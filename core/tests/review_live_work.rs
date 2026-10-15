@@ -166,6 +166,9 @@ fn deal_on(parties: [Hash; 2], work: Hash) -> Terms {
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     }
 }
 

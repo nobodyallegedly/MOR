@@ -1,7 +1,8 @@
 // Releases of the code (release manifest cMIP, draft 1; draft 3's
 // "implements"): a manifest naming every file by its hash, the release
 // before, the libraries it depends on and, since draft 3, the specifications
-// it implements by their publications' act ids, published by the collective
+// it implements, named since draft 4 by their spec hashes, a publication of
+// each beside it as a hint (Development Q7, taken), published by the collective
 // as a public Envelopes publication; the
 // members' visible signatures that make it a release; and the checks a fresh
 // machine runs to fetch one and verify every file.
@@ -15,6 +16,7 @@ import {
   Verifier,
   cborDecode,
   cborEncode,
+  decodeSpec,
   describeAct,
   hex,
   lockMedia,
@@ -61,13 +63,20 @@ export interface Manifest {
   /** Where it was built from, for example a git commit. A hint, never load-bearing. */
   source?: string;
   /**
-   * The specifications it implements (release manifest cMIP draft 3, field
-   * 6): the act ids of their publications, sorted, no id twice, at least
-   * one when present. Signed with the release, as every field is: a claim
-   * of whoever releases it, which a reader checks against the
-   * specifications it finds.
+   * The specifications it implements (release manifest cMIP draft 4, field
+   * 6): each by its spec hash, its name, with the act id of one of its
+   * publications beside it as a hint, never the name; sorted by spec hash,
+   * no spec hash twice, at least one when present. Signed with the release,
+   * as every field is: a claim of whoever releases it, which a reader
+   * checks against the specifications it finds.
    */
-  implements?: string[];
+  implements?: Implemented[];
+}
+
+/** A field 6 entry: `[spec, ? hint]` (release manifest cMIP draft 4). */
+export interface Implemented {
+  spec: string;
+  hint?: string;
 }
 
 /** A relative path with `/` separators, no empty, `.` or `..` segment, no `\` or control character. */
@@ -88,7 +97,7 @@ export function encodeManifest(m: Manifest): Uint8Array {
     [4, m.dependencies.map((d) => [d.registry, d.name, d.version, d.checksum])],
   ]);
   if (m.source !== undefined) map.set(5, m.source);
-  if (m.implements !== undefined) map.set(6, m.implements.map(unhex));
+  if (m.implements !== undefined) map.set(6, m.implements.map((i) => (i.hint ? [unhex(i.spec), unhex(i.hint)] : [unhex(i.spec)])));
   return cborEncode(map);
 }
 
@@ -139,13 +148,18 @@ export function decodeManifest(bytes: Uint8Array): Manifest {
       checksum: text(a[3], 'dependency checksum'),
     };
   });
-  let impl: string[] | undefined;
+  let impl: Implemented[] | undefined;
   if (m.has(6)) {
-    impl = list(m.get(6), 'implements').map((x) => hex(bytesOf(x, 32, 'an implemented specification')));
-    if (!impl.length) throw new Error('manifest: implements names at least one specification');
-    impl.forEach((x, i) => {
-      if (i && impl![i - 1] >= x) throw new Error('manifest: implements sorted and unique');
+    const entries: Implemented[] = list(m.get(6), 'implements').map((e) => {
+      if (!Array.isArray(e) || e.length < 1 || e.length > 2) throw new Error('manifest: an implemented specification is [spec, ? hint]');
+      const spec = hex(bytesOf(e[0], 32, 'an implemented specification'));
+      return e.length === 2 ? { spec, hint: hex(bytesOf(e[1], 32, 'a publication hint')) } : { spec };
     });
+    if (!entries.length) throw new Error('manifest: implements names at least one specification');
+    entries.forEach((x, i) => {
+      if (i && entries[i - 1].spec >= x.spec) throw new Error('manifest: implements sorted by spec hash and unique');
+    });
+    impl = entries;
   }
   return {
     name: text(m.get(0), 'name'),
@@ -269,37 +283,106 @@ export interface Prepared {
 
 const HEX64 = /^[0-9a-f]{64}$/;
 
-/** Field 6 as the manifest holds it: sorted, each once; absent when none is named. */
-export function implementsField(ids: string[] | undefined): string[] | undefined {
-  if (!ids?.length) return undefined;
-  for (const id of ids) if (!HEX64.test(id)) throw new Error(`implements: an act id is 64 hex digits, not “${id}”`);
-  return [...new Set(ids)].sort();
+/** Field 6 as the manifest holds it: sorted by spec hash, each once (the first hint given kept); absent when none is named. */
+export function implementsField(entries: Implemented[] | undefined): Implemented[] | undefined {
+  if (!entries?.length) return undefined;
+  const by = new Map<string, Implemented>();
+  for (const e of entries) {
+    if (!HEX64.test(e.spec)) throw new Error(`implements: a spec hash is 64 hex digits, not “${e.spec}”`);
+    if (e.hint !== undefined && !HEX64.test(e.hint)) throw new Error(`implements: a hint is an act id, 64 hex digits, not “${e.hint}”`);
+    if (!by.has(e.spec)) by.set(e.spec, e);
+  }
+  return [...by.values()].sort((x, y) => (x.spec < y.spec ? -1 : x.spec > y.spec ? 1 : 0));
+}
+
+/** A specification's content, read from one of its publications at the places given. */
+async function specificationAt(id: string, hints: string[], via: Via): Promise<{ content: Uint8Array } | { problem: string }> {
+  const act = await fetchFirst(hints, via, (r) => r.getAct(id));
+  if (!act) return { problem: `${id}: not found at ${hints.join(', ')}` };
+  const d = describeAct(act) as Described;
+  let media: Map<number, unknown> | null = null;
+  try {
+    media = d.public && d.spec === SPECS.envelopes && d.type === 0 && d.payload ? (cborDecode(d.payload) as Map<number, unknown>) : null;
+  } catch {
+    media = null;
+  }
+  const spec = media?.get(0);
+  if (!media || !(spec instanceof Uint8Array) || hex(spec) !== MIRS.development) {
+    return { problem: `${id}: not the publication of a specification (a public publication whose media spec is the Development MIR's)` };
+  }
+  const locked = await fetchFirst([...hints, ...((media.get(6) as string[] | undefined) ?? [])], via, (x) => x.getMedia(hex(media!.get(2) as Uint8Array)));
+  if (!locked) return { problem: `${id}: its content was not found` };
+  try {
+    const content = openMedia(locked, media.get(5) as Uint8Array, media.get(4) as Uint8Array);
+    if (workHash(content) !== hex(media.get(1) as Uint8Array)) return { problem: `${id}: its content does not match its work hash` };
+    return { content };
+  } catch (e) {
+    return { problem: `${id}: its content does not open: ${e instanceof Error ? e.message : e}` };
+  }
 }
 
 /**
- * Check, before a release names them, that each id is the publication of a
- * specification (Envelopes type 0, public, its media spec the Development
- * MIR's: Development, Part three, F290), found at the places given. Returns
- * a problem for each one that is not; a release naming them is refused.
+ * Before a release names them (release manifest cMIP draft 4, client
+ * conformance): for each publication given, read the specification's
+ * content, decode it whole (Development draft 10, F323: content not in the
+ * format is no specification), and name it by its spec hash, the
+ * publication beside it as a hint. Returns the entries, and a problem for
+ * each publication that is not a specification's; a release naming them is
+ * refused.
  */
-export async function checkImplements(ids: string[], hints: string[], via: Via = {}): Promise<string[]> {
+export async function resolveImplements(ids: string[], hints: string[], via: Via = {}): Promise<{ entries: Implemented[]; problems: string[] }> {
+  const entries: Implemented[] = [];
   const problems: string[] = [];
   for (const id of ids) {
-    const act = await fetchFirst(hints, via, (r) => r.getAct(id));
-    if (!act) {
-      problems.push(`${id}: not found at ${hints.join(', ')}`);
+    const got = await specificationAt(id, hints, via);
+    if ('problem' in got) {
+      problems.push(got.problem);
       continue;
     }
-    const d = describeAct(act) as Described;
-    let spec: unknown = null;
     try {
-      spec = d.public && d.spec === SPECS.envelopes && d.type === 0 && d.payload ? (cborDecode(d.payload) as Map<number, unknown>).get(0) : null;
-    } catch {
-      spec = null;
+      const sp = decodeSpec(got.content, REPO_SPECS.payment) as { hash: string };
+      entries.push({ spec: sp.hash, hint: id });
+    } catch (e) {
+      problems.push(`${id}: ${e instanceof Error ? e.message : e}`);
     }
-    if (!(spec instanceof Uint8Array) || hex(spec) !== MIRS.development) problems.push(`${id}: not the publication of a specification (a public publication whose media spec is the Development MIR's)`);
   }
-  return problems;
+  return { entries, problems };
+}
+
+/** As [`resolveImplements`], the problems only. */
+export async function checkImplements(ids: string[], hints: string[], via: Via = {}): Promise<string[]> {
+  return (await resolveImplements(ids, hints, via)).problems;
+}
+
+/**
+ * What a reader finds for each specification a release implements (release
+ * manifest cMIP draft 4, rule 4): `found` where the hint's publication
+ * carries content whose spec hash is the entry's; `wrong hint` where it
+ * carries another; `not found` (unknown, never invalid) where the
+ * specification is found nowhere it looked. None of these changes what the
+ * entry names.
+ */
+export async function findImplemented(entries: Implemented[], hints: string[], via: Via = {}): Promise<{ spec: string; seen: 'found' | 'wrong hint' | 'not found' }[]> {
+  const out: { spec: string; seen: 'found' | 'wrong hint' | 'not found' }[] = [];
+  for (const e of entries) {
+    if (!e.hint) {
+      out.push({ spec: e.spec, seen: 'not found' });
+      continue;
+    }
+    const got = await specificationAt(e.hint, hints, via);
+    if ('problem' in got) {
+      out.push({ spec: e.spec, seen: 'not found' });
+      continue;
+    }
+    let hash: string | null = null;
+    try {
+      hash = (decodeSpec(got.content, REPO_SPECS.payment) as { hash: string }).hash;
+    } catch {
+      hash = null;
+    }
+    out.push({ spec: e.spec, seen: hash === e.spec ? 'found' : 'wrong hint' });
+  }
+  return out;
 }
 
 /**
@@ -309,7 +392,7 @@ export async function checkImplements(ids: string[], hints: string[], via: Via =
  */
 export function prepareRelease(
   p: Publisher,
-  opts: { name: string; version: string; files: FileIn[]; source?: string; implements?: string[] },
+  opts: { name: string; version: string; files: FileIn[]; source?: string; implements?: Implemented[] },
 ): Prepared {
   const last = p.releases.at(-1);
   const beforeManifest = last ? decodeManifest(unb64(last.manifest)) : null;
@@ -382,7 +465,7 @@ export async function publishPrepared(p: Publisher, r: Prepared, via: Via = {}):
  */
 export async function publishRelease(
   c: TestCollective,
-  opts: { name: string; version: string; files: FileIn[]; source?: string; implements?: string[]; via?: Via },
+  opts: { name: string; version: string; files: FileIn[]; source?: string; implements?: Implemented[]; via?: Via },
 ): Promise<Published> {
   const p: Publisher = { id: c.id, relays: c.f.relays, releases: c.f.releases };
   return publishPrepared(p, prepareRelease(p, opts), opts.via);
@@ -499,7 +582,7 @@ export async function verifyRelease(
   }
 
   // 2. The signer's chain, and the publication's standing.
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   let homes: string[];
   try {
     const l = await lookUp(d.signer, hints, via, v);

@@ -552,17 +552,30 @@ class Verifier:
             b = s.act(ob)
             if b is None or b["type"] != "obligation" or not judged.get(ob, {}).get("counts"):
                 continue
-            if not self.settled(ob):
+            if not self.settled(ob, e):
                 why.append(f"owes {ob}")
         return (not why), why
 
-    def settled(self, ob: str) -> bool:
+    def relied_on(self, i: str, e: str) -> bool:
+        """Agreements draft 14, F303: a closing relies on another identity's receipt or
+        release only where an act of the collective in the closing's history acknowledges
+        it (Envelopes `acks`), or cites it."""
+        s = self.s
+        for j in s.history(e) | {e}:
+            b = s.act(j)
+            if b is not None and s.signed_by_own_key(b) and (i in b["acks"] or i in s.history(j)):
+                return True
+        return False
+
+    def settled(self, ob: str, e: str | None = None) -> bool:
         b = self.s.act(ob)
         creditor = b.get("creditor")
         amount = int(b.get("amount", 1))
         paid = 0
         for i, p in self.s.acts.items():
             if not p["held"] or not p["valid"] or p.get("obligation") != ob:
+                continue
+            if e is not None and not self.relied_on(i, e):
                 continue
             if p["type"] == "release" and p["signer"] == creditor:
                 return True
@@ -756,7 +769,10 @@ class Verifier:
                 ok, why = self.fork_complete(e, sigs[e])
             else:
                 ok, why = self.closing_complete(e, sigs[e])
-            v.endings[e] = {"status": "complete" if ok else "incomplete", "counts": False,
+            # Agreements draft 14, F304: an ending whose history names an act this
+            # verifier does not hold is unknown, never "incomplete" and never complete.
+            state = "complete" if ok else ("unknown" if self.s.names_unheld(e) else "incomplete")
+            v.endings[e] = {"status": state, "counts": False,
                             "signatures": status[e], "names": sorted(naming[e]), "why": why}
             if ok:
                 complete.append(e)

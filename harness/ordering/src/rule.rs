@@ -277,12 +277,40 @@ impl<'w> Eval<'w> {
     fn departures(&self, m: M, area: bool) -> Vec<Id> {
         self.acts()
             .filter(|&d| match &self.w.acts[d].kind {
-                Kind::Resign => self.w.signer(d) == Some(m),
-                Kind::StepDown => area && self.w.signer(d) == Some(m),
+                Kind::Resign => self.w.signer(d) == Some(m) && self.departure_kept(d),
+                Kind::StepDown => area && self.w.signer(d) == Some(m) && self.departure_kept(d),
                 Kind::Declare { member } => *member == m,
                 _ => false,
             })
             .collect()
+    }
+
+    /// Agreements draft 14, F302 (C5 extended from signatures to resignations
+    /// and steppings down): a member's departure act that its signer's own
+    /// rotation voided (made with the old key, outside the rotation's kept
+    /// ancestry) keeps its effect for the collective only where a line of the
+    /// collective registering it comes before every line registering that
+    /// rotation; with no line registering the rotation, wherever a line
+    /// registers it. Under the rules that do not register rotations (no C5),
+    /// a departure is never undone by one, as before.
+    fn departure_kept(&self, d: Id) -> bool {
+        if !self.c5() {
+            return true;
+        }
+        let m = self.w.signer(d);
+        let e = self.w.acts[d].epoch;
+        let Some(r) = self.acts().find(|&r| self.w.acts[r].kind == Kind::MemberRotate && self.w.signer(r) == m && self.w.acts[r].epoch == e) else {
+            return true;
+        };
+        if self.anc[r][d] {
+            return true;
+        }
+        let regs: Vec<Id> = self
+            .acts()
+            .filter(|&l| matches!(&self.w.acts[l].kind, Kind::Register { departures } if departures.contains(&d)))
+            .collect();
+        let rots = self.rot_lines(r);
+        regs.iter().any(|&l| rots.iter().all(|&q| self.before(l, q)))
     }
 
     /// The collective's lines registering any departure of `m`.

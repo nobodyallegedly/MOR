@@ -32,9 +32,8 @@ pub mod types {
     pub const SPLIT: u64 = 8;
     pub const GRANT: u64 = 9;
     pub const REVOCATION: u64 = 10;
-    /// An import (rule 41): the grantor adopting acts of an ended grant
-    /// (format open). The handover is withdrawn (F129, H3).
-    pub const IMPORT: u64 = 11;
+    // 11, the import, is retired and never reused (rule 77; Agreements
+    // draft 14, Agreements Q6, taken).
     pub const DECLARATION: u64 = 13;
     /// A contest of a declaration of absence (rule 52; BQ4, F188).
     pub const CONTEST: u64 = 14;
@@ -318,7 +317,8 @@ pub(crate) type R<T> = Result<T, AgreementsError>;
 
 // ---------------------------------------------------------------- rules
 
-/// `rule = [ 0 ] / [ 1, uint ] / [ 2, [+ hash] ]`
+/// `rule = [ 0 ] / [ 1, uint ] / [ 2, [+ hash] ] / [ 3, stake, share ] /
+/// [ 4, [2* rule] ] / [ 5, stake, share ]` (Agreements draft 14, F308, F311).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Rule {
     /// Every party.
@@ -327,16 +327,129 @@ pub enum Rule {
     Threshold(u64),
     /// These named parties.
     Named(Vec<Hash>),
+    /// `[ 3, stake, share ]`: the parties counted, holding together at least
+    /// this share, in millionths, of this stake, by its index in field 7
+    /// (new in draft 14, F308): the share is of what the parties whose
+    /// voice remains hold together (rule 65). Fields 5 and 18 only.
+    ByShare { stake: u64, share: u64 },
+    /// `[ 4, [2* rule] ]`: all of these rules, each counted as it would be
+    /// alone (F308); none nested. Fields 5 and 18 only.
+    AllOf(Vec<Rule>),
+    /// `[ 5, stake, share ]`: the holders of this stake, members or not,
+    /// holding together at least this share of the whole stake (new in
+    /// draft 14, F311). Field 18 only.
+    Holders { stake: u64, share: u64 },
+}
+
+/// `holders-rule = [ 0 ] / [ 3, share ]` (rule 94; new in draft 14, F307,
+/// F308): how a stake's holders consent together to the owners' matters.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum HoldersRule {
+    /// Every holder of the stake (the default, F59).
+    Every,
+    /// Holders together holding at least this share of the stake, in
+    /// millionths.
+    Share(u64),
+}
+
+impl HoldersRule {
+    pub fn to_value(&self) -> Value {
+        match self {
+            HoldersRule::Every => Value::Array(vec![Value::Uint(0)]),
+            HoldersRule::Share(s) => Value::Array(vec![Value::Uint(3), Value::Uint(*s)]),
+        }
+    }
+}
+
+/// The release rule, terms field 24: `holders-rule / [ 2, [+ hash] ]`, a
+/// threshold counted by share, never by head (new in draft 14, F308: the
+/// head count `[ 1, k ]` is invalid, not re-read as a share).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ReleaseRule {
+    Holders(HoldersRule),
+    /// `[ 2, [+ hash] ]`: these named holders.
+    Named(Vec<Hash>),
+}
+
+impl ReleaseRule {
+    pub fn to_value(&self) -> Value {
+        match self {
+            ReleaseRule::Holders(h) => h.to_value(),
+            ReleaseRule::Named(n) => Value::Array(vec![Value::Uint(2), hashes_value(n)]),
+        }
+    }
+}
+
+/// A stake's entry in terms field 30: `[ stake, holders-rule, ? waived:
+/// true ]` (rules 94, 96; new in draft 14, F307; F328, Q14: the standing
+/// waiver of pre-emption, mechanic, draft 14's).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HoldersEntry {
+    pub stake: u64,
+    pub rule: HoldersRule,
+    pub waived: bool,
+}
+
+/// Terms field 32: the issuance offer an issuance follows, or `[ 0 ]`, no
+/// offer, under the stake's standing waiver (rule 96; F309, F328).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum IssuesUnder {
+    Offer(Hash),
+    Waived,
 }
 
 impl Rule {
-    /// Whether the rule's own numbers and names fit the parties.
+    /// Whether the rule's own numbers and names fit the parties. A rule by
+    /// share fits where its share is above zero and at most the whole
+    /// (its stake is checked against field 7 by [`Terms::check`]); "all
+    /// of" where it lists two rules or more, none nested, each fitting.
     pub fn fits(&self, parties: &[Hash]) -> bool {
         match self {
             Rule::All => true,
             Rule::Threshold(k) => *k >= 1 && *k <= parties.len() as u64,
             Rule::Named(n) => !n.is_empty() && distinct(n) && n.iter().all(|x| parties.contains(x)),
+            Rule::ByShare { share, .. } | Rule::Holders { share, .. } => *share >= 1 && *share <= MILLION,
+            Rule::AllOf(rs) => rs.len() >= 2 && rs.iter().all(|r| !matches!(r, Rule::AllOf(_)) && r.fits(parties)),
         }
+    }
+
+    /// Whether the rule counts heads only (the forms before draft 14):
+    /// no share, no "all of".
+    pub fn by_head(&self) -> bool {
+        matches!(self, Rule::All | Rule::Threshold(_) | Rule::Named(_))
+    }
+
+    /// The rules this one is met by all of: itself, or the rules "all of"
+    /// lists (F308).
+    pub fn parts(&self) -> Vec<&Rule> {
+        match self {
+            Rule::AllOf(rs) => rs.iter().collect(),
+            r => vec![r],
+        }
+    }
+
+    /// The stakes a rule counts shares of (F308, F311).
+    pub fn stakes(&self) -> Vec<u64> {
+        let mut v: Vec<u64> = self
+            .parts()
+            .into_iter()
+            .filter_map(|r| match r {
+                Rule::ByShare { stake, .. } | Rule::Holders { stake, .. } => Some(*stake),
+                _ => None,
+            })
+            .collect();
+        v.sort();
+        v.dedup();
+        v
+    }
+
+    /// The stake whose holders a constitutional change rule counts among
+    /// (`[ 5, stake, share ]`, alone or in "all of"; F311).
+    pub fn holders_stake(&self) -> Option<u64> {
+        self.parts().into_iter().find_map(|r| match r {
+            Rule::Holders { stake, .. } => Some(*stake),
+            _ => None,
+        })
     }
 
     /// The parties this rule is counted among (rule 36b: every party under
@@ -345,6 +458,17 @@ impl Rule {
     pub fn counted_among(&self, parties: &[Hash]) -> Vec<Hash> {
         match self {
             Rule::Named(n) => n.clone(),
+            Rule::AllOf(rs) => {
+                let mut v: Vec<Hash> = Vec::new();
+                for r in rs {
+                    for p in r.counted_among(parties) {
+                        if !v.contains(&p) {
+                            v.push(p);
+                        }
+                    }
+                }
+                v
+            }
             _ => parties.to_vec(),
         }
     }
@@ -360,6 +484,10 @@ impl Rule {
         Some(match self {
             Rule::Threshold(k) => (*k as usize).min(remaining),
             Rule::All | Rule::Named(_) => remaining,
+            // Counted by share, never by head (rule 65, F308): the view
+            // counts these with the stakes ([`super::view`]); by head they
+            // ask for every voice, the strictest reading, never a looser one.
+            Rule::ByShare { .. } | Rule::AllOf(_) | Rule::Holders { .. } => remaining,
         })
     }
 
@@ -371,6 +499,9 @@ impl Rule {
             Rule::All => parties.iter().all(signed),
             Rule::Threshold(k) => parties.iter().filter(|p| signed(p)).count() as u64 >= *k,
             Rule::Named(n) => n.iter().all(signed),
+            Rule::AllOf(rs) => rs.iter().all(|r| r.met(parties, signers)),
+            // By head, every party: the view counts shares (rule 65, F308).
+            Rule::ByShare { .. } | Rule::Holders { .. } => parties.iter().all(signed),
         }
     }
 
@@ -379,6 +510,9 @@ impl Rule {
             Rule::All => Value::Array(vec![Value::Uint(0)]),
             Rule::Threshold(k) => Value::Array(vec![Value::Uint(1), Value::Uint(*k)]),
             Rule::Named(n) => Value::Array(vec![Value::Uint(2), hashes_value(n)]),
+            Rule::ByShare { stake, share } => Value::Array(vec![Value::Uint(3), Value::Uint(*stake), Value::Uint(*share)]),
+            Rule::AllOf(rs) => Value::Array(vec![Value::Uint(4), Value::Array(rs.iter().map(Rule::to_value).collect())]),
+            Rule::Holders { stake, share } => Value::Array(vec![Value::Uint(5), Value::Uint(*stake), Value::Uint(*share)]),
         }
     }
 }
@@ -469,8 +603,9 @@ pub struct SuccessionPlan {
     pub party: Hash,
     /// Stake successors, shares in millionths of the party's stakes.
     pub stakes: Option<Vec<(Hash, u64)>>,
-    /// Seat successors, with their voting weight.
-    pub seats: Option<Vec<(Hash, u64)>>,
+    /// Seat successors, with no voting weight: under a rule by share a
+    /// successor weighs what it holds (new in draft 14, F308; F328, Q15).
+    pub seats: Option<Vec<Hash>>,
     /// Seat entry: 0 automatic where every voice signed this version of the
     /// plan, 1 a nomination (Q14).
     pub entry: Option<u64>,
@@ -490,7 +625,7 @@ impl SuccessionPlan {
             m.push((Value::Uint(1), pairs(s)));
         }
         if let Some(s) = &self.seats {
-            m.push((Value::Uint(2), pairs(s)));
+            m.push((Value::Uint(2), hashes_value(s)));
         }
         if let Some(e) = self.entry {
             m.push((Value::Uint(3), Value::Uint(e)));
@@ -673,6 +808,10 @@ pub enum Power {
     /// `[ 4 ]`: the judicial tier, every party of the parent whose voice
     /// remains (rule 46a, F121).
     Judicial,
+    /// `[ 5, stake ]`: that stake's holders' rule (field 30), counted among
+    /// its holders at the line, by share (rules 64.4, 65, 94; new in draft
+    /// 14, F307).
+    Holders(u64),
 }
 
 impl Power {
@@ -683,6 +822,7 @@ impl Power {
             Power::Area(a) => Value::Array(vec![Value::Uint(2), Value::Uint(*a)]),
             Power::Plan(p) => Value::Array(vec![Value::Uint(3), b(p)]),
             Power::Judicial => Value::Array(vec![Value::Uint(4)]),
+            Power::Holders(s) => Value::Array(vec![Value::Uint(5), Value::Uint(*s)]),
         }
     }
 
@@ -1093,7 +1233,8 @@ pub struct Terms {
     /// 24: the release rule, set in founding terms: who among a stake's
     /// holders must sign its release to the public domain (F121, D);
     /// absent: every holder. A clone every owner signs may change it (N8).
-    pub release_rule: Option<Rule>,
+    /// Counted by share, never by head (F308).
+    pub release_rule: Option<ReleaseRule>,
     /// 26: in a deal's clone settling a fork, every tip it discards, beside
     /// its one parent, ascending, none twice (rule 45b, F186; QF3, F190,
     /// decided 9 October 2026: a list, so a tangled deal settles cleanly).
@@ -1113,6 +1254,17 @@ pub struct Terms {
     /// 29: the split service's backups, in order, and what counts as a
     /// failed attempt: the split cMIP's fields (F249, F250).
     pub backups: Option<Backups>,
+    /// 30: the holders' rules, per stake, ascending by stake, each with its
+    /// standing waiver of pre-emption where it carries one (rules 94, 96;
+    /// new in draft 14, F307, F328); a collective's only (F314).
+    pub holders_rules: Option<Vec<HoldersEntry>>,
+    /// 31: in a deal's clone carrying an owners' matter, the stake
+    /// transfers whose buyers it counts as holders (rule 94; F316).
+    pub transfers_counted: Option<Vec<Hash>>,
+    /// 32: in a collective's clone that is an issuance, the issuance offer
+    /// it follows, or none under the stake's standing waiver (rule 96; F309,
+    /// F328).
+    pub issues_under: Option<IssuesUnder>,
 }
 
 impl Terms {
@@ -1301,7 +1453,42 @@ impl Terms {
         if let Some(x) = &self.backups {
             m.push((Value::Uint(BACKUPS_FIELD), x.to_value()));
         }
+        if let Some(x) = &self.holders_rules {
+            m.push((
+                Value::Uint(30),
+                Value::Array(
+                    x.iter()
+                        .map(|e| {
+                            let mut a = vec![Value::Uint(e.stake), e.rule.to_value()];
+                            if e.waived {
+                                a.push(Value::Bool(true));
+                            }
+                            Value::Array(a)
+                        })
+                        .collect(),
+                ),
+            ));
+        }
+        if let Some(x) = &self.transfers_counted {
+            m.push((Value::Uint(31), hashes_value(x)));
+        }
+        match &self.issues_under {
+            Some(IssuesUnder::Offer(h)) => m.push((Value::Uint(32), b(h))),
+            Some(IssuesUnder::Waived) => m.push((Value::Uint(32), Value::Array(vec![Value::Uint(0)]))),
+            None => {}
+        }
         m
+    }
+
+    /// The holders' rule of a stake (field 30), every holder where the
+    /// field says nothing for it (rule 94, F59), and whether it carries a
+    /// standing waiver of pre-emption (rule 96, F328).
+    pub fn holders_rule(&self, stake: u64) -> (HoldersRule, bool) {
+        self.holders_rules
+            .iter()
+            .flatten()
+            .find(|e| e.stake == stake)
+            .map_or((HoldersRule::Every, false), |e| (e.rule.clone(), e.waived))
     }
 
     /// The deterministic encoding of each field present, by field number:
@@ -1337,7 +1524,7 @@ impl Terms {
                         "terms field 25 (the relays) is withdrawn: an act is done by its signatures, seals and citations, wherever held (F128)",
                     ))
                 }
-                Value::Uint(n) if *n <= 24 || *n == 26 || *n == 27 || *n == super::open_formats::FEES_FIELD || *n == BACKUPS_FIELD => f.push((*n, v)),
+                Value::Uint(n) if *n <= 24 || (26..=32).contains(n) => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("terms: unknown field")),
             }
         }
@@ -1362,7 +1549,7 @@ impl Terms {
                     let a = tuple(v, 2, "keepers")?;
                     Ok(Keepers {
                         operators: hashes(&a[0], "keepers")?,
-                        rule: rule(&a[1])?,
+                        rule: head_rule(&a[1], "the keepers' rule counts keepers, never shares (F308)")?,
                     })
                 })
                 .transpose()?,
@@ -1443,13 +1630,39 @@ impl Terms {
                 })
                 .transpose()?,
             forked_from: get(23).map(|v| hash(v, "forked from")).transpose()?,
-            release_rule: get(24).map(rule).transpose()?,
+            release_rule: get(24).map(release_rule).transpose()?,
             settles: get(26).map(|v| hashes(v, "settles")).transpose()?,
             fork_judge: get(27).map(|v| hash(v, "the judge of forks")).transpose()?,
             plan: get(8).map(super::open_formats::SplitPlan::decode).transpose()?,
             refund: get(17).map(super::open_formats::RefundTerms::decode).transpose()?,
             fees: get(super::open_formats::FEES_FIELD).map(super::open_formats::Fee::decode_field).transpose()?,
             backups: get(BACKUPS_FIELD).map(Backups::decode).transpose()?,
+            holders_rules: get(30)
+                .map(|v| {
+                    nonempty(v, "holders' rules")?
+                        .iter()
+                        .map(|e| {
+                            let Value::Array(a) = e else { return Err(AgreementsError::Shape("holders' rules: an entry is [stake, holders-rule, ? waived: true]")) };
+                            if a.len() < 2 || a.len() > 3 {
+                                return Err(AgreementsError::Shape("holders' rules: an entry is [stake, holders-rule, ? waived: true]"));
+                            }
+                            let waived = match a.get(2) {
+                                None => false,
+                                Some(Value::Bool(true)) => true,
+                                Some(_) => return Err(AgreementsError::Shape("holders' rules: a standing waiver is written true (F328)")),
+                            };
+                            Ok(HoldersEntry { stake: uint(&a[0], "holders' rules: the stake")?, rule: holders_rule(&a[1])?, waived })
+                        })
+                        .collect()
+                })
+                .transpose()?,
+            transfers_counted: get(31).map(|v| hashes(v, "transfers counted")).transpose()?,
+            issues_under: get(32)
+                .map(|v| match v {
+                    Value::Array(a) if a.len() == 1 && a[0] == Value::Uint(0) => Ok(IssuesUnder::Waived),
+                    _ => Ok(IssuesUnder::Offer(hash(v, "issues under: the issuance offer, or [0] (F309, F328)")?)),
+                })
+                .transpose()?,
         })
     }
 
@@ -1601,14 +1814,15 @@ impl Terms {
         self.check_stakes()?;
         if let Some(r) = &self.release_rule {
             let ok = match r {
-                Rule::All => true,
-                Rule::Threshold(k) => *k > 0,
-                Rule::Named(n) => !n.is_empty() && distinct(n),
+                ReleaseRule::Holders(HoldersRule::Every) => true,
+                ReleaseRule::Holders(HoldersRule::Share(s)) => *s >= 1 && *s <= MILLION,
+                ReleaseRule::Named(n) => !n.is_empty() && distinct(n),
             };
             if !ok {
-                return Err(AgreementsError::Check("the release rule is a rule among a stake's holders"));
+                return Err(AgreementsError::Check("the release rule is a rule among a stake's holders, counted by share (F308)"));
             }
         }
+        self.check_draft_14()?;
         if let Some(x) = &self.settles {
             if self.parent.is_none() || self.is_collective() {
                 return Err(AgreementsError::Check(
@@ -1938,6 +2152,104 @@ impl Terms {
     /// Terms field 7: each stake's holders distinct, each share above zero,
     /// summing to 1,000,000; no object twice; null, this collective, only in
     /// a collective's terms (S1), and never holding a stake in itself.
+    /// Agreements draft 14's format checks: the rule forms by share and
+    /// "all of" (fields 5 and 18 only, form 5 field 18 only; F308, F311),
+    /// the holders' rules (field 30, a collective's only; F307, F314), the
+    /// transfers a deal's clone counts (field 31; F316), the offer an
+    /// issuance follows (field 32; F309), and, where the constitutional
+    /// change rule counts among a stake's holders, an abandonment clause
+    /// able to move a vanished holder's stake (rule 61; F328, Q11).
+    fn check_draft_14(&self) -> R<()> {
+        // Rule 22 (F312): the collective's own part, a named receiver
+        // written null, in a collective's terms only.
+        if !self.is_collective() && self.plan.as_ref().is_some_and(|p| p.shares.iter().any(|s| matches!(s, super::open_formats::ShareRule::Own { .. }))) {
+            return Err(AgreementsError::Check("split plan: a receiver written null is the collective itself, in a collective's terms only (rule 22; new in draft 14, F312)"));
+        }
+        let n = self.stakes.as_ref().map_or(0, |s| s.len()) as u64;
+        let stakes_ok = |r: &Rule| r.stakes().iter().all(|s| *s < n);
+        let nested = |r: &Rule| matches!(r, Rule::AllOf(rs) if rs.iter().any(|x| matches!(x, Rule::AllOf(_))));
+        if nested(&self.clone) || self.clone.parts().iter().any(|r| matches!(r, Rule::Holders { .. })) {
+            return Err(AgreementsError::Check(
+                "the clone rule counts among the parties: a rule among a stake's holders is the constitutional change rule's only, and \"all of\" nests no \"all of\" (F308, F311)",
+            ));
+        }
+        if !stakes_ok(&self.clone) {
+            return Err(AgreementsError::Check("a rule by share names a stake of field 7 (F308)"));
+        }
+        if let Some(r) = &self.constitutional {
+            if nested(r) || !stakes_ok(r) {
+                return Err(AgreementsError::Check("a rule by share names a stake of field 7, and \"all of\" nests no \"all of\" (F308)"));
+            }
+            if let Some(stake) = r.holders_stake() {
+                // F328, Q11: "better do it upstream".
+                let a = self.abandonment.as_ref();
+                let moves = a.is_some_and(|a| a.outcomes.contains(&outcomes::STAKE_REDISTRIBUTED) || a.outcomes.contains(&outcomes::STAKE_TRANSFERRED));
+                let holders: Vec<Hash> = self
+                    .stakes
+                    .iter()
+                    .flatten()
+                    .nth(stake as usize)
+                    .into_iter()
+                    .flat_map(|s| s.holders.iter())
+                    .filter_map(|(w, _)| match w {
+                        Who::Id(h) if !self.parties.contains(h) => Some(*h),
+                        _ => None,
+                    })
+                    .collect();
+                let declares_all = a.is_some_and(|a| match &a.authority {
+                    Authority::Named(x) => !holders.contains(x),
+                    Authority::Others(_) => true,
+                });
+                if !moves || !declares_all {
+                    return Err(AgreementsError::Check(
+                        "a constitution counting membership among a stake's holders needs an abandonment clause allowing outcome 1 or 2, whose authority can declare each holder who is no party absent (rule 61; new in draft 14, F328)",
+                    ));
+                }
+            }
+        }
+        if let Some(h) = &self.holders_rules {
+            if !self.is_collective() {
+                return Err(AgreementsError::Check(
+                    "a deal carries no holders' rule, for now: terms of a deal carrying field 30 are invalid (rule 94; new in draft 14, F314)",
+                ));
+            }
+            for (i, e) in h.iter().enumerate() {
+                if e.stake >= n || (i > 0 && h[i - 1].stake >= e.stake) {
+                    return Err(AgreementsError::Check("holders' rules: one entry per stake of field 7, ascending (field 30, F307)"));
+                }
+                if let HoldersRule::Share(s) = e.rule {
+                    if s == 0 || s > MILLION {
+                        return Err(AgreementsError::Check("holders' rules: a share above zero, in millionths (field 30, F308)"));
+                    }
+                }
+            }
+        }
+        if let Some(t) = &self.transfers_counted {
+            if self.is_collective() || self.parent.is_none() {
+                return Err(AgreementsError::Check(
+                    "field 31 is a deal's clone's: a collective counts the transfers its line placed (rule 94; new in draft 14, F316)",
+                ));
+            }
+            if t.windows(2).any(|w| w[0] >= w[1]) {
+                return Err(AgreementsError::Check("field 31: the transfers counted, ascending, none twice (F316)"));
+            }
+        }
+        if self.issues_under.is_some() && (!self.is_collective() || self.parent.is_none()) {
+            return Err(AgreementsError::Check(
+                "field 32 is a collective's clone's: an issuance in a deal is signed by every holder (rule 96; new in draft 14, F309, F314)",
+            ));
+        }
+        if self.issues_under == Some(IssuesUnder::Waived) {
+            let waived = self.holders_rules.iter().flatten().any(|e| e.waived);
+            if !waived {
+                return Err(AgreementsError::Check(
+                    "an issuance naming no offer ([0]) stands only under a stake's standing waiver of pre-emption (field 30; new in draft 14, F328)",
+                ));
+            }
+        }
+        Ok(())
+    }
+
     fn check_stakes(&self) -> R<()> {
         let Some(st) = &self.stakes else { return Ok(()) };
         let objects: Vec<Who> = st.iter().map(|s| s.object).collect();
@@ -3912,7 +4224,43 @@ pub(crate) fn rule(v: &Value) -> R<Rule> {
         (0, 1) => Ok(Rule::All),
         (1, 2) => Ok(Rule::Threshold(uint(&a[1], "rule threshold")?)),
         (2, 2) => Ok(Rule::Named(hashes(&a[1], "rule names")?)),
+        (3, 3) => Ok(Rule::ByShare { stake: uint(&a[1], "rule by share: the stake")?, share: uint(&a[2], "rule by share: the share")? }),
+        (4, 2) => Ok(Rule::AllOf(nonempty(&a[1], "all of: the rules")?.iter().map(rule).collect::<R<_>>()?)),
+        (5, 3) => Ok(Rule::Holders { stake: uint(&a[1], "rule among holders: the stake")?, share: uint(&a[2], "rule among holders: the share")? }),
         _ => Err(AgreementsError::Shape("rule")),
+    }
+}
+
+/// A rule of the forms before draft 14 (any one, a threshold, named):
+/// keepers, a founding signing rule (F308: "no rule by share for keepers").
+fn head_rule(v: &Value, w: &'static str) -> R<Rule> {
+    let r = rule(v)?;
+    if !r.by_head() {
+        return Err(AgreementsError::Check(w));
+    }
+    Ok(r)
+}
+
+pub(crate) fn holders_rule(v: &Value) -> R<HoldersRule> {
+    let a = nonempty(v, "holders' rule")?;
+    match (uint(&a[0], "holders' rule form")?, a.len()) {
+        (0, 1) => Ok(HoldersRule::Every),
+        (3, 2) => Ok(HoldersRule::Share(uint(&a[1], "holders' rule: the share")?)),
+        _ => Err(AgreementsError::Shape("holders' rule: [0], every holder, or [3, share] (rule 94, F307)")),
+    }
+}
+
+/// Terms field 24 (F308): every holder, by share, or named holders; the
+/// head count `[ 1, k ]` invalid in draft 14, never re-read as a share
+/// (F328, the reading on field 24).
+fn release_rule(v: &Value) -> R<ReleaseRule> {
+    let a = nonempty(v, "the release rule")?;
+    match (uint(&a[0], "the release rule's form")?, a.len()) {
+        (1, 2) => Err(AgreementsError::Check(
+            "the release rule counts by share, never by head: [1, k] is invalid (rule 55; new in draft 14, F308, F328)",
+        )),
+        (2, 2) => Ok(ReleaseRule::Named(hashes(&a[1], "the release rule's names")?)),
+        _ => Ok(ReleaseRule::Holders(holders_rule(v)?)),
     }
 }
 
@@ -3954,6 +4302,7 @@ fn power(v: &Value) -> R<Power> {
         (2, 2) => Ok(Power::Area(uint(&a[1], "power area")?)),
         (3, 2) => Ok(Power::Plan(hash(&a[1], "power party")?)),
         (4, 1) => Ok(Power::Judicial),
+        (5, 2) => Ok(Power::Holders(uint(&a[1], "power: the stake whose holders' rule it is")?)),
         _ => Err(AgreementsError::Shape("power")),
     }
 }
@@ -4111,7 +4460,14 @@ fn succession_plan(v: &Value) -> R<SuccessionPlan> {
             .map(|x| pairs(x, "stake successors"))
             .transpose()?,
         seats: field(&f, 2)
-            .map(|x| pairs(x, "seat successors"))
+            .map(|x| {
+                if nonempty(x, "seat successors")?.iter().any(|e| matches!(e, Value::Array(_))) {
+                    return Err(AgreementsError::Check(
+                        "a seat successor carries no voting weight: plan key 2 lists the seat successors alone (rule 81; new in draft 14, F308, F328)",
+                    ));
+                }
+                hashes(x, "seat successors")
+            })
             .transpose()?,
         entry: field(&f, 3).map(|x| uint(x, "seat entry")).transpose()?,
     })

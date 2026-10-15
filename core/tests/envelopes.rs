@@ -87,8 +87,6 @@ fn rnd(label: &str, n: usize) -> SealRandom {
         container_key: h(&format!("{label}/container")),
         nonce: h(&format!("{label}/nonce"))[..24].try_into().unwrap(),
         eseeds: (0..n).map(|i| h64(&format!("{label}/eseed/{i}"))).collect(),
-        one_time_secret: h(&format!("{label}/otk")),
-        aux: [0; 32],
     }
 }
 
@@ -354,45 +352,37 @@ fn a_tampered_container_is_refused() {
         &rnd("t", 1),
     )
     .unwrap();
-    // A relay re-addressing it breaks the one-time signature.
+    // Envelopes draft 10 (F293): the outside is unauthenticated by design.
+    // Re-addressed to Mallory, it opens only for whoever holds a capsule's
+    // key, and the inner act, signed by Alice, still names Bob alone: step 5
+    // refuses it (rule 12).
     let mut readdressed = s.clone();
     readdressed.to = vec![h("mallory")];
-    assert_eq!(
+    assert!(matches!(
         open(&readdressed, Some(&h("mallory")), &bob_key).unwrap_err(),
-        EnvError::Signature
+        EnvError::Addressing(_)
+    ));
+    // Mallory's own key opens nothing: no capsule is hers.
+    assert_eq!(
+        open(&readdressed, Some(&h("mallory")), &deckey("mallory")).unwrap_err(),
+        EnvError::NotForUs
     );
-    // A flipped byte in the locked part, likewise.
+    // A flipped byte in the locked part: the locks refuse it.
     let mut flipped = s.clone();
     let n = flipped.locked_act.len();
     flipped.locked_act[n - 5] ^= 1;
-    assert_eq!(
-        open(&flipped, Some(&bob), &bob_key).unwrap_err(),
-        EnvError::Signature
-    );
-    // Re-signed by the tamperer with a fresh one-time key: the signature
-    // holds, the contents do not open.
-    let mut t = rnd("t", 1);
-    t.one_time_secret = h("mallory otk");
-    let mallory = SchnorrKey::from_secret(&t.one_time_secret).unwrap();
-    let mut resigned = flipped.clone();
-    resigned.one_time_key = mallory.public();
-    let sh = {
-        let v = Value::Array(vec![
-            Value::Array(
-                resigned
-                    .to
-                    .iter()
-                    .map(|x| Value::Bytes(x.to_vec()))
-                    .collect(),
-            ),
-            Value::Bytes(resigned.one_time_key.to_vec()),
-            Value::Bytes(resigned.locked_act.clone()),
-        ]);
-        mor_core::hash::tagged_hash("MOR/sealed", &mor_core::cbor::encode(&v))
-    };
-    resigned.sig = mallory.sign(&sh, &[0; 32]).sig.try_into().unwrap();
-    assert!(resigned.check_signature().is_ok());
-    assert!(open(&resigned, Some(&bob), &bob_key).is_err());
+    assert!(open(&flipped, Some(&bob), &bob_key).is_err());
+    // The container is two parts, no more (draft 9's four are refused).
+    let v = mor_core::cbor::decode(&s.encode()).unwrap();
+    let Value::Array(a) = v else { panic!() };
+    assert_eq!(a.len(), 2);
+    let four = mor_core::cbor::encode(&Value::Array(vec![
+        a[0].clone(),
+        Value::Bytes(vec![1; 32]),
+        a[1].clone(),
+        Value::Bytes(vec![2; 64]),
+    ]));
+    assert!(Sealed::decode(&four).is_err());
 }
 
 #[test]
@@ -594,17 +584,15 @@ fn one_container_for_several_recipients() {
     ));
 }
 
-/// Step 15 review, Envelopes, E3: the one-time signature binds the
-/// container's parts together, and nothing more. Since the one-time key
-/// belongs to nobody, anyone holding a container can strip a recipient
-/// (its entry in `to` and its capsule), sign the rest with a fresh
-/// one-time key, and the recipients left open it as before: the signature
-/// does not keep a relay from re-addressing in that direction. Adding a
-/// recipient stays impossible without the container key. This pins the
-/// behaviour as it is, so that the texts can describe it rightly; it is
-/// not a bug in the code, which follows the format.
+/// A relay holding a container sealed to Bob and Carol can drop Carol (her
+/// entry in `to` and her capsule), and Bob opens the rest as before: the
+/// outside of a sealed container is unauthenticated by design (Envelopes
+/// draft 10, F293), and leaving a recipient out is no more than withholding
+/// the container from it. Only the inner act's own `to`, signed by Alice,
+/// records whom she sealed it for; adding a recipient stays impossible
+/// without the container key.
 #[test]
-fn a_recipient_can_be_stripped_and_the_container_resigned() {
+fn a_recipient_can_be_stripped_from_the_container() {
     let alice = signer("alice");
     let names = ["bob", "carol"];
     let keys: Vec<DecKey> = names.iter().map(|n| deckey(n)).collect();
@@ -620,7 +608,7 @@ fn a_recipient_can_be_stripped_and_the_container_resigned() {
         })
         .collect();
     let s = seal(&msg, Some(&k), &recipients, &rnd("strip", 2)).unwrap();
-    // A relay drops Carol: her entry in `to`, her capsule, and signs anew.
+    // A relay drops Carol: her entry in `to` and her capsule.
     let (capsules, nonce, locked) = s.parts().unwrap();
     let locked_act = mor_core::cbor::encode(&Value::Array(vec![
         Value::Array(vec![Value::Array(vec![
@@ -630,25 +618,12 @@ fn a_recipient_can_be_stripped_and_the_container_resigned() {
         Value::Bytes(nonce.to_vec()),
         Value::Bytes(locked),
     ]));
-    let relay = SchnorrKey::from_secret(&h("a relay's one-time key")).unwrap();
-    let to = vec![ids[0]];
-    let signed = {
-        let v = Value::Array(vec![
-            Value::Array(to.iter().map(|x| Value::Bytes(x.to_vec())).collect()),
-            Value::Bytes(relay.public().to_vec()),
-            Value::Bytes(locked_act.clone()),
-        ]);
-        mor_core::hash::tagged_hash("MOR/sealed", &mor_core::cbor::encode(&v))
-    };
     let stripped = Sealed {
-        to,
-        one_time_key: relay.public(),
+        to: vec![ids[0]],
         locked_act,
-        sig: relay.sign(&signed, &[0; 32]).sig.try_into().unwrap(),
     };
-    // The signature holds, and Bob opens it as if Alice had built it so;
-    // only the inner act's own `to`, which Alice signed, still names Carol.
-    assert!(stripped.check_signature().is_ok());
+    // Bob opens it as if Alice had built it so; only the inner act's own
+    // `to`, which Alice signed, still names Carol.
     let opened = checked_open(&stripped, Some(&ids[0]), &keys[0]).unwrap();
     assert_eq!(opened.act, msg);
     assert_eq!(opened.act.outside.to.as_deref(), Some(ids.as_slice()));

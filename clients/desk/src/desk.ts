@@ -472,6 +472,32 @@ export class Desk {
     const l = await lookUp(me.id, this.hints(), via);
     if (rec.key) l.verifier.addWithKey(act, unb64(rec.key));
     else l.verifier.add(act);
+    // The acts it names in `objects` that this desk signed and kept: a
+    // withdrawal is judged against its publication, unknown without it
+    // (Envelopes rule 24; Identity draft 13, F298).
+    const named = new Set(((describeAct(act) as { objects?: [string, string][] }).objects ?? []).map((o) => o[1]));
+    if (named.size) {
+      for (const k of this.store.keptActs()) {
+        const id = (describeAct(k.act) as { id: string }).id;
+        if (!named.has(id)) continue;
+        if (k.key) l.verifier.addWithKey(k.act, k.key);
+        else l.verifier.add(k.act);
+        named.delete(id);
+      }
+      // Not kept here: looked for where acts are looked for.
+      for (const id of named) {
+        for (const hint of this.hints()) {
+          try {
+            const b = await relayAt(hint, via).getAct(id);
+            if (!b) continue;
+            l.verifier.add(b);
+            break;
+          } catch {
+            // not at that place
+          }
+        }
+      }
+    }
     const standing = l.verifier.status(rec.act);
     if (standing !== 'valid') throw new Error(`the signed act is ${standing}, not valid, for its signer's identity chain. Nothing was sent.`);
 

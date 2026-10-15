@@ -31,6 +31,15 @@ pub fn agreements_spec() -> Hash {
     sha256(b"LAW, test value until the freeze")
 }
 
+/// The Envelopes and Text MIRs' spec hashes in these tests, which every
+/// client holds: their acts are decoded strictly (F295, F296).
+pub fn envelopes_spec() -> Hash {
+    sha256(b"ENVELOPE, test value until the freeze")
+}
+pub fn text_spec() -> Hash {
+    sha256(b"TEXT, test value until the freeze")
+}
+
 /// The second implementation's verdict on an SLH-DSA signature.
 pub fn second_opinion(s: &Signature, msg: &[u8]) -> bool {
     fn check<P: slh_dsa::ParameterSet>(key: &[u8], sig: &[u8], msg: &[u8]) -> bool {
@@ -177,7 +186,7 @@ impl Default for World {
 impl World {
     pub fn new() -> Self {
         World {
-            v: Verifier::with_mirs(identity_spec(), money_spec(), agreements_spec()),
+            v: Verifier::with_mirs(identity_spec(), money_spec(), agreements_spec()).knowing_envelopes_and_text(envelopes_spec(), text_spec()),
             counter: 0,
             log: vec![],
         }
@@ -628,4 +637,28 @@ impl World {
         let id = owner.id;
         self.act(owner, p, Self::naming(&id, rotation))
     }
+}
+
+/// A publication's payload in its format (Envelopes draft 10, "Publication
+/// (type 0)"; F295): the fields given, and every required field the
+/// fixture leaves out filled with a test value (0, the media type; 1, the
+/// work hash; 2, the locked bytes' hash; 3, the size; 4, the nonce). A
+/// publication outside its format is invalid where Envelopes is
+/// implemented, so the fixtures write it whole.
+pub fn publication(mut fields: Vec<(Value, Value)>) -> Vec<(Value, Value)> {
+    let has = |f: &Vec<(Value, Value)>, k: u64| f.iter().any(|(x, _)| *x == Value::Uint(k));
+    let defaults = [
+        (0, Value::Bytes(sha256(b"a media type, test value").to_vec())),
+        (1, Value::Bytes(sha256(b"a work, test value").to_vec())),
+        (2, Value::Bytes(sha256(b"locked bytes, test value").to_vec())),
+        (3, Value::Uint(0)),
+        (4, Value::Bytes(vec![0; 24])),
+    ];
+    for (k, v) in defaults {
+        if !has(&fields, k) {
+            fields.push((Value::Uint(k), v));
+        }
+    }
+    fields.sort_by(|a, b| mor_core::cbor::encode(&a.0).cmp(&mor_core::cbor::encode(&b.0)));
+    fields
 }

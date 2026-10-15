@@ -63,6 +63,9 @@ fn terms(top: Vec<u64>) -> Terms {
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     }
 }
 

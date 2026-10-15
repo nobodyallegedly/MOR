@@ -52,7 +52,7 @@ interface Described {
 
 /** One verifier for the whole run, each signer looked up once. */
 class Judge implements Judging {
-  readonly v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  readonly v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   private looked = new Map<string, Promise<Lookup>>();
   constructor(
     private places: string[],

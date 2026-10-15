@@ -79,8 +79,14 @@ fn step_5_3_a_negotiation_record_is_proven_complete_by_agreements_messages() {
         Some(vec![Object { chain: m1, predecessor: m4 }]), Some(vec![m4]));
     let bad = w.add(&bad);
     assert_eq!(w.v.status(&bad), Status::Invalid);
-    let reply = w.everyday_act(&mut buyer, text_spec, 0, vec![(Value::Uint(0), Value::Text("ok".into()))],
+    // Without acks but naming the thread in `objects`, it is invalid too: a
+    // text act carries no objects (Text draft 8, rule 14, F296).
+    let chained = w.everyday_act(&mut buyer, text_spec, 0, vec![(Value::Uint(0), Value::Text("ok".into()))],
         Some(vec![Object { chain: m1, predecessor: m4 }]), None);
+    let chained = w.add(&chained);
+    assert_eq!(w.v.status(&chained), Status::Invalid);
+    // A plain text reply, valid, and no part of the record.
+    let reply = w.everyday_act(&mut buyer, text_spec, 0, vec![(Value::Uint(0), Value::Text("ok".into()))], None, None);
     let reply = w.add(&reply);
     assert_eq!(w.v.status(&reply), Status::Valid);
     // A negotiation message naming the text reply as its previous proves

@@ -589,24 +589,31 @@ export class TestIdentity {
    * whenever resent, rule 8a); it counts once the homes hold it. Sent to
    * `relays` too, beside the act it signs.
    */
-  async chainSign(signs: string, relays: string[] = []): Promise<{ id: string; counts: boolean; sent: Submitted[] }> {
+  async chainSign(
+    signs: string,
+    relays: string[] = [],
+    shared?: { scheme: number; seeds: Uint8Array; next: { scheme: number; commit: string } },
+  ): Promise<{ id: string; counts: boolean; sent: Submitted[] }> {
     if (this.f.pending) throw new Error('a rotation is pending: submit and settle it first; one chain key signs one identity-chain act (Identity rule 8a)');
-    const next = newTestChainKey(this.f.safety.scheme as 2 | 3);
+    // `shared`: a chain key held as shares (a collective's), rebuilt by the
+    // caller, the next one dealt as shares too, so never kept whole here.
+    const fresh = shared ? null : newTestChainKey(this.f.safety.scheme as 2 | 3);
+    const next = shared ? shared.next : fresh!;
     const chain = this.chainActs();
     const act = makeChainSignature({
       identitySpec: SPECS.identity,
       identity: this.f.identity,
       previous: actId(chain[chain.length - 1]),
       position: chain.length,
-      chainKeyScheme: this.f.safety.scheme,
-      chainKeySeeds: unhex(this.f.safety.seeds),
+      chainKeyScheme: shared ? shared.scheme : this.f.safety.scheme,
+      chainKeySeeds: shared ? shared.seeds : unhex(this.f.safety.seeds),
       nextChainKeyScheme: next.scheme,
       nextChainKeyCommit: next.commit,
       signs,
     });
     const id = actId(act);
     this.f.chain.push(b64(act));
-    this.f.safety = { scheme: next.scheme, seeds: hex(next.seeds) };
+    this.f.safety = { scheme: next.scheme, seeds: fresh ? hex(fresh.seeds) : '' };
     const sent = await this.submitChainAct(act, this.f.homes);
     for (const hint of relays) await relayAt(hint, this.via).putAct(act);
     const lookup = await lookUp(this.f.identity, this.f.homes.map((h) => h.hint), this.via);
@@ -896,7 +903,6 @@ export function sealFor(act: Uint8Array, key: Uint8Array | undefined, recipients
       containerKey: new Uint8Array(randomBytes(32)),
       nonce: new Uint8Array(randomBytes(24)),
       eseeds,
-      oneTimeSecret: newSigningSecret(),
     },
   });
   const parts = sealedParts(sealed) as { capsules: Uint8Array[] };

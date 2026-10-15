@@ -215,3 +215,56 @@ mod tests {
         );
     }
 }
+
+/// A string normalized to NFC with the pinned tables (Text, rule 6): what
+/// a composing client normalizes with, so that it composes exactly as the
+/// core checks (Fable's T5).
+pub fn nfc(s: &str) -> String {
+    s.nfc().collect()
+}
+
+/// The text act's type (Text, "Act format"): the only type the Text MIR defines.
+pub const TEXT_ACT: u64 = 0;
+
+/// Why an act of the Text MIR is not a text act in its format.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NotATextAct(pub &'static str);
+
+impl fmt::Display for NotATextAct {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "not a text act in its format: {}", self.0)
+    }
+}
+
+/// A Text MIR act in its format, decoded strictly (Text draft 8, part three
+/// and rule 14; F295, F296): of type 0; its payload a closed map, field 0
+/// a text string, field 1 (optional) a 32-byte hash, the format; no `acks`
+/// (Envelopes rule 18) and no `objects` (F296: a chain of texts is a cMIP's,
+/// by a companion act). The text's canonical form is checked with every
+/// text field of the act ([`check_value`], at decoding). An act that fails
+/// is invalid wherever the Text MIR is implemented, which every client does.
+pub fn check_act(inside: &crate::act::Inside) -> Result<(), NotATextAct> {
+    if inside.type_ != TEXT_ACT {
+        return Err(NotATextAct("a type the Text MIR does not define"));
+    }
+    if inside.acks.is_some() {
+        return Err(NotATextAct("a text act carries no acks (Envelopes rule 18)"));
+    }
+    if inside.objects.is_some() {
+        return Err(NotATextAct("a text act carries no objects (rule 14, F296)"));
+    }
+    let mut text = false;
+    for (k, v) in &inside.payload {
+        match (k, v) {
+            (Value::Uint(0), Value::Text(_)) => text = true,
+            (Value::Uint(0), _) => return Err(NotATextAct("field 0, the text, is a text string")),
+            (Value::Uint(1), Value::Bytes(b)) if b.len() == 32 => {}
+            (Value::Uint(1), _) => return Err(NotATextAct("field 1, the format, is a 32-byte hash")),
+            _ => return Err(NotATextAct("a field the text act's format does not define")),
+        }
+    }
+    if !text {
+        return Err(NotATextAct("a text act carries its text, field 0"));
+    }
+    Ok(())
+}

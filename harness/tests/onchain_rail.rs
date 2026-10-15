@@ -127,13 +127,7 @@ impl Party {
 
 /// Seal an act to an identity's encryption key and deliver it to its inbox.
 async fn deliver(to: &PayeeView, a: &Act, key: &[u8; 32]) {
-    let one_time_secret = loop {
-        let s = random::<32>();
-        if mor_core::sig::SchnorrKey::from_secret(&s).is_some() {
-            break s;
-        }
-    };
-    let rnd = SealRandom { container_key: random::<32>(), nonce: random::<24>(), eseeds: vec![random::<64>()], one_time_secret, aux: random::<32>() };
+    let rnd = SealRandom { container_key: random::<32>(), nonce: random::<24>(), eseeds: vec![random::<64>()] };
     let s = envelopes::seal(a, Some(key), &[Recipient::Identity { id: to.id, key: to.ek.clone() }], &rnd).expect("a sealed container");
     mor_relay::client::Client::new(&to.inbox).put_sealed(&s.encode(), &[]).await.expect("the inbox takes it");
 }

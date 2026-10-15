@@ -88,7 +88,7 @@ export async function sellerAlarm(me: string, payment: Uint8Array, hints: string
   if (!Array.isArray(claim) || !(claim[0] instanceof Uint8Array) || !(claim[1] instanceof Uint8Array)) return null;
   const agreement = hex(claim[0]);
   const named = hex(claim[1]);
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   const add = (a: Uint8Array) => {
     try {
       v.add(a);
@@ -318,7 +318,7 @@ export interface OfferCheck {
  * protected, A4).
  */
 export async function offerCheck(offered: string, hints: string[], via: Via = {}): Promise<OfferCheck> {
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   const add = (a: Uint8Array) => {
     try {
       v.add(a);

@@ -25,12 +25,35 @@ pub mod lnd;
 use bolt11::{Bolt11Error, Network};
 use mor_core::cbor::{self, Value};
 use mor_core::hash::{sha256, Hash};
-use mor_payment::{Answer, RailInput, RailKind, RailModule, Verification};
+use mor_payment::{Answer, RailInput, RailModule, Verification};
 
-/// This Module's spec hash. A test value until the Module is published by
-/// its creator (roadmap step 17).
+/// The creator this Module's specification names: a test value until its
+/// creator's identity is born at step 17.
+pub fn creator() -> Hash {
+    sha256(b"the founding specifications' creator, test value until step 17")
+}
+
+/// This Module's specification's content, encoded, as it is published
+/// (Development draft 10, Part three): a Module (kind 1) by its creator,
+/// implementing the payment cMIP (field 5), its text the Module's draft 3
+/// (`modules/module-lightning-rail-draft-3.md`, canonical text), and its kind and binding as fields
+/// 11 and 13 (F301): a request rail (0), its proof binding the payee and the
+/// purpose ([0, 1]). The payment cMIP reads them from here, never from code.
+pub fn specification() -> Vec<u8> {
+    cbor::encode(&Value::Map(vec![
+        (Value::Uint(0), Value::Uint(mor_core::development::kinds::MODULE)),
+        (Value::Uint(1), Value::Bytes(creator().to_vec())),
+        (Value::Uint(5), Value::Bytes(mor_payment::spec().to_vec())),
+        (Value::Uint(9), Value::Text(include_str!("../../module-lightning-rail-draft-3.md").into())),
+        (Value::Uint(11), Value::Uint(0)),
+        (Value::Uint(13), Value::Array(vec![Value::Uint(0), Value::Uint(1)])),
+    ]))
+}
+
+/// This Module's spec hash: the hash of its specification's content
+/// ([`specification`]). A draft hash until its creator is named at step 17.
 pub fn spec() -> Hash {
-    sha256(b"Lightning rail Module, draft 1, test value until publication")
+    mor_core::development::Spec::hash_of(&specification())
 }
 
 /// The units this Module carries, one per network (`modules/units-bitcoin-draft-1.md`):
@@ -199,9 +222,8 @@ impl RailModule for Lightning {
         mor_payment::spec()
     }
 
-    /// A request rail (F128, W4): the payee's node issues each invoice.
-    fn kind(&self) -> RailKind {
-        RailKind::Request
+    fn specification(&self) -> Vec<u8> {
+        specification()
     }
 
     fn unit(&self, address: &[u8]) -> Option<Hash> {

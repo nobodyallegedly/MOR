@@ -93,6 +93,9 @@ pub enum Refusal {
     Shares(ShareError),
     /// Something the device does not implement.
     Unsupported(&'static str),
+    /// Evidence given for an exception does not check (rule 29: only bytes
+    /// open an exception, F299, F328 Q3).
+    Evidence(String),
 }
 
 impl fmt::Display for Refusal {
@@ -113,6 +116,7 @@ impl fmt::Display for Refusal {
             Refusal::NeedsConfirmation(e) => write!(f, "needs your explicit confirmation: {e}"),
             Refusal::Shares(e) => write!(f, "{e}"),
             Refusal::Unsupported(w) => write!(f, "not supported by this device: {w}"),
+            Refusal::Evidence(e) => write!(f, "the evidence for an exception does not check: {e}"),
         }
     }
 }
@@ -139,6 +143,16 @@ pub enum Exception {
     /// One endorsed homeless rotation (an escape) after a normal rotation the
     /// homes refused; the endorsement must list it as abandoned.
     Escape { abandoned: Hash },
+    /// The same exception, out of a position contested at a self-hosted
+    /// home (Identity draft 13, rule 29, F299): granted only on the
+    /// competing rotation's bytes, checked here; the endorsement must list
+    /// both rotations served there as abandoned.
+    EscapeContested { own: Hash, competing: Hash },
+    /// The rotation this key signed failed the rotation checks, shown by
+    /// the identity chain's bytes, checked here: it was never a rotation, so
+    /// signing again is no second rotation (Identity draft 13, rule 29,
+    /// Fable's I5; F328, Q3).
+    AfterInvalid { invalid: Hash },
 }
 
 impl fmt::Display for Exception {
@@ -153,6 +167,17 @@ impl fmt::Display for Exception {
                 f,
                 "this key already signed a normal rotation ({}). Sign this escape only if the homes refused that rotation; the escape endorsement MUST list it as abandoned. Allowed once.",
                 hexs(abandoned)
+            ),
+            Exception::EscapeContested { own, competing } => write!(
+                f,
+                "this key already signed a normal rotation ({}), and this device checked a competing rotation revealing the same key at the same position ({}): the position is contested at a self-hosted home. Sign this escape to leave it; the escape endorsement MUST list both as abandoned. Allowed once.",
+                hexs(own),
+                hexs(competing)
+            ),
+            Exception::AfterInvalid { invalid } => write!(
+                f,
+                "this key signed a rotation ({}) that this device has checked against the identity chain's bytes and found invalid: it can count nowhere, so signing again is no second rotation.",
+                hexs(invalid)
             ),
         }
     }
@@ -261,6 +286,8 @@ struct Previous {
     commit: ChainKeyCommit,
     genesis: Option<Genesis>,
     vault: Option<Option<Value>>,
+    /// The homes the previous act sets, where it sets them.
+    homes: Option<Vec<identity::Home>>,
 }
 
 fn check_previous(bytes: &[u8], cfg: &Config) -> Result<Previous, Refusal> {
@@ -298,8 +325,9 @@ fn check_previous(bytes: &[u8], cfg: &Config) -> Result<Previous, Refusal> {
                 id,
                 identity: id,
                 position: 0,
-                commit: g.chain_key,
+                commit: g.chain_key.clone(),
                 vault: vault_of(&g.declarations),
+                homes: Some(g.homes.clone()),
                 genesis: Some(g),
             })
         }
@@ -312,8 +340,9 @@ fn check_previous(bytes: &[u8], cfg: &Config) -> Result<Previous, Refusal> {
                 id,
                 identity: a.outside.signer.expect("checked"),
                 position: r.position,
-                commit: r.chain_key,
+                commit: r.chain_key.clone(),
                 vault: vault_of(&r.declarations),
+                homes: r.homes.clone(),
                 genesis: None,
             })
         }
@@ -374,6 +403,114 @@ fn parse_inside(bytes: &[u8], cfg: &Config) -> Result<Parsed, Refusal> {
         stripped,
         commitment_supplied,
     })
+}
+
+/// An identity-chain act, opened and checked as the device checks the
+/// previous act: public, of the Identity MIR, its signature valid.
+fn open_chain_act(bytes: &[u8], cfg: &Config, what: &str) -> Result<(Act, Inside, Payload), Refusal> {
+    let e = |m: String| Refusal::Evidence(format!("{what}: {m}"));
+    let a = Act::decode(bytes).map_err(|x| e(format!("{x:?}")))?;
+    if !a.outside.is_public() {
+        return Err(e("an identity-chain act is always public".into()));
+    }
+    let inside = a.open(None).map_err(|x| e(format!("{x:?}")))?;
+    if inside.spec != cfg.identity_spec {
+        return Err(e("not an act of the Identity MIR".into()));
+    }
+    if sig::verify(&a.signature, &a.id()) != Verdict::Valid {
+        return Err(e("its signature does not verify".into()));
+    }
+    let payload = Payload::decode(inside.type_, &inside.payload).map_err(|x| e(x.to_string()))?;
+    Ok((a, inside, payload))
+}
+
+/// Rule 29, F299 (Agreements round 2, Q7): the competing rotation served at
+/// a self-hosted identity's position, checked offline. Its signature
+/// verifies under the chain key it revealed, and that key is the one this
+/// device's key commits to; its previous act is the same as that of the
+/// rotation the device signed; it is not a rotation the device signed.
+fn check_competing(bytes: &[u8], cfg: &Config, commitment: &ChainKeyCommit, own: &Record, signed: &[Record]) -> Result<Hash, Refusal> {
+    let e = |m: &str| Refusal::Evidence(format!("the competing rotation: {m}"));
+    let (a, inside, payload) = open_chain_act(bytes, cfg, "the competing rotation")?;
+    let Payload::Rotation(r) = payload else {
+        return Err(e("not a rotation"));
+    };
+    identity::check_rotation_shape(&a, &inside, &r).map_err(|x| Refusal::Evidence(format!("the competing rotation: {x}")))?;
+    let revealed = &a.signature;
+    if revealed.scheme != commitment.scheme || sig::chain_key_commitment(&revealed.scheme, &revealed.key) != commitment.commit {
+        return Err(e("it does not reveal the chain key this rotation is signed with"));
+    }
+    let own_act = Act::decode(&own.act).expect("stored by this device");
+    let own_inside = own_act.open(None).expect("stored by this device");
+    let Ok(Payload::Rotation(mine)) = Payload::decode(identity::types::ROTATION, &own_inside.payload) else {
+        return Err(e("the rotation this device signed is not a normal rotation"));
+    };
+    if r.prev != mine.prev || r.position != mine.position {
+        return Err(e("it does not follow the same previous act as the rotation this device signed"));
+    }
+    let id = a.id();
+    if signed.iter().any(|x| x.act_id == id) {
+        return Err(e("it is a rotation this device signed itself"));
+    }
+    Ok(id)
+}
+
+/// Rule 29, Fable's I5 with F328 Q3: the identity chain from genesis to the
+/// rotation's predecessor, as bytes, rebuilt here: each act's signature
+/// verifies, each rotation follows the act before it, is signed with the
+/// chain key that act committed, and passes the rotation checks against the
+/// state before it. The last act is the previous act given. Whether each
+/// rotation counted at its homes cannot be checked here: receipts live at
+/// the homes; the chain keys that signed them are the owner's, so the
+/// online side cannot forge them.
+fn rebuild_chain(chain: &[Vec<u8>], cfg: &Config, prev_id: &Hash) -> Result<(ChainState, u64), Refusal> {
+    let e = |m: String| Refusal::Evidence(format!("the identity chain: {m}"));
+    let mut state: Option<(ChainState, Hash)> = None;
+    for (i, bytes) in chain.iter().enumerate() {
+        let (a, inside, payload) = open_chain_act(bytes, cfg, "the identity chain")?;
+        state = Some(match (state, payload) {
+            (None, Payload::Genesis(g)) => {
+                identity::check_genesis(&a, &inside, &g).map_err(|x| e(x.to_string()))?;
+                (ChainState::genesis(a.id(), &g), a.id())
+            }
+            (Some((st, last)), Payload::Rotation(r)) => {
+                identity::check_rotation_shape(&a, &inside, &r).map_err(|x| e(x.to_string()))?;
+                if r.prev != last || r.position != i as u64 || a.outside.signer != Some(st.identity) {
+                    return Err(e(format!("act {i} does not follow the act before it")));
+                }
+                let s = &a.signature;
+                if s.scheme != st.chain_key.scheme || sig::chain_key_commitment(&s.scheme, &s.key) != st.chain_key.commit {
+                    return Err(e(format!("act {i} is not signed with the chain key the act before it committed")));
+                }
+                (st.apply(&r).map_err(|x| e(format!("act {i}: {x}")))?, a.id())
+            }
+            (None, _) => return Err(e("it starts with a genesis".into())),
+            (Some(_), _) => return Err(e(format!("act {i} is not a rotation (a chain signature in the chain is not supported by this device)"))),
+        });
+    }
+    let (st, last) = state.ok_or_else(|| e("it is empty".into()))?;
+    if &last != prev_id {
+        return Err(e("it does not end with the previous act given".into()));
+    }
+    Ok((st, chain.len() as u64 - 1))
+}
+
+/// Whether every home in a list is self-hosted.
+fn self_hosted_only(homes: &[identity::Home]) -> bool {
+    !homes.is_empty() && homes.iter().all(|h| h.operator.is_none())
+}
+
+/// What the online device showed, checked in bytes, for rule 29's
+/// exceptions.
+#[derive(Default)]
+struct Evidence {
+    /// The competing rotation, checked (F299).
+    competing: Option<Result<Hash, Refusal>>,
+    /// The state the identity chain's bytes rebuild, where given, and the
+    /// position of its last act (the previous act given).
+    state: Option<(ChainState, u64)>,
+    /// Whether the identity's homes are all self-hosted, where known.
+    self_hosted: Option<bool>,
 }
 
 impl Signer {
@@ -448,6 +585,7 @@ impl Signer {
         request: &Hash,
         homeless: bool,
         escape: bool,
+        evidence: &Evidence,
     ) -> Result<(Standing, Option<Vec<u8>>), Refusal> {
         let Some(m) = self.memory_of(commitment) else {
             return Ok((Standing::New, None));
@@ -467,13 +605,37 @@ impl Signer {
                 None,
             ));
         }
+        // I5 with F328 Q3: the rotation this key signed, run through the
+        // rotation checks against the state the chain's bytes rebuild.
+        if let Some((st, at)) = &evidence.state {
+            let a = Act::decode(&last.act).expect("stored by this device");
+            let inside = a.open(None).expect("stored by this device");
+            if let Ok(Payload::Rotation(r)) = Payload::decode(identity::types::ROTATION, &inside.payload) {
+                if r.position == at + 1 && st.apply(&r).is_err() {
+                    return Ok((Standing::Exception(Exception::AfterInvalid { invalid: last.act_id }), None));
+                }
+            }
+        }
         if !last.homeless && homeless && escape && !m.escape_used {
-            return Ok((
-                Standing::Exception(Exception::Escape {
-                    abandoned: last.act_id,
-                }),
-                None,
-            ));
+            return match &evidence.competing {
+                Some(Ok(rival)) => Ok((
+                    Standing::Exception(Exception::EscapeContested { own: last.act_id, competing: *rival }),
+                    None,
+                )),
+                Some(Err(e)) => Err(e.clone()),
+                // A self-hosted home refuses nothing: the escape out of a
+                // contested position needs the competing rotation's bytes,
+                // never the online side's word (F299).
+                None if evidence.self_hosted == Some(true) => Err(Refusal::Evidence(
+                    "a self-hosted home refuses nothing: an escape out of a contested position needs the competing rotation's bytes".into(),
+                )),
+                None => Ok((
+                    Standing::Exception(Exception::Escape {
+                        abandoned: last.act_id,
+                    }),
+                    None,
+                )),
+            };
         }
         Err(Refusal::AlreadySigned { act: last.act_id })
     }
@@ -655,7 +817,25 @@ impl Signer {
             ));
         }
 
-        let (standing, repeat) = self.standing(&commitment, &request, asked.homeless, escape)?;
+        // Rule 29's exceptions open only on bytes this device checks itself.
+        let mut evidence = Evidence::default();
+        if let Some(chain) = &pending.chain {
+            evidence.state = Some(rebuild_chain(chain, &self.config, &prev.id)?);
+        }
+        evidence.self_hosted = evidence
+            .state
+            .as_ref()
+            .map(|(st, _)| st.homes.clone())
+            .or_else(|| prev.homes.clone())
+            .map(|h| self_hosted_only(&h));
+        if let Some(c) = &pending.competing {
+            let last = self.memory_of(&commitment).and_then(|m| m.signed.last().map(|l| (l.clone(), m.signed.clone())));
+            evidence.competing = Some(match last {
+                Some((own, all)) => check_competing(c, &self.config, &prev.commit, &own, &all),
+                None => Err(Refusal::Evidence("this key has signed nothing it could compete with".into())),
+            });
+        }
+        let (standing, repeat) = self.standing(&commitment, &request, asked.homeless, escape, &evidence)?;
 
         let mut summary = Summary::default();
         if parsed.commitment_supplied {
@@ -765,6 +945,9 @@ impl Signer {
             ChainState::genesis(prev.identity, g)
                 .apply(&r)
                 .map_err(|e| bad(e.to_string()))?;
+        } else if let Some((st, _)) = &evidence.state {
+            // Or from the identity chain's bytes, where given (F328, Q3).
+            st.apply(&r).map_err(|e| bad(e.to_string()))?;
         }
 
         summary::describe(
@@ -795,7 +978,7 @@ impl Signer {
             summary::scheme_name(&next_key.scheme())
         ));
         self.finish_summary(&mut summary, &pending, &prev);
-        if prev.genesis.is_none() && r.homes.is_some() && r.rule.is_none() {
+        if prev.genesis.is_none() && evidence.state.is_none() && r.homes.is_some() && r.rule.is_none() {
             summary
                 .not_checked
                 .push("whether the home rule in effect still fits the new homes (the device holds only the previous act, not the whole chain)".into());
@@ -907,7 +1090,7 @@ impl Signer {
                     Standing::Exception(Exception::AfterVoidedHomeless { .. }) => {
                         m.after_void_used = true
                     }
-                    Standing::Exception(Exception::Escape { .. }) => m.escape_used = true,
+                    Standing::Exception(Exception::Escape { .. } | Exception::EscapeContested { .. }) => m.escape_used = true,
                     _ => {}
                 }
                 m.signed.push(record);

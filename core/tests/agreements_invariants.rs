@@ -23,7 +23,7 @@
 
 mod common;
 
-use common::{own_home, schnorr, signing_key, Person, World};
+use common::{own_home, publication, schnorr, signing_key, Person, World};
 use mor_core::act::{Act, Object};
 use mor_core::cbor::Value;
 use mor_core::chain::{Status, Verifier};
@@ -281,7 +281,7 @@ type Rails = (BTreeSet<Hash>, BTreeSet<Hash>);
 
 fn verdicts(v: &Verifier, rails: &Rails) -> BTreeMap<Hash, String> {
     let mut lv = AgreementsView::new(v, mirs());
-    lv.push_rails = rails.0.clone();
+    lv.rails = rails.0.iter().map(|r| (*r, push_rail_spec())).collect();
     lv.rail_invalid = rails.1.clone();
     let mut out = BTreeMap::new();
     let ids: Vec<Hash> = v.held_acts().map(|h| h.id).collect();
@@ -640,6 +640,9 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, work: Hash) -> Terms 
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     }
 }
 
@@ -852,7 +855,7 @@ impl ColWorld {
         });
         let x = self.act_on(Who2::Dev(0), mirs().money, 0, ptr.to_map(), vec![], &[], true, Seal::Public, None, &[]);
         self.lane_sign(&x);
-        let p = self.act_on(Who2::Dev(0), mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(self.work.to_vec()))], vec![], &[], true, Seal::Public, None, &[]);
+        let p = self.act_on(Who2::Dev(0), mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(self.work.to_vec()))]), vec![], &[], true, Seal::Public, None, &[]);
         self.note(p, Seal::Public, true, None, K::Publication);
         self.publication = Some(p);
     }
@@ -978,7 +981,7 @@ impl ColWorld {
         match *op {
             Op::Publish { dev, seal } => {
                 let d = dev as usize % devs;
-                let x = self.act_on(Who2::Dev(d), mirs().envelopes, 0, vec![(Value::Uint(0), Value::Text("a publication".into()))], vec![], &[], true, seal, None, &[]);
+                let x = self.act_on(Who2::Dev(d), mirs().envelopes, 0, publication(vec![]), vec![], &[], true, seal, None, &[]);
                 self.note(x, seal, true, None, K::Publication);
             }
             Op::Debt { dev, seal, cited, creditor, amount, lane_sign } => {
@@ -1000,7 +1003,7 @@ impl ColWorld {
                 }
                 let d = dev as usize % devs;
                 let h = heads[other as usize % heads.len()];
-                let x = self.act_on(Who2::Dev(d), mirs().envelopes, 0, vec![(Value::Uint(0), Value::Text("a joining publication".into()))], vec![], &[h], true, Seal::Public, None, &[]);
+                let x = self.act_on(Who2::Dev(d), mirs().envelopes, 0, publication(vec![]), vec![], &[h], true, Seal::Public, None, &[]);
                 self.note(x, Seal::Public, true, None, K::Publication);
                 if self.info.contains_key(&h) {
                     let lv = self.view();
@@ -1037,7 +1040,7 @@ impl ColWorld {
                         (x, K::Debt { creditor: cr, amount: 25 })
                     }
                     AgentWhat::InScope | AgentWhat::OutOfScope => {
-                        let x = self.act_on(Who2::Strand(gi, s), mirs().envelopes, 0, vec![(Value::Uint(0), Value::Text("an agent's publication".into()))], vec![], &[], true, seal, None, &[]);
+                        let x = self.act_on(Who2::Strand(gi, s), mirs().envelopes, 0, publication(vec![]), vec![], &[], true, seal, None, &[]);
                         (x, K::Publication)
                     }
                     AgentWhat::Record => {
@@ -1191,8 +1194,8 @@ impl ColWorld {
                 let n = self.succ_people.len();
                 for (k, j) in [n - 2, n - 1].into_iter().enumerate() {
                     if succ_sign || k == 0 {
-                        let mut p = self.succ_people[j].clone();
-                        sign(&mut self.w, &mut p, &x);
+                        // A successor signs by a chain signature (F303).
+                        let (_, p) = self.w.chain_sign(&self.succ_people[j], x);
                         self.succ_people[j] = p;
                     }
                 }
@@ -1285,6 +1288,12 @@ impl ColWorld {
                         let a = self.w.everyday_act(&mut self.creditors[k], mirs().money, 2, rc(creditor, col), None, None);
                         let x = self.w.add(&a);
                         self.paid.push((x, creditor));
+                        // The collective's client acknowledges the creditor's
+                        // receipt on its chain, so a closing may rely on it
+                        // (Agreements draft 14, F303).
+                        let cur = self.current;
+                        let live = agreements::Liveness { agreement: cur }.to_map();
+                        self.act_on(Who2::Dev(0), mirs().agreements, 12, live, obj(cur).unwrap(), &[], true, Seal::Public, Some(vec![x]), &[]);
                     }
                     PaidBy::Debtor => {
                         let x = self.act_on(Who2::Dev(0), mirs().money, 2, rc(col, col), vec![], &[], true, Seal::Public, None, &[]);
@@ -2327,6 +2336,9 @@ impl DealWorld {
             refund: None,
             fees: None,
             backups: s.backup.then(|| agreements::Backups { services: vec![agreements::ServiceGrants::PerPayee(backup_grants.iter().map(|g| g.0).collect())], failure: None }),
+            holders_rules: None,
+            transfers_counted: None,
+            issues_under: None,
         };
         assert_eq!(t.check(&mirs()), Ok(()), "the generator's own deal terms");
         let deal = agreements_act(&mut w, &mut p[0], agreements::types::TERMS, t.to_map(), None);
@@ -2338,7 +2350,7 @@ impl DealWorld {
         }
         t.parent = None;
         let publication = {
-            let a = w.everyday_act(&mut p[0], mirs().envelopes, 0, vec![(Value::Uint(1), Value::Bytes(work.to_vec()))], None, None);
+            let a = w.everyday_act(&mut p[0], mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(work.to_vec()))]), None, None);
             w.add(&a)
         };
         let strand = |x: &Person, g: &(Hash, SchnorrKey)| {
@@ -2381,7 +2393,7 @@ impl DealWorld {
 
     fn view(&self) -> AgreementsView<'_> {
         let mut lv = AgreementsView::new(&self.w.v, mirs());
-        lv.push_rails.insert(push_rail());
+        lv.rails.insert(push_rail(), push_rail_spec());
         lv.rail_invalid = self.wrong.clone();
         lv
     }
@@ -2657,7 +2669,33 @@ impl DealWorld {
                 None => true,
                 Some(p) => lv.agreement(p).map(|a| a.exists == Some(true)).unwrap_or(false),
             };
-            let valid_signer = |i: usize| self.sigs[k].iter().any(|(j, s, _)| *j == i && v.status(s) == Status::Valid);
+            // F314 (Agreements draft 14, rule 47): a version a later act
+            // relies on (a later version cloning it, a split under it, a
+            // purchase naming it) keeps its completeness, a disowned
+            // signature on it shown as a dispute.
+            // Valid under Identity, as the library reads it: valid, or scoped
+            // by a grant key whose grant is valid (an act the deal's split
+            // service signs under its grant, Identity, F128).
+            let counts = |x: &Hash| match v.status(x) {
+                Status::Valid => true,
+                Status::Scoped => v.get(x).and_then(|h| h.act.outside.binding).is_some_and(|g| v.status(&g) == Status::Valid),
+                _ => false,
+            };
+            let relied = self.versions.iter().any(|(x, p, _)| p.as_ref() == Some(k) && v.status(x) == Status::Valid)
+                || self.splits.iter().any(|(x, ..)| {
+                    counts(x) && agreements::Split::decode(&v.get(x).unwrap().inside.payload).is_ok_and(|s| &s.agreement == k)
+                })
+                || v.held_acts().any(|x| {
+                    x.inside.spec == mirs().money
+                        && counts(&x.id)
+                        && match mor_core::money::Payload::decode(x.inside.type_, &x.inside.payload) {
+                            Ok(mor_core::money::Payload::Receipt(r)) => r.purchase.is_some_and(|p| &p.agreement == k || &p.line == k),
+                            Ok(mor_core::money::Payload::Claim(c)) => c.purchase.is_some_and(|p| &p.agreement == k || &p.line == k),
+                            _ => false,
+                        }
+                });
+            let standing = |s: &Hash| v.status(s) == Status::Valid || (relied && matches!(v.status(s), Status::Void | Status::Disputed));
+            let valid_signer = |i: usize| self.sigs[k].iter().any(|(j, s, _)| *j == i && standing(s));
             let all = (0..ids.len()).all(valid_signer);
             if a.exists == Some(true) && !all {
                 bad.push(format!("DEAL-EVERY-PARTY: version {k:?} exists without every party's valid signature: {:?}", self.sigs[k].iter().map(|(j, s, t)| (j, *t, v.status(s))).collect::<Vec<_>>()));
@@ -2733,7 +2771,7 @@ impl DealWorld {
             _ => None,
         };
         let mut bare = AgreementsView::new(&self.w.v, mirs());
-        bare.push_rails.insert(push_rail());
+        bare.rails.insert(push_rail(), push_rail_spec());
         for (answers, lv) in [(true, &lv), (false, &bare)] {
             let mut groups: BTreeMap<(Hash, u8), Vec<String>> = BTreeMap::new();
             let mut lines: BTreeMap<(Hash, u8), BTreeSet<Hash>> = BTreeMap::new();
@@ -3717,7 +3755,7 @@ fn it3_the_payments_claim_decides() {
         }
     }
     let mut bare = AgreementsView::new(&d.w.v, mirs());
-    bare.push_rails.insert(push_rail());
+    bare.rails.insert(push_rail(), push_rail_spec());
     for (x, _) in &d.push {
         assert_eq!(bare.purchase(x).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Unrecorded, "no rail answer yet");
     }
@@ -4050,4 +4088,12 @@ fn of6b_a_pointer_whose_taking_on_a_fork_left_out_counts_for_payments_already_ma
     ];
     let cw = run_col(&shape, &ops, 0);
     assert_eq!(cw.check(), Ok(()));
+}
+
+
+/// A push rail's specification (F301): field 11 is 1, its proof binding the
+/// payee and the purpose, as the push rails of these tests did.
+fn push_rail_spec() -> mor_core::development::Rail {
+    use mor_core::development::{Bound, Rail, RailKind};
+    Rail { kind: RailKind::Push, binds: [Bound::Payee, Bound::Purpose].into_iter().collect() }
 }

@@ -38,3 +38,10 @@ export const NUDGE_TYPES = { terms: 0, nudge: 1, pick: 2 } as const;
  * tell that code is released for a specification a listing shows (website cMIP
  * draft 9, rule 13c). The same test value as the repo client's, until publication. */
 export const RELEASE_MANIFEST = test('release manifest cMIP, draft 1, test value until publication');
+
+
+/** The payment cMIP (cmips/cmip-payment-draft-3.md): only for a listing to
+ * read a Module working under it, which must carry fields 11 and 13
+ * (Development draft 10, F301). The same test value as the core's
+ * `mor_payment::spec()`, until publication. */
+export const PAYMENT_CMIP = test('payment cMIP, draft 2, test value until publication');

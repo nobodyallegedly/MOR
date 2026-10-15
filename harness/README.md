@@ -1,6 +1,6 @@
 # mor-harness
 
-The freeze-suite harness, in Rust. Roadmap step 7: the identity gauntlet, freeze test suite scenario 5, steps 6 to 7d.
+The freeze-suite harness, in Rust. Roadmap step 7: the identity gauntlet, freeze test suite scenario 5, steps 6 to 7d; and, from the decisions of step 15 (Identity draft 13), 5.5c, 5.7e to 5.7g and 5.8b.
 
 ## In plain words
 
@@ -48,6 +48,11 @@ target/release/mor-gauntlet live \
 | 5.7b | throwaway | a forged receipt naming a made-up act and a pair of non-extending summaries change nothing; the auditor stops cosigning that home; the thief cannot close the home |
 | 5.7c | throwaway | closure by rotation and the homeless rotation, final by the next; declared auditors' absence statements, with the proofs the owner carried (F101), and a late objection that changes nothing; a thief's homeless rotation voided by the live home's objection, carried back by a relay; rule 8a's exception; a hostile home and the escape, the abandoned rotation never counting; the audit requirement dropped; a used first chain key after a closure (F92); a thief dropping auditing (F93); the censored reader (F87), labelled re-homed without audit (conformance), the thief's second rotation not final, both undone by a bundle; a redirected inbox and encryption key, and the re-delivery after rotation |
 | 5.7d | throwaway | contested until the operator rotates; with audit, the cosigned receipt settles it; both receipts under cosigned summaries prove the home dishonest at that position only, the earlier receipts surviving; the auditor stops cosigning the home |
+| 5.5c | throwaway | (F298) a reader holding the rotation and its kept tip but not the whole line: the first post unknown, never void, then valid once the line arrives |
+| 5.7e | throwaway | (F297) an objection signed with a vanished home's stolen operator key voids the homeless rotation until the operator rotates (the stated cost, F328 Q2); witnessed by an accomplice and left out by the operator's rotation, it is shown as a dispute and voids nothing, and the exit counts |
+| 5.7f | throwaway | (F299) a thief's rotation and the owner's at one position of a self-hosted identity: contested for good; the escape with both keys, the endorsement listing both as abandoned, counts (the air-gapped Module's half: `modules/airgap/tests/rule_29.rs`) |
+| 5.7g | throwaway | (Fable's I5) a rotation leaving in place a home rule that no longer fits is refused by the homes and never counts; signed again with the same chain key, the rotation counts (the Module's half: `modules/airgap/tests/rule_29.rs`) |
+| 5.8b | throwaway | (F300) a stranger's succession naming the journalist, and the journalist's own before its heir confirms: shown as declared; followed once the heir signs a link confirmation naming the rotation |
 | all | — | every SLH-DSA signature the readers meet is checked by both implementations (fips205 and RustCrypto's `slh-dsa`), and they agree |
 
 ## Modules

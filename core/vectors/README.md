@@ -13,6 +13,7 @@ Made by `cargo run -p mor-core --example gen_vectors`, checked by the Rust libra
 | `running-summary.json` | The running summary over 0 to 11 stand-in act ids. | Envelopes, "Sequences" |
 | `sequence-three-acts.json` | **The three-act vector (F78).** Three public text acts in one sequence: each inside, its commitment, the locked bytes, the outside, the act id, and the running summary each act carries; then the summary including the third act. | Envelopes, "Sequences"; Text, "Act format" |
 | `open-act.json` | Sealed acts, and the first check that fails when each is opened, or `ok`. | Envelopes, validity rules 1–5 |
+| `sealed.json` | A sealed container in Envelopes draft 10's format (F293), `[to, locked-act]`, with no one-time key and no signature: every input fixed (the recipient's X-Wing secret, the inner act, the container key, the nonce, the eseed), the container's bytes, and what the recipient opens. Checked by the Rust library only: `check.py` has no X-Wing. | Envelopes, "Sealed container" |
 
 No signatures appear: they are part 2 (roadmap step 3). The act id does not depend on the signature, so every id here is final for its outside.
 

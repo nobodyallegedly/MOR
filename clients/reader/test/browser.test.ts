@@ -13,7 +13,8 @@ import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Browser } from 'playwright-core';
 import { TestIdentity } from '../../genesis/src/identity.ts';
-import { SPECS, cborEncode } from '../../genesis/src/core.ts';
+import { SPECS, cborEncode, mirHash } from '../../genesis/src/core.ts';
+import { MIR_TEXTS } from '../src/mirs.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { publishDocument } from '../../longform/src/act.ts';
@@ -164,6 +165,14 @@ test('the front page lists the documents, verified; a link to nothing says so', 
   await page.waitForFunction(() => document.querySelectorAll('#docs li a').length >= 2, null, { timeout: 60_000 });
   const titles = await page.$$eval('#docs li a', (as) => as.map((a) => a.textContent));
   assert.deepEqual(titles, ['Thank you for the shower… (a test post)', 'A long-form test document']);
+  // F324, suite 8.1: the six MIRs' hashes, recomputed in the browser from the texts the reader ships.
+  await page.waitForFunction(() => document.querySelectorAll('#mirs li[data-hash]').length === 6, null, { timeout: 60_000 });
+  const mirs = await page.$$eval('#mirs li', (ls) => ls.map((l) => [(l as HTMLElement).dataset.mir, (l as HTMLElement).dataset.hash]));
+  assert.deepEqual(
+    mirs,
+    MIR_TEXTS.map(({ layer, file }) => [layer, mirHash(readFileSync(join(here, '../../spec', file), 'utf8'))]),
+    'the same six as the core library recomputes outside the browser',
+  );
   await page.click('#docs li:nth-child(2) a');
   await page.waitForSelector('h1');
   assert.equal(await page.textContent('h1'), 'A long-form test document');

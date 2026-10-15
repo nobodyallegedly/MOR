@@ -215,20 +215,12 @@ pub struct RailInput<'a> {
     pub rail_proof: &'a [u8],
 }
 
-/// Whether a rail Module is a request rail or a push rail (F128, W4; F140
-/// item 1): a rail Module declares it, and a client reads it from the
-/// Module, never sets it by hand. *Format open: the Development
-/// specification format has no field for it yet; until it has, each
-/// Module's code states what its text declares.*
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RailKind {
-    /// The payee's side commits to each payment before it is made, and so
-    /// to the claim a purchase names.
-    Request,
-    /// The payer pays an address with no request; each holder settles the
-    /// claim on its own chain (Money rule 10c).
-    Push,
-}
+/// Whether a rail Module is a request rail or a push rail (F128, W4), and
+/// what its proof binds: fields 11 and 13 of its specification (Development
+/// draft 10, F301), read from the specification at adoption, never from the
+/// Module's code. A rail Module's specification without them is no
+/// specification, and a payment naming it is unknown (F323).
+pub use mor_core::development::{Bound, Rail, RailKind};
 
 /// A rail Module, as the payment cMIP needs it.
 pub trait RailModule {
@@ -238,9 +230,11 @@ pub trait RailModule {
     /// The cMIP its specification's field 5 names ("implements",
     /// Development). Checked where an agreement names a payment cMIP (F115).
     fn implements(&self) -> Hash;
-    /// Whether it is a request rail or a push rail, as its specification
-    /// declares.
-    fn kind(&self) -> RailKind;
+    /// Its specification's content, encoded, as it is published (Development
+    /// draft 10, Part three): its spec hash is the hash of these bytes, and
+    /// the payment cMIP reads its kind and binding, fields 11 and 13, from
+    /// them at adoption (F301), never from the Module's code.
+    fn specification(&self) -> Vec<u8>;
     /// The unit a rail address or vault source carries, if the address is
     /// one this Module reads.
     fn unit(&self, address: &[u8]) -> Option<Hash>;
@@ -312,28 +306,62 @@ pub trait Held {
     }
 }
 
-/// The rail Modules a verifier has adopted, by spec hash.
+/// The rail Modules a verifier has adopted, by spec hash, each with its
+/// kind and binding as its specification declares them.
 #[derive(Default)]
 pub struct Modules<'a> {
-    by_spec: BTreeMap<Hash, &'a dyn RailModule>,
+    by_spec: BTreeMap<Hash, (&'a dyn RailModule, Rail)>,
+    /// Modules offered for adoption whose specification is no specification
+    /// of a rail Module under this cMIP (F301, F323): not adopted, and every
+    /// payment naming them unknown.
+    pub refused: Vec<(Hash, String)>,
 }
 
 impl<'a> Modules<'a> {
     pub fn new() -> Self {
         Self::default()
     }
+    /// Adopt a rail Module: its specification decoded whole (F323), its
+    /// spec hash the hash of its content, naming this cMIP in field 5, with
+    /// fields 11 and 13 (F301). Otherwise it is not adopted, and the reason
+    /// is kept in [`Self::refused`].
     pub fn adopt(mut self, m: &'a dyn RailModule) -> Self {
-        self.by_spec.insert(m.spec(), m);
+        let content = m.specification();
+        let known = mor_core::development::Known { payment_cmip: Some(spec()) };
+        let why = match mor_core::development::Spec::decode(&content, &known) {
+            Err(e) => Some(e.to_string()),
+            Ok(_) if mor_core::development::Spec::hash_of(&content) != m.spec() => Some("its spec hash is not the hash of its content".into()),
+            Ok(sp) if sp.implements != Some(spec()) => Some("its field 5 does not name this payment cMIP".into()),
+            Ok(sp) => match sp.rail {
+                Some(r) => {
+                    self.by_spec.insert(m.spec(), (m, r));
+                    None
+                }
+                None => Some("no fields 11 and 13".into()),
+            },
+        };
+        if let Some(w) = why {
+            self.refused.push((m.spec(), w));
+        }
         self
     }
     pub fn get(&self, spec: &Hash) -> Option<&'a dyn RailModule> {
-        self.by_spec.get(spec).copied()
+        self.by_spec.get(spec).map(|(m, _)| *m)
     }
-    /// The adopted rail Modules that declare themselves push rails: what a
-    /// Agreements client hands the core's Agreements view (`AgreementsView::push_rails`), read
-    /// from the Modules rather than set by hand (F140 item 1).
+    /// An adopted rail Module's kind and binding, from its specification.
+    pub fn rail(&self, spec: &Hash) -> Option<&Rail> {
+        self.by_spec.get(spec).map(|(_, r)| r)
+    }
+    /// Every adopted rail Module's kind and binding, by spec hash: what an
+    /// Agreements client hands the core's Agreements view
+    /// (`AgreementsView::rails`), read from the specifications (F301).
+    pub fn rails(&self) -> BTreeMap<Hash, Rail> {
+        self.by_spec.iter().map(|(h, (_, r))| (*h, r.clone())).collect()
+    }
+    /// The adopted rail Modules whose specifications declare them push
+    /// rails (field 11 is 1).
     pub fn push_rails(&self) -> BTreeSet<Hash> {
-        self.by_spec.iter().filter(|(_, m)| m.kind() == RailKind::Push).map(|(h, _)| *h).collect()
+        self.by_spec.iter().filter(|(_, (_, r))| r.kind == RailKind::Push).map(|(h, _)| *h).collect()
     }
 }
 

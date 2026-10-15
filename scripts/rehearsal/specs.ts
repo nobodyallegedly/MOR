@@ -4,18 +4,39 @@
 // creator (the author's identity; none for a MIR), and its text, made
 // canonical (Text MIR).
 //
-// Development's kinds are cMIP, Module, unit, media type, MIR and signature
-// scheme: none is the MICS's own document or the freeze test suite. Until
-// Nobody, allegedly, decides, the rehearsal publishes both under the MIR kind,
-// and says so (PROVISIONAL); docs/step-17-rehearsal.md puts the question.
+// Development draft 10 gives the MICS document and a test suite kinds of
+// their own (6 and 7, F291), naming no creator, as a MIR names none; and a
+// Module names, in field 5, the cMIP it implements or the MIR it works under
+// (F322, F328 Q6). Which one, for each Module, is read from its text
+// (`MODULE_UNDER`); the four key Modules say only that they are Identity's,
+// so the rehearsal names the Identity MIR for them (the rehearsal's reading,
+// in docs/code-after-step-15-part-4.md).
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { cborEncode, checkText, unhex } from '../../clients/genesis/src/core.ts';
+import { specHash } from '../../clients/site/src/listing.ts';
 import { compose } from '../../clients/longform/src/text.ts';
 
-export const KIND = { cMIP: 0, Module: 1, unit: 2, MIR: 4 } as const;
-export const PROVISIONAL = 'the MICS and the freeze test suite published under the MIR kind (4), Development naming no kind for them';
+export const KIND = { cMIP: 0, Module: 1, unit: 2, MIR: 4, MICS: 6, suite: 7 } as const;
+/** No kind is provisional since Development draft 10 (F291): kept for the report's line. */
+export const PROVISIONAL = 'none: the MICS document and the freeze test suite have kinds of their own since Development draft 10 (F291)';
+/** Kinds that name no creator (Development draft 10, field 1). */
+const NO_CREATOR: (keyof typeof KIND)[] = ['MIR', 'MICS', 'suite'];
+
+/** What each Module works under (field 5), by the file of the cMIP or MIR its text names. */
+const MODULE_UNDER: Record<string, string> = {
+  'module-lightning-rail': 'cmip-payment',
+  'module-onchain-rail': 'cmip-payment',
+  'module-bitcoin-clock': 'cmip-anchoring',
+  'module-clock-timestamp': 'cmip-anchoring',
+  'module-jpeg': 'MIR-envelopes',
+  'module-video': 'MIR-envelopes',
+  'module-airgap-chain-key-signer': 'MIR-identity',
+  'module-chain-key-seed-words': 'MIR-identity',
+  'module-chain-key-seed-hex': 'MIR-identity',
+  'module-identity-carry-words': 'MIR-identity',
+};
 
 export interface SpecFile {
   file: string;
@@ -42,20 +63,34 @@ function newest(root: string, dir: string, re: RegExp): string[] {
 
 export function specifications(root: string, creator: string): SpecFile[] {
   const files: [string, keyof typeof KIND, boolean][] = [
-    ...newest(root, 'spec', /^(02-MOR-MICS)-v(\d+)\.md$/).map((f): [string, keyof typeof KIND, boolean] => [f, 'MIR', true]),
+    ...newest(root, 'spec', /^(02-MOR-MICS)-v(\d+)\.md$/).map((f): [string, keyof typeof KIND, boolean] => [f, 'MICS', false]),
     ...newest(root, 'spec', /^(MIR-[a-z]+)-draft-(\d+)\.md$/).map((f): [string, keyof typeof KIND, boolean] => [f, 'MIR', false]),
-    ...newest(root, 'spec', /^(03-MOR-freeze-test-suite)-v(\d+)\.md$/).map((f): [string, keyof typeof KIND, boolean] => [f, 'MIR', true]),
+    ...newest(root, 'spec', /^(03-MOR-freeze-test-suite)-v(\d+)\.md$/).map((f): [string, keyof typeof KIND, boolean] => [f, 'suite', false]),
     ...newest(root, 'cmips', /^(cmip-[a-z-]+?)-draft-(\d+)\.md$/).map((f): [string, keyof typeof KIND, boolean] => [f, 'cMIP', false]),
     ...newest(root, 'modules', /^(module-[a-z-]+?)-draft-(\d+)\.md$/).map((f): [string, keyof typeof KIND, boolean] => [f, 'Module', false]),
     ...newest(root, 'modules', /^(units-[a-z-]+?)-draft-(\d+)\.md$/).map((f): [string, keyof typeof KIND, boolean] => [f, 'unit', false]),
   ];
-  return files.map(([file, kind, provisional]) => {
+  // Modules last: each names, by its spec hash, what it works under.
+  const order = (k: keyof typeof KIND) => (k === 'Module' ? 1 : 0);
+  const made: SpecFile[] = [];
+  for (const [file, kind, provisional] of [...files].sort((a, b) => order(a[1]) - order(b[1]))) {
     const { text, changes } = compose(readFileSync(join(root, file), 'utf8'));
     checkText(text);
-    // A MIR names no creator (Development, Part three: optional for MIRs only), so its spec hash
+    // A MIR, the MICS document and a test suite name no creator, so their spec hashes
     // can be fixed at the freeze, before the author's identity exists. Every other kind names it.
-    const fields: [number, unknown][] = [[0, KIND[kind]], ...(kind === 'MIR' ? [] : [[1, unhex(creator)] as [number, unknown]]), [9, text]];
-    const content = cborEncode(new Map<number, unknown>(fields));
-    return { file, kind, provisional, content, changes };
-  });
+    const fields: [number, unknown][] = [[0, KIND[kind]], ...(NO_CREATOR.includes(kind) ? [] : [[1, unhex(creator)] as [number, unknown]])];
+    if (kind === 'Module') {
+      const name = Object.keys(MODULE_UNDER).find((m) => file.includes(`${m}-draft-`));
+      const under = name && made.find((x) => x.file.includes(`${MODULE_UNDER[name]}-draft-`));
+      if (!under) throw new Error(`${file}: what it works under (field 5) is not known to the rehearsal`);
+      fields.push([5, unhex(specHash(under.content))]);
+      // A rail Module's kind and binding (Development draft 10, fields 11 and 13;
+      // F301, F328 Q5): both rails are request rails binding payee and purpose
+      // (their drafts 3).
+      if (MODULE_UNDER[name] === 'cmip-payment') fields.push([11, 0], [13, [0, 1]]);
+    }
+    fields.push([9, text]);
+    made.push({ file, kind, provisional, content: cborEncode(new Map<number, unknown>(fields)), changes });
+  }
+  return made.sort((a, b) => files.findIndex((f) => f[0] === a.file) - files.findIndex((f) => f[0] === b.file));
 }

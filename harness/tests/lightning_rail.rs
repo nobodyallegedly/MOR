@@ -147,18 +147,10 @@ impl Party {
 async fn deliver(to: &PayeeView, a: &Act, key: &[u8; 32]) {
     let (inbox, ek) = (&to.inbox, &to.ek);
     let to = &to.id;
-    let one_time_secret = loop {
-        let s = random::<32>();
-        if mor_core::sig::SchnorrKey::from_secret(&s).is_some() {
-            break s;
-        }
-    };
     let rnd = SealRandom {
         container_key: random::<32>(),
         nonce: random::<24>(),
         eseeds: vec![random::<64>()],
-        one_time_secret,
-        aux: random::<32>(),
     };
     let s = envelopes::seal(
         a,

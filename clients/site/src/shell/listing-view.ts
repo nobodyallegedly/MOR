@@ -5,7 +5,8 @@
 // with the layers the work touches and links to those agreements' public
 // terms, saying that private agreements are not counted; then the xtypes by
 // use, the public acts of their types counted, saying that private acts are
-// not counted; then, below, a card for each line of drafts, newest draft first in its card, with what
+// not counted; then the MIPs, in a part of their own, by the MIR they fork
+// and how many fork each (website cMIP draft 11, F325); then, below, a card for each line of drafts, newest draft first in its card, with what
 // the specification's own fields say it is, its creator, the code released
 // for it, and its drafts in order; then the publications that could not be
 // verified, saying why, nothing they say shown. Phones first: one column,
@@ -14,7 +15,7 @@
 
 import { escapeHtml as e } from '../../../longform/src/html.ts';
 import { fingerprint } from '../../../reader/src/read.ts';
-import { roleWords, type Draft, type Extension, type Line, type Listed, type Listing, type Release, type Use } from '../listing.ts';
+import { KINDS, NO_CREATOR_KINDS, roleWords, type Draft, type Extension, type Forked, type Line, type Listed, type Listing, type Release, type Use } from '../listing.ts';
 
 export const LISTING_STYLE = `:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 18%,transparent);--soft:color-mix(in srgb,CanvasText 66%,Canvas);--ok:#1a7f37;--bad:#b3261e}
 @media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80}}
@@ -70,7 +71,11 @@ function code(l: Listed): string {
 
 function creator(l: Listed): string {
   const c = l.spec.creator;
-  if (!c) return `<div class="l-row">No creator: a MIR is the protocol itself.</div>`;
+  if (!c || NO_CREATOR_KINDS.includes(l.spec.kind)) {
+    // A MIR, the MICS document and a test suite name none: who published it, never its creator (draft 11, F291).
+    const by = [...new Set(l.publications.map((p) => p.signer))].map(fp).join('; ');
+    return `<div class="l-row" data-claimed="none">No creator: a ${e(KINDS[l.spec.kind])} names none. Published by ${by}.</div>`;
+  }
   if (l.claimed) return `<div class="l-row" data-claimed="yes">Creator ${fp(c)}, who published it.</div>`;
   const by = [...new Set(l.publications.map((p) => p.signer))].map(fp).join('; ');
   return `<div class="l-row l-warn" data-claimed="no">Unclaimed by its named creator ${fp(c)}: that identity's publication of it was not found. Published by ${by}.</div>`;
@@ -148,6 +153,41 @@ function xtypesHtml(listing: Listing): string {
 ${body}</section>`;
 }
 
+/** A MIP, MIR or MICS document in the MIPs' part, with the MIPs under it. */
+function forkedHtml(f: Forked): string {
+  const l = f.listed;
+  const counts = `<span class="l-count" data-direct="${f.direct}" data-total="${f.total}">${f.direct} ${f.direct === 1 ? 'MIP forks' : 'MIPs fork'} it directly, ${f.total} in all</span>`;
+  const by = l.spec.creator ? `, by <span class="l-fp">${short(l.spec.creator)}</span>${l.claimed ? '' : ' <span class="l-warn">(unclaimed by its named creator)</span>'}` : '';
+  const code = l.releases.some((r) => !r.problem) ? '; code released' : '';
+  const forks = f.forks.length ? `<ul class="l-terms">${f.forks.map(forkedHtml).join('')}</ul>` : '';
+  return `<li data-mip="${l.hash}" data-kind="${l.spec.kind}">${e(KINDS[l.spec.kind])} “${e(l.name)}”, <code>${short(l.hash)}</code>${by}${code}: ${counts}${forks}</li>`;
+}
+
+function mipsHtml(listing: Listing): string {
+  const m = listing.mips;
+  const roots = m.roots.length ? `<ul class="l-terms" id="l-mip-roots">${m.roots.map(forkedHtml).join('')}</ul>` : '<p class="l-none">No MIR or MICS document listed here.</p>';
+  const other = m.unrooted
+    .map(
+      (u) => `<div class="l-row l-warn" data-unrooted="${u.hash}">Leading to ${u.kind === null ? 'a specification not found here' : `a ${e(KINDS[u.kind] ?? `kind ${u.kind}`)}, neither a MIR, the MICS document nor a MIP`}, <code>${short(u.hash)}</code>:</div><ul class="l-terms">${u.forks.map(forkedHtml).join('')}</ul>`,
+    )
+    .join('');
+  return `<section id="l-mips"><h2 class="l-h">MIPs, by what they fork</h2>
+<p class="l-note" id="l-mips-note">A MIP is a proposal toward a successor protocol, not a rule of MOR. Each stands under the MIR it forks, through the MIPs it follows; one proposing a new layer under the MICS document. <strong>A count of forks is of MIPs published at these relays, not of agreement with them.</strong> Most forked first.</p>
+${roots}${other}</section>`;
+}
+
+/** Versions of one text (draft 11, F322): shown together, each its own specification. */
+function versionsHtml(listing: Listing): string {
+  if (!listing.versions.length) return '';
+  const groups = listing.versions.map(
+    (g) => `<article class="l-line" data-versions="${g.versions.length}">
+<div class="l-head"><span class="l-name">“${e(g.name)}”: ${g.versions.length} versions of one text</span></div>
+<div class="l-row">One text, published with different other fields: each is its own specification, with its own spec hash; agreements, acts and code released name one of them, never all.</div>
+<ul class="l-terms">${g.versions.map((v) => `<li data-version="${v.listed.hash}"><code>${short(v.listed.hash)}</code>${v.listed.spec.creator ? `, by <span class="l-fp">${short(v.listed.spec.creator)}</span>` : ''}: differs in ${v.differs.length ? `field${v.differs.length === 1 ? '' : 's'} ${v.differs.join(', ')}` : 'no field'}; ${v.listed.releases.filter((r) => !r.problem).length} releases naming it</li>`).join('')}</ul></article>`,
+  );
+  return `<h3 class="l-section" id="l-versions">Versions of one text (${listing.versions.length})</h3>${groups.join('\n')}`;
+}
+
 function unverifiedHtml(listing: Listing): string {
   if (!listing.unverified.length) return '';
   const items = listing.unverified.map(
@@ -163,13 +203,19 @@ function unverifiedHtml(listing: Listing): string {
 export function listingHtml(listing: Listing, style: string, reader: string | null = null): string {
   const all = new Map<string, Listed>();
   for (const line of listing.lines) for (const d of line.drafts) all.set(d.listed.hash, d.listed);
+  const walk = (f: Forked) => {
+    all.set(f.listed.hash, f.listed);
+    f.forks.forEach(walk);
+  };
+  listing.mips.roots.forEach(walk);
+  for (const u of listing.mips.unrooted) u.forks.forEach(walk);
   const relays = listing.relays.map((r) => e(r.name ?? r.address)).join(', ');
   const top = `<div class="l-any" id="l-any"><strong>One listing among any; anyone can run another.</strong>
 It decides nothing and refuses nothing: a specification is named by its own hash, not by being listed here, and is used by whoever adopts it.</div>
-<p class="l-note">Read from ${relays || 'no relay'}: first the extensions the agreements there name, then the xtypes by use, then the cMIPs, Modules and other specifications published there, each checked in this browser: who signed it, and that it is what they signed. What each specification is comes from its own fields; a name is the first line of its text.</p>`;
+<p class="l-note">Read from ${relays || 'no relay'}: first the extensions the agreements there name, then the xtypes by use, then the MIPs by what they fork (${listing.mips.count} listed, under ${listing.mips.roots.filter((r) => r.total).length} of the MIRs and MICS document found), then the cMIPs, Modules and other specifications published there, each checked in this browser: who signed it, and that it is what they signed. What each specification is comes from its own fields; a name is the first line of its text.${listing.versions.length ? ` ${listing.versions.length} ${listing.versions.length === 1 ? 'text is' : 'texts are'} published in versions, shown together.` : ''}</p>`;
   const body = listing.lines.length
     ? listing.lines.map((l) => lineHtml(l, all)).join('\n')
     : '<p class="l-none">No verified specification found at the relays read.</p>';
-  const specs = `<section id="l-specs"><h2 class="l-h">cMIPs and Modules</h2>${body}${unverifiedHtml(listing)}</section>`;
-  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${top}${extensionsHtml(listing, reader)}${xtypesHtml(listing)}${specs}</body></html>`;
+  const specs = `<section id="l-specs"><h2 class="l-h">cMIPs and Modules</h2>${body}${versionsHtml(listing)}${unverifiedHtml(listing)}</section>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${top}${extensionsHtml(listing, reader)}${xtypesHtml(listing)}${mipsHtml(listing)}${specs}</body></html>`;
 }

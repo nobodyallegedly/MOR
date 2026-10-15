@@ -23,15 +23,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, webkit, type Browser, type Frame } from 'playwright-core';
-import { MIRS, SPECS, cborEncode, lockMedia, signaturePayload, unhex } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, cborEncode, hex, lockMedia, signaturePayload, unhex } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { Gateway } from '../src/gateway.ts';
-import { decodeSpec, linesOf, nameOf, readListing, roleWords, specHash, type Listed, type Listing } from '../src/listing.ts';
+import { KINDS, decodeSpec, linesOf, nameOf, readListing, roleWords, specHash, type Listed, type Listing } from '../src/listing.ts';
 import { publishSite, readFolder } from '../src/publish.ts';
 import { parseGatewaySettings } from '../src/settings.ts';
-import { PUBLICATION, RELEASE_MANIFEST } from '../src/specs.ts';
+import { PAYMENT_CMIP, PUBLICATION, RELEASE_MANIFEST } from '../src/specs.ts';
 import { benign, SITE_DIR } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
@@ -112,12 +112,15 @@ async function publishSpec(by: TestIdentity, bytes: Uint8Array, relays: string[]
 
 /**
  * A release (release manifest cMIP): before draft 3, naming a specification's
- * publication among its publication's references; from draft 3, in its
- * manifest's "implements" (field 6), with or without references.
+ * publication among its publication's references; from draft 4, in its
+ * manifest's "implements" (field 6), entries `[spec, ? hint]` sorted by spec
+ * hash, with or without references; `draft3` writes draft 3's field 6, bare
+ * publication ids, which draft 4 does not take.
  */
-async function publishRelease(by: TestIdentity, name: string, version: string, names: string | null, relays: string[], implementsIds?: string[]): Promise<string> {
+async function publishRelease(by: TestIdentity, name: string, version: string, names: string | null, relays: string[], implementsSpecs?: [string, string?][], draft3?: string[]): Promise<string> {
   const fields: [number, unknown][] = [[0, name], [1, version], [2, null], [3, []], [4, []]];
-  if (implementsIds) fields.push([6, [...implementsIds].sort().map(unhex)]);
+  if (implementsSpecs) fields.push([6, [...implementsSpecs].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([h, hint]) => (hint ? [unhex(h), unhex(hint)] : [unhex(h)]))]);
+  if (draft3) fields.push([6, [...draft3].sort().map(unhex)]);
   const manifest = cborEncode(new Map<number, unknown>(fields));
   const lm = lockMedia(manifest) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
   const payload = cborEncode(
@@ -168,7 +171,7 @@ before(async () => {
   pub.pay1copy = (await publishSpec(carol, pay1, [relayB])).id;
 
   // A Module under the second draft: a rail Module, a request rail.
-  const rail = content([[0, 1], [1, id(bob)], [5, unhex(hash.pay2)], [9, '# Module: Test rail\n\nA rail for tests, never for money.'], [11, 0]]);
+  const rail = content([[0, 1], [1, id(bob)], [5, unhex(hash.pay2)], [9, '# Module: Test rail\n\nA rail for tests, never for money.'], [11, 0], [13, [0, 1]]]);
   ({ id: pub.rail, hash: hash.rail } = await publishSpec(bob, rail, [relayA]));
 
   // An xtype: act types, no task; code released by its creator. Then a successor by another creator.
@@ -183,9 +186,10 @@ before(async () => {
   ({ id: pub.checker, hash: hash.checker } = await publishSpec(carol, checker, [relayB]));
   // F290: a specification's content published under another media spec is no publication of a specification.
   pub.otherMedia = (await publishSpec(carol, content([[0, 0], [1, id(carol)], [9, '# cMIP: Under another media spec']]), [relayB], 'f'.repeat(64))).id;
-  // Release manifest cMIP draft 3: a release naming the checker in its manifest's "implements", and referring to the
-  // rail Module from its publication: "implements" is read first, so it is the checker's code, not the rail's.
-  pub.checkerRelease = await publishRelease(carol, 'test-checker', '3.0', pub.rail, [relayB], [pub.checker]);
+  // Release manifest cMIP draft 4: a release naming the checker's spec hash in its manifest's "implements", its
+  // publication beside it a hint, and referring to the rail Module from its publication: "implements" is read
+  // first, so it is the checker's code, not the rail's (Development Q7, taken).
+  pub.checkerRelease = await publishRelease(carol, 'test-checker', '3.0', pub.rail, [relayB], [[hash.checker, pub.checker]]);
 
   // The use of the two xtypes: public acts of their types, on both relays; a private one, an undefined type and an
   // act no chain counts are not counted.
@@ -197,6 +201,32 @@ before(async () => {
   // One naming Alice as its creator, published only by Carol: unclaimed by Alice (Development rule 3).
   const unclaimed = content([[0, 0], [1, id(alice)], [2, [[unhex(MIRS.agreements), 8]]], [9, '# cMIP: Test split, said to be Alice’s\n\nA split.']]);
   ({ id: pub.unclaimed, hash: hash.unclaimed } = await publishSpec(carol, unclaimed, [relayB]));
+  // A release under draft 3's "implements", naming its publication: not a valid manifest under draft 4.
+  pub.draft3Release = await publishRelease(carol, 'test-split', '0.3', null, [relayB], undefined, [pub.unclaimed]);
+  // A release naming a spec hash with no hint: matched by the spec hash alone, whichever publication was found.
+  pub.notes2Release = await publishRelease(carol, 'test-notes-carol', '2.0', null, [relayB], [[hash.notes2]]);
+
+  // MIPs (Development kind 8, F325): a MIR and the MICS document, published with no creator (F291), and MIPs
+  // forking them; one forking a MIP, one proposing a new layer under the MICS document (F328, Q10), one forking a
+  // specification not found here and one forking a cMIP, each in a group of its own.
+  const mir = content([[0, 4], [9, '# MIR: Test money\n\nThe money layer, for tests.']]);
+  ({ id: pub.mir, hash: hash.mir } = await publishSpec(alice, mir, [relayA]));
+  const mics = content([[0, 6], [9, '# MICS: Test core\n\nThe core, for tests.']]);
+  ({ id: pub.mics, hash: hash.mics } = await publishSpec(alice, mics, [relayA]));
+  const mip = (who: TestIdentity, forks: string, title: string) => content([[0, 8], [1, id(who)], [8, unhex(forks)], [9, `# MIP: ${title}\n\nA proposal.`]]);
+  ({ hash: hash.mipA } = await publishSpec(bob, mip(bob, hash.mir, 'Money, forked by Bob'), [relayA]));
+  ({ hash: hash.mipB } = await publishSpec(carol, mip(carol, hash.mipA, 'Bob’s fork, forked by Carol'), [relayB]));
+  ({ hash: hash.mipC } = await publishSpec(carol, mip(carol, hash.mir, 'Money, forked by Carol'), [relayB]));
+  ({ hash: hash.mipLayer } = await publishSpec(bob, mip(bob, hash.mics, 'A seventh layer'), [relayA]));
+  ({ hash: hash.mipLost } = await publishSpec(bob, mip(bob, 'd'.repeat(64), 'Forking what is not here'), [relayA]));
+  ({ hash: hash.mipOdd } = await publishSpec(bob, mip(bob, hash.pay2, 'Forking a cMIP'), [relayA]));
+  pub.mipRelease = await publishRelease(bob, 'test-money-fork', '0.1', null, [relayA], [[hash.mipA]]);
+
+  // Versions of one text (F322): one text, published with and without field 10.
+  const v1 = content([[0, 0], [1, id(alice)], [9, '# cMIP: Test versions\n\nOne text, two ways.']]);
+  const v2 = content([[0, 0], [1, id(alice)], [9, '# cMIP: Test versions\n\nOne text, two ways.'], [10, [0]]]);
+  ({ hash: hash.v1 } = await publishSpec(alice, v1, [relayA]));
+  ({ hash: hash.v2 } = await publishSpec(alice, v2, [relayA]));
 
   // Two that cannot be verified: a signer whose home is gone before its genesis reached anyone, and content that is no specification.
   gone = TestIdentity.create({ homes: [home3.home] });
@@ -256,26 +286,40 @@ const all = () => new Map(listing.lines.flatMap((l) => l.drafts.map((d) => [d.li
 const lineOf = (h: string) => listing.lines.find((l) => l.drafts.some((d) => d.listed.hash === h))!;
 const listed = (h: string) => all().get(h)!;
 
-test('a specification decodes strictly, is named by its hash and by the first line of its text', () => {
-  const ok = content([[0, 1], [1, new Uint8Array(32)], [9, '# Module: A\n\nText.'], [11, 2]]);
+test('a specification decodes as the core library decodes it (Development draft 10), is named by its hash and by the first line of its text', () => {
+  const under = new Uint8Array(32).fill(7);
+  const ok = content([[0, 1], [1, new Uint8Array(32)], [5, under], [9, '# Module: A\n\nText.'], [11, 1], [13, [1]]]);
   const s = decodeSpec(ok);
   assert.equal(s.kind, 1);
-  assert.equal(s.rail, 2);
+  assert.deepEqual(s.rail, { kind: 'push', binds: ['purpose'] });
   assert.equal(nameOf(s.text), 'Module: A');
   assert.equal(specHash(ok).length, 64);
-  assert.notEqual(specHash(ok), specHash(content([[0, 1], [1, new Uint8Array(32)], [9, '# Module: B']])), 'another content, another hash');
+  assert.notEqual(specHash(ok), specHash(content([[0, 1], [1, new Uint8Array(32)], [5, under], [9, '# Module: B']])), 'another content, another hash');
+  const c = new Uint8Array(32);
   for (const [bad, why] of [
-    [[[0, 0], [9, 'x']], /names no creator/],
-    [[[0, 9], [1, new Uint8Array(32)], [9, 'x']], /kind/],
-    [[[0, 0], [1, new Uint8Array(32)]], /no text/],
-    [[[0, 0], [1, new Uint8Array(32)], [9, 'x'], [10, [3, 2]]], /ascending/],
-    [[[0, 0], [1, new Uint8Array(32)], [9, 'x'], [12, false]], /field 12/],
-    [[[0, 0], [1, new Uint8Array(32)], [9, 'x'], [13, 1]], /key Development does not define/],
+    [[[0, 0], [9, 'x']], /creator, is required/],
+    [[[0, 9], [1, c], [9, 'x']], /not a kind/],
+    [[[0, 0], [1, c]], /field 9, its text, is required/],
+    [[[0, 0], [1, c], [9, 'x'], [10, [3, 2]]], /ascending/],
+    [[[0, 0], [1, c], [9, 'x'], [12, false]], /field 12/],
+    [[[0, 0], [1, c], [9, 'x'], [14, 1]], /a field the format does not define/],
+    [[[0, 1], [1, c], [9, 'x']], /field 5.*required for a Module/],
+    [[[0, 0], [1, c], [5, under], [9, 'x']], /field 5 is a Module's/],
+    [[[0, 1], [1, c], [5, under], [9, 'x'], [11, 0]], /go together/],
+    [[[0, 1], [1, c], [5, under], [9, 'x'], [11, 0], [13, [0]]], /binds payee and purpose/],
+    [[[0, 1], [1, c], [5, unhex(PAYMENT_CMIP)], [9, 'x']], /naming the payment cMIP carries fields 11 and 13/],
+    [[[0, 8], [1, c], [9, 'x']], /field 8.*required for a MIP/],
+    [[[0, 8], [9, 'x'], [8, c]], /creator, is required/],
+    [[[0, 4], [1, c], [9, 'x']], /name no creator/],
+    [[[0, 6], [1, c], [9, 'x']], /name no creator/],
   ] as [[number, unknown][], RegExp][]) {
-    assert.throws(() => decodeSpec(content(bad)), why);
+    assert.throws(() => decodeSpec(content(bad)), why, JSON.stringify(bad.map(([k]) => k)));
   }
-  // A MIR has no creator.
-  assert.equal(decodeSpec(content([[0, 4], [9, '# MIR: X']])).creator, null);
+  // A MIR, the MICS document and a test suite have no creator (F291); a MIP has one, and its predecessor (F325).
+  for (const k of [4, 6, 7]) assert.equal(decodeSpec(content([[0, k], [9, '# X']])).creator, null);
+  const m = decodeSpec(content([[0, 8], [1, c], [8, under], [9, '# MIP: X']]));
+  assert.equal(KINDS[m.kind], 'MIP');
+  assert.equal(m.predecessor, hex(under));
 });
 
 test('the listing reads the relays named, and only those a browser can reach', () => {
@@ -283,8 +327,8 @@ test('the listing reads the relays named, and only those a browser can reach', (
   assert.equal(a.address, relayA);
   assert.equal(a.name, 'the first relay');
   assert.ok(a.asked && b.asked);
-  assert.equal(a.specs, 5, 'each relay holds five publications of specifications');
-  assert.equal(b.specs, 5);
+  assert.equal(a.specs, 13, 'publications of specifications, each relay its own');
+  assert.equal(b.specs, 7);
   assert.ok(a.read > a.specs, 'every act it serves is read, specifications picked out');
   assert.equal(onion.asked, false, 'an onion address over http is not asked from a browser');
   assert.equal(onion.read, 0);
@@ -329,7 +373,7 @@ test('a Module under a cMIP takes its layer from it', () => {
   const w = roleWords(m, all());
   assert.equal(w.kind, 'Module');
   assert.equal(w.layer, 'Money');
-  assert.deepEqual(w.role, ['works under the cMIP “cMIP: Test payment, draft 2”', 'a rail Module: a request rail']);
+  assert.deepEqual(w.role, ['works under the cMIP “cMIP: Test payment, draft 2”', 'a rail Module: a request rail, its proof binding payee, purpose']);
   assert.equal(lineOf(hash.rail).drafts.length, 1);
 });
 
@@ -344,7 +388,7 @@ test('an xtype, and a successor of it by another creator, said as such', () => {
   assert.match(w.role[0], /^an xtype: defines 2 act types \(note, answer\), filling no task$/);
   assert.equal(line.drafts[1].otherCreator, true, 'Development rule 25: a successor by another creator is shown as such');
   assert.equal(listed(hash.notes).releases[0].signer, bob.id);
-  assert.equal(listed(hash.notes2).releases.length, 0);
+  assert.deepEqual(listed(hash.notes2).releases.map((r) => r.signer), [carol.id], 'its own release, by its own spec hash, not its predecessor’s');
 });
 
 test('field 12, the discovery field, and the layers an extension declares', () => {
@@ -356,13 +400,60 @@ test('field 12, the discovery field, and the layers an extension declares', () =
   ]);
 });
 
-test('code released: a release’s manifest “implements” read first, its publication’s references only where it has none (release manifest cMIP draft 3)', () => {
+test('code released: a release’s manifest “implements” read first, by spec hash, its publication’s references only where it has none (release manifest cMIP draft 4; Development Q7, taken)', () => {
   assert.deepEqual(
     listed(hash.checker).releases.map((r) => [r.id, r.signer, r.name, r.version, r.problem, r.by]),
     [[pub.checkerRelease, carol.id, 'test-checker', '3.0', null, 'implements']],
   );
   assert.deepEqual(listed(hash.rail).releases, [], 'its publication refers to the rail, but its manifest says what it implements');
   assert.equal(listed(hash.notes).releases[0].by, 'reference');
+  // A spec hash with no hint: matched all the same.
+  assert.deepEqual(
+    listed(hash.notes2).releases.map((r) => [r.id, r.problem, r.by]),
+    [[pub.notes2Release, null, 'implements']],
+  );
+  // Draft 3's field 6, naming publications: shown as not verified, with the reason.
+  const [r3] = listed(hash.unclaimed).releases;
+  assert.equal(r3.id, pub.draft3Release);
+  assert.match(r3.problem!, /names publications in “implements” \(field 6\), as release manifest cMIP draft 3 did/);
+});
+
+test('MIPs in a part of their own, by the MIR they fork and how many fork each (website cMIP draft 11, F325; F328, Q10)', () => {
+  const m = listing.mips;
+  assert.equal(m.count, 6);
+  const tree = (f: (typeof m.roots)[number]): unknown => [f.listed.hash, f.direct, f.total, f.forks.map(tree)];
+  assert.deepEqual(
+    m.roots.map(tree),
+    [
+      [hash.mics, 1, 1, [[hash.mipLayer, 0, 0, []]]],
+      [hash.mir, 2, 3, [[hash.mipA, 1, 1, [[hash.mipB, 0, 0, []]]], [hash.mipC, 0, 0, []]]],
+    ],
+    'the MIRs and the MICS document by name; most forked first',
+  );
+  assert.deepEqual(
+    m.unrooted.map((u) => [u.hash, u.kind, u.forks.map((f) => f.listed.hash)]),
+    [
+      [hash.pay2, 0, [hash.mipOdd]],
+      ['d'.repeat(64), null, [hash.mipLost]],
+    ].sort((a, b) => ((a[0] as string) < (b[0] as string) ? -1 : 1)),
+  );
+  // A MIP is never a line of drafts; its creator and its code released shown as for any specification.
+  assert.ok(!listing.lines.some((l) => l.drafts.some((d) => d.listed.spec.kind === 8)));
+  const a = m.roots[1].forks[0].listed;
+  assert.equal(a.spec.creator, bob.id);
+  assert.equal(a.claimed, true);
+  assert.deepEqual(a.releases.map((r) => r.id), [pub.mipRelease]);
+  // The MIR and the MICS document: no creator, its publisher shown as such.
+  assert.equal(m.roots[1].listed.spec.creator, null);
+  assert.equal(KINDS[m.roots[0].listed.spec.kind], 'MICS document');
+});
+
+test('versions of one text: two specifications, shown together with the fields in which they differ (F322)', () => {
+  assert.deepEqual(
+    listing.versions.map((g) => [g.name, g.versions.map((v) => [v.listed.hash, v.differs])]),
+    [['cMIP: Test versions', [[hash.v1, [10]], [hash.v2, [10]]].sort((a, b) => ((a[0] as string) < (b[0] as string) ? -1 : 1))]],
+  );
+  assert.notEqual(hash.v1, hash.v2);
 });
 
 test('the use of each xtype: the public acts of its types found, counted by type; private acts are not counted', () => {
@@ -408,8 +499,8 @@ test('what cannot be verified is shown as such, with the reason, and nothing it 
   assert.match(g.problem!, /identity chain could not be looked up/);
   assert.equal(g.spec, null, 'nothing it says is read');
   const x = listing.unverified.find((p) => p.id === pub.garbage)!;
-  assert.match(x.problem!, /not a specification as Development defines one/);
-  assert.equal(listing.lines.length, 5, 'payment (two drafts), rail, notes (two drafts), checker, unclaimed');
+  assert.match(x.problem!, /no specification \(Development draft 10, F323\)/);
+  assert.equal(listing.lines.length, 9, 'payment (two drafts), rail, notes (two drafts), checker, unclaimed, the MIR, the MICS document, two versions of one text');
 });
 
 test('lines of drafts: a fork named, a predecessor not found said', () => {
@@ -511,7 +602,15 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
 
   // The listing's first purpose: the extensions agreements name, most named first, before the cMIPs and Modules.
   const order = await f.$$eval('section', (els) => els.map((e) => e.id));
-  assert.deepEqual(order, ['l-extensions', 'l-xtypes', 'l-specs']);
+  assert.deepEqual(order, ['l-extensions', 'l-xtypes', 'l-mips', 'l-specs']);
+  // The MIPs, in a part of their own, by what they fork.
+  assert.match((await f.textContent('#l-mips-note'))!, /A MIP is a proposal toward a successor protocol, not a rule of MOR\..*A count of forks is of MIPs published at these relays, not of agreement with them\./);
+  const mips = await f.$$eval('#l-mip-roots > li', (els) => els.map((e) => [(e as HTMLElement).dataset.mip, (e.querySelector('[data-total]') as HTMLElement).dataset.total]));
+  assert.deepEqual(mips, [
+    [hash.mics, '1'],
+    [hash.mir, '3'],
+  ]);
+  assert.equal(await f.$$eval('#l-mips [data-unrooted]', (els) => els.length), 2);
   // The xtypes by use, said plainly that private acts are not counted.
   assert.match((await f.textContent('#l-use'))!, /Private acts are not counted: which specification a private act belongs to cannot be read\./);
   const uses = await f.$$eval('[data-xtype]', (els) => els.map((e) => [(e as HTMLElement).dataset.xtype, (e as HTMLElement).dataset.use, e.textContent ?? '']));
@@ -566,7 +665,10 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
       text: e.textContent ?? '',
     })),
   );
-  assert.equal(cards.length, 5);
+  assert.equal(cards.length, 9);
+  assert.match(card0(cards, hash.mir).text, /No creator: a MIR names none\. Published by/);
+  assert.equal(card0(cards, hash.mics).kind, 'MICS document');
+  assert.match((await f.textContent('#l-versions'))!, /Versions of one text \(1\)/);
   const card = (h: string) => cards.find((c) => c.spec === h)!;
   const pay = card(hash.pay2);
   assert.equal(pay.name, 'cMIP: Test payment, draft 2');
@@ -587,7 +689,7 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
   assert.match(card(hash.checker).role!, /checks proofs of delivery of proven offers \(field 12\)/);
   assert.equal(card(hash.unclaimed).claimed, 'no');
   assert.match(card(hash.unclaimed).text, /Unclaimed by its named creator/);
-  assert.equal(card(hash.unclaimed).code, 'none');
+  assert.equal(card(hash.unclaimed).code, 'unverified', 'a release under draft 3’s “implements”, not verified');
   assert.equal(card(hash.rail).code, 'none', 'a release referring to it, its manifest implementing another, is not its code');
 
   // The two that could not be verified: shown as such, their words nowhere.
@@ -605,11 +707,15 @@ test('dubsar.org’s listing on a phone: one listing among any, each specificati
   // The bar names the relays read, the one not asked, and the counts.
   await page.click('#mor-bar summary');
   const listed = (await page.textContent('#mor-listings'))!;
-  assert.match(listed, /3 extensions named by 3 agreements counted, from 5 public terms verified \(1 not yet signed by every party\); private agreements are not counted\. 2 xtypes listed, 4 public acts of their types counted; private acts are not counted\. 7 specifications verified, 2 publications not verified/);
-  assert.match(listed, /home1\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 5 publications of specifications/);
-  assert.match(listed, /home2\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 5 publications of specifications/);
+  assert.match(listed, /3 extensions named by 3 agreements counted, from 5 public terms verified \(1 not yet signed by every party\); private agreements are not counted\. 2 xtypes listed, 4 public acts of their types counted; private acts are not counted\. 6 MIPs listed, under 2 MIRs; 1 text found in versions\. 17 specifications verified, 2 publications not verified/);
+  assert.match(listed, /home1\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 13 publications of specifications/);
+  assert.match(listed, /home2\.dubsar\.org, http:\/\/127\.0\.0\.1:\d+: \d+ acts read, \d+ public terms, \d+ private, not opened, 7 publications of specifications/);
   if (shots) await page.screenshot({ path: join(shots, 'listing-phone.png'), fullPage: true });
   assert.deepEqual(elsewhere, [], 'nothing fetched from anywhere but the gateway, the homes and the relays');
   assert.deepEqual(problems, []);
   await ctx.close();
 });
+
+function card0<T extends { spec: string }>(cards: T[], h: string): T {
+  return cards.find((c) => c.spec === h)!;
+}

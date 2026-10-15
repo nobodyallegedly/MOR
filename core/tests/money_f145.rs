@@ -39,6 +39,20 @@ fn mirs() -> Mirs {
     }
 }
 
+/// A negotiation message's payload: its text (Agreements, type 18; in its
+/// format, as the verifier checks since Fable's A6).
+fn note() -> Vec<(mor_core::cbor::Value, mor_core::cbor::Value)> {
+    vec![(mor_core::cbor::Value::Uint(0), mor_core::cbor::Value::Text("Noted.".into()))]
+}
+
+/// A lone seller's standing offer (type 6, in its format: since Fable's A6
+/// an act outside it is invalid): what these tests read of an offer is only
+/// who signed it.
+fn standing_offer() -> Vec<(mor_core::cbor::Value, mor_core::cbor::Value)> {
+    let sold = vec![agreements::Sold::Publication(h("a publication"))];
+    agreements::Offer { under: None, sold, price: amount(5), paid: None, words: None, until: None, time: None, refund: None }.to_map()
+}
+
 fn h(s: &str) -> Hash {
     sha256(s.as_bytes())
 }
@@ -60,18 +74,19 @@ fn amount(value: u64) -> Amount {
 struct Lab {
     w: World,
     rail_valid: BTreeMap<Hash, PaidAt>,
-    unbound: BTreeSet<Hash>,
+    /// The rails' kinds and bindings, as their specifications declare them (F301).
+    rails: BTreeMap<Hash, mor_core::development::Rail>,
 }
 
 impl Lab {
     fn new() -> Self {
-        Lab { w: World::new(), rail_valid: BTreeMap::new(), unbound: BTreeSet::new() }
+        Lab { w: World::new(), rail_valid: BTreeMap::new(), rails: BTreeMap::new() }
     }
 
     fn view(&self) -> AgreementsView<'_> {
         let mut v = AgreementsView::new(&self.w.v, mirs());
         v.rail_valid = self.rail_valid.clone();
-        v.unbound_rails = self.unbound.clone();
+        v.rails = self.rails.clone();
         v
     }
 
@@ -277,7 +292,7 @@ fn the_payees_pointer_is_found_through_its_own_acts_only() {
     // IOU's `prev` leads to the debtor's terms citing version 3, which the
     // walk no longer enters.
     let iou = l.debt(&mut debtor, oid, 30, v1, None, vec![]);
-    l.act(&mut owner, mirs().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![iou]), None);
+    l.act(&mut owner, mirs().agreements, agreements::types::NEGOTIATION, note(), None, Some(vec![iou]), None);
     let holding = l.view().pointer_holding(&iou, &oid).unwrap();
     assert!(!holding.pointers.contains(&v3), "never through the debtor's history");
     l.claim(&mut debtor, oid, iou, 30, "iou to the thief", PaidAt::Flow(v3), vec![]);
@@ -323,7 +338,7 @@ fn an_iou_counts_only_to_the_vault_until_the_creditor_acknowledges_it() {
     // creditor's own acts, F157.)
     let mut friend = l.person("a second debtor");
     let acked = l.debt(&mut friend, cid, 30, v1, None, vec![]);
-    let ack = l.act(&mut creditor, mirs().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![acked]), None);
+    let ack = l.act(&mut creditor, mirs().agreements, agreements::types::NEGOTIATION, note(), None, Some(vec![acked]), None);
     assert_eq!(l.w.v.status(&ack), Status::Valid);
     let holding = l.view().pointer_holding(&acked, &cid).unwrap();
     assert_eq!(BTreeSet::from_iter(holding.pointers), BTreeSet::from([v1, v2]));
@@ -332,7 +347,7 @@ fn an_iou_counts_only_to_the_vault_until_the_creditor_acknowledges_it() {
     assert_eq!(l.paid(&acked), 30);
     // Never the thief's version 3, newer than any the creditor's act holds.
     let acked3 = l.debt(&mut friend, cid, 30, v3, None, vec![]);
-    l.act(&mut creditor, mirs().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![acked3]), None);
+    l.act(&mut creditor, mirs().agreements, agreements::types::NEGOTIATION, note(), None, Some(vec![acked3]), None);
     l.claim(&mut friend, cid, acked3, 30, "acked3 to v3", PaidAt::Flow(v3), vec![]);
     assert_eq!(l.paid(&acked3), 0);
 }
@@ -346,11 +361,11 @@ fn an_offer_is_the_payees_own_act_only_when_the_payee_signed_it() {
     let mut buyer = l.person("a buyer");
     let sid = seller.id;
     let v1 = l.pointer(&mut seller, sid, 1, None, "the seller's node");
-    let offer = l.act(&mut seller, mirs().agreements, agreements::types::STANDING_OFFER, vec![], None, None, None);
+    let offer = l.act(&mut seller, mirs().agreements, agreements::types::STANDING_OFFER, standing_offer(), None, None, None);
     let d = l.debt(&mut buyer, sid, 5, v1, Some(offer), vec![]);
     l.claim(&mut buyer, sid, d, 5, "to v1", PaidAt::Flow(v1), vec![]);
     assert_eq!(l.paid(&d), 5);
-    let not_hers = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, vec![], None, None, Some(vec![Ref::Act(v1)]));
+    let not_hers = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, standing_offer(), None, None, Some(vec![Ref::Act(v1)]));
     assert_eq!(l.view().pointer_holding(&not_hers, &sid).unwrap().pointers, Vec::<Hash>::new());
     let d2 = l.debt(&mut buyer, sid, 5, v1, Some(not_hers), vec![]);
     l.claim(&mut buyer, sid, d2, 5, "d2 to v1", PaidAt::Flow(v1), vec![]);
@@ -410,7 +425,7 @@ fn a_payee_accepting_anothers_offer_is_paid_by_what_its_acceptance_holds() {
     let mut buyer = l.person("a buyer posting a bounty");
     let rid = remixer.id;
     let v1 = l.pointer(&mut remixer, rid, 1, None, "the remixer's node");
-    let bounty = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, vec![], None, None, Some(vec![Ref::Act(v1)]));
+    let bounty = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, standing_offer(), None, None, Some(vec![Ref::Act(v1)]));
     assert!(l.view().pointer_holding(&bounty, &rid).unwrap().pointers.is_empty(), "the buyer's citation chooses nothing");
     l.sign_citing(&mut remixer, bounty, vec![v1]);
     assert_eq!(l.view().pointer_holding(&bounty, &rid).unwrap().pointers, vec![v1]);
@@ -437,7 +452,8 @@ fn the_payers_claim_decides_the_purpose_where_the_rail_binds_none() {
     let tip_pointer = l.pointer(&mut creditor, cid, 1, None, "the creditor's node");
     let d = l.debt(&mut debtor, cid, 500, tip_pointer, None, vec![]);
     let at = PaidAt::VaultEntry(cid, 0);
-    l.unbound.insert(rail());
+    // A push rail whose proof binds nothing (fields 11 = 1, 13 = []; F301).
+    l.rails.insert(rail(), mor_core::development::Rail { kind: mor_core::development::RailKind::Push, binds: Default::default() });
     let c = l.claim(&mut debtor, cid, d, 500, "500", at, vec![]);
     let r = l.receipt(&mut creditor, debtor.id, tip_pointer, 500, "500", Some(at));
     assert_eq!(l.paid(&d), 500, "the payer's claim decides");
@@ -459,7 +475,7 @@ fn the_payers_claim_decides_the_purpose_where_the_rail_binds_none() {
     // On a rail binding both (the payment cMIP draft 2), the commitment
     // decides: the claim carries the rail's valid answer, the receiver's
     // contrary receipt does not, and the debt is paid.
-    l.unbound.clear();
+    l.rails.clear();
     let d3 = l.debt(&mut debtor, cid, 100, tip_pointer, None, vec![]);
     l.claim(&mut debtor, cid, d3, 100, "100", at, vec![]);
     l.receipt(&mut creditor, debtor.id, tip_pointer, 100, "100", None);
@@ -469,4 +485,39 @@ fn the_payers_claim_decides_the_purpose_where_the_rail_binds_none() {
     l.claim(&mut debtor, cid, d4, 100, "100 again", at, vec![]);
     l.receipt(&mut creditor, debtor.id, tip_pointer, 100, "100 again", Some(at));
     assert_eq!(l.paid(&d4), 0);
+}
+
+/// Money draft 8, rule 11, element by element (F328, Q4), with Development
+/// draft 10's field 13 (F301): on a push rail whose proof binds the payee
+/// but not the purpose, a receipt disagreeing only in what the payment
+/// fulfils leaves the payer's claim deciding (the purpose is unbound), while
+/// one disagreeing in the payee, both answered valid by the rail, makes them
+/// contradict (the payee is bound): neither counts.
+#[test]
+fn what_a_proof_binds_is_read_element_by_element_f328_q4() {
+    use mor_core::development::{Bound, Rail as RailSpec, RailKind};
+    let mut l = Lab::new();
+    let mut creditor = l.person("a creditor");
+    let mut debtor = l.person("a debtor");
+    let cid = creditor.id;
+    let tip_pointer = l.pointer(&mut creditor, cid, 1, None, "the creditor's node");
+    l.rails.insert(rail(), RailSpec { kind: RailKind::Push, binds: [Bound::Payee].into_iter().collect() });
+    let at = PaidAt::VaultEntry(cid, 0);
+    // Purpose unbound: the claim decides what the payment fulfils.
+    let d = l.debt(&mut debtor, cid, 500, tip_pointer, None, vec![]);
+    l.claim(&mut debtor, cid, d, 500, "500", at, vec![]);
+    l.receipt(&mut creditor, debtor.id, tip_pointer, 500, "500", Some(at));
+    assert_eq!(l.paid(&d), 500, "the purpose is unbound: the payer's claim decides it");
+    // Payee bound: a receipt naming another payee, both answered valid,
+    // contradicts the claim, and neither counts.
+    let mut other = l.person("another payee");
+    let d2 = l.debt(&mut debtor, cid, 200, tip_pointer, None, vec![]);
+    l.claim(&mut debtor, cid, d2, 200, "200", at, vec![]);
+    let oid = other.id;
+    let r = l.receipt(&mut other, debtor.id, d2, 200, "200", Some(at));
+    let _ = (oid, r);
+    assert_eq!(l.paid(&d2), 0, "the payee is bound: the commitment decides, and both cannot be right");
+    // The same acts, the rail binding nothing: the payer's claim decides.
+    l.rails.insert(rail(), RailSpec { kind: RailKind::Push, binds: Default::default() });
+    assert_eq!(l.paid(&d2), 200, "unbound, the claim decides");
 }

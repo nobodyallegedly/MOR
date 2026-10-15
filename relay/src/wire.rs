@@ -460,38 +460,30 @@ impl PutSealed {
     }
 }
 
-/// A sealed container, as far as a relay reads it (Envelopes):
-/// `[ to: [* hash], one-time-key: bstr, locked-act: bstr, sig: bstr ]`.
-/// The relay checks the shape only; the container is opaque.
+/// A sealed container, as far as a relay reads it (Envelopes draft 10,
+/// F293): `[ to: [* hash], locked-act: bstr ]`. Its outside is
+/// unauthenticated by design; the relay checks the shape only, and the
+/// container is opaque.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Sealed {
     pub to: Vec<Hash>,
-    pub one_time_key: Vec<u8>,
     pub locked_act: Vec<u8>,
-    pub sig: Vec<u8>,
 }
 
 impl Sealed {
     pub fn encode(&self) -> Vec<u8> {
-        cbor::encode(&Value::Array(vec![
-            hashes(&self.to),
-            Value::Bytes(self.one_time_key.clone()),
-            Value::Bytes(self.locked_act.clone()),
-            Value::Bytes(self.sig.clone()),
-        ]))
+        cbor::encode(&Value::Array(vec![hashes(&self.to), Value::Bytes(self.locked_act.clone())]))
     }
 
     pub fn decode(bytes: &[u8]) -> R<Self> {
         let v = decode(bytes)?;
         let a = array(&v, true)?;
-        if a.len() != 4 {
-            return bad("a sealed container is [to, one-time-key, locked-act, sig]");
+        if a.len() != 2 {
+            return bad("a sealed container is [to, locked-act]");
         }
         Ok(Sealed {
             to: hash_list(&a[0], false)?,
-            one_time_key: bytes_of(&a[1])?,
-            locked_act: bytes_of(&a[2])?,
-            sig: bytes_of(&a[3])?,
+            locked_act: bytes_of(&a[1])?,
         })
     }
 }

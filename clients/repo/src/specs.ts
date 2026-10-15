@@ -11,6 +11,8 @@ export const REPO_SPECS = {
   agreements: test('LAW, test value until the freeze'),
   /** The release manifest cMIP (cmips/cmip-release-manifest-draft-1.md). */
   manifest: test('release manifest cMIP, draft 1, test value until publication'),
+  /** The payment cMIP: a Module under it must carry fields 11 and 13 (Development draft 10, F301). The core's test value. */
+  payment: test('payment cMIP, draft 2, test value until publication'),
 };
 
 export const AGREEMENTS_TYPES = {
@@ -20,6 +22,8 @@ export const AGREEMENTS_TYPES = {
   offer: 6,
   split: 8,
   grant: 9,
+  /** Liveness (type 12, rule 50): here, an act of the collective acknowledging what it relies on (F303). */
+  liveness: 12,
   declaration: 13,
   /** A contest of a declaration of absence (rule 52; BQ4, F188). */
   contest: 14,

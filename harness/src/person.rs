@@ -117,6 +117,8 @@ pub struct Rot {
     pub signing_key: Option<SchnorrKey>,
     /// Kept tips; `None` keeps the tip of the person's sequence, if any.
     pub kept: Option<Vec<KeptTip>>,
+    /// A succession declared (Identity, section 8): `Some(None)` ends one.
+    pub successor: Option<Option<mor_core::identity::Successor>>,
 }
 
 /// One identity, as whoever holds its keys sees it.
@@ -241,7 +243,7 @@ impl Person {
             homes: r.homes,
             rule: r.rule,
             declarations: None,
-            successor: None,
+            successor: r.successor,
             audit: r.audit,
             homeless: r.homeless,
             closure: r.closure,
@@ -337,6 +339,36 @@ impl Person {
     /// The content key of an everyday act this person signed.
     pub fn key_of(&self, act: &Hash) -> Option<[u8; 32]> {
         self.keys.get(act).copied()
+    }
+
+    /// A witness act acknowledging `acked` (Identity type 15, F110): the
+    /// next act of the sequence, carrying it in `acks`.
+    pub fn witness(&mut self, acked: &Hash) -> Act {
+        let mut i = inside(self.specs.identity, mor_core::identity::types::WITNESS, vec![]);
+        i.prev = Some(self.seq.last().map(|x| vec![*x]).unwrap_or_default());
+        i.acks = Some(vec![*acked]);
+        i.position = Some(self.seq.len() as u64 + 1);
+        i.summary = Some(if self.seq.is_empty() {
+            ZERO_HASH
+        } else {
+            Mmr::from_ids(&self.seq).root()
+        });
+        let key = random::<32>();
+        let sign = self.sign.clone();
+        let a = seal(&i, Some(self.id), Some(self.binding), None, &key, |id| {
+            sign.sign(id, &random::<32>())
+        });
+        self.seq.push(a.id());
+        self.keys.insert(a.id(), key);
+        a
+    }
+
+    /// A confirmation of a succession another identity's rotation declared
+    /// to this one (Identity draft 13, F300): a link confirmation (type 7)
+    /// naming the rotation in `objects`, its payload empty.
+    pub fn confirm_succession(&mut self, identity: &Hash, rotation: &Hash) -> Act {
+        let spec = self.specs.identity;
+        self.act(spec, mor_core::identity::types::LINK_CONFIRMATION, vec![], naming(identity, rotation), None)
     }
 
     pub fn identity_act(&mut self, p: Payload, objects: Option<Vec<Object>>) -> Act {

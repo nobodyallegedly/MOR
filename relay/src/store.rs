@@ -217,6 +217,17 @@ impl Store {
         Ok(arrival as u64)
     }
 
+    /// Replace the bytes of an act held by another copy of the same act id
+    /// (Envelopes draft 10, rule 27, Fable's E4): only its signature differs,
+    /// since the signature is not part of the id.
+    pub fn replace_act_bytes(&self, id: &Hash, bytes: &[u8]) -> R<()> {
+        self.conn.execute(
+            "UPDATE items SET bytes = ?1, size = ?2 WHERE id = ?3 AND kind = ?4",
+            params![bytes, bytes.len() as i64, id.as_slice(), kind::ACT],
+        )?;
+        Ok(())
+    }
+
     /// The arrival number and kind of an item held, by its id.
     pub fn arrival_of(&self, id: &Hash) -> R<Option<(u64, i64)>> {
         self.conn

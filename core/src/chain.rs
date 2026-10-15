@@ -64,6 +64,12 @@ pub struct Held {
     /// and signed by whom Money says (F295; Money rules 7 and 16, F46,
     /// F66, F113); the reason otherwise. Step 15 review, Money, M1.
     pub money: Option<Result<(), money::FinError>>,
+    /// For an act of the Envelopes or Text MIR, where this verifier knows
+    /// their hashes (`knowing_envelopes_and_text`): whether it is of a type
+    /// the MIR defines and its payload in that type's format (Envelopes
+    /// draft 10, rule 30; Text draft 8, rule 14; F294, F295, F296); the
+    /// reason otherwise.
+    pub format: Option<Result<(), String>>,
 }
 
 impl Held {
@@ -134,6 +140,11 @@ pub enum Stop {
     /// Rotations at the next position are held, and a conflict keeps any
     /// from counting: the identity is contested there, not frozen.
     Contested(Vec<Hash>),
+    /// Rotations at the next position are held, and whether one counts
+    /// cannot be told: an act a rule needs is not held, such as the line of
+    /// an objection to a homeless rotation (Identity draft 13, F298:
+    /// unknown, never void or invalid). Acts bound to them are unknown.
+    CannotTell(Vec<Hash>),
 }
 
 /// An identity chain as this verifier resolves it.
@@ -212,6 +223,38 @@ pub enum LinkSeen {
     /// private link nobody fetched from its signer's homes (F159: unknown,
     /// never invalid).
     Unknown,
+}
+
+/// Whether a publication claims a specification for its creator
+/// (Development draft 10, rule 3; F328, Q9).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpecClaim {
+    /// Published, validly, by the creator the content names.
+    Claimed,
+    /// Not by that creator, or disowned by its rotation: shown as
+    /// unclaimed by it, `disputed` where another identity relied on the
+    /// publication. Fee terms and reputation MUST NOT assume consent.
+    Unclaimed { disputed: bool },
+    /// The publication's standing cannot be told.
+    Unknown,
+}
+
+/// A succession as one verifier sees it (Identity draft 13, F300).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SuccessionSeen {
+    /// No succession declared, or the latest declaration ended it.
+    None,
+    /// Declared by `rotation` to the MOR identity `successor`, which has
+    /// not confirmed it: shown as declared, never followed.
+    Declared { rotation: Hash, successor: Hash },
+    /// Declared, and confirmed by the successor's `confirmation`: followed.
+    Confirmed { rotation: Hash, successor: Hash, confirmation: Hash },
+    /// Declared; a confirmation is held whose status this verifier cannot
+    /// tell (F298): not followed until it can.
+    Unknown { rotation: Hash, successor: Hash },
+    /// A succession to another protocol, confirmed as that protocol's link
+    /// cMIP says; this library cannot tell.
+    Elsewhere { rotation: Hash, successor: identity::Successor },
 }
 
 /// The standing of an act.
@@ -312,6 +355,37 @@ enum Judgement {
     Kept,
     Disputed,
     Void,
+    /// A kept line it needs is not held (F298): neither kept nor void yet.
+    Unknown,
+}
+
+/// Whether an act lies in a rotation's kept ancestry (rules 33 to 35).
+enum Kept {
+    Yes,
+    /// On no kept line: every line it could lie on was rebuilt (F298).
+    No,
+    /// A kept line it could lie on cannot be rebuilt from what is held.
+    CannotTell,
+}
+
+/// A kept tip's line, as far as the acts held allow.
+enum Line {
+    /// The act ids of the line, in order, its running summary matching.
+    Rebuilt(Vec<Hash>),
+    /// The acts held do not make the line the tip names: no act of it can
+    /// be proven kept through it (Envelopes draft 10, rule 13, F292).
+    Mismatch,
+    /// An act of the line is not held.
+    Missing,
+}
+
+/// The homeless procedure's answer for one homeless rotation.
+enum Hb {
+    Counts(Basis),
+    No,
+    /// An objection that would void it has a status this verifier cannot
+    /// tell (F298).
+    CannotTell,
 }
 
 /// A rotation that can count at a position: valid, naming the act that
@@ -459,6 +533,37 @@ impl Verifier {
                 let p = money::Payload::decode(inside.type_, &inside.payload)?;
                 money::check_signer(&p, &signer, &money::Citations::of(&inside))
             });
+        // F295, F296: an Envelopes or Text act outside its type's format,
+        // or of a type its MIR does not define (Envelopes type 2 retired,
+        // F294), is invalid, for a verifier that knows those hashes, as
+        // every client does.
+        let format = self
+            .never_ack_specs
+            .and_then(|(envelopes, text)| {
+                if inside.spec == envelopes {
+                    Some(crate::envelopes::check_act(&inside, act.outside.signer.as_ref()).map_err(|e| e.to_string()))
+                } else if inside.spec == text {
+                    Some(crate::text::check_act(&inside).map_err(|e| e.to_string()))
+                } else {
+                    None
+                }
+            })
+            // Fable's A6 (F295 for Agreements): an Agreements act outside its
+            // type's format, or of a retired or undefined type, is invalid for
+            // a verifier that knows which specification Agreements is; one of
+            // a type whose format is still open is not judged on its format
+            // (Agreements Q5, taken).
+            .or_else(|| {
+                let (_, agreements) = self.ack_specs?;
+                if inside.spec != agreements {
+                    return None;
+                }
+                match crate::agreements::in_format(&inside, act.outside.signer.as_ref()) {
+                    Ok(()) => Some(Ok(())),
+                    Err(crate::agreements::AgreementsError::Unsupported(_)) => None,
+                    Err(e) => Some(Err(e.to_string())),
+                }
+            });
         let held = Held {
             id,
             act,
@@ -466,6 +571,7 @@ impl Verifier {
             verdict,
             identity,
             money,
+            format,
         };
         if let Some(old) = self.acts.get_mut(&id) {
             // The same act again, from another home or relay. Its outside,
@@ -650,7 +756,10 @@ impl Verifier {
     /// same proof a rotation's kept ancestry uses. Agreements use it for the tips a
     /// collective's record names (record field 1).
     pub fn tip_line(&self, signer: &Hash, t: &identity::KeptTip) -> Option<Vec<Hash>> {
-        self.line(signer, t)
+        match self.line(signer, t) {
+            Line::Rebuilt(ids) => Some(ids),
+            Line::Mismatch | Line::Missing => None,
+        }
     }
 
     /// Whether the act `from` holds `target` in its history: `target` is
@@ -766,6 +875,82 @@ impl Verifier {
         }
     }
 
+    /// The succession of an identity as this verifier sees it (Identity
+    /// draft 13, section 8, F300): the latest counting rotation that says
+    /// something about succession decides it (rule 38); a succession to a
+    /// MOR identity is declared by that rotation and confirmed by the
+    /// successor, by a link confirmation (type 7) naming the rotation in
+    /// `objects`, or a witness act (type 15) naming it in `acks`, either
+    /// counting only while valid (F297). Clients show a declared succession
+    /// as declared and follow it only confirmed; Agreements' fallback
+    /// (rule 84, F305) passes nothing on a declared one.
+    pub fn succession(&self, identity: &Hash) -> SuccessionSeen {
+        let res = self.resolve(identity);
+        let decided = res.links.iter().rev().find_map(|l| match self.acts[&l.act].payload() {
+            Some(Payload::Rotation(r)) => r.successor.as_ref().map(|s| (l.act, s.clone())),
+            _ => None,
+        });
+        let Some((rotation, Some(successor))) = decided else {
+            return SuccessionSeen::None;
+        };
+        let mor = (successor.protocol == "mor")
+            .then(|| Hash::try_from(successor.identifier.as_slice()).ok())
+            .flatten();
+        let Some(by) = mor else {
+            return SuccessionSeen::Elsewhere { rotation, successor };
+        };
+        let mut unknown = false;
+        for h in self.signed_by(&by) {
+            if h.inside.spec != self.identity_spec {
+                continue;
+            }
+            let names = match h.inside.type_ {
+                types::LINK_CONFIRMATION => h.inside.objects.iter().flatten().any(|o| o.predecessor == rotation),
+                types::WITNESS => h.inside.acks.iter().flatten().any(|a| *a == rotation),
+                _ => false,
+            };
+            if !names {
+                continue;
+            }
+            match self.status(&h.id) {
+                Status::Valid => {
+                    return SuccessionSeen::Confirmed {
+                        rotation,
+                        successor: by,
+                        confirmation: h.id,
+                    }
+                }
+                Status::Unknown | Status::Pending => unknown = true,
+                _ => {}
+            }
+        }
+        if unknown {
+            SuccessionSeen::Unknown { rotation, successor: by }
+        } else {
+            SuccessionSeen::Declared { rotation, successor: by }
+        }
+    }
+
+    /// Whether a publication of a specification makes it its creator's
+    /// (Development draft 10, rule 3): only when signed by the creator the
+    /// content names, and valid. A publication the creator's rotation
+    /// disowned leaves the specification unclaimed, whether another
+    /// identity relied on it or not (F328, Q9: a special case beside
+    /// Identity rule 34); one relied on is shown as disputed and claims
+    /// nothing. Unknown where the publication's standing cannot be told.
+    pub fn specification_claim(&self, publication: &Hash, creator: &Hash) -> SpecClaim {
+        let Some(p) = self.acts.get(publication) else { return SpecClaim::Unknown };
+        if p.signer() != Some(creator) {
+            return SpecClaim::Unclaimed { disputed: false };
+        }
+        match self.status(publication) {
+            Status::Valid => SpecClaim::Claimed,
+            Status::Disputed => SpecClaim::Unclaimed { disputed: true },
+            Status::Void | Status::Invalid => SpecClaim::Unclaimed { disputed: false },
+            Status::Unknown | Status::Pending | Status::Scoped => SpecClaim::Unknown,
+        }
+    }
+
     /// The routes act that counts for an identity (Identity, "Routes"): its
     /// valid routes acts, followed from version 1, and whether the routes
     /// chain is contested past it.
@@ -821,10 +1006,11 @@ impl Verifier {
         self.resolve_cx(&mut Cx::default(), identity)
     }
 
-    /// The standing of an act this verifier holds.
+    /// The standing of an act this verifier holds. An act it does not hold
+    /// is unknown to it (Identity draft 13, F298).
     pub fn status(&self, act: &Hash) -> Status {
         match self.acts.get(act) {
-            None => Status::Invalid,
+            None => Status::Unknown,
             Some(h) => self.status_cx(&mut Cx::default(), h),
         }
     }
@@ -1094,7 +1280,7 @@ impl Verifier {
         let mut finals = vec![];
         for h in &homeless {
             let b = self.homeless_basis(cx, id, n, &prev, ps, h, &cands, &pool, dishonest, false);
-            if let Some(b @ (Basis::Escape | Basis::Gone)) = b {
+            if let Hb::Counts(b @ (Basis::Escape | Basis::Gone)) = b {
                 let mut l2 = links.to_vec();
                 let mut s2 = states.to_vec();
                 l2.push(Link {
@@ -1133,14 +1319,23 @@ impl Verifier {
             }
         }
 
-        // 3. A homeless rotation, still provisional.
-        let prov: Vec<(&Cand, Basis)> = homeless
-            .iter()
-            .filter_map(|h| {
-                self.homeless_basis(cx, id, n, &prev, ps, h, &cands, &pool, dishonest, true)
-                    .map(|b| (*h, b))
-            })
-            .collect();
+        // 3. A homeless rotation, still provisional. Where an objection's
+        //    status cannot be told, neither can whether one counts (F298).
+        let mut prov: Vec<(&Cand, Basis)> = vec![];
+        let mut cannot_tell = false;
+        for h in &homeless {
+            match self.homeless_basis(cx, id, n, &prev, ps, h, &cands, &pool, dishonest, true) {
+                Hb::Counts(b) => prov.push((*h, b)),
+                Hb::CannotTell => cannot_tell = true,
+                Hb::No => {}
+            }
+        }
+        if cannot_tell {
+            let mut out = StepOut::stop(Stop::CannotTell(ids));
+            out.dishonest = t.dishonest;
+            out.contested = t.contested;
+            return out;
+        }
         let mut out = match prov.len() {
             0 if t.contested => StepOut::stop(Stop::Contested(ids)),
             0 => StepOut::stop(Stop::Pending(ids)),
@@ -1274,7 +1469,7 @@ impl Verifier {
                 Judgement::Kept => Judged::Support { protected: true },
                 _ if cosigned => Judged::Support { protected: true },
                 Judgement::Disputed => Judged::Disputed,
-                Judgement::Void => Judged::No,
+                Judgement::Void | Judgement::Unknown => Judged::No,
             }
         } else {
             Judged::Support {
@@ -1329,8 +1524,9 @@ impl Verifier {
                 {
                     continue;
                 }
-                let ares = self.resolve_cx(cx, auditor);
-                if self.bound(&ares, c).is_some() {
+                // F297: a cosignature counts only while its signer's chain
+                // keeps it valid ("Log summaries and audits", 3).
+                if self.status_cx(cx, c) == Status::Valid {
                     by.insert(*auditor);
                 }
             }
@@ -1385,33 +1581,34 @@ impl Verifier {
             return Judgement::Kept;
         }
         let disowned = r.disowned.as_ref().is_some_and(|d| d.contains(&x.id));
-        if self.in_kept_ancestry(x, r, signer) && !disowned {
-            Judgement::Kept
-        } else if self.recorded.contains(&x.id) || self.acknowledged(cx, x) {
-            Judgement::Disputed
-        } else {
-            Judgement::Void
+        let kept = if disowned { Kept::No } else { self.in_kept_ancestry(x, r, signer) };
+        match kept {
+            Kept::Yes => Judgement::Kept,
+            // F298: void needs every kept line rebuilt and the act on none
+            // of them; disputed is void but relied on, so it waits too.
+            Kept::CannotTell => Judgement::Unknown,
+            Kept::No if self.recorded.contains(&x.id) || self.acknowledged(cx, x) => Judgement::Disputed,
+            Kept::No => Judgement::Void,
         }
     }
 
-    /// Whether another identity acknowledged this act, by a valid act whose
-    /// key is bound by a counting act of its signer (Envelopes, "Chains",
-    /// rule 4: the acknowledgement counts only alongside the act it names,
-    /// which the verifier holds, since it is judging it).
+    /// Whether another identity acknowledged this act, by an act of
+    /// another signer that is valid (Envelopes, "Chains", rule 4: the
+    /// acknowledgement counts only alongside the act it names, which the
+    /// verifier holds, since it is judging it). Only an Identity, Money or
+    /// Agreements act acknowledges (F110), an Identity act only if its own
+    /// shape holds (a witness act): [`Self::status_cx`] judges all of it.
+    /// An acknowledgement counts only while its signer's chain keeps it
+    /// valid: one its signer's rotation voided keeps nothing disputed,
+    /// acknowledged or not (Identity draft 13, F297).
     fn acknowledged(&self, cx: &mut Cx, x: &Held) -> bool {
         for a in self.acked_by.get(&x.id).into_iter().flatten() {
             let y = &self.acts[a];
-            // Only an Identity, Money or Agreements act acknowledges (F110); an
-            // Identity act only if its own shape holds (a witness act).
-            if self.acks_allowed(&y.inside) != Some(true) || matches!(y.identity, Some(Err(_))) {
-                continue;
-            }
             let Some(s) = y.signer() else { continue };
             if Some(s) == x.signer() {
                 continue;
             }
-            let res = self.resolve_cx(cx, s);
-            if self.bound(&res, y).is_some() {
+            if self.status_cx(cx, y) == Status::Valid {
                 return true;
             }
         }
@@ -1420,54 +1617,74 @@ impl Verifier {
 
     /// Whether an act lies in a rotation's kept ancestry: it is a kept tip,
     /// or an earlier act of the same line, proved by the tip's running
-    /// summary from the act ids the verifier holds.
-    fn in_kept_ancestry(&self, x: &Held, r: &Rotation, signer: &Hash) -> bool {
+    /// summary from the act ids the verifier holds. `CannotTell` where a
+    /// line it could lie on cannot be rebuilt (F298).
+    fn in_kept_ancestry(&self, x: &Held, r: &Rotation, signer: &Hash) -> Kept {
         let Some(p) = x.inside.position else {
-            return false;
+            return Kept::No;
         };
-        r.kept.iter().any(|t| {
-            t.act == x.id
-                || (p >= 1
-                    && p < t.position
-                    && self
-                        .line(signer, t)
-                        .is_some_and(|ids| ids[p as usize - 1] == x.id))
-        })
+        let mut tell = true;
+        for t in &r.kept {
+            if t.act == x.id {
+                return Kept::Yes;
+            }
+            if p >= 1 && p < t.position {
+                match self.line(signer, t) {
+                    Line::Rebuilt(ids) if ids[p as usize - 1] == x.id => return Kept::Yes,
+                    Line::Rebuilt(_) | Line::Mismatch => {}
+                    Line::Missing => tell = false,
+                }
+            }
+        }
+        if tell {
+            Kept::No
+        } else {
+            Kept::CannotTell
+        }
     }
 
     /// The act ids of the line ending in a kept tip, in order, if the
     /// verifier can rebuild it: from the tip itself if held, or from the act
     /// before it (so a private tip needs no opening). The running summary
-    /// it carries must match.
-    fn line(&self, signer: &Hash, t: &identity::KeptTip) -> Option<Vec<Hash>> {
-        let back = |start: &Held, extra: Option<Hash>| -> Option<Vec<Hash>> {
+    /// it carries must match. Where the tip is not held and no act before
+    /// it rebuilds the line, it cannot be told which act is the tip's
+    /// predecessor: `Missing`.
+    fn line(&self, signer: &Hash, t: &identity::KeptTip) -> Line {
+        let back = |start: &Held, extra: Option<Hash>| -> Line {
             let mut ids = vec![];
             let mut cur = start;
             loop {
                 ids.push(cur.id);
                 if ids.len() as u64 > t.position {
-                    return None;
+                    return Line::Mismatch;
                 }
                 match cur.inside.prev.as_deref() {
                     Some([]) => break,
-                    Some([p]) => {
-                        cur = self.acts.get(p)?;
-                        if cur.signer() != Some(signer) {
-                            return None;
-                        }
-                    }
-                    _ => return None,
+                    Some([p]) => match self.acts.get(p) {
+                        None => return Line::Missing,
+                        Some(n) if n.signer() != Some(signer) => return Line::Mismatch,
+                        Some(n) => cur = n,
+                    },
+                    _ => return Line::Mismatch,
                 }
             }
             ids.reverse();
             ids.extend(extra);
-            (ids.len() as u64 == t.position && mmr::summary(&ids) == t.summary).then_some(ids)
+            if ids.len() as u64 == t.position && mmr::summary(&ids) == t.summary {
+                Line::Rebuilt(ids)
+            } else {
+                Line::Mismatch
+            }
         };
         if let Some(tip) = self.acts.get(&t.act) {
             return back(tip, None);
         }
         if t.position == 1 {
-            return (mmr::summary(&[t.act]) == t.summary).then(|| vec![t.act]);
+            return if mmr::summary(&[t.act]) == t.summary {
+                Line::Rebuilt(vec![t.act])
+            } else {
+                Line::Mismatch
+            };
         }
         self.by_signer
             .get(signer)
@@ -1475,10 +1692,12 @@ impl Verifier {
             .flatten()
             .find_map(|a| {
                 let y = &self.acts[a];
-                (y.inside.position == Some(t.position - 1))
-                    .then(|| back(y, Some(t.act)))
-                    .flatten()
+                match (y.inside.position == Some(t.position - 1)).then(|| back(y, Some(t.act))) {
+                    Some(Line::Rebuilt(ids)) => Some(Line::Rebuilt(ids)),
+                    _ => None,
+                }
             })
+            .unwrap_or(Line::Missing)
     }
 
     // ------------------------------------------------------------ homeless
@@ -1543,18 +1762,24 @@ impl Verifier {
         pool: &[&Cand],
         dishonest: &[(Operator, u64)],
         objections: bool,
-    ) -> Option<Basis> {
+    ) -> Hb {
         // Step 5: receipts from the new homes meet the new rule, under the
         // audit requirement it declares or inherits (F60, F86).
         let t = self.tally(cx, id, n, &h.state, cands, pool, &|c| *c == h.id, dishonest);
         if t.winner != Some(h.id) {
-            return None;
+            return Hb::No;
         }
         if self.endorsements(id, prev, ps, &h.id).next().is_some() {
-            return Some(Basis::Escape);
+            return Hb::Counts(Basis::Escape);
         }
         let old = ps.operators();
-        // Step 3: no valid objection from a home of the old set.
+        // Step 3: no valid objection from a home of the old set. An
+        // objection counts only while its signer's chain keeps it valid: one
+        // its signer's rotation voided is shown as a dispute and voids
+        // nothing, acknowledged or not (Identity draft 13, F297; the
+        // objection checks, 1). One whose status this verifier cannot tell
+        // leaves the answer unknown (F298).
+        let mut unknown = false;
         if objections {
             for oid in self.by_type.get(&types::OBJECTION).into_iter().flatten() {
                 let o = &self.acts[oid];
@@ -1574,10 +1799,15 @@ impl Verifier {
                 {
                     continue;
                 }
-                if matches!(self.status_cx(cx, o), Status::Valid | Status::Disputed) {
-                    return None;
+                match self.status_cx(cx, o) {
+                    Status::Valid => return Hb::No,
+                    Status::Unknown => unknown = true,
+                    _ => {}
                 }
             }
+        }
+        if unknown {
+            return Hb::CannotTell;
         }
         // Step 4: enough old homes are gone.
         let mut strong = 0u64;
@@ -1594,10 +1824,11 @@ impl Verifier {
                     let (Some(Payload::Absence(ab)), Some(s)) = (x.payload(), x.signer()) else {
                         continue;
                     };
+                    // F297: only while its signer's chain keeps it valid.
                     if &ab.operator == o
                         && a.auditors.contains(s)
                         && names(&x.inside, id, &h.id)
-                        && matches!(self.status_cx(cx, x), Status::Valid | Status::Disputed)
+                        && self.status_cx(cx, x) == Status::Valid
                     {
                         by.insert(*s);
                     }
@@ -1621,62 +1852,144 @@ impl Verifier {
             Effective::Threshold(k) => count > old.len() as u64 - k,
         };
         if met(strong, true) {
-            Some(Basis::Gone)
+            Hb::Counts(Basis::Gone)
         } else if met(weak, false) {
-            Some(Basis::OwnAttempt)
+            Hb::Counts(Basis::OwnAttempt)
         } else {
-            None
+            Hb::No
         }
     }
 
     // ------------------------------------------------------------ status
 
+    /// Whether an identity-chain act of `res`'s identity that does not
+    /// count sits beyond what this verifier can resolve: at a position not
+    /// yet decided, built on an act it does not hold (F298: unknown, never
+    /// invalid). A rotation or chain signature at a decided position, or
+    /// built on a held act that does not count, is not.
+    fn beyond(&self, res: &Resolution, b: &Held) -> bool {
+        let mut cur = b;
+        loop {
+            let (position, prev) = match cur.payload() {
+                Some(Payload::Rotation(r)) => (r.position, r.prev),
+                Some(Payload::ChainSignature(c)) => (c.position, c.prev),
+                _ => return false,
+            };
+            if cur.signer() != Some(&res.identity) || (position as usize) < res.links.len() || res.position_of(&prev).is_some() {
+                return false;
+            }
+            match self.acts.get(&prev) {
+                None => return true,
+                Some(p) => cur = p,
+            }
+        }
+    }
+
+    /// For an Envelopes withdrawal (type 3), whether its signer is the
+    /// publication's signer or the identity the publication's `for` (field
+    /// 8) names; `None` while the publication is not held. `Some(true)` for
+    /// any other act.
+    fn withdrawal_by_authority(&self, x: &Held) -> Option<bool> {
+        let Some((envelopes, _)) = self.never_ack_specs else { return Some(true) };
+        if x.inside.spec != envelopes || x.inside.type_ != crate::envelopes::types::WITHDRAWAL {
+            return Some(true);
+        }
+        let Some(o) = x.inside.objects.iter().flatten().find(|o| o.chain == o.predecessor) else {
+            return Some(true);
+        };
+        let p = self.acts.get(&o.predecessor)?;
+        if p.inside.spec != envelopes || p.inside.type_ != crate::envelopes::types::PUBLICATION {
+            return Some(false);
+        }
+        let for_ = p.inside.payload.iter().find(|(k, _)| *k == crate::cbor::Value::Uint(8)).and_then(|(_, v)| match v {
+            crate::cbor::Value::Bytes(b) => Hash::try_from(b.as_slice()).ok(),
+            _ => None,
+        });
+        Some(x.signer().is_some() && (x.signer() == p.signer() || x.signer() == for_.as_ref()))
+    }
+
     fn status_cx(&self, cx: &mut Cx, x: &Held) -> Status {
-        match x.verdict {
-            Verdict::Unknown => return Status::Unknown,
-            Verdict::Invalid => return Status::Invalid,
-            Verdict::Valid => {}
-        }
-        match self.acks_allowed(&x.inside) {
-            Some(false) => return Status::Invalid,
-            None => return Status::Unknown,
-            Some(true) => {}
-        }
-        if matches!(x.money, Some(Err(_))) {
+        // Invalid beats unknown (Envelopes draft 10, rule 30; Fable's T3):
+        // every rule this verifier can apply to the act alone is applied
+        // before anything it cannot read makes the act unknown.
+        if x.verdict == Verdict::Invalid || self.acks_allowed(&x.inside) == Some(false) {
             return Status::Invalid;
         }
-        match &x.identity {
-            Some(Err(_)) => return Status::Invalid,
-            Some(Ok(Payload::Genesis(_))) | Some(Ok(Payload::Rotation(_))) | Some(Ok(Payload::ChainSignature(_))) => {
-                let who = x.signer().copied().unwrap_or(x.id);
-                let res = self.resolve_cx(cx, &who);
-                return if res.position_of(&x.id).is_some() {
-                    Status::Valid
-                } else if res.waiting().contains(&x.id) {
-                    Status::Pending
-                } else {
-                    Status::Invalid
-                };
+        // F295: outside its type's format, or of a type its MIR does not
+        // define (Identity, Money, Envelopes, Text, where known).
+        if matches!(x.money, Some(Err(_))) || matches!(x.format, Some(Err(_))) || matches!(x.identity, Some(Err(_))) {
+            return Status::Invalid;
+        }
+        let chain_act = matches!(
+            &x.identity,
+            Some(Ok(Payload::Genesis(_))) | Some(Ok(Payload::Rotation(_))) | Some(Ok(Payload::ChainSignature(_)))
+        );
+        if !chain_act {
+            // Everyday check 1; Envelopes draft 10, rule 13: an everyday act
+            // carries `prev`, with at most one entry, a shape rule judged act
+            // by act (Fable's E1; F328, Q1). Position and summary are not
+            // judged here: only when a line is rebuilt (F292).
+            if x.signer().is_none() || x.act.outside.binding.is_none() {
+                return Status::Invalid;
             }
-            _ => {}
+            if x.inside.prev.as_ref().is_none_or(|p| p.len() > 1) {
+                return Status::Invalid;
+            }
+        }
+        // Envelopes rule 24 (draft 10, section 10): a withdrawal is valid
+        // only if signed by the publication's signer or by the identity its
+        // `for` names; unknown while the publication is not held (F298).
+        let withdrawal_of_unheld = match self.withdrawal_by_authority(x) {
+            Some(false) => return Status::Invalid,
+            Some(true) => false,
+            None => true,
+        };
+        if x.verdict == Verdict::Unknown || self.acks_allowed(&x.inside).is_none() || withdrawal_of_unheld {
+            return Status::Unknown;
+        }
+        if chain_act {
+            let who = x.signer().copied().unwrap_or(x.id);
+            let res = self.resolve_cx(cx, &who);
+            return if res.position_of(&x.id).is_some() {
+                Status::Valid
+            } else if res.waiting().contains(&x.id) {
+                Status::Pending
+            } else if matches!(res.stop, Stop::CannotTell(ref c) if c.contains(&x.id))
+                || (res.links.is_empty() && matches!(res.stop, Stop::NoGenesis | Stop::Unknown))
+                || self.beyond(&res, x)
+            {
+                // F298: a chain this verifier cannot resolve this far.
+                Status::Unknown
+            } else {
+                Status::Invalid
+            };
         }
         let (Some(signer), Some(binding)) = (x.signer(), x.act.outside.binding.as_ref()) else {
             return Status::Invalid;
         };
-        if x.inside.prev.is_none() {
-            return Status::Invalid;
-        }
         let res = self.resolve_cx(cx, signer);
+        if res.links.is_empty() && matches!(res.stop, Stop::NoGenesis | Stop::Unknown) {
+            // F298: the signer's genesis is not held, or is signed under a
+            // scheme this client lacks: a chain it cannot resolve.
+            return Status::Unknown;
+        }
         let Some(k) = res.position_of(binding) else {
+            if matches!(res.stop, Stop::CannotTell(ref c) if c.contains(binding)) {
+                return Status::Unknown;
+            }
             if res.waiting().contains(binding) {
                 return Status::Pending;
             }
             // F128: a scoped key, installed by an act of a higher MIR. A
             // scoped key never signs an Identity act (rule 1a): a private
-            // link act signed by one is invalid (F168, B4).
+            // link act signed by one is invalid (F168, B4). F298: a binding
+            // this verifier has not held, or a rotation beyond what it can
+            // resolve, is unknown, never invalid.
             return match self.acts.get(binding) {
-                Some(_) if x.inside.spec == self.identity_spec && !x.act.outside.is_public() => Status::Invalid,
+                None => Status::Unknown,
+                Some(b) if b.inside.spec != self.identity_spec && x.inside.spec == self.identity_spec && !x.act.outside.is_public() => Status::Invalid,
                 Some(b) if b.inside.spec != self.identity_spec && b.id != x.id => Status::Scoped,
+                Some(b) if self.beyond(&res, b) => Status::Unknown,
                 _ => Status::Invalid,
             };
         };
@@ -1690,6 +2003,7 @@ impl Verifier {
                 Judgement::Kept => Status::Valid,
                 Judgement::Disputed => Status::Disputed,
                 Judgement::Void => return Status::Void,
+                Judgement::Unknown => return Status::Unknown,
             },
             None => Status::Valid,
         };

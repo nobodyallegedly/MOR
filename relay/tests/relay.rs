@@ -173,6 +173,40 @@ async fn what_a_relay_checks_on_arrival() {
     r.client.put_act(&good.encode()).await.unwrap();
 }
 
+/// Envelopes draft 10, rule 27 (Fable's E4): two copies of one act id,
+/// differing only in their signature. Whoever saw the outside first lodges
+/// it under a signature of a scheme the relay does not implement; the
+/// genuine act is not refused as "already held": its copy replaces the
+/// one the relay could not verify.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_copy_with_a_signature_it_can_verify_replaces_one_it_cannot_e4() {
+    let r = Running::start(Role::Relay, Policy::Open).await;
+    let (_, mut erin) = genesis(
+        "erin",
+        vec![Home {
+            operator: None,
+            hint: "https://e.example".into(),
+        }],
+        None,
+        None,
+    );
+    let real = post(&mut erin, "the genuine act");
+    let mut lodged = real.clone();
+    lodged.signature = mor_core::act::Signature {
+        scheme: mor_core::act::Scheme::Spec(sha256(b"a scheme nobody here implements")),
+        key: vec![1; 40],
+        sig: vec![2; 90],
+    };
+    assert_eq!(lodged.id(), real.id(), "the signature is not part of the id");
+    r.client.put_act(&lodged.encode()).await.unwrap();
+    assert_eq!(r.client.get_act(&real.id()).await.unwrap(), lodged.encode());
+    r.client.put_act(&real.encode()).await.unwrap();
+    assert_eq!(r.client.get_act(&real.id()).await.unwrap(), real.encode(), "replaced by the copy it can verify");
+    // And never the other way: a valid copy held stays.
+    r.client.put_act(&lodged.encode()).await.unwrap();
+    assert_eq!(r.client.get_act(&real.id()).await.unwrap(), real.encode());
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn too_large() {
     let limits = Limits {
@@ -485,23 +519,17 @@ async fn sealed_containers_and_pickup_tags() {
     let tag = wire::pickup_tag(&sig::SCHNORR, &bare_key);
     let to_bob = Sealed {
         to: vec![bob],
-        one_time_key: vec![1; 32],
         locked_act: vec![2; 100],
-        sig: vec![3; 64],
     }
     .encode();
     let to_key = Sealed {
         to: vec![],
-        one_time_key: vec![4; 32],
         locked_act: vec![5; 100],
-        sig: vec![6; 64],
     }
     .encode();
     let other = Sealed {
         to: vec![],
-        one_time_key: vec![7; 32],
         locked_act: vec![8; 100],
-        sig: vec![9; 64],
     }
     .encode();
     let p = r.client.put_sealed(&to_bob, &[]).await.unwrap();

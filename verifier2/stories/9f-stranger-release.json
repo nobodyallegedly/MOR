@@ -37,11 +37,37 @@
    "amount": 20
   },
   {
+   "id": "pay1",
+   "type": "payment",
+   "signer": "eve",
+   "obligation": "D1",
+   "amount": 10
+  },
+  {
+   "id": "rel2",
+   "type": "release",
+   "signer": "gus",
+   "obligation": "D2"
+  },
+  {
+   "id": "A",
+   "type": "publication",
+   "signer": "C/d0",
+   "prev": "D2",
+   "cites": [
+    "genesis"
+   ],
+   "acks": [
+    "pay1",
+    "rel2"
+   ]
+  },
+  {
    "id": "C1",
    "type": "closing",
    "signer": "ana",
    "tips": [
-    "D2"
+    "A"
    ],
    "objects": [],
    "public": true
@@ -61,19 +87,6 @@
    "ending": "C1",
    "position": 1,
    "counts": true
-  },
-  {
-   "id": "pay1",
-   "type": "payment",
-   "signer": "eve",
-   "obligation": "D1",
-   "amount": 10
-  },
-  {
-   "id": "rel2",
-   "type": "release",
-   "signer": "gus",
-   "obligation": "D2"
   }
  ]
 }

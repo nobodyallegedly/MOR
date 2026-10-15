@@ -56,6 +56,10 @@ pub use owning::{TransferEval, WorkOwners};
 /// The vow grammar (F237, F240): a vow's chain, the offers naming it, and
 /// each sale's state.
 mod vows;
+/// Issuance with pre-emption (Agreements draft 14, rule 96; F309, F315, F328 Q13, Q14).
+mod issuance;
+/// Proxies (Agreements draft 14, rule 97; F327).
+mod proxies;
 pub use vows::{SaleState, VowEval, VowSale};
 /// Agreements as parties of agreements (Agreements draft 11, rule 15,
 /// F254): named by their line, consenting by their own rule, no loops, the
@@ -75,19 +79,24 @@ pub struct AgreementsView<'a> {
     /// verifier states what it holds, as it states `keeper_recorded` to
     /// Identity.
     pub keeper_logs: BTreeMap<Hash, Vec<Hash>>,
-    /// The rail Modules this verifier read, in their specifications, as
-    /// push rails (F128, W4): rails on which the payer pays an address with
-    /// no request from the payee's side committing to each payment. Every
-    /// other rail is a request rail, as every rail Module under the payment
-    /// cMIP draft 2 is: the payee's side commits to the payment, and to the
-    /// claim a purchase names, before it is made. Like `ext_layers`, a fact
-    /// the caller states from the specifications it holds.
-    pub push_rails: BTreeSet<Hash>,
+    /// The rail Modules this verifier adopted, each with its kind and what
+    /// its proof binds, read from its specification, fields 11 and 13
+    /// (Development draft 10, F301; the payment cMIP's `Modules::rails`),
+    /// never from a Module's code. A push rail (F128, W4) is one on which
+    /// the payer pays an address with no request from the payee's side; a
+    /// request rail's side commits to the payment, and to the claim a
+    /// purchase names, before it is made. What the proof binds is read
+    /// element by element (Money rule 11; F328, Q4). *A rail not here was
+    /// not adopted: the payment cMIP gives no answer for its payments, so
+    /// none of them is in [`Self::rail_valid`], and nothing here decides
+    /// on it; the defaults below (a request rail binding everything) are
+    /// never reached for a payment that counts.*
+    pub rails: BTreeMap<Hash, crate::development::Rail>,
     /// Receipts and claims whose rail proof the caller checked under the
     /// payment cMIP and found not to carry the commitment recomputed from
     /// them (F131, IT3): on a payment whose receipts name different claims,
     /// those naming a claim the payment did not commit to. The rail's
-    /// answer, like `push_rails`, a fact the caller states: the core reads
+    /// answer, like `rail_valid`, a fact the caller states: the core reads
     /// no rail.
     pub rail_invalid: BTreeSet<Hash>,
     /// Receipts and claims whose rail proof the caller checked under the
@@ -120,7 +129,7 @@ pub struct AgreementsView<'a> {
     /// clock and the on-chain rail): on such a clock, rule 15 compares the
     /// anchors of the payer's valid claims only, the payment's block among
     /// them, and a pending claim's anchor counts for nothing (F203 applies
-    /// on every other clock). Like `push_rails`, a fact the caller states
+    /// on every other clock). Like `rail_valid`, a fact the caller states
     /// from the specifications it holds.
     pub rail_clocks: BTreeSet<(Hash, Hash)>,
     /// Absence proof (rule 51, task "Absence proof"; F172, F178 item 12):
@@ -142,18 +151,10 @@ pub struct AgreementsView<'a> {
     /// caller states them. Money rule 15 reads them on the clock the
     /// payee declared (F169, F176 to F181).
     pub anchored: crate::envelopes::anchoring::Anchors,
-    /// The rail Modules this verifier read, in their specifications, as
-    /// binding no payee or purpose (Money rule 10, F151): their proof
-    /// commits to neither the payee nor what the payment fulfils. Every
-    /// other rail binds both, as every rail Module under the payment cMIP
-    /// draft 2 does, its commitment carrying them. The field a rail
-    /// Module's specification declares it in is open (F140 item 1), so,
-    /// like `push_rails`, a fact the caller states.
-    pub unbound_rails: BTreeSet<Hash>,
     /// The specifications this verifier read as the relay transport cMIP,
     /// draft 3 or later, whose act type 0 is a relay's delivery record
     /// (F184): `[locked hash, size, client's nonce]`, signed by the relay's
-    /// operator. Like `push_rails`, a fact the caller states: the core reads
+    /// operator. Like `rail_valid`, a fact the caller states: the core reads
     /// no cMIP. A delivery record counts as evidence for a role share only
     /// where the payer's claim acknowledges it (Agreements rules 19, 22).
     pub delivery_records: BTreeSet<Hash>,
@@ -215,6 +216,22 @@ pub struct AgreementsView<'a> {
     /// field 17, or a lone seller's offer's field 7): ended (F219). The
     /// time reference's answer, a fact the caller states.
     pub refunds_past_terms: BTreeSet<Hash>,
+    /// Issuance offers (type 26) whose period the agreement's time
+    /// reference places passed (rule 96; new in draft 14, F309, F315): the
+    /// time reference's answer, a fact the caller states, like
+    /// `notices_lapsed`. An offer not listed is still open.
+    pub offer_periods_lapsed: BTreeSet<Hash>,
+    /// Take-ups of an issuance offer (signature acts naming it) that the
+    /// time reference places within the offer's period: the caller's
+    /// statement, read only once the offer's period has lapsed; while it
+    /// runs, every take-up is within it.
+    pub take_ups_within: BTreeSet<Hash>,
+    /// Acts of a grant key whose grant carries limits (fields 3 and 4):
+    /// whether each lies within them, an expiry on a time reference among
+    /// them, as the limits cMIP judges (Agreements draft 14, rule 80; F320):
+    /// the answer of a verifier holding that cMIP and the time reference,
+    /// stated by the caller. An act not listed is unknown (F298).
+    pub grant_limits: BTreeMap<Hash, bool>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
@@ -347,6 +364,9 @@ pub struct RecordEval {
     pub resolves: bool,
     /// What it registers.
     pub registers: Vec<Departure>,
+    /// The stake transfers, proxies and revocations of proxies it places
+    /// (field 3; new in draft 14, F316, F327).
+    pub places: Vec<Hash>,
 }
 
 /// Agreements' answer for an act of a collective.
@@ -536,7 +556,7 @@ impl<'a> AgreementsView<'a> {
             mirs,
             ext_layers: BTreeMap::new(),
             keeper_logs: BTreeMap::new(),
-            push_rails: BTreeSet::new(),
+            rails: BTreeMap::new(),
             rail_invalid: BTreeSet::new(),
             rail_valid: BTreeMap::new(),
             rail_pending: BTreeSet::new(),
@@ -544,7 +564,6 @@ impl<'a> AgreementsView<'a> {
             rail_clocks: BTreeSet::new(),
             absence_accepted: BTreeSet::new(),
             anchored: Default::default(),
-            unbound_rails: BTreeSet::new(),
             delivery_records: BTreeSet::new(),
             judges_lapsed: BTreeSet::new(),
             attempts_failed: BTreeSet::new(),
@@ -552,6 +571,9 @@ impl<'a> AgreementsView<'a> {
             notices_lapsed: BTreeSet::new(),
             paid_past_until: BTreeSet::new(),
             refunds_past_terms: BTreeSet::new(),
+            offer_periods_lapsed: BTreeSet::new(),
+            take_ups_within: BTreeSet::new(),
+            grant_limits: BTreeMap::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -596,7 +618,7 @@ impl<'a> AgreementsView<'a> {
             mirs: self.mirs.clone(),
             ext_layers: self.ext_layers.clone(),
             keeper_logs: self.keeper_logs.clone(),
-            push_rails: self.push_rails.clone(),
+            rails: self.rails.clone(),
             rail_invalid: self.rail_invalid.clone(),
             rail_valid: self.rail_valid.clone(),
             rail_pending: self.rail_pending.clone(),
@@ -604,7 +626,6 @@ impl<'a> AgreementsView<'a> {
             rail_clocks: self.rail_clocks.clone(),
             absence_accepted: self.absence_accepted.clone(),
             anchored: self.anchored.clone(),
-            unbound_rails: self.unbound_rails.clone(),
             delivery_records: self.delivery_records.clone(),
             judges_lapsed: self.judges_lapsed.clone(),
             attempts_failed: self.attempts_failed.clone(),
@@ -612,6 +633,9 @@ impl<'a> AgreementsView<'a> {
             notices_lapsed: self.notices_lapsed.clone(),
             paid_past_until: self.paid_past_until.clone(),
             refunds_past_terms: self.refunds_past_terms.clone(),
+            offer_periods_lapsed: self.offer_periods_lapsed.clone(),
+            take_ups_within: self.take_ups_within.clone(),
+            grant_limits: self.grant_limits.clone(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -801,17 +825,56 @@ impl<'a> AgreementsView<'a> {
     /// The signature acts naming `act` with a valid standing under
     /// Identity, by signer, among `among`.
     fn valid_sigs(&self, act: &Hash, among: &[Hash]) -> Vec<(Hash, Hash)> {
+        // F314: a deal's version someone relied on keeps its completeness for
+        // everyone, a disowned signature on it shown as a dispute.
+        let relied = std::cell::OnceCell::new();
         let mut out = vec![];
         for who in among {
             if let Some(h) = self.v.signed_by(who).find(|h| {
                 self.is_agreements(h, types::SIGNATURE)
                     && decode_signature(&h.inside).ok() == Some(*act)
-                    && self.valid(&h.id)
+                    && (self.valid(&h.id)
+                        || (matches!(self.status(&h.id), Status::Void | Status::Disputed) && *relied.get_or_init(|| self.deal_version_relied(act))))
             }) {
                 out.push((*who, h.id));
             }
         }
         out
+    }
+
+    /// Whether `act` is a deal's version a later act relies on (Agreements
+    /// draft 14, rule 47, F314): a purchase naming it (rule 12), a split
+    /// under it (rule 20), a keeper's record of it (rule 37, the keepers'
+    /// logs a verifier states), or a later version cloning it (rule 45),
+    /// each valid under Identity. "What others relied on stands."
+    fn deal_version_relied(&self, act: &Hash) -> bool {
+        use crate::money::Payload as Fin;
+        let Some(h) = self.v.get(act) else { return false };
+        if !self.is_agreements(h, types::TERMS) || Terms::decode(&h.inside.payload).map_or(true, |t| t.is_collective()) {
+            return false;
+        }
+        if self.keeper_logs.values().any(|log| log.contains(act)) {
+            return true;
+        }
+        self.v.held_acts().any(|x| {
+            if !self.valid(&x.id) || x.id == *act {
+                return false;
+            }
+            if self.is_agreements(x, types::TERMS) {
+                return Terms::decode(&x.inside.payload).is_ok_and(|t| t.parent == Some(*act));
+            }
+            if self.is_agreements(x, types::SPLIT) {
+                return Split::decode(&x.inside.payload).is_ok_and(|s| s.agreement == *act);
+            }
+            if x.inside.spec == self.mirs.money {
+                return match Fin::decode(x.inside.type_, &x.inside.payload) {
+                    Ok(Fin::Receipt(r)) => r.purchase.is_some_and(|p| p.agreement == *act || p.line == *act),
+                    Ok(Fin::Claim(c)) => c.purchase.is_some_and(|p| p.agreement == *act || p.line == *act),
+                    _ => false,
+                };
+            }
+            false
+        })
     }
 
     /// The distinct identities with a valid signature act naming `act`, in
@@ -890,10 +953,23 @@ impl<'a> AgreementsView<'a> {
             return Ok(Ok(needs));
         }
         for e in mark {
+            // A stake's holders' rule, `[5, stake]` (rule 64.4; F307): its
+            // signers are that stake's holders at the line, counted there.
+            if let Power::Holders(stake) = e.power {
+                if !matches!(parent.holders_rule(stake).0, HoldersRule::Share(_)) {
+                    return Ok(Err("the mark names a stake's holders' rule, and that stake's holders' rule is every holder (rule 64.4, F307)".into()));
+                }
+                continue;
+            }
             let base = power_base(parent, &e.power);
-            let Some((base, _)) = base else {
+            let Some((base, rule)) = base else {
                 return Ok(Err("the mark names an area the parent does not have".into()));
             };
+            // A rule counted among a stake's holders (F311): its holders who
+            // are no parties sign too, checked at the line.
+            if rule.holders_stake().is_some() {
+                continue;
+            }
             if !e.signers.iter().all(|s| base.contains(s)) {
                 return Ok(Err(
                     "the mark names a signer that power is not counted among (rule 45a)".into(),
@@ -977,6 +1053,64 @@ impl<'a> AgreementsView<'a> {
             }
         }
         out
+    }
+
+    /// A stake's holders as a version counts them (Agreements draft 14, rule
+    /// 94, F316): the parent's field 7, each effective transfer of `counted`
+    /// on that stake (an agreement of the parent's lineage, its index)
+    /// moving its share from its seller to its buyer.
+    fn roster_with(&self, index: usize, st: &Stake, counted: &[Hash]) -> Vec<(Hash, u64)> {
+        let mut out = st.identified();
+        for t in counted {
+            let Ok(e) = self.transfer(t) else { continue };
+            if !e.effective || e.transfer.stake != index as u64 {
+                continue;
+            }
+            let same = self.terms(&e.transfer.agreement).ok().and_then(|tt| tt.stakes.as_ref()?.get(index).map(|s| s.object)) == Some(st.object);
+            if !same {
+                continue;
+            }
+            if let Some(x) = out.iter_mut().find(|(h, _)| *h == e.seller) {
+                x.1 = x.1.saturating_sub(e.transfer.share);
+            }
+            match out.iter_mut().find(|(h, _)| *h == e.transfer.to) {
+                Some(x) => x.1 += e.transfer.share,
+                None => out.push((e.transfer.to, e.transfer.share)),
+            }
+        }
+        out
+    }
+
+    /// The holders a collective's clone pays less who have no voice in the
+    /// power making the change (rule 48, F270, F282), read on the roster at
+    /// line `at` (new in draft 14, F316); save, where the stake's holders'
+    /// rule is by share and the mark names `[5, stake]`, the holders that
+    /// rule binds: those who accepted it, by signing a version of the
+    /// lineage carrying it, or by buying under it (rule 94, F307).
+    fn collective_pay_signers(&self, col: &Col, at: Line<'a>, pid: &Hash, parent: &Terms, clone: &Terms, mark: &[MarkEntry]) -> R<Vec<Hash>> {
+        let mut out: Vec<Hash> = vec![];
+        let lineage = self.lineage(pid)?;
+        for (o, _) in super::pay::stakes_paid_less(parent, clone) {
+            let Some((i, st)) = parent.stake_on(&o) else { continue };
+            let (rule, _) = parent.holders_rule(i as u64);
+            let by_rule = matches!(rule, HoldersRule::Share(_)) && mark.iter().any(|e| e.power == Power::Holders(i as u64));
+            for (h, n) in self.roster_at(col, at, pid, i as u64)? {
+                if n == 0 || parent.parties.contains(&h) || out.contains(&h) {
+                    continue;
+                }
+                if by_rule {
+                    let bought = !st.identified().iter().any(|(x, _)| *x == h);
+                    let signed = lineage.iter().any(|(v, vt)| {
+                        vt.holders_rule(i as u64).0 == rule && vt.holders_rules.is_some() && !self.valid_sigs(v, &[h]).is_empty()
+                    });
+                    if bought || signed {
+                        continue;
+                    }
+                }
+                out.push(h);
+            }
+        }
+        Ok(out)
     }
 
     /// [`Self::must_sign`] in two: those asked for their share, their stake
@@ -1188,7 +1322,17 @@ impl<'a> AgreementsView<'a> {
                 }
             }
             let mut holders_signed = true;
-            for h in Self::must_sign(parent, &terms) {
+            let (mut asked, _) = Self::must_sign_parts(parent, &terms);
+            // F316: in a deal, the version carrying an owners' matter names
+            // the transfers it counts (field 31); a transfer it does not
+            // name counts nothing toward it, and its seller holds for it.
+            let counted = terms.transfers_counted.clone().unwrap_or_default();
+            for h in super::pay::pay_signers_by(parent, &terms, &|i, st| self.roster_with(i, st, &counted)) {
+                if !asked.contains(&h) {
+                    asked.push(h);
+                }
+            }
+            for h in asked {
                 if self.signers(id, &[h]).is_empty() && !self.moved_by_abandonment(&h, parent, &terms, id, &lineage[1..], None, &[])? {
                     holders_signed = false;
                 }
@@ -1427,6 +1571,9 @@ impl<'a> AgreementsView<'a> {
                 if let Some(w) = why {
                     return Ok(ChainState::Broken { reason: w.into(), act: None });
                 }
+                if let Some(w) = self.own_part_problem(col, j, &a.terms) {
+                    return Ok(ChainState::Broken { reason: w, act: None });
+                }
                 cur = Some(d.agreement);
                 continue;
             };
@@ -1569,7 +1716,14 @@ impl<'a> AgreementsView<'a> {
                     "the rollback registers a resignation of someone who is not a party of the agreement in force just before the broken act".into(),
                 ));
             };
-            if !self.valid(x) {
+            // F302: as the rollback places it, whatever its signer's later
+            // rotation disowned; a rollback still to be made places nothing
+            // yet, so Identity's verdict alone.
+            let kept = match at {
+                Some(r) => self.kept_at(col, a, Line::Rotation(r))?,
+                None => self.valid(x),
+            };
+            if !kept {
                 return Ok(Err("the rollback registers a resignation that is not valid".into()));
             }
             let Ok(res) = Resignation::decode(&a.inside) else {
@@ -1608,8 +1762,13 @@ impl<'a> AgreementsView<'a> {
         // Each signature act it names must be a valid signature on one of
         // the declarations it registers (Flaw B18's rule, at the rollback).
         for s in &cosigned {
-            let named = decode_signature(&self.held(s)?.inside).ok();
-            if !self.valid(s) || !named.is_some_and(|n| declarations.iter().any(|(d, _)| *d == n)) {
+            let sh = self.held(s)?;
+            let named = decode_signature(&sh.inside).ok();
+            let kept = match at {
+                Some(r) => self.kept_at(col, sh, Line::Rotation(r))?,
+                None => self.valid(s),
+            };
+            if !kept || !named.is_some_and(|n| declarations.iter().any(|(d, _)| *d == n)) {
                 return Ok(Err(
                     "the rollback names a signature act that is no valid signature on a declaration it registers (rule 37d, RB3)".into(),
                 ));
@@ -2357,11 +2516,39 @@ impl<'a> AgreementsView<'a> {
         if self.before_struct(col, x, l) {
             return Ok(true);
         }
-        if self.is_agreements(x, types::RECORD) || !matches!(l, Line::Record(_)) {
-            return Ok(false);
+        let placed = if self.is_agreements(x, types::RECORD) || !matches!(l, Line::Record(_)) {
+            false
+        } else {
+            let ag = self.line_agreement(col, l)?;
+            self.keepers_place(col, x, l, ag)?
+        };
+        if placed {
+            return Ok(true);
         }
-        let ag = self.line_agreement(col, l)?;
-        self.keepers_place(col, x, l, ag)
+        // F304 (F298): "made after" is read only on a history held whole;
+        // while an act the line's history names is not held, whether `x` is
+        // before it is unknown, and nothing is void on it.
+        if let Some(m) = self.line_hole(col, l) {
+            return Err(AgreementsError::Missing(m));
+        }
+        Ok(false)
+    }
+
+    /// An act the history of line `l` names that this verifier does not
+    /// hold, if any (F304): the hole that keeps "made after" unknown.
+    fn line_hole(&self, col: &Col, l: Line) -> Option<Hash> {
+        let h = match l {
+            Line::Rotation(j) => {
+                let r = col.rotation(self.v, j)?;
+                let start: Vec<Hash> = r.kept.iter().map(|t| t.act).collect();
+                self.history(col, j, &start, &r.kept)
+            }
+            Line::Record(lh) => {
+                let bl = self.link(col, lh)?;
+                self.history(col, bl, &[lh.id], &[])
+            }
+        };
+        h.missing.iter().next().copied()
     }
 
     /// Whether the keepers of agreement `ag`, in force for line `l`, place
@@ -2534,6 +2721,7 @@ impl<'a> AgreementsView<'a> {
             puts: None,
             resolves: false,
             registers: vec![],
+            places: vec![],
         };
         let no = |mut e: RecordEval, w: &str| {
             e.not_a_line = Some(w.into());
@@ -2590,11 +2778,30 @@ impl<'a> AgreementsView<'a> {
                 declarations.push((*x, p));
                 continue;
             }
+            // A stake transfer of a stake the agreement in force defines, a
+            // proxy or its revocation by a holder of such a stake, or a
+            // holder's take-up of an issuance offer: placed by this line for
+            // the owners' matters (rules 94, 96, 97; new in draft 14, F316,
+            // F327; the take-up placed as a transfer is, a reading of the
+            // build), each judged where the owners' matters read it.
+            if self.is_agreements(a, crate::agreements::open_formats::new_types::STAKE_TRANSFER)
+                || self.is_agreements(a, crate::agreements::owners::owner_types::PROXY)
+                || self.is_agreements(a, crate::agreements::owners::owner_types::PROXY_REVOCATION)
+                || self.takes_up(a)
+            {
+                if !self.kept_at(col, a, Line::Record(h))? {
+                    return no(e, "it registers a transfer, proxy or revocation that is not valid");
+                }
+                e.places.push(*x);
+                continue;
+            }
             if !at_terms.parties.contains(&p) {
                 return no(e, "it registers an act of someone who is not a party of the agreement in force");
             }
             if self.is_agreements(a, types::RESIGNATION) {
-                if !self.valid(&a.id) {
+                // F302: as this line places it, whatever its signer's later
+                // rotation disowned.
+                if !self.kept_at(col, a, Line::Record(h))? {
                     return no(e, "it registers a resignation that is not valid");
                 }
                 let r = match Resignation::decode(&a.inside) {
@@ -3035,6 +3242,37 @@ impl<'a> AgreementsView<'a> {
         Ok(None)
     }
 
+    /// Whether an act of another identity that line `at` names, registers
+    /// or relies on keeps, for the collective, the effect that line gives it
+    /// (new in draft 14, F302, C5 extended; "Record (type 17)": "valid under
+    /// Identity, or placed by this line before any line of the collective
+    /// registering the rotation that voided it"): valid, or voided or
+    /// disputed by its signer's next rotation where every line of the
+    /// collective registering that rotation comes after `at`. A rotation no
+    /// line registers (an authority who is no party, a holder who is no
+    /// member, a grantee, a buyer, a creditor: none is registered) never
+    /// unplaces it. Its status under Identity is unchanged; a client shows
+    /// the dispute on the line.
+    fn kept_at(&self, col: &Col, a: &Held, at: Line) -> R<bool> {
+        match self.status(&a.id) {
+            Status::Valid => return Ok(true),
+            Status::Void | Status::Disputed => {}
+            _ => return Ok(false),
+        }
+        let Some(next) = self.voiding_rotation(a) else {
+            return Ok(false);
+        };
+        Ok(self.rotation_lines(col, &next).into_iter().all(|l| self.line_before(col, at, Line::Record(l))))
+    }
+
+    /// The rotation of `a`'s signer that replaced the key `a` is bound to.
+    fn voiding_rotation(&self, a: &Held) -> Option<Hash> {
+        let p = a.act.outside.signer?;
+        let res = self.v.resolve(&p);
+        let kb = a.act.outside.binding.and_then(|b| res.position_of(&b))?;
+        res.links.get(kb + 1).map(|l| l.act)
+    }
+
     /// Whether a member's signature act counts for the collective: valid
     /// under Identity, or kept by C5 (placed before the collective's line
     /// registering the rotation that replaced its key).
@@ -3044,22 +3282,87 @@ impl<'a> AgreementsView<'a> {
             Status::Void | Status::Disputed => {}
             _ => return Ok(false),
         }
-        let Some(p) = s.act.outside.signer else {
+        let Some(next) = self.voiding_rotation(s) else {
             return Ok(false);
         };
-        let res = self.v.resolve(&p);
-        let Some(kb) = s.act.outside.binding.and_then(|b| res.position_of(&b)) else {
-            return Ok(false);
-        };
-        let Some(next) = res.links.get(kb + 1) else {
-            return Ok(false);
-        };
-        for l in self.rotation_lines(col, &next.act) {
-            if self.sig_before(col, s, Line::Record(l))? {
-                return Ok(true);
+        // Placed by the collective, before every line registering that
+        // rotation (C5; Agreements draft 14, "Record (type 17)", F302): with
+        // none yet, wherever it is placed.
+        let lines = self.rotation_lines(col, &next);
+        if lines.is_empty() {
+            return Ok(!self.placements(col, s).is_empty());
+        }
+        for l in lines {
+            if !self.sig_before(col, s, Line::Record(l))? {
+                return Ok(false);
             }
         }
-        Ok(false)
+        Ok(true)
+    }
+
+    /// Whether a mark's signers meet a rule by share or "all of" at line
+    /// `at` (rule 65; new in draft 14, F308, F311): each rule in it counted
+    /// as it would be alone, flaw C included. Among the parties (`[3, stake,
+    /// share]`), each party whose voice remains counts by what it holds of
+    /// the stake at the line, the share asked for being of what those
+    /// voices hold together; where they hold nothing, every voice that
+    /// remains together meets it. Among a stake's holders (`[5, stake,
+    /// share]`), every holder at the line counts by its share of the whole
+    /// stake. A rule by head counts as it always has.
+    #[allow(clippy::too_many_arguments)]
+    fn share_rule_met(
+        &self,
+        col: &Col,
+        at: Line<'a>,
+        pid: &Hash,
+        parent: &Terms,
+        rule: &Rule,
+        signers: &[Hash],
+        any: &BTreeMap<Hash, Vec<Hash>>,
+        own: &[Departure],
+    ) -> R<Result<(), String>> {
+        let mut counted: Vec<Hash> = vec![];
+        for part in rule.parts() {
+            match part {
+                Rule::Holders { stake, share } => {
+                    let roster = self.roster_at(col, at, pid, *stake)?;
+                    counted.extend(roster.iter().map(|(h, _)| *h));
+                    let s: Vec<Hash> = signers.iter().filter(|x| roster.iter().any(|(h, _)| h == *x)).copied().collect();
+                    if let Err(w) = holders_met(&roster, &s, *share) {
+                        return Ok(Err(w));
+                    }
+                }
+                Rule::ByShare { stake, share } => {
+                    let (voices, _) = self.voices(col, Point::Line(at), pid, &parent.parties, None, any, own)?;
+                    counted.extend(voices.iter().copied());
+                    let roster = self.roster_at(col, at, pid, *stake)?;
+                    let held = |x: &Hash| roster.iter().find(|(h, _)| h == x).map_or(0, |(_, n)| *n) as u128;
+                    let total: u128 = voices.iter().map(held).sum();
+                    let s: Vec<Hash> = signers.iter().filter(|x| voices.contains(x)).copied().collect();
+                    let got: u128 = s.iter().map(held).sum();
+                    let met = if total == 0 { voices.iter().all(|v| s.contains(v)) && !voices.is_empty() } else { got * MILLION as u128 >= *share as u128 * total };
+                    if !met {
+                        return Ok(Err("the mark names too few parties to meet the rule, counted by share of what the voices that remain hold (rule 65, F308)".into()));
+                    }
+                }
+                head => {
+                    let among = head.counted_among(&parent.parties);
+                    let (voices, _) = self.voices(col, Point::Line(at), pid, &among, None, any, own)?;
+                    counted.extend(voices.iter().copied());
+                    let s = signers.iter().filter(|x| voices.contains(x)).count();
+                    let Some(need) = head.needed(voices.len()) else {
+                        return Ok(Err("no voice remains to meet a power it names".into()));
+                    };
+                    if s < need {
+                        return Ok(Err("the mark names too few signers to meet the power (rule 45a)".into()));
+                    }
+                }
+            }
+        }
+        if !signers.iter().all(|x| counted.contains(x)) {
+            return Ok(Err("the mark names a signer that power is not counted among, or whose voice no longer counts there (rules 45a, 65)".into()));
+        }
+        Ok(Ok(()))
     }
 
     /// A clone at a record or rotation, judged with the signature acts it
@@ -3141,7 +3444,43 @@ impl<'a> AgreementsView<'a> {
         }
         let mut missing = false;
         for e in mark {
+            // Agreements draft 14 (rules 65, 94; F307, F308, F311): a stake's
+            // holders' rule, and the rules by share or "all of", counted with
+            // the roster at this line.
+            if let Power::Holders(stake) = e.power {
+                let HoldersRule::Share(need) = parent.holders_rule(stake).0 else {
+                    return Ok(CloneState::Invalid("the mark names a stake's holders' rule, and that rule is every holder (rule 64.4)".into()));
+                };
+                let roster = self.roster_at(col, at, &pid, stake)?;
+                if let Err(w) = holders_met(&roster, &e.signers, need) {
+                    return Ok(CloneState::Invalid(w));
+                }
+                // A holder who is no member may vote by its proxy (rule 97;
+                // new in draft 14, F327): members vote in person.
+                for s in &e.signers {
+                    missing |= !by.contains_key(s) && (parent.parties.contains(s) || !self.proxy_votes(col, at, &pid, k, stake, s, &by)?);
+                }
+                continue;
+            }
             let (base, rule) = power_base(parent, &e.power).expect("checked by clone_static");
+            if !rule.by_head() {
+                if let Err(w) = self.share_rule_met(col, at, &pid, parent, &rule, &e.signers, &any, own)? {
+                    return Ok(CloneState::Invalid(w));
+                }
+                // A rule counted among a stake's holders alone (rule 69,
+                // F311): a holder who is no member may vote by its proxy
+                // (rule 97, F327).
+                let only_holders = rule.parts().iter().all(|r| matches!(r, Rule::Holders { .. }));
+                for s in &e.signers {
+                    let proxied = |st: u64| self.proxy_votes(col, at, &pid, k, st, s, &by);
+                    let by_proxy = match (only_holders, rule.holders_stake()) {
+                        (true, Some(st)) if !parent.parties.contains(s) => proxied(st)?,
+                        _ => false,
+                    };
+                    missing |= !by.contains_key(s) && !by_proxy;
+                }
+                continue;
+            }
             let area = match e.power {
                 Power::Area(a) => Some(a),
                 _ => None,
@@ -3172,7 +3511,33 @@ impl<'a> AgreementsView<'a> {
                 "a party it adds, or makes a holder, has not signed it (Q11)".into(),
             ));
         }
-        let (losing, pay) = Self::must_sign_parts(parent, clone);
+        // Rule 96 (new in draft 14, F309, F315): an issuance, judged; the
+        // holders it scales down pro rata under the stake's holders' rule
+        // do not sign for themselves.
+        let excused = match self.issuance_at(col, at, &pid, parent, clone, &lineage, &by)? {
+            Err(state) => return Ok(state),
+            Ok(e) => e.unwrap_or_default(),
+        };
+        let (losing, _) = Self::must_sign_parts(parent, clone);
+        let losing: Vec<Hash> = losing.into_iter().filter(|h| !excused.contains(h)).collect();
+        // Agreements draft 14 (rules 48, 94; F307, F316): who is paid less is
+        // read on the roster at this line; a holder the stake's holders'
+        // rule binds, where the mark meets that rule, does not sign for itself.
+        let pay = self.collective_pay_signers(col, at, &pid, parent, clone, mark)?;
+        // Rule 45: a change of a stake's holders' rule (field 30, its
+        // standing waiver included, F328) needs every holder of that stake,
+        // as the roster at the line counts them.
+        for (i, _) in parent.stakes.iter().flatten().enumerate() {
+            if parent.holders_rule(i as u64) != clone.holders_rule(i as u64) {
+                for (h, _) in self.roster_at(col, at, &pid, i as u64)? {
+                    if !by.contains_key(&h) {
+                        return Ok(CloneState::Draft(
+                            "it changes a stake's holders' rule, and a holder of that stake has not signed it: it is changed only by every holder (rules 45, 94; F307, F328)".into(),
+                        ));
+                    }
+                }
+            }
+        }
         for h in &losing {
             if !by.contains_key(h) && !self.moved_by_abandonment(h, parent, clone, k, &lineage[1..], Some((col, at, &pid)), own)? {
                 return Ok(CloneState::Draft(
@@ -3190,7 +3555,26 @@ impl<'a> AgreementsView<'a> {
         if let Some(w) = self.coverage(clone) {
             return Ok(CloneState::Invalid(w));
         }
+        let link = match at {
+            Line::Rotation(j) => j,
+            Line::Record(h) => col.pos(h).unwrap_or(usize::MAX),
+        };
+        if let Some(w) = self.own_part_problem(col, link, clone) {
+            return Ok(CloneState::Invalid(w));
+        }
         Ok(CloneState::Complete)
+    }
+
+    /// Agreements draft 14, rule 22 (F312): a plan naming the collective
+    /// itself off the top (a named receiver written null) pays that part to
+    /// the collective's vault, so it is invalid where the collective's chain,
+    /// as it stands at link `k`, declares no vault (Money rule 14a).
+    fn own_part_problem(&self, col: &Col, k: usize, t: &Terms) -> Option<String> {
+        let own = t.plan.as_ref().is_some_and(|p| p.shares.iter().any(|s| matches!(s, crate::agreements::open_formats::ShareRule::Own { .. })));
+        if own && self.vault_at(&col.id, k).is_empty() {
+            return Some("the plan names the collective off the top, paid to its vault, and the collective declares no vault (rule 22; new in draft 14, F312)".into());
+        }
+        None
     }
 
 
@@ -3212,18 +3596,25 @@ impl<'a> AgreementsView<'a> {
     /// party made counts here; where an act of a collective uses the
     /// declaration, only those placed at or before its line do.
     pub fn declaration(&self, id: &Hash) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
-        self.declaration_as(id, &|_| Ok(true))
+        self.declaration_as(id, &|_| Ok(true), &|h| Ok(self.valid(&h.id)))
     }
 
     /// [`Self::declaration`], where a signature act `s` of the declared
     /// party on a version later than the one field 1 names makes field 1
     /// no longer the last version it signed only where `counts(s)`.
-    fn declaration_as(&self, id: &Hash, counts: &dyn Fn(&Hash) -> R<bool>) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
+    fn declaration_as(
+        &self,
+        id: &Hash,
+        counts: &dyn Fn(&Hash) -> R<bool>,
+        kept: &dyn Fn(&Held) -> R<bool>,
+    ) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
         let h = self.held(id)?;
         if !self.is_agreements(h, types::DECLARATION) {
             return Ok(Err("not an abandonment declaration (type 13)".into()));
         }
-        if !self.valid(&h.id) {
+        // F302: in a collective, as the line using it places it, whatever
+        // its signer's later rotation disowned.
+        if !kept(h)? {
             return Ok(Err("the declaration is not valid under Identity".into()));
         }
         let d = match AbsenceDeclaration::decode(&h.inside) {
@@ -3241,26 +3632,28 @@ impl<'a> AgreementsView<'a> {
         }
         let lineage = self.lineage(&d.agreement)?;
         if !lineage[0].1.parties.contains(&d.party) {
-            return Ok(Err("the party declared absent is not a party of the agreement it names".into()));
+            return self.holder_declaration(h, d, &lineage);
         }
         // Field 1 is the last version, back from field 0, that the party
         // signed (rule 51), judged where the declaration is used (F172): a
         // signature on a later version counts against it only where
         // `counts` places it there, so a later act of the party never
         // undoes what was put in force.
-        let sigs_on = |v: &Hash| -> Vec<Hash> {
-            self.v
-                .signed_by(&d.party)
-                .filter(|s| {
-                    self.is_agreements(s, types::SIGNATURE) && decode_signature(&s.inside).ok() == Some(*v) && self.valid(&s.id)
-                })
-                .map(|s| s.id)
-                .collect()
+        // The party's signatures field 1 is checked against, as the line
+        // judged them (F302): kept where its later rotation disowned them.
+        let sigs_on = |v: &Hash| -> R<Vec<Hash>> {
+            let mut out = vec![];
+            for s in self.v.signed_by(&d.party) {
+                if self.is_agreements(s, types::SIGNATURE) && decode_signature(&s.inside).ok() == Some(*v) && kept(s)? {
+                    out.push(s.id);
+                }
+            }
+            Ok(out)
         };
         let mut found = None;
         let mut signed_any = false;
         for (v, vt) in &lineage {
-            let sigs = sigs_on(v);
+            let sigs = sigs_on(v)?;
             if sigs.is_empty() {
                 continue;
             }
@@ -3319,6 +3712,49 @@ impl<'a> AgreementsView<'a> {
         Ok(Ok((d, clause)))
     }
 
+    /// Agreements draft 14, rule 85 (F313): a declaration naming a holder
+    /// of the collective's stake in itself who is no party (a departed
+    /// holder, a stake successor, a buyer), made under the clause in force
+    /// (that of the agreement it names, field 1 naming a version of its
+    /// lineage), signed by its authority, with the stake-moving outcomes
+    /// only: outcome 1 or 2 where the holder's succession plan names no
+    /// stake successor; where it names one, the stake goes by succession
+    /// (rule 89), and the declaration states outcome 0 alone, which removes
+    /// no voice (the holder has none) and moves the stake to the successor
+    /// (F330). Never 3 or 4; outcome 0 against no other holder.
+    fn holder_declaration(&self, h: &Held, d: AbsenceDeclaration, lineage: &[(Hash, Terms)]) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
+        let t = &lineage[0].1;
+        let holds = t.is_collective() && t.own_stake().is_some_and(|(_, st)| st.identified().iter().any(|(x, n)| *x == d.party && *n > 0));
+        if !holds {
+            return Ok(Err("the party declared absent is not a party of the agreement it names, nor a holder of a collective's stake in itself (rule 85, F313)".into()));
+        }
+        if !lineage.iter().any(|(v, _)| *v == d.clause) {
+            return Ok(Err("the clause it applies is not a version of the agreement it names (rule 85, F313)".into()));
+        }
+        let Some(clause) = t.abandonment.clone() else {
+            return Ok(Err("the agreement it names carries no abandonment clause".into()));
+        };
+        if !d.outcomes.iter().all(|o| clause.outcomes.contains(o)) {
+            return Ok(Err("an outcome the clause does not allow (rule 51)".into()));
+        }
+        let heirs = t.succession.iter().flatten().any(|s| s.party == d.party && s.stakes.as_ref().is_some_and(|v| !v.is_empty()));
+        let allowed: &[u64] = if heirs { &[outcomes::VOICE_REMOVED] } else { &[outcomes::STAKE_REDISTRIBUTED, outcomes::STAKE_TRANSFERRED] };
+        if !d.outcomes.iter().all(|o| allowed.contains(o)) {
+            return Ok(Err(
+                "against a holder who is no party, only the stake-moving outcomes: outcome 0 alone, the stake passing by succession, where its plan names a stake successor, else outcome 1 or 2; never 3 or 4 (rule 85; new in draft 14, F313, F330)".into(),
+            ));
+        }
+        let signer = h.act.outside.signer.ok_or(AgreementsError::Check("a declaration with no signer"))?;
+        let ok = match clause.authority {
+            Authority::Named(a) => signer == a,
+            Authority::Others(_) => signer != d.party,
+        };
+        if !ok {
+            return Ok(Err("it is not signed by the authority the clause names (rule 51)".into()));
+        }
+        Ok(Ok((d, clause)))
+    }
+
     /// A declaration as the act `by` uses it (rule 51, F172): the record
     /// registering it, or the clone put in force under it (a deal's clone,
     /// or the clone a recovery rotation declares). Its own checks
@@ -3336,10 +3772,14 @@ impl<'a> AgreementsView<'a> {
     fn declaration_used(&self, id: &Hash, by: &Hash, at: Option<(&Col, Line<'a>, &Hash)>) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
         let got = match at {
             None => self.declaration(id)?,
-            Some((col, l, ag)) => self.declaration_as(id, &|s| {
-                let h = self.held(s)?;
-                self.placed_at(col, h, l, ag)
-            })?,
+            Some((col, l, ag)) => self.declaration_as(
+                id,
+                &|s| {
+                    let h = self.held(s)?;
+                    self.placed_at(col, h, l, ag)
+                },
+                &|h| self.kept_at(col, h, l),
+            )?,
         };
         let (d, clause) = match got {
             Ok(v) => v,
@@ -3530,7 +3970,8 @@ impl<'a> AgreementsView<'a> {
         };
         for s in absence {
             let h = self.held(s)?;
-            let on = if self.is_agreements(h, types::SIGNATURE) && self.valid(&h.id) {
+            // F302: as this recovery rotation places it.
+            let on = if self.is_agreements(h, types::SIGNATURE) && self.kept_at(col, h, Line::Rotation(j))? {
                 decode_signature(&h.inside).ok()
             } else {
                 None
@@ -3577,7 +4018,7 @@ impl<'a> AgreementsView<'a> {
                 "the plan's seat does not enter automatically: its successor is a nomination (rule 48c, Q14)".into(),
             );
         }
-        let seats: Vec<Hash> = plan.seats.iter().flatten().map(|(h, _)| *h).collect();
+        let seats: Vec<Hash> = plan.seats.iter().flatten().copied().collect();
         if seats.is_empty() {
             return Err("the plan names no seat successor".into());
         }
@@ -3703,7 +4144,7 @@ impl<'a> AgreementsView<'a> {
         if let Some(w) = plan_open(parent, plan) {
             return Err(AgreementsError::Unsettled(w));
         }
-        let seats: Vec<Hash> = plan.seats.iter().flatten().map(|(h, _)| *h).collect();
+        let seats: Vec<Hash> = plan.seats.iter().flatten().copied().collect();
         let clone = &lineage[0].1;
         let placed: Vec<Hash> = parent
             .parties
@@ -4646,6 +5087,16 @@ impl<'a> AgreementsView<'a> {
             if acked(&|_| true)? {
                 return Ok(Backing::Binds { grant: gh.id });
             }
+            // Agreements draft 14 (F320): a verifier holding the limits
+            // cMIP, and the time reference an expiry is judged against,
+            // states whether the act lies within them; outside them (an
+            // expiry past, among them), it is not backed, the grant quiet
+            // and still revocable.
+            match self.grant_limits.get(act) {
+                Some(true) => return Ok(if ended { Backing::Binds { grant: gh.id } } else { Backing::Backed { grant: gh.id } }),
+                Some(false) => return not("the act lies outside the limits the grant's limits cMIP sets (fields 3 and 4), an expiry past among them: not backed, the grant quiet and still revocable (rule 80; new in draft 14, F320)"),
+                None => {}
+            }
             return Ok(Backing::Unknown {
                 grant: gh.id,
                 reason: "the grant carries limits (fields 3 and 4, rule 18d) under a cMIP this verifier does not implement: whether the act lies within them cannot be read".into(),
@@ -4871,6 +5322,30 @@ impl<'a> AgreementsView<'a> {
     /// mark (rules 44c, 45a), computed before anything is signed. Err: why
     /// there is no such count: the collective broken, ended, or its record
     /// forked, or the power none of that agreement's.
+    /// Agreements draft 14, rule 84 (F305): the nominee for `party`'s seat
+    /// in `collective`, where the agreement in force names no succession
+    /// plan for it: the successor of a succession the party declared under
+    /// Identity and the successor confirmed (Identity, F300). A nomination
+    /// only, approved under the constitutional change rule (rule 64), the
+    /// successor signing the clone that seats it; never an automatic seat,
+    /// and the stake stays with the party's identity. A declared succession
+    /// the successor never confirmed nominates nobody; one whose
+    /// confirmation's standing this verifier cannot tell is unknown (F298).
+    pub fn nominee(&self, collective: &Hash, party: &Hash) -> R<Option<Hash>> {
+        let Some(cur) = self.current(collective)? else {
+            return Ok(None);
+        };
+        let t = self.terms(&cur.agreement)?;
+        if !t.parties.contains(party) || t.succession.iter().flatten().any(|s| s.party == *party) {
+            return Ok(None);
+        }
+        Ok(match self.v.succession(party) {
+            crate::chain::SuccessionSeen::Confirmed { successor, .. } => Some(successor),
+            crate::chain::SuccessionSeen::Unknown { rotation, .. } => return Err(AgreementsError::Missing(rotation)),
+            _ => None,
+        })
+    }
+
     pub fn next_voices(&self, collective: &Hash, power: &Power, leaving: &[Hash]) -> R<Result<NextVoices, String>> {
         let col = self.col(collective);
         if col.res.links.is_empty() {
@@ -4958,6 +5433,20 @@ fn needed_to_sign(h: &Holding, p: &Hash) -> bool {
     }
 }
 
+/// Whether `signers`, holders of a stake at the line (`roster`), hold
+/// together at least `need` millionths of the whole stake (rules 65, 94;
+/// F307, F308, F311): a holder's share counts once, whoever signs.
+fn holders_met(roster: &[(Hash, u64)], signers: &[Hash], need: u64) -> Result<(), String> {
+    if signers.iter().any(|x| !roster.iter().any(|(h, _)| h == x)) {
+        return Err("the mark names a signer who holds none of that stake at the line (rule 46, F307)".into());
+    }
+    let got: u64 = roster.iter().filter(|(h, _)| signers.contains(h)).map(|(_, n)| *n).sum();
+    if got < need {
+        return Err("the mark names too few holders to meet the rule, counted by share (rule 46, F308)".into());
+    }
+    Ok(())
+}
+
 /// The parties a power is counted among in the parent, and its rule.
 fn power_base(parent: &Terms, p: &Power) -> Option<(Vec<Hash>, Rule)> {
     match p {
@@ -4967,7 +5456,9 @@ fn power_base(parent: &Terms, p: &Power) -> Option<(Vec<Hash>, Rule)> {
         }
         Power::Clone => Some((parent.clone.counted_among(&parent.parties), parent.clone.clone())),
         Power::Area(id) => parent.area(*id).map(|a| (a.holders.clone(), a.rule())),
-        Power::Plan(_) => None,
+        // Counted among a stake's holders by share, not among parties
+        // (rule 65; F307): see `holders_power_met`.
+        Power::Plan(_) | Power::Holders(_) => None,
         Power::Judicial => Some((parent.parties.clone(), Rule::All)),
     }
 }
@@ -5004,16 +5495,13 @@ fn plan_grammar(parent: &Terms, party: &Hash, seats: &[Hash]) -> Option<KeyGramm
     })
 }
 
-/// What Flaw B14's answer leaves open for a plan, refused rather than
-/// guessed: a seat's voting weight other than one, which no rule counts; a
-/// seat successor who is already a party; several successors to a holding
+/// What Flaw B14's answer leaves open for a plan, unknown rather than
+/// guessed (a seat's voting weight is out of format since draft 14, F328,
+/// Q15): a seat successor who is already a party; several successors to a holding
 /// of one; a party who is a custodian or holds the recovery path.
 fn plan_open(parent: &Terms, plan: &SuccessionPlan) -> Option<&'static str> {
     let seats = plan.seats.as_deref().unwrap_or_default();
-    if seats.iter().any(|(_, w)| *w != 1) {
-        return Some("a seat successor with a voting weight other than one: no rule counts weights (Flaw B14, its second remaining point)");
-    }
-    if seats.iter().any(|(h, _)| parent.parties.contains(h)) {
+    if seats.iter().any(|h| parent.parties.contains(h)) {
         return Some("a seat successor who is already a party: what taking the party's place in the keys then means is not written (Flaw B14)");
     }
     let p = &plan.party;
@@ -5231,7 +5719,7 @@ impl<'a> AgreementsView<'a> {
     /// proof the caller checked and found to carry the commitment
     /// recomputed from it, its signer, or the anonymous key it carries, as
     /// payer ([`Self::rail_valid`]), on a rail whose commitment binds the
-    /// payer (not [`Self::unbound_rails`]), acknowledging it (Envelopes rule
+    /// payer ([`Self::rail_binds`]), acknowledging it (Envelopes rule
     /// 4a), or naming it as its referral's evidence (Money, the claim's
     /// field 6: "the payer's client for a referral", rule 22); never the
     /// payer a receipt names,
@@ -5279,7 +5767,7 @@ impl<'a> AgreementsView<'a> {
                 && self.payers_claim(c)
                 && self.rail_valid.contains_key(&c.id)
                 && !self.rail_invalid.contains(&c.id)
-                && !self.unbound_rails.contains(&cl.rail)
+                && self.rail_binds(&cl.rail, crate::development::Bound::Purpose)
                 && (c.inside.acks.iter().flatten().any(|a| a == evidence) || cl.referral.as_ref().is_some_and(|r| &r.evidence == evidence)))
             .then(|| self.payment_of(&cl.proof))
         };
@@ -5553,6 +6041,12 @@ pub struct SplitEval {
     /// split service; a receiver the plan does not already pay; a record
     /// not signed by the measurer, or not of the metric's Module).
     pub metric_problems: Vec<String>,
+    /// Agreements draft 14, rule 22 (F312): payments of the collective's own
+    /// part (a receipt or claim naming this split, paid to the collective)
+    /// that the rail shows paid anywhere but an entry of the collective's
+    /// vault: to its flow pointer, its split service's address, which
+    /// would split it again. Any entry breaks the plan.
+    pub own_not_to_vault: Vec<Hash>,
 }
 
 /// A break in a split service's tally chain for a stake (rule 15a, rule
@@ -5912,10 +6406,9 @@ pub struct OwedBack {
     pub still_broken: bool,
 }
 
-/// The constitutional change rule, counted among the voices that remain
-/// (rule 44d), met by these signers.
-fn constitution_met(t: &Terms, voices: &[Hash], signed: &[Hash]) -> bool {
-    let rule = t.constitutional_rule();
+/// A rule by head, counted among the voices that remain (rule 44d), met
+/// by these signers.
+fn head_met(rule: &Rule, t: &Terms, voices: &[Hash], signed: &[Hash]) -> bool {
     let counted: Vec<Hash> = rule.counted_among(&t.parties).into_iter().filter(|p| voices.contains(p)).collect();
     match rule.needed(counted.len()) {
         None => false,
@@ -5977,6 +6470,48 @@ impl<'a> AgreementsView<'a> {
             return vec![];
         };
         self.history(col, bf, &[], tips).missing.iter().copied().collect()
+    }
+
+    /// Whether a fork or closing meets the constitutional change rule
+    /// (rules 47a, 69), each rule in it counted as it would be alone, at the
+    /// ending's line (new in draft 14, F330: "operate by share, die by
+    /// share"). By head, among the members whose voice remains, as before.
+    /// By share among the parties (`[3, stake, share]`), each member whose
+    /// voice remains counts by what it holds of the stake at the ending's
+    /// line ([`Self::roster_at_ending`]), the share asked for being of what
+    /// those voices hold together; where they hold nothing, every voice
+    /// that remains together meets it (rule 65). Among a stake's holders
+    /// (`[5, stake, share]`), every holder at the line counts by its share
+    /// of the whole stake, each by its chain signature on the ending (Identity
+    /// type 16): a member's, and that of a holder who is no member, as a
+    /// member signs (F331), judged as every
+    /// ending signature is (F132, U4).
+    #[allow(clippy::too_many_arguments)]
+    fn ending_rule_met(&self, col: &Col, ending: &Hash, ag: &Hash, t: &Terms, voices: &[Hash], signed: &[Hash], chain_act: &Hash, tips: &[KeptTip]) -> R<bool> {
+        let rule = t.constitutional_rule();
+        for part in rule.parts() {
+            let met = match part {
+                Rule::ByShare { stake, share } => {
+                    let roster = self.roster_at_ending(col, ag, *stake, chain_act, tips)?;
+                    let held = |x: &Hash| roster.iter().find(|(h, _)| h == x).map_or(0, |(_, n)| *n) as u128;
+                    let total: u128 = voices.iter().map(held).sum();
+                    let got: u128 = voices.iter().filter(|v| signed.contains(v)).map(held).sum();
+                    if total == 0 { !voices.is_empty() && voices.iter().all(|v| signed.contains(v)) } else { got * MILLION as u128 >= *share as u128 * total }
+                }
+                Rule::Holders { stake, share } => {
+                    let roster = self.roster_at_ending(col, ag, *stake, chain_act, tips)?;
+                    let others: Vec<Hash> = roster.iter().map(|(h, _)| *h).filter(|h| !voices.contains(h)).collect();
+                    let mut s: Vec<Hash> = signed.iter().filter(|x| voices.contains(x) && roster.iter().any(|(h, _)| h == *x)).copied().collect();
+                    s.extend(self.ending_signed(&col.id, ending, &others));
+                    holders_met(&roster, &s, *share).is_ok()
+                }
+                head => head_met(head, t, voices, signed),
+            };
+            if !met {
+                return Ok(false);
+            }
+        }
+        Ok(true)
     }
 
     /// The agreement in force at a fork's or closing's line, and the members
@@ -6118,6 +6653,32 @@ impl<'a> AgreementsView<'a> {
                 "not done: it is not sealed to every member ({missing} missing), nor public, so it binds no one (F126)"
             )));
         }
+        // Agreements draft 14, rule 57 (F318): where the collective's stake
+        // in itself has holders who are no members, an act in its Money
+        // lane is done only once sealed to every holder of that stake too
+        // (a holder that is an agreement: every party of its version in
+        // force; a collective: the collective, F328 Q13), the holders those
+        // the agreement in force and the transfers its line placed name.
+        if x.inside.spec == self.mirs.money && x.act.outside.content_key.is_none() {
+            if let Some((i, st)) = t.own_stake() {
+                let roster = match self.collective_of(agreement)? {
+                    Some(c) => {
+                        let col = self.col(&c);
+                        self.roster_at(&col, Line::Record(x), agreement, i as u64)?
+                    }
+                    None => st.identified(),
+                };
+                if roster.iter().any(|(h, _)| !t.parties.contains(h)) {
+                    for (h, _) in &roster {
+                        if !self.reaches_holder(x, h)? {
+                            return Ok(Some(
+                                "not done: an act in the Money lane of a collective whose stake in itself has holders who are no members is sealed to every holder of that stake, or public; it is not, so it binds no one (rule 57; new in draft 14, F318, F328)".into(),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
         Ok(None)
     }
 
@@ -6164,11 +6725,12 @@ impl<'a> AgreementsView<'a> {
             }
             let Ok(f0) = Fork::decode(&y.inside) else { continue };
             let Some(side) = f0.sides.iter().position(|s| s.successor == col.id) else { continue };
-            let signed = self
-                .valid_sigs(&y.id, &[col.id])
-                .iter()
-                .filter_map(|(_, s)| self.v.get(s))
-                .any(|s| self.before_line(col, s, chain_act, tips));
+            // F303: the original's own chain signature on that earlier fork,
+            // lying in its identity chain before this fork's chain act.
+            let signed = match (self.chain_signed(&col.id, &y.id), col.res.position_of(chain_act)) {
+                (Some(p), Some(q)) => p < q,
+                _ => false,
+            };
             if !signed || !self.fork(&y.id)?.complete {
                 continue;
             }
@@ -6363,8 +6925,8 @@ impl<'a> AgreementsView<'a> {
                 "every member on a side signs the fork, with their own identity (F121), by a chain signature with their chain key (F132); a signature placed after the signer's own signature on an ending naming this one counts for nothing (U4)",
             );
         }
-        if !constitution_met(&t, &voices, &e.signed) {
-            return fail(e, "the fork follows the constitutional change rule, every member by default (N1)");
+        if !self.ending_rule_met(&col, id, &f.agreement, &t, &voices, &e.signed, &f.chain_act, &f.tips)? {
+            return fail(e, "the fork follows the constitutional change rule, every member by default (N1), a rule by share counted at the fork's line (F330)");
         }
         if let Some(i) = e.successors.iter().position(|s| s.is_none()) {
             return fail(
@@ -6372,17 +6934,54 @@ impl<'a> AgreementsView<'a> {
                 &format!("side {i}'s successor is not held, or its founding terms do not have that side's members as parties, keeping every departed holder and member leaving at their share (N4)"),
             );
         }
+        // Rule 95, item 4 (new in draft 14, F310; Fable's Agreements review,
+        // A10): a successor's founding terms pay no kept holder less than the
+        // original's agreement in force at the fork's line, compared as the
+        // kept holders' stake (each collective's stake in itself, written
+        // null) as rule 48 reads "paid less"; or the kept holders consent:
+        // holders of the original's stake in itself meeting its holders'
+        // rule, or, under every holder, each kept holder, by a signature act
+        // naming the successor's founding terms, which counts only where an
+        // act of the original in the fork's history acknowledges it (F328,
+        // Q12), kept there whatever its signer's later rotation disowns.
+        let kept_ids: Vec<Hash> = e.kept.iter().map(|(h, _)| *h).collect();
+        for (i, ag) in e.successors.clone().iter().enumerate() {
+            let Some(ag) = ag else { continue };
+            let st = self.terms(ag)?;
+            if !super::pay::stakes_paid_less(&t, &st).iter().any(|(o, _)| *o == Who::This) || kept_ids.is_empty() {
+                continue;
+            }
+            let consented = |x: &Hash| {
+                self.v.signed_by(x).any(|s| {
+                    self.is_agreements(s, types::SIGNATURE)
+                        && decode_signature(&s.inside).ok() == Some(*ag)
+                        && matches!(self.status(&s.id), Status::Valid | Status::Void | Status::Disputed)
+                        && self.relied_by_line(&col, &f.chain_act, &f.tips, s)
+                })
+            };
+            let met = match (t.own_stake(), t.own_stake().map(|(j, _)| t.holders_rule(j as u64).0)) {
+                (Some((_, own_st)), Some(HoldersRule::Share(need))) => {
+                    own_st.identified().iter().filter(|(x, _)| consented(x)).map(|(_, n)| *n).sum::<u64>() >= need
+                }
+                _ => kept_ids.iter().all(consented),
+            };
+            if !met {
+                return fail(
+                    e,
+                    &format!("side {i}'s successor's founding terms pay a kept holder less than the original's agreement in force at the fork's line, and the kept holders have not consented, acknowledged by an act of the original in the fork's history (rule 95; new in draft 14, F310, F328)"),
+                );
+            }
+        }
         // Debts (N13; F127, replacing F125 D1): the fork cites its history
         // (its line) and hands out everything in it, or does not take
         // effect; each successor a debt is assigned to signs for it. What is
         // missing from that history is void (the tie rule): no successor
         // owes it.
-        let missing = self.line_missing(&col, &f.chain_act, &f.tips);
-        if !missing.is_empty() {
-            return fail(
-                e,
-                &format!("{} act(s) in the history the fork cites are not held: until they are, what it must hand out cannot be told (F127)", missing.len()),
-            );
+        // F304 (F298): while an act that history names is not held, the
+        // fork is unknown for this verifier, never complete and never "not
+        // complete"; it judges again once it holds the act.
+        if let Some(m) = self.line_missing(&col, &f.chain_act, &f.tips).first() {
+            return Err(AgreementsError::Missing(*m));
         }
         e.unassigned = self
             .to_hand_out(&col, &t, &f.chain_act, &f.tips)?
@@ -6399,12 +6998,30 @@ impl<'a> AgreementsView<'a> {
         owing.sort();
         owing.dedup();
         for i in owing {
-            if !self.signed_act(h, &f.sides[i as usize].successor)? {
-                return fail(e, &format!("side {i}'s successor signs for the debts the fork assigns to it (N13)"));
+            if self.chain_signed(&f.sides[i as usize].successor, id).is_none() {
+                return fail(
+                    e,
+                    &format!("side {i}'s successor signs for the debts the fork assigns to it by a chain signature with its own chain key (N13; new in draft 14, F303): a signature act is no successor's signature on it"),
+                );
             }
         }
         e.complete = true;
         Ok(e)
+    }
+
+    /// The position, in `signer`'s identity chain, of its chain signature
+    /// (Identity type 16) naming `act`, where one counts there and is not
+    /// void: the earliest (F132; new in draft 14, F303: a successor signs a
+    /// fork so, and no later rotation voids a chain act).
+    fn chain_signed(&self, signer: &Hash, act: &Hash) -> Option<usize> {
+        let res = self.v.resolve(signer);
+        self.v
+            .signed_by(signer)
+            .filter(|x| x.inside.spec == self.mirs.identity && x.inside.type_ == crate::identity::types::CHAIN_SIGNATURE)
+            .filter(|x| matches!(&x.identity, Some(Ok(Payload::ChainSignature(c))) if &c.signs == act))
+            .filter(|x| !self.refuses(&x.id))
+            .filter_map(|x| res.position_of(&x.id))
+            .min()
     }
 
     /// Stakes a collective holds in what this verifier holds: stakes of
@@ -6521,14 +7138,10 @@ impl<'a> AgreementsView<'a> {
         // line holds ... as for a fork"; "owes nothing" is judged on the
         // history the closing cites): while an act that history names is
         // not held, this verifier cannot tell what the collective owes
-        // before its line, so the closing is not complete for it (F298:
-        // never complete on partial knowledge). Fable's step-15 review, A3.
-        let missing = self.line_missing(&col, &c.chain_act, &c.tips);
-        if !missing.is_empty() {
-            return fail(
-                e,
-                &format!("{} act(s) in the history the closing cites are not held: until they are, what the collective owes before its line cannot be told (F127)", missing.len()),
-            );
+        // before its line: the closing is unknown for it, never complete and
+        // never "not complete" (F304, F298; Fable's step-15 review, A3).
+        if let Some(m) = self.line_missing(&col, &c.chain_act, &c.tips).first() {
+            return Err(AgreementsError::Missing(*m));
         }
         let signer = h.act.outside.signer.ok_or(AgreementsError::Check("a closing act has a signer"))?;
         e.signed = self.ending_signed(&c.collective, id, &voices);
@@ -6543,8 +7156,8 @@ impl<'a> AgreementsView<'a> {
         if !e.signed.contains(&signer) {
             return fail(e, "the closing's signer signs it too, by a chain signature with their chain key (F132)");
         }
-        if !constitution_met(&t, &voices, &e.signed) {
-            return fail(e, "a closing follows the constitutional change rule, every member by default (N9), each signing by a chain signature with their chain key (F132)");
+        if !self.ending_rule_met(&col, id, &c.agreement, &t, &voices, &e.signed, &c.chain_act, &c.tips)? {
+            return fail(e, "a closing follows the constitutional change rule, every member by default (N9), a rule by share counted at the closing's line (F330), each signing by a chain signature with their chain key (F132)");
         }
         if !e.holds.is_empty() {
             return fail(e, "a closing ends only a collective that holds nothing: every work sold or released (N9)");
@@ -6931,10 +7544,20 @@ impl<'a> AgreementsView<'a> {
     /// payee and purpose, the payment's own commitment decides, so only the
     /// act carrying the rail's valid answer counts, and where both carry
     /// one (which a rail binding both cannot give) neither does; on a rail
-    /// binding neither ([`Self::unbound_rails`]), the payer's claim decides
+    /// binding neither (field 13 of its specification, [`Self::rails`]), the payer's claim decides
     /// what the payment fulfils, and the receiver's contrary receipt counts
     /// for nothing, shown as a dispute on the receiver.
     pub fn paid_toward(&self, obligation: &Hash) -> u64 {
+        self.paid_toward_if(obligation, &|_| true, false)
+    }
+
+    /// [`Self::paid_toward`], counting only the receipts and claims `relied`
+    /// accepts (a closing's: those an act of the collective in its history
+    /// acknowledges, or the collective's own; F303); with `placed`, a receipt
+    /// so relied on is kept whatever its signer's later rotation disowned
+    /// (F302), shown as a dispute.
+    fn paid_toward_if(&self, obligation: &Hash, relied: &dyn Fn(&Held) -> bool, placed: bool) -> u64 {
+        let standing = |r: &Held| self.valid(&r.id) || (placed && matches!(self.status(&r.id), Status::Void | Status::Disputed));
         use crate::money::Payload as Fin;
         let o = match self.v.get(obligation).map(|o| (o, Fin::decode(o.inside.type_, &o.inside.payload))) {
             Some((x, Ok(Fin::Obligation(o)))) if x.inside.spec == self.mirs.money => o,
@@ -6959,7 +7582,8 @@ impl<'a> AgreementsView<'a> {
                     if &rc.fulfils == obligation
                         && rc.payee == creditor
                         && r.act.outside.signer == Some(creditor)
-                        && self.valid(&r.id)
+                        && relied(r)
+                        && standing(r)
                         && counts(&r.id, &rc.amount, &rc.proof)
                         && !self.receipt_overruled(&rc) =>
                 {
@@ -6969,6 +7593,7 @@ impl<'a> AgreementsView<'a> {
                     if &c.fulfils == obligation
                         && c.payee == creditor
                         && self.payers_claim(r)
+                        && relied(r)
                         && counts(&r.id, &c.amount, &c.proof)
                         && !self.claim_overruled(&c) =>
                 {
@@ -7428,18 +8053,38 @@ impl<'a> AgreementsView<'a> {
     /// Money rule 10 (F151), for a payer's claim with the rail's answer,
     /// valid: whether a receipt sharing its rail proof, disagreeing with it
     /// in payee or in what the payment fulfils, keeps it from counting. On
-    /// a rail binding no payee or purpose ([`Self::unbound_rails`]), never:
+    /// a rail binding no payee or purpose (field 13 of its specification, [`Self::rails`]), never:
     /// the payer's claim decides what the payment fulfils. On a rail
     /// binding both, the commitment decides: a contrary receipt the rail
     /// refuses, or has not answered for, does not; one the rail also
     /// answered valid for contradicts it, and neither counts.
     fn claim_overruled(&self, c: &crate::money::Claim) -> bool {
-        if self.unbound_rails.contains(&c.rail) {
-            return false;
-        }
+        use crate::development::Bound;
+        // Element by element (F328, Q4): where the proof binds an element,
+        // the commitment decides it, and a contrary receipt the rail also
+        // answered valid for contradicts the claim; where it does not, the
+        // payer's claim decides that element (for the payee, the payment
+        // address the claim's rail answer was checked against, rule 4).
+        let (payee, purpose) = (self.rail_binds(&c.rail, Bound::Payee), self.rail_binds(&c.rail, Bound::Purpose));
         self.receipts_for_proof(&c.proof)
             .iter()
-            .any(|(id, r)| (r.payee != c.payee || r.fulfils != c.fulfils) && self.rail_valid.contains_key(id))
+            .any(|(id, r)| ((payee && r.payee != c.payee) || (purpose && r.fulfils != c.fulfils)) && self.rail_valid.contains_key(id))
+    }
+
+    /// Whether a rail is a push rail, as its specification's field 11 says
+    /// (F301); a rail not adopted reads as a request rail (see [`Self::rails`]).
+    pub fn is_push_rail(&self, rail: &Hash) -> bool {
+        self.rails.get(rail).is_some_and(|r| r.kind == crate::development::RailKind::Push)
+    }
+
+    /// Whether a rail's proof binds an element, as its specification's
+    /// field 13 says (F301, F328 Q4); a rail not adopted reads as binding
+    /// every element (see [`Self::rails`]). *The payer is carried in the
+    /// payment commitment with the purpose, so a proof binding the purpose
+    /// binds the payer the commitment names (F193's "a rail binding the
+    /// payer"; Development draft 10, field 13, F330).*
+    pub fn rail_binds(&self, rail: &Hash, b: crate::development::Bound) -> bool {
+        self.rails.get(rail).is_none_or(|r| r.binds(b))
     }
 
     /// Money rule 10 (F151), for a receipt: whether a payer's claim
@@ -7507,6 +8152,14 @@ impl<'a> AgreementsView<'a> {
     /// rules: a Money act, reached by its Money lane alone (E2). Only the
     /// creditor signs it.
     pub fn debt_release(&self, id: &Hash) -> R<DebtReleaseEval> {
+        self.debt_release_as(id, false)
+    }
+
+    /// [`Self::debt_release`]; with `placed`, for a release a collective's
+    /// line placed (a closing's history acknowledging it, F303): kept there
+    /// whatever its signer's later rotation disowned (F302), its status
+    /// under Identity shown as a dispute.
+    fn debt_release_as(&self, id: &Hash, placed: bool) -> R<DebtReleaseEval> {
         use crate::money::{self as fin, Payload as Fin};
         let h = self.held(id)?;
         let r = match Fin::decode(h.inside.type_, &h.inside.payload) {
@@ -7518,7 +8171,8 @@ impl<'a> AgreementsView<'a> {
             e.why = Some(w.into());
             Ok(e)
         };
-        if !self.valid(id) {
+        let disowned = placed && matches!(self.status(id), Status::Void | Status::Disputed);
+        if !self.valid(id) && !disowned {
             return fail(e, "the creditor's release is not valid under Identity");
         }
         let Some(x) = self.v.get(&r.obligation) else {
@@ -7531,7 +8185,7 @@ impl<'a> AgreementsView<'a> {
         if h.act.outside.signer != Some(o.creditor) {
             return fail(e, "only the creditor the obligation names signs its release (F125)");
         }
-        if !self.consent(id)?.counts() {
+        if !disowned && !self.consent(id)?.counts() {
             return fail(e, "the creditor's consent does not count, by its own rules (its Money lane, F126)");
         }
         e.counts = true;
@@ -7553,6 +8207,48 @@ impl<'a> AgreementsView<'a> {
             }
         }
         Ok(None)
+    }
+
+    /// Whether an act lies in the history a closing drawn at `chain_act` and
+    /// `tips` cites and was signed by the collective, or is acknowledged
+    /// there by an act of the collective (Envelopes, `acks`; F303).
+    fn relied_by_line(&self, col: &Col, chain_act: &Hash, tips: &[KeptTip], x: &Held) -> bool {
+        if x.act.outside.signer == Some(col.id) {
+            return true;
+        }
+        let Some(bf) = col.res.position_of(chain_act) else { return false };
+        let h = self.history(col, bf, &[], tips);
+        self.v.acknowledgements(&x.id).into_iter().any(|a| Self::own_key(col, a) && h.acts.contains(&a.id))
+    }
+
+    /// Whether an obligation is still owed for a closing (F303): counting
+    /// only the receipts, claims and releases its line relies on.
+    fn still_owed_for_closing(&self, col: &Col, chain_act: &Hash, tips: &[KeptTip], obligation: &Hash, amount: u64) -> R<bool> {
+        if self.own_attempts_open() {
+            return self.binding(|v| {
+                let col = v.col(&col.id);
+                v.still_owed_for_closing(&col, chain_act, tips, obligation, amount)
+            });
+        }
+        let paid = self.paid_toward_if(obligation, &|r| self.relied_by_line(col, chain_act, tips, r), true);
+        if paid >= amount {
+            return Ok(false);
+        }
+        use crate::money::{self as fin, Payload as Fin};
+        let mut released = false;
+        for x in self.v.held_acts() {
+            if x.inside.spec != self.mirs.money || x.inside.type_ != fin::types::RELEASE {
+                continue;
+            }
+            if !matches!(Fin::decode(x.inside.type_, &x.inside.payload), Ok(Fin::Release(r)) if &r.obligation == obligation) {
+                continue;
+            }
+            if self.relied_by_line(col, chain_act, tips, x) && self.debt_release_as(&x.id, true)?.counts {
+                released = true;
+                break;
+            }
+        }
+        Ok(!released)
     }
 
     /// Whether an obligation is still owed: neither fulfilled in full by
@@ -7604,7 +8300,16 @@ impl<'a> AgreementsView<'a> {
             } else {
                 self.debtors(&x.id)?.is_some_and(|d| d.contains(&col.id))
             };
-            if owes && self.still_owed(&x.id, o.amount.value)? {
+            let still = match line {
+                None => self.still_owed(&x.id, o.amount.value)?,
+                // F303: for a closing, a receipt or release of another
+                // identity counts only where an act of the collective in the
+                // closing's history acknowledges it, or the receipt is the
+                // collective's own; one nobody acknowledged is shown (the
+                // view's ordinary `owes`), and the closing waits.
+                Some((c, t)) => self.still_owed_for_closing(col, c, t, &x.id, o.amount.value)?,
+            };
+            if owes && still {
                 out.push(x.id);
             }
         }
@@ -8356,7 +9061,7 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
-        if !self.push_rails.contains(&rail) {
+        if !self.is_push_rail(&rail) {
             // W4 (F128), request rails: the claim the payment names is the
             // one the seller's request committed to, so a buyer cannot pay a
             // version the seller has left. Where the seller is a collective,
@@ -9322,7 +10027,10 @@ impl<'a> AgreementsView<'a> {
             if let Some(i) = p.metric {
                 return matches!(plan.shares.get(i as usize), Some(super::open_formats::ShareRule::Metric { .. }));
             }
-            plan.receivers().contains(&p.receiver)
+            // The collective's own part off the top (rule 22, F312): paid
+            // to the collective itself.
+            let own = plan.shares.iter().any(|x| matches!(x, super::open_formats::ShareRule::Own { .. }));
+            plan.receivers().contains(&p.receiver) || (own && collective == Some(p.receiver))
         };
         for p in &s.payouts {
             if p.role.is_some() && plan.is_some() && !planned(p) && !unplanned.contains(&p.receiver) {
@@ -9580,6 +10288,22 @@ impl<'a> AgreementsView<'a> {
             },
             _ => None,
         };
+        // Rule 22 (F312): the collective's own part paid to its vault.
+        let mut own_not_to_vault = vec![];
+        if let (Some(c), true) = (collective, t.plan.as_ref().is_some_and(|p| p.shares.iter().any(|x| matches!(x, super::open_formats::ShareRule::Own { .. })))) {
+            if s.payouts.iter().any(|p| p.receiver == c && p.stake.is_none()) {
+                for r in self.v.signed_by(&c) {
+                    if r.inside.spec != self.mirs.money || !self.valid(&r.id) {
+                        continue;
+                    }
+                    let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { continue };
+                    let names = x.fulfils == *id || r.inside.objects.iter().flatten().any(|o| o.chain == *id || o.predecessor == *id);
+                    if names && x.payee == c && self.rail_valid.get(&r.id).is_some_and(|at| !matches!(at, crate::money::PaidAt::VaultEntry(v, _) if *v == c)) {
+                        own_not_to_vault.push(r.id);
+                    }
+                }
+            }
+        }
         Ok(SplitEval {
             id: *id,
             split: s,
@@ -9600,6 +10324,7 @@ impl<'a> AgreementsView<'a> {
             unequal_roles,
             fees_skipped,
             metric_problems,
+            own_not_to_vault,
         })
     }
 
@@ -10358,22 +11083,35 @@ impl<'a> AgreementsView<'a> {
             }
             let this = if t.is_collective() { self.collective_of(ag)? } else { None };
             let mut holders = vec![];
-            for (w, _) in &stake.holders {
+            let mut shares = vec![];
+            for (w, n) in &stake.holders {
                 match w.resolve(this.as_ref()) {
-                    Some(x) => holders.push(x),
+                    Some(x) => {
+                        holders.push(x);
+                        shares.push((x, *n));
+                    }
                     None => return fail(e, "a holder written null, and the collective is not held"),
                 }
             }
             let mut signed = vec![];
             for x in &holders {
-                if self.signed_act(h, x)? {
+                // A collective holder's release of its stake in a work is an
+                // owners' matter of its own stake in itself (rule 95; new in
+                // draft 14, F310): it signs only once its owners consented.
+                if self.signed_act(h, x)? && self.owners_consent(x, id)?.is_ok() {
                     signed.push(*x);
                 }
             }
             // The release rule in force: set at founding, changed only by a
             // clone every owner signs (N8).
-            let rule = t.release_rule.clone().unwrap_or(Rule::All);
-            met &= rule.met(&holders, &signed);
+            // Counted by share, never by head (F308).
+            met &= match t.release_rule.clone().unwrap_or(ReleaseRule::Holders(HoldersRule::Every)) {
+                ReleaseRule::Holders(HoldersRule::Every) => holders.iter().all(|x| signed.contains(x)),
+                ReleaseRule::Holders(HoldersRule::Share(need)) => {
+                    shares.iter().filter(|(x, _)| signed.contains(x)).map(|(_, n)| *n).sum::<u64>() >= need
+                }
+                ReleaseRule::Named(n) => n.iter().all(|x| signed.contains(x)),
+            };
             for x in holders {
                 if !e.holders.contains(&x) {
                     e.holders.push(x);

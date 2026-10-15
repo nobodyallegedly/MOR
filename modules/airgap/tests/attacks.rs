@@ -281,8 +281,9 @@ fn a_second_different_rotation_with_the_same_key_is_refused() {
 
 #[test]
 fn the_two_exceptions_are_allowed_once_each_and_only_when_confirmed() {
-    // A normal rotation the homes refuse; then an escape, once.
-    let mut o = Owner::new("escape", SeedModule::Words, 2);
+    // A normal rotation the homes refuse; then an escape, once. (A home
+    // that can refuse: a self-hosted home refuses nothing, F299.)
+    let mut o = Owner::with_homes("escape", SeedModule::Words, 2, vec![home("a home that refuses")]);
     let refused = o.sign(&o.pending(&o.plan()), &Choices::default());
     let refused_id = rotation_act(&refused).id();
     let mut esc = o.plan();
@@ -316,7 +317,7 @@ fn the_two_exceptions_are_allowed_once_each_and_only_when_confirmed() {
     ));
 
     // A homeless rotation voided by an objection; then one normal rotation.
-    let mut o = Owner::new("after void", SeedModule::Words, 2);
+    let mut o = Owner::with_homes("after void", SeedModule::Words, 2, vec![home("an old home")]);
     let mut hl = o.plan();
     hl.homeless = true;
     hl.homes = Some(vec![home("new home")]);

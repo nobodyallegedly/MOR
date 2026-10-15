@@ -525,14 +525,22 @@ fn only_identity_money_and_agreements_acts_acknowledge_f110() {
     let wit = w.ack(&mut fan, witnessed);
     assert_eq!(w.v.status(&wit), Status::Valid);
     // A buyer's claim acknowledging the publication it paid for.
-    let claim = w.everyday_act(
-        &mut buyer,
-        money_spec(),
-        3,
-        vec![(Value::Uint(0), Value::Text("a claim".into()))],
-        None,
-        Some(vec![sold]),
-    );
+    // A claim in Money's format: one outside it is invalid (F295), and an
+    // invalid act acknowledges nothing (F297).
+    let claim_payload = mor_core::money::Payload::Claim(mor_core::money::Claim {
+        rail: sha256(b"a rail"),
+        proof: b"a payment".to_vec(),
+        payee: j.id,
+        amount: mor_core::money::Amount { unit: sha256(b"a unit"), value: 1000 },
+        fulfils: sold,
+        disagrees: None,
+        referral: None,
+        refund: None,
+        anonymous: None,
+        purchase: None,
+        previous: None,
+    });
+    let claim = w.everyday_act(&mut buyer, money_spec(), 3, claim_payload.to_map(), None, Some(vec![sold]));
     w.add(&claim);
     // The journalist's rotation leaves the side line out.
     let (r, _) = w.rotate(&j, Rot::default());
@@ -576,7 +584,15 @@ fn a_witness_act_names_what_it_witnesses() {
     assert_eq!(w.v.status(&said), Status::Invalid, "its payload is empty");
     // A verifier told only the Identity MIR's hash.
     let mut blind = mor_core::chain::Verifier::new(identity_spec());
-    let agreements_act = w.everyday_act(&mut r, agreements_spec(), 17, vec![], None, Some(vec![x]));
+    // An Agreements act in its format (Fable's A6), a liveness, carrying `acks`.
+    let agreements_act = w.everyday_act(
+        &mut r,
+        agreements_spec(),
+        12,
+        vec![(Value::Uint(0), Value::Bytes(x.to_vec()))],
+        Some(vec![mor_core::act::Object { chain: x, predecessor: x }]),
+        Some(vec![x]),
+    );
     let genesis = w.v.resolve(&r.id).links[0].act;
     blind.add(w.v.get(&genesis).unwrap().act.clone()).unwrap();
     let id = blind.add(agreements_act.clone()).unwrap();

@@ -20,7 +20,7 @@ A visitor who wants to write can use email, or MOR. Over MOR, the message is sea
 | `src/app.ts` | The page in the browser. |
 | `src/web/core.ts`, `src/web/common.ts` | The core library in a browser: the build puts them in place of `clients/genesis/src/core.ts`. |
 | `src/headers.ts` | The content security policy it is served with. |
-| `scripts/build.ts` | Builds `dist/`: `index.html`, `reader.js` (not minified, so anyone can read it), `reader.css`, `mor_wasm_bg.wasm`. The build fails if anything from Node reaches the bundle. |
+| `scripts/build.ts` | Builds `dist/`: `index.html`, `reader.js` (not minified, so anyone can read it), `reader.css`, `mor_wasm_bg.wasm`, and the six MIRs' texts from `spec/` (F324: the front page recomputes their spec hashes from them, and shows them). The build fails if anything from Node reaches the bundle. |
 | `reader.example.json` | Settings to copy and fill in. |
 
 ## Run
@@ -86,7 +86,7 @@ For it, the shared client code no longer needs Node outside `clients/genesis/src
 2. **Build**, where the clients are built (`npm install && npm run build` here), and copy `dist/` to the server:
    ```
    ssh SERVER 'sudo install -d -m 755 /srv/reader'
-   scp dist/* SERVER:/tmp/ && ssh SERVER 'sudo mv /tmp/index.html /tmp/reader.js /tmp/reader.css /tmp/mor_wasm_bg.wasm /srv/reader/'
+   scp dist/* SERVER:/tmp/ && ssh SERVER 'sudo mv /tmp/index.html /tmp/reader.js /tmp/reader.css /tmp/mor_wasm_bg.wasm /tmp/MIR-*.md /srv/reader/'
    ```
 3. **Settings:** copy `reader.example.json` to `/srv/reader/reader.json` on the server and put the test identity's hash in `identity`. For the release, change `email` to the dubsar.org address there; nothing needs rebuilding.
 4. **DNS:** `reader.dubsar.org`, A and AAAA, to the server, as for `home1`.

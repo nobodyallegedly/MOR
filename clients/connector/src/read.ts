@@ -108,7 +108,7 @@ export function describeChecked(act: Uint8Array, id: string): Described {
 
 /** One verifier, with each identity looked up once. */
 class Judge {
-  readonly v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  readonly v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   private looked = new Map<string, Resolution | null>();
   constructor(
     readonly hints: string[],

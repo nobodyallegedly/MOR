@@ -322,7 +322,7 @@ function endsSection(t: TermsRead, names: Names): Section {
   if (t.abandonment?.outcomes.includes(4)) lines.push({ text: `A declaration of absence may close it (Agreements rule 89, outcome 4: ${OUTCOMES[4]}).` });
   if ((t.stakes ?? []).length) {
     const r = t.releaseRule;
-    lines.push({ text: `A stake ends if released to the public domain, which ${!r || r.form === 'all' ? 'every holder of it signs' : r.form === 'named' ? `${list((r.named ?? []).map(names))} sign` : `any ${r.threshold} of its holders sign`} (Agreements rule 55, field 24).` });
+    lines.push({ text: `A stake ends if released to the public domain, which ${!r || r.form === 'all' ? 'every holder of it signs' : r.form === 'named' ? `${list((r.named ?? []).map(names))} sign` : `holders of it holding together at least ${(r.share ?? 0) / 10_000}% sign`} (Agreements rule 55, field 24; Agreements draft 14, F308: by share, never by head).` });
   }
   return { heading: 'How it ends', lines };
 }

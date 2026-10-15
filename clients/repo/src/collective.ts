@@ -168,7 +168,8 @@ export interface CollectiveFile {
   /** Kept by the collective client: the notices it sent to payers owed money back who gave no address (Agreements type 24, F197): the payment, the notice and its content key (base64), its payer, and the deadline on the test time reference. */
   notices?: { payment: string; notice: string; key: string; to: string; deadline: number }[];
   /** Kept by the collective client: debts the collective signed, private, with their content keys (base64) (F124 N13). */
-  debts?: { id: string; key: string; creditor: string }[];
+  /** `relied`: the creditor's receipts and releases ending it, which the collective acknowledges before it closes (Agreements draft 14, F303). */
+  debts?: { id: string; key: string; creditor: string; relied?: string[] }[];
   /** Kept by the collective client: its payee pointers, newest last. */
   pointers?: string[];
   /**
@@ -843,6 +844,26 @@ export class TestCollective {
    */
   recovering(): NonNullable<CollectiveFile['departed']> {
     return (this.f.departed ?? []).filter((d) => d.declaration && !d.record && !d.rotation && this.f.members.includes(d.member));
+  }
+
+  /**
+   * A chain signature of the collective (Identity type 16): its chain key,
+   * rebuilt from the shares of `rebuilders`, signs `signs` on its identity
+   * chain and commits a fresh key dealt to the same members. A fork's
+   * successor signs for the debts it takes on this way (Agreements draft 14,
+   * F303).
+   */
+  async chainSign(signs: string, relays: string[] = [], rebuilders: string[] = this.f.members): Promise<{ id: string; counts: boolean }> {
+    const shares = this.f.safety.shares
+      .filter((s) => rebuilders.includes(s.holder))
+      .slice(0, this.f.safety.threshold)
+      .map((s) => unb64(s.share));
+    const current = rebuildChainKey(shares) as { scheme: number; seeds: Uint8Array; commit: string };
+    const dealt = deal(this.f.members, this.f.safety.threshold, this.f.safety.index + 1, this.f.safety.scheme);
+    const r = await this.id.chainSign(signs, relays, { scheme: current.scheme, seeds: current.seeds, next: { scheme: dealt.scheme, commit: dealt.commit } });
+    this.f.safety = dealt;
+    this.remember();
+    return { id: r.id, counts: r.counts };
   }
 
   /** Once the member change's rotation counts, the new shares and agreement take over. */

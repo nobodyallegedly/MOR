@@ -158,19 +158,21 @@ try {
     published.push({ file: s.file, kind: s.kind, id, hash: specHash(s.content), provisional: s.provisional });
   }
   say(`${published.length} specifications published (${published.filter((p) => p.provisional).length} under the provisional reading: ${PROVISIONAL})`);
-  const specOf = (file: string) => published.find((p) => p.file.includes(file))!.id;
-  const ref = (id: string): [string, string] => [id, author.id];
+  const specOf = (file: string) => published.find((p) => p.file.includes(file))!;
+  // What a release implements, by spec hash, its publication a hint
+  // (release manifest cMIP draft 4, field 6; Development Q7, taken).
+  const implemented = (ps: { id: string; hash: string }[]) => ps.map((p) => ({ spec: p.hash, hint: p.id }));
 
   const releases: { name: string; id: string; files: number }[] = [];
-  const release = async (name: string, files: FileIn[], refs: string[], source?: string) => {
+  const release = async (name: string, files: FileIn[], specs: { id: string; hash: string }[], source?: string) => {
     const p: Publisher = { id: author, relays, releases: [] };
-    const r = await publishPrepared(p, prepareRelease(p, { name, version: 'rehearsal', files, source, refs: refs.map(ref) }));
+    const r = await publishPrepared(p, prepareRelease(p, { name, version: 'rehearsal', files, source, implements: implemented(specs) }));
     releases.push({ name, id: r.id, files: r.manifest.files.length });
     say(`release "${name}" ${r.id} (${r.manifest.files.length} files)`);
     return r.id;
   };
   const folder = (dir: string): FileIn[] => readdirSync(dir).map((f) => ({ path: f, bytes: new Uint8Array(readFileSync(join(dir, f))) }));
-  await release('MOR', gitFiles(ROOT), published.map((p) => p.id), gitSource(ROOT));
+  await release('MOR', gitFiles(ROOT), published, gitSource(ROOT));
   const display = await release('MOR display client', folder(BUILT), [specOf('cmip-website'), specOf('cmip-relay-transport')]);
   await release('Dub web client', folder(join(ROOT, 'clients/dub/built')), [specOf('cmip-relay-transport'), specOf('module-jpeg'), specOf('cmip-long-form')]);
 
@@ -202,7 +204,7 @@ try {
   const documents = [shower, ...published.map((p) => p.id), thanks];
   const cosign = await say_(machine, `Machine, allegedly, co-signs these ${documents.length} documents of Nobody, allegedly: credit, not a second witness.`, relays, {
     objects: documents.map((d): [string, string] => [d, d]),
-    refs: documents.map(ref),
+    refs: documents.map((d): [string, string] => [d, author.id]),
   });
   say(`Machine, allegedly: first act ${disclosure}, co-signature ${cosign}`);
 

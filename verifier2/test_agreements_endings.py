@@ -219,7 +219,8 @@ class Endings(unittest.TestCase):
             sig("ana", "K1", 1), sig("ben", "K1", 1),
         ])
         v = verify(s)
-        self.assertEqual(v["endings"]["K1"]["status"], "incomplete")
+        # Agreements draft 14, F304: unknown, never "incomplete" (step 3.9af).
+        self.assertEqual(v["endings"]["K1"]["status"], "unknown")
         self.assertIsNone(v["closed_by"])
 
     def test_fork_under_a_threshold_with_a_member_on_no_side(self):
@@ -407,7 +408,8 @@ class Forks(unittest.TestCase):
 
     def test_an_unheld_act_in_the_history(self):
         """A verifier that does not hold every act the history names cannot tell what it
-        must hand out: for it, the fork is not complete."""
+        must hand out: for it, the fork is unknown, never complete and never
+        "incomplete" (Agreements draft 14, F304; step 3.7aa)."""
         s = story("unheld", ["ana", "ben"], [
             genesis(),
             act("p0", "publication", cites=["genesis"], held=False),
@@ -415,7 +417,7 @@ class Forks(unittest.TestCase):
             fork("F1", "ana", ["p1"], SIDES_AB),
             sig("ana", "F1", 1), sig("ben", "F1", 1),
         ])
-        self.assertEqual(verify(s)["endings"]["F1"]["status"], "incomplete")
+        self.assertEqual(verify(s)["endings"]["F1"]["status"], "unknown")
 
     def test_a_successor_signs_for_its_debt(self):
         s = story("successor-unsigned", ["ana", "ben"], [
@@ -431,26 +433,35 @@ class Closings(unittest.TestCase):
     def test_9f_a_collective_owing_nothing_closes(self):
         """3.9f (N9, D5, 47b): a closing while owing does not take effect; it completes
         once one debt is paid and the other released by its creditor; a release by
-        anyone else ends nothing."""
-        base = [
-            genesis(),
-            act("D1", "obligation", cites=["genesis"], creditor="eve", amount=10),
-            act("D2", "obligation", prev="D1", cites=["genesis"], creditor="fay", amount=20),
-            closing("C1", "ana", ["D2"]), sig("ana", "C1", 1), sig("ben", "C1", 1),
-        ]
-        s = story("9f-owing", ["ana", "ben"], base)
-        self.assertIsNone(verify(s)["closed_by"])
-        s = story("9f-stranger-release", ["ana", "ben"], base + [
+        anyone else ends nothing. Agreements draft 14 (F303; step 3.9ae): the closing
+        relies on a receipt or release only where an act of the collective in its
+        history acknowledges it; the same payments, acknowledged by nothing, leave it
+        owing."""
+        def closing_story(name, paid, acked=True):
+            acts = [
+                genesis(),
+                act("D1", "obligation", cites=["genesis"], creditor="eve", amount=10),
+                act("D2", "obligation", prev="D1", cites=["genesis"], creditor="fay", amount=20),
+            ] + paid
+            tip = "D2"
+            if acked and paid:
+                acts.append(act("A", "publication", prev="D2", cites=["genesis"], acks=[p["id"] for p in paid]))
+                tip = "A"
+            acts += [closing("C1", "ana", [tip]), sig("ana", "C1", 1), sig("ben", "C1", 1)]
+            return story(name, ["ana", "ben"], acts)
+        self.assertIsNone(verify(closing_story("9f-owing", []))["closed_by"])
+        s = closing_story("9f-stranger-release", [
             {"id": "pay1", "type": "payment", "signer": "eve", "obligation": "D1", "amount": 10},
             {"id": "rel2", "type": "release", "signer": "gus", "obligation": "D2"}])
         self.assertIsNone(verify(s)["closed_by"])
-        s = story("9f-settled", ["ana", "ben"], base + [
+        settled = [
             {"id": "pay1a", "type": "payment", "signer": "eve", "obligation": "D1", "amount": 4},
             {"id": "pay1b", "type": "payment", "signer": "eve", "obligation": "D1", "amount": 6},
             {"id": "pay2", "type": "payment", "signer": "fay", "obligation": "D2", "amount": 5},
-            {"id": "rel2", "type": "release", "signer": "fay", "obligation": "D2"}])
-        self.assertEqual(verify(s)["closed_by"], "C1")
-        s = story("9f-debtor-receipt", ["ana", "ben"], base + [
+            {"id": "rel2", "type": "release", "signer": "fay", "obligation": "D2"}]
+        self.assertEqual(verify(closing_story("9f-settled", settled))["closed_by"], "C1")
+        self.assertIsNone(verify(closing_story("9f-settled-unacknowledged", settled, acked=False))["closed_by"])
+        s = closing_story("9f-debtor-receipt", [
             {"id": "pay1", "type": "payment", "signer": "C/d0", "obligation": "D1", "amount": 10},
             {"id": "rel2", "type": "release", "signer": "fay", "obligation": "D2"}])
         self.assertIsNone(verify(s)["closed_by"])

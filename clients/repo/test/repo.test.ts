@@ -12,7 +12,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MIRS, SPECS, Verifier, cborDecode, cborEncode, checkTerms, hex, describeAct, lockMedia, rebuildChainKey, signaturePayload, unhex, verifyShare } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, decodeSpec, checkTerms, hex, describeAct, lockMedia, rebuildChainKey, signaturePayload, unhex, verifyShare } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { TestIdentity, lookUp } from '../../genesis/src/identity.ts';
 import { actsBy } from '../../genesis/src/lines.ts';
@@ -21,7 +21,7 @@ import { TestCollective, type Governance } from '../src/collective.ts';
 import { AGREEMENTS_SPECS, dealGrantPayload, latestPointer, pointerPayload, sign } from '../src/agreements.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../src/specs.ts';
 import {
-  checkImplements,
+  checkImplements, findImplemented, resolveImplements,
   compareWithTree,
   decodeManifest,
   encodeManifest,
@@ -252,33 +252,53 @@ test('the MOR repository itself, published and verified file by file', async () 
   assert.deepEqual(compareWithTree(v.manifest!, root).differ, []);
 });
 
-test('a release names the specifications it implements, by their publications, signed with it (release manifest cMIP draft 3)', async () => {
+test('a release names the specifications it implements by their spec hashes, a publication of each as a hint (release manifest cMIP draft 4)', async () => {
   // Two specifications, published as Development's Part three says (F290: the media spec is the Development MIR's).
-  const publishSpec = async (by: TestIdentity, words: string, media = MIRS.development) => {
-    const content = cborEncode(new Map<number, unknown>([[0, 0], [1, unhex(by.id)], [9, words]]));
+  const publishSpec = async (by: TestIdentity, words: string, media = MIRS.development, fields: [number, unknown][] = []) => {
+    const content = cborEncode(new Map<number, unknown>([[0, 0], [1, unhex(by.id)], [9, words], ...fields]));
     const l = lockMedia(content) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
     const payload = cborEncode(new Map<number, unknown>([[0, unhex(media)], [1, unhex(l.workHash)], [2, unhex(l.lockedHash)], [3, content.length], [4, l.nonce], [5, l.key], [6, [relay.base]]]));
     const made = await by.publish(SPECS.envelopes, 0, payload, { public: true, relays: [relay.base] });
     await relayAt(relay.base).putMedia(l.locked);
-    return made.id;
+    let hash = '';
+    try {
+      hash = (decodeSpec(content) as { hash: string }).hash;
+    } catch {
+      // content not in the format: no specification, no spec hash read from it
+    }
+    return { id: made.id, hash };
   };
-  const a = await publishSpec(m[0], '# A test cMIP\n');
-  const b = await publishSpec(m[1], '# Another test cMIP\n');
-  // Checked first: a specification's publication passes; anything else is said.
-  assert.deepEqual(await checkImplements([a, b], [relay.base]), []);
-  const otherMedia = await publishSpec(m[0], '# Under another media spec\n', 'f'.repeat(64));
-  const notSpec = await checkImplements([second, '00'.repeat(32), otherMedia], [relay.base]);
+  const a = await publishSpec(m[0], '# A test cMIP');
+  const b = await publishSpec(m[1], '# Another test cMIP');
+  // The same text published by another identity is the same specification
+  // only where the content is the same; this one names another creator.
+  const a2 = await publishSpec(m[2], '# A test cMIP');
+  assert.notEqual(a2.hash, a.hash, 'the creator is in the content');
+  // Read first: a specification's publication gives its spec hash; anything else is said.
+  const ok = await resolveImplements([a.id, b.id], [relay.base]);
+  assert.deepEqual(ok.problems, []);
+  assert.deepEqual(ok.entries, [{ spec: a.hash, hint: a.id }, { spec: b.hash, hint: b.id }]);
+  const otherMedia = await publishSpec(m[0], '# Under another media spec', 'f'.repeat(64));
+  const malformed = await publishSpec(m[0], '# Field 10 out of order', MIRS.development, [[10, [3, 0]]]);
+  const notSpec = await checkImplements([second, '00'.repeat(32), otherMedia.id, malformed.id], [relay.base]);
   assert.match(notSpec[0], /not the publication of a specification/);
   assert.match(notSpec[1], /not found/);
   assert.match(notSpec[2], /not the publication of a specification/, 'F290: another media spec is no specification');
+  assert.match(notSpec[3], /no specification/, 'F323: content not in the format is no specification');
 
-  const p = await publishRelease(c, { name: 'MOR test tree', version: '4', files: small, implements: [b, a, b] });
-  assert.deepEqual(p.manifest.implements, [a, b].sort(), 'sorted, each once');
+  const p = await publishRelease(c, { name: 'MOR test tree', version: '4', files: small, implements: [...ok.entries, ok.entries[0]] });
+  const want = [{ spec: a.hash, hint: a.id }, { spec: b.hash, hint: b.id }].sort((x, y) => (x.spec < y.spec ? -1 : 1));
+  assert.deepEqual(p.manifest.implements, want, 'sorted by spec hash, each once');
   await signRelease(m[0], p.id, c.f.relays);
   await signRelease(m[3], p.id, c.f.relays);
   const v = await verifyRelease(p.id, [relay.base]);
   assert.ok(v.ok, v.problems.join('; '));
-  assert.deepEqual(v.manifest!.implements, [a, b].sort(), 'read back from the signed manifest');
+  assert.deepEqual(v.manifest!.implements, want, 'read back from the signed manifest');
+  // A reader looks each specification up by its hash: at the hint first.
+  assert.deepEqual((await findImplemented(v.manifest!.implements!, [relay.base])).map((x) => x.seen), ['found', 'found']);
+  // A hint naming another specification's publication is a wrong hint; a spec hash found nowhere, not found.
+  const odd = await findImplemented([{ spec: a.hash, hint: b.id }, { spec: 'ab'.repeat(32) }], [relay.base]);
+  assert.deepEqual(odd.map((x) => x.seen), ['wrong hint', 'not found']);
   // A release naming nothing has no field 6, as every release before draft 3.
   const v2 = await verifyRelease(second, [relay.base]);
   assert.equal(v2.manifest!.implements, undefined);
@@ -307,12 +327,14 @@ test('manifests are strict', () => {
     raw.set(6, x);
     return decodeManifest(cborEncode(raw));
   };
-  const [lo, hi] = [new Uint8Array(32).fill(1), new Uint8Array(32).fill(2)];
-  assert.deepEqual(withImpl([lo, hi])().implements, [hex(lo), hex(hi)]);
+  // Field 6 (draft 4): entries [spec, ? hint], sorted by spec hash.
+  const [lo, hi, pub] = [new Uint8Array(32).fill(1), new Uint8Array(32).fill(2), new Uint8Array(32).fill(3)];
+  assert.deepEqual(withImpl([[lo], [hi, pub]])().implements, [{ spec: hex(lo) }, { spec: hex(hi), hint: hex(pub) }]);
   assert.throws(withImpl([]), /at least one/);
-  assert.throws(withImpl([hi, lo]), /sorted and unique/);
-  assert.throws(withImpl([lo, lo]), /sorted and unique/);
-  assert.throws(withImpl([new Uint8Array(31)]), /implemented specification/);
+  assert.throws(withImpl([[hi], [lo]]), /sorted by spec hash and unique/);
+  assert.throws(withImpl([[lo], [lo, pub]]), /sorted by spec hash and unique/);
+  assert.throws(withImpl([[new Uint8Array(31)]]), /implemented specification/);
+  assert.throws(withImpl([lo, hi]), /\[spec, \? hint\]/, "draft 3's bare ids are refused by draft 4's closed format");
 });
 
 test('a key grammar that one lost holder would freeze is refused (F96)', () => {
@@ -396,7 +418,7 @@ test("a deal signed on the phone cites the wallet published from the laptop (F16
   assert.equal(await latestPointer(phone, relays), v2.id, 'the latest, published from the other device');
   const terms = (n: string) => label.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.terms, cborEncode(new Map([[0, n]])), { public: true, relays });
   const holding = (deal: string, acts: Uint8Array[]) => {
-    const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+    const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
     for (const a of [...laptop.chainActs(), ...label.chainActs(), v1.act, v2.act, ...acts]) v.add(a);
     return v.agreementsPointerHolding(AGREEMENTS_SPECS, deal, laptop.id) as { pointers: string[]; complete: boolean };
   };

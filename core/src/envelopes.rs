@@ -19,11 +19,11 @@
 //! Precisely: the formats below, strict both ways (closed maps, exact
 //! lengths). As everywhere in this library, randomness is the caller's.
 
-use crate::act::{Act, ActError, Inside, Scheme, Signature};
+use crate::act::{Act, ActError, Inside, Scheme};
 use crate::cbor::{self, Value};
 use crate::hash::{tagged_hash, tagged_hash_parts, Hash};
 use crate::lock::{self, ContentKey, Nonce};
-use crate::sig::{self, SchnorrKey, Verdict};
+use crate::sig;
 use crate::xwing::{self, XWingError};
 use std::fmt;
 
@@ -34,7 +34,11 @@ pub mod vow;
 pub mod types {
     pub const PUBLICATION: u64 = 0;
     pub const KEY_DELIVERY: u64 = 1;
-    pub const COMMITMENT: u64 = 2;
+    /// Retired in Envelopes draft 10 (F294): was the relay's commitment,
+    /// which left the core for the relay transport cMIP. Never reused: an
+    /// Envelopes act of type 2 is of a type the MIR does not define, and
+    /// invalid (rule 30, F295).
+    pub const RETIRED_COMMITMENT: u64 = 2;
     pub const WITHDRAWAL: u64 = 3;
     pub const ENCRYPTION_KEY: u64 = 4;
     /// A vow (F237; "announcement" in the texts until the redraft, F241):
@@ -48,8 +52,9 @@ pub mod types {
 pub const XWING: Scheme = Scheme::Founding(4);
 
 pub mod tag {
-    /// The sealed container's one-time signature: over `[to, one-time-key, locked-act]`.
-    pub const SEALED: &str = "MOR/sealed";
+    // Envelopes draft 10 (F293): the container carries no signature, so
+    // nothing is hashed under `MOR/sealed` any longer; a relay names a
+    // container under its cMIP's own tag, `MOR/transport/sealed`.
     /// The key that locks a container key to one recipient: over the X-Wing shared secret.
     pub const WRAP: &str = "MOR/sealed/wrap";
 }
@@ -63,8 +68,6 @@ pub enum EnvError {
     /// An encryption key under a scheme this client does not implement.
     UnknownScheme,
     XWing(XWingError),
-    /// The container's one-time signature is not valid.
-    Signature,
     /// None of the given private keys opens the container.
     NotForUs,
     /// The inner act is broken, or its key does not open it.
@@ -80,7 +83,6 @@ impl fmt::Display for EnvError {
             EnvError::Cbor(e) => write!(f, "not deterministic CBOR: {e}"),
             EnvError::UnknownScheme => f.write_str("an encryption key under an unknown scheme"),
             EnvError::XWing(e) => write!(f, "{e}"),
-            EnvError::Signature => f.write_str("the sealed container's signature is not valid"),
             EnvError::NotForUs => f.write_str("the sealed container does not open with these keys"),
             EnvError::Act(e) => write!(f, "the inner act: {e}"),
             EnvError::Addressing(w) => write!(f, "addressing: {w}"),
@@ -478,6 +480,57 @@ impl KeyDelivery {
     }
 }
 
+/// An Envelopes act in its type's format (Envelopes draft 10, rule 30,
+/// F295; the MICS's common conventions): of a type this MIR defines (0, 1,
+/// 3, 4, 5; type 2 retired, F294), its payload in that type's format, and a
+/// withdrawal carrying the entry `[publication, publication]` (F294). An
+/// act that fails is invalid wherever the Envelopes MIR is implemented,
+/// which every client does (MICS, "Client conformance"). `signer` is
+/// the act's, whose own chain entries (a collective's actions chain) a
+/// vow's format sets aside.
+pub fn check_act(inside: &Inside, signer: Option<&Hash>) -> R<()> {
+    let p = &inside.payload;
+    match inside.type_ {
+        types::PUBLICATION => {
+            let f = map_fields(p, &[0, 1, 2, 3, 4, 5, 6, 7, 8], "publication: a field its format does not define")?;
+            for k in [0, 1, 2] {
+                hash(get(&f, k).ok_or(EnvError::Shape("publication: fields 0 to 4 are required"))?, "publication: fields 0 to 2 are hashes")?;
+            }
+            uint(get(&f, 3).ok_or(EnvError::Shape("publication: fields 0 to 4 are required"))?, "publication 3: the size")?;
+            let n = bytes(get(&f, 4).ok_or(EnvError::Shape("publication: fields 0 to 4 are required"))?, "publication 4: the nonce")?;
+            if n.len() != 24 {
+                return Err(EnvError::Shape("publication 4: the nonce is 24 bytes"));
+            }
+            if let Some(k) = get(&f, 5) {
+                hash(k, "publication 5: a 32-byte content key")?;
+            }
+            if let Some(w) = get(&f, 6) {
+                let w = array(w, "publication 6: where the bytes can be fetched")?;
+                if w.is_empty() || !w.iter().all(|x| matches!(x, Value::Text(_))) {
+                    return Err(EnvError::Shape("publication 6: one or more text strings"));
+                }
+            }
+            if let Some(h) = get(&f, 8) {
+                hash(h, "publication 8: for")?;
+            }
+            Ok(())
+        }
+        types::KEY_DELIVERY => KeyDelivery::decode(p).map(|_| ()),
+        types::WITHDRAWAL => {
+            if !p.is_empty() {
+                return Err(EnvError::Shape("withdrawal: its payload is empty"));
+            }
+            if !inside.objects.iter().flatten().any(|o| o.chain == o.predecessor) {
+                return Err(EnvError::Shape("withdrawal: its objects carry [publication, publication]"));
+            }
+            Ok(())
+        }
+        types::ENCRYPTION_KEY => EncryptionKey::decode(p).map(|_| ()),
+        types::VOW => vow::Vow::decode(inside, signer).map(|_| ()),
+        _ => Err(EnvError::Shape("a type the Envelopes MIR does not define (type 2 retired, F294)")),
+    }
+}
+
 // ---------------------------------------------------------------- sealed containers
 
 /// A recipient of a sealed container: an identity, through its current
@@ -488,15 +541,16 @@ pub enum Recipient {
     Bare(EncKey),
 }
 
-/// A sealed container: `[ to: [* hash], one-time-key: bstr, locked-act: bstr, sig: bstr ]`.
+/// A sealed container: `[ to: [* hash], locked-act: bstr ]` (Envelopes
+/// draft 10, F293). No one-time key and no signature: its outside is
+/// unauthenticated by design. *Draft 9's one-time signature belonged to
+/// nobody, so anyone could drop a recipient and its capsule and sign the
+/// rest; it proved nothing the capsules and locks do not.*
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Sealed {
     pub to: Vec<Hash>,
-    /// A one-time Schnorr key (scheme 1, 32 bytes x-only) belonging to no identity.
-    pub one_time_key: [u8; 32],
     /// `locked-act`, encoded: `[ capsules: [+ capsule], nonce, locked ]`.
     pub locked_act: Vec<u8>,
-    pub sig: [u8; 64],
 }
 
 /// `capsule = [ ct: bstr .size 1120, wrapped: bstr .size 48 ]`
@@ -520,9 +574,6 @@ pub struct SealRandom {
     pub nonce: Nonce,
     /// One X-Wing `eseed` per recipient.
     pub eseeds: Vec<[u8; 64]>,
-    /// The one-time key's secret, and the signature's auxiliary randomness.
-    pub one_time_secret: [u8; 32],
-    pub aux: [u8; 32],
 }
 
 const ZERO_NONCE: Nonce = [0u8; 24];
@@ -531,32 +582,19 @@ fn wrap_key(ss: &[u8; 32]) -> ContentKey {
     tagged_hash(tag::WRAP, ss)
 }
 
-fn signed_hash(to: &[Hash], otk: &[u8; 32], locked_act: &[u8]) -> Hash {
-    let v = Value::Array(vec![
-        Value::Array(to.iter().map(|h| b(h)).collect()),
-        b(otk),
-        b(locked_act),
-    ]);
-    tagged_hash(tag::SEALED, &cbor::encode(&v))
-}
-
 impl Sealed {
     pub fn encode(&self) -> Vec<u8> {
         cbor::encode(&Value::Array(vec![
             Value::Array(self.to.iter().map(|h| b(h)).collect()),
-            b(&self.one_time_key),
             b(&self.locked_act),
-            b(&self.sig),
         ]))
     }
 
     pub fn decode(data: &[u8]) -> R<Self> {
         let v = cbor::decode(data)?;
         let a = array(&v, "sealed")?;
-        if a.len() != 4 {
-            return Err(EnvError::Shape(
-                "sealed: [to, one-time-key, locked-act, sig]",
-            ));
+        if a.len() != 2 {
+            return Err(EnvError::Shape("sealed: [to, locked-act]"));
         }
         let to = array(&a[0], "sealed to")?
             .iter()
@@ -564,30 +602,8 @@ impl Sealed {
             .collect::<R<Vec<_>>>()?;
         Ok(Sealed {
             to,
-            one_time_key: bytes(&a[1], "one-time-key")?
-                .try_into()
-                .map_err(|_| EnvError::Shape("one-time-key"))?,
-            locked_act: bytes(&a[2], "locked-act")?.to_vec(),
-            sig: bytes(&a[3], "sealed sig")?
-                .try_into()
-                .map_err(|_| EnvError::Shape("sealed sig"))?,
+            locked_act: bytes(&a[1], "locked-act")?.to_vec(),
         })
-    }
-
-    /// Check the one-time signature over `[to, one-time-key, locked-act]`.
-    pub fn check_signature(&self) -> R<()> {
-        let s = Signature {
-            scheme: sig::SCHNORR,
-            key: self.one_time_key.to_vec(),
-            sig: self.sig.to_vec(),
-        };
-        match sig::verify(
-            &s,
-            &signed_hash(&self.to, &self.one_time_key, &self.locked_act),
-        ) {
-            Verdict::Valid => Ok(()),
-            _ => Err(EnvError::Signature),
-        }
     }
 
     /// The parts of `locked-act`.
@@ -697,17 +713,7 @@ pub fn seal(
         b(&rnd.nonce),
         b(&locked),
     ]));
-    let otk = SchnorrKey::from_secret(&rnd.one_time_secret).ok_or(EnvError::Addressing(
-        "the one-time secret is not a valid key",
-    ))?;
-    let one_time_key = otk.public();
-    let s = otk.sign(&signed_hash(&to, &one_time_key, &locked_act), &rnd.aux);
-    Ok(Sealed {
-        to,
-        one_time_key,
-        locked_act,
-        sig: s.sig.try_into().expect("a Schnorr signature is 64 bytes"),
-    })
+    Ok(Sealed { to, locked_act })
 }
 
 /// A sealed container, opened and checked.
@@ -724,14 +730,14 @@ pub struct Opened {
 /// Open a sealed container with one private key. `me` is the identity the
 /// key belongs to, or `None` for a bare key.
 ///
-/// Checks: the one-time signature; the capsule for this recipient (its
+/// Checks (Envelopes draft 10, "Opening" and "Addressing", steps 4 and 5;
+/// rule 12): the capsule for this recipient (its
 /// place in `to`, or the single capsule of a bare-key container); the inner
 /// act's shape, locked hash and inside commitment; and rule 10's addressing:
 /// an inner act sent to an identity names it in its own `to`, an inner act
 /// sent to a bare key names no one. The inner act's signature is judged by
 /// the caller, like any act's.
 pub fn open(sealed: &Sealed, me: Option<&Hash>, dk: &DecKey) -> R<Opened> {
-    sealed.check_signature()?;
     let (capsules, nonce, locked) = sealed.parts()?;
     let index = match me {
         Some(id) => sealed

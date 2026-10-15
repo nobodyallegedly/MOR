@@ -71,7 +71,7 @@ async function textWith(by: TestIdentity, text: string, refs: string[]): Promise
   const made = await by.publish(POST_SPECS.text, TEXT_ACT, cborEncode(new Map([[0, text]])), {
     public: true,
     relays: [relay.base],
-    refs,
+    refs: refs.length ? refs : undefined,
   });
   return made.id;
 }
@@ -258,4 +258,22 @@ test("a post names its picture's signer beside it, and a reader follows a refere
   const w = await readPost(wrong.id, [relay.base]);
   assert.match((w.refs[0] as { what: string }).what, /the reference is wrong/);
   assert.equal(w.standing, 'valid', 'a wrong signer never makes the act naming it invalid');
+});
+
+test("a post made before its signer's rotation is judged with the signer's sequence, as any reader would (Identity draft 13, F298)", async () => {
+  const me = TestIdentity.create({ homes: homes.map((h) => h.home) });
+  await me.publishGenesis();
+  const first = await textWith(me, 'Before the rotation, the first.', []);
+  await textWith(me, 'Before the rotation, the second.', []);
+  await textWith(me, 'Before the rotation, the third: the tip the rotation keeps.', []);
+  await me.prepareRotation({ hints: [relay.base] });
+  await me.submitRotation();
+  assert.equal((await me.settleRotation()).counts, true);
+  for (const a of me.chainActs()) await relayAt(relay.base).putAct(a);
+  // The first post is kept only through the second and the third, the tip
+  // the rotation names: a reader holding the first alone could not rebuild
+  // the line to the tip's running summary, so it fetches the signer's
+  // sequence before judging.
+  const shown = await readPost(first, [relay.base]);
+  assert.equal(shown.standing, 'valid');
 });

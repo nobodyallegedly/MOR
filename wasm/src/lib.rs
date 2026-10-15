@@ -403,6 +403,83 @@ pub fn check_text(s: &str) -> R<()> {
     mor_core::text::check(s).map_err(|e| err(format!("not canonical text: {e}")))
 }
 
+/// A string in NFC under the pinned Unicode tables (Text, rule 6), as the
+/// core checks it: a client composes with the same tables it is checked
+/// with, never its system's (Fable's T5).
+#[wasm_bindgen(js_name = nfc)]
+pub fn nfc(s: &str) -> String {
+    mor_core::text::nfc(s)
+}
+
+/// A specification's content decoded whole (Development draft 10, Part
+/// three; F322, F323, F325, F301): its fields as an object, or an error
+/// beginning "no specification:" where the content is not in the format.
+/// `paymentCmip`, where given, is the payment cMIP's spec hash, whose rail
+/// Modules must carry fields 11 and 13.
+#[wasm_bindgen(js_name = decodeSpec)]
+pub fn decode_spec(content: &[u8], payment_cmip: Option<String>) -> R<JsValue> {
+    use mor_core::development::{Bound, RailKind, Spec};
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Out {
+        hash: String,
+        kind: u64,
+        creator: Option<String>,
+        tasks: Vec<(String, u64)>,
+        types: Vec<(u64, String)>,
+        dependencies: Vec<String>,
+        implements: Option<String>,
+        predecessor: Option<String>,
+        text: String,
+        layers: Vec<u64>,
+        checks_delivery: bool,
+        rail_kind: Option<&'static str>,
+        rail_binds: Option<Vec<&'static str>>,
+        rules: usize,
+        fee: bool,
+    }
+    let known = mor_core::development::Known { payment_cmip: payment_cmip.as_deref().map(unhex).transpose()? };
+    let sp = Spec::decode(content, &known).map_err(err)?;
+    to_js(&Out {
+        hash: hx(&Spec::hash_of(content)),
+        kind: sp.kind,
+        creator: sp.creator.as_ref().map(hx),
+        tasks: sp.tasks.iter().flatten().map(|(m, t)| (hx(m), *t)).collect(),
+        types: sp.types.iter().flatten().map(|t| (t.type_, t.name.clone())).collect(),
+        dependencies: sp.dependencies.iter().flatten().map(hx).collect(),
+        implements: sp.implements.as_ref().map(hx),
+        predecessor: sp.predecessor.as_ref().map(hx),
+        text: sp.text,
+        layers: sp.layers.unwrap_or_default(),
+        checks_delivery: sp.checks_delivery,
+        rail_kind: sp.rail.as_ref().map(|r| match r.kind {
+            RailKind::Request => "request",
+            RailKind::Push => "push",
+        }),
+        rail_binds: sp.rail.as_ref().map(|r| {
+            r.binds
+                .iter()
+                .map(|b| match b {
+                    Bound::Payee => "payee",
+                    Bound::Purpose => "purpose",
+                    Bound::PreviousHop => "previous hop",
+                })
+                .collect()
+        }),
+        rules: sp.rules.map_or(0, |r| r.len()),
+        fee: sp.fee.is_some(),
+    })
+}
+
+/// The spec hash of a MIR's text, as the root recomputes it (Development
+/// draft 10, rule 26, F324): `tagged_hash("MOR/spec", {0: 4, 9: text})`, the
+/// text canonical. Throws where the text is not canonical.
+#[wasm_bindgen(js_name = mirHash)]
+pub fn mir_hash(text: &str) -> R<String> {
+    mor_core::text::check(text).map_err(|e| err(format!("not canonical text: {e}")))?;
+    Ok(hx(&mor_core::development::Spec::hash_of(&mor_core::development::Spec::mir_content(text))))
+}
+
 #[wasm_bindgen(js_name = actId)]
 pub fn act_id(bytes: &[u8]) -> R<String> {
     Ok(hx(&Act::decode(bytes).map_err(err)?.id()))
@@ -1062,8 +1139,6 @@ struct RandomIn {
     #[serde(with = "serde_bytes")]
     nonce: Vec<u8>,
     eseeds: Vec<serde_bytes::ByteBuf>,
-    #[serde(with = "serde_bytes")]
-    one_time_secret: Vec<u8>,
 }
 
 #[derive(Deserialize)]
@@ -1111,15 +1186,11 @@ pub fn seal(input: JsValue) -> R<Vec<u8>> {
                 .iter()
                 .map(|e| arr::<64>(e, "an eseed"))
                 .collect::<R<Vec<_>>>()?,
-            one_time_secret: arr::<32>(&r.one_time_secret, "a one-time secret")?,
-            aux: random::<32>(),
         },
         None => SealRandom {
             container_key: random::<32>(),
             nonce: random::<24>(),
             eseeds: recipients.iter().map(|_| random::<64>()).collect(),
-            one_time_secret: schnorr_secret(),
-            aux: random::<32>(),
         },
     };
     Ok(envelopes::seal(&a, key.as_ref(), &recipients, &rnd)
@@ -1139,7 +1210,6 @@ struct SealedParts {
 #[wasm_bindgen(js_name = sealedParts)]
 pub fn sealed_parts(bytes: &[u8]) -> R<JsValue> {
     let s = Sealed::decode(bytes).map_err(err)?;
-    s.check_signature().map_err(err)?;
     let (capsules, _, _) = s.parts().map_err(err)?;
     to_js(&SealedParts {
         to: s.to.iter().map(hx).collect(),
@@ -1257,14 +1327,30 @@ impl Verifier {
     /// A verifier for the given Identity spec hash (`IDENTITY`; a test value
     /// until the freeze). Given the Money and Agreements spec hashes too, it can
     /// tell which acts may carry acknowledgements (F110); without them, an
-    /// act of another specification carrying `acks` is unknown to it.
+    /// act of another specification carrying `acks` is unknown to it. Given
+    /// the Envelopes and Text spec hashes, which every client holds (MICS,
+    /// "Client conformance"), it decodes their acts strictly (Envelopes
+    /// draft 10, rule 30; Text draft 8, rule 14; F295, F296) and shows a text
+    /// or Envelopes act carrying `acks` as invalid without the Money and
+    /// Agreements hashes (Fable's E5, the clients' half).
     #[wasm_bindgen(constructor)]
-    pub fn new(identity_spec: &str, money_spec: Option<String>, agreements_spec: Option<String>) -> R<Verifier> {
+    pub fn new(
+        identity_spec: &str,
+        money_spec: Option<String>,
+        agreements_spec: Option<String>,
+        envelopes_spec: Option<String>,
+        text_spec: Option<String>,
+    ) -> R<Verifier> {
         let identity = unhex(identity_spec)?;
-        let inner = match (money_spec, agreements_spec) {
+        let mut inner = match (money_spec, agreements_spec) {
             (Some(f), Some(l)) => chain::Verifier::with_mirs(identity, unhex(&f)?, unhex(&l)?),
             (None, None) => chain::Verifier::new(identity),
             _ => return Err(JsError::new("give both the Money and the Agreements spec hashes, or neither")),
+        };
+        inner = match (envelopes_spec, text_spec) {
+            (Some(e), Some(t)) => inner.knowing_envelopes_and_text(unhex(&e)?, unhex(&t)?),
+            (None, None) => inner,
+            _ => return Err(JsError::new("give both the Envelopes and the Text spec hashes, or neither")),
         };
         Ok(Verifier { inner, held: vec![] })
     }
@@ -1332,6 +1418,7 @@ impl Verifier {
             Stop::End => ("end", vec![]),
             Stop::Pending(w) => ("pending", w.clone()),
             Stop::Contested(w) => ("contested", w.clone()),
+            Stop::CannotTell(w) => ("unknown", w.clone()),
         };
         let latest = res.latest().map(|(_, s)| s.clone());
         to_js(&ResolutionOut {
@@ -1406,6 +1493,30 @@ impl Verifier {
             Status::Scoped => "scoped",
         }
         .into())
+    }
+
+    /// An identity's succession (Identity draft 13, section 8, F300):
+    /// `{ state, rotation, successor, confirmation }`, `state` one of
+    /// "none", "declared" (shown as declared, never followed), "confirmed"
+    /// (followed), "unknown" (a confirmation held whose status cannot be
+    /// told), "elsewhere" (another protocol's, confirmed as its link cMIP
+    /// says).
+    pub fn succession(&self, identity: &str) -> R<JsValue> {
+        #[derive(Serialize)]
+        struct Out {
+            state: &'static str,
+            rotation: Option<String>,
+            successor: Option<String>,
+            confirmation: Option<String>,
+        }
+        let o = match self.inner.succession(&unhex(identity)?) {
+            chain::SuccessionSeen::None => Out { state: "none", rotation: None, successor: None, confirmation: None },
+            chain::SuccessionSeen::Declared { rotation, successor } => Out { state: "declared", rotation: Some(hx(&rotation)), successor: Some(hx(&successor)), confirmation: None },
+            chain::SuccessionSeen::Confirmed { rotation, successor, confirmation } => Out { state: "confirmed", rotation: Some(hx(&rotation)), successor: Some(hx(&successor)), confirmation: Some(hx(&confirmation)) },
+            chain::SuccessionSeen::Unknown { rotation, successor } => Out { state: "unknown", rotation: Some(hx(&rotation)), successor: Some(hx(&successor)), confirmation: None },
+            chain::SuccessionSeen::Elsewhere { rotation, successor } => Out { state: "elsewhere", rotation: Some(hx(&rotation)), successor: Some(format!("{}:{}", successor.protocol, hex::encode(&successor.identifier))), confirmation: None },
+        };
+        to_js(&o)
     }
 
     /// The standing of an act for everything binding (keeper records,
@@ -1563,13 +1674,13 @@ struct SpecsIn {
     ext_layers: std::collections::BTreeMap<String, Vec<u64>>,
     #[serde(default)]
     keeper_logs: std::collections::BTreeMap<String, Vec<String>>,
-    /// The rail Modules the client read, in their specifications, as push
-    /// rails (F128, W4): the payer pays an address, with no request from
-    /// the payee's side committing to each payment. Every other rail is a
-    /// request rail. (Where the client found an act is never a condition of
-    /// validity, F128: it states it to its user as information only.)
+    /// The rail Modules the client adopted: each one's specification
+    /// content, hex (Development draft 10, Part three). Its kind and what
+    /// its proof binds, fields 11 and 13, are read from it (F301), and its
+    /// spec hash is the hash of the content; one that is no specification
+    /// of a rail Module is refused (F323).
     #[serde(default)]
-    push_rails: Vec<String>,
+    rails: Vec<String>,
     /// Receipts and claims whose rail proof the client checked under the
     /// payment cMIP and found not to carry the commitment recomputed from
     /// them (F131, IT3): wrong receipts, counting for nothing.
@@ -1636,8 +1747,11 @@ impl SpecsIn {
             view.keeper_logs
                 .insert(unhex(k)?, log.iter().map(|x| unhex(x)).collect::<R<_>>()?);
         }
-        for r in &self.push_rails {
-            view.push_rails.insert(unhex(r)?);
+        for r in &self.rails {
+            let content = hex::decode(r).map_err(err)?;
+            let spec = mor_core::development::Spec::decode(&content, &Default::default()).map_err(err)?;
+            let rail = spec.rail.ok_or_else(|| err("a rail Module's specification carries fields 11 and 13 (F301)"))?;
+            view.rails.insert(mor_core::development::Spec::hash_of(&content), rail);
         }
         for r in &self.rail_invalid {
             view.rail_invalid.insert(unhex(r)?);
@@ -1748,10 +1862,21 @@ struct AbandonmentOut {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct HoldersEntryOut {
+    stake: u64,
+    /// "all" (every holder) or "share".
+    rule: RuleOut,
+    /// A standing waiver of pre-emption (rule 96, F328).
+    waived: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct SuccessionOut {
     party: String,
     stakes: Option<Vec<(String, u64)>>,
-    seats: Option<Vec<(String, u64)>>,
+    /// Seat successors, with no voting weight (Agreements draft 14, F328).
+    seats: Option<Vec<String>>,
     entry: Option<u64>,
 }
 
@@ -1805,7 +1930,8 @@ struct AreaOut {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct PowerOut {
-    /// "constitutional", "clone", "area", "plan" or "judicial".
+    /// "constitutional", "clone", "area", "plan", "judicial" or "holders"
+    /// (draft 14, F307: `area` then names the stake).
     form: String,
     area: Option<u64>,
     party: Option<String>,
@@ -1818,6 +1944,8 @@ fn power_out(p: &agreements::Power) -> PowerOut {
         agreements::Power::Area(a) => ("area", Some(*a), None),
         agreements::Power::Plan(h) => ("plan", None, Some(hx(h))),
         agreements::Power::Judicial => ("judicial", None, None),
+        // The stake's holders' rule (F307): `area` carries the stake's index.
+        agreements::Power::Holders(s) => ("holders", Some(*s), None),
     };
     PowerOut {
         form: form.into(),
@@ -1890,8 +2018,15 @@ struct TermsOut {
     backups: Option<BackupsOut>,
     /// Forked from (field 23): the original collective, a back-link (N4).
     forked_from: Option<String>,
-    /// The release rule (field 24); null: every holder.
+    /// The release rule (field 24); null: every holder. Counted by share
+    /// since draft 14 (F308): "all", "share" or "named".
     release_rule: Option<RuleOut>,
+    /// The holders' rules, per stake (field 30; F307, F328).
+    holders_rules: Option<Vec<HoldersEntryOut>>,
+    /// The transfers a deal's clone counts (field 31; F316).
+    transfers_counted: Option<Vec<String>>,
+    /// The issuance offer an issuance follows, or "waived" (field 32; F309, F328).
+    issues_under: Option<String>,
     /// In a deal's clone settling a fork, every tip it discards (field 26,
     /// F186; a list since QF3, F190); null otherwise.
     settles: Option<Vec<String>>,
@@ -2092,7 +2227,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                 .map(|p| SuccessionOut {
                     party: hx(&p.party),
                     stakes: p.stakes.as_ref().map(pairs),
-                    seats: p.seats.as_ref().map(pairs),
+                    seats: p.seats.as_ref().map(|v| v.iter().map(hx).collect()),
                     entry: p.entry,
                 })
                 .collect()
@@ -2122,7 +2257,21 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
             failure: b.failure.is_some(),
         }),
         forked_from: t.forked_from.as_ref().map(hx),
-        release_rule: t.release_rule.as_ref().map(rule_out),
+        release_rule: t.release_rule.as_ref().map(release_rule_out),
+        holders_rules: t.holders_rules.as_ref().map(|v| {
+            v.iter()
+                .map(|e| HoldersEntryOut {
+                    stake: e.stake,
+                    rule: release_rule_out(&agreements::ReleaseRule::Holders(e.rule.clone())),
+                    waived: e.waived,
+                })
+                .collect()
+        }),
+        transfers_counted: t.transfers_counted.as_ref().map(|x| x.iter().map(hx).collect()),
+        issues_under: t.issues_under.as_ref().map(|x| match x {
+            agreements::IssuesUnder::Offer(h) => hx(h),
+            agreements::IssuesUnder::Waived => "waived".into(),
+        }),
         settles: t.settles.as_ref().map(|x| x.iter().map(hx).collect()),
         fork_judge: t.fork_judge.as_ref().map(hx),
         plan: t.plan.as_ref().map(plan_out),
@@ -2176,6 +2325,7 @@ fn plan_out(p: &agreements::SplitPlan) -> PlanOut {
                 agreements::ShareRule::Role { role, part } => PlanShareOut { role: Some(role.clone()), ..share("role", *part) },
                 agreements::ShareRule::Receiver { receiver, part } => PlanShareOut { receiver: Some(hx(receiver)), ..share("receiver", *part) },
                 agreements::ShareRule::Metric { metric, part } => PlanShareOut { metric: Some(*metric), ..share("metric", *part) },
+                agreements::ShareRule::Own { part } => share("own", *part),
             })
             .collect(),
         cmip: hx(&p.cmip),
@@ -2489,30 +2639,39 @@ pub fn record_payload(input: JsValue) -> R<Vec<u8>> {
     Ok(cbor::encode(&Value::Map(rec.to_map())))
 }
 
-#[derive(Serialize)]
+/// A rule: "all", "threshold", "named", and from Agreements draft 14
+/// (F307, F308, F311) "share" (by share of a stake among the parties, or,
+/// for the holders' and release rules, among a stake's holders), "allOf"
+/// and "holders" (among a stake's holders, by share).
+#[derive(Serialize, Default)]
 struct RuleOut {
     form: String,
     threshold: Option<u64>,
     named: Option<Vec<String>>,
+    stake: Option<u64>,
+    /// In millionths.
+    share: Option<u64>,
+    rules: Option<Vec<RuleOut>>,
 }
 
 fn rule_out(r: &agreements::Rule) -> RuleOut {
+    let form = |f: &str| RuleOut { form: f.into(), ..Default::default() };
     match r {
-        agreements::Rule::All => RuleOut {
-            form: "all".into(),
-            threshold: None,
-            named: None,
-        },
-        agreements::Rule::Threshold(k) => RuleOut {
-            form: "threshold".into(),
-            threshold: Some(*k),
-            named: None,
-        },
-        agreements::Rule::Named(n) => RuleOut {
-            form: "named".into(),
-            threshold: None,
-            named: Some(n.iter().map(hx).collect()),
-        },
+        agreements::Rule::All => form("all"),
+        agreements::Rule::Threshold(k) => RuleOut { threshold: Some(*k), ..form("threshold") },
+        agreements::Rule::Named(n) => RuleOut { named: Some(n.iter().map(hx).collect()), ..form("named") },
+        agreements::Rule::ByShare { stake, share } => RuleOut { stake: Some(*stake), share: Some(*share), ..form("share") },
+        agreements::Rule::AllOf(rs) => RuleOut { rules: Some(rs.iter().map(rule_out).collect()), ..form("allOf") },
+        agreements::Rule::Holders { stake, share } => RuleOut { stake: Some(*stake), share: Some(*share), ..form("holders") },
+    }
+}
+
+fn release_rule_out(r: &agreements::ReleaseRule) -> RuleOut {
+    let form = |f: &str| RuleOut { form: f.into(), ..Default::default() };
+    match r {
+        agreements::ReleaseRule::Holders(agreements::HoldersRule::Every) => form("all"),
+        agreements::ReleaseRule::Holders(agreements::HoldersRule::Share(s)) => RuleOut { share: Some(*s), ..form("share") },
+        agreements::ReleaseRule::Named(n) => RuleOut { named: Some(n.iter().map(hx).collect()), ..form("named") },
     }
 }
 

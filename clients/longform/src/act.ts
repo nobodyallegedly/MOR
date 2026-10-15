@@ -89,7 +89,7 @@ export async function readDocument(id: string, hints: string[], via: Via = {}): 
   const f = p.get(1);
   const format = f instanceof Uint8Array ? hex(f) : null;
 
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   await lookUp(d.signer, hints, via, v);
   v.add(act);
   return {
