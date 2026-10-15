@@ -22,7 +22,7 @@ use mor_core::identity::KeptTip;
 use mor_core::agreements::{
     self, outcomes, Abandonment, AbsenceDeclaration, Area, Authority, Backing, CloneState, Consent, Field4, Grant, Who,
     Holding, KeyGrammar, Keepers, Kind, AgreementsError, AgreementsView, MarkEntry, Mirs, Power, Record,
-    Recovery, Resignation, Rule, SuccessionPlan, Terms,
+    Recovery, ReleaseRule, HoldersRule, Resignation, Rule, SuccessionPlan, Terms,
 };
 use mor_core::mmr::Mmr;
 
@@ -161,6 +161,9 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     };
     f(&mut t);
     t
@@ -172,6 +175,13 @@ fn tip(dev: &Person) -> KeptTip {
         position: dev.seq.len() as u64,
         summary: Mmr::from_ids(&dev.seq).root(),
     }
+}
+
+/// A liveness payload (type 12, rule 50) naming `x`: the plainest
+/// Agreements act in its format, used where a test needs any act (Fable's
+/// A6: an act outside its type's format is invalid).
+fn liveness(x: Hash) -> Vec<(Value, Value)> {
+    agreements::Liveness { agreement: x }.to_map()
 }
 
 fn obj(x: Hash) -> Option<Vec<Object>> {
@@ -374,11 +384,14 @@ impl Lab {
     }
 
     /// The label acknowledges an act by an action of its own key on device
-    /// `d`, on its chain (an Agreements act, type 12, which may carry `acks`, F110):
+    /// `d`, on its chain (an Agreements act, here a liveness on its founding
+    /// agreement, type 12, in its format since Fable's A6; it may carry
+    /// `acks`, F110):
     /// how it places a member's signature act before its next line
     /// ("Made before, made after", 2; C2, F156).
     fn acknowledge(&mut self, d: usize, x: Hash) -> Hash {
-        let a = self.w.everyday_act(&mut self.c[d], agreements_spec(), 12, vec![], None, Some(vec![x]));
+        let f = self.founding;
+        let a = self.w.everyday_act(&mut self.c[d], agreements_spec(), 12, liveness(f), obj(f), Some(vec![x]));
         self.w.add(&a)
     }
 
@@ -386,7 +399,8 @@ impl Lab {
     /// chain of the label, which places nothing (rule 35b, F156).
     fn acknowledge_uncited(&mut self, d: usize, x: Hash) -> Hash {
         let cite = self.c[d].cite.take();
-        let a = self.w.everyday_act(&mut self.c[d], agreements_spec(), 12, vec![], None, Some(vec![x]));
+        let f = self.founding;
+        let a = self.w.everyday_act(&mut self.c[d], agreements_spec(), 12, liveness(f), obj(f), Some(vec![x]));
         self.c[d].cite = cite;
         self.w.add(&a)
     }
@@ -1807,7 +1821,7 @@ fn open_formats_are_refused_not_guessed() {
     // never reused: an act of a retired type is invalid. A revocation's
     // format is exact since F128: one naming no grant is invalid.
     let mut lab = Lab::new(&|_| {});
-    for retired in [agreements::types::IMPORT, 7, 15] {
+    for retired in [11, 7, 15] {
         let a = lab
             .w
             .everyday_act(&mut lab.c[0], mirs().agreements, retired, vec![], None, None);
@@ -2129,7 +2143,7 @@ fn a_declaration_is_the_authoritys_judgment_with_no_anchors() {
     });
     let f = lab.founding;
     let mut cy = lab.m[CY].clone();
-    agreements_act(&mut lab.w, &mut cy, 12, vec![], obj(f));
+    agreements_act(&mut lab.w, &mut cy, 12, liveness(f), obj(f));
     lab.m[CY] = cy;
     let d = lab.declare(None, f, f, CY, vec![outcomes::VOICE_REMOVED]);
     assert!(lab.view().declaration(&d).unwrap().is_ok(), "{:?}", lab.view().declaration(&d).unwrap().err());
@@ -2344,7 +2358,7 @@ fn a_later_act_of_the_party_never_undoes_the_line() {
     let registered = |lab: &Lab| lab.view().record(&lab.c[0].id, &line).unwrap().registers.len();
     assert_eq!(registered(&lab), 1);
     // Ana comes back.
-    agreements_act(&mut lab.w, &mut lab.m[ANA].clone(), 12, vec![], obj(k));
+    agreements_act(&mut lab.w, &mut lab.m[ANA].clone(), 12, liveness(k), obj(k));
     let contest = agreements_act(&mut lab.w, &mut lab.m[ANA].clone(), 14, vec![], obj(d));
     assert!(lab.w.v.get(&contest).is_some(), "the contest is held, shown beside the declaration");
     lab.sign(ANA, &k);
@@ -2628,7 +2642,7 @@ fn a_seat_passes_by_nomination_after_a_declaration() {
     let plan = SuccessionPlan {
         party: ids[BEN],
         stakes: Some(vec![(spec("child one"), 500_000), (spec("child two"), 500_000)]),
-        seats: Some(vec![(dee.id, 1)]),
+        seats: Some(vec![dee.id]),
         entry: Some(1),
     };
     let f = lab.founding;
@@ -2701,7 +2715,7 @@ fn a_seat_passes_by_automatic_succession() {
         let plan = SuccessionPlan {
             party: ids[BEN],
             stakes: Some(vec![(spec("child one"), 500_000), (spec("child two"), 500_000)]),
-            seats: Some(vec![(dee.id, 1)]),
+            seats: Some(vec![dee.id]),
             entry: Some(0),
         };
         let f = lab.founding;
@@ -2742,7 +2756,7 @@ fn a_seat_passes_by_automatic_succession() {
         };
         if declared && !stranger && !alone {
             // What a plan cannot do (rule 44c, Q26, B14).
-            let other = SuccessionPlan { party: ids[ANA], stakes: None, seats: Some(vec![(dee.id, 1)]), entry: Some(1) };
+            let other = SuccessionPlan { party: ids[ANA], stakes: None, seats: Some(vec![dee.id]), entry: Some(1) };
             for (why, extra) in [
                 ("it lowers the area's number", &(|t: &mut Terms| t.areas.as_mut().unwrap()[1].threshold = 1) as &dyn Fn(&mut Terms)),
                 ("it names a new holder", &|t: &mut Terms| t.areas.as_mut().unwrap()[0].holders.push(t.parties[1])),
@@ -2828,17 +2842,17 @@ fn a_seat_passes_by_automatic_succession() {
     }
 }
 
-/// Flaw B14's remaining points, refused rather than guessed: where the
-/// successor goes among the parties when not in the party's place, and a
-/// seat's voting weight other than one.
+/// Flaw B14's remaining point, refused rather than guessed: where the
+/// successor goes among the parties when not in the party's place. (A seat's
+/// voting weight is out of format since Agreements draft 14, F328, Q15:
+/// `a_seat_weight_is_out_of_format_3_8d`.)
 #[test]
 fn what_b14_leaves_open_is_refused() {
-    for case in ["placed last", "weight two"] {
+    for case in ["placed last"] {
         let mut lab = Lab::new(&|_| {});
         let mut dee = lab.w.genesis("dee", vec![own_home()], None, None);
         let ids = lab.ids();
-        let w = if case == "weight two" { 2 } else { 1 };
-        let plan = SuccessionPlan { party: ids[BEN], stakes: None, seats: Some(vec![(dee.id, w)]), entry: Some(0) };
+        let plan = SuccessionPlan { party: ids[BEN], stakes: None, seats: Some(vec![dee.id]), entry: Some(0) };
         let f = lab.founding;
         let k0 = lab.add_plan(&f, &[ANA, BEN, CY], plan);
         let d = lab.declare(None, k0, k0, BEN, vec![outcomes::VOICE_REMOVED]);
@@ -2882,7 +2896,7 @@ fn a_sole_chain_key_holders_successor_names_their_own_successor() {
         t.succession = Some(vec![SuccessionPlan {
             party: ids[BEN],
             stakes: None,
-            seats: Some(vec![(spec("a first successor"), 1)]),
+            seats: Some(vec![spec("a first successor")]),
             entry: Some(1),
         }]);
     });
@@ -2892,11 +2906,11 @@ fn a_sole_chain_key_holders_successor_names_their_own_successor() {
     let ben_plan = SuccessionPlan {
         party: ids[BEN],
         stakes: None,
-        seats: Some(vec![(dee.id, 1)]),
+        seats: Some(vec![dee.id]),
         entry: Some(0),
     };
-    let ana_plan = SuccessionPlan { party: ids[ANA], stakes: None, seats: Some(vec![(spec("Ana's heir"), 1)]), entry: Some(1) };
-    let dee_plan = SuccessionPlan { party: dee.id, stakes: None, seats: Some(vec![(deesucc, 1)]), entry: Some(1) };
+    let ana_plan = SuccessionPlan { party: ids[ANA], stakes: None, seats: Some(vec![spec("Ana's heir")]), entry: Some(1) };
+    let dee_plan = SuccessionPlan { party: dee.id, stakes: None, seats: Some(vec![deesucc]), entry: Some(1) };
     let f = lab.founding;
     let t0 = lab.clone_terms(&f, vec![(Power::Judicial, vec![ANA, BEN, CY])], &|t| {
         t.succession = Some(vec![ben_plan.clone(), ana_plan.clone()]);
@@ -2949,7 +2963,7 @@ fn a_sole_chain_key_holders_successor_names_their_own_successor() {
     assert_eq!(lab.in_force(&y), k);
     let cur = lab.view().terms(&k).unwrap();
     assert_eq!(cur.grammar.unwrap().chain_key, Holding::One(dee.id));
-    assert!(cur.succession.unwrap().iter().any(|p| p.party == dee.id && p.seats.as_ref().is_some_and(|s| s[0].0 == deesucc)));
+    assert!(cur.succession.unwrap().iter().any(|p| p.party == dee.id && p.seats.as_ref().is_some_and(|s| s[0] == deesucc)));
 }
 
 /// Flaw B17 adds a plan only where the party held the chain key alone: in
@@ -2960,13 +2974,13 @@ fn a_succession_clone_adds_no_plan_where_the_key_is_shared() {
     let mut lab = Lab::new(&|_| {});
     let dee = lab.w.genesis("dee", vec![own_home()], None, None);
     let ids = lab.ids();
-    let plan = SuccessionPlan { party: ids[BEN], stakes: None, seats: Some(vec![(dee.id, 1)]), entry: Some(0) };
+    let plan = SuccessionPlan { party: ids[BEN], stakes: None, seats: Some(vec![dee.id]), entry: Some(0) };
     let f = lab.founding;
     let k0 = lab.add_plan(&f, &[ANA, BEN, CY], plan);
     let new = vec![ids[ANA], dee.id, ids[CY]];
     let mut t = lab.clone_terms(&k0, vec![], &|t| {
         t.parties = new.clone();
-        t.succession = Some(vec![SuccessionPlan { party: dee.id, stakes: None, seats: Some(vec![(spec("Dee's successor"), 1)]), entry: Some(1) }]);
+        t.succession = Some(vec![SuccessionPlan { party: dee.id, stakes: None, seats: Some(vec![spec("Dee's successor")]), entry: Some(1) }]);
         let g = t.grammar.as_mut().unwrap();
         g.signing = Holding::Shares { threshold: 2, members: new.clone() };
         g.chain_key = Holding::Shares { threshold: 3, members: new.clone() };
@@ -3020,6 +3034,9 @@ fn a_deal_changes_only_with_everyone() {
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     };
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
     sign(&mut w, &mut m[0], &d);
@@ -3102,6 +3119,9 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             refund: None,
             fees: None,
             backups: None,
+            holders_rules: None,
+            transfers_counted: None,
+            issues_under: None,
         };
         let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
         for p in m.iter_mut() {
@@ -3201,6 +3221,9 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     };
     for k in [1, 2] {
         let got = deal(Authority::Others(k)).check(&mirs());
@@ -3272,10 +3295,10 @@ fn scenario_1_step_9_absence_is_the_authoritys_judgment() {
         sign(&mut w, p, &d);
     }
     // p1's liveness act on the deal.
-    let live = agreements_act(&mut w, &mut m[0], 12, vec![], obj(d));
+    let live = agreements_act(&mut w, &mut m[0], 12, liveness(d), obj(d));
     // p2, busy elsewhere.
     let elsewhere = agreements_act(&mut w, &mut m[1], agreements::types::TERMS, Terms { parties: vec![ids[1]], ..terms.clone() }.to_map(), None);
-    agreements_act(&mut w, &mut m[1], 12, vec![], obj(elsewhere));
+    agreements_act(&mut w, &mut m[1], 12, liveness(elsewhere), obj(elsewhere));
     // p1 and p3 sign a clone without p2, redistributing the stake.
     let mut c = terms.clone();
     c.parent = Some(d);
@@ -3310,7 +3333,7 @@ fn scenario_1_step_9_absence_is_the_authoritys_judgment() {
     assert_eq!(judged(&w, vec![odd, x]).exists, Some(true), "{:?}", judged(&w, vec![odd, x]).invalid);
     // p2 contests and comes back: the clone stands.
     let contest = agreements_act(&mut w, &mut m[1], 14, vec![], obj(x));
-    agreements_act(&mut w, &mut m[1], 12, vec![], obj(d));
+    agreements_act(&mut w, &mut m[1], 12, liveness(d), obj(d));
     sign(&mut w, &mut m[1], &k);
     assert!(w.v.get(&contest).is_some() && w.v.get(&live).is_some(), "both held, shown beside the declaration");
     let after = judged(&w, vec![odd, x]);
@@ -3373,6 +3396,9 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     };
     assert_eq!(terms.check(&mirs()), Ok(()));
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, terms.to_map(), None);
@@ -3393,7 +3419,7 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
     // p1, with nothing to sign for months, posts a liveness act on the deal
     // (type 12, its format open: here it names the deal), anchored at 95 by
     // a friend: it keeps their vote.
-    let live = agreements_act(&mut w, &mut m[0], 12, vec![], obj(d));
+    let live = agreements_act(&mut w, &mut m[0], 12, liveness(d), obj(d));
     let d1 = declare(&mut w, 0);
     let ack1 = w.ack(&mut m[1], d1);
     let base = vec![(d1, 100), (ack1, 110)];
@@ -3406,7 +3432,7 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
 
     // p2 goes silent on the deal while active elsewhere: acts anchored
     // within the period, but not on the deal, protect nothing.
-    let busy = agreements_act(&mut w, &mut m[1], 12, vec![], obj(elsewhere));
+    let busy = agreements_act(&mut w, &mut m[1], 12, liveness(elsewhere), obj(elsewhere));
     let post = w.post(&mut m[1], "a post far from the film");
     let d2 = declare(&mut w, 1);
     let ack2 = w.ack(&mut m[0], d2);
@@ -3420,7 +3446,7 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
     let d3 = declare(&mut w, 2);
     let mut back = vec![];
     for at in [140, 170, 200, 230] {
-        let x = agreements_act(&mut w, &mut m[2], 12, vec![], obj(d));
+        let x = agreements_act(&mut w, &mut m[2], 12, liveness(d), obj(d));
         back.push((x, at));
     }
     let late = w.ack(&mut m[0], d3);
@@ -3430,7 +3456,7 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
     // between the two: it does not count either.
     let early = w.ack(&mut m[1], d3);
     let mut returned = back.clone();
-    returned.push((agreements_act(&mut w, &mut m[2], 12, vec![], obj(d)), 110));
+    returned.push((agreements_act(&mut w, &mut m[2], 12, liveness(d), obj(d)), 110));
     let got = judged(&w, &[returned, vec![(d3, 100), (late, 400), (early, 125)]].concat(), &d3);
     assert!(got.as_ref().is_err_and(|e| e.contains("between")), "{got:?}");
     // With nothing of p3's between, the acknowledgement at 125 makes it
@@ -3452,7 +3478,7 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
     assert_eq!(judged(&w, &[(d3, 100), (kept, 105), (other, 106)], &d3), Ok(()));
     // F162 (3): bounds are inclusive: p3's act on the deal anchored at the
     // declaration's own point protects p3.
-    let same = agreements_act(&mut w, &mut m[2], 12, vec![], obj(d));
+    let same = agreements_act(&mut w, &mut m[2], 12, liveness(d), obj(d));
     let got = judged(&w, &[(d3, 100), (other, 106), (same, 100)], &d3);
     assert!(got.as_ref().is_err_and(|e| e.contains("within the period")), "{got:?}");
     // F162 (5): an act on a later version of the deal, a clone of it, is
@@ -3462,7 +3488,7 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
     c.text = "The film's contributors share its revenue, version two.".into();
     c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(ids.clone()) }]);
     let later = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, c.to_map(), obj(d));
-    let on_later = agreements_act(&mut w, &mut m[2], 12, vec![], obj(later));
+    let on_later = agreements_act(&mut w, &mut m[2], 12, liveness(later), obj(later));
     let got = judged(&w, &[(d3, 100), (other, 106), (on_later, 90)], &d3);
     assert!(got.as_ref().is_err_and(|e| e.contains("within the period")), "{got:?}");
     // Not anchored at all: it does not count (F136).
@@ -3506,7 +3532,7 @@ fn a_threshold_declarations_signers_do_not_acknowledge_it() {
     // Ana works on the label's chain: an act of hers naming it in
     // `objects`, anchored at 95.
     let label = lab.c[0].id;
-    let on_chain = agreements_act(&mut lab.w, &mut lab.m[ANA], 12, vec![], Some(vec![Object { chain: label, predecessor: label }]));
+    let on_chain = agreements_act(&mut lab.w, &mut lab.m[ANA], 12, liveness(label), Some(vec![Object { chain: label, predecessor: label }]));
     let got = judged(&lab, &[(d, 100), (by_keeper, 106), (on_chain, 95)]);
     assert!(got.as_ref().is_err_and(|e| e.contains("within the period")), "{got:?}");
 }
@@ -3824,7 +3850,7 @@ fn a_removal_under_a_lower_rule_completes() {
     let plan = |t: &Terms| SuccessionPlan {
         party: t.parties[CY],
         stakes: Some(vec![(spec("an heir"), 1_000_000)]),
-        seats: Some(vec![(spec("a seat heir"), 1)]),
+        seats: Some(vec![spec("a seat heir")]),
         entry: Some(1),
     };
     let mut lab = Lab::new(&|t| {
@@ -4677,6 +4703,9 @@ fn payer_side_splitting_follows_the_claim() {
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     };
     let d = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::TERMS, deal.to_map(), None);
     let got = lab.view().payer_split(&d, &Who::Id(work), 1000).unwrap().unwrap();
@@ -4722,6 +4751,9 @@ fn leftovers_go_by_largest_remainder_whatever_the_order() {
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     };
     let listed = [vec![(ids[ANA], 333_333), (ids[BEN], 333_333), (ids[CY], 333_334)], vec![(ids[CY], 333_334), (ids[ANA], 333_333), (ids[BEN], 333_333)]];
     for holders in listed.iter() {
@@ -5355,7 +5387,7 @@ fn a_work_is_released_to_the_public_domain() {
     let mut ben = w.genesis("ben", vec![own_home()], None, None);
     let mut cy = w.genesis("cy", vec![own_home()], None, None);
     let work = spec("a work");
-    let terms = |ana: &Person, ben: &Person, cy: &Person, rule: Option<Rule>| Terms {
+    let terms = |ana: &Person, ben: &Person, cy: &Person, rule: Option<ReleaseRule>| Terms {
         parties: vec![ana.id, ben.id],
         text: "Ana and Ben share a work with Cy.".into(),
         cmips: vec![],
@@ -5388,6 +5420,9 @@ fn a_work_is_released_to_the_public_domain() {
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     };
     let t = terms(&ana, &ben, &cy, None);
     let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
@@ -5410,7 +5445,7 @@ fn a_work_is_released_to_the_public_domain() {
     let other = agreements_act(&mut w, &mut ben, agreements::types::WORK_CLAIM, vec![(Value::Uint(0), Value::Bytes(work.to_vec()))], None);
     assert_eq!(view(&w).claim_after_release(&other, &work).unwrap(), Some(r));
     // N8: a clone changing the release rule needs every owner, Cy too.
-    let mut c = terms(&ana, &ben, &cy, Some(Rule::Threshold(2)));
+    let mut c = terms(&ana, &ben, &cy, Some(ReleaseRule::Holders(HoldersRule::Share(900_000))));
     c.parent = Some(d);
     c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
     let k = agreements_act(&mut w, &mut ana, agreements::types::TERMS, c.to_map(), obj(d));
@@ -5447,14 +5482,14 @@ fn a_release_is_judged_by_the_agreement_in_force() {
     let work = spec("a work");
     let mut t = deal_terms(ana.id, ben.id);
     t.stakes = Some(vec![agreements::Stake { object: Who::Id(work), holders: vec![(Who::Id(ana.id), 500_000), (Who::Id(ben.id), 500_000)] }]);
-    t.release_rule = Some(Rule::Threshold(1));
+    t.release_rule = Some(ReleaseRule::Holders(HoldersRule::Share(500_000)));
     let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
     sign(&mut w, &mut ana, &d);
     sign(&mut w, &mut ben, &d);
     // Every owner signs the clone that needs every holder to release.
     let mut c = t.clone();
     c.parent = Some(d);
-    c.release_rule = Some(Rule::All);
+    c.release_rule = Some(ReleaseRule::Holders(HoldersRule::Every));
     c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
     let k = agreements_act(&mut w, &mut ana, agreements::types::TERMS, c.to_map(), obj(d));
     sign(&mut w, &mut ana, &k);
@@ -5505,7 +5540,7 @@ fn two_complete_versions_of_a_deal() {
     let work = spec("a work");
     let mut t = deal_terms(ana.id, ben.id);
     t.stakes = Some(vec![agreements::Stake { object: Who::Id(work), holders: vec![(Who::Id(ana.id), 500_000), (Who::Id(ben.id), 500_000)] }]);
-    t.release_rule = Some(Rule::Threshold(1));
+    t.release_rule = Some(ReleaseRule::Holders(HoldersRule::Share(500_000)));
     let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
     sign(&mut w, &mut ana, &d);
     sign(&mut w, &mut ben, &d);
@@ -5513,7 +5548,7 @@ fn two_complete_versions_of_a_deal() {
         let mut c = t.clone();
         c.parent = Some(parent);
         c.text = text.into();
-        c.release_rule = Some(Rule::All);
+        c.release_rule = Some(ReleaseRule::Holders(HoldersRule::Every));
         c.settles = settles.map(|x| vec![x]);
         c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
         let k = agreements_act(w, ana, agreements::types::TERMS, c.to_map(), obj(parent));
@@ -5550,7 +5585,7 @@ fn two_complete_versions_of_a_deal() {
         let mut c = t.clone();
         c.parent = Some(k3);
         c.text = "Settling nothing.".into();
-        c.release_rule = Some(Rule::All);
+        c.release_rule = Some(ReleaseRule::Holders(HoldersRule::Every));
         c.settles = Some(vec![d]);
         c.field4 = Field4::Mark(vec![MarkEntry { power: Power::Clone, signers: sorted(vec![ana.id, ben.id]) }]);
         let o = vec![Object { chain: k3, predecessor: k3 }, Object { chain: d, predecessor: d }];
@@ -5690,6 +5725,9 @@ fn a_timed_release() {
             refund: None,
             fees: None,
             backups: None,
+            holders_rules: None,
+            transfers_counted: None,
+            issues_under: None,
         };
         let x = agreements_act(w, ana, agreements::types::TERMS, t.to_map(), None);
         sign(w, ana, &x);
@@ -7226,7 +7264,7 @@ fn a_debt_is_paid_only_where_the_creditors_rules_let_it_count() {
     };
     // The printer acknowledges a debt with an act of its own (F145).
     let ack = |lab: &mut Lab, printer: &mut Person, d: Hash| {
-        let a = lab.w.everyday_act(printer, mirs().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![d]));
+        let a = lab.w.everyday_act(printer, mirs().agreements, agreements::types::NEGOTIATION, vec![(Value::Uint(0), Value::Text("Noted.".into()))], None, Some(vec![d]));
         lab.w.add(&a)
     };
     let paid = |lab: &mut Lab, printer: &mut Person, d: Hash, value: u64, at: PaidAt, proof: &str| {
@@ -7310,7 +7348,7 @@ fn a_debt_paid_through_a_readers_own_attempt_is_unknown() {
     // The printer acknowledges the IOU with an act of its own, which holds
     // its pointer through its sequence (F145): only then can it count on
     // the flow.
-    let a = lab.w.everyday_act(&mut p1, mirs().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![d]));
+    let a = lab.w.everyday_act(&mut p1, mirs().agreements, agreements::types::NEGOTIATION, vec![(Value::Uint(0), Value::Text("Noted.".into()))], None, Some(vec![d]));
     lab.w.add(&a);
     let mut payer = lab.c[0].clone();
     let c = payment(&mut lab, &mut payer, true, pid, d, spec("a unit"), 100, b"paid to the new node");

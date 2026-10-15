@@ -153,6 +153,8 @@ enum Key {
     Role(String),
     Receiver(Hash),
     Metric(Metric),
+    /// The collective's own part off the top (rule 22, F312).
+    Own,
 }
 
 #[derive(PartialEq)]
@@ -173,6 +175,7 @@ fn entries(t: &Terms, plan: &SplitPlan) -> Option<Vec<Entry>> {
             ShareRule::Stake { stake, part } => (Key::Stake(t.stakes.as_ref()?.get(*stake as usize)?.object), *part),
             ShareRule::Role { role, part } => (Key::Role(role.clone()), *part),
             ShareRule::Receiver { receiver, part } => (Key::Receiver(*receiver), *part),
+            ShareRule::Own { part } => (Key::Own, *part),
             ShareRule::Metric { metric, part } => (Key::Metric(plan.metrics.get(*metric as usize)?.clone()), *part),
         };
         match out.iter_mut().find(|e| e.key == key) {

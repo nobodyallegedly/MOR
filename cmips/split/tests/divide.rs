@@ -49,6 +49,9 @@ fn terms(shares: Vec<ShareRule>, top: Vec<u64>, stakes: Vec<Vec<(Hash, u64)>>) -
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     }
 }
 

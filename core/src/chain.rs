@@ -537,15 +537,33 @@ impl Verifier {
         // or of a type its MIR does not define (Envelopes type 2 retired,
         // F294), is invalid, for a verifier that knows those hashes, as
         // every client does.
-        let format = self.never_ack_specs.and_then(|(envelopes, text)| {
-            if inside.spec == envelopes {
-                Some(crate::envelopes::check_act(&inside, act.outside.signer.as_ref()).map_err(|e| e.to_string()))
-            } else if inside.spec == text {
-                Some(crate::text::check_act(&inside).map_err(|e| e.to_string()))
-            } else {
-                None
-            }
-        });
+        let format = self
+            .never_ack_specs
+            .and_then(|(envelopes, text)| {
+                if inside.spec == envelopes {
+                    Some(crate::envelopes::check_act(&inside, act.outside.signer.as_ref()).map_err(|e| e.to_string()))
+                } else if inside.spec == text {
+                    Some(crate::text::check_act(&inside).map_err(|e| e.to_string()))
+                } else {
+                    None
+                }
+            })
+            // Fable's A6 (F295 for Agreements): an Agreements act outside its
+            // type's format, or of a retired or undefined type, is invalid for
+            // a verifier that knows which specification Agreements is; one of
+            // a type whose format is still open is not judged on its format
+            // (Agreements Q5, taken).
+            .or_else(|| {
+                let (_, agreements) = self.ack_specs?;
+                if inside.spec != agreements {
+                    return None;
+                }
+                match crate::agreements::in_format(&inside, act.outside.signer.as_ref()) {
+                    Ok(()) => Some(Ok(())),
+                    Err(crate::agreements::AgreementsError::Unsupported(_)) => None,
+                    Err(e) => Some(Err(e.to_string())),
+                }
+            });
         let held = Held {
             id,
             act,

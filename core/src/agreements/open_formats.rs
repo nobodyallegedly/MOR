@@ -443,6 +443,10 @@ pub enum ShareRule {
     /// `[ 3, metric: uint, part ]`: a metric share, by its index in field 8
     /// (rule 28).
     Metric { metric: u64, part: u64 },
+    /// `[ 2, null, part ]`: the collective itself, a named receiver off the
+    /// top of its own plan: its own money, paid to its vault and never split
+    /// again (rule 22; new in draft 14, F312). A collective's terms only.
+    Own { part: u64 },
 }
 
 impl ShareRule {
@@ -450,7 +454,7 @@ impl ShareRule {
         match self {
             ShareRule::Stake { .. } => 0,
             ShareRule::Role { .. } => 1,
-            ShareRule::Receiver { .. } => 2,
+            ShareRule::Receiver { .. } | ShareRule::Own { .. } => 2,
             ShareRule::Metric { .. } => 3,
         }
     }
@@ -461,6 +465,7 @@ impl ShareRule {
             ShareRule::Role { role, part } => Value::Array(vec![Value::Uint(1), Value::Text(role.clone()), Value::Uint(*part)]),
             ShareRule::Receiver { receiver, part } => Value::Array(vec![Value::Uint(2), b(receiver), Value::Uint(*part)]),
             ShareRule::Metric { metric, part } => Value::Array(vec![Value::Uint(3), Value::Uint(*metric), Value::Uint(*part)]),
+            ShareRule::Own { part } => Value::Array(vec![Value::Uint(2), Value::Null, Value::Uint(*part)]),
         }
     }
 
@@ -470,6 +475,7 @@ impl ShareRule {
         match uint(&a[0], "split plan: a share's kind")? {
             0 => Ok(ShareRule::Stake { stake: uint(&a[1], "split plan: a stake")?, part }),
             1 => Ok(ShareRule::Role { role: text(&a[1], "split plan: a role, by its name (review 7.2)")?, part }),
+            2 if a[1] == Value::Null => Ok(ShareRule::Own { part }),
             2 => Ok(ShareRule::Receiver { receiver: hash(&a[1], "split plan: a named receiver")?, part }),
             3 => Ok(ShareRule::Metric { metric: uint(&a[1], "split plan: a metric")?, part }),
             _ => Err(AgreementsError::Shape("split plan: a share's kind")),

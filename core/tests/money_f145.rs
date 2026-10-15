@@ -39,6 +39,18 @@ fn mirs() -> Mirs {
     }
 }
 
+/// A negotiation message's payload: its text (Agreements, type 18; in its
+/// format, as the verifier checks since Fable's A6).
+fn note() -> Vec<(mor_core::cbor::Value, mor_core::cbor::Value)> {
+    vec![(mor_core::cbor::Value::Uint(0), mor_core::cbor::Value::Text("Noted.".into()))]
+}
+
+/// A lone seller's standing offer of nothing yet (type 6, in its format):
+/// what these tests read of an offer is only who signed it.
+fn offer() -> Vec<(mor_core::cbor::Value, mor_core::cbor::Value)> {
+    agreements::Offer { under: None, sold: vec![], price: amount(5), paid: None, words: None, until: None, time: None, refund: None }.to_map()
+}
+
 fn h(s: &str) -> Hash {
     sha256(s.as_bytes())
 }
@@ -278,7 +290,7 @@ fn the_payees_pointer_is_found_through_its_own_acts_only() {
     // IOU's `prev` leads to the debtor's terms citing version 3, which the
     // walk no longer enters.
     let iou = l.debt(&mut debtor, oid, 30, v1, None, vec![]);
-    l.act(&mut owner, mirs().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![iou]), None);
+    l.act(&mut owner, mirs().agreements, agreements::types::NEGOTIATION, note(), None, Some(vec![iou]), None);
     let holding = l.view().pointer_holding(&iou, &oid).unwrap();
     assert!(!holding.pointers.contains(&v3), "never through the debtor's history");
     l.claim(&mut debtor, oid, iou, 30, "iou to the thief", PaidAt::Flow(v3), vec![]);
@@ -324,7 +336,7 @@ fn an_iou_counts_only_to_the_vault_until_the_creditor_acknowledges_it() {
     // creditor's own acts, F157.)
     let mut friend = l.person("a second debtor");
     let acked = l.debt(&mut friend, cid, 30, v1, None, vec![]);
-    let ack = l.act(&mut creditor, mirs().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![acked]), None);
+    let ack = l.act(&mut creditor, mirs().agreements, agreements::types::NEGOTIATION, note(), None, Some(vec![acked]), None);
     assert_eq!(l.w.v.status(&ack), Status::Valid);
     let holding = l.view().pointer_holding(&acked, &cid).unwrap();
     assert_eq!(BTreeSet::from_iter(holding.pointers), BTreeSet::from([v1, v2]));
@@ -333,7 +345,7 @@ fn an_iou_counts_only_to_the_vault_until_the_creditor_acknowledges_it() {
     assert_eq!(l.paid(&acked), 30);
     // Never the thief's version 3, newer than any the creditor's act holds.
     let acked3 = l.debt(&mut friend, cid, 30, v3, None, vec![]);
-    l.act(&mut creditor, mirs().agreements, agreements::types::NEGOTIATION, vec![], None, Some(vec![acked3]), None);
+    l.act(&mut creditor, mirs().agreements, agreements::types::NEGOTIATION, note(), None, Some(vec![acked3]), None);
     l.claim(&mut friend, cid, acked3, 30, "acked3 to v3", PaidAt::Flow(v3), vec![]);
     assert_eq!(l.paid(&acked3), 0);
 }
@@ -347,11 +359,11 @@ fn an_offer_is_the_payees_own_act_only_when_the_payee_signed_it() {
     let mut buyer = l.person("a buyer");
     let sid = seller.id;
     let v1 = l.pointer(&mut seller, sid, 1, None, "the seller's node");
-    let offer = l.act(&mut seller, mirs().agreements, agreements::types::STANDING_OFFER, vec![], None, None, None);
+    let offer = l.act(&mut seller, mirs().agreements, agreements::types::STANDING_OFFER, offer(), None, None, None);
     let d = l.debt(&mut buyer, sid, 5, v1, Some(offer), vec![]);
     l.claim(&mut buyer, sid, d, 5, "to v1", PaidAt::Flow(v1), vec![]);
     assert_eq!(l.paid(&d), 5);
-    let not_hers = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, vec![], None, None, Some(vec![Ref::Act(v1)]));
+    let not_hers = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, offer(), None, None, Some(vec![Ref::Act(v1)]));
     assert_eq!(l.view().pointer_holding(&not_hers, &sid).unwrap().pointers, Vec::<Hash>::new());
     let d2 = l.debt(&mut buyer, sid, 5, v1, Some(not_hers), vec![]);
     l.claim(&mut buyer, sid, d2, 5, "d2 to v1", PaidAt::Flow(v1), vec![]);
@@ -411,7 +423,7 @@ fn a_payee_accepting_anothers_offer_is_paid_by_what_its_acceptance_holds() {
     let mut buyer = l.person("a buyer posting a bounty");
     let rid = remixer.id;
     let v1 = l.pointer(&mut remixer, rid, 1, None, "the remixer's node");
-    let bounty = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, vec![], None, None, Some(vec![Ref::Act(v1)]));
+    let bounty = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, offer(), None, None, Some(vec![Ref::Act(v1)]));
     assert!(l.view().pointer_holding(&bounty, &rid).unwrap().pointers.is_empty(), "the buyer's citation chooses nothing");
     l.sign_citing(&mut remixer, bounty, vec![v1]);
     assert_eq!(l.view().pointer_holding(&bounty, &rid).unwrap().pointers, vec![v1]);

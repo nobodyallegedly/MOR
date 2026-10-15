@@ -1862,10 +1862,21 @@ struct AbandonmentOut {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct HoldersEntryOut {
+    stake: u64,
+    /// "all" (every holder) or "share".
+    rule: RuleOut,
+    /// A standing waiver of pre-emption (rule 96, F328).
+    waived: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct SuccessionOut {
     party: String,
     stakes: Option<Vec<(String, u64)>>,
-    seats: Option<Vec<(String, u64)>>,
+    /// Seat successors, with no voting weight (Agreements draft 14, F328).
+    seats: Option<Vec<String>>,
     entry: Option<u64>,
 }
 
@@ -1919,7 +1930,8 @@ struct AreaOut {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct PowerOut {
-    /// "constitutional", "clone", "area", "plan" or "judicial".
+    /// "constitutional", "clone", "area", "plan", "judicial" or "holders"
+    /// (draft 14, F307: `area` then names the stake).
     form: String,
     area: Option<u64>,
     party: Option<String>,
@@ -1932,6 +1944,8 @@ fn power_out(p: &agreements::Power) -> PowerOut {
         agreements::Power::Area(a) => ("area", Some(*a), None),
         agreements::Power::Plan(h) => ("plan", None, Some(hx(h))),
         agreements::Power::Judicial => ("judicial", None, None),
+        // The stake's holders' rule (F307): `area` carries the stake's index.
+        agreements::Power::Holders(s) => ("holders", Some(*s), None),
     };
     PowerOut {
         form: form.into(),
@@ -2004,8 +2018,15 @@ struct TermsOut {
     backups: Option<BackupsOut>,
     /// Forked from (field 23): the original collective, a back-link (N4).
     forked_from: Option<String>,
-    /// The release rule (field 24); null: every holder.
+    /// The release rule (field 24); null: every holder. Counted by share
+    /// since draft 14 (F308): "all", "share" or "named".
     release_rule: Option<RuleOut>,
+    /// The holders' rules, per stake (field 30; F307, F328).
+    holders_rules: Option<Vec<HoldersEntryOut>>,
+    /// The transfers a deal's clone counts (field 31; F316).
+    transfers_counted: Option<Vec<String>>,
+    /// The issuance offer an issuance follows, or "waived" (field 32; F309, F328).
+    issues_under: Option<String>,
     /// In a deal's clone settling a fork, every tip it discards (field 26,
     /// F186; a list since QF3, F190); null otherwise.
     settles: Option<Vec<String>>,
@@ -2206,7 +2227,7 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                 .map(|p| SuccessionOut {
                     party: hx(&p.party),
                     stakes: p.stakes.as_ref().map(pairs),
-                    seats: p.seats.as_ref().map(pairs),
+                    seats: p.seats.as_ref().map(|v| v.iter().map(hx).collect()),
                     entry: p.entry,
                 })
                 .collect()
@@ -2236,7 +2257,21 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
             failure: b.failure.is_some(),
         }),
         forked_from: t.forked_from.as_ref().map(hx),
-        release_rule: t.release_rule.as_ref().map(rule_out),
+        release_rule: t.release_rule.as_ref().map(release_rule_out),
+        holders_rules: t.holders_rules.as_ref().map(|v| {
+            v.iter()
+                .map(|e| HoldersEntryOut {
+                    stake: e.stake,
+                    rule: release_rule_out(&agreements::ReleaseRule::Holders(e.rule.clone())),
+                    waived: e.waived,
+                })
+                .collect()
+        }),
+        transfers_counted: t.transfers_counted.as_ref().map(|x| x.iter().map(hx).collect()),
+        issues_under: t.issues_under.as_ref().map(|x| match x {
+            agreements::IssuesUnder::Offer(h) => hx(h),
+            agreements::IssuesUnder::Waived => "waived".into(),
+        }),
         settles: t.settles.as_ref().map(|x| x.iter().map(hx).collect()),
         fork_judge: t.fork_judge.as_ref().map(hx),
         plan: t.plan.as_ref().map(plan_out),
@@ -2290,6 +2325,7 @@ fn plan_out(p: &agreements::SplitPlan) -> PlanOut {
                 agreements::ShareRule::Role { role, part } => PlanShareOut { role: Some(role.clone()), ..share("role", *part) },
                 agreements::ShareRule::Receiver { receiver, part } => PlanShareOut { receiver: Some(hx(receiver)), ..share("receiver", *part) },
                 agreements::ShareRule::Metric { metric, part } => PlanShareOut { metric: Some(*metric), ..share("metric", *part) },
+                agreements::ShareRule::Own { part } => share("own", *part),
             })
             .collect(),
         cmip: hx(&p.cmip),
@@ -2603,30 +2639,39 @@ pub fn record_payload(input: JsValue) -> R<Vec<u8>> {
     Ok(cbor::encode(&Value::Map(rec.to_map())))
 }
 
-#[derive(Serialize)]
+/// A rule: "all", "threshold", "named", and from Agreements draft 14
+/// (F307, F308, F311) "share" (by share of a stake among the parties, or,
+/// for the holders' and release rules, among a stake's holders), "allOf"
+/// and "holders" (among a stake's holders, by share).
+#[derive(Serialize, Default)]
 struct RuleOut {
     form: String,
     threshold: Option<u64>,
     named: Option<Vec<String>>,
+    stake: Option<u64>,
+    /// In millionths.
+    share: Option<u64>,
+    rules: Option<Vec<RuleOut>>,
 }
 
 fn rule_out(r: &agreements::Rule) -> RuleOut {
+    let form = |f: &str| RuleOut { form: f.into(), ..Default::default() };
     match r {
-        agreements::Rule::All => RuleOut {
-            form: "all".into(),
-            threshold: None,
-            named: None,
-        },
-        agreements::Rule::Threshold(k) => RuleOut {
-            form: "threshold".into(),
-            threshold: Some(*k),
-            named: None,
-        },
-        agreements::Rule::Named(n) => RuleOut {
-            form: "named".into(),
-            threshold: None,
-            named: Some(n.iter().map(hx).collect()),
-        },
+        agreements::Rule::All => form("all"),
+        agreements::Rule::Threshold(k) => RuleOut { threshold: Some(*k), ..form("threshold") },
+        agreements::Rule::Named(n) => RuleOut { named: Some(n.iter().map(hx).collect()), ..form("named") },
+        agreements::Rule::ByShare { stake, share } => RuleOut { stake: Some(*stake), share: Some(*share), ..form("share") },
+        agreements::Rule::AllOf(rs) => RuleOut { rules: Some(rs.iter().map(rule_out).collect()), ..form("allOf") },
+        agreements::Rule::Holders { stake, share } => RuleOut { stake: Some(*stake), share: Some(*share), ..form("holders") },
+    }
+}
+
+fn release_rule_out(r: &agreements::ReleaseRule) -> RuleOut {
+    let form = |f: &str| RuleOut { form: f.into(), ..Default::default() };
+    match r {
+        agreements::ReleaseRule::Holders(agreements::HoldersRule::Every) => form("all"),
+        agreements::ReleaseRule::Holders(agreements::HoldersRule::Share(s)) => RuleOut { share: Some(*s), ..form("share") },
+        agreements::ReleaseRule::Named(n) => RuleOut { named: Some(n.iter().map(hx).collect()), ..form("named") },
     }
 }
 

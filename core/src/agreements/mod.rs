@@ -16,6 +16,8 @@
 
 pub mod formats;
 pub mod open_formats;
+/// The owners' acts of draft 14: the issuance offer and proxies (F309, F327).
+pub mod owners;
 /// What a version pays a stake less (Agreements draft 12, rule 48: F270,
 /// F274, F279, F280).
 pub mod pay;
@@ -25,6 +27,7 @@ pub mod tiers;
 pub mod view;
 
 pub use formats::*;
+pub use owners::{decode_proxy_revocation, in_format, owner_types, proxy_revocation_payload, IssuanceOffer, Proxy};
 pub use open_formats::{
     new_types, Fee, FeeScope, JudgeRequest, Liveness, Metric, Offer, OfferAct, Paid, RefundTerms, ShareRule, Sold, SplitPlan,
     StakeTransfer, Unfilled, WorkClaim, FEES_FIELD, RETIRED_TYPES, WITHDRAWN_FIELDS,

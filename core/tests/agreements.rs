@@ -8,7 +8,7 @@ use mor_core::hash::{sha256, Hash};
 use mor_core::agreements::{
     self, judged, outcomes, powers_needed, Abandonment, Area, Authority, ChainLink, Who,
     Field4, FieldRef, Holding, Judge, KeyGrammar, Kind, AgreementsError, MarkEntry, Mirs, Power, Recovery,
-    Rule, SuccessionPlan, Terms, chain_answer, ChainAnswer, Step, Stake,
+    Rule, ReleaseRule, HoldersRule, SuccessionPlan, Terms, chain_answer, ChainAnswer, Step, Stake,
 };
 
 pub fn mirs() -> Mirs {
@@ -114,6 +114,9 @@ fn label() -> Terms {
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     }
 }
 
@@ -395,7 +398,7 @@ fn a_grammar_leaves_a_way_to_rotate() {
     t.succession = Some(vec![SuccessionPlan {
         party: h(1),
         stakes: None,
-        seats: Some(vec![(h(3), 1)]),
+        seats: Some(vec![h(3)]),
         entry: Some(1),
     }]);
     check(&t).unwrap();
@@ -734,11 +737,11 @@ fn stakes_are_written_in_millionths() {
     // The release rule (field 24): a clone changing it needs the clone rule
     // (and every owner's signature, judged with the acts, N8).
     let mut x = t.clone();
-    x.release_rule = Some(Rule::Threshold(2));
+    x.release_rule = Some(ReleaseRule::Holders(HoldersRule::Share(500_000)));
     assert_eq!(check(&x), Ok(()));
     assert_eq!(roundtrip(&x), x);
     let mut c = clone_of(&t, vec![(Power::Clone, vec![h(1), h(2)])]);
-    c.release_rule = Some(Rule::Threshold(2));
+    c.release_rule = Some(ReleaseRule::Holders(HoldersRule::Share(500_000)));
     assert_eq!(needs(&t, &c), vec![Power::Clone]);
     // Forked from (field 23): a back-link in founding terms of a collective.
     x.forked_from = Some(h(80));
@@ -1036,4 +1039,183 @@ fn f280_a_non_owner_is_paid_off_the_top_only() {
     check(&t).unwrap();
     t.plan.as_mut().unwrap().top = vec![1];
     check(&t).unwrap();
+}
+
+// ---------------------------------------------------------------- Agreements draft 14's formats
+
+/// The label with a stake in itself (Q8), Ana 60%, Ben 40%, and a departed
+/// holder (h 9) at 10% taken from both.
+fn label_owned() -> Terms {
+    let mut t = label();
+    t.stakes = Some(vec![Stake {
+        object: Who::This,
+        holders: vec![(Who::Id(h(1)), 500_000), (Who::Id(h(2)), 400_000), (Who::Id(h(9)), 100_000)],
+    }]);
+    t
+}
+
+fn decode_raw(t: &Terms, f: &dyn Fn(&mut Vec<(Value, Value)>)) -> Result<Terms, AgreementsError> {
+    let mut m = t.to_map();
+    f(&mut m);
+    let bytes = cbor::encode(&Value::Map(m));
+    let Value::Map(m) = cbor::decode(&bytes).unwrap() else { panic!() };
+    Terms::decode(&m)
+}
+
+fn set(m: &mut Vec<(Value, Value)>, k: u64, v: Value) {
+    m.retain(|(x, _)| x != &Value::Uint(k));
+    m.push((Value::Uint(k), v));
+}
+
+/// Freeze suite v28, 3.8d (F328, Q15): a succession plan whose key 2 writes
+/// a voting weight beside a seat successor (draft 13's `[successor,
+/// weight]`) is out of format, whatever the weight; key 2 listing the seat
+/// successors alone is valid.
+#[test]
+fn a_seat_weight_is_out_of_format_3_8d() {
+    let mut t = label();
+    t.succession = Some(vec![SuccessionPlan { party: h(1), stakes: None, seats: Some(vec![h(3)]), entry: Some(1) }]);
+    assert_eq!(roundtrip(&t), t, "seat successors alone");
+    for w in [1u64, 2] {
+        let got = decode_raw(&t, &|m| {
+            let plan = Value::Map(vec![
+                (Value::Uint(0), Value::Bytes(h(1).to_vec())),
+                (Value::Uint(2), Value::Array(vec![Value::Array(vec![Value::Bytes(h(3).to_vec()), Value::Uint(w)])])),
+                (Value::Uint(3), Value::Uint(1)),
+            ]);
+            set(m, 16, Value::Array(vec![plan]));
+        });
+        assert!(matches!(&got, Err(AgreementsError::Check(e)) if e.contains("no voting weight")), "weight {w}: {got:?}");
+    }
+}
+
+/// Freeze suite v28, 3.7ah (F308, F311), the formats: a change rule by share
+/// and "all of" for fields 5 and 18; a rule among a stake's holders for
+/// field 18 only; "all of" lists two rules or more, none nested; a rule by
+/// share for keepers, or as a deal's clone rule, is invalid; the release
+/// rule counted by share, its head count `[1, k]` invalid (F328's reading
+/// on field 24).
+#[test]
+fn rules_by_share_have_their_fields_3_7ah() {
+    let by_share = Rule::ByShare { stake: 0, share: 600_000 };
+    let mut t = label_owned();
+    t.clone = by_share.clone();
+    check(&t).unwrap();
+    assert_eq!(roundtrip(&t), t);
+    t.constitutional = Some(Rule::AllOf(vec![Rule::Threshold(2), Rule::Holders { stake: 0, share: 600_000 }]));
+    t.abandonment.as_mut().unwrap().outcomes = vec![outcomes::VOICE_REMOVED, outcomes::STAKE_REDISTRIBUTED];
+    check(&t).unwrap();
+    assert_eq!(roundtrip(&t), t);
+    // "All of" with one rule, or nested.
+    let mut x = t.clone();
+    x.constitutional = Some(Rule::AllOf(vec![Rule::Threshold(2)]));
+    assert!(check(&x).is_err());
+    x.constitutional = Some(Rule::AllOf(vec![Rule::Threshold(2), Rule::AllOf(vec![Rule::All, by_share.clone()])]));
+    assert!(check(&x).is_err(), "none nested");
+    // Among a stake's holders: field 18 only.
+    let mut x = t.clone();
+    x.clone = Rule::Holders { stake: 0, share: 600_000 };
+    assert!(check(&x).is_err(), "the clone rule counts among the parties");
+    // A stake that field 7 does not define; a share of nothing or more than a whole.
+    let mut x = t.clone();
+    x.clone = Rule::ByShare { stake: 1, share: 600_000 };
+    assert!(check(&x).is_err());
+    x.clone = Rule::ByShare { stake: 0, share: 0 };
+    assert!(check(&x).is_err());
+    x.clone = Rule::ByShare { stake: 0, share: 1_000_001 };
+    assert!(check(&x).is_err());
+    // Keepers count keepers, never shares.
+    let mut k = label_owned();
+    k.keepers = Some(agreements::Keepers { operators: vec![h(80)], rule: Rule::All });
+    let got = decode_raw(&k, &|m| {
+        set(m, 3, Value::Array(vec![Value::Array(vec![Value::Bytes(h(80).to_vec())]), by_share.to_value()]));
+    });
+    assert!(got.is_err(), "{got:?}");
+    // A deal's clone rule is every party.
+    let mut d = label_owned();
+    d.grammar = None;
+    d.areas = None;
+    d.area_words = None;
+    d.stakes = Some(vec![Stake { object: Who::Id(h(40)), holders: vec![(Who::Id(h(1)), 600_000), (Who::Id(h(2)), 400_000)] }]);
+    d.clone = by_share.clone();
+    assert!(check(&d).is_err());
+    // The release rule, by share; a number of heads is invalid.
+    let mut r = label_owned();
+    r.release_rule = Some(ReleaseRule::Holders(HoldersRule::Share(500_000)));
+    check(&r).unwrap();
+    assert_eq!(roundtrip(&r), r);
+    let got = decode_raw(&r, &|m| set(m, 24, Rule::Threshold(2).to_value()));
+    assert!(matches!(&got, Err(AgreementsError::Check(e)) if e.contains("never by head")), "{got:?}");
+}
+
+/// Freeze suite v28, 1.9g and 3.7aj (F307, F314, F328 Q14), the formats: a
+/// holders' rule per stake (field 30), ascending, a collective's only; terms
+/// of a deal carrying it are invalid; a standing waiver of pre-emption
+/// written `true`; an issuance naming no offer (`[0]`, field 32) only under
+/// a standing waiver, and only in a collective's clone; field 31 a deal's
+/// clone's.
+#[test]
+fn a_holders_rule_is_a_collectives_only_1_9g_3_7aj() {
+    let mut t = label_owned();
+    t.holders_rules = Some(vec![agreements::HoldersEntry { stake: 0, rule: HoldersRule::Share(600_000), waived: false }]);
+    check(&t).unwrap();
+    assert_eq!(roundtrip(&t), t);
+    t.holders_rules.as_mut().unwrap()[0].waived = true;
+    assert_eq!(roundtrip(&t), t);
+    let got = decode_raw(&t, &|m| {
+        set(m, 30, Value::Array(vec![Value::Array(vec![Value::Uint(0), Value::Array(vec![Value::Uint(3), Value::Uint(600_000)]), Value::Bool(false)])]))
+    });
+    assert!(got.is_err(), "a waiver is written true");
+    let mut x = t.clone();
+    x.holders_rules = Some(vec![agreements::HoldersEntry { stake: 1, rule: HoldersRule::Every, waived: false }]);
+    assert!(check(&x).is_err(), "a stake of field 7");
+    // A deal: invalid.
+    let mut d = label_owned();
+    d.grammar = None;
+    d.areas = None;
+    d.area_words = None;
+    d.clone = Rule::All;
+    d.stakes = Some(vec![Stake { object: Who::Id(h(40)), holders: vec![(Who::Id(h(1)), 600_000), (Who::Id(h(2)), 400_000)] }]);
+    check(&d).unwrap();
+    d.holders_rules = Some(vec![agreements::HoldersEntry { stake: 0, rule: HoldersRule::Share(600_000), waived: false }]);
+    assert!(matches!(check(&d), Err(AgreementsError::Check(e)) if e.contains("a deal carries no holders' rule")));
+    // Field 32: a collective's clone only; `[0]` only under a standing waiver.
+    let mut c = clone_of(&t, vec![(Power::Clone, vec![h(1), h(2)])]);
+    c.issues_under = Some(agreements::IssuesUnder::Waived);
+    assert_eq!(roundtrip(&c), c);
+    check(&c).unwrap();
+    c.holders_rules.as_mut().unwrap()[0].waived = false;
+    assert!(check(&c).is_err(), "no standing waiver");
+    let mut f = t.clone();
+    f.issues_under = Some(agreements::IssuesUnder::Offer(h(50)));
+    assert!(check(&f).is_err(), "founding terms are no issuance");
+    // Field 31: a deal's clone's.
+    let mut x = clone_of(&t, vec![(Power::Clone, vec![h(1), h(2)])]);
+    x.transfers_counted = Some(vec![h(51)]);
+    assert!(check(&x).is_err(), "a collective counts the transfers its line placed");
+    let mut dc = d.clone();
+    dc.holders_rules = None;
+    let mut dc = clone_of(&dc, vec![(Power::Clone, vec![h(1), h(2)])]);
+    dc.transfers_counted = Some(vec![h(51), h(52)]);
+    assert_eq!(roundtrip(&dc), dc);
+    check(&dc).unwrap();
+    dc.transfers_counted = Some(vec![h(52), h(51)]);
+    assert!(check(&dc).is_err(), "ascending");
+}
+
+/// Freeze suite v28, 3.7an (F328, Q11): a constitution counting membership
+/// among a stake's holders needs an abandonment clause allowing outcome 1
+/// or 2, whose authority can declare each holder who is no party; otherwise
+/// the terms are invalid.
+#[test]
+fn owners_who_vote_on_membership_can_be_declared_absent_3_7an() {
+    let mut t = label_owned();
+    t.constitutional = Some(Rule::Holders { stake: 0, share: 600_000 });
+    t.abandonment.as_mut().unwrap().outcomes = vec![outcomes::VOICE_REMOVED];
+    assert!(matches!(check(&t), Err(AgreementsError::Check(e)) if e.contains("F328")));
+    t.abandonment.as_mut().unwrap().outcomes = vec![outcomes::VOICE_REMOVED, outcomes::STAKE_TRANSFERRED];
+    check(&t).unwrap();
+    // An authority that is itself a holder who is no party cannot declare itself.
+    t.abandonment.as_mut().unwrap().authority = Authority::Named(h(9));
+    assert!(check(&t).is_err());
 }

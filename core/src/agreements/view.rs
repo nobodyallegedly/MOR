@@ -3572,7 +3572,7 @@ impl<'a> AgreementsView<'a> {
                 "the plan's seat does not enter automatically: its successor is a nomination (rule 48c, Q14)".into(),
             );
         }
-        let seats: Vec<Hash> = plan.seats.iter().flatten().map(|(h, _)| *h).collect();
+        let seats: Vec<Hash> = plan.seats.iter().flatten().copied().collect();
         if seats.is_empty() {
             return Err("the plan names no seat successor".into());
         }
@@ -3698,7 +3698,7 @@ impl<'a> AgreementsView<'a> {
         if let Some(w) = plan_open(parent, plan) {
             return Err(AgreementsError::Unsettled(w));
         }
-        let seats: Vec<Hash> = plan.seats.iter().flatten().map(|(h, _)| *h).collect();
+        let seats: Vec<Hash> = plan.seats.iter().flatten().copied().collect();
         let clone = &lineage[0].1;
         let placed: Vec<Hash> = parent
             .parties
@@ -4962,7 +4962,9 @@ fn power_base(parent: &Terms, p: &Power) -> Option<(Vec<Hash>, Rule)> {
         }
         Power::Clone => Some((parent.clone.counted_among(&parent.parties), parent.clone.clone())),
         Power::Area(id) => parent.area(*id).map(|a| (a.holders.clone(), a.rule())),
-        Power::Plan(_) => None,
+        // Counted among a stake's holders by share, not among parties
+        // (rule 65; F307): see `holders_power_met`.
+        Power::Plan(_) | Power::Holders(_) => None,
         Power::Judicial => Some((parent.parties.clone(), Rule::All)),
     }
 }
@@ -4999,16 +5001,13 @@ fn plan_grammar(parent: &Terms, party: &Hash, seats: &[Hash]) -> Option<KeyGramm
     })
 }
 
-/// What Flaw B14's answer leaves open for a plan, refused rather than
-/// guessed: a seat's voting weight other than one, which no rule counts; a
-/// seat successor who is already a party; several successors to a holding
+/// What Flaw B14's answer leaves open for a plan, unknown rather than
+/// guessed (a seat's voting weight is out of format since draft 14, F328,
+/// Q15): a seat successor who is already a party; several successors to a holding
 /// of one; a party who is a custodian or holds the recovery path.
 fn plan_open(parent: &Terms, plan: &SuccessionPlan) -> Option<&'static str> {
     let seats = plan.seats.as_deref().unwrap_or_default();
-    if seats.iter().any(|(_, w)| *w != 1) {
-        return Some("a seat successor with a voting weight other than one: no rule counts weights (Flaw B14, its second remaining point)");
-    }
-    if seats.iter().any(|(h, _)| parent.parties.contains(h)) {
+    if seats.iter().any(|h| parent.parties.contains(h)) {
         return Some("a seat successor who is already a party: what taking the party's place in the keys then means is not written (Flaw B14)");
     }
     let p = &plan.party;
@@ -10373,9 +10372,13 @@ impl<'a> AgreementsView<'a> {
             }
             let this = if t.is_collective() { self.collective_of(ag)? } else { None };
             let mut holders = vec![];
-            for (w, _) in &stake.holders {
+            let mut shares = vec![];
+            for (w, n) in &stake.holders {
                 match w.resolve(this.as_ref()) {
-                    Some(x) => holders.push(x),
+                    Some(x) => {
+                        holders.push(x);
+                        shares.push((x, *n));
+                    }
                     None => return fail(e, "a holder written null, and the collective is not held"),
                 }
             }
@@ -10387,8 +10390,14 @@ impl<'a> AgreementsView<'a> {
             }
             // The release rule in force: set at founding, changed only by a
             // clone every owner signs (N8).
-            let rule = t.release_rule.clone().unwrap_or(Rule::All);
-            met &= rule.met(&holders, &signed);
+            // Counted by share, never by head (F308).
+            met &= match t.release_rule.clone().unwrap_or(ReleaseRule::Holders(HoldersRule::Every)) {
+                ReleaseRule::Holders(HoldersRule::Every) => holders.iter().all(|x| signed.contains(x)),
+                ReleaseRule::Holders(HoldersRule::Share(need)) => {
+                    shares.iter().filter(|(x, _)| signed.contains(x)).map(|(_, n)| *n).sum::<u64>() >= need
+                }
+                ReleaseRule::Named(n) => n.iter().all(|x| signed.contains(x)),
+            };
             for x in holders {
                 if !e.holders.contains(&x) {
                     e.holders.push(x);

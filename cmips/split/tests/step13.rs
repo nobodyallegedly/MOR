@@ -158,6 +158,9 @@ fn deal(parties: Vec<Hash>, words: &str) -> Terms {
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     }
 }
 

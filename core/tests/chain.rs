@@ -584,7 +584,15 @@ fn a_witness_act_names_what_it_witnesses() {
     assert_eq!(w.v.status(&said), Status::Invalid, "its payload is empty");
     // A verifier told only the Identity MIR's hash.
     let mut blind = mor_core::chain::Verifier::new(identity_spec());
-    let agreements_act = w.everyday_act(&mut r, agreements_spec(), 17, vec![], None, Some(vec![x]));
+    // An Agreements act in its format (Fable's A6), a liveness, carrying `acks`.
+    let agreements_act = w.everyday_act(
+        &mut r,
+        agreements_spec(),
+        12,
+        vec![(Value::Uint(0), Value::Bytes(x.to_vec()))],
+        Some(vec![mor_core::act::Object { chain: x, predecessor: x }]),
+        Some(vec![x]),
+    );
     let genesis = w.v.resolve(&r.id).links[0].act;
     blind.add(w.v.get(&genesis).unwrap().act.clone()).unwrap();
     let id = blind.add(agreements_act.clone()).unwrap();

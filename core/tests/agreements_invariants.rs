@@ -640,6 +640,9 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, work: Hash) -> Terms 
         refund: None,
         fees: None,
         backups: None,
+        holders_rules: None,
+        transfers_counted: None,
+        issues_under: None,
     }
 }
 
@@ -2327,6 +2330,9 @@ impl DealWorld {
             refund: None,
             fees: None,
             backups: s.backup.then(|| agreements::Backups { services: vec![agreements::ServiceGrants::PerPayee(backup_grants.iter().map(|g| g.0).collect())], failure: None }),
+            holders_rules: None,
+            transfers_counted: None,
+            issues_under: None,
         };
         assert_eq!(t.check(&mirs()), Ok(()), "the generator's own deal terms");
         let deal = agreements_act(&mut w, &mut p[0], agreements::types::TERMS, t.to_map(), None);

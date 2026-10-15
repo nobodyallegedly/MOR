@@ -277,6 +277,15 @@ pub fn divide(amount: u64, terms: &Terms, collective: Option<&Hash>, before: &dy
                     payouts.push(Payout { receiver: *receiver, amount: pots[i], ..Default::default() });
                 }
             }
+            // The collective's own part off the top: paid to the collective
+            // itself, at its vault, never split again (Agreements draft 14,
+            // rule 22, F312).
+            ShareRule::Own { .. } => {
+                if pots[i] > 0 {
+                    let c = collective.ok_or("the collective's own part names the collective, and no collective given")?;
+                    payouts.push(Payout { receiver: *c, amount: pots[i], ..Default::default() });
+                }
+            }
             _ => return Err("draft 2 computes stakes and named receivers only: roles and metrics are refused, never guessed".into()),
         }
     }
@@ -286,6 +295,10 @@ pub fn divide(amount: u64, terms: &Terms, collective: Option<&Hash>, before: &dy
 
 fn part_of(s: &ShareRule) -> u64 {
     match s {
-        ShareRule::Stake { part, .. } | ShareRule::Role { part, .. } | ShareRule::Receiver { part, .. } | ShareRule::Metric { part, .. } => *part,
+        ShareRule::Stake { part, .. }
+        | ShareRule::Role { part, .. }
+        | ShareRule::Receiver { part, .. }
+        | ShareRule::Metric { part, .. }
+        | ShareRule::Own { part } => *part,
     }
 }
