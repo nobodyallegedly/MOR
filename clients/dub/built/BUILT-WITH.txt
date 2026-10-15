@@ -8,12 +8,12 @@ esbuild: 0.25.12
 
 Work hash of each file (as the display client lists them):
 44f84786a9a1e6b6673f277f29d0080832a48b19369a44e31a9021285e3edd2f  index.html
-085c9d06f6750e5c0e0df8729540f7a871c64a6f0f192c57a6c3f6a188c40607  dub.js
+e265a024d6c800811e58c94093f7c15e8afa36ed7afead2586f77dd97a729aad  dub.js
 82e4873e536703f54d9b7aca75eaa5c39e745e0eb1057a38cf2785c93be35ac5  dub.css
-a2b86895cb630ec1a5aca2aea3089d302d9a1521d19865a321d10aa837083ff9  mor_wasm_bg.wasm
+50bd856a20ffc5a20930098357a48f8afa5d4e08cc18daca714fa0a328b49cda  mor_wasm_bg.wasm
 
 SHA-256 of each file (as sha256sum prints it):
 4fe778f7dfaadd3a2849b6b0064b4bbd6138502627a933ff3ad556ef8c2a5282  index.html
-f08b3f3a85edf1dde3a097cf3699cbd245866939b8cfc194239b07034b3392ad  dub.js
+075a3dee1378310310607ede5c48062d304f1228bbd63c756df0d25b75cedefe  dub.js
 f51744a35d4a6b8b8fd52ce437b1f99157d180b14acfec3a3f62227f0a7daabc  dub.css
-adbac2e815548ff22c9dfcf9466edaf21055fcf51369749975b8ecdc89b3a0f1  mor_wasm_bg.wasm
+4bc8da7ec7b9a0a1179807bbf7bfdf4ee59f0ff5c53c349d73c255c7ccf44c60  mor_wasm_bg.wasm

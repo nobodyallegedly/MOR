@@ -1056,19 +1056,30 @@ var Verifier = class {
    * A verifier for the given Identity spec hash (`IDENTITY`; a test value
    * until the freeze). Given the Money and Agreements spec hashes too, it can
    * tell which acts may carry acknowledgements (F110); without them, an
-   * act of another specification carrying `acks` is unknown to it.
+   * act of another specification carrying `acks` is unknown to it. Given
+   * the Envelopes and Text spec hashes, which every client holds (MICS,
+   * "Client conformance"), it decodes their acts strictly (Envelopes
+   * draft 10, rule 30; Text draft 8, rule 14; F295, F296) and shows a text
+   * or Envelopes act carrying `acks` as invalid without the Money and
+   * Agreements hashes (Fable's E5, the clients' half).
    * @param {string} identity_spec
    * @param {string | null} [money_spec]
    * @param {string | null} [agreements_spec]
+   * @param {string | null} [envelopes_spec]
+   * @param {string | null} [text_spec]
    */
-  constructor(identity_spec, money_spec, agreements_spec) {
+  constructor(identity_spec, money_spec, agreements_spec, envelopes_spec, text_spec) {
     const ptr0 = passStringToWasm0(identity_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     var ptr1 = isLikeNone(money_spec) ? 0 : passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len1 = WASM_VECTOR_LEN;
     var ptr2 = isLikeNone(agreements_spec) ? 0 : passStringToWasm0(agreements_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len2 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_new(ptr0, len0, ptr1, len1, ptr2, len2);
+    var ptr3 = isLikeNone(envelopes_spec) ? 0 : passStringToWasm0(envelopes_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len3 = WASM_VECTOR_LEN;
+    var ptr4 = isLikeNone(text_spec) ? 0 : passStringToWasm0(text_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len4 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_new(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -1159,6 +1170,25 @@ var Verifier = class {
     } finally {
       wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
     }
+  }
+  /**
+   * An identity's succession (Identity draft 13, section 8, F300):
+   * `{ state, rotation, successor, confirmation }`, `state` one of
+   * "none", "declared" (shown as declared, never followed), "confirmed"
+   * (followed), "unknown" (a confirmation held whose status cannot be
+   * told), "elsewhere" (another protocol's, confirmed as its link cMIP
+   * says).
+   * @param {string} identity
+   * @returns {any}
+   */
+  succession(identity2) {
+    const ptr0 = passStringToWasm0(identity2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_succession(this.__wbg_ptr, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
   }
 };
 if (Symbol.dispose) Verifier.prototype[Symbol.dispose] = Verifier.prototype.free;
@@ -1306,6 +1336,20 @@ function newTestChainKey(scheme) {
     throw takeFromExternrefTable0(ret[1]);
   }
   return takeFromExternrefTable0(ret[0]);
+}
+function nfc(s) {
+  let deferred2_0;
+  let deferred2_1;
+  try {
+    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.nfc(ptr0, len0);
+    deferred2_0 = ret[0];
+    deferred2_1 = ret[1];
+    return getStringFromWasm0(ret[0], ret[1]);
+  } finally {
+    wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+  }
 }
 function openMedia(locked, key, nonce) {
   const ptr0 = passArray8ToWasm0(locked, wasm.__wbindgen_malloc);
@@ -2907,7 +2951,7 @@ async function firstOf(items, ask2, failed) {
   });
 }
 async function lookUp(identity2, hints, via2 = {}, into) {
-  const v = into ?? new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  const v = into ?? new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   const asked = /* @__PURE__ */ new Set();
   const unreachable = [];
   const notTried = [];
@@ -3080,6 +3124,17 @@ async function followRef(r, hints, via2 = {}) {
   const there = await fetchFrom(places.filter((p) => outbox.has(p))) ?? await fetchFrom(places.filter((p) => !outbox.has(p)));
   if (there) return { ...there, how: "signer", notTried };
   throw new Error(`the act ${id} was not found at ${hints.join(", ")}, nor at its signer's routes and homes (${places.join(", ") || "none found"})`);
+}
+async function holdSequence(v, signer, l, places, via2 = {}) {
+  if (l.resolution.links.length < 2) return;
+  const homes = (l.resolution.homes ?? []).map((h) => h.hint);
+  const hints = [.../* @__PURE__ */ new Set([...homes, ...places])].filter((h) => !cannotReach(h, via2));
+  for (const a of await actsBy(signer, hints, via2)) {
+    try {
+      v.add(a);
+    } catch {
+    }
+  }
 }
 
 // ../genesis/src/identity.ts
@@ -3447,24 +3502,25 @@ var TestIdentity = class _TestIdentity {
    * whenever resent, rule 8a); it counts once the homes hold it. Sent to
    * `relays` too, beside the act it signs.
    */
-  async chainSign(signs, relays = []) {
+  async chainSign(signs, relays = [], shared) {
     if (this.f.pending) throw new Error("a rotation is pending: submit and settle it first; one chain key signs one identity-chain act (Identity rule 8a)");
-    const next = newTestChainKey(this.f.safety.scheme);
+    const fresh = shared ? null : newTestChainKey(this.f.safety.scheme);
+    const next = shared ? shared.next : fresh;
     const chain = this.chainActs();
     const act = makeChainSignature({
       identitySpec: SPECS.identity,
       identity: this.f.identity,
       previous: actId(chain[chain.length - 1]),
       position: chain.length,
-      chainKeyScheme: this.f.safety.scheme,
-      chainKeySeeds: unhex(this.f.safety.seeds),
+      chainKeyScheme: shared ? shared.scheme : this.f.safety.scheme,
+      chainKeySeeds: shared ? shared.seeds : unhex(this.f.safety.seeds),
       nextChainKeyScheme: next.scheme,
       nextChainKeyCommit: next.commit,
       signs
     });
     const id = actId(act);
     this.f.chain.push(b64(act));
-    this.f.safety = { scheme: next.scheme, seeds: hex(next.seeds) };
+    this.f.safety = { scheme: next.scheme, seeds: fresh ? hex(fresh.seeds) : "" };
     const sent = await this.submitChainAct(act, this.f.homes);
     for (const hint of relays) await relayAt(hint, this.via).putAct(act);
     const lookup = await lookUp(this.f.identity, this.f.homes.map((h) => h.hint), this.via);
@@ -3678,8 +3734,7 @@ function sealFor(act, key, recipients) {
     random: {
       containerKey: new Uint8Array(randomBytes(32)),
       nonce: new Uint8Array(randomBytes(24)),
-      eseeds,
-      oneTimeSecret: newSigningSecret()
+      eseeds
     }
   });
   const parts = sealedParts(sealed);
@@ -4115,7 +4170,7 @@ var Judge = class {
   constructor(hints, via2) {
     this.hints = hints;
     this.via = via2;
-    this.v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+    this.v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   }
   v;
   /** Addresses not tried by any lookup, each with why. */
@@ -4124,8 +4179,9 @@ var Judge = class {
   async standing(act, id, signer) {
     let l = this.looked.get(signer);
     if (!l) {
-      l = lookUp(signer, this.hints, this.via, this.v).then((x) => {
+      l = lookUp(signer, this.hints, this.via, this.v).then(async (x) => {
         for (const n of x.notTried) if (!this.notTried.some((y) => y.hint === n.hint)) this.notTried.push(n);
+        await holdSequence(this.v, signer, x, this.hints, this.via);
       });
       this.looked.set(signer, l);
     }
@@ -5228,7 +5284,7 @@ function compose(raw) {
   step(t.replace(/\t/g, "    "), "tabs replaced with four spaces");
   step(t.replace(CONTROL, ""), "control characters removed");
   step(t.replace(NONCHAR, ""), "noncharacters removed");
-  step(t.normalize("NFC"), "normalized to NFC");
+  step(nfc(t), "normalized to NFC");
   step(t.replace(TRAILING, ""), "trailing spaces removed");
   step(t.replace(TRAILING_END, ""), "final line breaks removed");
   return { text: t, changes };
