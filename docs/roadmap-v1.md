@@ -303,6 +303,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 *15 October 2026, morning: Fable's aggregated review merged and answered (F329): the six drafts hold together. Next: the code for F292 to F329 in five parts (Identity, Envelopes and Text first, their scenarios run; then Money and Development; then Agreements; then clients), the drafts corrected with G1 to G10 along the way; then the freeze-ready drafts, written against the build.*
 
+*15 October 2026, evening: the code for F292 to F331 merged (pull requests 64 to 67; Rust 736, TypeScript 421, all passing; the step 17 rehearsal at 16 of 17, the last by design until step 17). The order to the freeze (Nobody, allegedly): **the author's human tests first**, on the real homes once the servers and his Mac are brought to this release (the sealed container's format changed, F293); then the freeze-ready drafts, corrected by what the tests find; then the step 17 rehearsal on the frozen texts; then the freeze.*
+
 ## Decisions due along the way
 
 | Decision | Before |
