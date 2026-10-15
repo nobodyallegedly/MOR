@@ -24,6 +24,10 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## Development Q6 and Q7, taken by the project lead under the working practice (development layer; 15 October 2026, morning)
+
+*From Fable's Development review (`docs/reviews/fable-step-15-development.md`).* Q6 (D5): F301 is written as field 11, the rail's kind alone (0 request, 1 push), and a new field 13, the set its proof binds (ascending, from 0 payee, 1 purpose, 2 previous hop); both required on a Module whose field 5 names the payment cMIP, the specification invalid without them; task 6's table line reworded to "reads each rail Module's kind and binding from its specification (F301)". Q7 (D8): the release manifest's "implements" (field 6) names spec hashes, a publication id beside each as a hint only, never as the name.
+
 ## Working principle: where MOR is the law, and where it only keeps the record (Nobody, allegedly, 14 October 2026, night)
 
 "MOR isn't the law, it only keeps the record on these matters." And, refining it: "Some promises it can check, but simple ones. 'This is the file that was signed' for example is the law, on MOR." What bytes can prove (a signature, a hash, an order on a chain, a stake paid as written, an offer that reached every holder) the core decides, and every verifier agrees. What bytes cannot prove (a fair price, an intention, whether a promise was kept in the world) the core records, signed and placed, and leaves to the people, their courts and their reputation. The rule behind tonight's answers: check what can be checked, state the rest honestly.
