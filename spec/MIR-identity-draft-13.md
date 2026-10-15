@@ -432,11 +432,11 @@ An answer that rests on the verifier's own failed attempts is marked as such ("r
 
 #### A verifier that cannot tell answers unknown (new in draft 13, F298)
 
-A verifier that holds the acts a rule needs answers as the rule says. One that does not (a kept tip whose line it cannot rebuild, a scoped key whose installing act it has not held, a chain it cannot resolve) answers unknown, never valid, void or invalid.
+A verifier that holds the acts a rule needs answers as the rule says. One that does not (a kept tip whose line it cannot rebuild, a scoped key whose installing act it has not held, a chain it cannot resolve) answers unknown, never valid, void or invalid, unless a rule it can apply shows the act invalid (invalid beats unknown, Envelopes draft 10, rule 30).
 
 Void needs every kept line of the rotation rebuilt and the act on none of them. Invalid is only for a rule the verifier can apply and sees fail.
 
-*A verdict that flips from void to valid, or from invalid to scoped, as acts arrive is a verdict given with part of the picture; a reader that trusts it goes dark. Unknown is the word this MIR already uses for a link nobody can fetch (F159) and for a scheme a client lacks. Disputed is void but relied on, so it waits on void as well. An act bound to a rotation the verifier can check, of a chain whose genesis is signed under a scheme it lacks, is unknown, as is every act under it. A shorter proof that an act lies within a kept ancestry (the peaks of the running summary and a path) can follow after MOR 1 without changing any act; until then its absence costs a reader unknown, never void.*
+*A verdict that flips from void to valid, or from invalid to scoped, as acts arrive is a verdict given with part of the picture; a reader that trusts it goes dark. Unknown is the word this MIR already uses for a link nobody can fetch (F159) and for a scheme a client lacks. Disputed is void but relied on, so it waits on void as well. An act bound to a rotation the verifier can check, of a chain whose genesis is signed under a scheme it lacks, is unknown, as is every act under it that no rule the verifier can apply shows invalid. A shorter proof that an act lies within a kept ancestry (the peaks of the running summary and a path) can follow after MOR 1 without changing any act; until then its absence costs a reader unknown, never void.*
 
 #### Rule 36 (was 18). Old disputes may be collapsed
 
