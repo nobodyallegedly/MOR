@@ -24,6 +24,10 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F325. A MIP is a specification kind of its own (15 October 2026, morning; Development Q5; with F291)
+
+*From Fable's Development review (D6).* F291 added two kinds (the MICS document, a test suite); a MIP toward MOR 2 (F286, F289) published under kind 4 would read as a MIR to every client and the listing, and lose its creator (kind 4 forbids one). **Nobody, allegedly: "Agreed."** Three kinds, not two: 6 the MICS document, 7 a test suite, 8 a MIP (a proposal toward a successor protocol), which requires a creator and names in a predecessor field the MIR or MIP it forks. The listing shows MIPs in a part of their own, by the MIR they fork and how many fork each.
+
 ## F324. The root is the six frozen texts, committed as canonical text (15 October 2026, morning; Development Q3)
 
 *From Fable's Development review (D3) and the step 17 rehearsal (item 5c).* Rule 26 had a client learn the six MIR hashes "from that repository and its own build", which is circular (the author signs both); the repository's files end with a line break canonical text forbids, so a hash of the file is not the specification's. **Nobody, allegedly: "Agreed."** Rule 26: the root is the six frozen texts, published as canonical text; their hashes follow from them; a client ships the texts (or their canonical bytes) and recomputes the hashes it accepts, so two clients can differ only about a text. The frozen specifications are committed as canonical text (no final line break, no trailing space), a repository check refusing any that are not. Suite 8.1: a client recomputes the six hashes from the texts it ships, and shows them.
