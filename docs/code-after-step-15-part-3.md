@@ -31,7 +31,7 @@ The second verifier (verifier2), the ordering simulation, the invariants and the
 
 The one ignored Rust test is the same as before (the Lightning regtest test). The display client's and Dub's web client's `built/` folders are not touched.
 
-**verifier2 against the library.** VERIFIER2_RESULT
+**verifier2 against the library** (400 of the invariants' random collective histories, seed 1, exported with the library's verdicts; `verifier2/README.md` says how): **0 stories with a disagreement**. The same stories judged by verifier2 as it stood before this part disagree in 4, on endings with a history not held and closings relying on receipts nobody acknowledged: what F303 and F304 changed. The first comparison of this part showed many more; they were the exporter's, not the rules': it still read successors' signature acts (F303 made them chain signatures), wrote the library's unknown as "incomplete", and skipped the collective's liveness acts (type 12), which the generator now uses to acknowledge what a closing relies on. All three are fixed in `verifier2/export/export.rs`.
 
 ## Which suite steps now run
 
