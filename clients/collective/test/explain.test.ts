@@ -270,3 +270,17 @@ test('Agreements rule 49 (F172, F178 item 11): before signing terms with an aban
   assert.match(section(readAgreement(k3, names), 'If someone disappears'), /This client does not implement the absence-proof cMIP the clause names/);
   assert.ok(!readAgreement(t, names).blocking.some((b) => /absence-proof/.test(b)), 'no absence-proof cMIP named: nothing to refuse');
 });
+
+test('owners who choose the members, holding no key: the reading warns (Agreements draft 14, F311, F317; freeze suite 3.7ae, client conformance)', () => {
+  const t = termsOf(encodeTerms(collectiveTerms(g(), [a, b, c], a)));
+  // The constitution counted among the holders of the collective's stake in
+  // itself, Di, no member, holding half of it.
+  t.constitutional = { form: 'holders', stake: 0, share: 600_000 };
+  t.stakes = [[null, [[a, 200_000], [b, 150_000], [c, 150_000], [d, 500_000]]]];
+  const w = section(readAgreement(t, names), 'Who decides what');
+  assert.match(w, /holders of stake 0 holding together at least 60% of it, members or not/);
+  assert.match(w, /none of them who is no member \(Di\) holds a share of the chain key or is its custodian: if the owners vote the members out and the members refuse to rotate, the vote stands complete and unexecuted/);
+  // Di holds a share of the chain key: no warning.
+  t.grammar!.chainKey = { ...t.grammar!.chainKey, members: [...(t.grammar!.chainKey.members ?? []), d] };
+  assert.doesNotMatch(section(readAgreement(t, names), 'Who decides what'), /complete and unexecuted/);
+});
