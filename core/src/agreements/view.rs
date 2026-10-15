@@ -1564,7 +1564,14 @@ impl<'a> AgreementsView<'a> {
                     "the rollback registers a resignation of someone who is not a party of the agreement in force just before the broken act".into(),
                 ));
             };
-            if !self.valid(x) {
+            // F302: as the rollback places it, whatever its signer's later
+            // rotation disowned; a rollback still to be made places nothing
+            // yet, so Identity's verdict alone.
+            let kept = match at {
+                Some(r) => self.kept_at(col, a, Line::Rotation(r))?,
+                None => self.valid(x),
+            };
+            if !kept {
                 return Ok(Err("the rollback registers a resignation that is not valid".into()));
             }
             let Ok(res) = Resignation::decode(&a.inside) else {
@@ -1603,8 +1610,13 @@ impl<'a> AgreementsView<'a> {
         // Each signature act it names must be a valid signature on one of
         // the declarations it registers (Flaw B18's rule, at the rollback).
         for s in &cosigned {
-            let named = decode_signature(&self.held(s)?.inside).ok();
-            if !self.valid(s) || !named.is_some_and(|n| declarations.iter().any(|(d, _)| *d == n)) {
+            let sh = self.held(s)?;
+            let named = decode_signature(&sh.inside).ok();
+            let kept = match at {
+                Some(r) => self.kept_at(col, sh, Line::Rotation(r))?,
+                None => self.valid(s),
+            };
+            if !kept || !named.is_some_and(|n| declarations.iter().any(|(d, _)| *d == n)) {
                 return Ok(Err(
                     "the rollback names a signature act that is no valid signature on a declaration it registers (rule 37d, RB3)".into(),
                 ));
@@ -2352,11 +2364,39 @@ impl<'a> AgreementsView<'a> {
         if self.before_struct(col, x, l) {
             return Ok(true);
         }
-        if self.is_agreements(x, types::RECORD) || !matches!(l, Line::Record(_)) {
-            return Ok(false);
+        let placed = if self.is_agreements(x, types::RECORD) || !matches!(l, Line::Record(_)) {
+            false
+        } else {
+            let ag = self.line_agreement(col, l)?;
+            self.keepers_place(col, x, l, ag)?
+        };
+        if placed {
+            return Ok(true);
         }
-        let ag = self.line_agreement(col, l)?;
-        self.keepers_place(col, x, l, ag)
+        // F304 (F298): "made after" is read only on a history held whole;
+        // while an act the line's history names is not held, whether `x` is
+        // before it is unknown, and nothing is void on it.
+        if let Some(m) = self.line_hole(col, l) {
+            return Err(AgreementsError::Missing(m));
+        }
+        Ok(false)
+    }
+
+    /// An act the history of line `l` names that this verifier does not
+    /// hold, if any (F304): the hole that keeps "made after" unknown.
+    fn line_hole(&self, col: &Col, l: Line) -> Option<Hash> {
+        let h = match l {
+            Line::Rotation(j) => {
+                let r = col.rotation(self.v, j)?;
+                let start: Vec<Hash> = r.kept.iter().map(|t| t.act).collect();
+                self.history(col, j, &start, &r.kept)
+            }
+            Line::Record(lh) => {
+                let bl = self.link(col, lh)?;
+                self.history(col, bl, &[lh.id], &[])
+            }
+        };
+        h.missing.iter().next().copied()
     }
 
     /// Whether the keepers of agreement `ag`, in force for line `l`, place
@@ -2589,7 +2629,9 @@ impl<'a> AgreementsView<'a> {
                 return no(e, "it registers an act of someone who is not a party of the agreement in force");
             }
             if self.is_agreements(a, types::RESIGNATION) {
-                if !self.valid(&a.id) {
+                // F302: as this line places it, whatever its signer's later
+                // rotation disowned.
+                if !self.kept_at(col, a, Line::Record(h))? {
                     return no(e, "it registers a resignation that is not valid");
                 }
                 let r = match Resignation::decode(&a.inside) {
@@ -3030,6 +3072,33 @@ impl<'a> AgreementsView<'a> {
         Ok(None)
     }
 
+    /// Whether an act of another identity that line `at` names, registers
+    /// or relies on keeps, for the collective, the effect that line gives it
+    /// ("Made before, made after", 4; new in draft 14, F302, C5 extended):
+    /// valid under Identity, or voided or disputed by its signer's rotation
+    /// where `at` is before the collective's line registering that rotation,
+    /// `sig_counts`'s test (F302: "take `sig_counts`'s test for registered
+    /// acts"). Its status under Identity is unchanged; a client shows the
+    /// dispute on the line.
+    fn kept_at(&self, col: &Col, a: &Held, at: Line) -> R<bool> {
+        match self.status(&a.id) {
+            Status::Valid => return Ok(true),
+            Status::Void | Status::Disputed => {}
+            _ => return Ok(false),
+        }
+        let Some(p) = a.act.outside.signer else {
+            return Ok(false);
+        };
+        let res = self.v.resolve(&p);
+        let Some(kb) = a.act.outside.binding.and_then(|b| res.position_of(&b)) else {
+            return Ok(false);
+        };
+        let Some(next) = res.links.get(kb + 1) else {
+            return Ok(false);
+        };
+        Ok(self.rotation_lines(col, &next.act).into_iter().any(|l| self.line_before(col, at, Line::Record(l))))
+    }
+
     /// Whether a member's signature act counts for the collective: valid
     /// under Identity, or kept by C5 (placed before the collective's line
     /// registering the rotation that replaced its key).
@@ -3207,18 +3276,25 @@ impl<'a> AgreementsView<'a> {
     /// party made counts here; where an act of a collective uses the
     /// declaration, only those placed at or before its line do.
     pub fn declaration(&self, id: &Hash) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
-        self.declaration_as(id, &|_| Ok(true))
+        self.declaration_as(id, &|_| Ok(true), &|h| Ok(self.valid(&h.id)))
     }
 
     /// [`Self::declaration`], where a signature act `s` of the declared
     /// party on a version later than the one field 1 names makes field 1
     /// no longer the last version it signed only where `counts(s)`.
-    fn declaration_as(&self, id: &Hash, counts: &dyn Fn(&Hash) -> R<bool>) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
+    fn declaration_as(
+        &self,
+        id: &Hash,
+        counts: &dyn Fn(&Hash) -> R<bool>,
+        kept: &dyn Fn(&Held) -> R<bool>,
+    ) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
         let h = self.held(id)?;
         if !self.is_agreements(h, types::DECLARATION) {
             return Ok(Err("not an abandonment declaration (type 13)".into()));
         }
-        if !self.valid(&h.id) {
+        // F302: in a collective, as the line using it places it, whatever
+        // its signer's later rotation disowned.
+        if !kept(h)? {
             return Ok(Err("the declaration is not valid under Identity".into()));
         }
         let d = match AbsenceDeclaration::decode(&h.inside) {
@@ -3243,19 +3319,21 @@ impl<'a> AgreementsView<'a> {
         // signature on a later version counts against it only where
         // `counts` places it there, so a later act of the party never
         // undoes what was put in force.
-        let sigs_on = |v: &Hash| -> Vec<Hash> {
-            self.v
-                .signed_by(&d.party)
-                .filter(|s| {
-                    self.is_agreements(s, types::SIGNATURE) && decode_signature(&s.inside).ok() == Some(*v) && self.valid(&s.id)
-                })
-                .map(|s| s.id)
-                .collect()
+        // The party's signatures field 1 is checked against, as the line
+        // judged them (F302): kept where its later rotation disowned them.
+        let sigs_on = |v: &Hash| -> R<Vec<Hash>> {
+            let mut out = vec![];
+            for s in self.v.signed_by(&d.party) {
+                if self.is_agreements(s, types::SIGNATURE) && decode_signature(&s.inside).ok() == Some(*v) && kept(s)? {
+                    out.push(s.id);
+                }
+            }
+            Ok(out)
         };
         let mut found = None;
         let mut signed_any = false;
         for (v, vt) in &lineage {
-            let sigs = sigs_on(v);
+            let sigs = sigs_on(v)?;
             if sigs.is_empty() {
                 continue;
             }
@@ -3331,10 +3409,14 @@ impl<'a> AgreementsView<'a> {
     fn declaration_used(&self, id: &Hash, by: &Hash, at: Option<(&Col, Line<'a>, &Hash)>) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
         let got = match at {
             None => self.declaration(id)?,
-            Some((col, l, ag)) => self.declaration_as(id, &|s| {
-                let h = self.held(s)?;
-                self.placed_at(col, h, l, ag)
-            })?,
+            Some((col, l, ag)) => self.declaration_as(
+                id,
+                &|s| {
+                    let h = self.held(s)?;
+                    self.placed_at(col, h, l, ag)
+                },
+                &|h| self.kept_at(col, h, l),
+            )?,
         };
         let (d, clause) = match got {
             Ok(v) => v,
@@ -3525,7 +3607,8 @@ impl<'a> AgreementsView<'a> {
         };
         for s in absence {
             let h = self.held(s)?;
-            let on = if self.is_agreements(h, types::SIGNATURE) && self.valid(&h.id) {
+            // F302: as this recovery rotation places it.
+            let on = if self.is_agreements(h, types::SIGNATURE) && self.kept_at(col, h, Line::Rotation(j))? {
                 decode_signature(&h.inside).ok()
             } else {
                 None
@@ -6371,12 +6454,11 @@ impl<'a> AgreementsView<'a> {
         // effect; each successor a debt is assigned to signs for it. What is
         // missing from that history is void (the tie rule): no successor
         // owes it.
-        let missing = self.line_missing(&col, &f.chain_act, &f.tips);
-        if !missing.is_empty() {
-            return fail(
-                e,
-                &format!("{} act(s) in the history the fork cites are not held: until they are, what it must hand out cannot be told (F127)", missing.len()),
-            );
+        // F304 (F298): while an act that history names is not held, the
+        // fork is unknown for this verifier, never complete and never "not
+        // complete"; it judges again once it holds the act.
+        if let Some(m) = self.line_missing(&col, &f.chain_act, &f.tips).first() {
+            return Err(AgreementsError::Missing(*m));
         }
         e.unassigned = self
             .to_hand_out(&col, &t, &f.chain_act, &f.tips)?
@@ -6515,14 +6597,10 @@ impl<'a> AgreementsView<'a> {
         // line holds ... as for a fork"; "owes nothing" is judged on the
         // history the closing cites): while an act that history names is
         // not held, this verifier cannot tell what the collective owes
-        // before its line, so the closing is not complete for it (F298:
-        // never complete on partial knowledge). Fable's step-15 review, A3.
-        let missing = self.line_missing(&col, &c.chain_act, &c.tips);
-        if !missing.is_empty() {
-            return fail(
-                e,
-                &format!("{} act(s) in the history the closing cites are not held: until they are, what the collective owes before its line cannot be told (F127)", missing.len()),
-            );
+        // before its line: the closing is unknown for it, never complete and
+        // never "not complete" (F304, F298; Fable's step-15 review, A3).
+        if let Some(m) = self.line_missing(&col, &c.chain_act, &c.tips).first() {
+            return Err(AgreementsError::Missing(*m));
         }
         let signer = h.act.outside.signer.ok_or(AgreementsError::Check("a closing act has a signer"))?;
         e.signed = self.ending_signed(&c.collective, id, &voices);

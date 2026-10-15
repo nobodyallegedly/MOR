@@ -74,7 +74,11 @@ pub fn changes(parent: &Terms, clone: &Terms) -> Vec<Change> {
     // release rule, may change by a clone every owner signs (F124, N8).
     // 28, fees (F213), is an operational field like 8; 29, the split
     // service's backups (F250), a judicial one like 14.
-    for n in (0..=24u64).filter(|n| *n != 23).chain([super::open_formats::FEES_FIELD, super::formats::BACKUPS_FIELD]) {
+    // 30, the holders' rules, is operational in no area, as 24 (draft 14,
+    // F307): the clone rule, and every holder of the stake whose entry
+    // changes (rule 45). 31 and 32 each version states for itself, never
+    // compared (F309, F316).
+    for n in (0..=24u64).filter(|n| *n != 23).chain([super::open_formats::FEES_FIELD, super::formats::BACKUPS_FIELD, 30]) {
         if n == 16 && removal_only(parent, clone) {
             // M1 (F124): the seat part of a removed member's plan goes with
             // the removal, as their areas do; the stake part stays.

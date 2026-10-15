@@ -6519,7 +6519,7 @@ fn a_closing_must_be_done() {
 /// complete for it, as the fork is not (`a_fork_hands_out_its_whole_history`,
 /// its last part), never complete on partial knowledge.
 #[test]
-fn a_closing_whose_history_names_an_act_not_held_is_not_complete() {
+fn a_closing_whose_history_names_an_act_not_held_is_unknown_3_9af() {
     let mut lab = Lab::new(&|_| {});
     let f = lab.founding;
     let label = lab.c[0].id;
@@ -6533,10 +6533,10 @@ fn a_closing_whose_history_names_an_act_not_held_is_not_complete() {
     lab.end(ANA, &k);
     lab.end(BEN, &k);
     lab.end(CY, &k);
-    let e = lab.view().closing(&k).unwrap();
-    assert!(!e.complete, "a closing whose history names an act not held is not complete for this verifier");
-    assert!(e.why.as_deref().is_some_and(|w| w.contains("not held")), "{:?}", e.why);
-    assert_eq!(lab.view().closed_by(&label).unwrap(), None);
+    let unheld = spec("an act this verifier does not hold");
+    // Freeze suite v28, 3.9af (F304): unknown, never complete and never "not complete".
+    assert_eq!(lab.view().closing(&k), Err(AgreementsError::Missing(unheld)));
+    assert_eq!(lab.view().closed_by(&label), Err(AgreementsError::Missing(unheld)));
 }
 
 /// F128, extended to every identity (Nobody, allegedly, 4 October 2026):
@@ -13637,4 +13637,88 @@ fn f284_in_a_collective_the_vows_signer_holds_its_stake() {
 fn push_rail_spec() -> mor_core::development::Rail {
     use mor_core::development::{Bound, Rail, RailKind};
     Rail { kind: RailKind::Push, binds: [Bound::Payee, Bound::Purpose].into_iter().collect() }
+}
+
+// ---------------------------------------------------------------- Agreements draft 14 (the code after step 15, part 3)
+
+/// Freeze suite v28, 3.7aa (F304, F298; Fable's Agreements review, A4): a
+/// verifier missing one act a line's history names voids nothing on that
+/// line and takes no voice away: whether an act is before it is unknown,
+/// and it judges again once it holds the act. An action citing a decision
+/// the verifier does not hold is unknown.
+#[test]
+fn a_hole_in_the_history_voids_nothing_3_7aa() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    // On the label's third device, an act Ben signs; on its second, an act
+    // joining it that this verifier never receives. The line names only the
+    // second device's tip: the third device's act is in its history only
+    // through the act not held.
+    let y = lab.cmip_act(2, pay());
+    lab.sign(BEN, &y);
+    let o = lab.chain(&[y]);
+    let hole = lab.w.everyday_act(&mut lab.c[1], pay(), 0, vec![(Value::Uint(0), Value::Text("a receipt".into()))], Some(o), None);
+    let hole_id = hole.id();
+    // Ben resigns; the line registering it names the second device's tip.
+    let mut ben = lab.m[BEN].clone();
+    let res = lab.resign_from(&mut ben, f, None);
+    lab.m[BEN] = ben;
+    let line = lab.record(0, None, &[1], vec![res], f);
+    assert!(lab.view().record(&label, &line).unwrap().line);
+    // Whether `y` is before the line is unknown: Ben's voice on it is
+    // neither kept nor taken away.
+    assert_eq!(lab.view().consent(&y), Err(AgreementsError::Missing(hole_id)), "unknown, never void");
+    // Held, it is judged: `y` lies before the line, and Ben's signature counts.
+    lab.w.add(&hole);
+    assert!(lab.counts(&y));
+    // An action citing a decision this verifier does not hold is unknown.
+    let mut o = lab.chain(&[]);
+    o.push(Object { chain: label, predecessor: spec("a record this verifier does not hold") });
+    let a = lab.w.everyday_act(&mut lab.c[0], pay(), 0, vec![(Value::Uint(0), Value::Text("a receipt".into()))], Some(o), None);
+    let x = lab.w.add(&a);
+    assert_eq!(lab.view().consent(&x), Err(AgreementsError::Missing(spec("a record this verifier does not hold"))));
+}
+
+/// Freeze suite v28, 3.7z (F302; Fable's Agreements review, A1), as F302's
+/// decision builds it ("take `sig_counts`'s test for registered acts"): a
+/// member resigns, the label's line registers it and lives on under it; the
+/// member rotates and disowns the resignation. Once the label's line
+/// registers that rotation (C5), the first line stands, as does every
+/// record after it; the resignation is shown disputed under Identity. The
+/// same for the signature a declaration's field 1 is checked against,
+/// disowned by the declared member. Before the label registers the
+/// rotation, the resignation is judged by Identity alone (the window the
+/// report names, `docs/code-after-step-15-part-3.md`, question 1).
+#[test]
+fn what_the_line_placed_stays_placed_3_7z() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let ben_phone = lab.m[BEN].clone();
+    let mut ben_laptop = device(&ben_phone);
+    lab.cmip_act(0, pay());
+    // Ben resigns from his laptop; the label's line registers it.
+    let res = lab.resign_from(&mut ben_laptop, f, None);
+    let line = lab.record(0, None, &[], vec![res], f);
+    assert!(lab.view().record(&label, &line).unwrap().line);
+    // The label lives on under that line: a later clone, and its record.
+    let t = lab.clone_terms(&f, vec![(Power::Area(1), vec![ANA])], &|t| words(t, 1, "Monthly releases."));
+    let k = lab.propose(ANA, &t);
+    let s = lab.sign(ANA, &k);
+    let r = lab.record(0, Some((k, vec![s])), &[], vec![], k);
+    assert_eq!(puts(&lab, &r), Some(k));
+    // Ben rotates, keeping his phone and forgetting the laptop: the
+    // resignation is void under Identity.
+    let (rot, ben2) = lab.w.rotate(&lab.m[BEN], Rot::default());
+    lab.m[BEN] = ben2;
+    assert!(matches!(lab.w.v.status(&res), Status::Void | Status::Disputed));
+    // Before the label registers the rotation: Identity alone.
+    assert!(!lab.view().record(&label, &line).unwrap().line, "the window before the label's line registers the rotation");
+    // The label registers it (C5): what its line placed stays placed.
+    let r2 = lab.record(0, None, &[], vec![rot], k);
+    assert!(lab.view().record(&label, &r2).unwrap().line);
+    assert!(lab.view().record(&label, &line).unwrap().line, "the line stands");
+    assert_eq!(puts(&lab, &r), Some(k), "every record after it stands");
+    assert!(matches!(lab.w.v.status(&res), Status::Void | Status::Disputed), "its status under Identity is unchanged");
 }
