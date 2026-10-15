@@ -491,11 +491,23 @@ impl<'a> AgreementsView<'a> {
             .collect();
         let mut placed: Vec<Hash> = vec![];
         for x in self.v.signed_by(&col.id) {
-            if !Self::own_key(col, x) || self.status(&x.id) != Status::Valid {
+            if !Self::own_key(col, x) {
+                continue;
+            }
+            // An act of the collective acknowledging an act this verifier
+            // does not hold may place a transfer: unknown (F298, F304).
+            if self.status(&x.id) != Status::Valid {
+                if self.status(&x.id) == Status::Unknown && self.on_chain(col, x) && self.before_struct(col, x, at) {
+                    if let Some(y) = x.inside.acks.iter().flatten().find(|y| self.v.get(y).is_none()) {
+                        return Err(AgreementsError::Missing(*y));
+                    }
+                }
                 continue;
             }
             let is_record = self.is_agreements(x, types::RECORD);
-            let before = if is_record { self.line_before(col, Line::Record(x), at) } else { self.on_chain(col, x) && self.before(col, x, at)? };
+            // Judged on the collective's own sequences (not by keepers), so the
+            // roster at a record never asks for that record's own evaluation.
+            let before = if is_record { self.line_before(col, Line::Record(x), at) } else { self.on_chain(col, x) && self.before_struct(col, x, at) };
             if !before {
                 continue;
             }

@@ -14040,3 +14040,104 @@ fn a_holders_rule_3_7aj() {
     let r = lab.record(0, Some((x, s)), &[], vec![], x);
     assert!(matches!(clone_state(&lab, &r), CloneState::Draft(_)), "a holder the rule does not bind signs for itself: {:?}", clone_state(&lab, &r));
 }
+
+/// Freeze suite v28, 3.7ab (F302, F314; A2-1): a holder votes on an owners'
+/// matter, the record names the signature, the holder rotates and disowns
+/// it: the change stays in force, the vote shown disputed.
+#[test]
+fn a_disowned_vote_stays_placed_3_7ab() {
+    let (mut lab, dana, k) = owned_label(400_000);
+    let ids = lab.ids();
+    let mut dana_laptop = device(&dana);
+    let (x, _) = fee_clone(&mut lab, &k, 50_000, &[ids[ANA], dana.id]);
+    let mut s = vec![lab.sign(ANA, &x), lab.sign(BEN, &x), lab.sign(CY, &x)];
+    s.push(sign(&mut lab.w, &mut dana_laptop, &x));
+    let r = lab.record(0, Some((x, s.clone())), &[], vec![], x);
+    assert_eq!(puts(&lab, &r), Some(x), "{:?}", clone_state(&lab, &r));
+    // Dana rotates, forgetting the laptop: her vote is disowned under Identity.
+    let (_, d2) = lab.w.rotate(&dana, Rot::default());
+    let _ = d2;
+    assert!(matches!(lab.w.v.status(s.last().unwrap()), Status::Void | Status::Disputed));
+    assert_eq!(puts(&lab, &r), Some(x), "the change stays in force");
+}
+
+/// Freeze suite v28, 3.7ad (F316; A2-3): Ben sells his part of the label's
+/// stake in itself to Fay, on his own line; for the owners' matters, the
+/// transfer counts only where the label's line placed it (a record naming
+/// it in field 3, or an act of the label acknowledging it), and seller and
+/// buyer never both count. A transfer the label acknowledged that this
+/// verifier does not hold leaves the vote unknown.
+#[test]
+fn who_holds_what_at_the_vote_3_7ad() {
+    let (mut lab, _dana, k) = owned_label(100_000);
+    let ids = lab.ids();
+    let mut fay = lab.w.genesis("fay, who buys", vec![own_home()], None, None);
+    let tr = agreements::StakeTransfer { agreement: k, stake: 0, to: fay.id, share: 300_000, record: vec![] };
+    let mut ben = lab.m[BEN].clone();
+    let t = agreements_act(&mut lab.w, &mut ben, agreements::new_types::STAKE_TRANSFER, tr.to_map(), obj(k));
+    let (_, ben2) = lab.w.chain_sign(&ben, t);
+    lab.m[BEN] = ben2;
+    sign(&mut lab.w, &mut fay, &t);
+    assert!(lab.view().transfer(&t).unwrap().effective);
+    // Not yet placed: Ben still holds for the label, Fay holds nothing.
+    let (x, _) = fee_clone(&mut lab, &k, 50_000, &[ids[ANA], fay.id, ids[CY]]);
+    let mut s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &x)).collect();
+    s.push(sign(&mut lab.w, &mut fay, &x));
+    let r = lab.record(0, Some((x, s.clone())), &[], vec![], x);
+    assert!(matches!(clone_state(&lab, &r), CloneState::Invalid(w) if w.contains("holds none")), "{:?}", clone_state(&lab, &r));
+    // The label's line places the transfer: Fay holds, Ben does not.
+    lab.record(0, None, &[], vec![t], k);
+    let r2 = lab.record(0, Some((x, s.clone())), &[], vec![], x);
+    assert_eq!(puts(&lab, &r2), Some(x), "{:?}", clone_state(&lab, &r2));
+    let (y, _) = fee_clone(&mut lab, &x, 60_000, &[ids[ANA], ids[BEN], ids[CY]]);
+    let sy: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &y)).collect();
+    let r3 = lab.record(0, Some((y, sy)), &[], vec![], y);
+    assert!(matches!(clone_state(&lab, &r3), CloneState::Invalid(w) if w.contains("holds none")), "the seller no longer counts: {:?}", clone_state(&lab, &r3));
+    // An act of the label acknowledging something this verifier does not hold.
+    let unheld = spec("a transfer this verifier does not hold");
+    lab.acknowledge(0, unheld);
+    let (z, _) = fee_clone(&mut lab, &x, 70_000, &[ids[ANA], fay.id, ids[CY]]);
+    let sz = lab.sign(ANA, &z);
+    let r4 = lab.record(0, Some((z, vec![sz])), &[], vec![], z);
+    assert_eq!(lab.view().record(&lab.c[0].id, &r4).map(|e| e.puts), Err(AgreementsError::Missing(unheld)), "unknown, never silently short");
+}
+
+/// Freeze suite v28, 3.7ah (F308; A2-7), counted: a clone rule by share,
+/// sixty per cent of the label's stake in itself, a departed holder (Dee)
+/// holding half of it. The members' sixty per cent is of what the voices
+/// that remain hold: Ana alone (250 of the members' 500) does not meet it;
+/// Ana and Ben (400) do. Under "all of" two members and sixty per cent, each
+/// rule is counted as if alone.
+#[test]
+fn counting_by_share_3_7ah() {
+    let dee = spec("dee, departed");
+    let owned = |rule: Rule| {
+        move |t: &mut Terms| {
+            let p = t.parties.clone();
+            t.stakes = Some(vec![agreements::Stake {
+                object: Who::This,
+                holders: vec![(Who::Id(p[ANA]), 250_000), (Who::Id(p[BEN]), 150_000), (Who::Id(p[CY]), 100_000), (Who::Id(dee), 500_000)],
+            }]);
+            t.clone = rule.clone();
+            // A time reference, so that refund terms (field 17, in no area:
+            // the clone rule's) can change.
+            t.time = Some((spec("a clock"), Value::Uint(1)));
+        }
+    };
+    let by_share = Rule::ByShare { stake: 0, share: 600_000 };
+    let attempt = |lab: &mut Lab, who: &[usize]| -> CloneState {
+        let f = lab.founding;
+        let t = lab.clone_terms(&f, vec![(Power::Clone, who.to_vec())], &|t| t.refund = Some(agreements::RefundTerms { until: Value::Uint(5) }));
+        let k = lab.propose(ANA, &t);
+        let s: Vec<Hash> = who.iter().map(|i| lab.sign(*i, &k)).collect();
+        let r = lab.record(0, Some((k, s)), &[], vec![], k);
+        clone_state(&lab, &r)
+    };
+    let mut lab = Lab::new(&owned(by_share.clone()));
+    let got = attempt(&mut lab, &[ANA]);
+    assert!(matches!(&got, CloneState::Invalid(w) if w.contains("by share")), "{got:?}");
+    assert_eq!(attempt(&mut lab, &[ANA, BEN]), CloneState::Complete);
+    let mut lab = Lab::new(&owned(Rule::AllOf(vec![Rule::Threshold(2), by_share.clone()])));
+    assert_eq!(attempt(&mut lab, &[ANA, CY]), CloneState::Complete, "two members, holding 70% of the voices' part");
+    assert!(matches!(attempt(&mut lab, &[BEN, CY]), CloneState::Invalid(_)), "two members, holding 50%: the share is not met");
+}
