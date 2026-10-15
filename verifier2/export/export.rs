@@ -276,6 +276,10 @@ fn story_json(cw: &ColWorld) -> J {
                     }
                     ("revocation", e)
                 }
+                // A liveness act (type 12): an action of the collective, here
+                // the generator's acknowledgement of acts (Agreements draft 14,
+                // F303: what a closing relies on); exported as any action.
+                agreements::new_types::LIVENESS => ("publication", Map::new()),
                 other => {
                     skipped.push(json!({"id": hx(&id), "why": format!("law type {other}"), "grant": grant.map(|g| hx(&g))}));
                     continue;

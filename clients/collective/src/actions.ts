@@ -7,7 +7,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MIRS, SPECS, Verifier, cborDecode, describeAct, hex, agreementsClonePlan, agreementsDivideStake, agreementsRollbackPlan, agreementsSplitTally, noticePayload, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, unhex, describeAct, hex, agreementsClonePlan, agreementsDivideStake, agreementsRollbackPlan, agreementsSplitTally, noticePayload, resignationPayload, runningSummary } from '../../genesis/src/core.ts';
 import { TestIdentity, lookUp, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { beforeSigning } from '../../assess/src/assess.ts';
@@ -869,7 +869,8 @@ export class Actions {
         continue;
       }
       if (d.signer !== c.identity || !d.spec) continue;
-      if (d.spec === SPECS.identity && (d.type === 0 || d.type === 1)) continue; // genesis and rotations: the chain
+      // Genesis, rotations and chain signatures (type 16): the identity chain, not the sequence.
+      if (d.spec === SPECS.identity && (d.type === 0 || d.type === 1 || d.type === 16)) continue;
       if (!mine.has(d.id)) found.set(d.id, d.position ?? 0);
     }
     return found;
@@ -2669,6 +2670,15 @@ export class Actions {
     return out;
   }
 
+  /** The creditor's releases kept for debt `id`, in whichever collective here signed it (F303). */
+  private reliedOf(id: string): string[] {
+    for (const x of this.store.book().collectives.filter((y) => this.store.isCollective(y.id))) {
+      const e = (this.store.collective(x.id).f.debts ?? []).find((d) => d.id === id);
+      if (e) return e.relied ?? [];
+    }
+    return [];
+  }
+
   /** Everyone a collective's money concerns: its members, departed holders, its successors, the identities and collectives held here. */
   private concerned(c: TestCollective): string[] {
     const b = this.store.book();
@@ -3250,13 +3260,17 @@ export class Actions {
     const blocking: string[] = [...this.closedBlock(c)];
     const value = whole(a.amount, 'the amount');
     if (!/^[0-9a-f]{64}$/.test(a.creditor)) blocking.push('Name the creditor by its identity.');
-    const to = [...new Set([a.creditor, ...c.f.members])];
+    // Agreements draft 14, rule 57 (F318): where the collective's stake in
+    // itself has holders who are no members, a Money act is done only once
+    // sealed to every one of them too.
+    const owners = await this.ownersWithNoSay(c);
+    const to = [...new Set([a.creditor, ...c.f.members, ...owners])];
     const payload = blocking.length ? new Uint8Array() : obligationPayload({ debtor: c.identity, creditor: a.creditor, unit: TEST_RAIL, value, pointer: c.f.agreement });
     const reading: Reading = {
       title: `“${cname}” owes ${value} to ${names(a.creditor)}`,
       summary: [
         'The collective signs an obligation as its debtor (F66). It binds the collective only once its outside is public: it is published on the collective\'s relays, its inside locked (F124 N13).',
-        `Sealed to the creditor and to every member: ${list(to.map(names))} (client conformance, F124 N13).`,
+        `Sealed to the creditor and to every member: ${list(to.map(names))} (client conformance, F124 N13)${owners.length ? `; the holders of its stake in itself who are no members among them, without whom a Money act of the collective binds no one (Agreements draft 14, rule 57, F318)` : ''}.`,
         'Cost, stated: anyone can see that the collective has debts, and how many, never their content.',
       ],
       sections: [],
@@ -3448,11 +3462,12 @@ export class Actions {
           ids.push(i);
         }
         for (const i of ids) this.store.saveIdentity(i);
-        // Each successor assigned a debt signs for it (N13).
+        // Each successor assigned a debt signs for it (N13), by a chain
+        // signature with its own chain key (Agreements draft 14, F303).
         const owing = new Set(debts.flatMap(([, i]) => i));
         for (const i of owing) {
           const sc = this.store.collective(successors[i].identity);
-          acts.push((await agreementsSign(sc.id, x.id, relays)).id);
+          acts.push((await sc.chainSign(x.id, relays)).id);
           this.store.saveCollective(sc);
         }
         const { v, specs } = await this.agreementsVerifier(col, [...this.concerned(col), ...successors.map((x) => x.identity)]);
@@ -3479,6 +3494,18 @@ export class Actions {
    * work: here the collective alone, which signs by its own rules, meeting
    * the lanes of every layer a release touches (Envelopes, Money, Agreements).
    */
+  /**
+   * The holders of the collective's stake in itself who are no parties of
+   * its agreement in force (Agreements draft 14: departed holders, buyers,
+   * stake successors), whose consent the owners' matters ask (rule 95,
+   * F310) and whom its Money acts must reach (rule 57, F318).
+   */
+  async ownersWithNoSay(c: TestCollective): Promise<string[]> {
+    const t = (await this.agreementsOf(c)).terms?.t;
+    if (!t) return [];
+    return (t.stakes.find(([o]) => o == null)?.[1] ?? []).map(([h]) => h).filter((h): h is string => !!h && !t.parties.includes(h));
+  }
+
   async prepareReleaseWork(a: { collective: string; release: string }) {
     const c = this.store.collective(a.collective);
     const blocking: string[] = [...this.closedBlock(c)];
@@ -3487,11 +3514,20 @@ export class Actions {
     const index = w ? this.stakeIndex(c, w.work) : -1;
     if (w && index < 0) blocking.push("The collective's terms carry no stake in that release: set the stakes first.");
     const payload = w ? releasePayload({ work: w.work, stakes: [[c.f.agreement, Math.max(index, 0)]], keys: [[a.release, w.key]] }) : new Uint8Array();
+    // Agreements draft 14, rule 95 (F310): a release of a work is an owners'
+    // matter. The holders of the collective's stake in itself who are no
+    // members consent, each by a signature act naming the release (or by the
+    // stake's holders' rule, where it has one).
+    const owners = await this.ownersWithNoSay(c);
+    const names0 = this.store.names();
     const reading: Reading = {
       title: `Release ${short(a.release)} to the public domain`,
       summary: [
         'The claim ends: nobody earns from this work as its owner any more. Its history (who made it, who owned it) stays named, and its content key is published: anyone may carry or sell copies (Agreements rule 17, F121).',
-        "The collective owns the work wholly, so it alone signs, by its own rules, meeting the lanes of every layer a release touches: Envelopes, Money and Agreements (F124 N7). This collective gives none of them to an area, so its own signature counts. Its members and departed holders own shares of its income, not the work; a release affects every holder alike.",
+        "The collective owns the work wholly, so it alone signs, by its own rules, meeting the lanes of every layer a release touches: Envelopes, Money and Agreements (F124 N7). This collective gives none of them to an area, so its own signature counts. Its members and departed holders own shares of its income, not the work.",
+        ...(owners.length
+          ? [`It ends what the collective earns from the work, so it is an owners' matter (Agreements draft 14, rule 95, F310): it counts only once ${list(owners.map(names0))}, holding part of the collective's stake in itself with no say, consent (or holders meeting the stake's holders' rule, where the terms carry one), each by a signature act naming it. Those whose keys this device holds sign it here (test only).`]
+          : []),
         'A claim on this work that the release does not name is shown beside it, openly contested (F124 N12).',
       ],
       sections: [{ heading: 'Signed on this device', lines: [{ text: "The collective's signing key signs it (test only).", tone: 'warn' }] }],
@@ -3507,7 +3543,12 @@ export class Actions {
         const col = this.store.collective(a.collective);
         const x = await col.id.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.release, payload, { public: true, relays: col.f.relays, objects: [[col.f.agreement, col.f.agreement]] });
         this.store.saveCollective(col);
-        const { v, specs } = await this.agreementsVerifier(col, this.concerned(col));
+        for (const h of owners.filter((o) => this.store.holds(o))) {
+          const i = this.store.identity(h);
+          await agreementsSign(i, x.id, col.f.relays);
+          this.store.saveIdentity(i);
+        }
+        const { v, specs } = await this.agreementsVerifier(col, [...this.concerned(col), ...owners]);
         const e = v.agreementsRelease(specs, x.id) as { complete: boolean; why: string | null; signed: string[] };
         const names = this.store.names();
         return {
@@ -3603,6 +3644,15 @@ export class Actions {
       depends: [a.collective, ...signers],
       run: async () => {
         const col = this.store.collective(a.collective);
+        // Agreements draft 14, F303: a closing relies on a creditor's receipt or
+        // release only where an act of the collective in its history
+        // acknowledges it: one act of the collective acknowledging every one
+        // this program kept, drawn before the closing's line.
+        const relied = [...new Set(this.debtsOf(col).flatMap((d) => this.reliedOf(d.id)))];
+        if (relied.length) {
+          await col.id.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.liveness, cborEncode(new Map([[0, unhex(col.f.agreement)]])), { public: true, relays: col.f.relays, objects: [[col.f.agreement, col.f.agreement]], acks: relied });
+          this.store.saveCollective(col);
+        }
         const seq = col.f.identity.sequence;
         const tips = seq.length ? [{ act: seq[seq.length - 1], position: seq.length, summary: runningSummary(seq) }] : [];
         const payload = closingPayload({ agreement: col.f.agreement, collective: col.identity, chainAct: col.f.identity.binding, tips, open: leftOpen });
@@ -3722,6 +3772,16 @@ export class Actions {
         const creditor = this.store.identity(d!.creditor);
         const x = await creditor.publish(MIRS.money, MONEY_TYPES.release, payload, { public: true, relays: col.f.relays });
         this.store.saveIdentity(creditor);
+        // The debtor's client keeps it, to acknowledge before a closing that
+        // relies on it (Agreements draft 14, F303).
+        for (const o of [col, ...this.store.book().collectives.filter((y) => this.store.isCollective(y.id)).map((y) => this.store.collective(y.id))]) {
+          const entry = (o.f.debts ?? []).find((e) => e.id === a.debt);
+          if (entry) {
+            entry.relied = [...(entry.relied ?? []), x.id];
+            this.store.saveCollective(o);
+            break;
+          }
+        }
         const { v, specs } = await this.agreementsVerifier(col, this.concerned(col));
         const e = v.agreementsDebtRelease(specs, x.id) as { counts: boolean; why: string | null };
         return {

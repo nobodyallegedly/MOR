@@ -22,6 +22,8 @@ export const AGREEMENTS_TYPES = {
   offer: 6,
   split: 8,
   grant: 9,
+  /** Liveness (type 12, rule 50): here, an act of the collective acknowledging what it relies on (F303). */
+  liveness: 12,
   declaration: 13,
   /** A contest of a declaration of absence (rule 52; BQ4, F188). */
   contest: 14,
