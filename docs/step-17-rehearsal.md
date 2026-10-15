@@ -4,6 +4,8 @@
 
 **Run it:** `scripts/rehearse-step-17.sh`. One command, about two minutes once built; it prints the steps, the author's test seed words, a checklist and the list of what is done by hand at step 17; it leaves nothing running and nothing behind.
 
+*15 October 2026, after the code after step 15 (`docs/code-after-step-15-part-4.md`): run again. The reader and the display client now hold the signer's sequence before judging (F298), so the first post stays verified after the rotation; the rehearsal publishes the specifications as Development draft 10 writes them and names what each release implements by spec hash. As committed, 14 of 17 checks pass (the display client's released build still predates the fix, and check 10 stands); with the display client rebuilt from the branch, 16 of 17, check 10 alone failing, by design until step 17. The record below is the run of 14 October.*
+
 ## Does it pass end to end?
 
 **No: 14 of its 17 checks pass, and 3 fail, the same three in every run.**
