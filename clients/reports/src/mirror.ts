@@ -1,14 +1,22 @@
 // The mirror (F287, decided by Nobody, allegedly, 13 October 2026: "Ideally
-// A"): bugs and attacks are reported on MOR, to a public reporting identity,
-// each report a signed act kept and answered in the open; GitHub issues are a
-// mirror for those not on MOR yet.
+// A"; both ways, F289's question 6: "If we can have it bidirectional yes
+// please"): bugs and attacks are reported on MOR, to a public reporting
+// identity, each report a signed act kept and answered in the open; GitHub
+// issues are a mirror for those not on MOR yet.
 //
-// One way, MOR to GitHub: each public report, checked, has one issue, its
-// body the report's words with its act id and signer; each public answer of
-// the reporting identity is added to the issue it answers as a comment, once.
-// The other way, GitHub to MOR: an issue opened on GitHub, not by the mirror,
-// and not yet answered on MOR, is listed for the reporting identity to answer
-// there. Nothing is ever signed here: the tool holds no key.
+// MOR to GitHub: each public report, checked, has one issue, its body the
+// report's words with its act id and signer; each public answer of the
+// reporting identity is added to the issue it answers as a comment, once.
+//
+// GitHub to MOR: an issue opened on GitHub, not by the mirror, is published
+// again on MOR by the reporting identity, its first line "Reported on GitHub
+// by @" its author's handle, its last line the issue's address. Nothing is
+// signed here: the tool holds no key. It prepares the act as a draft for the
+// desk (`prepare.ts`), only for the issues the author names after reading the
+// dry run, and the author signs it there, as the desk signs every draft. Once
+// it is on MOR, the issue is told by a comment, and every answer naming the
+// re-publication is added to the issue. An answer carrying an issue's address
+// in its words still answers that issue.
 //
 // What the mirror has done is read back from GitHub each time (its own
 // issues and comments, each ending with the act id it carries), so a run
@@ -23,6 +31,9 @@ export const READER = 'https://reader.dubsar.org/#';
 
 const REPORT_MARK = /^<!-- mor-report ([0-9a-f]{64}) -->$/;
 const ANSWER_MARK = /^<!-- mor-answer ([0-9a-f]{64}) -->$/;
+const REPUBLISHED_MARK = /^<!-- mor-republished ([0-9a-f]{64}) -->$/;
+/** The label a re-publication's first line starts with, before its author's handle. */
+export const REPORTED_ON_GITHUB = 'Reported on GitHub by @';
 const lastLine = (body: string) => body.trimEnd().split('\n').at(-1) ?? '';
 
 /** The words in a fenced block GitHub shows as they are: no link, mention, picture or markup of the writer's is acted on. */
@@ -68,6 +79,36 @@ export function answerBody(a: Signed, answers: string): string {
   ].join('\n');
 }
 
+/**
+ * The words the reporting identity publishes again on MOR for an issue
+ * opened on GitHub: "Reported on GitHub by @handle: title", the issue's
+ * words, and its address as the last line. Composed as canonical text by the
+ * draft (Text rule 6), which says what composing changed.
+ */
+export function republicationText(i: Issue): string {
+  const title = i.title.replace(/\s+/g, ' ').trim();
+  const body = i.body.trim();
+  return [`${REPORTED_ON_GITHUB}${i.author}: ${title}`, ...(body ? ['', body] : []), '', i.url].join('\n');
+}
+
+/** Whether the reporting identity's words publish this issue again: the label first, the issue's address alone as the last line. */
+export function republishes(text: string, i: Issue): boolean {
+  if (!i.url) return false;
+  const lines = text.split('\n');
+  return lines[0].startsWith(REPORTED_ON_GITHUB) && lines.at(-1)?.trim() === i.url;
+}
+
+export function republishedBody(a: Signed, i: Issue): string {
+  return [
+    `Published again on MOR by the reporting identity, labelled “Reported on GitHub by @${i.author}”, with this issue's words as they were when it was signed. It is answered there; each answer is added here as a comment.`,
+    '',
+    `- **Act:** \`${a.id}\` (on the web reader: ${READER}${a.id})`,
+    `- **Signed by:** \`${a.signer}\`, the reporting identity; valid through its identity chain when it was mirrored.`,
+    '',
+    `<!-- mor-republished ${a.id} -->`,
+  ].join('\n');
+}
+
 /** Whether an answer's words carry this issue's address (and not a longer number). */
 export function namesIssue(text: string, issue: Issue): boolean {
   if (!issue.url) return false;
@@ -84,8 +125,10 @@ export interface Plan {
   steps: Step[];
   /** Reports already mirrored and unchanged. */
   kept: number;
-  /** Issues opened on GitHub, not by the mirror, still open and not answered on MOR: for the reporting identity to answer there. */
+  /** Issues opened on GitHub, not by the mirror, still open, not yet published again nor answered on MOR: for the reporting identity to publish there. */
   waiting: Issue[];
+  /** Issues published again on MOR by the reporting identity, by issue number: the re-publication's act id. */
+  republished: Map<number, string>;
   /** Answers naming no report or issue the mirror knows (a post of its own, or an answer to a private report). */
   unplaced: number;
 }
@@ -123,16 +166,41 @@ export async function plan(held: Held, reporting: string, gh: GitHub): Promise<P
   const done = async (n: number) => {
     let s = answered.get(n);
     if (!s) {
-      s = new Set((await gh.comments(n)).filter((c) => c.author === me).flatMap((c) => ANSWER_MARK.exec(lastLine(c.body))?.[1] ?? []));
+      s = new Set(
+        (await gh.comments(n))
+          .filter((c) => c.author === me)
+          .flatMap((c) => {
+            const l = lastLine(c.body);
+            return ANSWER_MARK.exec(l)?.[1] ?? REPUBLISHED_MARK.exec(l)?.[1] ?? [];
+          }),
+      );
       answered.set(n, s);
     }
     return s;
   };
   const onMor = new Set<number>();
+  // First the re-publications of issues opened on GitHub, so that answers naming them find their issue.
+  const republished = new Map<number, string>();
+  const issueOf = new Map<string, Issue>();
+  for (const a of held.answers) {
+    const i = others.find((x) => !republished.has(x.number) && republishes(a.text, x));
+    if (!i) continue;
+    republished.set(i.number, a.id);
+    issueOf.set(a.id, i);
+    onMor.add(i.number);
+    if (!(await done(i.number)).has(a.id)) steps.push({ do: 'comment', answer: a, issue: i.number, body: republishedBody(a, i) });
+  }
   let unplaced = 0;
   for (const a of held.answers) {
+    if (issueOf.has(a.id)) continue;
     let placed = false;
     for (const ref of a.refs) {
+      const from = issueOf.get(ref);
+      if (from) {
+        placed = true;
+        if (!(await done(from.number)).has(a.id)) steps.push({ do: 'comment', answer: a, issue: from.number, body: answerBody(a, `this issue, published again on MOR as \`${ref}\``) });
+        continue;
+      }
       if (!reports.has(ref)) continue;
       placed = true;
       const i = byReport.get(ref);
@@ -149,7 +217,7 @@ export async function plan(held: Held, reporting: string, gh: GitHub): Promise<P
     if (!placed) unplaced++;
   }
   const waiting = others.filter((i) => i.state === 'open' && !onMor.has(i.number));
-  return { steps, kept, waiting, unplaced };
+  return { steps, kept, waiting, republished, unplaced };
 }
 
 /** Carry the plan out on GitHub, in order; each line said as it is done. */
@@ -168,7 +236,7 @@ export async function apply(p: Plan, gh: GitHub, say: (line: string) => void): P
       const n = typeof s.issue === 'number' ? s.issue : opened.get(s.issue.report);
       if (n === undefined) continue; // its report's issue was not opened
       await gh.comment(n, s.body);
-      say(`Added the answer ${s.answer.id.slice(0, 12)}… to issue #${n}.`);
+      say(REPUBLISHED_MARK.test(lastLine(s.body)) ? `Told issue #${n} that it is published again on MOR as ${s.answer.id.slice(0, 12)}….` : `Added the answer ${s.answer.id.slice(0, 12)}… to issue #${n}.`);
     }
   }
 }

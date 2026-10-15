@@ -4072,9 +4072,24 @@ async function post(by, opts) {
   const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, opts.format ?? null), {
     public: true,
     relays: opts.relays,
-    refs: picture2 ? [referenceTo(picture2.act)] : void 0
+    refs: picture2 ? [referenceTo(picture2.act)] : void 0,
+    to: opts.to?.length ? opts.to : void 0
   });
-  return { id: made.id, picture: picture2 };
+  return { id: made.id, act: made.act, picture: picture2 };
+}
+async function leaveInInbox(by, act, inbox) {
+  const out = { left: [], failed: [] };
+  for (const hint of inbox) {
+    try {
+      const r = relayAt(hint, by.via);
+      for (const c of by.chainActs()) await r.putAct(c).catch(() => void 0);
+      await r.putAct(act);
+      out.left.push(hint);
+    } catch (e2) {
+      out.failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
+    }
+  }
+  return out;
 }
 async function withdraw(by, publication, relays) {
   const made = await by.publish(POST_SPECS.envelopes, WITHDRAWAL, cborEncode(/* @__PURE__ */ new Map()), {
@@ -7615,21 +7630,53 @@ var Dub = class {
       throw new Error("This identity\u2019s signing key was changed elsewhere, so the key this app holds no longer counts. Nothing was signed. To post from here again, bring the identity again with its new words.");
     }
   }
-  /** Post a text, with a JPEG if one is given, then read it back from the relays, verified. */
+  /**
+   * Post a text, with a JPEG if one is given, then read it back from the
+   * relays, verified. `to`, an identity's ID: a public message to it, as a
+   * bug report to the reporting identity is (F287): the post names it as
+   * its recipient and is left, unsealed, in its inbox as well, with this
+   * identity's chain so it can be checked there. Its inbox is looked up
+   * first; an identity declaring none is said, and nothing is signed.
+   */
   post(a) {
     return this.serial(async () => {
       const me = await this.me();
       const { text: text2, changes } = compose(a.text);
       if (!text2.trim()) throw new Error("Write something to post.");
+      const s = await this.store.settings();
+      const relays = s.relays;
+      let to = null;
+      if (a.to?.trim()) {
+        let id;
+        try {
+          id = readId(a.to);
+        } catch (e2) {
+          throw new Error(`To: ${e2 instanceof Error ? e2.message : e2}. Nothing was posted.`);
+        }
+        if (id === me.id) throw new Error("To: that is this identity itself. Nothing was posted.");
+        let inbox;
+        try {
+          inbox = (await lookUp(id, [.../* @__PURE__ */ new Set([...relays, ...me.f.homes.map((h) => h.hint)])], s.via)).inbox(SPECS.text);
+        } catch (e2) {
+          throw new Error(`To: the identity ${id.slice(0, 12)}\u2026 was not found: ${e2 instanceof Error ? e2.message : e2}. Nothing was posted.`);
+        }
+        if (!inbox?.length) throw new Error(`To: the identity ${id.slice(0, 12)}\u2026 declares no inbox, so nothing can be left for it. Nothing was posted.`);
+        to = { id, inbox };
+      }
       await this.current(me);
-      const relays = (await this.store.settings()).relays;
       let made;
       try {
-        made = await post(me, { text: text2, jpeg: a.jpeg, relays });
+        made = await post(me, { text: text2, jpeg: a.jpeg, relays, to: to ? [to.id] : void 0 });
       } finally {
         await this.store.saveIdentity(me);
       }
       const lines2 = changes.map((c) => ({ text: `Text: ${c}.` }));
+      if (to) {
+        const { left, failed: refused } = await leaveInInbox(me, made.act, to.inbox);
+        const failed = refused.map((f) => `${f.relay} (${f.reason})`);
+        if (left.length) lines2.push({ text: `To ${to.id.slice(0, 12)}\u2026: left in its inbox at ${left.join(", ")}, unsealed: anyone may read it.`, tone: "ok" });
+        if (failed.length) lines2.push({ text: `Its inbox did not take it at ${failed.join(", ")}.`, tone: left.length ? "warn" : "bad" });
+      }
       if (made.picture) {
         lines2.push({
           text: made.picture.removed.length ? `Taken out of the picture before publishing: ${made.picture.removed.map((c) => CARRIED_WORDS[c]).join("; ")}.` : "The picture carried nothing to take out.",
@@ -7829,6 +7876,8 @@ function ready(s, web = false) {
 <form id="post"><textarea class="write" name="text" required placeholder="What do you want to say?"></textarea>
 <label>A picture (optional, JPEG)</label><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg">
 <p class="small">Before it leaves, the picture is stripped to the picture alone: no location, camera data or previews.</p>
+<label>To an identity (optional): its ID</label><input name="to" autocomplete="off" spellcheck="false" placeholder="64 characters; spaces do not matter">
+<p class="small">A public message: the post names that identity and is also left in its inbox, unsealed, so anyone may read it. To report a bug or an attack on MOR, write to the reporting identity named on dubsar.org\u2019s report page.</p>
 <div class="row"><button type="submit">Post</button></div></form></section>
 <section><h2>Published</h2><div id="published"><p class="small">Your post appears here, read back from the relays and verified.</p></div></section>
 <section><h2>Your posts, newest first</h2><div class="row"><button class="quiet" data-action="posts">Look again</button></div><div id="posts"></div></section>
@@ -8045,7 +8094,7 @@ function mount(app2, b) {
         const file = form.elements.namedItem("picture").files?.[0];
         const r = await busy(
           file ? "Stripping the picture, publishing, and reading it back\u2026" : "Publishing, and reading it back\u2026",
-          async () => b.ask("post", { text: String(d.get("text") ?? ""), jpeg: file ? await base642(file) : "" })
+          async () => b.ask("post", { text: String(d.get("text") ?? ""), jpeg: file ? await base642(file) : "", to: String(d.get("to") ?? "") })
         );
         if (r) {
           form.reset();
@@ -8169,7 +8218,7 @@ async function ask(op, a = {}) {
     case "bring":
       return await dub.bring({ id: text(a.id), words: text(a.words), address: text(a.address), relays: list2(a.relays) });
     case "post":
-      return await dub.post({ text: text(a.text), jpeg: text(a.jpeg) ? bytes(text(a.jpeg)) : void 0 });
+      return await dub.post({ text: text(a.text), jpeg: text(a.jpeg) ? bytes(text(a.jpeg)) : void 0, to: text(a.to) });
     case "posts":
       return await dub.posts();
     case "withdraw":

@@ -6517,6 +6517,19 @@ impl<'a> AgreementsView<'a> {
         if !self.sealed_to_all(h, &t) {
             return fail(e, "not done: the closing is not sealed to every member, nor public (W5, F128)");
         }
+        // F127, as for a fork (Agreements draft 13, "Closing (type 20)": "its
+        // line holds ... as for a fork"; "owes nothing" is judged on the
+        // history the closing cites): while an act that history names is
+        // not held, this verifier cannot tell what the collective owes
+        // before its line, so the closing is not complete for it (F298:
+        // never complete on partial knowledge). Fable's step-15 review, A3.
+        let missing = self.line_missing(&col, &c.chain_act, &c.tips);
+        if !missing.is_empty() {
+            return fail(
+                e,
+                &format!("{} act(s) in the history the closing cites are not held: until they are, what the collective owes before its line cannot be told (F127)", missing.len()),
+            );
+        }
         let signer = h.act.outside.signer.ok_or(AgreementsError::Check("a closing act has a signer"))?;
         e.signed = self.ending_signed(&c.collective, id, &voices);
         if let Some(y) = self.ending_sigs(&c.collective).no_ending.get(id) {

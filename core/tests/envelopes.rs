@@ -594,6 +594,71 @@ fn one_container_for_several_recipients() {
     ));
 }
 
+/// Step 15 review, Envelopes, E3: the one-time signature binds the
+/// container's parts together, and nothing more. Since the one-time key
+/// belongs to nobody, anyone holding a container can strip a recipient
+/// (its entry in `to` and its capsule), sign the rest with a fresh
+/// one-time key, and the recipients left open it as before: the signature
+/// does not keep a relay from re-addressing in that direction. Adding a
+/// recipient stays impossible without the container key. This pins the
+/// behaviour as it is, so that the texts can describe it rightly; it is
+/// not a bug in the code, which follows the format.
+#[test]
+fn a_recipient_can_be_stripped_and_the_container_resigned() {
+    let alice = signer("alice");
+    let names = ["bob", "carol"];
+    let keys: Vec<DecKey> = names.iter().map(|n| deckey(n)).collect();
+    let ids: Vec<Hash> = names.iter().map(|n| h(&format!("{n}/id"))).collect();
+    let k = h("stripped message key");
+    let msg = make(&alice, &inside(7, vec![], "strip"), &k, false, Some(ids.clone()));
+    let recipients: Vec<Recipient> = ids
+        .iter()
+        .zip(&keys)
+        .map(|(id, dk)| Recipient::Identity {
+            id: *id,
+            key: dk.public.clone(),
+        })
+        .collect();
+    let s = seal(&msg, Some(&k), &recipients, &rnd("strip", 2)).unwrap();
+    // A relay drops Carol: her entry in `to`, her capsule, and signs anew.
+    let (capsules, nonce, locked) = s.parts().unwrap();
+    let locked_act = mor_core::cbor::encode(&Value::Array(vec![
+        Value::Array(vec![Value::Array(vec![
+            Value::Bytes(capsules[0].ct.clone()),
+            Value::Bytes(capsules[0].wrapped.clone()),
+        ])]),
+        Value::Bytes(nonce.to_vec()),
+        Value::Bytes(locked),
+    ]));
+    let relay = SchnorrKey::from_secret(&h("a relay's one-time key")).unwrap();
+    let to = vec![ids[0]];
+    let signed = {
+        let v = Value::Array(vec![
+            Value::Array(to.iter().map(|x| Value::Bytes(x.to_vec())).collect()),
+            Value::Bytes(relay.public().to_vec()),
+            Value::Bytes(locked_act.clone()),
+        ]);
+        mor_core::hash::tagged_hash("MOR/sealed", &mor_core::cbor::encode(&v))
+    };
+    let stripped = Sealed {
+        to,
+        one_time_key: relay.public(),
+        locked_act,
+        sig: relay.sign(&signed, &[0; 32]).sig.try_into().unwrap(),
+    };
+    // The signature holds, and Bob opens it as if Alice had built it so;
+    // only the inner act's own `to`, which Alice signed, still names Carol.
+    assert!(stripped.check_signature().is_ok());
+    let opened = checked_open(&stripped, Some(&ids[0]), &keys[0]).unwrap();
+    assert_eq!(opened.act, msg);
+    assert_eq!(opened.act.outside.to.as_deref(), Some(ids.as_slice()));
+    // Carol is no longer a recipient of the container at all.
+    assert_eq!(
+        checked_open(&stripped, Some(&ids[1]), &keys[1]).unwrap_err(),
+        EnvError::NotForUs
+    );
+}
+
 #[test]
 fn going_public_later_is_one_public_key_delivery() {
     let alice = signer("alice");

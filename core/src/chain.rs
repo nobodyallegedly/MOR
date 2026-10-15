@@ -40,6 +40,7 @@ use crate::identity::{
 use crate::lock::ContentKey;
 use crate::merkle;
 use crate::mmr;
+use crate::money;
 use crate::sig::{self, Verdict};
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -58,6 +59,11 @@ pub struct Held {
     /// For an act of the Identity MIR: its payload, if it decoded and passed
     /// the checks that need no other act; the reason otherwise.
     pub identity: Option<Result<Payload, IdError>>,
+    /// For an act of the Money MIR, where this verifier knows Money's hash
+    /// (`with_mirs`): whether its payload is in Money's format for its type
+    /// and signed by whom Money says (F295; Money rules 7 and 16, F46,
+    /// F66, F113); the reason otherwise. Step 15 review, Money, M1.
+    pub money: Option<Result<(), money::FinError>>,
 }
 
 impl Held {
@@ -258,6 +264,12 @@ pub struct Verifier {
     /// Unset: this verifier cannot tell, and an act of another specification
     /// carrying `acks` is unknown to it, never valid.
     ack_specs: Option<(Hash, Hash)>,
+    /// The spec hashes of the Envelopes and Text MIRs, which every client
+    /// implements (MICS, "Client conformance"): an act of either carrying
+    /// `acks` is invalid, whether or not this verifier knows the Money and
+    /// Agreements hashes (Envelopes rules 18 and 19, F110; step 15 review,
+    /// E5). Unset: such an act is judged as any other specification's.
+    never_ack_specs: Option<(Hash, Hash)>,
     acts: BTreeMap<Hash, Held>,
     by_type: BTreeMap<u64, Vec<Hash>>,
     by_signer: BTreeMap<Hash, Vec<Hash>>,
@@ -340,6 +352,7 @@ impl Verifier {
         Verifier {
             identity_spec,
             ack_specs: None,
+            never_ack_specs: None,
             acts: BTreeMap::new(),
             by_type: BTreeMap::new(),
             by_signer: BTreeMap::new(),
@@ -361,6 +374,16 @@ impl Verifier {
         v
     }
 
+    /// Tell the verifier the Envelopes and Text MIRs' spec hashes, which
+    /// every client holds, so that a text act or an Envelopes act carrying
+    /// `acks` is invalid for it even without the Money and Agreements
+    /// hashes (Envelopes rule 18: "a text act, any other act of this MIR
+    /// ... MUST NOT carry `acks`; an act that does is invalid"; F110).
+    pub fn knowing_envelopes_and_text(mut self, envelopes: Hash, text: Hash) -> Self {
+        self.never_ack_specs = Some((envelopes, text));
+        self
+    }
+
     /// Whether an act may carry the acknowledgements it carries (Envelopes
     /// rules 4a and 7b, F110): `Some(true)` if it carries none or is of an
     /// Identity, Money or Agreements type; `Some(false)` if it carries some and is
@@ -369,6 +392,13 @@ impl Verifier {
     pub fn acks_allowed(&self, inside: &Inside) -> Option<bool> {
         if inside.acks.as_ref().is_none_or(|a| a.is_empty()) || inside.spec == self.identity_spec {
             return Some(true);
+        }
+        // Envelopes and Text acts never carry acknowledgements, and every
+        // client knows those two hashes: invalid, not unknown (rule 18).
+        if let Some((envelopes, text)) = self.never_ack_specs {
+            if inside.spec == envelopes || inside.spec == text {
+                return Some(false);
+            }
         }
         let (money, agreements) = self.ack_specs?;
         Some(inside.spec == money || inside.spec == agreements)
@@ -413,12 +443,29 @@ impl Verifier {
             }
             Ok(p)
         });
+        // F295: a Money act outside its type's format, of a type Money does
+        // not define, or signed by someone other than Money names (a pointer
+        // not by its payee, an obligation not by its debtor, a receipt not
+        // by its payee, an anonymous claim whose key 8 does not verify) is
+        // invalid, for a verifier that knows which specification Money is.
+        let money = self
+            .ack_specs
+            .filter(|(m, _)| inside.spec == *m)
+            .map(|_| -> Result<(), money::FinError> {
+                let signer = act
+                    .outside
+                    .signer
+                    .ok_or(money::FinError::Check("a Money act names its signer"))?;
+                let p = money::Payload::decode(inside.type_, &inside.payload)?;
+                money::check_signer(&p, &signer, &money::Citations::of(&inside))
+            });
         let held = Held {
             id,
             act,
             inside,
             verdict,
             identity,
+            money,
         };
         if let Some(old) = self.acts.get_mut(&id) {
             // The same act again, from another home or relay. Its outside,
@@ -514,6 +561,7 @@ impl Verifier {
         let w = Rc::new(Verifier {
             identity_spec: self.identity_spec,
             ack_specs: self.ack_specs,
+            never_ack_specs: self.never_ack_specs,
             acts: self.acts.clone(),
             by_type: self.by_type.clone(),
             by_signer: self.by_signer.clone(),
@@ -1593,6 +1641,9 @@ impl Verifier {
             Some(false) => return Status::Invalid,
             None => return Status::Unknown,
             Some(true) => {}
+        }
+        if matches!(x.money, Some(Err(_))) {
+            return Status::Invalid;
         }
         match &x.identity {
             Some(Err(_)) => return Status::Invalid,

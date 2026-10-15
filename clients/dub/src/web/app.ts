@@ -35,7 +35,7 @@ async function ask<T>(op: string, a: Record<string, unknown> = {}): Promise<T> {
     case 'bring':
       return (await dub.bring({ id: text(a.id), words: text(a.words), address: text(a.address), relays: list(a.relays) })) as T;
     case 'post':
-      return (await dub.post({ text: text(a.text), jpeg: text(a.jpeg) ? bytes(text(a.jpeg)) : undefined })) as T;
+      return (await dub.post({ text: text(a.text), jpeg: text(a.jpeg) ? bytes(text(a.jpeg)) : undefined, to: text(a.to) })) as T;
     case 'posts':
       return (await dub.posts()) as T;
     case 'withdraw':

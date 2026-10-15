@@ -12,12 +12,12 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { base64, describeAct, hex, signingPublic, unhex } from '../../genesis/src/core.ts';
+import { SPECS, base64, describeAct, hex, signingPublic, unhex } from '../../genesis/src/core.ts';
 import { ownLine } from '../../genesis/src/lines.ts';
 import { TestIdentity, TEST_LABEL, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
-import { listPosts, post, readPost, withdraw, type ShownPicture } from '../../barebone/src/post.ts';
+import { leaveInInbox, listPosts, post, readPost, withdraw, type ShownPicture } from '../../barebone/src/post.ts';
 import { renderPost } from '../../barebone/src/html.ts';
 import { escapeHtml } from '../../longform/src/html.ts';
 import { compose } from '../../longform/src/text.ts';
@@ -393,22 +393,54 @@ export class Dub {
     }
   }
 
-  /** Post a text, with a JPEG if one is given, then read it back from the relays, verified. */
-  post(a: { text: string; jpeg?: Uint8Array }): Promise<{ post: Shown; lines: Line[] }> {
+  /**
+   * Post a text, with a JPEG if one is given, then read it back from the
+   * relays, verified. `to`, an identity's ID: a public message to it, as a
+   * bug report to the reporting identity is (F287): the post names it as
+   * its recipient and is left, unsealed, in its inbox as well, with this
+   * identity's chain so it can be checked there. Its inbox is looked up
+   * first; an identity declaring none is said, and nothing is signed.
+   */
+  post(a: { text: string; jpeg?: Uint8Array; to?: string }): Promise<{ post: Shown; lines: Line[] }> {
     return this.serial(async () => {
       const me = await this.me();
       const { text, changes } = compose(a.text);
       if (!text.trim()) throw new Error('Write something to post.');
+      const s = await this.store.settings();
+      const relays = s.relays;
+      let to: { id: string; inbox: string[] } | null = null;
+      if (a.to?.trim()) {
+        let id: string;
+        try {
+          id = readId(a.to);
+        } catch (e) {
+          throw new Error(`To: ${e instanceof Error ? e.message : e}. Nothing was posted.`);
+        }
+        if (id === me.id) throw new Error('To: that is this identity itself. Nothing was posted.');
+        let inbox: string[] | null;
+        try {
+          inbox = (await lookUp(id, [...new Set([...relays, ...me.f.homes.map((h) => h.hint)])], s.via)).inbox(SPECS.text);
+        } catch (e) {
+          throw new Error(`To: the identity ${id.slice(0, 12)}… was not found: ${e instanceof Error ? e.message : e}. Nothing was posted.`);
+        }
+        if (!inbox?.length) throw new Error(`To: the identity ${id.slice(0, 12)}… declares no inbox, so nothing can be left for it. Nothing was posted.`);
+        to = { id, inbox };
+      }
       await this.current(me);
-      const relays = (await this.store.settings()).relays;
       let made;
       try {
-        made = await post(me, { text, jpeg: a.jpeg, relays });
+        made = await post(me, { text, jpeg: a.jpeg, relays, to: to ? [to.id] : undefined });
       } finally {
         // The sequence grew, even if a relay was away: never sign the same position twice.
         await this.store.saveIdentity(me);
       }
       const lines: Line[] = changes.map((c) => ({ text: `Text: ${c}.` }));
+      if (to) {
+        const { left, failed: refused } = await leaveInInbox(me, made.act, to.inbox);
+        const failed = refused.map((f) => `${f.relay} (${f.reason})`);
+        if (left.length) lines.push({ text: `To ${to.id.slice(0, 12)}…: left in its inbox at ${left.join(', ')}, unsealed: anyone may read it.`, tone: 'ok' });
+        if (failed.length) lines.push({ text: `Its inbox did not take it at ${failed.join(', ')}.`, tone: left.length ? 'warn' : 'bad' });
+      }
       if (made.picture) {
         lines.push({
           text: made.picture.removed.length

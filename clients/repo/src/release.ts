@@ -1,6 +1,8 @@
-// Releases of the code (release manifest cMIP, draft 1): a manifest naming
-// every file by its hash, the release before and the libraries it depends
-// on, published by the collective as a public Envelopes publication; the
+// Releases of the code (release manifest cMIP, draft 1; draft 3's
+// "implements"): a manifest naming every file by its hash, the release
+// before, the libraries it depends on and, since draft 3, the specifications
+// it implements by their publications' act ids, published by the collective
+// as a public Envelopes publication; the
 // members' visible signatures that make it a release; and the checks a fresh
 // machine runs to fetch one and verify every file.
 
@@ -58,6 +60,14 @@ export interface Manifest {
   dependencies: Dependency[];
   /** Where it was built from, for example a git commit. A hint, never load-bearing. */
   source?: string;
+  /**
+   * The specifications it implements (release manifest cMIP draft 3, field
+   * 6): the act ids of their publications, sorted, no id twice, at least
+   * one when present. Signed with the release, as every field is: a claim
+   * of whoever releases it, which a reader checks against the
+   * specifications it finds.
+   */
+  implements?: string[];
 }
 
 /** A relative path with `/` separators, no empty, `.` or `..` segment, no `\` or control character. */
@@ -78,6 +88,7 @@ export function encodeManifest(m: Manifest): Uint8Array {
     [4, m.dependencies.map((d) => [d.registry, d.name, d.version, d.checksum])],
   ]);
   if (m.source !== undefined) map.set(5, m.source);
+  if (m.implements !== undefined) map.set(6, m.implements.map(unhex));
   return cborEncode(map);
 }
 
@@ -85,7 +96,7 @@ export function encodeManifest(m: Manifest): Uint8Array {
 export function decodeManifest(bytes: Uint8Array): Manifest {
   const m = cborDecode(bytes);
   if (!(m instanceof Map)) throw new Error('a manifest is a map');
-  for (const k of m.keys()) if (typeof k !== 'number' || k < 0 || k > 5) throw new Error(`manifest: unknown field ${k}`);
+  for (const k of m.keys()) if (typeof k !== 'number' || k < 0 || k > 6) throw new Error(`manifest: unknown field ${k}`);
   const text = (v: unknown, w: string) => {
     if (typeof v !== 'string') throw new Error(`manifest: ${w}`);
     return v;
@@ -128,6 +139,14 @@ export function decodeManifest(bytes: Uint8Array): Manifest {
       checksum: text(a[3], 'dependency checksum'),
     };
   });
+  let impl: string[] | undefined;
+  if (m.has(6)) {
+    impl = list(m.get(6), 'implements').map((x) => hex(bytesOf(x, 32, 'an implemented specification')));
+    if (!impl.length) throw new Error('manifest: implements names at least one specification');
+    impl.forEach((x, i) => {
+      if (i && impl![i - 1] >= x) throw new Error('manifest: implements sorted and unique');
+    });
+  }
   return {
     name: text(m.get(0), 'name'),
     version: text(m.get(1), 'version'),
@@ -135,6 +154,7 @@ export function decodeManifest(bytes: Uint8Array): Manifest {
     files,
     dependencies,
     source: m.has(5) ? text(m.get(5), 'source') : undefined,
+    implements: impl,
   };
 }
 
@@ -253,6 +273,41 @@ export interface Prepared {
   refs?: Reference[];
 }
 
+const HEX64 = /^[0-9a-f]{64}$/;
+
+/** Field 6 as the manifest holds it: sorted, each once; absent when none is named. */
+export function implementsField(ids: string[] | undefined): string[] | undefined {
+  if (!ids?.length) return undefined;
+  for (const id of ids) if (!HEX64.test(id)) throw new Error(`implements: an act id is 64 hex digits, not “${id}”`);
+  return [...new Set(ids)].sort();
+}
+
+/**
+ * Check, before a release names them, that each id is the publication of a
+ * specification (Envelopes type 0, public, its media spec the Development
+ * MIR's: Development, Part three, F290), found at the places given. Returns
+ * a problem for each one that is not; a release naming them is refused.
+ */
+export async function checkImplements(ids: string[], hints: string[], via: Via = {}): Promise<string[]> {
+  const problems: string[] = [];
+  for (const id of ids) {
+    const act = await fetchFirst(hints, via, (r) => r.getAct(id));
+    if (!act) {
+      problems.push(`${id}: not found at ${hints.join(', ')}`);
+      continue;
+    }
+    const d = describeAct(act) as Described;
+    let spec: unknown = null;
+    try {
+      spec = d.public && d.spec === SPECS.envelopes && d.type === 0 && d.payload ? (cborDecode(d.payload) as Map<number, unknown>).get(0) : null;
+    } catch {
+      spec = null;
+    }
+    if (!(spec instanceof Uint8Array) || hex(spec) !== MIRS.development) problems.push(`${id}: not the publication of a specification (a public publication whose media spec is the Development MIR's)`);
+  }
+  return problems;
+}
+
 /**
  * Make a release without signing anything: every file locked as a media
  * object (a file unchanged since the previous release is the same object,
@@ -260,7 +315,11 @@ export interface Prepared {
  */
 export function prepareRelease(
   p: Publisher,
+<<<<<<< HEAD
   opts: { name: string; version: string; files: FileIn[]; source?: string; refs?: Reference[] },
+=======
+  opts: { name: string; version: string; files: FileIn[]; source?: string; implements?: string[] },
+>>>>>>> origin/main
 ): Prepared {
   const last = p.releases.at(-1);
   const beforeManifest = last ? decodeManifest(unb64(last.manifest)) : null;
@@ -289,6 +348,7 @@ export function prepareRelease(
     files: entries,
     dependencies: dependencies(files),
     source: opts.source,
+    implements: implementsField(opts.implements),
   };
   const encoded = encodeManifest(manifest);
   decodeManifest(encoded); // the same checks a verifier runs
@@ -332,7 +392,7 @@ export async function publishPrepared(p: Publisher, r: Prepared, via: Via = {}):
  */
 export async function publishRelease(
   c: TestCollective,
-  opts: { name: string; version: string; files: FileIn[]; source?: string; via?: Via },
+  opts: { name: string; version: string; files: FileIn[]; source?: string; implements?: string[]; via?: Via },
 ): Promise<Published> {
   const p: Publisher = { id: c.id, relays: c.f.relays, releases: c.f.releases };
   return publishPrepared(p, prepareRelease(p, opts), opts.via);
