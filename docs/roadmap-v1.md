@@ -301,6 +301,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 *15 October 2026, morning: the drafts after step 15 merged (pull requests 60 to 62): Envelopes draft 10, Text 8, Identity 13, Money 8, Agreements 14, Development 10, MICS v28, freeze suite v28, release manifest cMIP draft 4, payment cMIP draft 3, website cMIP draft 11, with F282 to F328 written in (report: `docs/drafts-after-step-15.md`). Texts only. Next (Nobody, allegedly, to spare tokens): Fable's aggregated review of the drafts first; then the code for F292 to F328, after its questions are answered; then the freeze-ready drafts.*
 
+*15 October 2026, morning: Fable's aggregated review merged and answered (F329): the six drafts hold together. Next: the code for F292 to F329 in five parts (Identity, Envelopes and Text first, their scenarios run; then Money and Development; then Agreements; then clients), the drafts corrected with G1 to G10 along the way; then the freeze-ready drafts, written against the build.*
+
 ## Decisions due along the way
 
 | Decision | Before |
