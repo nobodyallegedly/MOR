@@ -1,6 +1,12 @@
 // A listing of the specifications published on the relays a page names, as
 // its `mor-listing` names them (website cMIP draft 9, rule 13c; F288; draft
-// 10: the use of xtypes, and code released read from "implements"). One
+// 10: the use of xtypes, and code released read from "implements"; draft 11:
+// the specification format of Development draft 10, decoded by the core
+// library, a content that does not decode no specification (F323); the MIPs
+// in a part of their own, by the MIR they fork and how many fork each
+// (F325; F328, Q10); versions of one text shown together (F322); a rail's
+// kind and what its proof binds (F301); code released matched by spec hash
+// (release manifest cMIP draft 4; Development Q7, taken)). One
 // listing among any: it reads, checks and shows; it decides nothing and
 // refuses nothing (Development rule 17, "No core registry").
 //
@@ -53,12 +59,12 @@
 // Private acts are not counted: which specification a private act belongs
 // to cannot be read from outside, and the listing says so.
 
-import { MIRS, SPECS, Verifier, cborDecode, cborEncode, checkText, describeAct, hex, openMedia, workHash } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, decodeSpec as coreDecodeSpec, describeAct, hex, openMedia, workHash } from '../../genesis/src/core.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { relayAddress } from './settings.ts';
-import { PUBLICATION, RELEASE_MANIFEST } from './specs.ts';
+import { PAYMENT_CMIP, PUBLICATION, RELEASE_MANIFEST } from './specs.ts';
 
 /** Agreements act types a listing reads: terms and signatures. */
 const AGREEMENTS_TERMS = 0;
@@ -89,7 +95,14 @@ export interface RelayLine extends ListedRelay {
 }
 
 /** Development's specification kinds (Part three, field 0). */
-export const KINDS = ['cMIP', 'Module', 'unit', 'media type', 'MIR', 'signature scheme'] as const;
+export const KINDS = ['cMIP', 'Module', 'unit', 'media type', 'MIR', 'signature scheme', 'MICS document', 'test suite', 'MIP'] as const;
+
+/** The kinds published with no creator (Development draft 10, F291): a MIR, the MICS document, a test suite. */
+export const NO_CREATOR_KINDS = [4, 6, 7];
+/** A MIR, the MICS document, a MIP (kinds 4, 6, 8): what a MIP may fork (F325; F328, Q10). */
+export const MIR = 4;
+export const MICS = 6;
+export const MIP = 8;
 
 /** The six layers, by the MIR whose spec hash a task names (test values until the freeze). */
 export const LAYERS: Record<string, string> = {
@@ -122,8 +135,11 @@ export const TASKS: Record<number, [layer: string, name: string]> = {
   14: ['Agreements', 'Absence proof'],
 };
 
-/** A rail Module's kind (field 11). */
-export const RAIL_KINDS = ['a request rail', 'a push rail binding the commitment', 'a push rail binding nothing'];
+/** A rail Module's kind (field 11) and the set its proof binds (field 13), as the core reads them (Development draft 10, F301). */
+export interface Rail {
+  kind: 'request' | 'push';
+  binds: ('payee' | 'purpose' | 'previous hop')[];
+}
 
 /** A specification's content, decoded (Development, Part three). */
 export interface Spec {
@@ -143,8 +159,8 @@ export interface Spec {
   text: string;
   /** Field 10: layers it acts on as an extension. */
   layers: number[] | null;
-  /** Field 11: a rail Module's kind. */
-  rail: number | null;
+  /** Fields 11 and 13: a rail Module's kind and the set its proof binds. */
+  rail: Rail | null;
   /** Field 12: a proof-of-delivery checker. */
   checker: boolean;
 }
@@ -158,7 +174,7 @@ export interface Release {
   version: string | null;
   /** Set when it is not shown as verified, saying why. */
   problem: string | null;
-  /** How it names the specification: its manifest's "implements" (release manifest cMIP draft 3), or, for a release without one, a reference from its publication. */
+  /** How it names the specification: its manifest's "implements", by spec hash (release manifest cMIP draft 4; Development Q7, taken), or, for a release without one, a reference from its publication. */
   by: 'implements' | 'reference';
 }
 
@@ -183,6 +199,8 @@ export interface Found {
   /** Its spec hash and content, once verified. */
   hash: string | null;
   spec: Spec | null;
+  /** Its content's bytes, once verified: to say where versions of one text differ. */
+  content: Uint8Array | null;
 }
 
 /** A specification, by its spec hash: every verified publication of it found. */
@@ -254,6 +272,41 @@ export interface AgreementsRead {
   private: number;
 }
 
+/** A MIP, or a MIR or the MICS document a MIP forks, with the MIPs under it (website cMIP draft 11, F325). */
+export interface Forked {
+  listed: Listed;
+  /** MIPs naming it as their predecessor. */
+  direct: number;
+  /** MIPs standing under it in all. */
+  total: number;
+  /** The MIPs naming it, most forked first, then by name. */
+  forks: Forked[];
+}
+
+/** MIPs whose line of predecessors leads to a specification not found here, or to one neither a MIR, the MICS document nor a MIP. */
+export interface Unrooted {
+  /** The specification the line leads to, by its hash. */
+  hash: string;
+  /** Its kind, where found here; null where not found. */
+  kind: number | null;
+  forks: Forked[];
+}
+
+/** The MIPs' part: each MIR and the MICS document found, with the MIPs under it; then those that lead elsewhere. */
+export interface Mips {
+  /** The MIRs and the MICS document found, in the order of their names, each with its MIPs. */
+  roots: Forked[];
+  unrooted: Unrooted[];
+  /** MIPs listed. */
+  count: number;
+}
+
+/** Specifications holding one text (field 9) and differing in other fields: versions of one text (F322). */
+export interface Versions {
+  name: string;
+  versions: { listed: Listed; differs: number[] }[];
+}
+
 export interface Listing {
   relays: RelayLine[];
   /** The extensions agreements name, most named first: the listing's first purpose (F288). */
@@ -264,6 +317,10 @@ export interface Listing {
   unverified: Found[];
   /** The xtypes listed, most used first (each a line's draft: every draft is its own specification, counted on its own). */
   xtypes: Listed[];
+  /** The MIPs, in a part of their own, by what they fork (website cMIP draft 11, F325). */
+  mips: Mips;
+  /** Versions of one text found (F322). */
+  versions: Versions[];
 }
 
 /** The most acts a listing reads of one relay (a reading, website cMIP draft 9, rule 13c). */
@@ -289,85 +346,56 @@ export function specHash(content: Uint8Array): string {
 }
 
 /**
- * Decode a specification's content strictly (Development, Part three):
- * known keys only, each of its kind; field 9, canonical text; a creator
- * for every kind but a MIR; field 10 ascending, from 0 to 3. Throws saying why.
+ * Decode a specification's content as the core library does (Development
+ * draft 10, Part three; `mor_core::development::Spec::decode`): only the keys
+ * it defines, each of its kind; field 9 canonical text; a creator for every
+ * kind but a MIR, the MICS document and a test suite; what each kind
+ * requires (a Module's field 5; fields 11 and 13 on a Module under the
+ * payment cMIP; a MIP's predecessor); field 10 ascending, from 0 to 3; in
+ * canonical encoding. A content that does not decode so is no specification
+ * (F323). Throws saying why.
  */
 export function decodeSpec(content: Uint8Array): Spec {
-  let m: unknown;
+  let d: CoreSpec;
   try {
-    m = cborDecode(content);
+    d = coreDecodeSpec(content, PAYMENT_CMIP) as CoreSpec;
   } catch (e) {
-    throw new Error(`its content is not CBOR: ${message(e)}`);
+    throw new Error(message(e));
   }
-  if (!(m instanceof Map)) throw new Error('its content is not a map');
-  for (const k of m.keys()) if (typeof k !== 'number' || !Number.isInteger(k) || k < 0 || k > 12) throw new Error(`its content has a key Development does not define (${String(k)})`);
-  const kind = m.get(0);
-  if (typeof kind !== 'number' || !Number.isInteger(kind) || kind < 0 || kind >= KINDS.length) throw new Error('its kind (field 0) is not one Development defines');
-  const creator = m.get(1);
-  if (creator !== undefined && !bytes32(creator)) throw new Error('its creator (field 1) is not an identity hash');
-  if (kind !== 4 && creator === undefined) throw new Error('it names no creator (field 1), which every kind but a MIR must');
-  const list = (k: number): unknown[] => {
-    const v = m.get(k);
-    if (v === undefined) return [];
-    if (!Array.isArray(v) || !v.length) throw new Error(`field ${k} is not a list of at least one`);
-    return v;
-  };
-  const tasks = list(2).map((t) => {
-    if (!Array.isArray(t) || t.length !== 2 || !bytes32(t[0]) || typeof t[1] !== 'number') throw new Error('a task (field 2) is not [MIR, number]');
-    return [hex(t[0]), t[1]] as [string, number];
-  });
-  const types = list(3).map((t) => {
-    if (!Array.isArray(t) || t.length !== 3 || typeof t[0] !== 'number' || typeof t[1] !== 'string' || typeof t[2] !== 'string') throw new Error('an act type (field 3) is not [type, name, schema]');
-    return { type: t[0], name: t[1] };
-  });
-  const dependencies = list(4).map((d) => {
-    if (!bytes32(d)) throw new Error('a dependency (field 4) is not a hash');
-    return hex(d);
-  });
-  const impl = m.get(5);
-  if (impl !== undefined && !bytes32(impl)) throw new Error('field 5 (implements) is not a hash');
-  const rules = list(6).length;
-  const fee = m.get(7);
-  if (fee !== undefined && !Array.isArray(fee)) throw new Error('its fee (field 7) is not a list');
-  const pred = m.get(8);
-  if (pred !== undefined && !bytes32(pred)) throw new Error('its predecessor (field 8) is not a hash');
-  const text = m.get(9);
-  if (typeof text !== 'string') throw new Error('it holds no text (field 9)');
-  try {
-    checkText(text);
-  } catch (e) {
-    throw new Error(`its text is not canonical text: ${message(e)}`);
-  }
-  let layers: number[] | null = null;
-  if (m.has(10)) {
-    const l = list(10);
-    if (!l.every((x, i) => typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= 3 && (i === 0 || x > (l[i - 1] as number)))) {
-      throw new Error('its layers (field 10) are not ascending, from 0 to 3');
-    }
-    layers = l as number[];
-  }
-  const rail = m.get(11);
-  if (rail !== undefined && (typeof rail !== 'number' || !Number.isInteger(rail) || rail < 0 || rail > 2)) throw new Error('its rail kind (field 11) is not 0, 1 or 2');
-  const checker = m.get(12);
-  if (checker !== undefined && checker !== true) throw new Error('field 12 is not true');
-  // Canonical: the same bytes again once decoded, so one specification has one hash.
-  if (hex(cborEncode(m)) !== hex(content)) throw new Error('its content is not in canonical encoding');
   return {
-    kind,
-    creator: creator ? hex(creator) : null,
-    tasks,
-    types,
-    dependencies,
-    implements: impl ? hex(impl) : null,
-    rules,
-    fee: fee !== undefined,
-    predecessor: pred ? hex(pred) : null,
-    text,
-    layers,
-    rail: rail ?? null,
-    checker: checker === true,
+    kind: d.kind,
+    creator: d.creator ?? null,
+    tasks: d.tasks,
+    types: d.types.map(([type, name]) => ({ type, name })),
+    dependencies: d.dependencies,
+    implements: d.implements ?? null,
+    rules: d.rules,
+    fee: d.fee,
+    predecessor: d.predecessor ?? null,
+    text: d.text,
+    layers: d.layers.length ? d.layers : null,
+    rail: d.railKind ? { kind: d.railKind, binds: d.railBinds ?? [] } : null,
+    checker: d.checksDelivery,
   };
+}
+
+/** What the core library's `decodeSpec` returns. */
+interface CoreSpec {
+  hash: string;
+  kind: number;
+  creator?: string | null;
+  tasks: [string, number][];
+  types: [number, string][];
+  dependencies: string[];
+  implements?: string | null;
+  predecessor?: string | null;
+  text: string;
+  layers: number[];
+  checksDelivery: boolean;
+  railKind?: 'request' | 'push' | null;
+  railBinds?: Rail['binds'] | null;
+  rules: number;
+  fee: boolean;
 }
 
 /** An xtype, as the listing names one (Development rule 18): it defines act types and fills no task. */
@@ -538,7 +566,7 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
     if (m.spec !== MIRS.development) continue;
     const l = lines.find((x) => x.address === at.get(d.id));
     if (l) l.specs++;
-    pubs.push({ id: d.id, signer: d.signer ?? '', problem: null, hash: null, spec: null });
+    pubs.push({ id: d.id, signer: d.signer ?? '', problem: null, hash: null, spec: null, content: null });
   }
   await Promise.all(
     pubs.map(async (p) => {
@@ -553,9 +581,10 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
       try {
         p.spec = decodeSpec(content);
       } catch (e) {
-        return void (p.problem = `not a specification as Development defines one: ${message(e)}`);
+        return void (p.problem = `no specification (Development draft 10, F323): ${message(e)}`);
       }
       p.hash = specHash(content);
+      p.content = content;
     }),
   );
 
@@ -574,16 +603,14 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
     l.publications.sort((a, b) => Number(b.signer === l.spec.creator) - Number(a.signer === l.spec.creator) || (a.id < b.id ? -1 : 1));
   }
 
-  // Code released: a release naming one of a specification's publications, checked through its signer's chain.
-  // Its manifest's "implements" first (release manifest cMIP draft 3); without one, its publication's references.
+  // Code released: its manifest's "implements" first, read by spec hash (release manifest cMIP draft 4;
+  // Development Q7, taken), the publication beside each a hint only; without one, its publication's references.
   const pubOf = new Map<string, Listed>();
   for (const l of byHash.values()) for (const p of l.publications) pubOf.set(p.id, l);
   const listedBy = (ids: string[]) => [...new Set(ids.map((r) => pubOf.get(r)).filter((x): x is Listed => !!x))];
   await Promise.all(
     releases.map(async ({ d, act, m }) => {
-      if (!d.signer) return;
-      const fallback = listedBy(d.refs ?? []);
-      if (!pubOf.size) return;
+      if (!d.signer || !byHash.size) return;
       const bad = await judge.problem(act, d.id, d.signer);
       const plain = bad ? null : await openAt(m, [...places, ...m.places.map(relayAddress).filter((x): x is string => !!x)], via);
       let man: Map<number, unknown> | null = null;
@@ -593,11 +620,18 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
       } catch {
         man = null;
       }
-      const impl = man?.get(6);
-      const implemented = Array.isArray(impl) && impl.length && impl.every(bytes32) ? (impl as Uint8Array[]).map((h) => hex(h)) : null;
-      const named = implemented ? listedBy(implemented) : fallback;
+      const field6 = implementsOf(man);
+      let named: Listed[];
+      let problem = bad;
+      if (field6 === null) named = listedBy(d.refs ?? []);
+      else if ('specs' in field6) named = [...new Set(field6.specs.map((h) => byHash.get(h)).filter((x): x is Listed => !!x))];
+      else {
+        // Draft 3's field 6, naming publications: not a valid manifest under draft 4.
+        named = listedBy(field6.publications);
+        problem ??= field6.problem;
+      }
       if (!named.length) return;
-      const r: Release = { id: d.id, signer: d.signer, name: null, version: null, problem: bad, by: implemented ? 'implements' : 'reference' };
+      const r: Release = { id: d.id, signer: d.signer, name: null, version: null, problem, by: field6 ? 'implements' : 'reference' };
       if (!r.problem) {
         if (man) {
           r.name = man.get(0) as string;
@@ -611,7 +645,118 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
 
   const { extensions, agreements } = await readExtensions(found, byHash, judge, lines.reduce((n, l) => n + l.private, 0));
   const xtypes = await countUse(found, byHash, judge);
-  return { relays: lines, extensions, agreements, lines: linesOf([...byHash.values()]), unverified: pubs.filter((p) => p.problem).sort((a, b) => (a.id < b.id ? -1 : 1)), xtypes };
+  const all = [...byHash.values()];
+  return {
+    relays: lines,
+    extensions,
+    agreements,
+    // A MIP's predecessor is what it forks, shown in the MIPs' part, never as a line of drafts (draft 11, F325).
+    lines: linesOf(all.filter((l) => l.spec.kind !== MIP)),
+    unverified: pubs.filter((p) => p.problem).sort((a, b) => (a.id < b.id ? -1 : 1)),
+    xtypes,
+    mips: mipsOf(all),
+    versions: versionsOf(all),
+  };
+}
+
+/**
+ * A manifest's field 6 (release manifest cMIP draft 4): null where it holds
+ * none; the spec hashes its entries `[spec, ? hint]` name, sorted and each
+ * once; or, where it holds draft 3's form, bare hashes naming publications,
+ * those publications and why it is not verified.
+ */
+function implementsOf(man: Map<number, unknown> | null): null | { specs: string[] } | { publications: string[]; problem: string } {
+  if (!man || !man.has(6)) return null;
+  const v = man.get(6);
+  const wrong = { publications: [] as string[], problem: 'its manifest\'s “implements” (field 6) is not as release manifest cMIP draft 4 gives it: [spec, ? hint] entries, sorted by spec hash' };
+  if (!Array.isArray(v) || !v.length) return wrong;
+  if (v.every(bytes32)) {
+    return { publications: v.map((h) => hex(h)), problem: 'its manifest names publications in “implements” (field 6), as release manifest cMIP draft 3 did; under draft 4 it names spec hashes, so it is not a valid manifest' };
+  }
+  const specs: string[] = [];
+  for (const e of v) {
+    if (!Array.isArray(e) || e.length < 1 || e.length > 2 || !e.every(bytes32)) return wrong;
+    const h = hex(e[0]);
+    if (specs.length && specs[specs.length - 1] >= h) return wrong;
+    specs.push(h);
+  }
+  return { specs };
+}
+
+/**
+ * The MIPs, by what they fork (website cMIP draft 11, F325; F328, Q10): each
+ * MIP under the specification its predecessor names, back through the MIPs
+ * as far as found; each MIR and the MICS document found, with the MIPs under
+ * it, a MIR no MIP forks with none; a line leading to a specification not
+ * found, or to one neither a MIR, the MICS document nor a MIP, in a group of
+ * its own. Most forked first, then by name; the roots by name.
+ */
+export function mipsOf(all: Listed[]): Mips {
+  const byHash = new Map(all.map((l) => [l.hash, l]));
+  const mips = all.filter((l) => l.spec.kind === MIP);
+  const children = new Map<string, Listed[]>();
+  for (const l of mips) {
+    const p = l.spec.predecessor!;
+    if (p !== l.hash) children.set(p, [...(children.get(p) ?? []), l]);
+  }
+  const order = (a: Forked, b: Forked) => b.total - a.total || b.direct - a.direct || (a.listed.name < b.listed.name ? -1 : a.listed.name > b.listed.name ? 1 : a.listed.hash < b.listed.hash ? -1 : 1);
+  const placed = new Set<string>();
+  const tree = (l: Listed): Forked => {
+    placed.add(l.hash);
+    const forks = (children.get(l.hash) ?? []).filter((c) => !placed.has(c.hash)).map(tree).sort(order);
+    return { listed: l, direct: forks.length, total: forks.reduce((n, f) => n + 1 + f.total, 0), forks };
+  };
+  const byName = (a: Forked, b: Forked) => (a.listed.name < b.listed.name ? -1 : a.listed.name > b.listed.name ? 1 : a.listed.hash < b.listed.hash ? -1 : 1);
+  const roots = all.filter((l) => l.spec.kind === MIR || l.spec.kind === MICS).map(tree).sort(byName);
+  // The rest: MIPs whose line leads to a specification not found, or found and of another kind.
+  const unrooted = new Map<string, Unrooted>();
+  const top = (l: Listed): string => {
+    const seen = new Set<string>();
+    let x = l;
+    for (;;) {
+      seen.add(x.hash);
+      const p = byHash.get(x.spec.predecessor!);
+      if (!p || p.spec.kind !== MIP || seen.has(p.hash)) return x.hash;
+      x = p;
+    }
+  };
+  for (const l of mips.filter((x) => !placed.has(x.hash)).sort((a, b) => (a.hash < b.hash ? -1 : 1))) {
+    if (placed.has(l.hash)) continue;
+    const head = byHash.get(top(l))!;
+    const leads = head.spec.predecessor!;
+    const u = unrooted.get(leads) ?? { hash: leads, kind: byHash.get(leads)?.spec.kind ?? null, forks: [] };
+    u.forks.push(tree(head));
+    u.forks.sort(order);
+    unrooted.set(leads, u);
+  }
+  return { roots, unrooted: [...unrooted.values()].sort((a, b) => (a.hash < b.hash ? -1 : 1)), count: mips.length };
+}
+
+/**
+ * Versions of one text (F322): specifications whose field 9 is the same and
+ * which differ in other fields, each its own specification, with the fields
+ * in which it differs from the others. Shown together, never merged.
+ */
+export function versionsOf(all: Listed[]): Versions[] {
+  const byText = new Map<string, Listed[]>();
+  for (const l of all) byText.set(l.spec.text, [...(byText.get(l.spec.text) ?? []), l]);
+  const out: Versions[] = [];
+  for (const group of byText.values()) {
+    if (group.length < 2) continue;
+    const fields = group.map((l) => {
+      const c = l.publications.find((p) => p.content)?.content;
+      const m = c ? (cborDecode(c) as Map<number, unknown>) : new Map<number, unknown>();
+      return new Map([...m].map(([k, v]) => [k, hex(cborEncode(v))]));
+    });
+    const keys = [...new Set(fields.flatMap((f) => [...f.keys()]))].filter((k) => k !== 9).sort((a, b) => a - b);
+    const versions = group.map((listed, i) => ({
+      listed,
+      differs: keys.filter((k) => fields.some((f, j) => j !== i && f.get(k) !== fields[i].get(k))),
+    }));
+    versions.sort((a, b) => (a.listed.hash < b.listed.hash ? -1 : 1));
+    out.push({ name: group[0].name, versions });
+  }
+  return out.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
 /**
@@ -700,9 +845,15 @@ export function roleWords(l: Listed, all: Map<string, Listed>): { kind: string; 
     if (known && layer === known[0]) role.push(`fills task ${n}, ${known[1]}`);
     else role.push(`fills task ${n}${layer ? ` of ${layer}` : ', of a MIR this listing does not know'}`);
   }
-  if (s.implements) {
+  if (s.implements && LAYERS[s.implements]) {
+    // A Module working under a MIR (Development draft 10, rule 5; F328, Q6): its layer that MIR's.
+    role.push(`works under the ${LAYERS[s.implements]} MIR`);
+    if (!s.tasks.length) layers.add(LAYERS[s.implements]);
+  } else if (s.implements) {
     const under = all.get(s.implements);
-    if (under) {
+    if (under && under.spec.kind === MIR) {
+      role.push(`works under the MIR “${under.name}”`);
+    } else if (under) {
       role.push(`works under the cMIP “${under.name}”`);
       if (!s.tasks.length) for (const [mir] of under.spec.tasks) if (LAYERS[mir]) layers.add(LAYERS[mir]);
     } else role.push(`works under a cMIP not found here (${s.implements.slice(0, 12)}…)`);
@@ -715,8 +866,9 @@ export function roleWords(l: Listed, all: Map<string, Listed>): { kind: string; 
     );
   }
   if (s.layers) role.push(`declares, for use as an extension, the layers it acts on beyond Development: ${s.layers.map((n) => EXTENSION_LAYERS[n]).join(', ')}`);
-  if (s.rail !== null) role.push(`a rail Module: ${RAIL_KINDS[s.rail]}`);
+  if (s.rail) role.push(`a rail Module: a ${s.rail.kind} rail, its proof binding ${s.rail.binds.length ? s.rail.binds.join(', ') : 'nothing'}`);
   if (s.checker) role.push('checks proofs of delivery of proven offers (field 12)');
+  if (s.kind === MIP) role.push(`a MIP: a proposal toward a successor protocol, not a rule of MOR; it forks ${all.get(s.predecessor!) ? `“${all.get(s.predecessor!)!.name}”` : `a specification not found here (${s.predecessor!.slice(0, 12)}…)`}`);
   if (!role.length) role.push(s.kind === 0 ? 'names no task, defines no act type' : 'declares nothing more');
   // An xtype's or an extension's own acts belong to Development (F106).
   if (!layers.size && (s.types.length || s.layers || (s.kind === 0 && !s.tasks.length))) layers.add('Development');

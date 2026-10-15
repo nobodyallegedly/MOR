@@ -10,6 +10,7 @@ import { build, type Plugin } from 'esbuild';
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { MIR_TEXTS } from '../src/mirs.ts';
 import { STYLE } from '../src/view.ts';
 
 const here = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));
@@ -43,4 +44,6 @@ await build({
 writeFileSync(`${out}/reader.css`, STYLE + '\n');
 copyFileSync(here('static/index.html'), `${out}/index.html`);
 copyFileSync(here('../genesis/wasm/mor_wasm_bg.wasm'), `${out}/mor_wasm_bg.wasm`);
+// The six MIRs' texts, shipped as they are committed, canonical text (F324).
+for (const { file } of MIR_TEXTS) copyFileSync(here(`../../spec/${file}`), `${out}/${file}`);
 console.log(`built ${out}`);

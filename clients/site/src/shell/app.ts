@@ -173,11 +173,12 @@ async function showListings(frame: HTMLIFrameElement, settings: SiteSettings, li
     try {
       const listing = await readListing(asked.relays, settings.relays);
       line.read = listing.relays;
-      line.verified = listing.lines.reduce((n, l) => n + l.drafts.length, 0);
+      line.verified = listing.lines.reduce((n, l) => n + l.drafts.length, 0) + listing.mips.count;
       line.unverified = listing.unverified.length;
       line.agreements = listing.agreements;
       line.extensions = listing.extensions.length;
       line.xtypes = { listed: listing.xtypes.length, acts: listing.xtypes.reduce((n, l) => n + (l.use?.acts ?? 0), 0) };
+      line.mips = { listed: listing.mips.count, under: listing.mips.roots.filter((r) => r.total).length, versions: listing.versions.length };
       const inner = doc.createElement('iframe');
       inner.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
       inner.setAttribute('title', 'Specifications');
@@ -377,7 +378,7 @@ async function main(): Promise<void> {
     document.title = `${prepared.title ?? entry.path} · ${version.manifest!.name}`;
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
     state.writes = prepared.writes;
-    state.listings = prepared.listings.map((l) => ({ relays: l.relays, read: null, verified: 0, unverified: 0, agreements: null, extensions: 0, xtypes: null }));
+    state.listings = prepared.listings.map((l) => ({ relays: l.relays, read: null, verified: 0, unverified: 0, agreements: null, extensions: 0, xtypes: null, mips: null }));
     state.feeds = prepared.feeds.map((authors, i) => ({ authors, clock: prepared.clocks[i] ?? null, found: null, clockFound: null, order: null, shown: 0, verified: 0 }));
     state.phase = 'ok';
     state.words = verifiedWords(settings, 'page');

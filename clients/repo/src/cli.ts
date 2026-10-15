@@ -13,7 +13,7 @@ import { hex } from '../../genesis/src/core.ts';
 import { readCards } from '../../genesis/src/lines.ts';
 import { TestCollective, abandonmentOf, governanceText, type Governance } from './collective.ts';
 import { absenceNotice } from './agreements.ts';
-import { checkImplements, compareWithTree, gitFiles, gitSource, publishRelease, signRelease, verifyRelease, type Verified } from './release.ts';
+import { resolveImplements, compareWithTree, gitFiles, gitSource, publishRelease, signRelease, verifyRelease, type Verified } from './release.ts';
 
 const HELP = `mor-repo: MOR governs its own code. A test collective publishes releases
 as signed manifests; anyone fetches one and verifies every file.
@@ -66,8 +66,9 @@ genesis client (clients/genesis: mor-genesis new).
         Publish every file git tracks under DIR (default: this repository) as a
         release of the collective. It counts once enough members sign it.
         --implements names a specification the release implements, by the act
-        id of its publication (release manifest cMIP draft 3), checked first
-        at the collective's relays to be a specification's publication.
+        id of one of its publications: its content is read at the collective's
+        relays and decoded whole, and the release names it by its spec hash,
+        the publication beside it as a hint (release manifest cMIP draft 4).
   sign --member M.json --release ID --at URL [--at URL ...] [--against DIR]
         As a member: fetch the release, check every file (and, with --against,
         compare them with a checkout), show it, then sign it.
@@ -231,9 +232,10 @@ async function main() {
       const c = TestCollective.load(file, via);
       const dir = resolve(one('root') ?? root);
       const files = gitFiles(dir);
-      // Release manifest cMIP draft 3: the specifications it implements, by their publications, checked first.
-      const impl = (opts.implements ?? []).flatMap((x) => x.split(',')).map((x) => x.trim()).filter(Boolean);
-      const bad = await checkImplements(impl, c.f.relays, via);
+      // Release manifest cMIP draft 4: the specifications it implements, named by their spec hashes,
+      // read from the publications given (each kept beside its spec hash as a hint), checked first.
+      const ids = (opts.implements ?? []).flatMap((x) => x.split(',')).map((x) => x.trim()).filter(Boolean);
+      const { entries: impl, problems: bad } = await resolveImplements(ids, c.f.relays, via);
       if (bad.length) throw new Error(`nothing released: --implements names what is not a specification's publication: ${bad.join('; ')}`);
       const p = await publishRelease(c, {
         name: one('name') ?? 'MOR',
@@ -246,7 +248,7 @@ async function main() {
       c.save(file);
       console.log(`release ${p.id}`);
       console.log(`${p.manifest.files.length} files (${p.uploaded} new), ${p.manifest.dependencies.length} dependencies, previous ${p.manifest.previous ?? 'none'}`);
-      for (const x of p.manifest.implements ?? []) console.log(`  implements ${x}`);
+      for (const x of p.manifest.implements ?? []) console.log(`  implements ${x.spec}${x.hint ? ` (a publication of it: ${x.hint})` : ''}`);
       for (const r of p.refused) console.log(`  refused: ${r}`);
       console.log(`It counts once ${c.f.governance.releaseThreshold} members sign it: mor-repo sign --member M.json --release ${p.id} --at ${c.f.relays[0]}`);
       break;
@@ -310,7 +312,7 @@ function report(v: Verified) {
   if (v.manifest) {
     const m = v.manifest;
     console.log(`  ${m.name} ${m.version}, ${m.files.length} files, ${m.dependencies.length} dependencies, previous ${m.previous ?? 'none'}${m.source ? `, from ${m.source}` : ''}`);
-    for (const x of m.implements ?? []) console.log(`  implements ${x}`);
+    for (const x of m.implements ?? []) console.log(`  implements ${x.spec}${x.hint ? ` (a publication of it: ${x.hint})` : ''}`);
   }
   if (v.agreement) console.log(`  under agreement ${v.agreement}: ${v.rule}`);
   console.log(`  signed by ${v.signers.length ? v.signers.join(', ') : 'no member'}`);

@@ -78,7 +78,21 @@ export function frontPage(settings: Settings): string {
 <span class="fp">${fingerprint(settings.identity)}</span>
 <ul class="docs" id="docs"><li class="small">Fetching from ${settings.relays.map(e).join(', ')}…</li></ul></section>
 ${links}
-${contact(settings)}`;
+${contact(settings)}
+<section><h2 class="section">The protocol this reader ships</h2>
+<p class="small">The six MIRs, shipped as texts beside this page; each spec hash recomputed from its text in this browser (F324). Until the freeze these are drafts, and the hashes this reader checks with are still test values.</p>
+<ul class="docs" id="mirs"><li class="small">Recomputing…</li></ul></section>`;
+}
+
+/** The six MIRs' hashes, recomputed from the texts shipped (F324; the freeze suite v28, 8.1). */
+export function mirsHtml(rows: { layer: string; file: string; hash: string | null; problem: string | null }[]): string {
+  return rows
+    .map((r) =>
+      r.hash
+        ? `<li data-mir="${e(r.layer)}" data-hash="${e(r.hash)}">${e(r.layer)}, <span class="small">${e(r.file)}</span><div class="small"><code>${e(r.hash)}</code></div></li>`
+        : `<li data-mir="${e(r.layer)}"><span class="standing bad">not recomputed</span> ${e(r.layer)}, <span class="small">${e(r.file)}: ${e(r.problem ?? '')}</span></li>`,
+    )
+    .join('');
 }
 
 export function documentItem(s: Shown, link: string): string {

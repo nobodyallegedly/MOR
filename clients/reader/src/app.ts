@@ -8,7 +8,8 @@ import { makeLink, parseLink, relaysFor } from './link.ts';
 import { documents, show } from './read.ts';
 import { parseSettings, type Settings } from './settings.ts';
 import { recipient, sendMessage } from './message.ts';
-import { documentItem, documentPage, errorPage, frontPage, note } from './view.ts';
+import { documentItem, documentPage, errorPage, frontPage, mirsHtml, note } from './view.ts';
+import { recompute } from './mirs.ts';
 
 const root = document.getElementById('app')!;
 const MAX_LISTED = 30;
@@ -35,6 +36,13 @@ async function route(settings: Settings): Promise<void> {
     document.title = `MOR reader · ${settings.name}`;
     root.innerHTML = frontPage(settings);
     wireMessage(settings);
+    void recompute(async (file) => {
+      const r = await fetch(file);
+      if (!r.ok) throw new Error(`not shipped (${r.status})`);
+      return r.text();
+    }).then((rows) => {
+      if (me === shown) document.getElementById('mirs')!.innerHTML = mirsHtml(rows);
+    });
     const list = document.getElementById('docs')!;
     const ids = (await documents(settings.identity, settings.relays)).slice(0, MAX_LISTED);
     if (me !== shown) return;

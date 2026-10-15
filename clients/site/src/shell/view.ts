@@ -150,6 +150,8 @@ export interface ListingLine {
   extensions: number;
   /** Xtypes listed, and the public acts of their types counted; null until read. */
   xtypes: { listed: number; acts: number } | null;
+  /** MIPs listed, under how many MIRs and the MICS document, and versions of one text found (draft 11, F325, F322); null until read. */
+  mips: { listed: number; under: number; versions: number } | null;
 }
 
 export interface BarState {
@@ -223,7 +225,8 @@ function listingItem(l: ListingLine): string {
     ? `${l.extensions} ${l.extensions === 1 ? 'extension' : 'extensions'} named by ${a.counted} ${a.counted === 1 ? 'agreement' : 'agreements'} counted, from ${a.terms} public terms verified (${a.proposed} not yet signed by every party${a.notCounted.length ? `, <span class="bad-word">${a.notCounted.length} not counted</span>` : ''}); private agreements are not counted. `
     : '';
   const xt = l.xtypes ? `${l.xtypes.listed} ${l.xtypes.listed === 1 ? 'xtype' : 'xtypes'} listed, ${l.xtypes.acts} public ${l.xtypes.acts === 1 ? 'act' : 'acts'} of their types counted; private acts are not counted. ` : '';
-  return `<li>${ag}${xt}${l.verified} ${l.verified === 1 ? 'specification' : 'specifications'} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? 'publication' : 'publications'} not verified</span>` : ''}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join('')}</ul></li>`;
+  const mp = l.mips ? `${l.mips.listed} ${l.mips.listed === 1 ? 'MIP' : 'MIPs'} listed, under ${l.mips.under} ${l.mips.under === 1 ? 'MIR' : 'MIRs'}${l.mips.versions ? `; ${l.mips.versions} ${l.mips.versions === 1 ? 'text' : 'texts'} found in versions` : ''}. ` : '';
+  return `<li>${ag}${xt}${mp}${l.verified} ${l.verified === 1 ? 'specification' : 'specifications'} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? 'publication' : 'publications'} not verified</span>` : ''}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join('')}</ul></li>`;
 }
 
 function filmItem(f: FilmLine): string {
