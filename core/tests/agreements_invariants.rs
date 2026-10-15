@@ -2673,13 +2673,21 @@ impl DealWorld {
             // relies on (a later version cloning it, a split under it, a
             // purchase naming it) keeps its completeness, a disowned
             // signature on it shown as a dispute.
+            // Valid under Identity, as the library reads it: valid, or scoped
+            // by a grant key whose grant is valid (an act the deal's split
+            // service signs under its grant, Identity, F128).
+            let counts = |x: &Hash| match v.status(x) {
+                Status::Valid => true,
+                Status::Scoped => v.get(x).and_then(|h| h.act.outside.binding).is_some_and(|g| v.status(&g) == Status::Valid),
+                _ => false,
+            };
             let relied = self.versions.iter().any(|(x, p, _)| p.as_ref() == Some(k) && v.status(x) == Status::Valid)
                 || self.splits.iter().any(|(x, ..)| {
-                    v.status(x) == Status::Valid && agreements::Split::decode(&v.get(x).unwrap().inside.payload).is_ok_and(|s| &s.agreement == k)
+                    counts(x) && agreements::Split::decode(&v.get(x).unwrap().inside.payload).is_ok_and(|s| &s.agreement == k)
                 })
                 || v.held_acts().any(|x| {
                     x.inside.spec == mirs().money
-                        && v.status(&x.id) == Status::Valid
+                        && counts(&x.id)
                         && match mor_core::money::Payload::decode(x.inside.type_, &x.inside.payload) {
                             Ok(mor_core::money::Payload::Receipt(r)) => r.purchase.is_some_and(|p| &p.agreement == k || &p.line == k),
                             Ok(mor_core::money::Payload::Claim(c)) => c.purchase.is_some_and(|p| &p.agreement == k || &p.line == k),
