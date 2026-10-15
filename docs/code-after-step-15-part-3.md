@@ -24,7 +24,7 @@ The second verifier (verifier2), the ordering simulation, the invariants and the
 
 | | Before (part 2's branch, `b855204`) | After (this branch) |
 | --- | --- | --- |
-| Rust workspace (`cargo test --workspace`) | 710 passed, 0 failed, 1 ignored | RUST_AFTER |
+| Rust workspace (`cargo test --workspace`) | 710 passed, 0 failed, 1 ignored | 736 passed, 0 failed, 1 ignored (26 new: the draft 14 formats and A6, the steps above, the owners in shuffled orders; fixtures brought into draft 14's formats) |
 | TypeScript, 18 packages (`scripts/test-all.sh`'s list) | 419 passed, 0 failed | 419 passed, 0 failed (no new TypeScript tests; the collective client's money-and-endings story now runs through draft 14's rules, below) |
 | verifier2's own tests (`python3 verifier2/test_agreements_endings.py`) | 24 passed | 24 passed (two stories now unknown, one closing story with and without acknowledgement) |
 | The ordering simulation (`cargo run -p mor-ordering-sim -- 20000`) | 0 wrong answers | 0 wrong answers; one new story, `f302_a_registered_resignation_stays_placed` |
