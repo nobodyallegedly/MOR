@@ -116,6 +116,10 @@ The one in bold changes how existing terms read (an agreement written with a hea
 
 *The reading on field 24* (the old head-count form invalid, not re-read): accepted by the project lead; no terms exist on MOR before the freeze, so no signed agreement changes meaning.
 
+*Writing the answers in.* Each answer is marked "F328" where it stands in its draft, the MICS and the suite (new suite steps 5.5d, 2.4j, 8.11, 3.7an, 3.8d; steps 5.7g, 3.9ag, 3.7ac, 8.10 completed). Format details taken as mechanics in Agreements: the standing waiver is a third element of a field 30 entry (`[stake, holders-rule, ? waived: true]`), and an issuance under it writes `[0]` in field 32 for "no offer"; plan key 2 keeps its number and lists the seat successors alone (`[+ hash]`), a plan writing a weight invalid. Two points remain:
+- **A possible question (Agreements, done and reaching; Q13's answer):** for a holder that is a deal, "every party of its version in force" does not say *when* the version in force is judged; a deal has no line (F314), so a verifier cannot place the moment exactly. A reading is needed: at the collective's act being sealed, the version the collective's line last placed, or another. Not put yet; for Nobody, allegedly, with the next questions.
+- **Q9 has no suite step yet** (a disowned specification unclaimed whether relied on or not); one to write with the Development code.
+
 *The questions as they were put follow, kept for the record.*
 
 
