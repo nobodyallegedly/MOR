@@ -1194,8 +1194,8 @@ impl ColWorld {
                 let n = self.succ_people.len();
                 for (k, j) in [n - 2, n - 1].into_iter().enumerate() {
                     if succ_sign || k == 0 {
-                        let mut p = self.succ_people[j].clone();
-                        sign(&mut self.w, &mut p, &x);
+                        // A successor signs by a chain signature (F303).
+                        let (_, p) = self.w.chain_sign(&self.succ_people[j], x);
                         self.succ_people[j] = p;
                     }
                 }
@@ -1288,6 +1288,12 @@ impl ColWorld {
                         let a = self.w.everyday_act(&mut self.creditors[k], mirs().money, 2, rc(creditor, col), None, None);
                         let x = self.w.add(&a);
                         self.paid.push((x, creditor));
+                        // The collective's client acknowledges the creditor's
+                        // receipt on its chain, so a closing may rely on it
+                        // (Agreements draft 14, F303).
+                        let cur = self.current;
+                        let live = agreements::Liveness { agreement: cur }.to_map();
+                        self.act_on(Who2::Dev(0), mirs().agreements, 12, live, obj(cur).unwrap(), &[], true, Seal::Public, Some(vec![x]), &[]);
                     }
                     PaidBy::Debtor => {
                         let x = self.act_on(Who2::Dev(0), mirs().money, 2, rc(col, col), vec![], &[], true, Seal::Public, None, &[]);

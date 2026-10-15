@@ -262,14 +262,19 @@ fn a_private_link_signed_by_a_scoped_key_is_invalid() {
     let mut ana = w.genesis("ana", vec![own_home()], None, None);
     let ben = w.genesis("ben", vec![own_home()], None, None);
     // An act of a higher MIR, standing for the grant that installs a key.
-    let g = w.everyday_act(&mut ana, agreements_spec(), 9, vec![], None, None);
+    // (In its format since Fable's A6: an Agreements act outside it is
+    // invalid; a liveness, the plainest Agreements act.)
+    let x = mor_core::hash::sha256(b"an agreement");
+    let live = || vec![(Value::Uint(0), Value::Bytes(x.to_vec()))];
+    let on = || Some(vec![mor_core::act::Object { chain: x, predecessor: x }]);
+    let g = w.everyday_act(&mut ana, agreements_spec(), 12, live(), on(), None);
     let grant = w.add(&g);
     let mut scoped = ana.clone();
     scoped.binding = grant;
     scoped.seq.clear();
     // An Agreements act (the core verifier reads no Agreements payload;
     // a Money act outside its format would be invalid since F295).
-    let public = w.everyday_act(&mut scoped, agreements_spec(), 12, vec![], None, None);
+    let public = w.everyday_act(&mut scoped, agreements_spec(), 12, live(), on(), None);
     let public = w.add(&public);
     assert_eq!(w.v.status(&public), Status::Scoped, "a scoped key signs a higher MIR's act");
     let claim = w.private_act(&mut scoped, identity_spec(), types::LINK_CLAIM, claim_payload(&ben.id), None, vec![ben.id]);

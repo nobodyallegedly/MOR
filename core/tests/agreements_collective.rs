@@ -548,6 +548,14 @@ fn view(w: &World) -> AgreementsView<'_> {
     AgreementsView::new(&w.v, mirs())
 }
 
+/// A fork's successor signs it as a member does, by a chain signature with
+/// its own chain key (Identity type 16; Agreements draft 14, F303, N13).
+fn successor_sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
+    let (id, q) = w.chain_sign(p, *x);
+    *p = q;
+    id
+}
+
 fn sign(w: &mut World, p: &mut Person, x: &Hash) -> Hash {
     agreements_act(w, p, agreements::types::SIGNATURE, agreements::signature_payload(x), obj(*x))
 }
@@ -4917,8 +4925,8 @@ fn a_collective_forks() {
     for i in [BEN, CY] {
         lab.end(i, &short);
     }
-    sign(&mut lab.w, &mut sb, &short);
-    sign(&mut lab.w, &mut sa, &short);
+    successor_sign(&mut lab.w, &mut sb, &short);
+    successor_sign(&mut lab.w, &mut sa, &short);
     let e = lab.view().fork(&short).unwrap();
     assert!(!e.complete);
     assert_eq!(e.unassigned, vec![d3]);
@@ -4932,11 +4940,11 @@ fn a_collective_forks() {
     let e = lab.view().fork(&fa).unwrap();
     assert!(!e.complete, "Cy has not signed");
     lab.end(CY, &fa);
-    sign(&mut lab.w, &mut sb, &fa);
+    successor_sign(&mut lab.w, &mut sb, &fa);
     let e = lab.view().fork(&fa).unwrap();
     assert!(!e.complete, "side A's successor has not signed for its debt");
     assert!(e.why.as_deref().is_some_and(|w| w.contains("N13")), "{:?}", e.why);
-    sign(&mut lab.w, &mut sa, &fa);
+    successor_sign(&mut lab.w, &mut sa, &fa);
     let v = lab.view();
     let e = v.fork(&fa).unwrap();
     assert!(e.complete, "{:?}", e.why);
@@ -5023,7 +5031,10 @@ fn a_collective_forks() {
     // D5: side A's successor, holding nothing here, cannot close while it
     // owes d2 (jointly) and d3 (handed to it).
     let sa_terms = ta;
-    let closing = agreements::Closing { agreement: sa_terms, collective: sa.id, chain_act: sa.binding, tips: vec![tip(&sa)], open: vec![] };
+    // (Side A's successor signed the fork by a chain signature: its line's
+    // tips are its sequences since.)
+    let tips_of = |p: &Person| if p.seq.is_empty() { vec![] } else { vec![tip(p)] };
+    let closing = agreements::Closing { agreement: sa_terms, collective: sa.id, chain_act: sa.binding, tips: tips_of(&sa), open: vec![] };
     let eo = ending_obj(&lab, sa_terms, closing.collective);
     let cl = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::CLOSING, closing.to_map(), eo);
     lab.end(ANA, &cl);
@@ -5034,12 +5045,24 @@ fn a_collective_forks() {
     assert!(e.why.as_deref().is_some_and(|w| w.contains("D5")), "{:?}", e.why);
     drop(v);
     // Side B pays d2 in full; d3's creditor releases it, taking nothing.
-    receipt(&mut lab, &mut supplier, sb.id, d2, 300);
-    debt_release(&mut lab.w, &mut hidden, d3, vec![]);
+    let paid = receipt(&mut lab, &mut supplier, sb.id, d2, 300);
+    let released = debt_release(&mut lab.w, &mut hidden, d3, vec![]);
     let v = lab.view();
     assert_eq!(v.owes(&sa.id).unwrap(), Vec::<Hash>::new());
     assert_eq!(v.owes(&sb.id).unwrap(), vec![d1]);
+    // F303 (freeze suite v28, 3.9ae): a closing relies on another identity's
+    // receipt or release only where an act of the collective in its history
+    // acknowledges it; one nobody acknowledged is shown, and the closing waits.
     let e = v.closing(&cl).unwrap();
+    assert!(!e.complete, "nobody acknowledged the receipt or the release: {:?}", e.why);
+    drop(v);
+    let a = lab.w.everyday_act(&mut sa, mirs().agreements, 12, liveness(sa_terms), obj(sa_terms), Some(vec![paid, released]));
+    lab.w.add(&a);
+    let closing = agreements::Closing { tips: tips_of(&sa), ..closing };
+    let eo = ending_obj(&lab, sa_terms, closing.collective);
+    let cl2 = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::CLOSING, closing.to_map(), eo);
+    lab.end(ANA, &cl2);
+    let e = lab.view().closing(&cl2).unwrap();
     assert!(e.complete, "{:?}", e.why);
 }
 
@@ -5100,8 +5123,8 @@ fn a_fork_hands_out_its_whole_history() {
         lab.end(ANA, &fk);
         lab.end(BEN, &fk);
         lab.end(CY, &fk);
-        sign(&mut lab.w, sa, &fk);
-        sign(&mut lab.w, sb, &fk);
+        successor_sign(&mut lab.w, sa, &fk);
+        successor_sign(&mut lab.w, sb, &fk);
         fk
     };
     // d2 and d5 left out: no fork.
@@ -5132,7 +5155,7 @@ fn a_fork_hands_out_its_whole_history() {
             agreement: tb,
             collective: sb.id,
             chain_act: sb.binding,
-            tips: vec![tip(sb)],
+            tips: if sb.seq.is_empty() { vec![] } else { vec![tip(sb)] },
             sides: vec![agreements::Side { successor: b1_id, members: vec![ids[BEN]] }, agreements::Side { successor: b2_id, members: vec![ids[CY]] }],
             shares: vec![],
             debts,
@@ -5143,16 +5166,20 @@ fn a_fork_hands_out_its_whole_history() {
         lab.end(CY, &x);
         x
     };
+    // Side B's successor draws its own line at a later chain act: its chain
+    // signature on the first fork lies before it (F303).
+    let (_, sb2) = lab.w.rotate(&sb, Rot::default());
+    let sb = sb2;
     let fb = fork_b(&mut lab, vec![], &sb);
     let e = lab.view().fork(&fb).unwrap();
     assert!(!e.complete);
     assert!(e.unassigned.contains(&d2), "{:?}", e.why);
-    sign(&mut lab.w, &mut b1, &fb);
-    sign(&mut lab.w, &mut b2, &fb);
+    successor_sign(&mut lab.w, &mut b1, &fb);
+    successor_sign(&mut lab.w, &mut b2, &fb);
     assert!(e.unassigned.contains(&d5), "inherited jointly");
     let fb = fork_b(&mut lab, vec![(d2, vec![0]), (d5, vec![1])], &sb);
-    sign(&mut lab.w, &mut b1, &fb);
-    sign(&mut lab.w, &mut b2, &fb);
+    successor_sign(&mut lab.w, &mut b1, &fb);
+    successor_sign(&mut lab.w, &mut b2, &fb);
     let e = lab.view().fork(&fb).unwrap();
     assert!(e.complete, "{:?}", e.why);
     assert_eq!(lab.view().debtors(&d2).unwrap(), Some(vec![b1.id]));
@@ -5183,11 +5210,11 @@ fn a_fork_hands_out_its_whole_history() {
     lab.end(ANA, &fk);
     lab.end(BEN, &fk);
     lab.end(CY, &fk);
-    sign(&mut lab.w, &mut sa, &fk);
-    sign(&mut lab.w, &mut sb, &fk);
-    let e = lab.view().fork(&fk).unwrap();
-    assert!(!e.complete);
-    assert!(e.why.as_deref().is_some_and(|w| w.contains("not held")), "{:?}", e.why);
+    successor_sign(&mut lab.w, &mut sa, &fk);
+    successor_sign(&mut lab.w, &mut sb, &fk);
+    // F304 (freeze suite v28, 3.9af, "the same for a fork"): unknown, never
+    // "not complete".
+    assert!(matches!(lab.view().fork(&fk), Err(AgreementsError::Missing(_))));
 }
 
 /// Freeze suite v21, 3.9d (F124 N1): under a constitutional rule of two of
@@ -5809,10 +5836,14 @@ fn a_collective_releases_its_work_and_closes() {
     assert!(e.why.as_deref().is_some_and(|w| w.contains("cannot close while it owes anything")), "{:?}", e.why);
     drop(v);
     // The supplier is paid in full; the printer is paid 30 of 80.
-    receipt(&mut lab, &mut supplier, label, d, 100);
+    let full = receipt(&mut lab, &mut supplier, label, d, 100);
     let part = receipt(&mut lab, &mut printer, label, d2, 30);
     let v = lab.view();
-    assert_eq!(v.closing(&c1).unwrap().open_debts, vec![d2]);
+    assert_eq!(v.owes(&label).unwrap(), vec![d2]);
+    // F303: the closing relies on another identity's receipt only where an
+    // act of the label in its history acknowledges it; drawn before them,
+    // the first closing waits.
+    assert_eq!(sorted(v.closing(&c1).unwrap().open_debts), sorted(vec![d, d2]));
     assert_eq!(v.paid_toward(&d2), 30);
     drop(v);
     // A release of the printer's debt signed by a member ends nothing:
@@ -5831,14 +5862,26 @@ fn a_collective_releases_its_work_and_closes() {
     let v = lab.view();
     assert!(v.debt_release(&rel).unwrap().counts);
     assert_eq!(v.debt_released(&d2).unwrap(), Some(rel));
-    let e = v.closing(&c1).unwrap();
+    assert!(!v.closing(&c1).unwrap().complete, "nothing in its history acknowledges them (F303)");
+    drop(v);
+    // The label acknowledges the receipt and the release, and closes again.
+    lab.acknowledge(0, full);
+    lab.acknowledge(0, rel);
+    let x = closing(&lab);
+    let eo = ending_obj(&lab, f, x.collective);
+    let c2 = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::CLOSING, x.to_map(), eo);
+    lab.end(ANA, &c2);
+    lab.end(BEN, &c2);
+    lab.end(CY, &c2);
+    let v = lab.view();
+    let e = v.closing(&c2).unwrap();
     assert!(e.complete, "{:?}", e.why);
-    assert_eq!(v.current(&label).unwrap().unwrap().closed, Some(c1));
+    assert_eq!(v.current(&label).unwrap().unwrap().closed, Some(c2));
     drop(v);
     let after = lab.publish(0);
     lab.sign(ANA, &after);
     let v = lab.view();
-    assert_eq!(v.consent(&after).unwrap(), Consent::Closed { by: c1 });
+    assert_eq!(v.consent(&after).unwrap(), Consent::Closed { by: c2 });
     assert!(v.consent(&p).unwrap().counts());
 }
 
@@ -5892,7 +5935,9 @@ fn a_bankrupt_collective_settles_by_stakes_and_a_release() {
     assert_eq!(v.paid_toward(&d), 300);
     drop(v);
     // It owes nothing, but holds 60% of the work: a closing still does not
-    // take effect; it stays open, paying the lender as a holder.
+    // take effect; it stays open, paying the lender as a holder. (The label
+    // acknowledges the lender's release, so a closing may rely on it: F303.)
+    lab.acknowledge(0, rel);
     let x = agreements::Closing { agreement: k, collective: label, chain_act: lab.c[0].binding, tips: vec![tip(&lab.c[0])], open: vec![] };
     let eo = ending_obj(&lab, k, x.collective);
     let c = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::CLOSING, x.to_map(), eo);
@@ -6346,8 +6391,8 @@ fn a_sale_is_recorded_on_the_actions_chain() {
     lab.end(ANA, &fk);
     lab.end(BEN, &fk);
     lab.end(CY, &fk);
-    sign(&mut lab.w, &mut sa, &fk);
-    sign(&mut lab.w, &mut sb, &fk);
+    successor_sign(&mut lab.w, &mut sa, &fk);
+    successor_sign(&mut lab.w, &mut sb, &fk);
     assert!(lab.view().fork(&fk).unwrap().complete);
     let v = lab.view();
     // Ana's sale is in the fork's history: still a purchase.

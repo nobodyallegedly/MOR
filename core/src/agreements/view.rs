@@ -6241,11 +6241,12 @@ impl<'a> AgreementsView<'a> {
             }
             let Ok(f0) = Fork::decode(&y.inside) else { continue };
             let Some(side) = f0.sides.iter().position(|s| s.successor == col.id) else { continue };
-            let signed = self
-                .valid_sigs(&y.id, &[col.id])
-                .iter()
-                .filter_map(|(_, s)| self.v.get(s))
-                .any(|s| self.before_line(col, s, chain_act, tips));
+            // F303: the original's own chain signature on that earlier fork,
+            // lying in its identity chain before this fork's chain act.
+            let signed = match (self.chain_signed(&col.id, &y.id), col.res.position_of(chain_act)) {
+                (Some(p), Some(q)) => p < q,
+                _ => false,
+            };
             if !signed || !self.fork(&y.id)?.complete {
                 continue;
             }
@@ -6475,12 +6476,30 @@ impl<'a> AgreementsView<'a> {
         owing.sort();
         owing.dedup();
         for i in owing {
-            if !self.signed_act(h, &f.sides[i as usize].successor)? {
-                return fail(e, &format!("side {i}'s successor signs for the debts the fork assigns to it (N13)"));
+            if self.chain_signed(&f.sides[i as usize].successor, id).is_none() {
+                return fail(
+                    e,
+                    &format!("side {i}'s successor signs for the debts the fork assigns to it by a chain signature with its own chain key (N13; new in draft 14, F303): a signature act is no successor's signature on it"),
+                );
             }
         }
         e.complete = true;
         Ok(e)
+    }
+
+    /// The position, in `signer`'s identity chain, of its chain signature
+    /// (Identity type 16) naming `act`, where one counts there and is not
+    /// void: the earliest (F132; new in draft 14, F303: a successor signs a
+    /// fork so, and no later rotation voids a chain act).
+    fn chain_signed(&self, signer: &Hash, act: &Hash) -> Option<usize> {
+        let res = self.v.resolve(signer);
+        self.v
+            .signed_by(signer)
+            .filter(|x| x.inside.spec == self.mirs.identity && x.inside.type_ == crate::identity::types::CHAIN_SIGNATURE)
+            .filter(|x| matches!(&x.identity, Some(Ok(Payload::ChainSignature(c))) if &c.signs == act))
+            .filter(|x| !self.refuses(&x.id))
+            .filter_map(|x| res.position_of(&x.id))
+            .min()
     }
 
     /// Stakes a collective holds in what this verifier holds: stakes of
@@ -7007,6 +7026,13 @@ impl<'a> AgreementsView<'a> {
     /// what the payment fulfils, and the receiver's contrary receipt counts
     /// for nothing, shown as a dispute on the receiver.
     pub fn paid_toward(&self, obligation: &Hash) -> u64 {
+        self.paid_toward_if(obligation, &|_| true)
+    }
+
+    /// [`Self::paid_toward`], counting only the receipts and claims `relied`
+    /// accepts (a closing's: those an act of the collective in its history
+    /// acknowledges, or the collective's own; F303).
+    fn paid_toward_if(&self, obligation: &Hash, relied: &dyn Fn(&Held) -> bool) -> u64 {
         use crate::money::Payload as Fin;
         let o = match self.v.get(obligation).map(|o| (o, Fin::decode(o.inside.type_, &o.inside.payload))) {
             Some((x, Ok(Fin::Obligation(o)))) if x.inside.spec == self.mirs.money => o,
@@ -7032,6 +7058,7 @@ impl<'a> AgreementsView<'a> {
                         && rc.payee == creditor
                         && r.act.outside.signer == Some(creditor)
                         && self.valid(&r.id)
+                        && relied(r)
                         && counts(&r.id, &rc.amount, &rc.proof)
                         && !self.receipt_overruled(&rc) =>
                 {
@@ -7041,6 +7068,7 @@ impl<'a> AgreementsView<'a> {
                     if &c.fulfils == obligation
                         && c.payee == creditor
                         && self.payers_claim(r)
+                        && relied(r)
                         && counts(&r.id, &c.amount, &c.proof)
                         && !self.claim_overruled(&c) =>
                 {
@@ -7647,6 +7675,38 @@ impl<'a> AgreementsView<'a> {
         Ok(None)
     }
 
+    /// Whether an act lies in the history a closing drawn at `chain_act` and
+    /// `tips` cites and was signed by the collective, or is acknowledged
+    /// there by an act of the collective (Envelopes, `acks`; F303).
+    fn relied_by_line(&self, col: &Col, chain_act: &Hash, tips: &[KeptTip], x: &Held) -> bool {
+        if x.act.outside.signer == Some(col.id) {
+            return true;
+        }
+        let Some(bf) = col.res.position_of(chain_act) else { return false };
+        let h = self.history(col, bf, &[], tips);
+        self.v.acknowledgements(&x.id).into_iter().any(|a| Self::own_key(col, a) && h.acts.contains(&a.id))
+    }
+
+    /// Whether an obligation is still owed for a closing (F303): counting
+    /// only the receipts, claims and releases its line relies on.
+    fn still_owed_for_closing(&self, col: &Col, chain_act: &Hash, tips: &[KeptTip], obligation: &Hash, amount: u64) -> R<bool> {
+        if self.own_attempts_open() {
+            return self.binding(|v| {
+                let col = v.col(&col.id);
+                v.still_owed_for_closing(&col, chain_act, tips, obligation, amount)
+            });
+        }
+        let paid = self.paid_toward_if(obligation, &|r| self.relied_by_line(col, chain_act, tips, r));
+        if paid >= amount {
+            return Ok(false);
+        }
+        let released = match self.debt_released(obligation)? {
+            Some(r) => self.relied_by_line(col, chain_act, tips, self.held(&r)?),
+            None => false,
+        };
+        Ok(!released)
+    }
+
     /// Whether an obligation is still owed: neither fulfilled in full by
     /// receipts held nor ended by a creditor's release.
     fn still_owed(&self, obligation: &Hash, amount: u64) -> R<bool> {
@@ -7696,7 +7756,16 @@ impl<'a> AgreementsView<'a> {
             } else {
                 self.debtors(&x.id)?.is_some_and(|d| d.contains(&col.id))
             };
-            if owes && self.still_owed(&x.id, o.amount.value)? {
+            let still = match line {
+                None => self.still_owed(&x.id, o.amount.value)?,
+                // F303: for a closing, a receipt or release of another
+                // identity counts only where an act of the collective in the
+                // closing's history acknowledges it, or the receipt is the
+                // collective's own; one nobody acknowledged is shown (the
+                // view's ordinary `owes`), and the closing waits.
+                Some((c, t)) => self.still_owed_for_closing(col, c, t, &x.id, o.amount.value)?,
+            };
+            if owes && still {
                 out.push(x.id);
             }
         }

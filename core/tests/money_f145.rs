@@ -45,10 +45,12 @@ fn note() -> Vec<(mor_core::cbor::Value, mor_core::cbor::Value)> {
     vec![(mor_core::cbor::Value::Uint(0), mor_core::cbor::Value::Text("Noted.".into()))]
 }
 
-/// A lone seller's standing offer of nothing yet (type 6, in its format):
-/// what these tests read of an offer is only who signed it.
-fn offer() -> Vec<(mor_core::cbor::Value, mor_core::cbor::Value)> {
-    agreements::Offer { under: None, sold: vec![], price: amount(5), paid: None, words: None, until: None, time: None, refund: None }.to_map()
+/// A lone seller's standing offer (type 6, in its format: since Fable's A6
+/// an act outside it is invalid): what these tests read of an offer is only
+/// who signed it.
+fn standing_offer() -> Vec<(mor_core::cbor::Value, mor_core::cbor::Value)> {
+    let sold = vec![agreements::Sold::Publication(h("a publication"))];
+    agreements::Offer { under: None, sold, price: amount(5), paid: None, words: None, until: None, time: None, refund: None }.to_map()
 }
 
 fn h(s: &str) -> Hash {
@@ -359,11 +361,11 @@ fn an_offer_is_the_payees_own_act_only_when_the_payee_signed_it() {
     let mut buyer = l.person("a buyer");
     let sid = seller.id;
     let v1 = l.pointer(&mut seller, sid, 1, None, "the seller's node");
-    let offer = l.act(&mut seller, mirs().agreements, agreements::types::STANDING_OFFER, offer(), None, None, None);
+    let offer = l.act(&mut seller, mirs().agreements, agreements::types::STANDING_OFFER, standing_offer(), None, None, None);
     let d = l.debt(&mut buyer, sid, 5, v1, Some(offer), vec![]);
     l.claim(&mut buyer, sid, d, 5, "to v1", PaidAt::Flow(v1), vec![]);
     assert_eq!(l.paid(&d), 5);
-    let not_hers = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, offer(), None, None, Some(vec![Ref::Act(v1)]));
+    let not_hers = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, standing_offer(), None, None, Some(vec![Ref::Act(v1)]));
     assert_eq!(l.view().pointer_holding(&not_hers, &sid).unwrap().pointers, Vec::<Hash>::new());
     let d2 = l.debt(&mut buyer, sid, 5, v1, Some(not_hers), vec![]);
     l.claim(&mut buyer, sid, d2, 5, "d2 to v1", PaidAt::Flow(v1), vec![]);
@@ -423,7 +425,7 @@ fn a_payee_accepting_anothers_offer_is_paid_by_what_its_acceptance_holds() {
     let mut buyer = l.person("a buyer posting a bounty");
     let rid = remixer.id;
     let v1 = l.pointer(&mut remixer, rid, 1, None, "the remixer's node");
-    let bounty = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, offer(), None, None, Some(vec![Ref::Act(v1)]));
+    let bounty = l.act(&mut buyer, mirs().agreements, agreements::types::STANDING_OFFER, standing_offer(), None, None, Some(vec![Ref::Act(v1)]));
     assert!(l.view().pointer_holding(&bounty, &rid).unwrap().pointers.is_empty(), "the buyer's citation chooses nothing");
     l.sign_citing(&mut remixer, bounty, vec![v1]);
     assert_eq!(l.view().pointer_holding(&bounty, &rid).unwrap().pointers, vec![v1]);
