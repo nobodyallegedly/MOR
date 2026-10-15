@@ -15168,6 +15168,11 @@ fn owners_story(ops: &[OwnerOp]) -> Lab {
                 // The new holder takes what is left, so the shares sum exactly.
                 holders.retain(|(h, _)| *h != ids[5]);
                 let rest = 1_000_000 - holders.iter().map(|(_, n)| *n).sum::<u64>();
+                // Every holder took up its whole share: nothing is issued, so
+                // there is no issuance to make (no owners' matter either).
+                if rest == 0 {
+                    continue;
+                }
                 holders.push((ids[5], rest));
                 holders.retain(|(_, n)| *n > 0);
                 let x = issuance(&mut lab, &cur, agreements::IssuesUnder::Offer(o), holders, &[ids[ANA], ids[BEN], ids[CY]]);
@@ -15213,13 +15218,19 @@ fn owners_verdicts(v: &mor_core::chain::Verifier, label: &Hash) -> std::collecti
 /// issuance offers and take-ups, votes on owners' matters with and without
 /// proxies) are judged, then their acts are delivered again into fresh
 /// verifiers in shuffled orders: every verdict must come out the same. Cases:
-/// `AGREEMENTS_INVARIANT_CASES` (default 16).
+/// `AGREEMENTS_INVARIANT_CASES` (default 16); the stories are drawn from
+/// `AGREEMENTS_INVARIANT_SEED` (default 1), so a run is the same everywhere
+/// and another seed explores other stories.
 #[test]
 fn owners_verdicts_do_not_depend_on_order() {
     use proptest::prelude::*;
     use proptest::test_runner::{Config, TestRunner};
     let cases = std::env::var("AGREEMENTS_INVARIANT_CASES").ok().and_then(|v| v.parse().ok()).unwrap_or(16);
-    let mut runner = TestRunner::new(Config { cases, failure_persistence: None, ..Config::default() });
+    let seed: u64 = std::env::var("AGREEMENTS_INVARIANT_SEED").ok().and_then(|v| v.parse().ok()).unwrap_or(1);
+    let mut bytes = [0u8; 32];
+    bytes[..8].copy_from_slice(&seed.to_le_bytes());
+    let rng = proptest::test_runner::TestRng::from_seed(proptest::test_runner::RngAlgorithm::ChaCha, &bytes);
+    let mut runner = TestRunner::new_with_rng(Config { cases, failure_persistence: None, ..Config::default() }, rng);
     // Stories whose votes moved the label off its founding terms: the
     // property is about something only if some do.
     let moved = std::sync::atomic::AtomicUsize::new(0);
