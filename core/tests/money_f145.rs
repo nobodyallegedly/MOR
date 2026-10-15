@@ -60,18 +60,19 @@ fn amount(value: u64) -> Amount {
 struct Lab {
     w: World,
     rail_valid: BTreeMap<Hash, PaidAt>,
-    unbound: BTreeSet<Hash>,
+    /// The rails' kinds and bindings, as their specifications declare them (F301).
+    rails: BTreeMap<Hash, mor_core::development::Rail>,
 }
 
 impl Lab {
     fn new() -> Self {
-        Lab { w: World::new(), rail_valid: BTreeMap::new(), unbound: BTreeSet::new() }
+        Lab { w: World::new(), rail_valid: BTreeMap::new(), rails: BTreeMap::new() }
     }
 
     fn view(&self) -> AgreementsView<'_> {
         let mut v = AgreementsView::new(&self.w.v, mirs());
         v.rail_valid = self.rail_valid.clone();
-        v.unbound_rails = self.unbound.clone();
+        v.rails = self.rails.clone();
         v
     }
 
@@ -437,7 +438,8 @@ fn the_payers_claim_decides_the_purpose_where_the_rail_binds_none() {
     let tip_pointer = l.pointer(&mut creditor, cid, 1, None, "the creditor's node");
     let d = l.debt(&mut debtor, cid, 500, tip_pointer, None, vec![]);
     let at = PaidAt::VaultEntry(cid, 0);
-    l.unbound.insert(rail());
+    // A push rail whose proof binds nothing (fields 11 = 1, 13 = []; F301).
+    l.rails.insert(rail(), mor_core::development::Rail { kind: mor_core::development::RailKind::Push, binds: Default::default() });
     let c = l.claim(&mut debtor, cid, d, 500, "500", at, vec![]);
     let r = l.receipt(&mut creditor, debtor.id, tip_pointer, 500, "500", Some(at));
     assert_eq!(l.paid(&d), 500, "the payer's claim decides");
@@ -459,7 +461,7 @@ fn the_payers_claim_decides_the_purpose_where_the_rail_binds_none() {
     // On a rail binding both (the payment cMIP draft 2), the commitment
     // decides: the claim carries the rail's valid answer, the receiver's
     // contrary receipt does not, and the debt is paid.
-    l.unbound.clear();
+    l.rails.clear();
     let d3 = l.debt(&mut debtor, cid, 100, tip_pointer, None, vec![]);
     l.claim(&mut debtor, cid, d3, 100, "100", at, vec![]);
     l.receipt(&mut creditor, debtor.id, tip_pointer, 100, "100", None);
@@ -469,4 +471,39 @@ fn the_payers_claim_decides_the_purpose_where_the_rail_binds_none() {
     l.claim(&mut debtor, cid, d4, 100, "100 again", at, vec![]);
     l.receipt(&mut creditor, debtor.id, tip_pointer, 100, "100 again", Some(at));
     assert_eq!(l.paid(&d4), 0);
+}
+
+/// Money draft 8, rule 11, element by element (F328, Q4), with Development
+/// draft 10's field 13 (F301): on a push rail whose proof binds the payee
+/// but not the purpose, a receipt disagreeing only in what the payment
+/// fulfils leaves the payer's claim deciding (the purpose is unbound), while
+/// one disagreeing in the payee, both answered valid by the rail, makes them
+/// contradict (the payee is bound): neither counts.
+#[test]
+fn what_a_proof_binds_is_read_element_by_element_f328_q4() {
+    use mor_core::development::{Bound, Rail as RailSpec, RailKind};
+    let mut l = Lab::new();
+    let mut creditor = l.person("a creditor");
+    let mut debtor = l.person("a debtor");
+    let cid = creditor.id;
+    let tip_pointer = l.pointer(&mut creditor, cid, 1, None, "the creditor's node");
+    l.rails.insert(rail(), RailSpec { kind: RailKind::Push, binds: [Bound::Payee].into_iter().collect() });
+    let at = PaidAt::VaultEntry(cid, 0);
+    // Purpose unbound: the claim decides what the payment fulfils.
+    let d = l.debt(&mut debtor, cid, 500, tip_pointer, None, vec![]);
+    l.claim(&mut debtor, cid, d, 500, "500", at, vec![]);
+    l.receipt(&mut creditor, debtor.id, tip_pointer, 500, "500", Some(at));
+    assert_eq!(l.paid(&d), 500, "the purpose is unbound: the payer's claim decides it");
+    // Payee bound: a receipt naming another payee, both answered valid,
+    // contradicts the claim, and neither counts.
+    let mut other = l.person("another payee");
+    let d2 = l.debt(&mut debtor, cid, 200, tip_pointer, None, vec![]);
+    l.claim(&mut debtor, cid, d2, 200, "200", at, vec![]);
+    let oid = other.id;
+    let r = l.receipt(&mut other, debtor.id, d2, 200, "200", Some(at));
+    let _ = (oid, r);
+    assert_eq!(l.paid(&d2), 0, "the payee is bound: the commitment decides, and both cannot be right");
+    // The same acts, the rail binding nothing: the payer's claim decides.
+    l.rails.insert(rail(), RailSpec { kind: RailKind::Push, binds: Default::default() });
+    assert_eq!(l.paid(&d2), 200, "unbound, the claim decides");
 }

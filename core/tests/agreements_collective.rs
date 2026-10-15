@@ -6369,7 +6369,7 @@ fn a_superseded_claim_settles_on_each_holders_chain() {
     };
     fn pview(w: &World, push: Hash) -> AgreementsView<'_> {
         let mut v = AgreementsView::new(&w.v, mirs());
-        v.push_rails.insert(push);
+        v.rails.insert(push, push_rail_spec());
         v
     }
     // On the push rail, before the change: each holder's receipt.
@@ -8148,7 +8148,7 @@ fn a_purchase_following_either_branch_counts() {
     let ra = receipt(&mut w, &mut ana);
     receipt(&mut w, &mut ben);
     let mut v = AgreementsView::new(&w.v, mirs());
-    v.push_rails.insert(push);
+    v.rails.insert(push, push_rail_spec());
     assert_eq!(v.version_in_force(&deal).unwrap(), deal, "forked: the reference");
     assert_eq!(v.purchase(&ra).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
 }
@@ -8567,7 +8567,7 @@ fn f188_a_buyer_under_a_tangled_version_stays_protected() {
     let ra = receipt(&mut l, 0);
     receipt(&mut l, 1);
     let mut v = AgreementsView::new(&l.w.v, mirs());
-    v.push_rails.insert(push);
+    v.rails.insert(push, push_rail_spec());
     assert_eq!(v.version_in_force(&d).unwrap(), d, "tangled: the reference");
     assert_eq!(v.purchase(&ra).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
 }
@@ -13590,4 +13590,13 @@ fn f284_in_a_collective_the_vows_signer_holds_its_stake() {
             assert!(a.invalid.as_deref().is_some_and(|r| r.contains("F284")), "{name}: {:?}", a.invalid);
         }
     }
+}
+
+
+/// A push rail's specification as these tests read it (F301): field 11 is
+/// 1, and its proof binds the payee and the purpose (field 13 [0, 1]), as
+/// the tests' push rails did before F301 made both fields of the spec.
+fn push_rail_spec() -> mor_core::development::Rail {
+    use mor_core::development::{Bound, Rail, RailKind};
+    Rail { kind: RailKind::Push, binds: [Bound::Payee, Bound::Purpose].into_iter().collect() }
 }

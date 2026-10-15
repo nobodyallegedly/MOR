@@ -286,7 +286,7 @@ impl<'a> AgreementsView<'a> {
         claims.into_iter().find_map(|id| {
             let h = self.v.get(&id)?;
             let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return None };
-            if self.rail_invalid.contains(&id) || self.unbound_rails.contains(&c.rail) {
+            if self.rail_invalid.contains(&id) || !self.rail_binds(&c.rail, crate::development::Bound::Purpose) {
                 return None;
             }
             match c.payer(&h.act.outside.signer?) {
@@ -346,7 +346,7 @@ impl<'a> AgreementsView<'a> {
                 .filter(|id| {
                     let Some(h) = self.v.get(id) else { return false };
                     let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return false };
-                    !self.rail_invalid.contains(id) && !self.unbound_rails.contains(&c.rail) && h.act.outside.signer.is_some_and(|s| c.payer(&s) == Payer::Identity(*buyer))
+                    !self.rail_invalid.contains(id) && self.rail_binds(&c.rail, crate::development::Bound::Purpose) && h.act.outside.signer.is_some_and(|s| c.payer(&s) == Payer::Identity(*buyer))
                 })
                 .collect(),
             None => vec![*sale],

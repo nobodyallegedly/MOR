@@ -281,7 +281,7 @@ type Rails = (BTreeSet<Hash>, BTreeSet<Hash>);
 
 fn verdicts(v: &Verifier, rails: &Rails) -> BTreeMap<Hash, String> {
     let mut lv = AgreementsView::new(v, mirs());
-    lv.push_rails = rails.0.clone();
+    lv.rails = rails.0.iter().map(|r| (*r, push_rail_spec())).collect();
     lv.rail_invalid = rails.1.clone();
     let mut out = BTreeMap::new();
     let ids: Vec<Hash> = v.held_acts().map(|h| h.id).collect();
@@ -2381,7 +2381,7 @@ impl DealWorld {
 
     fn view(&self) -> AgreementsView<'_> {
         let mut lv = AgreementsView::new(&self.w.v, mirs());
-        lv.push_rails.insert(push_rail());
+        lv.rails.insert(push_rail(), push_rail_spec());
         lv.rail_invalid = self.wrong.clone();
         lv
     }
@@ -2733,7 +2733,7 @@ impl DealWorld {
             _ => None,
         };
         let mut bare = AgreementsView::new(&self.w.v, mirs());
-        bare.push_rails.insert(push_rail());
+        bare.rails.insert(push_rail(), push_rail_spec());
         for (answers, lv) in [(true, &lv), (false, &bare)] {
             let mut groups: BTreeMap<(Hash, u8), Vec<String>> = BTreeMap::new();
             let mut lines: BTreeMap<(Hash, u8), BTreeSet<Hash>> = BTreeMap::new();
@@ -3717,7 +3717,7 @@ fn it3_the_payments_claim_decides() {
         }
     }
     let mut bare = AgreementsView::new(&d.w.v, mirs());
-    bare.push_rails.insert(push_rail());
+    bare.rails.insert(push_rail(), push_rail_spec());
     for (x, _) in &d.push {
         assert_eq!(bare.purchase(x).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Unrecorded, "no rail answer yet");
     }
@@ -4050,4 +4050,12 @@ fn of6b_a_pointer_whose_taking_on_a_fork_left_out_counts_for_payments_already_ma
     ];
     let cw = run_col(&shape, &ops, 0);
     assert_eq!(cw.check(), Ok(()));
+}
+
+
+/// A push rail's specification (F301): field 11 is 1, its proof binding the
+/// payee and the purpose, as the push rails of these tests did.
+fn push_rail_spec() -> mor_core::development::Rail {
+    use mor_core::development::{Bound, Rail, RailKind};
+    Rail { kind: RailKind::Push, binds: [Bound::Payee, Bound::Purpose].into_iter().collect() }
 }

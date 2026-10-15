@@ -75,19 +75,24 @@ pub struct AgreementsView<'a> {
     /// verifier states what it holds, as it states `keeper_recorded` to
     /// Identity.
     pub keeper_logs: BTreeMap<Hash, Vec<Hash>>,
-    /// The rail Modules this verifier read, in their specifications, as
-    /// push rails (F128, W4): rails on which the payer pays an address with
-    /// no request from the payee's side committing to each payment. Every
-    /// other rail is a request rail, as every rail Module under the payment
-    /// cMIP draft 2 is: the payee's side commits to the payment, and to the
-    /// claim a purchase names, before it is made. Like `ext_layers`, a fact
-    /// the caller states from the specifications it holds.
-    pub push_rails: BTreeSet<Hash>,
+    /// The rail Modules this verifier adopted, each with its kind and what
+    /// its proof binds, read from its specification, fields 11 and 13
+    /// (Development draft 10, F301; the payment cMIP's `Modules::rails`),
+    /// never from a Module's code. A push rail (F128, W4) is one on which
+    /// the payer pays an address with no request from the payee's side; a
+    /// request rail's side commits to the payment, and to the claim a
+    /// purchase names, before it is made. What the proof binds is read
+    /// element by element (Money rule 11; F328, Q4). *A rail not here was
+    /// not adopted: the payment cMIP gives no answer for its payments, so
+    /// none of them is in [`Self::rail_valid`], and nothing here decides
+    /// on it; the defaults below (a request rail binding everything) are
+    /// never reached for a payment that counts.*
+    pub rails: BTreeMap<Hash, crate::development::Rail>,
     /// Receipts and claims whose rail proof the caller checked under the
     /// payment cMIP and found not to carry the commitment recomputed from
     /// them (F131, IT3): on a payment whose receipts name different claims,
     /// those naming a claim the payment did not commit to. The rail's
-    /// answer, like `push_rails`, a fact the caller states: the core reads
+    /// answer, like `rail_valid`, a fact the caller states: the core reads
     /// no rail.
     pub rail_invalid: BTreeSet<Hash>,
     /// Receipts and claims whose rail proof the caller checked under the
@@ -120,7 +125,7 @@ pub struct AgreementsView<'a> {
     /// clock and the on-chain rail): on such a clock, rule 15 compares the
     /// anchors of the payer's valid claims only, the payment's block among
     /// them, and a pending claim's anchor counts for nothing (F203 applies
-    /// on every other clock). Like `push_rails`, a fact the caller states
+    /// on every other clock). Like `rail_valid`, a fact the caller states
     /// from the specifications it holds.
     pub rail_clocks: BTreeSet<(Hash, Hash)>,
     /// Absence proof (rule 51, task "Absence proof"; F172, F178 item 12):
@@ -142,18 +147,10 @@ pub struct AgreementsView<'a> {
     /// caller states them. Money rule 15 reads them on the clock the
     /// payee declared (F169, F176 to F181).
     pub anchored: crate::envelopes::anchoring::Anchors,
-    /// The rail Modules this verifier read, in their specifications, as
-    /// binding no payee or purpose (Money rule 10, F151): their proof
-    /// commits to neither the payee nor what the payment fulfils. Every
-    /// other rail binds both, as every rail Module under the payment cMIP
-    /// draft 2 does, its commitment carrying them. The field a rail
-    /// Module's specification declares it in is open (F140 item 1), so,
-    /// like `push_rails`, a fact the caller states.
-    pub unbound_rails: BTreeSet<Hash>,
     /// The specifications this verifier read as the relay transport cMIP,
     /// draft 3 or later, whose act type 0 is a relay's delivery record
     /// (F184): `[locked hash, size, client's nonce]`, signed by the relay's
-    /// operator. Like `push_rails`, a fact the caller states: the core reads
+    /// operator. Like `rail_valid`, a fact the caller states: the core reads
     /// no cMIP. A delivery record counts as evidence for a role share only
     /// where the payer's claim acknowledges it (Agreements rules 19, 22).
     pub delivery_records: BTreeSet<Hash>,
@@ -536,7 +533,7 @@ impl<'a> AgreementsView<'a> {
             mirs,
             ext_layers: BTreeMap::new(),
             keeper_logs: BTreeMap::new(),
-            push_rails: BTreeSet::new(),
+            rails: BTreeMap::new(),
             rail_invalid: BTreeSet::new(),
             rail_valid: BTreeMap::new(),
             rail_pending: BTreeSet::new(),
@@ -544,7 +541,6 @@ impl<'a> AgreementsView<'a> {
             rail_clocks: BTreeSet::new(),
             absence_accepted: BTreeSet::new(),
             anchored: Default::default(),
-            unbound_rails: BTreeSet::new(),
             delivery_records: BTreeSet::new(),
             judges_lapsed: BTreeSet::new(),
             attempts_failed: BTreeSet::new(),
@@ -596,7 +592,7 @@ impl<'a> AgreementsView<'a> {
             mirs: self.mirs.clone(),
             ext_layers: self.ext_layers.clone(),
             keeper_logs: self.keeper_logs.clone(),
-            push_rails: self.push_rails.clone(),
+            rails: self.rails.clone(),
             rail_invalid: self.rail_invalid.clone(),
             rail_valid: self.rail_valid.clone(),
             rail_pending: self.rail_pending.clone(),
@@ -604,7 +600,6 @@ impl<'a> AgreementsView<'a> {
             rail_clocks: self.rail_clocks.clone(),
             absence_accepted: self.absence_accepted.clone(),
             anchored: self.anchored.clone(),
-            unbound_rails: self.unbound_rails.clone(),
             delivery_records: self.delivery_records.clone(),
             judges_lapsed: self.judges_lapsed.clone(),
             attempts_failed: self.attempts_failed.clone(),
@@ -5231,7 +5226,7 @@ impl<'a> AgreementsView<'a> {
     /// proof the caller checked and found to carry the commitment
     /// recomputed from it, its signer, or the anonymous key it carries, as
     /// payer ([`Self::rail_valid`]), on a rail whose commitment binds the
-    /// payer (not [`Self::unbound_rails`]), acknowledging it (Envelopes rule
+    /// payer ([`Self::rail_binds`]), acknowledging it (Envelopes rule
     /// 4a), or naming it as its referral's evidence (Money, the claim's
     /// field 6: "the payer's client for a referral", rule 22); never the
     /// payer a receipt names,
@@ -5279,7 +5274,7 @@ impl<'a> AgreementsView<'a> {
                 && self.payers_claim(c)
                 && self.rail_valid.contains_key(&c.id)
                 && !self.rail_invalid.contains(&c.id)
-                && !self.unbound_rails.contains(&cl.rail)
+                && self.rail_binds(&cl.rail, crate::development::Bound::Purpose)
                 && (c.inside.acks.iter().flatten().any(|a| a == evidence) || cl.referral.as_ref().is_some_and(|r| &r.evidence == evidence)))
             .then(|| self.payment_of(&cl.proof))
         };
@@ -6931,7 +6926,7 @@ impl<'a> AgreementsView<'a> {
     /// payee and purpose, the payment's own commitment decides, so only the
     /// act carrying the rail's valid answer counts, and where both carry
     /// one (which a rail binding both cannot give) neither does; on a rail
-    /// binding neither ([`Self::unbound_rails`]), the payer's claim decides
+    /// binding neither (field 13 of its specification, [`Self::rails`]), the payer's claim decides
     /// what the payment fulfils, and the receiver's contrary receipt counts
     /// for nothing, shown as a dispute on the receiver.
     pub fn paid_toward(&self, obligation: &Hash) -> u64 {
@@ -7428,18 +7423,38 @@ impl<'a> AgreementsView<'a> {
     /// Money rule 10 (F151), for a payer's claim with the rail's answer,
     /// valid: whether a receipt sharing its rail proof, disagreeing with it
     /// in payee or in what the payment fulfils, keeps it from counting. On
-    /// a rail binding no payee or purpose ([`Self::unbound_rails`]), never:
+    /// a rail binding no payee or purpose (field 13 of its specification, [`Self::rails`]), never:
     /// the payer's claim decides what the payment fulfils. On a rail
     /// binding both, the commitment decides: a contrary receipt the rail
     /// refuses, or has not answered for, does not; one the rail also
     /// answered valid for contradicts it, and neither counts.
     fn claim_overruled(&self, c: &crate::money::Claim) -> bool {
-        if self.unbound_rails.contains(&c.rail) {
-            return false;
-        }
+        use crate::development::Bound;
+        // Element by element (F328, Q4): where the proof binds an element,
+        // the commitment decides it, and a contrary receipt the rail also
+        // answered valid for contradicts the claim; where it does not, the
+        // payer's claim decides that element (for the payee, the payment
+        // address the claim's rail answer was checked against, rule 4).
+        let (payee, purpose) = (self.rail_binds(&c.rail, Bound::Payee), self.rail_binds(&c.rail, Bound::Purpose));
         self.receipts_for_proof(&c.proof)
             .iter()
-            .any(|(id, r)| (r.payee != c.payee || r.fulfils != c.fulfils) && self.rail_valid.contains_key(id))
+            .any(|(id, r)| ((payee && r.payee != c.payee) || (purpose && r.fulfils != c.fulfils)) && self.rail_valid.contains_key(id))
+    }
+
+    /// Whether a rail is a push rail, as its specification's field 11 says
+    /// (F301); a rail not adopted reads as a request rail (see [`Self::rails`]).
+    pub fn is_push_rail(&self, rail: &Hash) -> bool {
+        self.rails.get(rail).is_some_and(|r| r.kind == crate::development::RailKind::Push)
+    }
+
+    /// Whether a rail's proof binds an element, as its specification's
+    /// field 13 says (F301, F328 Q4); a rail not adopted reads as binding
+    /// every element (see [`Self::rails`]). *The payer is carried in the
+    /// payment commitment with the purpose, so a proof binding the purpose
+    /// binds the payer the commitment names (F193's "a rail binding the
+    /// payer"; a reading of the build, written into Money draft 8).*
+    pub fn rail_binds(&self, rail: &Hash, b: crate::development::Bound) -> bool {
+        self.rails.get(rail).is_none_or(|r| r.binds(b))
     }
 
     /// Money rule 10 (F151), for a receipt: whether a payer's claim
@@ -8356,7 +8371,7 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
-        if !self.push_rails.contains(&rail) {
+        if !self.is_push_rail(&rail) {
             // W4 (F128), request rails: the claim the payment names is the
             // one the seller's request committed to, so a buyer cannot pay a
             // version the seller has left. Where the seller is a collective,

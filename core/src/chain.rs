@@ -225,6 +225,20 @@ pub enum LinkSeen {
     Unknown,
 }
 
+/// Whether a publication claims a specification for its creator
+/// (Development draft 10, rule 3; F328, Q9).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpecClaim {
+    /// Published, validly, by the creator the content names.
+    Claimed,
+    /// Not by that creator, or disowned by its rotation: shown as
+    /// unclaimed by it, `disputed` where another identity relied on the
+    /// publication. Fee terms and reputation MUST NOT assume consent.
+    Unclaimed { disputed: bool },
+    /// The publication's standing cannot be told.
+    Unknown,
+}
+
 /// A succession as one verifier sees it (Identity draft 13, F300).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SuccessionSeen {
@@ -896,6 +910,26 @@ impl Verifier {
             SuccessionSeen::Unknown { rotation, successor: by }
         } else {
             SuccessionSeen::Declared { rotation, successor: by }
+        }
+    }
+
+    /// Whether a publication of a specification makes it its creator's
+    /// (Development draft 10, rule 3): only when signed by the creator the
+    /// content names, and valid. A publication the creator's rotation
+    /// disowned leaves the specification unclaimed, whether another
+    /// identity relied on it or not (F328, Q9: a special case beside
+    /// Identity rule 34); one relied on is shown as disputed and claims
+    /// nothing. Unknown where the publication's standing cannot be told.
+    pub fn specification_claim(&self, publication: &Hash, creator: &Hash) -> SpecClaim {
+        let Some(p) = self.acts.get(publication) else { return SpecClaim::Unknown };
+        if p.signer() != Some(creator) {
+            return SpecClaim::Unclaimed { disputed: false };
+        }
+        match self.status(publication) {
+            Status::Valid => SpecClaim::Claimed,
+            Status::Disputed => SpecClaim::Unclaimed { disputed: true },
+            Status::Void | Status::Invalid => SpecClaim::Unclaimed { disputed: false },
+            Status::Unknown | Status::Pending | Status::Scoped => SpecClaim::Unknown,
         }
     }
 

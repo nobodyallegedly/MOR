@@ -366,9 +366,15 @@ fn a_request_may_name_more_confirmations_and_the_payment_counts_only_there() {
 fn it_declares_itself_a_request_rail_and_carries_lightnings_units() {
     let onchain = Onchain::offline();
     let ln = mor_lightning::Lightning;
-    assert_eq!(onchain.kind(), RailKind::Request);
-    assert_eq!(ln.kind(), RailKind::Request);
-    assert!(Modules::new().adopt(&onchain).adopt(&ln).push_rails().is_empty());
+    // Read from their specifications, fields 11 and 13 (F301), never from code.
+    let m = Modules::new().adopt(&onchain).adopt(&ln);
+    assert!(m.refused.is_empty(), "{:?}", m.refused);
+    for spec in [mor_onchain::spec(), mor_lightning::spec()] {
+        let r = m.rail(&spec).expect("adopted");
+        assert_eq!(r.kind, RailKind::Request);
+        assert!(r.binds(mor_payment::Bound::Payee) && r.binds(mor_payment::Bound::Purpose) && !r.binds(mor_payment::Bound::PreviousHop));
+    }
+    assert!(m.push_rails().is_empty());
     // One name per unit: a regtest satoshi on-chain is a regtest satoshi on
     // Lightning.
     use mor_lightning::bolt11::Network as LnNet;
@@ -569,4 +575,45 @@ fn payer_and_payee_build_the_same_proof_independently() {
     });
     assert_eq!(payer, payee);
     assert_eq!(rule(&a, &c, &sat(1234), &OnchainProof::decode(&payer).unwrap()), Answer::Valid);
+}
+
+/// A rail Module whose specification lacks fields 11 and 13: no
+/// specification under Development draft 10 (F301, F323), so the payment
+/// cMIP does not adopt it, and a payment naming it has no rail answer
+/// (freeze suite v28, 2.4i and 8.9).
+struct WithoutFields;
+
+impl RailModule for WithoutFields {
+    fn spec(&self) -> Hash {
+        mor_core::development::Spec::hash_of(&self.specification())
+    }
+    fn implements(&self) -> Hash {
+        mor_payment::spec()
+    }
+    fn specification(&self) -> Vec<u8> {
+        use mor_core::cbor::{encode, Value};
+        encode(&Value::Map(vec![
+            (Value::Uint(0), Value::Uint(1)),
+            (Value::Uint(1), Value::Bytes(mor_lightning::creator().to_vec())),
+            (Value::Uint(5), Value::Bytes(mor_payment::spec().to_vec())),
+            (Value::Uint(9), Value::Text("A rail Module that does not say its kind.".into())),
+        ]))
+    }
+    fn unit(&self, a: &[u8]) -> Option<Hash> {
+        mor_lightning::Lightning.unit(a)
+    }
+    fn payment(&self, p: &[u8]) -> Option<Vec<u8>> {
+        mor_lightning::Lightning.payment(p)
+    }
+    fn check(&self, i: &RailInput) -> mor_payment::Verification {
+        mor_lightning::Lightning.check(i)
+    }
+}
+
+#[test]
+fn a_rail_module_without_its_kind_and_binding_is_not_adopted_f301() {
+    let m = Modules::new().adopt(&WithoutFields);
+    assert!(m.get(&WithoutFields.spec()).is_none());
+    assert_eq!(m.refused.len(), 1);
+    assert!(m.refused[0].1.contains("fields 11 and 13"), "{}", m.refused[0].1);
 }

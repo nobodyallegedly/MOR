@@ -411,6 +411,75 @@ pub fn nfc(s: &str) -> String {
     mor_core::text::nfc(s)
 }
 
+/// A specification's content decoded whole (Development draft 10, Part
+/// three; F322, F323, F325, F301): its fields as an object, or an error
+/// beginning "no specification:" where the content is not in the format.
+/// `paymentCmip`, where given, is the payment cMIP's spec hash, whose rail
+/// Modules must carry fields 11 and 13.
+#[wasm_bindgen(js_name = decodeSpec)]
+pub fn decode_spec(content: &[u8], payment_cmip: Option<String>) -> R<JsValue> {
+    use mor_core::development::{Bound, RailKind, Spec};
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Out {
+        hash: String,
+        kind: u64,
+        creator: Option<String>,
+        tasks: Vec<(String, u64)>,
+        types: Vec<(u64, String)>,
+        dependencies: Vec<String>,
+        implements: Option<String>,
+        predecessor: Option<String>,
+        text: String,
+        layers: Vec<u64>,
+        checks_delivery: bool,
+        rail_kind: Option<&'static str>,
+        rail_binds: Option<Vec<&'static str>>,
+        rules: usize,
+        fee: bool,
+    }
+    let known = mor_core::development::Known { payment_cmip: payment_cmip.as_deref().map(unhex).transpose()? };
+    let sp = Spec::decode(content, &known).map_err(err)?;
+    to_js(&Out {
+        hash: hx(&Spec::hash_of(content)),
+        kind: sp.kind,
+        creator: sp.creator.as_ref().map(hx),
+        tasks: sp.tasks.iter().flatten().map(|(m, t)| (hx(m), *t)).collect(),
+        types: sp.types.iter().flatten().map(|t| (t.type_, t.name.clone())).collect(),
+        dependencies: sp.dependencies.iter().flatten().map(hx).collect(),
+        implements: sp.implements.as_ref().map(hx),
+        predecessor: sp.predecessor.as_ref().map(hx),
+        text: sp.text,
+        layers: sp.layers.unwrap_or_default(),
+        checks_delivery: sp.checks_delivery,
+        rail_kind: sp.rail.as_ref().map(|r| match r.kind {
+            RailKind::Request => "request",
+            RailKind::Push => "push",
+        }),
+        rail_binds: sp.rail.as_ref().map(|r| {
+            r.binds
+                .iter()
+                .map(|b| match b {
+                    Bound::Payee => "payee",
+                    Bound::Purpose => "purpose",
+                    Bound::PreviousHop => "previous hop",
+                })
+                .collect()
+        }),
+        rules: sp.rules.map_or(0, |r| r.len()),
+        fee: sp.fee.is_some(),
+    })
+}
+
+/// The spec hash of a MIR's text, as the root recomputes it (Development
+/// draft 10, rule 26, F324): `tagged_hash("MOR/spec", {0: 4, 9: text})`, the
+/// text canonical. Throws where the text is not canonical.
+#[wasm_bindgen(js_name = mirHash)]
+pub fn mir_hash(text: &str) -> R<String> {
+    mor_core::text::check(text).map_err(|e| err(format!("not canonical text: {e}")))?;
+    Ok(hx(&mor_core::development::Spec::hash_of(&mor_core::development::Spec::mir_content(text))))
+}
+
 #[wasm_bindgen(js_name = actId)]
 pub fn act_id(bytes: &[u8]) -> R<String> {
     Ok(hx(&Act::decode(bytes).map_err(err)?.id()))
@@ -1605,13 +1674,13 @@ struct SpecsIn {
     ext_layers: std::collections::BTreeMap<String, Vec<u64>>,
     #[serde(default)]
     keeper_logs: std::collections::BTreeMap<String, Vec<String>>,
-    /// The rail Modules the client read, in their specifications, as push
-    /// rails (F128, W4): the payer pays an address, with no request from
-    /// the payee's side committing to each payment. Every other rail is a
-    /// request rail. (Where the client found an act is never a condition of
-    /// validity, F128: it states it to its user as information only.)
+    /// The rail Modules the client adopted: each one's specification
+    /// content, hex (Development draft 10, Part three). Its kind and what
+    /// its proof binds, fields 11 and 13, are read from it (F301), and its
+    /// spec hash is the hash of the content; one that is no specification
+    /// of a rail Module is refused (F323).
     #[serde(default)]
-    push_rails: Vec<String>,
+    rails: Vec<String>,
     /// Receipts and claims whose rail proof the client checked under the
     /// payment cMIP and found not to carry the commitment recomputed from
     /// them (F131, IT3): wrong receipts, counting for nothing.
@@ -1678,8 +1747,11 @@ impl SpecsIn {
             view.keeper_logs
                 .insert(unhex(k)?, log.iter().map(|x| unhex(x)).collect::<R<_>>()?);
         }
-        for r in &self.push_rails {
-            view.push_rails.insert(unhex(r)?);
+        for r in &self.rails {
+            let content = hex::decode(r).map_err(err)?;
+            let spec = mor_core::development::Spec::decode(&content, &Default::default()).map_err(err)?;
+            let rail = spec.rail.ok_or_else(|| err("a rail Module's specification carries fields 11 and 13 (F301)"))?;
+            view.rails.insert(mor_core::development::Spec::hash_of(&content), rail);
         }
         for r in &self.rail_invalid {
             view.rail_invalid.insert(unhex(r)?);
