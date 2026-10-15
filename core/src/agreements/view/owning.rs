@@ -485,7 +485,7 @@ impl<'a> AgreementsView<'a> {
     /// buyer never both count: the line moves the share once. An act the
     /// line acknowledges that this verifier does not hold leaves the roster
     /// unknown (F298, F304), never silently short.
-    pub(crate) fn roster_at(&self, col: &Col, at: Line<'a>, ag: &Hash, stake: u64) -> R<Vec<(Hash, u64)>> {
+    pub(super) fn roster_at(&self, col: &Col, at: Line<'a>, ag: &Hash, stake: u64) -> R<Vec<(Hash, u64)>> {
         let t = self.terms(ag)?;
         let Some(st) = t.stakes.as_ref().and_then(|s| s.get(stake as usize)).cloned() else {
             return Ok(vec![]);

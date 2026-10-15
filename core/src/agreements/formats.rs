@@ -2160,6 +2160,11 @@ impl Terms {
     /// change rule counts among a stake's holders, an abandonment clause
     /// able to move a vanished holder's stake (rule 61; F328, Q11).
     fn check_draft_14(&self) -> R<()> {
+        // Rule 22 (F312): the collective's own part, a named receiver
+        // written null, in a collective's terms only.
+        if !self.is_collective() && self.plan.as_ref().is_some_and(|p| p.shares.iter().any(|s| matches!(s, super::open_formats::ShareRule::Own { .. }))) {
+            return Err(AgreementsError::Check("split plan: a receiver written null is the collective itself, in a collective's terms only (rule 22; new in draft 14, F312)"));
+        }
         let n = self.stakes.as_ref().map_or(0, |s| s.len()) as u64;
         let stakes_ok = |r: &Rule| r.stakes().iter().all(|s| *s < n);
         let nested = |r: &Rule| matches!(r, Rule::AllOf(rs) if rs.iter().any(|x| matches!(x, Rule::AllOf(_))));

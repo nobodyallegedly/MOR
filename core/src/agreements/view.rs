@@ -56,6 +56,10 @@ pub use owning::{TransferEval, WorkOwners};
 /// The vow grammar (F237, F240): a vow's chain, the offers naming it, and
 /// each sale's state.
 mod vows;
+/// Issuance with pre-emption (Agreements draft 14, rule 96; F309, F315, F328 Q13, Q14).
+mod issuance;
+/// Proxies (Agreements draft 14, rule 97; F327).
+mod proxies;
 pub use vows::{SaleState, VowEval, VowSale};
 /// Agreements as parties of agreements (Agreements draft 11, rule 15,
 /// F254): named by their line, consenting by their own rule, no loops, the
@@ -212,6 +216,22 @@ pub struct AgreementsView<'a> {
     /// field 17, or a lone seller's offer's field 7): ended (F219). The
     /// time reference's answer, a fact the caller states.
     pub refunds_past_terms: BTreeSet<Hash>,
+    /// Issuance offers (type 26) whose period the agreement's time
+    /// reference places passed (rule 96; new in draft 14, F309, F315): the
+    /// time reference's answer, a fact the caller states, like
+    /// `notices_lapsed`. An offer not listed is still open.
+    pub offer_periods_lapsed: BTreeSet<Hash>,
+    /// Take-ups of an issuance offer (signature acts naming it) that the
+    /// time reference places within the offer's period: the caller's
+    /// statement, read only once the offer's period has lapsed; while it
+    /// runs, every take-up is within it.
+    pub take_ups_within: BTreeSet<Hash>,
+    /// Acts of a grant key whose grant carries limits (fields 3 and 4):
+    /// whether each lies within them, an expiry on a time reference among
+    /// them, as the limits cMIP judges (Agreements draft 14, rule 80; F320):
+    /// the answer of a verifier holding that cMIP and the time reference,
+    /// stated by the caller. An act not listed is unknown (F298).
+    pub grant_limits: BTreeMap<Hash, bool>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
@@ -551,6 +571,9 @@ impl<'a> AgreementsView<'a> {
             notices_lapsed: BTreeSet::new(),
             paid_past_until: BTreeSet::new(),
             refunds_past_terms: BTreeSet::new(),
+            offer_periods_lapsed: BTreeSet::new(),
+            take_ups_within: BTreeSet::new(),
+            grant_limits: BTreeMap::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -610,6 +633,9 @@ impl<'a> AgreementsView<'a> {
             notices_lapsed: self.notices_lapsed.clone(),
             paid_past_until: self.paid_past_until.clone(),
             refunds_past_terms: self.refunds_past_terms.clone(),
+            offer_periods_lapsed: self.offer_periods_lapsed.clone(),
+            take_ups_within: self.take_ups_within.clone(),
+            grant_limits: self.grant_limits.clone(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
@@ -1544,6 +1570,9 @@ impl<'a> AgreementsView<'a> {
                 };
                 if let Some(w) = why {
                     return Ok(ChainState::Broken { reason: w.into(), act: None });
+                }
+                if let Some(w) = self.own_part_problem(col, j, &a.terms) {
+                    return Ok(ChainState::Broken { reason: w, act: None });
                 }
                 cur = Some(d.agreement);
                 continue;
@@ -2750,12 +2779,15 @@ impl<'a> AgreementsView<'a> {
                 continue;
             }
             // A stake transfer of a stake the agreement in force defines, a
-            // proxy or its revocation by a holder of such a stake: placed by
-            // this line for the owners' matters (rules 94, 97; new in draft
-            // 14, F316, F327), each judged where the owners' matters read it.
+            // proxy or its revocation by a holder of such a stake, or a
+            // holder's take-up of an issuance offer: placed by this line for
+            // the owners' matters (rules 94, 96, 97; new in draft 14, F316,
+            // F327; the take-up placed as a transfer is, a reading of the
+            // build), each judged where the owners' matters read it.
             if self.is_agreements(a, crate::agreements::open_formats::new_types::STAKE_TRANSFER)
                 || self.is_agreements(a, crate::agreements::owners::owner_types::PROXY)
                 || self.is_agreements(a, crate::agreements::owners::owner_types::PROXY_REVOCATION)
+                || self.takes_up(a)
             {
                 if !self.kept_at(col, a, Line::Record(h))? {
                     return no(e, "it registers a transfer, proxy or revocation that is not valid");
@@ -3423,7 +3455,11 @@ impl<'a> AgreementsView<'a> {
                 if let Err(w) = holders_met(&roster, &e.signers, need) {
                     return Ok(CloneState::Invalid(w));
                 }
-                missing |= !e.signers.iter().all(|s| by.contains_key(s));
+                // A holder who is no member may vote by its proxy (rule 97;
+                // new in draft 14, F327): members vote in person.
+                for s in &e.signers {
+                    missing |= !by.contains_key(s) && (parent.parties.contains(s) || !self.proxy_votes(col, at, &pid, k, stake, s, &by)?);
+                }
                 continue;
             }
             let (base, rule) = power_base(parent, &e.power).expect("checked by clone_static");
@@ -3431,7 +3467,18 @@ impl<'a> AgreementsView<'a> {
                 if let Err(w) = self.share_rule_met(col, at, &pid, parent, &rule, &e.signers, &any, own)? {
                     return Ok(CloneState::Invalid(w));
                 }
-                missing |= !e.signers.iter().all(|s| by.contains_key(s));
+                // A rule counted among a stake's holders alone (rule 69,
+                // F311): a holder who is no member may vote by its proxy
+                // (rule 97, F327).
+                let only_holders = rule.parts().iter().all(|r| matches!(r, Rule::Holders { .. }));
+                for s in &e.signers {
+                    let proxied = |st: u64| self.proxy_votes(col, at, &pid, k, st, s, &by);
+                    let by_proxy = match (only_holders, rule.holders_stake()) {
+                        (true, Some(st)) if !parent.parties.contains(s) => proxied(st)?,
+                        _ => false,
+                    };
+                    missing |= !by.contains_key(s) && !by_proxy;
+                }
                 continue;
             }
             let area = match e.power {
@@ -3464,7 +3511,15 @@ impl<'a> AgreementsView<'a> {
                 "a party it adds, or makes a holder, has not signed it (Q11)".into(),
             ));
         }
+        // Rule 96 (new in draft 14, F309, F315): an issuance, judged; the
+        // holders it scales down pro rata under the stake's holders' rule
+        // do not sign for themselves.
+        let excused = match self.issuance_at(col, at, &pid, parent, clone, &lineage, &by)? {
+            Err(state) => return Ok(state),
+            Ok(e) => e.unwrap_or_default(),
+        };
         let (losing, _) = Self::must_sign_parts(parent, clone);
+        let losing: Vec<Hash> = losing.into_iter().filter(|h| !excused.contains(h)).collect();
         // Agreements draft 14 (rules 48, 94; F307, F316): who is paid less is
         // read on the roster at this line; a holder the stake's holders'
         // rule binds, where the mark meets that rule, does not sign for itself.
@@ -3500,7 +3555,26 @@ impl<'a> AgreementsView<'a> {
         if let Some(w) = self.coverage(clone) {
             return Ok(CloneState::Invalid(w));
         }
+        let link = match at {
+            Line::Rotation(j) => j,
+            Line::Record(h) => col.pos(h).unwrap_or(usize::MAX),
+        };
+        if let Some(w) = self.own_part_problem(col, link, clone) {
+            return Ok(CloneState::Invalid(w));
+        }
         Ok(CloneState::Complete)
+    }
+
+    /// Agreements draft 14, rule 22 (F312): a plan naming the collective
+    /// itself off the top (a named receiver written null) pays that part to
+    /// the collective's vault, so it is invalid where the collective's chain,
+    /// as it stands at link `k`, declares no vault (Money rule 14a).
+    fn own_part_problem(&self, col: &Col, k: usize, t: &Terms) -> Option<String> {
+        let own = t.plan.as_ref().is_some_and(|p| p.shares.iter().any(|s| matches!(s, crate::agreements::open_formats::ShareRule::Own { .. })));
+        if own && self.vault_at(&col.id, k).is_empty() {
+            return Some("the plan names the collective off the top, paid to its vault, and the collective declares no vault (rule 22; new in draft 14, F312)".into());
+        }
+        None
     }
 
 
@@ -3558,7 +3632,7 @@ impl<'a> AgreementsView<'a> {
         }
         let lineage = self.lineage(&d.agreement)?;
         if !lineage[0].1.parties.contains(&d.party) {
-            return Ok(Err("the party declared absent is not a party of the agreement it names".into()));
+            return self.holder_declaration(h, d, &lineage);
         }
         // Field 1 is the last version, back from field 0, that the party
         // signed (rule 51), judged where the declaration is used (F172): a
@@ -3625,6 +3699,50 @@ impl<'a> AgreementsView<'a> {
         if heirs && d.outcomes.iter().any(|o| *o == outcomes::STAKE_REDISTRIBUTED || *o == outcomes::STAKE_TRANSFERRED) {
             return Ok(Err(
                 "outcome 1 or 2 against a party whose succession plan names a stake successor: its stake goes to that successor by succession (rule 89, F279)".into(),
+            ));
+        }
+        let signer = h.act.outside.signer.ok_or(AgreementsError::Check("a declaration with no signer"))?;
+        let ok = match clause.authority {
+            Authority::Named(a) => signer == a,
+            Authority::Others(_) => signer != d.party,
+        };
+        if !ok {
+            return Ok(Err("it is not signed by the authority the clause names (rule 51)".into()));
+        }
+        Ok(Ok((d, clause)))
+    }
+
+    /// Agreements draft 14, rule 85 (F313): a declaration naming a holder
+    /// of the collective's stake in itself who is no party (a departed
+    /// holder, a stake successor, a buyer), made under the clause in force
+    /// (that of the agreement it names, field 1 naming a version of its
+    /// lineage), signed by its authority, with the stake-moving outcomes
+    /// only: outcome 1 or 2 where the holder's succession plan names no
+    /// stake successor; where it names one, the stake goes by succession
+    /// (rule 89), and the declaration states outcome 0 alone, which removes
+    /// no voice (the holder has none) and moves the stake to the successor
+    /// (a reading of the build, put to Nobody, allegedly: the text names no
+    /// outcome for succession against a holder). Never 3 or 4.
+    fn holder_declaration(&self, h: &Held, d: AbsenceDeclaration, lineage: &[(Hash, Terms)]) -> R<Result<(AbsenceDeclaration, Abandonment), String>> {
+        let t = &lineage[0].1;
+        let holds = t.is_collective() && t.own_stake().is_some_and(|(_, st)| st.identified().iter().any(|(x, n)| *x == d.party && *n > 0));
+        if !holds {
+            return Ok(Err("the party declared absent is not a party of the agreement it names, nor a holder of a collective's stake in itself (rule 85, F313)".into()));
+        }
+        if !lineage.iter().any(|(v, _)| *v == d.clause) {
+            return Ok(Err("the clause it applies is not a version of the agreement it names (rule 85, F313)".into()));
+        }
+        let Some(clause) = t.abandonment.clone() else {
+            return Ok(Err("the agreement it names carries no abandonment clause".into()));
+        };
+        if !d.outcomes.iter().all(|o| clause.outcomes.contains(o)) {
+            return Ok(Err("an outcome the clause does not allow (rule 51)".into()));
+        }
+        let heirs = t.succession.iter().flatten().any(|s| s.party == d.party && s.stakes.as_ref().is_some_and(|v| !v.is_empty()));
+        let allowed: &[u64] = if heirs { &[outcomes::VOICE_REMOVED] } else { &[outcomes::STAKE_REDISTRIBUTED, outcomes::STAKE_TRANSFERRED] };
+        if !d.outcomes.iter().all(|o| allowed.contains(o)) {
+            return Ok(Err(
+                "against a holder who is no party, only the stake-moving outcomes: succession where its plan names a stake successor, else outcome 1 or 2; never 3 or 4 (rule 85; new in draft 14, F313)".into(),
             ));
         }
         let signer = h.act.outside.signer.ok_or(AgreementsError::Check("a declaration with no signer"))?;
@@ -4970,6 +5088,16 @@ impl<'a> AgreementsView<'a> {
             if acked(&|_| true)? {
                 return Ok(Backing::Binds { grant: gh.id });
             }
+            // Agreements draft 14 (F320): a verifier holding the limits
+            // cMIP, and the time reference an expiry is judged against,
+            // states whether the act lies within them; outside them (an
+            // expiry past, among them), it is not backed, the grant quiet
+            // and still revocable.
+            match self.grant_limits.get(act) {
+                Some(true) => return Ok(if ended { Backing::Binds { grant: gh.id } } else { Backing::Backed { grant: gh.id } }),
+                Some(false) => return not("the act lies outside the limits the grant's limits cMIP sets (fields 3 and 4), an expiry past among them: not backed, the grant quiet and still revocable (rule 80; new in draft 14, F320)"),
+                None => {}
+            }
             return Ok(Backing::Unknown {
                 grant: gh.id,
                 reason: "the grant carries limits (fields 3 and 4, rule 18d) under a cMIP this verifier does not implement: whether the act lies within them cannot be read".into(),
@@ -5195,6 +5323,30 @@ impl<'a> AgreementsView<'a> {
     /// mark (rules 44c, 45a), computed before anything is signed. Err: why
     /// there is no such count: the collective broken, ended, or its record
     /// forked, or the power none of that agreement's.
+    /// Agreements draft 14, rule 84 (F305): the nominee for `party`'s seat
+    /// in `collective`, where the agreement in force names no succession
+    /// plan for it: the successor of a succession the party declared under
+    /// Identity and the successor confirmed (Identity, F300). A nomination
+    /// only, approved under the constitutional change rule (rule 64), the
+    /// successor signing the clone that seats it; never an automatic seat,
+    /// and the stake stays with the party's identity. A declared succession
+    /// the successor never confirmed nominates nobody; one whose
+    /// confirmation's standing this verifier cannot tell is unknown (F298).
+    pub fn nominee(&self, collective: &Hash, party: &Hash) -> R<Option<Hash>> {
+        let Some(cur) = self.current(collective)? else {
+            return Ok(None);
+        };
+        let t = self.terms(&cur.agreement)?;
+        if !t.parties.contains(party) || t.succession.iter().flatten().any(|s| s.party == *party) {
+            return Ok(None);
+        }
+        Ok(match self.v.succession(party) {
+            crate::chain::SuccessionSeen::Confirmed { successor, .. } => Some(successor),
+            crate::chain::SuccessionSeen::Unknown { rotation, .. } => return Err(AgreementsError::Missing(rotation)),
+            _ => None,
+        })
+    }
+
     pub fn next_voices(&self, collective: &Hash, power: &Power, leaving: &[Hash]) -> R<Result<NextVoices, String>> {
         let col = self.col(collective);
         if col.res.links.is_empty() {
@@ -5890,6 +6042,12 @@ pub struct SplitEval {
     /// split service; a receiver the plan does not already pay; a record
     /// not signed by the measurer, or not of the metric's Module).
     pub metric_problems: Vec<String>,
+    /// Agreements draft 14, rule 22 (F312): payments of the collective's own
+    /// part (a receipt or claim naming this split, paid to the collective)
+    /// that the rail shows paid anywhere but an entry of the collective's
+    /// vault: to its flow pointer, its split service's address, which
+    /// would split it again. Any entry breaks the plan.
+    pub own_not_to_vault: Vec<Hash>,
 }
 
 /// A break in a split service's tally chain for a stake (rule 15a, rule
@@ -6454,6 +6612,32 @@ impl<'a> AgreementsView<'a> {
             return Ok(Some(format!(
                 "not done: it is not sealed to every member ({missing} missing), nor public, so it binds no one (F126)"
             )));
+        }
+        // Agreements draft 14, rule 57 (F318): where the collective's stake
+        // in itself has holders who are no members, an act in its Money
+        // lane is done only once sealed to every holder of that stake too
+        // (a holder that is an agreement: every party of its version in
+        // force; a collective: the collective, F328 Q13), the holders those
+        // the agreement in force and the transfers its line placed name.
+        if x.inside.spec == self.mirs.money && x.act.outside.content_key.is_none() {
+            if let Some((i, st)) = t.own_stake() {
+                let roster = match self.collective_of(agreement)? {
+                    Some(c) => {
+                        let col = self.col(&c);
+                        self.roster_at(&col, Line::Record(x), agreement, i as u64)?
+                    }
+                    None => st.identified(),
+                };
+                if roster.iter().any(|(h, _)| !t.parties.contains(h)) {
+                    for (h, _) in &roster {
+                        if !self.reaches_holder(x, h)? {
+                            return Ok(Some(
+                                "not done: an act in the Money lane of a collective whose stake in itself has holders who are no members is sealed to every holder of that stake, or public; it is not, so it binds no one (rule 57; new in draft 14, F318, F328)".into(),
+                            ));
+                        }
+                    }
+                }
+            }
         }
         Ok(None)
     }
@@ -9803,7 +9987,10 @@ impl<'a> AgreementsView<'a> {
             if let Some(i) = p.metric {
                 return matches!(plan.shares.get(i as usize), Some(super::open_formats::ShareRule::Metric { .. }));
             }
-            plan.receivers().contains(&p.receiver)
+            // The collective's own part off the top (rule 22, F312): paid
+            // to the collective itself.
+            let own = plan.shares.iter().any(|x| matches!(x, super::open_formats::ShareRule::Own { .. }));
+            plan.receivers().contains(&p.receiver) || (own && collective == Some(p.receiver))
         };
         for p in &s.payouts {
             if p.role.is_some() && plan.is_some() && !planned(p) && !unplanned.contains(&p.receiver) {
@@ -10061,6 +10248,22 @@ impl<'a> AgreementsView<'a> {
             },
             _ => None,
         };
+        // Rule 22 (F312): the collective's own part paid to its vault.
+        let mut own_not_to_vault = vec![];
+        if let (Some(c), true) = (collective, t.plan.as_ref().is_some_and(|p| p.shares.iter().any(|x| matches!(x, super::open_formats::ShareRule::Own { .. })))) {
+            if s.payouts.iter().any(|p| p.receiver == c && p.stake.is_none()) {
+                for r in self.v.signed_by(&c) {
+                    if r.inside.spec != self.mirs.money || !self.valid(&r.id) {
+                        continue;
+                    }
+                    let Ok(Fin::Receipt(x)) = Fin::decode(r.inside.type_, &r.inside.payload) else { continue };
+                    let names = x.fulfils == *id || r.inside.objects.iter().flatten().any(|o| o.chain == *id || o.predecessor == *id);
+                    if names && x.payee == c && self.rail_valid.get(&r.id).is_some_and(|at| !matches!(at, crate::money::PaidAt::VaultEntry(v, _) if *v == c)) {
+                        own_not_to_vault.push(r.id);
+                    }
+                }
+            }
+        }
         Ok(SplitEval {
             id: *id,
             split: s,
@@ -10081,6 +10284,7 @@ impl<'a> AgreementsView<'a> {
             unequal_roles,
             fees_skipped,
             metric_problems,
+            own_not_to_vault,
         })
     }
 

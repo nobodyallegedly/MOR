@@ -1376,6 +1376,8 @@ A member, who holds the power or chose it by signing the constitution, is left t
 
 *Stated cost (F310):* *a members' collective with departed holders and no holders' rule waits for their signatures on its sales and releases of works, and on a fork whose successors' plans pay them less, as its fee changes already do. "Shared ownership means shared fruits" (Nobody, allegedly).*
 
+**Prices are no owners' matter** (new in draft 14, F329 Q1; Fable's aggregated review, G1). The price of what a collective sells, and whether it publishes at all, are the collective's business, decided under its areas and lanes (rules 36, 60). Owners who have no say are protected by sight (rule 57, F318) and by the exit (rule 10), never by a vote on prices. *Stated cost (F329):* *the members can offer every work at a token price, or at none; offers are public (F215), so the owners see it, and can leave. A vote on every price is not one owners could cast.*
+
 #### Rule 96 (new in draft 14). Issuance, with pre-emption
 
 *In short: a stake may take new owners, every existing share shrinking in the same proportion, if its owners agree by their holders' rule; each existing owner is first offered its own proportion on the same terms.*
@@ -1388,7 +1390,7 @@ A member, who holds the power or chose it by signing the constitution, is left t
 
 **What the core checks** (new in draft 14, F315):
 
-- **the offer reached each holder**: it is public, or sealed to that holder among its recipients (Envelopes, `to`), as a declaration must reach the member it names (F189, 8). **An offer that did not reach a holder starts no period for that holder**;
+- **the offer reached each holder**: it is public, or sealed to that holder among its recipients (Envelopes, `to`), as a declaration must reach the member it names (F189, 8); where a holder is itself an agreement, it is public (rule 57; F329 Q4). **An offer that did not reach a holder starts no period for that holder**;
 - **the offer names its period on the agreement's time reference** (terms field 6, or field 2's task 10); terms naming none carry no issuance offer, which counts for nothing under them;
 - **the period's lapse is the time reference's answer**, a fact the caller states, as for every time reference (rule 33, a notice's deadline): the core reads no clock.
 
@@ -1398,7 +1400,9 @@ A member, who holds the power or chose it by signing the constitution, is left t
 - for every holder of the stake the offer had to reach (the roster where the offer is placed on the collective's chain, rule 94), the offer reached it, and it either took up its proportion within its period, or its period lapsed;
 - each holder that took up receives exactly its proportion of the new shares, and the rest goes to the offer's new holders in the offer's shares.
 
-A holder the offer did not reach had no period: an issuance naming that offer stays a draft, and the collective makes a new offer, reaching every holder, and an issuance naming it. **A holder takes up** by a signature act naming the offer (type 1), within its period, placed by the collective's line as a holder's vote is (rule 94), with its payment where the offer names a price, a Money receipt or claim naming the take-up (Money field 5), as a transfer's payment fulfils it (mechanic, draft 14's). A transfer placed after the offer passes the seller's place in it to the buyer, the new holder inheriting the full position (rule 10; mechanic, draft 14's).
+A holder the offer did not reach had no period: an issuance naming that offer stays a draft, and the collective makes a new offer, reaching every holder, and an issuance naming it. **A holder takes up** by a signature act naming the offer (type 1), within its period, with its payment where the offer names a price, a Money receipt or claim naming the take-up (Money field 5), as a transfer's payment fulfils it (mechanic, draft 14's), together at least its exact proportion of the price (mechanic, the build's). **A take-up the agreement's time reference places within the period counts, placed by the collective's line or not** (new in draft 14, F329 Q3; Fable's aggregated review, G3): a holder's protection is to anchor it, as a buyer anchors a transfer (rule 10); without an anchor, the time reference judges it where the collective's line placed it (an act of the collective acknowledging it, or a record naming it in field 3). Whether it lies within the period is the time reference's answer, which the caller states (rule 33). *Without it, the members issuing would decide whether an owner's paid take-up was placed in time.*
+
+**The same terms are the offer's own** (new in draft 14, Fable's aggregated review, G7; mechanic): one offer, its price and its words (fields 5 and 6), for every holder and every new holder; the core compares nothing beyond the offer. A transfer placed after the offer passes the seller's place in it to the buyer, the new holder inheriting the full position (rule 10; mechanic, draft 14's).
 
 **Any other form of issuance is a cMIP's, within this one** (F309): staged issuance, vesting, other offer terms. A cMIP may offer more as a term of the issuance (F315), never less: it is built within the pre-emption, never around it.
 
@@ -1419,7 +1423,7 @@ A holder the offer did not reach had no period: an issuance naming that offer st
 - the collective's line placed the proxy (an act of the collective acknowledging it, or a record naming it in field 3) before the line that puts the version in force;
 - no revocation of it was placed before that line;
 - it is the holder's latest proxy on the stake so placed: one proxy per owner per stake at a time, a new one replacing the old;
-- **the holder signed nothing on that version: the owner's own vote always beats the proxy's.**
+- **the holder placed no signature act of its own on that version at or before that line: the owner's own vote always beats the proxy's** (new in draft 14, Fable's aggregated review, G5: "signed nothing" given its place). A signature of the holder's the line does not reach is no vote there, and leaves the proxy's standing.
 
 **A proxy is revocable by the holder at any time**, by a revocation of the proxy (type 28), placed as the proxy was.
 
@@ -1541,7 +1545,7 @@ Before that, even signed, it is planning. It binds no one, its signer included. 
 
 *Stated cost (F318): more recipients per sealed act, or publicity; such a collective loses privacy from its owners only. "The right of exit means little to an owner who cannot see why to leave."*
 
-**Sealed to a holder that is itself an agreement means sealed to every party of its version in force; for a collective holder, to the collective** (new in draft 14, F328). This holds wherever an act must be sealed to a holder: a collective's Money acts here, and an issuance offer (rule 96).
+**Where a holder of the stake is itself an agreement, the act is public; for a collective holder, it is sealed to the collective** (new in draft 14, F328 Q13, F329 Q4; Fable's aggregated review, G4). A deal has no line, so no verifier could tell which of its versions was in force when the act was sealed; publicity reaches every party of every version. Sealed to an agreement's own hash (its pointer, its split service's address), or to the parties of one of its versions, an act reaches no holder that is an agreement. Where a collective seals to the parties of an agreement it names elsewhere, "the version in force" is the version the act itself names. This holds wherever an act must reach a holder: a collective's Money acts here, and an issuance offer (rule 96). *F328 Q13 read "sealed to every party of its version in force"; F329 Q4 replaced it.*
 
 **Where an act is held is never a condition** (F128). An act is valid by its signatures, seals and citations wherever a verifier holds it. Relays are transport: they are where a collective's clients publish and look first, a matter of client conformance or of a cMIP (the relay transport cMIP), never of the core. A verifier states where it found each act as information only; no validity rests on it (reading 9, adjusted, F128).
 
@@ -2722,7 +2726,9 @@ Each takes effect for the collective's acts at a line. A line is a record (type 
    - a declaration of absence (type 13) a line registers, or a recovery rotation or rollback takes effect on, and the signature acts completing it that the line places (B15, B18);
    - the signature acts of the declared party that the declaration's field 1 is checked against, as the line judged them (rule 87);
    - a signature act a line names among those completing a clone, or places by acknowledging it (point 2), a holder's vote on an owners' matter and a proxy's among them (rules 94, 97);
-   - a stake transfer, a proxy and its revocation that a line registers or acknowledges (rules 94, 97; F316, F327).
+   - a stake transfer, a proxy and its revocation that a line registers or acknowledges (rules 94, 97; F316, F327);
+   - a take-up of an issuance offer that a line registers or acknowledges (rule 96; new in draft 14, F329 Q3);
+   - **a keeper's record that a rule reads to place an act (point 5), or that a version's completeness relies on (rule 47, F314)** (new in draft 14, F329 Q2; Fable's aggregated review, G2): it keeps the effect the rule gave it, whatever the keeper's later rotation disowned, shown as a dispute. *A witness chosen in advance cannot un-witness.* In MOR 1 the keeper record (type 2) has no format and no client makes one, so nothing yet rests on this.
 
    Its status under Identity is unchanged, and every client shows it as a dispute on the line. The line is the collective's own act (F109; Identity rule 34's "disowned but relied on"; "what others relied on stands"), so the record stays a line, the clone it wrote stays in force, the departure stays taken, and every later record finds its parent. An act a line never placed is judged by Identity alone (F297): disowned by its signer's rotation, it is shown, and decides nothing.
 
@@ -3245,9 +3251,9 @@ issuance-offer-payload = {
 
 Signed by the collective, with its own key: an act in its name, done once sealed to every member and on its chain (rule 57), counting as rule 60 says. Its inside names the agreement as chain and predecessor, `[[agreement, agreement]]`, followed by its chain citations, as an action cites (rule 58). *Mechanics, draft 14's:* the field numbers, the size written as the new shares' part, and the price as one amount for the whole issuance.
 
-**It reaches a holder** where it is public, or sealed to that holder among its recipients (Envelopes, `to`), as a declaration reaches the member it names (F189, 8). Its period runs for a holder only where it reached that holder. Which holders it must reach, and their proportions, is the roster where the offer is placed on the collective's chain (rule 94, F316).
+**It reaches a holder** where it is public, or sealed to that holder among its recipients (Envelopes, `to`), as a declaration reaches the member it names (F189, 8); a holder that is itself an agreement, only where it is public (rule 57; new in draft 14, F329 Q4). Its period runs for a holder only where it reached that holder. Which holders it must reach, and their proportions, is the roster where the offer is placed on the collective's chain (rule 94, F316).
 
-**A holder takes up its proportion** by a signature act naming the offer (type 1), before the point field 4 names, as the time reference judges it, placed by the collective's line as a holder's vote is (rule 94), with its payment where field 5 names a price: a Money receipt or claim fulfilling the take-up (Money field 5). A take-up takes the holder's whole proportion; a cMIP of field 7 may offer more (mechanic, draft 14's).
+**A holder takes up its proportion** by a signature act naming the offer (type 1), before the point field 4 names, as the time reference judges it, placed by the collective's line or not (rule 96; new in draft 14, F329 Q3), with its payment where field 5 names a price: a Money receipt or claim fulfilling the take-up (Money field 5). A take-up takes the holder's whole proportion; a cMIP of field 7 may offer more (mechanic, draft 14's).
 
 **It counts** only under terms naming a time reference (field 6, or field 2's task 10), in a collective (F314). Whether its point has passed is the time reference's answer, which a verifier states as it states every time reference's answer: the core reads no time reference (rule 33).
 
@@ -3478,7 +3484,7 @@ A release is complete when:
 
 **Every direct owner of the work signs, departed holders of a stake in the work included, unless the release rule says otherwise** (F124, N7).
 
-A holder that is a collective signs by its own rules. Its signature (the release itself, or its signature act on it) counts only with its consent. A release, or a collective's signature on one, is reached by the lanes of every layer a release touches, Envelopes, Money and Agreements, each lane that exists meeting its threshold (rule 60, Q7). *Two levels of ownership: the collective owns the work; its members and departed holders own shares of its income, not the work. Releasing is a business decision of the collective, like setting a price to zero; it affects every holder alike.* **And since it pays the holders of the collective's stake in itself less, by effect, it is an owners' matter** (rule 95; new in draft 14, F310, deleting draft 13's "which departed holders, passive, accept"): the release counts only once the owners of the collective's stake in itself who have no say consent, by that stake's holders' rule or each signing, placed by the collective's line.
+A holder that is a collective signs by its own rules. Its signature (the release itself, or its signature act on it) counts only with its consent. A release, or a collective's signature on one, is reached by the lanes of every layer a release touches, Envelopes, Money and Agreements, each lane that exists meeting its threshold (rule 60, Q7). *Two levels of ownership: the collective owns the work; its members and departed holders own shares of its income, not the work. Releasing is a business decision of the collective; it affects every holder alike. Unlike a price, it ends the claim for good: a price can be raised again, a release cannot be undone (new in draft 14, F329 Q1, replacing draft 13's "like setting a price to zero").* **And since it pays the holders of the collective's stake in itself less, by effect, it is an owners' matter** (rule 95; new in draft 14, F310, deleting draft 13's "which departed holders, passive, accept"): the release counts only once the owners of the collective's stake in itself who have no say consent, by that stake's holders' rule or each signing, placed by the collective's line.
 
 **A timed release** (F124, N11) names a point on the time reference of each agreement whose stake it ends, which must name one, and the identity that delivers the content keys then (field 4). The claim ends at that point, as the time reference judges it, and is undetermined where it answers undetermined. *Stated cost (N11): the keys' delivery rests on that identity; if it vanishes, the work is released in Agreements but its key may never come out; the owners may always publish the key earlier. That identity is named for the keys alone, not as a keeper in rule 37's sense, which never receives content keys as such (rule 43; F125 reading 8).*
 
@@ -3609,7 +3615,8 @@ record-payload = {
   1 => [* kept-tip],        ; the latest act of every other sequence the collective keeps
   ? 3 => [+ hash]           ; what it registers (A1, C3, C5): resignations and steppings down by parties, abandonment
                             ;   declarations removing a party's voice, and parties' own rotations, each by its act's id;
-                            ;   also stake transfers (F316), proxies and their revocations (F327) (new in draft 14)
+                            ;   also stake transfers (F316), proxies and their revocations (F327), and take-ups of an
+                            ;   issuance offer (F329 Q3; mechanic, the build's) (new in draft 14)
 }                           ; at least one of fields 0 and 3
 
 kept-tip = [ act: hash, position: uint, summary: hash ]   ; as in Identity: the act's id, its position, and the running summary including it
@@ -4140,7 +4147,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 - A collective's debt sealed to its creditor alone binds no one; sealed to every member, it binds, wherever it is held; a grantee's act sealed to its counterparty alone is not backed; terms carrying field 25 are invalid (F126, F128, rule 57): 3.
 - A collective's negotiation message is talk: it binds nothing, and need not be sealed to every member (F128, W6): 3.
 - A collective with departed holders pays a member from its reserve: the payout is done only sealed to every holder of its stake in itself, or public; sealed to members alone, it binds no one (new in draft 14, F318): 3.
-- A collective's stake in itself held in part by a deal and in part by another collective: a payout is done sealed to every party of the deal's version in force and to the other collective, or public; sealed to the deal's pointer alone, it binds no one; an issuance offer reaches those holders the same way (new in draft 14, F328): 3.
+- A collective's stake in itself held in part by a deal and in part by another collective: a payout is done only public, a holder being a deal; sealed to the deal's pointer, or to the parties of one of its versions, it binds no one; with no deal among the holders, sealed to the other collective and every other holder; an issuance offer reaches those holders the same way (new in draft 14, F328, F329 Q4): 3.
 
 #### Tiers and clones
 
