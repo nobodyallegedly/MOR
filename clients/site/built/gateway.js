@@ -1074,19 +1074,30 @@ var Verifier = class {
    * A verifier for the given Identity spec hash (`IDENTITY`; a test value
    * until the freeze). Given the Money and Agreements spec hashes too, it can
    * tell which acts may carry acknowledgements (F110); without them, an
-   * act of another specification carrying `acks` is unknown to it.
+   * act of another specification carrying `acks` is unknown to it. Given
+   * the Envelopes and Text spec hashes, which every client holds (MICS,
+   * "Client conformance"), it decodes their acts strictly (Envelopes
+   * draft 10, rule 30; Text draft 8, rule 14; F295, F296) and shows a text
+   * or Envelopes act carrying `acks` as invalid without the Money and
+   * Agreements hashes (Fable's E5, the clients' half).
    * @param {string} identity_spec
    * @param {string | null} [money_spec]
    * @param {string | null} [agreements_spec]
+   * @param {string | null} [envelopes_spec]
+   * @param {string | null} [text_spec]
    */
-  constructor(identity_spec, money_spec, agreements_spec) {
+  constructor(identity_spec, money_spec, agreements_spec, envelopes_spec, text_spec) {
     const ptr0 = passStringToWasm0(identity_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     var ptr1 = isLikeNone(money_spec) ? 0 : passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len1 = WASM_VECTOR_LEN;
     var ptr2 = isLikeNone(agreements_spec) ? 0 : passStringToWasm0(agreements_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len2 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_new(ptr0, len0, ptr1, len1, ptr2, len2);
+    var ptr3 = isLikeNone(envelopes_spec) ? 0 : passStringToWasm0(envelopes_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len3 = WASM_VECTOR_LEN;
+    var ptr4 = isLikeNone(text_spec) ? 0 : passStringToWasm0(text_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len4 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_new(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -1178,6 +1189,25 @@ var Verifier = class {
       wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
     }
   }
+  /**
+   * An identity's succession (Identity draft 13, section 8, F300):
+   * `{ state, rotation, successor, confirmation }`, `state` one of
+   * "none", "declared" (shown as declared, never followed), "confirmed"
+   * (followed), "unknown" (a confirmation held whose status cannot be
+   * told), "elsewhere" (another protocol's, confirmed as its link cMIP
+   * says).
+   * @param {string} identity
+   * @returns {any}
+   */
+  succession(identity) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_succession(this.__wbg_ptr, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
 };
 if (Symbol.dispose) Verifier.prototype[Symbol.dispose] = Verifier.prototype.free;
 function actId(bytes) {
@@ -1227,6 +1257,17 @@ function checkText(s) {
     throw takeFromExternrefTable0(ret[0]);
   }
 }
+function decodeSpec(content, payment_cmip) {
+  const ptr0 = passArray8ToWasm0(content, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  var ptr1 = isLikeNone(payment_cmip) ? 0 : passStringToWasm0(payment_cmip, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  var len1 = WASM_VECTOR_LEN;
+  const ret = wasm.decodeSpec(ptr0, len0, ptr1, len1);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
 function describeAct(bytes) {
   const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
@@ -1264,6 +1305,20 @@ function newTestChainKey(scheme) {
     throw takeFromExternrefTable0(ret[1]);
   }
   return takeFromExternrefTable0(ret[0]);
+}
+function nfc(s) {
+  let deferred2_0;
+  let deferred2_1;
+  try {
+    const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.nfc(ptr0, len0);
+    deferred2_0 = ret[0];
+    deferred2_1 = ret[1];
+    return getStringFromWasm0(ret[0], ret[1]);
+  } finally {
+    wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+  }
 }
 function openMedia(locked, key, nonce) {
   const ptr0 = passArray8ToWasm0(locked, wasm.__wbindgen_malloc);
@@ -2552,6 +2607,48 @@ var Relay = class {
 };
 var relayAt = (hint, via = {}) => new Relay(hint, via[hint] ?? hint);
 
+// ../genesis/src/lines.ts
+var IDENTITY_WORDS = {
+  [IDENTITY_TYPES.routes]: "routes: where its acts are found and where to reach it",
+  4: "a name",
+  5: "a name withdrawn",
+  6: "a link claimed",
+  7: "a link confirmed",
+  8: "a link ended",
+  14: "an escape endorsement",
+  [IDENTITY_TYPES.witness]: "a witness act: acts of others it relies on"
+};
+var ENVELOPES_WORDS = {
+  [ENVELOPES_TYPES.publication]: "a publication (a post, a picture, a file)",
+  [ENVELOPES_TYPES.keyDelivery]: "a key delivery",
+  3: "a withdrawal of a publication",
+  [ENVELOPES_TYPES.encryptionKey]: "a new encryption key, to receive sealed messages",
+  5: "a vow"
+};
+async function actsBy(signer, hints, via = {}) {
+  const out = /* @__PURE__ */ new Map();
+  for (const hint of hints) {
+    try {
+      let after;
+      for (; ; ) {
+        const page = await relayAt(hint, via).feed({ signer, after });
+        for (const it of page.items) {
+          if (it.kind !== "act") continue;
+          try {
+            const d = describeAct(it.item);
+            if (!out.has(d.id)) out.set(d.id, it.item);
+          } catch {
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  return [...out.values()];
+}
+
 // ../genesis/src/lookup.ts
 var inBrowser = () => typeof globalThis.window !== "undefined" && typeof globalThis.process === "undefined";
 function cannotReach(hint, via = {}) {
@@ -2591,7 +2688,7 @@ async function firstOf(items, ask, failed) {
   });
 }
 async function lookUp(identity, hints, via = {}, into) {
-  const v = into ?? new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  const v = into ?? new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   const asked = /* @__PURE__ */ new Set();
   const unreachable = [];
   const notTried = [];
@@ -2760,6 +2857,17 @@ async function followRef(r, hints, via = {}) {
   const there = await fetchFrom(places.filter((p) => outbox.has(p))) ?? await fetchFrom(places.filter((p) => !outbox.has(p)));
   if (there) return { ...there, how: "signer", notTried };
   throw new Error(`the act ${id} was not found at ${hints.join(", ")}, nor at its signer's routes and homes (${places.join(", ") || "none found"})`);
+}
+async function holdSequence(v, signer, l, places, via = {}) {
+  if (l.resolution.links.length < 2) return;
+  const homes = (l.resolution.homes ?? []).map((h) => h.hint);
+  const hints = [.../* @__PURE__ */ new Set([...homes, ...places])].filter((h) => !cannotReach(h, via));
+  for (const a of await actsBy(signer, hints, via)) {
+    try {
+      v.add(a);
+    } catch {
+    }
+  }
 }
 
 // ../../modules/jpeg/src/jpeg.ts
@@ -3074,7 +3182,7 @@ var Judge = class {
   constructor(hints, via) {
     this.hints = hints;
     this.via = via;
-    this.v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+    this.v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   }
   v;
   /** Addresses not tried by any lookup, each with why. */
@@ -3083,8 +3191,9 @@ var Judge = class {
   async standing(act, id, signer) {
     let l = this.looked.get(signer);
     if (!l) {
-      l = lookUp(signer, this.hints, this.via, this.v).then((x) => {
+      l = lookUp(signer, this.hints, this.via, this.v).then(async (x) => {
         for (const n of x.notTried) if (!this.notTried.some((y) => y.hint === n.hint)) this.notTried.push(n);
+        await holdSequence(this.v, signer, x, this.hints, this.via);
       });
       this.looked.set(signer, l);
     }
@@ -4288,6 +4397,7 @@ var WITHDRAWAL2 = 3;
 var NUDGE = test3("nudge cMIP, draft 2, test value until publication");
 var NUDGE_TYPES = { terms: 0, nudge: 1, pick: 2 };
 var RELEASE_MANIFEST = test3("release manifest cMIP, draft 1, test value until publication");
+var PAYMENT_CMIP = test3("payment cMIP, draft 2, test value until publication");
 
 // src/verify.ts
 async function fetchAct2(id, hints, via) {
@@ -4326,9 +4436,9 @@ async function openVersion(version2, expected, hints, via = {}) {
   if (!(spec instanceof Uint8Array) || hex(spec) !== SITE_SPECS.site) return fail2("the publication is not a site manifest");
   const named = Array.isArray(media.get(6)) ? media.get(6).filter((x) => typeof x === "string") : [];
   r.places = [...hints, ...named.filter((n) => !hints.includes(n))];
-  const v = new Verifier(SITE_SPECS.identity);
+  const v = new Verifier(SITE_SPECS.identity, void 0, void 0, SPECS.envelopes, SPECS.text);
   try {
-    await lookUp(d.signer, r.places, via, v);
+    await holdSequence(v, d.signer, await lookUp(d.signer, r.places, via, v), r.places, via);
   } catch (e) {
     return fail2(`the signer's identity was not found: ${e instanceof Error ? e.message : e}`);
   }
@@ -4598,8 +4708,18 @@ var FeedJudge = class {
     this.places = places;
     this.via = via;
   }
-  v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   looked = /* @__PURE__ */ new Map();
+  held = /* @__PURE__ */ new Map();
+  /** The signer's chain and its sequence, held before one of its acts is judged (F298). */
+  sequence(identity) {
+    let h = this.held.get(identity);
+    if (!h) {
+      h = this.lookUp(identity).then((l) => holdSequence(this.v, identity, l, this.places, this.via));
+      this.held.set(identity, h);
+    }
+    return h;
+  }
   lookUp(identity, places = this.places) {
     let l = this.looked.get(identity);
     if (!l) {
@@ -4609,7 +4729,7 @@ var FeedJudge = class {
     return l;
   }
   async standing(act, id, signer) {
-    await this.lookUp(signer);
+    await this.sequence(signer);
     this.v.add(act);
     return this.v.status(id);
   }
@@ -4628,7 +4748,7 @@ function placesFor(l, relays, scope = POST_SPECS.text) {
   for (const r of relays) if (!asked.includes(r)) asked.push(r);
   return { asked, unreachable };
 }
-async function actsBy(signer, places, via, into) {
+async function actsBy2(signer, places, via, into) {
   for (const h of places) {
     let after;
     for (; ; ) {
@@ -4763,7 +4883,7 @@ async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT, clock = n
     })
   );
   lines.sort((x, y) => authors.findIndex((a) => a.identity === x.identity) - authors.findIndex((a) => a.identity === y.identity));
-  for (const a of authors) await actsBy(a.identity, placesOf.get(a.identity), via, found);
+  for (const a of authors) await actsBy2(a.identity, placesOf.get(a.identity), via, found);
   let clockLine = null;
   let times;
   if (clock) {
@@ -5014,7 +5134,7 @@ function compose(raw) {
   step(t.replace(/\t/g, "    "), "tabs replaced with four spaces");
   step(t.replace(CONTROL, ""), "control characters removed");
   step(t.replace(NONCHAR, ""), "noncharacters removed");
-  step(t.normalize("NFC"), "normalized to NFC");
+  step(nfc(t), "normalized to NFC");
   step(t.replace(TRAILING, ""), "trailing spaces removed");
   step(t.replace(TRAILING_END, ""), "final line breaks removed");
   return { text: t, changes };
@@ -5098,7 +5218,7 @@ async function sendMessage(o) {
     act: made.act,
     key: made.key,
     recipients: [{ id: o.to.identity, key: o.to.key }],
-    random: { containerKey: randomBytes(32), nonce: randomBytes(24), eseeds: [eseed], oneTimeSecret: newSigningSecret() }
+    random: { containerKey: randomBytes(32), nonce: randomBytes(24), eseeds: [eseed] }
   });
   record({ kind: "encapsulate", publicKey: o.to.key, eseed, ct: sealedParts(sealed).capsules[0] });
   signingSecret.fill(0);
@@ -5271,7 +5391,11 @@ function writeBox(authors, places, homes) {
 // src/listing.ts
 var AGREEMENTS_TERMS = 0;
 var AGREEMENTS_SIGNATURE = 1;
-var KINDS2 = ["cMIP", "Module", "unit", "media type", "MIR", "signature scheme"];
+var KINDS2 = ["cMIP", "Module", "unit", "media type", "MIR", "signature scheme", "MICS document", "test suite", "MIP"];
+var NO_CREATOR_KINDS = [4, 6, 7];
+var MIR = 4;
+var MICS = 6;
+var MIP = 8;
 var LAYERS = {
   [MIRS.identity]: "Identity",
   [MIRS.text]: "Text",
@@ -5297,7 +5421,6 @@ var TASKS = {
   13: ["Agreements", "Work claims"],
   14: ["Agreements", "Absence proof"]
 };
-var RAIL_KINDS = ["a request rail", "a push rail binding the commitment", "a push rail binding nothing"];
 var LISTING_READ = 5e3;
 var message2 = (err) => err instanceof Error ? err.message : String(err);
 var bytes32 = (x) => x instanceof Uint8Array && x.length === 32;
@@ -5314,79 +5437,27 @@ function specHash(content) {
   const tag = sha256(new TextEncoder().encode("MOR/spec"));
   return hex(sha256(concat(tag, tag, content)));
 }
-function decodeSpec(content) {
-  let m;
+function decodeSpec2(content) {
+  let d;
   try {
-    m = cborDecode(content);
+    d = decodeSpec(content, PAYMENT_CMIP);
   } catch (e) {
-    throw new Error(`its content is not CBOR: ${message2(e)}`);
+    throw new Error(message2(e));
   }
-  if (!(m instanceof Map)) throw new Error("its content is not a map");
-  for (const k of m.keys()) if (typeof k !== "number" || !Number.isInteger(k) || k < 0 || k > 12) throw new Error(`its content has a key Development does not define (${String(k)})`);
-  const kind = m.get(0);
-  if (typeof kind !== "number" || !Number.isInteger(kind) || kind < 0 || kind >= KINDS2.length) throw new Error("its kind (field 0) is not one Development defines");
-  const creator2 = m.get(1);
-  if (creator2 !== void 0 && !bytes32(creator2)) throw new Error("its creator (field 1) is not an identity hash");
-  if (kind !== 4 && creator2 === void 0) throw new Error("it names no creator (field 1), which every kind but a MIR must");
-  const list = (k) => {
-    const v = m.get(k);
-    if (v === void 0) return [];
-    if (!Array.isArray(v) || !v.length) throw new Error(`field ${k} is not a list of at least one`);
-    return v;
-  };
-  const tasks = list(2).map((t) => {
-    if (!Array.isArray(t) || t.length !== 2 || !bytes32(t[0]) || typeof t[1] !== "number") throw new Error("a task (field 2) is not [MIR, number]");
-    return [hex(t[0]), t[1]];
-  });
-  const types = list(3).map((t) => {
-    if (!Array.isArray(t) || t.length !== 3 || typeof t[0] !== "number" || typeof t[1] !== "string" || typeof t[2] !== "string") throw new Error("an act type (field 3) is not [type, name, schema]");
-    return { type: t[0], name: t[1] };
-  });
-  const dependencies = list(4).map((d) => {
-    if (!bytes32(d)) throw new Error("a dependency (field 4) is not a hash");
-    return hex(d);
-  });
-  const impl = m.get(5);
-  if (impl !== void 0 && !bytes32(impl)) throw new Error("field 5 (implements) is not a hash");
-  const rules = list(6).length;
-  const fee = m.get(7);
-  if (fee !== void 0 && !Array.isArray(fee)) throw new Error("its fee (field 7) is not a list");
-  const pred = m.get(8);
-  if (pred !== void 0 && !bytes32(pred)) throw new Error("its predecessor (field 8) is not a hash");
-  const text2 = m.get(9);
-  if (typeof text2 !== "string") throw new Error("it holds no text (field 9)");
-  try {
-    checkText(text2);
-  } catch (e) {
-    throw new Error(`its text is not canonical text: ${message2(e)}`);
-  }
-  let layers = null;
-  if (m.has(10)) {
-    const l = list(10);
-    if (!l.every((x, i) => typeof x === "number" && Number.isInteger(x) && x >= 0 && x <= 3 && (i === 0 || x > l[i - 1]))) {
-      throw new Error("its layers (field 10) are not ascending, from 0 to 3");
-    }
-    layers = l;
-  }
-  const rail = m.get(11);
-  if (rail !== void 0 && (typeof rail !== "number" || !Number.isInteger(rail) || rail < 0 || rail > 2)) throw new Error("its rail kind (field 11) is not 0, 1 or 2");
-  const checker = m.get(12);
-  if (checker !== void 0 && checker !== true) throw new Error("field 12 is not true");
-  if (hex(cborEncode(m)) !== hex(content)) throw new Error("its content is not in canonical encoding");
   return {
-    kind,
-    creator: creator2 ? hex(creator2) : null,
-    tasks,
-    types,
-    dependencies,
-    implements: impl ? hex(impl) : null,
-    rules,
-    fee: fee !== void 0,
-    predecessor: pred ? hex(pred) : null,
-    text: text2,
-    layers,
-    rail: rail ?? null,
-    checker: checker === true
+    kind: d.kind,
+    creator: d.creator ?? null,
+    tasks: d.tasks,
+    types: d.types.map(([type, name]) => ({ type, name })),
+    dependencies: d.dependencies,
+    implements: d.implements ?? null,
+    rules: d.rules,
+    fee: d.fee,
+    predecessor: d.predecessor ?? null,
+    text: d.text,
+    layers: d.layers.length ? d.layers : null,
+    rail: d.railKind ? { kind: d.railKind, binds: d.railBinds ?? [] } : null,
+    checker: d.checksDelivery
   };
 }
 var isXtype = (s) => s.types.length > 0 && s.tasks.length === 0;
@@ -5420,7 +5491,7 @@ var Judge2 = class {
     this.places = places;
     this.via = via;
   }
-  v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements);
+  v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   looked = /* @__PURE__ */ new Map();
   lookUp(identity) {
     let l = this.looked.get(identity);
@@ -5433,7 +5504,7 @@ var Judge2 = class {
   /** Why the act is not valid for its signer's chain, or null when it is. */
   async problem(act, id, signer) {
     try {
-      await this.lookUp(signer);
+      await holdSequence(this.v, signer, await this.lookUp(signer), this.places, this.via);
     } catch (e) {
       return `its signer's identity chain could not be looked up: ${message2(e)}`;
     }
@@ -5516,7 +5587,7 @@ async function readListing(relays, gatewayRelays, via = {}) {
     if (m.spec !== MIRS.development) continue;
     const l = lines.find((x) => x.address === at.get(d.id));
     if (l) l.specs++;
-    pubs.push({ id: d.id, signer: d.signer ?? "", problem: null, hash: null, spec: null });
+    pubs.push({ id: d.id, signer: d.signer ?? "", problem: null, hash: null, spec: null, content: null });
   }
   await Promise.all(
     pubs.map(async (p) => {
@@ -5529,11 +5600,12 @@ async function readListing(relays, gatewayRelays, via = {}) {
       const content = await openAt(m, [...places, ...m.places.map(relayAddress).filter((x) => !!x)], via);
       if (!content) return void (p.problem = "its content was not found, or does not match its work hash and size");
       try {
-        p.spec = decodeSpec(content);
+        p.spec = decodeSpec2(content);
       } catch (e) {
-        return void (p.problem = `not a specification as Development defines one: ${message2(e)}`);
+        return void (p.problem = `no specification (Development draft 10, F323): ${message2(e)}`);
       }
       p.hash = specHash(content);
+      p.content = content;
     })
   );
   const byHash = /* @__PURE__ */ new Map();
@@ -5554,9 +5626,7 @@ async function readListing(relays, gatewayRelays, via = {}) {
   const listedBy = (ids) => [...new Set(ids.map((r) => pubOf.get(r)).filter((x) => !!x))];
   await Promise.all(
     releases.map(async ({ d, act, m }) => {
-      if (!d.signer) return;
-      const fallback = listedBy(d.refs ?? []);
-      if (!pubOf.size) return;
+      if (!d.signer || !byHash.size) return;
       const bad = await judge.problem(act, d.id, d.signer);
       const plain = bad ? null : await openAt(m, [...places, ...m.places.map(relayAddress).filter((x) => !!x)], via);
       let man = null;
@@ -5566,11 +5636,17 @@ async function readListing(relays, gatewayRelays, via = {}) {
       } catch {
         man = null;
       }
-      const impl = man?.get(6);
-      const implemented = Array.isArray(impl) && impl.length && impl.every(bytes32) ? impl.map((h) => hex(h)) : null;
-      const named = implemented ? listedBy(implemented) : fallback;
+      const field6 = implementsOf(man);
+      let named;
+      let problem = bad;
+      if (field6 === null) named = listedBy(d.refs ?? []);
+      else if ("specs" in field6) named = [...new Set(field6.specs.map((h) => byHash.get(h)).filter((x) => !!x))];
+      else {
+        named = listedBy(field6.publications);
+        problem ??= field6.problem;
+      }
       if (!named.length) return;
-      const r = { id: d.id, signer: d.signer, name: null, version: null, problem: bad, by: implemented ? "implements" : "reference" };
+      const r = { id: d.id, signer: d.signer, name: null, version: null, problem, by: field6 ? "implements" : "reference" };
       if (!r.problem) {
         if (man) {
           r.name = man.get(0);
@@ -5583,7 +5659,95 @@ async function readListing(relays, gatewayRelays, via = {}) {
   for (const l of byHash.values()) l.releases.sort((a, b) => Number(!!a.problem) - Number(!!b.problem) || (a.id < b.id ? -1 : 1));
   const { extensions, agreements } = await readExtensions(found, byHash, judge, lines.reduce((n, l) => n + l.private, 0));
   const xtypes = await countUse(found, byHash, judge);
-  return { relays: lines, extensions, agreements, lines: linesOf([...byHash.values()]), unverified: pubs.filter((p) => p.problem).sort((a, b) => a.id < b.id ? -1 : 1), xtypes };
+  const all = [...byHash.values()];
+  return {
+    relays: lines,
+    extensions,
+    agreements,
+    // A MIP's predecessor is what it forks, shown in the MIPs' part, never as a line of drafts (draft 11, F325).
+    lines: linesOf(all.filter((l) => l.spec.kind !== MIP)),
+    unverified: pubs.filter((p) => p.problem).sort((a, b) => a.id < b.id ? -1 : 1),
+    xtypes,
+    mips: mipsOf(all),
+    versions: versionsOf(all)
+  };
+}
+function implementsOf(man) {
+  if (!man || !man.has(6)) return null;
+  const v = man.get(6);
+  const wrong = { publications: [], problem: "its manifest's \u201Cimplements\u201D (field 6) is not as release manifest cMIP draft 4 gives it: [spec, ? hint] entries, sorted by spec hash" };
+  if (!Array.isArray(v) || !v.length) return wrong;
+  if (v.every(bytes32)) {
+    return { publications: v.map((h) => hex(h)), problem: "its manifest names publications in \u201Cimplements\u201D (field 6), as release manifest cMIP draft 3 did; under draft 4 it names spec hashes, so it is not a valid manifest" };
+  }
+  const specs = [];
+  for (const e of v) {
+    if (!Array.isArray(e) || e.length < 1 || e.length > 2 || !e.every(bytes32)) return wrong;
+    const h = hex(e[0]);
+    if (specs.length && specs[specs.length - 1] >= h) return wrong;
+    specs.push(h);
+  }
+  return { specs };
+}
+function mipsOf(all) {
+  const byHash = new Map(all.map((l) => [l.hash, l]));
+  const mips = all.filter((l) => l.spec.kind === MIP);
+  const children2 = /* @__PURE__ */ new Map();
+  for (const l of mips) {
+    const p = l.spec.predecessor;
+    if (p !== l.hash) children2.set(p, [...children2.get(p) ?? [], l]);
+  }
+  const order = (a, b) => b.total - a.total || b.direct - a.direct || (a.listed.name < b.listed.name ? -1 : a.listed.name > b.listed.name ? 1 : a.listed.hash < b.listed.hash ? -1 : 1);
+  const placed = /* @__PURE__ */ new Set();
+  const tree = (l) => {
+    placed.add(l.hash);
+    const forks = (children2.get(l.hash) ?? []).filter((c) => !placed.has(c.hash)).map(tree).sort(order);
+    return { listed: l, direct: forks.length, total: forks.reduce((n, f) => n + 1 + f.total, 0), forks };
+  };
+  const byName = (a, b) => a.listed.name < b.listed.name ? -1 : a.listed.name > b.listed.name ? 1 : a.listed.hash < b.listed.hash ? -1 : 1;
+  const roots = all.filter((l) => l.spec.kind === MIR || l.spec.kind === MICS).map(tree).sort(byName);
+  const unrooted = /* @__PURE__ */ new Map();
+  const top = (l) => {
+    const seen = /* @__PURE__ */ new Set();
+    let x = l;
+    for (; ; ) {
+      seen.add(x.hash);
+      const p = byHash.get(x.spec.predecessor);
+      if (!p || p.spec.kind !== MIP || seen.has(p.hash)) return x.hash;
+      x = p;
+    }
+  };
+  for (const l of mips.filter((x) => !placed.has(x.hash)).sort((a, b) => a.hash < b.hash ? -1 : 1)) {
+    if (placed.has(l.hash)) continue;
+    const head = byHash.get(top(l));
+    const leads = head.spec.predecessor;
+    const u = unrooted.get(leads) ?? { hash: leads, kind: byHash.get(leads)?.spec.kind ?? null, forks: [] };
+    u.forks.push(tree(head));
+    u.forks.sort(order);
+    unrooted.set(leads, u);
+  }
+  return { roots, unrooted: [...unrooted.values()].sort((a, b) => a.hash < b.hash ? -1 : 1), count: mips.length };
+}
+function versionsOf(all) {
+  const byText = /* @__PURE__ */ new Map();
+  for (const l of all) byText.set(l.spec.text, [...byText.get(l.spec.text) ?? [], l]);
+  const out = [];
+  for (const group of byText.values()) {
+    if (group.length < 2) continue;
+    const fields = group.map((l) => {
+      const c = l.publications.find((p) => p.content)?.content;
+      const m = c ? cborDecode(c) : /* @__PURE__ */ new Map();
+      return new Map([...m].map(([k, v]) => [k, hex(cborEncode(v))]));
+    });
+    const keys = [...new Set(fields.flatMap((f) => [...f.keys()]))].filter((k) => k !== 9).sort((a, b) => a - b);
+    const versions = group.map((listed, i) => ({
+      listed,
+      differs: keys.filter((k) => fields.some((f, j) => j !== i && f.get(k) !== fields[i].get(k)))
+    }));
+    versions.sort((a, b) => a.listed.hash < b.listed.hash ? -1 : 1);
+    out.push({ name: group[0].name, versions });
+  }
+  return out.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 }
 async function countUse(found, byHash, judge) {
   const xtypes = [...byHash.values()].filter((l) => isXtype(l.spec));
@@ -5654,9 +5818,14 @@ function roleWords(l, all) {
     if (known && layer === known[0]) role.push(`fills task ${n}, ${known[1]}`);
     else role.push(`fills task ${n}${layer ? ` of ${layer}` : ", of a MIR this listing does not know"}`);
   }
-  if (s.implements) {
+  if (s.implements && LAYERS[s.implements]) {
+    role.push(`works under the ${LAYERS[s.implements]} MIR`);
+    if (!s.tasks.length) layers.add(LAYERS[s.implements]);
+  } else if (s.implements) {
     const under = all.get(s.implements);
-    if (under) {
+    if (under && under.spec.kind === MIR) {
+      role.push(`works under the MIR \u201C${under.name}\u201D`);
+    } else if (under) {
       role.push(`works under the cMIP \u201C${under.name}\u201D`);
       if (!s.tasks.length) {
         for (const [mir] of under.spec.tasks) if (LAYERS[mir]) layers.add(LAYERS[mir]);
@@ -5669,8 +5838,9 @@ function roleWords(l, all) {
     );
   }
   if (s.layers) role.push(`declares, for use as an extension, the layers it acts on beyond Development: ${s.layers.map((n) => EXTENSION_LAYERS[n]).join(", ")}`);
-  if (s.rail !== null) role.push(`a rail Module: ${RAIL_KINDS[s.rail]}`);
+  if (s.rail) role.push(`a rail Module: a ${s.rail.kind} rail, its proof binding ${s.rail.binds.length ? s.rail.binds.join(", ") : "nothing"}`);
   if (s.checker) role.push("checks proofs of delivery of proven offers (field 12)");
+  if (s.kind === MIP) role.push(`a MIP: a proposal toward a successor protocol, not a rule of MOR; it forks ${all.get(s.predecessor) ? `\u201C${all.get(s.predecessor).name}\u201D` : `a specification not found here (${s.predecessor.slice(0, 12)}\u2026)`}`);
   if (!role.length) role.push(s.kind === 0 ? "names no task, defines no act type" : "declares nothing more");
   if (!layers.size && (s.types.length || s.layers || s.kind === 0 && !s.tasks.length)) layers.add("Development");
   return { kind, layer: [...layers].join(", ") || "not said", role };
@@ -5812,7 +5982,10 @@ function code(l) {
 }
 function creator(l) {
   const c = l.spec.creator;
-  if (!c) return `<div class="l-row">No creator: a MIR is the protocol itself.</div>`;
+  if (!c || NO_CREATOR_KINDS.includes(l.spec.kind)) {
+    const by2 = [...new Set(l.publications.map((p) => p.signer))].map(fp).join("; ");
+    return `<div class="l-row" data-claimed="none">No creator: a ${escapeHtml(KINDS2[l.spec.kind])} names none. Published by ${by2}.</div>`;
+  }
   if (l.claimed) return `<div class="l-row" data-claimed="yes">Creator ${fp(c)}, who published it.</div>`;
   const by = [...new Set(l.publications.map((p) => p.signer))].map(fp).join("; ");
   return `<div class="l-row l-warn" data-claimed="no">Unclaimed by its named creator ${fp(c)}: that identity's publication of it was not found. Published by ${by}.</div>`;
@@ -5874,6 +6047,34 @@ function xtypesHtml(listing) {
 <p class="l-note" id="l-use">An xtype defines act types and fills no task. Counted: the public acts of its types found on these relays, each checked in this browser; each draft is its own specification, counted on its own. <strong>Private acts are not counted</strong>: which specification a private act belongs to cannot be read. Most used first.</p>
 ${body}</section>`;
 }
+function forkedHtml(f) {
+  const l = f.listed;
+  const counts = `<span class="l-count" data-direct="${f.direct}" data-total="${f.total}">${f.direct} ${f.direct === 1 ? "MIP forks" : "MIPs fork"} it directly, ${f.total} in all</span>`;
+  const by = l.spec.creator ? `, by <span class="l-fp">${short4(l.spec.creator)}</span>${l.claimed ? "" : ' <span class="l-warn">(unclaimed by its named creator)</span>'}` : "";
+  const code2 = l.releases.some((r) => !r.problem) ? "; code released" : "";
+  const forks = f.forks.length ? `<ul class="l-terms">${f.forks.map(forkedHtml).join("")}</ul>` : "";
+  return `<li data-mip="${l.hash}" data-kind="${l.spec.kind}">${escapeHtml(KINDS2[l.spec.kind])} \u201C${escapeHtml(l.name)}\u201D, <code>${short4(l.hash)}</code>${by}${code2}: ${counts}${forks}</li>`;
+}
+function mipsHtml(listing) {
+  const m = listing.mips;
+  const roots = m.roots.length ? `<ul class="l-terms" id="l-mip-roots">${m.roots.map(forkedHtml).join("")}</ul>` : '<p class="l-none">No MIR or MICS document listed here.</p>';
+  const other = m.unrooted.map(
+    (u) => `<div class="l-row l-warn" data-unrooted="${u.hash}">Leading to ${u.kind === null ? "a specification not found here" : `a ${escapeHtml(KINDS2[u.kind] ?? `kind ${u.kind}`)}, neither a MIR, the MICS document nor a MIP`}, <code>${short4(u.hash)}</code>:</div><ul class="l-terms">${u.forks.map(forkedHtml).join("")}</ul>`
+  ).join("");
+  return `<section id="l-mips"><h2 class="l-h">MIPs, by what they fork</h2>
+<p class="l-note" id="l-mips-note">A MIP is a proposal toward a successor protocol, not a rule of MOR. Each stands under the MIR it forks, through the MIPs it follows; one proposing a new layer under the MICS document. <strong>A count of forks is of MIPs published at these relays, not of agreement with them.</strong> Most forked first.</p>
+${roots}${other}</section>`;
+}
+function versionsHtml(listing) {
+  if (!listing.versions.length) return "";
+  const groups = listing.versions.map(
+    (g) => `<article class="l-line" data-versions="${g.versions.length}">
+<div class="l-head"><span class="l-name">\u201C${escapeHtml(g.name)}\u201D: ${g.versions.length} versions of one text</span></div>
+<div class="l-row">One text, published with different other fields: each is its own specification, with its own spec hash; agreements, acts and code released name one of them, never all.</div>
+<ul class="l-terms">${g.versions.map((v) => `<li data-version="${v.listed.hash}"><code>${short4(v.listed.hash)}</code>${v.listed.spec.creator ? `, by <span class="l-fp">${short4(v.listed.spec.creator)}</span>` : ""}: differs in ${v.differs.length ? `field${v.differs.length === 1 ? "" : "s"} ${v.differs.join(", ")}` : "no field"}; ${v.listed.releases.filter((r) => !r.problem).length} releases naming it</li>`).join("")}</ul></article>`
+  );
+  return `<h3 class="l-section" id="l-versions">Versions of one text (${listing.versions.length})</h3>${groups.join("\n")}`;
+}
 function unverifiedHtml(listing) {
   if (!listing.unverified.length) return "";
   const items = listing.unverified.map(
@@ -5887,13 +6088,19 @@ function unverifiedHtml(listing) {
 function listingHtml(listing, style, reader = null) {
   const all = /* @__PURE__ */ new Map();
   for (const line of listing.lines) for (const d of line.drafts) all.set(d.listed.hash, d.listed);
+  const walk = (f) => {
+    all.set(f.listed.hash, f.listed);
+    f.forks.forEach(walk);
+  };
+  listing.mips.roots.forEach(walk);
+  for (const u of listing.mips.unrooted) u.forks.forEach(walk);
   const relays = listing.relays.map((r) => escapeHtml(r.name ?? r.address)).join(", ");
   const top = `<div class="l-any" id="l-any"><strong>One listing among any; anyone can run another.</strong>
 It decides nothing and refuses nothing: a specification is named by its own hash, not by being listed here, and is used by whoever adopts it.</div>
-<p class="l-note">Read from ${relays || "no relay"}: first the extensions the agreements there name, then the xtypes by use, then the cMIPs, Modules and other specifications published there, each checked in this browser: who signed it, and that it is what they signed. What each specification is comes from its own fields; a name is the first line of its text.</p>`;
+<p class="l-note">Read from ${relays || "no relay"}: first the extensions the agreements there name, then the xtypes by use, then the MIPs by what they fork (${listing.mips.count} listed, under ${listing.mips.roots.filter((r) => r.total).length} of the MIRs and MICS document found), then the cMIPs, Modules and other specifications published there, each checked in this browser: who signed it, and that it is what they signed. What each specification is comes from its own fields; a name is the first line of its text.${listing.versions.length ? ` ${listing.versions.length} ${listing.versions.length === 1 ? "text is" : "texts are"} published in versions, shown together.` : ""}</p>`;
   const body = listing.lines.length ? listing.lines.map((l) => lineHtml(l, all)).join("\n") : '<p class="l-none">No verified specification found at the relays read.</p>';
-  const specs = `<section id="l-specs"><h2 class="l-h">cMIPs and Modules</h2>${body}${unverifiedHtml(listing)}</section>`;
-  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${top}${extensionsHtml(listing, reader)}${xtypesHtml(listing)}${specs}</body></html>`;
+  const specs = `<section id="l-specs"><h2 class="l-h">cMIPs and Modules</h2>${body}${versionsHtml(listing)}${unverifiedHtml(listing)}</section>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${top}${extensionsHtml(listing, reader)}${xtypesHtml(listing)}${mipsHtml(listing)}${specs}</body></html>`;
 }
 
 // ../../modules/video/src/video.ts
@@ -6615,7 +6822,8 @@ function listingItem(l) {
   const a = l.agreements;
   const ag = a ? `${l.extensions} ${l.extensions === 1 ? "extension" : "extensions"} named by ${a.counted} ${a.counted === 1 ? "agreement" : "agreements"} counted, from ${a.terms} public terms verified (${a.proposed} not yet signed by every party${a.notCounted.length ? `, <span class="bad-word">${a.notCounted.length} not counted</span>` : ""}); private agreements are not counted. ` : "";
   const xt = l.xtypes ? `${l.xtypes.listed} ${l.xtypes.listed === 1 ? "xtype" : "xtypes"} listed, ${l.xtypes.acts} public ${l.xtypes.acts === 1 ? "act" : "acts"} of their types counted; private acts are not counted. ` : "";
-  return `<li>${ag}${xt}${l.verified} ${l.verified === 1 ? "specification" : "specifications"} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? "publication" : "publications"} not verified</span>` : ""}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join("")}</ul></li>`;
+  const mp = l.mips ? `${l.mips.listed} ${l.mips.listed === 1 ? "MIP" : "MIPs"} listed, under ${l.mips.under} ${l.mips.under === 1 ? "MIR" : "MIRs"}${l.mips.versions ? `; ${l.mips.versions} ${l.mips.versions === 1 ? "text" : "texts"} found in versions` : ""}. ` : "";
+  return `<li>${ag}${xt}${mp}${l.verified} ${l.verified === 1 ? "specification" : "specifications"} verified${l.unverified ? `, <span class="bad-word">${l.unverified} ${l.unverified === 1 ? "publication" : "publications"} not verified</span>` : ""}. One listing among any: it decides nothing and refuses nothing.<ul>${lines.join("")}</ul></li>`;
 }
 function filmItem(f) {
   const words = {
@@ -7173,11 +7381,12 @@ async function showListings(frame2, settings, listings) {
     try {
       const listing = await readListing(asked.relays, settings.relays);
       line.read = listing.relays;
-      line.verified = listing.lines.reduce((n, l) => n + l.drafts.length, 0);
+      line.verified = listing.lines.reduce((n, l) => n + l.drafts.length, 0) + listing.mips.count;
       line.unverified = listing.unverified.length;
       line.agreements = listing.agreements;
       line.extensions = listing.extensions.length;
       line.xtypes = { listed: listing.xtypes.length, acts: listing.xtypes.reduce((n, l) => n + (l.use?.acts ?? 0), 0) };
+      line.mips = { listed: listing.mips.count, under: listing.mips.roots.filter((r) => r.total).length, versions: listing.versions.length };
       const inner = doc.createElement("iframe");
       inner.setAttribute("sandbox", "allow-same-origin allow-popups allow-popups-to-escape-sandbox");
       inner.setAttribute("title", "Specifications");
@@ -7341,7 +7550,7 @@ async function main() {
     document.title = `${prepared.title ?? entry.path} \xB7 ${version2.manifest.name}`;
     state.acts = prepared.acts.map((id) => ({ id, standing: null, signer: null, problem: null }));
     state.writes = prepared.writes;
-    state.listings = prepared.listings.map((l) => ({ relays: l.relays, read: null, verified: 0, unverified: 0, agreements: null, extensions: 0, xtypes: null }));
+    state.listings = prepared.listings.map((l) => ({ relays: l.relays, read: null, verified: 0, unverified: 0, agreements: null, extensions: 0, xtypes: null, mips: null }));
     state.feeds = prepared.feeds.map((authors, i) => ({ authors, clock: prepared.clocks[i] ?? null, found: null, clockFound: null, order: null, shown: 0, verified: 0 }));
     state.phase = "ok";
     state.words = verifiedWords(settings, "page");
