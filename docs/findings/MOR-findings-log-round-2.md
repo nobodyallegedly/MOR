@@ -24,6 +24,10 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## Aggregated review Q5, taken by the project lead under the working practice (the MICS's vocabulary, wording; 15 October 2026)
+
+*From Fable's aggregated review (`docs/reviews/fable-step-15-aggregated.md`, G6, G8).* No rule changes; the vocabulary said once in the MICS's common conventions: *pending* is one meaning across Identity, Money and Agreements ("waiting on something outside the act"); "no line, no fork, no closing, no ending, no declaration, no specification" are one verdict ("an act claiming to be X that fails X's conditions is no X, and decides nothing as X"); *counts for nothing* is an umbrella the Agreements glossary lists; the records (disputed, contested, creator mismatch, wrong receipt, bypassing, mismatch, not found, deferred) decide nothing; the convention "counts only alongside the act it names" carries F297's clause; Identity's four nouns of "contested" in the MICS glossary. And G8's mechanics: a specification malformed and implemented by a client is no specification (adoption is of published bytes); the three stale citations corrected; the suite's old 3.9 sentence removed; "reasoned until built" marked in the suite's steps.
+
 ## F328. The drafts after step 15: sixteen questions answered (15 October 2026, morning)
 
 *From the session writing the next drafts (`docs/drafts-after-step-15.md`, pull request 62; the drafts in pull requests 60, 61, 62), put one at a time.*
