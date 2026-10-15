@@ -15010,3 +15010,248 @@ fn owners_choose_the_operators_3_7ae() {
     assert_eq!(lab2.view().current(&label2).unwrap().map(|c| c.agreement), Some(k2), "executed once the key holders rotate");
     let _ = (sd, se);
 }
+
+// ---------------------------------------------------------------- the owners' acts in any order
+
+/// A step of an owners' story (Agreements draft 14, rules 94 to 97): a sale
+/// of part of the stake, a proxy, its revocation, an issuance offer and a
+/// take-up, or a vote on an owners' matter recorded by the label's line;
+/// each placed by the line or not.
+#[derive(Clone, Debug)]
+enum OwnerOp {
+    Sell { seller: u8, buyer: u8, part: u8, placed: bool },
+    Proxy { holder: u8, proxy: u8, scoped: bool, placed: bool },
+    Revoke { placed: bool },
+    Offer { public: bool },
+    TakeUp { holder: u8, placed: bool },
+    Vote { mark: u8, sign: u8, proxies: bool },
+    Issue { took: u8 },
+}
+
+fn owner_op() -> impl proptest::strategy::Strategy<Value = OwnerOp> {
+    use proptest::prelude::*;
+    prop_oneof![
+        2 => (any::<u8>(), any::<u8>(), 1u8..5, any::<bool>()).prop_map(|(seller, buyer, part, placed)| OwnerOp::Sell { seller, buyer, part, placed }),
+        2 => (any::<u8>(), any::<u8>(), any::<bool>(), prop::bool::weighted(0.7)).prop_map(|(holder, proxy, scoped, placed)| OwnerOp::Proxy { holder, proxy, scoped, placed }),
+        1 => any::<bool>().prop_map(|placed| OwnerOp::Revoke { placed }),
+        1 => any::<bool>().prop_map(|public| OwnerOp::Offer { public }),
+        1 => (any::<u8>(), any::<bool>()).prop_map(|(holder, placed)| OwnerOp::TakeUp { holder, placed }),
+        4 => (any::<u8>(), any::<u8>(), any::<bool>()).prop_map(|(mark, sign, proxies)| OwnerOp::Vote { mark, sign, proxies }),
+        1 => any::<u8>().prop_map(|took| OwnerOp::Issue { took }),
+    ]
+}
+
+/// The label of `owned_label`'s kind with two owners who are no members
+/// (Dana, Eve) and two outsiders who buy or stand as proxies (Fay, Gus),
+/// under a sixty per cent holders' rule every holder signed, and a clock;
+/// the story's steps applied. Returns the lab and the people by index:
+/// Ana, Ben, Cy, Dana, Eve, Fay, Gus.
+fn owners_story(ops: &[OwnerOp]) -> Lab {
+    let (mut lab, mut others) = Lab::with_others(
+        &["dana", "eve", "fay", "gus"],
+        &|t, o| {
+            let p = t.parties.clone();
+            t.stakes = Some(vec![own(vec![(p[ANA], 200_000), (p[BEN], 200_000), (p[CY], 200_000), (o[0], 200_000), (o[1], 200_000)])]);
+            t.holders_rules = Some(vec![agreements::HoldersEntry { stake: 0, rule: HoldersRule::Share(600_000), waived: false }]);
+            t.time = Some((spec("a clock"), Value::Uint(1)));
+        },
+        true,
+    );
+    let f = lab.founding;
+    for p in others.iter_mut().take(2) {
+        sign(&mut lab.w, p, &f);
+    }
+    let ids: Vec<Hash> = lab.ids().into_iter().chain(others.iter().map(|p| p.id)).collect();
+    // Who signs as person `i`: a member's phone, or one of the others.
+    fn with<T>(lab: &mut Lab, others: &mut [Person], i: usize, f: impl FnOnce(&mut World, &mut Person) -> T) -> T {
+        if i < 3 {
+            let mut p = lab.m[i].clone();
+            let out = f(&mut lab.w, &mut p);
+            lab.m[i] = p;
+            out
+        } else {
+            f(&mut lab.w, &mut others[i - 3])
+        }
+    }
+    let mut cur = f;
+    let mut proxies: Vec<Hash> = vec![];
+    let mut offer: Option<Hash> = None;
+    let mut part = 10_000u64;
+    for op in ops {
+        match op {
+            OwnerOp::Sell { seller, buyer, part: q, placed } => {
+                let s = *seller as usize % 5;
+                let b = 5 + *buyer as usize % 2;
+                let tr = agreements::StakeTransfer { agreement: cur, stake: 0, to: ids[b], share: *q as u64 * 20_000, record: vec![] };
+                let t = with(&mut lab, &mut others, s, |w, p| {
+                    let t = agreements_act(w, p, agreements::new_types::STAKE_TRANSFER, tr.to_map(), obj(cur));
+                    let (_, q) = w.chain_sign(p, t);
+                    *p = q;
+                    t
+                });
+                with(&mut lab, &mut others, b, |w, p| sign(w, p, &t));
+                if *placed {
+                    lab.acknowledge(0, t);
+                }
+            }
+            OwnerOp::Proxy { holder, proxy, scoped, placed } => {
+                let h = *holder as usize % 5;
+                let to = ids[5 + *proxy as usize % 2];
+                let p = agreements::Proxy { version: cur, stake: 0, proxy: to, scoped: scoped.then_some(cur) };
+                let x = with(&mut lab, &mut others, h, |w, q| agreements_act(w, q, agreements::owner_types::PROXY, p.to_map(), obj(cur)));
+                proxies.push(x);
+                if *placed {
+                    lab.acknowledge(0, x);
+                }
+            }
+            OwnerOp::Revoke { placed } => {
+                let Some(px) = proxies.last().copied() else { continue };
+                let Some(h) = lab.w.v.get(&px).and_then(|a| a.act.outside.signer) else { continue };
+                let Some(i) = ids.iter().position(|x| *x == h) else { continue };
+                let r = with(&mut lab, &mut others, i, |w, q| agreements_act(w, q, agreements::owner_types::PROXY_REVOCATION, agreements::proxy_revocation_payload(&px), obj(px)));
+                if *placed {
+                    lab.acknowledge(0, r);
+                }
+            }
+            OwnerOp::Offer { public } => {
+                let o = agreements::IssuanceOffer { version: cur, stake: 0, size: 100_000, new_holders: vec![(ids[5], 1_000_000)], period: Value::Uint(9), price: None, words: None, more: None };
+                let x = if *public {
+                    let a = lab.w.everyday_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, o.to_map(), obj(cur), None);
+                    lab.w.add(&a)
+                } else {
+                    let to = sorted(lab.ids());
+                    lab.w.private_act(&mut lab.c[0], mirs().agreements, agreements::owner_types::ISSUANCE_OFFER, o.to_map(), obj(cur), to)
+                };
+                offer = Some(x);
+            }
+            OwnerOp::TakeUp { holder, placed } => {
+                let Some(o) = offer else { continue };
+                let h = *holder as usize % 5;
+                let x = with(&mut lab, &mut others, h, |w, p| sign(w, p, &o));
+                if *placed {
+                    lab.acknowledge(0, x);
+                }
+            }
+            OwnerOp::Vote { mark, sign: who, proxies: by_proxy } => {
+                let marked: Vec<Hash> = (0..7).filter(|i| mark >> i & 1 == 1).map(|i| ids[i]).collect();
+                part += 1_000;
+                let (x, _) = fee_clone(&mut lab, &cur, part, &marked);
+                let mut s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &x)).collect();
+                for i in 3..7 {
+                    if (who >> i & 1 == 1) || (*by_proxy && i >= 5) {
+                        s.push(with(&mut lab, &mut others, i, |w, p| sign(w, p, &x)));
+                    }
+                }
+                let r = lab.record(0, Some((x, s)), &[], vec![], x);
+                if lab.view().record(&lab.c[0].id, &r).ok().and_then(|e| e.puts) == Some(x) {
+                    cur = x;
+                }
+            }
+            OwnerOp::Issue { took } => {
+                let Some(o) = offer else { continue };
+                let roster: Vec<(Hash, u64)> = {
+                    let t = lab.view().terms(&cur).unwrap();
+                    t.own_stake().unwrap().1.identified()
+                };
+                // Pro rata, those in `took` keeping their whole share.
+                let mut holders: Vec<(Hash, u64)> = vec![];
+                let mut left = 100_000u64;
+                for (i, (h, n)) in roster.iter().enumerate() {
+                    if took >> i & 1 == 1 {
+                        holders.push((*h, *n));
+                        left -= n / 10;
+                    } else {
+                        holders.push((*h, n - n / 10));
+                    }
+                }
+                let _ = left;
+                // The new holder takes what is left, so the shares sum exactly.
+                holders.retain(|(h, _)| *h != ids[5]);
+                let rest = 1_000_000 - holders.iter().map(|(_, n)| *n).sum::<u64>();
+                holders.push((ids[5], rest));
+                holders.retain(|(_, n)| *n > 0);
+                let x = issuance(&mut lab, &cur, agreements::IssuesUnder::Offer(o), holders, &[ids[ANA], ids[BEN], ids[CY]]);
+                let mut s: Vec<Hash> = [ANA, BEN, CY].iter().map(|i| lab.sign(*i, &x)).collect();
+                s.push(with(&mut lab, &mut others, 5, |w, p| sign(w, p, &x)));
+                let r = lab.record(0, Some((x, s)), &[], vec![], x);
+                if lab.view().record(&lab.c[0].id, &r).ok().and_then(|e| e.puts) == Some(x) {
+                    cur = x;
+                }
+            }
+        }
+    }
+    lab
+}
+
+/// What the library says of every act an owners' story made: each act's
+/// status; each record's verdict (what it puts in force, its clone's state);
+/// each transfer's effect; the label's agreement in force.
+fn owners_verdicts(v: &mor_core::chain::Verifier, label: &Hash) -> std::collections::BTreeMap<Hash, String> {
+    let mut lv = AgreementsView::new(v, mirs());
+    lv.ext_layers.insert(ext(), vec![]);
+    let mut out = std::collections::BTreeMap::new();
+    let ids: Vec<Hash> = v.held_acts().map(|h| h.id).collect();
+    for id in ids {
+        let h = v.get(&id).unwrap();
+        let mut s = format!("status={:?}", v.status(&id));
+        if h.inside.spec == mirs().agreements {
+            match h.inside.type_ {
+                agreements::types::RECORD => s += &format!(" record={:?}", lv.record(label, &id).map(|e| (e.puts, e.clone.map(|c| c.1)))),
+                agreements::new_types::STAKE_TRANSFER => s += &format!(" transfer={:?}", lv.transfer(&id).map(|e| (e.effective, e.place))),
+                _ => {}
+            }
+        }
+        out.insert(id, s);
+    }
+    out.insert(*label, format!("current={:?}", lv.current(label).map(|c| c.map(|c| c.agreement))));
+    out
+}
+
+/// Freeze suite v28, 3.7ab, 3.7ac, 3.7ad and 3.7ak in any order (Agreements
+/// draft 14, rules 94 to 97; F302, F316, F327, F329 Q3): random owners'
+/// stories (sales placed by the line or not, proxies and revocations,
+/// issuance offers and take-ups, votes on owners' matters with and without
+/// proxies) are judged, then their acts are delivered again into fresh
+/// verifiers in shuffled orders: every verdict must come out the same. Cases:
+/// `AGREEMENTS_INVARIANT_CASES` (default 16).
+#[test]
+fn owners_verdicts_do_not_depend_on_order() {
+    use proptest::prelude::*;
+    use proptest::test_runner::{Config, TestRunner};
+    let cases = std::env::var("AGREEMENTS_INVARIANT_CASES").ok().and_then(|v| v.parse().ok()).unwrap_or(16);
+    let mut runner = TestRunner::new(Config { cases, failure_persistence: None, ..Config::default() });
+    // Stories whose votes moved the label off its founding terms: the
+    // property is about something only if some do.
+    let moved = std::sync::atomic::AtomicUsize::new(0);
+    let r = runner.run(&(prop::collection::vec(owner_op(), 1..9), any::<u64>()), |(ops, seed)| {
+        let lab = owners_story(&ops);
+        let label = lab.c[0].id;
+        let first = owners_verdicts(&lab.w.v, &label);
+        if first.get(&label).is_some_and(|c| !c.contains(&format!("{:?}", lab.founding))) {
+            moved.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
+        let mut order: Vec<usize> = (0..lab.w.log.len()).collect();
+        let mut x = seed | 1;
+        for i in (1..order.len()).rev() {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            order.swap(i, (x % (i as u64 + 1)) as usize);
+        }
+        let mut v = mor_core::chain::Verifier::with_mirs(common::identity_spec(), common::money_spec(), common::agreements_spec());
+        for i in order {
+            let (a, k) = &lab.w.log[i];
+            v.add_with_key(a.clone(), k.as_ref()).unwrap();
+        }
+        let second = owners_verdicts(&v, &label);
+        for (k, a) in &first {
+            let b = second.get(k).map(String::as_str).unwrap_or("(not held)");
+            prop_assert_eq!(a.as_str(), b, "act {:?} judged differently in another order, story {:?}", k, ops);
+        }
+        Ok(())
+    });
+    if let Err(e) = r {
+        panic!("{e}");
+    }
+    assert!(moved.into_inner() > 0, "no story put an owners' matter in force");
+}
