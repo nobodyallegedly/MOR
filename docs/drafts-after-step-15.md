@@ -16,7 +16,7 @@
 | Payment cMIP | `cmips/cmip-payment-draft-3.md` | draft 2 |
 | Website cMIP | `cmips/cmip-website-draft-11.md` | draft 10 |
 
-Every change is marked in its text "new in draft N (Fxxx)" (or with the record that took it, for mechanics). Where writing a decided rule ran into a gap, the text says "Open in draft N" and names a question below; nothing was worked around quietly. Writing them raised **16 questions** (below, one at a time, in the order suggested). The files under `spec/` are written as canonical text (no final line break, no trailing space), as F324 asks of the frozen ones.
+Every change is marked in its text "new in draft N (Fxxx)" (or with the record that took it, for mechanics). Where writing a decided rule ran into a gap, the text says "Open in draft N" and names a question below; nothing was worked around quietly. Writing them raised **16 questions** (below, one at a time, in the order suggested), **answered by Nobody, allegedly, the same morning (F328) and written into the drafts**, each answer marked "F328" where it stands. The files under `spec/` are written as canonical text (no final line break, no trailing space), as F324 asks of the frozen ones.
 
 *The pull requests:* the five smaller MIRs and the three cMIPs in one; Agreements draft 14 in its own; the MICS, the suite, this note, `spec/README.md` and the roadmap in a third. They touch different files and can be merged in any order.
 
@@ -89,9 +89,35 @@ None of these changes a decided rule; each is a detail the decided rules bound, 
 8. **Payment cMIP, field 6 (a rail's rule as a published program) required only where present**, since by F326 no founding rule is yet such a program.
 9. **Agreements, eleven format details** (`notes` to the draft's section "Mechanics taken", each marked "mechanic, draft 14's" in the text): the numbers of types 26 to 28 and fields 30 to 32 and their shapes; an issuance is a version carrying field 32 (its offer), the offer type 26; the offer states the new shares' part of the stake, one price, each holder taking up its whole proportion by a signature act with a Money receipt or claim, no decline act; the offer reaches the roster where it is placed, a later placed transfer passing the seller's place to the buyer; "by share" written `[3, share]` (holders) and `[3, stake, share]` (members), **field 24's head count `[1, k]` made invalid rather than silently re-read as a share**; "all of" lists two rules or more, none nested, the forms by share for fields 5 and 18 only; a declaration against a holder who is no party names the clause in force, and may carry no outcome where the holder's plan names a stake successor; proxies and revocations count only public or sealed to the collective, signed by the holder, the later placed replacing the earlier; a successor's chain signature is "before" a later fork when it lies in its chain before the later fork's chain act; record field 3 registers transfers, proxies and revocations; F302's test written as C5's.
 
-The one in bold changes how existing terms read (an agreement written with a head count for field 24 becomes invalid, not re-read); it follows F308 ("counted by share"), but it is the reading most worth the author's eye.
+The one in bold changes how existing terms read (an agreement written with a head count for field 24 becomes invalid, not re-read); it follows F308 ("counted by share"), but it is the reading most worth the author's eye. *Accepted by the project lead (F328): no terms exist on MOR before the freeze.*
 
 ## The questions, one at a time
+
+**Answered (F328, 15 October 2026, morning), and written in:**
+
+| Q | Draft's label | Answer |
+| --- | --- | --- |
+| 1 | QE1 | (a) two entries in `prev`: invalid act by act. "Agreed." |
+| 2 | Q2 (Identity) | (a) stated as a cost in rule 49's commentary. "Agreed." |
+| 3 | Q1 (Identity) | (b) only bytes: the identity chain from genesis to the rotation's predecessor, checked offline by the Module. Taken by the project lead under the working practice (round 2's standard). |
+| 4 | Q-Money-1 | (a) element by element; where the payee is unbound, the payment address (rule 4) decides. "Agreed." |
+| 5 | Q-Money-2 | (a) a request rail binds payee and purpose, or it is no specification (FR11). "Agreed." |
+| 6 | Q-Development-1 | (a) field 5 may name a MIR. "A is correct." |
+| 7 | Q-Development-2 | (a) `rule-ref` gains the profile's spec hash. "Agreed." |
+| 8 | Q-Development-3 | (a) the profile is a Module whose field 5 names the Development MIR. "Yes." |
+| 9 | Q-Development-4 | (a) unclaimed whether relied on or not, shown as disputed. "Agreed." |
+| 10 | Q-W1 | (b) the predecessor always required; a new-layer MIP names the MICS document. "B feels right." |
+| 11 | Agreements draft 14's Q2 | (a) the abandonment clause must allow moving a vanished holder's stake where owners count membership, or the terms are invalid. "A) better do it upstream." |
+| 12 | Agreements draft 14's Q4 | (a) kept owners' consent counts where an act of the original in the fork's history acknowledges it. "Agreed, chain key is too much here." |
+| 13 | Agreements draft 14's Q6 | (a) sealed to every party of the agreement's version in force; a collective holder, to the collective. "Agreed." |
+| 14 | Agreements draft 14's Q5 | (b) a standing waiver too, set or removed only by every holder, accepted by buying. "B." With it: "Agreements can be used to form simple partnerships, more complex structures require collectives." |
+| 15 | Agreements draft 14's Q1 | (a) the voting weight dropped from the format. "Sounds safe." |
+| 16 | Agreements draft 14's Q3 | (a) areas keep counting heads in MOR 1. "A) this is not ownership, this is splitting operations." |
+
+*The reading on field 24* (the old head-count form invalid, not re-read): accepted by the project lead; no terms exist on MOR before the freeze, so no signed agreement changes meaning.
+
+*The questions as they were put follow, kept for the record.*
+
 
 Sixteen, in the order suggested: the ones on the core's verdicts first, then the formats that freeze, then the rest. Each names its area. The label in brackets is the one the draft's "Open" marker uses.
 
@@ -139,7 +165,7 @@ Sixteen, in the order suggested: the ones on the core's verdicts first, then the
 
 ## The rehearsal of step 17 (items 2, 5 and 9), and the roadmap
 
-`docs/step-17-rehearsal.md` arrived with pull request 51 while these drafts were written; Development draft 10 and the cMIP drafts were checked against it and need no change. What it adds to step 17's order is written into the roadmap (step 17):
+`docs/step-17-rehearsal.md` (now on main, pull request 51) arrived while these drafts were written; Development draft 10 and the cMIP drafts were checked against it and need no change. What it adds to step 17's order is written into the roadmap (step 17):
 - **Item 2.** Every founding cMIP's and Module's spec hash exists only once its creator's identity is born. Step 17's order: the author's genesis; every founding spec hash computed; the specifications published with every field their kind requires (F322; Q6 answered first); the clients rebuilt with those hashes and released, signed, naming by spec hash what they implement. The MIRs, the MICS and the suite carry no creator, so their hashes are fixed at the freeze. The founding specifications are published on a line the author's later rotations keep, since a rotation disowning it would leave them unclaimed (D7).
 - **Item 5.** The publishing command writes each kind's required fields from the texts (F322), and F324's canonical-text check covers every file published as a specification, founding cMIPs and Modules included (the same rule; the draft binds the frozen ones).
 - **Item 9.** Step 17 makes four identities (the author, the reporting identity, the clock, Machine, allegedly); it says which identity creates each founding specification (the author, by the build brief) and, still to decide there, who holds the other three's keys and where the clock runs.
