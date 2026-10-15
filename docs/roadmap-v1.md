@@ -299,6 +299,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 *14 October 2026, night (F307 to F319, decided by Nobody, allegedly): the common language for collectives goes into MOR 1: a holders' rule per stake, counting by share, issuance with pre-emption, the owners' matters, owner-chosen operators (binding through the keys), the collective's own reserve, owners' sight of the money acts, and the way out for a vanished holder who is no party (F313). Next, in order: Agreements draft 14 carrying F282 to F319; the code for F297 to F318; tests and freeze scenarios; Fable's attack on draft 14; then the Development segment. The author wants to examine grants ("something I want to go poke when we can").*
 
+*15 October 2026, morning: the drafts after step 15 merged (pull requests 60 to 62): Envelopes draft 10, Text 8, Identity 13, Money 8, Agreements 14, Development 10, MICS v28, freeze suite v28, release manifest cMIP draft 4, payment cMIP draft 3, website cMIP draft 11, with F282 to F328 written in (report: `docs/drafts-after-step-15.md`). Texts only. Next: the code for F292 to F328, and Fable's aggregated review of the drafts, in parallel; then the freeze-ready drafts.*
+
 ## Decisions due along the way
 
 | Decision | Before |
