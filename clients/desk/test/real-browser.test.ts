@@ -53,7 +53,7 @@ const problems: string[] = [];
 
 before(async () => {
   const dist = mkdtempSync(join(tmpdir(), 'real-web-'));
-  execFileSync(process.execPath, ['--import', 'tsx', 'scripts/build-web.ts', '--out', dist], { cwd: dubDir, stdio: 'ignore' });
+  execFileSync(process.execPath, ['--import', 'tsx', 'scripts/build-web.ts', '--out', dist], { cwd: dubDir, stdio: ['ignore', 'ignore', 'inherit'] });
   homes = [await start('home'), await start('home')];
   relay = await start('relay');
   const policy = contentSecurityPolicy([...homes, relay].map((r) => r.base));
