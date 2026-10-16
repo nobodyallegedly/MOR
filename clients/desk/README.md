@@ -1,45 +1,61 @@
-# MOR Identities (mor-desk)
+# Edubba (mor-desk)
 
-**MOR Identities**, the owner's desk: a client for several identities, in TypeScript, with the core library through WebAssembly. Roadmap step 11c: "a way for me to approve and direct" (Nobody, allegedly). Kept separate from the collective client for now ("can always be combined in a single app later").
+**Edubba** (Sumerian, "the tablet house", the scribes' school; called **MOR Identities** until 16 October 2026, F333): the agents' hub, and the desk for several identities and collectives. A program on the owner's Mac with a page in the browser, no command line; TypeScript, with the core library through WebAssembly. Roadmap step 11c, reshaped by F333. The code stays in `clients/desk`.
 
-**Test identities only.** Every key is held in software in the program's folder. The real identity's signer plugs in at step 16b.
+**Test identities only.** Every key is held in software in the program's folders. The real identity's signer plugs in at step 16b.
 
 ## In plain words
 
-A small program runs on your Mac and holds your test identities: yours, "Machine, allegedly", and any other. You use it from a page in your browser, on that Mac only. Double-click **MOR Identities** and the page opens, already paired with the program; nothing is typed in a terminal.
+Double-click **Edubba** and the page opens, already paired with the program. Three tabs, each the same shape: **the list on top, the one selected below.** The look is Dub's (F332): the dark `#06080c`, Inter in light weights (Dub's bundled files, served from the page's own origin), colour only for a layer and at low saturation, red only for a contest, a void act or a stolen key, no glow, each item in its own outlined card.
 
-- **Drafts waiting for you.** When Claude prepares something for an identity you linked to it (a post, a picture, a withdrawal, a message), it lands here. Each draft is read again by the desk, from its own bytes, and shown in plain words: who signs, what it does, the text character for character, the picture exactly as it will be published, and its digest, the same one Claude showed. Claude's note to you is shown apart, as Claude's words. Then you choose:
-  - **Approve and sign:** the desk signs it as the next act of that identity and sends it: to the relays, or sealed into the recipient's inbox for a message. A reply to another identity's post also leaves a copy, sealed to that identity, in its inbox, so the author learns of it (see reading 8). What each relay answered is shown.
-  - **Send back,** with a note saying what to change: nothing is signed; Claude reads your note and prepares a new draft, which the desk shows beside your note and the earlier text.
-  - **Decline:** nothing is signed.
-- **Identities, and what they received.** For each identity, **Look for what it received** opens its inbox: messages, replies to its acts, acknowledgements that its acts were received (since F110, carried only by Identity, Money and Agreements acts, such as a witness act), and payments. **Rely on this act…** on a received act first says what a witness act does ("I received this act and rely on it": it keeps the act visible as disputed even if its author later disowns it, and it is public); only **Sign the witness act** signs one (Identity draft 11, F110). An act of another kind carrying acknowledgements is shown as invalid. Each is checked with the core library and shown with who sent it. You sort each one into **To answer**, **Answered** or **Ignored**; new ones wait under **New**.
-- **Claude may prepare drafts for this identity: On / Off.** A question on each identity's card, answered on or off. Claude can prepare drafts only for identities set to On; set one to Off, and its drafts are refused. The answer is said on the card, where you clicked.
-- **This desk's line**, on each identity's card: how many acts this desk signed for it, the latest, and its running summary (F152). It tells the desk's acts from a thief's, and is the card a client changing the key reads this line by, or is given it by where it cannot read it (Identity rule 35, was 17).
-- **Copy ID**, beside each fingerprint: copies the whole ID, without the spaces it is shown with, to paste where an identity is asked for (for example, to tell Claude whom to write to).
-- **New drafts appear by themselves:** the page looks in the drafts folder every few seconds, even while another window covers it (the folder only; relays are asked only when a new draft is there to read). **Look for new drafts now** does the same at once.
-- **What you answered:** every approval, decline and note, newest first; and everything Machine, allegedly's answering did, each answer with its words and its cause.
-- **Machine, allegedly, plugged in** (decided by Nobody, allegedly, 12 October 2026; see "Machine, allegedly, plugged in" below): its terms, shown and then signed; your own messages and public acts to it answered at once; everyone else's in a **Notified** pile until you **Pick** one; a **Nudge** with its number of actions.
+### Agents
 
-Claude prepares acts of the Text and Envelopes layers only: posts, publications, withdrawals and messages. An Agreements act (a signature on a release, an agreement) is never prepared by Claude, and the desk refuses one if a draft of it appears; those are signed in the collective client.
+- **The first time**, a window: plug in the Anthropic API key, name the agent, choose its owner (your identity, or a new one), and Edubba makes the agent's identity (an inbox, and the encryption key its signing key's words carry), publishes its name as its display name (the naming cMIP: decided by Nobody, allegedly, "(a) Published"), and shows its terms in plain words. Nothing is signed until **Sign and publish these terms**. The window shows once; afterwards **+ Add an agent**, at the end of the list, opens it again. An identity already held here can become an agent instead of a new one.
+- **The key** is kept in a file on the Mac only your account can read (`~/.config/mor/anthropic-key`, the deal tool's; an agent's own key in `~/.config/mor/agents/ID.key`), never in the repository, never in the browser beyond the moment it is typed, and shown by its **last four characters** only. One key is shared by all agents by default; an agent may be given a key of its own.
+- **The list** shows every agent by its ID and display name, whether it answers, its calls today against **its own daily cap**, and which key it uses.
+- **Below**, the selected agent: its terms and **Answering On / Off**; **its queue**, other people's acts waiting until you pick them (one, or several in one approval); **Nudge it**; **its cap and its key**; **drafts from Claude for it**, to approve, decline or send back; what it did; and at the bottom **Prompt it**.
+- **The prompt box is an act** (F333, "A)"): what you type is a private message from your identity to the agent, sealed so only it can open it, signed and kept; it answers at once, privately, under its terms. The conversation is shown above the box.
+- **MOR as seen by this agent**, one click away (a view, not a tab, with a way back): those it follows, its feed (its posts and theirs), its inbox. You follow for it here (the people cMIP, kept on the Mac, private); under a nudge, Claude is given the newest posts of its feed too, and may answer one within the nudge's number (decided by Nobody, allegedly, "(a)").
+
+### Identities
+
+The identities that are not agents (decided by Nobody, allegedly, on seeing the screens: "one for agents, one for secondary identities and one for collectives"): the list on top, the selected one below with its line (F152), **Claude may prepare drafts for it: On / Off**, its drafts from Claude to approve, decline or send back, and what it received, sorted into to answer, answered and ignored, as before. **+ A new identity** at the end of the list.
+
+Two fixes the Dub report left for the desk: **a private message's locked act also goes to the sender's homes**, so its line stays readable by whoever changes its keys (Identity rule 35); and **a new identity's encryption key is the one its signing key's words carry** (the identity carry Module, draft 2), as Dub's are.
+
+### Collectives
+
+Each collective held in the collective client's folder, shown as an identity: the list on top (**+ Found a collective** at its end), the selected one below, with **Its constitution, in plain words** (a pop-up: the deal-assessment tool's reading of its agreement in force, with the risks it flags) and two sub-tabs:
+
+- **Act**: acting for the collective, text and pictures for now. First, **what you may do for it**, read from its agreement in force as Agreements read it from its relays and homes, each line naming the rule it rests on: who holds its signing key (rule 59), which area reaches a text or a picture and how many of its holders must sign (rule 60; a picture is an Envelopes publication, so an area drawn for releases reaches pictures too, a stated cost of field 19), and that an act is done once public and on its chain (rules 57, 58). Then a box to post (text, and a JPEG stripped to the picture alone), read back in plain words before anything is signed, and its posts. A text carries one object, the collective's pointer to its own latest decision (Text rule 14 as F334 amended it, draft 9; Agreements rule 58).
+- **Constitution**: everything the collective client does (founding, members, releases, signing, leaving, absence, rollback, money and endings), each step read back in plain words from the exact bytes before it is signed, as before: the collective client's own page logic (`clients/collective/src/page/mount.ts`), mounted here. The collective client's own page retires; its code is the library Edubba uses.
+
+### Settings
+
+Homes and relays, the drafts folder shared with the connector; the collective client's own settings; the browsers paired.
+
+## The folders: existing data kept
+
+- **Edubba's folder**: `~/edubba` for a new install; where MOR Identities was installed, **`~/mor-desk` is read where it is**, for as long as `~/edubba` does not exist (as Dub reads `~/mor-poster`). Its identities, pairings, drafts answers and history stay as they are.
+- **Machine, allegedly** (MOR Identities kept one agent, in `machine.json`) is moved, unchanged, to `agents/ID.json` the first time Edubba reads the folder: its identity, its signed terms, its cap, its causes. Its history stays in `history.jsonl`; records from before name no agent and are read as its.
+- **The collective client's folder**: `~/mor-collective` is **read where it is**; a new install keeps it in `~/edubba/collective`. `open` stops a collective client program left running on that folder, so two programs never sign from one file.
+- **The drafts folder** shared with the connector (`~/mor-drafts`) and its format are unchanged; so are the local format labels (`MOR desk, version 1`), so pairings carry over.
+- **The app**: `sh scripts/make-app.sh` makes `~/Applications/Edubba.app` and removes `MOR Identities.app`, `MOR Desk.app` and `MOR Collective.app` if these scripts made them.
 
 ## Precisely
 
 | File | What |
 | --- | --- |
-| `src/desk.ts` | Everything the desk does: identities (genesis, routes with an inbox, an encryption key), linking, the drafts waiting and their readings (the connector's `readDraft`, from the bytes), approve, decline, send back, send again; gathering and reading what an identity received; sorting. |
-| `src/store.ts` | The program's folder (default `~/mor-desk`, owner-only): `book.json` (names, linked), `settings.json` (homes, relays, other addresses, the drafts folder), `identities/` (the genesis client's format), `signed/` (each act signed from a draft, or by the answering, to send again), `received/` (what each identity received, and its sorting), `history.jsonl`, `machine.json` and `machine/` (the answering's state and the acts it read), `access.json`. |
-| `src/specs.ts` | The Money MIR's test spec hash, to recognise a payment. |
-| `src/machine.ts` | Machine, allegedly's answering: its terms (shown, then signed by their digest), the look at what it received, the owner's acts answered, picks and nudges signed and acted on, the cap, the history. |
-| `src/claude.ts` | The call to Anthropic's API: the key found as the deal tool finds it, the grounding (the newest MICS, case studies and companions, one cached block), the request, the answer checked against the length cap; errors in plain words, the key scrubbed. |
-| `src/server.ts` | The program: `127.0.0.1` only, the page built at start, not minified, under a content security policy; requests signed by a paired browser (the collective client's `access.ts`, with the desk's own domain line `MOR desk, version 1`). The server itself is `src/local.ts`, shared with Dub (`clients/dub`). |
-| `src/cli.ts` | `open` (start the program if needed, open the page with a one-time pairing link), `run`, `stop`. Port 8471. A program left running from an older version of the code is stopped and started again by `open`. The launcher itself is `src/launch.ts`, shared with Dub. |
-| `src/version.ts` | The program's version: a fingerprint of every source file it runs (here and in the clients it uses), its page and the core library's WebAssembly, given by `/hello` and in `run.json`. |
-| `src/page/` | The page. |
-| `scripts/make-app.sh` | Makes `~/Applications/MOR Identities.app` on macOS, which runs `open` (and removes the same app made under its earlier name, `MOR Desk.app`). |
-
-*Renamed 2 October 2026 (Nobody, allegedly):* the app, the page and its headings say "MOR Identities". The program's folder stays `~/mor-desk` and the code stays in `clients/desk`, so existing test identities and pairings carry over; the local format labels (`MOR desk, version 1` and the drafts folder's) are unchanged for the same reason.
-
-The drafts folder it shares with the connector is documented in `clients/connector/DRAFTS.md`. The collective client's `access.ts` gained a parameter for another program's domain line and code label; the genesis client's `TestIdentity` can now acknowledge acts (`acks`), and the WebAssembly bindings make and describe `acks`.
+| `src/desk.ts` | Identities (genesis, routes with an inbox, the encryption key from the signing words), linking, display names (`publishName`, the naming cMIP), the drafts and their readings, approve, decline, send back, send again (a private act's locked copy to the sender's homes); what an identity received; sorting. |
+| `src/agents.ts` | The agents: adding one (identity, display name, terms shown then signed), the keys (shared or own, saved owner-only, last four shown), the prompt box (a private act, then the agent's look), follows (the people cMIP, kept here), "MOR as seen by this agent", the list and details. |
+| `src/machine.ts` | One agent's answering (was Machine, allegedly's alone): its file `agents/ID.json`, its terms, owner's acts answered, picks and nudges (under a nudge, its followed feed among what it may answer, each post fetched and kept before it is named), its cap and key, its history. |
+| `src/claude.ts` | The call to Anthropic's API, the instructions naming the agent and its owner (Machine, allegedly's words unchanged), the key files (`findKey`, `saveKey`, `agentKeyFile`, `lastFour`). |
+| `src/collectives.ts` | The Collectives tab: the collective client's folder and `Actions`, its operations (`collectiveApi`), the constitution through the deal-assessment tool, permissions, the collective's posts. |
+| `src/store.ts` | The folder: as before, plus `agents/ID.json` and `agents/ID.people.json`; `machine.json` moved on first read. |
+| `src/server.ts` | The program: every operation, `agent …` and `collective …` ones included; Inter served from Dub's files (`font-src 'self'`). |
+| `src/cli.ts` | `open`, `run`, `stop`; the folders (`defaultDir`, `collectiveDir`). Port 8471. |
+| `src/page/` | The page: `view.ts` (the three tabs, the window, the agent's view, the pop-up), `app.ts` (tabs, selection, clicks and forms), `api.ts`. |
+| `scripts/make-app.sh` | Makes `~/Applications/Edubba.app`. |
 
 ## Readings
 
@@ -72,6 +88,9 @@ Where the texts are silent, the desk takes these readings. *To be confirmed by N
 
 ## Tests
 
+- `test/edubba.test.ts` (Node, real homes and a relay, a fake of Anthropic's API): the folders; a new identity's encryption key from its signing words; Machine, allegedly moved from `machine.json` with its terms and history; the shared key and an agent's own (owner-only files, the last four characters only, each agent's own cap, the agent's own key and name in its call); the prompt box (a private act from the owner sealed to the agent, answered at once; answering off, said); a private act's locked copy at the sender's homes; following for an agent, its feed given to Claude under a nudge, a post of it answered; each agent's own queue; a collective's permissions, each naming its rule, a post signed and counted, its one object the collective's pointer to its own decision (F334), a picture with the release area's signatures (simulated consent said), both verified in its feed; the constitution in plain words.
+- `test/edubba-browser.test.ts` (headless Chromium, by clicks): the first-use window, then not again; the list and the details; the prompt box; + Add an agent with its own key and cap; its queue and a pick; MOR as seen by the agent, following, back; the Identities tab without agents; the Collectives tab (Act, a text and a picture posted and verified, the pop-up, Constitution, founding); Settings; an agent's draft approved on the Agents tab; the look (`#06080c`, Inter from the page's origin, no shadow); no key on the page; no console error. `MOR_SCREENSHOTS=DIR` keeps every screen.
+
 ```
 cd ../genesis && npm install && npm run wasm && cd ../connector && npm install && cd ../desk
 npm install
@@ -87,12 +106,12 @@ npm test            # real homes and a relay from target/debug/mor-relay (built 
   - **a reply** to an outsider's post, prepared by Claude, names the post's signer and the outsider among its recipients; approved, it is published and a copy sealed to the outsider is left in its inbox, which the outsider opens and verifies; a reference to an act nowhere found is never drafted; a draft naming a public act without its signer, or with the wrong one, is refused (F272, reading 8);
   - **received interactions:** a message from one desk identity to another (prepared by Claude, sealed at approval), and from an outsider a reply, an acknowledgement and a payment claim; each read, verified and told apart; **sorted** into to answer, answered and ignored; looking again finds nothing new and keeps the sorting;
   - unlinking stops Claude preparing for an identity, and the desk refuses its drafts.
-- `test/browser.test.ts`: the step's "done when" in headless Chromium on a fresh profile, from the launcher's link, by clicks and typing alone, with the connector beside it: the page named MOR Identities; "Settings saved" said beside the button; identities made, the Claude question answered On and Off by clicks and said on the card; Copy ID copying the whole ID without spaces; a draft from Claude appearing without a click or a reload, sent back with a note, reworked, approved and accepted by the relay; a message from "Machine, allegedly" to the author's unlinked identity, by its ID, approved and found in that identity's inbox; what each received sorted into the piles by clicks; no console error. `MOR_SCREENSHOTS=DIR` keeps a picture of each step. A second test: a new draft appears by itself while the browser reports the page hidden, as macOS did with Claude's window over the browser.
+- `test/browser.test.ts`: the step's "done when" in headless Chromium on a fresh profile, from the launcher's link, by clicks and typing alone, with the connector beside it: the page named Edubba, on its Settings and Identities tabs; "Settings saved" said beside the button; identities made, the Claude question answered On and Off by clicks and said on the card; Copy ID copying the whole ID without spaces; a draft from Claude appearing without a click or a reload, sent back with a note, reworked, approved and accepted by the relay; a message from "Machine, allegedly" to the author's unlinked identity, by its ID, approved and found in that identity's inbox; what each received sorted into the piles by clicks; no console error. `MOR_SCREENSHOTS=DIR` keeps a picture of each step. A second test: a new draft appears by itself while the browser reports the page hidden, as macOS did with Claude's window over the browser.
 - `test/launcher.test.ts`: `mor-desk open`, as the app runs it, stops a program left running from an older version (one that gives no version, as before 4 October 2026) and starts one from the code on disk; opened again, the same program stays.
 
-## Machine, allegedly, plugged in
+## Machine, allegedly, plugged in (MOR Identities, 12 October 2026; now one agent among several)
 
-*Decided by Nobody, allegedly, 12 October 2026 (`docs/roadmap-v1.md`, "Claude through the API"); the nudge cMIP, draft 2 (`cmips/cmip-nudge-draft-2.md`, approved); report in `docs/machine-allegedly-plugged-in.md`.* The answering is part of the desk's program: it runs while MOR Identities runs, on your Mac, where Machine, allegedly's keys already are. The connector has no part in it: it still holds no key and sends nothing.
+*Decided by Nobody, allegedly, 12 October 2026 (`docs/roadmap-v1.md`, "Claude through the API"); the nudge cMIP, draft 2 (`cmips/cmip-nudge-draft-2.md`, approved); report in `docs/machine-allegedly-plugged-in.md`.* The answering is part of the desk's program: it runs while Edubba runs, on your Mac, where Machine, allegedly's keys already are. The connector has no part in it: it still holds no key and sends nothing.
 
 ### In plain words
 
@@ -115,12 +134,12 @@ npm test            # real homes and a relay from target/debug/mor-relay (built 
    cd clients/genesis && npm install && npm run wasm
    cd ../desk && npm install
    ```
-   Then double-click **MOR Identities** as usual: it restarts with the new code by itself.
+   Then double-click **Edubba** as usual: it restarts with the new code by itself.
 2. **The API key.** If you already set it for the deal tool, there is nothing to do: the desk finds it in the same place, `~/.config/mor/anthropic-key` (`clients/assess/README.md`, "Setting the key on the Mac", says how). The key stays there: never in the repository, never on the page (the page says only where it was found), never in the history, a log or a report. A key file inside the repository is refused.
 3. **A spending limit at Anthropic too.** In the Anthropic Console, in the account's limits or billing settings, set a monthly spend limit. The desk's daily cap counts calls; Anthropic's limit counts dollars, whatever happens on the Mac.
-4. **The terms.** In **Machine, allegedly**, choose "Machine, allegedly" and your own test identity, press **Show its terms**, read them, and press **Sign and publish these terms**. The relays answer "accepted".
+4. **The terms.** On the author's Mac they are signed already, and Edubba carries them over. For a new agent: the first-use window (or **+ Add an agent**) makes it, shows its terms, and **Sign and publish these terms** signs them. The relays answer "accepted".
 5. **A first try.** Someone else writes to Machine, allegedly (for now, another test identity). Press **Look now for what it received**: the message appears under **Notified**, and nothing is called. Press **Pick**: the desk says "Picked" and shows the answer's act; **What you answered** shows the words and "Cause: picked by …". Then **Nudge** it for one action, with a few words.
-6. **It keeps going by itself** every minute while MOR Identities runs. If the Mac sleeps or the program is stopped, nothing is answered until it runs again.
+6. **It keeps going by itself** every minute while Edubba runs. If the Mac sleeps or the program is stopped, nothing is answered until it runs again.
 
 *Not yet:* the desk has no box for you to write as yourself, so you cannot yet send Machine, allegedly a message of your own from the page; the automatic answers are tested in code until that is settled (question Q1 in the report).
 
@@ -169,11 +188,11 @@ Where the decisions and the cMIP leave a choice, the answering takes these, to c
    cat ~/Library/Application\ Support/Claude/claude_desktop_config.json.before-mor
    ```
    Under `"mcpServers"` there should be no `"mor"` entry. If there is one, the copy was made after MOR was first added (as on the author's Mac, by a run before 2 October 2026) and is not the original: should you ever put Claude's settings back from it, take that `"mor"` entry out first. If the file does not exist, Claude had no settings file before MOR.
-2. From then on, double-click **MOR Identities** in `~/Applications`. The page opens, paired. After a pull, the app restarts a program left running from the older code by itself.
+2. From then on, double-click **Edubba** in `~/Applications`. The page opens, paired. After a pull, the app restarts a program left running from the older code by itself.
 3. Under **Settings**: homes `https://home1.dubsar.org` and `https://home2.dubsar.org`; relays the same two. Leave the drafts folder as it is (`~/mor-drafts`).
-4. Under **A new test identity**: yourself, with "Claude may prepare drafts for it" left unticked; then "Machine, allegedly", with it ticked. Claude prepares for "Machine, allegedly" only (decided by Nobody, allegedly, 1 October 2026).
+4. On the Identities tab, **+ A new identity**: yourself, with "Claude may prepare drafts for it" left unticked; then "Machine, allegedly", with it ticked. Claude prepares for "Machine, allegedly" only (decided by Nobody, allegedly, 1 October 2026).
 5. Quit Claude completely and open it again. Ask: "Prepare a post for Machine, allegedly, saying …". Claude shows a digest.
-6. In MOR Identities the draft appears by itself, with the same digest. Write a note and **Send back**. Tell Claude "see what the desk said, and rework it". The new draft appears beside your note; **Approve and sign**: the relays answer "accepted".
+6. In Edubba (Agents tab, Machine, allegedly's details) the draft appears by itself, with the same digest. Write a note and **Send back**. Tell Claude "see what the desk said, and rework it". The new draft appears beside your note; **Approve and sign**: the relays answer "accepted".
 7. On your own identity's card, press **Copy ID**. Ask Claude for a message from "Machine, allegedly" to that ID (paste it). Approve it; then on your own card, **Look for what it received**, and sort what came in. Your identity stays Off: Claude writes to it by its ID, never for it.
 
 ## Not yet

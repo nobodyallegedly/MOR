@@ -31,4 +31,4 @@ npm install
 npm test
 ```
 
-`test/nudge.test.ts`: scenarios N1 to N13, the draft 2 additions (N3 to N3d, N4b to N4d, N9b, N11's count of 0) and draft 3's (N3b, N4d, N7 and N11 rewritten; N3e, N3f and `maySign`, N3g), each act signed by a test identity through the core library, offline; the terms in plain words; the payloads read back exactly. Delivery to inboxes, and the desk acting on nudges and picks, are tested in `clients/desk/test/machine.test.ts`.
+`test/nudge.test.ts`: scenarios N1 to N13, the draft 2 additions (N3 to N3d, N4b to N4d, N9b, N11's count of 0) and draft 3's (N3b, N4d, N7 and N11 rewritten; N3e, N3f and `maySign`, N3g), each act signed by a test identity through the core library, offline; the terms in plain words; the payloads read back exactly. Delivery to inboxes, and the desk acting on nudges and picks, are tested in `clients/desk/test/machine.test.ts`; Edubba's several agents, each under its own terms, its prompt box (the owner's private message, answered freely) and a nudge answering a post of its feed, in `clients/desk/test/edubba.test.ts`.

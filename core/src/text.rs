@@ -240,18 +240,31 @@ impl fmt::Display for NotATextAct {
 /// and rule 14; F295, F296): of type 0; its payload a closed map, field 0
 /// a text string, field 1 (optional) a 32-byte hash, the format; no `acks`
 /// (Envelopes rule 18) and no `objects` (F296: a chain of texts is a cMIP's,
-/// by a companion act). The text's canonical form is checked with every
-/// text field of the act ([`check_value`], at decoding). An act that fails
-/// is invalid wherever the Text MIR is implemented, which every client does.
-pub fn check_act(inside: &crate::act::Inside) -> Result<(), NotATextAct> {
+/// by a companion act), save one (F334): a collective's text names, as its
+/// one object, its own latest decision on its actions chain (Agreements rule
+/// 58), `[collective, decision]`. Here, the act's shape: one object, naming
+/// its signer as chain. Whether the signer is a collective and the
+/// predecessor a decision of its own is judged with its identity chain
+/// ([`crate::chain::Verifier`]). The text's canonical form is checked with
+/// every text field of the act ([`check_value`], at decoding). An act that
+/// fails is invalid wherever the Text MIR is implemented, which every client
+/// does.
+pub fn check_act(inside: &crate::act::Inside, signer: Option<&crate::hash::Hash>) -> Result<(), NotATextAct> {
     if inside.type_ != TEXT_ACT {
         return Err(NotATextAct("a type the Text MIR does not define"));
     }
     if inside.acks.is_some() {
         return Err(NotATextAct("a text act carries no acks (Envelopes rule 18)"));
     }
-    if inside.objects.is_some() {
-        return Err(NotATextAct("a text act carries no objects (rule 14, F296)"));
+    if let Some(objects) = &inside.objects {
+        // F334: one object at most, naming the signer itself as chain (a
+        // collective's pointer to its own decision, Agreements rule 58).
+        let own = matches!(objects.as_slice(), [o] if Some(&o.chain) == signer);
+        if !own {
+            return Err(NotATextAct(
+                "a text act carries no objects, save a collective's one pointer to its own decision (rule 14, F296, F334)",
+            ));
+        }
     }
     let mut text = false;
     for (k, v) in &inside.payload {

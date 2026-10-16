@@ -39,3 +39,39 @@ test('open starts the program and prints a pairing link; open again keeps it; st
   }
   assert.fail('the program did not stop');
 });
+
+test('stop never stops a process Dub did not start: a stale run file, or another program on its port, is left alone', async () => {
+  const { spawn, execFile } = await import('node:child_process');
+  // Not the synchronous helper: this test's own server must answer while `stop` asks it.
+  const stop = (dir: string) =>
+    new Promise<string>((resolve, reject) =>
+      execFile(process.execPath, ['--import', 'tsx', 'src/cli.ts', 'stop', '--dir', dir], { cwd: pkg, env: { ...process.env, MOR_NO_BROWSER: '1' } }, (err, out) => (err ? reject(err) : resolve(out))),
+    );
+  const { writeFileSync } = await import('node:fs');
+  const { createServer } = await import('node:http');
+  const alive = (pid: number) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const dir = mkdtempSync(join(tmpdir(), 'mor-dub-stranger-'));
+  const stranger = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });
+  const other = createServer((req, res) => {
+    res.writeHead(req.url === '/hello' ? 200 : 403, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ app: 'someone else', time: 0, pid: stranger.pid }));
+  });
+  await new Promise<void>((r) => other.listen(0, '127.0.0.1', r));
+  try {
+    writeFileSync(join(dir, 'run.json'), JSON.stringify({ port: (other.address() as { port: number }).port, pid: stranger.pid, secret: 'not theirs' }));
+    assert.match(await stop(dir), /nothing was stopped/);
+    writeFileSync(join(dir, 'run.json'), JSON.stringify({ port: 9, pid: stranger.pid, secret: 'stale' }));
+    assert.match(await stop(dir), /nothing was stopped/);
+    assert.ok(alive(stranger.pid!), 'the stranger still runs');
+  } finally {
+    other.close();
+    stranger.kill();
+  }
+});

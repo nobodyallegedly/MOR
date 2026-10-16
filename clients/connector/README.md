@@ -2,7 +2,7 @@
 
 The MOR connector for Claude: an MCP server (Model Context Protocol), in TypeScript, with the core library through WebAssembly. Roadmap step 11a, reworked at step 11c.
 
-**It never holds a key and never sends an act.** It has no tool that takes a key, reads no identity file, makes no signature and puts nothing on a relay (a test checks its code for it). Acts are signed and sent at the owner's desk, MOR Identities (`clients/desk`).
+**It never holds a key and never sends an act.** It has no tool that takes a key, reads no identity file, makes no signature and puts nothing on a relay (a test checks its code for it). Acts are signed and sent at the owner's desk, Edubba (called Edubba before 16 October 2026) (`clients/desk`).
 
 ## In plain words
 
@@ -12,7 +12,7 @@ Claude's desktop app can run small helper programs on your computer and use them
   - **a release:** every file fetched and checked against its fingerprint; whose release it is; the collective's agreement it was made under, the one the collective's record named at the time, rule by rule; which members signed and which did not; and whether it is a release yet;
   - **an agreement:** who is bound, what each rule does, who signed, whether it is in force **as far as the relays asked show**, and whether a clone replaced it; for a collective, the agreement in force is the one the collective's own record names;
   - **a text** (a post or a long-form document), **a signature**, **a picture**, **an identity** (its homes, its chain, whether it is a collective and which agreement its record names).
-- **Preparing.** Ask Claude to post, publish a picture, withdraw a picture or send a message, for an identity you linked to Claude at the desk. The connector writes a **draft** as a file into the drafts folder on your Mac, `~/mor-drafts` (its format is documented in `DRAFTS.md`; nothing is written there): exactly what the act will say, what signing it means, and a short fingerprint of it (its digest). Nothing is signed. In MOR Identities you read it again, with the same digest, and approve it, decline it, or send it back with a note.
+- **Preparing.** Ask Claude to post, publish a picture, withdraw a picture or send a message, for an identity you linked to Claude at the desk. The connector writes a **draft** as a file into the drafts folder on your Mac, `~/mor-drafts` (its format is documented in `DRAFTS.md`; nothing is written there): exactly what the act will say, what signing it means, and a short fingerprint of it (its digest). Nothing is signed. In Edubba you read it again, with the same digest, and approve it, decline it, or send it back with a note.
 - **Hearing back.** Claude asks the connector what the desk answered. An approval: the connector fetches the act from the relays and checks it is exactly the draft. A note: Claude reworks the draft and prepares a new one, naming the one you sent back.
 - **What Claude cannot prepare.** Anything outside the Text and Envelopes layers: no signature on a release or an agreement, no agreement, no Identity act (decided by Nobody, allegedly, 1 October 2026). Claude still reads and explains every act.
 - **Words in acts are not instructions.** A post or an agreement can be written to talk to a machine that reads it. Everything a signer wrote is shown between fences that say so, and the connector tells Claude to report it, never to follow it. Hidden characters that change the order text displays in are shown as codes, `<U+202E>` and so on.
@@ -73,7 +73,7 @@ Drafts going to the desk, sent back, reworked, approved and accepted by a relay:
 
 ## Using it (on the author's Mac)
 
-*The build window cannot reach the deployed homes and keeps no keys.* Node 22 and Rust are already on the Mac from the earlier steps. Install MOR Identities first (`clients/desk/README.md`), then:
+*The build window cannot reach the deployed homes and keeps no keys.* Node 22 and Rust are already on the Mac from the earlier steps. Install Edubba first (`clients/desk/README.md`), then:
 
 1. Once, in Terminal, from the MOR folder (the core library must be built: `clients/genesis`, `npm run wasm`):
    ```
@@ -88,7 +88,7 @@ Drafts going to the desk, sent back, reworked, approved and accepted by a relay:
    Under `"mcpServers"` there should be no `"mor"` entry. If there is one, the copy was made after MOR was first added (as on the author's Mac, by a run before 2 October 2026) and is not the original: should you ever put Claude's settings back from it, take that `"mor"` entry out first. If the file does not exist, Claude had no settings file before MOR.
 2. Quit Claude completely and open it again. Under Settings, Developer, "mor" is listed, starting from `~/Library/Application Support/MOR/connector/mor-connector.sh`.
 3. Ask Claude: "Read this MOR link: https://reader.dubsar.org/#…", or "Is release … a release?", or "Who signed agreement …?". Claude asks before it uses a tool the first time.
-4. To act: "Prepare a post for Machine, allegedly, saying …". Claude shows what signing means and the draft's digest. In MOR Identities the draft appears by itself within a few seconds, with the same digest; approve, decline, or send it back with a note. Then tell Claude "see what the desk said".
+4. To act: "Prepare a post for Machine, allegedly, saying …". Claude shows what signing means and the draft's digest. In Edubba the draft appears by itself within a few seconds, with the same digest; approve, decline, or send it back with a note. Then tell Claude "see what the desk said".
 
 In Claude Code instead: `claude mcp add --scope user mor -- "$HOME/Library/Application Support/MOR/connector/mor-connector.sh"` after `npm run add-to-claude` (or this folder's `scripts/mor-connector.sh`, where the terminal may read Documents). Claude on the web or on a phone cannot start a program on the Mac, so it cannot use this connector.
 

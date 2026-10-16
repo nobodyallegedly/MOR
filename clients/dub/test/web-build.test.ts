@@ -36,7 +36,13 @@ test('the release in built/: every file, each with its fingerprints listed, the 
   const script = readFileSync(join(BUILT, 'dub.js'), 'utf8');
   assert.ok(!/\/(home|Users|root)\//.test(script), 'no build machine folder in the script');
   // The same core library the display client released.
-  assert.deepEqual(readFileSync(join(BUILT, 'mor_wasm_bg.wasm')), readFileSync(join(here, '../site/built/mor_wasm_bg.wasm')));
+  // Compared by digest: a byte-by-byte diff of two differing WebAssembly
+  // files exhausts the machine's memory before it fails (16 October 2026).
+  assert.equal(
+    sha256(new Uint8Array(readFileSync(join(BUILT, 'mor_wasm_bg.wasm')))),
+    sha256(new Uint8Array(readFileSync(join(here, '../site/built/mor_wasm_bg.wasm')))),
+    'Dub’s WebAssembly is not the display client’s: release both (npm run release in clients/site and clients/dub)',
+  );
 });
 
 test('built twice, in two folders, the same bytes; not minified', () => {
@@ -44,7 +50,7 @@ test('built twice, in two folders, the same bytes; not minified', () => {
   const b = mkdtempSync(join(tmpdir(), 'dub b-'));
   buildInto(a);
   buildInto(b);
-  for (const f of WEB_FILES) assert.deepEqual(readFileSync(join(a, f)), readFileSync(join(b, f)), f);
+  for (const f of WEB_FILES) assert.equal(sha256(new Uint8Array(readFileSync(join(a, f)))), sha256(new Uint8Array(readFileSync(join(b, f)))), f);
   assert.ok(readFileSync(join(a, 'dub.js'), 'utf8').split('\n').length > 5000, 'readable, line by line');
 });
 

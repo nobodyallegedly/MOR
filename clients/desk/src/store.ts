@@ -8,9 +8,12 @@
 //   received/ID.json      what each identity received, and how the owner sorted it
 //   history.jsonl         every answer given to a draft: approved, declined, sent back;
 //                         and Machine, allegedly's terms, picks, nudges and answers, each with its cause
-//   machine.json          Machine, allegedly's answering: its identity, its owner, its terms,
-//                         the cap on calls and what each cause led to (src/machine.ts)
-//   machine/ACT.mor       the acts the answering signed or read, to read them again (the nudge cMIP's readings)
+//   agents/ID.json        each agent's answering (Edubba, F333): its identity, its owner, its
+//                         terms, its cap, its key (shared or its own) and what each cause led to
+//                         (src/machine.ts); machine.json, the one agent of MOR Identities, is
+//                         moved here the first time Edubba reads the folder
+//   agents/ID.people.json whom the agent follows (the people cMIP, private by default)
+//   machine/ACT.json      the acts the answering signed or read, to read them again (the nudge cMIP's readings)
 //   access.json           the browsers paired with this program
 //
 // The drafts folder (DRAFTS.md in clients/connector) is elsewhere, shared
@@ -46,6 +49,12 @@ export interface Settings {
   via: Via;
   /** The drafts folder shared with the connector. */
   drafts: string;
+}
+
+/** Whom an agent follows (the people cMIP, draft 1): kept here, private unless published. */
+export interface AgentPeople {
+  follows: { id: string; name: string | null }[];
+  muted: string[];
 }
 
 export type Sorted = 'new' | 'to answer' | 'answered' | 'ignored';
@@ -102,7 +111,9 @@ export interface Answered {
   time: number;
   /** The draft answered; empty for what Machine, allegedly's answering did. */
   draft: string;
-  verdict: 'approved' | 'declined' | 'sent back' | 'terms published' | 'picked' | 'nudged' | 'answered' | 'not answered';
+  verdict: 'approved' | 'declined' | 'sent back' | 'terms published' | 'picked' | 'nudged' | 'answered' | 'not answered' | 'prompted' | 'named';
+  /** The agent it concerns (Edubba, several agents); absent in records made before 16 October 2026, which concern Machine, allegedly. */
+  agent?: string;
   signer: string;
   title: string;
   note: string;
@@ -149,11 +160,26 @@ const HEX64 = /^[0-9a-f]{64}$/;
 
 export class Store {
   constructor(readonly dir: string) {
-    for (const d of ['identities', 'signed', 'received', 'machine']) mkdirSync(join(dir, d), { recursive: true, mode: 0o700 });
+    for (const d of ['identities', 'signed', 'received', 'machine', 'agents']) mkdirSync(join(dir, d), { recursive: true, mode: 0o700 });
     chmodSync(dir, 0o700);
     if (!existsSync(this.path('book.json'))) writeJson(this.path('book.json'), { label: BOOK_LABEL, identities: [], names: {} } satisfies Book);
     if (!existsSync(this.path('settings.json'))) writeJson(this.path('settings.json'), { homes: [], relays: [], via: {}, drafts: DEFAULT_DRAFTS } satisfies Settings);
     if (this.book().label !== BOOK_LABEL) throw new Error(`${dir} is not a MOR desk folder`);
+    this.moveMachine();
+  }
+
+  /**
+   * MOR Identities kept one agent, Machine, allegedly, in machine.json.
+   * Edubba keeps each agent in agents/ID.json: the file is moved there,
+   * unchanged, the first time the folder is read (its history stays where it
+   * is). A machine.json whose terms were never signed holds nothing to move.
+   */
+  private moveMachine(): void {
+    const old = this.path('machine.json');
+    if (!existsSync(old)) return;
+    const m = JSON.parse(readFileSync(old, 'utf8')) as { agent?: string | null; terms?: string | null };
+    if (m.agent && m.terms && HEX64.test(m.agent) && !existsSync(this.agentPath(m.agent))) renameSync(old, this.agentPath(m.agent));
+    else renameSync(old, this.path('machine.json.unused'));
   }
 
   path(...p: string[]): string {
@@ -237,13 +263,40 @@ export class Store {
 
   // ------------------------------------------------------------ Machine, allegedly's answering
 
-  machine<T>(fresh: () => T): T {
-    const p = this.path('machine.json');
-    return existsSync(p) ? (JSON.parse(readFileSync(p, 'utf8')) as T) : fresh();
+  private agentPath(id: string, what = 'json'): string {
+    if (!HEX64.test(id)) throw new Error('not an identity');
+    return this.path('agents', `${id}.${what}`);
   }
 
-  saveMachine(m: unknown): void {
-    writeJson(this.path('machine.json'), m);
+  /** The agents: identities whose terms were signed here, oldest first. */
+  agentIds(): string[] {
+    const dir = this.path('agents');
+    return readdirSync(dir)
+      .filter((f) => /^[0-9a-f]{64}\.json$/.test(f))
+      .map((f) => ({ id: f.slice(0, 64), t: (JSON.parse(readFileSync(join(dir, f), 'utf8')) as { since?: number }).since ?? 0 }))
+      .sort((a, b) => a.t - b.t || (a.id < b.id ? -1 : 1))
+      .map((x) => x.id);
+  }
+
+  isAgent(id: string): boolean {
+    return HEX64.test(id) && existsSync(this.agentPath(id));
+  }
+
+  agent<T>(id: string, fresh: () => T): T {
+    return this.isAgent(id) ? (JSON.parse(readFileSync(this.agentPath(id), 'utf8')) as T) : fresh();
+  }
+
+  saveAgent(id: string, m: unknown): void {
+    writeJson(this.agentPath(id), m);
+  }
+
+  people(id: string): AgentPeople {
+    const p = this.agentPath(id, 'people.json');
+    return existsSync(p) ? (JSON.parse(readFileSync(p, 'utf8')) as AgentPeople) : { follows: [], muted: [] };
+  }
+
+  savePeople(id: string, p: AgentPeople): void {
+    writeJson(this.agentPath(id, 'people.json'), p);
   }
 
   /** An act kept for the answering's readings, with its content key where private. */

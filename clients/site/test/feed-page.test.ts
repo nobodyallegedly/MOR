@@ -171,7 +171,7 @@ test('the page: the placeholder link to the third thank-you text, said in one li
   assert.match(clients[0], /^Dub: /);
   assert.match(clients[1], /^Dub on the web, https:\/\/dub\.dubsar\.org\/: .*for testing only/);
   assert.equal(await outer.$eval('#clients a', (a) => a.getAttribute('href')), 'https://dub.dubsar.org/');
-  assert.match(clients[2], /^MOR Identities: /);
+  assert.match(clients[2], /^Edubba: /);
   const homes = await outer.$$eval('#homes li', (els) => els.map((e) => e.textContent!));
   assert.deepEqual(homes.map((h) => h.split(':')[0] + ':' + h.split(':')[1]), ['https://home1.dubsar.org', 'https://home2.dubsar.org']);
   const box = await page.waitForSelector('.mor-write-box');

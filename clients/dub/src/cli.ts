@@ -91,7 +91,7 @@ async function main() {
       await openProgram({ dir, port, cli: fileURLToPath(import.meta.url), cwd: pkg, log: 'dub.log', version });
       break;
     case 'stop':
-      stopProgram(dir);
+      await stopProgram(dir);
       break;
     case 'check': {
       const url = rest.find((a) => !a.startsWith('--') && a !== o.built);

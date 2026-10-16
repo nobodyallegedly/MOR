@@ -185,7 +185,7 @@ fn a_disowned_publication_leaves_the_specification_unclaimed_whether_relied_on_o
 #[test]
 fn the_six_mir_hashes_follow_from_their_texts_8_1() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../spec");
-    for f in ["MIR-identity-draft-13.md", "MIR-text-draft-8.md", "MIR-envelopes-draft-10.md", "MIR-money-draft-8.md", "MIR-agreements-draft-14.md", "MIR-development-draft-10.md"] {
+    for f in ["MIR-identity-draft-13.md", "MIR-text-draft-9.md", "MIR-envelopes-draft-10.md", "MIR-money-draft-8.md", "MIR-agreements-draft-14.md", "MIR-development-draft-10.md"] {
         let text = std::fs::read_to_string(root.join(f)).unwrap();
         mor_core::text::check(&text).unwrap_or_else(|e| panic!("{f} is not canonical text: {e}"));
         let c = Spec::mir_content(&text);

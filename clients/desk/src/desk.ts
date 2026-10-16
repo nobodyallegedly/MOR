@@ -8,7 +8,9 @@
 // desk reads the file again, checks its bytes hash to that digest, reads it
 // again, and signs only if nothing blocks it. What you sign is what you saw.
 
-import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPES_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts } from '../../genesis/src/core.ts';
+import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPES_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts, unhex } from '../../genesis/src/core.ts';
+import { encryptionSecret } from '../../../modules/carry/src/carry.ts';
+import { NAME, namePayload, readName } from '../../dub/src/names.ts';
 import { TestIdentity, sealFor, type Home, type Reference } from '../../genesis/src/identity.ts';
 import { carryChains, lookUp, refAct } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, RelayError, type Via } from '../../genesis/src/transport.ts';
@@ -153,7 +155,10 @@ export class Desk {
         { scope: null, hints: relays, kind: 1 },
       ]);
       this.store.saveIdentity(id);
-      const key = await id.publishEncryptionKey();
+      // Its encryption key is the one its signing key's words carry (the
+      // identity carry Module, draft 2, 2a.2), as Dub's identities get theirs:
+      // the same words then open its private messages in another app.
+      const key = await id.publishEncryptionKey(encryptionSecret(unhex(id.f.signingSecret)));
       this.store.saveIdentity(id);
       for (const r of relays) {
         for (const act of id.chainActs()) {
@@ -164,7 +169,7 @@ export class Desk {
           }
         }
       }
-      lines.push({ text: `Its acts are found at, and its inbox is, ${relays.join(', ')}.` });
+      lines.push({ text: `Its acts are found at, and its inbox is, ${relays.join(', ')}. Its encryption key is the one its signing key’s words carry.` });
       lines.push({ text: a.linked ? 'Linked to Claude: Claude may prepare drafts for it, which you approve here.' : 'Not linked to Claude.' });
       this.writeLinked();
       return { title: `“${name}” is born`, lines, acts: [id.id, routes.id, key.id] };
@@ -192,10 +197,39 @@ export class Desk {
 
   // ------------------------------------------------------------ drafts
 
-  /** The identity this desk answers as Machine, allegedly, once its terms are signed here; else null. */
-  private agent(): string | null {
-    const m = this.store.machine(() => ({ agent: null as string | null, terms: null as string | null }));
-    return m.agent && m.terms ? m.agent : null;
+  /** Whether this desk answers as `id`, an agent whose terms were signed here (Edubba keeps several, F333). */
+  private isAgent(id: string): boolean {
+    return this.store.isAgent(id) && !!this.store.agent(id, () => ({ terms: null as string | null })).terms;
+  }
+
+  /**
+   * Publish a display name for an identity held here (the naming cMIP,
+   * draft 1; F333: an agent is named when it is added, decided by Nobody,
+   * allegedly, "(a) Published"): an Identity name act (type 4) naming the
+   * cMIP, public, at its homes and the relays. Not unique: always shown
+   * beside the fingerprint, never instead of it.
+   */
+  async publishName(identity: string, typed: string): Promise<{ act: string; name: string; sent: number }> {
+    const name = readName(typed);
+    return this.serial(async () => {
+      const me = this.store.identity(identity);
+      if (me.f.pending) throw new Error('A rotation of this identity is waiting to count: nothing is signed with it until it does.');
+      const made = me.sign(SPECS.identity, NAME, namePayload(name), { public: true });
+      this.store.saveIdentity(me);
+      this.store.keepAct(made.id, made.act);
+      let sent = 0;
+      for (const h of [...new Set([...me.f.homes.map((x) => x.hint), ...this.store.settings().relays])]) {
+        try {
+          await relayAt(h, this.via).putAct(made.act);
+          sent++;
+        } catch {
+          // that place is away: the others hold it
+        }
+      }
+      if (!sent) throw new Error('No home or relay took the name. It is signed, not published.');
+      this.store.record({ time: now(), draft: '', verdict: 'named', signer: identity, title: `Display name “${name}” published`, note: '', act: made.id });
+      return { act: made.id, name, sent };
+    });
   }
 
   /**
@@ -210,7 +244,7 @@ export class Desk {
    * be signed; else why not.
    */
   private agency(signer: string, a: { spec: string; type: number; public: boolean; to: string[]; refs: Reference[] }): string | null {
-    if (signer !== this.agent() || a.spec !== NUDGE_SPECS.text || a.type !== TEXT_ACT) return null;
+    if (!this.isAgent(signer) || a.spec !== NUDGE_SPECS.text || a.type !== TEXT_ACT) return null;
     const r = new Reading(this.store.names());
     for (const k of this.store.keptActs()) r.add(k.act, k.key);
     for (const it of this.store.received(signer).items) if (it.raw) r.add(unb64(it.raw.act), it.raw.key ? unb64(it.raw.key) : undefined);
@@ -370,14 +404,14 @@ export class Desk {
       // The sequence is saved before anything leaves, so no later act can fork from this one.
       this.store.saveIdentity(me);
       // The agent's acts are kept for the readings, so its picks and nudges are counted (item 13).
-      if (d.signer === this.agent()) this.store.keepAct(made.id, made.act, d.public ? undefined : made.key);
+      if (this.isAgent(d.signer)) this.store.keepAct(made.id, made.act, d.public ? undefined : made.key);
       const rec = await this.record(digest, made, d.public, d.to, d.relays, recipient);
       if (d.media.length) rec.media = d.media.map(b64);
       this.store.saveSigned(rec);
       const sent = await this.send(rec, me);
       this.answer({ draft: digest, verdict: 'approved', note: '', act: made.id, sent }, d, r.title);
       const lines: Line[] = sent.map((s) => ({ text: `${s.to}: ${s.answer}`, tone: s.accepted ? 'ok' : 'bad' }));
-      if (!sent.some((s) => s.accepted)) lines.push({ text: 'Nothing accepted it: it is signed, but not delivered. Send it again when the relays are back.', tone: 'bad' });
+      if (!sent.some((s) => s.accepted && s.to !== 'its homes')) lines.push({ text: 'Nothing accepted it: it is signed, but not delivered. Send it again when the relays are back.', tone: 'bad' });
       return { title: `Approved and signed: ${r.title.replace(/, to be \w+$/, '').toLowerCase()}`, lines, acts: [made.id] };
     });
   }
@@ -521,6 +555,20 @@ export class Desk {
           out.push({ to: `inbox ${hint}`, accepted: false, answer: `refused: ${e instanceof RelayError ? e.reason : err(e)}` });
         }
       }
+      // The act itself, locked, goes to the sender's homes too (Identity rule
+      // 35; what the Dub report left for the desk): its line of acts stays
+      // readable there by whoever changes its keys. The homes see that a
+      // private act exists, never what it says or to whom it is sealed.
+      const homes: string[] = [];
+      for (const h of me.f.homes) {
+        try {
+          await relayAt(h.hint, via).putAct(act);
+          homes.push(h.hint);
+        } catch {
+          // a home may decline a private act: the line is then read by its card
+        }
+      }
+      if (out.length) out.push({ to: 'its homes', accepted: homes.length > 0, answer: homes.length ? `its locked act kept at ${homes.join(', ')}, so its line stays readable (Identity rule 35)` : 'no home took its locked act: its line is read by its card (Identity rule 35)' });
       return out;
     }
     // The identity chains of the signers its public references name, carried to
@@ -812,7 +860,7 @@ export class Desk {
   /** Whether anything accepted the act signed from a draft, as the desk's answer records it. */
   private delivered(draft: string): boolean {
     try {
-      return !!loadAnswer(this.store.settings().drafts, draft)?.sent?.some((x) => x.accepted);
+      return !!loadAnswer(this.store.settings().drafts, draft)?.sent?.some((x) => x.accepted && x.to !== 'its homes');
     } catch {
       return false;
     }

@@ -15423,3 +15423,68 @@ fn owners_verdicts_do_not_depend_on_order() {
     }
     assert!(moved.into_inner() > 0, "no story put an owners' matter in force");
 }
+
+/// F334 (Text draft 9, rule 14; Agreements rule 58): a collective's text act
+/// names, as its one object, its own decision on its actions chain, and is
+/// valid and counted. Any other `objects` on a text act stays invalid (F296):
+/// another collective's chain, an individual signer, two objects, a pointer
+/// to an act that is no decision of its own, any other object; and an act
+/// its verifier judges invalid counts for nothing in Agreements either.
+#[test]
+fn a_collectives_text_names_its_own_decision_f334() {
+    let mut lab = Lab::new(&|t| {
+        t.areas = None;
+        t.area_words = None;
+    });
+    let col = lab.c[0].id;
+    let text = |s: &str| vec![(Value::Uint(0), Value::Text(s.into()))];
+    // Its own pointer, as its client cites it (rule 58): valid, and counted.
+    let a = lab.w.everyday_act(&mut lab.c[0], mirs().text, 0, text("For the house."), None, None);
+    let good = lab.w.add(&a);
+    assert_eq!(lab.w.v.status(&good), Status::Valid);
+    assert!(matches!(lab.consent(&good), Consent::NoArea { .. }));
+    assert!(lab.counts(&good));
+    // Without the pointer it is valid as a text, and on no chain (rule 58).
+    let mut bare = lab.c[0].clone();
+    bare.cite = None;
+    let a = lab.w.everyday_act(&mut bare, mirs().text, 0, text("Uncited."), None, None);
+    let uncited = lab.w.add(&a);
+    assert_eq!(lab.w.v.status(&uncited), Status::Valid);
+    assert!(matches!(lab.consent(&uncited), Consent::Uncited { .. }));
+
+    // Another collective, declaring an agreement of its own.
+    let other = lab.w.genesis_with(
+        "other",
+        vec![own_home()],
+        None,
+        None,
+        Some(vec![agreements::founding_declaration(&mirs().agreements, &lab.founding)]),
+        3,
+    );
+    let ana = lab.m[ANA].id;
+    let one = |chain: Hash, predecessor: Hash| Some(vec![Object { chain, predecessor }]);
+    let mut dev = lab.c[1].clone();
+    dev.seq = lab.c[0].seq.clone();
+    let cases: Vec<(&str, Option<Vec<Object>>)> = vec![
+        ("another collective's chain", one(other.id, other.id)),
+        ("its own chain, another collective's decision", one(col, other.id)),
+        ("its own chain, an act that is no decision", one(col, good)),
+        ("two objects", Some(vec![Object { chain: col, predecessor: col }, Object { chain: col, predecessor: col }])),
+        ("any other object", one(sha256(b"a deal's head"), sha256(b"a deal's head"))),
+    ];
+    for (label, objects) in cases {
+        // Exactly these objects: the device adds no pointer of its own.
+        let mut d = dev.clone();
+        d.cite = None;
+        let a = lab.w.everyday_act(&mut d, mirs().text, 0, text(label), objects, None);
+        let id = lab.w.add(&a);
+        assert_eq!(lab.w.v.status(&id), Status::Invalid, "{label}");
+        assert!(!lab.counts(&id), "{label}: counts for nothing in Agreements");
+        assert!(matches!(lab.consent(&id), Consent::Invalid { .. } | Consent::Uncited { .. }), "{label}");
+    }
+    // An individual signer naming its own chain: no collective, invalid (F296 kept).
+    let mut ana_dev = lab.m[ANA].clone();
+    let a = lab.w.everyday_act(&mut ana_dev, mirs().text, 0, text("My own log."), one(ana, ana), None);
+    let solo = lab.w.add(&a);
+    assert_eq!(lab.w.v.status(&solo), Status::Invalid);
+}

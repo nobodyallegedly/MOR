@@ -150,9 +150,11 @@ ${a.frozen ? '' : `<form class="words row" data-collective="${e(c.id)}"><input n
     .join('');
 }
 
-export function collectives(s: State): string {
-  if (!s.collectives.length) return '<p class="small">None yet.</p>';
-  return s.collectives
+/** The collectives held here; `only`, one of them (Edubba's Constitution sub-tab shows the one selected). */
+export function collectives(s: State, only?: string): string {
+  const shown = only ? s.collectives.filter((c) => c.id === only) : s.collectives;
+  if (!shown.length) return '<p class="small">None yet.</p>';
+  return shown
     .map((c) => {
       const heldMembers = c.members.filter((m) => m.held);
       const releases = c.releases

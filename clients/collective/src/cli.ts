@@ -9,9 +9,14 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { serve, type RunFile } from './server.ts';
+import { stopProgram } from '../../desk/src/launch.ts';
 
 const HELP = `mor-collective: a client with no command line for test collectives.
 TEST IDENTITIES ONLY: every key is held in software, in its folder.
+
+Retired as the person's app on 16 October 2026 (F333): Edubba (clients/desk)
+takes it in, as its Collectives tab, reading ~/mor-collective where it is.
+Kept for its tests and as the library Edubba uses; do not run both on one folder.
 
   open [--dir DIR] [--port N]   Start the program if it is not running, and open
                                 its page in the browser, paired by a one-time link.
@@ -99,20 +104,11 @@ async function main() {
     case 'open':
       await open(dir, port);
       break;
-    case 'stop': {
-      const run = runFile(dir);
-      if (!run) {
-        console.log('not running');
-        break;
-      }
-      try {
-        process.kill(run.pid, 'SIGTERM');
-      } catch {
-        // already gone
-      }
-      console.log('stopped');
+    case 'stop':
+      // Only the program proven to have written this folder's run file is
+      // signalled (Edubba's launcher, `provenPid`): never another process.
+      await stopProgram(dir);
       break;
-    }
     default:
       console.log(HELP);
   }

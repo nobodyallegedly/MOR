@@ -2,6 +2,8 @@
 
 The collective client, in TypeScript, with the core library through WebAssembly. Roadmap step 11b: "I will be needing to manage a collective without typing a line of code" (Nobody, allegedly).
 
+**Taken into Edubba (16 October 2026, F333).** The collective client's page retires as the person's app: Edubba (`clients/desk`) shows each collective under its Collectives tab, with its **Constitution** sub-tab running this client's own page logic (`src/page/mount.ts`) and its **Act** sub-tab acting for the collective in text and pictures (`Actions.permissions`, `Actions.preparePost`). Edubba reads `~/mor-collective` where it is. This folder's code stays as the library Edubba uses: `src/server.ts` exports `collectiveApi`, the operations behind the page's requests; its own page and command remain for its tests (`scripts/make-app.sh` now points to Edubba's). Do not run this program and Edubba on one folder: Edubba's `open` stops it.
+
 **Test identities only.** Every key, every share of a collective's chain key, is held in software in the program's folder. The real identity's keys come through the air-gapped Module and its phone app (step 16b).
 
 ## In plain words
@@ -31,7 +33,7 @@ From the page you can:
 | `src/access.ts` | Pairing and signed requests, as the management page of step 11: a browser key that cannot be read out, a one-time code, each request its exact JSON signed after `"MOR collective client, version 1\n"`, naming this program, the time (five minutes) and a single-use nonce. |
 | `src/server.ts` | The program: `127.0.0.1` only, the page (built from `src/page/` at start, not minified) under a content security policy, `/hello`, `/api`, and `/local/code` for the launcher. Requests addressed to any other host name are refused (DNS rebinding). |
 | `src/cli.ts` | `open` (start the program if needed, open the page with a one-time pairing link), `run`, `stop`. |
-| `src/page/` | The page: requests, the browser's key, the sections and the reviews. |
+| `src/page/` | The page: requests, the browser's key, the sections and the reviews. `mount.ts`: its logic, mountable in any element (its own page, Edubba's Constitution sub-tab). |
 | `scripts/make-app.sh` | Makes `~/Applications/MOR Collective.app` on macOS, which runs `open`. |
 
 It builds on the repo client (step 5a), which gained, for it: `prepareRelease` and `publishPrepared` (a release made and shown before it is signed, by a collective or by one identity), `proposePayload` and `encodeTerms`, `collectiveTerms`, and member changes that may also rewrite the rules (`changeMembers({ governance })`), each refusing to sign if the terms made now are not the bytes shown (`expect`). For Agreements draft 7 it also gained, from this step: `expect` on `changeReleaseWords`; three optional fields of the collective file the client keeps (`departed`, `steppedDown`, `records`); and `verifyRelease` reading the publisher's own acts before judging a release's standing, since a release that is no longer the tip a rotation kept is valid only through the acts after it.
@@ -51,6 +53,12 @@ Each collective has a section **Money and endings**, every step reviewed in plai
 - **A simulated payment and its split:** the service signs a receipt and a split delivered to every holder it pays, naming its fee and who received it (Q9); the core says whether the payouts sum exactly and whether any departed stake is paid less than a member's of the same size (equal treatment).
 - **A release to the public domain** of one of the collective's releases: every holder of the collective's stake in itself signs, the departed one too (F121, D).
 - **The fork:** each member on a side; everyone signs with their own identity; once complete, the collective is closed in Agreements and the page refuses anything more from it (F121, B). Founding each side's new collective, naming the original in "forked from", is not here yet.
+
+## Acting for a collective (Edubba, F333)
+
+`Actions.permissions(collective)`: what the identities marked yours may do for it, text and pictures for now, from Agreements' own reading of its agreement in force (its relays and homes): who holds the signing key (rule 59); for a text (Text, type 0) and for a picture (an Envelopes publication, then the text showing it), which area reaches it and how many of its holders' signature acts it needs, as Agreements count the voices that remain (rule 60, `agreementsNextVoices`), a frozen area counting for nothing (rule 71); that an act is done once public and on the chain (rules 57, 58). An area drawn by act type cannot tell a release from a picture (field 19, a stated cost): said. Each item's `state` says what can be done now (`byAgreement`, where set, what the agreement alone would allow).
+
+`Actions.preparePost({ collective, text, jpeg })`: the post read back before it is signed (the text as plain text, the picture stripped, whose signature acts it needs, simulated consent said), with its digest; `confirm` signs it with the collective's key, then the signature acts its areas need, yours first, then reads back Agreements' consent for each act. The text carries one object, the collective's pointer to its own decision: Text rule 14 allows it since F334 (draft 9), and Agreements rule 58 asks it.
 
 ## Readings
 

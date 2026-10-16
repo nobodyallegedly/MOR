@@ -2,7 +2,7 @@
 // bidirectional yes please"): an issue opened on GitHub is published again
 // on MOR by the reporting identity, never automatically. This command holds
 // no key. For the issues the author names (`--prepare N`), after reading
-// the dry run, it writes a draft into the drafts folder MOR Identities reads
+// the dry run, it writes a draft into the drafts folder Edubba reads
 // (`clients/connector/DRAFTS.md`): a public post of the reporting identity,
 // its words `republicationText`. The desk reads the draft again from its own
 // bytes, shows it, and signs it only if the author approves it there, as it
