@@ -24,6 +24,16 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F336. Conformance vectors for every layer, and an independent verifier in C, before the freeze (16 October 2026)
+
+*Area: development layer and the freeze. Asked by Nobody, allegedly: "If we were to freeze as is… the first useful test another person could do is to rebuild it from documents, correct?"*
+
+**The finding.** The project lead agreed (the smallest useful rebuild is a verifier: acts in, verdicts out) and checked what a rebuilder could compare against: `core/vectors/` holds part 1 only (tagged hash, CBOR, canonical text, lock, running summary, the three-act sequence, opening acts, the sealed container), checked by the Rust library and an independent Python implementation; missing are signatures (part 2) and verdict vectors for the layers (these exact acts give valid, invalid or unknown: rotations, contests, receipts, succession, Text, Money, Agreements, Development).
+
+**The language.** Asked "So, this other verifier is also in Rust?", the project lead advised another language, for independence (a second Rust verifier would share libraries and habits). Asked "C?", and then "C is very tempting due to popularity with devs.", the project lead agreed: the cryptography and security groups of the first wave read and trust C. *Cost:* a large job; memory safety needs care (strict compiler checks and sanitisers, run on GitHub); the post-quantum pieces come from a pinned library.
+
+**Decided by Nobody, allegedly:** "Yes, let's do it, even if it takes more time, it will show proof of work." Before the freeze: the missing vectors (part 2 and every layer's verdicts), checked by the Python checker as well as the Rust library; then a verifier in C, written only from the frozen-ready texts and the vectors (a session that does not read the Rust code), passing every vector, to go out with the first wave.
+
 ## F335. MOR Safety is named Kišib: what it must do and what it may do (16 October 2026)
 
 *Area: presentation and the development layer (a client). The rotation app decided in F332 (amended).*
