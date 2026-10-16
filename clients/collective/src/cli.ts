@@ -13,6 +13,10 @@ import { serve, type RunFile } from './server.ts';
 const HELP = `mor-collective: a client with no command line for test collectives.
 TEST IDENTITIES ONLY: every key is held in software, in its folder.
 
+Retired as the person's app on 16 October 2026 (F333): Edubba (clients/desk)
+takes it in, as its Collectives tab, reading ~/mor-collective where it is.
+Kept for its tests and as the library Edubba uses; do not run both on one folder.
+
   open [--dir DIR] [--port N]   Start the program if it is not running, and open
                                 its page in the browser, paired by a one-time link.
   run  [--dir DIR] [--port N]   Run the program here, in the foreground.

@@ -49,7 +49,9 @@ after(async () => {
   for (const r of [...(homes ?? []), relay]) await r?.stop();
 });
 
-const done = (page: Page, words: string | RegExp) => page.locator('#status .note.done', { hasText: words }).waitFor({ timeout: 60_000 });
+const done = (page: Page, words: string | RegExp) => page.locator('#e-status .note.done', { hasText: words }).waitFor({ timeout: 60_000 });
+/** Edubba (F333): an identity is shown below the list once selected. */
+const select = (page: Page, id: string) => page.locator(`.entry[data-id="${id}"]`).click().then(() => page.locator(`.card[data-identity="${id}"]`).waitFor());
 
 test('the author, without a terminal: a draft from Claude sent back, reworked, approved; received interactions sorted', async () => {
   const context = await browser.newContext();
@@ -62,22 +64,25 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
 
   // The launcher's link pairs this browser by itself; the code leaves the address bar.
   await page.goto(`${app.base}/#pair=${app.access.newCode()}`);
-  await page.locator('h1', { hasText: 'MOR Identities' }).waitFor();
-  assert.equal(await page.title(), 'MOR Identities');
-  await page.locator('#settings form').waitFor();
+  await page.locator('h1', { hasText: 'Edubba' }).waitFor();
+  assert.equal(await page.title(), 'Edubba');
+  await page.click('[data-action=tab][data-tab=settings]');
+  await page.locator('form#desk-settings').waitFor();
   assert.equal(new URL(page.url()).hash, '');
 
   // Settings: the homes and the relay.
-  await page.fill('#settings textarea[name=homes]', homes.map((h) => h.base).join('\n'));
-  await page.fill('#settings textarea[name=relays]', relay.base);
-  await page.click('#settings button[type=submit]');
+  await page.fill('#desk-settings textarea[name=homes]', homes.map((h) => h.base).join('\n'));
+  await page.fill('#desk-settings textarea[name=relays]', relay.base);
+  await page.click('#desk-settings button[type=submit]');
   // Said beside the button that was pressed, not only at the top of the page.
   await page.locator('#settings-status .note.done', { hasText: 'Settings saved' }).waitFor({ timeout: 60_000 });
 
   // Two identities: the author's, and "Machine, allegedly", linked to Claude.
+  await page.click('[data-action=tab][data-tab=identities]');
   await page.fill('#new-identity input[name=name]', 'Me');
   await page.click('#new-identity button[type=submit]');
   await done(page, '“Me” is born');
+  await page.click('.entry.add[data-id=new]');
   await page.fill('#new-identity input[name=name]', 'Machine, allegedly');
   await page.check('#new-identity input[name=linked]');
   await page.click('#new-identity button[type=submit]');
@@ -88,9 +93,11 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   // The question on each card, answered on or off; the author's own stays off (decided 1 October 2026).
   const meCard = page.locator(`.card[data-identity="${me}"]`);
   const machineCard = page.locator(`.card[data-identity="${machine}"]`);
-  assert.match((await meCard.textContent())!, /Claude may prepare drafts for this identity:/);
-  assert.equal(await meCard.locator('[data-action=link][data-on=false]').getAttribute('aria-pressed'), 'true');
   assert.equal(await machineCard.locator('[data-action=link][data-on=true]').getAttribute('aria-pressed'), 'true');
+  await select(page, me);
+  assert.match((await meCard.textContent())!, /Claude may prepare drafts for this identity/);
+  assert.equal(await meCard.locator('[data-action=link][data-on=false]').getAttribute('aria-pressed'), 'true');
+  assert.equal(await machineCard.count(), 0, 'one identity shown below the list at a time');
   // Turned on, then off again, by clicks; the answer is said on the card.
   await meCard.locator('[data-action=link][data-on=true]').click();
   await meCard.locator('.here .note.done', { hasText: 'Claude may now prepare drafts' }).waitFor();
@@ -103,11 +110,13 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
 
   // Copy ID: the whole ID, without the spaces the fingerprint is shown with.
   await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: app.base });
-  await meCard.locator('[data-action=copy]').click();
-  await meCard.locator('[data-action=copy]', { hasText: 'Copied' }).waitFor();
+  await page.locator('.head [data-action=copy]').click();
+  await page.locator('.head [data-action=copy]', { hasText: 'Copied' }).waitFor();
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), me);
 
   // Claude prepares a post for Machine, allegedly; it appears without a click or a reload.
+  await page.locator('[data-action=copy]', { hasText: 'Copy ID' }).first().waitFor();
+  await select(page, machine);
   const first = await claude.ask('mor_prepare_post', { signer: 'Machine, allegedly', text: 'Hello, word.', note: 'A first post.' });
   const d1 = handed(first.text);
   const card = page.locator(`.draft[data-draft="${d1}"]`);
@@ -139,7 +148,7 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   // Approved: signed and accepted by the relay.
   await card2.locator('[data-action=approve]').click();
   await done(page, 'Approved and signed');
-  assert.match((await page.locator('#status').textContent())!, new RegExp(`${relay.base.replace(/[.]/g, '\\.')}: accepted`));
+  assert.match((await page.locator('#e-status').textContent())!, new RegExp(`${relay.base.replace(/[.]/g, '\\.')}: accepted`));
   const post = app.store.identity(machine).f.sequence.at(-1)!;
   assert.equal((await readPost(post, [relay.base])).standing, 'valid');
   assert.match((await claude.ask('mor_drafts', { draft: d2 })).text, /APPROVED by the owner/);
@@ -150,11 +159,12 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   await page.click('[data-action=drafts]');
   await page.locator(`.draft[data-draft="${handed(msg.text)}"] [data-action=approve]`).click();
   await done(page, 'Approved and signed');
-  await meCard.locator('[data-action=refresh]').click();
-  await meCard.locator('.here .note.done', { hasText: '1 new item' }).waitFor({ timeout: 60_000 });
-  assert.match((await meCard.locator('[data-pile="new"] .item').textContent())!, /A message.*A private word\./s);
-  await meCard.locator('[data-pile="new"] .item [data-sorted="to answer"]').click();
-  await page.locator(`.card[data-identity="${me}"] [data-pile="to answer"] .item`).waitFor();
+  await select(page, me);
+  await page.locator(`[data-action=refresh][data-identity="${me}"]`).click();
+  await page.locator(`[data-here-received="${me}"] .note.done`, { hasText: '1 new item' }).waitFor({ timeout: 60_000 });
+  assert.match((await page.locator('[data-pile="new"] .item').textContent())!, /A message.*A private word\./s);
+  await page.locator('[data-pile="new"] .item [data-sorted="to answer"]').click();
+  await page.locator('[data-pile="to answer"] .item').waitFor();
 
   // Someone else replies to the post, publicly, to the machine's inbox.
   const other = TestIdentity.create({ homes: homes.map((h) => h.home), scheme: 3 });
@@ -165,10 +175,11 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   await other.publish(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(new Map()), { public: true, relays: [relay.base], to: [machine], acks: [post] });
 
   // What the machine received, then sorted by clicks.
+  await select(page, machine);
   const id = page.locator(`.card[data-identity="${machine}"]`);
-  await id.locator('[data-action=refresh]').click();
-  await id.locator('.here .note.done', { hasText: '2 new items' }).waitFor({ timeout: 60_000 });
-  const pile = (p: string) => id.locator(`[data-pile="${p}"] .item`);
+  await page.locator(`[data-action=refresh][data-identity="${machine}"]`).click();
+  await page.locator(`[data-here-received="${machine}"] .note.done`, { hasText: '2 new items' }).waitFor({ timeout: 60_000 });
+  const pile = (p: string) => page.locator(`[data-pile="${p}"] .item`);
   assert.equal(await pile('new').count(), 2);
   await shot(page, '3-received');
   // Relying on the reply: the click explains first and signs nothing; Cancel leaves nothing signed.
@@ -179,9 +190,9 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   await id.locator('.here [data-action="witness-sign"]').click();
   await id.locator('.here .note.done', { hasText: 'Witness act' }).waitFor({ timeout: 60_000 });
   await pile('new').filter({ hasText: 'A reply' }).locator('[data-sorted="answered"]').click();
-  await id.locator('[data-pile="answered"] .item').first().waitFor();
+  await page.locator('[data-pile="answered"] .item').first().waitFor();
   await pile('new').filter({ hasText: 'An acknowledgement' }).locator('[data-sorted="ignored"]').click();
-  await id.locator('[data-pile="ignored"] .item').first().waitFor();
+  await page.locator('[data-pile="ignored"] .item').first().waitFor();
   assert.equal(await pile('new').count(), 0);
   assert.match((await pile('answered').textContent())!, /Nice post\./);
   assert.match((await pile('ignored').textContent())!, /A witness act: its sender relies on/);
@@ -204,6 +215,8 @@ test('a new draft appears by itself even while the browser reports the page hidd
   const page = await context.newPage();
   page.on('pageerror', (e) => problems.push(String(e)));
   await page.goto(`${app.base}/#pair=${app.access.newCode()}`);
+  await page.click('[data-action=tab][data-tab=identities]');
+  await page.click(`.entry:has-text("Machine, allegedly")`);
   await page.locator('#drafts').waitFor();
   assert.equal(await page.evaluate(() => document.visibilityState), 'hidden');
   const r = await claude.ask('mor_prepare_post', { signer: 'Machine, allegedly', text: 'Seen while hidden.' });

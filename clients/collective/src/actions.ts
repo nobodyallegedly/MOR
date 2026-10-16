@@ -11,6 +11,9 @@ import { MIRS, SPECS, Verifier, cborDecode, cborEncode, unhex, describeAct, hex,
 import { TestIdentity, lookUp, type Home } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { beforeSigning } from '../../assess/src/assess.ts';
+import { post } from '../../barebone/src/post.ts';
+import { compose } from '../../longform/src/text.ts';
+import { CARRIED_WORDS, strip } from '../../../modules/jpeg/src/jpeg.ts';
 import { TestCollective, collectiveTerms, type Governance, type KeptLines } from '../../repo/src/collective.ts';
 import { readCards, type Card } from '../../genesis/src/lines.ts';
 import {
@@ -93,6 +96,26 @@ export interface Done {
   lines: Line[];
   /** The acts made, by id. */
   acts: string[];
+}
+
+/** One act a post needs signatures on, by an area (Agreements rule 60). */
+export interface PostNeed {
+  spec: string;
+  type: number;
+  area: number;
+  name: string;
+  needed: number;
+  voices: string[];
+}
+
+/** What a person may do for a collective (Edubba, F333): each permission with the rules it rests on. */
+export interface Permissions {
+  collective: string;
+  name: string;
+  agreement: string | null;
+  you: string[];
+  items: { what: string; state: 'yes' | 'with others' | 'no'; lines: Line[]; needs: PostNeed[] }[];
+  notes: Line[];
 }
 
 /** An operation made and shown, waiting for the person's confirmation. */
@@ -3823,6 +3846,197 @@ export class Actions {
     }
     this.shownCache.set(c.identity, { stamp, at: Date.now(), shown });
     return shown;
+  }
+
+  // ------------------------------------------------------------ acting for a collective (Edubba, F333)
+
+  /**
+   * What a person may do for a collective, text and pictures only for now
+   * (F333: "For now, the app only acts on text and jpeg envelope"), as its
+   * agreement in force says, each permission naming the rule it rests on.
+   * "You" are the identities this folder marks as yours. Read from Agreements'
+   * own reading of the collective (its relays and homes), never this
+   * device's copy alone.
+   */
+  async permissions(collective: string): Promise<Permissions> {
+    const c = this.store.collective(collective);
+    const names = this.store.names();
+    const cname = this.store.book().collectives.find((x) => x.id === collective)?.name ?? short(collective);
+    const mine = this.store.book().identities.filter((i) => i.mine).map((i) => i.id);
+    const out: Permissions = { collective, name: cname, agreement: null, you: mine, items: [], notes: [] };
+    if (c.f.closed) {
+      out.notes.push({ text: `It was ended by its fork or closing ${short(c.f.closed)}: nothing more can be done for it (Agreements rule 47a).`, tone: 'bad' });
+      return out;
+    }
+    const ag = await this.agreementsOf(c);
+    if (ag.broken) {
+      out.notes.push({ text: brokenWords(`“${cname}”`, ag.broken), tone: 'bad' });
+      return out;
+    }
+    if (!ag.agreement || !ag.terms) {
+      out.notes.push({ text: `Agreements' reading of it could not be had (${ag.unread ?? 'nothing found'}): nothing can be done for it until it can.`, tone: 'bad' });
+      return out;
+    }
+    out.agreement = ag.agreement;
+    const t = ag.terms.t;
+    if (!mine.length) out.notes.push({ text: 'No identity here is marked as you, so nothing is yours to do for it: mark yours under Members held here.', tone: 'warn' });
+    const signing = t.grammar?.signing;
+    const holder = signing?.form === 'one' ? (signing.holder ?? null) : signing?.form === 'custodian' ? (signing.custodian ?? null) : null;
+    const keyWords = !signing
+      ? 'Its key grammar could not be read.'
+      : signing.form === 'one'
+        ? `Its signing key is held by ${names(holder!)} (Agreements rule 59, key grammar).`
+        : signing.form === 'custodian'
+          ? `Its signing key is held by ${names(holder!)}, as custodian (Agreements rule 59).`
+          : `Its signing key is held as a threshold: any ${signing.threshold} of ${list((signing.members ?? []).map(names))} produce its signature together (Agreements rule 59).`;
+    const youHoldKey = !!holder && mine.includes(holder);
+    const keyHere = holder ? this.store.holds(holder) : (signing?.members ?? []).every((m) => this.store.holds(m));
+    const reaching = (spec: string, type: number) =>
+      t.areas.filter((a) => a.kinds.some((k) => (k.form === 'layer' && k.layer === 1) || (k.form === 'type' && k.spec === spec && k.type === type)));
+    const kinds: { what: string; acts: { label: string; spec: string; type: number }[] }[] = [
+      { what: 'Post a text for it', acts: [{ label: 'a text (Text, type 0)', spec: SPECS.text, type: 0 }] },
+      {
+        what: 'Post a picture for it',
+        acts: [
+          { label: 'the picture’s publication (Envelopes, type 0; the JPEG Module)', spec: SPECS.envelopes, type: 0 },
+          { label: 'the text showing it (Text, type 0)', spec: SPECS.text, type: 0 },
+        ],
+      },
+    ];
+    for (const k of kinds) {
+      const lines: Line[] = [];
+      let state: 'yes' | 'with others' | 'no' = youHoldKey ? 'yes' : keyHere ? 'with others' : 'no';
+      lines.push({ text: `${keyWords} ${youHoldKey ? 'You hold it.' : keyHere ? 'It is held on this device by a simulated member: its consent is simulated, and said each time.' : 'It is not held on this device: Edubba cannot sign for it.'}` });
+      const needs: PostNeed[] = [];
+      for (const a of k.acts) {
+        const areas = reaching(a.spec, a.type);
+        if (!areas.length) {
+          lines.push({ text: `No area reaches ${a.label}: it counts on the collective's own signature, as any identity's act does (Agreements rule 60).` });
+          continue;
+        }
+        for (const area of areas) {
+          const nv = ag.v.agreementsNextVoices(AGREEMENTS_SPECS, c.identity, { form: 'area', area: area.id }, []) as { error: string | null; voices: string[]; needed: number | null };
+          if (nv.error || nv.needed == null || ag.frozen.includes(area.id)) {
+            lines.push({ text: `The “${area.name}” area reaches ${a.label}, and has no holder whose voice remains: it stands frozen, and such an act counts for nothing until the members refit it (Agreements rules 60, 71).`, tone: 'bad' });
+            state = 'no';
+            continue;
+          }
+          const held = nv.voices.filter((m) => this.store.holds(m));
+          const you = nv.voices.filter((m) => mine.includes(m));
+          lines.push({
+            text: `The “${area.name}” area (area ${area.id}) reaches ${a.label}: it counts only with the signature acts of ${anyOf(nv.needed, nv.voices, names)} (Agreements rule 60).${you.length ? ` You hold this area.` : ' You do not hold this area.'}`,
+          });
+          if (a.spec === SPECS.envelopes)
+            lines.push({ text: 'An area drawn by act type cannot tell a release from a picture: both are Envelopes publications, so this area decides the collective’s pictures too (Agreements, field 19, a stated cost).', tone: 'warn' });
+          needs.push({ spec: a.spec, type: a.type, area: area.id, name: area.name, needed: nv.needed, voices: nv.voices });
+          if (held.length < nv.needed) state = 'no';
+          else if (state === 'yes' && (nv.needed > you.length || !you.length)) state = 'with others';
+        }
+      }
+      lines.push({ text: 'Edubba makes it public, so it is done once on the collective’s chain (Agreements rule 57), citing the collective’s latest decision (rule 58).' });
+      out.items.push({ what: k.what, state, lines, needs });
+    }
+    out.items.push({
+      what: 'Anything else for it',
+      state: 'no',
+      needs: [],
+      lines: [
+        { text: 'Not from the Act tab yet (F333: text and pictures for now): private messages for it, payments, deals. A private act of a collective is done only once sealed to every member too (Agreements rule 57).' },
+        { text: 'Its releases, members, rules, money and endings are under Constitution, each read back in plain words before it is signed.' },
+      ],
+    });
+    return out;
+  }
+
+  /**
+   * A post for a collective, text and an optional JPEG, made and read back
+   * before it is signed. The picture is stripped to the picture alone first
+   * (the JPEG Module); the digest covers the text and the stripped picture.
+   * Signed with the collective's key, public, citing its latest decision;
+   * then, where an area reaches an act, the signature acts its threshold
+   * needs, by the holders held here, yours first (simulated consent, said).
+   */
+  async preparePost(a: { collective: string; text: string; jpeg?: string }) {
+    const c = this.store.collective(a.collective);
+    const names = this.store.names();
+    const perms = await this.permissions(a.collective);
+    const blocking: string[] = [];
+    const { text, changes } = compose(a.text);
+    if (!text.trim()) blocking.push('Write something to post.');
+    let stripped: Uint8Array | null = null;
+    let removed: string[] = [];
+    if (a.jpeg) {
+      try {
+        const s = strip(Uint8Array.from(Buffer.from(a.jpeg, 'base64')));
+        stripped = s.bytes;
+        removed = s.removed.map((r) => CARRIED_WORDS[r]);
+      } catch (e) {
+        blocking.push(`The picture is not a JPEG this client can publish: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+    const item = perms.items[stripped ? 1 : 0];
+    if (!item) blocking.push(...perms.notes.map((n) => n.text));
+    else if (item.state === 'no') blocking.push(`${item.what} is not something you can do now: ${item.lines.filter((l) => l.tone === 'bad').map((l) => l.text).join(' ') || 'its key or the signatures it needs are not held here.'}`);
+    const sign = (item?.needs ?? []).map((n) => {
+      const held = n.voices.filter((m) => this.store.holds(m));
+      const ordered = [...held.filter((m) => perms.you.includes(m)), ...held.filter((m) => !perms.you.includes(m))];
+      return { ...n, signers: ordered.slice(0, n.needed) };
+    });
+    const reading: Reading = {
+      title: `A post for the collective “${perms.name}”${stripped ? ', with a picture' : ''}`,
+      summary: [
+        `Signed with ${names(c.identity)}'s own key, public: anyone can read it. It is an act of the collective, not of its members.`,
+        ...(sign.length ? [`Then ${list(sign.flatMap((n) => n.signers).filter((x, i, xs) => xs.indexOf(x) === i).map(names))} sign it, each with a signature act of their own, as the agreement's areas ask.`] : []),
+      ],
+      sections: [
+        { heading: 'Why it may be done', lines: item?.lines ?? [] },
+        ...(changes.length ? [{ heading: 'The text, made canonical', lines: changes.map((x) => ({ text: x })) }] : []),
+        ...(stripped ? [{ heading: 'The picture', lines: [{ text: removed.length ? `Taken out before publishing: ${removed.join('; ')}.` : 'It carried nothing to take out.' }, { text: `Published as ${stripped.length} bytes, locked, at ${list(c.f.relays)}.` }] }] : []),
+        ...sign.map((n) => ({
+          heading: `The “${n.name}” area's signatures`,
+          lines: n.signers.map((m) => ({ text: `${names(m)} signs it${perms.you.includes(m) ? ' (you)' : ': a simulated member held here, its consent simulated'}.`, tone: (perms.you.includes(m) ? undefined : 'warn') as Line['tone'] })),
+        })),
+      ],
+      plain: [{ heading: 'The text, as it will be signed', text }],
+      blocking,
+    };
+    return this.plan({
+      kind: 'post',
+      digest: digestOf('post', a.collective, text, stripped ?? new Uint8Array()),
+      reading,
+      depends: [a.collective, ...sign.flatMap((n) => n.signers)],
+      run: async () => {
+        const made = await post(c.id, { text, jpeg: stripped ?? undefined, relays: c.f.relays });
+        this.store.saveCollective(c);
+        const lines: Line[] = [{ text: `Posted for “${perms.name}”: ${short(made.id)}${made.picture ? `, with the picture ${short(made.picture.id)}` : ''}.`, tone: 'ok' }];
+        const acts = [made.id, ...(made.picture ? [made.picture.id] : [])];
+        for (const n of sign) {
+          const target = n.spec === SPECS.envelopes ? made.picture?.id : made.id;
+          if (!target) continue;
+          for (const m of n.signers) {
+            const who = this.store.identity(m);
+            const sig = await agreementsSign(who, target, c.f.relays);
+            this.store.saveIdentity(who);
+            acts.push(sig.id);
+            lines.push({ text: `${names(m)} signed ${short(target)} for the “${n.name}” area.` });
+          }
+        }
+        // Agreements' reading of what was made, from the relays.
+        const ag = await this.agreementsOf(c);
+        for (const id of acts.slice(0, made.picture ? 2 : 1)) {
+          try {
+            const k = ag.v.agreementsConsent(AGREEMENTS_SPECS, id) as { kind: string; reason?: string; met: boolean };
+            lines.push({
+              text: `${id === made.id ? 'The text' : 'The picture'}: ${k.met ? (k.kind === 'areas' ? 'counts for the collective, its area’s signatures met' : 'counts for the collective, on its own signature') : `does not count yet (${k.kind}${k.reason ? `: ${k.reason}` : ''})`}.`,
+              tone: k.met ? 'ok' : 'bad',
+            });
+          } catch (e) {
+            lines.push({ text: `Agreements could not read ${short(id)}: ${e instanceof Error ? e.message : e}`, tone: 'bad' });
+          }
+        }
+        return { title: `Posted for “${perms.name}”`, lines, acts };
+      },
+    });
   }
 
   async state() {

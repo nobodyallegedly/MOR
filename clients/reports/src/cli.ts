@@ -117,7 +117,7 @@ async function main(): Promise<number> {
     const fresh = p.waiting.filter((i) => !desk.has(i.number));
     if (!p.waiting.length) say('No issue opened on GitHub waits to be published on MOR.');
     else {
-      say(`Opened on GitHub and not yet on MOR (${p.waiting.length}). Each is published again on MOR as the reporting identity only once you approve its draft at MOR Identities: read it below with --dry-run, then name it with --prepare N.`);
+      say(`Opened on GitHub and not yet on MOR (${p.waiting.length}). Each is published again on MOR as the reporting identity only once you approve its draft in Edubba: read it below with --dry-run, then name it with --prepare N.`);
       for (const i of p.waiting) {
         const at = desk.get(i.number);
         const where = !at
@@ -144,7 +144,7 @@ async function main(): Promise<number> {
           continue;
         }
         const r = await prepareRepublication(i, { dir: s.drafts, identity: s.identity, relays: held.publishAt, hints: [...new Set([...s.places, ...held.publishAt])] });
-        say(`Prepared draft ${r.digest} for issue #${n}, in ${s.drafts}: approve it at MOR Identities to publish it on MOR as the reporting identity. Nothing was signed here.${r.changes.length ? ` Its words were composed as canonical text: ${r.changes.join('; ')}.` : ''}`);
+        say(`Prepared draft ${r.digest} for issue #${n}, in ${s.drafts}: approve it in Edubba to publish it on MOR as the reporting identity. Nothing was signed here.${r.changes.length ? ` Its words were composed as canonical text: ${r.changes.join('; ')}.` : ''}`);
       }
     }
     return 0;

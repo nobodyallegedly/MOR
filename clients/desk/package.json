@@ -1,12 +1,13 @@
 {
   "name": "mor-desk",
   "version": "0.1.0",
-  "description": "MOR Identities, the owner's desk: a client for several MOR test identities, with no command line. An inbox of drafts from the Claude connector, each read in plain words with its digest, to approve, decline or send back with a note; and each identity's received messages, replies, acknowledgements and payments, sorted into to answer, answered and ignored. Test identities only. Machine, allegedly's answering: its agency terms (the nudge cMIP), the owner's own acts answered at once, other people's notified until he picks one, nudges within their number; drafted with Claude through Anthropic's API under a daily cap, the key on this machine only.",
+  "description": "Edubba (called MOR Identities until 16 October 2026, F333): the tablet house, with no command line. Three tabs: Agents (each agent's terms under the nudge cMIP, its queue, nudges, its cap and API key, a prompt box whose words are a signed private act, and MOR as seen by it), Identities (drafts from the Claude connector read in plain words and approved, declined or sent back; what each identity received, sorted) and Collectives (acting for a collective in text and pictures, with what its agreement lets you do; its constitution in plain words; the collective client's work). Test identities only.",
   "license": "MIT OR Apache-2.0",
   "private": true,
   "type": "module",
   "bin": {
-    "mor-desk": "./src/cli.ts"
+    "mor-desk": "./src/cli.ts",
+    "edubba": "./src/cli.ts"
   },
   "scripts": {
     "wasm": "sh ../genesis/scripts/build-wasm.sh",

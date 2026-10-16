@@ -161,7 +161,64 @@ export interface State {
   }[];
   history: { time: number; draft: string; verdict: string; signer: string; signerName: string; title: string; note: string; act?: string; cause?: string; causeAct?: string; text?: string; resend: boolean }[];
   machine: MachineState;
+  /** Edubba (F333): the agents, by ID and display name, each with its cap and key. */
+  agents: AgentSummary[];
+  /** The shared API key: found or not, and its last four characters only. */
+  sharedKey: { found: boolean; last4?: string; from: string; warning?: string };
+  /** The collectives held in the collective client's folder. */
+  collectives: { id: string; name: string; closed: boolean; members: number }[];
   paired: { key: string; label: string; added: number; you: boolean }[];
+}
+
+export interface AgentSummary {
+  id: string;
+  name: string;
+  named: { name: string; act: string } | null;
+  on: boolean;
+  callsPerDay: number;
+  callsToday: number;
+  key: { kind: 'shared' | 'own'; found: boolean; last4: string | null };
+  notified: number;
+  stopped: string | null;
+}
+
+/** One agent's details: its answering, the prompt box's conversation, its history, whom it follows. */
+export interface AgentDetails extends MachineState {
+  named: { name: string; act: string } | null;
+  conversation: { from: 'owner' | 'agent'; text: string; act?: string; time: number; note?: string }[];
+  history: State['history'];
+  follows: { id: string; name: string | null }[];
+}
+
+/** "MOR as seen by this agent". */
+export interface AgentView {
+  follows: { id: string; name: string | null }[];
+  feed: { id: string; signer: string; signerName: string; standing: string; text: string; pictures: string[]; answers: string[] }[];
+  problems: string[];
+  inbox: { key: string; kind: string; from: string | null; fromName: string | null; private: boolean; standing: string; text?: string; found: number }[];
+}
+
+/** What a person may do for a collective (the collective client's `Actions.permissions`). */
+export interface Permissions {
+  collective: string;
+  name: string;
+  agreement: string | null;
+  you: string[];
+  items: { what: string; state: 'yes' | 'with others' | 'no'; lines: Line[] }[];
+  notes: Line[];
+}
+
+/** Its latest constitutional agreement, in plain words (the deal-assessment tool's reading). */
+export interface Constitution {
+  agreement: string;
+  inForce: boolean;
+  note: string | null;
+  title: string;
+  summary: string[];
+  sections: { heading: string; lines: Line[] }[];
+  plain: { heading: string; text: string }[];
+  flags: { text: string; rests: string; family: string }[];
+  problem: string | null;
 }
 
 /** Machine, allegedly's answering, as the program reports it (src/machine.ts). */
@@ -177,8 +234,8 @@ export interface MachineState {
   maxChars: number;
   callsToday: number;
   stopped: string | null;
-  /** Where the API key was found (never the key), or why there is none. */
-  key: { found: boolean; from: string; warning?: string };
+  /** Where the API key was found (never the key: its last four characters only), or why there is none. */
+  key: { found: boolean; from: string; warning?: string; last4?: string; kind: 'shared' | 'own' };
   notified: { key: string; act: string | null; from: string | null; fromName: string | null; private: boolean; kind: string; standing: string; text?: string }[];
   /** Picks signed that wait to be answered (the cap): their acts leave the Notified pile. */
   waiting: { pick: string; act: string; fromName: string | null; private: boolean }[];

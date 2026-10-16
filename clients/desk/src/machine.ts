@@ -28,9 +28,11 @@ import { recipientOf } from '../../connector/src/draft.ts';
 import { escapeControls } from '../../connector/src/words.ts';
 import { NUDGE_SPECS, NUDGE_TYPES, TEXT_ACT, KIND, type KindNumber } from '../../nudge/src/specs.ts';
 import { Reading, encodeNudge, encodePick, encodeTerms, entryFor, termsInWords, type Terms } from '../../nudge/src/nudge.ts';
-import { ClaudeError, DEFAULT_MODEL, findKey, inRepository, writeAnswer, writeNudged, type Answering, type Reach, type Settings } from './claude.ts';
+import { ClaudeError, DEFAULT_MODEL, findKey, inRepository, lastFour, writeAnswer, writeNudged, type Answering, type Reach, type Settings } from './claude.ts';
+import { readFeed } from '../../site/src/feed.ts';
+import { relayAt } from '../../genesis/src/transport.ts';
 import type { Desk, Done } from './desk.ts';
-import type { Item, Store } from './store.ts';
+import type { Answered, Item, Store } from './store.ts';
 
 const unb64 = (s: string) => Uint8Array.from(Buffer.from(s, 'base64'));
 const err = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -74,6 +76,10 @@ export interface MachineFile {
   usage: { day: string; calls: number };
   /** Why answering stopped, said on the desk until it can go on. */
   stopped: string | null;
+  /** Which API key it uses (Edubba, F333): the shared one by default, or its own. Absent in files from before: shared. */
+  keyKind?: 'shared' | 'own';
+  /** Its display name as published (the naming cMIP), the act; absent where none was published from here. */
+  named?: { name: string; act: string } | null;
   causes: Record<string, Cause>;
 }
 
@@ -88,6 +94,8 @@ const fresh = (): MachineFile => ({
   model: DEFAULT_MODEL,
   usage: { day: '', calls: 0 },
   stopped: null,
+  keyKind: 'shared',
+  named: null,
   causes: {},
 });
 
@@ -108,6 +116,17 @@ export function firstTerms(owner: string, previous?: string): Terms {
     pickers: [owner],
     nudgedFree: true,
   };
+}
+
+/** Something the agent may answer under a nudge: an act sent to it, or a post of its feed (F333, the agent's view, answer (a)). */
+interface Candidate {
+  act: string;
+  from: string;
+  private: boolean;
+  text?: string;
+  how: string;
+  /** A post of its feed, not something sent to it: fetched and kept before it is answered. */
+  feed?: boolean;
 }
 
 /** The answering was stopped, with nothing sent and nothing spent: it waits, and goes on when the reason is gone. */
@@ -133,18 +152,31 @@ const localDay = () => {
 export class Machine {
   private running: Promise<unknown> = Promise.resolve();
 
+  /**
+   * One agent's answering (Edubba keeps several, F333). `agentId`: the agent,
+   * or null before any agent's terms are signed (its terms can then be shown
+   * and signed, nothing else).
+   */
   constructor(
     private readonly desk: Desk,
     private readonly store: Store,
     private readonly opts: MachineOptions = {},
+    readonly agentId: string | null = null,
   ) {}
 
   private file(): MachineFile {
-    return { ...fresh(), ...this.store.machine(fresh) };
+    return this.agentId ? { ...fresh(), ...this.store.agent(this.agentId, fresh) } : fresh();
   }
 
+  /** Kept once its terms are signed; before, there is nothing of it to keep. */
   private save(m: MachineFile): void {
-    this.store.saveMachine(m);
+    const id = m.agent ?? this.agentId;
+    if (id && m.terms) this.store.saveAgent(id, m);
+  }
+
+  /** A record in the history, naming this agent. */
+  private note(a: Answered): void {
+    this.store.record({ ...a, agent: a.agent ?? this.file().agent ?? this.agentId ?? undefined });
   }
 
   /** One answering operation at a time. */
@@ -188,13 +220,40 @@ export class Machine {
       const payload = this.termsPayload(agent, owner);
       if (sha256(payload) !== digest) throw new Error('These are not the terms shown: look at them again. Nothing was signed.');
       const s = await this.desk.signAndSend(agent, { spec: NUDGE_SPECS.nudge, type: NUDGE_TYPES.terms, payload, public: true, to: [], refs: [] });
-      const m = this.file();
-      Object.assign(m, { agent, owner, terms: s.id, on: true, since: now(), stopped: null });
+      const m = this.agentId === agent ? this.file() : { ...fresh(), ...this.store.agent(agent, fresh) };
+      Object.assign(m, { agent, owner, terms: s.id, on: true, since: m.since || now(), stopped: null });
       this.save(m);
       const names = this.nameOf();
-      this.store.record({ time: now(), draft: '', verdict: 'terms published', signer: agent, title: `${names(agent)}’s agency terms signed and published`, note: '', act: s.id });
+      this.note({ time: now(), draft: '', verdict: 'terms published', agent, signer: agent, title: `${names(agent)}’s agency terms signed and published`, note: '', act: s.id });
       return { title: 'Terms signed and published', lines: s.sent.map((x) => ({ text: `${x.to}: ${x.answer}`, tone: x.accepted ? 'ok' : 'bad' })), acts: [s.id] };
     });
+  }
+
+  /** Which key it uses: the shared one, or its own (F333). */
+  setKeyKind(kind: 'shared' | 'own'): void {
+    const m = this.file();
+    if (!m.terms) throw new Error('Sign its terms first.');
+    m.keyKind = kind;
+    if (m.stopped && !m.stopped.startsWith('The cap')) m.stopped = null;
+    this.save(m);
+  }
+
+  /** Its display name, as published from here (the naming cMIP). */
+  setNamed(named: { name: string; act: string }): void {
+    const m = this.file();
+    m.named = named;
+    this.save(m);
+  }
+
+  /** The history of this agent: what it answered and why, its owner's picks, nudges and prompts, newest first. */
+  history(): Answered[] {
+    const m = this.file();
+    if (!m.agent) return [];
+    const oldest = this.store.agentIds()[0];
+    return this.store
+      .history()
+      .filter((h) => h.agent === m.agent || (!h.agent && m.agent === oldest && (h.signer === m.agent || ['picked', 'nudged', 'terms published'].includes(h.verdict))))
+      .reverse();
   }
 
   setOn(on: boolean): void {
@@ -206,6 +265,7 @@ export class Machine {
   }
 
   setCap(a: { callsPerDay: number; maxChars: number }): void {
+    if (!this.file().terms) throw new Error('Sign its terms first: the cap belongs to an agent.');
     if (!Number.isInteger(a.callsPerDay) || a.callsPerDay < 0 || a.callsPerDay > 1000) throw new Error('Calls a day: a whole number from 0 to 1000.');
     if (!Number.isInteger(a.maxChars) || a.maxChars < 50 || a.maxChars > 20_000) throw new Error('An answer’s length: a whole number of characters from 50 to 20000.');
     const m = this.file();
@@ -266,10 +326,12 @@ export class Machine {
    * that no act is picked twice; each is answered once the cap allows.
    */
   private waiting(m: MachineFile): { pick: string; picked: string; time: number }[] {
-    if (!m.owner) return [];
+    if (!m.owner || !m.agent) return [];
+    // Several agents may share an owner: a pick is this agent's where the act it names is one this agent received.
+    const mine = new Set(this.store.received(m.agent).items.map((x) => x.act));
     return this.store
       .history()
-      .filter((h) => h.verdict === 'picked' && h.signer === m.owner && h.act && h.causeAct && !m.causes[h.act])
+      .filter((h) => h.verdict === 'picked' && h.signer === m.owner && h.act && h.causeAct && mine.has(h.causeAct) && !m.causes[h.act])
       .map((h) => ({ pick: h.act!, picked: h.causeAct!, time: h.time }));
   }
 
@@ -282,7 +344,7 @@ export class Machine {
     }
     let key: string;
     try {
-      key = findKey(this.opts.env, this.opts.home, this.opts.repo).key;
+      key = findKey(this.opts.env, this.opts.home, this.opts.repo, m.keyKind === 'own' ? m.agent! : undefined).key;
     } catch (e) {
       throw new Stopped(err(e));
     }
@@ -298,7 +360,26 @@ export class Machine {
   }
 
   private settings(m: MachineFile): Settings {
-    return { model: m.model, maxTokens: m.maxTokens, maxChars: m.maxChars };
+    const names = this.nameOf();
+    return { model: m.model, maxTokens: m.maxTokens, maxChars: m.maxChars, agent: m.agent ? names(m.agent) : undefined, owner: m.owner ? names(m.owner) : undefined };
+  }
+
+  /**
+   * The newest posts of those it follows (the people cMIP, kept here), muted
+   * ones left out, verified, not yet answered: what it reads besides what is
+   * sent to it, given to Claude under a nudge (F333, answer (a)).
+   */
+  async feedCandidates(m: MachineFile, limit = 10): Promise<Candidate[]> {
+    if (!m.agent) return [];
+    const p = this.store.people(m.agent);
+    const authors = p.follows.map((f) => f.id).filter((id) => id !== m.agent && !p.muted.includes(id));
+    if (!authors.length) return [];
+    const answered = new Set(Object.values(m.causes).flatMap((c) => c.answered));
+    const names = this.nameOf();
+    const feed = await readFeed(authors.map((identity) => ({ identity, name: null })), this.desk.places.hints, this.desk.places.via, limit);
+    return feed.posts
+      .filter((x) => x.post && x.post.standing === 'valid' && !answered.has(x.id))
+      .map((x) => ({ act: x.id, from: x.signer, private: false, text: x.post!.text, how: `a public post by ${names(x.signer)}, in your feed (those you follow)`, feed: true }));
   }
 
   // ------------------------------------------------------------ answering
@@ -342,7 +423,7 @@ export class Machine {
     const m = this.file();
     m.causes[cause.act] = cause;
     this.save(m);
-    this.store.record({
+    this.note({
       time: cause.time,
       draft: '',
       verdict: cause.status === 'answered' ? 'answered' : 'not answered',
@@ -424,7 +505,7 @@ export class Machine {
         refs: [],
       });
       const names = this.nameOf();
-      this.store.record({ time: now(), draft: '', verdict: 'picked', signer: m.owner, title: `${names(m.owner)} picked ${names(it.from!)}’s ${it.private ? 'message' : 'act'} ${short(it.act!)}`, note: '', act: s.id, causeAct: it.act! });
+      this.note({ time: now(), draft: '', verdict: 'picked', signer: m.owner, title: `${names(m.owner)} picked ${names(it.from!)}’s ${it.private ? 'message' : 'act'} ${short(it.act!)}`, note: '', act: s.id, causeAct: it.act! });
       const r = await this.answerPick(s.id).catch((e) => (e instanceof Stopped ? null : Promise.reject(e)));
       const c = this.file().causes[s.id];
       const lines: Done['lines'] = [{ text: `The pick ${short(s.id)}, signed and delivered.`, tone: 'ok' }];
@@ -496,7 +577,7 @@ export class Machine {
       for (const [i, it] of items.entries()) {
         try {
           const s = await this.desk.signAndSend(m.owner!, { spec: NUDGE_SPECS.nudge, type: NUDGE_TYPES.pick, payload: payloads[i], public: true, to: [m.agent!], refs: [] });
-          this.store.record({ time: now(), draft: '', verdict: 'picked', signer: m.owner!, title: `${names(m.owner!)} picked ${what(it)}`, note: `One of ${items.length} picked together.`, act: s.id, causeAct: it.act! });
+          this.note({ time: now(), draft: '', verdict: 'picked', signer: m.owner!, title: `${names(m.owner!)} picked ${what(it)}`, note: `One of ${items.length} picked together.`, act: s.id, causeAct: it.act! });
           picks.push({ it, id: s.id });
         } catch (e) {
           lines.push({ text: `Not picked: ${what(it)}. The pick was not signed: ${err(e)}`, tone: 'bad' });
@@ -593,7 +674,7 @@ export class Machine {
    * a private one a private message, which needs the sender's inbox and
    * key. Null when it can; else why not, said before any call is made.
    */
-  private async reach(it: Item): Promise<string | null> {
+  private async reach(it: { private: boolean; from: string | null }): Promise<string | null> {
     if (!it.private) return null;
     try {
       await recipientOf(it.from!, this.desk.places.hints, this.desk.places.via);
@@ -601,6 +682,19 @@ export class Machine {
     } catch (e) {
       return `A private message is answered privately, and its sender cannot receive one: ${err(e)}. Nothing was drafted or sent.`;
     }
+  }
+
+  /** A public act, from where acts are looked for. */
+  private async fetchAct(id: string): Promise<Uint8Array | null> {
+    for (const h of this.desk.places.hints) {
+      try {
+        const a = await relayAt(h, this.desk.places.via).getAct(id);
+        if (a) return a;
+      } catch {
+        // not at that place
+      }
+    }
+    return null;
   }
 
   /** The nudge cMIP's reading of an act just signed, in plain words. */
@@ -621,7 +715,7 @@ export class Machine {
       // Public, as its terms take public nudges only (field 4); delivered to its inbox.
       const s = await this.desk.signAndSend(m.owner, { spec: NUDGE_SPECS.nudge, type: NUDGE_TYPES.nudge, payload, public: true, to: [m.agent], refs: [] });
       const names = this.nameOf();
-      this.store.record({ time: now(), draft: '', verdict: 'nudged', signer: m.owner, title: `${names(m.owner)} nudged ${names(m.agent)}, for ${count === 1 ? 'one action' : `${count} actions`}`, note: words, act: s.id });
+      this.note({ time: now(), draft: '', verdict: 'nudged', signer: m.owner, title: `${names(m.owner)} nudged ${names(m.agent)}, for ${count === 1 ? 'one action' : `${count} actions`}`, note: words, act: s.id });
       await this.answerNudge(s.id).catch((e) => (e instanceof Stopped ? null : Promise.reject(e)));
       const c = this.file().causes[s.id];
       const lines: Done['lines'] = [{ text: `The nudge ${short(s.id)}, signed, published and delivered.`, tone: 'ok' }];
@@ -647,7 +741,16 @@ export class Machine {
       return this.done(cause, { title: 'A nudge not acted on', why });
     }
     const count = n.nudge.count;
-    const candidates = this.notified(m).slice(0, 10);
+    const notified: Candidate[] = this.notified(m)
+      .slice(0, 10)
+      .map((c) => ({ act: c.act!, from: c.from!, private: c.private, text: c.text, how: c.private ? 'a private message' : 'a public act addressed to you' }));
+    let feed: Candidate[] = [];
+    try {
+      feed = (await this.feedCandidates(m)).filter((f) => !notified.some((x) => x.act === f.act));
+    } catch {
+      // its feed could not be read: it chooses from what was sent to it
+    }
+    const candidates = [...notified, ...feed];
     const named = (r.held(nudgeId)?.refs ?? []).flatMap((x) => {
       const t = this.textOf(r, x);
       return t === null ? [] : [{ from: names(r.held(x)!.signer), text: t }];
@@ -662,7 +765,7 @@ export class Machine {
     let chosen: Awaited<ReturnType<typeof writeNudged>>;
     try {
       chosen = await writeNudged(
-        { count, context: n.nudge.context ?? null, named, candidates: candidates.map((c, i) => ({ n: i + 1, from: names(c.from!), how: c.private ? 'a private message' : 'a public act addressed to you', text: c.text ?? '' })) },
+        { count, context: n.nudge.context ?? null, named, candidates: candidates.map((c, i) => ({ n: i + 1, from: names(c.from), how: c.how, text: c.text ?? '' })) },
         key,
         this.settings(m),
         this.opts.reach,
@@ -691,13 +794,23 @@ export class Machine {
         }
         const cannot = await this.reach(c);
         if (cannot) {
-          notes.push(`An answer to ${names(c.from!)} was left out: ${cannot}`);
+          notes.push(`An answer to ${names(c.from)} was left out: ${cannot}`);
           continue;
         }
-        to = [c.from!];
+        if (c.feed) {
+          // Held before it is named, as what it receives is: its readings (and the
+          // nudge cMIP's client conformance) read the act an answer names.
+          const held = await this.fetchAct(c.act);
+          if (!held) {
+            notes.push(`An answer to ${names(c.from)}’s post was left out: the post was not found again.`);
+            continue;
+          }
+          this.store.keepAct(c.act, held);
+        }
+        to = [c.from];
         pub = !c.private;
-        refs.push(c.private ? c.act! : [c.act!, c.from!]);
-        answered = c.act!;
+        refs.push(c.private ? c.act : [c.act, c.from]);
+        answered = c.act;
       }
       try {
         const s = await this.desk.signAndSend(agent, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: textPayload(a.text), public: pub, to, refs });
@@ -744,12 +857,13 @@ export class Machine {
     const names = this.store.names();
     const r = m.agent ? this.reading(m) : null;
     const terms = r && m.terms ? r.termsAct(m.terms) : null;
-    let key: { found: boolean; from: string; warning?: string };
+    let key: { found: boolean; from: string; warning?: string; last4?: string; kind: 'shared' | 'own' };
+    const kind = m.keyKind ?? 'shared';
     try {
-      const k = findKey(this.opts.env, this.opts.home, this.opts.repo);
-      key = { found: true, from: k.from, warning: k.warning };
+      const k = findKey(this.opts.env, this.opts.home, this.opts.repo, kind === 'own' && m.agent ? m.agent : undefined);
+      key = { found: true, from: k.from, warning: k.warning, last4: lastFour(k.key), kind };
     } catch (e) {
-      key = { found: false, from: err(e) };
+      key = { found: false, from: err(e), kind };
     }
     const day = (this.opts.today ?? localDay)();
     return {
@@ -764,6 +878,7 @@ export class Machine {
       callsToday: m.usage.day === day ? m.usage.calls : 0,
       stopped: m.stopped,
       key,
+      named: m.named ?? null,
       notified: this.notified(m).map((it) => ({ key: it.key, act: it.act, from: it.from, fromName: it.from ? names(it.from) : null, private: it.private, kind: it.kind, standing: it.standing, text: it.text === undefined ? undefined : escapeControls(it.text) })),
       waiting: this.waiting(m).map((w) => {
         const it = m.agent ? this.store.received(m.agent).items.find((x) => x.act === w.picked) : undefined;
@@ -782,7 +897,9 @@ function textPayload(text: string): Uint8Array {
 }
 
 /** Where an act went, in a few words. */
-function delivered(sent: { to: string; accepted: boolean }[]): string {
+function delivered(all: { to: string; accepted: boolean }[]): string {
+  // The locked copy at the sender's homes is its line, not a delivery.
+  const sent = all.filter((s) => s.to !== 'its homes');
   const ok = sent.filter((s) => s.accepted).length;
   return ok ? `Delivered (${ok} of ${sent.length} accepted).` : 'Signed, but nothing accepted it yet: send it again from the history.';
 }

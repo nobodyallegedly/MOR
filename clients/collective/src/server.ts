@@ -87,6 +87,7 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
   const secret = randomBytes(32).toString('hex');
   let port = opts.port;
 
+  const ops = collectiveApi(actions, store);
   const api = async (op: string, a: Record<string, unknown>, key: string): Promise<unknown> => {
     switch (op) {
       case 'pair':
@@ -94,6 +95,85 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
         return {};
       case 'state':
         return { ...(await actions.state()), paired: access.paired().map((p) => ({ ...p, you: p.key === key })) };
+      case 'code':
+        return { code: access.newCode() };
+      case 'unpair':
+        access.unpair(text(a.key));
+        return {};
+      default:
+        return ops(op, a);
+    }
+  };
+
+  const server = createServer(async (req, res) => {
+    try {
+      // Only this machine, by its own name: a web page elsewhere that points
+      // a name of its own at 127.0.0.1 (DNS rebinding) is refused.
+      const host = req.headers.host ?? '';
+      if (host !== `127.0.0.1:${port}` && host !== `localhost:${port}`) return send(res, 421, 'text/plain', 'not this address');
+      const url = new URL(req.url ?? '/', `http://${host}`);
+      if (req.method === 'GET') {
+        if (url.pathname === '/') return send(res, 200, 'text/html; charset=utf-8', index);
+        if (url.pathname === '/app.js') return send(res, 200, 'text/javascript; charset=utf-8', script);
+        if (url.pathname === '/app.css') return send(res, 200, 'text/css; charset=utf-8', STYLE);
+        if (url.pathname === '/hello') return json(res, 200, { app: access.app, time: Math.floor(Date.now() / 1000) });
+        return send(res, 404, 'text/plain', 'not found');
+      }
+      if (req.method === 'POST' && url.pathname === '/local/code') {
+        if (req.headers['mor-local'] !== secret) return json(res, 401, { error: 'not the owner' });
+        return json(res, 200, { code: access.newCode() });
+      }
+      if (req.method === 'POST' && url.pathname === '/api') {
+        const body = await readBody(req);
+        const r = access.check(body, req.headers['mor-key'] as string | undefined, req.headers['mor-signature'] as string | undefined);
+        try {
+          return json(res, 200, { ok: (await api(r.op, r.args, r.key)) ?? {} });
+        } catch (e) {
+          if (e instanceof Refusal) throw e;
+          return json(res, 422, { error: e instanceof Error ? e.message : String(e) });
+        }
+      }
+      return send(res, 405, 'text/plain', 'not allowed');
+    } catch (e) {
+      if (e instanceof Refusal) return json(res, e.status, { error: e.message });
+      return json(res, 500, { error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(opts.port, '127.0.0.1', () => resolve());
+  });
+  const a = server.address();
+  port = typeof a === 'object' && a ? a.port : opts.port;
+  const run = store.path('run.json');
+  writeFileSync(`${run}.tmp`, JSON.stringify({ port, pid: process.pid, secret } satisfies RunFile) + '\n', { mode: 0o600 });
+  renameSync(`${run}.tmp`, run);
+  return {
+    server,
+    port,
+    base: `http://127.0.0.1:${port}`,
+    store,
+    access,
+    close: () =>
+      new Promise<void>((resolve) => {
+        rmSync(run, { force: true });
+        server.close(() => resolve());
+        server.closeAllConnections();
+      }),
+  };
+}
+
+/**
+ * The collective client's operations on its folder, behind the page's
+ * signed requests (pairing aside): this program's, and Edubba's Collectives
+ * tab's (clients/desk, F333), which takes the collective client in. Every
+ * operation that signs goes through a review first.
+ */
+export function collectiveApi(actions: Actions, store: Store): (op: string, a: Record<string, unknown>) => Promise<unknown> {
+  return async (op: string, a: Record<string, unknown>): Promise<unknown> => {
+    switch (op) {
+      case 'state':
+        return actions.state();
       case 'settings': {
         const via: Record<string, string> = {};
         for (const line of list(a.via)) {
@@ -185,6 +265,9 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
             return actions.prepareClosing({ collective: text(a.collective) });
           case 'debt-release':
             return actions.prepareDebtRelease({ debt: text(a.debt), against: Array.isArray(a.against) ? a.against.map(String) : [] });
+          case 'post':
+            // Acting for the collective, text and pictures (Edubba, F333).
+            return actions.preparePost({ collective: text(a.collective), text: text(a.text), jpeg: text(a.jpeg) || undefined });
           case 'release-work':
             return actions.prepareReleaseWork({ collective: text(a.collective), release: text(a.release) });
           default:
@@ -199,75 +282,15 @@ export async function serve(opts: { dir: string; port: number }): Promise<Runnin
         return actions.verify({ release: text(a.release).trim().toLowerCase(), at: list(a.at) });
       case 'resend':
         return actions.resend(text(a.collective));
+      case 'permissions':
+        return actions.permissions(text(a.collective));
       case 'check-pointer':
         return actions.checkPointer({ collective: text(a.collective) });
       case 'check-split':
         return actions.checkSplit({ collective: text(a.collective), split: text(a.split) });
-      case 'code':
-        return { code: access.newCode() };
-      case 'unpair':
-        access.unpair(text(a.key));
-        return {};
       default:
         throw new Refusal(400, `unknown operation ${op}`);
     }
-  };
-
-  const server = createServer(async (req, res) => {
-    try {
-      // Only this machine, by its own name: a web page elsewhere that points
-      // a name of its own at 127.0.0.1 (DNS rebinding) is refused.
-      const host = req.headers.host ?? '';
-      if (host !== `127.0.0.1:${port}` && host !== `localhost:${port}`) return send(res, 421, 'text/plain', 'not this address');
-      const url = new URL(req.url ?? '/', `http://${host}`);
-      if (req.method === 'GET') {
-        if (url.pathname === '/') return send(res, 200, 'text/html; charset=utf-8', index);
-        if (url.pathname === '/app.js') return send(res, 200, 'text/javascript; charset=utf-8', script);
-        if (url.pathname === '/app.css') return send(res, 200, 'text/css; charset=utf-8', STYLE);
-        if (url.pathname === '/hello') return json(res, 200, { app: access.app, time: Math.floor(Date.now() / 1000) });
-        return send(res, 404, 'text/plain', 'not found');
-      }
-      if (req.method === 'POST' && url.pathname === '/local/code') {
-        if (req.headers['mor-local'] !== secret) return json(res, 401, { error: 'not the owner' });
-        return json(res, 200, { code: access.newCode() });
-      }
-      if (req.method === 'POST' && url.pathname === '/api') {
-        const body = await readBody(req);
-        const r = access.check(body, req.headers['mor-key'] as string | undefined, req.headers['mor-signature'] as string | undefined);
-        try {
-          return json(res, 200, { ok: (await api(r.op, r.args, r.key)) ?? {} });
-        } catch (e) {
-          if (e instanceof Refusal) throw e;
-          return json(res, 422, { error: e instanceof Error ? e.message : String(e) });
-        }
-      }
-      return send(res, 405, 'text/plain', 'not allowed');
-    } catch (e) {
-      if (e instanceof Refusal) return json(res, e.status, { error: e.message });
-      return json(res, 500, { error: e instanceof Error ? e.message : String(e) });
-    }
-  });
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(opts.port, '127.0.0.1', () => resolve());
-  });
-  const a = server.address();
-  port = typeof a === 'object' && a ? a.port : opts.port;
-  const run = store.path('run.json');
-  writeFileSync(`${run}.tmp`, JSON.stringify({ port, pid: process.pid, secret } satisfies RunFile) + '\n', { mode: 0o600 });
-  renameSync(`${run}.tmp`, run);
-  return {
-    server,
-    port,
-    base: `http://127.0.0.1:${port}`,
-    store,
-    access,
-    close: () =>
-      new Promise<void>((resolve) => {
-        rmSync(run, { force: true });
-        server.close(() => resolve());
-        server.closeAllConnections();
-      }),
   };
 }
 
