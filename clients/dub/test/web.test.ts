@@ -33,6 +33,8 @@ const TYPES: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
   '.wasm': 'application/wasm',
   '.json': 'application/json',
+  '.woff2': 'font/woff2',
+  '.txt': 'text/plain; charset=utf-8',
 };
 const shots = process.env.MOR_SCREENSHOTS;
 const shot = async (page: Page, name: string) => {
@@ -74,7 +76,7 @@ before(async () => {
       return;
     }
     try {
-      if (!/^[a-z_.]+$/.test(name)) throw new Error('no');
+      if (!/^[a-z0-9_.]+$/.test(name)) throw new Error('no');
       const body = readFileSync(join(dist, name));
       res.writeHead(200, {
         'content-type': TYPES[extname(name)] ?? 'application/octet-stream',
@@ -138,6 +140,15 @@ function chainForms(words: string[]): string[] {
   const seed = fromWords(words);
   const seeds = keySeeds(seed, SCHEME, INDEX);
   return [words.join(' '), words.slice(0, 6).join(' '), hex(seed), base64(seed), hex(seeds), base64(seeds), hex(seeds.subarray(0, 16))];
+}
+
+
+/** The faces of Inter the page loaded, from its own origin (F332, "Inter bundled"), once its fonts are ready. */
+async function interLoaded(page: Page): Promise<string[]> {
+  return page.evaluate(async () => {
+    await document.fonts.ready;
+    return [...document.fonts].filter((f) => f.family.replace(/"/g, '') === 'Inter' && f.status === 'loaded').map((f) => f.weight).sort();
+  });
 }
 
 const banner = async (page: Page, where: string) => {
@@ -226,6 +237,10 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   const a2 = describeAct((await relayAt(relay.base).getAct(second))!) as { position: number; prev?: string };
   assert.equal(a2.prev, first, 'the second post follows the first, in the same line');
   assert.equal(a2.position, a1.position + 1);
+  // Inter, light and regular, from this page's own origin, its licence beside it.
+  assert.deepEqual(await interLoaded(page), ['300', '400']);
+  assert.match(await (await fetch(`${base}/inter_license.txt`)).text(), /SIL Open Font License, Version 1\.1/);
+  assert.match(contentSecurityPolicy(), /font-src 'self'/);
   await shot(page, '03-public');
 
   // The signing key's words, on request: the way out, labelled.

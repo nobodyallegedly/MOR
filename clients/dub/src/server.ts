@@ -15,6 +15,7 @@ import { Dub } from './dub.ts';
 import { OPS, run } from './ops.ts';
 import { Store } from './store.ts';
 import { STYLE } from './page/view.ts';
+import { FONT_FILES, FONTS_DIR } from './fonts.ts';
 import { version } from './version.ts';
 
 /** What the browser's key signs, before the request body. */
@@ -74,6 +75,8 @@ export async function serve(opts: { dir: string; port: number; reader?: string }
     }
   };
 
-  const local = await serveLocal({ dir: opts.dir, port: opts.port, access, index, script, style: STYLE, version: built, api, limit: LIMIT });
+  // Inter and its licence, served beside the page from the program's own origin (F332, "Inter bundled").
+  const files = Object.fromEntries(Object.entries(FONT_FILES).map(([name, type]) => [`/${name}`, { type, body: readFileSync(here(`${FONTS_DIR}/${name}`)) }]));
+  const local = await serveLocal({ dir: opts.dir, port: opts.port, access, index, script, style: STYLE, version: built, api, limit: LIMIT, files });
   return { server: local.server, port: local.port, base: local.base, store, access, dub, close: local.close };
 }

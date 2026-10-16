@@ -45,7 +45,11 @@ The words are the identity carry Module's (`modules/module-identity-carry-words-
 
 ### The look
 
-Calm and sparse, one column, after Damus and Snort (studied for layout and feel only; no code copied, Damus being under the GPL): the visual bible's background `#06080c`, Inter in light weights (where installed; the page loads no font, see the report), colour only for a layer and at low saturation (a grey-blue for fingerprints, the Identity layer; a grey-violet for what is sealed, Envelopes), red only for a contest, a void act or a key changed elsewhere, no glow and no shadow. Compact posts and a quiet action row.
+Calm and sparse, one column, after Damus and Snort (studied for layout and feel only; no code copied, Damus being under the GPL): the visual bible's background `#06080c`, Inter, light and regular, bundled with Dub (below), colour only for a layer and at low saturation (a grey-blue for fingerprints, the Identity layer; a grey-violet for what is sealed, Envelopes), red only for a contest, a void act or a key changed elsewhere, no glow and no shadow. Compact posts and a quiet action row.
+
+### Inter, bundled
+
+*Decided by Nobody, allegedly (F332: "Inter bundled", "Yes."), so the look is the same everywhere.* Inter 4.1 (rsms/inter, its release's `web/` folder), light (300) and regular (400), woff2, unchanged, in `static/fonts/`: `inter_light.woff2`, `inter_regular.woff2`, and its licence beside them, `inter_license.txt`, the **SIL Open Font License 1.1**. The fonts are under that licence, not under Dub's (MIT or Apache 2.0); the OFL lets them be bundled and served with Dub as long as the licence goes with them. They are served from the page's own origin and nowhere else: on the Mac by the program (`/inter_light.woff2`, `/inter_regular.woff2`, `/inter_license.txt`, its policy then reading `font-src 'self'`; the desk's own policy is unchanged), and on the web as files of the release in `built/` beside the page. `src/fonts.ts` names them; the page's style declares them (`@font-face`, `font-display: swap`). Characters Inter does not cover fall back to the system font.
 
 ## Moving from MOR Post
 
@@ -108,7 +112,7 @@ MOR_SCREENSHOTS=DIR npm test   # also keeps a picture of every screen
   - unpaired requests refused; nothing listens beyond 127.0.0.1.
 - `test/names.test.ts`: a name's form; two counting names both shown, in act id order; a withdrawn, malformed or other cMIP's name not shown.
 - `test/people.test.ts`: a follow list's chain; a skipped version ignored; a fork read as forked.
-- `test/browser.test.ts`, headless Chromium, by clicks and typing alone, every screen in turn: the identity window, the chain key's words with nothing asked beside them, **hidden before three are asked (H3)**, a wrong word refused, born; a post and a picture; another person's Dub, followed by ID with a name; a long-form document as a link; **a reply** from the action row; **counts** on both tabs; **To you**; **the private tab**, a message received, answered, sealed; **mute** and unmute; the identity window: **a display name**, **the signing key's words**; a second identity brought by clicks and the switch; **a key changed elsewhere**, said, the new words taken; no console error, nothing the content security policy refused.
+- `test/browser.test.ts`, headless Chromium, by clicks and typing alone, every screen in turn: the identity window, the chain key's words with nothing asked beside them, **hidden before three are asked (H3)**, a wrong word refused, born; a post and a picture; another person's Dub, followed by ID with a name; a long-form document as a link; **a reply** from the action row; **counts** on both tabs; **To you**; **the private tab**, a message received, answered, sealed; **mute** and unmute; the identity window: **a display name**, **the signing key's words**; a second identity brought by clicks and the switch; **a key changed elsewhere**, said, the new words taken; no console error, nothing the content security policy refused; **Inter, light and regular, loaded from the program**, served as `font/woff2` under a policy with `font-src 'self'`, its licence beside it.
 - `test/web.test.ts`: the web client (below).
 - `test/launcher.test.ts`, `test/chainwords.test.ts`, `test/web-build.test.ts`, `test/build/`: unchanged.
 
@@ -145,16 +149,16 @@ It makes an identity as Dub on the Mac does: the chain key's 24 words shown once
 - **Kept** in IndexedDB, database `dub`: `identity:ID`, `settings:ID`, `people:ID`, `active`. `WebKeep.saveIdentity` refuses a file holding a chain key. Every signing step runs under a Web Lock. An identity kept before 16 October 2026 is moved under its ID.
 - **The banner** is in the page's HTML itself (`static/web.html`), so it shows even when the script does not run.
 - **`dub.json`** beside the page, optional, https only: `{"homes": [...], "relays": [...], "reader": "https://…/"}` fills in the form and names the reader; trusted for nothing else.
-- **The build** (`scripts/build-web.ts`): the shared client code with the reader's browser core library, not minified, reproducible; anything from Node fails the build except two shims. **The release**: `built/`, with `BUILT-WITH.txt`; `mor-dub check URL` compares a server with it.
+- **The build** (`scripts/build-web.ts`): the shared client code with the reader's browser core library, not minified, reproducible; anything from Node fails the build except two shims. **The release**: `built/`, Inter and its licence included, with `BUILT-WITH.txt`; `mor-dub check URL` compares a server with it.
 
 ### Tests
 
-- `test/web.test.ts`, headless Chromium, the built page served with its headers, real homes and a relay: the banner on every screen; the chain key's words with nothing asked beside them, **hidden before three are asked (H3)**; **nothing of the chain key in the browser's storage** (IndexedDB, local and session storage, caches, cookies, read whole) nor on the page, before and after; the genesis committing the key the words give; an encryption key at once; a post, a reload, a second post in the same line; **the signing key's words**, not the chain key's; **brought into Dub on the Mac**, which starts its own line and opens the identity's private messages; a message from a third identity opening in both, with the count on the Private tab; the lines going on, every post valid; forgetting it leaves no key in storage; no console error, nothing the content security policy refused. And an identity made by Dub on the Mac brought into the web client, its chain key's words refused where the signing key's are asked.
+- `test/web.test.ts`, headless Chromium, the built page served with its headers, real homes and a relay: the banner on every screen; the chain key's words with nothing asked beside them, **hidden before three are asked (H3)**; **nothing of the chain key in the browser's storage** (IndexedDB, local and session storage, caches, cookies, read whole) nor on the page, before and after; the genesis committing the key the words give; an encryption key at once; a post, a reload, a second post in the same line; **the signing key's words**, not the chain key's; **brought into Dub on the Mac**, which starts its own line and opens the identity's private messages; a message from a third identity opening in both, with the count on the Private tab; the lines going on, every post valid; forgetting it leaves no key in storage; **Inter, light and regular, loaded from the page's own origin**, its licence served, the policy reading `font-src 'self'`; no console error, nothing the content security policy refused. And an identity made by Dub on the Mac brought into the web client, its chain key's words refused where the signing key's are asked.
 - `test/chainwords.test.ts`, `test/web-build.test.ts`, `test/build/`: as before.
 
 ### Putting it behind Caddy (a later machine session; not done here)
 
-1. Build the release on GitHub (or `npm run release` with the tools `BUILT-WITH.txt` names), and copy `built/index.html`, `dub.js`, `dub.css`, `mor_wasm_bg.wasm` to `/srv/dub` on the server. Optionally a `dub.json` naming the test homes and relays, and the reader long-form documents open in (`"reader"`, default `https://reader.dubsar.org/`).
+1. Build the release on GitHub (or `npm run release` with the tools `BUILT-WITH.txt` names), and copy every file of `built/` but `BUILT-WITH.txt` (`index.html`, `dub.js`, `dub.css`, `mor_wasm_bg.wasm`, `inter_light.woff2`, `inter_regular.woff2`, `inter_license.txt`) to `/srv/dub` on the server. Optionally a `dub.json` naming the test homes and relays, and the reader long-form documents open in (`"reader"`, default `https://reader.dubsar.org/`).
 2. DNS: `dub.dubsar.org`, A and AAAA, to the server (the author's to add).
 3. Caddy, then `sudo systemctl reload caddy`:
    ```
@@ -162,7 +166,7 @@ It makes an identity as Dub on the Mac does: the chain key's 24 words shown once
        root * /srv/dub
        file_server
        header {
-           Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self' https:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+           Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self' https:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
            X-Content-Type-Options nosniff
            Referrer-Policy no-referrer
            Strict-Transport-Security "max-age=31536000"
@@ -170,4 +174,5 @@ It makes an identity as Dub on the Mac does: the chain key's 24 words shown once
        }
    }
    ```
-4. From another machine: `node --import tsx src/cli.ts check https://dub.dubsar.org/` in `clients/dub` says SAME.
+   **What changes on a server already serving Dub (Inter, 16 October 2026):** one line only, the `Content-Security-Policy` line inside the `header` block of Dub's site, which gains `font-src 'self';` right after `style-src 'self';`. Without it, the browser refuses the fonts and the page falls back to the system font. Caddy's `file_server` gives the `.woff2` files their type (`font/woff2`) by itself. Then reload Caddy, and copy the three new files with the others.
+4. From another machine: `node --import tsx src/cli.ts check https://dub.dubsar.org/` in `clients/dub` says SAME (it compares every file of the release, the fonts and the licence included).
