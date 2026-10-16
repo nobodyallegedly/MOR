@@ -24,6 +24,16 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F335. MOR Safety is named Kišib: what it must do and what it may do (16 October 2026)
+
+*Area: presentation and the development layer (a client). The rotation app decided in F332 (amended).*
+
+**The name.** The project lead proposed Kišib (Sumerian, the cylinder seal: a person's mark of authority, serious to lose and serious to replace, as the chain key is), Abul (the city gate, the way out) or MOR Keys. **Decided by Nobody, allegedly:** "kišib" (written Kishib where the š will not type).
+
+**What it must do (the project lead's list, the core's emergency acts that today live on the command line):** rotate an identity from its chain key's paper words, keeping every line (Identity rule 35), waiting for the homes' receipts and resending the same bytes, never a second rotation, then showing the new signing words to carry to Dub or Edubba; rotate a collective from enough members' paper shares; escape a contested position (F299); declare a succession, confirmed by the successor (F300); hold nothing between uses (the words typed, used and dropped).
+
+**What it may do (the project lead's list):** check paper words without signing; warn when the identity is rotated by someone else; show the identity's record plainly (homes, receipts, lines, any contest); later, run air-gapped, the signed bytes passed by QR code (the air-gapped signer Module).
+
 ## F334. A collective's text names its own latest decision: Text rule 14 opened for rule 58 only (16 October 2026)
 
 *Area: core business (Text and Agreements). Found by the Edubba session building the collectives' Act tab: writing code is also a review.*
