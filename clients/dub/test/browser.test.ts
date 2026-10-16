@@ -1,6 +1,13 @@
-// Dub in a real browser (headless Chromium, a fresh profile), as a
-// person uses it: open the app's link, then only clicks and typing. Real
-// homes and a relay. `MOR_SCREENSHOTS=DIR` keeps a picture of each step.
+// Dub in a real browser (headless Chromium, a fresh profile), as a person
+// uses it: open the app's link, then only clicks and typing. Real homes and
+// a relay; another person, a second Dub, on the other side. Every screen in
+// turn: the identity window, the chain key's words (hidden before three are
+// asked back, H3), the public tab (posting, a picture, following by ID, a
+// reply, a long-form document's link, "to you" and its count, muting), the
+// private tab (a sealed message each way, its count), one's own display
+// name, the signing key's words, a second identity and the switch between
+// them, and a key changed elsewhere. `MOR_SCREENSHOTS=DIR` keeps a picture of
+// each screen.
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,10 +17,12 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
-import { readPost, type ShownPicture } from '../../barebone/src/post.ts';
+import { post as barebonePost, readPost, type ShownPicture } from '../../barebone/src/post.ts';
+import { POST_SPECS } from '../../barebone/src/specs.ts';
 import { serve, type Running } from '../src/server.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { unhex } from '../../genesis/src/core.ts';
+import { relayAt } from '../../genesis/src/transport.ts';
 import { groupId, toWords } from '../../../modules/carry/src/carry.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -22,12 +31,13 @@ const shots = process.env.MOR_SCREENSHOTS;
 const shot = async (page: Page, name: string) => {
   if (!shots) return;
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({ path: join(shots, `${name}.png`), fullPage: true });
+  await page.screenshot({ path: join(shots, `mac-${name}.png`), fullPage: true });
 };
 
 let homes: Relay[];
 let relay: Relay;
 let app: Running;
+let peer: Running;
 let browser: Browser;
 const problems: string[] = [];
 
@@ -35,19 +45,24 @@ before(async () => {
   homes = [await start('home'), await start('home')];
   relay = await start('relay');
   app = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-dub-browser-')), port: 0 });
+  peer = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-dub-peer-')), port: 0 });
   browser = await chromium.launch({ executablePath: CHROMIUM });
 });
 
 after(async () => {
   await browser?.close();
   await app?.close();
+  await peer?.close();
   for (const r of [...(homes ?? []), relay]) await r?.stop();
 });
 
 const done = (page: Page, words: string | RegExp) => page.locator('#status .note.done', { hasText: words }).waitFor({ timeout: 60_000 });
+/** Wait until an element holds nothing (a count gone, a notice cleared). */
+const empty = (page: Page, sel: string) => page.waitForFunction((s) => document.querySelector(s)?.textContent === '', sel, { timeout: 60_000 });
+const post = (page: Page, id: string) => page.locator(`#feed [data-post="${id}"]`);
 
-test('a person, without a terminal: a new identity, its words written and three typed back, a post, a picture, a withdrawal', async () => {
-  const context = await browser.newContext();
+test('a person, without a terminal, through every screen of Dub', async () => {
+  const context = await browser.newContext({ viewport: { width: 760, height: 900 } });
   const page = await context.newPage();
   page.on('console', (m) => {
     if (m.type() === 'error' && !/status of 4\d\d/.test(m.text())) problems.push(m.text());
@@ -55,15 +70,16 @@ test('a person, without a terminal: a new identity, its words written and three 
   page.on('pageerror', (e) => problems.push(e.message));
   page.on('dialog', (d) => void d.accept());
 
-  // The app's link, as the launcher opens it.
+  // The identity window, before anything: Dub opens only once an identity is here.
   await page.goto(`${app.base}/#pair=${app.access.newCode()}`);
-  await page.getByRole('heading', { name: 'Dub' }).waitFor();
+  await page.getByRole('heading', { name: 'Identity', exact: true }).waitFor({ timeout: 60_000 });
   assert.match(await page.locator('#test-only').innerText(), /^Test identities only, until MOR is frozen\./);
   await page.getByRole('heading', { name: 'Make a new identity' }).waitFor();
   await page.getByRole('heading', { name: 'Bring an identity you have' }).waitFor();
-  await shot(page, '1-doors');
+  assert.equal(await page.locator('[data-tab]').count(), 0, 'no tabs before an identity');
+  await shot(page, '01-identity-window');
 
-  // Door one.
+  // Make one: the chain key's words, shown once, with nothing asked beside them (H3).
   const begin = page.locator('form#begin');
   await begin.locator('textarea[name=homes]').fill(homes.map((h) => h.base).join('\n'));
   await begin.locator('textarea[name=relays]').fill(relay.base);
@@ -71,82 +87,184 @@ test('a person, without a terminal: a new identity, its words written and three 
   await page.locator('#words').waitFor({ timeout: 60_000 });
   const written = (await page.locator('#words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
   assert.equal(written.length, 24);
-  assert.match(await page.locator('.say').innerText(), /Whoever holds these words can post as this identity/);
-  await shot(page, '2-words');
+  assert.match(await page.getByRole('heading', { name: 'The chain key’s words' }).innerText(), /chain key/);
+  assert.match(await page.locator('.say').innerText(), /Dub keeps nothing of the chain key/);
+  assert.equal(await page.locator('form#confirm, input').count(), 0, 'no word is asked while the words are shown');
+  await shot(page, '02-chain-words');
 
-  // A reload does not show the words again; it asks for three.
-  await page.reload();
+  // H3: once written down, the words are hidden, and only then are three asked back.
+  await page.getByRole('button', { name: 'I have written them down' }).click();
   await page.locator('form#confirm').waitFor();
   assert.equal(await page.locator('#words').count(), 0);
+  const html = await page.content();
+  assert.equal(await page.locator('.words').count(), 0);
+  for (const i of [0, 8, 16]) assert.ok(!html.includes(`${i + 1}.</b>${written[i]}`) && !html.includes(written.slice(i, i + 3).join(' ')), 'no word left on the page');
   const inputs = page.locator('form#confirm input');
-  const names = await inputs.evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name));
-  const positions = names.map((n) => Number(n.slice(1)));
-  // One wrong: refused, nothing published.
+  const positions = (await inputs.evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name))).map((n) => Number(n.slice(1)));
   for (const [i, p] of positions.entries()) await inputs.nth(i).fill(i === 2 ? 'wrong' : written[p - 1]);
   await page.getByRole('button', { name: 'Go on' }).click();
   await page.locator('#status .note.error', { hasText: 'Nothing has been published' }).waitFor({ timeout: 60_000 });
+  await shot(page, '03-three-words');
   await inputs.nth(2).fill(written[positions[2] - 1]);
   await page.getByRole('button', { name: 'Go on' }).click();
   await done(page, 'The identity is born');
-  await shot(page, '3-born');
+  const me = (await app.dub.state()).identity!.id;
 
-  // A post, read back verified.
+  // The public tab: post, and a picture, read back verified.
+  await page.locator('[data-tab=public].on').waitFor();
   await page.locator('form#post textarea[name=text]').fill('Hello, from a page.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, 'Posted');
-  const published = page.locator('#published .mor-post');
-  await published.waitFor();
-  assert.match(await published.innerText(), /verified/);
-  assert.match(await published.innerText(), /Hello, from a page\./);
-
-  // With a picture: stripped before it left.
   await page.locator('form#post textarea[name=text]').fill('And a picture.');
   await page.locator('form#post input[name=picture]').setInputFiles(PHONE);
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, /the place the picture was taken \(GPS\)/);
-  await page.locator('#published img').waitFor();
-  const id = await page.locator('#published [data-post]').getAttribute('data-post');
-  await shot(page, '4-picture');
-  const read = await readPost(id!, [relay.base]);
+  const withPicture = (await page.locator('#feed .post').first().getAttribute('data-post'))!;
+  await post(page, withPicture).locator('img').waitFor();
+  const read = await readPost(withPicture, [relay.base]);
   assert.equal(read.standing, 'valid');
   assert.deepEqual((read.refs[0] as ShownPicture).picture!.carries, []);
+  assert.match(await page.locator('#feed .post').nth(1).innerText(), /Hello, from a page\./);
 
-  // The list, newest first, then withdraw the picture from it.
-  await page.locator('#posts .mor-post').nth(1).waitFor({ timeout: 60_000 });
-  assert.match(await page.locator('#posts .mor-post').first().innerText(), /And a picture\./);
-  await page.locator('#posts').getByRole('button', { name: 'Withdraw this picture' }).click();
-  await done(page, 'The picture is withdrawn');
-  await page.locator('#posts .mor-post-missing', { hasText: 'withdrawn by its signer' }).waitFor({ timeout: 60_000 });
-  assert.ok((await readPost(id!, [relay.base]).then((p) => (p.refs[0] as ShownPicture).withdrawn)));
-  // The card shows this app's line as it is now: routes, a post, a picture, a post, a withdrawal.
-  await page.locator('#identity', { hasText: '5 acts' }).waitFor({ timeout: 60_000 });
-  await shot(page, '5-withdrawn');
+  // Another person, in their own Dub, and an identity that publishes a long-form document.
+  const pb = await peer.dub.begin({ homes: [homes[1].base], relays: [relay.base] });
+  await peer.dub.confirm(pb.positions.map((p) => pb.words[p - 1]));
+  const them = (await peer.dub.state()).identity!.id;
+  await peer.dub.setName('River');
+  const theirPost = await peer.dub.post({ text: 'A first word from River.' });
+  const writer = TestIdentity.create({ homes: [homes[0].home] });
+  await writer.publishGenesis();
+  await writer.publishRoutes([{ scope: null, hints: [relay.base], kind: 0 }]);
+  for (const a of writer.chainActs()) await relayAt(relay.base).putAct(a);
+  const doc = await barebonePost(writer, { text: '# Running your own relay\n\nThe whole guide.', format: POST_SPECS.longform, relays: [relay.base] });
+
+  // Follow both by their IDs, one with a name of one's own.
+  await page.locator('#people summary').click();
+  const follow = page.locator('form#follow');
+  await follow.locator('input[name=id]').fill(groupId(them));
+  await follow.locator('input[name=name]').fill('River (from the test)');
+  await follow.getByRole('button', { name: 'Follow' }).click();
+  await done(page, 'Followed');
+  await follow.locator('input[name=id]').fill(writer.id);
+  await follow.getByRole('button', { name: 'Follow' }).click();
+  await done(page, 'Followed');
+  await post(page, theirPost.post.id).waitFor({ timeout: 60_000 });
+  const card = await post(page, theirPost.post.id).innerText();
+  assert.match(card, /River \(from the test\)/, 'the name given here');
+  assert.match(card, /River/, 'its display name');
+  assert.ok(card.includes(`${them.slice(0, 8)}…${them.slice(-4)}`), 'beside its fingerprint, always');
+  // The long-form document: not shown in the feed; a link to the reader.
+  const link = post(page, doc.id).locator('a.doc');
+  assert.equal(await link.getAttribute('href'), `https://reader.dubsar.org/#${doc.id}`);
+  assert.ok(!(await post(page, doc.id).innerText()).includes('The whole guide.'));
+  await shot(page, '04-public-feed');
+
+  // A reply, as a quick action on the post.
+  await post(page, theirPost.post.id).getByRole('button', { name: 'Reply' }).click();
+  await page.locator('#replying .chip').waitFor();
+  await shot(page, '05-replying');
+  await page.locator('form#post textarea[name=text]').fill('Welcome, River.');
+  await page.getByRole('button', { name: 'Post', exact: true }).click();
+  await done(page, /Left in the inbox of/);
+  await page.locator('#feed .post .re', { hasText: 'answering' }).first().waitFor({ timeout: 60_000 });
+
+  // The other side answers one of this identity's posts, and writes privately: counts on both tabs.
+  const mine = (await app.dub.feed()).items.find((x) => x.text === 'Hello, from a page.')!;
+  const theirReply = await peer.dub.post({ text: 'Thank you for the hello.', reply: { id: mine.id, signer: me } });
+  await peer.dub.message({ to: me, text: 'A word just for you.' });
+  await page.getByRole('button', { name: 'Look again' }).click();
+  await page.locator('#count-public', { hasText: '1' }).waitFor({ timeout: 60_000 });
+  await page.locator('#count-private', { hasText: '1' }).waitFor({ timeout: 60_000 });
+  await page.locator('#count-toyou', { hasText: '1' }).waitFor();
+  await shot(page, '06-counts');
+
+  // "To you": a filter, not a hub; seen, the count goes.
+  await page.locator('[data-filter=toyou]').click();
+  await post(page, theirReply.post.id).waitFor();
+  assert.equal(await page.locator('#feed .post').count(), 1);
+  await empty(page, '#count-toyou');
+  await shot(page, '07-to-you');
+  await page.locator('[data-filter=all]').click();
+
+  // The private tab: the message, opened here only; an answer, sealed.
+  await page.locator('[data-tab=private]').click();
+  await page.locator('#inbox .msg', { hasText: 'A word just for you.' }).waitFor({ timeout: 60_000 });
+  await empty(page, '#count-private');
+  await page.locator('#inbox .msg', { hasText: 'A word just for you.' }).getByRole('button', { name: 'Reply' }).click();
+  assert.equal(await page.locator('form#message input[name=to]').inputValue(), them);
+  await page.locator('form#message textarea[name=text]').fill('And one just for you.');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await done(page, 'Sent');
+  await page.locator('#inbox .msg.out', { hasText: 'And one just for you.' }).waitFor({ timeout: 60_000 });
+  assert.ok((await peer.dub.inbox()).messages.some((m) => m.text === 'And one just for you.' && m.who.id === me));
+  await shot(page, '08-private');
+
+  // Mute, from the post: nothing of it shown; nobody told.
+  await page.locator('[data-tab=public]').click();
+  await post(page, theirPost.post.id).getByRole('button', { name: 'Mute' }).click();
+  await page.locator('#feed').waitFor();
+  await page.waitForFunction((id) => !document.querySelector(`#feed [data-post="${id}"]`), theirPost.post.id, { timeout: 60_000 });
+  await page.locator('#people summary', { hasText: 'muted 1' }).waitFor({ timeout: 60_000 });
+  await page.locator('#feed .post').first().waitFor({ timeout: 60_000 });
+  // Still open from following: the panel stays as the person left it.
+  if (!(await page.locator('#people[open]').count())) await page.locator('#people summary').click();
+  await page.locator('#people[open]').waitFor();
+  await shot(page, '09-muted');
+  await page.locator('#people').getByRole('button', { name: 'Unmute' }).click();
+  await post(page, theirPost.post.id).waitFor({ timeout: 60_000 });
+
+  // The identity window, from the header: a display name, the signing key's words.
+  await page.locator('[data-action=window]').click();
+  await page.getByRole('heading', { name: 'Identity', exact: true }).waitFor();
+  await page.locator('form#name input[name=name]').fill('Ada');
+  await page.locator('form#name').getByRole('button', { name: 'Save' }).click();
+  await done(page, /Your display name is “Ada”/);
+  await page.getByRole('button', { name: 'Show the signing key’s words' }).click();
+  await page.locator('#carry-words').waitFor();
+  const carry = (await page.locator('#carry-words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
+  assert.notDeepEqual(carry, written, 'the signing key’s words, never the chain key’s');
+  assert.match(await page.locator('#carry').innerText(), /The signing key’s words/i);
+  assert.match(await page.locator('#carry').innerText(), /post as this identity and read its private messages/);
+  await shot(page, '10-identity-window');
+  await page.getByRole('button', { name: 'Hide them' }).click();
+  await page.getByRole('button', { name: 'Back to Dub' }).click();
+  assert.match(await page.locator('header .me').innerText(), /Ada/);
+
+  // A second identity, brought by its words; the switch between them.
+  const g = TestIdentity.create({ homes: [homes[0].home] });
+  await g.publishGenesis();
+  await g.publishRoutes([{ scope: null, hints: [relay.base], kind: 0 }]);
+  await page.locator('[data-action=window]').click();
+  await page.locator('#doors > summary').click();
+  const bring = page.locator('form#bring');
+  await bring.locator('input[name=id]').fill(groupId(g.id));
+  await bring.locator('textarea[name=words]').fill(toWords(unhex(g.f.signingSecret)).join(' '));
+  await bring.locator('input[name=address]').fill(homes[0].base);
+  await bring.getByRole('button', { name: 'Bring it' }).click();
+  await done(page, 'The identity is here');
+  await page.locator('[data-action=window]').click();
+  await page.getByRole('button', { name: 'Use this one' }).waitFor();
+  await shot(page, '11-two-identities');
+  assert.match((await page.locator('#identity').textContent())!, /brought here by its signing key’s words/);
+
+  // A key changed elsewhere (MOR Safety's work; the genesis client stands in): said, and the new words taken.
+  await g.prepareRotation();
+  await g.submitRotation();
+  assert.ok((await g.settleRotation()).counts);
+  await page.getByRole('button', { name: 'Back to Dub' }).click();
+  await page.locator('#spent .note.spent').waitFor({ timeout: 60_000 });
+  assert.match(await page.locator('#spent').innerText(), /changed elsewhere.*MOR Safety/s);
+  await shot(page, '12-key-changed-elsewhere');
+  await page.locator('form#renew textarea[name=words]').fill(toWords(unhex(g.f.signingSecret)).join(' '));
+  await page.getByRole('button', { name: 'Use the new words' }).click();
+  await done(page, 'The new words are in use');
+  await empty(page, '#spent');
+
+  // Back to the first identity.
+  await page.locator('[data-action=window]').click();
+  await page.getByRole('button', { name: 'Use this one' }).click();
+  await page.locator('header .me', { hasText: 'Ada' }).waitFor({ timeout: 60_000 });
 
   assert.deepEqual(problems, []);
   await context.close();
-});
-
-test('the second door by clicks: an identity made elsewhere, brought in by its ID and words (the form never submitted before 13 October 2026)', async () => {
-  const other = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-dub-browser-')), port: 0 });
-  try {
-    const made = TestIdentity.create({ homes: [homes[0].home] });
-    await made.publishGenesis();
-    await made.publishRoutes([{ scope: null, hints: [relay.base], kind: 0 }]);
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    page.on('pageerror', (e) => problems.push(e.message));
-    await page.goto(`${other.base}/#pair=${other.access.newCode()}`);
-    const bring = page.locator('form#bring');
-    await bring.waitFor({ timeout: 60_000 });
-    await bring.locator('input[name=id]').fill(groupId(made.id));
-    await bring.locator('textarea[name=words]').fill(toWords(unhex(made.f.signingSecret)).join(' '));
-    await bring.locator('input[name=address]').fill(homes[0].base);
-    await bring.getByRole('button', { name: 'Bring it' }).click();
-    await done(page, 'The identity is here');
-    assert.match(await page.locator('#identity').innerText(), /Elsewhere, and brought here by its words/);
-    assert.deepEqual(problems, []);
-    await context.close();
-  } finally {
-    await other.close();
-  }
 });

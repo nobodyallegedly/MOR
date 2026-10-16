@@ -1,7 +1,7 @@
 {
   "name": "mor-dub",
   "version": "0.1.0",
-  "description": "Dub: write a text, add a picture, post, and see it published, verified. One identity, made here or brought here by its words (the identity carry Module). On the Mac, a program and its page; on the web (dub.dubsar.org), the same page running in the browser, for testing only (F281). Test identities only, until MOR is frozen.",
+  "description": "Dub: an identity window (make one, its chain key's words shown once; bring one by its signing key's words; switch; a display name), then a public tab (the feed of one's own posts and the followed, posting, replies, follow and mute, what is addressed to you) and a private tab (the inbox, sealed messages). On the Mac, a program and its page; on the web (dub.dubsar.org), the same page running in the browser, for testing only (F281). Test identities only, until MOR is frozen.",
   "license": "MIT OR Apache-2.0",
   "private": true,
   "type": "module",

@@ -8,6 +8,11 @@
 //! The chain key never travels: it stays on the device that holds it.
 //! Whoever holds these words can sign as the identity until its signing key
 //! is rotated.
+//!
+//! Draft 2 (`modules/module-identity-carry-words-draft-2.md`): the words
+//! carry the identity's encryption key too, derived from the signing seed
+//! (`encryption_secret`), so whoever holds them can also open its private
+//! messages, a cost the draft states.
 
 use crate::seed::{Seed, SeedError, SeedModule};
 use mor_core::sig::SchnorrKey;
@@ -33,6 +38,16 @@ impl fmt::Display for CarryError {
 }
 
 impl std::error::Error for CarryError {}
+
+/// The tag of the encryption key's derivation (draft 2, section 2a).
+pub const ENCRYPTION_TAG: &str = "MOR/module/carry/encryption";
+
+/// The X-Wing secret (32 bytes) an identity's encryption key is made from,
+/// derived from its signing seed (draft 2, section 2a):
+/// `tagged_hash("MOR/module/carry/encryption", signing seed)`.
+pub fn encryption_secret(signing_seed: &[u8; 32]) -> [u8; 32] {
+    mor_core::hash::tagged_hash(ENCRYPTION_TAG, signing_seed)
+}
 
 /// The words of a signing seed.
 pub fn words(signing_seed: &[u8; 32]) -> String {
@@ -69,5 +84,14 @@ mod tests {
         ));
         // All zero is valid words but not a key.
         assert_eq!(restore(&words(&[0u8; 32])), Err(CarryError::NotAKey));
+    }
+
+    #[test]
+    fn the_encryption_secret_follows_the_signing_seed() {
+        let a = encryption_secret(&[1u8; 32]);
+        assert_ne!(a, encryption_secret(&[2u8; 32]));
+        assert_eq!(a, mor_core::hash::tagged_hash(ENCRYPTION_TAG, &[1u8; 32]));
+        // Never the signing seed itself.
+        assert_ne!(a, [1u8; 32]);
     }
 }

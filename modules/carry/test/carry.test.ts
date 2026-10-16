@@ -7,11 +7,11 @@ import assert from 'node:assert/strict';
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { ENGLISH } from '../src/english.ts';
-import { Refused, fromWords, readId, threePositions, toWords, typedBack } from '../src/carry.ts';
-import { hex, signingPublic, unhex } from '../../../clients/genesis/src/core.ts';
+import { Refused, encryptionSecret, fromWords, readId, threePositions, toWords, typedBack } from '../src/carry.ts';
+import { hex, sha256, signingPublic, unhex, xwingPublic } from '../../../clients/genesis/src/core.ts';
 
 const vectors = JSON.parse(readFileSync(new URL('../../airgap/vectors/carry.json', import.meta.url), 'utf8')) as {
-  vectors: { signing_seed: string; words: string; public_key?: string; refused?: string }[];
+  vectors: { signing_seed: string; words: string; public_key?: string; refused?: string; encryption_secret?: string; encryption_public_sha256?: string }[];
 };
 
 test('the word list is BIP-39 English', () => {
@@ -83,4 +83,17 @@ test('an ID as typed', () => {
   assert.equal(readId(id.toUpperCase().match(/.{4}/g)!.join(' ')), id);
   assert.throws(() => readId(id.slice(1)), Refused);
   assert.throws(() => readId(`${id.slice(1)}g`), Refused);
+});
+
+test('draft 2: the encryption key the words carry, as the Rust vectors give it', () => {
+  let n = 0;
+  for (const v of vectors.vectors) {
+    if (!v.encryption_secret) continue;
+    const e = encryptionSecret(fromWords(v.words));
+    assert.equal(hex(e), v.encryption_secret);
+    assert.equal(sha256(xwingPublic(e)), v.encryption_public_sha256);
+    n++;
+  }
+  assert.equal(n, 2);
+  assert.throws(() => encryptionSecret(new Uint8Array(31)), Refused);
 });

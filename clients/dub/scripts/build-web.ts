@@ -22,7 +22,6 @@ import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'no
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STYLE, WEB_BANNER } from '../src/page/view.ts';
-import { STYLE as POST_STYLE } from '../../barebone/src/html.ts';
 import { WEB_FILES } from '../src/web/released.ts';
 
 const here = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));
@@ -90,7 +89,7 @@ await build({
   legalComments: 'inline',
   logLevel: 'warning',
 });
-writeFileSync(`${out}/dub.css`, `${STYLE}\n${POST_STYLE}\n`);
+writeFileSync(`${out}/dub.css`, `${STYLE}\n`);
 const page = readFileSync(here('static/web.html'), 'utf8');
 if (!page.includes('<!-- dub banner -->')) throw new Error('static/web.html has lost its banner mark');
 writeFileSync(`${out}/index.html`, page.replace('<!-- dub banner -->', WEB_BANNER));

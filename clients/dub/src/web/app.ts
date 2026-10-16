@@ -5,67 +5,43 @@
 // library's WebAssembly, and sent from here to the homes and relays.
 //
 // A new identity's chain key is shown once as words and never kept; its
-// signing key is kept in this browser (`keep.ts`), with the carry words as
-// the way out. Every page carries the banner (`static/web.html`).
+// signing and encryption keys are kept in this browser (`keep.ts`), with the
+// signing key's words as the way out. Every page carries the banner
+// (`static/web.html`).
 
 import { Dub } from '../dub.ts';
+import { run } from '../ops.ts';
 import { mount } from '../page/ui.ts';
 import * as v from '../page/view.ts';
+import type { State, Suggested } from '../shapes.ts';
 import { WebKeep } from './keep.ts';
 
 const app = document.getElementById('app')!;
 let keep: WebKeep;
 let dub: Dub;
 
-const text = (x: unknown) => (typeof x === 'string' ? x : '');
 const list = (x: unknown) => (Array.isArray(x) ? x.map(String) : []);
-const bytes = (b64: string) => Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+const platform = { bytes: (b64: string) => Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0)), via: () => ({}) };
 
 /** Dub's operations, as the program on the Mac names them, run here. */
-async function ask<T>(op: string, a: Record<string, unknown> = {}): Promise<T> {
-  switch (op) {
-    case 'state':
-      return (await dub.state()) as T;
-    case 'begin':
-      return (await dub.begin({ homes: list(a.homes), relays: list(a.relays) })) as T;
-    case 'confirm':
-      return (await dub.confirm(list(a.typed))) as T;
-    case 'abandon':
-      return (await dub.abandon()) as T;
-    case 'bring':
-      return (await dub.bring({ id: text(a.id), words: text(a.words), address: text(a.address), relays: list(a.relays) })) as T;
-    case 'post':
-      return (await dub.post({ text: text(a.text), jpeg: text(a.jpeg) ? bytes(text(a.jpeg)) : undefined, to: text(a.to) })) as T;
-    case 'posts':
-      return (await dub.posts()) as T;
-    case 'withdraw':
-      return (await dub.withdraw(text(a.publication))) as T;
-    case 'carry':
-      return (await dub.carry()) as T;
-    default:
-      throw new Error(`unknown operation ${op}`);
-  }
-}
+const ask = <T>(op: string, a: Record<string, unknown> = {}): Promise<T> => run(dub, op, a, platform) as Promise<T>;
 
-/** Addresses the deployer suggests, in `dub.json` beside the page: optional, only filled in, never trusted for anything else. */
-async function suggested(): Promise<v.Suggested> {
+/** Addresses the deployer suggests, and the reader it names, in `dub.json` beside the page: optional, only filled in, never trusted for anything else. */
+async function deployer(): Promise<Suggested & { reader?: string }> {
   try {
     const r = await fetch('dub.json', { cache: 'no-store' });
     if (!r.ok) return {};
-    const j = (await r.json()) as { homes?: unknown; relays?: unknown };
+    const j = (await r.json()) as { homes?: unknown; relays?: unknown; reader?: unknown };
     const urls = (x: unknown) => list(x).filter((s) => /^https:\/\/[^\s]+$/.test(s));
-    return { homes: urls(j.homes), relays: urls(j.relays) };
+    return { homes: urls(j.homes), relays: urls(j.relays), reader: urls([j.reader])[0] };
   } catch {
     return {};
   }
 }
 
-const ui = mount(app, {
-  web: true,
-  ask,
-  start,
-  forget: () => keep.forget(),
-});
+let suggested: Suggested = {};
+
+const ui = mount(app, { web: true, ask, start, suggested: () => suggested });
 
 async function start() {
   if (!window.isSecureContext || !crypto?.getRandomValues || !window.indexedDB) {
@@ -78,15 +54,19 @@ async function start() {
     app.innerHTML = `${v.top(true)}${v.note('error', `This browser does not let the page keep anything (${v.e(err instanceof Error ? err.message : String(err))}). A private window may not.`)}`;
     return;
   }
-  dub ??= new Dub(keep, { web: true });
-  let state: v.State;
+  if (!dub) {
+    const d = await deployer();
+    suggested = { homes: d.homes, relays: d.relays };
+    dub = new Dub(keep, { web: true, reader: d.reader });
+  }
+  let state: State;
   try {
-    state = (await dub.state()) as v.State;
+    state = await dub.state();
   } catch (err) {
     app.innerHTML = `${v.top(true)}${v.note('error', v.e(err instanceof Error ? err.message : String(err)))}`;
     return;
   }
-  await ui.show(state, state.stage === 'doors' ? await suggested() : undefined);
+  await ui.show(state);
 }
 
 void start();

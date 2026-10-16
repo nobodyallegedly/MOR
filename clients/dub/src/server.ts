@@ -12,9 +12,9 @@ import { fileURLToPath } from 'node:url';
 import { Access, Refusal } from '../../collective/src/access.ts';
 import { pageScript, serveLocal } from '../../desk/src/local.ts';
 import { Dub } from './dub.ts';
+import { OPS, run } from './ops.ts';
 import { Store } from './store.ts';
 import { STYLE } from './page/view.ts';
-import { STYLE as POST_STYLE } from '../../barebone/src/html.ts';
 import { version } from './version.ts';
 
 /** What the browser's key signs, before the request body. */
@@ -49,48 +49,31 @@ function via(v: unknown): Record<string, string> {
 }
 
 /** Start the program on 127.0.0.1 at `port` (0: any free port), with its folder at `dir`. */
-export async function serve(opts: { dir: string; port: number }): Promise<Running> {
+export async function serve(opts: { dir: string; port: number; reader?: string }): Promise<Running> {
   const store = new Store(opts.dir);
   const access = new Access(opts.dir, { domain: DOMAIN, label: CODE_LABEL });
-  const dub = new Dub(store);
+  const dub = new Dub(store, { reader: opts.reader });
   const script = await pageScript(here('src/page/app.ts'));
   const index = readFileSync(here('static/index.html'), 'utf8');
   const built = await version();
 
+  const platform = { bytes: (b64: string) => new Uint8Array(Buffer.from(b64, 'base64')), via };
   const api = async (op: string, a: Record<string, unknown>, key: string): Promise<unknown> => {
     switch (op) {
       case 'pair':
         access.pair(key, text(a.code), text(a.label));
         return {};
-      case 'state':
-        return dub.state();
-      case 'begin':
-        return dub.begin({ homes: list(a.homes), relays: list(a.relays), via: via(a.via) });
-      case 'confirm':
-        return dub.confirm(list(a.typed));
-      case 'abandon':
-        await dub.abandon();
-        return {};
-      case 'bring':
-        return dub.bring({ id: text(a.id), words: text(a.words), address: text(a.address), relays: list(a.relays), via: via(a.via) });
-      case 'post': {
-        const jpeg = text(a.jpeg) ? new Uint8Array(Buffer.from(text(a.jpeg), 'base64')) : undefined;
-        return dub.post({ text: text(a.text), jpeg, to: text(a.to) });
-      }
-      case 'posts':
-        return dub.posts();
-      case 'withdraw':
-        return dub.withdraw(text(a.publication));
       case 'code':
         return { code: access.newCode() };
       case 'unpair':
         access.unpair(text(a.key));
         return {};
       default:
-        throw new Refusal(400, `unknown operation ${op}`);
+        if (!(OPS as readonly string[]).includes(op)) throw new Refusal(400, `unknown operation ${op}`);
+        return run(dub, op, a, platform);
     }
   };
 
-  const local = await serveLocal({ dir: opts.dir, port: opts.port, access, index, script, style: `${STYLE}\n${POST_STYLE}`, version: built, api, limit: LIMIT });
+  const local = await serveLocal({ dir: opts.dir, port: opts.port, access, index, script, style: STYLE, version: built, api, limit: LIMIT });
   return { server: local.server, port: local.port, base: local.base, store, access, dub, close: local.close };
 }

@@ -1,0 +1,110 @@
+// What Dub's page is told, the same from the program on the Mac and from the
+// web client. Plain data and words only: this file imports nothing, so the page on the
+// Mac (built without Node) and Dub's own code share it. Never a key, and
+// never a word, except the words a person asked to see.
+
+/** Said before a follow list is first published (the people cMIP, 3.5), word for word. */
+export const PUBLISH_WARNING =
+  'Anyone can read whom this identity follows, now and for good: a later change of mind stops new versions, it does not take this one back. The names you gave them stay in this app.';
+
+export interface Line {
+  text: string;
+  tone?: 'ok' | 'warn' | 'bad';
+}
+
+/** An identity as shown: its fingerprint always, its display names (the naming cMIP) and the person's own name for it beside it. */
+export interface Who {
+  id: string;
+  /** The fingerprint: the ID's first eight and last four characters. */
+  short: string;
+  /** Its display names that count (the naming cMIP, section 3): free text, not unique. */
+  names: string[];
+  /** The name the person gave it in this app (the people cMIP), never published. */
+  pet: string | null;
+  me: boolean;
+  followed: boolean;
+  muted: boolean;
+}
+
+/** A picture of a post, checked as the JPEG Module and the barebone reader say. */
+export interface Pic {
+  /** The verified JPEG, as a data link; null where it is not shown. */
+  src: string | null;
+  width: number;
+  height: number;
+  publication: string;
+  /** Why it is not shown, if so. */
+  problem: string | null;
+  /** This identity's own picture, which it may withdraw. */
+  withdrawable: boolean;
+}
+
+/** A post, in the feed or "to you". */
+export interface Item {
+  id: string;
+  who: Who;
+  /** Its standing for its signer's chain, as the core library judges it ("valid" shown as nothing). */
+  standing: string;
+  text: string;
+  /** A long-form document: not shown in the feed; a link opens it in the reader. */
+  doc: { title: string; link: string } | null;
+  pictures: Pic[];
+  /** The posts it answers. */
+  answers: { id: string; who: Who | null; snippet: string | null }[];
+  /** It answers one of this identity's posts, or is addressed to it. */
+  toMe: boolean;
+  /** Where it was found: the feed, or this identity's inbox. */
+  via: 'feed' | 'inbox';
+  problem: string | null;
+  seen: boolean;
+}
+
+/** A private message, received or sent here. */
+export interface Message {
+  key: string;
+  who: Who;
+  dir: 'in' | 'out';
+  text: string;
+  standing: string;
+  /** When this app found or sent it, in seconds since 1970: this app's time, not a signed one. */
+  at: number;
+  seen: boolean;
+  problem: string | null;
+}
+
+export interface Held {
+  id: string;
+  grouped: string;
+  who: Who;
+  active: boolean;
+  kind: 'made' | 'brought';
+}
+
+export interface State {
+  /** The identity window (no identity in use), three words to type back, or the app. */
+  stage: 'identity' | 'confirm' | 'ready';
+  confirm?: { positions: number[]; id: string };
+  held: Held[];
+  identity?: {
+    id: string;
+    grouped: string;
+    who: Who;
+    kind: 'made' | 'brought';
+    homes: string[];
+    relays: string[];
+    /** Whether this app holds the identity's encryption key (the carry Module, draft 2, 2a). */
+    encryption: boolean;
+    /** An identity made by Dub on the Mac before 16 October 2026 keeps its chain key in the app's folder, unused. */
+    oldChainKey: boolean;
+    line: { acts: number; latest: string | null; summary: string | null };
+    list: 'private' | 'published';
+    follows: Who[];
+    muted: Who[];
+  };
+}
+
+/** Addresses a web client's deployer suggests (`dub.json`), filled in. */
+export interface Suggested {
+  homes?: string[];
+  relays?: string[];
+}

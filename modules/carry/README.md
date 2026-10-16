@@ -1,6 +1,6 @@
 # mor-carry
 
-The identity carry Module (`../module-identity-carry-words-draft-1.md`) in TypeScript: an identity's signing seed written as 24 words (BIP-39's English list and checksum, the words seed Module's encoding), read back, and refused when a word or the checksum is wrong. Used by Dub (`clients/dub/`, called MOR Post until 13 October 2026), on the Mac and in its web client. **Experimental; test identities only.** The chain key never travels.
+The identity carry Module (`../module-identity-carry-words-draft-2.md`; draft 1 kept) in TypeScript: an identity's signing seed written as 24 words (BIP-39's English list and checksum, the words seed Module's encoding), read back, and refused when a word or the checksum is wrong; and, from draft 2, the encryption key the words carry (`encryptionSecret`), checked against the Rust code's vectors. Used by Dub (`clients/dub/`, called MOR Post until 13 October 2026), on the Mac and in its web client. **Experimental; test identities only.** The chain key never travels.
 
 | File | What |
 | --- | --- |

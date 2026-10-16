@@ -3,22 +3,36 @@
 // the rename), never in the repository. Dub's web client keeps the same
 // things in the browser instead (`web/keep.ts`).
 //
-//   identity.json   the identity, in the genesis client's format: its keys
-//                   (for an identity brought here, the signing key only: the
-//                   chain key never travels), its chain, and this app's line
-//   settings.json   made here or brought here, the relays its posts go to,
-//                   other ways to reach an address
-//   pending.json    a new identity whose words were shown, until three are
-//                   typed back; nothing of it is published yet
-//   access.json     the browsers paired with this program
-//   run.json        how the launcher reaches the running program
+//   identities/ID/identity.json   an identity, in the genesis client's format:
+//                                 its signing key and its encryption keys, its
+//                                 chain, and this app's line. Never a chain
+//                                 key (F332, amended): it was shown once as
+//                                 words. An identity made by Dub here before
+//                                 16 October 2026 keeps the chain key it was
+//                                 made with, unused, as it was.
+//   identities/ID/settings.json   made here or brought here, the relays its
+//                                 posts go to, other ways to reach an address
+//   identities/ID/people.json     whom it follows (with the names given them,
+//                                 never published), whom it mutes, its inbox
+//                                 as read, the messages sent from here
+//   active.json                   the identity in use
+//   access.json                   the browsers paired with this program
+//   run.json                      how the launcher reaches the running program
+//
+// A new identity waiting for three of its words is held in the program's
+// memory only, never here: it carries the chain-key seed. Quitting forgets
+// it, and nothing of it was published.
+//
+// A folder from before 16 October 2026 (one identity.json and settings.json
+// at its top) is moved into identities/ID/ the first time it is read.
 //
 // TEST IDENTITIES ONLY: every key is in these files, in software.
 
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { TestIdentity, TEST_LABEL, type IdentityFile } from '../../genesis/src/identity.ts';
 import type { Keep, Pending, Settings } from './dub.ts';
+import { NO_PEOPLE, type People } from './people.ts';
 
 export const SETTINGS_LABEL = 'DUB. A test identity, its keys held in software in this folder: a prototype, never for a real identity.';
 
@@ -27,51 +41,109 @@ const writeJson = (path: string, v: unknown) => {
   writeFileSync(tmp, JSON.stringify(v, null, 2) + '\n', { mode: 0o600 });
   renameSync(tmp, path);
 };
+const readJson = <T>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
+const isId = (s: string) => /^[0-9a-f]{64}$/.test(s);
 
 export class Store implements Keep {
+  private waiting: Pending | null = null;
+
   constructor(readonly dir: string) {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     chmodSync(dir, 0o700);
+    this.migrate();
   }
 
   path(...p: string[]): string {
     return join(this.dir, ...p);
   }
 
-  async identity(): Promise<TestIdentity | null> {
-    const p = this.path('identity.json');
+  /** One identity at the folder's top, as Dub kept it before 16 October 2026: moved into identities/ID/, and in use. */
+  private migrate(): void {
+    const old = this.path('identity.json');
+    if (!existsSync(old)) return;
+    const f = readJson<IdentityFile>(old);
+    if (f.label !== TEST_LABEL || !isId(f.identity)) return;
+    const to = this.idDir(f.identity);
+    renameSync(old, join(to, 'identity.json'));
+    if (existsSync(this.path('settings.json'))) renameSync(this.path('settings.json'), join(to, 'settings.json'));
+    rmSync(this.path('pending.json'), { force: true });
+    writeJson(this.path('active.json'), { active: f.identity });
+  }
+
+  private idDir(id: string): string {
+    if (!isId(id)) throw new Error('not an identity ID');
+    const d = this.path('identities', id);
+    mkdirSync(d, { recursive: true, mode: 0o700 });
+    return d;
+  }
+
+  async held(): Promise<string[]> {
+    const d = this.path('identities');
+    if (!existsSync(d)) return [];
+    return readdirSync(d)
+      .filter((x) => isId(x) && existsSync(join(d, x, 'identity.json')))
+      .sort();
+  }
+
+  async active(): Promise<string | null> {
+    const p = this.path('active.json');
     if (!existsSync(p)) return null;
-    const f = JSON.parse(readFileSync(p, 'utf8')) as IdentityFile;
+    const a = readJson<{ active: string | null }>(p).active;
+    return a && (await this.held()).includes(a) ? a : null;
+  }
+
+  async setActive(id: string | null): Promise<void> {
+    writeJson(this.path('active.json'), { active: id });
+  }
+
+  async identity(id: string): Promise<TestIdentity | null> {
+    if (!isId(id)) return null;
+    const p = this.path('identities', id, 'identity.json');
+    if (!existsSync(p)) return null;
+    const f = readJson<IdentityFile>(p);
     if (f.label !== TEST_LABEL) throw new Error(`${p} is not a MOR test identity file`);
-    return new TestIdentity(f, (await this.settings()).via);
+    return new TestIdentity(f, (await this.settings(id)).via);
   }
 
   async saveIdentity(id: TestIdentity): Promise<void> {
-    id.save(this.path('identity.json'));
+    id.save(join(this.idDir(id.id), 'identity.json'));
   }
 
-  async settings(): Promise<Settings> {
-    const p = this.path('settings.json');
+  async settings(id: string): Promise<Settings> {
+    const p = this.path('identities', id, 'settings.json');
     if (!existsSync(p)) return { kind: 'made', relays: [], via: {} };
-    const { label: _, ...s } = JSON.parse(readFileSync(p, 'utf8')) as Settings & { label: string };
+    const { label: _, ...s } = readJson<Settings & { label: string }>(p);
     return s;
   }
 
-  async saveSettings(s: Settings): Promise<void> {
-    writeJson(this.path('settings.json'), { label: SETTINGS_LABEL, ...s });
+  async saveSettings(id: string, s: Settings): Promise<void> {
+    writeJson(join(this.idDir(id), 'settings.json'), { label: SETTINGS_LABEL, ...s });
+  }
+
+  async people(id: string): Promise<People> {
+    const p = this.path('identities', id, 'people.json');
+    return existsSync(p) ? { ...NO_PEOPLE(), ...readJson<People>(p) } : NO_PEOPLE();
+  }
+
+  async savePeople(id: string, p: People): Promise<void> {
+    writeJson(join(this.idDir(id), 'people.json'), p);
+  }
+
+  async forget(id: string): Promise<void> {
+    if (!isId(id)) return;
+    rmSync(this.path('identities', id), { recursive: true, force: true });
   }
 
   async pending(): Promise<Pending | null> {
-    const p = this.path('pending.json');
-    return existsSync(p) ? (JSON.parse(readFileSync(p, 'utf8')) as Pending) : null;
+    return this.waiting;
   }
 
   async savePending(p: Pending): Promise<void> {
-    writeJson(this.path('pending.json'), p);
+    this.waiting = p;
   }
 
   async dropPending(): Promise<void> {
-    rmSync(this.path('pending.json'), { force: true });
+    this.waiting = null;
   }
 
   /** One program per folder (the launcher sees to it), and `Dub` runs one thing at a time. */
