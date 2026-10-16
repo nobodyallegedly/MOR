@@ -311,6 +311,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 *16 October 2026, late afternoon: Dub reshaped merged (pull request 68; report `docs/dub-reshaped-report.md`): the identity window, the public and private tabs, the naming cMIP and the people cMIP (draft 1), the carry Module's draft 2 (the encryption key derived from the signing words). Dub's web release run; deploying it at dub.dubsar.org is a machine session's. Left: MOR Safety, the rotation app (F332 amended); the desk, the collective client and the site cleaned; the remaining human tests on the cleaned apps.*
 
+*16 October 2026, evening: MOR Identities becomes **Edubba** (F333), the agents' hub and the desk for several identities and collectives: three tabs (agents, identities, collectives), the collective client taken in as the collectives tab's constitution sub-tab. Inter bundled in Dub (F332).*
+
 ## Decisions due along the way
 
 | Decision | Before |

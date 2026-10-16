@@ -40,6 +40,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **The collective client taken in** (the project lead's lean: take it in, at the cost of a larger session). **Decided by Nobody, allegedly:** "Then we need a sub tab for the creation and constitutional actions, signing and so on. What the part of the app I was describing must do is to act for the organization." So the collectives tab has two sub-tabs: acting for the collective (text and pictures for now), and its constitution (founding, members, releases, signing, leaving: the collective client's work).
 
+**"MOR as seen by the agents":** a view, not a fourth tab: from an agent's details, one click opens what it reads (its feed and inbox, those it follows), and back. **Confirmed:** "Correct."
+
 ## F332. Dub reshaped: an identity window, a public tab, a private tab (16 October 2026)
 
 *Area: presentation and the development layer (clients, a cMIP, a Module). Raised by the human tests (H7, H8, H9).*
