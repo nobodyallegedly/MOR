@@ -127,3 +127,37 @@ test('the launcher starts the program and gives a link that pairs by itself', as
     await run(process.execPath, ['--import', 'tsx', cli, 'stop', '--dir', dir], { env });
   }
 });
+
+test('stop never stops a process this program did not start: a stale run file, or another program on its port, is left alone', async () => {
+  const { spawn } = await import('node:child_process');
+  const { writeFileSync } = await import('node:fs');
+  const { createServer } = await import('node:http');
+  const alive = (pid: number) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  const dir = mkdtempSync(join(tmpdir(), 'mor-collective-stranger-'));
+  const cli = fileURLToPath(new URL('../src/cli.ts', import.meta.url));
+  const run = promisify(execFile);
+  const stranger = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });
+  const other = createServer((req, res) => {
+    res.writeHead(req.url === '/hello' ? 200 : 403, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ app: 'someone else', time: 0, pid: stranger.pid }));
+  });
+  await new Promise<void>((r) => other.listen(0, '127.0.0.1', r));
+  try {
+    for (const port of [(other.address() as { port: number }).port, 9]) {
+      writeFileSync(join(dir, 'run.json'), JSON.stringify({ port, pid: stranger.pid, secret: 'not theirs' }));
+      const said = await run(process.execPath, ['--import', 'tsx', cli, 'stop', '--dir', dir], { env: { ...process.env, MOR_NO_BROWSER: '1' } });
+      assert.match(said.stdout, /nothing was stopped/);
+      assert.ok(alive(stranger.pid!), 'the stranger still runs');
+    }
+  } finally {
+    other.close();
+    stranger.kill();
+  }
+});

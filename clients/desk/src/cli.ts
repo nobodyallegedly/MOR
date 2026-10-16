@@ -73,11 +73,11 @@ async function main() {
     case 'open':
       // The collective client's own program, if left running, holds the same
       // folder: it is stopped, so two programs never sign from one file.
-      if (runFile(collective)) stopProgram(collective);
+      if (runFile(collective)) await stopProgram(collective);
       await openProgram({ dir, port, cli: fileURLToPath(import.meta.url), cwd: pkg, log: 'desk.log', version });
       break;
     case 'stop':
-      stopProgram(dir);
+      await stopProgram(dir);
       break;
     default:
       console.log(HELP);

@@ -102,6 +102,12 @@ All run here, all passing (counts from the last full run).
 
 Screenshots of every screen were sent to Nobody, allegedly (`MOR_SCREENSHOTS`). His answer, about the Identities tab, was taken in the same run, and two new screenshots were sent.
 
+## The GitHub run cancelled twice (after F334)
+
+- **The cause**: Dub's build test compares its released WebAssembly with the display client's (`clients/site/built/`). F334 rebuilt Dub's release and not the display client's. `assert.deepEqual` on two differing 1.5 MB buffers then builds its diff without bound (13 GB measured here), so GitHub's runner ran out of memory and was shut down: "The operation was canceled", with no failing test. No process was stopped by our code.
+- **Fixed**: the display client's release rebuilt with its own tooling, so both releases carry the same WebAssembly. Dub's release files are now compared by digest, so a mismatch fails at once, naming the file (peak memory of a Dub test process: 182 MB).
+- **Guarded all the same, as asked**: the launcher Edubba and Dub share (`clients/desk/src/launch.ts`) sends a signal only to a program that proves it wrote the folder's run file. That program must accept the file's secret, and the process number it gives must be the file's (`provenPid`); it never signals itself or its parent. A stale run file, a reused process number, or another program on the port is left alone, and its `/hello` request times out after three seconds. `stop` in Edubba, Dub and the collective client, `open` restarting an older program, and Edubba's `open` stopping a collective client program all go through it. New tests in all three: a stranger process named by a stale run file, or by another program on the port, survives `stop` (and, for Edubba, `open`), while Edubba's own program still stops.
+
 ## What is left
 
 - **The MICS and the freeze suite** naming Text draft 9 and F334's components, at their next versions; **approval** of Text draft 9.

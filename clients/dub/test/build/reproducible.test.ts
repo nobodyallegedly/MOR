@@ -8,9 +8,12 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BUILT, WEB_FILES } from '../../src/web/released.ts';
+
+const digest = (b: Uint8Array) => createHash('sha256').update(b).digest('hex');
 
 const here = fileURLToPath(new URL('../..', import.meta.url));
 
@@ -26,5 +29,6 @@ test('built here, the same as the release', () => {
   for (const [k, v] of Object.entries(mine)) assert.equal(v, tool(k), `${k} differs from the release's: rebuild with the release's tools`);
   const out = mkdtempSync(join(tmpdir(), 'dub-release-'));
   execFileSync(process.execPath, ['--import', 'tsx', 'scripts/build-web.ts', '--out', out], { cwd: here, stdio: 'ignore' });
-  for (const f of WEB_FILES) assert.deepEqual(readFileSync(join(out, f)), readFileSync(join(BUILT, f)), `${f} is not the released bytes: release again (npm run release)`);
+  // By digest: a diff of two differing WebAssembly files would exhaust the machine's memory.
+  for (const f of WEB_FILES) assert.equal(digest(readFileSync(join(out, f))), digest(readFileSync(join(BUILT, f))), `${f} is not the released bytes: release again (npm run release)`);
 });
