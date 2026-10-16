@@ -34,7 +34,7 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Noticed in passing (cleanup):** the two Dubs differ on the words shown at creation: the Mac shows the signing key's words, the web client the chain key's (with the carry words shown on request). To be made one.
 
-**Open:** whether a follow list is public (an act) or private (kept in the app). Names attached to followed identities: the project lead's lean, private.
+**The follow list:** "Customizable?" Then, on a private default with the choice to publish it (the project lead's lean, under F59): "Agreed". The names attached to followed identities stay in the app either way.
 
 ## F331. An owner who is no member signs an ending by chain signature (15 October 2026, afternoon)
 
