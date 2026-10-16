@@ -45,7 +45,7 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; hom
 
 ## Open, in order
 
-1. A small session for Dub and Edubba: a display name at creation in Dub (H12); Edubba's "What you may do for it" folding and unfolding (H14); bringing an existing identity or collective beside making one (H15); releases under one's own name moved to the Identities tab, the folder chosen at each release (H16); a Linux desktop icon for both, and a Linux test run.
+1. A small session for Dub and Edubba: a display name at creation in Dub (H12); Edubba's "What you may do for it" folding and unfolding (H14); bringing an existing identity or collective beside making one (H15); releases under one's own name moved to the Identities tab, the folder chosen at each release (H16); the Identities tab made an identity setup page (its record of routes, homes, keys and lines; relying on an act; drafts from Claude) with releases (F333); a Linux desktop icon for both, and a Linux test run.
 2. The site session (structure and look; H1, H2, H7; the reader showing display names, H17). Nearer release: the KI tab icon's fit and the tablet in the footer (H13).
 3. MOR Safety, the rotation app (F332, amended).
 4. The remaining human tests on the cleaned apps.
