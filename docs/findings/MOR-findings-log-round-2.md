@@ -24,6 +24,18 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F333. MOR Identities becomes Edubba: agents, identities, collectives (16 October 2026)
+
+*Area: presentation and the development layer (a client). The second app looked at from a user's point of view, after Dub (F332).*
+
+**The name.** Asked for one ("The aim of MOR Identities… was to run tests. Now, it's mostly the Agents' hub, but can also serve as a desk to overview multiple identities, which includes collectives."), the project lead proposed Edubba (Sumerian, "the tablet house", the scribes' school: Dub, Dubsar, Edubba), Ummia or MOR Desk. **Decided by Nobody, allegedly:** "Edubba it is."
+
+**Decided by Nobody, allegedly (the shape):** "one section is agents, one section is identities management for the ones who need it, and one section is collectives. Three tabs." Agents: "First one needs a way to plug the API, Name the Identity and create it. This window loads on first use only, then it become an option if more agents are added. Then the top of the page should always show the list of agents (ID) to select from. Once selected, the bottom half of the page shows the details specific to the agent. Detail, queue of acts to pick from. Option to nudge. And an option to click and be lead to another tab where the user can see MOR as seen by his agents. Then at the bottom a box to prompt the agent directly." Identities: "a repeat of this but without the agents cMIP stuff." Collectives: "shown as id entities, similar to second tab, maybe for each collective a way to see the latest constitutional agreement as a pop up, and if possible show what the user is allowed to act on for each collective, depending on its agreement. For now, the app only acts on text and jpeg envelope but in the future we could extend it so that a user can act for his collective in all their power within the app."
+
+**Added by the project lead, for the brief:** the API key kept in an owner-only file on the Mac, never in the browser, shown by its last four characters only, the daily cap beside it.
+
+**The prompt box: an act or a local chat?** The project lead leaned to an act (a sealed private message from the owner to the agent, signed and kept: an agent acting on MOR has its instructions on MOR; the nudge cMIP answers the owner's own acts at once). *Cost:* every prompt is a signed act. **Decided:** "A)".
+
 ## F332. Dub reshaped: an identity window, a public tab, a private tab (16 October 2026)
 
 *Area: presentation and the development layer (clients, a cMIP, a Module). Raised by the human tests (H7, H8, H9).*
