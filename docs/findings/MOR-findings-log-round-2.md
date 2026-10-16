@@ -38,6 +38,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Amended the same afternoon (the session's question on the words):** "The app show the seed for the chain key at creation, once, and that's it. From then on when asked for words, it only gives the signing key. Both should be labeled properly in the app. No rotation from Dub. We can create a MOR Safety app for rotation business." The project lead agreed: Dub then holds no chain key at all (the web client already works so), the chain key lives on paper, and rotation is a separate app's, the natural test-phase client of the air-gapped safety signer. Dub, when its key is no longer current, says so, points to MOR Safety, and takes the new signing words. *Stated cost:* paper words lost means no rotation; as before, but now plainly so. This replaces "rotation in Dub" above and settles the two Dubs' difference.
 
+**Inter bundled** (the Dub session left it for the author's word; the project lead leaned yes, so the look is the same everywhere): "Yes."
+
 **Noticed in passing (cleanup):** the two Dubs differ on the words shown at creation: the Mac shows the signing key's words, the web client the chain key's (with the carry words shown on request). To be made one.
 
 **The follow list:** "Customizable?" Then, on a private default with the choice to publish it (the project lead's lean, under F59): "Agreed". The names attached to followed identities stay in the app either way.
