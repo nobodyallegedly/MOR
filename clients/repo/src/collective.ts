@@ -21,6 +21,7 @@ import {
   makeRotation,
   newSigningSecret,
   rebuildChainKey,
+  rebuildChainKeyFromPaper,
   signingPublic,
   verifyShare,
 } from '../../genesis/src/core.ts';
@@ -864,6 +865,165 @@ export class TestCollective {
     this.f.safety = dealt;
     this.remember();
     return { id: r.id, counts: r.counts };
+  }
+
+  // ------------------------------------------------------------ real collectives (H18)
+
+  /**
+   * The founding terms of a real collective (H18): every member a party,
+   * the first the signing key's holder. Nothing is signed here: the founder
+   * proposes them, and each member signs on their own device.
+   */
+  static foundingTerms(governance: Governance, members: string[]): Uint8Array {
+    return termsPayload(collectiveTerms(governance, members, members[0]));
+  }
+
+  /**
+   * Found a real collective once every party signed its founding terms
+   * elsewhere (H18; Agreements rule 1): the chain key dealt to the members
+   * (the air-gapped signer Module, 5.1: verifiably, each share checked, the
+   * rebuild check done here, the one place that ever held the key), the
+   * genesis declaring the agreement and naming its homes, the routes. **No
+   * share is kept**: they are returned, to be sent to each member (sealed
+   * to a one-time key) or shown once, and the file holds the dealing's
+   * public part only. The signing key is held here, by the first member's
+   * app (the key grammar's one holder).
+   */
+  static async foundSigned(opts: {
+    agreement: string;
+    members: string[];
+    homes: Home[];
+    relays: string[];
+    governance: Governance;
+    scheme?: 2 | 3;
+    via?: Via;
+  }): Promise<{ collective: TestCollective; shares: { holder: string; share: Uint8Array }[]; sent: Submitted[] }> {
+    const ids = opts.members;
+    const scheme = opts.scheme ?? 3;
+    const chainKey = deal(ids, opts.governance.safetyThreshold, 0, scheme);
+    const shares = chainKey.shares.map((s) => ({ holder: s.holder, share: unb64(s.share) }));
+    const signingSecret = newSigningSecret();
+    const genesis = makeGenesis({
+      identitySpec: SPECS.identity,
+      signingSecret,
+      chainKeyScheme: scheme,
+      chainKeyCommit: chainKey.commit,
+      homes: opts.homes,
+      declarations: [{ spec: REPO_SPECS.agreements, kind: FOUNDING_AGREEMENT, value: opts.agreement }],
+    });
+    const id = actId(genesis);
+    const identity: IdentityFile = {
+      label: 'MOR TEST IDENTITY. The safety key is held in software: a prototype, never for a real identity.',
+      identity: id,
+      position: 0,
+      binding: id,
+      signingSecret: hex(signingSecret),
+      // Held as shares on the members' paper, never here.
+      safety: { scheme, seeds: '' },
+      chain: [b64(genesis)],
+      homes: opts.homes,
+      rule: null,
+      sequence: [],
+      routes: null,
+      encryption: [],
+      pending: null,
+      cites: [id],
+    };
+    const c = new TestCollective(
+      {
+        label: COLLECTIVE_LABEL,
+        identity,
+        relays: opts.relays,
+        governance: opts.governance,
+        members: ids,
+        signingHolder: ids[0],
+        agreement: opts.agreement,
+        agreements: [opts.agreement],
+        safety: { ...chainKey, shares: [] },
+        pending: null,
+        releases: [],
+      },
+      opts.via ?? {},
+    );
+    c.remember();
+    const sent = await c.id.publishGenesis();
+    await c.id.publishRoutes([{ scope: null, hints: opts.relays }]);
+    return { collective: c, shares, sent };
+  }
+
+  /**
+   * A member change's clone for a real collective (H18; rule 69), made and
+   * not signed: its mark names the constitutional change rule and the
+   * members whose voice remains (every one of them must sign, by default),
+   * each signing on their own device; a joining member signs too, to be
+   * bound. The founder proposes it; the rotation that declares it waits for
+   * Kišib (decided by Nobody, allegedly: "Wait for Kišib").
+   */
+  cloneFor(members: string[], governance?: Governance): { payload: Uint8Array; signers: string[]; holder: string; governance: Governance } {
+    const g = this.departedAfter(governance ?? this.f.governance, members);
+    const holder = this.nextHolder(members);
+    const voices = this.f.members.filter((m) => !(this.f.departed ?? []).some((d) => d.member === m));
+    const mark: MarkEntry[] = [{ power: { constitutional: true }, signers: voices }];
+    const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
+    if (clonePlan(parent, collectiveTerms(g, members, holder, this.f.agreement, mark)).needs.some((n) => n.form === 'judicial')) {
+      mark.push({ power: { judicial: true }, signers: voices });
+    }
+    const payload = termsPayload(collectiveTerms(g, members, holder, this.f.agreement, mark));
+    return { payload, signers: [...new Set([...voices, ...members])], holder, governance: g };
+  }
+
+  /**
+   * The rotation of a real collective from its members' paper shares (H18:
+   * a share is its number and 24 words; Kišib's work, this the stand-in in
+   * tests): the current chain key rebuilt from the papers and checked
+   * against the key this collective's chain commits to, the rotation
+   * declaring the clone `agreement` with its signature acts and keeping
+   * every line, the next key dealt to `members`, its shares returned and
+   * kept nowhere. Waits in `pending` until the homes count it ([`settle`]).
+   */
+  async rotateFromPaper(o: {
+    agreement: string;
+    signatures: string[];
+    members: string[];
+    governance: Governance;
+    holder: string;
+    papers: { x: number; value: Uint8Array }[];
+    lines?: KeptLines;
+  }): Promise<{ id: string; sent: Submitted[]; shares: { holder: string; share: Uint8Array }[] }> {
+    if (this.f.pending || this.f.identity.pending) throw new Error('a member change is already pending: resend it');
+    const plan = await this.planLines(o.lines);
+    checkWarned(plan, o.lines?.warned);
+    const current = rebuildChainKeyFromPaper({
+      seedModule: 'words',
+      scheme: this.f.safety.scheme,
+      index: this.f.safety.index,
+      commit: this.f.safety.commit,
+      papers: o.papers,
+    }) as { scheme: number; seeds: Uint8Array; commit: string };
+    const dealt = deal(o.members, o.governance.safetyThreshold, this.f.safety.index + 1, this.f.safety.scheme);
+    const shares = dealt.shares.map((s) => ({ holder: s.holder, share: unb64(s.share) }));
+    const f = this.f.identity;
+    const newSigning = newSigningSecret();
+    const rotation = makeRotation({
+      identitySpec: SPECS.identity,
+      identity: f.identity,
+      previous: actId(this.id.chainActs()[f.position]),
+      position: f.position + 1,
+      chainKeySeeds: current.seeds,
+      chainKeyScheme: current.scheme,
+      newSigningPublic: signingPublic(newSigning),
+      nextChainKeyScheme: dealt.scheme,
+      nextChainKeyCommit: dealt.commit,
+      kept: plan.kept,
+      declarations: [{ spec: AGREEMENTS_SPECS.agreements, kind: FOUNDING_AGREEMENT, value: o.agreement, signatures: o.signatures }],
+    });
+    current.seeds.fill(0);
+    const id = actId(rotation);
+    f.pending = { rotation: b64(rotation), id, signingSecret: hex(newSigning), safety: { scheme: dealt.scheme, seeds: '' }, homes: f.homes, rule: f.rule };
+    this.f.pending = { safety: { ...dealt, shares: [] }, agreement: o.agreement, members: o.members, governance: o.governance === this.f.governance ? undefined : o.governance };
+    this.f.signingHolder = o.holder;
+    const sent = await this.id.submitRotation();
+    return { id, sent, shares };
   }
 
   /** Once the member change's rotation counts, the new shares and agreement take over. */
