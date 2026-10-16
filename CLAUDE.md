@@ -1,6 +1,6 @@
 # Working in this repository
 
-Start with `docs/build-brief-v1.md` and `docs/roadmap-v1.md`. Each working session does one roadmap step.
+Start with `docs/state-of-mor.md` (what exists now), then `docs/build-brief-v1.md` and `docs/roadmap-v1.md` (the history). Each working session does one roadmap step.
 
 **Names.** Never write the author's personal name or nicknames in anything that enters this repository: files, commit messages, branch names, pull requests. Write "Nobody, allegedly". Earlier records keep their wording; do not copy the name from them into anything new.
 
