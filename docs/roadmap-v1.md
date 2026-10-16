@@ -307,6 +307,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 *16 October 2026: the homes, the gateway, the reader, Dub's web client, the desk and the author's Mac brought to the release of 15 October (machine report servers-2026-10-16, details in the private project note); a timestamp clock stamps the feed; a test reporting identity named on the report page; Machine, allegedly's terms signed; home2 also an onion service. Smoke test passed (the site verified on a phone, a Dub web post verified in the reader, a sealed message opened only by its recipient). Found, for after the human tests: no page links to the feed or the listing (presentation); the feed dates every post published before the clock's start to its first stamp (the documented cost of a late find, worth a sentence on the feed page); the gateway's `messageHomes` setting was missing on the server (added there; check the example names it). Ready for the author's human tests (`docs/human-tests-v1.md`).*
 
+*16 October 2026, afternoon: the human tests found the clients need a proper look from a user's point of view (`docs/human-tests-v1-findings.md`, H1 to H10). Nobody, allegedly: "I suggest cleaning all the apps first", then the remaining tests on the cleaned apps; Dub first ("Wanna build this first and we see the rest after?"). Dub reshaped (F332): an identity window, a public tab and a private tab, replies, a "to you" filter, follow and mute, a display name, rotation in the app, a Damus-like calm; with a naming cMIP, a people cMIP (follow and mute) and the carry Module's draft 2 (the encryption key carried too). The other apps (the desk, the collective client, the site) after it.*
+
 ## Decisions due along the way
 
 | Decision | Before |
