@@ -182,13 +182,16 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   const pile = (p: string) => page.locator(`[data-pile="${p}"] .item`);
   assert.equal(await pile('new').count(), 2);
   await shot(page, '3-received');
-  // Relying on the reply: the click explains first and signs nothing; Cancel leaves nothing signed.
+  // Relying on the reply: the click reads it back first and signs nothing; Cancel leaves nothing signed; then RELY typed signs it.
+  void id;
   await pile('new').filter({ hasText: 'A reply' }).locator('[data-action="witness"]').click();
-  await id.locator('.here', { hasText: 'I received this act and rely on it' }).waitFor();
-  await id.locator('.here [data-action="witness-cancel"]').click();
+  await page.locator('#e-rely-shown', { hasText: 'I received this act and rely on it' }).waitFor({ timeout: 60_000 });
+  assert.match(await page.locator('#e-rely-shown').innerText(), /Nice post\./);
+  await page.locator('#e-rely-shown [data-action="rely-cancel"]').click();
   await pile('new').filter({ hasText: 'A reply' }).locator('[data-action="witness"]').click();
-  await id.locator('.here [data-action="witness-sign"]').click();
-  await id.locator('.here .note.done', { hasText: 'Witness act' }).waitFor({ timeout: 60_000 });
+  await page.locator('#rely-sign input[name=typed]').fill('RELY');
+  await page.locator('#rely-sign button[type=submit]').click();
+  await page.locator('#e-rely-shown .note.done', { hasText: 'Witness act signed' }).waitFor({ timeout: 60_000 });
   await pile('new').filter({ hasText: 'A reply' }).locator('[data-sorted="answered"]').click();
   await page.locator('[data-pile="answered"] .item').first().waitFor();
   await pile('new').filter({ hasText: 'An acknowledgement' }).locator('[data-sorted="ignored"]').click();

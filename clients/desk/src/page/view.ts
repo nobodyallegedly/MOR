@@ -132,8 +132,6 @@ dl.card-of{margin:6px 0 0}
 details.fold>summary{display:flex;align-items:baseline;gap:12px;cursor:pointer;list-style:none}
 details.fold>summary::-webkit-details-marker{display:none}
 details.fold>summary h3{margin:0;flex:1}
-details.fold>summary h3::before{content:"▸";display:inline-block;width:1.1em;color:var(--soft)}
-details.fold[open]>summary h3::before{content:"▾"}
 details.fold[open]>summary{margin-bottom:8px}`;
 
 /** A fingerprint, shortened on screen, whole on hover. */

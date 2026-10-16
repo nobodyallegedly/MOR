@@ -294,8 +294,10 @@ test("an identity's received interactions: messages, replies, acknowledgements a
     { message: 'to answer', reply: 'answered', acknowledgement: 'ignored', payment: 'to answer' },
   );
   // Machine relies on the reply it received: a witness act, only once the explanation was shown (F110).
-  await assert.rejects(w.client.ask('witness', { identity: machine, act: kind('reply').act, shown: 'Like' }), /shown what it does/);
-  const wit = await w.client.ask<{ id: string }>('witness', { identity: machine, act: kind('reply').act, shown: WITNESS_EXPLANATION });
+  // Only once RELY is typed, as the genesis client asks (the Identities tab, F333).
+  await assert.rejects(w.client.ask('witness', { identity: machine, act: kind('reply').act, shown: WITNESS_EXPLANATION }), /Type RELY.*Nothing was signed/);
+  await assert.rejects(w.client.ask('witness', { identity: machine, act: kind('reply').act, shown: 'Like', typed: 'RELY' }), /shown what it does/);
+  const wit = await w.client.ask<{ id: string }>('witness', { identity: machine, act: kind('reply').act, shown: WITNESS_EXPLANATION, typed: 'RELY' });
   assert.match(wit.id, /^[0-9a-f]{64}$/);
 
   // The author's own identity received nothing.

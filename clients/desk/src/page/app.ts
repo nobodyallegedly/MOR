@@ -474,6 +474,9 @@ app.addEventListener('click', async (ev) => {
       const r = await busy('Signing the release and publishing its files…', () => c.ask<Done>('release confirm', { plan: d.plan, digest: d.digest }), $('e-release-review'));
       if (r) {
         records.delete(at.identity!);
+        // Signed: the folder chosen and its review are done with, and are not kept across the redraw.
+        fill('e-release-review', '');
+        fill('e-release-form', '');
         await refresh();
         say('done', v.done(r));
       }
@@ -571,7 +574,9 @@ app.addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const d = new FormData(form);
   const agent = at.agent ?? undefined;
-  if (form.id === 'pair') {
+  // Not `form.id`: a form's fields shadow its properties (the bring forms have a field named "id").
+  const fid = form.getAttribute('id');
+  if (fid === 'pair') {
     try {
       await c.ask('pair', { code: $<HTMLInputElement>('pair-code')!.value, label: 'this browser' });
       await start();
@@ -584,7 +589,7 @@ app.addEventListener('submit', async (ev) => {
   if (form.classList.contains('send-back')) {
     return after(await busy('Sending it back to Claude…', () => c.ask<Done>('send back', { digest: form.dataset.digest, note: words(d.get('note')) })));
   }
-  if (form.id === 'agent-add') {
+  if (fid === 'agent-add') {
     const own = d.get('own') === 'on';
     const r = await busy('Making its identity at its homes, and publishing its name…', async () => {
       if (d.has('homes')) await c.ask('settings', { homes: linesOf(d.get('homes')), relays: linesOf(d.get('relays')), via: [], drafts: '' });
@@ -607,7 +612,7 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
-  if (form.id === 'agent-prompt') {
+  if (fid === 'agent-prompt') {
     const r = await busy('Signing your prompt, sealing it to the agent; it is answering…', () => c.ask<Done>('agent prompt', { agent, text: String(d.get('text') ?? '') }));
     if (r) {
       await refresh();
@@ -617,12 +622,12 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
-  if (form.id === 'agent-follow') {
+  if (fid === 'agent-follow') {
     const r = await busy('Following…', () => c.ask('agent follow', { agent, id: words(d.get('who')), name: words(d.get('name')) }));
     if (r) await draw().catch(fail);
     return;
   }
-  if (form.id === 'agent-key') {
+  if (fid === 'agent-key') {
     const own = d.get('own') === 'own';
     const r = await busy('Saving its key…', () => c.ask<{ last4: string | null }>('agent key', { agent, own, key: words(d.get('key')) }));
     form.reset();
@@ -632,15 +637,15 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
-  if (form.id === 'machine-cap') {
+  if (fid === 'machine-cap') {
     const r = await busy('Saving the cap…', () => c.ask('machine cap', { agent, callsPerDay: Number(words(d.get('callsPerDay'))), maxChars: Number(words(d.get('maxChars'))) }));
     if (r) await refresh();
     return;
   }
-  if (form.id === 'machine-nudge') {
+  if (fid === 'machine-nudge') {
     return after(await busy('Signing your nudge; it is choosing…', () => c.ask<Done>('machine nudge', { agent, count: Number(words(d.get('count'))), context: words(d.get('context')) })));
   }
-  if (form.id === 'collective-post') {
+  if (fid === 'collective-post') {
     const file = d.get('jpeg');
     const jpeg = file instanceof File && file.size ? await base64Of(file) : undefined;
     const r = await busy('Preparing, and reading it back…', () => c.ask<Review>('collective prepare', { kind: 'post', collective: at.collective, text: String(d.get('text') ?? ''), jpeg }));
@@ -652,7 +657,7 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
-  if (form.id === 'bring-identity') {
+  if (fid === 'bring-identity') {
     const r = await busy('Reading the identity from its homes, and checking the words…', () =>
       c.ask<Done>('bring', { name: words(d.get('name')), id: words(d.get('id')), words: words(d.get('words')), address: words(d.get('address')), linked: d.get('linked') === 'on' }),
     );
@@ -662,7 +667,7 @@ app.addEventListener('submit', async (ev) => {
     }
     return after(r);
   }
-  if (form.id === 'bring-collective') {
+  if (fid === 'bring-collective') {
     const r = await busy('Reading the collective from its homes and relays…', () => c.ask<Done>('collective bring', { id: words(d.get('id')), name: words(d.get('name')) }));
     if (r) {
       form.reset();
@@ -670,13 +675,13 @@ app.addEventListener('submit', async (ev) => {
     }
     return after(r);
   }
-  if (form.id === 'rely') {
+  if (fid === 'rely') {
     const identity = at.identity!;
     const r = await busy('Reading the act back…', () => c.ask<ActRead>('read act', { identity, act: words(d.get('act')) }), $('e-rely-shown'));
     if (r) fill('e-rely-shown', v.relyShown(identity, r));
     return;
   }
-  if (form.id === 'rely-sign') {
+  if (fid === 'rely-sign') {
     const r = await busy('Signing the witness act…', () => c.ask<{ id: string }>('witness', { identity: form.dataset.identity, act: form.dataset.act, shown: WITNESS_EXPLANATION, typed: words(d.get('typed')) }), $('e-rely-shown'));
     if (r) {
       records.delete(form.dataset.identity!);
@@ -686,7 +691,7 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
-  if (form.id === 'release-folder') {
+  if (fid === 'release-folder') {
     const i = state.identities.find((x) => x.id === at.identity)!;
     const r = await busy('Looking at the folder…', () => c.ask<{ folder: string; how: 'git' | 'plain'; name: string; previous: string | null }>('release folder', { identity: i.id, folder: words(d.get('folder')) }), $('e-release-form'));
     if (r) {
@@ -695,7 +700,7 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
-  if (form.id === 'release-prepare') {
+  if (fid === 'release-prepare') {
     const r = await busy(
       'Reading every file, locking each, and making the manifest…',
       () => c.ask<ReleaseReview>('release prepare', { identity: at.identity, folder: form.dataset.folder, name: words(d.get('name')), version: words(d.get('version')), previous: words(d.get('previous')) }),
@@ -707,7 +712,7 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
-  if (form.id === 'new-identity') {
+  if (fid === 'new-identity') {
     const r = await busy('Making the identity at its homes…', () => c.ask<Done>('identity', { name: words(d.get('name')), linked: d.get('linked') === 'on' }));
     if (r) {
       form.reset();
@@ -715,7 +720,7 @@ app.addEventListener('submit', async (ev) => {
     }
     return after(r);
   }
-  if (form.id === 'desk-settings') {
+  if (fid === 'desk-settings') {
     const r = await busy(
       'Asking each home who runs it…',
       () => c.ask('settings', { homes: linesOf(d.get('homes')), relays: linesOf(d.get('relays')), via: words(d.get('via')).split('\n').map((s) => s.trim()).filter(Boolean), drafts: words(d.get('drafts')) }),
