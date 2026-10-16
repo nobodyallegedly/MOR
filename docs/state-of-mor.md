@@ -46,11 +46,12 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; hom
 ## Open, in order
 
 1. A small session for Dub and Edubba: a display name at creation in Dub (H12); Edubba's "What you may do for it" folding and unfolding (H14); bringing an existing identity or collective beside making one (H15); releases under one's own name moved to the Identities tab, the folder chosen at each release (H16); the Identities tab made an identity setup page (its record of routes, homes, keys and lines; relying on an act; drafts from Claude) with releases (F333); a Linux desktop icon for both, and a Linux test run.
-2. The site session (structure and look; H1, H2, H7; the reader showing display names, H17). Nearer release: the KI tab icon's fit and the tablet in the footer (H13).
-3. MOR Safety, the rotation app (F332, amended).
-4. The remaining human tests on the cleaned apps.
-5. The freeze-ready drafts, including: Agreements' count aligned with every MIR's format (F295, found under F334); MICS and suite naming Text 9.
-6. The step 17 rehearsal, then the freeze.
+2. Real collectives in Edubba (H18): members chosen from a contacts list of Edubba's own or by ID, each signing on their own device, the chain key's shares dealt to each; tested by the author with three members on three devices (human test 10).
+3. The site session (structure and look; H1, H2, H7; the reader showing display names, H17). Nearer release: the KI tab icon's fit and the tablet in the footer (H13).
+4. MOR Safety, the rotation app (F332, amended).
+5. The remaining human tests on the cleaned apps.
+6. The freeze-ready drafts, including: Agreements' count aligned with every MIR's format (F295, found under F334); MICS and suite naming Text 9.
+7. The step 17 rehearsal, then the freeze.
 
 ## Working rules for sessions
 
