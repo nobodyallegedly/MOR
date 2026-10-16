@@ -22,7 +22,7 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { SPECS, base64, cborDecode, cborEncode, describeAct, hex, openSealed, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
+import { SPECS, base64, cborDecode, cborEncode, describeAct, hex, openSealed, signingPublic, unhex } from '../../genesis/src/core.ts';
 import { ownLine } from '../../genesis/src/lines.ts';
 import { TestIdentity, TEST_LABEL, sealFor, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
@@ -35,6 +35,7 @@ import { compose } from '../../longform/src/text.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
 import { Refused, encryptionSecret, fromWords, groupId, readId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { newChainKey } from './chainwords.ts';
+import { carriedKey, lookCurrent, servedChain } from './carryin.ts';
 import { NAME, NAME_WITHDRAWAL, namePayload, namesOf, readName } from './names.ts';
 import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PUBLISH_WARNING, followListPayload, readFollowList, type Kept, type People } from './people.ts';
 import type { Held, Item, Line, Message, Pic, State, Who } from './shapes.ts';
@@ -69,10 +70,6 @@ export const LINE_SAY =
 export const SPENT_SAY =
   'This identity’s signing key was changed elsewhere, with its chain key, so the signing key’s words this app holds no longer count. Nothing was signed. Changing keys is MOR Safety’s work, not Dub’s. To go on here, give this app the new signing key’s words.';
 
-/** Said where the words do not give the current key (the carry Module, costs). */
-const NOT_CURRENT =
-  'These words do not give this identity’s current signing key: they are another identity’s, an earlier key’s, or written wrong. Nothing was kept. If these are your chain key’s words, they must never be typed into an online app.';
-
 /** Said where the identity's encryption key is not one this app holds (the carry Module, draft 2, 2a.3). */
 export const NO_KEY_SAY =
   'This app holds no encryption key for this identity, so its private messages cannot be opened here: its encryption key was not made from its signing key’s words. Messages can still be sent from here.';
@@ -97,6 +94,8 @@ export interface Pending {
   via: Via;
   /** The chain-key seed whose words were shown. Never stored. */
   chainSeed: string;
+  /** A display name to publish right after the genesis (the naming cMIP; H12), already checked; none if not given. */
+  name?: string;
 }
 
 /**
@@ -277,8 +276,10 @@ export class Dub {
    * the web. Nothing is published until three of the words are typed back
    * (`confirm`). Starting again forgets the last one.
    */
-  async begin(a: { homes: string[]; relays: string[]; via?: Via }): Promise<{ words: string[]; positions: number[]; say: string[] }> {
+  async begin(a: { homes: string[]; relays: string[]; via?: Via; name?: string }): Promise<{ words: string[]; positions: number[]; say: string[] }> {
     const via = a.via ?? {};
+    // A display name, if given, is checked now, before anything is made (the naming cMIP, section 2; H12).
+    const name = a.name?.trim() ? readName(a.name) : undefined;
     const hints = list(a.homes);
     if (!hints.length) throw new Error('Give at least one home address: where the identity lives, and anyone can check it.');
     const homes = await this.homes(hints, via);
@@ -291,7 +292,7 @@ export class Dub {
     // The chain key is not kept with the identity, even while it waits: only the seed, in memory, to check the words typed back.
     id.f.safety = { scheme: 0, seeds: '' };
     chain.key.seeds.fill(0);
-    await this.store.savePending({ identity: id.f, positions, relays: relays.length ? relays : hints, via, chainSeed: hex(seed) });
+    await this.store.savePending({ identity: id.f, positions, relays: relays.length ? relays : hints, via, chainSeed: hex(seed), ...(name ? { name } : {}) });
     seed.fill(0);
     return { words: chain.words, positions, say: CHAIN_WORDS_SAY };
   }
@@ -348,6 +349,14 @@ export class Dub {
         }
       }
       lines.push({ text: `Its posts are published at, and its inbox is, ${p.relays.join(', ')}. Its encryption key is published: private messages can be sealed to it.` });
+      // The display name given in the form, published right after the genesis (H12; the naming cMIP, section 1).
+      if (p.name) {
+        try {
+          lines.push(...(await this.publishName(id, { relays: p.relays, via: p.via }, p.name)).lines);
+        } catch (e) {
+          lines.push({ text: `The display name was not published (${message(e)}). Give it again in the identity window.`, tone: 'warn' });
+        }
+      }
       return { lines };
     });
   }
@@ -417,51 +426,16 @@ export class Dub {
     });
   }
 
-  /** Look an identity up, and refuse unless `seed` gives its current signing key (the carry Module, 4.2). */
-  private async lookCurrent(id: string, seed: Uint8Array, hints: string[], via: Via): Promise<Lookup> {
-    let pub: Uint8Array;
-    try {
-      pub = signingPublic(seed);
-    } catch {
-      throw new Error('The words do not hold a signing key. Nothing was kept.');
-    }
-    let look: Lookup;
-    try {
-      look = await lookUp(id, hints, via);
-    } catch (e) {
-      throw new Error(`This identity was not found at ${hints.join(', ')}: ${message(e)}`);
-    }
-    const r = look.resolution;
-    if (r.stop === 'contested') throw new Error('Its homes disagree about its keys (contested): nothing can be signed for it until they agree.');
-    if (r.stop === 'pending' || r.waiting.length) throw new Error('A change of its keys is waiting for its homes: bring it once that change counts, with the new words.');
-    if (!r.signingKey || !r.links.length) throw new Error(`Its chain could not be read (${r.stop}).`);
-    if (hex(r.signingKey) !== hex(pub)) throw new Error(NOT_CURRENT);
-    return look;
+  private lookCurrent(id: string, seed: Uint8Array, hints: string[], via: Via): Promise<Lookup> {
+    return lookCurrent(id, seed, hints, via);
   }
 
-  /** The chain acts, as its homes serve them, to carry along with posts. */
-  private async servedChain(id: string, homes: Home[], via: Via): Promise<Uint8Array[]> {
-    for (const h of homes) {
-      try {
-        const chain = (await relayAt(h.hint, via).identity(id)).chain;
-        if (chain.length) return chain;
-      } catch {
-        // the next home
-      }
-    }
-    throw new Error('None of its homes served its chain.');
+  private servedChain(id: string, homes: Home[], via: Via): Promise<Uint8Array[]> {
+    return servedChain(id, homes, via);
   }
 
-  /** The identity's encryption key that counts, where the words carry it (the carry Module, draft 2, 2a.3); else null. */
   private carriedKey(look: Lookup, seed: Uint8Array): { version: number; act: string; secret: string } | null {
-    const secret = encryptionSecret(seed);
-    if (!look.encryptionKey || !look.encryptionKeyAct || hex(xwingPublic(secret)) !== hex(look.encryptionKey)) return null;
-    return { version: this.keyVersion(look), act: look.encryptionKeyAct, secret: hex(secret) };
-  }
-
-  private keyVersion(look: Lookup): number {
-    const e = (look.verifier as unknown as { latest(i: string, s: string, t: number): { payload?: Uint8Array } }).latest(look.resolution.identity, SPECS.envelopes, 4);
-    return e.payload ? Number((cborDecode(e.payload) as Map<number, unknown>).get(0)) : 1;
+    return carriedKey(look, seed);
   }
 
   /**
@@ -591,34 +565,40 @@ export class Dub {
    */
   setName(typed: string): Promise<{ lines: Line[]; names: string[] }> {
     return this.serial(async () => {
-      const { me, s, hints } = await this.ctx();
+      const { me, s } = await this.ctx();
       const name = typed.trim() ? readName(typed) : null;
       await this.current(me);
-      const before = await namesOf(me.id, hints, s.via);
-      const lines: Line[] = [];
-      const send = async (act: Uint8Array) => {
-        for (const h of [...me.f.homes.map((x) => x.hint), ...s.relays]) {
-          try {
-            await relayAt(h, s.via).putAct(act);
-          } catch {
-            // that place is away: the others hold it
-          }
-        }
-      };
-      if (name && !before.some((n) => n.name === name)) {
-        const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME, namePayload(name), { public: true }));
-        await send(made.act);
-        lines.push({ text: `Your display name is “${name}”, shown beside your fingerprint, never instead of it. Anyone may take the same name.`, tone: 'ok' });
-      }
-      for (const old of before.filter((n) => n.name !== name)) {
-        const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME_WITHDRAWAL, cborEncode(new Map()), { public: true, objects: [[old.act, old.act]] }));
-        await send(made.act);
-        lines.push({ text: `“${old.name}” withdrawn: it stays readable as an act, no longer as your name.` });
-      }
-      const names = (await namesOf(me.id, hints, s.via)).map((n) => n.name);
-      this.names.set(me.id, { names, at: now() });
-      return { lines, names };
+      return this.publishName(me, s, name);
     });
+  }
+
+  /** Publish `name` and withdraw every other counting name, for an identity whose key is current. Inside `serial`. */
+  private async publishName(me: TestIdentity, s: { relays: string[]; via: Via }, name: string | null): Promise<{ lines: Line[]; names: string[] }> {
+    const hints = [...new Set([...s.relays, ...me.f.homes.map((h) => h.hint)])];
+    const before = await namesOf(me.id, hints, s.via);
+    const lines: Line[] = [];
+    const send = async (act: Uint8Array) => {
+      for (const h of [...me.f.homes.map((x) => x.hint), ...s.relays]) {
+        try {
+          await relayAt(h, s.via).putAct(act);
+        } catch {
+          // that place is away: the others hold it
+        }
+      }
+    };
+    if (name && !before.some((n) => n.name === name)) {
+      const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME, namePayload(name), { public: true }));
+      await send(made.act);
+      lines.push({ text: `Your display name is “${name}”, shown beside your fingerprint, never instead of it. Anyone may take the same name.`, tone: 'ok' });
+    }
+    for (const old of before.filter((n) => n.name !== name)) {
+      const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME_WITHDRAWAL, cborEncode(new Map()), { public: true, objects: [[old.act, old.act]] }));
+      await send(made.act);
+      lines.push({ text: `“${old.name}” withdrawn: it stays readable as an act, no longer as your name.` });
+    }
+    const names = (await namesOf(me.id, hints, s.via)).map((n) => n.name);
+    this.names.set(me.id, { names, at: now() });
+    return { lines, names };
   }
 
   // ------------------------------------------------------------ the public side

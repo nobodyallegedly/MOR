@@ -155,9 +155,13 @@ export interface State {
     id: string;
     name: string;
     linked: boolean;
+    /** Made here, or brought here by its signing key's words (H15). */
+    kind: 'made' | 'brought';
     /** This desk's own line of acts for it (F152): how many, the latest, its running summary. */
     line: { acts: number; latest: string | null; summary: string | null };
     received: Item[];
+    /** Releases it published under its own name here (H16), newest first. */
+    releases: { id: string; name: string; version: string; folder: string }[];
   }[];
   history: { time: number; draft: string; verdict: string; signer: string; signerName: string; title: string; note: string; act?: string; cause?: string; causeAct?: string; text?: string; resend: boolean }[];
   machine: MachineState;
@@ -166,7 +170,9 @@ export interface State {
   /** The shared API key: found or not, and its last four characters only. */
   sharedKey: { found: boolean; last4?: string; from: string; warning?: string };
   /** The collectives held in the collective client's folder. */
-  collectives: { id: string; name: string; closed: boolean; members: number }[];
+  collectives: { id: string; name: string; closed: boolean; members: number; brought?: boolean }[];
+  /** "What you may do for it", folded (false) or unfolded, per collective (H14). */
+  unfolded?: Record<string, boolean>;
   paired: { key: string; label: string; added: number; you: boolean }[];
 }
 
@@ -240,4 +246,35 @@ export interface MachineState {
   /** Picks signed that wait to be answered (the cap): their acts leave the Notified pile. */
   waiting: { pick: string; act: string; fromName: string | null; private: boolean }[];
   notAnswered: { act: string; kind: string; note: string }[];
+}
+
+/** An identity's record, in plain words (the Identities tab as a setup page, F333). */
+export interface IdentityRecord {
+  id: string;
+  kind: 'made' | 'brought';
+  sections: { heading: string; lines: Line[] }[];
+  lines: { own: boolean; readable: boolean; words: string; card: { act: string; position: number; summary: string } | null }[];
+  problems: string[];
+}
+
+/** An act read back before relying on it. */
+export interface ActRead {
+  act: string;
+  lines: Line[];
+  text: string | null;
+  explanation: string;
+  blocking: string[];
+}
+
+/** A release under one's own name, read back before it is signed (H16). */
+export interface ReleaseReview {
+  plan: string;
+  digest: string;
+  title: string;
+  summary: string[];
+  sections: { heading: string; lines: Line[] }[];
+  files: { path: string; size: number; fingerprint: string }[];
+  dependencies: { registry: string; name: string; version: string }[];
+  skipped: string[];
+  blocking: string[];
 }

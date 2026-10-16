@@ -14,6 +14,7 @@ import { Desk } from './desk.ts';
 import { type MachineOptions } from './machine.ts';
 import { Agents } from './agents.ts';
 import { Collectives } from './collectives.ts';
+import { Setup } from './setup.ts';
 import { FONT_FILES, FONTS_DIR } from '../../dub/src/fonts.ts';
 import { Store } from './store.ts';
 import { STYLE } from './page/view.ts';
@@ -37,6 +38,7 @@ export interface Running {
   desk: Desk;
   agents: Agents;
   collectives: Collectives;
+  setup: Setup;
   close(): Promise<void>;
 }
 
@@ -61,6 +63,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
   // The collective client's folder, read where it is (~/mor-collective), or
   // inside this one for a new install (src/cli.ts).
   const collectives = new Collectives(opts.collective ?? join(opts.dir, 'collective'), store);
+  const setup = new Setup(desk, store);
   const agentOf = (a: Record<string, unknown>) => agents.for(text(a.agent) || null);
   const num = (v: unknown): number => (typeof v === 'number' ? v : Number(text(v)));
   const script = await pageScript(here('src/page/app.ts'));
@@ -165,7 +168,28 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
       case 'refresh':
         return desk.refresh(text(a.identity));
       case 'witness':
-        return desk.witness(text(a.identity), text(a.act), text(a.shown));
+        // Read back first, then signed only once RELY is typed (as the genesis client's command; Identity rule 18c).
+        return setup.witness(text(a.identity), text(a.act), text(a.shown), text(a.typed));
+      case 'read act':
+        return setup.readAct(text(a.identity), text(a.act));
+      case 'record':
+        return setup.record(text(a.identity));
+      case 'bring':
+        return setup.bring({ name: text(a.name), id: text(a.id), words: text(a.words), address: text(a.address), linked: a.linked === true });
+      case 'release folder':
+        return setup.suggest(text(a.identity), text(a.folder));
+      case 'release prepare':
+        return setup.prepareRelease({ identity: text(a.identity), folder: text(a.folder), name: text(a.name), version: text(a.version), previous: text(a.previous) || null });
+      case 'release confirm':
+        return setup.confirmRelease(text(a.plan), text(a.digest));
+      case 'release cancel':
+        setup.cancelRelease(text(a.plan));
+        return {};
+      case 'fold':
+        desk.fold(text(a.collective), a.open === true);
+        return {};
+      case 'collective bring':
+        return collectives.bring({ id: text(a.id), name: text(a.name) });
       case 'sort':
         desk.sort(text(a.identity), text(a.key), text(a.sorted));
         return {};
@@ -199,6 +223,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
     desk,
     agents,
     collectives,
+    setup,
     async close() {
       if (timer) clearInterval(timer);
       await local.close();

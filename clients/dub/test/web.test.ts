@@ -182,6 +182,8 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   const begin = page.locator('form#begin');
   await begin.locator('textarea[name=homes]').fill(homes.map((h) => h.base).join('\n'));
   await begin.locator('textarea[name=relays]').fill(relay.base);
+  // H12: a display name given in the form, published right after the genesis.
+  await begin.locator('input[name=name]').fill('Web Ada');
   await begin.getByRole('button', { name: 'Make it' }).click();
   await page.locator('#words').waitFor({ timeout: 60_000 });
   await banner(page, 'the words');
@@ -207,6 +209,7 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   await inputs.nth(1).fill(words[positions[1] - 1]);
   await page.getByRole('button', { name: 'Go on' }).click();
   await done(page, 'The identity is born');
+  await page.locator('#status', { hasText: 'Your display name is “Web Ada”' }).waitFor();
   await banner(page, 'the app');
 
   // The genesis commits the chain key these words give; nothing of it in storage or on the page.

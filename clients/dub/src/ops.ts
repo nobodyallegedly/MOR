@@ -48,7 +48,7 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
     case 'state':
       return dub.state();
     case 'begin':
-      return dub.begin({ homes: list(a.homes), relays: list(a.relays), via: p.via(a.via) });
+      return dub.begin({ homes: list(a.homes), relays: list(a.relays), via: p.via(a.via), name: text(a.name) });
     case 'confirm':
       return dub.confirm(list(a.typed));
     case 'abandon':

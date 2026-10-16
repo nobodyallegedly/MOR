@@ -198,6 +198,7 @@ export function identityWindow(s: State, web = false, suggested: Suggested = {})
 <form id="begin">
 <label>Its home, where anyone can check it (one address per line)</label><textarea name="homes" required placeholder="https://">${lns(suggested.homes)}</textarea>
 <label>Relays for its posts and its inbox (one per line; empty: its home)</label><textarea name="relays">${lns(suggested.relays)}</textarea>
+<label>A display name, if you like: published right after it is made, shown beside its fingerprint, never instead of it. Anyone can take the same name.</label><input name="name" type="text" maxlength="48" autocomplete="off" placeholder="No name: its fingerprint alone">
 ${web ? '' : via}
 <div class="row"><button type="submit" class="primary">Make it</button></div></form></section>`;
   const bring = `<section class="card"><h3>Bring an identity you have</h3>
