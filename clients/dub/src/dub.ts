@@ -1058,7 +1058,8 @@ export class Dub {
         const act = k.refs[0].id;
         const signer = k.refs[0].signer;
         const places = [...new Set([...hints, ...(await this.placesOf(signer ?? k.from!, hints, s.via))])];
-        const later = p.inbox.items.filter((x) => x.talk?.thread === k.key && x.key !== k.key && x.from === k.from).map((x) => x.text ?? '');
+        const laterKept = p.inbox.items.filter((x) => x.talk?.thread === k.key && x.key !== k.key && x.from === k.from);
+        const later = laterKept.map((x) => x.text ?? '');
         let reading: Awaited<ReturnType<typeof readProposal>> | null = null;
         let problem: string | null = null;
         try {
@@ -1087,7 +1088,7 @@ export class Dub {
           text: k.text ?? '',
           later,
           act,
-          collective: k.refs[1]?.id ?? reading?.collective ?? null,
+          collective: this.collectiveOf(p, k.key) ?? reading?.collective ?? null,
           reading: reading ? { kind: reading.kind, title: reading.title, summary: reading.summary, sections: reading.sections, plain: reading.plain, risks: reading.risks, blocking: reading.blocking } : null,
           problem,
           answer: ans ? { verdict: ans.verdict, signature: ans.signature } : null,
@@ -1098,6 +1099,12 @@ export class Dub {
       }
       return { on: true, waiting: firsts.filter((k) => !st.answered[k.key]).length, proposals: out, problems, say: SIGNING_SAY };
     });
+  }
+
+  /** The collective a thread is about, as the proposer's messages in it name it (their second reference). */
+  private collectiveOf(p: People, thread: string): string | null {
+    for (const x of p.inbox.items) if (x.talk?.thread === thread && x.refs[1]) return x.refs[1].id;
+    return null;
   }
 
   /** Where an identity's acts are: its homes and the relays its routes name. */
@@ -1233,7 +1240,6 @@ export class Dub {
       const positions = threePositions(randomBelow);
       w.shown = positions;
       await this.store.saveSigning(me.id, st);
-      const k = p.inbox.items.find((x) => x.key === thread);
       return {
         thread,
         x: paper.x,
@@ -1241,7 +1247,7 @@ export class Dub {
         threshold: paper.threshold,
         words: toWords(paper.value),
         fingerprint: paper.fingerprint.match(/.{1,4}/g)!.slice(0, 8).join(' '),
-        collective: k?.refs[1]?.id ?? null,
+        collective: this.collectiveOf(p, thread),
         say: SHARE_SAY,
         positions,
       };
@@ -1257,9 +1263,8 @@ export class Dub {
       if (!typedBack(toWords(paper.value), w.shown, typed)) {
         throw new Error(`Those are not words ${w.shown.join(', ')} of your share as shown. Look at what you wrote down. The one-time key is kept until they are.`);
       }
-      const k = p.inbox.items.find((x) => x.key === thread);
       delete st.waiting[thread];
-      st.received[thread] = { x: paper.x, fingerprint: paper.fingerprint, collective: k?.refs[1]?.id ?? null, at: now() };
+      st.received[thread] = { x: paper.x, fingerprint: paper.fingerprint, collective: this.collectiveOf(p, thread), at: now() };
       await this.store.saveSigning(me.id, st);
       return { lines: [{ text: `Share ${paper.x} is written down. The one-time key is destroyed: the copy on the relays can never be opened again, by anyone. Keep the paper safe.`, tone: 'ok' }] };
     });

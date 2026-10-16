@@ -345,7 +345,6 @@ export function proposal(p: Proposal): string {
   const body = `${r.summary.map((x) => `<p>${e(x)}</p>`).join('')}
 ${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines(x.lines)}`).join('')}
 ${r.plain.map((x) => `<h4>${e(x.heading)}</h4><p class="small">As plain text, character for character; any invisible control is shown as &lt;U+…&gt;.</p><div class="plain">${e(x.text)}</div>`).join('')}
-${r.kind === 'founding' || r.kind === 'clone' ? `<h4>Risks to read (${r.risks.length})</h4>${r.risks.length ? `<ul>${r.risks.map((f) => `<li>${e(f.text)} <span class="small">${e(f.rests)}</span></li>`).join('')}</ul>` : '<p class="small">None of the risks the deal-assessment tool knows.</p>'}` : ''}
 ${r.blocking.length ? note('error', `<strong>It cannot be signed here:</strong>${lines(r.blocking.map((text) => ({ text })))}`) : ''}`;
   const share =
     p.share === 'none'

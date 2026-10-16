@@ -201,10 +201,14 @@ export class Collectives {
   }
 
   /** What its agreement in force says, for a collective brought here: read only, nothing can be signed for it here. */
-  private async broughtPermissions(b: BroughtCollective) {
+  private async broughtPermissions(b: BroughtCollective, real = false) {
     const names = this.names();
     const out = { collective: b.id, name: b.name, agreement: null as string | null, you: [b.member], items: [] as { what: string; state: 'yes' | 'with others' | 'no'; lines: Line[]; needs: never[] }[], notes: [] as Line[] };
-    out.notes.push({ text: 'Brought here by its ID: Edubba holds none of its keys, so nothing can be signed for it from here. This is what its agreement in force says.', tone: 'warn' });
+    out.notes.push(
+      real
+        ? { text: 'A real collective, founded here: its members sign in their own apps. Its signing key is held here; its chain key only on its members’ paper. Releases and member changes are proposed under Constitution; posting for it from the Act tab comes later. This is what its agreement in force says.' }
+        : { text: 'Brought here by its ID: Edubba holds none of its keys, so nothing can be signed for it from here. This is what its agreement in force says.', tone: 'warn' },
+    );
     let r;
     try {
       r = await this.read(b.id, b.hints);
@@ -228,7 +232,7 @@ export class Collectives {
       ['Post a text for it', [[SPECS.text, 0, 'a text']]],
       ['Post a picture for it', [[SPECS.envelopes, 0, 'a picture’s publication'], [SPECS.text, 0, 'the text showing it']]],
     ] as [string, [string, number, string][]][]) {
-      const lines: Line[] = [{ text: `${keyWords} It is not held here: Edubba cannot sign for it.` }];
+      const lines: Line[] = [{ text: real ? keyWords : `${keyWords} It is not held here: Edubba cannot sign for it.` }];
       for (const [spec, type, label] of kinds) {
         const areas = t.areas.filter((x) => x.kinds.some((k) => (k.form === 'layer' && k.layer === 1) || (k.form === 'type' && k.spec === spec && k.type === type)));
         if (!areas.length) lines.push({ text: `No area reaches ${label}: it counts on the collective’s own signature (Agreements rule 60).` });
@@ -263,9 +267,9 @@ export class Collectives {
    * Agreements read it from its relays and homes), in plain words: the
    * deal-assessment tool's reading, its flags each with the rule it rests on.
    */
-  async constitution(collective: string) {
+  async constitution(collective: string, real?: BroughtCollective) {
     this.places();
-    const b = this.broughtOne(collective);
+    const b = real ?? this.broughtOne(collective);
     if (b) {
       const r = await this.read(collective, b.hints);
       const g = await gather(r.agreement, r.hints, this.desk.settings().via, this.names());
@@ -295,17 +299,18 @@ export class Collectives {
     };
   }
 
-  permissions(collective: string) {
+  permissions(collective: string, real?: BroughtCollective) {
     this.places();
+    if (real) return this.broughtPermissions(real, true);
     const b = this.broughtOne(collective);
     if (b) return this.broughtPermissions(b);
     return this.actions.permissions(collective);
   }
 
   /** The collective's own posts, as the site's feed reads them (it shown as an identity). */
-  async posts(collective: string): Promise<{ items: { id: string; text: string; standing: string; pictures: string[] }[]; problems: string[] }> {
+  async posts(collective: string, real?: BroughtCollective): Promise<{ items: { id: string; text: string; standing: string; pictures: string[] }[]; problems: string[] }> {
     this.places();
-    const b = this.broughtOne(collective);
+    const b = real ?? this.broughtOne(collective);
     const s = this.store.settings();
     const places = b ? this.hints(b.hints) : (() => {
       const c = this.store.collective(collective);
