@@ -34,6 +34,34 @@ export interface IdentityEntry {
   name: string;
   /** Linked to Claude: the connector may prepare drafts for it. */
   linked: boolean;
+  /** Made here, or brought here by its signing key's words (H15; the carry Module, draft 2). Absent: made here. */
+  kind?: 'made' | 'brought';
+  /** Brought here: the acts its homes held, signed with its key, when it was brought (made by the app it came from), so they raise no warning (F152). */
+  elsewhere?: string[];
+  /** Releases it published under its own name from Edubba (H16), oldest first, each with its manifest, to name as the one before a later release. */
+  releases?: OwnRelease[];
+}
+
+/** A release under one's own name (H16; release manifest cMIP). */
+export interface OwnRelease {
+  /** Its publication's act id. */
+  id: string;
+  name: string;
+  version: string;
+  /** The manifest's exact bytes, base64. */
+  manifest: string;
+  /** The folder it was made from: a hint for the person, never in any act. */
+  folder: string;
+}
+
+/** A collective brought here by its ID (H15): read from its homes and relays; Edubba holds none of its keys. */
+export interface BroughtCollective {
+  id: string;
+  name: string;
+  /** Where it was read: its homes and relays as found. */
+  hints: string[];
+  /** The identity held here, or in the collective client's folder, among the parties of its agreement in force when it was brought. */
+  member: string;
 }
 
 export interface Book {
@@ -41,6 +69,10 @@ export interface Book {
   identities: IdentityEntry[];
   /** Names given to identities this desk does not hold (senders, recipients). */
   names: Record<string, string>;
+  /** Collectives brought here by their ID (H15). Absent in folders from before. */
+  collectives?: BroughtCollective[];
+  /** "What you may do for it", folded (false) or unfolded, per collective, as the person left it (H14). Absent: unfolded. */
+  unfolded?: Record<string, boolean>;
 }
 
 export interface Settings {
@@ -111,7 +143,7 @@ export interface Answered {
   time: number;
   /** The draft answered; empty for what Machine, allegedly's answering did. */
   draft: string;
-  verdict: 'approved' | 'declined' | 'sent back' | 'terms published' | 'picked' | 'nudged' | 'answered' | 'not answered' | 'prompted' | 'named';
+  verdict: 'approved' | 'declined' | 'sent back' | 'terms published' | 'picked' | 'nudged' | 'answered' | 'not answered' | 'prompted' | 'named' | 'released';
   /** The agent it concerns (Edubba, several agents); absent in records made before 16 October 2026, which concern Machine, allegedly. */
   agent?: string;
   signer: string;

@@ -15,7 +15,7 @@
 import { e } from '../../../manage/src/view.ts';
 import { STYLE as DUB } from '../../../dub/src/page/view.ts';
 import { STYLE as TEXT, plainHtml } from '../../../longform/src/html.ts';
-import type { AgentDetails, AgentSummary, AgentView, Constitution, Done, DraftView, Item, Line, MachineState, Permissions, Sorted, State } from './api.ts';
+import type { ActRead, AgentDetails, AgentSummary, AgentView, Constitution, Done, DraftView, IdentityRecord, Item, Line, MachineState, Permissions, ReleaseReview, Sorted, State } from './api.ts';
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 
 export { e };
@@ -122,7 +122,19 @@ input.pet{max-width:14em}
 .card>h2:first-child{margin-top:0}
 .colroot form.words{display:flex;grid-template-columns:none;font:inherit;padding:0;border:none;margin:10px 0}
 .colroot form.words input{flex:1}
-.colroot input.wide{width:100%}`;
+.colroot input.wide{width:100%}
+.files{max-height:22em;overflow:auto;border:1px solid var(--edge);border-radius:10px;margin:6px 0 12px}
+.files table{border-collapse:collapse;width:100%;font-size:13px}
+.files th,.files td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+.files th{font-weight:400;color:var(--faint);font-size:12px;position:sticky;top:0;background:var(--bg)}
+.card.review{border-color:var(--faint)}
+dl.card-of{margin:6px 0 0}
+details.fold>summary{display:flex;align-items:baseline;gap:12px;cursor:pointer;list-style:none}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary h3{margin:0;flex:1}
+details.fold>summary h3::before{content:"▸";display:inline-block;width:1.1em;color:var(--soft)}
+details.fold[open]>summary h3::before{content:"▾"}
+details.fold[open]>summary{margin-bottom:8px}`;
 
 /** A fingerprint, shortened on screen, whole on hover. */
 export function fp(h: string): string {
@@ -227,9 +239,9 @@ export function identityList(s: State, selected: string | null, drafts: DraftVie
 export function collectiveList(s: State, selected: string | null): string {
   return `<div class="list" role="list" aria-label="Collectives">${s.collectives
     .map((c) =>
-      entry({ action: 'pick-collective', key: 'collective', id: c.id, current: c.id === selected, title: c.name, meta: `${c.members} member${c.members === 1 ? '' : 's'}${c.closed ? ' · ended' : ''}` }),
+      entry({ action: 'pick-collective', key: 'collective', id: c.id, current: c.id === selected, title: c.name, meta: c.brought ? 'brought here · no key held' : `${c.members} member${c.members === 1 ? '' : 's'}${c.closed ? ' · ended' : ''}` }),
     )
-    .join('')}<button class="entry add" data-action="pick-collective" data-id="found">+ Found a collective</button></div>`;
+    .join('')}<button class="entry add" data-action="pick-collective" data-id="found">+ Found a collective</button><button class="entry add" data-action="pick-collective" data-id="bring">+ Bring an existing collective</button></div>`;
 }
 
 // ---------------------------------------------------------------- agents
@@ -477,12 +489,6 @@ ${x.text !== undefined ? plain(x.text) : ''}
 <div class="sorts">${sorts}${x.act && x.from && x.standing === 'valid' ? `<button data-action="witness" data-identity="${e(identity)}" data-act="${e(x.act)}">Rely on this act…</button>` : ''}</div></div>`;
 }
 
-/** Before a witness act is signed: what it does, in plain words (Identity rule 18c). */
-export function witnessAsk(identity: string, act: string): string {
-  return `${note('', `${e(WITNESS_EXPLANATION)}<br>Act ${fp(act)}.`)}
-<div class="row"><button class="primary" data-action="witness-sign" data-identity="${e(identity)}" data-act="${e(act)}">Sign the witness act</button> <button data-action="witness-cancel" data-identity="${e(identity)}">Cancel</button></div>`;
-}
-
 /** The question, and its answer as a clear on or off. */
 function linkSwitch(id: string, on: boolean): string {
   const b = (value: boolean, words: string) => `<button type="button" data-action="link" data-identity="${e(id)}" data-on="${value}" aria-pressed="${on === value}">${words}</button>`;
@@ -500,11 +506,17 @@ export function identityDetails(s: State, id: string, drafts: DraftView[]): stri
     return `<div data-pile="${e(k)}"><h4>${e(w)} (${xs.length})</h4>${xs.map((x) => item(i.id, x)).join('') || '<p class="small">None.</p>'}</div>`;
   }).join('');
   const answered = s.history.filter((h) => h.signer === id);
-  return `<div class="head"><h2>${e(i.name)}</h2><span class="id">${grouped(i.id)}</span>${copyButton(i.id)}</div>
+  return `<div class="head"><h2>${e(i.name)}</h2><span class="id">${grouped(i.id)}</span>${copyButton(i.id)}<span class="tag">${i.kind === 'brought' ? 'brought here' : 'made here'}</span></div>
 <div class="card" data-identity="${e(i.id)}">
 <dl class="facts"><dt>This desk's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
 ${linkSwitch(i.id, i.linked)}
 <div class="here" data-here="${e(i.id)}" role="status" aria-live="polite"></div></div>
+<section class="card" id="e-record"><h3>Its record</h3><p class="small">Reading it from its homes and relays…</p></section>
+<section class="card" id="e-rely"><h3>Rely on an act</h3>
+<p class="small">${e(WITNESS_EXPLANATION)}</p>
+<form id="rely" class="row"><input name="act" type="text" class="grow" placeholder="The act’s id: 64 hexadecimal characters" autocomplete="off" spellcheck="false" required><button type="submit">Read it back</button></form>
+<div id="e-rely-shown"></div></section>
+${releaseCard(i)}
 <h3>Drafts from Claude (${mine.length})</h3>
 <div class="row"><button class="quiet" data-action="drafts">Look for new drafts now</button><span class="small" id="drafts-watch" role="status" aria-live="polite">${WATCHING}</span></div>
 <div id="drafts">${mine.map(draft).join('') || '<p class="empty small">No draft is waiting for it.</p>'}</div>
@@ -515,6 +527,82 @@ ${piles}
 <details class="card"><summary>What you answered for it (${answered.length})</summary>${history(answered)}</details>`;
 }
 
+type Held = State['identities'][number];
+
+/** The record, in plain words (F333: "an identity setup page of sorts"): nothing here is signed. */
+export function record(r: IdentityRecord): string {
+  const card = (l: IdentityRecord['lines'][number]) =>
+    l.card
+      ? `<dl class="facts card-of"><dt>Latest act</dt><dd><code>${e(l.card.act)}</code></dd><dt>Position</dt><dd>${l.card.position}</dd><dt>Summary</dt><dd><code>${e(l.card.summary)}</code></dd></dl>`
+      : '';
+  return `<h3>Its record</h3>
+<p class="small">As its homes and relays show it now. Nothing here is signed.</p>
+${r.problems.map((p) => note('warn', e(p))).join('')}
+${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines(x.lines)}`).join('')}
+<h4>Its lines of acts (${r.lines.length})</h4>
+<p class="small">A change of its signing key (in MOR Safety, with the chain key) must keep every line, or that line’s acts become void (Identity rule 35). Where MOR Safety cannot read a line, give it the latest act, position and summary shown here.</p>
+${r.lines.map((l) => `<div class="item" data-line="${e(l.card?.act ?? '')}"><span class="small">${e(l.words)}</span>${card(l)}</div>`).join('') || '<p class="empty small">No line of acts found yet.</p>'}
+<div class="row"><button class="quiet" data-action="record" data-identity="${e(r.id)}">Read it again</button></div>`;
+}
+
+/** An act read back before a witness act is signed, with the typed confirmation (as the genesis client asks it). */
+export function relyShown(identity: string, r: ActRead): string {
+  const blocked = r.blocking.length ? note('error', `<strong>It cannot be relied on from here:</strong><ul>${r.blocking.map((b) => `<li>${e(b)}</li>`).join('')}</ul>`) : '';
+  return `<div class="card review"><h4>The act ${fp(r.act)}</h4>${lines(r.lines)}
+${r.text !== null ? `<p class="small">Its words, as plain text, character for character:</p>${plain(r.text)}` : ''}
+<h4>What signing does</h4><p>${e(r.explanation)}</p>
+${blocked}
+${
+  r.blocking.length
+    ? '<div class="row"><button data-action="rely-cancel">Close</button></div>'
+    : `<form id="rely-sign" data-identity="${e(identity)}" data-act="${e(r.act)}"><label>Type RELY to sign the witness act</label><div class="row"><input name="typed" type="text" class="narrow" autocomplete="off" spellcheck="false"><button type="submit" class="primary">Sign the witness act</button><button type="button" data-action="rely-cancel">Cancel</button></div></form>`
+}</div>`;
+}
+
+/** H16: a release under this identity's own name, its folder chosen at each release. */
+export function releaseCard(i: Held): string {
+  return `<section class="card" id="e-release"><h3>A release under its own name</h3>
+<p class="small">Publishes the files of a folder you choose now, signed by this identity alone. A git folder gives the files git tracks there; a plain folder gives every file but hidden ones. Every file is listed with its size and fingerprint, and the libraries it depends on, before anything is signed.</p>
+<form id="release-folder" class="row"><input name="folder" type="text" class="grow" placeholder="The folder: /Users/you/Projects/site or ~/Projects/site" autocomplete="off" spellcheck="false" required><button type="submit">Choose this folder</button></form>
+<div id="e-release-form"></div>
+<div id="e-release-review"></div>
+${
+  i.releases.length
+    ? `<details><summary>Its releases here (${i.releases.length})</summary><ul class="plain">${i.releases.map((r) => `<li>${e(r.name)} ${e(r.version)} ${fp(r.id)} <span class="small">from ${e(r.folder)}</span></li>`).join('')}</ul></details>`
+    : ''
+}</section>`;
+}
+
+/** The release's name, version and the release before it, once the folder is chosen. */
+export function releaseForm(i: Held, f: { folder: string; how: 'git' | 'plain'; name: string; previous: string | null }): string {
+  const opts = [`<option value=""${f.previous ? '' : ' selected'}>None: a new release line</option>`, ...i.releases.map((r) => `<option value="${e(r.id)}"${r.id === f.previous ? ' selected' : ''}>${e(r.name)} ${e(r.version)} (${e(r.id.slice(0, 8))}…), from ${e(r.folder)}</option>`)].join('');
+  return `<form id="release-prepare" data-folder="${e(f.folder)}">
+<p class="small">${e(f.folder)}: ${f.how === 'git' ? 'a git folder: the files git tracks there.' : 'a plain folder: every file but hidden ones.'}</p>
+<label>Its name</label><input name="name" type="text" value="${e(f.name)}" required>
+<label>Its version</label><input name="version" type="text" placeholder="For example 1.0" required>
+<label>The release before it</label><select name="previous">${opts}</select>
+<p class="small">Pre-set to this identity’s last release of the same name, if any. The review says which release it follows and what changed since.</p>
+<div class="row"><button type="submit">Review the release</button></div></form>`;
+}
+
+const size = (n: number) => (n < 1024 ? `${n} bytes` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
+
+/** The release read back: every file with its size and fingerprint, the libraries, then the one button that signs exactly that. */
+export function releaseReview(r: ReleaseReview): string {
+  const blocked = r.blocking.length ? note('error', `<strong>This cannot be signed:</strong><ul>${r.blocking.map((b) => `<li>${e(b)}</li>`).join('')}</ul>`) : '';
+  return `<div class="card review" id="e-release-shown"><h3>${e(r.title)}</h3>
+${r.summary.map((x) => `<p>${e(x)}</p>`).join('')}
+${blocked}
+${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines(x.lines)}`).join('')}
+<h4>Every file (${r.files.length})</h4>
+<div class="files"><table><tr><th>File</th><th>Size</th><th>Fingerprint</th></tr>${r.files.map((f) => `<tr><td dir="auto">${e(f.path)}</td><td>${e(size(f.size))}</td><td><code title="${e(f.fingerprint)}">${e(f.fingerprint.slice(0, 16))}…</code></td></tr>`).join('')}</table></div>
+<h4>The libraries it depends on (${r.dependencies.length})</h4>
+${r.dependencies.length ? `<div class="files"><table><tr><th>Where</th><th>Library</th><th>Version</th></tr>${r.dependencies.map((d) => `<tr><td>${e(d.registry)}</td><td>${e(d.name)}</td><td>${e(d.version)}</td></tr>`).join('')}</table></div>` : '<p class="small">None: it names no lock file (Cargo.lock, package-lock.json).</p>'}
+${r.skipped.length ? `<h4>Not in the release (${r.skipped.length})</h4><ul>${r.skipped.map((x) => `<li class="warn">${e(x)}</li>`).join('')}</ul>` : ''}
+<p class="digest">Digest of exactly what is signed: ${e(r.digest.match(/.{1,4}/g)!.join(' '))}</p>
+<div class="row"><button class="primary" data-action="release-sign" data-plan="${e(r.plan)}" data-digest="${e(r.digest)}"${r.blocking.length ? ' disabled' : ''}>Sign and publish</button><button data-action="release-cancel" data-plan="${e(r.plan)}">Cancel</button></div></div>`;
+}
+
 /** Drafts naming an identity this desk does not hold: shown so nothing waits unseen. */
 export function strayDrafts(s: State, drafts: DraftView[]): string {
   const stray = drafts.filter((d) => !s.identities.some((i) => i.id === d.signer));
@@ -522,10 +610,19 @@ export function strayDrafts(s: State, drafts: DraftView[]): string {
 }
 
 export function newIdentity(): string {
-  return `<h2>A new identity</h2><section class="card"><form id="new-identity"><label>Its name, kept on this Mac</label><input name="name" type="text" placeholder="A name" required>
+  return `<h2>A new identity, or one you have</h2><section class="card"><h3>Make a new identity</h3><form id="new-identity"><label>Its name, kept on this Mac</label><input name="name" type="text" placeholder="A name" required>
 <label class="check"><input name="linked" type="checkbox"> Claude may prepare drafts for it</label>
 <div class="row"><button type="submit" class="primary">Make it</button></div></form>
-<p class="small">A test identity is born at the homes named in Settings, with its acts and its inbox at the relays, and the encryption key its signing key's words carry. If Claude may prepare drafts for it, its name and fingerprint are written to the drafts folder, so Claude can name it.</p></section>`;
+<p class="small">A test identity is born at the homes named in Settings, with its acts and its inbox at the relays, and the encryption key its signing key's words carry. If Claude may prepare drafts for it, its name and fingerprint are written to the drafts folder, so Claude can name it.</p></section>
+<section class="card"><h3>Bring an identity you have</h3>
+<p class="small">Its ID and its signing key’s words, as Dub shows them (“Show the signing key’s words”). Edubba reads it from its homes and keeps it only if the words give its current signing key. Nothing is signed or published by bringing it.</p>
+<form id="bring-identity"><label>Its name, kept on this Mac</label><input name="name" type="text" placeholder="A name" required>
+<label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" required>
+<label>Its signing key’s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
+<label>An address where it is found (one of its homes; empty: the homes and relays in Settings)</label><input name="address" type="text" placeholder="https://">
+<label class="check"><input name="linked" type="checkbox"> Claude may prepare drafts for it</label>
+<p class="small">Never type the chain key’s words here: they belong to MOR Safety, on a device that stays offline. Whoever holds the signing key’s words can sign as this identity and read its private messages: Edubba keeps them in its folder, as every key here.</p>
+<div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
 }
 
 export function settings(s: State): string {
@@ -589,24 +686,43 @@ ${
 }`;
 }
 
-/** "+ Found a collective": the collective client's founding form, the members held here, a release under one's own name. */
+/** "+ Found a collective": the collective client's founding form and the members held here. A release under one's own name is on the Identities tab now (H16). */
 export function foundCollective(): string {
   return `<h2>Found a collective</h2><div class="colroot" data-collective-root id="e-col-root"><div id="status"></div><div id="review"></div>
 <section class="card"><h3>Its founding</h3><div id="found"></div></section>
-<section class="card"><h3>Members held here</h3><p class="small">Yourself, and the simulated members a test collective needs: held in the collective client's folder.</p><div id="identities"></div></section>
-<details class="card"><summary>A release under your own name</summary><div id="own-release"></div></details></div>`;
+<section class="card"><h3>Members held here</h3><p class="small">Yourself, and the simulated members a test collective needs: held in the collective client's folder.</p><div id="identities"></div></section></div>
+<p class="small">A release under one’s own name is on the Identities tab, as an action of the identity selected.</p>`;
+}
+
+/** "+ Bring an existing collective" (H15): by its ID, read from its homes, one of your identities among its members. */
+export function bringCollective(): string {
+  return `<h2>Bring an existing collective</h2><section class="card"><form id="bring-collective">
+<label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" required>
+<label>A name for it, kept on this Mac</label><input name="name" type="text" required>
+<div class="row"><button type="submit" class="primary">Bring it</button></div></form>
+<p class="small">Edubba reads it from the homes and relays in Settings: its chain, and its agreement in force as Agreements read it. It is brought only if one of your identities held here (or in the collective client’s folder) is among the parties of that agreement. Edubba holds none of its keys: nothing is signed for it by bringing it, and nothing can be signed with its key here.</p></section>`;
+}
+
+/** The lower half for a collective brought by its ID: read only, no key held here. */
+export function broughtDetails(s: State, id: string): string {
+  const c = s.collectives.find((x) => x.id === id);
+  if (!c) return '';
+  return `<div class="head"><h2>${e(c.name)}</h2><span class="id">${grouped(c.id)}</span>${copyButton(c.id)}<span class="tag">brought here</span></div>
+<div class="row"><button data-action="constitution">Its constitution, in plain words</button></div>
+<div id="e-perms"><p class="small">Reading its agreement in force…</p></div>
+<h3>Its posts</h3><div id="e-posts"><p class="small">Reading…</p></div>`;
 }
 
 const STATE_WORDS = { yes: 'You may', 'with others': 'With others’ signatures', no: 'Not now' };
 
 /** What this user may do for the collective, each permission naming the rule it rests on. */
-export function permissions(p: Permissions): string {
-  return `<section class="card" id="e-may"><h3>What you may do for it</h3>
+export function permissions(p: Permissions, open = true): string {
+  return `<details class="card fold" id="e-may" data-collective="${e(p.collective)}"${open ? ' open' : ''}><summary><h3>What you may do for it</h3><span class="small">${open ? 'Fold' : 'Unfold'}</span></summary>
 ${p.notes.length ? lines(p.notes) : ''}
 ${p.items
   .map((i) => `<div class="item" data-may="${e(i.what)}"><div class="row tight"><strong>${e(i.what)}</strong><span class="grow"></span>${i.byAgreement ? `<span class="state">By its agreement: ${STATE_WORDS[i.byAgreement]}</span><span class="state no">· now: ${STATE_WORDS[i.state]}</span>` : `<span class="state ${i.state === 'no' ? 'no' : ''}">${STATE_WORDS[i.state]}</span>`}</div>${lines(i.lines)}</div>`)
   .join('')}
-${p.agreement ? `<p class="small">As its agreement in force ${fp(p.agreement)} says, read by Agreements from its relays and homes.</p>` : ''}</section>`;
+${p.agreement ? `<p class="small">As its agreement in force ${fp(p.agreement)} says, read by Agreements from its relays and homes.</p>` : ''}</details>`;
 }
 
 export function posts(r: { items: { id: string; text: string; standing: string; pictures: string[] }[]; problems: string[] }): string {

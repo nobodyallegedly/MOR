@@ -4,7 +4,7 @@
 // Constitution sub-tab is the collective client's own page logic
 // (`clients/collective/src/page/mount.ts`), mounted here.
 
-import { Client, Refused, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Permissions, type State } from './api.ts';
+import { Client, Refused, type ActRead, type IdentityRecord, type ReleaseReview, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Permissions, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
@@ -113,18 +113,23 @@ async function draw() {
       // Agents have their own tab (decided by Nobody, allegedly): only the other identities here.
       const held = v.secondary(state);
       if (!at.identity || (at.identity !== 'new' && !held.some((i) => i.id === at.identity))) at.identity = held[0]?.id ?? 'new';
+      const kept = keepForms();
       body.innerHTML = `${v.identityList(state, at.identity, drafts)}<div class="detail" id="e-detail">${
         at.identity === 'new' ? v.newIdentity() : v.identityDetails(state, at.identity, drafts)
       }${v.strayDrafts(state, drafts)}</div>`;
+      kept();
       shown = drafts.map((d) => d.digest).join(',');
+      if (at.identity !== 'new') await drawRecord(at.identity, false);
       return;
     }
     case 'collectives': {
-      if (!at.collective || (at.collective !== 'found' && !state.collectives.some((x) => x.id === at.collective))) at.collective = state.collectives[0]?.id ?? 'found';
+      if (!at.collective || (!['found', 'bring'].includes(at.collective) && !state.collectives.some((x) => x.id === at.collective))) at.collective = state.collectives[0]?.id ?? 'found';
+      const brought = state.collectives.find((x) => x.id === at.collective)?.brought;
       body.innerHTML = `${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${
-        at.collective === 'found' ? v.foundCollective() : v.collectiveDetails(state, at.collective, at.sub)
+        at.collective === 'found' ? v.foundCollective() : at.collective === 'bring' ? v.bringCollective() : brought ? v.broughtDetails(state, at.collective) : v.collectiveDetails(state, at.collective, at.sub)
       }</div>`;
-      if (at.collective !== 'found' && at.sub === 'act') await drawAct(at.collective);
+      if (at.collective === 'bring') return;
+      if (at.collective !== 'found' && (brought || at.sub === 'act')) await drawAct(at.collective);
       else await mountCollective();
       return;
     }
@@ -168,10 +173,50 @@ async function mountCollective() {
   }
 }
 
+/** The record of the identity selected, read from its homes and relays; kept between redraws until read again. */
+const records = new Map<string, IdentityRecord>();
+async function drawRecord(id: string, again = true) {
+  const had = records.get(id);
+  if (had && !again) {
+    fill('e-record', v.record(had));
+    return;
+  }
+  if (had) fill('e-record', v.record(had));
+  try {
+    const r = await c.ask<IdentityRecord>('record', { identity: id });
+    records.set(id, r);
+    if (at.identity === id) fill('e-record', v.record(r));
+  } catch (err) {
+    if (at.identity === id) fill('e-record', `<h3>Its record</h3>${v.note('error', v.e(err instanceof Error ? err.message : String(err)))}`);
+  }
+}
+
+/**
+ * What is being written or reviewed on the Identities tab (a folder chosen,
+ * a release reviewed, an act read back), kept across a redraw, as notes on
+ * drafts are: a new draft arriving must not lose them.
+ */
+function keepForms(): () => void {
+  const ids = ['e-rely-shown', 'e-release-form', 'e-release-review'];
+  const html = new Map(ids.map((i) => [i, $(i)?.innerHTML ?? '']));
+  const values = new Map<string, string>();
+  for (const f of ['rely', 'release-folder', 'release-prepare']) $<HTMLFormElement>(f)?.querySelectorAll<HTMLInputElement>('input,select,textarea').forEach((x) => values.set(`${f}:${x.name}`, x.value));
+  const was = at.identity;
+  return () => {
+    if (at.identity !== was) return;
+    for (const [i, h] of html) if (h) fill(i, h);
+    for (const [k, val] of values) {
+      const [f, n] = k.split(':');
+      const x = $<HTMLFormElement>(f)?.elements.namedItem(n) as HTMLInputElement | null;
+      if (x) x.value = val;
+    }
+  };
+}
+
 async function drawAct(id: string) {
   try {
     const p = await c.ask<Permissions>('collective permissions', { collective: id });
-    if (at.collective === id) fill('e-perms', v.permissions(p));
+    if (at.collective === id) fill('e-perms', v.permissions(p, state.unfolded?.[id] !== false));
   } catch (err) {
     fill('e-perms', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
   }
@@ -405,16 +450,33 @@ app.addEventListener('click', async (ev) => {
       }
       break;
     }
-    case 'witness':
-      // Nothing is signed by this click: it shows what a witness act does.
-      say('', v.witnessAsk(d.identity!, d.act!), hereFor(d.identity));
+    case 'witness': {
+      // Nothing is signed by this click: the act is read back on the identity's page, with what a witness act does.
+      const r = await busy('Reading the act back…', () => c.ask<ActRead>('read act', { identity: d.identity, act: d.act }), $('e-rely-shown'));
+      if (r) {
+        fill('e-rely-shown', v.relyShown(d.identity!, r));
+        $('e-rely')?.scrollIntoView({ block: 'start' });
+      }
       break;
-    case 'witness-cancel':
-      say('', '', hereFor(d.identity));
+    }
+    case 'rely-cancel':
+      fill('e-rely-shown', '');
       break;
-    case 'witness-sign': {
-      const r = await busy('Signing the witness act…', () => c.ask<{ id: string }>('witness', { identity: d.identity, act: d.act, shown: WITNESS_EXPLANATION }), hereFor(d.identity));
-      if (r) say('done', `Witness act ${v.e(r.id.slice(0, 16))}… signed and sent.`, hereFor(d.identity));
+    case 'record':
+      await drawRecord(d.identity!);
+      break;
+    case 'release-cancel':
+      void c.ask('release cancel', { plan: d.plan }).catch(() => undefined);
+      fill('e-release-review', '');
+      say('', 'Nothing was signed.', $('e-release-review'));
+      break;
+    case 'release-sign': {
+      const r = await busy('Signing the release and publishing its files…', () => c.ask<Done>('release confirm', { plan: d.plan, digest: d.digest }), $('e-release-review'));
+      if (r) {
+        records.delete(at.identity!);
+        await refresh();
+        say('done', v.done(r));
+      }
       break;
     }
     case 'sort':
@@ -590,6 +652,61 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
+  if (form.id === 'bring-identity') {
+    const r = await busy('Reading the identity from its homes, and checking the words…', () =>
+      c.ask<Done>('bring', { name: words(d.get('name')), id: words(d.get('id')), words: words(d.get('words')), address: words(d.get('address')), linked: d.get('linked') === 'on' }),
+    );
+    if (r) {
+      form.reset();
+      at.identity = r.acts[0];
+    }
+    return after(r);
+  }
+  if (form.id === 'bring-collective') {
+    const r = await busy('Reading the collective from its homes and relays…', () => c.ask<Done>('collective bring', { id: words(d.get('id')), name: words(d.get('name')) }));
+    if (r) {
+      form.reset();
+      at.collective = r.acts[0];
+    }
+    return after(r);
+  }
+  if (form.id === 'rely') {
+    const identity = at.identity!;
+    const r = await busy('Reading the act back…', () => c.ask<ActRead>('read act', { identity, act: words(d.get('act')) }), $('e-rely-shown'));
+    if (r) fill('e-rely-shown', v.relyShown(identity, r));
+    return;
+  }
+  if (form.id === 'rely-sign') {
+    const r = await busy('Signing the witness act…', () => c.ask<{ id: string }>('witness', { identity: form.dataset.identity, act: form.dataset.act, shown: WITNESS_EXPLANATION, typed: words(d.get('typed')) }), $('e-rely-shown'));
+    if (r) {
+      records.delete(form.dataset.identity!);
+      fill('e-rely-shown', '');
+      void drawRecord(form.dataset.identity!);
+      say('done', `<strong>Witness act signed and sent.</strong><br>Act ${v.e(r.id)}.`, $('e-rely-shown'));
+    }
+    return;
+  }
+  if (form.id === 'release-folder') {
+    const i = state.identities.find((x) => x.id === at.identity)!;
+    const r = await busy('Looking at the folder…', () => c.ask<{ folder: string; how: 'git' | 'plain'; name: string; previous: string | null }>('release folder', { identity: i.id, folder: words(d.get('folder')) }), $('e-release-form'));
+    if (r) {
+      fill('e-release-review', '');
+      fill('e-release-form', v.releaseForm(i, r));
+    }
+    return;
+  }
+  if (form.id === 'release-prepare') {
+    const r = await busy(
+      'Reading every file, locking each, and making the manifest…',
+      () => c.ask<ReleaseReview>('release prepare', { identity: at.identity, folder: form.dataset.folder, name: words(d.get('name')), version: words(d.get('version')), previous: words(d.get('previous')) }),
+      $('e-release-review'),
+    );
+    if (r) {
+      fill('e-release-review', v.releaseReview(r));
+      $('e-release-review')?.scrollIntoView({ block: 'start' });
+    }
+    return;
+  }
   if (form.id === 'new-identity') {
     const r = await busy('Making the identity at its homes…', () => c.ask<Done>('identity', { name: words(d.get('name')), linked: d.get('linked') === 'on' }));
     if (r) {
@@ -660,6 +777,23 @@ async function start() {
     fail(err);
   }
 }
+
+// H14: "What you may do for it" folds and unfolds at the person's choice, remembered per collective by the program.
+app.addEventListener(
+  'toggle',
+  (ev) => {
+    const el = ev.target as HTMLElement;
+    if (!(el instanceof HTMLDetailsElement) || el.id !== 'e-may') return;
+    const id = el.dataset.collective!;
+    const open = el.open;
+    const hint = el.querySelector('summary .small');
+    if (hint) hint.textContent = open ? 'Fold' : 'Unfold';
+    if ((state.unfolded?.[id] !== false) === open) return;
+    state.unfolded = { ...(state.unfolded ?? {}), [id]: open };
+    void c.ask('fold', { collective: id, open }).catch(fail);
+  },
+  true,
+);
 
 setInterval(() => void watch(), 4000);
 document.addEventListener('visibilitychange', () => void watch());

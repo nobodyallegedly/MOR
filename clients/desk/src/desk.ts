@@ -83,7 +83,8 @@ export class Desk {
 
   constructor(readonly store: Store) {}
 
-  private serial<T>(f: () => Promise<T>): Promise<T> {
+  /** One signing operation at a time, for every part of Edubba that signs with the identities held here. */
+  serial<T>(f: () => Promise<T>): Promise<T> {
     const p = this.busy.then(f, f);
     this.busy = p.catch(() => undefined);
     return p;
@@ -629,7 +630,8 @@ export class Desk {
     return this.serial(async () => {
       const me = this.store.identity(identity);
       const via = this.via;
-      const hints = this.hints();
+      // An identity brought here may live at other homes than those in Settings (H15).
+      const hints = [...new Set([...this.hints(), ...me.f.homes.map((h) => h.hint)])];
       const l = await lookUp(identity, hints, via);
       const inbox = [...new Set(l.routes.routes.filter((r) => r.kind === 1).flatMap((r) => r.hints))];
       const rec = this.store.received(identity);
@@ -698,9 +700,14 @@ export class Desk {
       // homes, so a thief using a stolen signing key leaves something here:
       // any act its homes hold, signed with its key, that this desk did not
       // make. Content unread; its existence is the warning.
-      for (const u of await me.unrecognised()) {
+      // An identity brought here (H15): the acts its homes held when it was brought were made by the app it came from, and are no warning.
+      const entry = this.store.book().identities.find((x) => x.id === identity);
+      const before = new Set(entry?.elsewhere ?? []);
+      for (const u of (await me.unrecognised()).filter((x) => !before.has(x.id))) {
         problems.push(
-          `Its home ${u.home} holds ${u.private ? 'a private act' : 'an act'} signed with this identity's key that this desk did not make (${short(u.id)}). If you did not make it elsewhere, the signing key may be stolen: rotate the identity.`,
+          entry?.kind === 'brought'
+            ? `Its home ${u.home} holds ${u.private ? 'a private act' : 'an act'} signed with this identity's key that this desk did not make (${short(u.id)}), since it was brought here. If the app it came from made it, all is well; if no app of yours did, the signing key may be stolen: change its keys in MOR Safety.`
+            : `Its home ${u.home} holds ${u.private ? 'a private act' : 'an act'} signed with this identity's key that this desk did not make (${short(u.id)}). If you did not make it elsewhere, the signing key may be stolen: rotate the identity.`,
         );
       }
       this.store.saveReceived(identity, rec);
@@ -845,6 +852,14 @@ export class Desk {
     });
   }
 
+  /** H14: "What you may do for it" folded or unfolded for a collective, as the person left it. */
+  fold(collective: string, open: boolean): void {
+    if (!/^[0-9a-f]{64}$/.test(collective)) throw new Error('not a collective');
+    const b = this.store.book();
+    b.unfolded = { ...(b.unfolded ?? {}), [collective]: open };
+    this.store.saveBook(b);
+  }
+
   /** The owner sorts one received item. */
   sort(identity: string, key: string, sorted: string): void {
     if (!SORTED.includes(sorted as Sorted)) throw new Error(`sort into one of: ${SORTED.join(', ')}`);
@@ -872,6 +887,7 @@ export class Desk {
     const names = this.store.names();
     return {
       settings: s,
+      unfolded: b.unfolded ?? {},
       identities: b.identities.map((i) => {
         const r = this.store.received(i.id);
         // F152: this desk's own line of acts for the identity, so the owner
@@ -882,7 +898,9 @@ export class Desk {
           id: i.id,
           name: i.name,
           linked: i.linked,
+          kind: i.kind ?? 'made',
           line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
+          releases: [...(i.releases ?? [])].reverse().map(({ id, name, version, folder }) => ({ id, name, version, folder })),
           received: r.items.map((x) => ({ ...x, fromName: x.from ? names(x.from) : null, text: x.text === undefined ? undefined : escapeControls(x.text) })),
         };
       }),
