@@ -251,25 +251,38 @@ test('the Collectives tab: what you may do, each naming its rule; a post; a pict
   const may = page.locator('#e-may');
   await may.waitFor({ timeout: 90_000 });
   const text = await may.innerText();
-  assert.match(text, /Post a text for it[\s\S]*By its agreement: You may[\s\S]*now: Not now[\s\S]*No area reaches a text[\s\S]*Agreements rule 60/i);
+  assert.match(text, /Post a text for it[\s\S]*You may[\s\S]*No area reaches a text[\s\S]*Agreements rule 60/i);
   assert.match(text, /You hold it\./, 'you hold the signing key');
   assert.match(text, /rule 59/);
   assert.match(text, /Post a picture for it[\s\S]*With others’ signatures[\s\S]*“Releases” area[\s\S]*cannot tell a release from a picture/i);
   assert.match(text, /rule 57/);
-  assert.match(text, /Reported to the project lead/);
+  assert.match(text, /Text rule 14, F334/);
   await shot(page, '09-collective-act');
 
-  // A post: reviewed, read back in plain words; the Sign button stays off while the core texts are open.
+  // A text post: reviewed, then signed.
+  await page.fill('#collective-post textarea[name=text]', 'Hello from the collective.');
+  await page.click('#collective-post button[type=submit]');
+  await page.locator('#e-post-review #reading h2', { hasText: 'A post for the collective' }).waitFor({ timeout: 90_000 });
+  await shot(page, '10-collective-post-review');
+  await page.click('#e-post-review [data-action=confirm]');
+  await said('Posted for');
+  await page.locator('#e-status', { hasText: 'counts for the collective, on its own signature' }).waitFor();
+  await page.locator('#e-posts .post', { hasText: 'Hello from the collective.' }).waitFor({ timeout: 60_000 });
+
+  // A picture: the release area's signatures, by you and a simulated member, said.
   const jpeg = readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url));
   await page.fill('#collective-post textarea[name=text]', 'With a picture.');
   await page.setInputFiles('#collective-post input[name=jpeg]', { name: 'phone.jpg', mimeType: 'image/jpeg', buffer: jpeg });
   await page.click('#collective-post button[type=submit]');
   await page.locator('#e-post-review #reading', { hasText: '“Releases” area' }).waitFor({ timeout: 90_000 });
   await page.locator('#e-post-review #reading', { hasText: 'its consent simulated' }).waitFor();
-  await page.locator('#e-post-review #reading', { hasText: 'Reported to the project lead' }).waitFor();
-  assert.equal(await page.locator('#e-post-review [data-action=confirm]').isDisabled(), true);
-  await shot(page, '10-collective-post-review');
-  await page.click('#e-post-review [data-action=cancel]');
+  await page.click('#e-post-review [data-action=confirm]');
+  await said('Posted for');
+  await page.locator('#e-status', { hasText: 'The picture: counts for the collective, its area’s signatures met' }).waitFor();
+  await page.locator('#e-posts .post img').first().waitFor({ timeout: 60_000 });
+  // Verified in its feed, not flagged.
+  assert.equal(await page.locator('#e-posts .flag.bad').count(), 0);
+  await shot(page, '11-collective-posts');
 
   // Its constitution, as a pop-up, in plain words.
   await page.click('[data-action=constitution]');

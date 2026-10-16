@@ -543,7 +543,7 @@ impl Verifier {
                 if inside.spec == envelopes {
                     Some(crate::envelopes::check_act(&inside, act.outside.signer.as_ref()).map_err(|e| e.to_string()))
                 } else if inside.spec == text {
-                    Some(crate::text::check_act(&inside).map_err(|e| e.to_string()))
+                    Some(crate::text::check_act(&inside, act.outside.signer.as_ref()).map_err(|e| e.to_string()))
                 } else {
                     None
                 }
@@ -1908,6 +1908,41 @@ impl Verifier {
         Some(x.signer().is_some() && (x.signer() == p.signer() || x.signer() == for_.as_ref()))
     }
 
+/// Text rule 14 (F334): whether a text act's one object, already of
+    /// the right shape (`[signer, decision]`, [`crate::text::check_act`]),
+    /// is a collective's pointer to a decision of its own (Agreements rule
+    /// 58): its signer's chain declares a founding agreement (Agreements
+    /// rule 56), and the act it names is a link of that chain or a record
+    /// (Agreements type 17) the collective signed. `Some(true)` for any act
+    /// this does not concern; `None` (unknown) where the signer's chain or
+    /// the act named is not held, or Agreements' hash is not known here.
+    fn text_pointer(&self, cx: &mut Cx, x: &Held) -> Option<bool> {
+        let Some((_, text)) = self.never_ack_specs else { return Some(true) };
+        if x.inside.spec != text || x.inside.objects.is_none() {
+            return Some(true);
+        }
+        let (Some(o), Some(signer)) = (x.inside.objects.iter().flatten().next(), x.signer()) else {
+            return Some(false);
+        };
+        let (_, agreements) = self.ack_specs?;
+        let res = self.resolve_cx(cx, signer);
+        if res.links.is_empty() {
+            return None;
+        }
+        let collective = res
+            .states
+            .iter()
+            .any(|s| s.declarations.iter().any(|d| d.spec == agreements && d.kind == crate::agreements::kinds::FOUNDING_AGREEMENT && d.value.is_some()));
+        if !collective {
+            return Some(false);
+        }
+        if res.position_of(&o.predecessor).is_some() {
+            return Some(true);
+        }
+        let p = self.acts.get(&o.predecessor)?;
+        Some(p.signer() == Some(signer) && p.inside.spec == agreements && p.inside.type_ == crate::agreements::types::RECORD)
+    }
+
     fn status_cx(&self, cx: &mut Cx, x: &Held) -> Status {
         // Invalid beats unknown (Envelopes draft 10, rule 30; Fable's T3):
         // every rule this verifier can apply to the act alone is applied
@@ -1936,6 +1971,15 @@ impl Verifier {
                 return Status::Invalid;
             }
         }
+        // Text rule 14 (F334): a text act's one object is a collective's
+        // pointer to a decision of its own; invalid where its signer is no
+        // collective, or the act it names is no decision of that collective;
+        // unknown while either cannot be read.
+        let text_pointer = match self.text_pointer(cx, x) {
+            Some(false) => return Status::Invalid,
+            Some(true) => false,
+            None => true,
+        };
         // Envelopes rule 24 (draft 10, section 10): a withdrawal is valid
         // only if signed by the publication's signer or by the identity its
         // `for` names; unknown while the publication is not held (F298).
@@ -1944,7 +1988,7 @@ impl Verifier {
             Some(true) => false,
             None => true,
         };
-        if x.verdict == Verdict::Unknown || self.acks_allowed(&x.inside).is_none() || withdrawal_of_unheld {
+        if x.verdict == Verdict::Unknown || self.acks_allowed(&x.inside).is_none() || withdrawal_of_unheld || text_pointer {
             return Status::Unknown;
         }
         if chain_act {

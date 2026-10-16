@@ -4328,6 +4328,15 @@ impl<'a> AgreementsView<'a> {
                 return Ok(Consent::Closed { by: e.by });
             }
         }
+        // F334: a text act the Text MIR makes invalid (rule 14: `objects`
+        // other than the collective's one pointer to its own decision)
+        // counts for nothing here either: Agreements follow Text's verdict.
+        if x.inside.spec == self.mirs.text && self.v.status(act) == crate::chain::Status::Invalid {
+            return Ok(Consent::Invalid {
+                agreement: base,
+                reason: "a text act the Text MIR makes invalid (rule 14, F334): it counts for nothing".into(),
+            });
+        }
         if self.is_agreements(x, types::RECORD) {
             let ag = self.in_force_act(&col, x, b, base)?.agreement;
             return Ok(Consent::Line { agreement: ag });

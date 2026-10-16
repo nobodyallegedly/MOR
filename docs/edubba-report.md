@@ -10,7 +10,7 @@ MOR Identities is now **Edubba**, "the tablet house". It is the same program on 
 - **Identities.** Your other identities, without the agents (your word on the screenshots). For each one: its drafts from Claude to approve, decline or send back, and what it received, sorted as before. Two fixes are in. A private message's locked copy now goes to the sender's homes too, so its line can be kept at a change of keys. A new identity now draws its encryption key from its signing words, as Dub's identities do.
 - **Collectives.** Each collective is shown as an identity, with its constitution available as a pop-up in plain words, and two sub-tabs. **Act** shows what you may do for it, from its agreement, each line naming its rule. Below that is a box to post text and pictures, read back before anything is signed. **Constitution** is the collective client's whole page, inside Edubba. The collective client's own app is retired; its code is now the library Edubba uses.
 
-**One thing does not work yet, and on purpose:** posting for a collective. Building it showed that two core texts contradict each other: Agreements wants every act of a collective to point to its latest decision, and the Text MIR forbids a text to carry any such pointer. So no text a collective signs can count, whichever way it is made. You asked for it to go to the project lead (question 1 below). Until then, Edubba shows the whole review and keeps the Sign button off.
+**Building the Act tab found a flaw in the core texts**, now fixed: Agreements wanted every act of a collective to point to its latest decision, and the Text MIR forbade a text to carry any pointer, so no text a collective posted could ever count. Reported to the project lead, answered by you in F334: a collective's text may carry that one pointer, and nothing else. It is written into the Text MIR's draft 9 and into the core, with tests, and Edubba now signs posts for a collective.
 
 Your data stays where it is. `~/mor-desk` is read where it is (a new install uses `~/edubba`), and so is `~/mor-collective`. Machine, allegedly keeps its identity, its signed terms and its history. The drafts folder shared with the connector is unchanged.
 
@@ -41,18 +41,23 @@ Your data stays where it is. `~/mor-desk` is read where it is (a new install use
 ### Collectives (`src/collectives.ts`; `clients/collective`)
 
 - The collective client's operations are now a library function (`collectiveApi`), and its page logic is mountable in any element (`src/page/mount.ts`). Its own page is a thin wrapper kept for its tests; its app script points to Edubba's.
-- **Act**: `Actions.permissions` reads the agreement in force as Agreements read it from the collective's relays and homes. For a text and for a picture it names who holds the signing key (rule 59), which area reaches each act and how many of its holders' signature acts it needs (rule 60, the voices that remain), a frozen area (rule 71), and that the act is done once public and on the chain (rules 57, 58). The stated cost of field 19 is said: an area cannot tell a release from a picture. "You" are the identities the collective folder marks as yours. Each permission carries what the agreement alone allows and whether it can be done now.
-- `Actions.preparePost`: the text made canonical, the JPEG stripped, whose signature acts its areas need (yours first, the simulated members' consent said), a digest, then the collective's key and those signatures, then Agreements' reading of each act. **Blocked for now** (question 1).
+- **Act**: `Actions.permissions` reads the agreement in force as Agreements read it from the collective's relays and homes. For a text and for a picture it names who holds the signing key (rule 59), which area reaches each act and how many of its holders' signature acts it needs (rule 60, the voices that remain), a frozen area (rule 71), and that the act is done once public and on the chain (rules 57, 58). The stated cost of field 19 is said: an area cannot tell a release from a picture. "You" are the identities the collective folder marks as yours. Each permission names the rule it rests on, Text rule 14 (F334) included.
+- `Actions.preparePost`: the text made canonical, the JPEG stripped, whose signature acts its areas need (yours first, the simulated members' consent said), a digest, then the collective's key and those signatures, then Agreements' reading of each act. The text carries one object, the collective's pointer to its own decision (F334).
+
+### The core, after F334 (Text rule 14 against Agreements rule 58)
+
+- **The Text MIR, draft 9** (`spec/MIR-text-draft-9.md`; draft 8 kept beside it): rule 14 allows a text act exactly one object, `[collective, decision]`, where its signer is a collective and the predecessor is its own decision on its actions chain (a link of its identity chain or one of its records). Any other `objects` stays invalid; an individual still chains its texts by a cMIP's companion act (F296). A verifier missing the signer's chain or the decision answers unknown (F298). The components list gains the matching line. `spec/README.md`, the reader's six texts and the core's six-hashes test name draft 9.
+- **The core**: `text::check_act` now takes the signer and allows one object naming the signer as chain (the shape, judged when the act is added); the verifier's `text_pointer`, when a verdict is asked for, makes such an act invalid where the signer's chain declares no founding agreement or the predecessor is no link of its chain and no record it signed. Agreements' consent now answers *invalid* for a text act the Text MIR makes invalid, instead of counting it.
+- **Tests** (`core/tests/agreements_collective.rs`, `a_collectives_text_names_its_own_decision_f334`): a collective's text with its own pointer, valid and counted; without it, valid and uncited; with another collective's chain, with its own chain naming another collective's decision, naming an act that is no decision, with two objects, with any other object, and an individual naming its own chain: each invalid, none counted. The existing F296 tests stand unchanged.
+- **Reading taken**: "its own latest decision" is checked as *a decision of its own*; which decision is the latest as its signer knew it stays rule 58's matter (concurrent devices cite what they knew), as for every other action.
+- **Not aligned, found on the way (for the project lead)**: Agreements' consent still counts acts of other MIRs that their own format makes invalid (F295). Many of the core's Agreements tests use simplified publications that Envelopes' strict format refuses, so aligning every MIR at once would rewrite those tests. F334 asked for Text's alone; this session did that.
+- **The WebAssembly** is rebuilt, and with it Dub's web release (`clients/dub/built`, byte for byte by its own build); deploying it at dub.dubsar.org is a machine session's.
 - **Its constitution**, a pop-up: the deal-assessment tool's reading (`assess` over `gather`) of the agreement in force, its risks each with its rule.
 - **Constitution sub-tab** and **+ Found a collective**: the collective client's page, scoped to the collective selected; founding, members held here, releases under one's own name; its settings under Settings.
 
 ## The questions
 
-1. **To the project lead (your answer: "Report to lead pls"): a collective's text can never count.** Agreements rule 58 asks every action of a collective to cite, in `objects`, the decision it acts under, or it is on no chain and counts for nothing. Text rule 14 (F296) makes a text act carrying `objects` invalid. A post with a picture ends in a text act too, so nothing a collective posts can count, either way. The core's code also lets Agreements count such a text (`agreementsConsent` answered "counts" for a text act the core itself judges invalid): Agreements' consent does not first ask whether the act is valid under its own MIR. That is a code fix whichever answer is taken. Options as put to Nobody, allegedly:
-   - (c) Text rule 14 allows `objects` only where each names the signer's own identity as chain: a collective citing its own decision. F296's reason is kept, since nobody can attach a text to another's chain. One sentence in Text, one check in the core. *The session's lean.*
-   - (a) Agreements rules 57 and 58 exempt text acts: a collective's text sits on no chain, counting on its signature and its areas'. Cost: its posts are not unmissable, and the tie rule cannot order them against a departure.
-   - (b) F296's own way: a plain text plus a companion act on the chain, under a cMIP the collective adopts. Cost: two acts per post, and the cMIP.
-   Until answered, `COLLECTIVE_TEXT_OPEN` keeps Edubba from signing any post for a collective.
+1. **Text rule 14 against Agreements rule 58** (reported to the project lead; **answered, F334**): "(c), narrowed". A text act may carry objects only when its signer is a collective and its one object is rule 58's pointer to that collective's own latest decision; any other objects stays invalid. Built as above.
 2. **Asked and answered** (F333 left them open; each changes what a person sees or signs):
    - Does adding an agent publish its name? **"(a) Published"**: the naming cMIP, at creation; a button for Machine, allegedly.
    - Who sets whom an agent follows, and does it read its feed? **"(a) Follow, and read it"**: the owner follows for it, privately; a nudge gives Claude its feed.
@@ -92,13 +97,16 @@ All run here, all passing (counts from the last full run).
 | `clients/desk` | `edubba.test.ts` 8 (new), `edubba-browser.test.ts` 8 (new, headless Chromium), `desk.test.ts`, `machine.test.ts`, `launcher.test.ts`, `browser.test.ts` and `machine-browser.test.ts` (the last two adapted to the tabs: the same behaviours, found where they now are) |
 | `clients/collective` | all, unchanged (its browser test now drives the page through `mount.ts`) |
 | `clients/nudge`, `clients/connector`, `clients/assess` | all, unchanged |
-| `clients/site`, `clients/reports`, `clients/dub` (and its release build) | all; the site's feed-page test reads "Edubba" |
+| `clients/site`, `clients/reports`, `clients/dub` (its release rebuilt for the new WebAssembly), `clients/reader`, `clients/barebone`, `clients/repo`, `clients/genesis`, `clients/longform` | all; the site's feed-page test reads "Edubba" |
+| the Rust workspace (`cargo test --workspace`) | all, with the new F334 test |
 
 Screenshots of every screen were sent to Nobody, allegedly (`MOR_SCREENSHOTS`). His answer, about the Identities tab, was taken in the same run, and two new screenshots were sent.
 
 ## What is left
 
-- **Question 1**, then posting for a collective: remove `COLLECTIVE_TEXT_OPEN`, and fix Agreements' consent in the core so it never counts an act its own MIR makes invalid.
+- **The MICS and the freeze suite** naming Text draft 9 and F334's components, at their next versions; **approval** of Text draft 9.
+- **Agreements' count against other MIRs' formats** (above): the same alignment as F334's for Envelopes, Money and Agreements acts, with the tests' simplified publications made real.
+- **Deploying Dub's rebuilt web release** (a machine session's).
 - **Acting for a collective "in all their power"** (F333's future): private messages sealed to every member, money, deals.
 - **Publishing an agent's follow list**, and muting from its view.
 - **On the author's Mac**: pull, `npm install` in `clients/desk`, `sh scripts/make-app.sh`, then double-click Edubba. Machine, allegedly and `~/mor-collective` carry over.
