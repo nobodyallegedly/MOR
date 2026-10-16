@@ -22,7 +22,7 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { SPECS, base64, cborDecode, cborEncode, describeAct, hex, openSealed, signingPublic, unhex } from '../../genesis/src/core.ts';
+import { SPECS, base64, cborDecode, cborEncode, describeAct, hex, openSealed, shareOnPaper, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
 import { ownLine } from '../../genesis/src/lines.ts';
 import { TestIdentity, TEST_LABEL, sealFor, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
@@ -35,10 +35,14 @@ import { compose } from '../../longform/src/text.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
 import { Refused, encryptionSecret, fromWords, groupId, readId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { newChainKey } from './chainwords.ts';
+import { readMessage, acceptanceText, negotiate, openShare, DECLINED } from '../../repo/src/proposals.ts';
+import { sign as signAct } from '../../repo/src/agreements.ts';
+import { REPO_SPECS } from '../../repo/src/specs.ts';
+import { fetchAct, readProposal, SHARE_SAY, SIGNING_OFF_SAY, SIGNING_SAY } from './signing.ts';
 import { carriedKey, lookCurrent, servedChain } from './carryin.ts';
 import { NAME, NAME_WITHDRAWAL, namePayload, namesOf, readName } from './names.ts';
 import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PUBLISH_WARNING, followListPayload, readFollowList, type Kept, type People } from './people.ts';
-import type { Held, Item, Line, Message, Pic, State, Who } from './shapes.ts';
+import type { Held, Item, Line, Message, Pic, Proposal, ShareShown, State, Who } from './shapes.ts';
 
 export type { Line, State } from './shapes.ts';
 
@@ -83,7 +87,27 @@ export interface Settings {
   kind: 'made' | 'brought';
   relays: string[];
   via: Via;
+  /** The Signing tab (H18): off by default (F59), turned on in the identity window. */
+  signing?: boolean;
 }
+
+/**
+ * What the Signing tab keeps for one identity (H18). The one-time keys'
+ * secrets are held here, and only here, from the moment the member accepts
+ * a proposal until its share has been shown and three of its words typed
+ * back (or the member says it came by hand, or declines); then they are
+ * destroyed. Nothing of a share is ever kept.
+ */
+export interface SigningState {
+  /** Answers given, by thread (the proposal's first message). */
+  answered: Record<string, { act: string; verdict: 'signed' | 'declined'; signature?: string; reply: string; at: number }>;
+  /** One-time keys waiting for a share, by thread: the X-Wing secret, hex; `shown`, the three positions asked once the share was shown. */
+  waiting: Record<string, { secret: string; since: number; act: string; shown?: number[] }>;
+  /** Shares received and written down (nothing of them kept but this): by thread. */
+  received: Record<string, { x: number; fingerprint: string; collective: string | null; at: number; byHand?: boolean }>;
+}
+
+export const NO_SIGNING = (): SigningState => ({ answered: {}, waiting: {}, received: {} });
 
 /** A new identity whose chain key's words were shown, until three are typed back. Held in memory only: it carries the chain-key seed. */
 export interface Pending {
@@ -116,6 +140,9 @@ export interface Keep {
   saveSettings(id: string, s: Settings): Promise<void>;
   people(id: string): Promise<People>;
   savePeople(id: string, p: People): Promise<void>;
+  /** The Signing tab's state (H18). */
+  signing(id: string): Promise<SigningState>;
+  saveSigning(id: string, s: SigningState): Promise<void>;
   /** Forget an identity here: its keys and everything kept about it. */
   forget(id: string): Promise<void>;
   pending(): Promise<Pending | null>;
@@ -149,6 +176,8 @@ interface Described {
   payload?: Uint8Array;
   refs?: string[];
   refSigners?: (string | undefined)[];
+  objects?: [string, string][];
+  acks?: string[];
 }
 
 /** How long a display name found is trusted before it is read again, in seconds. */
@@ -233,6 +262,7 @@ export class Dub {
         oldChainKey: !!me.f.safety.seeds,
         line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
         list: p.list,
+        signing: !!s.signing,
         follows: p.follows.map((f) => this.whoFrom(f.id, me.id, p)),
         muted: p.muted.map((m) => this.whoFrom(m, me.id, p)),
       };
@@ -859,7 +889,11 @@ export class Dub {
       const t = (cborDecode(d.payload!) as Map<number, unknown>).get(0);
       if (typeof t === 'string') text = t;
     }
+    // An Agreements negotiation message (H18): a proposal to sign, or talk in its thread, for the Signing tab.
+    const talk = readMessage(d as Parameters<typeof readMessage>[0]);
+    if (talk) text = talk.text;
     return {
+      ...(talk ? { talk: { thread: talk.thread, previous: talk.previous, acks: talk.acks } } : {}),
       key: d.id,
       kind: !isText ? 'other' : d.public ? 'public' : 'private',
       from: d.signer,
@@ -989,6 +1023,262 @@ export class Dub {
   }
 
   /** Mark what the person has seen, for the counts on the tabs. */
+  // ------------------------------------------------------------ the Signing tab (H18)
+
+  /** Turn the Signing tab on or off for the identity in use (off by default, F59). */
+  setSigning(on: boolean): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.store.saveSettings(me.id, { ...s, signing: on });
+      return { lines: [{ text: on ? `Signing is on. ${SIGNING_SAY}` : 'Signing is off. Proposals wait in your inbox, unread, until it is on again.', tone: on ? 'warn' : undefined }] };
+    });
+  }
+
+  /** How this app names an identity in a reading: the name given here or its display name, beside its fingerprint; "you" for itself. */
+  private namer(me: string, p: People): (id: string) => string {
+    return (id: string) => {
+      const w = this.whoFrom(id, me, p);
+      const n = w.pet ?? w.names[0] ?? null;
+      return `${id === me ? 'you' : n ? n : 'an identity'} [${w.short}]`;
+    };
+  }
+
+  /** The proposals in this identity's inbox (negotiation messages opening a thread), each read in plain words; or, with Signing off, how many wait. */
+  proposals(): Promise<{ on: boolean; waiting: number; proposals: Proposal[]; problems: string[]; say: string }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      const problems = await this.readInbox(me, s, p, hints);
+      const firsts = p.inbox.items.filter((k) => k.talk && k.talk.thread === k.key && k.from && k.from !== me.id && !p.muted.includes(k.from) && k.refs.length);
+      if (!s.signing) return { on: false, waiting: firsts.length, proposals: [], problems, say: SIGNING_OFF_SAY };
+      const st = await this.store.signing(me.id);
+      await this.warm(firsts.map((k) => k.from!), hints, s.via);
+      const names = this.namer(me.id, p);
+      const out: Proposal[] = [];
+      for (const k of firsts.sort((a, b) => b.found - a.found)) {
+        const act = k.refs[0].id;
+        const signer = k.refs[0].signer;
+        const places = [...new Set([...hints, ...(await this.placesOf(signer ?? k.from!, hints, s.via))])];
+        const later = p.inbox.items.filter((x) => x.talk?.thread === k.key && x.key !== k.key && x.from === k.from).map((x) => x.text ?? '');
+        let reading: Awaited<ReturnType<typeof readProposal>> | null = null;
+        let problem: string | null = null;
+        try {
+          const got = await fetchAct(act, places, s.via);
+          if (!got) problem = `The act it asks you to sign (${act}) was not found at ${places.join(', ')}.`;
+          else reading = await readProposal(got.act, names, places, s.via);
+        } catch (e) {
+          problem = `It could not be read: ${message(e)}`;
+        }
+        const ans = st.answered[k.key] ?? null;
+        const w = st.waiting[k.key];
+        const r = st.received[k.key];
+        let share: Proposal['share'] = 'none';
+        if (r) share = r.byHand ? 'byHand' : 'received';
+        else if (w?.shown) share = 'shown';
+        else if (w) {
+          try {
+            share = (await openShare(unhex(w.secret), places, places, s.via)) ? 'ready' : 'waiting';
+          } catch {
+            share = 'waiting';
+          }
+        }
+        out.push({
+          thread: k.key,
+          from: this.whoFrom(k.from!, me.id, p),
+          text: k.text ?? '',
+          later,
+          act,
+          collective: k.refs[1]?.id ?? reading?.collective ?? null,
+          reading: reading ? { kind: reading.kind, title: reading.title, summary: reading.summary, sections: reading.sections, plain: reading.plain, risks: reading.risks, blocking: reading.blocking } : null,
+          problem,
+          answer: ans ? { verdict: ans.verdict, signature: ans.signature } : null,
+          share,
+          positions: w?.shown ?? null,
+          seen: p.seen.includes(k.key),
+        });
+      }
+      return { on: true, waiting: firsts.filter((k) => !st.answered[k.key]).length, proposals: out, problems, say: SIGNING_SAY };
+    });
+  }
+
+  /** Where an identity's acts are: its homes and the relays its routes name. */
+  private async placesOf(id: string, hints: string[], via: Via): Promise<string[]> {
+    try {
+      const l = await lookUp(id, hints, via);
+      return [...l.resolution.homes.map((h) => h.hint), ...l.routes.routes.flatMap((r) => r.hints)];
+    } catch {
+      return [];
+    }
+  }
+
+  /** The proposal a thread opens, from the inbox as read, with the act it names fetched again. */
+  private async proposal(me: TestIdentity, s: Settings, p: People, hints: string[], thread: string) {
+    if (!s.signing) throw new Error(SIGNING_OFF_SAY);
+    const k = p.inbox.items.find((x) => x.key === thread && x.talk?.thread === thread && x.from && x.refs.length);
+    if (!k) throw new Error('No such proposal in this identity’s inbox.');
+    const act = k.refs[0].id;
+    const places = [...new Set([...hints, ...(await this.placesOf(k.refs[0].signer ?? k.from!, hints, s.via))])];
+    const got = await fetchAct(act, places, s.via);
+    if (!got) throw new Error(`The act it asks you to sign (${act}) was not found. Nothing was signed.`);
+    const reading = await readProposal(got.act, this.namer(me.id, p), places, s.via);
+    const collective = k.refs[1]?.id ?? reading.collective;
+    return { k, act, places, reading, collective, proposer: k.from! };
+  }
+
+  /**
+   * Sign what a proposal names, as read (Agreements rule 4): the member's own
+   * signature act, public, at this identity's relays, where the act was
+   * found and, for a collective's clone or release, at the collective's
+   * homes; then the answer to the proposer, a negotiation message in its
+   * thread, acknowledging it. For a founding or a member change, the answer
+   * carries the public half of a one-time key made for this share alone
+   * (H18), whose secret is held here until the share is shown and written
+   * down.
+   */
+  signProposal(thread: string): Promise<{ lines: Line[]; signature: string }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      const st = await this.store.signing(me.id);
+      if (st.answered[thread]) throw new Error(`You already ${st.answered[thread].verdict} it. Nothing more was signed.`);
+      const { act, places, reading, collective, proposer } = await this.proposal(me, s, p, hints, thread);
+      if (reading.blocking.length) throw new Error(`It cannot be signed here: ${reading.blocking.join(' ')} Nothing was signed.`);
+      await this.current(me);
+      const where = [...new Set([...s.relays, ...places, ...(collective ? await this.placesOf(collective, hints, s.via) : [])])];
+      const made = await this.signed(me, () => signAct(me, act, where));
+      const lines: Line[] = [{ text: `Signed: your signature act ${made.id} is published at ${where.join(', ')}.`, tone: 'ok' }];
+      let oneTime: Uint8Array | undefined;
+      if (reading.kind === 'founding' || reading.kind === 'clone') {
+        const k = TestIdentity.newBareKey();
+        oneTime = k.public;
+        st.waiting[thread] = { secret: hex(k.secret), since: now(), act };
+        lines.push({ text: 'A one-time key was made for your share of the collective’s chain key: its secret stays in this app only until the share arrives and you have written it down, then it is destroyed.' });
+      }
+      st.answered[thread] = { act, verdict: 'signed', signature: made.id, reply: '', at: now() };
+      await this.store.saveSigning(me.id, st);
+      const reach = await this.reach(proposer, hints, s.via);
+      const reply = await this.signed(me, () => negotiate(me, reach, { text: acceptanceText(made.id, oneTime), thread, previous: this.lastFrom(p, thread, proposer), acks: [this.lastFrom(p, thread, proposer)] }));
+      st.answered[thread].reply = reply.id;
+      await this.store.saveSigning(me.id, st);
+      lines.push({ text: reply.left.length ? `Your answer was left in the proposer’s inbox (${reply.left.join(', ')}).` : `Your answer could not be left in the proposer’s inbox: ${reply.failed.map((f) => `${f.relay}: ${f.reason}`).join('; ')}.`, tone: reply.left.length ? undefined : 'bad' });
+      return { lines, signature: made.id };
+    });
+  }
+
+  /** Decline a proposal: a negotiation message in its thread saying so; nothing is signed for it. */
+  declineProposal(thread: string, why = ''): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      const st = await this.store.signing(me.id);
+      if (st.answered[thread]) throw new Error(`You already ${st.answered[thread].verdict} it.`);
+      const k = p.inbox.items.find((x) => x.key === thread && x.talk?.thread === thread && x.from);
+      if (!k) throw new Error('No such proposal in this identity’s inbox.');
+      if (!s.signing) throw new Error(SIGNING_OFF_SAY);
+      await this.current(me);
+      const reach = await this.reach(k.from!, hints, s.via);
+      const last = this.lastFrom(p, thread, k.from!);
+      const reply = await this.signed(me, () => negotiate(me, reach, { text: why.trim() ? `${DECLINED}\n${compose(why).text}` : DECLINED, thread, previous: last, acks: [last] }));
+      st.answered[thread] = { act: k.refs[0]?.id ?? '', verdict: 'declined', reply: reply.id, at: now() };
+      await this.store.saveSigning(me.id, st);
+      return { lines: [{ text: 'Declined: nothing was signed, and the proposer was told.' }] };
+    });
+  }
+
+  /** The latest message of the other side in a thread, as this app read it: what an answer follows and acknowledges. */
+  private lastFrom(p: People, thread: string, from: string): string {
+    const theirs = p.inbox.items.filter((x) => x.talk?.thread === thread && x.from === from);
+    const ids = new Set(theirs.map((x) => x.key));
+    // The one no other of theirs follows.
+    return theirs.find((x) => !theirs.some((y) => y.talk?.previous === x.key && ids.has(y.key)))?.key ?? thread;
+  }
+
+  private async reach(id: string, hints: string[], via: Via) {
+    const l = await lookUp(id, hints, via);
+    if (!l.encryptionKey) throw new Error('The proposer has published no encryption key: no answer can be sealed to it. Nothing was sent.');
+    const inbox = l.inbox(REPO_SPECS.agreements) ?? l.inbox(POST_SPECS.text);
+    if (!inbox?.length) throw new Error('The proposer declares no inbox. Nothing was sent.');
+    return { id, key: l.encryptionKey, inbox };
+  }
+
+  /** Open the share waiting for a thread with its one-time key. */
+  private async shareFor(me: TestIdentity, s: Settings, hints: string[], thread: string) {
+    const st = await this.store.signing(me.id);
+    const w = st.waiting[thread];
+    if (!w) throw new Error('No share is waiting for this proposal here.');
+    const places = [...new Set([...hints, ...(await this.inboxOf(me.id, hints, s.via))])];
+    const got = await openShare(unhex(w.secret), places, places, s.via);
+    if (!got) throw new Error('The share has not arrived yet: the founder’s Edubba sends it once every member has signed.');
+    const paper = shareOnPaper(got.share) as { x: number; value: Uint8Array; threshold: number; holders: number; fingerprint: string };
+    return { st, w, paper };
+  }
+
+  private async inboxOf(id: string, hints: string[], via: Via): Promise<string[]> {
+    try {
+      return list((await lookUp(id, hints, via)).routes.routes.filter((r) => r.kind === 1).flatMap((r) => r.hints));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Show a member's share once (H18): its number and 24 words, labelled as
+   * the collective's chain key share, checked against the dealing first.
+   * From then on it is never shown again; three of its words are asked back
+   * (as H3), and only then is the one-time key destroyed.
+   */
+  shareShow(thread: string): Promise<ShareShown> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      if (!s.signing) throw new Error(SIGNING_OFF_SAY);
+      const { st, w, paper } = await this.shareFor(me, s, hints, thread);
+      if (w.shown) throw new Error('It was shown once already: type back the three words asked.');
+      const positions = threePositions(randomBelow);
+      w.shown = positions;
+      await this.store.saveSigning(me.id, st);
+      const k = p.inbox.items.find((x) => x.key === thread);
+      return {
+        thread,
+        x: paper.x,
+        holders: paper.holders,
+        threshold: paper.threshold,
+        words: toWords(paper.value),
+        fingerprint: paper.fingerprint.match(/.{1,4}/g)!.slice(0, 8).join(' '),
+        collective: k?.refs[1]?.id ?? null,
+        say: SHARE_SAY,
+        positions,
+      };
+    });
+  }
+
+  /** Three words of the share typed back: then the one-time key is destroyed, and the relays' copy can never be opened again. */
+  shareConfirm(thread: string, typed: string[]): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      const { st, w, paper } = await this.shareFor(me, s, hints, thread);
+      if (!w.shown) throw new Error('The share has not been shown yet.');
+      if (!typedBack(toWords(paper.value), w.shown, typed)) {
+        throw new Error(`Those are not words ${w.shown.join(', ')} of your share as shown. Look at what you wrote down. The one-time key is kept until they are.`);
+      }
+      const k = p.inbox.items.find((x) => x.key === thread);
+      delete st.waiting[thread];
+      st.received[thread] = { x: paper.x, fingerprint: paper.fingerprint, collective: k?.refs[1]?.id ?? null, at: now() };
+      await this.store.saveSigning(me.id, st);
+      return { lines: [{ text: `Share ${paper.x} is written down. The one-time key is destroyed: the copy on the relays can never be opened again, by anyone. Keep the paper safe.`, tone: 'ok' }] };
+    });
+  }
+
+  /** The share came by hand, shown on the founder's screen: the one-time key is destroyed unused. */
+  shareByHand(thread: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me } = await this.ctx();
+      const st = await this.store.signing(me.id);
+      const w = st.waiting[thread];
+      if (!w) throw new Error('No share is waiting for this proposal here.');
+      delete st.waiting[thread];
+      st.received[thread] = { x: 0, fingerprint: '', collective: null, at: now(), byHand: true };
+      await this.store.saveSigning(me.id, st);
+      return { lines: [{ text: 'The one-time key is destroyed: a share sealed to it later could never be opened.' }] };
+    });
+  }
+
   async seen(keys: string[]): Promise<void> {
     await this.serial(async () => {
       const { me, p } = await this.ctx();

@@ -31,7 +31,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { TestIdentity, TEST_LABEL, type IdentityFile } from '../../genesis/src/identity.ts';
-import type { Keep, Pending, Settings } from './dub.ts';
+import { NO_SIGNING, type Keep, type Pending, type Settings, type SigningState } from './dub.ts';
 import { NO_PEOPLE, type People } from './people.ts';
 
 export const SETTINGS_LABEL = 'DUB. A test identity, its keys held in software in this folder: a prototype, never for a real identity.';
@@ -127,6 +127,16 @@ export class Store implements Keep {
 
   async savePeople(id: string, p: People): Promise<void> {
     writeJson(join(this.idDir(id), 'people.json'), p);
+  }
+
+  /** The Signing tab's state: `identities/ID/signing.json`, owner-only, holding a one-time key's secret only while its share waits (H18). */
+  async signing(id: string): Promise<SigningState> {
+    const p = this.path('identities', id, 'signing.json');
+    return existsSync(p) ? { ...NO_SIGNING(), ...readJson<SigningState>(p) } : NO_SIGNING();
+  }
+
+  async saveSigning(id: string, s: SigningState): Promise<void> {
+    writeJson(join(this.idDir(id), 'signing.json'), s);
   }
 
   async forget(id: string): Promise<void> {

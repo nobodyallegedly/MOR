@@ -22,7 +22,7 @@
 // TEST IDENTITIES ONLY (F281).
 
 import { TestIdentity, TEST_LABEL, type IdentityFile } from '../../../genesis/src/identity.ts';
-import type { Keep, Pending, Settings } from '../dub.ts';
+import { NO_SIGNING, type Keep, type Pending, type Settings, type SigningState } from '../dub.ts';
 import { NO_PEOPLE, type People } from '../people.ts';
 
 export const DB = 'dub';
@@ -128,10 +128,19 @@ export class WebKeep implements Keep {
     await this.put(`people:${id}`, p);
   }
 
+  /** The Signing tab's state, `signing:ID`: a one-time key's secret only while its share waits (H18). */
+  async signing(id: string): Promise<SigningState> {
+    return { ...NO_SIGNING(), ...((await this.get<SigningState>(`signing:${id}`)) ?? {}) };
+  }
+
+  async saveSigning(id: string, s: SigningState): Promise<void> {
+    await this.put(`signing:${id}`, s);
+  }
+
   /** Forget an identity in this browser: its keys and everything kept about it. Only its signing key's words, if written down, bring it back. */
   async forget(id: string): Promise<void> {
     await this.write((s) => {
-      for (const k of ['identity', 'settings', 'people']) s.delete(`${k}:${id}`);
+      for (const k of ['identity', 'settings', 'people', 'signing']) s.delete(`${k}:${id}`);
     });
   }
 

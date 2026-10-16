@@ -48,7 +48,7 @@ const browserCore: Plugin = {
  * fails the build.
  */
 const SHIMS: Record<string, { shim: string; for: string[] }> = {
-  'node:crypto': { shim: 'src/web/node-crypto.ts', for: ['../genesis/src/identity.ts', '../../modules/carry/src/carry.ts'] },
+  'node:crypto': { shim: 'src/web/node-crypto.ts', for: ['../genesis/src/identity.ts', '../../modules/carry/src/carry.ts', '../repo/src/specs.ts'] },
   'node:fs': { shim: 'src/web/node-fs.ts', for: ['../genesis/src/identity.ts'] },
 };
 const nodeShims: Plugin = {

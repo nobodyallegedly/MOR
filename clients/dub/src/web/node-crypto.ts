@@ -4,7 +4,7 @@
 // every other import from Node.
 //
 //   randomBytes        the genesis client's sealing (identity.ts): the browser's secure random source
-//   createHash         the identity carry Module's checksum (carry.ts): SHA-256 only
+//   createHash         the identity carry Module's checksum (carry.ts) and the repo client's test spec hashes (specs.ts): SHA-256 only
 
 import { sha256 } from '@noble/hashes/sha2.js';
 
