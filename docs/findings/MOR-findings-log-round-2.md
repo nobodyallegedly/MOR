@@ -34,6 +34,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **What it may do (the project lead's list):** check paper words without signing; warn when the identity is rotated by someone else; show the identity's record plainly (homes, receipts, lines, any contest); later, run air-gapped, the signed bytes passed by QR code (the air-gapped signer Module).
 
+**Where it runs.** Options: (a) like Dub, a Mac and Linux app and a web page, testing only, risks stated, usable from any device; (b) the Mac and Linux app only; (c) air-gapped from the start, an offline device signing and an online one carrying the bytes by QR code. The project lead leaned (a) now, (c) later (the one who needs it most may have only a phone; Kišib holds the words only for the minute of the rotation). **Decided:** "A for everyone c as demonstration."
+
 ## F334. A collective's text names its own latest decision: Text rule 14 opened for rule 58 only (16 October 2026)
 
 *Area: core business (Text and Agreements). Found by the Edubba session building the collectives' Act tab: writing code is also a review.*
