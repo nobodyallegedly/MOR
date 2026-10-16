@@ -323,7 +323,7 @@ ${i.encryption ? '' : `<div class="note">No encryption key for this identity is 
 ${
   i.signing
     ? `<section id="signing" hidden>
-<div class="experimental"><strong>Even more experimental.</strong> ${e(SIGNING_LABEL)}</div>
+<div class="experimental"><strong>Even more experimental</strong>${e(SIGNING_LABEL.slice('Even more experimental'.length))}</div>
 <div id="signing-list"><p class="empty">Reading the proposals…</p></div>
 </section>`
     : ''
