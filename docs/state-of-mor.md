@@ -2,7 +2,7 @@
 
 *A living file: what exists today, not how it came to be. Updated by the project lead at every merge. Every session reads it first. The history is in `docs/roadmap-v1.md`; the reasons are in `docs/findings/`. If this file and the code disagree, the code's own README wins, and this file is corrected.*
 
-*Last updated: 16 October 2026, evening, after pull request 70 (Edubba).*
+*Last updated: 16 October 2026, evening, after pull request 70 (Edubba) and the evening's Mac session.*
 
 ## Where we are
 
@@ -41,17 +41,16 @@ Awaiting Nobody, allegedly's approval: Text 9; the naming and people cMIPs; carr
 
 ## The servers (no addresses here: those are in the private project note)
 
-Three homes (home1, home2 on servers; home3 on the author's Mac, onion only), the gateway serving dubsar.org, the reader, Dub's web client, a timestamp clock. **All on the release of 15 October.** Not yet deployed: Dub reshaped with Inter, F334's core (the homes must run it before a collective's text counts there), the two dubsar.org pages naming Edubba.
+Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; home2 also by onion), the gateway serving dubsar.org (https only, no onion: decided 16 October), the reader, Dub's web client, a timestamp clock. **All on main after pull requests 68 to 70 (16 October, evening):** the homes with F334's core, the reader with Text draft 9, Dub reshaped with Inter, site version 836bc0bd naming Edubba. The clock runs its own code copy of the morning, still stamping.
 
 ## Open, in order
 
-1. A Mac session: deploy Dub's web release, update the homes to the current core, republish the dubsar.org pages naming Edubba.
-2. A small session for Dub and Edubba: a display name at creation in Dub (H12); Edubba's "What you may do for it" folding and unfolding (H14); bringing an existing identity or collective beside making one (H15); releases under one's own name moved to the Identities tab, the folder chosen at each release (H16); a Linux desktop icon for both, and a Linux test run.
-3. The site session (structure and look; H1, H2, H7). Nearer release: the KI tab icon's fit and the tablet in the footer (H13).
-4. MOR Safety, the rotation app (F332, amended).
-5. The remaining human tests on the cleaned apps.
-6. The freeze-ready drafts, including: Agreements' count aligned with every MIR's format (F295, found under F334); MICS and suite naming Text 9.
-7. The step 17 rehearsal, then the freeze.
+1. A small session for Dub and Edubba: a display name at creation in Dub (H12); Edubba's "What you may do for it" folding and unfolding (H14); bringing an existing identity or collective beside making one (H15); releases under one's own name moved to the Identities tab, the folder chosen at each release (H16); a Linux desktop icon for both, and a Linux test run.
+2. The site session (structure and look; H1, H2, H7; the reader showing display names, H17). Nearer release: the KI tab icon's fit and the tablet in the footer (H13).
+3. MOR Safety, the rotation app (F332, amended).
+4. The remaining human tests on the cleaned apps.
+5. The freeze-ready drafts, including: Agreements' count aligned with every MIR's format (F295, found under F334); MICS and suite naming Text 9.
+6. The step 17 rehearsal, then the freeze.
 
 ## Working rules for sessions
 
