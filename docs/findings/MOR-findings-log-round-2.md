@@ -36,6 +36,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Where it runs.** Options: (a) like Dub, a Mac and Linux app and a web page, testing only, risks stated, usable from any device; (b) the Mac and Linux app only; (c) air-gapped from the start, an offline device signing and an online one carrying the bytes by QR code. The project lead leaned (a) now, (c) later (the one who needs it most may have only a phone; Kišib holds the words only for the minute of the rotation). **Decided:** "A for everyone c as demonstration."
 
+*Taken by the project lead (presentation):* the warning of a rotation made elsewhere belongs to Dub and Edubba, which already look the identity up on opening and before every act ("your key was changed, not from here: open Kišib"); Kišib, holding nothing and running only when opened, cannot watch. *Order:* Kišib is built after real collectives (H18), whose paper shares a collective rotation needs; its prompt "when we get to the tests" (Nobody, allegedly).
+
 ## F334. A collective's text names its own latest decision: Text rule 14 opened for rule 58 only (16 October 2026)
 
 *Area: core business (Text and Agreements). Found by the Edubba session building the collectives' Act tab: writing code is also a review.*
