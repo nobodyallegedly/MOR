@@ -225,39 +225,34 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   const p = await c.ask<any>('collective permissions', { collective: col.id });
   const text = p.items[0];
   assert.equal(text.what, 'Post a text for it');
-  assert.equal(text.state, 'yes');
+  assert.equal(text.byAgreement, 'yes', 'by its agreement, you may');
   assert.ok(text.lines.some((l: any) => /No area reaches a text .*Agreements rule 60/.test(l.text)));
   assert.ok(text.lines.some((l: any) => /rule 59/.test(l.text) && /You hold it/.test(l.text)));
   const pic = p.items[1];
-  assert.equal(pic.state, 'with others');
+  assert.equal(pic.byAgreement, 'with others');
   assert.ok(pic.lines.some((l: any) => /“Releases” area .*any 2 of .*Agreements rule 60/.test(l.text)));
   assert.ok(pic.lines.some((l: any) => /cannot tell a release from a picture/.test(l.text)));
   assert.equal(p.items[2].state, 'no');
-
-  // A text: read back first, nothing signed by reading; then signed, counting on its own signature.
+  // Open in the core texts (Text rule 14 against Agreements rule 58): said, and nothing signed.
+  for (const i of [text, pic]) {
+    assert.equal(i.state, 'no');
+    assert.ok(i.lines.some((l: any) => l.tone === 'warn' && /Agreements rule 58 .*Text MIR \(rule 14, F296\).*Reported to the project lead/.test(l.text)));
+  }
   const before = app.collectives.store.collective(col.id).id.f.sequence.length;
   const r = await c.ask<any>('collective prepare', { kind: 'post', collective: col.id, text: 'For the house.' });
   assert.equal(r.reading.plain[0].text, 'For the house.');
-  assert.equal(app.collectives.store.collective(col.id).id.f.sequence.length, before);
-  await assert.rejects(c.ask('collective confirm', { plan: r.plan, digest: '00'.repeat(32) }), /does not match/);
-  const done = await c.ask<Done>('collective confirm', { plan: r.plan, digest: r.digest });
-  assert.ok(done.lines.some((l) => /The text: counts for the collective, on its own signature/.test(l.text)));
-  const posted = describeAct((await relayAt(relay.base).getAct(done.acts[0]))!) as { signer: string; public: boolean; objects: [string, string][] };
-  assert.equal(posted.signer, col.id);
-  assert.ok(posted.public);
-  assert.ok(posted.objects.some(([chain]) => chain === col.id), 'it cites the collective’s latest decision on its chain (rule 58)');
-
-  // A picture: the release area's signatures, by you and a simulated member, said; it counts.
+  assert.ok(r.reading.blocking.some((x: string) => /Reported to the project lead/.test(x)));
+  await assert.rejects(c.ask('collective confirm', { plan: r.plan, digest: r.digest }), /cannot be signed/);
+  // A picture's review: stripped, the release area's signatures named, simulated consent said; not signed either.
   const jpeg = readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url)).toString('base64');
   const rp = await c.ask<any>('collective prepare', { kind: 'post', collective: col.id, text: 'With a picture.', jpeg });
   const words = JSON.stringify(rp.reading);
   assert.match(words, /Taken out before publishing/);
+  assert.match(words, /“Releases” area's signatures/);
   assert.match(words, /its consent simulated/);
-  const dp = await c.ask<Done>('collective confirm', { plan: rp.plan, digest: rp.digest });
-  assert.ok(dp.lines.some((l) => /The picture: counts for the collective, its area’s signatures met/.test(l.text)), JSON.stringify(dp.lines));
-  const posts = await c.ask<any>('collective posts', { collective: col.id });
-  assert.ok(posts.items.some((x: any) => x.text === 'For the house.'));
-  assert.ok(posts.items.some((x: any) => x.pictures.length === 1));
+  await assert.rejects(c.ask('collective confirm', { plan: rp.plan, digest: rp.digest }), /cannot be signed/);
+  assert.equal(app.collectives.store.collective(col.id).id.f.sequence.length, before, 'nothing signed for it');
+  assert.deepEqual((await c.ask<any>('collective posts', { collective: col.id })).items, []);
 
   // Its constitution, in plain words: the deal-assessment tool's reading of its agreement in force.
   const k = await c.ask<any>('collective constitution', { collective: col.id });

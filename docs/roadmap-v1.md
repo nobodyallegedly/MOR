@@ -313,6 +313,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 *16 October 2026, evening: MOR Identities becomes **Edubba** (F333), the agents' hub and the desk for several identities and collectives: three tabs (agents, identities, collectives), the collective client taken in as the collectives tab's constitution sub-tab. Inter bundled in Dub (F332).*
 
+*16 October 2026, night: Edubba built (branch `claude/edubba`, report `docs/edubba-report.md`): three tabs in Dub's look; several agents (a first-use window, the key owner-only and shown by its last four characters, each its own cap, the prompt box a signed private act, MOR as seen by each, its follows read under a nudge); the identities that are no agents; collectives with the permissions their agreement gives, their constitution as a pop-up, the collective client's page taken in. Found while building: Agreements rule 58 and Text rule 14 (F296) leave no way for a collective's text to count; reported to the project lead (question 1), posting for a collective held until it is settled.*
+
 ## Decisions due along the way
 
 | Decision | Before |

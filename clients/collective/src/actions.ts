@@ -98,6 +98,17 @@ export interface Done {
   acts: string[];
 }
 
+/**
+ * Open in the core texts (found building Edubba, 16 October 2026; reported to
+ * the project lead, docs/edubba-report.md, question 1): Agreements rule 58
+ * wants every action of a collective to cite its latest decision in
+ * `objects`, or it counts for nothing; Text rule 14 (F296) makes a text act
+ * carrying `objects` invalid. No text a collective signs can count either
+ * way, so none is signed until the texts say which gives.
+ */
+export const COLLECTIVE_TEXT_OPEN =
+  'Not until the core texts are settled: Agreements rule 58 asks every act of a collective to cite its latest decision, or it counts for nothing, and the Text MIR (rule 14, F296) makes a text act carrying that citation invalid. So no text a collective signs can count today, either way. Reported to the project lead; nothing is signed meanwhile.';
+
 /** One act a post needs signatures on, by an area (Agreements rule 60). */
 export interface PostNeed {
   spec: string;
@@ -114,7 +125,8 @@ export interface Permissions {
   name: string;
   agreement: string | null;
   you: string[];
-  items: { what: string; state: 'yes' | 'with others' | 'no'; lines: Line[]; needs: PostNeed[] }[];
+  /** `state`: whether it can be done now; `byAgreement`: what the agreement in force alone allows, where something else stops it. */
+  items: { what: string; state: 'yes' | 'with others' | 'no'; byAgreement?: 'yes' | 'with others' | 'no'; lines: Line[]; needs: PostNeed[] }[];
   notes: Line[];
 }
 
@@ -3934,7 +3946,9 @@ export class Actions {
         }
       }
       lines.push({ text: 'Edubba makes it public, so it is done once on the collective’s chain (Agreements rule 57), citing the collective’s latest decision (rule 58).' });
-      out.items.push({ what: k.what, state, lines, needs });
+      // Every post is, or ends with, a text act: open in the core texts.
+      lines.push({ text: COLLECTIVE_TEXT_OPEN, tone: 'warn' });
+      out.items.push({ what: k.what, state: 'no', byAgreement: state, lines, needs });
     }
     out.items.push({
       what: 'Anything else for it',
@@ -3976,6 +3990,7 @@ export class Actions {
     }
     const item = perms.items[stripped ? 1 : 0];
     if (!item) blocking.push(...perms.notes.map((n) => n.text));
+    else if (item.lines.some((l) => l.text === COLLECTIVE_TEXT_OPEN)) blocking.push(COLLECTIVE_TEXT_OPEN);
     else if (item.state === 'no') blocking.push(`${item.what} is not something you can do now: ${item.lines.filter((l) => l.tone === 'bad').map((l) => l.text).join(' ') || 'its key or the signatures it needs are not held here.'}`);
     const sign = (item?.needs ?? []).map((n) => {
       const held = n.voices.filter((m) => this.store.holds(m));

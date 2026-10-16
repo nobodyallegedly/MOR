@@ -215,7 +215,9 @@ test('its queue: a stranger’s message waits until picked; MOR as seen by this 
 
 test('the Identities tab: the list, the selected identity and what it received, a new identity', async () => {
   await page.click('[data-action=tab][data-tab=identities]');
-  await page.locator(`.entry[data-id="${AGENT}"]`).waitFor();
+  await page.locator(`.entry[data-id="${OWNER}"]`).waitFor();
+  // Agents have their own tab: the Identities tab lists the other identities only.
+  assert.equal(await page.locator(`.entry[data-id="${AGENT}"]`).count(), 0);
   await page.click(`.entry[data-id="${OWNER}"]`);
   await page.locator('.head h2', { hasText: 'Nobody, allegedly' }).waitFor();
   await page.click(`[data-action=refresh][data-identity="${OWNER}"]`);
@@ -249,35 +251,25 @@ test('the Collectives tab: what you may do, each naming its rule; a post; a pict
   const may = page.locator('#e-may');
   await may.waitFor({ timeout: 90_000 });
   const text = await may.innerText();
-  assert.match(text, /Post a text for it[\s\S]*You may[\s\S]*No area reaches a text[\s\S]*Agreements rule 60/i);
+  assert.match(text, /Post a text for it[\s\S]*By its agreement: You may[\s\S]*now: Not now[\s\S]*No area reaches a text[\s\S]*Agreements rule 60/i);
   assert.match(text, /You hold it\./, 'you hold the signing key');
   assert.match(text, /rule 59/);
   assert.match(text, /Post a picture for it[\s\S]*With others’ signatures[\s\S]*“Releases” area[\s\S]*cannot tell a release from a picture/i);
   assert.match(text, /rule 57/);
+  assert.match(text, /Reported to the project lead/);
   await shot(page, '09-collective-act');
 
-  // A text post: reviewed, then signed.
-  await page.fill('#collective-post textarea[name=text]', 'Hello from the collective.');
-  await page.click('#collective-post button[type=submit]');
-  await page.locator('#e-post-review #reading h2', { hasText: 'A post for the collective' }).waitFor({ timeout: 90_000 });
-  await shot(page, '10-collective-post-review');
-  await page.click('#e-post-review [data-action=confirm]');
-  await said('Posted for');
-  await page.locator('#e-status', { hasText: 'counts for the collective, on its own signature' }).waitFor();
-  await page.locator('#e-posts .post', { hasText: 'Hello from the collective.' }).waitFor({ timeout: 60_000 });
-
-  // A picture: the release area's signatures, by you and a simulated member, said.
+  // A post: reviewed, read back in plain words; the Sign button stays off while the core texts are open.
   const jpeg = readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url));
   await page.fill('#collective-post textarea[name=text]', 'With a picture.');
-  await page.setInputFiles('#collective-post input[name=jpeg]', { name: 'earth.jpg', mimeType: 'image/jpeg', buffer: jpeg });
+  await page.setInputFiles('#collective-post input[name=jpeg]', { name: 'phone.jpg', mimeType: 'image/jpeg', buffer: jpeg });
   await page.click('#collective-post button[type=submit]');
   await page.locator('#e-post-review #reading', { hasText: '“Releases” area' }).waitFor({ timeout: 90_000 });
   await page.locator('#e-post-review #reading', { hasText: 'its consent simulated' }).waitFor();
-  await page.click('#e-post-review [data-action=confirm]');
-  await said('Posted for');
-  await page.locator('#e-status', { hasText: 'The picture: counts for the collective, its area’s signatures met' }).waitFor();
-  await page.locator('#e-posts .post img').first().waitFor({ timeout: 60_000 });
-  await shot(page, '11-collective-posts');
+  await page.locator('#e-post-review #reading', { hasText: 'Reported to the project lead' }).waitFor();
+  assert.equal(await page.locator('#e-post-review [data-action=confirm]').isDisabled(), true);
+  await shot(page, '10-collective-post-review');
+  await page.click('#e-post-review [data-action=cancel]');
 
   // Its constitution, as a pop-up, in plain words.
   await page.click('[data-action=constitution]');
@@ -303,4 +295,24 @@ test('Settings, and no console error throughout', async () => {
   await shot(page, '15-settings');
   await noKey();
   assert.deepEqual(problems, []);
+});
+
+test('a draft from Claude for an agent is shown in its details on the Agents tab, approved there', async () => {
+  const { connect } = await import('../../connector/test/world.ts');
+  const { handed } = await import('./setup.ts');
+  await app.desk.link(AGENT, true);
+  const claude = await connect({ MOR_RELAYS: relay.base, MOR_DRAFTS: app.store.settings().drafts });
+  try {
+    const r = await claude.ask('mor_prepare_post', { signer: 'Machine, allegedly', text: 'Drafted for the agent.' });
+    const digest = handed(r.text);
+    await page.click('[data-action=tab][data-tab=agents]');
+    await page.click(`.entry[data-id="${AGENT}"]`);
+    const card = page.locator(`.draft[data-draft="${digest}"]`);
+    await card.waitFor({ timeout: 30_000 });
+    await shot(page, '16-agent-draft');
+    await card.locator('[data-action=approve]').click();
+    await said('Approved and signed');
+  } finally {
+    await claude.close();
+  }
 });

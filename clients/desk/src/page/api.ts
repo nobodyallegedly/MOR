@@ -204,7 +204,7 @@ export interface Permissions {
   name: string;
   agreement: string | null;
   you: string[];
-  items: { what: string; state: 'yes' | 'with others' | 'no'; lines: Line[] }[];
+  items: { what: string; state: 'yes' | 'with others' | 'no'; byAgreement?: 'yes' | 'with others' | 'no'; lines: Line[] }[];
   notes: Line[];
 }
 

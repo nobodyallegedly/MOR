@@ -81,8 +81,8 @@ async function busy<T>(words: string, f: () => Promise<T>, where?: HTMLElement |
 
 function counts(): Partial<Record<v.Tab, number>> {
   return {
-    agents: state.agents.reduce((n, a) => n + a.notified, 0),
-    identities: drafts.length + state.identities.reduce((n, i) => n + i.received.filter((x) => x.sorted === 'new').length, 0),
+    agents: state.agents.reduce((n, a) => n + a.notified + drafts.filter((d) => d.signer === a.id).length, 0),
+    identities: drafts.filter((d) => !state.agents.some((a) => a.id === d.signer)).length + v.secondary(state).reduce((n, i) => n + i.received.filter((x) => x.sorted === 'new').length, 0),
   };
 }
 
@@ -104,12 +104,15 @@ async function draw() {
         fill('e-detail', v.agentView(state.agents.find((a) => a.id === at.agent)!.name, view));
       } else {
         const d = await c.ask<AgentDetails>('agent', { agent: at.agent });
-        fill('e-detail', v.agentDetails(state, d));
+        fill('e-detail', v.agentDetails(state, d, drafts));
+        shown = drafts.map((x) => x.digest).join(',');
       }
       return;
     }
     case 'identities': {
-      if (!at.identity || (at.identity !== 'new' && !state.identities.some((i) => i.id === at.identity))) at.identity = state.identities[0]?.id ?? 'new';
+      // Agents have their own tab (decided by Nobody, allegedly): only the other identities here.
+      const held = v.secondary(state);
+      if (!at.identity || (at.identity !== 'new' && !held.some((i) => i.id === at.identity))) at.identity = held[0]?.id ?? 'new';
       body.innerHTML = `${v.identityList(state, at.identity, drafts)}<div class="detail" id="e-detail">${
         at.identity === 'new' ? v.newIdentity() : v.identityDetails(state, at.identity, drafts)
       }${v.strayDrafts(state, drafts)}</div>`;
@@ -213,7 +216,7 @@ async function watch() {
     });
     await readDrafts();
     shown = drafts.map((d) => d.digest).join(',');
-    if (at.tab === 'identities') {
+    if (at.tab === 'identities' || (at.tab === 'agents' && !at.seeing && !at.adding && state.agents.length)) {
       await draw();
       for (const [digest, note] of notes) {
         const t = app.querySelector<HTMLTextAreaElement>(`form.send-back[data-digest="${CSS.escape(digest)}"] textarea`);

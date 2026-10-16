@@ -203,10 +203,12 @@ export function agentList(s: State, selected: string | null): string {
     .join('')}<button class="entry add" data-action="add-agent">+ Add an agent</button></div>`;
 }
 
+/** The identities that are no agent: the Identities tab's (decided by Nobody, allegedly: agents have their own tab). */
+export const secondary = (s: State) => s.identities.filter((i) => !s.agents.some((a) => a.id === i.id));
+
 export function identityList(s: State, selected: string | null, drafts: DraftView[]): string {
-  return `<div class="list" role="list" aria-label="Identities">${s.identities
+  return `<div class="list" role="list" aria-label="Identities">${secondary(s)
     .map((i) => {
-      const agent = s.agents.some((a) => a.id === i.id);
       const waiting = drafts.filter((d) => d.signer === i.id).length;
       const fresh = i.received.filter((x) => x.sorted === 'new').length;
       return entry({
@@ -215,7 +217,7 @@ export function identityList(s: State, selected: string | null, drafts: DraftVie
         id: i.id,
         current: i.id === selected,
         title: i.name,
-        meta: [agent ? 'agent' : '', i.linked ? 'Claude may draft' : '', waiting ? `${waiting} draft${waiting === 1 ? '' : 's'}` : '', fresh ? `${fresh} new` : ''].filter(Boolean).join(' · ') || '&nbsp;',
+        meta: [i.linked ? 'Claude may draft' : '', waiting ? `${waiting} draft${waiting === 1 ? '' : 's'}` : '', fresh ? `${fresh} new` : ''].filter(Boolean).join(' · ') || '&nbsp;',
         count: waiting + fresh,
       });
     })
@@ -291,7 +293,8 @@ export function picksShown(keys: string[], t: { lines: string[]; digest: string 
 }
 
 /** The lower half: the selected agent's terms, queue, nudge, cap and key, history, and the prompt box at the bottom. */
-export function agentDetails(s: State, a: AgentDetails): string {
+export function agentDetails(s: State, a: AgentDetails, drafts: DraftView[] = []): string {
+  const mine = drafts.filter((d) => d.signer === a.agent);
   const name = bare(a.agentName);
   const owner = bare(a.ownerName);
   const switchB = (value: boolean, words: string) => `<button type="button" data-action="machine-on" data-on="${value}" aria-pressed="${a.on === value}">${words}</button>`;
@@ -343,6 +346,10 @@ ${
 <form id="agent-key"><div class="switch" role="radiogroup" aria-label="Its key"><label class="check"><input type="radio" name="own" value="shared"${a.key.kind === 'own' ? '' : ' checked'}> The shared key</label><label class="check"><input type="radio" name="own" value="own"${a.key.kind === 'own' ? ' checked' : ''}> A key of its own</label></div>
 <input name="key" type="password" autocomplete="off" spellcheck="false" placeholder="Its own key, if it has one">
 <div class="row"><button type="submit">Save its key</button></div></form></section>
+
+<h3>Drafts from Claude for it (${mine.length})</h3>
+<div class="row"><button class="quiet" data-action="drafts">Look for new drafts now</button><span class="small" id="drafts-watch" role="status" aria-live="polite">${WATCHING}</span></div>
+<div id="drafts">${mine.map(draft).join('') || '<p class="empty small">No draft is waiting for it.</p>'}</div>
 
 <details class="card"><summary>What it did (${a.history.length})</summary>${history(a.history)}</details>
 
@@ -597,7 +604,7 @@ export function permissions(p: Permissions): string {
   return `<section class="card" id="e-may"><h3>What you may do for it</h3>
 ${p.notes.length ? lines(p.notes) : ''}
 ${p.items
-  .map((i) => `<div class="item" data-may="${e(i.what)}"><div class="row tight"><strong>${e(i.what)}</strong><span class="grow"></span><span class="state ${i.state === 'no' ? 'no' : ''}">${STATE_WORDS[i.state]}</span></div>${lines(i.lines)}</div>`)
+  .map((i) => `<div class="item" data-may="${e(i.what)}"><div class="row tight"><strong>${e(i.what)}</strong><span class="grow"></span>${i.byAgreement ? `<span class="state">By its agreement: ${STATE_WORDS[i.byAgreement]}</span><span class="state no">· now: ${STATE_WORDS[i.state]}</span>` : `<span class="state ${i.state === 'no' ? 'no' : ''}">${STATE_WORDS[i.state]}</span>`}</div>${lines(i.lines)}</div>`)
   .join('')}
 ${p.agreement ? `<p class="small">As its agreement in force ${fp(p.agreement)} says, read by Agreements from its relays and homes.</p>` : ''}</section>`;
 }
