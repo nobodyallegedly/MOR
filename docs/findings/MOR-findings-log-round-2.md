@@ -32,6 +32,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Raised by the project lead:** reading sealed messages needs the identity's encryption key, which the carry words do not carry today; a new encryption key published by a second app would fork the identity's versioned acts (carry Module 4.4). The author's answer: the carry brings the encryption key too, for now. *Mechanics to the session (development layer):* a carry Module draft 2 that carries the encryption key with the signing key. *Stated cost:* whoever holds the words can post as the identity and read its private messages.
 
+**What Dub had forgotten (the project lead's list; the author's answers):** replies, "needed as a quick option"; what is addressed to you publicly, no notification hub but a count on each tab, the public tab's "to you" as a filter ("Good, to you as a filter works"); rotation in Dub, "Yes rotation is needed"; muting, "Muting is needed yes"; the feed shows "only simple text acts and supported envelopes (jpg)… The reader is where long form needs to land for now"; money "out of it for now". Your own name: the core already has the act (Identity, name, type 4), whose form and resolution a naming cMIP defines; none is drafted yet. Open below.
+
 **Noticed in passing (cleanup):** the two Dubs differ on the words shown at creation: the Mac shows the signing key's words, the web client the chain key's (with the carry words shown on request). To be made one.
 
 **The follow list:** "Customizable?" Then, on a private default with the choice to publish it (the project lead's lean, under F59): "Agreed". The names attached to followed identities stay in the app either way.
