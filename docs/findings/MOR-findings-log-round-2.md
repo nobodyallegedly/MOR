@@ -24,6 +24,18 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F332. Dub reshaped: an identity window, a public tab, a private tab (16 October 2026)
+
+*Area: presentation and the development layer (clients, a cMIP, a Module). Raised by the human tests (H7, H8, H9).*
+
+**Decided by Nobody, allegedly:** "first is a window where one can create or import an identity. Once that is done we enter the actual app. This first window can be used when wanting to change identity or export it via words." "We need a follow list cMIP I think it's good to have at release." "the app needs to also offer the inbox for private messages." "Let's have separate tabs for public matters and private matters." "Public keeps the feed and the box to post, with option to address the message, no need for the private public switch, the tabs act as one." "Follow, via hashes or via available acts published by others. When following someone, give option to attach a name (for now)." "The private tab show the inbox, and a box to write private messages." On an identity brought in by its words and its encryption key: "Ideally import it. All this business of moving keys won't work like this long term but for now…" On exporting by words: already an option ("Show the carry words").
+
+**Raised by the project lead:** reading sealed messages needs the identity's encryption key, which the carry words do not carry today; a new encryption key published by a second app would fork the identity's versioned acts (carry Module 4.4). The author's answer: the carry brings the encryption key too, for now. *Mechanics to the session (development layer):* a carry Module draft 2 that carries the encryption key with the signing key. *Stated cost:* whoever holds the words can post as the identity and read its private messages.
+
+**Noticed in passing (cleanup):** the two Dubs differ on the words shown at creation: the Mac shows the signing key's words, the web client the chain key's (with the carry words shown on request). To be made one.
+
+**Open:** whether a follow list is public (an act) or private (kept in the app). Names attached to followed identities: the project lead's lean, private.
+
 ## F331. An owner who is no member signs an ending by chain signature (15 October 2026, afternoon)
 
 *From the build of F330 (`docs/code-after-step-15-part-4.md`, question 1).* F330's consent of owners who are no members, "a signature act the original acknowledges in the ending's history", cannot be met: the ending names its history by its chain act and kept tips, so nothing in that history can acknowledge a signature on the ending itself.
