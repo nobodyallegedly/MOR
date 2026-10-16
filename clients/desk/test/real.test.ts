@@ -21,11 +21,12 @@ import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { MIRS, SPECS, Verifier, hex, shareOnPaper } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, hex, pickupTag, shareOnPaper, unhex } from '../../genesis/src/core.ts';
+import { receive } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
-import { fromWords } from '../../../modules/carry/src/carry.ts';
+import { encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { sealShare } from '../../repo/src/proposals.ts';
 import { serve, type Running } from '../src/server.ts';
@@ -189,6 +190,15 @@ test('three people on three devices: a real collective founded, a release, a mem
     assert.equal((await m.c.ask<any>('proposals')).proposals[0].share, 'received');
   }
   assert.deepEqual(Object.values(papers).map((p) => p.x).sort(), [1, 2, 3]);
+  // Each relay copy, found by its one-time key's pickup tag, opens with nothing its member keeps: its signing key, its encryption keys.
+  for (const m of [ana, bo]) {
+    const oneTime = Uint8Array.from(Buffer.from(g.proposal.answers[m.id].oneTime, 'base64'));
+    const items = (await relayAt(relay.base).feed({ pickup: pickupTag(oneTime) })).items;
+    assert.equal(items.length, 1, 'the sealed share is still on the relay');
+    const f = JSON.parse(readFileSync(join(m.dir, 'identities', m.id, 'identity.json'), 'utf8'));
+    const held = [unhex(f.signingSecret), encryptionSecret(unhex(f.signingSecret)), ...f.encryption.map((x: { secret: string }) => unhex(x.secret))];
+    assert.equal((await receive(items[0].item, null, held, [relay.base])).opened, false, 'not with anything the member keeps');
+  }
 
   // Agreements read it founded under the terms every party signed, each in its own app.
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);

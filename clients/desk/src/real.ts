@@ -582,7 +582,20 @@ export class Real {
     const founder = this.proposals().find((p) => p.founded === a.collective)?.founder ?? c.f.signingHolder;
     if (!members.includes(founder) && !this.store.holds(founder)) blocking.push('The founder held here must stay a member, or another identity held here propose.');
     if (c.f.pending) blocking.push('A member change already waits for its rotation (Kišib).');
-    const clone = c.cloneFor(members);
+    let clone: ReturnType<TestCollective['cloneFor']>;
+    try {
+      clone = c.cloneFor(members);
+    } catch (e) {
+      // Agreements refuse the clone as it stands (its numbers no longer fit the members): said, nothing made.
+      const reading: Reading = {
+        title: 'This member change cannot be proposed as it stands',
+        summary: [`Agreements refuse it: ${err(e)}.`, 'With fewer members, the rules’ numbers (shares that rebuild the key, who judges absence) must change with them; changing them in the same proposal is not offered here yet.'],
+        sections: [],
+        plain: [],
+        blocking: [`Agreements refuse it: ${err(e)}.`],
+      };
+      return this.plan({ digest: sha256(`refused ${a.collective} ${members.join(',')}`), reading, run: async () => ({ title: '', lines: [], acts: [] }) });
+    }
     const parent = TestCollective.foundingTerms(c.f.governance, c.f.members);
     const reading: Reading = {
       title: `Change the members of “${this.collectives().find((x) => x.id === a.collective)?.name ?? short(a.collective)}”`,

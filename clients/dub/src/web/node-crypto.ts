@@ -20,14 +20,18 @@ export function createHash(algorithm: string) {
       parts.push(typeof data === 'string' ? new TextEncoder().encode(data) : data);
       return h;
     },
-    digest(): Uint8Array {
+    /** The digest's bytes, or, as Node gives it with "hex", its hexadecimal text (the repo client's spec hashes). */
+    digest(encoding?: 'hex'): any {
       const all = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
       let at = 0;
       for (const p of parts) {
         all.set(p, at);
         at += p.length;
       }
-      return sha256(all);
+      const d = sha256(all);
+      if (encoding === undefined) return d;
+      if (encoding !== 'hex') throw new Error(`${encoding}: only hex in the browser`);
+      return [...d].map((b) => b.toString(16).padStart(2, '0')).join('');
     },
   };
   return h;

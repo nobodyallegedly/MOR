@@ -4,7 +4,7 @@
 // Constitution sub-tab is the collective client's own page logic
 // (`clients/collective/src/page/mount.ts`), mounted here.
 
-import { Client, Refused, type ActRead, type IdentityRecord, type ReleaseReview, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Permissions, type State } from './api.ts';
+import { Client, Refused, type ActRead, type IdentityRecord, type ReleaseReview, type RealCollective, type ShareHere, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Permissions, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
@@ -34,6 +34,8 @@ const at = {
 
 let collectiveMount: Mounted | null = null;
 let postReview: Review | null = null;
+/** A real collective's review (H18): founding, a member change, a release. Nothing is signed until confirmed. */
+let realReview: { plan: string; digest: string } | null = null;
 
 const unpaired = (err: unknown) => err instanceof Refused && err.status === 401 && /not paired/.test(err.message);
 
@@ -123,8 +125,22 @@ async function draw() {
       return;
     }
     case 'collectives': {
-      if (!at.collective || (!['found', 'bring'].includes(at.collective) && !state.collectives.some((x) => x.id === at.collective))) at.collective = state.collectives[0]?.id ?? 'found';
-      const brought = state.collectives.find((x) => x.id === at.collective)?.brought;
+      const proposalOf = (k: string | null) => (k?.startsWith('p:') ? state.proposals.find((p) => p.act === k.slice(2) && !p.founded) : undefined);
+      if (!at.collective || (!['found', 'bring', 'real'].includes(at.collective) && !proposalOf(at.collective) && !state.collectives.some((x) => x.id === at.collective))) at.collective = state.collectives[0]?.id ?? 'real';
+      const here = state.collectives.find((x) => x.id === at.collective);
+      const brought = here?.brought;
+      realReview = null;
+      if (at.collective === 'real' || proposalOf(at.collective)) {
+        const p = proposalOf(at.collective);
+        body.innerHTML = `${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${p ? v.realProposalDetails(state, p) : v.realFound(state)}</div>`;
+        return;
+      }
+      if (here?.real) {
+        const rc = await c.ask<RealCollective>('real collective', { collective: here.id });
+        body.innerHTML = `${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${v.realDetails(state, here.id, rc)}</div>`;
+        await drawAct(here.id);
+        return;
+      }
       body.innerHTML = `${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${
         at.collective === 'found' ? v.foundCollective() : at.collective === 'bring' ? v.bringCollective() : brought ? v.broughtDetails(state, at.collective) : v.collectiveDetails(state, at.collective, at.sub)
       }</div>`;
@@ -389,6 +405,17 @@ app.addEventListener('click', async (ev) => {
       $<HTMLDialogElement>('e-dialog')!.close();
       break;
     case 'confirm': {
+      if (realReview) {
+        const r = realReview;
+        const done = await busy('Signing and sending…', () => c.ask<Done>('real confirm', { plan: r.plan, digest: r.digest }));
+        if (done) {
+          realReview = null;
+          if (at.collective === 'real') at.collective = `p:${done.acts[0]}`;
+          await refresh();
+          say('done', v.done(done));
+        }
+        return;
+      }
       // A post for a collective, reviewed (the collective client's reading).
       if (!postReview) return;
       const r = postReview;
@@ -403,11 +430,58 @@ app.addEventListener('click', async (ev) => {
       break;
     }
     case 'cancel':
+      if (realReview) {
+        void c.ask('real cancel', { plan: realReview.plan }).catch(() => undefined);
+        realReview = null;
+        fill('e-real-review', '');
+        say('', 'Nothing was signed.');
+        break;
+      }
       if (postReview) void c.ask('collective cancel', { plan: postReview.plan }).catch(() => undefined);
       postReview = null;
       fill('e-post-review', '');
       say('', 'Nothing was signed.');
       break;
+    case 'contact-remove':
+      if (await busy('Removing…', () => c.ask('real contact remove', { id: d.id }))) await refresh();
+      break;
+    case 'real-gather': {
+      const where = () => app.querySelector<HTMLElement>(`[data-here-proposal="${CSS.escape(d.act!)}"]`);
+      const r = await busy('Reading the answers in your inbox…', () => c.ask<{ problems: string[] }>('real gather', { act: d.act }), where());
+      if (r) {
+        await refresh();
+        if (r.problems.length) say('warn', r.problems.map(v.e).join('<br>'), where());
+      }
+      break;
+    }
+    case 'real-found': {
+      const r = await busy('Dealing the chain key, founding the collective, sealing each share to its one-time key…', () => c.ask<Done & { show: string[] }>('real found', { act: d.act }));
+      if (r) {
+        at.collective = r.acts[0];
+        await refresh();
+        say('done', v.done(r));
+      }
+      break;
+    }
+    case 'real-show-share': {
+      const r = await busy('Opening the share, once…', () => c.ask<ShareHere>('real show share', { collective: d.collective, member: d.member }));
+      if (r) {
+        say('', '');
+        fill('e-shares-here', v.shareHere(d.collective!, r, state.identities.find((i) => i.id === d.member)?.name ?? state.contacts.find((x) => x.id === d.member)?.name ?? 'a member'));
+        $('e-shares-here')?.scrollIntoView({ block: 'start' });
+      }
+      break;
+    }
+    case 'real-share-written':
+      // As H3: the words go before three are asked back.
+      fill('e-shares-here', v.shareBackHere(d.collective!, d.member!, (d.positions ?? '').split(',').map(Number)));
+      break;
+    case 'real-release-standing': {
+      const where = () => app.querySelector<HTMLElement>(`[data-here-proposal="${CSS.escape(d.act!)}"]`);
+      const r = await busy('Checking the release as a fresh verifier…', () => c.ask<{ ok: boolean; signers: string[]; problems: string[] }>('real release standing', { act: d.act }), where());
+      if (r) say(r.ok ? 'done' : 'warn', r.ok ? `It counts as the collective’s release, signed by ${r.signers.length} members.` : `It does not count yet: ${r.problems.map(v.e).join(' ')}`, where());
+      break;
+    }
     case 'drafts':
       await busy('Reading the drafts folder…', async () => {
         await readDrafts();
@@ -667,6 +741,58 @@ app.addEventListener('submit', async (ev) => {
     }
     return after(r);
   }
+  if (fid === 'contact-add') {
+    const r = await busy('Adding…', () => c.ask('real contact add', { id: words(d.get('id')), name: words(d.get('name')) }));
+    if (r) {
+      // A founding form being filled is kept: only the contacts are drawn again.
+      state = await c.ask<State>('state');
+      const picked = new Set([...app.querySelectorAll<HTMLInputElement>('input[name=member]:checked')].map((x) => x.value));
+      const values = new Map([...app.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('#real-found input:not([type=checkbox]),#real-found textarea,#real-found select')].map((x) => [x.name, x.value]));
+      await draw();
+      for (const x of app.querySelectorAll<HTMLInputElement>('input[name=member]')) if (picked.has(x.value)) x.checked = true;
+      for (const [n, val] of values) {
+        const x = $<HTMLFormElement>('real-found')?.elements.namedItem(n) as HTMLInputElement | null;
+        if (x) x.value = val;
+      }
+    }
+    return;
+  }
+  if (fid === 'real-found' || fid === 'real-change' || fid === 'real-release') {
+    const members = [...form.querySelectorAll<HTMLInputElement>('input[name=member]:checked')].map((x) => x.value);
+    const typed = words(d.get('typed')).split(/\n+/).map((x) => x.trim()).filter(Boolean);
+    const r = await busy('Making it, and reading it back…', () =>
+      fid === 'real-found'
+        ? c.ask<Review>('real found prepare', {
+            name: words(d.get('name')),
+            founder: words(d.get('founder')),
+            members: [...members, ...typed],
+            safety: Number(words(d.get('safety'))),
+            release: Number(words(d.get('release'))),
+            clone: Number(words(d.get('clone'))),
+            others: Number(words(d.get('others'))),
+            words: words(d.get('words')),
+          })
+        : fid === 'real-change'
+          ? c.ask<Review>('real change prepare', { collective: form.dataset.collective, members: [...members, ...typed] })
+          : c.ask<Review>('real release prepare', { collective: form.dataset.collective, folder: words(d.get('folder')), name: words(d.get('name')), version: words(d.get('version')) }),
+    );
+    if (r) {
+      realReview = { plan: r.plan, digest: r.digest };
+      say('', '');
+      fill('e-real-review', `<div class="colroot">${reading(r.reading, r)}</div>`);
+      $('e-real-review')?.scrollIntoView({ block: 'start' });
+    }
+    return;
+  }
+  if (fid === 'real-share-back') {
+    const typed = [...form.querySelectorAll<HTMLInputElement>('input')].map((i) => i.value);
+    const r = await busy('Checking the words…', () => c.ask<Done>('real share back', { collective: form.dataset.collective, member: form.dataset.member, typed }));
+    if (r) {
+      await refresh();
+      say('done', v.done(r));
+    }
+    return;
+  }
   if (fid === 'bring-collective') {
     const r = await busy('Reading the collective from its homes and relays…', () => c.ask<Done>('collective bring', { id: words(d.get('id')), name: words(d.get('name')) }));
     if (r) {
@@ -782,6 +908,19 @@ async function start() {
     fail(err);
   }
 }
+
+// H18: a member's share shown here, hand to hand, rather than sealed to a one-time key.
+app.addEventListener('change', async (ev) => {
+  const el = ev.target as HTMLInputElement;
+  if (el.dataset.action !== 'real-byhand') return;
+  try {
+    await c.ask('real by hand', { act: el.dataset.act, member: el.dataset.member, on: el.checked });
+    state = await c.ask<State>('state');
+  } catch (err) {
+    el.checked = !el.checked;
+    fail(err);
+  }
+});
 
 // H14: "What you may do for it" folds and unfolds at the person's choice, remembered per collective by the program.
 app.addEventListener(

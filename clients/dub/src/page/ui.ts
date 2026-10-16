@@ -172,6 +172,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     $('public')!.hidden = t !== 'public';
     $('private')!.hidden = t !== 'private';
     if ($('signing')) $('signing')!.hidden = t !== 'signing';
+    // Proposals and shares arrive while the page is open: the tab reads them again when opened.
+    if (t === 'signing') void readSigning();
     if (t === 'private') void seen((inbox?.messages ?? []).filter((m) => !m.seen).map((m) => m.key));
   }
 
@@ -404,6 +406,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       case 'feed':
         say('', '');
         await Promise.all([readFeed(), readInbox()]);
+        await readSigning();
         break;
       case 'accept': {
         if (!confirm('Sign it? Your signature is public, and binds you to exactly what you read here.')) break;

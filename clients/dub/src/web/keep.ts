@@ -117,7 +117,7 @@ export class WebKeep implements Keep {
   }
 
   async saveSettings(id: string, s: Settings): Promise<void> {
-    await this.put(`settings:${id}`, { kind: s.kind, relays: s.relays, via: {} });
+    await this.put(`settings:${id}`, { kind: s.kind, relays: s.relays, via: {}, ...(s.signing ? { signing: true } : {}) });
   }
 
   async people(id: string): Promise<People> {
