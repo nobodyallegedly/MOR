@@ -73,7 +73,7 @@ Dub's readings (thirteen, in `clients/dub/README.md`, "Readings"), to be confirm
 - **"To you" finds what reached the inbox, or the feed.** A reply by someone not followed that was never delivered to the inbox is not found. Silence proves nothing.
 - **Signed order is not a time.** Between posts no signed link orders, the order is the site's order of finding (website cMIP draft 6).
 - **One look-up before every act, and one when the app opens,** to see whether the key still counts.
-- **Inter is not bundled.** The page names Inter, falling back to the system font where Inter is not installed, as on most Macs. Bundling it would add a font file to the web client's release and a `font-src` to its content security policy (the Caddy lines too). Left for the author's word.
+- **Inter is not bundled.** The page names Inter, falling back to the system font where Inter is not installed, as on most Macs. Bundling it would add a font file to the web client's release and a `font-src` to its content security policy (the Caddy lines too). Left for the author's word. *Since, the same day: bundled, at the author's word (F332, "Inter bundled"); light and regular, woff2, under the SIL Open Font License, served from the page's own origin; `clients/dub/README.md`, "Inter, bundled", and the one Caddy line that changes.*
 
 ## Tests
 

@@ -157,6 +157,18 @@ test('a person, without a terminal, through every screen of Dub', async () => {
   const link = post(page, doc.id).locator('a.doc');
   assert.equal(await link.getAttribute('href'), `https://reader.dubsar.org/#${doc.id}`);
   assert.ok(!(await post(page, doc.id).innerText()).includes('The whole guide.'));
+  // Inter, light and regular, served by the program from the page's own origin, its licence beside it.
+  assert.deepEqual(
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      return [...document.fonts].filter((f) => f.family.replace(/"/g, '') === 'Inter' && f.status === 'loaded').map((f) => f.weight).sort();
+    }),
+    ['300', '400'],
+  );
+  const font = await fetch(`${app.base}/inter_light.woff2`);
+  assert.equal(font.headers.get('content-type'), 'font/woff2');
+  assert.match(font.headers.get('content-security-policy') ?? '', /font-src 'self'/);
+  assert.match(await (await fetch(`${app.base}/inter_license.txt`)).text(), /SIL Open Font License, Version 1\.1/);
   await shot(page, '04-public-feed');
 
   // A reply, as a quick action on the post.

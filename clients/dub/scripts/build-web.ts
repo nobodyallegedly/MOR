@@ -23,6 +23,7 @@ import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STYLE, WEB_BANNER } from '../src/page/view.ts';
 import { WEB_FILES } from '../src/web/released.ts';
+import { FONT_FILES, FONTS_DIR } from '../src/fonts.ts';
 
 const here = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));
 const args = process.argv.slice(2);
@@ -94,6 +95,8 @@ const page = readFileSync(here('static/web.html'), 'utf8');
 if (!page.includes('<!-- dub banner -->')) throw new Error('static/web.html has lost its banner mark');
 writeFileSync(`${out}/index.html`, page.replace('<!-- dub banner -->', WEB_BANNER));
 copyFileSync(here('../genesis/wasm/mor_wasm_bg.wasm'), `${out}/mor_wasm_bg.wasm`);
+// Inter and its licence, copied byte for byte (F332, "Inter bundled").
+for (const f of Object.keys(FONT_FILES)) copyFileSync(here(`${FONTS_DIR}/${f}`), `${out}/${f}`);
 
 if (release) {
   // What made these bytes, so that anyone can rebuild them from source, and each file's fingerprints.

@@ -30,8 +30,8 @@ export interface RunFile {
   version?: string;
 }
 
-export function send(res: ServerResponse, status: number, type: string, body: string | Buffer) {
-  res.writeHead(status, { ...HEADERS, 'content-type': type });
+export function send(res: ServerResponse, status: number, type: string, body: string | Buffer, headers: Record<string, string> = HEADERS) {
+  res.writeHead(status, { ...headers, 'content-type': type });
   res.end(body);
 }
 
@@ -89,8 +89,19 @@ export async function serveLocal(opts: {
   api: Api;
   /** The largest request body accepted, in bytes (default 1 MiB). */
   limit?: number;
+  /**
+   * Other files the page loads, by path (`/name`), with their type: Dub's
+   * fonts. Where one is a font, this program's policy adds `font-src 'self'`;
+   * a program serving none (the desk) keeps its own unchanged.
+   */
+  files?: Record<string, { type: string; body: Buffer }>;
 }): Promise<Local> {
   const { access } = opts;
+  const files = opts.files ?? {};
+  const headers = Object.values(files).some((f) => f.type.startsWith('font/'))
+    ? { ...HEADERS, 'content-security-policy': HEADERS['content-security-policy'].replace("style-src 'self';", "style-src 'self'; font-src 'self';") }
+    : HEADERS;
+  const reply = (res: ServerResponse, status: number, type: string, body: string | Buffer) => send(res, status, type, body, headers);
   const secret = randomBytes(32).toString('hex');
   let port = opts.port;
   const server = createServer(async (req, res) => {
@@ -101,9 +112,11 @@ export async function serveLocal(opts: {
       if (host !== `127.0.0.1:${port}` && host !== `localhost:${port}`) return send(res, 421, 'text/plain', 'not this address');
       const url = new URL(req.url ?? '/', `http://${host}`);
       if (req.method === 'GET') {
-        if (url.pathname === '/') return send(res, 200, 'text/html; charset=utf-8', opts.index);
-        if (url.pathname === '/app.js') return send(res, 200, 'text/javascript; charset=utf-8', opts.script);
-        if (url.pathname === '/app.css') return send(res, 200, 'text/css; charset=utf-8', opts.style);
+        if (url.pathname === '/') return reply(res, 200, 'text/html; charset=utf-8', opts.index);
+        if (url.pathname === '/app.js') return reply(res, 200, 'text/javascript; charset=utf-8', opts.script);
+        if (url.pathname === '/app.css') return reply(res, 200, 'text/css; charset=utf-8', opts.style);
+        const file = Object.hasOwn(files, url.pathname) ? files[url.pathname] : null;
+        if (file) return reply(res, 200, file.type, file.body);
         if (url.pathname === '/hello') return json(res, 200, { app: access.app, time: Math.floor(Date.now() / 1000), pid: process.pid, version: opts.version });
         return send(res, 404, 'text/plain', 'not found');
       }

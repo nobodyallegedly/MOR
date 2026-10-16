@@ -36,12 +36,15 @@ export const KEPT_SAY =
   'Its signing key and its encryption key are kept in this browser’s storage (IndexedDB), as they are, not locked: the only lock this page could put on them is one it could open by itself, and so could whatever else runs in this page. Its signing key’s words are the way out: write them down.';
 
 /**
- * The page's style. Colours: the background and its greys; the Identity
+ * The page's style. Inter, light and regular, bundled and served beside the
+ * page (`../fonts.ts`; F332, "Inter bundled"). Colours: the background and its greys; the Identity
  * layer's (fingerprints) a grey-blue, the Envelopes layer's (what is sealed)
  * a grey-violet, both at low saturation; red only for a contest, a void act
  * or a stolen key. No shadow, no glow.
  */
-export const STYLE = `:root{color-scheme:dark;--bg:#06080c;--raise:#0f131b;--line:#2a313d;--edge:#3a4250;--text:#d6dae1;--soft:#7f8794;--faint:#4c5360;--identity:#8394a8;--envelopes:#9a92ad;--bad:#b4615f;--ok:#7f8794}
+export const STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
+@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+:root{color-scheme:dark;--bg:#06080c;--raise:#0f131b;--line:#2a313d;--edge:#3a4250;--text:#d6dae1;--soft:#7f8794;--faint:#4c5360;--identity:#8394a8;--envelopes:#9a92ad;--bad:#b4615f;--ok:#7f8794}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text)}
 body{font:300 15px/1.55 Inter,"Inter Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
