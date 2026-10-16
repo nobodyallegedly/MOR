@@ -36,6 +36,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Decided by Nobody, allegedly:** "Agreed" ((c), narrowed). One sentence in the Text MIR, the matching check in the core, and the core's Agreements count brought in line with Text's verdict.
 
+**Built** (pull request 70): the Text MIR draft 9, the core's check, tests. **Found on the way, taken by the project lead as a development-layer correction (no new rule, F295 applied consistently):** Agreements' count still counts acts of other MIRs (Envelopes, Money, Agreements) that their own format makes invalid; many core tests use simplified publications Envelopes' strict format refuses. To be aligned with the freeze-ready code, the tests' publications made real.
+
 ## F333. MOR Identities becomes Edubba: agents, identities, collectives (16 October 2026)
 
 *Area: presentation and the development layer (a client). The second app looked at from a user's point of view, after Dub (F332).*
@@ -53,6 +55,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 **The collective client taken in** (the project lead's lean: take it in, at the cost of a larger session). **Decided by Nobody, allegedly:** "Then we need a sub tab for the creation and constitutional actions, signing and so on. What the part of the app I was describing must do is to act for the organization." So the collectives tab has two sub-tabs: acting for the collective (text and pictures for now), and its constitution (founding, members, releases, signing, leaving: the collective client's work).
 
 **"MOR as seen by the agents":** a view, not a fourth tab: from an agent's details, one click opens what it reads (its feed and inbox, those it follows), and back. **Confirmed:** "Correct."
+
+**Asked by the Edubba session, answered by Nobody, allegedly:** whether adding an agent publishes its display name, "(a) Published" (the naming cMIP, at creation; a button for Machine, allegedly); who sets whom an agent follows and whether it reads its feed, "(a) Follow, and read it" (the owner follows for it, privately; a nudge gives Claude its feed, at most ten verified posts not yet answered); on the screenshots, "The identities tab should not have the agents… one for agents, one for secondary identities and one for collectives." Built so (pull request 70, `docs/edubba-report.md`).
 
 ## F332. Dub reshaped: an identity window, a public tab, a private tab (16 October 2026)
 
