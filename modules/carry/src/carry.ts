@@ -7,6 +7,11 @@
 //
 // The chain key never travels. Whoever holds the words can sign as the
 // identity until its signing key is rotated.
+//
+// Draft 2 (modules/module-identity-carry-words-draft-2.md): the words carry
+// the identity's encryption key too, derived from the signing seed
+// (`encryptionSecret`): whoever holds them can also open its private
+// messages, a cost the draft states.
 
 import { createHash } from 'node:crypto';
 import { ENGLISH } from './english.ts';
@@ -54,6 +59,21 @@ export function fromWords(written: string | string[]): Uint8Array {
     throw new Refused('the checksum does not match: a word was written or read wrong');
   }
   return seed;
+}
+
+/** The tag of the encryption key's derivation (draft 2, section 2a). */
+export const ENCRYPTION_TAG = 'MOR/module/carry/encryption';
+
+/**
+ * The X-Wing secret (32 bytes) an identity's encryption key is made from,
+ * derived from its signing seed (draft 2, section 2a):
+ * tagged_hash("MOR/module/carry/encryption", signing seed), the Identity
+ * MIR's tagged hash, SHA-256(SHA-256(tag) ‖ SHA-256(tag) ‖ data).
+ */
+export function encryptionSecret(signingSeed: Uint8Array): Uint8Array {
+  if (signingSeed.length !== 32) throw new Refused('a signing seed is 32 bytes');
+  const t = createHash('sha256').update(ENCRYPTION_TAG).digest();
+  return new Uint8Array(createHash('sha256').update(t).update(t).update(signingSeed).digest());
 }
 
 /** An identity's ID as typed: 64 hexadecimal characters, spaces and case ignored. */

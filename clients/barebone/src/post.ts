@@ -97,20 +97,23 @@ export interface Posted {
  * first, then the text act naming it in `refs`, with its signer (a public
  * act, held: Envelopes draft 9, rule 20, F272). The text must already be
  * canonical (compose it first); the core library refuses it otherwise.
+ * `refs`: the acts it answers, as references (a reply).
  * `to`: the identities it is addressed to, named on the act (a public
  * message; the caller leaves it in their inboxes). Save the identity file
  * after: its sequence has grown.
  */
 export async function post(
   by: TestIdentity,
-  opts: { text: string; jpeg?: Uint8Array; format?: string | null; relays: string[]; to?: string[] },
+  opts: { text: string; jpeg?: Uint8Array; format?: string | null; relays: string[]; to?: string[]; refs?: Reference[] },
 ): Promise<Posted> {
   const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
   await carryChain(by, opts.relays);
+  // `refs`: acts the post answers (a reply, Text MIR), after its picture.
+  const refs: Reference[] = [...(picture ? [referenceTo(picture.act)] : []), ...(opts.refs ?? [])];
   const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, opts.format ?? null), {
     public: true,
     relays: opts.relays,
-    refs: picture ? [referenceTo(picture.act)] : undefined,
+    refs: refs.length ? refs : undefined,
     to: opts.to?.length ? opts.to : undefined,
   });
   return { id: made.id, act: made.act, picture };

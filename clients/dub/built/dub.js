@@ -16,11 +16,11 @@ var Verifier = class {
    * @param {Uint8Array} key
    * @returns {string}
    */
-  addWithKey(bytes2, key) {
+  addWithKey(bytes, key) {
     let deferred4_0;
     let deferred4_1;
     try {
-      const ptr0 = passArray8ToWasm0(bytes2, wasm.__wbindgen_malloc);
+      const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
       const len0 = WASM_VECTOR_LEN;
       const ptr1 = passArray8ToWasm0(key, wasm.__wbindgen_malloc);
       const len1 = WASM_VECTOR_LEN;
@@ -45,11 +45,11 @@ var Verifier = class {
    * @param {Uint8Array} bytes
    * @returns {string}
    */
-  add(bytes2) {
+  add(bytes) {
     let deferred3_0;
     let deferred3_1;
     try {
-      const ptr0 = passArray8ToWasm0(bytes2, wasm.__wbindgen_malloc);
+      const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
       const len0 = WASM_VECTOR_LEN;
       const ret = wasm.verifier_add(this.__wbg_ptr, ptr0, len0);
       var ptr2 = ret[0];
@@ -326,8 +326,8 @@ var Verifier = class {
    * @param {string} binding
    * @returns {string | undefined}
    */
-  agreementsDeclared(specs, identity2, binding) {
-    const ptr0 = passStringToWasm0(identity2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  agreementsDeclared(specs, identity, binding) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(binding, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
@@ -1010,8 +1010,8 @@ var Verifier = class {
    * @param {number} type_
    * @returns {any}
    */
-  latest(identity2, spec, type_) {
-    const ptr0 = passStringToWasm0(identity2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  latest(identity, spec, type_) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
@@ -1118,8 +1118,8 @@ var Verifier = class {
    * @param {string} rotation
    * @returns {any}
    */
-  quorum(identity2, rotation) {
-    const ptr0 = passStringToWasm0(identity2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  quorum(identity, rotation) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(rotation, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
@@ -1134,8 +1134,8 @@ var Verifier = class {
    * @param {string} identity
    * @returns {any}
    */
-  resolve(identity2) {
-    const ptr0 = passStringToWasm0(identity2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  resolve(identity) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_resolve(this.__wbg_ptr, ptr0, len0);
     if (ret[2]) {
@@ -1181,8 +1181,8 @@ var Verifier = class {
    * @param {string} identity
    * @returns {any}
    */
-  succession(identity2) {
-    const ptr0 = passStringToWasm0(identity2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  succession(identity) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_succession(this.__wbg_ptr, ptr0, len0);
     if (ret[2]) {
@@ -1192,11 +1192,11 @@ var Verifier = class {
   }
 };
 if (Symbol.dispose) Verifier.prototype[Symbol.dispose] = Verifier.prototype.free;
-function actId(bytes2) {
+function actId(bytes) {
   let deferred3_0;
   let deferred3_1;
   try {
-    const ptr0 = passArray8ToWasm0(bytes2, wasm.__wbindgen_malloc);
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.actId(ptr0, len0);
     var ptr2 = ret[0];
@@ -1213,8 +1213,8 @@ function actId(bytes2) {
     wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
   }
 }
-function cborDecode(bytes2) {
-  const ptr0 = passArray8ToWasm0(bytes2, wasm.__wbindgen_malloc);
+function cborDecode(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
   const ret = wasm.cborDecode(ptr0, len0);
   if (ret[2]) {
@@ -1240,8 +1240,8 @@ function chainKeyFromSeeds(scheme, seeds) {
   }
   return takeFromExternrefTable0(ret[0]);
 }
-function describeAct(bytes2) {
-  const ptr0 = passArray8ToWasm0(bytes2, wasm.__wbindgen_malloc);
+function describeAct(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
   const ret = wasm.describeAct(ptr0, len0);
   if (ret[2]) {
@@ -1366,8 +1366,8 @@ function openMedia(locked, key, nonce) {
   wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
   return v4;
 }
-function openSealed(bytes2, me, secret) {
-  const ptr0 = passArray8ToWasm0(bytes2, wasm.__wbindgen_malloc);
+function openSealed(bytes, me, secret) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
   var ptr1 = isLikeNone(me) ? 0 : passStringToWasm0(me, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
   var len1 = WASM_VECTOR_LEN;
@@ -1452,8 +1452,8 @@ function seal(input) {
   wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
   return v1;
 }
-function sealedParts(bytes2) {
-  const ptr0 = passArray8ToWasm0(bytes2, wasm.__wbindgen_malloc);
+function sealedParts(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
   const ret = wasm.sealedParts(ptr0, len0);
   if (ret[2]) {
@@ -2053,8 +2053,8 @@ async function __wbg_load(module2, imports) {
         }
       }
     }
-    const bytes2 = await module2.arrayBuffer();
-    return await WebAssembly.instantiate(bytes2, imports);
+    const bytes = await module2.arrayBuffer();
+    return await WebAssembly.instantiate(bytes, imports);
   } else {
     const instance = await WebAssembly.instantiate(module2, imports);
     if (instance instanceof WebAssembly.Instance) {
@@ -2120,13 +2120,13 @@ function abytes(value, length, title = "") {
     return value;
   if (length !== void 0)
     anumber(length, "length");
-  const bytes2 = isBytes(value);
+  const bytes = isBytes(value);
   const ofLen = length !== void 0 ? ` of length ${length}` : "";
-  const got = bytes2 ? `length=${value.length}` : `type=${typeof value}`;
-  const message = atitle(title) + "expected Uint8Array" + ofLen + ", got " + got;
-  if (!bytes2)
-    throw new TypeError(message);
-  throw new RangeError(message);
+  const got = bytes ? `length=${value.length}` : `type=${typeof value}`;
+  const message3 = atitle(title) + "expected Uint8Array" + ofLen + ", got " + got;
+  if (!bytes)
+    throw new TypeError(message3);
+  throw new RangeError(message3);
 }
 var aobject = (value, label) => {
   if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -2175,7 +2175,7 @@ function createHasher(hashCons, info = {}) {
   if (typeof hashCons !== "function")
     throw new TypeError('"hashCons" expected function, got type=' + typeof hashCons);
   info = checkOpts({}, info, "info");
-  const hashC = (msg, opts) => hashCons(opts).update(msg).digest();
+  const hashC = (msg2, opts) => hashCons(opts).update(msg2).digest();
   const tmp = hashCons(void 0);
   hashC.outputLen = tmp.outputLen;
   hashC.blockLen = tmp.blockLen;
@@ -2532,12 +2532,12 @@ var CODE = {
   slowDown: 10
 };
 var bytesList = (v) => Array.isArray(v) ? v : [];
-var sealedId = (bytes2) => {
+var sealedId = (bytes) => {
   const t = unhex(sha2562("MOR/transport/sealed"));
-  const all = new Uint8Array(64 + bytes2.length);
+  const all = new Uint8Array(64 + bytes.length);
   all.set(t, 0);
   all.set(t, 32);
-  all.set(bytes2, 64);
+  all.set(bytes, 64);
   return sha2562(all);
 };
 var stated = /* @__PURE__ */ new Map();
@@ -2846,26 +2846,26 @@ function planLines(lines2, o = {}) {
   }
   const kept = [];
   const left = [];
-  const shown2 = [];
+  const shown = [];
   for (const l of lines2) {
     const card = cards.find((c) => c.act === l.tip) ?? l.card;
     if (leaveOut.has(l.tip)) {
       left.push(l);
-      shown2.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
+      shown.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
     } else if (card) {
       kept.push(card);
-      shown2.push({ text: l.readable ? `${lineWords(l)} Kept.` : `${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`, tone: l.readable ? "ok" : "warn" });
+      shown.push({ text: l.readable ? `${lineWords(l)} Kept.` : `${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`, tone: l.readable ? "ok" : "warn" });
     } else {
       left.push(l);
-      shown2.push({ text: `${lineWords(l)} No card was given, so it is left out: its acts become void.`, tone: "bad" });
+      shown.push({ text: `${lineWords(l)} No card was given, so it is left out: its acts become void.`, tone: "bad" });
     }
   }
   for (const c of cards) {
     if (lines2.some((l) => l.tip === c.act)) continue;
     kept.push(c);
-    shown2.push({ text: `A line ending at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}).`, tone: "warn" });
+    shown.push({ text: `A line ending at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}).`, tone: "warn" });
   }
-  return { kept, left, shown: shown2, warning: left.length ? voidWarning(left) : null };
+  return { kept, left, shown, warning: left.length ? voidWarning(left) : null };
 }
 function checkWarned(plan, warned) {
   if (plan.warning && warned !== plan.warning) {
@@ -2950,7 +2950,7 @@ async function firstOf(items, ask2, failed) {
     }
   });
 }
-async function lookUp(identity2, hints, via2 = {}, into) {
+async function lookUp(identity, hints, via2 = {}, into) {
   const v = into ?? new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   const asked = /* @__PURE__ */ new Set();
   const unreachable = [];
@@ -2975,8 +2975,8 @@ async function lookUp(identity2, hints, via2 = {}, into) {
   const failed = (hint) => {
     if (!unreachable.includes(hint)) unreachable.push(hint);
   };
-  const genesis = await firstOf(hints.filter(tryable), (h) => relayAt(h, via2).getAct(identity2), failed);
-  if (!genesis) throw new Error(`the genesis of ${identity2} was not found at ${hints.join(", ")}`);
+  const genesis = await firstOf(hints.filter(tryable), (h) => relayAt(h, via2).getAct(identity), failed);
+  if (!genesis) throw new Error(`the genesis of ${identity} was not found at ${hints.join(", ")}`);
   keep2([genesis]);
   const genesisHomes = () => {
     try {
@@ -2989,16 +2989,16 @@ async function lookUp(identity2, hints, via2 = {}, into) {
     }
   };
   const inForce = () => {
-    const r2 = v.resolve(identity2);
+    const r2 = v.resolve(identity);
     return r2.homesAt?.length ? r2.homesAt[r2.homesAt.length - 1] : genesisHomes();
   };
   const record2 = async (h) => {
-    const rec = await relayAt(h.hint, via2).identity(identity2);
+    const rec = await relayAt(h.hint, via2).identity(identity);
     keep2([...rec.chain, ...rec.receipts, ...rec.routes, ...rec.encryptionKeys, ...rec.evidence, ...rec.otherReceipts]);
     for (const a of rec.links) {
       try {
         const d = describeAct(a);
-        if (!d.public && d.signer === identity2) v.foundAtHome(d.id, h.operator ?? identity2);
+        if (!d.public && d.signer === identity) v.foundAtHome(d.id, h.operator ?? identity);
       } catch {
       }
     }
@@ -3031,11 +3031,11 @@ async function lookUp(identity2, hints, via2 = {}, into) {
     if (!fresh.length) break;
     for (const h of fresh) asked.add(h.hint);
     await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record2(h).catch(() => failed(h.hint))));
-    const ops = [...new Set(homes.map((h) => h.operator).filter((o) => !!o && o !== identity2 && !operatorActs.has(o)))];
+    const ops = [...new Set(homes.map((h) => h.operator).filter((o) => !!o && o !== identity && !operatorActs.has(o)))];
     await Promise.all(ops.map((op) => operatorChain(op, homes.filter((h) => h.operator === op).map((h) => h.hint))));
   }
-  const resolution = v.resolve(identity2);
-  const r = v.latest(identity2, SPECS.identity, IDENTITY_TYPES.routes);
+  const resolution = v.resolve(identity);
+  const r = v.latest(identity, SPECS.identity, IDENTITY_TYPES.routes);
   const routes = [];
   if (r.payload) {
     const p = cborDecode(r.payload);
@@ -3047,7 +3047,7 @@ async function lookUp(identity2, hints, via2 = {}, into) {
       });
     }
   }
-  const e2 = v.latest(identity2, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
+  const e2 = v.latest(identity, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
   let encryptionKey = null;
   if (e2.payload) {
     const p = cborDecode(e2.payload);
@@ -3059,7 +3059,7 @@ async function lookUp(identity2, hints, via2 = {}, into) {
     const d = describeAct(a);
     if (d.spec !== SPECS.identity || d.type !== IDENTITY_TYPES.receipt || !d.payload) continue;
     const p = cborDecode(d.payload);
-    if (hex(p.get(0)) === identity2 && v.status(id) === "valid") receipts.push(a);
+    if (hex(p.get(0)) === identity && v.status(id) === "valid") receipts.push(a);
   }
   return {
     resolution,
@@ -3321,12 +3321,14 @@ var TestIdentity = class _TestIdentity {
   }
   /**
    * Publish a new encryption key (Envelopes type 4): a fresh X-Wing key
-   * pair; the public half in the act, the private half kept in the file.
+   * pair, or the one `secret` gives (the identity carry Module, draft 2,
+   * derives it from the signing seed); the public half in the act, the
+   * private half kept in the file.
    */
-  async publishEncryptionKey() {
+  async publishEncryptionKey(given) {
     const last = this.f.encryption.at(-1);
     const version = (last?.version ?? 0) + 1;
-    const secret = newEncryptionSecret();
+    const secret = given ?? newEncryptionSecret();
     const payload = encryptionKeyPayload(version, last?.act, xwingPublic(secret));
     const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
     this.f.encryption.push({ version, act: made.id, secret: hex(secret) });
@@ -3865,27 +3867,27 @@ function readExif(body) {
   const entries = (o) => {
     const n = r16(o);
     if (n < 0 || o + 2 + 12 * n + 4 > t.length) return null;
-    const list3 = [];
+    const list4 = [];
     for (let k = 0; k < n; k++) {
       const at = o + 2 + 12 * k;
-      list3.push({ tag: r16(at), type: r16(at + 2), count: r32(at + 4), at: at + 8 });
+      list4.push({ tag: r16(at), type: r16(at + 2), count: r32(at + 4), at: at + 8 });
     }
-    return { list: list3, next: r32(o + 2 + 12 * n) };
+    return { list: list4, next: r32(o + 2 + 12 * n) };
   };
   const first = entries(ifd0);
   if (!first) return none2;
   let orientation = null;
-  let location2 = false;
+  let location = false;
   for (const e2 of first.list) {
     if (e2.tag === 274 && e2.type === 3 && e2.count === 1) orientation = r16(e2.at);
-    if (e2.tag === 34853) location2 = true;
+    if (e2.tag === 34853) location = true;
   }
   let thumbnail = false;
   if (first.next > 0 && first.next < t.length) {
     const second = entries(first.next);
     if (second) thumbnail = second.list.some((e2) => e2.tag === 513 || e2.tag === 273);
   }
-  return { orientation, location: location2, thumbnail };
+  return { orientation, location, thumbnail };
 }
 function read(b) {
   const { segments: segs, end } = segments(b);
@@ -4037,10 +4039,10 @@ function strip(b) {
     parts.push(b.subarray(s.start, s.end));
   }
   parts.push(Uint8Array.from([255, EOI]));
-  const bytes2 = concat(parts);
-  const after = read(bytes2);
+  const bytes = concat(parts);
+  const after = read(bytes);
   if (after.carries.length) throw new Error(`stripping left ${after.carries.join(", ")}`);
-  return { bytes: bytes2, removed: p.carries, picture: after };
+  return { bytes, removed: p.carries, picture: after };
 }
 function segment(marker, body) {
   const out = new Uint8Array(4 + body.length);
@@ -4122,15 +4124,16 @@ function textPayload(text2, format = null) {
   return cborEncode(m);
 }
 async function post(by, opts) {
-  const picture2 = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
+  const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
   await carryChain(by, opts.relays);
+  const refs = [...picture ? [referenceTo(picture.act)] : [], ...opts.refs ?? []];
   const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, opts.format ?? null), {
     public: true,
     relays: opts.relays,
-    refs: picture2 ? [referenceTo(picture2.act)] : void 0,
+    refs: refs.length ? refs : void 0,
     to: opts.to?.length ? opts.to : void 0
   });
-  return { id: made.id, act: made.act, picture: picture2 };
+  return { id: made.id, act: made.act, picture };
 }
 async function leaveInInbox(by, act, inbox) {
   const out = { left: [], failed: [] };
@@ -4283,8 +4286,8 @@ async function readPicture(act, d, hints, via2, judge) {
   return out;
 }
 async function findWithdrawal(publication, signer, forId, hints, via2, judge) {
-  const who = [signer];
-  if (forId instanceof Uint8Array) who.push(hex(forId));
+  const who2 = [signer];
+  if (forId instanceof Uint8Array) who2.push(hex(forId));
   const search = async (h, s) => {
     let after;
     for (; ; ) {
@@ -4310,959 +4313,436 @@ async function findWithdrawal(publication, signer, forId, hints, via2, judge) {
       after = page.next;
     }
   };
-  const pairs = hints.filter((h) => !cannotReach(h, via2)).flatMap((h) => who.map((s) => [h, s]));
+  const pairs = hints.filter((h) => !cannotReach(h, via2)).flatMap((h) => who2.map((s) => [h, s]));
   return firstOf(pairs, ([h, s]) => search(h, s));
 }
-async function listPosts(signer, hint, via2 = {}) {
-  const out = [];
-  let after;
-  for (; ; ) {
-    const page = await relayAt(hint, via2).feed({ signer, after });
-    for (const it of page.items) {
-      if (it.kind !== "act") continue;
-      try {
-        const d = describeAct(it.item);
-        if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) out.push(d.id);
-      } catch {
+
+// ../site/src/settings.ts
+function relayAddress(s) {
+  if (typeof s !== "string") return null;
+  let u;
+  try {
+    u = new URL(s);
+  } catch {
+    return null;
+  }
+  const local = u.hostname === "127.0.0.1" || u.hostname === "localhost" || u.hostname === "[::1]";
+  if (u.protocol !== "https:" && !(u.protocol === "http:" && local)) return null;
+  if (u.username || u.password || u.search || u.hash) return null;
+  return s.replace(/\/$/, "");
+}
+
+// ../site/src/specs.ts
+var test3 = (s) => sha2562(s);
+var SITE_SPECS = {
+  identity: SPECS.identity,
+  /** The Envelopes MIR (`ENVELOPES`): a version is a publication. */
+  envelopes: SPECS.envelopes,
+  /** The Agreements MIR (`AGREEMENTS`): only to tell that a signer is a collective. */
+  agreements: test3("LAW, test value until the freeze"),
+  /** The website cMIP (cmips/cmip-website-draft-4.md). Draft 3 adds the icon
+   * (rule 16a), draft 4 films (rules 4, 6a, 12a); both leave the manifest's
+   * format as it was, so the test value stays draft 2's: versions already
+   * published still verify. */
+  site: test3("website cMIP, draft 2, test value until publication")
+};
+var SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreements };
+var NUDGE = test3("nudge cMIP, draft 2, test value until publication");
+var NUDGE_TYPES = { terms: 0, nudge: 1, pick: 2 };
+var RELEASE_MANIFEST = test3("release manifest cMIP, draft 1, test value until publication");
+var PAYMENT_CMIP = test3("payment cMIP, draft 2, test value until publication");
+
+// ../../modules/timestamp/src/stamp.ts
+var TIMESTAMP_SPEC = sha2562("timestamp clock Module, draft 1, test value until publication");
+var STAMP_TYPE = 1;
+var MOST_PER_STAMP = 256;
+var NotAStamp = class extends Error {
+};
+function decodeStamp(payload) {
+  let m;
+  try {
+    m = cborDecode(payload);
+  } catch (e2) {
+    throw new NotAStamp(`not CBOR (${e2 instanceof Error ? e2.message : e2})`);
+  }
+  if (!(m instanceof Map)) throw new NotAStamp("not a map");
+  for (const k of m.keys()) if (k !== 0 && k !== 1) throw new NotAStamp(`${String(k)} is not one of its fields`);
+  const time = m.get(0);
+  if (typeof time !== "number" || !Number.isSafeInteger(time) || time < 0) throw new NotAStamp("its time (field 0) is not a whole number of seconds");
+  const list4 = m.get(1);
+  if (!Array.isArray(list4) || !list4.length) throw new NotAStamp("its acts (field 1) are not a list of at least one");
+  if (list4.length > MOST_PER_STAMP) throw new NotAStamp(`it names more than ${MOST_PER_STAMP} acts`);
+  const acts = list4.map((x, i) => {
+    if (!(x instanceof Uint8Array) || x.length !== 32) throw new NotAStamp(`its act ${i + 1} is not an act id`);
+    return hex(x);
+  });
+  if (new Set(acts).size !== acts.length) throw new NotAStamp("it names an act twice");
+  return { time, acts };
+}
+
+// ../../modules/timestamp/src/read.ts
+function asStamp(d, clock) {
+  if (!d.public || d.signer !== clock || d.spec !== TIMESTAMP_SPEC || d.type !== STAMP_TYPE || !d.payload) return null;
+  try {
+    const s = decodeStamp(d.payload);
+    return { stamp: d.id, time: s.time, acts: s.acts };
+  } catch (e2) {
+    if (e2 instanceof NotAStamp) return null;
+    throw e2;
+  }
+}
+function earliest(stamps) {
+  const out = /* @__PURE__ */ new Map();
+  for (const s of stamps) for (const a of s.acts) if (!out.has(a) || s.time < out.get(a)) out.set(a, s.time);
+  return out;
+}
+function earliestByNames(acts, own) {
+  const ids = new Set(acts.map((a) => a.id));
+  const links = new Map(acts.map((a) => [a.id, a.links.filter((l) => ids.has(l) && l !== a.id)]));
+  const out = /* @__PURE__ */ new Map();
+  for (const [a, t] of own) if (ids.has(a)) out.set(a, t);
+  const work = [...out.keys()];
+  while (work.length) {
+    const a = work.pop();
+    const t = out.get(a);
+    for (const n of links.get(a) ?? []) {
+      if (!out.has(n) || t < out.get(n)) {
+        out.set(n, t);
+        work.push(n);
       }
     }
-    if (!page.items.length || page.next === after) break;
-    after = page.next;
   }
   return out;
 }
-
-// ../longform/src/format.ts
-var MAX_DEPTH = 16;
-var DECLARED = {
-  heading: "# ",
-  rule: "-*",
-  "fence-open": "`",
-  "fence-close": "`",
-  quote: "> ",
-  item: " ",
-  indent: " ",
-  escape: "\\",
-  "code-open": "`",
-  "code-close": "`",
-  "link-open": "<",
-  "link-close": ">",
-  "em-open": "*",
-  "em-close": "*"
-};
-var ENDS_BLOCK = "\n";
-var ESCAPABLE = /* @__PURE__ */ new Set(["\\", "`", "*", "_", "#", "-", "+", ".", ">", "<", "[", "]", "(", ")", "!", "|", "~"]);
-var SPACES = /* @__PURE__ */ new Set([
-  32,
-  160,
-  5760,
-  8192,
-  8193,
-  8194,
-  8195,
-  8196,
-  8197,
-  8198,
-  8199,
-  8200,
-  8201,
-  8202,
-  8239,
-  8287,
-  12288
-]);
-var isSpace = (s, i) => SPACES.has(s.charCodeAt(i));
-function linkCloseShown(s, i) {
-  return isDigit(charBefore(s, i)) || isDigit(charAt(s, i + 1));
-}
-function linkOpenShown(s, i) {
-  return underFloor(s, i) !== null;
-}
-var AUTOLINK = /^<((?:https?|mailto):[^ <>]+)>/;
-function parse(source) {
-  const lines2 = [];
-  let start2 = 0;
-  for (; ; ) {
-    const lf = source.indexOf("\n", start2);
-    if (lf < 0) {
-      lines2.push({ from: start2, to: source.length });
-      break;
-    }
-    lines2.push({ from: start2, to: lf });
-    start2 = lf + 1;
-  }
-  const p = new Parser(source);
-  const blocks = p.blocks(lines2, 0);
-  return { source, blocks, marks: p.marks.sort((a, b) => a.span.from - b.span.from) };
-}
-var FENCE = /^(`{3,})([^`]*)$/;
-var HEADING = /^(#{1,6}) (.+)$/;
-var RULE = /^(?:-{3,}|\*{3,})$/;
-var BULLET = /^([-*+]) /;
-var ORDERED = /^([0-9]{1,9}\.) /;
-var Parser = class {
-  constructor(s) {
-    this.s = s;
-  }
-  marks = [];
-  mark(rule, from, to) {
-    if (to > from) this.marks.push({ rule, span: { from, to } });
-  }
-  text(l) {
-    return this.s.slice(l.from, l.to);
-  }
-  /** The item marker a line starts with, if any, and its width including the space. */
-  marker(l) {
-    const x = this.text(l);
-    let m = BULLET.exec(x);
-    if (m) return { kind: m[1], width: 2, marker: { from: l.from, to: l.from + 1 } };
-    m = ORDERED.exec(x);
-    if (m) return { kind: ".", width: m[1].length + 1, marker: { from: l.from, to: l.from + m[1].length } };
-    return null;
-  }
-  /** Does this line open a block other than a paragraph (so it ends one)? */
-  starts(l, depth) {
-    const x = this.text(l);
-    if (FENCE.test(x) || HEADING.test(x) || RULE.test(x)) return true;
-    if (depth < MAX_DEPTH && (this.quoteOpens(l) || this.marker(l))) return true;
-    return false;
-  }
-  /**
-   * Does this line open a quote? A `>` opening it does, unless the Text
-   * MIR's floor forbids hiding it (a mathematical sign directly before a
-   * digit, `>5`): then it is shown as text, and the line is no quote
-   * (F182).
-   */
-  quoteOpens(l) {
-    return l.from < l.to && this.s[l.from] === ">" && underFloor(this.s, l.from) === null;
-  }
-  blocks(lines2, depth) {
-    const out = [];
-    let i = 0;
-    while (i < lines2.length) {
-      const l = lines2[i];
-      const x = this.text(l);
-      if (x === "") {
-        i++;
-        continue;
-      }
-      let m = FENCE.exec(x);
-      if (m) {
-        const n = m[1].length;
-        const label = m[2] === "" ? null : { from: l.from + n, to: l.to };
-        this.mark("fence-open", l.from, l.from + n);
-        const body = [];
-        i++;
-        while (i < lines2.length) {
-          const y = this.text(lines2[i]);
-          if (/^`+$/.test(y) && y.length >= n) {
-            this.mark("fence-close", lines2[i].from, lines2[i].to);
-            i++;
-            break;
-          }
-          body.push(lines2[i]);
-          i++;
-        }
-        out.push({ t: "code", label, lines: body });
-        continue;
-      }
-      m = HEADING.exec(x);
-      if (m) {
-        const level = m[1].length;
-        this.mark("heading", l.from, l.from + level + 1);
-        out.push({ t: "heading", level, children: this.inline({ from: l.from + level + 1, to: l.to }) });
-        i++;
-        continue;
-      }
-      if (RULE.test(x)) {
-        this.mark("rule", l.from, l.to);
-        out.push({ t: "rule" });
-        i++;
-        continue;
-      }
-      if (depth < MAX_DEPTH && this.quoteOpens(l)) {
-        const inner = [];
-        while (i < lines2.length && this.quoteOpens(lines2[i])) {
-          const q = lines2[i];
-          const skip = this.s[q.from + 1] === " " && q.from + 1 < q.to ? 2 : 1;
-          this.mark("quote", q.from, q.from + skip);
-          inner.push({ from: q.from + skip, to: q.to });
-          i++;
-        }
-        out.push({ t: "quote", children: this.blocks(inner, depth + 1) });
-        continue;
-      }
-      const first = depth < MAX_DEPTH ? this.marker(l) : null;
-      if (first) {
-        const items = [];
-        while (i < lines2.length) {
-          const mk = this.marker(lines2[i]);
-          if (!mk || mk.kind !== first.kind) break;
-          const w = mk.width;
-          this.mark("item", lines2[i].from + w - 1, lines2[i].from + w);
-          const body = [{ from: lines2[i].from + w, to: lines2[i].to }];
-          i++;
-          const indent = " ".repeat(w);
-          while (i < lines2.length) {
-            const y = this.text(lines2[i]);
-            if (y.startsWith(indent)) {
-              this.mark("indent", lines2[i].from, lines2[i].from + w);
-              body.push({ from: lines2[i].from + w, to: lines2[i].to });
-              i++;
-              continue;
-            }
-            if (y === "") {
-              let j2 = i;
-              while (j2 < lines2.length && this.text(lines2[j2]) === "") j2++;
-              if (j2 < lines2.length && this.text(lines2[j2]).startsWith(indent)) {
-                for (; i < j2; i++) body.push({ from: lines2[i].from, to: lines2[i].to });
-                continue;
-              }
-            }
-            break;
-          }
-          items.push({ marker: mk.marker, children: this.blocks(body, depth + 1) });
-          let j = i;
-          while (j < lines2.length && this.text(lines2[j]) === "") j++;
-          const next = j < lines2.length ? this.marker(lines2[j]) : null;
-          if (!next || next.kind !== first.kind) break;
-          i = j;
-        }
-        out.push({ t: "list", ordered: first.kind === ".", items });
-        continue;
-      }
-      const children = [...this.inline(l)];
-      i++;
-      while (i < lines2.length && this.text(lines2[i]) !== "" && !this.starts(lines2[i], depth)) {
-        children.push({ t: "break", at: lines2[i - 1].to }, ...this.inline(lines2[i]));
-        i++;
-      }
-      out.push({ t: "paragraph", children });
-    }
-    return out;
-  }
-  // -------------------------------------------------------------- inlines
-  /**
-   * The inline content of one line (rule 9). Where the Text MIR's floor
-   * forbids hiding a piece of emphasis, code or link markup (a run of
-   * hidden markup between two digits, `1*2*3`, `1`2`3`), that piece is
-   * shown as text rather than the document refused (F175, F182): the line
-   * is read again with it as text, until no hidden run lies between two
-   * digits.
-   */
-  inline(l) {
-    const literal = /* @__PURE__ */ new Set();
+async function readStamps(clock, places, judge, via2 = {}) {
+  const seen = /* @__PURE__ */ new Map();
+  for (const h of places) {
+    let after;
     for (; ; ) {
-      const from = this.marks.length;
-      const nodes = this.inlineOnce(l, literal);
-      const at = this.betweenDigits(from);
-      if (at === null) return nodes;
-      this.marks.length = from;
-      literal.add(at);
+      let page;
+      try {
+        page = await relayAt(h, via2).feed({ signer: clock, after });
+      } catch {
+        break;
+      }
+      for (const it of page.items) {
+        if (it.kind !== "act") continue;
+        let s = null;
+        try {
+          s = asStamp(describeAct(it.item), clock);
+        } catch {
+          continue;
+        }
+        if (s && !seen.has(s.stamp)) seen.set(s.stamp, { s, act: it.item });
+      }
+      if (!page.items.length || page.next === after) break;
+      after = page.next;
     }
   }
-  /**
-   * The first run of markup hidden since mark `from` that lies between two
-   * digits, as the offset to read as text instead: an emphasis run, a code
-   * span's or a link's opening sign. Null if none.
-   */
-  betweenDigits(from) {
-    const s = this.s;
-    const ms = this.marks.slice(from).sort((a, b) => a.span.from - b.span.from);
-    for (let i = 0; i < ms.length; ) {
-      let j = i;
-      while (j + 1 < ms.length && ms[j + 1].span.from === ms[j].span.to) j++;
-      if (isDigit(charBefore(s, ms[i].span.from)) && isDigit(charAt(s, ms[j].span.to))) {
-        const m = ms.slice(i, j + 1).find((x) => x.rule !== "escape") ?? ms[i];
-        if (m.rule === "code-close") return [...ms].reverse().find((x) => x.rule === "code-open" && x.span.from < m.span.from).span.from;
-        if (m.rule === "link-close") return s.lastIndexOf("<", m.span.from);
-        return m.span.from;
-      }
-      i = j + 1;
+  const verified = [];
+  for (const { s, act } of seen.values()) {
+    try {
+      if (await judge.standing(act, s.stamp, clock) === "valid") verified.push(s);
+    } catch {
     }
-    return null;
   }
-  /** One reading of a line's inline content, with the offsets in `literal` read as text. */
-  inlineOnce(l, literal) {
-    const s = this.s;
-    const toks = [];
-    let run = -1;
-    const flush = (end) => {
-      if (run >= 0 && end > run) toks.push({ k: "node", node: { t: "text", span: { from: run, to: end } } });
-      run = -1;
-    };
-    const lit = (at) => {
-      if (run < 0) run = at;
-    };
-    let p = l.from;
-    while (p < l.to) {
-      const c = s[p];
-      if (c === "\\" && p + 1 < l.to && ESCAPABLE.has(s[p + 1]) && !literal.has(p)) {
-        flush(p);
-        this.mark("escape", p, p + 1);
-        run = p + 1;
-        p += 2;
-        continue;
-      }
-      if (c === "`") {
-        let n = 0;
-        while (p + n < l.to && s[p + n] === "`") n++;
-        if (literal.has(p)) {
-          lit(p);
-          p += n;
-          continue;
-        }
-        let q = p + n;
-        let close = -1;
-        while (q < l.to) {
-          if (s[q] !== "`") {
-            q++;
-            continue;
-          }
-          let k = 0;
-          while (q + k < l.to && s[q + k] === "`") k++;
-          if (k === n) {
-            close = q;
-            break;
-          }
-          q += k;
-        }
-        if (close >= 0) {
-          flush(p);
-          this.mark("code-open", p, p + n);
-          this.mark("code-close", close, close + n);
-          toks.push({ k: "node", node: { t: "code", span: { from: p + n, to: close } } });
-          p = close + n;
-        } else {
-          lit(p);
-          p += n;
-        }
-        continue;
-      }
-      if (c === "<") {
-        const m = literal.has(p) ? null : AUTOLINK.exec(s.slice(p, l.to));
-        if (m) {
-          const span = { from: p + 1, to: p + 1 + m[1].length };
-          if (linkOpenShown(s, p)) {
-            lit(p);
-            flush(p + 1);
-          } else {
-            flush(p);
-            this.mark("link-open", p, p + 1);
-          }
-          toks.push({ k: "node", node: { t: "link", href: m[1], span } });
-          p = span.to + 1;
-          if (linkCloseShown(s, span.to)) lit(span.to);
-          else this.mark("link-close", span.to, span.to + 1);
-          continue;
-        }
-        lit(p);
-        p++;
-        continue;
-      }
-      if (c === "*") {
-        let n = 0;
-        while (p + n < l.to && s[p + n] === "*") n++;
-        if (n > 3 || literal.has(p)) {
-          lit(p);
-          p += n;
-          continue;
-        }
-        flush(p);
-        const open = p + n < l.to && !isSpace(s, p + n);
-        const close = p > l.from && !isSpace(s, p - 1);
-        toks.push({ k: "delim", span: { from: p, to: p + n }, n, open, close });
-        p += n;
-        continue;
-      }
-      lit(p);
-      p++;
+  return { found: seen.size, verified, earliest: earliest(verified) };
+}
+
+// ../site/src/feed.ts
+var FEED_LIMIT = 30;
+var isPost = (d) => d.public && d.spec === POST_SPECS.text && d.type === TEXT_ACT;
+var FeedJudge = class {
+  constructor(places, via2) {
+    this.places = places;
+    this.via = via2;
+  }
+  v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  looked = /* @__PURE__ */ new Map();
+  held = /* @__PURE__ */ new Map();
+  /** The signer's chain and its sequence, held before one of its acts is judged (F298). */
+  sequence(identity) {
+    let h = this.held.get(identity);
+    if (!h) {
+      h = this.lookUp(identity).then((l) => holdSequence(this.v, identity, l, this.places, this.via));
+      this.held.set(identity, h);
     }
-    flush(l.to);
-    const stack = [];
-    toks.forEach((tk, idx) => {
-      if (tk.k !== "delim") return;
-      if (tk.close) {
-        for (let j = stack.length - 1; j >= 0; j--) {
-          const o = toks[stack[j]];
-          if (o.n === tk.n) {
-            o.pair = "open";
-            tk.pair = "close";
-            stack.length = j;
-            return;
-          }
-        }
-      }
-      if (tk.open) stack.push(idx);
-    });
-    for (const j of stack) delete toks[j].pair;
-    const root = [];
-    const frames = [root];
-    const top2 = () => frames[frames.length - 1];
-    for (const tk of toks) {
-      if (tk.k === "node") {
-        top2().push(tk.node);
-      } else if (tk.pair === "open") {
-        this.mark("em-open", tk.span.from, tk.span.to);
-        const outer = [];
-        if (tk.n === 1) {
-          top2().push({ t: "em", children: outer });
-          frames.push(outer);
-        } else if (tk.n === 2) {
-          top2().push({ t: "strong", children: outer });
-          frames.push(outer);
-        } else {
-          const inner = [];
-          top2().push({ t: "strong", children: [{ t: "em", children: inner }] });
-          frames.push(inner);
-        }
-      } else if (tk.pair === "close") {
-        this.mark("em-close", tk.span.from, tk.span.to);
-        frames.pop();
-      } else {
-        top2().push({ t: "text", span: tk.span });
-      }
+    return h;
+  }
+  lookUp(identity, places = this.places) {
+    let l = this.looked.get(identity);
+    if (!l) {
+      l = lookUp(identity, places, this.via, this.v);
+      this.looked.set(identity, l);
     }
-    return merge(root);
+    return l;
+  }
+  async standing(act, id, signer) {
+    await this.sequence(signer);
+    this.v.add(act);
+    return this.v.status(id);
   }
 };
-function merge(nodes) {
-  const out = [];
-  for (const n of nodes) {
-    const last = out[out.length - 1];
-    if (n.t === "text" && last?.t === "text" && last.span.to === n.span.from) {
-      last.span = { from: last.span.from, to: n.span.to };
-    } else if (n.t === "em" || n.t === "strong") {
-      out.push({ t: n.t, children: merge(n.children) });
-    } else {
-      out.push(n.t === "text" ? { t: "text", span: { ...n.span } } : n);
-    }
+function placesFor(l, relays, scope = POST_SPECS.text) {
+  const outbox = (l?.routes.routes ?? []).filter((r) => (r.kind ?? 0) === 0);
+  const route = outbox.find((r) => r.scope === scope) ?? outbox.find((r) => r.scope === null);
+  const asked = [];
+  const unreachable = [];
+  for (const h of route?.hints ?? []) {
+    const a = relayAddress(h);
+    if (a) {
+      if (!asked.includes(a)) asked.push(a);
+    } else if (!unreachable.includes(h)) unreachable.push(h);
   }
-  return out;
+  for (const r of relays) if (!asked.includes(r)) asked.push(r);
+  return { asked, unreachable };
 }
-function shownIn(doc) {
-  const out = [];
-  let leaf = 0;
-  const span = (x) => {
-    for (let i = x.from; i < x.to; i++) out.push([i, leaf]);
-  };
-  const inl = (ns) => {
-    for (const n of ns) {
-      if (n.t === "text" || n.t === "code" || n.t === "link") span(n.span);
-      else if (n.t === "break") out.push([n.at, leaf]);
-      else inl(n.children);
-    }
-  };
-  const blk = (bs) => {
-    for (const b of bs) {
-      switch (b.t) {
-        case "heading":
-        case "paragraph":
-          leaf++;
-          inl(b.children);
-          break;
-        case "quote":
-          blk(b.children);
-          break;
-        case "list":
-          for (const it of b.items) {
-            leaf++;
-            span(it.marker);
-            blk(it.children);
-          }
-          break;
-        case "code":
-          leaf++;
-          if (b.label) span(b.label);
-          leaf++;
-          b.lines.forEach((l, k) => {
-            span(l);
-            if (k + 1 < b.lines.length) out.push([l.to, leaf]);
-          });
-          break;
-        case "rule":
-          break;
+async function actsBy2(signer, places, via2, into) {
+  for (const h of places) {
+    let after;
+    for (; ; ) {
+      let page;
+      try {
+        page = await relayAt(h, via2).feed({ signer, after });
+      } catch {
+        break;
       }
-    }
-  };
-  blk(doc.blocks);
-  return out;
-}
-var PERCENT_SIGNS = /* @__PURE__ */ new Set([37, 1642, 65130, 65285, 8240, 1545, 8241]);
-var SIGNS = /* @__PURE__ */ new Set([43, 45, 8722, 8208, 8209, 8210, 8211, 10134, 65123, 65293]);
-var STOPS = /* @__PURE__ */ new Set([
-  // Full stops.
-  46,
-  1417,
-  1748,
-  1793,
-  1794,
-  4962,
-  5742,
-  6147,
-  6153,
-  11513,
-  11518,
-  11836,
-  12290,
-  42239,
-  42510,
-  42739,
-  65042,
-  65106,
-  65294,
-  65377,
-  92917,
-  93848,
-  113823,
-  121480,
-  // Commas.
-  44,
-  1373,
-  1548,
-  2040,
-  4963,
-  6146,
-  6152,
-  11826,
-  11828,
-  11841,
-  11849,
-  11852,
-  12289,
-  42238,
-  42509,
-  42741,
-  65040,
-  65041,
-  65104,
-  65105,
-  65292,
-  65380,
-  70733,
-  70746,
-  93847,
-  121479,
-  // The Arabic decimal and thousands separators.
-  1643,
-  1644
-]);
-var APOSTROPHES = /* @__PURE__ */ new Set([39, 8217, 1370, 65287]);
-var MARKS_QE = /* @__PURE__ */ new Set([
-  63,
-  191,
-  894,
-  1374,
-  1567,
-  4967,
-  6469,
-  8263,
-  8265,
-  11514,
-  11515,
-  11822,
-  11860,
-  42511,
-  42743,
-  65046,
-  65110,
-  65311,
-  69955,
-  125279,
-  33,
-  161,
-  1372,
-  2041,
-  6468,
-  8252,
-  8264,
-  11859,
-  65045,
-  65111,
-  65281,
-  125278,
-  8253,
-  11800
-]);
-var DIGIT = /^\p{N}$/u;
-var LETTER = /^\p{L}$/u;
-var MARK = /^\p{M}$/u;
-var ALWAYS = /^[\p{L}\p{N}\p{M}]$/u;
-var CURRENCY = /^\p{Sc}$/u;
-var MATHS = /^\p{Sm}$/u;
-var OPEN_BRACKET = /^\p{Ps}$/u;
-var CLOSE_BRACKET = /^\p{Pe}$/u;
-function charAt(s, i) {
-  if (i < 0 || i >= s.length) return null;
-  let from = i;
-  const u = s.charCodeAt(i);
-  if (u >= 56320 && u <= 57343 && i > 0) {
-    const h = s.charCodeAt(i - 1);
-    if (h >= 55296 && h <= 56319) from = i - 1;
-  }
-  const c = String.fromCodePoint(s.codePointAt(from));
-  return { c, from, to: from + c.length };
-}
-var charBefore = (s, i) => i > 0 ? charAt(s, i - 1) : null;
-var isDigit = (x) => x !== null && DIGIT.test(x.c);
-function letterBefore(s, i) {
-  let x = charBefore(s, i);
-  while (x && MARK.test(x.c)) x = charBefore(s, x.from);
-  return x !== null && LETTER.test(x.c);
-}
-function inAmount(c) {
-  const cp = c.codePointAt(0);
-  return DIGIT.test(c) || CURRENCY.test(c) || SIGNS.has(cp) || STOPS.has(cp) || PERCENT_SIGNS.has(cp) || APOSTROPHES.has(cp) || SPACES.has(cp);
-}
-function aroundAmount(s, from, to, open) {
-  let digits = 0;
-  let edge = null;
-  let x = open ? charAt(s, to) : charBefore(s, from);
-  const first = x;
-  while (x && inAmount(x.c)) {
-    if (DIGIT.test(x.c)) digits++;
-    edge = x;
-    x = open ? charAt(s, x.to) : charBefore(s, x.from);
-  }
-  if (!x || !digits || !first || !edge) return false;
-  if (SPACES.has(first.c.codePointAt(0)) || SPACES.has(edge.c.codePointAt(0))) return false;
-  return open ? CLOSE_BRACKET.test(x.c) : OPEN_BRACKET.test(x.c);
-}
-var FLOOR = [
-  ["a letter, a digit or a combining mark", (h) => ALWAYS.test(h.c)],
-  ["a currency sign", (h) => CURRENCY.test(h.c)],
-  ["a mathematical sign next to a digit", (h) => MATHS.test(h.c) && (isDigit(h.before) || isDigit(h.after))],
-  ["a percent, per-mille or per-ten-thousand sign", (h) => PERCENT_SIGNS.has(h.cp)],
-  ["a character between two digits", (h) => isDigit(h.before) && isDigit(h.after)],
-  [
-    "a plus or minus sign directly before a digit or a currency sign, or directly after a digit",
-    (h) => SIGNS.has(h.cp) && (isDigit(h.after) || h.after !== null && CURRENCY.test(h.after.c) || isDigit(h.before))
-  ],
-  ["a full stop or comma directly before a digit", (h) => STOPS.has(h.cp) && isDigit(h.after)],
-  [
-    "a bracket directly around an amount",
-    (h) => OPEN_BRACKET.test(h.c) && aroundAmount(h.s, h.from, h.to, true) || CLOSE_BRACKET.test(h.c) && aroundAmount(h.s, h.from, h.to, false)
-  ],
-  [
-    "a space or apostrophe between two letters",
-    (h) => (SPACES.has(h.cp) || APOSTROPHES.has(h.cp)) && h.after !== null && LETTER.test(h.after.c) && letterBefore(h.s, h.from)
-  ],
-  ["a question or exclamation mark", (h) => MARKS_QE.has(h.cp)]
-];
-function underFloor(s, i) {
-  const here = charAt(s, i);
-  if (!here) return null;
-  const h = { s, c: here.c, cp: here.c.codePointAt(0), from: here.from, to: here.to, before: charBefore(s, here.from), after: charAt(s, here.to) };
-  for (const [why, holds] of FLOOR) if (holds(h)) return why;
-  return null;
-}
-function checkBound(doc, declared = DECLARED, endsBlock = ENDS_BLOCK) {
-  const s = doc.source;
-  const n = s.length;
-  const at = shownIn(doc);
-  const state = new Uint8Array(n);
-  const leafOf = new Int32Array(n).fill(-1);
-  let last = -1;
-  for (const [i, leaf] of at) {
-    if (i < 0 || i >= n) return `shows offset ${i}, outside the text`;
-    if (i <= last) return `shows offset ${i} after ${last}: out of the order of the bytes`;
-    last = i;
-    state[i] = 1;
-    leafOf[i] = leaf;
-  }
-  const prevShown = new Int32Array(n + 1).fill(-1);
-  for (let i = 0; i < n; i++) prevShown[i + 1] = state[i] ? i : prevShown[i];
-  const nextShown = new Int32Array(n + 1).fill(-1);
-  for (let i = n - 1; i >= 0; i--) nextShown[i] = state[i] ? i : nextShown[i + 1];
-  const endsABlock = (i) => {
-    if (s[i] !== "\n" || !endsBlock.includes("\n")) return false;
-    const a = prevShown[i];
-    const b = nextShown[i];
-    return a >= 0 && b >= 0 && leafOf[a] !== leafOf[b];
-  };
-  const floor = (i, why) => `hides ${JSON.stringify(s[i])} at ${i}, which no format may hide (F167): ${why}`;
-  const ruleAt = /* @__PURE__ */ new Map();
-  for (const m of doc.marks) for (let i = m.span.from; i < m.span.to; i++) ruleAt.set(i, m.rule);
-  const emphasisOrCode = (i) => {
-    const rule = ruleAt.get(i);
-    return rule === "em-open" || rule === "em-close" || rule === "code-open" || rule === "code-close";
-  };
-  const BETWEEN = "a character between two digits";
-  for (let i = 0; i < n; i++) {
-    if (state[i]) continue;
-    const why = underFloor(s, i);
-    if (why === BETWEEN && endsABlock(i)) continue;
-    if (why === BETWEEN && emphasisOrCode(i)) return floor(i, "emphasis or code markup between two digits");
-    if (why) return floor(i, why);
-  }
-  for (let a = 0; a < n; ) {
-    if (state[a]) {
-      a++;
-      continue;
-    }
-    let b = a;
-    while (b < n && !state[b]) b++;
-    const before = charBefore(s, a);
-    const after = charAt(s, b);
-    let newBlock = false;
-    for (let i = a; i < b && !newBlock; i++) newBlock = endsABlock(i);
-    if (isDigit(before) && isDigit(after) && !newBlock) {
-      for (let i = a; i < b; i++) if (emphasisOrCode(i)) return floor(i, "emphasis or code markup between two digits");
-      return floor(a, "a run of hidden characters between two digits");
-    }
-    a = b;
-  }
-  const said = (i) => JSON.stringify(s[i] ?? "");
-  const lineStart = (i) => s.lastIndexOf("\n", i - 1) + 1;
-  const lineEnd = (i) => {
-    const e2 = s.indexOf("\n", i);
-    return e2 < 0 ? n : e2;
-  };
-  const markers = new Uint8Array(n);
-  const markerSpans = (bs) => {
-    for (const b of bs) {
-      if (b.t === "quote") markerSpans(b.children);
-      if (b.t === "list")
-        for (const it of b.items) {
-          for (let i = it.marker.from; i < it.marker.to; i++) markers[i] = 1;
-          markerSpans(it.children);
+      for (const it of page.items) {
+        if (it.kind !== "act") continue;
+        let d;
+        try {
+          d = describeAct(it.item);
+        } catch {
+          continue;
         }
-    }
-  };
-  markerSpans(doc.blocks);
-  const container = new Uint8Array(n);
-  for (const m of doc.marks)
-    if (m.rule === "quote" || m.rule === "indent" || m.rule === "item")
-      for (let i = m.span.from; i < m.span.to; i++) container[i] = 1;
-  const opensLine = (i) => {
-    for (let j = lineStart(i); j < i; j++) if (!container[j] && !markers[j]) return false;
-    return true;
-  };
-  const escaped = new Uint8Array(n + 1);
-  for (const m of doc.marks) if (m.rule === "escape") escaped[m.span.to] = 1;
-  const run = (i, c) => {
-    let a = i;
-    let b = i;
-    while (a > lineStart(i) && s[a - 1] === c && !escaped[a - 1]) a--;
-    while (b < lineEnd(i) && s[b] === c && !escaped[b]) b++;
-    return { from: a, to: b };
-  };
-  const isSpaceAt = (i) => i >= 0 && i < n && SPACES.has(s.charCodeAt(i));
-  const wholeRun = (m, c) => {
-    const r = run(m.span.from, c);
-    return r.from === m.span.from && r.to === m.span.to;
-  };
-  const sameLine = (a, b) => lineEnd(a.span.from) === lineEnd(b.span.from);
-  const closeShown = (i) => linkCloseShown(s, i);
-  const stack = [];
-  let code = null;
-  let link = null;
-  for (const m of doc.marks) {
-    const { from, to } = m.span;
-    if (from < 0 || to > n || from >= to) return `declares markup outside the text at ${from}`;
-    for (let i = from; i < to; i++) {
-      if (state[i]) return `hides ${said(i)} at ${i}, which it also shows`;
-      if (!declared[m.rule].includes(s[i])) return `hides ${said(i)} at ${i}, which is not ${m.rule} markup`;
-      state[i] = 2;
-    }
-    const text2 = s.slice(from, to);
-    const fail = (why) => `hides ${JSON.stringify(text2)} at ${from}, not in a declared position: ${why}`;
-    switch (m.rule) {
-      case "heading":
-        if (!/^#{1,6} $/.test(text2) || !opensLine(from) || to >= lineEnd(from)) return fail("one to six # and a space, opening a line, before some text");
-        break;
-      case "rule":
-        if (!opensLine(from) || to !== lineEnd(from) || !/^(?:-{3,}|\*{3,})$/.test(text2)) return fail("a whole line of three or more - or *");
-        break;
-      case "fence-open":
-        if (!opensLine(from) || to - from < 3 || !wholeRun(m, "`") || s.slice(to, lineEnd(from)).includes("`")) return fail("three or more backticks opening a line, nothing after them a backtick");
-        break;
-      case "fence-close":
-        if (!opensLine(from) || to !== lineEnd(from)) return fail("a whole line of backticks");
-        break;
-      case "quote":
-        if (s[from] !== ">" || to - from === 2 && s[from + 1] !== " " || !opensLine(from)) return fail("a > and one space, opening a line");
-        break;
-      case "item":
-        if (from === 0 || !markers[from - 1] || to - from !== 1) return fail("the one space after a list marker");
-        break;
-      case "indent":
-        if (!opensLine(from) || !/^ +$/.test(text2)) return fail("spaces opening an item's later line");
-        break;
-      case "escape":
-        if (to - from !== 1 || to >= lineEnd(from) || !ESCAPABLE.has(s[to]) || state[to] !== 1) return fail("a backslash before a character it escapes");
-        break;
-      case "code-open":
-        if (code || !wholeRun(m, "`")) return fail("a whole run of backticks opening a code span");
-        code = m;
-        break;
-      case "code-close":
-        if (!code || !sameLine(code, m) || !wholeRun(m, "`") || to - from !== code.span.to - code.span.from) return fail("a run of as many backticks closing a code span on its line");
-        code = null;
-        break;
-      case "link-open": {
-        const a = AUTOLINK.exec(s.slice(from, lineEnd(from)));
-        if (!a || link) return fail("a < opening a link to an https, http or mailto address");
-        const close = from + a[0].length - 1;
-        if (state[close] === 1) {
-          if (!closeShown(close)) return fail("a link whose closing > is shown, though not next to a digit");
-        } else link = m;
-        break;
+        if (d.signer !== signer || into.has(d.id)) continue;
+        into.set(d.id, { d, act: it.item });
       }
-      case "link-close": {
-        const o = link ? link.span.from : s.lastIndexOf("<", from);
-        if (!link && !(o >= lineStart(from) && state[o] === 1 && linkOpenShown(s, o))) return fail("the > closing a link");
-        const a = AUTOLINK.exec(s.slice(o, lineEnd(o)));
-        if (!a || o + a[0].length !== to) return fail("the > closing a link");
-        if (closeShown(from)) return fail("the > closing a link, next to a digit, is shown");
-        link = null;
-        break;
-      }
-      case "em-open":
-        if (to - from > 3 || !wholeRun(m, "*") || to >= lineEnd(from) || isSpaceAt(to)) return fail("a run of one to three * before a character not a space");
-        stack.push(m);
-        break;
-      case "em-close": {
-        const o = stack.pop();
-        if (to - from > 3 || !wholeRun(m, "*") || from <= lineStart(from) || isSpaceAt(from - 1)) return fail("a run of one to three * after a character not a space");
-        if (!o || !sameLine(o, m) || o.span.to - o.span.from !== to - from) return fail("no opener of its length on its line");
-        break;
-      }
+      if (!page.items.length || page.next === after) break;
+      after = page.next;
     }
   }
-  if (stack.length || code || link) return "an opening sign is never closed on its line";
-  let prev = -1;
-  const next = new Int32Array(n + 1).fill(-1);
-  for (let i = n - 1; i >= 0; i--) next[i] = state[i] === 1 ? i : next[i + 1];
-  for (let i = 0; i < n; i++) {
-    if (state[i] === 1) {
-      prev = i;
-      continue;
+}
+var linksOf = (d) => [
+  ...d.prev ? [d.prev] : [],
+  ...d.refs ?? [],
+  ...(d.objects ?? []).flatMap(([chain, pred]) => [chain, pred]),
+  ...d.acks ?? []
+];
+function signedOrder(acts, rank, times) {
+  const ids = new Set(acts.map((d) => d.id));
+  const byId = new Map(acts.map((d) => [d.id, d]));
+  const waiting = new Map(acts.map((d) => [d.id, 0]));
+  for (const d of acts) for (const n of new Set(linksOf(d))) if (ids.has(n) && n !== d.id) waiting.set(n, waiting.get(n) + 1);
+  const key = (d) => [rank(d.signer), -(d.position ?? 0), d.id];
+  const byTime = (a, b) => {
+    if (!times) return 0;
+    const [x, y] = [times.get(a.id), times.get(b.id)];
+    if (x === void 0 || y === void 0) return x === y ? 0 : x === void 0 ? -1 : 1;
+    return y - x;
+  };
+  const before = (a, b) => {
+    const [x, y] = [key(a), key(b)];
+    return byTime(a, b) || x[0] - y[0] || x[1] - y[1] || (x[2] < y[2] ? -1 : 1);
+  };
+  const free = acts.filter((d) => waiting.get(d.id) === 0);
+  const out = [];
+  while (free.length) {
+    free.sort(before);
+    const d = free.shift();
+    out.push(d.id);
+    for (const n of new Set(linksOf(d))) {
+      if (!ids.has(n) || n === d.id) continue;
+      const left = waiting.get(n) - 1;
+      waiting.set(n, left);
+      if (left === 0) free.push(byId.get(n));
     }
-    if (state[i] === 2) continue;
-    if (!endsBlock.includes(s[i])) return `hides ${said(i)} at ${i}, which is not markup`;
-    const after = next[i + 1] ?? -1;
-    if (prev >= 0 && after >= 0 && leafOf[prev] === leafOf[after]) return `hides the LF at ${i}, inside a block`;
   }
-  return null;
+  for (const d of acts.filter((x) => !out.includes(x.id)).sort(before)) out.push(d.id);
+  return out.filter((id) => isPost(byId.get(id)));
+}
+async function readOne(id, signer, position, places, via2, judge, lookupProblem) {
+  const p = { id, signer, position, post: null, problem: null, answers: [] };
+  if (lookupProblem) {
+    p.problem = `its signer's identity chain could not be looked up: ${lookupProblem}`;
+    return p;
+  }
+  try {
+    p.post = await readPost(id, places, via2, judge);
+    if (p.post.standing !== "valid") p.problem = `its standing is \u201C${p.post.standing}\u201D, not valid`;
+  } catch (err) {
+    p.problem = err instanceof Error ? err.message : String(err);
+  }
+  return p;
+}
+async function causeOf(id, agent, named, places, via2, judge, found) {
+  let act = found.get(id)?.act ?? null;
+  for (const h of act ? [] : places) {
+    try {
+      act = await relayAt(h, via2).getAct(id);
+      if (act) break;
+    } catch {
+    }
+  }
+  if (!act) return null;
+  let d;
+  try {
+    d = describeAct(act);
+  } catch {
+    return null;
+  }
+  if (d.id !== id || !d.public || !d.payload || !d.signer || d.spec !== NUDGE) return null;
+  if (d.type !== NUDGE_TYPES.pick && d.type !== NUDGE_TYPES.nudge) return null;
+  if (!named.has(d.signer)) return null;
+  let m;
+  try {
+    m = cborDecode(d.payload);
+  } catch {
+    return null;
+  }
+  const f0 = m.get(0);
+  if (!(f0 instanceof Uint8Array) || hex(f0) !== agent) return null;
+  const f2 = m.get(2);
+  const picked = d.type === NUDGE_TYPES.pick ? f2 instanceof Uint8Array ? hex(f2) : null : null;
+  if (d.type === NUDGE_TYPES.pick && !picked) return null;
+  if (d.type === NUDGE_TYPES.nudge && !(typeof f2 === "number" && f2 >= 1)) return null;
+  if (await judge.standing(act, id, d.signer) !== "valid") return null;
+  return { type: d.type, signer: d.signer, picked };
+}
+var message = (err) => err instanceof Error ? err.message : String(err);
+async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = null) {
+  const judge = new FeedJudge(relays, via2);
+  const lines2 = [];
+  const found = /* @__PURE__ */ new Map();
+  const placesOf = /* @__PURE__ */ new Map();
+  const problems = /* @__PURE__ */ new Map();
+  await Promise.all(
+    authors.map(async (a) => {
+      let l = null;
+      let problem = null;
+      try {
+        l = await judge.lookUp(a.identity);
+      } catch (err) {
+        problem = message(err);
+      }
+      const { asked, unreachable } = placesFor(l, relays);
+      lines2.push({ ...a, asked, unreachable, problem, found: 0, verified: 0 });
+      placesOf.set(a.identity, asked);
+      if (problem) problems.set(a.identity, problem);
+    })
+  );
+  lines2.sort((x, y) => authors.findIndex((a) => a.identity === x.identity) - authors.findIndex((a) => a.identity === y.identity));
+  for (const a of authors) await actsBy2(a.identity, placesOf.get(a.identity), via2, found);
+  let clockLine = null;
+  let times;
+  if (clock) {
+    let l = null;
+    let problem = null;
+    try {
+      l = await judge.lookUp(clock.identity);
+    } catch (err) {
+      problem = message(err);
+    }
+    const { asked, unreachable } = placesFor(l, relays, TIMESTAMP_SPEC);
+    clockLine = { ...clock, asked, unreachable, problem, found: 0, verified: 0, placed: 0 };
+    if (!problem) {
+      const read2 = await readStamps(clock.identity, asked, judge, via2);
+      clockLine.found = read2.found;
+      clockLine.verified = read2.verified.length;
+      times = earliestByNames([...found.values()].map((x) => ({ id: x.d.id, links: linksOf(x.d) })), read2.earliest);
+    }
+  }
+  const rank = (s) => authors.findIndex((a) => a.identity === s);
+  const all = [...found.values()].map((x) => x.d);
+  const placed = times ? all.filter((d) => isPost(d) && times.has(d.id)).length : 0;
+  if (clockLine) clockLine.placed = placed;
+  const byClock = placed > 0;
+  const order = signedOrder(all, rank, byClock ? times : void 0);
+  const shown = order.slice(0, limit);
+  const posts = await Promise.all(
+    shown.map(async (id) => {
+      const { d } = found.get(id);
+      const p = await readOne(id, d.signer, d.position ?? null, placesOf.get(d.signer), via2, judge, problems.get(d.signer) ?? null);
+      if (byClock) p.time = times.get(id) ?? null;
+      return p;
+    })
+  );
+  const answered = /* @__PURE__ */ new Map();
+  const byId = new Map(posts.map((p) => [p.id, p]));
+  const everywhere = [...new Set([...placesOf.values()].flat())];
+  const named = new Set(authors.map((a) => a.identity));
+  for (const p of posts) {
+    if (!p.post || p.problem) continue;
+    for (const ref of p.post.refs) {
+      if (ref.kind !== "act") continue;
+      const r = ref.id;
+      if (answered.has(r)) {
+        p.answers.push(r);
+        continue;
+      }
+      const inFeed = byId.get(r);
+      if (inFeed) {
+        answered.set(r, inFeed);
+        p.answers.push(r);
+        continue;
+      }
+      let d = found.get(r)?.d ?? null;
+      for (const h of d ? [] : everywhere) {
+        try {
+          const act = await relayAt(h, via2).getAct(r);
+          if (act) {
+            d = describeAct(act);
+            if (d.id !== r) d = null;
+            if (d) break;
+          }
+        } catch {
+        }
+      }
+      if (!d) {
+        if (ref.what !== "not found at the relays asked") continue;
+        answered.set(r, { id: r, signer: "", position: null, post: null, problem: "not found at the places asked", answers: [] });
+      } else if (!isPost(d) || !d.signer) {
+        continue;
+      } else if (!named.has(d.signer) && (d.to ?? []).some((t) => named.has(t))) {
+        const n = await readOne(r, d.signer, d.position ?? null, everywhere, via2, judge, null);
+        n.note = true;
+        answered.set(r, n);
+      } else if (!named.has(d.signer)) {
+        answered.set(r, { id: r, signer: d.signer, position: d.position ?? null, post: null, problem: null, answers: [] });
+      } else {
+        answered.set(r, await readOne(r, d.signer, d.position ?? null, everywhere, via2, judge, problems.get(d.signer) ?? null));
+      }
+      p.answers.push(r);
+    }
+  }
+  for (const p of posts) {
+    const notes = p.answers.filter((r) => answered.get(r)?.note);
+    if (!notes.length) continue;
+    p.picked = new Map(notes.map((r) => [r, null]));
+    const causes = p.post.refs.flatMap((x) => x.kind === "act" && !answered.has(x.id) ? [x.id] : []);
+    let nudged = false;
+    for (const c of causes) {
+      const cause = await causeOf(c, p.signer, named, everywhere, via2, judge, found);
+      if (cause?.type === NUDGE_TYPES.pick && p.picked.has(cause.picked)) p.picked.set(cause.picked, cause.signer);
+      if (cause?.type === NUDGE_TYPES.nudge) nudged = true;
+    }
+    if (nudged) {
+      for (const [r, by] of p.picked) if (by === null) p.picked.set(r, p.signer);
+    }
+  }
+  for (const line of lines2) {
+    const mine = posts.filter((p) => p.signer === line.identity);
+    line.found = order.filter((id) => found.get(id).d.signer === line.identity).length;
+    line.verified = mine.filter((p) => !p.problem).length;
+  }
+  return { authors: lines2, posts, more: order.length - shown.length, answered, clock: clockLine, order: byClock ? "clock" : "signed" };
 }
 
-// ../longform/src/html.ts
-var ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-var escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ESC[c]);
-var STYLE = `.mor-lf{white-space:pre-wrap;overflow-wrap:anywhere}
-.mor-lf :is(h1,h2,h3,h4,h5,h6,p,li,blockquote,pre){unicode-bidi:isolate}
-.mor-lf ul,.mor-lf ol{list-style:none;padding-left:0}
-.mor-lf li{display:flex;gap:.5em}
-.mor-lf li>.mor-lf-marker{flex:none}
-.mor-lf li>div{flex:1;min-width:0}
-.mor-lf li>div>:first-child{margin-top:0}
-.mor-lf li>div>:last-child{margin-bottom:0}
-.mor-lf li{margin:.25em 0}
-.mor-lf blockquote{margin-left:0;padding-left:1em;border-left:3px solid currentColor}
-.mor-lf pre{overflow-x:auto}
-.mor-lf .mor-lf-label{display:block;font-size:.85em;opacity:.8}
-.mor-lf-plain{white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,monospace}
-.mor-lf-ctl{outline:1px solid currentColor;font-size:.8em}`;
-function renderHtml(doc) {
-  const breach = checkBound(doc);
-  if (breach) {
-    return `<div class="mor-lf"><p class="mor-lf-refused">Shown plain: the long-form rendering would break the Text MIR's bound (${escapeHtml(breach)}).</p>${plainHtml(doc.source, { showControls: true })}</div>`;
-  }
-  const s = doc.source;
-  const text2 = (x) => escapeHtml(s.slice(x.from, x.to));
-  const inl = (ns) => ns.map((n) => {
-    switch (n.t) {
-      case "text":
-        return text2(n.span);
-      case "break":
-        return "<br>";
-      case "em":
-        return `<em>${inl(n.children)}</em>`;
-      case "strong":
-        return `<strong>${inl(n.children)}</strong>`;
-      case "code":
-        return `<code>${text2(n.span)}</code>`;
-      case "link":
-        return `<a href="${escapeHtml(n.href)}" rel="nofollow noopener noreferrer">${text2(n.span)}</a>`;
-    }
-  }).join("");
-  const blk = (bs) => bs.map((b) => {
-    switch (b.t) {
-      case "heading":
-        return `<h${b.level} dir="auto">${inl(b.children)}</h${b.level}>`;
-      case "paragraph":
-        return `<p dir="auto">${inl(b.children)}</p>`;
-      case "quote":
-        return `<blockquote>${blk(b.children)}</blockquote>`;
-      case "list": {
-        const tag = b.ordered ? "ol" : "ul";
-        const items = b.items.map((it) => `<li><span class="mor-lf-marker">${text2(it.marker)}</span><div>${blk(it.children)}</div></li>`).join("");
-        return `<${tag}>${items}</${tag}>`;
-      }
-      case "code": {
-        const label = b.label ? `<span class="mor-lf-label">${text2(b.label)}</span>` : "";
-        return `<pre dir="auto">${label}<code>${b.lines.map(text2).join("\n")}</code></pre>`;
-      }
-      case "rule":
-        return "<hr>";
-    }
-  }).join("");
-  return `<div class="mor-lf">${blk(doc.blocks)}</div>`;
-}
-var INVISIBLE = /[\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u2069]/g;
-function plainHtml(source, opts = {}) {
-  if (!opts.showControls) return `<div class="mor-lf-plain" dir="ltr">${escapeHtml(source)}</div>`;
-  let out = "";
-  let last = 0;
-  for (const m of source.matchAll(INVISIBLE)) {
-    const cp = m[0].codePointAt(0).toString(16).toUpperCase().padStart(4, "0");
-    out += escapeHtml(source.slice(last, m.index)) + `<span class="mor-lf-ctl" title="invisible character">U+${cp}</span>`;
-    last = m.index + m[0].length;
-  }
-  out += escapeHtml(source.slice(last));
-  return `<div class="mor-lf-plain" dir="ltr">${out}</div>`;
-}
-
-// ../barebone/src/html.ts
-var short = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
-var STYLE2 = `${STYLE}
-.mor-post{border:1px solid color-mix(in srgb,currentColor 25%,transparent);border-radius:8px;padding:12px 16px;margin:16px 0}
-.mor-post-by{font-size:.85em;opacity:.8;overflow-wrap:anywhere}
-.mor-post-by code{font-size:.95em}
-.mor-post-text{margin:.75em 0;white-space:pre-wrap;overflow-wrap:anywhere}
-.mor-post figure{margin:.75em 0}
-.mor-post img{display:block;max-width:100%;height:auto;image-orientation:from-image}
-.mor-post figcaption{font-size:.8em;opacity:.8;overflow-wrap:anywhere}
-.mor-post-missing{font-size:.9em;padding:.5em;border:1px dashed currentColor;border-radius:4px}
-.mor-post-bad{font-weight:bold}`;
-function standingWords(s) {
-  return s === "valid" ? "verified" : `not verified: ${s}`;
-}
-function picture(p, poster) {
-  const by = p.signer === poster ? "" : ` A picture by <code>${short(p.signer)}</code>, not by the poster.`;
-  if (!p.bytes || !p.picture) {
-    return `<figure><div class="mor-post-missing">Picture not shown: ${escapeHtml(p.problem ?? "unknown")}.${by}</div></figure>`;
-  }
-  const src = `data:image/jpeg;base64,${base64(p.bytes)}`;
-  const still = p.picture.carries.length ? ` It still carries ${p.picture.carries.map((c) => CARRIED_WORDS[c]).join("; ")}, not shown.` : "";
-  return `<figure><img src="${src}" width="${p.picture.shownWidth}" height="${p.picture.shownHeight}" alt="">
-<figcaption>JPEG, ${p.picture.shownWidth} \xD7 ${p.picture.shownHeight}, publication <code>${short(p.publication)}</code>, ${standingWords(p.standing)}.${by}${still}</figcaption></figure>`;
-}
-function renderPost(p) {
-  const text2 = p.format === POST_SPECS.longform ? renderHtml(parse(p.text)) : `<div class="mor-post-text" dir="auto">${escapeHtml(p.text)}</div>`;
-  const others = p.refs.filter((r) => r.kind === "act").map((r) => {
-    const by = r.kind === "act" && r.signer ? `, signed by <code title="${r.signer}">${short(r.signer)}</code> as the reference says` : "";
-    return `<div class="mor-post-by">Refers to <code>${short(r.id)}</code>${by}: ${escapeHtml(r.kind === "act" ? r.what : "")}.</div>`;
-  }).join("");
-  const pictures = p.refs.filter((r) => r.kind === "picture").map((r) => picture(r, p.signer)).join("");
-  const notTried = (p.notTried ?? []).map((n) => `<div class="mor-post-by">Not tried: <code>${escapeHtml(n.hint)}</code>, ${escapeHtml(n.why)}. What it holds was not asked for; silence proves nothing.</div>`).join("");
-  const bad = p.standing === "valid" ? "" : " mor-post-bad";
-  return `<article class="mor-post">
-<div class="mor-post-by${bad}">By <code title="${p.signer}">${short(p.signer)}</code>, ${standingWords(p.standing)}. Post <code title="${p.id}">${short(p.id)}</code>.</div>
-${text2}${pictures}${others}${notTried}
-<details><summary>Plain text</summary>${plainHtml(p.text, { showControls: true })}</details>
-</article>`;
+// ../reader/src/link.ts
+function makeLink(page, act, relays = []) {
+  const base = page.replace(/#.*$/, "");
+  const q = relays.length ? "?" + relays.map((r) => `r=${encodeURIComponent(r)}`).join("&") : "";
+  return `${base}#${act}${q}`;
 }
 
 // ../longform/src/text.ts
@@ -7376,6 +6856,12 @@ function fromWords(written) {
   }
   return seed;
 }
+var ENCRYPTION_TAG = "MOR/module/carry/encryption";
+function encryptionSecret(signingSeed) {
+  if (signingSeed.length !== 32) throw new Refused("a signing seed is 32 bytes");
+  const t = createHash("sha256").update(ENCRYPTION_TAG).digest();
+  return new Uint8Array(createHash("sha256").update(t).update(t).update(signingSeed).digest());
+}
 function readId(typed) {
   const s = typed.replace(/\s+/g, "").toLowerCase();
   if (!/^[0-9a-f]{64}$/.test(s)) throw new Refused("an ID is 64 characters, 0 to 9 and a to f (spaces do not matter)");
@@ -7421,29 +6907,168 @@ function newChainKey(seed) {
   return { words: toWords(seed), key };
 }
 
+// src/names.ts
+var NAMING_SPEC = sha2562("Naming cMIP, draft 1, test value until publication");
+var NAME = 4;
+var NAME_WITHDRAWAL = 5;
+var MAX_NAME = 48;
+var FORBIDDEN = new RegExp("[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]", "u");
+function nameProblem(name) {
+  if (name !== name.normalize("NFC")) return "it is not canonical text (NFC)";
+  if (!name.trim()) return "it is empty";
+  if (/^\s|\s$/u.test(name)) return "it starts or ends with a space";
+  if (FORBIDDEN.test(name)) return "it holds a line break, a control character or a direction override";
+  if ([...name].length > MAX_NAME) return `it is longer than ${MAX_NAME} characters`;
+  return null;
+}
+function readName(typed) {
+  const name = typed.normalize("NFC").trim();
+  const why = nameProblem(name);
+  if (why) throw new Error(`That name cannot be used: ${why}. Nothing was signed.`);
+  return name;
+}
+var namePayload = (name) => cborEncode(
+  /* @__PURE__ */ new Map([
+    [0, name],
+    [1, unhex(NAMING_SPEC)]
+  ])
+);
+async function namesOf(identity, places, via2 = {}) {
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const l = await lookUp(identity, places, via2, v);
+  const routed = l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
+  const at = [.../* @__PURE__ */ new Set([...l.resolution.homes.map((h) => h.hint), ...routed, ...places])];
+  await holdSequence(v, identity, l, at, via2);
+  const names = /* @__PURE__ */ new Map();
+  const withdrawn = /* @__PURE__ */ new Set();
+  const seen = /* @__PURE__ */ new Set();
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via2).feed({ signer: identity, after });
+        for (const it of page.items) {
+          if (it.kind !== "act") continue;
+          let d;
+          try {
+            d = describeAct(it.item);
+          } catch {
+            continue;
+          }
+          if (seen.has(d.id) || d.spec !== SPECS.identity || d.signer !== identity) continue;
+          if (d.type !== NAME && d.type !== NAME_WITHDRAWAL) continue;
+          seen.add(d.id);
+          v.add(it.item);
+          if (v.status(d.id) !== "valid") continue;
+          if (d.type === NAME_WITHDRAWAL) {
+            for (const [chain, target] of d.objects ?? []) if (chain === target) withdrawn.add(target);
+            continue;
+          }
+          const m = cborDecode(d.payload);
+          const name = m.get(0);
+          const cmip = m.get(1);
+          if (typeof name !== "string" || !(cmip instanceof Uint8Array) || hex(cmip) !== NAMING_SPEC) continue;
+          if (nameProblem(name)) continue;
+          names.set(d.id, { act: d.id, name });
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  return [...names.values()].filter((n) => !withdrawn.has(n.act)).sort((a, b) => a.act < b.act ? -1 : 1);
+}
+
+// src/shapes.ts
+var PUBLISH_WARNING = "Anyone can read whom this identity follows, now and for good: a later change of mind stops new versions, it does not take this one back. The names you gave them stay in this app.";
+
+// src/people.ts
+var PEOPLE_SPEC = sha2562("People cMIP, draft 1, test value until publication");
+var FOLLOW_LIST = 0;
+var NO_PEOPLE = () => ({ follows: [], muted: [], list: "private", published: null, seen: [], inbox: { after: {}, items: [] }, sent: [] });
+function followListPayload(a) {
+  const m = /* @__PURE__ */ new Map([[0, a.version]]);
+  if (a.previous) m.set(1, unhex(a.previous));
+  m.set(2, a.withdrawn ? [] : a.ids.map(unhex));
+  if (a.withdrawn) m.set(3, true);
+  return cborEncode(m);
+}
+async function readFollowList(identity, places, via2 = {}) {
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const l = await lookUp(identity, places, via2, v);
+  const routed = l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
+  const at = [.../* @__PURE__ */ new Set([...routed, ...places, ...l.resolution.homes.map((h) => h.hint)])];
+  await holdSequence(v, identity, l, at, via2);
+  const acts = /* @__PURE__ */ new Map();
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via2).feed({ signer: identity, after });
+        for (const it of page.items) {
+          if (it.kind !== "act") continue;
+          let d;
+          try {
+            d = describeAct(it.item);
+          } catch {
+            continue;
+          }
+          if (acts.has(d.id) || !d.public || d.spec !== PEOPLE_SPEC || d.type !== FOLLOW_LIST || d.signer !== identity || !d.payload) continue;
+          v.add(it.item);
+          if (v.status(d.id) !== "valid") continue;
+          try {
+            const m = cborDecode(d.payload);
+            const version = Number(m.get(0));
+            const prev = m.get(1);
+            const ids = m.get(2).filter((x) => x instanceof Uint8Array).map(hex);
+            acts.set(d.id, { version, previous: prev instanceof Uint8Array ? hex(prev) : null, ids, withdrawn: m.get(3) === true });
+          } catch {
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  const out = { act: null, version: 0, ids: [], withdrawn: false, forked: null };
+  let at_ = null;
+  for (; ; ) {
+    const next = [...acts.entries()].filter(([, a2]) => a2.previous === at_ && a2.version === out.version + 1);
+    if (next.length !== 1) {
+      if (next.length > 1) out.forked = out.version;
+      return out;
+    }
+    const [id, a] = next[0];
+    Object.assign(out, { act: id, version: a.version, ids: a.ids, withdrawn: a.withdrawn });
+    at_ = id;
+  }
+}
+
 // src/dub.ts
-var WORDS_SAY = [
-  "Write these 24 words on paper, in order, and keep the paper safe. They are shown once.",
-  "Whoever holds these words can post as this identity. They are its signing key; the chain key is not in them.",
-  "Type them into another app to post from there as the same identity. They stop working when the signing key is changed.",
-  "They are not a Bitcoin wallet. Never type them into one."
-];
 var CHAIN_WORDS_SAY = [
-  "Write these 24 words on paper, in order, and keep the paper away from anything that goes online. They are shown once: neither this page nor this browser keeps them.",
-  "They are this identity\u2019s chain key: the only way to change its signing key if it is ever stolen or lost. Without them, the identity can never change its key.",
-  "They are the chain-key seed words Module\u2019s backup: the air-gapped chain key Module restores the chain key from them. Never type them into this page, or into any device that goes online.",
+  "These are the chain key\u2019s words. Write them on paper, in order, and keep the paper away from anything that goes online. They are shown once: Dub keeps nothing of the chain key.",
+  "The chain key is the only way to change this identity\u2019s signing key if it is ever stolen or lost. That is done by another app, MOR Safety, never by Dub. Lost paper means no change of keys, ever.",
+  "Never type these words into Dub, or into any app that goes online. They are not the signing key\u2019s words, which Dub shows on request.",
   "They are not a Bitcoin wallet. Never type them into one."
 ];
 var CARRY_SAY = [
-  "These 24 words and the ID carry this identity to Dub on a computer, or to another device: choose \u201CBring an identity you have\u201D there.",
-  "Whoever holds these words can post as this identity. They are its signing key; the chain key is not in them.",
-  "Write them on paper; they are the way out of this browser if its storage is lost. They stop working when the signing key is changed.",
+  "These are the signing key\u2019s words. With the ID, they bring this identity into Dub on another computer or device: choose \u201CBring an identity you have\u201D there.",
+  "Whoever holds these words can post as this identity and read its private messages. The chain key is not in them.",
+  "Write them on paper: if this app\u2019s storage is lost, they are the way back. They stop working when the signing key is changed.",
   "Each place you bring them keeps its own line of acts. A change of the signing key must keep every line, or that line\u2019s posts become void.",
   "They are not a Bitcoin wallet. Never type them into one."
 ];
-var LINE_SAY = "This app keeps its own line of acts for this identity. If the signing key is ever changed (with the chain key, on the device that holds it), that change must keep this line, or every post made here becomes void. The client making the change reads this line from the homes and relays and keeps it, unless you leave it out; if it cannot read it, give it this line\u2019s latest act, position and summary, shown on this app\u2019s card.";
-var NOT_CURRENT = "These words do not give this identity\u2019s current signing key: they are another identity\u2019s, an earlier key\u2019s, or written wrong. Nothing was kept. If these are your chain key\u2019s words, they must never be typed into an online device.";
+var LINE_SAY = "This app keeps its own line of acts for this identity. If the signing key is ever changed (with the chain key, in MOR Safety), that change must keep this line, or every post made here becomes void. The app making the change reads this line from the homes and relays and keeps it, unless you leave it out; if it cannot read it, give it this line\u2019s latest act, position and summary, shown in the identity window.";
+var SPENT_SAY = "This identity\u2019s signing key was changed elsewhere, with its chain key, so the signing key\u2019s words this app holds no longer count. Nothing was signed. Changing keys is MOR Safety\u2019s work, not Dub\u2019s. To go on here, give this app the new signing key\u2019s words.";
+var NOT_CURRENT = "These words do not give this identity\u2019s current signing key: they are another identity\u2019s, an earlier key\u2019s, or written wrong. Nothing was kept. If these are your chain key\u2019s words, they must never be typed into an online app.";
+var NO_KEY_SAY = "This app holds no encryption key for this identity, so its private messages cannot be opened here: its encryption key was not made from its signing key\u2019s words. Messages can still be sent from here.";
+var READER = "https://reader.dubsar.org/";
 var list = (xs) => [...new Set(xs.map((s) => s.trim()).filter(Boolean))];
+var message2 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var now = () => Math.floor(Date.now() / 1e3);
+var fingerprint = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 function randomBelow(n) {
   const limit = Math.floor(4294967296 / n) * n;
   const x = new Uint32Array(1);
@@ -7452,45 +7077,91 @@ function randomBelow(n) {
   while (x[0] >= limit);
   return x[0] % n;
 }
+var NAMES_FOR = 600;
 var Dub = class {
-  /** `web`: Dub's web client (F281): a new identity's chain key is shown once as words and never kept. */
+  /** `web`: Dub's web client (F281). `reader`: where long-form documents open. */
   constructor(store, opts = {}) {
     this.store = store;
     this.opts = opts;
   }
   queue = Promise.resolve();
+  /** Display names found, by ID, and when (this app's memory only). */
+  names = /* @__PURE__ */ new Map();
   /** One thing at a time: a sequence must never be signed twice at once. */
   serial(f) {
     const next = this.queue.then(() => this.store.exclusive(f));
     this.queue = next.catch(() => void 0);
     return next;
   }
-  async state() {
-    const me = await this.store.identity();
-    if (me) {
-      const s = await this.store.settings();
-      const own = ownLine(me.f.sequence);
-      return {
-        stage: "ready",
-        identity: {
-          id: me.id,
-          grouped: groupId(me.id),
-          kind: s.kind,
-          chainKey: s.kind === "brought" ? "elsewhere" : me.f.safety.seeds ? "held" : "shown",
-          homes: me.f.homes.map((h) => h.hint),
-          relays: s.relays,
-          line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null }
+  // ------------------------------------------------------------ who is who
+  whoFrom(id, me, p) {
+    const f = p?.follows.find((x) => x.id === id);
+    return {
+      id,
+      short: fingerprint(id),
+      names: this.names.get(id)?.names ?? [],
+      pet: f?.name ?? null,
+      me: id === me,
+      followed: !!f,
+      muted: !!p?.muted.includes(id)
+    };
+  }
+  /** Read the display names of these identities, where not read lately. A name not found is no name: silence proves nothing. */
+  async warm(ids, places, via2) {
+    const due = [...new Set(ids)].filter((id) => (this.names.get(id)?.at ?? 0) + NAMES_FOR < now());
+    await Promise.all(
+      due.map(async (id) => {
+        try {
+          this.names.set(id, { names: (await namesOf(id, places, via2)).map((n) => n.name), at: now() });
+        } catch {
         }
+      })
+    );
+  }
+  // ------------------------------------------------------------ state
+  async state() {
+    const active = await this.store.active();
+    const held = [];
+    for (const id of await this.store.held()) {
+      const s = await this.store.settings(id);
+      held.push({ id, grouped: groupId(id), who: this.whoFrom(id, active, null), active: id === active, kind: s.kind });
+    }
+    const pend = await this.store.pending();
+    const out = { stage: "identity", held };
+    if (pend) {
+      out.stage = "confirm";
+      out.confirm = { positions: pend.positions, id: pend.identity.identity };
+    }
+    const me = active ? await this.store.identity(active) : null;
+    if (me) {
+      const s = await this.store.settings(me.id);
+      const p = await this.store.people(me.id);
+      const own = ownLine(me.f.sequence);
+      if (!pend) out.stage = "ready";
+      out.identity = {
+        id: me.id,
+        grouped: groupId(me.id),
+        who: this.whoFrom(me.id, me.id, p),
+        kind: s.kind,
+        homes: me.f.homes.map((h) => h.hint),
+        relays: s.relays,
+        encryption: me.f.encryption.length > 0,
+        oldChainKey: !!me.f.safety.seeds,
+        line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
+        list: p.list,
+        follows: p.follows.map((f) => this.whoFrom(f.id, me.id, p)),
+        muted: p.muted.map((m) => this.whoFrom(m, me.id, p))
       };
     }
-    const p = await this.store.pending();
-    if (p) return { stage: "confirm", confirm: { positions: p.positions, id: p.identity.identity } };
-    return { stage: "doors" };
+    return out;
   }
-  async me() {
-    const me = await this.store.identity();
-    if (!me) throw new Error("No identity yet: make one, or bring one.");
-    return me;
+  async ctx() {
+    const active = await this.store.active();
+    const me = active ? await this.store.identity(active) : null;
+    if (!me) throw new Error("No identity in use: make one, or bring one, in the identity window.");
+    const s = await this.store.settings(me.id);
+    const p = await this.store.people(me.id);
+    return { me, s, p, hints: [.../* @__PURE__ */ new Set([...s.relays, ...me.f.homes.map((h) => h.hint)])] };
   }
   /** Each home's operator, as it declares itself (relay transport cMIP, `info`). */
   async homes(hints, via2) {
@@ -7501,7 +7172,7 @@ var Dub = class {
       try {
         info = await relayAt(hint, via2).info();
       } catch (e2) {
-        throw new Error(`${hint} did not answer: ${e2 instanceof Error ? e2.message : e2}`);
+        throw new Error(`${hint} did not answer: ${message2(e2)}`);
       }
       const op = info.get(0);
       if (!(op instanceof Uint8Array)) throw new Error(`${hint} is not a home: it declares no operator`);
@@ -7509,16 +7180,15 @@ var Dub = class {
     }
     return out;
   }
-  // ------------------------------------------------------------ door 1: a new identity
+  // ------------------------------------------------------------ the identity window: a new identity
   /**
-   * Make a new identity with the genesis client's code, and show its words
-   * once: on the Mac, its signing seed's (the chain key kept in the folder);
-   * in the web client, its chain key's, which nothing keeps (F281). Nothing
-   * is published until three of the words are typed back (`confirm`).
-   * Starting again forgets the last one.
+   * Make a new identity with the genesis client's code, and show its chain
+   * key's words once (F332, amended): the chain key is derived from a seed
+   * shown as words (the words seed Module) and kept nowhere, on the Mac as on
+   * the web. Nothing is published until three of the words are typed back
+   * (`confirm`). Starting again forgets the last one.
    */
   async begin(a) {
-    if (await this.store.identity()) throw new Error("This app already holds an identity.");
     const via2 = a.via ?? {};
     const hints = list(a.homes);
     if (!hints.length) throw new Error("Give at least one home address: where the identity lives, and anyone can check it.");
@@ -7526,20 +7196,14 @@ var Dub = class {
     const relays = list(a.relays);
     for (const r of relays) if (!/^https?:\/\//.test(r)) throw new Error(`\u201C${r}\u201D: an address starts with https:// (or http://)`);
     const positions = threePositions(randomBelow);
-    if (this.opts.web) {
-      const seed = crypto.getRandomValues(new Uint8Array(32));
-      const chain = newChainKey(seed);
-      const id2 = TestIdentity.create({ homes, via: via2, chainKey: chain.key });
-      id2.f.safety = { scheme: 0, seeds: "" };
-      chain.key.seeds.fill(0);
-      await this.store.savePending({ identity: id2.f, positions, relays: relays.length ? relays : hints, via: via2, chainSeed: hex(seed) });
-      seed.fill(0);
-      return { words: chain.words, positions, say: CHAIN_WORDS_SAY };
-    }
-    const id = TestIdentity.create({ homes, via: via2, scheme: 3 });
-    const words2 = toWords(unhex(id.f.signingSecret));
-    await this.store.savePending({ identity: id.f, positions, relays: relays.length ? relays : hints, via: via2 });
-    return { words: words2, positions, say: WORDS_SAY };
+    const seed = crypto.getRandomValues(new Uint8Array(32));
+    const chain = newChainKey(seed);
+    const id = TestIdentity.create({ homes, via: via2, chainKey: chain.key });
+    id.f.safety = { scheme: 0, seeds: "" };
+    chain.key.seeds.fill(0);
+    await this.store.savePending({ identity: id.f, positions, relays: relays.length ? relays : hints, via: via2, chainSeed: hex(seed) });
+    seed.fill(0);
+    return { words: chain.words, positions, say: CHAIN_WORDS_SAY };
   }
   /** Forget a new identity before it was published. */
   async abandon() {
@@ -7547,15 +7211,17 @@ var Dub = class {
   }
   /**
    * The three words typed back. Refused, with nothing published, unless
-   * each is the word at its position. Then the genesis goes to the homes,
-   * the routes name the relays, and the identity is this app's.
+   * each is the word at its position. Then the genesis goes to the homes; its
+   * routes name the relays as its outbox and its inbox; its encryption key,
+   * the one its signing key's words carry (the carry Module, draft 2, 2a.2),
+   * is published, as the desk's identities have theirs at once; and it is the
+   * identity in use.
    */
   confirm(typed) {
     return this.serial(async () => {
       const p = await this.store.pending();
       if (!p) throw new Error("No new identity is waiting.");
-      const words2 = toWords(unhex(p.chainSeed ?? p.identity.signingSecret));
-      if (!typedBack(words2, p.positions, typed)) {
+      if (!typedBack(toWords(unhex(p.chainSeed)), p.positions, typed)) {
         throw new Error(`Those are not words ${p.positions.join(", ")} as shown. Look at what you wrote down. Nothing has been published.`);
       }
       const id = new TestIdentity(p.identity, p.via);
@@ -7567,10 +7233,16 @@ var Dub = class {
       if (!sent.some((x) => x.result?.receipt)) {
         throw new Error(`No home took the identity, so it was not kept. ${lines2.map((l) => l.text).join("; ")}`);
       }
-      await this.store.saveSettings({ kind: "made", relays: p.relays, via: p.via });
+      await this.store.saveSettings(id.id, { kind: "made", relays: p.relays, via: p.via });
       await this.store.saveIdentity(id);
+      await this.store.setActive(id.id);
       await this.store.dropPending();
-      await id.publishRoutes([{ scope: null, hints: p.relays, kind: 0 }]);
+      await id.publishRoutes([
+        { scope: null, hints: p.relays, kind: 0 },
+        { scope: null, hints: p.relays, kind: 1 }
+      ]);
+      await this.store.saveIdentity(id);
+      await id.publishEncryptionKey(encryptionSecret(unhex(id.f.signingSecret)));
       await this.store.saveIdentity(id);
       for (const r of p.relays) {
         for (const act of id.chainActs()) {
@@ -7580,20 +7252,21 @@ var Dub = class {
           }
         }
       }
-      lines2.push({ text: `Its posts are published at ${p.relays.join(", ")}.` });
+      lines2.push({ text: `Its posts are published at, and its inbox is, ${p.relays.join(", ")}. Its encryption key is published: private messages can be sealed to it.` });
       return { lines: lines2 };
     });
   }
-  // ------------------------------------------------------------ door 2: an identity made elsewhere
+  // ------------------------------------------------------------ the identity window: an identity made elsewhere
   /**
    * Bring an identity made elsewhere (the carry Module, section 4): read its
    * chain from its homes, starting at `address`, and keep it only if the
-   * words give its current signing key. Relays are asked for only where
-   * its routes name none. This app starts its own line.
+   * words give its current signing key; with its encryption key where the
+   * words carry the one that counts (2a.3). Relays are asked for only where
+   * its routes name none. This app starts its own line. An identity already
+   * held here takes the new words instead (`renew`).
    */
   bring(a) {
     return this.serial(async () => {
-      if (await this.store.identity()) throw new Error("This app already holds an identity.");
       const via2 = a.via ?? {};
       let id;
       let seed;
@@ -7604,40 +7277,19 @@ var Dub = class {
         if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
         throw e2;
       }
-      let pub;
-      try {
-        pub = signingPublic(seed);
-      } catch {
-        throw new Error("The words do not hold a signing key. Nothing was kept.");
-      }
+      if ((await this.store.held()).includes(id)) return this.renewHeld(id, seed);
       const address = a.address.trim();
       if (!/^https?:\/\//.test(address)) throw new Error("Give an address where this identity is found (one of its homes), starting with https://.");
-      let look;
-      try {
-        look = await lookUp(id, [address], via2);
-      } catch (e2) {
-        throw new Error(`This identity was not found at ${address}: ${e2 instanceof Error ? e2.message : e2}`);
-      }
+      const look = await this.lookCurrent(id, seed, [address], via2);
       const r = look.resolution;
-      if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing can be signed for it until they agree.");
-      if (r.stop === "pending" || r.waiting.length) throw new Error("A change of its keys is waiting for its homes: bring it once that change counts, with the new words.");
-      if (!r.signingKey || !r.links.length) throw new Error(`Its chain could not be read (${r.stop}).`);
-      if (hex(r.signingKey) !== hex(pub)) throw new Error(NOT_CURRENT);
       const binding = r.links[r.links.length - 1];
-      let chain = [];
-      for (const h of r.homes) {
-        try {
-          chain = (await relayAt(h.hint, via2).identity(id)).chain;
-          if (chain.length) break;
-        } catch {
-        }
-      }
-      if (!chain.length) throw new Error("None of its homes served its chain.");
+      const chain = await this.servedChain(id, r.homes, via2);
       const named = list(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
       const relays = named.length ? named : list(a.relays ?? []);
       if (!relays.length) {
         throw new Error("This identity names no relays for its posts. Give one or more relay addresses, and bring it again.");
       }
+      const enc = this.carriedKey(look, seed);
       const f = {
         label: TEST_LABEL,
         identity: id,
@@ -7651,87 +7303,269 @@ var Dub = class {
         rule: r.rule ?? null,
         sequence: [],
         routes: null,
-        encryption: [],
+        encryption: enc ? [enc] : [],
         pending: null
       };
-      await this.store.saveSettings({ kind: "brought", relays, via: via2 });
+      await this.store.saveSettings(id, { kind: "brought", relays, via: via2 });
       await this.store.saveIdentity(new TestIdentity(f, via2));
+      await this.store.setActive(id);
       return {
         lines: [
           { text: "Its current signing key matches the words.", tone: "ok" },
+          enc ? { text: "Its encryption key is the one the words carry: its private messages open here.", tone: "ok" } : { text: NO_KEY_SAY, tone: "warn" },
           { text: named.length ? `Its posts are published at the relays it names: ${relays.join(", ")}.` : `It names no relays: its posts are published at ${relays.join(", ")}.` },
           { text: LINE_SAY, tone: "warn" }
         ]
       };
     });
   }
+  /** Look an identity up, and refuse unless `seed` gives its current signing key (the carry Module, 4.2). */
+  async lookCurrent(id, seed, hints, via2) {
+    let pub;
+    try {
+      pub = signingPublic(seed);
+    } catch {
+      throw new Error("The words do not hold a signing key. Nothing was kept.");
+    }
+    let look;
+    try {
+      look = await lookUp(id, hints, via2);
+    } catch (e2) {
+      throw new Error(`This identity was not found at ${hints.join(", ")}: ${message2(e2)}`);
+    }
+    const r = look.resolution;
+    if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing can be signed for it until they agree.");
+    if (r.stop === "pending" || r.waiting.length) throw new Error("A change of its keys is waiting for its homes: bring it once that change counts, with the new words.");
+    if (!r.signingKey || !r.links.length) throw new Error(`Its chain could not be read (${r.stop}).`);
+    if (hex(r.signingKey) !== hex(pub)) throw new Error(NOT_CURRENT);
+    return look;
+  }
+  /** The chain acts, as its homes serve them, to carry along with posts. */
+  async servedChain(id, homes, via2) {
+    for (const h of homes) {
+      try {
+        const chain = (await relayAt(h.hint, via2).identity(id)).chain;
+        if (chain.length) return chain;
+      } catch {
+      }
+    }
+    throw new Error("None of its homes served its chain.");
+  }
+  /** The identity's encryption key that counts, where the words carry it (the carry Module, draft 2, 2a.3); else null. */
+  carriedKey(look, seed) {
+    const secret = encryptionSecret(seed);
+    if (!look.encryptionKey || !look.encryptionKeyAct || hex(xwingPublic(secret)) !== hex(look.encryptionKey)) return null;
+    return { version: this.keyVersion(look), act: look.encryptionKeyAct, secret: hex(secret) };
+  }
+  keyVersion(look) {
+    const e2 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
+    return e2.payload ? Number(cborDecode(e2.payload).get(0)) : 1;
+  }
   /**
-   * The identity's ID and carry words (the carry Module), on request: the
-   * way out of the web client, to Dub on a computer or another device.
+   * The new signing key's words, after a rotation made elsewhere counts (the
+   * carry Module, draft 2, 4.6; F332, amended): checked as any brought words
+   * are, then this app signs with them in a new line under the new binding,
+   * keeping what it held of the identity. Where this app published the
+   * identity's last encryption key, it publishes the next one, from the new
+   * words (2a.4).
    */
+  renew(words2) {
+    return this.serial(async () => {
+      const active = await this.store.active();
+      if (!active) throw new Error("No identity in use.");
+      let seed;
+      try {
+        seed = fromWords(words2);
+      } catch (e2) {
+        if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
+        throw e2;
+      }
+      return this.renewHeld(active, seed);
+    });
+  }
+  async renewHeld(id, seed) {
+    const me = await this.store.identity(id);
+    const s = await this.store.settings(id);
+    const look = await this.lookCurrent(id, seed, [.../* @__PURE__ */ new Set([...me.f.homes.map((h) => h.hint), ...s.relays])], s.via);
+    if (hex(seed) === me.f.signingSecret) throw new Error("These are the signing key\u2019s words this app already holds, and they still count: nothing to change.");
+    const r = look.resolution;
+    const binding = r.links[r.links.length - 1];
+    me.f.chain = (await this.servedChain(id, r.homes, s.via)).map(base64);
+    me.f.position = binding.position;
+    me.f.binding = binding.act;
+    me.f.signingSecret = hex(seed);
+    me.f.homes = r.homes;
+    me.f.rule = r.rule ?? null;
+    me.f.pending = null;
+    me.f.sequence = [];
+    me.f.routes = me.f.routes && look.routes.act === me.f.routes.act ? me.f.routes : null;
+    const lines2 = [{ text: "The new signing key\u2019s words give its current signing key. This app signs with them from now on, in a new line.", tone: "ok" }];
+    const carried = this.carriedKey(look, seed);
+    const last = me.f.encryption.at(-1);
+    if (carried) {
+      if (!me.f.encryption.some((e2) => e2.act === carried.act)) me.f.encryption.push(carried);
+      lines2.push({ text: "Its encryption key is the one the new words carry.", tone: "ok" });
+      await this.store.saveIdentity(me);
+    } else if (last && look.encryptionKeyAct === last.act) {
+      await this.store.saveIdentity(me);
+      await me.publishEncryptionKey(encryptionSecret(seed));
+      await this.store.saveIdentity(me);
+      lines2.push({ text: "Its encryption key was renewed from the new words: messages sealed from now on open only with them. Messages sealed before, to the old key, stay readable by whoever held the old words.", tone: "ok" });
+    } else {
+      await this.store.saveIdentity(me);
+      lines2.push({ text: NO_KEY_SAY, tone: "warn" });
+    }
+    lines2.push({ text: LINE_SAY, tone: "warn" });
+    return { lines: lines2 };
+  }
+  /** Use another identity held here. */
+  async use(id) {
+    if (!(await this.store.held()).includes(id)) throw new Error("This app does not hold that identity.");
+    await this.store.setActive(id);
+  }
+  /** Forget an identity here: its keys go. Only its signing key's words, written down, bring it back. Its posts stay published. */
+  forget(id) {
+    return this.serial(async () => {
+      if (!(await this.store.held()).includes(id)) throw new Error("This app does not hold that identity.");
+      const was = await this.store.active();
+      await this.store.forget(id);
+      if (was === id) await this.store.setActive((await this.store.held())[0] ?? null);
+    });
+  }
+  /** The identity's ID and its signing key's words (the carry Module), on request: the way to another app. */
   async carry() {
-    const me = await this.me();
+    const { me } = await this.ctx();
     return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)), say: CARRY_SAY };
   }
-  // ------------------------------------------------------------ posting
+  // ------------------------------------------------------------ the key in use
   /**
-   * Refuse to sign once a rotation counts that this app did not make: the
-   * key it holds is spent (the carry Module, 4.5; Identity rule 17).
+   * Whether the signing key this app holds still counts (the carry Module,
+   * 4.5): false once a rotation made elsewhere bound another key.
    */
+  async check() {
+    const { me } = await this.ctx();
+    try {
+      await this.current(me);
+      return { current: true, say: null };
+    } catch (e2) {
+      if (message2(e2) === SPENT_SAY) return { current: false, say: SPENT_SAY };
+      throw e2;
+    }
+  }
+  /** Refuse to sign once a rotation counts that this app did not see: the key it holds is spent. */
   async current(me) {
     const look = await lookUp(me.id, me.f.homes.map((h) => h.hint), me.via);
     const r = look.resolution;
     if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing was signed.");
-    if (!r.signingKey || hex(r.signingKey) !== hex(signingPublic(unhex(me.f.signingSecret)))) {
-      throw new Error("This identity\u2019s signing key was changed elsewhere, so the key this app holds no longer counts. Nothing was signed. To post from here again, bring the identity again with its new words.");
+    if (!r.signingKey || hex(r.signingKey) !== hex(signingPublic(unhex(me.f.signingSecret)))) throw new Error(SPENT_SAY);
+  }
+  /** An act signed and kept: the sequence is saved before anything leaves. */
+  async signed(me, f) {
+    try {
+      return await f();
+    } finally {
+      await this.store.saveIdentity(me);
     }
   }
+  // ------------------------------------------------------------ one's own display name (the naming cMIP)
+  /**
+   * Publish a display name (the naming cMIP, section 1), then withdraw every
+   * other name of this identity under that cMIP found counting (1.3). An
+   * empty name withdraws them all.
+   */
+  setName(typed) {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      const name = typed.trim() ? readName(typed) : null;
+      await this.current(me);
+      const before = await namesOf(me.id, hints, s.via);
+      const lines2 = [];
+      const send = async (act) => {
+        for (const h of [...me.f.homes.map((x) => x.hint), ...s.relays]) {
+          try {
+            await relayAt(h, s.via).putAct(act);
+          } catch {
+          }
+        }
+      };
+      if (name && !before.some((n) => n.name === name)) {
+        const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME, namePayload(name), { public: true }));
+        await send(made.act);
+        lines2.push({ text: `Your display name is \u201C${name}\u201D, shown beside your fingerprint, never instead of it. Anyone may take the same name.`, tone: "ok" });
+      }
+      for (const old of before.filter((n) => n.name !== name)) {
+        const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME_WITHDRAWAL, cborEncode(/* @__PURE__ */ new Map()), { public: true, objects: [[old.act, old.act]] }));
+        await send(made.act);
+        lines2.push({ text: `\u201C${old.name}\u201D withdrawn: it stays readable as an act, no longer as your name.` });
+      }
+      const names = (await namesOf(me.id, hints, s.via)).map((n) => n.name);
+      this.names.set(me.id, { names, at: now() });
+      return { lines: lines2, names };
+    });
+  }
+  // ------------------------------------------------------------ the public side
   /**
    * Post a text, with a JPEG if one is given, then read it back from the
-   * relays, verified. `to`, an identity's ID: a public message to it, as a
-   * bug report to the reporting identity is (F287): the post names it as
-   * its recipient and is left, unsealed, in its inbox as well, with this
-   * identity's chain so it can be checked there. Its inbox is looked up
-   * first; an identity declaring none is said, and nothing is signed.
+   * relays, verified. `to`, an identity's ID: a public message to it (F287):
+   * the post names it and is left, unsealed, in its inbox too. `reply`, a
+   * post: this one answers it (it names it in `refs`, with its signer), is
+   * addressed to its signer, and left in its inbox where it has one. No
+   * private switch here: the private side is its own tab.
    */
   post(a) {
     return this.serial(async () => {
-      const me = await this.me();
+      const { me, s, p, hints } = await this.ctx();
       const { text: text2, changes } = compose(a.text);
       if (!text2.trim()) throw new Error("Write something to post.");
-      const s = await this.store.settings();
-      const relays = s.relays;
-      let to = null;
+      const to = [];
       if (a.to?.trim()) {
         let id;
         try {
           id = readId(a.to);
         } catch (e2) {
-          throw new Error(`To: ${e2 instanceof Error ? e2.message : e2}. Nothing was posted.`);
+          throw new Error(`To: ${message2(e2)}. Nothing was posted.`);
         }
         if (id === me.id) throw new Error("To: that is this identity itself. Nothing was posted.");
         let inbox;
         try {
-          inbox = (await lookUp(id, [.../* @__PURE__ */ new Set([...relays, ...me.f.homes.map((h) => h.hint)])], s.via)).inbox(SPECS.text);
+          inbox = (await lookUp(id, hints, s.via)).inbox(SPECS.text);
         } catch (e2) {
-          throw new Error(`To: the identity ${id.slice(0, 12)}\u2026 was not found: ${e2 instanceof Error ? e2.message : e2}. Nothing was posted.`);
+          throw new Error(`To: the identity ${fingerprint(id)} was not found: ${message2(e2)}. Nothing was posted.`);
         }
-        if (!inbox?.length) throw new Error(`To: the identity ${id.slice(0, 12)}\u2026 declares no inbox, so nothing can be left for it. Nothing was posted.`);
-        to = { id, inbox };
+        if (!inbox?.length) throw new Error(`To: the identity ${fingerprint(id)} declares no inbox, so nothing can be left for it. Nothing was posted.`);
+        to.push({ id, inbox });
+      }
+      let refs;
+      if (a.reply) {
+        const signer = readId(a.reply.signer);
+        const id = readId(a.reply.id);
+        let act;
+        try {
+          act = (await followRef([id, signer], [...hints, ...this.inboxPlaces(p)], s.via)).act;
+        } catch (e2) {
+          throw new Error(`The post answered could not be found: ${message2(e2)}. Nothing was posted.`);
+        }
+        const d = describeAct(act);
+        refs = [[d.id, d.signer]];
+        if (d.signer !== me.id && !to.some((t) => t.id === d.signer)) {
+          try {
+            to.push({ id: d.signer, inbox: (await lookUp(d.signer, hints, s.via)).inbox(SPECS.text) });
+          } catch (e2) {
+            to.push({ id: d.signer, inbox: null, why: message2(e2) });
+          }
+        }
       }
       await this.current(me);
-      let made;
-      try {
-        made = await post(me, { text: text2, jpeg: a.jpeg, relays, to: to ? [to.id] : void 0 });
-      } finally {
-        await this.store.saveIdentity(me);
-      }
+      const made = await this.signed(me, () => post(me, { text: text2, jpeg: a.jpeg, relays: s.relays, to: to.length ? to.map((t) => t.id) : void 0, refs }));
       const lines2 = changes.map((c) => ({ text: `Text: ${c}.` }));
-      if (to) {
-        const { left, failed: refused } = await leaveInInbox(me, made.act, to.inbox);
-        const failed = refused.map((f) => `${f.relay} (${f.reason})`);
-        if (left.length) lines2.push({ text: `To ${to.id.slice(0, 12)}\u2026: left in its inbox at ${left.join(", ")}, unsealed: anyone may read it.`, tone: "ok" });
-        if (failed.length) lines2.push({ text: `Its inbox did not take it at ${failed.join(", ")}.`, tone: left.length ? "warn" : "bad" });
+      for (const t of to) {
+        if (!t.inbox?.length) {
+          lines2.push({ text: `${fingerprint(t.id)} declares no inbox${t.why ? ` (${t.why})` : ""}: the reply is published, not left for it.`, tone: "warn" });
+          continue;
+        }
+        const { left, failed } = await leaveInInbox(me, made.act, t.inbox);
+        if (left.length) lines2.push({ text: `Left in the inbox of ${fingerprint(t.id)} too, unsealed: anyone may read it.`, tone: "ok" });
+        if (failed.length) lines2.push({ text: `Its inbox did not take it at ${failed.map((f) => `${f.relay} (${f.reason})`).join(", ")}.`, tone: left.length ? "warn" : "bad" });
       }
       if (made.picture) {
         lines2.push({
@@ -7739,278 +7573,816 @@ var Dub = class {
           tone: "ok"
         });
       }
-      return { post: await this.show(made.id), lines: lines2 };
+      const shown = await readPost(made.id, hints, s.via);
+      return { post: this.item(shown, me.id, p, s, "feed", [], false), lines: lines2 };
     });
   }
-  /** A post as the barebone client's reader shows it: fetched from the relays and verified. */
-  async show(id) {
-    const me = await this.me();
-    const s = await this.store.settings();
-    const p = await readPost(id, s.relays, s.via);
-    const withdrawable = p.refs.filter((r) => r.kind === "picture").filter((r) => r.signer === me.id && !r.withdrawn && r.standing === "valid").map((r) => r.publication);
-    return { id, html: renderPost(p), withdrawable };
+  /** A post read and judged, as the page shows it. */
+  item(sp, me, p, s, via2, answers, toMe) {
+    const pictures = sp.refs.filter((r) => r.kind === "picture").map((r) => ({
+      src: r.bytes && r.picture ? `data:image/jpeg;base64,${base64(r.bytes)}` : null,
+      width: r.picture?.shownWidth ?? 0,
+      height: r.picture?.shownHeight ?? 0,
+      publication: r.publication,
+      problem: r.problem,
+      withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === "valid"
+    }));
+    const doc = sp.format === POST_SPECS.longform ? { title: titleOf(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) } : null;
+    return {
+      id: sp.id,
+      who: this.whoFrom(sp.signer, me, p),
+      standing: sp.standing,
+      text: doc ? "" : sp.text,
+      doc,
+      pictures,
+      answers,
+      toMe,
+      via: via2,
+      problem: sp.standing === "valid" ? null : `not verified: ${sp.standing}`,
+      seen: !toMe || p.seen.includes(sp.id)
+    };
   }
-  /** This identity's posts at its relays, from every line, newest first. */
-  async posts(limit = 20) {
-    const me = await this.me();
-    const s = await this.store.settings();
-    const ids = [];
-    for (const r of s.relays) {
-      try {
-        for (const id of await listPosts(me.id, r, s.via)) if (!ids.includes(id)) ids.push(id);
-      } catch {
+  /**
+   * The feed: this identity's own posts and those of the identities it
+   * follows, muted ones left out (the people cMIP, 2.2), read and judged as
+   * the site's feed reads them, in signed order (website cMIP, draft 6: MOR
+   * has no clock; a reply comes after what it answers). Only text acts and
+   * JPEG pictures are shown; a long-form document is named, with a link to
+   * the reader.
+   */
+  async feed() {
+    const { me, s, p, hints } = await this.ctx();
+    const authors = [me.id, ...p.follows.map((f) => f.id).filter((id) => !p.muted.includes(id))].map((identity) => ({ identity, name: null }));
+    const feed = await readFeed(authors, hints, s.via);
+    await this.warm([...feed.posts.map((x) => x.signer), ...[...feed.answered.values()].map((x) => x.signer).filter(Boolean)], hints, s.via);
+    const items = [];
+    for (const fp of feed.posts) {
+      if (!fp.post) {
+        items.push(this.unread(fp, me.id, p));
+        continue;
       }
+      const answers = fp.answers.map((id) => {
+        const a = feed.answered.get(id);
+        return { id, who: a?.signer ? this.whoFrom(a.signer, me.id, p) : null, snippet: a?.post ? snippet(a.post.text) : null };
+      });
+      const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
+      items.push(this.item(fp.post, me.id, p, s, "feed", answers, toMe));
     }
-    const out = [];
-    for (const id of ids.reverse().slice(0, limit)) {
+    const problems = feed.authors.filter((a) => a.problem).map((a) => `${fingerprint(a.identity)}: ${a.problem}`);
+    return { items, more: feed.more, problems };
+  }
+  unread(fp, me, p) {
+    return { id: fp.id, who: this.whoFrom(fp.signer, me, p), standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "feed", problem: fp.problem, seen: true };
+  }
+  // ------------------------------------------------------------ the inbox: "to you", and the private side
+  inboxPlaces(p) {
+    return Object.keys(p.inbox.after);
+  }
+  /**
+   * Read this identity's inbox since last time: everything its inbox relays
+   * hold addressed to it, sealed or not; each container opened with its
+   * encryption keys, each act judged through its signer's chain. Kept here,
+   * so each is read once. Silence proves nothing: what was not delivered to
+   * the inbox is not found here.
+   */
+  async readInbox(me, s, p, hints) {
+    const problems = [];
+    let inbox = [];
+    try {
+      const l = await lookUp(me.id, hints, s.via);
+      inbox = list(l.routes.routes.filter((r) => r.kind === 1).flatMap((r) => r.hints));
+    } catch (e2) {
+      problems.push(`Its inbox could not be looked up: ${message2(e2)}`);
+    }
+    if (!inbox.length) {
+      problems.push("This identity declares no inbox: nothing addressed to it can be found here.");
+      return problems;
+    }
+    const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const looked = /* @__PURE__ */ new Map();
+    const judge = async (signer, act, id, key) => {
+      let l = looked.get(signer);
+      if (!l) looked.set(signer, l = lookUp(signer, hints, s.via));
       try {
-        out.push(await this.show(id));
+        const x = await l;
+        if (key) x.verifier.addWithKey(act, key);
+        else x.verifier.add(act);
+        return x.verifier.status(id);
       } catch (e2) {
-        out.push({ id, html: `<p class="small">Post ${id.slice(0, 12)}\u2026 could not be read: ${escapeHtml(String(e2 instanceof Error ? e2.message : e2))}</p>`, withdrawable: [] });
+        return `its signer was not found (${message2(e2)})`;
+      }
+    };
+    for (const hint of inbox) {
+      let after = p.inbox.after[hint];
+      try {
+        for (; ; ) {
+          const page = await relayAt(hint, s.via).feed({ to: me.id, after });
+          for (const it of page.items) {
+            const k = await this.readItem(it.kind, it.item, me.id, secrets, judge);
+            if (k && !p.inbox.items.some((x) => x.key === k.key)) p.inbox.items.push(k);
+          }
+          if (!page.items.length || page.next === after) break;
+          after = page.next;
+        }
+        p.inbox.after[hint] = after ?? 0;
+      } catch (e2) {
+        problems.push(`${hint}: ${message2(e2)}`);
       }
     }
-    return out;
+    await this.store.savePeople(me.id, p);
+    return problems;
   }
-  /** Withdraw a picture this identity published (Envelopes, "Withdrawal"): readers stop showing it; the post stands. */
-  withdraw(publication) {
-    return this.serial(async () => {
-      const me = await this.me();
-      const s = await this.store.settings();
-      if (!/^[0-9a-f]{64}$/.test(publication)) throw new Error("not a publication id");
-      const act = await (async () => {
-        for (const r of s.relays) {
+  async readItem(kind, bytes, me, secrets, judge) {
+    let act = bytes;
+    let key;
+    let d;
+    if (kind === "sealed") {
+      const open = () => {
+        for (const s of secrets) {
           try {
-            const a = await relayAt(r, s.via).getAct(publication);
-            if (a) return a;
+            return openSealed(bytes, me, s);
           } catch {
           }
         }
         return null;
-      })();
+      };
+      const opened = open();
+      if (!opened) {
+        return {
+          key: `sealed:${sealedId(bytes)}`,
+          kind: "other",
+          from: null,
+          text: null,
+          standing: "unknown",
+          refs: [],
+          to: [],
+          found: now(),
+          problem: secrets.length ? "a sealed message that does not open with this identity\u2019s encryption keys" : NO_KEY_SAY
+        };
+      }
+      act = opened.act;
+      key = opened.key;
+      d = opened.described;
+    } else {
+      try {
+        d = describeAct(bytes);
+      } catch {
+        return null;
+      }
+    }
+    if (!d.signer || d.signer === me) return null;
+    const isText = d.spec === POST_SPECS.text && d.type === TEXT_ACT && !!d.payload;
+    let text2 = null;
+    if (isText) {
+      const t = cborDecode(d.payload).get(0);
+      if (typeof t === "string") text2 = t;
+    }
+    return {
+      key: d.id,
+      kind: !isText ? "other" : d.public ? "public" : "private",
+      from: d.signer,
+      text: text2,
+      standing: await judge(d.signer, act, d.id, key),
+      refs: (d.refs ?? []).map((id, i) => ({ id, signer: d.refSigners?.[i] ?? null })),
+      to: d.to ?? [],
+      found: now(),
+      problem: d.payload ? void 0 : "a private act whose key was not delivered with it: it cannot be read here"
+    };
+  }
+  /**
+   * The inbox, read: on the public side, "to you" (public posts that answer
+   * one of this identity's posts or are addressed to it); on the private
+   * side, the messages sealed to it, with those sent from here. Muted
+   * identities are left out (the people cMIP, 2.2), and counted.
+   */
+  async inbox() {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      const problems = await this.readInbox(me, s, p, hints);
+      const shown = p.inbox.items.filter((k) => !k.from || !p.muted.includes(k.from));
+      const hidden = p.inbox.items.length - shown.length;
+      await this.warm([...shown.map((k) => k.from).filter(Boolean), ...p.sent.map((x) => x.to)], hints, s.via);
+      const places = [...hints, ...this.inboxPlaces(p)];
+      const toYou = [];
+      for (const k of shown.filter((x) => x.kind === "public").sort((a, b) => b.found - a.found).slice(0, 30)) {
+        const answers = k.refs.filter((r) => r.signer === me.id || me.f.sequence.includes(r.id));
+        if (!answers.length && !k.to.includes(me.id)) continue;
+        const ans = answers.map((r) => ({ id: r.id, who: this.whoFrom(me.id, me.id, p), snippet: null }));
+        let item;
+        try {
+          item = this.item(await readPost(k.key, places, s.via), me.id, p, s, "inbox", ans, true);
+        } catch {
+          item = {
+            id: k.key,
+            who: this.whoFrom(k.from, me.id, p),
+            standing: k.standing,
+            text: k.text ?? "",
+            doc: null,
+            pictures: [],
+            answers: ans,
+            toMe: true,
+            via: "inbox",
+            problem: k.standing === "valid" ? null : `not verified: ${k.standing}`,
+            seen: false
+          };
+        }
+        item.seen = p.seen.includes(k.key);
+        toYou.push(item);
+      }
+      const messages = [
+        ...shown.filter((k) => k.kind === "private" || k.kind === "other" && k.key.startsWith("sealed:")).map((k) => ({
+          key: k.key,
+          who: k.from ? this.whoFrom(k.from, me.id, p) : { id: "", short: "unknown", names: [], pet: null, me: false, followed: false, muted: false },
+          dir: "in",
+          text: k.text ?? "",
+          standing: k.standing,
+          at: k.found,
+          seen: p.seen.includes(k.key),
+          problem: k.problem ?? (k.standing === "valid" ? null : `not verified: ${k.standing}`)
+        })),
+        ...p.sent.map((x) => ({ key: x.id, who: this.whoFrom(x.to, me.id, p), dir: "out", text: x.text, standing: "valid", at: x.at, seen: true, problem: null }))
+      ].sort((a, b) => b.at - a.at);
+      return { toYou, messages, encryption: me.f.encryption.length > 0, hidden, problems };
+    });
+  }
+  /**
+   * A private message (F293): a private text act addressed to one identity,
+   * sealed to its current encryption key and left in its inbox. Only it can
+   * open it. Kept here as sent; the act itself, locked, goes to this
+   * identity's homes too, so this app's line can be rebuilt by whoever
+   * changes its keys (Identity rule 35), and it shows only that a private act
+   * exists.
+   */
+  message(a) {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      let to;
+      try {
+        to = readId(a.to);
+      } catch (e2) {
+        throw new Error(`To: ${message2(e2)}. Nothing was sent.`);
+      }
+      if (to === me.id) throw new Error("To: that is this identity itself. Nothing was sent.");
+      const { text: text2 } = compose(a.text);
+      if (!text2.trim()) throw new Error("Write something to send.");
+      let l;
+      try {
+        l = await lookUp(to, hints, s.via);
+      } catch (e2) {
+        throw new Error(`To: the identity ${fingerprint(to)} was not found: ${message2(e2)}. Nothing was sent.`);
+      }
+      if (!l.encryptionKey) throw new Error(`To: the identity ${fingerprint(to)} has published no encryption key, so nothing can be sealed to it. Nothing was sent.`);
+      const inbox = l.inbox(SPECS.text);
+      if (!inbox?.length) throw new Error(`To: the identity ${fingerprint(to)} declares no inbox. Nothing was sent.`);
+      await this.current(me);
+      const made = await this.signed(me, async () => me.sign(SPECS.text, TEXT_ACT, textPayload(text2), { public: false, to: [to] }));
+      const sealed = sealFor(made.act, made.key, [{ id: to, key: l.encryptionKey }]);
+      const lines2 = [];
+      let left = 0;
+      for (const h of inbox) {
+        try {
+          await relayAt(h, s.via).putSealed(sealed);
+          left++;
+        } catch (e2) {
+          lines2.push({ text: `${h} did not take it: ${message2(e2)}`, tone: "warn" });
+        }
+      }
+      if (!left) throw new Error(`No inbox of ${fingerprint(to)} took the message: ${lines2.map((x) => x.text).join("; ")}. It is signed, not delivered.`);
+      for (const h of me.f.homes) {
+        try {
+          await relayAt(h.hint, s.via).putAct(made.act);
+        } catch {
+        }
+      }
+      p.sent.push({ id: made.id, to, text: text2, at: now() });
+      await this.store.savePeople(me.id, p);
+      lines2.unshift({ text: `Sealed to ${fingerprint(to)} and left in its inbox: only it can open it.`, tone: "ok" });
+      return { lines: lines2 };
+    });
+  }
+  /** Mark what the person has seen, for the counts on the tabs. */
+  async seen(keys) {
+    await this.serial(async () => {
+      const { me, p } = await this.ctx();
+      p.seen = [.../* @__PURE__ */ new Set([...p.seen, ...keys])];
+      await this.store.savePeople(me.id, p);
+    });
+  }
+  // ------------------------------------------------------------ follow and mute (the people cMIP)
+  async people(f) {
+    return this.serial(async () => {
+      const { me, s, p } = await this.ctx();
+      f(p, me);
+      await this.store.savePeople(me.id, p);
+      const lines2 = [];
+      if (p.list === "published") lines2.push(...await this.publishList(me, s, p, false));
+      return { lines: lines2 };
+    });
+  }
+  /** Follow an identity, by its ID or the signer of an act shown; a name for it, if given, stays in this app. */
+  follow(a) {
+    const id = readId(a.id);
+    const name = a.name?.trim() ? a.name.trim().slice(0, 64) : null;
+    return this.people((p, me) => {
+      if (id === me.id) throw new Error("That is this identity itself: its own posts are always in its feed.");
+      const f = p.follows.find((x) => x.id === id);
+      if (f) f.name = name ?? f.name;
+      else p.follows.push({ id, name });
+    });
+  }
+  unfollow(id) {
+    return this.people((p) => {
+      p.follows = p.follows.filter((x) => x.id !== id);
+    });
+  }
+  /** Your own name for an identity you follow: in this app only, never published. */
+  callIt(a) {
+    return this.people((p) => {
+      const f = p.follows.find((x) => x.id === a.id);
+      if (!f) throw new Error("Follow it first.");
+      f.name = a.name.trim() ? a.name.trim().slice(0, 64) : null;
+    });
+  }
+  /** Mute an identity: nothing of it is shown here. Never published, never told. */
+  async mute(id) {
+    const x = readId(id);
+    return this.serial(async () => {
+      const { me, p } = await this.ctx();
+      if (x === me.id) throw new Error("That is this identity itself.");
+      if (!p.muted.includes(x)) p.muted.push(x);
+      await this.store.savePeople(me.id, p);
+      return { lines: [] };
+    });
+  }
+  async unmute(id) {
+    return this.serial(async () => {
+      const { me, p } = await this.ctx();
+      p.muted = p.muted.filter((m) => m !== id);
+      await this.store.savePeople(me.id, p);
+      return { lines: [] };
+    });
+  }
+  /**
+   * The follow list's option (the people cMIP, 1.3): private (the default)
+   * or published. Published is chosen only with the warning shown, word for
+   * word (3.5); back to private publishes one last, empty, withdrawn version
+   * (3.4).
+   */
+  listOption(a) {
+    return this.serial(async () => {
+      const { me, s, p } = await this.ctx();
+      if (a.published === (p.list === "published")) return { lines: [] };
+      if (a.published && a.shown !== PUBLISH_WARNING) throw new Error("The follow list is published only once its warning was shown. Nothing was signed.");
+      const lines2 = await this.publishList(me, s, p, !a.published);
+      p.list = a.published ? "published" : "private";
+      await this.store.savePeople(me.id, p);
+      return { lines: lines2 };
+    });
+  }
+  async publishList(me, s, p, withdrawn) {
+    await this.current(me);
+    let last = p.published;
+    try {
+      const found = await readFollowList(me.id, s.relays, s.via);
+      if (found.act && found.version >= (last?.version ?? 0)) last = { version: found.version, act: found.act };
+    } catch {
+    }
+    const version = (last?.version ?? 0) + 1;
+    const payload = followListPayload({ version, previous: last?.act ?? null, ids: p.follows.map((f) => f.id), withdrawn });
+    const made = await this.signed(me, async () => me.publish(PEOPLE_SPEC, FOLLOW_LIST, payload, { public: true, relays: s.relays }));
+    p.published = { version, act: made.id };
+    await this.store.savePeople(me.id, p);
+    return [
+      withdrawn ? { text: `The follow list is private again: a last, empty version (${version}) says so. What was published stays published.`, tone: "warn" } : { text: `The follow list is published (version ${version}): ${p.follows.length} identit${p.follows.length === 1 ? "y" : "ies"}, by ID only. The names you gave them stay here.`, tone: "ok" }
+    ];
+  }
+  // ------------------------------------------------------------ pictures
+  /** Withdraw a picture this identity published (Envelopes, "Withdrawal"): readers stop showing it; the post stands. */
+  withdraw(publication) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      if (!/^[0-9a-f]{64}$/.test(publication)) throw new Error("not a publication id");
+      let act = null;
+      for (const r of s.relays) {
+        try {
+          act = await relayAt(r, s.via).getAct(publication);
+          if (act) break;
+        } catch {
+        }
+      }
       if (!act) throw new Error("That picture was not found at the relays.");
       if (describeAct(act).signer !== me.id) throw new Error("That picture was published by another identity: only its signer can withdraw it.");
       await this.current(me);
-      try {
-        return await withdraw(me, publication, s.relays);
-      } finally {
-        await this.store.saveIdentity(me);
-      }
+      return this.signed(me, () => withdraw(me, publication, s.relays));
     });
   }
 };
+function titleOf(text2) {
+  const first = text2.split("\n").find((l) => l.trim()) ?? "";
+  return first.replace(/^#+\s*/, "").trim().slice(0, 120) || "A document";
+}
+function snippet(text2) {
+  const one = text2.replace(/\s+/g, " ").trim();
+  return one.length > 80 ? `${one.slice(0, 79)}\u2026` : one;
+}
+
+// src/ops.ts
+var text = (v) => typeof v === "string" ? v : "";
+var list2 = (v) => Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : [];
+async function run(dub2, op, a, p) {
+  switch (op) {
+    case "state":
+      return dub2.state();
+    case "begin":
+      return dub2.begin({ homes: list2(a.homes), relays: list2(a.relays), via: p.via(a.via) });
+    case "confirm":
+      return dub2.confirm(list2(a.typed));
+    case "abandon":
+      await dub2.abandon();
+      return {};
+    case "bring":
+      return dub2.bring({ id: text(a.id), words: text(a.words), address: text(a.address), relays: list2(a.relays), via: p.via(a.via) });
+    case "renew":
+      return dub2.renew(text(a.words));
+    case "use":
+      await dub2.use(text(a.id));
+      return {};
+    case "forget":
+      await dub2.forget(text(a.id));
+      return {};
+    case "carry":
+      return dub2.carry();
+    case "check":
+      return dub2.check();
+    case "name":
+      return dub2.setName(text(a.name));
+    case "post": {
+      const reply = a.reply && typeof a.reply === "object" ? a.reply : null;
+      return dub2.post({
+        text: text(a.text),
+        jpeg: text(a.jpeg) ? p.bytes(text(a.jpeg)) : void 0,
+        to: text(a.to),
+        reply: reply ? { id: text(reply.id), signer: text(reply.signer) } : void 0
+      });
+    }
+    case "feed":
+      return dub2.feed();
+    case "inbox":
+      return dub2.inbox();
+    case "message":
+      return dub2.message({ to: text(a.to), text: text(a.text) });
+    case "seen":
+      await dub2.seen(list2(a.keys));
+      return {};
+    case "follow":
+      return dub2.follow({ id: text(a.id), name: text(a.name) });
+    case "unfollow":
+      return dub2.unfollow(text(a.id));
+    case "call":
+      return dub2.callIt({ id: text(a.id), name: text(a.name) });
+    case "mute":
+      return dub2.mute(text(a.id));
+    case "unmute":
+      return dub2.unmute(text(a.id));
+    case "list":
+      return dub2.listOption({ published: a.published === true, shown: text(a.shown) });
+    case "withdraw":
+      return dub2.withdraw(text(a.publication));
+    default:
+      throw new Error(`unknown operation ${op}`);
+  }
+}
 
 // ../manage/src/view.ts
-var STYLE3 = `:root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 18%,transparent);--soft:color-mix(in srgb,CanvasText 65%,Canvas);--ok:#1a7f37;--bad:#b3261e;--warn:#9a6700}
-@media (prefers-color-scheme:dark){:root{--ok:#4ac26b;--bad:#ff8a80;--warn:#d29922}}
-*{box-sizing:border-box}
-body{margin:0;background:Canvas;color:CanvasText;font:15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif}
-main{max-width:60em;margin:0 auto;padding:20px 16px 64px}
-header.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 16px;padding-bottom:12px;border-bottom:1px solid var(--line)}
-header.top h1{font-size:18px;margin:0}
-.small{font-size:13px;color:var(--soft)}
-code{font-family:ui-monospace,Menlo,monospace;font-size:.9em;overflow-wrap:anywhere}
-section{margin-top:32px}
-h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin:0 0 8px}
-dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:0}
-dl.facts dt{color:var(--soft)}
-dl.facts dd{margin:0;overflow-wrap:anywhere}
-.table{overflow-x:auto}
-table{border-collapse:collapse;width:100%}
-th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-weight:600;font-size:13px;color:var(--soft)}
-button{font:600 14px system-ui,sans-serif;padding:6px 12px;border-radius:6px;border:1px solid CanvasText;background:CanvasText;color:Canvas;cursor:pointer}
-button.quiet{background:transparent;color:CanvasText;border-color:var(--line)}
-button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
-button:disabled{opacity:.5;cursor:default}
-input[type=text],input[type=number]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:Canvas;color:CanvasText;min-width:0}
-input.wide{width:100%}
-form.row,div.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
-.note{padding:10px 12px;border-left:3px solid var(--line);margin:12px 0}
-.note.error{border-left-color:var(--bad)}
-.note.done{border-left-color:var(--ok)}
-.note.warn{border-left-color:var(--warn)}
-.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
-.tag.ok{color:var(--ok);border-color:var(--ok)}
-.tag.bad{color:var(--bad);border-color:var(--bad)}
-.tag.warn{color:var(--warn);border-color:var(--warn)}
-.code{font:600 20px ui-monospace,Menlo,monospace;letter-spacing:.06em}
-#status{position:sticky;top:0;background:Canvas;z-index:1}
-details{margin:12px 0}
-summary{cursor:pointer;font-weight:600}
-ul.plain{list-style:none;padding:0}`;
 function e(s) {
   return String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
 // src/page/view.ts
-var NAME = "Dub";
+var NAME2 = "Dub";
 var TEST_ONLY = "Test identities only, until MOR is frozen";
 var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY}. Two risks, in plain words:</p>
 <ol><li>Whoever serves this page's code at the moment an identity is made here could copy its keys.</li>
 <li>This browser's storage, where the identity's signing key is kept, can be lost, or read by what runs in this page.</li></ol>
 <p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div>`;
-var KEPT_SAY = "Its signing key is kept in this browser\u2019s storage (IndexedDB), as it is, not locked: the only lock this page could put on it is one it could open by itself, and so could whatever else runs in this page. Its carry words are the way out: write them down.";
-var STYLE4 = `${STYLE3}
-.banner{margin:12px 0;padding:8px 12px;border:1px solid var(--warn);color:var(--warn);font-weight:600;font-size:13px}
-#for-testing-only{max-width:868px;margin:16px auto 0;box-sizing:border-box}
-@media (max-width:900px){#for-testing-only{margin:16px 16px 0}}
-.banner p,.banner ol{margin:4px 0}
-.banner ol{padding-left:1.4em}
-.card{border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:12px 0}
-.card h3{margin:0 0 4px;font-size:17px}
-.doors{display:grid;grid-template-columns:repeat(auto-fit,minmax(18em,1fr));gap:12px}
-label{display:block;margin:10px 0 4px;font-weight:600;font-size:14px}
-textarea{font:inherit;width:100%;min-height:4em;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:Canvas;color:CanvasText}
-textarea.write{min-height:8em}
-input.wide{width:100%}
-.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(9em,1fr));gap:6px 12px;margin:12px 0;padding:12px;border:2px solid CanvasText;border-radius:8px;font:16px ui-monospace,Menlo,monospace}
-.words span{white-space:nowrap}
-.words b{display:inline-block;min-width:2em;color:var(--soft);font-weight:400}
-.say li{margin:4px 0}
-.typed{display:flex;flex-wrap:wrap;gap:8px}
-.typed label{margin:0;font-weight:400}
-.typed input{width:10em}
-.published{border:2px solid var(--ok);border-radius:8px;padding:4px 12px;margin:12px 0}
-.id{font:14px ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
-.copy{font-size:12px;padding:2px 8px;margin-left:8px;vertical-align:baseline}
-.here:empty{display:none}
-details.more summary{cursor:pointer;color:var(--soft);font-size:13px;margin-top:8px}`;
+var KEPT_SAY = "Its signing key and its encryption key are kept in this browser\u2019s storage (IndexedDB), as they are, not locked: the only lock this page could put on them is one it could open by itself, and so could whatever else runs in this page. Its signing key\u2019s words are the way out: write them down.";
 var note = (kind, html) => `<div class="note ${kind}">${html}</div>`;
 var lines = (ls) => `<ul>${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>`;
-function top(web = false) {
-  if (web) return `<header class="top"><h1>${NAME}</h1><span class="small">web client, for testing only \xB7 ${e(location.host)}</span></header>`;
-  return `<header class="top"><h1>${NAME}</h1><span class="small">this machine only \xB7 ${e(location.host)}</span></header>
-<div class="banner" id="test-only">${TEST_ONLY}. Every key is held in software in this program's folder: a prototype, never for a real identity.</div>`;
+function who(w) {
+  const dn = w.names.length ? w.names.map((n) => `\u201C${e(n)}\u201D`).join(" / ") : "";
+  const first = w.pet ? `<span class="name" dir="auto">${e(w.pet)}</span>${dn ? `<span class="dn" dir="auto" title="its display name">${dn}</span>` : ""}` : dn ? `<span class="name" dir="auto">${dn.replace(/“|”/g, "")}</span>` : "";
+  return `<span class="who">${first}<span class="fp" title="${e(w.id)}">${e(w.short)}</span>${w.me ? '<span class="you">you</span>' : ""}</span>`;
 }
-var via = `<details class="more"><summary>Another way to reach an address (rarely needed)</summary>
+function testNotice(web) {
+  return web ? "" : `<div class="banner" id="test-only">${TEST_ONLY}. Every key is held in software in this program's folder: a prototype, never for a real identity.</div>`;
+}
+function top(web = false, back = false) {
+  return `<header class="bar"><h1 class="mark">${NAME2}</h1><span class="grow"></span>${back ? '<button class="quiet" data-action="back">Back to Dub</button>' : `<span class="small">${web ? "web client, for testing only" : "this machine only"}</span>`}</header>
+${testNotice(web)}`;
+}
+var via = `<details><summary>Another way to reach an address (rarely needed)</summary>
 <label>One per line, as address=where (for example an onion home at its local port)</label><textarea name="via"></textarea></details>`;
-function doors(web = false, suggested2 = {}) {
-  const make = web ? `<p>A new test identity of your own, made in this browser. You will be shown 24 words to write down, once: its chain key, which this page then forgets. Its signing key stays in this browser.</p>` : `<p>A new identity of your own, made here. You will be shown 24 words to write down, once.</p>`;
-  const lines2 = (xs) => e((xs ?? []).join("\n"));
-  return `${top(web)}
-<div id="status"></div>
-<div class="doors">
-<section class="card"><h3>Make a new identity</h3>
-${make}
-<form id="begin">
-<label>Its home, where anyone can check it (one address per line)</label><textarea name="homes" required placeholder="https://">${lines2(suggested2.homes)}</textarea>
-<label>Relays where its posts are published (one per line; leave empty to use its home)</label><textarea name="relays">${lines2(suggested2.relays)}</textarea>
-${web ? "" : via}
-<div class="row"><button type="submit">Make it</button></div></form></section>
-<section class="card"><h3>Bring an identity you have</h3>
-<p>An identity made in another app: its ID and its 24 words. This app reads the identity from its homes and checks that the words give its current signing key.</p>
-<form id="bring">
-<label>Its ID</label><input class="wide" name="id" type="text" autocomplete="off" spellcheck="false" required>
-<label>Its 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
-<label>An address where it is found (one of its homes)</label><input class="wide" name="address" type="text" placeholder="https://" required>
-<label>Relays for its posts (only if the identity names none; one per line)</label><textarea name="relays"></textarea>
-${web ? "" : via}
-<p class="small">Never type the chain key's words here: the chain key stays on the device that holds it.${web ? ` ${e(KEPT_SAY)}` : ""}</p>
-<div class="row"><button type="submit">Bring it</button></div></form></section>
-</div>`;
-}
-function words(ws, positions, say, web = false) {
-  return `${top(web)}
-<section><h2>${web ? "Write these words down: the chain key" : "Write these words down"}</h2>
-<ul class="say">${say.map((s) => `<li>${e(s)}</li>`).join("")}</ul>
-<div class="words" id="words">${ws.map((w, i) => `<span><b>${i + 1}.</b>${e(w)}</span>`).join("")}</div>
-${typeBack(positions, false, web)}</section>`;
-}
-function typeBack(positions, again, web = false) {
-  const ask2 = again ? `<p>The 24 words of this new identity were shown once. Type three of them from what you wrote down.</p>` : `<p>When they are written down, type three of them back.</p>`;
-  return `${again ? top(web) : ""}<div id="status"></div>${ask2}
-<form id="confirm"><div class="typed">${positions.map((p) => `<label>Word ${p} <input name="w${p}" type="text" autocomplete="off" spellcheck="false" required></label>`).join("")}</div>
-<div class="row"><button type="submit">Go on</button> <button type="button" class="quiet" data-action="abandon">Start again with a new identity</button></div></form>
-<p class="small">Nothing is published until these three are right.</p>`;
-}
-function ready(s, web = false) {
-  const tail = web ? `<section><h2>Carry it elsewhere</h2><p>The identity's ID and 24 words bring it into Dub on a computer, or onto another device. Write them down: if this browser's storage is lost, they are the only way back.</p>
-<div class="row"><button class="quiet" data-action="carry">Show the carry words</button> <button class="quiet" data-action="forget">Forget this identity in this browser</button></div><div id="carry"></div></section>` : `<section><h2>Browsers</h2><div class="row"><button class="quiet" data-action="code">A code for another browser on this machine</button> <button class="quiet" data-action="unpair">Unpair this browser</button></div><div id="code"></div></section>`;
-  return `${top(web)}
-<div id="status"></div>
-<section><h2>Write</h2>
-<form id="post"><textarea class="write" name="text" required placeholder="What do you want to say?"></textarea>
-<label>A picture (optional, JPEG)</label><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg">
-<p class="small">Before it leaves, the picture is stripped to the picture alone: no location, camera data or previews.</p>
-<label>To an identity (optional): its ID</label><input name="to" autocomplete="off" spellcheck="false" placeholder="64 characters; spaces do not matter">
-<p class="small">A public message: the post names that identity and is also left in its inbox, unsealed, so anyone may read it. To report a bug or an attack on MOR, write to the reporting identity named on dubsar.org\u2019s report page.</p>
-<div class="row"><button type="submit">Post</button></div></form></section>
-<section><h2>Published</h2><div id="published"><p class="small">Your post appears here, read back from the relays and verified.</p></div></section>
-<section><h2>Your posts, newest first</h2><div class="row"><button class="quiet" data-action="posts">Look again</button></div><div id="posts"></div></section>
-<section><h2>This identity</h2><div class="card" id="identity">${identity(s, web)}</div></section>
-${tail}`;
-}
-function carry(c) {
-  return `<div class="card"><p class="id">${e(c.grouped)}</p>
-<ul class="say">${c.say.map((s) => `<li>${e(s)}</li>`).join("")}</ul>
-<div class="words" id="carry-words">${c.words.map((w, i) => `<span><b>${i + 1}.</b>${e(w)}</span>`).join("")}</div>
-<div class="row"><button class="quiet" data-action="hide-carry">Hide them</button></div></div>`;
-}
-function identity(s, web = false) {
+function identityWindow(s, web = false, suggested2 = {}) {
   const i = s.identity;
-  const made = {
-    held: "Here. Its chain key is held here too, in software, as test identities hold it.",
-    shown: "Here, in this browser. Its chain key was shown once as words, and is kept nowhere here.",
-    elsewhere: "Elsewhere, and brought here by its words. Its chain key is not here."
-  }[i.chainKey];
-  return `<p class="id">${e(i.grouped)}<button class="quiet copy" data-action="copy" data-id="${e(i.id)}">Copy ID</button></p>
-<dl class="facts"><dt>Made</dt><dd>${e(made)}</dd>${web ? `<dt>Kept</dt><dd>${e(KEPT_SAY)}</dd>` : ""}
+  const others = s.held.filter((h) => !h.active);
+  const lns = (xs) => e((xs ?? []).join("\n"));
+  const make = `<section class="card"><h3>Make a new identity</h3>
+<p class="small">Dub makes it here and shows you 24 words, once: the chain key\u2019s words, to write on paper. Dub keeps nothing of the chain key. Its signing key stays in ${web ? "this browser" : "this app"}.</p>
+<form id="begin">
+<label>Its home, where anyone can check it (one address per line)</label><textarea name="homes" required placeholder="https://">${lns(suggested2.homes)}</textarea>
+<label>Relays for its posts and its inbox (one per line; empty: its home)</label><textarea name="relays">${lns(suggested2.relays)}</textarea>
+${web ? "" : via}
+<div class="row"><button type="submit" class="primary">Make it</button></div></form></section>`;
+  const bring = `<section class="card"><h3>Bring an identity you have</h3>
+<p class="small">Its ID and its signing key\u2019s words. Dub reads it from its homes and checks the words give its current signing key.</p>
+<form id="bring">
+<label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" required>
+<label>Its signing key\u2019s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
+<label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>
+<label>Relays for its posts (only if it names none; one per line)</label><textarea name="relays"></textarea>
+${web ? "" : via}
+<p class="small">Never type the chain key\u2019s words here: they belong to MOR Safety, on a device that stays offline.${web ? ` ${e(KEPT_SAY)}` : ""}</p>
+<div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
+  const doors = i ? `<details id="doors"><summary>Another identity: make one, or bring one</summary>${make}${bring}</details>` : `${make}${bring}`;
+  const browsers = web ? "" : `<details><summary>Browsers paired with this app</summary><div class="row"><button data-action="code">A code for another browser on this machine</button><button class="quiet" data-action="unpair">Unpair this browser</button></div><div id="code"></div></details>`;
+  return `${top(web, !!i)}
+<div id="status"></div>
+<h2>Identity</h2>
+${i ? current(s) : '<p class="small">Dub opens once an identity is here.</p>'}
+${others.length ? `<div class="held"><span class="label">Also here</span><ul>${others.map((h) => `<li>${who(h.who)}<button data-action="use" data-id="${e(h.id)}">Use this one</button></li>`).join("")}</ul></div>` : ""}
+${doors}
+${browsers}`;
+}
+function current(s) {
+  const i = s.identity;
+  const name = i.who.names.join(" / ");
+  return `<div class="card" id="identity">
+<span class="label">In use</span>
+<p>${who(i.who)}</p>
+<p class="id">${e(i.grouped)}</p>
+<div class="row"><button class="quiet" data-action="copy" data-id="${e(i.id)}">Copy ID</button></div>
+<form id="name"><label>Your display name: shown beside your fingerprint, never instead of it. Anyone can take the same name.</label>
+<div class="row"><input class="grow" name="name" maxlength="48" autocomplete="off" value="${e(name)}" placeholder="No name: your fingerprint alone"><button type="submit">Save</button></div></form>
+<div class="row"><button data-action="carry">Show the signing key\u2019s words</button><button class="quiet" data-action="forget" data-id="${e(i.id)}">Forget it here</button></div>
+<div id="carry"></div>
+<details><summary>This app\u2019s line, and where it lives</summary>
+<dl class="facts"><dt>Made</dt><dd>${i.kind === "made" ? "Here. Its chain key was shown once as words, and is kept nowhere here." : "Elsewhere, brought here by its signing key\u2019s words. Its chain key is not here."}</dd>
+${i.oldChainKey ? "<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app\u2019s folder, unused. MOR Safety will take it from there.</dd>" : ""}
+<dt>Private messages</dt><dd>${i.encryption ? "Its encryption key is here: its private messages open here." : "No encryption key here: its private messages cannot be opened here."}</dd>
 <dt>Homes</dt><dd>${e(i.homes.join(", "))}</dd>
 <dt>Relays</dt><dd>${e(i.relays.join(", "))}</dd>
 <dt>This app's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? "" : "s"}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? "")}</code>` : ""}</dd></dl>
-<p class="small">This app keeps its own line of acts. If the signing key is ever changed, that change must keep this line, or the posts made here become void: take the line above to the device that changes it.</p>`;
+<p class="small">If the signing key is ever changed (in MOR Safety, with the chain key\u2019s words), that change must keep this line, or the posts made here become void: take the line above to it.</p></details>
+</div>`;
 }
-function shown(p) {
-  return `<div data-post="${e(p.id)}">${p.html}${p.withdrawable.map((w) => `<div class="row"><button class="quiet" data-action="withdraw" data-publication="${e(w)}">Withdraw this picture</button><span class="small">Readers stop showing it; the post stands.</span></div>`).join("")}</div>`;
+function words(ws, say, web = false) {
+  return `${top(web)}
+<h2>The chain key\u2019s words</h2>
+<ul class="say">${say.map((s) => `<li>${e(s)}</li>`).join("")}</ul>
+<div class="words" id="words">${ws.map((w, i) => `<span><b>${i + 1}.</b>${e(w)}</span>`).join("")}</div>
+<div class="row"><button class="primary" data-action="written">I have written them down</button><button class="quiet" data-action="abandon">Start again</button></div>
+<p class="small">Once you go on, the words are hidden, and three of them are asked back.</p>`;
+}
+function typeBack(positions, web = false) {
+  return `${top(web)}
+<div id="status"></div>
+<h2>Three of the chain key\u2019s words</h2>
+<p class="small">From what you wrote down. Nothing is published until these three are right.</p>
+<form id="confirm"><div class="typed">${positions.map((p) => `<label>Word ${p} <input name="w${p}" type="text" autocomplete="off" spellcheck="false" required></label>`).join("")}</div>
+<div class="row"><button type="submit" class="primary">Go on</button><button type="button" class="quiet" data-action="abandon">Start again with a new identity</button></div></form>`;
+}
+function carry(c) {
+  return `<div class="card"><span class="label">The signing key\u2019s words</span>
+<p class="id">${e(c.grouped)}</p>
+<ul class="say">${c.say.map((s) => `<li>${e(s)}</li>`).join("")}</ul>
+<div class="words" id="carry-words">${c.words.map((w, i) => `<span><b>${i + 1}.</b>${e(w)}</span>`).join("")}</div>
+<div class="row"><button data-action="hide-carry">Hide them</button></div></div>`;
+}
+function app(s, web = false) {
+  const i = s.identity;
+  return `<header class="bar"><h1 class="mark">${NAME2}</h1>
+<nav class="tabs"><button class="tab on" data-tab="public">Public<span class="count" id="count-public"></span></button><button class="tab" data-tab="private">Private<span class="count" id="count-private"></span></button></nav>
+<button class="me" data-action="window" title="The identity window">${who(i.who)}</button></header>
+${testNotice(web)}
+<div id="spent"></div>
+<div id="status"></div>
+<section id="public">
+<form id="post" class="compose">
+<div id="replying"></div>
+<textarea name="text" required placeholder="Write something public"></textarea>
+<div class="to"><input name="to" autocomplete="off" spellcheck="false" placeholder="To an identity: its ID (a public message, left in its inbox too)"></div>
+<div class="row"><label class="quiet-file"><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"><span class="small" data-action="pick">Picture</span></label><button type="button" class="quiet" data-action="address">To\u2026</button><span class="grow small" id="picked"></span><button type="submit" class="primary">Post</button></div>
+</form>
+<div class="filters"><button class="tab on" data-filter="all">Everyone</button><button class="tab" data-filter="toyou">To you<span class="count" id="count-toyou"></span></button><span class="grow"></span><button class="quiet" data-action="feed">Look again</button></div>
+${people(s)}
+<div id="feed"><p class="empty">Reading the feed\u2026</p></div>
+</section>
+<section id="private" hidden>
+<form id="message" class="compose">
+<input name="to" autocomplete="off" spellcheck="false" placeholder="To: an identity\u2019s ID" required>
+<textarea name="text" required placeholder="Write something private"></textarea>
+<div class="row"><span class="grow small">Sealed to them: only they can open it.</span><button type="submit" class="primary">Send</button></div>
+</form>
+${i.encryption ? "" : `<div class="note">No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.</div>`}
+<div id="inbox"><p class="empty">Reading the inbox\u2026</p></div>
+</section>`;
+}
+function people(s) {
+  const i = s.identity;
+  const row = (w, actions) => `<li>${who(w)}<span class="acts">${actions}</span></li>`;
+  return `<details class="people" id="people"><summary>Following ${i.follows.length}${i.muted.length ? ` \xB7 muted ${i.muted.length}` : ""}</summary>
+<form id="follow" class="row"><input class="grow" name="id" autocomplete="off" spellcheck="false" placeholder="Follow an identity: its ID" required><input class="pet" name="name" autocomplete="off" placeholder="Your name for it (stays here)"><button type="submit">Follow</button></form>
+${i.follows.length ? `<ul>${i.follows.map((f) => row(f, `<button data-action="call" data-id="${e(f.id)}">Name</button><button data-action="unfollow" data-id="${e(f.id)}">Unfollow</button>`)).join("")}</ul>` : '<p class="small">Nobody yet. Follow by ID, or from any post or message.</p>'}
+${i.muted.length ? `<span class="label">Muted</span><ul>${i.muted.map((m) => row(m, `<button data-action="unmute" data-id="${e(m.id)}">Unmute</button>`)).join("")}</ul>` : ""}
+<div class="row"><label class="small check"><input type="checkbox" id="publish-list" ${i.list === "published" ? "checked" : ""}> Publish whom this identity follows</label></div>
+<p class="small">${i.list === "published" ? "Published: anyone can read the IDs it follows. The names you gave them stay here." : "Private, the default: the list stays in this app. Muting is always private."}</p>
+</details>`;
+}
+var bad = (standing) => /void|contest|invalid|stolen/.test(standing);
+function post2(p) {
+  const flag = p.problem ? `<span class="flag ${bad(p.problem) ? "bad" : ""}">${e(p.problem)}</span>` : "";
+  const answers = p.answers.map((a) => `<div class="re">\u21B3 answering ${a.who ? who(a.who) : '<span class="fp">an act not found</span>'}${a.snippet ? ` \xB7 <span dir="auto">${e(a.snippet)}</span>` : ""}</div>`).join("");
+  const pics = p.pictures.map(
+    (x) => x.src ? `<figure><img src="${e(x.src)}" width="${x.width}" height="${x.height}" alt=""></figure>` : `<figure><figcaption>A picture not shown: ${e(x.problem ?? "unknown")}.</figcaption></figure>`
+  ).join("");
+  const doc = p.doc ? `<a class="doc" href="${e(p.doc.link)}" target="_blank" rel="noopener noreferrer"><span dir="auto">${e(p.doc.title)}</span><span class="small">A long-form document: open it in the reader</span></a>` : "";
+  const acts = [
+    `<button data-action="reply">Reply</button>`,
+    p.who.me ? "" : p.who.followed ? `<button data-action="unfollow" data-id="${e(p.who.id)}">Following</button>` : `<button data-action="follow" data-id="${e(p.who.id)}">Follow</button>`,
+    p.who.me ? "" : `<button data-action="mute" data-id="${e(p.who.id)}">Mute</button>`,
+    ...p.pictures.filter((x) => x.withdrawable).map((x) => `<button data-action="withdraw" data-publication="${e(x.publication)}">Withdraw picture</button>`)
+  ].join("");
+  return `<article class="post" data-post="${e(p.id)}" data-signer="${e(p.who.id)}">
+<div class="row tight">${who(p.who)}${flag}</div>${answers}
+${p.text ? `<div class="text" dir="auto">${e(p.text)}</div>` : ""}${pics}${doc}
+<div class="acts">${acts}</div></article>`;
+}
+function msg(m) {
+  const flag = m.problem ? `<span class="flag ${bad(m.problem) ? "bad" : ""}">${e(m.problem)}</span>` : "";
+  const acts = m.dir === "in" && m.who.id ? [
+    `<button data-action="answer" data-id="${e(m.who.id)}">Reply</button>`,
+    m.who.followed ? "" : `<button data-action="follow" data-id="${e(m.who.id)}">Follow</button>`,
+    `<button data-action="mute" data-id="${e(m.who.id)}">Mute</button>`
+  ].join("") : "";
+  return `<article class="msg ${m.dir}" data-key="${e(m.key)}">
+<div class="row tight">${m.dir === "out" ? '<span class="small">to</span>' : ""}${who(m.who)}<span class="sealed">sealed</span>${flag}</div>
+${m.text ? `<div class="text" dir="auto">${e(m.text)}</div>` : ""}
+${acts ? `<div class="acts">${acts}</div>` : ""}</article>`;
+}
+function spent(say) {
+  return note(
+    "spent",
+    `<p>${e(say)}</p><form id="renew"><label>The new signing key\u2019s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Use the new words</button></div></form>`
+  );
 }
 
 // src/page/ui.ts
-function mount(app2, b) {
+var SPENT = "This identity\u2019s signing key was changed elsewhere";
+function mount(app3, b) {
   const $ = (id) => document.getElementById(id);
-  function say(kind, html, where) {
-    const s = where ?? $("status");
+  let state = null;
+  let feed = [];
+  let inbox = null;
+  let filter = "all";
+  let tab = "public";
+  let replying = null;
+  let shown = null;
+  function say(kind, html) {
+    const s = $("status");
     if (s) s.innerHTML = html ? note(kind, html) : "";
     if (html) s?.scrollIntoView({ block: "nearest" });
   }
-  function fail(err, where) {
+  async function fail(err) {
     if (b.unpaired?.(err)) {
       void b.start();
       return;
     }
-    say("error", e(err instanceof Error ? err.message : String(err)), where);
+    const m = err instanceof Error ? err.message : String(err);
+    if (m.startsWith(SPENT)) {
+      await check();
+      say("", "");
+      return;
+    }
+    say("error", e(m));
   }
   const fill = (id, html) => {
     const el = $(id);
     if (el) el.innerHTML = html;
   };
-  async function busy(words3, f, where) {
-    say("", `<span class="small">${e(words3)}</span>`, where);
-    const was = [...app2.querySelectorAll("button")].map((x) => [x, x.disabled]);
-    app2.querySelectorAll("button").forEach((x) => x.disabled = true);
+  async function busy(words3, f) {
+    say("", `<span class="small">${e(words3)}</span>`);
+    const was = [...app3.querySelectorAll("button")].map((x) => [x, x.disabled]);
+    app3.querySelectorAll("button").forEach((x) => x.disabled = true);
     try {
       return await f();
     } catch (err) {
-      fail(err, where);
+      await fail(err);
       return void 0;
     } finally {
       for (const [x, d] of was) x.disabled = d;
     }
   }
-  async function line() {
+  function toYou() {
+    const out = [...inbox?.toYou ?? []];
+    for (const p of feed) if (p.toMe && !out.some((x) => x.id === p.id)) out.push(p);
+    return out;
+  }
+  function counts() {
+    const n = (k) => k ? String(k) : "";
+    const unseen = toYou().filter((x) => !x.seen).length;
+    fill("count-toyou", n(unseen));
+    fill("count-public", n(unseen));
+    fill("count-private", n((inbox?.messages ?? []).filter((m) => !m.seen).length));
+  }
+  function drawFeed() {
+    const items = filter === "toyou" ? toYou() : feed;
+    const empty = filter === "toyou" ? "Nothing addressed to you yet: replies to your posts, and public messages to you, come here." : "Nothing yet. Write something, or follow someone.";
+    fill("feed", items.length ? items.map(post2).join("") : `<p class="empty">${empty}</p>`);
+  }
+  function drawInbox() {
+    if (!inbox) return;
+    const ms = inbox.messages;
+    fill(
+      "inbox",
+      (ms.length ? ms.map(msg).join("") : '<p class="empty">No private message yet.</p>') + (inbox.hidden ? `<p class="small">${inbox.hidden} from muted identities, not shown.</p>` : "") + inbox.problems.map((p) => `<p class="small">${e(p)}</p>`).join("") + (ms.length ? '<p class="small">In the order this app found or sent them: its own time, not a signed one.</p>' : "")
+    );
+  }
+  async function readFeed2() {
     try {
-      fill("identity", identity(await b.ask("state"), b.web));
+      const r = await b.ask("feed");
+      feed = r.items;
+      drawFeed();
+      if (r.problems.length) $("feed").insertAdjacentHTML("beforeend", r.problems.map((p) => `<p class="small">${e(p)}</p>`).join(""));
+      if (r.items.length) $("feed").insertAdjacentHTML("beforeend", '<p class="small">In signed order: a reply after what it answers. MOR has no clock, so this is not a time.</p>');
     } catch (err) {
-      fail(err);
+      fill("feed", note("error", e(err instanceof Error ? err.message : String(err))));
+    }
+    counts();
+  }
+  async function readInbox() {
+    try {
+      inbox = await b.ask("inbox");
+      drawInbox();
+      if (filter === "toyou") drawFeed();
+    } catch (err) {
+      fill("inbox", note("error", e(err instanceof Error ? err.message : String(err))));
+    }
+    counts();
+  }
+  async function check() {
+    try {
+      const c = await b.ask("check");
+      fill("spent", c.current ? "" : spent(c.say ?? ""));
+    } catch {
     }
   }
-  async function posts() {
-    fill("posts", '<p class="small">Reading your posts from the relays\u2026</p>');
+  async function seen(keys) {
+    if (!keys.length) return;
     try {
-      const ps = await b.ask("posts");
-      fill("posts", ps.length ? ps.map(shown).join("") : '<p class="small">No post yet.</p>');
-    } catch (err) {
-      fill("posts", note("error", e(err instanceof Error ? err.message : String(err))));
+      await b.ask("seen", { keys });
+      for (const x of [...toYou(), ...inbox?.messages ?? []]) if (keys.includes("key" in x ? x.key : x.id)) x.seen = true;
+      for (const x of feed) if (keys.includes(x.id)) x.seen = true;
+    } catch {
     }
+    counts();
+  }
+  function setTab(t) {
+    tab = t;
+    app3.querySelectorAll("[data-tab]").forEach((x) => x.classList.toggle("on", x.dataset.tab === t));
+    $("public").hidden = t !== "public";
+    $("private").hidden = t !== "private";
+    if (t === "private") void seen((inbox?.messages ?? []).filter((m) => !m.seen).map((m) => m.key));
+  }
+  function setFilter(f) {
+    filter = f;
+    app3.querySelectorAll("[data-filter]").forEach((x) => x.classList.toggle("on", x.dataset.filter === f));
+    drawFeed();
+    if (f === "toyou") void seen(toYou().filter((x) => !x.seen).map((x) => x.id));
+  }
+  async function refresh() {
+    const s = await b.ask("state");
+    state = s;
+    await show(s);
+  }
+  async function show(s) {
+    state = s;
+    if (s.stage === "confirm" && shown) {
+      app3.innerHTML = typeBack(shown.positions, b.web);
+      return;
+    }
+    if (s.stage === "confirm") {
+      app3.innerHTML = typeBack(s.confirm.positions, b.web);
+      return;
+    }
+    if (s.stage === "identity") {
+      app3.innerHTML = identityWindow(s, b.web, b.suggested?.() ?? {});
+      return;
+    }
+    app3.innerHTML = app(s, b.web);
+    setTab(tab);
+    setFilter(filter);
+    void check();
+    await Promise.all([readFeed2(), readInbox()]);
   }
   async function copy(text2) {
     try {
@@ -8020,56 +8392,64 @@ function mount(app2, b) {
       return false;
     }
   }
-  app2.addEventListener("click", async (ev) => {
-    const el = ev.target.closest("[data-action]");
+  app3.addEventListener("change", async (ev) => {
+    const el = ev.target;
+    if (el.name === "picture") fill("picked", el.files?.[0] ? e(el.files[0].name) : "");
+    if (el.id === "publish-list") {
+      const on = el.checked;
+      if (on && !confirm(PUBLISH_WARNING)) {
+        el.checked = false;
+        return;
+      }
+      const r = await busy(on ? "Publishing the follow list\u2026" : "Making the follow list private again\u2026", () => b.ask("list", { published: on, shown: on ? PUBLISH_WARNING : "" }));
+      if (r) {
+        await refresh();
+        say("done", lines(r.lines));
+      } else el.checked = !on;
+    }
+  });
+  app3.addEventListener("click", async (ev) => {
+    const el = ev.target.closest("[data-action],[data-tab],[data-filter]");
     if (!el || el instanceof HTMLInputElement) return;
     const d = el.dataset;
+    if (d.tab) return setTab(d.tab);
+    if (d.filter) return setFilter(d.filter);
+    const card = el.closest("[data-post]");
     switch (d.action) {
+      case "written":
+        app3.innerHTML = typeBack(shown.positions, b.web);
+        break;
       case "abandon":
         if (!confirm("Forget this new identity? Nothing of it was published. A new one will show new words.")) break;
+        shown = null;
         try {
           await b.ask("abandon");
           await b.start();
         } catch (err) {
-          fail(err);
+          await fail(err);
         }
         break;
-      case "posts":
-        await posts();
+      case "window":
+        if (state) app3.innerHTML = identityWindow(state, b.web, b.suggested?.() ?? {});
         break;
-      case "withdraw": {
-        if (!confirm("Withdraw this picture? Readers stop showing it; the post stays. It cannot be undone.")) break;
-        const r = await busy("Withdrawing\u2026", () => b.ask("withdraw", { publication: d.publication }));
+      case "back":
+        await refresh();
+        break;
+      case "use": {
+        const r = await busy("Switching\u2026", () => b.ask("use", { id: d.id }));
         if (r) {
-          say("done", `The picture is withdrawn (act <code>${e(r.id.slice(0, 16))}\u2026</code>).`);
-          const pub = $("published")?.querySelector("[data-post]")?.getAttribute("data-post");
-          await line();
-          await posts();
-          if (pub) fill("published", '<p class="small">The post above was changed: see it in the list below.</p>');
+          feed = [];
+          inbox = null;
+          await refresh();
         }
         break;
       }
-      case "copy": {
-        const ok = await copy(d.id ?? "");
-        el.textContent = ok ? "Copied" : "Copy failed: select the ID";
-        setTimeout(() => el.textContent = "Copy ID", 2e3);
-        break;
-      }
-      case "code": {
-        const r = await busy("Making a code\u2026", () => b.ask("code"));
-        if (r) {
-          say("", "");
-          fill("code", note("", `Code for another browser, valid ten minutes, once: <span class="code">${e(r.code)}</span>`));
-        }
-        break;
-      }
-      case "unpair":
-        if (!confirm("Unpair this browser? It will need a new link from the app.")) break;
-        try {
-          await b.unpair?.();
-          await b.start();
-        } catch (err) {
-          fail(err);
+      case "forget":
+        if (!confirm("Forget this identity here? Its keys go with it. Only its signing key\u2019s words, written down, bring it back. Its posts stay published.")) break;
+        if (await busy("Forgetting\u2026", () => b.ask("forget", { id: d.id }))) {
+          feed = [];
+          inbox = null;
+          await refresh();
         }
         break;
       case "carry": {
@@ -8083,14 +8463,86 @@ function mount(app2, b) {
       case "hide-carry":
         fill("carry", "");
         break;
-      case "forget":
-        if (!confirm("Forget this identity in this browser? Its signing key goes with it. Only its carry words, written down, bring it back. Its posts stay published.")) break;
+      case "copy": {
+        const ok = await copy(d.id ?? "");
+        el.textContent = ok ? "Copied" : "Copy failed: select the ID";
+        setTimeout(() => el.textContent = "Copy ID", 2e3);
+        break;
+      }
+      case "code": {
+        const r = await busy("Making a code\u2026", () => b.ask("code"));
+        if (r) {
+          say("", "");
+          fill("code", note("", `Code for another browser, valid ten minutes, once: <code>${e(r.code)}</code>`));
+        }
+        break;
+      }
+      case "unpair":
+        if (!confirm("Unpair this browser? It will need a new link from the app.")) break;
         try {
-          await b.forget?.();
+          await b.unpair?.();
           await b.start();
         } catch (err) {
-          fail(err);
+          await fail(err);
         }
+        break;
+      case "address":
+        $("post")?.classList.toggle("addressed");
+        break;
+      case "reply": {
+        if (!card) break;
+        replying = { id: card.dataset.post, signer: card.dataset.signer };
+        const w = card.querySelector(".who")?.outerHTML ?? "";
+        fill("replying", `<span class="chip">Replying to ${w}<button type="button" data-action="unreply" title="Not a reply">\xD7</button></span>`);
+        setTab("public");
+        $("post")?.querySelector("textarea")?.focus();
+        break;
+      }
+      case "unreply":
+        replying = null;
+        fill("replying", "");
+        break;
+      case "answer": {
+        const f = $("message");
+        (f?.elements.namedItem("to")).value = d.id ?? "";
+        f?.querySelector("textarea")?.focus();
+        break;
+      }
+      case "follow":
+      case "unfollow":
+      case "mute":
+      case "unmute": {
+        if (d.action === "mute" && !confirm("Mute this identity? Nothing of it is shown here any more. Nobody is told; it is never published.")) break;
+        const r = await busy("Saving\u2026", () => b.ask(d.action, { id: d.id }));
+        if (r) {
+          const open = $("people")?.open;
+          await refresh();
+          if (open) $("people").open = true;
+          if (r.lines.length) say("done", lines(r.lines));
+        }
+        break;
+      }
+      case "call": {
+        const name = prompt("Your name for this identity. It stays in this app, never published.");
+        if (name === null) break;
+        if (await busy("Saving\u2026", () => b.ask("call", { id: d.id, name }))) {
+          await refresh();
+          $("people").open = true;
+        }
+        break;
+      }
+      case "withdraw": {
+        if (!confirm("Withdraw this picture? Readers stop showing it; the post stays. It cannot be undone.")) break;
+        const r = await busy("Withdrawing\u2026", () => b.ask("withdraw", { publication: d.publication }));
+        if (r) {
+          say("done", `The picture is withdrawn (act <code>${e(r.id.slice(0, 16))}\u2026</code>).`);
+          await readFeed2();
+        }
+        break;
+      }
+      case "feed":
+        say("", "");
+        await Promise.all([readFeed2(), readInbox()]);
         break;
     }
   });
@@ -8105,7 +8557,7 @@ function mount(app2, b) {
       r.readAsDataURL(file);
     });
   }
-  app2.addEventListener("submit", async (ev) => {
+  app3.addEventListener("submit", async (ev) => {
     const form = ev.target;
     const name = form.getAttribute("id");
     if (name === "pair") return;
@@ -8114,16 +8566,20 @@ function mount(app2, b) {
     switch (name) {
       case "begin": {
         const r = await busy(
-          b.web ? "Asking each home who runs it, and making the identity in this browser\u2026" : "Asking each home who runs it, and making the identity\u2026",
+          "Asking each home who runs it, and making the identity\u2026",
           () => b.ask("begin", { homes: linesOf2(d.get("homes")), relays: linesOf2(d.get("relays")), via: viaOf(d.get("via")) })
         );
-        if (r) app2.innerHTML = words(r.words, r.positions, r.say, b.web);
+        if (r) {
+          shown = { positions: r.positions };
+          app3.innerHTML = words(r.words, r.say, b.web);
+        }
         return;
       }
       case "confirm": {
         const typed = [...form.querySelectorAll("input")].map((i) => i.value);
         const r = await busy("Checking the words, then sending the genesis to the homes\u2026", () => b.ask("confirm", { typed }));
         if (r) {
+          shown = null;
           await b.start();
           say("done", `<strong>The identity is born.</strong>${lines(r.lines)}`);
         }
@@ -8141,38 +8597,72 @@ function mount(app2, b) {
           })
         );
         if (r) {
+          feed = [];
+          inbox = null;
           await b.start();
           say("done", `<strong>The identity is here.</strong>${lines(r.lines)}`);
         }
         return;
       }
+      case "renew": {
+        const r = await busy("Checking the new words at its homes\u2026", () => b.ask("renew", { words: words2(d.get("words")) }));
+        if (r) {
+          await refresh();
+          say("done", `<strong>The new words are in use.</strong>${lines(r.lines)}`);
+        }
+        return;
+      }
+      case "name": {
+        const r = await busy("Publishing the name\u2026", () => b.ask("name", { name: String(d.get("name") ?? "") }));
+        if (r) {
+          const s = await b.ask("state");
+          state = s;
+          app3.innerHTML = identityWindow(s, b.web, b.suggested?.() ?? {});
+          say("done", r.lines.length ? lines(r.lines) : "Nothing changed.");
+        }
+        return;
+      }
       case "post": {
         const file = form.elements.namedItem("picture").files?.[0];
+        const reply = replying;
         const r = await busy(
           file ? "Stripping the picture, publishing, and reading it back\u2026" : "Publishing, and reading it back\u2026",
-          async () => b.ask("post", { text: String(d.get("text") ?? ""), jpeg: file ? await base642(file) : "", to: String(d.get("to") ?? "") })
+          async () => b.ask("post", { text: String(d.get("text") ?? ""), jpeg: file ? await base642(file) : "", to: String(d.get("to") ?? ""), reply })
         );
         if (r) {
           form.reset();
+          form.classList.remove("addressed");
+          replying = null;
+          fill("replying", "");
+          fill("picked", "");
+          feed = [r.post, ...feed.filter((x) => x.id !== r.post.id)];
+          setFilter("all");
           say("done", `<strong>Posted.</strong>${lines(r.lines)}`);
-          fill("published", `<div class="published">${shown(r.post)}</div>`);
-          await line();
-          await posts();
+          await readFeed2();
+        }
+        return;
+      }
+      case "message": {
+        const r = await busy("Sealing it, and leaving it in their inbox\u2026", () => b.ask("message", { to: String(d.get("to") ?? ""), text: String(d.get("text") ?? "") }));
+        if (r) {
+          form.reset();
+          say("done", `<strong>Sent.</strong>${lines(r.lines)}`);
+          await readInbox();
+        }
+        return;
+      }
+      case "follow": {
+        const r = await busy("Following\u2026", () => b.ask("follow", { id: words2(d.get("id")), name: words2(d.get("name")) }));
+        if (r) {
+          await refresh();
+          $("people").open = true;
+          say("done", `<strong>Followed.</strong>${r.lines.length ? lines(r.lines) : ""}`);
         }
         return;
       }
     }
   });
-  return {
-    async show(state, suggested2) {
-      if (state.stage === "doors") app2.innerHTML = doors(b.web, suggested2);
-      else if (state.stage === "confirm") app2.innerHTML = typeBack(state.confirm.positions, true, b.web);
-      else {
-        app2.innerHTML = ready(state, b.web);
-        await posts();
-      }
-    }
-  };
+  return { show };
 }
 
 // src/web/keep.ts
@@ -8193,35 +8683,76 @@ var WebKeep = class _WebKeep {
   static async open() {
     const r = indexedDB.open(DB, 1);
     r.onupgradeneeded = () => r.result.createObjectStore(STORE);
-    return new _WebKeep(await request(r));
+    const k = new _WebKeep(await request(r));
+    await k.migrate();
+    return k;
   }
   async get(key) {
     return request(this.db.transaction(STORE).objectStore(STORE).get(key));
   }
-  async put(key, value) {
+  async write(f) {
     const t = this.db.transaction(STORE, "readwrite");
-    t.objectStore(STORE).put(value, key);
+    f(t.objectStore(STORE));
     await new Promise((resolve, reject) => {
       t.oncomplete = () => resolve();
       t.onerror = () => reject(t.error);
       t.onabort = () => reject(t.error ?? new Error("the browser refused to keep it"));
     });
   }
-  async identity() {
+  put(key, value) {
+    return this.write((s) => s.put(JSON.parse(JSON.stringify(value)), key));
+  }
+  /** The single identity kept before 16 October 2026, moved under its ID and put in use. */
+  async migrate() {
     const f = await this.get("identity");
+    if (!f || f.label !== TEST_LABEL) return;
+    const s = await this.get("settings");
+    await this.write((st) => {
+      st.put(f, `identity:${f.identity}`);
+      if (s) st.put(s, `settings:${f.identity}`);
+      st.put(f.identity, "active");
+      st.delete("identity");
+      st.delete("settings");
+    });
+  }
+  async held() {
+    const keys = await request(this.db.transaction(STORE).objectStore(STORE).getAllKeys());
+    return keys.map(String).filter((k) => k.startsWith("identity:")).map((k) => k.slice(9)).sort();
+  }
+  async active() {
+    const a = await this.get("active") ?? null;
+    return a && (await this.held()).includes(a) ? a : null;
+  }
+  async setActive(id) {
+    await this.put("active", id);
+  }
+  async identity(id) {
+    const f = await this.get(`identity:${id}`);
     if (!f) return null;
     if (f.label !== TEST_LABEL) throw new Error("What this browser keeps is not a MOR test identity.");
     return new TestIdentity(f);
   }
   async saveIdentity(id) {
     if (id.f.safety.seeds) throw new Error("A chain key is never kept in this browser.");
-    await this.put("identity", JSON.parse(JSON.stringify(id.f)));
+    await this.put(`identity:${id.id}`, id.f);
   }
-  async settings() {
-    return await this.get("settings") ?? { kind: "made", relays: [], via: {} };
+  async settings(id) {
+    return await this.get(`settings:${id}`) ?? { kind: "made", relays: [], via: {} };
   }
-  async saveSettings(s) {
-    await this.put("settings", { kind: s.kind, relays: s.relays, via: {} });
+  async saveSettings(id, s) {
+    await this.put(`settings:${id}`, { kind: s.kind, relays: s.relays, via: {} });
+  }
+  async people(id) {
+    return { ...NO_PEOPLE(), ...await this.get(`people:${id}`) ?? {} };
+  }
+  async savePeople(id, p) {
+    await this.put(`people:${id}`, p);
+  }
+  /** Forget an identity in this browser: its keys and everything kept about it. Only its signing key's words, if written down, bring it back. */
+  async forget(id) {
+    await this.write((s) => {
+      for (const k of ["identity", "settings", "people"]) s.delete(`${k}:${id}`);
+    });
   }
   async pending() {
     return this.waiting;
@@ -8232,20 +8763,9 @@ var WebKeep = class _WebKeep {
   async dropPending() {
     this.waiting = null;
   }
-  /** Forget the identity in this browser: its signing key and its line. Only its carry words, if written down, bring it back. */
-  async forget() {
-    await this.exclusive(async () => {
-      const t = this.db.transaction(STORE, "readwrite");
-      t.objectStore(STORE).clear();
-      await new Promise((resolve, reject) => {
-        t.oncomplete = () => resolve();
-        t.onerror = () => reject(t.error);
-      });
-    });
-  }
   /**
    * One signer at a time across every tab of this site: two tabs signing at
-   * once would put two acts at one position of the line. Each signer reads
+   * once would put two acts at one position of a line. Each signer reads
    * the identity afresh inside the lock (`Dub` does).
    */
   exclusive(f) {
@@ -8255,72 +8775,48 @@ var WebKeep = class _WebKeep {
 };
 
 // src/web/app.ts
-var app = document.getElementById("app");
+var app2 = document.getElementById("app");
 var keep;
 var dub;
-var text = (x) => typeof x === "string" ? x : "";
-var list2 = (x) => Array.isArray(x) ? x.map(String) : [];
-var bytes = (b642) => Uint8Array.from(atob(b642), (ch) => ch.charCodeAt(0));
-async function ask(op, a = {}) {
-  switch (op) {
-    case "state":
-      return await dub.state();
-    case "begin":
-      return await dub.begin({ homes: list2(a.homes), relays: list2(a.relays) });
-    case "confirm":
-      return await dub.confirm(list2(a.typed));
-    case "abandon":
-      return await dub.abandon();
-    case "bring":
-      return await dub.bring({ id: text(a.id), words: text(a.words), address: text(a.address), relays: list2(a.relays) });
-    case "post":
-      return await dub.post({ text: text(a.text), jpeg: text(a.jpeg) ? bytes(text(a.jpeg)) : void 0, to: text(a.to) });
-    case "posts":
-      return await dub.posts();
-    case "withdraw":
-      return await dub.withdraw(text(a.publication));
-    case "carry":
-      return await dub.carry();
-    default:
-      throw new Error(`unknown operation ${op}`);
-  }
-}
-async function suggested() {
+var list3 = (x) => Array.isArray(x) ? x.map(String) : [];
+var platform = { bytes: (b642) => Uint8Array.from(atob(b642), (ch) => ch.charCodeAt(0)), via: () => ({}) };
+var ask = (op, a = {}) => run(dub, op, a, platform);
+async function deployer() {
   try {
     const r = await fetch("dub.json", { cache: "no-store" });
     if (!r.ok) return {};
     const j = await r.json();
-    const urls = (x) => list2(x).filter((s) => /^https:\/\/[^\s]+$/.test(s));
-    return { homes: urls(j.homes), relays: urls(j.relays) };
+    const urls = (x) => list3(x).filter((s) => /^https:\/\/[^\s]+$/.test(s));
+    return { homes: urls(j.homes), relays: urls(j.relays), reader: urls([j.reader])[0] };
   } catch {
     return {};
   }
 }
-var ui = mount(app, {
-  web: true,
-  ask,
-  start,
-  forget: () => keep.forget()
-});
+var suggested = {};
+var ui = mount(app2, { web: true, ask, start, suggested: () => suggested });
 async function start() {
   if (!window.isSecureContext || !crypto?.getRandomValues || !window.indexedDB) {
-    app.innerHTML = `${top(true)}${note("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.")}`;
+    app2.innerHTML = `${top(true)}${note("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.")}`;
     return;
   }
   try {
     keep ??= await WebKeep.open();
   } catch (err) {
-    app.innerHTML = `${top(true)}${note("error", `This browser does not let the page keep anything (${e(err instanceof Error ? err.message : String(err))}). A private window may not.`)}`;
+    app2.innerHTML = `${top(true)}${note("error", `This browser does not let the page keep anything (${e(err instanceof Error ? err.message : String(err))}). A private window may not.`)}`;
     return;
   }
-  dub ??= new Dub(keep, { web: true });
+  if (!dub) {
+    const d = await deployer();
+    suggested = { homes: d.homes, relays: d.relays };
+    dub = new Dub(keep, { web: true, reader: d.reader });
+  }
   let state;
   try {
     state = await dub.state();
   } catch (err) {
-    app.innerHTML = `${top(true)}${note("error", e(err instanceof Error ? err.message : String(err)))}`;
+    app2.innerHTML = `${top(true)}${note("error", e(err instanceof Error ? err.message : String(err)))}`;
     return;
   }
-  await ui.show(state, state.stage === "doors" ? await suggested() : void 0);
+  await ui.show(state);
 }
 void start();

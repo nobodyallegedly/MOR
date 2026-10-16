@@ -387,12 +387,14 @@ export class TestIdentity {
 
   /**
    * Publish a new encryption key (Envelopes type 4): a fresh X-Wing key
-   * pair; the public half in the act, the private half kept in the file.
+   * pair, or the one `secret` gives (the identity carry Module, draft 2,
+   * derives it from the signing seed); the public half in the act, the
+   * private half kept in the file.
    */
-  async publishEncryptionKey(): Promise<{ id: string; sent: Submitted[] }> {
+  async publishEncryptionKey(given?: Uint8Array): Promise<{ id: string; sent: Submitted[] }> {
     const last = this.f.encryption.at(-1);
     const version = (last?.version ?? 0) + 1;
-    const secret = newEncryptionSecret();
+    const secret = given ?? newEncryptionSecret();
     const payload = encryptionKeyPayload(version, last?.act, xwingPublic(secret));
     const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
     this.f.encryption.push({ version, act: made.id, secret: hex(secret) });

@@ -6,7 +6,7 @@
 import * as v from './view.ts';
 
 export interface Backend {
-  /** One of Dub's operations, by name, as the program's API names them. */
+  /** One of Dub's operations, by name (`../ops.ts`). */
   ask<T>(op: string, a?: Record<string, unknown>): Promise<T>;
   /** The web client (F281), not the program on the Mac. */
   web: boolean;
@@ -16,25 +16,52 @@ export interface Backend {
   unpaired?(err: unknown): boolean;
   /** The program on the Mac: forget this browser's key. */
   unpair?(): Promise<void>;
-  /** The web client: forget the identity in this browser. */
-  forget?(): Promise<void>;
+  /** The web client: the addresses its deployer suggests. */
+  suggested?(): v.Suggested;
 }
 
-export function mount(app: HTMLElement, b: Backend): { show(state: v.State, suggested?: v.Suggested): Promise<void> } {
-  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
+/** The first words of what Dub says when its signing key no longer counts (`SPENT_SAY` in `dub.ts`). */
+const SPENT = 'This identity’s signing key was changed elsewhere';
 
-  function say(kind: 'error' | 'done' | 'warn' | '', html: string, where?: HTMLElement | null) {
-    const s = where ?? $('status');
+interface Inbox {
+  toYou: v.Item[];
+  messages: v.Message[];
+  encryption: boolean;
+  hidden: number;
+  problems: string[];
+}
+
+export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Promise<void> } {
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
+  let state: v.State | null = null;
+  /** What was read last: the feed and the inbox, for the filter and the counts. */
+  let feed: v.Item[] = [];
+  let inbox: Inbox | null = null;
+  let filter: 'all' | 'toyou' = 'all';
+  let tab: 'public' | 'private' = 'public';
+  /** The post being answered, if any. */
+  let replying: { id: string; signer: string } | null = null;
+  /** Words shown once, held only until they are hidden (H3). */
+  let shown: { positions: number[] } | null = null;
+
+  function say(kind: 'error' | 'done' | 'warn' | '', html: string) {
+    const s = $('status');
     if (s) s.innerHTML = html ? v.note(kind, html) : '';
     if (html) s?.scrollIntoView({ block: 'nearest' });
   }
 
-  function fail(err: unknown, where?: HTMLElement | null) {
+  async function fail(err: unknown) {
     if (b.unpaired?.(err)) {
       void b.start();
       return;
     }
-    say('error', v.e(err instanceof Error ? err.message : String(err)), where);
+    const m = err instanceof Error ? err.message : String(err);
+    if (m.startsWith(SPENT)) {
+      await check();
+      say('', '');
+      return;
+    }
+    say('error', v.e(m));
   }
 
   const fill = (id: string, html: string) => {
@@ -43,37 +70,141 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State, sugg
   };
 
   /** Busy: the buttons wait, so nothing is sent twice. */
-  async function busy<T>(words: string, f: () => Promise<T>, where?: HTMLElement | null): Promise<T | undefined> {
-    say('', `<span class="small">${v.e(words)}</span>`, where);
+  async function busy<T>(words: string, f: () => Promise<T>): Promise<T | undefined> {
+    say('', `<span class="small">${v.e(words)}</span>`);
     const was = [...app.querySelectorAll('button')].map((x) => [x, x.disabled] as const);
     app.querySelectorAll('button').forEach((x) => (x.disabled = true));
     try {
       return await f();
     } catch (err) {
-      fail(err, where);
+      await fail(err);
       return undefined;
     } finally {
       for (const [x, d] of was) x.disabled = d;
     }
   }
 
-  /** The identity's card, with this app's line as it is now. */
-  async function line() {
+  // ---------------------------------------------------------------- reading
+
+  /** "To you": the inbox's, and the feed's posts answering this identity, each once. */
+  function toYou(): v.Item[] {
+    const out = [...(inbox?.toYou ?? [])];
+    for (const p of feed) if (p.toMe && !out.some((x) => x.id === p.id)) out.push(p);
+    return out;
+  }
+
+  function counts() {
+    const n = (k: number) => (k ? String(k) : '');
+    const unseen = toYou().filter((x) => !x.seen).length;
+    fill('count-toyou', n(unseen));
+    fill('count-public', n(unseen));
+    fill('count-private', n((inbox?.messages ?? []).filter((m) => !m.seen).length));
+  }
+
+  function drawFeed() {
+    const items = filter === 'toyou' ? toYou() : feed;
+    const empty = filter === 'toyou' ? 'Nothing addressed to you yet: replies to your posts, and public messages to you, come here.' : 'Nothing yet. Write something, or follow someone.';
+    fill('feed', items.length ? items.map(v.post).join('') : `<p class="empty">${empty}</p>`);
+  }
+
+  function drawInbox() {
+    if (!inbox) return;
+    const ms = inbox.messages;
+    fill(
+      'inbox',
+      (ms.length ? ms.map(v.msg).join('') : '<p class="empty">No private message yet.</p>') +
+        (inbox.hidden ? `<p class="small">${inbox.hidden} from muted identities, not shown.</p>` : '') +
+        inbox.problems.map((p) => `<p class="small">${v.e(p)}</p>`).join('') +
+        (ms.length ? '<p class="small">In the order this app found or sent them: its own time, not a signed one.</p>' : ''),
+    );
+  }
+
+  async function readFeed() {
     try {
-      fill('identity', v.identity(await b.ask<v.State>('state'), b.web));
+      const r = await b.ask<{ items: v.Item[]; more: number; problems: string[] }>('feed');
+      feed = r.items;
+      drawFeed();
+      if (r.problems.length) $('feed')!.insertAdjacentHTML('beforeend', r.problems.map((p) => `<p class="small">${v.e(p)}</p>`).join(''));
+      if (r.items.length) $('feed')!.insertAdjacentHTML('beforeend', '<p class="small">In signed order: a reply after what it answers. MOR has no clock, so this is not a time.</p>');
     } catch (err) {
-      fail(err);
+      fill('feed', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+    }
+    counts();
+  }
+
+  async function readInbox() {
+    try {
+      inbox = await b.ask<Inbox>('inbox');
+      drawInbox();
+      if (filter === 'toyou') drawFeed();
+    } catch (err) {
+      fill('inbox', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+    }
+    counts();
+  }
+
+  async function check() {
+    try {
+      const c = await b.ask<{ current: boolean; say: string | null }>('check');
+      fill('spent', c.current ? '' : v.spent(c.say ?? ''));
+    } catch {
+      // its homes did not answer: said when something is signed
     }
   }
 
-  async function posts() {
-    fill('posts', '<p class="small">Reading your posts from the relays…</p>');
+  /** Mark seen what the person is looking at, for the counts. */
+  async function seen(keys: string[]) {
+    if (!keys.length) return;
     try {
-      const ps = await b.ask<v.Shown[]>('posts');
-      fill('posts', ps.length ? ps.map(v.shown).join('') : '<p class="small">No post yet.</p>');
-    } catch (err) {
-      fill('posts', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+      await b.ask('seen', { keys });
+      for (const x of [...toYou(), ...(inbox?.messages ?? [])]) if (keys.includes('key' in x ? x.key : x.id)) x.seen = true;
+      for (const x of feed) if (keys.includes(x.id)) x.seen = true;
+    } catch {
+      // the counts stay as they are
     }
+    counts();
+  }
+
+  function setTab(t: 'public' | 'private') {
+    tab = t;
+    app.querySelectorAll<HTMLElement>('[data-tab]').forEach((x) => x.classList.toggle('on', x.dataset.tab === t));
+    $('public')!.hidden = t !== 'public';
+    $('private')!.hidden = t !== 'private';
+    if (t === 'private') void seen((inbox?.messages ?? []).filter((m) => !m.seen).map((m) => m.key));
+  }
+
+  function setFilter(f: 'all' | 'toyou') {
+    filter = f;
+    app.querySelectorAll<HTMLElement>('[data-filter]').forEach((x) => x.classList.toggle('on', x.dataset.filter === f));
+    drawFeed();
+    if (f === 'toyou') void seen(toYou().filter((x) => !x.seen).map((x) => x.id));
+  }
+
+  async function refresh() {
+    const s = await b.ask<v.State>('state');
+    state = s;
+    await show(s);
+  }
+
+  async function show(s: v.State) {
+    state = s;
+    if (s.stage === 'confirm' && shown) {
+      app.innerHTML = v.typeBack(shown.positions, b.web);
+      return;
+    }
+    if (s.stage === 'confirm') {
+      app.innerHTML = v.typeBack(s.confirm!.positions, b.web);
+      return;
+    }
+    if (s.stage === 'identity') {
+      app.innerHTML = v.identityWindow(s, b.web, b.suggested?.() ?? {});
+      return;
+    }
+    app.innerHTML = v.app(s, b.web);
+    setTab(tab);
+    setFilter(filter);
+    void check();
+    await Promise.all([readFeed(), readInbox()]);
   }
 
   async function copy(text: string): Promise<boolean> {
@@ -87,56 +218,66 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State, sugg
 
   // ---------------------------------------------------------------- clicks
 
+  app.addEventListener('change', async (ev) => {
+    const el = ev.target as HTMLInputElement;
+    if (el.name === 'picture') fill('picked', el.files?.[0] ? v.e(el.files[0].name) : '');
+    if (el.id === 'publish-list') {
+      const on = el.checked;
+      if (on && !confirm(v.PUBLISH_WARNING)) {
+        el.checked = false;
+        return;
+      }
+      const r = await busy(on ? 'Publishing the follow list…' : 'Making the follow list private again…', () => b.ask<{ lines: v.Line[] }>('list', { published: on, shown: on ? v.PUBLISH_WARNING : '' }));
+      if (r) {
+        await refresh();
+        say('done', v.lines(r.lines));
+      } else el.checked = !on;
+    }
+  });
+
   app.addEventListener('click', async (ev) => {
-    const el = (ev.target as HTMLElement).closest<HTMLElement>('[data-action]');
+    const el = (ev.target as HTMLElement).closest<HTMLElement>('[data-action],[data-tab],[data-filter]');
     if (!el || el instanceof HTMLInputElement) return;
     const d = el.dataset;
+    if (d.tab) return setTab(d.tab as 'public' | 'private');
+    if (d.filter) return setFilter(d.filter as 'all' | 'toyou');
+    const card = el.closest<HTMLElement>('[data-post]');
     switch (d.action) {
+      case 'written':
+        // H3: the words go before three are asked back.
+        app.innerHTML = v.typeBack(shown!.positions, b.web);
+        break;
       case 'abandon':
         if (!confirm('Forget this new identity? Nothing of it was published. A new one will show new words.')) break;
+        shown = null;
         try {
           await b.ask('abandon');
           await b.start();
         } catch (err) {
-          fail(err);
+          await fail(err);
         }
         break;
-      case 'posts':
-        await posts();
+      case 'window':
+        if (state) app.innerHTML = v.identityWindow(state, b.web, b.suggested?.() ?? {});
         break;
-      case 'withdraw': {
-        if (!confirm('Withdraw this picture? Readers stop showing it; the post stays. It cannot be undone.')) break;
-        const r = await busy('Withdrawing…', () => b.ask<{ id: string }>('withdraw', { publication: d.publication }));
+      case 'back':
+        await refresh();
+        break;
+      case 'use': {
+        const r = await busy('Switching…', () => b.ask('use', { id: d.id }));
         if (r) {
-          say('done', `The picture is withdrawn (act <code>${v.e(r.id.slice(0, 16))}…</code>).`);
-          const pub = $('published')?.querySelector('[data-post]')?.getAttribute('data-post');
-          await line();
-          await posts();
-          if (pub) fill('published', '<p class="small">The post above was changed: see it in the list below.</p>');
+          feed = [];
+          inbox = null;
+          await refresh();
         }
         break;
       }
-      case 'copy': {
-        const ok = await copy(d.id ?? '');
-        el.textContent = ok ? 'Copied' : 'Copy failed: select the ID';
-        setTimeout(() => (el.textContent = 'Copy ID'), 2000);
-        break;
-      }
-      case 'code': {
-        const r = await busy('Making a code…', () => b.ask<{ code: string }>('code'));
-        if (r) {
-          say('', '');
-          fill('code', v.note('', `Code for another browser, valid ten minutes, once: <span class="code">${v.e(r.code)}</span>`));
-        }
-        break;
-      }
-      case 'unpair':
-        if (!confirm('Unpair this browser? It will need a new link from the app.')) break;
-        try {
-          await b.unpair?.();
-          await b.start();
-        } catch (err) {
-          fail(err);
+      case 'forget':
+        if (!confirm('Forget this identity here? Its keys go with it. Only its signing key’s words, written down, bring it back. Its posts stay published.')) break;
+        if (await busy('Forgetting…', () => b.ask('forget', { id: d.id }))) {
+          feed = [];
+          inbox = null;
+          await refresh();
         }
         break;
       case 'carry': {
@@ -150,14 +291,86 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State, sugg
       case 'hide-carry':
         fill('carry', '');
         break;
-      case 'forget':
-        if (!confirm('Forget this identity in this browser? Its signing key goes with it. Only its carry words, written down, bring it back. Its posts stay published.')) break;
+      case 'copy': {
+        const ok = await copy(d.id ?? '');
+        el.textContent = ok ? 'Copied' : 'Copy failed: select the ID';
+        setTimeout(() => (el.textContent = 'Copy ID'), 2000);
+        break;
+      }
+      case 'code': {
+        const r = await busy('Making a code…', () => b.ask<{ code: string }>('code'));
+        if (r) {
+          say('', '');
+          fill('code', v.note('', `Code for another browser, valid ten minutes, once: <code>${v.e(r.code)}</code>`));
+        }
+        break;
+      }
+      case 'unpair':
+        if (!confirm('Unpair this browser? It will need a new link from the app.')) break;
         try {
-          await b.forget?.();
+          await b.unpair?.();
           await b.start();
         } catch (err) {
-          fail(err);
+          await fail(err);
         }
+        break;
+      case 'address':
+        $('post')?.classList.toggle('addressed');
+        break;
+      case 'reply': {
+        if (!card) break;
+        replying = { id: card.dataset.post!, signer: card.dataset.signer! };
+        const w = card.querySelector('.who')?.outerHTML ?? '';
+        fill('replying', `<span class="chip">Replying to ${w}<button type="button" data-action="unreply" title="Not a reply">×</button></span>`);
+        setTab('public');
+        $<HTMLTextAreaElement>('post')?.querySelector('textarea')?.focus();
+        break;
+      }
+      case 'unreply':
+        replying = null;
+        fill('replying', '');
+        break;
+      case 'answer': {
+        const f = $<HTMLFormElement>('message');
+        (f?.elements.namedItem('to') as HTMLInputElement).value = d.id ?? '';
+        f?.querySelector('textarea')?.focus();
+        break;
+      }
+      case 'follow':
+      case 'unfollow':
+      case 'mute':
+      case 'unmute': {
+        if (d.action === 'mute' && !confirm('Mute this identity? Nothing of it is shown here any more. Nobody is told; it is never published.')) break;
+        const r = await busy('Saving…', () => b.ask<{ lines: v.Line[] }>(d.action!, { id: d.id }));
+        if (r) {
+          const open = $<HTMLDetailsElement>('people')?.open;
+          await refresh();
+          if (open) $<HTMLDetailsElement>('people')!.open = true;
+          if (r.lines.length) say('done', v.lines(r.lines));
+        }
+        break;
+      }
+      case 'call': {
+        const name = prompt('Your name for this identity. It stays in this app, never published.');
+        if (name === null) break;
+        if (await busy('Saving…', () => b.ask('call', { id: d.id, name }))) {
+          await refresh();
+          $<HTMLDetailsElement>('people')!.open = true;
+        }
+        break;
+      }
+      case 'withdraw': {
+        if (!confirm('Withdraw this picture? Readers stop showing it; the post stays. It cannot be undone.')) break;
+        const r = await busy('Withdrawing…', () => b.ask<{ id: string }>('withdraw', { publication: d.publication }));
+        if (r) {
+          say('done', `The picture is withdrawn (act <code>${v.e(r.id.slice(0, 16))}…</code>).`);
+          await readFeed();
+        }
+        break;
+      }
+      case 'feed':
+        say('', '');
+        await Promise.all([readFeed(), readInbox()]);
         break;
     }
   });
@@ -180,25 +393,28 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State, sugg
 
   app.addEventListener('submit', async (ev) => {
     const form = ev.target as HTMLFormElement;
-    // Not `form.id`: the bring form has a field named "id", which `form.id` would give instead
-    // (a form's fields shadow its properties). Until 13 October 2026 the bring door never submitted from the page.
+    // Not `form.id`: a form's fields shadow its properties (the bring form has a field named "id").
     const name = form.getAttribute('id');
     if (name === 'pair') return; // the program's own start handles it (`app.ts`)
     ev.preventDefault();
     const d = new FormData(form);
     switch (name) {
       case 'begin': {
-        const r = await busy(b.web ? 'Asking each home who runs it, and making the identity in this browser…' : 'Asking each home who runs it, and making the identity…', () =>
+        const r = await busy('Asking each home who runs it, and making the identity…', () =>
           b.ask<{ words: string[]; positions: number[]; say: string[] }>('begin', { homes: linesOf(d.get('homes')), relays: linesOf(d.get('relays')), via: viaOf(d.get('via')) }),
         );
         // The words are on the page now and nowhere else it can reach: a reload will not show them again.
-        if (r) app.innerHTML = v.words(r.words, r.positions, r.say, b.web);
+        if (r) {
+          shown = { positions: r.positions };
+          app.innerHTML = v.words(r.words, r.say, b.web);
+        }
         return;
       }
       case 'confirm': {
         const typed = [...form.querySelectorAll<HTMLInputElement>('input')].map((i) => i.value);
         const r = await busy('Checking the words, then sending the genesis to the homes…', () => b.ask<{ lines: v.Line[] }>('confirm', { typed }));
         if (r) {
+          shown = null;
           await b.start();
           say('done', `<strong>The identity is born.</strong>${v.lines(r.lines)}`);
         }
@@ -215,36 +431,70 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State, sugg
           }),
         );
         if (r) {
+          feed = [];
+          inbox = null;
           await b.start();
           say('done', `<strong>The identity is here.</strong>${v.lines(r.lines)}`);
         }
         return;
       }
+      case 'renew': {
+        const r = await busy('Checking the new words at its homes…', () => b.ask<{ lines: v.Line[] }>('renew', { words: words(d.get('words')) }));
+        if (r) {
+          await refresh();
+          say('done', `<strong>The new words are in use.</strong>${v.lines(r.lines)}`);
+        }
+        return;
+      }
+      case 'name': {
+        const r = await busy('Publishing the name…', () => b.ask<{ lines: v.Line[]; names: string[] }>('name', { name: String(d.get('name') ?? '') }));
+        if (r) {
+          const s = await b.ask<v.State>('state');
+          state = s;
+          app.innerHTML = v.identityWindow(s, b.web, b.suggested?.() ?? {});
+          say('done', r.lines.length ? v.lines(r.lines) : 'Nothing changed.');
+        }
+        return;
+      }
       case 'post': {
         const file = (form.elements.namedItem('picture') as HTMLInputElement).files?.[0];
+        const reply = replying;
         const r = await busy(file ? 'Stripping the picture, publishing, and reading it back…' : 'Publishing, and reading it back…', async () =>
-          b.ask<{ post: v.Shown; lines: v.Line[] }>('post', { text: String(d.get('text') ?? ''), jpeg: file ? await base64(file) : '', to: String(d.get('to') ?? '') }),
+          b.ask<{ post: v.Item; lines: v.Line[] }>('post', { text: String(d.get('text') ?? ''), jpeg: file ? await base64(file) : '', to: String(d.get('to') ?? ''), reply }),
         );
         if (r) {
           form.reset();
+          form.classList.remove('addressed');
+          replying = null;
+          fill('replying', '');
+          fill('picked', '');
+          feed = [r.post, ...feed.filter((x) => x.id !== r.post.id)];
+          setFilter('all');
           say('done', `<strong>Posted.</strong>${v.lines(r.lines)}`);
-          fill('published', `<div class="published">${v.shown(r.post)}</div>`);
-          await line();
-          await posts();
+          await readFeed();
+        }
+        return;
+      }
+      case 'message': {
+        const r = await busy('Sealing it, and leaving it in their inbox…', () => b.ask<{ lines: v.Line[] }>('message', { to: String(d.get('to') ?? ''), text: String(d.get('text') ?? '') }));
+        if (r) {
+          form.reset();
+          say('done', `<strong>Sent.</strong>${v.lines(r.lines)}`);
+          await readInbox();
+        }
+        return;
+      }
+      case 'follow': {
+        const r = await busy('Following…', () => b.ask<{ lines: v.Line[] }>('follow', { id: words(d.get('id')), name: words(d.get('name')) }));
+        if (r) {
+          await refresh();
+          $<HTMLDetailsElement>('people')!.open = true;
+          say('done', `<strong>Followed.</strong>${r.lines.length ? v.lines(r.lines) : ''}`);
         }
         return;
       }
     }
   });
 
-  return {
-    async show(state, suggested) {
-      if (state.stage === 'doors') app.innerHTML = v.doors(b.web, suggested);
-      else if (state.stage === 'confirm') app.innerHTML = v.typeBack(state.confirm!.positions, true, b.web);
-      else {
-        app.innerHTML = v.ready(state, b.web);
-        await posts();
-      }
-    },
-  };
+  return { show };
 }

@@ -130,7 +130,7 @@ async function kept(page: Page): Promise<{ text: string; identity: IdentityFile 
     return out;
   });
   const entries = ((dump.indexedDB as Record<string, Record<string, [string, unknown][]>>).dub?.keep ?? []) as [string, unknown][];
-  return { text: JSON.stringify(dump), identity: entries.find(([k]) => k === 'identity')?.[1] as IdentityFile | undefined };
+  return { text: JSON.stringify(dump), identity: entries.find(([k]) => String(k).startsWith('identity:'))?.[1] as IdentityFile | undefined };
 }
 
 /** Every way the chain key could be written down: its words, its seed, the key's own seeds, in hex and base64. */
@@ -149,8 +149,8 @@ const banner = async (page: Page, where: string) => {
   assert.match(t, /This browser's storage, where the identity's signing key is kept, can be lost, or read by what runs in this page\./, where);
 };
 
-test('the web client: a new identity, its chain key shown once as words and kept nowhere; posts across a reload; carried into Dub on the Mac, each keeping its own line', async () => {
-  const context = await browser.newContext();
+test('the web client: a new identity, its chain key shown once and kept nowhere, the words hidden before three are asked (H3); posts across a reload; carried to Dub on the Mac and back, each keeping its own line, private messages opening on both', async () => {
+  const context = await browser.newContext({ viewport: { width: 760, height: 900 } });
   const page = await context.newPage();
   page.on('console', (m) => {
     if (m.type() === 'error' && !/status of 4\d\d/.test(m.text())) problems.push(m.text());
@@ -158,16 +158,16 @@ test('the web client: a new identity, its chain key shown once as words and kept
   page.on('pageerror', (e) => problems.push(e.message));
   page.on('dialog', (d) => void d.accept());
 
-  // The first screen: the banner, two doors, the deployer's suggested home filled in.
+  // The identity window: the banner, two doors, the deployer's suggested home filled in.
   await page.goto(`${base}/`);
   await page.getByRole('heading', { name: 'Make a new identity' }).waitFor({ timeout: 60_000 });
-  await banner(page, 'the doors');
+  await banner(page, 'the identity window');
   assert.equal(await page.locator('form#begin textarea[name=homes]').inputValue(), 'https://home.example');
   assert.equal(await page.locator('textarea[name=via]').count(), 0, 'no other way to reach an address: a browser has none');
-  assert.match(await page.locator('form#bring').innerText(), /kept in this browser’s storage \(IndexedDB\), as it is, not locked/);
-  await shot(page, '1-doors');
+  assert.match(await page.locator('form#bring').innerText(), /kept in this browser’s storage \(IndexedDB\), as they are, not locked/);
+  await shot(page, '01-identity-window');
 
-  // Door one: the chain key's words, shown once.
+  // The chain key's words, shown once, nothing asked beside them.
   const begin = page.locator('form#begin');
   await begin.locator('textarea[name=homes]').fill(homes.map((h) => h.base).join('\n'));
   await begin.locator('textarea[name=relays]').fill(relay.base);
@@ -176,14 +176,18 @@ test('the web client: a new identity, its chain key shown once as words and kept
   await banner(page, 'the words');
   const words = (await page.locator('#words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
   assert.equal(words.length, 24);
-  assert.match(await page.locator('.say').innerText(), /this identity’s chain key/);
-  assert.match(await page.locator('.say').innerText(), /neither this page nor this browser keeps them/);
-  await shot(page, '2-chain-words');
+  assert.match(await page.locator('.say').innerText(), /These are the chain key’s words/);
+  assert.match(await page.locator('.say').innerText(), /Dub keeps nothing of the chain key/);
+  assert.equal(await page.locator('form#confirm').count(), 0, 'H3: nothing asked while the words show');
+  await shot(page, '02-chain-words');
   const forms = chainForms(words);
-  // Even while they wait to be typed back, nothing of the chain key is in storage.
   for (const f of forms) assert.ok(!(await kept(page)).text.includes(f), 'nothing of the chain key in storage, before');
 
-  // Three typed back: one wrong first, refused, nothing published.
+  // H3: hidden, then three asked; one wrong first, refused, nothing published.
+  await page.getByRole('button', { name: 'I have written them down' }).click();
+  await page.locator('form#confirm').waitFor();
+  assert.equal(await page.locator('#words').count(), 0);
+  for (const f of forms) assert.ok(!(await page.content()).includes(f), 'the words are not on the page once three are asked');
   const inputs = page.locator('form#confirm input');
   const positions = (await inputs.evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name))).map((n) => Number(n.slice(1)));
   for (const [i, p] of positions.entries()) await inputs.nth(i).fill(i === 1 ? 'wrong' : words[p - 1]);
@@ -192,84 +196,85 @@ test('the web client: a new identity, its chain key shown once as words and kept
   await inputs.nth(1).fill(words[positions[1] - 1]);
   await page.getByRole('button', { name: 'Go on' }).click();
   await done(page, 'The identity is born');
-  await banner(page, 'the identity');
-  await shot(page, '3-born');
+  await banner(page, 'the app');
 
-  // The genesis at the homes commits the chain key these words give (the seed Module's key 0, scheme 3).
+  // The genesis commits the chain key these words give; nothing of it in storage or on the page.
   const store1 = await kept(page);
   const me = store1.identity!;
   assert.ok(me, 'the identity is kept in IndexedDB');
   const genesis = (await relayAt(homes[0].base).identity(me.identity)).chain[0];
   const commit = newChainKey(fromWords(words)).key.commit;
   assert.ok(hex((describeAct(genesis) as { payload: Uint8Array }).payload).includes(commit), 'the genesis commits the chain key of the words shown');
-  // Nowhere in storage afterwards: not the words, not the seed, not the key's seeds. The signing key is there, as it is (said on the page).
   for (const f of forms) assert.ok(!store1.text.includes(f), `nothing of the chain key in storage: ${f.slice(0, 12)}…`);
   assert.deepEqual(me.safety, { scheme: 0, seeds: '' });
-  assert.match(me.signingSecret, /^[0-9a-f]{64}$/);
-  assert.ok(store1.text.includes(me.signingSecret));
-  // Nor on the page any more.
-  const html = await page.content();
-  for (const f of forms) assert.ok(!html.includes(f), 'the words are not on the page any more');
-  assert.match(await page.locator('#identity').innerText(), /Its chain key was shown once as words, and is kept nowhere here\./);
+  assert.equal(me.encryption.length, 1, 'an encryption key at once');
+  for (const f of forms) assert.ok(!(await page.content()).includes(f), 'the words are not on the page any more');
 
-  // A post, read back verified.
+  // A post, read back verified; a reload; the next post continues the same line.
   await page.locator('form#post textarea[name=text]').fill('First, from the web client.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, 'Posted');
-  assert.match(await page.locator('#published .mor-post').innerText(), /verified/);
-  const first = (await page.locator('#published [data-post]').getAttribute('data-post'))!;
-
-  // A reload: the identity is still here, and the next post continues the same line.
+  const first = (await page.locator('#feed .post').first().getAttribute('data-post'))!;
   await page.reload();
   await page.locator('form#post').waitFor({ timeout: 60_000 });
   await banner(page, 'the page after a reload');
   await page.locator('form#post textarea[name=text]').fill('Second, after a reload.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, 'Posted');
-  const second = (await page.locator('#published [data-post]').getAttribute('data-post'))!;
+  const second = (await page.locator('#feed .post').first().getAttribute('data-post'))!;
   const a1 = describeAct((await relayAt(relay.base).getAct(first))!) as { position: number; prev?: string };
   const a2 = describeAct((await relayAt(relay.base).getAct(second))!) as { position: number; prev?: string };
   assert.equal(a2.prev, first, 'the second post follows the first, in the same line');
   assert.equal(a2.position, a1.position + 1);
-  const store2 = await kept(page);
-  assert.deepEqual(store2.identity!.sequence.slice(-2), [first, second]);
-  for (const f of forms) assert.ok(!store2.text.includes(f), 'still nothing of the chain key in storage');
-  await shot(page, '4-posted');
+  await shot(page, '03-public');
 
-  // The carry words, on request: the way out.
-  await page.getByRole('button', { name: 'Show the carry words' }).click();
+  // The signing key's words, on request: the way out, labelled.
+  await page.locator('[data-action=window]').click();
+  await page.getByRole('button', { name: 'Show the signing key’s words' }).click();
   await page.locator('#carry-words').waitFor();
   const carry = (await page.locator('#carry-words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
   const grouped = await page.locator('#carry .id').innerText();
-  assert.equal(carry.length, 24);
-  assert.equal(hex(fromWords(carry)), me.signingSecret, 'the carry words are the signing key');
+  assert.equal(hex(fromWords(carry)), me.signingSecret, 'the signing key’s words');
   assert.notDeepEqual(carry, words, 'not the chain key');
-  assert.match(await page.locator('#carry .say').innerText(), /Whoever holds these words can post as this identity/);
-  await shot(page, '5-carry');
+  assert.match(await page.locator('#carry .say').innerText(), /post as this identity and read its private messages/);
+  await shot(page, '04-signing-words');
 
-  // Into Dub on the Mac, by those words: it checks the current signing key, and starts its own line.
-  await mac.dub.bring({ id: grouped, words: carry.join(' '), address: homes[1].base });
+  // Into Dub on the Mac, by those words: its own line, and its private messages open there (the carry Module, draft 2).
+  const brought = await mac.dub.bring({ id: grouped, words: carry.join(' '), address: homes[1].base });
+  assert.ok(brought.lines.some((l) => /its private messages open here/.test(l.text)));
   const onMac = await mac.dub.post({ text: 'Third, from Dub on the Mac.' });
   const a3 = describeAct((await relayAt(relay.base).getAct(onMac.post.id))!) as { position: number; prev?: string };
   assert.equal(a3.position, 1, 'the Mac starts its own line');
-  assert.ok(!a3.prev);
-  // And the web client goes on with its own.
+  // Someone writes privately to the identity: both the web client and the Mac open it.
+  const other = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-dub-other-')), port: 0 });
+  try {
+    const ob = await other.dub.begin({ homes: [homes[1].base], relays: [relay.base] });
+    await other.dub.confirm(ob.positions.map((p) => ob.words[p - 1]));
+    await other.dub.message({ to: me.identity, text: 'For both of your apps.' });
+  } finally {
+    await other.close();
+  }
+  assert.ok((await mac.dub.inbox()).messages.some((m) => m.text === 'For both of your apps.'));
+  await page.getByRole('button', { name: 'Back to Dub' }).click();
+  await page.locator('#count-private', { hasText: '1' }).waitFor({ timeout: 60_000 });
+  await page.locator('[data-tab=private]').click();
+  await page.locator('#inbox .msg', { hasText: 'For both of your apps.' }).waitFor({ timeout: 60_000 });
+  await shot(page, '05-private');
+  // The web client's line goes on from its own last act; every post valid.
+  await page.locator('[data-tab=public]').click();
   await page.locator('form#post textarea[name=text]').fill('Fourth, from the web client again.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, 'Posted');
-  const fourth = (await page.locator('#published [data-post]').getAttribute('data-post'))!;
-  const a4 = describeAct((await relayAt(relay.base).getAct(fourth))!) as { position: number; prev?: string };
-  assert.equal(a4.prev, second, 'the web client’s line goes on from its own last act');
-  // Every post valid, read by a reader that knows only the relay; both lines listed in each app.
+  const fourth = (await page.locator('#feed .post').first().getAttribute('data-post'))!;
+  assert.equal((describeAct((await relayAt(relay.base).getAct(fourth))!) as { prev?: string }).prev, second);
   for (const id of [first, second, onMac.post.id, fourth]) assert.equal((await readPost(id, [relay.base])).standing, 'valid', id);
   assert.deepEqual(new Set(await listPosts(me.identity, relay.base)), new Set([first, second, onMac.post.id, fourth]));
-  await page.getByRole('button', { name: 'Look again' }).click();
-  await page.locator('#posts', { hasText: 'Third, from Dub on the Mac.' }).waitFor({ timeout: 60_000 });
-  assert.equal((await mac.dub.posts()).length, 4);
-  await shot(page, '6-both-lines');
+  await page.locator('#feed .post', { hasText: 'Third, from Dub on the Mac.' }).waitFor({ timeout: 60_000 });
+  for (const f of forms) assert.ok(!(await kept(page)).text.includes(f), 'still nothing of the chain key in storage');
 
   // Forgetting it in this browser leaves nothing of it in storage.
-  await page.getByRole('button', { name: 'Forget this identity in this browser' }).click();
+  await page.locator('[data-action=window]').click();
+  await page.getByRole('button', { name: 'Forget it here' }).click();
   await page.getByRole('heading', { name: 'Make a new identity' }).waitFor({ timeout: 60_000 });
   assert.ok(!(await kept(page)).text.includes(me.signingSecret));
 
@@ -282,10 +287,8 @@ test('the web client brings an identity made by Dub on the Mac, and refuses wron
   const mac2 = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-dub-mac2-')), port: 0 });
   try {
     const b = await mac2.dub.begin({ homes: [homes[0].base], relays: [relay.base] });
-    const st = await mac2.dub.state();
     await mac2.dub.confirm(b.positions.map((p) => b.words[p - 1]));
-    const id = (await mac2.dub.carry()).id;
-    assert.equal(st.confirm!.id, id);
+    const { id, words } = await mac2.dub.carry();
 
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -293,23 +296,21 @@ test('the web client brings an identity made by Dub on the Mac, and refuses wron
     await page.goto(`${base}/`);
     const bring = page.locator('form#bring');
     await bring.waitFor({ timeout: 60_000 });
-    const wrong = [...b.words];
-    [wrong[0], wrong[1]] = [wrong[1], wrong[0]];
+    // The chain key's words, typed where the signing key's are asked: refused.
     await bring.locator('input[name=id]').fill(id);
-    await bring.locator('textarea[name=words]').fill(wrong.join(' '));
+    await bring.locator('textarea[name=words]').fill(b.words.join(' '));
     await bring.locator('input[name=address]').fill(homes[0].base);
     await bring.getByRole('button', { name: 'Bring it' }).click();
-    await page.locator('#status .note.error', { hasText: /Nothing was kept/ }).waitFor({ timeout: 60_000 });
+    await page.locator('#status .note.error', { hasText: /Nothing was kept.*chain key’s words/ }).waitFor({ timeout: 60_000 });
     assert.equal((await kept(page)).identity, undefined);
-    await bring.locator('textarea[name=words]').fill(b.words.join(' '));
+    await bring.locator('textarea[name=words]').fill(words.join(' '));
     await bring.getByRole('button', { name: 'Bring it' }).click();
     await done(page, 'The identity is here');
     await banner(page, 'a brought identity');
-    assert.match(await page.locator('#identity').innerText(), /Elsewhere, and brought here by its words\. Its chain key is not here\./);
     await page.locator('form#post textarea[name=text]').fill('From the web, an identity made on the Mac.');
     await page.getByRole('button', { name: 'Post', exact: true }).click();
     await done(page, 'Posted');
-    const pid = (await page.locator('#published [data-post]').getAttribute('data-post'))!;
+    const pid = (await page.locator('#feed .post').first().getAttribute('data-post'))!;
     assert.equal((describeAct((await relayAt(relay.base).getAct(pid))!) as { position: number }).position, 1, 'its own line');
     assert.equal((await readPost(pid, [relay.base])).standing, 'valid');
     assert.deepEqual(problems, []);
