@@ -36,6 +36,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **The prompt box: an act or a local chat?** The project lead leaned to an act (a sealed private message from the owner to the agent, signed and kept: an agent acting on MOR has its instructions on MOR; the nudge cMIP answers the owner's own acts at once). *Cost:* every prompt is a signed act. **Decided:** "A)".
 
+**Adding an agent:** an "+ Add an agent" at the end of the list reopens the first-use window (name, identity, terms); each agent signs its own terms. **The API key:** shared by default, each agent with its own daily cap; an agent may be given its own key (the project lead's lean). **Decided:** "Yes".
+
 ## F332. Dub reshaped: an identity window, a public tab, a private tab (16 October 2026)
 
 *Area: presentation and the development layer (clients, a cMIP, a Module). Raised by the human tests (H7, H8, H9).*
