@@ -46,7 +46,7 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only), th
 ## Open, in order
 
 1. A Mac session: deploy Dub's web release, update the homes to the current core, republish the dubsar.org pages naming Edubba.
-2. A small session for Dub and Edubba: a display name at creation in Dub (H12); Edubba's "What you may do for it" folding and unfolding (H14); a Linux desktop icon for both, and a Linux test run.
+2. A small session for Dub and Edubba: a display name at creation in Dub (H12); Edubba's "What you may do for it" folding and unfolding (H14); bringing an existing identity or collective beside making one (H15); releases under one's own name moved to the Identities tab, the folder chosen at each release (H16); a Linux desktop icon for both, and a Linux test run.
 3. The site session (structure and look; H1, H2, H7). Nearer release: the KI tab icon's fit and the tablet in the footer (H13).
 4. MOR Safety, the rotation app (F332, amended).
 5. The remaining human tests on the cleaned apps.
