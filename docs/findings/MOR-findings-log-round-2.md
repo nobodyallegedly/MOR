@@ -24,6 +24,18 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F334. A collective's text names its own latest decision: Text rule 14 opened for rule 58 only (16 October 2026)
+
+*Area: core business (Text and Agreements). Found by the Edubba session building the collectives' Act tab: writing code is also a review.*
+
+**The flaw.** Agreements rule 58 requires every act of a collective to carry `objects` naming `[collective, decision]`, its latest decision on its actions chain, so that nobody can miss it and the tie rule can order it; without it the act counts for nothing. Text rule 14 (F296) makes any text act carrying `objects` invalid. Together, no text a collective posts can ever count. Publications are unaffected (they may carry the pointer). The core's code also let Agreements count such a text although the Text MIR calls it invalid.
+
+**Options (the session's).** (a) Agreements rules 57 and 58 exempt text acts: a collective's texts sit on no chain, counting on their signature; *cost:* not unmissable, and the tie rule cannot order them against a departure. (b) F296's own way: a plain text plus a companion act on the chain naming it; *cost:* two acts per post and a cMIP the collective must adopt. (c) Text rule 14 allows `objects` only where each names the signer's own identity as chain. The session leaned (c).
+
+**The project lead's narrowing.** (c) as worded would let any identity chain its own texts without a cMIP, which F296 deliberately gave up ("a co-written document, a collective's log, a thread in one agreed order" left to a cMIP's companion acts). Narrowed: a text act may carry `objects` **only when its signer is a collective and the one object is rule 58's pointer to its own latest decision on its actions chain**; any other `objects` on a text act stays invalid. F296's reason (no text read as a fork of someone else's agreement) is kept.
+
+**Decided by Nobody, allegedly:** "Agreed" ((c), narrowed). One sentence in the Text MIR, the matching check in the core, and the core's Agreements count brought in line with Text's verdict.
+
 ## F333. MOR Identities becomes Edubba: agents, identities, collectives (16 October 2026)
 
 *Area: presentation and the development layer (a client). The second app looked at from a user's point of view, after Dub (F332).*
