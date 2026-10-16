@@ -309,6 +309,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 *16 October 2026, afternoon: the human tests found the clients need a proper look from a user's point of view (`docs/human-tests-v1-findings.md`, H1 to H10). Nobody, allegedly: "I suggest cleaning all the apps first", then the remaining tests on the cleaned apps; Dub first ("Wanna build this first and we see the rest after?"). Dub reshaped (F332): an identity window, a public tab and a private tab, replies, a "to you" filter, follow and mute, a display name, rotation in the app, a Damus-like calm; with a naming cMIP, a people cMIP (follow and mute) and the carry Module's draft 2 (the encryption key carried too). The other apps (the desk, the collective client, the site) after it.*
 
+*16 October 2026, late afternoon: Dub reshaped merged (pull request 68; report `docs/dub-reshaped-report.md`): the identity window, the public and private tabs, the naming cMIP and the people cMIP (draft 1), the carry Module's draft 2 (the encryption key derived from the signing words). Dub's web release run; deploying it at dub.dubsar.org is a machine session's. Left: MOR Safety, the rotation app (F332 amended); the desk, the collective client and the site cleaned; the remaining human tests on the cleaned apps.*
+
 ## Decisions due along the way
 
 | Decision | Before |
