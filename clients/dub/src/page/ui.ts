@@ -401,7 +401,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     switch (name) {
       case 'begin': {
         const r = await busy('Asking each home who runs it, and making the identity…', () =>
-          b.ask<{ words: string[]; positions: number[]; say: string[] }>('begin', { homes: linesOf(d.get('homes')), relays: linesOf(d.get('relays')), via: viaOf(d.get('via')) }),
+          b.ask<{ words: string[]; positions: number[]; say: string[] }>('begin', { homes: linesOf(d.get('homes')), relays: linesOf(d.get('relays')), via: viaOf(d.get('via')), name: String(d.get('name') ?? '') }),
         );
         // The words are on the page now and nowhere else it can reach: a reload will not show them again.
         if (r) {

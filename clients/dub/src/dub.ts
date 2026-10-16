@@ -97,6 +97,8 @@ export interface Pending {
   via: Via;
   /** The chain-key seed whose words were shown. Never stored. */
   chainSeed: string;
+  /** A display name to publish right after the genesis (the naming cMIP; H12), already checked; none if not given. */
+  name?: string;
 }
 
 /**
@@ -277,8 +279,10 @@ export class Dub {
    * the web. Nothing is published until three of the words are typed back
    * (`confirm`). Starting again forgets the last one.
    */
-  async begin(a: { homes: string[]; relays: string[]; via?: Via }): Promise<{ words: string[]; positions: number[]; say: string[] }> {
+  async begin(a: { homes: string[]; relays: string[]; via?: Via; name?: string }): Promise<{ words: string[]; positions: number[]; say: string[] }> {
     const via = a.via ?? {};
+    // A display name, if given, is checked now, before anything is made (the naming cMIP, section 2; H12).
+    const name = a.name?.trim() ? readName(a.name) : undefined;
     const hints = list(a.homes);
     if (!hints.length) throw new Error('Give at least one home address: where the identity lives, and anyone can check it.');
     const homes = await this.homes(hints, via);
@@ -291,7 +295,7 @@ export class Dub {
     // The chain key is not kept with the identity, even while it waits: only the seed, in memory, to check the words typed back.
     id.f.safety = { scheme: 0, seeds: '' };
     chain.key.seeds.fill(0);
-    await this.store.savePending({ identity: id.f, positions, relays: relays.length ? relays : hints, via, chainSeed: hex(seed) });
+    await this.store.savePending({ identity: id.f, positions, relays: relays.length ? relays : hints, via, chainSeed: hex(seed), ...(name ? { name } : {}) });
     seed.fill(0);
     return { words: chain.words, positions, say: CHAIN_WORDS_SAY };
   }
@@ -348,6 +352,14 @@ export class Dub {
         }
       }
       lines.push({ text: `Its posts are published at, and its inbox is, ${p.relays.join(', ')}. Its encryption key is published: private messages can be sealed to it.` });
+      // The display name given in the form, published right after the genesis (H12; the naming cMIP, section 1).
+      if (p.name) {
+        try {
+          lines.push(...(await this.publishName(id, { relays: p.relays, via: p.via }, p.name)).lines);
+        } catch (e) {
+          lines.push({ text: `The display name was not published (${message(e)}). Give it again in the identity window.`, tone: 'warn' });
+        }
+      }
       return { lines };
     });
   }
@@ -591,34 +603,40 @@ export class Dub {
    */
   setName(typed: string): Promise<{ lines: Line[]; names: string[] }> {
     return this.serial(async () => {
-      const { me, s, hints } = await this.ctx();
+      const { me, s } = await this.ctx();
       const name = typed.trim() ? readName(typed) : null;
       await this.current(me);
-      const before = await namesOf(me.id, hints, s.via);
-      const lines: Line[] = [];
-      const send = async (act: Uint8Array) => {
-        for (const h of [...me.f.homes.map((x) => x.hint), ...s.relays]) {
-          try {
-            await relayAt(h, s.via).putAct(act);
-          } catch {
-            // that place is away: the others hold it
-          }
-        }
-      };
-      if (name && !before.some((n) => n.name === name)) {
-        const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME, namePayload(name), { public: true }));
-        await send(made.act);
-        lines.push({ text: `Your display name is “${name}”, shown beside your fingerprint, never instead of it. Anyone may take the same name.`, tone: 'ok' });
-      }
-      for (const old of before.filter((n) => n.name !== name)) {
-        const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME_WITHDRAWAL, cborEncode(new Map()), { public: true, objects: [[old.act, old.act]] }));
-        await send(made.act);
-        lines.push({ text: `“${old.name}” withdrawn: it stays readable as an act, no longer as your name.` });
-      }
-      const names = (await namesOf(me.id, hints, s.via)).map((n) => n.name);
-      this.names.set(me.id, { names, at: now() });
-      return { lines, names };
+      return this.publishName(me, s, name);
     });
+  }
+
+  /** Publish `name` and withdraw every other counting name, for an identity whose key is current. Inside `serial`. */
+  private async publishName(me: TestIdentity, s: { relays: string[]; via: Via }, name: string | null): Promise<{ lines: Line[]; names: string[] }> {
+    const hints = [...new Set([...s.relays, ...me.f.homes.map((h) => h.hint)])];
+    const before = await namesOf(me.id, hints, s.via);
+    const lines: Line[] = [];
+    const send = async (act: Uint8Array) => {
+      for (const h of [...me.f.homes.map((x) => x.hint), ...s.relays]) {
+        try {
+          await relayAt(h, s.via).putAct(act);
+        } catch {
+          // that place is away: the others hold it
+        }
+      }
+    };
+    if (name && !before.some((n) => n.name === name)) {
+      const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME, namePayload(name), { public: true }));
+      await send(made.act);
+      lines.push({ text: `Your display name is “${name}”, shown beside your fingerprint, never instead of it. Anyone may take the same name.`, tone: 'ok' });
+    }
+    for (const old of before.filter((n) => n.name !== name)) {
+      const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME_WITHDRAWAL, cborEncode(new Map()), { public: true, objects: [[old.act, old.act]] }));
+      await send(made.act);
+      lines.push({ text: `“${old.name}” withdrawn: it stays readable as an act, no longer as your name.` });
+    }
+    const names = (await namesOf(me.id, hints, s.via)).map((n) => n.name);
+    this.names.set(me.id, { names, at: now() });
+    return { lines, names };
   }
 
   // ------------------------------------------------------------ the public side

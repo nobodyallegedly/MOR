@@ -372,6 +372,25 @@ test('a display name (the naming cMIP): shown beside the fingerprint, renamed wi
   assert.deepEqual(who.names, []);
 });
 
+test('a display name at creation (H12): checked before anything is made, published right after the genesis', async () => {
+  const { app, c } = await dub();
+  await refused(c.ask('begin', { homes: [homes[0].base], relays: [relay.base], name: 'two\nlines' }), /line break.*Nothing was signed/);
+  assert.equal((await c.ask<State>('state')).stage, 'identity', 'nothing waits for a refused name');
+  assert.equal(await app.store.pending(), null);
+  const b = await c.ask<{ words: string[]; positions: number[] }>('begin', { homes: [homes[0].base], relays: [relay.base], name: '  Grace  ' });
+  const r = await c.ask<Lines>('confirm', { typed: b.positions.map((p) => b.words[p - 1]) });
+  assert.ok(r.lines.some((l) => /Your display name is “Grace”/.test(l.text)));
+  const st = await c.ask<State>('state');
+  assert.deepEqual(st.identity!.who.names, ['Grace']);
+  assert.deepEqual((await namesOf(st.identity!.id, [relay.base])).map((n) => n.name), ['Grace'], 'read by anyone');
+  // Its sequence: genesis, routes, encryption key, then the name; nothing else.
+  assert.equal(fileOf(app, st.identity!.id).sequence.length, 3);
+  // No name given: none published.
+  const { c: plain } = await dub();
+  const p = await made(plain);
+  assert.deepEqual(await namesOf(p.id, [relay.base]), []);
+});
+
 test('a private message, sealed (F293): opened only by its recipient; the identity carried by its signing key’s words opens it too (the carry Module, draft 2)', async () => {
   const { c: ca } = await dub();
   const { c: cb } = await dub();

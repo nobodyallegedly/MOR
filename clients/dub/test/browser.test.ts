@@ -83,6 +83,13 @@ test('a person, without a terminal, through every screen of Dub', async () => {
   const begin = page.locator('form#begin');
   await begin.locator('textarea[name=homes]').fill(homes.map((h) => h.base).join('\n'));
   await begin.locator('textarea[name=relays]').fill(relay.base);
+  // H12: a display name in the form that makes it, published right after the genesis. A malformed one is refused before anything is made.
+  await begin.locator('input[name=name]').fill(' Ada‮ ');
+  await begin.getByRole('button', { name: 'Make it' }).click();
+  await page.locator('#status .note.error', { hasText: 'direction override' }).waitFor({ timeout: 60_000 });
+  assert.equal(await page.locator('#words').count(), 0, 'no words for a refused name');
+  await begin.locator('input[name=name]').fill('Ada');
+  await shot(page, '01b-make-with-a-name');
   await begin.getByRole('button', { name: 'Make it' }).click();
   await page.locator('#words').waitFor({ timeout: 60_000 });
   const written = (await page.locator('#words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
@@ -108,6 +115,8 @@ test('a person, without a terminal, through every screen of Dub', async () => {
   await inputs.nth(2).fill(written[positions[2] - 1]);
   await page.getByRole('button', { name: 'Go on' }).click();
   await done(page, 'The identity is born');
+  await page.locator('#status', { hasText: 'Your display name is “Ada”' }).waitFor();
+  await page.locator('header .me', { hasText: 'Ada' }).waitFor({ timeout: 60_000 });
   const me = (await app.dub.state()).identity!.id;
 
   // The public tab: post, and a picture, read back verified.
@@ -228,9 +237,11 @@ test('a person, without a terminal, through every screen of Dub', async () => {
   // The identity window, from the header: a display name, the signing key's words.
   await page.locator('[data-action=window]').click();
   await page.getByRole('heading', { name: 'Identity', exact: true }).waitFor();
-  await page.locator('form#name input[name=name]').fill('Ada');
+  assert.equal(await page.locator('form#name input[name=name]').inputValue(), 'Ada', 'the name given at its making');
+  await page.locator('form#name input[name=name]').fill('Ada Lovelace');
   await page.locator('form#name').getByRole('button', { name: 'Save' }).click();
-  await done(page, /Your display name is “Ada”/);
+  await done(page, /Your display name is “Ada Lovelace”/);
+  await page.locator('#status', { hasText: '“Ada” withdrawn' }).waitFor();
   await page.getByRole('button', { name: 'Show the signing key’s words' }).click();
   await page.locator('#carry-words').waitFor();
   const carry = (await page.locator('#carry-words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
