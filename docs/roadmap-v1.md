@@ -361,6 +361,8 @@ V1 is frozen at inception, and nobody is appointed to decide what comes next. "T
 
 *MOR 2 research (17 October 2026, F337):* generating a collective's chain key jointly, so no device ever holds it whole (no trusted dealer at founding or rotation), with a post-quantum signature that allows it.
 
+*Who decides that MOR 2 is ready (17 October 2026). Nobody, allegedly: "Who decides when MOR2 is ready? The people forking." And: "Even if I stayed… it's not up to me what people do with a fork." For the path-to-MOR-2 document going out with the first wave: there is no committee; MOR 1 is frozen and every act written under it stays valid; a MOR 2 is ready when those who fork it say so and those who use it agree; there may be several.*
+
 ### Ideas above the core, for builders
 
 *Private acts that say less (16 to 17 October 2026, from the sealed follow list; Nobody, allegedly: "that cost will always exist unless someone finds a way of chopping acts across multiple relays"; "absolutely"):* padding private acts to a few fixed sizes; decoy private acts to hide existence and timing; reading over Tor to hide the reader; splitting an act across independent relays so no single relay holds anything meaningful (no defence against relays that compare notes). All above the core: cMIPs and relay-market choices.
