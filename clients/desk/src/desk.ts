@@ -8,7 +8,7 @@
 // desk reads the file again, checks its bytes hash to that digest, reads it
 // again, and signs only if nothing blocks it. What you sign is what you saw.
 
-import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPES_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts, unhex, xwingPublic } from '../../genesis/src/core.ts';
+import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPES_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
 import { encryptionSecret } from '../../../modules/carry/src/carry.ts';
 import { NAME, namePayload, readName } from '../../dub/src/names.ts';
 import { TestIdentity, sealFor, type Home, type Reference } from '../../genesis/src/identity.ts';
@@ -76,6 +76,10 @@ export interface DraftView {
 }
 
 export const SORTED: Sorted[] = ['new', 'to answer', 'answered', 'ignored'];
+
+/** Said where an identity's signing key was changed elsewhere (F335): where a change of keys is done, and how Edubba goes on. */
+export const KEY_CHANGED_SAY =
+  'This identity’s signing key was changed elsewhere, with its chain key’s paper words: a change of keys is done in Kišib, never in Edubba. The key Edubba holds no longer counts, so Edubba signs nothing more with it. If you did not change it, someone holding the chain key’s words may have: open Kišib. To go on here, give the new signing key’s words in the identity’s record (Identities tab).';
 
 export class Desk {
   /** One signing operation at a time. */
@@ -215,6 +219,7 @@ export class Desk {
     return this.serial(async () => {
       const me = this.store.identity(identity);
       if (me.f.pending) throw new Error('A rotation of this identity is waiting to count: nothing is signed with it until it does.');
+      await this.keyCurrent(me.id);
       const made = me.sign(SPECS.identity, NAME, namePayload(name), { public: true });
       this.store.saveIdentity(me);
       this.store.keepAct(made.id, made.act);
@@ -396,6 +401,7 @@ export class Desk {
       const me = this.store.identity(d.signer);
       let recipient: Awaited<ReturnType<typeof recipientOf>> | null = null;
       if (r.kind === 'message') recipient = await recipientOf(d.to[0], this.hints(), this.via);
+      await this.keyCurrent(me.id);
       const made = me.sign(d.spec, d.type, d.payload, {
         public: d.public,
         to: d.to.length ? d.to : undefined,
@@ -470,6 +476,7 @@ export class Desk {
       const agency = this.agency(signer, a);
       if (agency) throw new Error(`${agency} Nothing was signed.`);
       const recipient = a.public ? null : await recipientOf(a.to[0], this.hints(), this.via);
+      await this.keyCurrent(me.id);
       const made = me.sign(a.spec, a.type, a.payload, { public: a.public, to: a.to.length ? a.to : undefined, refs: a.refs.length ? a.refs : undefined, objects: a.objects?.length ? a.objects : undefined });
       // The sequence is saved before anything leaves, so no later act can fork from this one.
       this.store.saveIdentity(me);
@@ -501,6 +508,7 @@ export class Desk {
       if (!me.f.encryption.some((e) => hex(xwingPublic(unhex(e.secret))) === hex(look.encryptionKey!))) {
         throw new Error('The encryption key this identity publishes is not one Edubba holds: what is sealed to it would not open here. Nothing was signed.');
       }
+      await this.keyCurrent(me.id);
       const made = me.sign(a.spec, a.type, a.payload, { public: false, to: [me.id] });
       this.store.saveIdentity(me);
       this.store.keepAct(made.id, made.act, made.key);
@@ -518,6 +526,29 @@ export class Desk {
       if (!left.length) throw new Error(`No home took it (${homes.join(', ')}): it was signed but went nowhere.`);
       return { id: made.id, left };
     });
+  }
+
+  /**
+   * Whether the signing key Edubba holds for an identity is still the one
+   * its homes serve (F335: a change of keys is Kišib's, and Dub and Edubba
+   * warn on opening and before every act). Null where it is, or where its
+   * homes do not answer (the act's own check after signing still runs);
+   * otherwise the warning, in plain words. *Cost:* one look-up per act.
+   */
+  async keyChanged(identity: string): Promise<string | null> {
+    const me = this.store.identity(identity);
+    let key: Uint8Array | undefined;
+    try {
+      key = (await lookUp(me.id, this.hints(), this.via)).resolution.signingKey;
+    } catch {
+      return null;
+    }
+    return key && hex(key) !== hex(signingPublic(unhex(me.f.signingSecret))) ? KEY_CHANGED_SAY : null;
+  }
+
+  private async keyCurrent(identity: string): Promise<void> {
+    const w = await this.keyChanged(identity);
+    if (w) throw new Error(`${w} Nothing was signed.`);
   }
 
   /** Where acts are looked for: the relays, then the homes. */
@@ -747,8 +778,8 @@ export class Desk {
       for (const u of (await me.unrecognised()).filter((x) => !before.has(x.id))) {
         problems.push(
           entry?.kind === 'brought'
-            ? `Its home ${u.home} holds ${u.private ? 'a private act' : 'an act'} signed with this identity's key that this desk did not make (${short(u.id)}), since it was brought here. If the app it came from made it, all is well; if no app of yours did, the signing key may be stolen: change its keys in MOR Safety.`
-            : `Its home ${u.home} holds ${u.private ? 'a private act' : 'an act'} signed with this identity's key that this desk did not make (${short(u.id)}). If you did not make it elsewhere, the signing key may be stolen: rotate the identity.`,
+            ? `Its home ${u.home} holds ${u.private ? 'a private act' : 'an act'} signed with this identity's key that this desk did not make (${short(u.id)}), since it was brought here. If the app it came from made it, all is well; if no app of yours did, the signing key may be stolen: change its keys in Kišib, from the chain key’s paper words.`
+            : `Its home ${u.home} holds ${u.private ? 'a private act' : 'an act'} signed with this identity's key that this desk did not make (${short(u.id)}). If you did not make it elsewhere, the signing key may be stolen: change its keys in Kišib, from the chain key’s paper words.`,
         );
       }
       this.store.saveReceived(identity, rec);

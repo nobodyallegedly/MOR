@@ -169,7 +169,8 @@ test('three people on three devices: a real collective founded, a release, a mem
   assert.ok(g.proposal.answers[ana.id].oneTime && g.proposal.answers[bo.id].oneTime);
 
   // Found: the key dealt here, each share sealed to its one-time key; the founder's own shown here once.
-  const f = await e.c.ask<Done & { show: string[] }>('real found', { act: terms });
+  await refused(e.c.ask('real found', { act: terms }), /Read what this device will hold while founding \(F337\)/);
+  const f = await e.c.ask<Done & { show: string[] }>('real found', { act: terms, read: true });
   const col = f.acts[0];
   assert.deepEqual(f.show, [nobody]);
   assert.ok(f.lines.some((l) => /sealed to Ana .*one-time key/.test(l.text)), JSON.stringify(f.lines));
@@ -358,7 +359,7 @@ test('H33: Edubba acting as a member it holds, with Dub’s own signing; people 
   const g = await e.c.ask<any>('real gather', { act });
   assert.deepEqual(g.standing.signed.sort(), [nobody, dee].sort());
   assert.ok(g.proposal.answers[dee].signature === signed.signature);
-  const founded = await e.c.ask<Done & { show: string[] }>('real found', { act });
+  const founded = await e.c.ask<Done & { show: string[] }>('real found', { act, read: true });
   assert.equal((await e.c.ask<any>('state')).collectives.find((c: { id: string }) => c.id === founded.acts[0]).real, true);
 
   // As Dee: the share, shown once; three words back; the one-time key gone; nothing of the share in the folder.

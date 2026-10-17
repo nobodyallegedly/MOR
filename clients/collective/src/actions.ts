@@ -74,6 +74,7 @@ import {
   type TermsRead,
 } from './explain.ts';
 import type { Store } from './store.ts';
+import { folderOf } from '../../desk/src/folders.ts';
 
 /** The MOR repository this program is part of: what a release publishes unless another folder is set. */
 export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
@@ -419,8 +420,9 @@ export class Actions {
       if (!(op instanceof Uint8Array)) throw new Error(`${hint} is not a home: it declares no operator`);
       homes.push({ operator: Buffer.from(op).toString('hex'), hint });
     }
-    if (a.checkout && !existsSync(a.checkout)) throw new Error(`no folder ${a.checkout}`);
-    this.store.saveSettings({ homes, relays: a.relays, via: a.via, checkout: a.checkout || null });
+    // H19: a folder pasted from the Terminal ("\ " a space, quotes, spaces at its end), a near match named (Edubba's reading).
+    const checkout = a.checkout?.trim() ? folderOf(a.checkout) : null;
+    this.store.saveSettings({ homes, relays: a.relays, via: a.via, checkout });
   }
 
   rename(id: string, name: string): void {

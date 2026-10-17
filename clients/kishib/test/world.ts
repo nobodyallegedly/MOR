@@ -146,7 +146,7 @@ export async function founded(homes: Relay[], relay: Relay) {
     await m.c.ask('accept', { thread: p.thread });
   }
   await e.c.ask('real gather', { act: terms });
-  const fd = await e.c.ask<any>('real found', { act: terms });
+  const fd = await e.c.ask<any>('real found', { act: terms, read: true });
   const col = fd.acts[0] as string;
   const mine = await e.c.ask<any>('real show share', { collective: col, member: f.id });
   await e.c.ask('real share back', { collective: col, member: f.id, typed: mine.positions.map((n: number) => mine.words[n - 1]) });

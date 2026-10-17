@@ -21,7 +21,7 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { STYLE, WEB_BANNER } from '../src/page/view.ts';
+import { PAGE_STYLE as STYLE, WEB_BANNER } from '../src/page/view.ts';
 import { WEB_FILES } from '../src/web/released.ts';
 import { FONT_FILES, FONTS_DIR } from '../src/fonts.ts';
 

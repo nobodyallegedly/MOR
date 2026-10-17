@@ -49,8 +49,25 @@ export const KEY_SAY =
  * sub-tabs, the pop-up, and the classes the collective client's reviews use,
  * in the same calm dark.
  */
+/**
+ * Edubba's tint (H36): the Agreements layer's emerald, #48c08c (chosen by
+ * the Edubba agents session, the visual bible's value not being in the
+ * repository), laid over #06080c at a share, channel by channel (Kišib's
+ * rule): separators 22% (#153028), outlines of cards, fields and buttons
+ * 30% (#1a3f32), quiet accents (a hover or focus outline, a fold's mark, a
+ * tab's count) 60% (#2e7659). Red stays for a contest, a void act or a
+ * stolen key.
+ */
+export const TINT = { layer: '#48c08c', line: '#153028', edge: '#1a3f32', accent: '#2e7659' } as const;
+
 export const STYLE = `${DUB}
 ${TEXT}
+:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
+.label{display:inline-block;font-size:12px;color:var(--soft);border:1px solid var(--tint);border-radius:999px;padding:0 8px;margin-right:6px}
 main{max-width:760px}
 .bar .tabs{margin:0 0 0 18px}
 .bar .grow{flex:1}
@@ -196,13 +213,13 @@ const copyButton = (id: string) => `<button class="copy" data-action="copy" data
 
 // ---------------------------------------------------------------- the frame
 
-export type Tab = 'agents' | 'identities' | 'collectives' | 'settings';
+export type Tab = 'agents' | 'collectives' | 'publishing' | 'identities' | 'settings';
 
 export function top(tab: Tab | null = null, counts: Partial<Record<Tab, number>> = {}): string {
   const t = (k: Tab, words: string) =>
     `<button class="tab${tab === k ? ' on' : ''}" data-action="tab" data-tab="${k}" aria-pressed="${tab === k}">${words}<span class="count">${counts[k] ? counts[k] : ''}</span></button>`;
   return `<header class="bar"><h1 class="mark">${NAME}</h1>${
-    tab ? `<nav class="tabs" aria-label="Edubba">${t('agents', 'Agents')}${t('identities', 'Identities')}${t('collectives', 'Collectives')}</nav><span class="grow"></span>${t('settings', 'Settings')}` : '<span class="grow"></span><span class="small">this machine only</span>'
+    tab ? `<nav class="tabs" aria-label="Edubba">${t('agents', 'Agents')}${t('collectives', 'Collectives')}${t('publishing', 'Publishing')}${t('identities', 'Identities')}</nav><span class="grow"></span>${t('settings', 'Settings')}` : '<span class="grow"></span><span class="small">this machine only</span>'
   }</header>
 <p class="testonly">Test identities only, until MOR is frozen. Every key is held in software in this program’s folders: a prototype, never for a real identity.</p>`;
 }
@@ -450,6 +467,9 @@ ${foldCard('e-cap', 'agent-cap', 'Its cap and its key', `
 
 ${foldCard('e-agent-drafts', 'agent-drafts', `Drafts from Claude for it (${mine.length})`, `<div class="row"><button class="quiet" data-action="drafts">Look for new drafts now</button><span class="small" id="drafts-watch" role="status" aria-live="polite">${WATCHING}</span></div>
 <div id="drafts">${mine.map(draft).join('') || '<p class="empty small">No draft is waiting for it.</p>'}</div>`)}
+
+<div id="e-grants"><p class="small">Reading its grants…</p></div>
+<div id="e-memory"><p class="small">Reading its notes from its homes…</p></div>
 
 ${foldCard('e-agent-history', 'agent-history', `What it did (${a.history.length})`, history(a.history), false)}
 
@@ -728,7 +748,7 @@ export function newIdentity(): string {
 <label>Its signing key’s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes; empty: the homes and relays in Settings)</label><input name="address" type="text" placeholder="https://">
 <label class="check"><input name="linked" type="checkbox"> Claude may prepare drafts for it</label>
-<p class="small">Never type the chain key’s words here: they belong to MOR Safety, on a device that stays offline. Whoever holds the signing key’s words can sign as this identity and read its private messages: Edubba keeps them in its folder, as every key here.</p>
+<p class="small">Never type the chain key’s words here: they belong to Kišib, the app where a change of keys is done, and to paper. Whoever holds the signing key’s words can sign as this identity and read its private messages: Edubba keeps them in its folder, as every key here.</p>
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
 }
 
@@ -833,17 +853,142 @@ ${p.items
 ${p.agreement ? `<p class="small">As its agreement in force ${fp(p.agreement)} says, read by Agreements from its relays and homes.</p>` : ''}</details>`;
 }
 
-export function posts(r: { items: { id: string; text: string; standing: string; pictures: string[] }[]; problems: string[] }): string {
+export function posts(r: { items: { id: string; text: string; standing: string; pictures: string[]; corrects?: string | null; correctedBy?: string[] }[]; problems: string[] }, correct: { kind: 'identity' | 'collective'; id: string } | null = null): string {
   return (
     r.problems.map((p) => `<p class="small">${e(p)}</p>`).join('') +
     (r.items
       .map(
-        (p) => `<div class="post"><div class="who">${fp(p.id)}${p.standing === 'valid' ? '' : `<span class="flag bad">${e(p.standing)}</span>`}</div><div class="text" dir="auto">${e(p.text)}</div>${p.pictures
-          .map((src) => `<figure><img alt="A picture of the post" src="${e(src)}"></figure>`)
-          .join('')}</div>`,
+        (p) => `<div class="post" data-post="${e(p.id)}"><div class="who">${p.corrects ? '<span class="label">Correction</span>' : ''}${fp(p.id)}${p.standing === 'valid' ? '' : `<span class="flag bad">${e(p.standing)}</span>`}</div>${
+          p.corrects ? `<div class="small">Corrects ${fp(p.corrects)}, which stays as it was signed.</div>` : ''
+        }<div class="text" dir="auto">${e(p.text)}</div>${p.pictures.map((src) => `<figure><img alt="A picture of the post" src="${e(src)}"></figure>`).join('')}${
+          p.correctedBy?.length ? `<div class="small">Corrected by ${p.correctedBy.map(fp).join(', ')}: shown as it was signed.</div>` : ''
+        }${
+          correct && p.standing === 'valid'
+            ? `<details class="correct"><summary class="small">Correct this</summary><form class="correct-form" data-kind="${correct.kind}" data-id="${e(correct.id)}" data-act="${e(p.id)}"><p class="small">${e(CORRECTION_SAY)}</p><textarea name="text" required>${e(p.text)}</textarea><div class="row"><button type="submit">${correct.kind === 'collective' ? 'Read the correction back' : 'Sign the correction'}</button></div></form></details>`
+            : ''
+        }</div>`,
       )
       .join('') || '<p class="empty small">Nothing posted for it yet.</p>')
   );
+}
+
+/** F337, said where a real collective is founded (src/real.ts, FOUNDING_SAY), word for word. */
+export const FOUNDING_SAY: Line[] = [
+  { text: 'Founding deals the collective’s chain key on this device: one person, you, deals every member’s share. For a moment this Edubba holds the whole chain key, and sees every share before it goes.', tone: 'bad' },
+  { text: 'If this device were compromised, or the person holding it dishonest, they could keep the key and later act alone, past the threshold the members agreed: the trusted-dealer weakness (F337; the air-gapped signer Module’s stated price, F97). Nothing can prove a device forgot a key. Kišib’s rotations of the collective have the same moment, on the starter’s device.', tone: 'bad' },
+  { text: 'So found on the cleanest device you have: this app rather than any web page, ideally a computer used for nothing else. Making the key jointly, never whole anywhere, is not practical yet for the signature the chain key uses: a MOR 2 research item.', tone: 'warn' },
+  { text: 'The practices Edubba follows: the key alive only in memory, dealt at once and overwritten, never written anywhere; each member’s share sealed to the one-time key their own Dub made; the shares to show here (yours, and any hand to hand) held in memory for one hour at most, then overwritten and lost: show them in one sitting, within the hour.' },
+  { text: 'Afterwards every member writes their share on paper. A later change of members, or of the collective’s keys, is done in Kišib, from those papers.' },
+];
+
+/** Said where a correction is written (src/corrections.ts, CORRECTION_SAY), word for word. */
+export const CORRECTION_SAY =
+  'A correction is a new post naming the old one, labelled “Correction”. The old post stays as it was signed, shown with “corrected by”: nothing on MOR is changed or deleted. Apps that do not know the corrections cMIP show an ordinary post naming the old one.';
+
+/** An identity's own posts, each correctable (decided by Nobody, allegedly, 17 October 2026; the corrections cMIP). */
+export function identityPosts(identity: string, r: Parameters<typeof posts>[0]): string {
+  return foldCard('e-identity-posts', 'identity-posts', `Its posts (${r.items.length})`, posts(r, { kind: 'identity', id: identity }), false);
+}
+
+// ---------------------------------------------------------------- an agent's memory (H22)
+
+export interface NotesRead {
+  notes: { id: string; short: string; kind: 'instruction' | 'person' | 'said' | 'thread'; about: string | null; aboutName: string | null; text: string; from: string | null; dropped: { by: 'agent' | 'owner'; why: string | null } | null }[];
+  problems: string[];
+  costs: string;
+  diary: { say: string; button: string };
+}
+
+const KIND_WORDS = { instruction: 'Your standing instruction', person: 'About', said: 'What it said publicly', thread: 'An open thread' } as const;
+
+/** Its notes, for its owner to read and retire (H22); its diary behind one deliberate action, nothing of it shown here. */
+export function memoryCard(r: NotesRead): string {
+  const live = r.notes.filter((n) => !n.dropped);
+  const dropped = r.notes.filter((n) => n.dropped);
+  const one = (n: NotesRead['notes'][number]) =>
+    `<div class="item"><span class="small">${KIND_WORDS[n.kind]}${n.kind === 'person' ? ` ${e(bare(n.aboutName))} ${n.about ? fp(n.about) : ''}` : ''} · ${fp(n.id)}${n.dropped ? ` · dropped${n.dropped.by === 'owner' ? ' at your request' : ' by it'}${n.dropped.why ? `: ${e(n.dropped.why)}` : ''}` : ''}</span><div class="text" dir="auto">${e(n.text)}</div>${
+      n.dropped ? '' : `<div class="row"><button class="quiet" data-action="note-retire" data-note="${e(n.id)}">Retire this note</button></div>`
+    }</div>`;
+  return foldCard(
+    'e-memory-card',
+    'agent-memory',
+    `Its notes (${live.length})`,
+    `<p class="small">What it keeps between answers: your standing instructions (only from your own prompts), a note about each identity it deals with, what it said publicly, its open threads. Loaded each time it answers, under a size cap. Retiring a note signs a later act marking it dropped; the note stays.</p>
+${r.problems.map((p) => `<p class="small">${e(p)}</p>`).join('')}
+${live.map(one).join('') || '<p class="empty small">No notes yet.</p>'}
+${dropped.length ? `<details><summary class="small">Dropped (${dropped.length})</summary>${dropped.map(one).join('')}</details>` : ''}
+<p class="small">${e(r.costs)}</p>
+<h4>Its diary</h4>
+<p class="small">A daily reflection it writes for itself, sealed to itself. Shown nowhere unless you choose to read it.</p>
+<div class="row"><button data-action="diary-ask">${e(r.diary.button)}</button></div><div id="e-diary"></div>`,
+    false,
+  );
+}
+
+/** Before the diary is shown: what reading it means, said plainly (H22, 6). */
+export function diaryAsk(say: string, button: string): string {
+  return `<div class="card"><p>${e(say)}</p><div class="row"><button class="primary" data-action="diary-read">${e(button.replace(/^Read/, 'Yes, read'))}</button><button data-action="diary-close">Not now</button></div></div>`;
+}
+
+export function diary(r: { entries: { day: string; striking: string; reflection: string; why: string }[] }): string {
+  return `<div class="card">${
+    r.entries.map((x) => `<div class="item"><h4>${e(x.day)}</h4><p dir="auto">${e(x.striking)}</p><p dir="auto">${e(x.reflection)}</p><p dir="auto" class="small">${e(x.why)}</p></div>`).join('') || '<p class="empty small">Nothing written yet.</p>'
+  }<div class="row"><button data-action="diary-close">Close the diary</button></div></div>`;
+}
+
+// ---------------------------------------------------------------- a grant from its owner (film 2)
+
+export interface GrantListed {
+  grant: string;
+  grantorName: string;
+  words: string[];
+  accepted: string | null;
+  declined: string | null;
+  revoked: string | null;
+  acts: { act: string; words: string; backing: string }[];
+}
+
+/** Said where a grant is made (src/grants.ts, GRANT_SAY), word for word. */
+export const GRANT_SAY =
+  'A grant lets your agent sign in your name, within what you choose: which acts, how much one act may move, until when. It holds a key of its own for it, never yours; every act it signs that way names the grant, so anyone reading it sees it was signed by your agent, on your authority. One revocation ends it.';
+
+export function grantsCard(list: GrantListed[]): string {
+  const one = (g: GrantListed) =>
+    `<div class="item"><span class="small">Grant ${fp(g.grant)} from ${e(bare(g.grantorName))} · ${
+      g.revoked ? `revoked by ${fp(g.revoked)}` : g.accepted ? `accepted by its signature ${fp(g.accepted)}` : g.declined ? `declined: ${e(g.declined)}` : 'not answered yet'
+    }</span>${lines(g.words.map((text) => ({ text })))}${
+      g.acts.length ? `<h4>Signed under it (${g.acts.length})</h4>${g.acts.map((x) => `<div class="small">${fp(x.act)}: ${e(x.words)}</div>`).join('')}` : ''
+    }<div class="row">${!g.revoked ? `<button data-action="grant-revoke" data-grant="${e(g.grant)}">Revoke it</button>` : ''}${!g.accepted && !g.revoked ? `<button data-action="grant-ask" data-grant="${e(g.grant)}">Ask it again</button>` : ''}</div></div>`;
+  return foldCard(
+    'e-grants-card',
+    'agent-grants',
+    `Its grants from you (${list.filter((g) => g.accepted && !g.revoked).length} in force)`,
+    `<p class="small">${e(GRANT_SAY)}</p>
+${list.map(one).join('')}
+<form id="grant-form"><h4>Grant it authority</h4>
+<div class="row"><label class="check"><input type="checkbox" name="kinds" value="posts" checked> Posts and messages</label><label class="check"><input type="checkbox" name="kinds" value="publications"> Publications</label><label class="check"><input type="checkbox" name="kinds" value="money"> Money acts (promises to pay, claims, receipts)</label></div>
+<div class="row"><label>At most per act <input name="cap" type="number" min="0" class="narrow" placeholder="no cap"> regtest satoshis</label></div>
+<div class="row"><label>Until <input name="until" type="datetime-local"></label><label class="grow">by the timestamp clock <input name="clock" type="text" placeholder="its ID (64 hex digits)" spellcheck="false"></label></div>
+<p class="small">An expiry is judged by the clock you name, which stamps each act: until it does, whether an act came before the expiry is unknown to anyone checking (the grant limits cMIP).</p>
+<div class="row"><button type="submit">Read the grant back</button></div></form>
+<div id="e-grant-shown"></div>`,
+    false,
+  );
+}
+
+export function grantShown(t: { lines: string[]; digest: string }): string {
+  return `<div class="card"><h3>The grant, before you sign it</h3>${lines(t.lines.map((text) => ({ text })))}
+<p class="digest">Digest of exactly what you sign: ${e(t.digest.match(/.{1,4}/g)!.join(' '))}</p>
+<p class="small">Signing publishes it under your identity. Then your agent is asked whether it accepts; if it does, it signs its acceptance, and only then may it sign under the grant.</p>
+<div class="row"><button class="primary" data-action="grant-sign" data-digest="${e(t.digest)}">Sign and publish this grant</button><button data-action="grant-cancel">Cancel</button></div></div>`;
+}
+
+// ---------------------------------------------------------------- the Publishing tab
+
+/** The Publishing tab, a placeholder until it is built (decided by Nobody, allegedly, 17 October 2026: after Damgar's round 2). */
+export function publishingTab(): string {
+  return `<div class="card"><h2>Publishing</h2><p>Coming after Damgar’s round 2: protected files (songs, films, any file) published under terms, their agreement and offer prepared here, acting as yourself or as a collective you belong to; paid in Damgar, shown in Dub. Vows too, each sale confirmed or contested.</p>
+<p class="small">Releases of code and specifications are made in Ummia.</p></div>`;
 }
 
 /** Its latest constitutional agreement, as a pop-up in plain words: the deal-assessment tool's reading. */
@@ -934,7 +1079,7 @@ export function proposalStatus(s: State, p: RealProposal): string {
     p.kind === 'founding'
       ? p.founded
         ? `<p class="small">Founded: ${fp(p.founded)}.</p>`
-        : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Found it: deal the shares</button></div>`
+        : `<div class="card"><h4>Before you found: what this device will hold (F337)</h4>${lines(FOUNDING_SAY)}<label class="check"><input type="checkbox" id="real-found-read-${e(p.act.slice(0, 12))}"> I have read what this device will hold, and found on it knowingly</label></div><div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Found it: deal the shares</button></div>`
       : p.kind === 'clone'
         ? p.rotated
           ? note('done', `In force: Kišib’s rotation ${fp(p.rotated)} declares it, and Edubba follows it.`)

@@ -169,6 +169,16 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
         return agents.grants.revoke(text(a.agent), text(a.grant));
       case 'agent grants':
         return agents.grants.list(text(a.agent));
+      case 'keys check': {
+        // F335: on opening, every identity held here whose signing key was changed elsewhere, said; a change of keys is Kišib's.
+        const out: { id: string; name: string; say: string }[] = [];
+        for (const i of store.book().identities) {
+          if (!store.holds(i.id)) continue;
+          const w = await desk.keyChanged(i.id);
+          if (w) out.push({ id: i.id, name: i.name, say: w });
+        }
+        return out;
+      }
       case 'identity posts':
         return corrections.posts(text(a.identity));
       case 'identity correct':
@@ -286,7 +296,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
       case 'real by hand':
         return real.byHand(text(a.act), text(a.member), a.on === true);
       case 'real found':
-        return real.found(text(a.act));
+        return real.found(text(a.act), a.read === true);
       case 'real to show':
         return real.toShow(text(a.collective));
       case 'real show share':

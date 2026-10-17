@@ -111,9 +111,13 @@ async function draw() {
         const d = await c.ask<AgentDetails>('agent', { agent: at.agent });
         fill('e-detail', v.agentDetails(state, d, drafts));
         shown = drafts.map((x) => x.digest).join(',');
+        await drawAgentExtras(at.agent);
       }
       return;
     }
+    case 'publishing':
+      body.innerHTML = v.publishingTab();
+      return;
     case 'identities': {
       // Agents have their own tab (decided by Nobody, allegedly): only the other identities here.
       const held = v.secondary(state);
@@ -127,6 +131,7 @@ async function draw() {
       if (at.identity !== 'new') {
         await drawMoney();
         await drawRecord(at.identity, false);
+        await drawIdentityPosts(at.identity);
       }
       return;
     }
@@ -266,9 +271,37 @@ async function drawAct(id: string) {
   }
   try {
     const r = await c.ask<Parameters<typeof v.posts>[0]>('collective posts', { collective: id });
-    if (at.collective === id) fill('e-posts', v.posts(r));
+    // A collective's correction is read back and signed as any of its posts (the corrections cMIP).
+    if (at.collective === id) fill('e-posts', v.posts(r, state.collectives.find((x) => x.id === id)?.brought ? null : { kind: 'collective', id }));
   } catch (err) {
     fill('e-posts', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+  }
+}
+
+/** An agent's grants and notes, read after its details (H22; the grant, film 2). Its diary is never read here. */
+async function drawAgentExtras(agent: string) {
+  try {
+    const g = await c.ask<v.GrantListed[]>('agent grants', { agent });
+    if (at.agent === agent) fill('e-grants', v.grantsCard(g));
+  } catch (err) {
+    fill('e-grants', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+  }
+  try {
+    const n = await c.ask<v.NotesRead>('agent notes', { agent });
+    if (at.agent === agent) fill('e-memory', v.memoryCard(n));
+  } catch (err) {
+    fill('e-memory', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+  }
+}
+
+/** An identity's own posts, each correctable (the corrections cMIP). */
+async function drawIdentityPosts(identity: string) {
+  $('e-detail')?.insertAdjacentHTML('beforeend', '<div id="e-ident-posts"></div>');
+  try {
+    const r = await c.ask<Parameters<typeof v.posts>[0]>('identity posts', { identity });
+    if (at.identity === identity) fill('e-ident-posts', v.identityPosts(identity, r));
+  } catch (err) {
+    fill('e-ident-posts', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
   }
 }
 
@@ -484,8 +517,8 @@ function base64Of(f: File): Promise<string> {
 app.addEventListener('click', async (ev) => {
   const b = (ev.target as HTMLElement).closest<HTMLElement>('[data-action]');
   if (!b || b instanceof HTMLInputElement) return;
-  // The collective client's page answers its own buttons.
-  if (b.closest('[data-collective-root]')) return;
+  // The collective client's page answers its own buttons, the folder picker aside (H19, H31: its release folder setting).
+  if (b.closest('[data-collective-root]') && b.dataset.action !== 'pick-folder') return;
   const d = b.dataset;
   const agent = at.agent ?? undefined;
   // H33: a member's steps, in the "To sign" view, by Dub's names for them.
@@ -503,7 +536,9 @@ app.addEventListener('click', async (ev) => {
       break;
     case 'folder-use': {
       const target = b.closest<HTMLElement>('.picker')!.dataset.target!;
-      const input = $<HTMLFormElement>(target)?.elements.namedItem('folder') as HTMLInputElement | null;
+      // The target: a form with a field named "folder", or the input itself.
+      const el = $<HTMLElement>(target);
+      const input = (el instanceof HTMLInputElement ? el : ((el as HTMLFormElement | null)?.elements.namedItem('folder') ?? null)) as HTMLInputElement | null;
       if (input) input.value = d.path!;
       $<HTMLDialogElement>('e-dialog')!.close();
       break;
@@ -513,6 +548,56 @@ app.addEventListener('click', async (ev) => {
       if (r) {
         await refresh();
         say(r.problems.length ? 'warn' : 'done', `${r.read === 1 ? 'One follow list read' : `${r.read} follow lists read`}.${r.problems.map((p) => `<br>${v.e(p)}`).join('')}`);
+      }
+      break;
+    }
+    case 'note-retire': {
+      const why = prompt('Why retire this note? (optional, kept with it)') ?? '';
+      const r = await busy('Signing a later act that marks the note dropped…', () => c.ask<Done>('agent note retire', { agent: at.agent, note: d.note, why }));
+      if (r) {
+        say('done', v.done(r));
+        await drawAgentExtras(at.agent!);
+      }
+      break;
+    }
+    case 'diary-ask': {
+      const n = await busy('…', () => c.ask<v.NotesRead>('agent notes', { agent: at.agent }));
+      if (n) fill('e-diary', v.diaryAsk(n.diary.say, n.diary.button));
+      break;
+    }
+    case 'diary-read': {
+      const r = await busy('Reading its diary from its homes…', () => c.ask<{ entries: { day: string; striking: string; reflection: string; why: string }[] }>('agent diary', { agent: at.agent, reading: true }));
+      if (r) fill('e-diary', v.diary(r));
+      break;
+    }
+    case 'diary-close':
+      fill('e-diary', '');
+      break;
+    case 'grant-sign': {
+      const r = await busy('Signing the grant; asking your agent whether it accepts…', () => c.ask<Done>('agent grant publish', { agent: at.agent, digest: d.digest }));
+      if (r) {
+        say(r.title.includes('accepted') ? 'done' : 'warn', v.done(r));
+        await drawAgentExtras(at.agent!);
+      }
+      break;
+    }
+    case 'grant-cancel':
+      fill('e-grant-shown', '');
+      break;
+    case 'grant-revoke': {
+      if (!confirm('Revoke this grant? Its key backs nothing signed after the revocation.')) break;
+      const r = await busy('Signing the revocation…', () => c.ask<Done>('agent grant revoke', { agent: at.agent, grant: d.grant }));
+      if (r) {
+        say('done', v.done(r));
+        await drawAgentExtras(at.agent!);
+      }
+      break;
+    }
+    case 'grant-ask': {
+      const r = await busy('Asking your agent whether it accepts…', () => c.ask<Done>('agent grant ask', { agent: at.agent, grant: d.grant }));
+      if (r) {
+        say('done', v.done(r));
+        await drawAgentExtras(at.agent!);
       }
       break;
     }
@@ -641,7 +726,12 @@ app.addEventListener('click', async (ev) => {
       break;
     }
     case 'real-found': {
-      const r = await busy('Dealing the chain key, founding the collective, sealing each share to its one-time key…', () => c.ask<Done & { show: string[] }>('real found', { act: d.act }));
+      const read = $<HTMLInputElement>(`real-found-read-${d.act!.slice(0, 12)}`)?.checked === true;
+      if (!read) {
+        say('warn', 'Read what this device will hold while founding (F337), and tick it, first. Nothing was dealt.');
+        break;
+      }
+      const r = await busy('Dealing the chain key, founding the collective, sealing each share to its one-time key…', () => c.ask<Done & { show: string[] }>('real found', { act: d.act, read: true }));
       if (r) {
         at.collective = r.acts[0];
         await refresh();
@@ -900,6 +990,39 @@ app.addEventListener('submit', async (ev) => {
   if (fid === 'machine-nudge') {
     return after(await busy('Signing your nudge; it is choosing…', () => c.ask<Done>('machine nudge', { agent, count: Number(words(d.get('count'))), context: words(d.get('context')) })));
   }
+  if (fid === 'grant-form') {
+    const until = words(d.get('until'));
+    const r = await busy('Reading the grant back…', () =>
+      c.ask<{ lines: string[]; digest: string }>('agent grant preview', {
+        agent,
+        kinds: d.getAll('kinds').map(String),
+        cap: words(d.get('cap')) || null,
+        clock: words(d.get('clock')),
+        until: until ? Math.floor(new Date(until).getTime() / 1000) : 0,
+      }),
+    );
+    if (r) fill('e-grant-shown', v.grantShown(r));
+    return;
+  }
+  if (form.classList.contains('correct-form')) {
+    const kind = form.dataset.kind;
+    if (kind === 'identity') {
+      const r = await busy('Signing the correction…', () => c.ask<Done>('identity correct', { identity: form.dataset.id, act: form.dataset.act, text: String(d.get('text') ?? '') }));
+      if (r) {
+        say('done', v.done(r));
+        await draw();
+      }
+      return;
+    }
+    const r = await busy('Preparing the correction, and reading it back…', () => c.ask<Review>('collective prepare', { kind: 'post', collective: form.dataset.id, text: String(d.get('text') ?? ''), corrects: form.dataset.act }));
+    if (r) {
+      postReview = r;
+      say('', '');
+      fill('e-post-review', `<div class="colroot">${reading(r.reading, r)}</div>`);
+      $('e-post-review')?.scrollIntoView({ block: 'start' });
+    }
+    return;
+  }
   if (fid === 'collective-post') {
     const file = d.get('jpeg');
     const jpeg = file instanceof File && file.size ? await base64Of(file) : undefined;
@@ -1102,6 +1225,13 @@ async function start() {
   } catch (err) {
     fail(err);
   }
+  // On opening: an identity whose signing key was changed elsewhere (F335: a change of keys is done in Kišib), said.
+  void c
+    .ask<{ id: string; name: string; say: string }[]>('keys check')
+    .then((xs) => {
+      if (xs.length && !working) say('warn', xs.map((x) => `<strong>${v.e(x.name)}</strong>: ${v.e(x.say)}`).join('<br>'));
+    })
+    .catch(() => undefined);
   // On opening: answers waiting for proposals sent from here (H32), and the follow lists sealed to the identities held here (people cMIP draft 2).
   void gatherAll();
   void c

@@ -292,7 +292,8 @@ export function settings(s: State): string {
 <label>Homes, one address per line: where new identities and collectives live</label><textarea name="homes">${e(s.settings.homes.map((h) => h.hint).join('\n'))}</textarea>
 <label>Relays, one per line: where agreements, signatures, releases and files go (empty: the homes)</label><textarea name="relays">${e(s.settings.relays.join('\n'))}</textarea>
 <label>Other ways to reach an address, one per line, as address=where (for example the onion home at its local port)</label><textarea name="via">${e(via)}</textarea>
-<label>The folder a release publishes and a member compares with (empty: this MOR repository)</label><input name="checkout" type="text" class="wide" value="${e(s.settings.checkout ?? '')}" placeholder="${e(s.settings.checkoutDefault)}">
+<label>The folder a release publishes and a member compares with (empty: this MOR repository)</label><div class="row"><input id="col-checkout" name="checkout" type="text" class="wide" spellcheck="false" autocomplete="off" value="${e(s.settings.checkout ?? '')}" placeholder="${e(s.settings.checkoutDefault)}"><button type="button" data-action="pick-folder" data-target="col-checkout">Choose a folder…</button></div>
+<p class="small">A path pasted from the Terminal is read as the Terminal writes it: “\ ” a space, quotes taken off, spaces at its end trimmed.</p>
 <div class="row"><button type="submit">Save settings</button></div></form>`;
 }
 

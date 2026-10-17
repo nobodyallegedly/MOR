@@ -161,6 +161,26 @@ dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
 .post.act .acts{border-top:none;padding-top:0;margin-top:2px}
 details.fold>summary{font-size:15px;color:var(--text);margin:14px 0 4px}`;
 
+/**
+ * Dub's tint (H36): the Text layer's warm pearl, #e9dfcd (chosen by the
+ * Edubba agents session, the visual bible's value not being in the
+ * repository), laid over #06080c at a share, channel by channel (Kišib's
+ * rule): separators 22% (#383736), outlines of cards, fields and buttons 30%
+ * (#4a4946), quiet accents (a hover or focus outline, a fold's mark, a tab's
+ * count) 60% (#8e8980). Red stays for a contest, a void act or a stolen key.
+ * `STYLE` stays the family's untinted base, which the other apps tint with
+ * their own layer; Dub's own page uses `PAGE_STYLE`.
+ */
+export const TINT = { layer: '#e9dfcd', line: '#383736', edge: '#4a4946', accent: '#8e8980' } as const;
+
+export const PAGE_STYLE = `${STYLE}
+:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
+.correction strong{font-weight:400;color:var(--text)}`;
+
 /** A fold (H34): open or closed by default, the person's choice remembered by the page (`ui.ts`, `applyFolds`). */
 export function fold(key: string, summary: string, body: string, open: boolean): string {
   return `<details class="fold" data-fold="${e(key)}"${open ? ' open' : ''}><summary>${e(summary)}</summary>${body}</details>`;
@@ -227,7 +247,7 @@ ${web ? '' : via}
 <label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>
 <label>Relays for its posts (only if it names none; one per line)</label><textarea name="relays"></textarea>
 ${web ? '' : via}
-<p class="small">Never type the chain key’s words here: they belong to MOR Safety, on a device that stays offline.${web ? ` ${e(KEPT_SAY)}` : ''}</p>
+<p class="small">Never type the chain key’s words here: they belong to Kišib, the app where a change of keys is done, and to paper.${web ? ` ${e(KEPT_SAY)}` : ''}</p>
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
   // H28: with an identity in use, one way out: leave it first; then this window lists those held, and the two doors.
   const doors = i ? '' : held.length ? `${fold('make', 'Make a new identity', make.replace(/^<section class="card"><h3>Make a new identity<\/h3>/, '<section class="card">'), false)}${fold('bring', 'Bring an identity you have', bring.replace(/^<section class="card"><h3>Bring an identity you have<\/h3>/, '<section class="card">'), false)}` : `${make}${bring}`;
@@ -260,12 +280,12 @@ function current(s: State): string {
 <div id="carry"></div>
 <details data-fold="line"><summary>This app’s line, and where it lives</summary>
 <dl class="facts"><dt>Made</dt><dd>${i.kind === 'made' ? 'Here. Its chain key was shown once as words, and is kept nowhere here.' : 'Elsewhere, brought here by its signing key’s words. Its chain key is not here.'}</dd>
-${i.oldChainKey ? '<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app’s folder, unused. MOR Safety will take it from there.</dd>' : ''}
+${i.oldChainKey ? '<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app’s folder, unused and untouched. Kišib changes keys from paper words only, never from this folder.</dd>' : ''}
 <dt>Private messages</dt><dd>${i.encryption ? 'Its encryption key is here: its private messages open here.' : 'No encryption key here: its private messages cannot be opened here.'}</dd>
 <dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd>
 <dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd>
 <dt>This app's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
-<p class="small">If the signing key is ever changed (in MOR Safety, with the chain key’s words), that change must keep this line, or the posts made here become void: take the line above to it.</p></details>
+<p class="small">If the signing key is ever changed (in Kišib, with the chain key’s words), that change must keep this line, or the posts made here become void: take the line above to it.</p></details>
 </div>`;
 }
 

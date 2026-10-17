@@ -16,7 +16,7 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { cborEncode, describeAct, hex, unhex } from '../../genesis/src/core.ts';
@@ -279,4 +279,17 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   assert.equal(k.inForce, true);
   assert.equal(k.kind, 'collective');
   assert.ok(k.sections.some((s: any) => s.heading === 'Areas: who decides which acts'));
+});
+
+test('H19: the release folder of a test collective, pasted from the Terminal (“\\ ” a space, quotes, a space at the end), is read as the folder', async () => {
+  const top = mkdtempSync(join(tmpdir(), 'edubba-h19-'));
+  const folder = join(top, 'my release');
+  mkdirSync(folder);
+  const st = await c.ask<any>('collective state');
+  const s = { settings: { homes: st.settings.homes.map((h: any) => (typeof h === 'string' ? h : h.hint)), relays: st.settings.relays } };
+  for (const pasted of [`${folder.replace(/ /g, '\\ ')}  `, `'${folder}'`]) {
+    await c.ask('collective settings', { homes: s.settings.homes, relays: s.settings.relays, via: [], checkout: pasted });
+    assert.equal((await c.ask<any>('collective state')).settings.checkout, realpathSync(folder), pasted);
+  }
+  await assert.rejects(c.ask('collective settings', { homes: s.settings.homes, relays: s.settings.relays, via: [], checkout: join(top, 'my releas') }), /There is no folder at/);
 });

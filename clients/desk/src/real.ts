@@ -63,6 +63,24 @@ export const REAL_SAY =
   'A real collective: each member is a person with their own identity, on their own device. Each reads the founding in plain words and signs it in their own app (Dub’s Signing tab, or Edubba). Its chain key is dealt as one share per member, written on paper; no app keeps a share.';
 
 /** Said where a member change waits for its rotation (decided by Nobody, allegedly: "Wait for Kišib"). */
+/**
+ * Said where Edubba founds a real collective, before anything is dealt (F337,
+ * decided by Nobody, allegedly: "Kišib needs to lay all this properly to its
+ * users", and Edubba at founding): who holds the whole key and when, what
+ * that device could do if it were not honest, how to choose it, and the
+ * practices. Ticked as read before "Found it".
+ */
+export const FOUNDING_SAY: Line[] = [
+  { text: 'Founding deals the collective’s chain key on this device: one person, you, deals every member’s share. For a moment this Edubba holds the whole chain key, and sees every share before it goes.', tone: 'bad' },
+  { text: 'If this device were compromised, or the person holding it dishonest, they could keep the key and later act alone, past the threshold the members agreed: the trusted-dealer weakness (F337; the air-gapped signer Module’s stated price, F97). Nothing can prove a device forgot a key. Kišib’s rotations of the collective have the same moment, on the starter’s device.', tone: 'bad' },
+  { text: 'So found on the cleanest device you have: this app rather than any web page, ideally a computer used for nothing else. Making the key jointly, never whole anywhere, is not practical yet for the signature the chain key uses: a MOR 2 research item.', tone: 'warn' },
+  { text: 'The practices Edubba follows: the key alive only in memory, dealt at once and overwritten, never written anywhere; each member’s share sealed to the one-time key their own Dub made; the shares to show here (yours, and any hand to hand) held in memory for one hour at most, then overwritten and lost: show them in one sitting, within the hour.' },
+  { text: 'Afterwards every member writes their share on paper. A later change of members, or of the collective’s keys, is done in Kišib, from those papers.' },
+];
+
+/** How long a share waits here to be shown, in memory (F337: the waiting expires after an hour). */
+export const SHARE_WAITS = 60 * 60;
+
 export const WAIT_FOR_KISIB =
   'Every signature is in. The rotation that declares this change needs the chain key, rebuilt from enough members’ paper shares: that is Kišib’s work, not Edubba’s. Open Kišib and choose “Rotate a collective”: the member who proposed the change starts it there, and the other members give their shares in their own Kišib. Until it counts, the change waits, signed and not in force.';
 
@@ -119,7 +137,16 @@ export class Real {
   /** The follow lists sealed to the identities held here (people cMIP draft 2), as last read: in memory only. */
   private listed = new Map<string, Followed[]>();
   /** Shares waiting to be shown here once (hand to hand, and the founder's own): in memory only, by `collective member`. */
-  private waiting = new Map<string, { share: Uint8Array; positions?: number[] }>();
+  private waiting = new Map<string, { share: Uint8Array; positions?: number[]; until: number }>();
+
+  /** Shares past their hour (F337): overwritten and dropped. */
+  private expire(now = Math.floor(Date.now() / 1000)): void {
+    for (const [k, w] of this.waiting) {
+      if (w.until > now) continue;
+      w.share.fill(0);
+      this.waiting.delete(k);
+    }
+  }
 
   constructor(
     readonly desk: Desk,
@@ -385,9 +412,9 @@ export class Real {
           lines: [
             { text: `The terms are a public act at ${relays.join(', ')}; each member’s signature is a public act of theirs.` },
             { text: 'Each member is sent the proposal as an Agreements negotiation message (rule 52), sealed to them, in their inbox. It binds nothing: talk.' },
-            { text: 'For a moment, at dealing, this Edubba holds the whole chain key, and sees every share before it goes: a stated price of the air-gapped signer Module (5.1, F97). Nothing can prove it forgot them.', tone: 'warn' },
           ],
         },
+        { heading: 'Before you found: what this device will hold (F337)', lines: FOUNDING_SAY },
         ...beforeSigning(payload, names),
       ],
       plain: [{ heading: 'The words everyone signs', text: t.text }, ...read.plain],
@@ -531,7 +558,7 @@ export class Real {
    * its one-time key (or held in memory to be shown here once, hand to hand),
    * the founder's own held to be shown once. Nothing of a share is written.
    */
-  found(act: string): Promise<Done & { show: string[] }> {
+  found(act: string, read = false): Promise<Done & { show: string[] }> {
     return this.desk.serial(async () => {
       const p = this.proposal(act);
       if (p.kind !== 'founding') throw new Error('Not a founding.');
@@ -541,6 +568,7 @@ export class Real {
       if (!st.enough) throw new Error(`Waiting for ${st.waiting.map(this.names()).join(', ')}: founding terms exist only once every party has signed (Agreements rule 1).`);
       const missing = p.members.filter((m) => m !== p.founder && !p.answers[m]?.oneTime && !(p.byHand ?? []).includes(m));
       if (missing.length) throw new Error(`No one-time key from ${missing.map(this.names()).join(', ')}: their share can only be shown here, hand to hand. Choose that for them first.`);
+      if (!read) throw new Error('Read what this device will hold while founding (F337), and tick it, first. Nothing was dealt.');
       const s = this.store.settings();
       const { collective: c, shares } = await TestCollective.foundSigned({ agreement: p.act, members: p.members, homes: s.homes, relays: p.relays, governance: p.governance!, via: this.via });
       this.saveCollective(c);
@@ -554,7 +582,7 @@ export class Real {
         const m = sh.holder;
         const x = (shareOnPaper(sh.share) as { x: number }).x;
         if (m === p.founder || (p.byHand ?? []).includes(m)) {
-          this.waiting.set(`${c.identity} ${m}`, { share: sh.share });
+          this.waiting.set(`${c.identity} ${m}`, { share: sh.share, until: Math.floor(Date.now() / 1000) + SHARE_WAITS });
           show.push(m);
           lines.push({ text: `Share ${x}, for ${this.names()(m)}: to be shown here once${m === p.founder ? '' : ', hand to hand'}.` });
           continue;
@@ -581,20 +609,22 @@ export class Real {
         }
         sh.share.fill(0);
       }
-      lines.push({ text: 'No share is kept by this program: the shares to show here wait in its memory only, until shown, and are lost if it stops.', tone: 'warn' });
+      lines.push({ text: 'No share is kept by this program: the shares to show here wait in its memory only, for one hour at most (F337), until shown, and are lost if it stops or the hour passes.', tone: 'warn' });
       return { title: `“${p.name}” is founded`, lines, acts: [c.identity], show };
     });
   }
 
   /** The shares waiting here to be shown once: by collective and member. */
   toShow(collective: string): string[] {
+    this.expire();
     return [...this.waiting.keys()].filter((k) => k.startsWith(`${collective} `)).map((k) => k.slice(65));
   }
 
   /** Show one member's share here, once (hand to hand, or the founder's own): its number and 24 words; three are then asked back. */
   showShare(collective: string, member: string): { x: number; holders: number; threshold: number; words: string[]; fingerprint: string; positions: number[]; member: string } {
+    this.expire();
     const w = this.waiting.get(`${collective} ${member}`);
-    if (!w) throw new Error('No share waits here for that member: shares are shown once, then forgotten.');
+    if (!w) throw new Error('No share waits here for that member: shares are shown once, then forgotten, and wait an hour at most (F337).');
     if (w.positions) throw new Error('It was shown once already: type back the three words asked.');
     const p = shareOnPaper(w.share) as { x: number; value: Uint8Array; holders: number; threshold: number; fingerprint: string };
     w.positions = threePositions((n) => Math.floor(Math.random() * n));
@@ -604,6 +634,7 @@ export class Real {
   /** Three words of a shown share typed back: then it is forgotten here. */
   confirmShare(collective: string, member: string, typed: string[]): Done {
     const key = `${collective} ${member}`;
+    this.expire();
     const w = this.waiting.get(key);
     if (!w?.positions) throw new Error('No share was shown here for that member.');
     const p = shareOnPaper(w.share) as { x: number; value: Uint8Array };
