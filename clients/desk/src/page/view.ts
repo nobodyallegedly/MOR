@@ -15,7 +15,7 @@
 import { e } from '../../../manage/src/view.ts';
 import { STYLE as DUB } from '../../../dub/src/page/view.ts';
 import { STYLE as TEXT, plainHtml } from '../../../longform/src/html.ts';
-import type { ActRead, AgentDetails, AgentSummary, AgentView, Constitution, Done, DraftView, IdentityRecord, Item, Line, MachineState, Permissions, ReleaseReview, Sorted, State } from './api.ts';
+import type { ActRead, RealCollective, RealProposal, ShareHere, AgentDetails, AgentSummary, AgentView, Constitution, Done, DraftView, IdentityRecord, Item, Line, MachineState, Permissions, ReleaseReview, Sorted, State } from './api.ts';
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 
 export { e };
@@ -31,6 +31,10 @@ export const PROMPT_SAY =
   'What you type here is an act: a private message from your identity to this agent, sealed so only it can open it, signed and kept. It answers at once, privately, under its terms.';
 
 /** Said where the key is plugged in (src/agents.ts, KEY_SAY). */
+/** Said wherever the present test mode is offered (`src/real.ts`, TEST_MODE_SAY), word for word. */
+export const TEST_MODE_SAY =
+  'Test mode: every member is held here, in this program’s folder, and their consent is simulated: one person decides for all of them. For quick trials and the tests. A real collective is founded with “+ Found a real collective”.';
+
 export const KEY_SAY =
   'The key goes from this page to the program once, and is kept in a file on this Mac that only your account can read (~/.config/mor). This page never holds it again: it is shown by its last four characters only.';
 
@@ -123,6 +127,13 @@ input.pet{max-width:14em}
 .colroot form.words{display:flex;grid-template-columns:none;font:inherit;padding:0;border:none;margin:10px 0}
 .colroot form.words input{flex:1}
 .colroot input.wide{width:100%}
+.picks{display:flex;flex-direction:column;gap:2px;margin:6px 0}
+table.signers{border-collapse:collapse;width:100%;font-size:14px;margin:8px 0}
+table.signers th,table.signers td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)}
+table.signers th{font-weight:400;color:var(--faint);font-size:12px}
+.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px ui-monospace,"SF Mono",Menlo,monospace}
+.words b{display:inline-block;min-width:2em;color:var(--faint);font-weight:400}
+.say{padding-left:1.1em;color:var(--soft);font-size:14px}
 .files{max-height:22em;overflow:auto;border:1px solid var(--edge);border-radius:10px;margin:6px 0 12px}
 .files table{border-collapse:collapse;width:100%;font-size:13px}
 .files th,.files td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
@@ -237,9 +248,12 @@ export function identityList(s: State, selected: string | null, drafts: DraftVie
 export function collectiveList(s: State, selected: string | null): string {
   return `<div class="list" role="list" aria-label="Collectives">${s.collectives
     .map((c) =>
-      entry({ action: 'pick-collective', key: 'collective', id: c.id, current: c.id === selected, title: c.name, meta: c.brought ? 'brought here · no key held' : `${c.members} member${c.members === 1 ? '' : 's'}${c.closed ? ' · ended' : ''}` }),
+      entry({ action: 'pick-collective', key: 'collective', id: c.id, current: c.id === selected, title: c.name, meta: c.brought ? 'brought here · no key held' : c.real ? `real · ${c.members} members` : `test mode · ${c.members} member${c.members === 1 ? '' : 's'}${c.closed ? ' · ended' : ''}` }),
     )
-    .join('')}<button class="entry add" data-action="pick-collective" data-id="found">+ Found a collective</button><button class="entry add" data-action="pick-collective" data-id="bring">+ Bring an existing collective</button></div>`;
+    .join('')}${s.proposals
+    .filter((p) => p.kind === 'founding' && !p.founded)
+    .map((p) => entry({ action: 'pick-collective', key: 'proposal', id: `p:${p.act}`, current: selected === `p:${p.act}`, title: p.name, meta: `founding · ${p.standing.signed.length} of ${p.signers.length} signed${p.standing.declined.length ? ` · ${p.standing.declined.length} declined` : ''}` }).replace(/<span class="fp">[^<]*<\/span>/, ''))
+    .join('')}<button class="entry add" data-action="pick-collective" data-id="real">+ Found a real collective</button><button class="entry add" data-action="pick-collective" data-id="found">+ Found a test collective (test mode)</button><button class="entry add" data-action="pick-collective" data-id="bring">+ Bring an existing collective</button></div>`;
 }
 
 // ---------------------------------------------------------------- agents
@@ -667,7 +681,8 @@ export function collectiveDetails(s: State, id: string, sub: 'act' | 'constituti
   const c = s.collectives.find((x) => x.id === id);
   if (!c) return '';
   const t = (k: 'act' | 'constitution', words: string) => `<button class="tab${sub === k ? ' on' : ''}" data-action="sub" data-sub="${k}" aria-pressed="${sub === k}">${words}</button>`;
-  return `<div class="head"><h2>${e(c.name)}</h2><span class="id">${grouped(c.id)}</span>${copyButton(c.id)}</div>
+  return `<div class="head"><h2>${e(c.name)}</h2><span class="id">${grouped(c.id)}</span>${copyButton(c.id)}<span class="tag warn" title="${e(TEST_MODE_SAY)}">test mode</span></div>
+<p class="small">${e(TEST_MODE_SAY)}</p>
 <div class="row"><button data-action="constitution">Its constitution, in plain words</button>${c.closed ? '<span class="tag">ended</span>' : ''}</div>
 <nav class="sub">${t('act', 'Act')}${t('constitution', 'Constitution')}</nav>
 ${
@@ -686,7 +701,7 @@ ${
 
 /** "+ Found a collective": the collective client's founding form and the members held here. A release under one's own name is on the Identities tab now (H16). */
 export function foundCollective(): string {
-  return `<h2>Found a collective</h2><div class="colroot" data-collective-root id="e-col-root"><div id="status"></div><div id="review"></div>
+  return `<h2>Found a test collective</h2>${note('warn', `<strong>Test mode.</strong> ${e(TEST_MODE_SAY)}`)}<div class="colroot" data-collective-root id="e-col-root"><div id="status"></div><div id="review"></div>
 <section class="card"><h3>Its founding</h3><div id="found"></div></section>
 <section class="card"><h3>Members held here</h3><p class="small">Yourself, and the simulated members a test collective needs: held in the collective client's folder.</p><div id="identities"></div></section></div>
 <p class="small">A release under one’s own name is on the Identities tab, as an action of the identity selected.</p>`;
@@ -748,4 +763,148 @@ ${c.sections.map((s) => `<h4>${e(s.heading)}</h4>${lines(s.lines)}`).join('')}
 ${c.plain.map((p) => `<h4>${e(p.heading)}</h4>${plain(p.text)}`).join('')}
 <h4>Risks to read (${c.flags.length})</h4>
 ${c.flags.length ? `<ul>${c.flags.map((f) => `<li>${e(f.text)} <span class="small">${e(f.rests)}</span></li>`).join('')}</ul>` : '<p class="small">None of the risks the tool knows.</p>'}`;
+}
+
+// ---------------------------------------------------------------- real collectives (H18)
+
+const STANDS: Record<string, string> = { signed: 'signed', declined: 'declined', waiting: 'not yet' };
+const nm = (s: State, id: string) => s.identities.find((i) => i.id === id)?.name ?? s.contacts.find((c) => c.id === id)?.name ?? '';
+
+/** An identity in a real collective's lists: its name here, beside its fingerprint. */
+function person(s: State, id: string): string {
+  const n = nm(s, id);
+  return `${n ? `<span class="name">${e(n)}</span> ` : ''}${fp(id)}`;
+}
+
+/** The contacts list, with checkboxes to choose members (H18). */
+function contactPicks(s: State, picked: string[], skip: string[] = []): string {
+  const rows = s.contacts.filter((c) => !skip.includes(c.id));
+  return rows.length
+    ? `<div class="picks">${rows
+        .map(
+          (c) =>
+            `<label class="check"><input type="checkbox" name="member" value="${e(c.id)}"${picked.includes(c.id) ? ' checked' : ''}> ${e(c.name)} ${fp(c.id)} <span class="small">${c.from === 'added' ? '' : `followed by ${e(c.from.agent)}`}</span></label>`,
+        )
+        .join('')}</div>`
+    : '<p class="small">No contact yet: add one below, or type IDs.</p>';
+}
+
+/** The contacts card: add by ID with a name, kept here; remove. */
+export function contactsCard(s: State): string {
+  return `<section class="card" id="e-contacts"><h3>Contacts (${s.contacts.length})</h3>
+<p class="small">Identities you add by ID, with a name you give them, kept on this Mac and never published (as the people cMIP keeps names), and those your agents follow.</p>
+${s.contacts.length ? `<ul class="plain">${s.contacts.map((c) => `<li>${e(c.name)} ${fp(c.id)} ${c.from === 'added' ? `<button class="quiet" data-action="contact-remove" data-id="${e(c.id)}">Remove</button>` : `<span class="small">followed by ${e(c.from.agent)}</span>`}</li>`).join('')}</ul>` : ''}
+<form id="contact-add" class="row"><input name="id" type="text" class="grow" placeholder="An identity’s ID" autocomplete="off" spellcheck="false" required><input name="name" type="text" class="pet" placeholder="Its name here" required><button type="submit">Add</button></form></section>`;
+}
+
+/** "+ Found a real collective": the founder held here, the members from the contacts or typed, the rules; then a review. */
+export function realFound(s: State): string {
+  const founders = s.identities.filter((i) => !s.agents.some((a) => a.id === i.id));
+  return `<h2>Found a real collective</h2>
+${note('', 'Each member signs in their own Dub, on their own device, after reading the founding terms in plain words (Dub’s Signing tab, turned on in its identity window). The collective is founded once every one has signed. Its chain key is then dealt as one share per member, kept on paper: a member’s share goes sealed to a one-time key their Dub makes when they sign, or is shown here, hand to hand; yours is shown here once. No app keeps a share.')}
+<section class="card"><form id="real-found">
+<label>Its name, kept on this Mac</label><input name="name" type="text" required>
+<label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}">${e(i.name)}</option>`).join('')}</select>
+<label>Its other members, from your contacts</label>${contactPicks(s, [])}
+<label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
+<fieldset><legend>Its rules</legend><div class="row">
+<label>Shares that rebuild the chain key <input name="safety" type="number" min="1" value="2" class="narrow"></label>
+<label>Signatures a release needs <input name="release" type="number" min="1" value="2" class="narrow"></label>
+<label>Signatures an operational change needs <input name="clone" type="number" min="1" value="2" class="narrow"></label>
+<label>Members who judge absence <input name="others" type="number" min="1" value="2" class="narrow"></label></div>
+<p class="small">Changes of members or rules need every member whose voice remains (Agreements rule 64). A way to rotate must survive the loss of any one member’s share (F96): fewer shares than members.</p></fieldset>
+<label>The words everyone signs (empty: the standard words for these rules)</label><textarea name="words"></textarea>
+<div class="row"><button type="submit" class="primary">Review the founding</button></div></form></section>
+<div id="e-real-review"></div>
+${contactsCard(s)}`;
+}
+
+/** Who has signed a proposal, who declined, who has not; for a founding, how each share travels. */
+export function proposalStatus(s: State, p: RealProposal): string {
+  const row = (m: string) => {
+    const a = p.answers[m];
+    const st = a ? a.verdict : 'waiting';
+    const share =
+      p.kind === 'founding' && !p.founded && m !== p.founder
+        ? `<label class="check small"><input type="checkbox" data-action="real-byhand" data-act="${e(p.act)}" data-member="${e(m)}"${(p.byHand ?? []).includes(m) ? ' checked' : ''}> hand to hand</label>${a?.oneTime ? '<span class="small">one-time key received</span>' : ''}`
+        : '';
+    return `<tr data-member="${e(m)}"><td>${person(s, m)}${m === p.founder ? ' <span class="small">(here)</span>' : ''}</td><td class="state ${st === 'signed' ? '' : 'no'}">${e(STANDS[st])}</td><td>${share}</td></tr>`;
+  };
+  const what = p.kind === 'founding' ? 'Founding terms' : p.kind === 'clone' ? 'A member change' : 'A release';
+  const next =
+    p.kind === 'founding'
+      ? p.founded
+        ? `<p class="small">Founded: ${fp(p.founded)}.</p>`
+        : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Found it: deal the shares</button></div>`
+      : p.kind === 'clone'
+        ? `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button></div>${p.standing.enough ? note('warn', e(WAIT_FOR_KISIB)) : ''}`
+        : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button data-action="real-release-standing" data-act="${e(p.act)}">Check it as anyone would</button></div>`;
+  return `<section class="card proposal-status" data-proposal="${e(p.act)}"><h3>${what} <span class="small">act ${fp(p.act)}</span></h3>
+<p class="small">${p.standing.signed.length} of ${p.signers.length} signed; ${p.kind === 'release' ? `it counts with ${p.needed}` : 'every one must sign'}.</p>
+<table class="signers"><tr><th>Member</th><th>Signed</th><th></th></tr>${p.signers.map(row).join('')}</table>
+${next}<div class="here" data-here-proposal="${e(p.act)}" role="status" aria-live="polite"></div></section>`;
+}
+
+/** Said where a member change waits for its rotation (`src/real.ts`, WAIT_FOR_KISIB). */
+export const WAIT_FOR_KISIB =
+  'Every signature is in. The rotation that declares this change needs the chain key, rebuilt from enough members’ paper shares: that is Kišib’s work, not Edubba’s, and Kišib is not built yet. Until then the change waits, signed and not in force.';
+
+/** A founding in progress, selected in the list. */
+export function realProposalDetails(s: State, p: RealProposal): string {
+  return `<div class="head"><h2>${e(p.name)}</h2><span class="tag">founding</span></div>
+<p class="small">Proposed by ${person(s, p.founder)}. Each member signs in their own Dub; once all have, found it here.</p>
+${proposalStatus(s, p)}
+<div id="e-shares-here"></div>`;
+}
+
+/** Shares waiting here to be shown once (hand to hand, or the founder's own). */
+export function sharesHere(s: State, collective: string, members: string[]): string {
+  if (!members.length) return '';
+  return `<section class="card" id="e-to-show"><h3>Shares to show here, once</h3>
+<p class="small">Each is shown once, to its member, here: written on paper, then three words typed back, then forgotten. They wait in this program’s memory only: if it stops, they are lost.</p>
+<div class="row">${members.map((m) => `<button data-action="real-show-share" data-collective="${e(collective)}" data-member="${e(m)}">Show ${e(nm(s, m) || 'a member')}’s share</button>`).join('')}</div></section>`;
+}
+
+/** A share shown here once. */
+export function shareHere(collective: string, r: ShareHere, name: string): string {
+  return `<section class="card" id="e-share-here"><span class="label">The collective’s chain key share</span>
+<p>Share <strong>${r.x}</strong> of ${r.holders}, for ${e(name)}; any ${r.threshold} rebuild the key.</p>
+<ul class="say"><li>Write the number and the 24 words on paper, in order, away from anything that goes online. They are shown once: nothing keeps them after.</li><li>It is not an identity’s chain key, nor a signing key, nor a Bitcoin wallet.</li></ul>
+<div class="words">${r.words.map((w, i) => `<span><b>${i + 1}.</b>${e(w)}</span>`).join('')}</div>
+<p class="small">The dealing’s fingerprint, the same for every member: <code>${e(r.fingerprint)}</code></p>
+<div class="row"><button class="primary" data-action="real-share-written" data-collective="${e(collective)}" data-member="${e(r.member)}" data-positions="${e(r.positions.join(','))}">It is written down</button></div></section>`;
+}
+
+/** Three words of a share shown here, typed back (as H3). */
+export function shareBackHere(collective: string, member: string, positions: number[]): string {
+  return `<section class="card"><form id="real-share-back" data-collective="${e(collective)}" data-member="${e(member)}"><span class="label">Three words of the share</span><p class="small">From the paper. Then it is forgotten here.</p><div class="row">${positions
+    .map((p) => `<label>Word ${p} <input name="w${p}" type="text" autocomplete="off" spellcheck="false" required class="narrow"></label>`)
+    .join('')}</div><div class="row"><button type="submit" class="primary">Check them</button></div></form></section>`;
+}
+
+/** A real collective founded here: who it is, its proposals, a member change, a release. */
+export function realDetails(s: State, id: string, c: RealCollective): string {
+  const col = s.collectives.find((x) => x.id === id)!;
+  const mine = s.proposals.filter((p) => p.collective === id && p.kind !== 'founding');
+  return `<div class="head"><h2>${e(col.name)}</h2><span class="id">${grouped(id)}</span>${copyButton(id)}<span class="tag">real</span></div>
+<div class="row"><button data-action="constitution">Its constitution, in plain words</button></div>
+<section class="card"><h3>Its members (${c.members.length})</h3><ul class="plain">${c.members.map((m) => `<li>${person(s, m)}${m === c.holder ? ' <span class="small">holds its signing key, here</span>' : ''}</li>`).join('')}</ul>
+<p class="small">Its chain key: one share per member, kept on paper, any ${c.threshold} rebuilding it. Dealing fingerprint <code>${e(c.fingerprint.match(/.{1,4}/g)!.slice(0, 8).join(' '))}</code>. No app holds a share.</p>
+${c.pending ? note('warn', 'A member change was rotated and waits for its homes to count it.') : ''}</section>
+${sharesHere(s, id, c.toShow)}<div id="e-shares-here"></div>
+<div id="e-perms"><p class="small">Reading its agreement in force…</p></div>
+${mine.map((p) => proposalStatus(s, p)).join('')}
+<section class="card"><h3>Change its members</h3><form id="real-change" data-collective="${e(id)}">
+<p class="small">Tick who is a member after the change. Every member whose voice remains signs it, and each joining member, each in their own app; then it waits for Kišib.</p>
+<div class="picks">${c.members.map((m) => `<label class="check"><input type="checkbox" name="member" value="${e(m)}" checked> ${person(s, m)}</label>`).join('')}</div>
+${contactPicks(s, [], c.members)}
+<label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
+<div class="row"><button type="submit">Review the change</button></div></form></section>
+<section class="card"><h3>A release</h3><form id="real-release" data-collective="${e(id)}">
+<p class="small">Published by the collective, from a folder chosen now (a git folder: what git tracks; a plain folder: every file but hidden ones). It counts once enough members sign it, each in their own app.</p>
+<label>The folder</label><input name="folder" type="text" required spellcheck="false">
+<div class="row"><label>Its name <input name="name" type="text" class="pet"></label><label>Its version <input name="version" type="text" class="narrow" required></label></div>
+<div class="row"><button type="submit">Review the release</button></div></form></section>
+<div id="e-real-review"></div>
+<h3>Its posts</h3><div id="e-posts"><p class="small">Reading…</p></div>`;
 }

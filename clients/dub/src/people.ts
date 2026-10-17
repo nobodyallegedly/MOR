@@ -39,6 +39,8 @@ export interface Kept {
   /** When this app first found it, in seconds since 1970: this app's time, not a signed one. */
   found: number;
   problem?: string;
+  /** An Agreements negotiation message (H18: a proposal to sign, or an answer in its thread): its thread, the message it follows, what it acknowledges. */
+  talk?: { thread: string; previous: string | null; acks: string[] };
 }
 
 /** A private message this app sent, kept here: its sealed copy went to the recipient only. */

@@ -10,10 +10,10 @@
 // mute. No likes, no zaps, no notification hub: a count on each tab.
 
 import { e } from '../../../manage/src/view.ts';
-import { PUBLISH_WARNING, type Held, type Item, type Line, type Message, type State, type Suggested, type Who } from '../shapes.ts';
+import { PUBLISH_WARNING, type Held, type Item, type Line, type Message, type Proposal, type ShareShown, type State, type Suggested, type Who } from '../shapes.ts';
 
 export { e, PUBLISH_WARNING };
-export type { Held, Item, Line, Message, State, Suggested, Who };
+export type { Held, Item, Line, Message, Proposal, ShareShown, State, Suggested, Who };
 
 export const NAME = 'Dub';
 /** Asked by Nobody, allegedly, for the first screen. Kept equal to `TEST_ONLY` in `dub.ts` (a test checks). */
@@ -146,7 +146,16 @@ dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
 .banner ol{padding-left:1.4em}
 #for-testing-only{max-width:568px;margin:12px auto 0}
 @media (max-width:600px){#for-testing-only{margin:12px 16px 0}}
-[hidden]{display:none!important}`;
+[hidden]{display:none!important}
+.experimental{margin:10px 0;padding:10px 12px;border:1px solid var(--bad);border-radius:10px;color:var(--soft);font-size:13px}
+.experimental strong{color:var(--text);font-weight:400}
+.proposal{border:1px solid var(--edge);border-radius:12px;background:var(--raise);padding:12px 14px;margin:12px 0}
+.proposal h3{margin:0 0 6px;font-weight:400;font-size:15px}
+.proposal h4{margin:12px 0 4px;font-weight:400;font-size:13px;color:var(--soft)}
+.proposal ul{margin:4px 0;padding-left:1.1em;font-size:14px}
+.proposal .plain{border:1px solid var(--edge);border-radius:10px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;max-height:18em;overflow:auto;background:var(--bg)}
+.proposal .state{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}
+.share-number{font-size:15px;margin:8px 0}`;
 
 export const note = (kind: 'error' | 'done' | 'warn' | 'spent' | '', html: string) => `<div class="note ${kind}">${html}</div>`;
 
@@ -235,6 +244,7 @@ function current(s: State): string {
 <div class="row"><button class="quiet" data-action="copy" data-id="${e(i.id)}">Copy ID</button></div>
 <form id="name"><label>Your display name: shown beside your fingerprint, never instead of it. Anyone can take the same name.</label>
 <div class="row"><input class="grow" name="name" maxlength="48" autocomplete="off" value="${e(name)}" placeholder="No name: your fingerprint alone"><button type="submit">Save</button></div></form>
+<div class="row"><label class="small check"><input type="checkbox" id="signing-on" ${i.signing ? 'checked' : ''}> Signing: sign agreements of real collectives here. Even more experimental than Dub itself; off unless you turn it on.</label></div>
 <div class="row"><button data-action="carry">Show the signing key’s words</button><button class="quiet" data-action="forget" data-id="${e(i.id)}">Forget it here</button></div>
 <div id="carry"></div>
 <details><summary>This app’s line, and where it lives</summary>
@@ -284,7 +294,7 @@ export function carry(c: { grouped: string; words: string[]; say: string[] }): s
 export function app(s: State, web = false): string {
   const i = s.identity!;
   return `<header class="bar"><h1 class="mark">${NAME}</h1>
-<nav class="tabs"><button class="tab on" data-tab="public">Public<span class="count" id="count-public"></span></button><button class="tab" data-tab="private">Private<span class="count" id="count-private"></span></button></nav>
+<nav class="tabs"><button class="tab on" data-tab="public">Public<span class="count" id="count-public"></span></button><button class="tab" data-tab="private">Private<span class="count" id="count-private"></span></button>${i.signing ? '<button class="tab" data-tab="signing">Signing<span class="count" id="count-signing"></span></button>' : ''}</nav>
 <button class="me" data-action="window" title="The identity window">${who(i.who)}</button></header>
 ${testNotice(web)}
 <div id="spent"></div>
@@ -307,8 +317,71 @@ ${people(s)}
 <div class="row"><span class="grow small">Sealed to them: only they can open it.</span><button type="submit" class="primary">Send</button></div>
 </form>
 ${i.encryption ? '' : `<div class="note">No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.</div>`}
+<div id="signing-waiting"></div>
 <div id="inbox"><p class="empty">Reading the inbox…</p></div>
-</section>`;
+</section>
+${
+  i.signing
+    ? `<section id="signing" hidden>
+<div class="experimental"><strong>Even more experimental</strong>${e(SIGNING_LABEL.slice('Even more experimental'.length))}</div>
+<div id="signing-list"><p class="empty">Reading the proposals…</p></div>
+</section>`
+    : ''
+}`;
+}
+
+/** Said at the top of the Signing tab (`signing.ts`, SIGNING_SAY), word for word. */
+export const SIGNING_LABEL =
+  'Even more experimental than Dub itself. Here you sign agreements for real collectives: founding one, changing its members, its releases. A signature binds you, and it is public. Read every proposal in full before signing; when in doubt, decline.';
+
+const STATE_OF: Record<string, string> = { signed: 'Signed by you', declined: 'Declined' };
+
+/** One proposal, read in plain words from the exact bytes of the act it names, with what can be done. */
+export function proposal(p: Proposal): string {
+  const r = p.reading;
+  const head = `<h3>${e(r?.title ?? 'A proposal')}</h3><p class="small">From ${who(p.from)}${p.collective ? `, for the collective <span class="fp" title="${e(p.collective)}">${e(p.collective.slice(0, 8))}…${e(p.collective.slice(-4))}</span>` : ''}. Act <span class="fp" title="${e(p.act)}">${e(p.act.slice(0, 8))}…${e(p.act.slice(-4))}</span>.</p>
+<p class="small">Their words with it:</p><div class="plain">${e(p.text)}</div>${p.later.map((t) => `<div class="plain">${e(t)}</div>`).join('')}`;
+  if (!r) return `<div class="proposal" data-thread="${e(p.thread)}">${head}${note('error', e(p.problem ?? 'It could not be read.'))}</div>`;
+  const body = `${r.summary.map((x) => `<p>${e(x)}</p>`).join('')}
+${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines(x.lines)}`).join('')}
+${r.plain.map((x) => `<h4>${e(x.heading)}</h4><p class="small">As plain text, character for character; any invisible control is shown as &lt;U+…&gt;.</p><div class="plain">${e(x.text)}</div>`).join('')}
+${r.blocking.length ? note('error', `<strong>It cannot be signed here:</strong>${lines(r.blocking.map((text) => ({ text })))}`) : ''}`;
+  const share =
+    p.share === 'none'
+      ? ''
+      : p.share === 'waiting'
+        ? `<p class="small">Your share of the collective’s chain key will arrive once every member has signed and the founder’s Edubba deals the key. Its one-time key waits in this app until then.</p><div class="row"><button class="quiet" data-action="sharehand" data-thread="${e(p.thread)}">I received my share by hand</button></div>`
+        : p.share === 'ready'
+          ? `<div class="row"><button class="primary" data-action="share" data-thread="${e(p.thread)}">Show my share of the chain key, once</button></div>`
+          : p.share === 'shown'
+            ? shareTypeBack(p.thread, p.positions ?? [])
+            : p.share === 'byHand'
+              ? '<p class="small">Your share came by hand. The one-time key is destroyed.</p>'
+              : '<p class="small">Your share is written down. The one-time key is destroyed: nothing of it is here.</p>';
+  const actions = p.answer
+    ? `<p class="state">${e(STATE_OF[p.answer.verdict])}${p.answer.signature ? ` · signature act <span class="fp" title="${e(p.answer.signature)}">${e(p.answer.signature.slice(0, 8))}…</span>` : ''}</p>`
+    : r.blocking.length
+      ? `<div class="row"><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div>`
+      : `<div class="row"><button class="primary" data-action="accept" data-thread="${e(p.thread)}">Sign it</button><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div><p class="small">Your signature is an act of yours, public: it binds you to exactly what is read above.</p>`;
+  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${body}${actions}${share}</div>`;
+}
+
+/** A share of a collective's chain key, shown once (H18), with nothing asked beside it. */
+export function share(s: ShareShown): string {
+  return `<div class="proposal" id="share-shown" data-thread="${e(s.thread)}"><span class="label">The collective’s chain key share</span>
+<p class="share-number">Share <strong>${s.x}</strong> of ${s.holders}; any ${s.threshold} rebuild the key.${s.collective ? ` Collective <span class="fp" title="${e(s.collective)}">${e(s.collective.slice(0, 8))}…${e(s.collective.slice(-4))}</span>.` : ''}</p>
+<ul class="say">${s.say.map((x) => `<li>${e(x)}</li>`).join('')}</ul>
+<div class="words" id="share-words">${s.words.map((w, i) => `<span><b>${i + 1}.</b>${e(w)}</span>`).join('')}</div>
+<p class="small">The dealing’s fingerprint, the same for every member: compare it with theirs. <code>${e(s.fingerprint)}</code></p>
+<div class="row"><button class="primary" data-action="share-written" data-thread="${e(s.thread)}" data-positions="${e(s.positions.join(','))}">I have written share ${s.x} and its 24 words down</button></div>
+<p class="small">Once you go on, the words are hidden, and three of them are asked back.</p></div>`;
+}
+
+/** Three words of a share typed back, the words hidden (as H3). */
+export function shareTypeBack(thread: string, positions: number[]): string {
+  return `<form class="share-back" data-thread="${e(thread)}"><span class="label">Three words of your share</span><p class="small">From what you wrote down. The one-time key is destroyed only once these are right.</p><div class="typed">${positions
+    .map((p) => `<label>Word ${p} <input name="w${p}" type="text" autocomplete="off" spellcheck="false" required></label>`)
+    .join('')}</div><div class="row"><button type="submit" class="primary">Check them</button></div></form>`;
 }
 
 /** Follow and mute (the people cMIP): quiet, folded away. */

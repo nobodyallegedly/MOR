@@ -170,7 +170,11 @@ export interface State {
   /** The shared API key: found or not, and its last four characters only. */
   sharedKey: { found: boolean; last4?: string; from: string; warning?: string };
   /** The collectives held in the collective client's folder. */
-  collectives: { id: string; name: string; closed: boolean; members: number; brought?: boolean }[];
+  collectives: { id: string; name: string; closed: boolean; members: number; brought?: boolean; real?: boolean }[];
+  /** Real collectives' proposals sent from here (H18), each with who signed. */
+  proposals: RealProposal[];
+  /** The contacts list (H18): added here by ID with a name, and those the agents follow. */
+  contacts: { id: string; name: string; from: 'added' | { agent: string } }[];
   /** "What you may do for it", folded (false) or unfolded, per collective (H14). */
   unfolded?: Record<string, boolean>;
   paired: { key: string; label: string; added: number; you: boolean }[];
@@ -277,4 +281,45 @@ export interface ReleaseReview {
   dependencies: { registry: string; name: string; version: string }[];
   skipped: string[];
   blocking: string[];
+}
+
+/** A proposal sent from here for a real collective (H18). */
+export interface RealProposal {
+  act: string;
+  kind: 'founding' | 'clone' | 'release';
+  name: string;
+  collective: string | null;
+  founder: string;
+  members: string[];
+  signers: string[];
+  needed: number;
+  answers: Record<string, { verdict: 'signed' | 'declined'; signature?: string; oneTime?: string; text: string }>;
+  byHand?: string[];
+  founded?: string;
+  standing: { signed: string[]; declined: string[]; waiting: string[]; enough: boolean };
+}
+
+/** A real collective founded here, as the program reads it. */
+export interface RealCollective {
+  id: string;
+  members: string[];
+  holder: string;
+  agreement: string;
+  relays: string[];
+  threshold: number;
+  fingerprint: string;
+  pending: boolean;
+  releases: { id: string; version: string }[];
+  toShow: string[];
+}
+
+/** A share shown here once (hand to hand, or the founder's own). */
+export interface ShareHere {
+  x: number;
+  holders: number;
+  threshold: number;
+  words: string[];
+  fingerprint: string;
+  positions: number[];
+  member: string;
 }

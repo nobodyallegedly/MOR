@@ -1,0 +1,152 @@
+// Dub's Signing tab (H18, decided by Nobody, allegedly: "an optional tab only
+// available via settings clearly labeled as even more experimental"): what a
+// proposal asks a member to sign, read in plain words from the exact bytes
+// of the act it names, before anything is signed. Runs on the Mac and in the
+// web client alike: nothing from Node.
+//
+// What may be proposed: founding terms (Agreements type 0, no parent), a
+// clone of a collective's agreement (a member change: type 0 with a
+// parent), or a collective's release (an Envelopes publication of the
+// release manifest cMIP). Anything else is shown as such, and cannot be
+// signed here.
+//
+// TEST IDENTITIES ONLY, until MOR is frozen.
+
+import { SPECS, cborDecode, describeAct, hex, openMedia, workHash } from '../../genesis/src/core.ts';
+import { relayAt, type Via } from '../../genesis/src/transport.ts';
+import { assess } from '../../assess/src/assess.ts';
+import { readChanges, readRelease, termsOf, type Line, type Names, type Section } from '../../collective/src/explain.ts';
+import { decodeManifest } from '../../repo/src/manifest.ts';
+import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
+import { escapeControls } from '../../connector/src/words.ts';
+
+/** Said at the top of the Signing tab, and where it is turned on, word for word. */
+export const SIGNING_SAY =
+  'Even more experimental than Dub itself. Here you sign agreements for real collectives: founding one, changing its members, its releases. A signature binds you, and it is public. Read every proposal in full before signing; when in doubt, decline.';
+
+/** Said where the tab is off and proposals wait. */
+export const SIGNING_OFF_SAY = 'Signing is off: proposals to sign wait in your inbox, unread, until you turn Signing on in the identity window.';
+
+/** Said where a share of a collective's chain key is shown, once. */
+export const SHARE_SAY = [
+  'This is your share of the collective’s chain key: its number and 24 words. Write both on paper, in order, and keep the paper away from anything that goes online.',
+  'It is shown once. Dub keeps nothing of it: once you have typed three words back, the one-time key it came sealed to is destroyed, and the copy on the relays can never be opened again.',
+  'With enough members’ papers, the collective’s keys can be changed (in Kišib, later). A lost paper weakens that, as the collective’s rule allows; never type these words into Dub again.',
+  'It is not your own chain key, nor your signing key, nor a Bitcoin wallet.',
+];
+
+export type ProposalKind = 'founding' | 'clone' | 'release' | 'other';
+
+/** A proposal read in plain words. */
+export interface Reading {
+  kind: ProposalKind;
+  title: string;
+  summary: string[];
+  sections: Section[];
+  /** Words signed by others, as plain text, every invisible control written out. */
+  plain: { heading: string; text: string }[];
+  /** The risks the deal-assessment tool flags, each with the rule it rests on. */
+  risks: { text: string; rests: string }[];
+  /** Why it cannot be signed here, if so. */
+  blocking: string[];
+  /** For a clone or a release: the collective it concerns. */
+  collective: string | null;
+}
+
+interface Described {
+  id: string;
+  signer?: string;
+  public: boolean;
+  spec?: string;
+  type?: number;
+  payload?: Uint8Array;
+  objects?: [string, string][];
+}
+
+/** The act a proposal names, fetched by its id from the first place that holds it, and checked to be it. */
+export async function fetchAct(id: string, hints: string[], via: Via = {}): Promise<{ act: Uint8Array; at: string } | null> {
+  for (const h of hints) {
+    try {
+      const a = await relayAt(h, via).getAct(id);
+      if (a && (describeAct(a) as Described).id === id) return { act: a, at: h };
+    } catch {
+      // away: the next
+    }
+  }
+  return null;
+}
+
+/** Read the act a proposal names, from its exact bytes (Agreements rule 4: what you sign is what you saw). */
+export async function readProposal(act: Uint8Array, names: Names, hints: string[], via: Via = {}): Promise<Reading> {
+  const d = describeAct(act) as Described;
+  const blocking: string[] = [];
+  if (!d.public || !d.payload) {
+    return { kind: 'other', title: 'A private act', summary: ['It cannot be read here, so it cannot be signed here.'], sections: [], plain: [], risks: [], blocking: ['It is private.'], collective: null };
+  }
+  if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.terms) {
+    const a = assess(d.payload, names);
+    const t = termsOf(d.payload);
+    const parent = t.parent;
+    const sections: Section[] = [...a.sections];
+    const collective: string | null = null;
+    let kind: ProposalKind = 'founding';
+    if (parent) {
+      kind = 'clone';
+      const p = await fetchAct(parent, hints, via);
+      const pd = p ? (describeAct(p.act) as Described) : null;
+      if (pd?.payload) sections.unshift({ heading: 'What it changes', lines: readChanges(pd.payload, d.payload, names) });
+      else blocking.push(`The agreement it changes (${parent}) was not found, so what it changes cannot be shown.`);
+    }
+    if (!t.grammar) blocking.push('These terms found no collective: Dub signs collectives’ agreements only.');
+    if (a.problem) blocking.push(`Agreements refuse these terms: ${a.problem}`);
+    return {
+      kind,
+      title: kind === 'founding' ? `Found a collective: ${a.title}` : `Change a collective’s agreement: ${a.title}`,
+      summary: a.summary,
+      sections,
+      plain: a.plain.map((x) => ({ heading: x.heading, text: escapeControls(x.text) })),
+      risks: a.flags.map((f) => ({ text: f.text, rests: f.rests })),
+      blocking,
+      collective,
+    };
+  }
+  if (d.spec === SPECS.envelopes && d.type === 0) {
+    const m = cborDecode(d.payload) as Map<number, unknown>;
+    if (hex(m.get(0) as Uint8Array) !== REPO_SPECS.manifest) {
+      return { kind: 'other', title: 'A publication', summary: ['It is no release: nothing to sign here.'], sections: [], plain: [], risks: [], blocking: ['Not a release.'], collective: null };
+    }
+    const lockedHash = hex(m.get(2) as Uint8Array);
+    let manifest = null;
+    for (const h of [...new Set([...((m.get(6) as string[]) ?? []), ...hints])]) {
+      try {
+        const locked = await relayAt(h, via).getMedia(lockedHash);
+        if (!locked) continue;
+        const plain = openMedia(locked, m.get(5) as Uint8Array, m.get(4) as Uint8Array) as Uint8Array;
+        if (workHash(plain) !== hex(m.get(1) as Uint8Array)) continue;
+        manifest = decodeManifest(plain);
+        break;
+      } catch {
+        // the next place
+      }
+    }
+    if (!manifest) {
+      return { kind: 'release', title: 'A release', summary: ['Its manifest was not found, so what it releases cannot be shown.'], sections: [], plain: [], risks: [], blocking: ['Its manifest was not found.'], collective: d.signer ?? null };
+    }
+    const files: Line[] = manifest.files.slice(0, 200).map((f) => ({ text: `${f.path}: ${f.size} bytes, fingerprint ${f.work.slice(0, 16)}…` }));
+    if (manifest.files.length > 200) files.push({ text: `And ${manifest.files.length - 200} more files.` });
+    return {
+      kind: 'release',
+      title: `Sign a release: ${manifest.name} ${manifest.version}`,
+      summary: [
+        `Published by the collective ${names(d.signer!)}. It counts as the collective’s release once enough holders of its Releases area have signed it, each with an act of their own (Agreements rule 60).`,
+        'Dub cannot compare these files with a copy of your own: sign only if you checked them elsewhere (each file’s fingerprint is listed).',
+      ],
+      sections: [...readRelease(manifest, null), { heading: `Its files (${manifest.files.length})`, lines: files }],
+      plain: [],
+      risks: [],
+      blocking,
+      collective: d.signer ?? null,
+    };
+  }
+  return { kind: 'other', title: 'An act Dub does not sign', summary: ['Dub signs founding terms, clones of a collective’s agreement, and releases.'], sections: [], plain: [], risks: [], blocking: ['Not something Dub signs.'], collective: null };
+}

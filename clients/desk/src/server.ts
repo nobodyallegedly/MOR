@@ -15,6 +15,7 @@ import { type MachineOptions } from './machine.ts';
 import { Agents } from './agents.ts';
 import { Collectives } from './collectives.ts';
 import { Setup } from './setup.ts';
+import { Real } from './real.ts';
 import { FONT_FILES, FONTS_DIR } from '../../dub/src/fonts.ts';
 import { Store } from './store.ts';
 import { STYLE } from './page/view.ts';
@@ -39,6 +40,7 @@ export interface Running {
   agents: Agents;
   collectives: Collectives;
   setup: Setup;
+  real: Real;
   close(): Promise<void>;
 }
 
@@ -64,6 +66,14 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
   // inside this one for a new install (src/cli.ts).
   const collectives = new Collectives(opts.collective ?? join(opts.dir, 'collective'), store);
   const setup = new Setup(desk, store);
+  const real = new Real(desk, store);
+  /** A real collective founded here, read as anyone reads it (its relays and homes), with its founder as the member held here. */
+  const realRead = (id: string) => {
+    if (!real.isReal(id)) return undefined;
+    const c = real.collective(id);
+    const p = real.collectives().find((x) => x.id === id)!;
+    return { id, name: p.name, member: p.founder, hints: [...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)] };
+  };
   const agentOf = (a: Record<string, unknown>) => agents.for(text(a.agent) || null);
   const num = (v: unknown): number => (typeof v === 'number' ? v : Number(text(v)));
   const script = await pageScript(here('src/page/app.ts'));
@@ -81,7 +91,9 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
           machine: agents.for(null).state(),
           agents: agents.list(),
           sharedKey: agents.sharedKey(),
-          collectives: collectives.list(),
+          collectives: [...collectives.list(), ...real.collectives().map((c) => ({ id: c.id, name: c.name, closed: false, members: c.members, real: true }))],
+          proposals: real.proposals().map((p) => ({ ...p, standing: real.standing(p) })),
+          contacts: real.contacts(),
           paired: access.paired().map((p) => ({ ...p, you: p.key === key })),
         };
       // An agent's answering: `agent` names it; without, the first agent (as MOR Identities had one).
@@ -130,11 +142,11 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
       case 'agent view':
         return agents.view(text(a.agent));
       case 'collective constitution':
-        return collectives.constitution(text(a.collective));
+        return collectives.constitution(text(a.collective), realRead(text(a.collective)));
       case 'collective permissions':
-        return collectives.permissions(text(a.collective));
+        return collectives.permissions(text(a.collective), realRead(text(a.collective)));
       case 'collective posts':
-        return collectives.posts(text(a.collective));
+        return collectives.posts(text(a.collective), realRead(text(a.collective)));
       case 'settings': {
         const via: Record<string, string> = {};
         for (const line of list(a.via)) {
@@ -188,6 +200,50 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
       case 'fold':
         desk.fold(text(a.collective), a.open === true);
         return {};
+      case 'real contacts':
+        return real.contacts();
+      case 'real contact add':
+        return real.addContact(text(a.id), text(a.name));
+      case 'real contact remove':
+        real.removeContact(text(a.id));
+        return {};
+      case 'real found prepare':
+        return real.prepareFounding({
+          name: text(a.name),
+          founder: text(a.founder),
+          members: list(a.members),
+          rules: { safety: num(a.safety), release: num(a.release), clone: num(a.clone), others: num(a.others) },
+          words: text(a.words),
+        });
+      case 'real change prepare':
+        return real.prepareChange({ collective: text(a.collective), members: list(a.members) });
+      case 'real release prepare':
+        return real.prepareRelease({ collective: text(a.collective), folder: text(a.folder), name: text(a.name), version: text(a.version) });
+      case 'real confirm':
+        return real.confirm(text(a.plan), text(a.digest));
+      case 'real cancel':
+        real.cancel(text(a.plan));
+        return {};
+      case 'real gather': {
+        const r = await real.gather(text(a.act));
+        return { ...r, standing: real.standing(r.proposal) };
+      }
+      case 'real by hand':
+        return real.byHand(text(a.act), text(a.member), a.on === true);
+      case 'real found':
+        return real.found(text(a.act));
+      case 'real to show':
+        return real.toShow(text(a.collective));
+      case 'real show share':
+        return real.showShare(text(a.collective), text(a.member));
+      case 'real share back':
+        return real.confirmShare(text(a.collective), text(a.member), list(a.typed));
+      case 'real release standing':
+        return real.releaseStanding(text(a.act));
+      case 'real collective': {
+        const c = real.collective(text(a.collective));
+        return { id: c.identity, members: c.f.members, holder: c.f.signingHolder, agreement: c.f.agreement, relays: c.f.relays, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint, pending: !!c.f.pending, releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })), toShow: real.toShow(c.identity) };
+      }
       case 'collective bring':
         return collectives.bring({ id: text(a.id), name: text(a.name) });
       case 'sort':
@@ -224,6 +280,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
     agents,
     collectives,
     setup,
+    real,
     async close() {
       if (timer) clearInterval(timer);
       await local.close();

@@ -38,7 +38,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
   let feed: v.Item[] = [];
   let inbox: Inbox | null = null;
   let filter: 'all' | 'toyou' = 'all';
-  let tab: 'public' | 'private' = 'public';
+  let tab: 'public' | 'private' | 'signing' = 'public';
   /** The post being answered, if any. */
   let replying: { id: string; signer: string } | null = null;
   /** Words shown once, held only until they are hidden (H3). */
@@ -165,11 +165,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     counts();
   }
 
-  function setTab(t: 'public' | 'private') {
+  function setTab(t: 'public' | 'private' | 'signing') {
+    if (t === 'signing' && !$('signing')) t = 'public';
     tab = t;
     app.querySelectorAll<HTMLElement>('[data-tab]').forEach((x) => x.classList.toggle('on', x.dataset.tab === t));
     $('public')!.hidden = t !== 'public';
     $('private')!.hidden = t !== 'private';
+    if ($('signing')) $('signing')!.hidden = t !== 'signing';
+    // Proposals and shares arrive while the page is open: the tab reads them again when opened.
+    if (t === 'signing') void readSigning();
     if (t === 'private') void seen((inbox?.messages ?? []).filter((m) => !m.seen).map((m) => m.key));
   }
 
@@ -205,6 +209,22 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     setFilter(filter);
     void check();
     await Promise.all([readFeed(), readInbox()]);
+    await readSigning();
+  }
+
+  /** The Signing tab (H18): the proposals read in plain words; with it off, how many wait. */
+  async function readSigning() {
+    try {
+      const r = await b.ask<{ on: boolean; waiting: number; proposals: v.Proposal[]; problems: string[]; say: string }>('proposals');
+      if (!r.on) {
+        fill('signing-waiting', r.waiting ? v.note('', `${r.waiting === 1 ? 'A proposal to sign waits' : `${r.waiting} proposals to sign wait`}. ${v.e(r.say)}`) : '');
+        return;
+      }
+      fill('signing-list', r.proposals.length ? r.proposals.map(v.proposal).join('') : '<p class="empty">No proposal to sign. When a collective’s founder asks you to sign, it comes here.</p>');
+      fill('count-signing', r.waiting ? String(r.waiting) : '');
+    } catch (err) {
+      fill('signing-list', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+    }
   }
 
   async function copy(text: string): Promise<boolean> {
@@ -221,6 +241,21 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
   app.addEventListener('change', async (ev) => {
     const el = ev.target as HTMLInputElement;
     if (el.name === 'picture') fill('picked', el.files?.[0] ? v.e(el.files[0].name) : '');
+    if (el.id === 'signing-on') {
+      const on = el.checked;
+      if (on && !confirm(v.SIGNING_LABEL)) {
+        el.checked = false;
+        return;
+      }
+      const r = await busy(on ? 'Turning Signing on…' : 'Turning Signing off…', () => b.ask<{ lines: v.Line[] }>('signing', { on }));
+      if (r) {
+        const s = await b.ask<v.State>('state');
+        state = s;
+        app.innerHTML = v.identityWindow(s, b.web, b.suggested?.() ?? {});
+        say(on ? 'warn' : 'done', v.lines(r.lines));
+      } else el.checked = !on;
+      return;
+    }
     if (el.id === 'publish-list') {
       const on = el.checked;
       if (on && !confirm(v.PUBLISH_WARNING)) {
@@ -239,7 +274,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     const el = (ev.target as HTMLElement).closest<HTMLElement>('[data-action],[data-tab],[data-filter]');
     if (!el || el instanceof HTMLInputElement) return;
     const d = el.dataset;
-    if (d.tab) return setTab(d.tab as 'public' | 'private');
+    if (d.tab) return setTab(d.tab as 'public' | 'private' | 'signing');
     if (d.filter) return setFilter(d.filter as 'all' | 'toyou');
     const card = el.closest<HTMLElement>('[data-post]');
     switch (d.action) {
@@ -371,7 +406,52 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       case 'feed':
         say('', '');
         await Promise.all([readFeed(), readInbox()]);
+        await readSigning();
         break;
+      case 'accept': {
+        if (!confirm('Sign it? Your signature is public, and binds you to exactly what you read here.')) break;
+        const r = await busy('Signing, and answering the proposer…', () => b.ask<{ lines: v.Line[] }>('accept', { thread: d.thread }));
+        if (r) {
+          await readSigning();
+          say('done', `<strong>Signed.</strong>${v.lines(r.lines)}`);
+        }
+        break;
+      }
+      case 'decline': {
+        const why = prompt('Decline it. Your reason, if you like (sent to the proposer, sealed):');
+        if (why === null) break;
+        const r = await busy('Declining…', () => b.ask<{ lines: v.Line[] }>('decline', { thread: d.thread, why }));
+        if (r) {
+          await readSigning();
+          say('done', v.lines(r.lines));
+        }
+        break;
+      }
+      case 'share': {
+        const r = await busy('Opening your share with its one-time key, and checking it against the dealing…', () => b.ask<v.ShareShown>('share', { thread: d.thread }));
+        // Shown once: on the page now and nowhere else; a reload asks for three of its words instead.
+        if (r) {
+          say('', '');
+          const card = app.querySelector<HTMLElement>(`.proposal[data-thread="${CSS.escape(r.thread)}"]`);
+          if (card) card.outerHTML = v.share(r);
+        }
+        break;
+      }
+      case 'share-written': {
+        // As H3: the words go before three are asked back.
+        const card = $('share-shown');
+        if (card) card.outerHTML = `<div class="proposal" data-thread="${v.e(d.thread!)}">${v.shareTypeBack(d.thread!, (d.positions ?? '').split(',').map(Number))}</div>`;
+        break;
+      }
+      case 'sharehand': {
+        if (!confirm('Your share came by hand, shown on the founder’s screen? The one-time key is destroyed: a share sealed to it could never be opened.')) break;
+        const r = await busy('Destroying the one-time key…', () => b.ask<{ lines: v.Line[] }>('sharehand', { thread: d.thread }));
+        if (r) {
+          await readSigning();
+          say('done', v.lines(r.lines));
+        }
+        break;
+      }
     }
   });
 
@@ -398,6 +478,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     if (name === 'pair') return; // the program's own start handles it (`app.ts`)
     ev.preventDefault();
     const d = new FormData(form);
+    if (form.classList.contains('share-back')) {
+      const typed = [...form.querySelectorAll<HTMLInputElement>('input')].map((i) => i.value);
+      const r = await busy('Checking the words, then destroying the one-time key…', () => b.ask<{ lines: v.Line[] }>('shareback', { thread: form.dataset.thread, typed }));
+      if (r) {
+        await readSigning();
+        say('done', `<strong>Your share is written down.</strong>${v.lines(r.lines)}`);
+      }
+      return;
+    }
     switch (name) {
       case 'begin': {
         const r = await busy('Asking each home who runs it, and making the identity…', () =>

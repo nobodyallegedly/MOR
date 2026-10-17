@@ -4097,6 +4097,85 @@ pub fn verify_share(bytes: &[u8]) -> R<JsValue> {
 }
 
 #[derive(Serialize)]
+struct PaperOut {
+    x: u64,
+    #[serde(with = "serde_bytes")]
+    value: Vec<u8>,
+    threshold: u64,
+    holders: usize,
+    index: u64,
+    scheme: u8,
+    commit: String,
+    fingerprint: String,
+}
+
+/// A share as its holder writes it on paper (H18: its number and its value,
+/// the blinding dropped), after the holder's own check against the dealing
+/// (Module 5.1). Throws if the share does not lie on the commitments.
+#[wasm_bindgen(js_name = shareOnPaper)]
+pub fn share_on_paper(bytes: &[u8]) -> R<JsValue> {
+    let s = share_of(bytes)?;
+    mor_airgap::shares::verify_share(&s).map_err(err)?;
+    let d = &s.dealing;
+    let (x, value) = mor_airgap::shares::paper(&s);
+    to_js(&PaperOut {
+        x,
+        value: value.to_vec(),
+        threshold: d.threshold,
+        holders: d.holders.len(),
+        index: d.index,
+        scheme: match d.chain_key.scheme {
+            Scheme::Founding(n) => n,
+            _ => 0,
+        },
+        commit: hx(&d.chain_key.commit),
+        fingerprint: hx(&d.fingerprint()),
+    })
+}
+
+#[derive(Deserialize)]
+struct PaperIn {
+    x: u64,
+    #[serde(with = "serde_bytes")]
+    value: Vec<u8>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FromPaperIn {
+    /// "words" or "hex".
+    seed_module: String,
+    scheme: u8,
+    index: u64,
+    /// The chain-key commitment the collective's chain holds for this key.
+    commit: String,
+    papers: Vec<PaperIn>,
+}
+
+/// Rebuild a collective's chain key from paper shares alone (H18), checked
+/// against the commitment its own chain holds; no dealing needed. Returns the
+/// FIPS 205 seeds to sign one rotation with. **Test collectives only**, and
+/// the stand-in for Kišib in tests.
+#[wasm_bindgen(js_name = rebuildChainKeyFromPaper)]
+pub fn rebuild_chain_key_from_paper(input: JsValue) -> R<JsValue> {
+    use mor_airgap::seed::SeedModule;
+    let i: FromPaperIn = from_js(input)?;
+    let module = SeedModule::from_name(&i.seed_module).ok_or_else(|| err("seed Module: words or hex"))?;
+    let commit = unhex(&i.commit)?;
+    let papers = i
+        .papers
+        .iter()
+        .map(|p| Ok((p.x, <[u8; 32]>::try_from(p.value.as_slice()).map_err(|_| err("a share's value is 32 bytes"))?)))
+        .collect::<R<Vec<_>>>()?;
+    let seed = mor_airgap::shares::rebuild_from_paper(module, i.scheme, i.index, &commit, &papers).map_err(err)?;
+    to_js(&RebuiltOut {
+        scheme: i.scheme,
+        seeds: seed.key_seeds(i.scheme, i.index).to_vec(),
+        commit: i.commit,
+    })
+}
+
+#[derive(Serialize)]
 struct RebuiltOut {
     scheme: u8,
     #[serde(with = "serde_bytes")]

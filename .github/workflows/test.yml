@@ -47,7 +47,7 @@ jobs:
         run: cd clients/connector && npm ci --no-audit --no-fund && npm test
       - name: clients/desk
         if: success() || failure()
-        run: cd clients/desk && npm ci --no-audit --no-fund && npm test
+        run: cd clients/dub && npm ci --no-audit --no-fund && cd ../desk && npm ci --no-audit --no-fund && npm test
       - name: clients/genesis
         if: success() || failure()
         run: cd clients/genesis && npm ci --no-audit --no-fund && npm test

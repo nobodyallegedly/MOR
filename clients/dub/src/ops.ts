@@ -41,6 +41,13 @@ export const OPS = [
   'unmute',
   'list',
   'withdraw',
+  'signing',
+  'proposals',
+  'accept',
+  'decline',
+  'share',
+  'shareback',
+  'sharehand',
 ] as const;
 
 export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: Platform): Promise<unknown> {
@@ -102,6 +109,20 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.listOption({ published: a.published === true, shown: text(a.shown) });
     case 'withdraw':
       return dub.withdraw(text(a.publication));
+    case 'signing':
+      return dub.setSigning(a.on === true);
+    case 'proposals':
+      return dub.proposals();
+    case 'accept':
+      return dub.signProposal(text(a.thread));
+    case 'decline':
+      return dub.declineProposal(text(a.thread), text(a.why));
+    case 'share':
+      return dub.shareShow(text(a.thread));
+    case 'shareback':
+      return dub.shareConfirm(text(a.thread), list(a.typed));
+    case 'sharehand':
+      return dub.shareByHand(text(a.thread));
     default:
       throw new Error(`unknown operation ${op}`);
   }

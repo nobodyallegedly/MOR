@@ -149,7 +149,7 @@ export interface Rules {
   constitutionNamed?: string[];
 }
 
-const toRules = (g: Governance): Rules => ({
+export const toRules = (g: Governance): Rules => ({
   safety: g.safetyThreshold,
   release: g.releaseThreshold,
   clone: g.cloneThreshold,
@@ -159,7 +159,7 @@ const toRules = (g: Governance): Rules => ({
 });
 
 /** The numbers of a Governance from the rules typed on the page. */
-const fromRules = (r: Rules) => ({
+export const fromRules = (r: Rules) => ({
   safetyThreshold: whole(r.safety, 'the shares needed'),
   releaseThreshold: whole(r.release, 'the signatures a release needs'),
   cloneThreshold: whole(r.clone, 'the signatures a change needs'),

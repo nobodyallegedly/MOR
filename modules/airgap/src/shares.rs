@@ -53,6 +53,10 @@ pub enum ShareError {
     /// The rebuilt seed does not give the key the dealing commits to: the
     /// dealer handed out shares of another seed.
     WrongKey,
+    /// Paper shares (numbers and values alone) that do not rebuild the key
+    /// the collective's chain commits to: too few, one from another
+    /// collective or key, or one written wrong.
+    PaperMismatch,
 }
 
 impl fmt::Display for ShareError {
@@ -66,6 +70,9 @@ impl fmt::Display for ShareError {
             ShareError::Unsupported(w) => write!(f, "unsupported: {w}"),
             ShareError::WrongKey => f.write_str(
                 "the shares rebuild a key other than the one the dealing commits to: the dealer cheated",
+            ),
+            ShareError::PaperMismatch => f.write_str(
+                "these shares do not rebuild the collective's chain key: too few of them, one of another collective or of an earlier key, or one written wrong",
             ),
         }
     }
@@ -291,4 +298,81 @@ pub fn rebuild_key(shares: &[Share]) -> R<(mor_core::sig::SlhKey, Dealing)> {
 pub fn rebuild_check(shares: &[Share]) -> R<Hash> {
     let (_key, d) = rebuild_key(shares)?;
     Ok(d.chain_key.commit)
+}
+
+/// A share as its holder keeps it on paper (H18, decided by Nobody,
+/// allegedly: "Number + 24 words"): its number and its value. The blinding,
+/// used only to check the share against the dealing when it arrives, is
+/// dropped then.
+pub fn paper(share: &Share) -> (u64, [u8; 32]) {
+    (share.x, share.value)
+}
+
+/// Rebuild a chain-key seed from paper shares alone, with no dealing: every
+/// share given is used (Lagrange at zero), and the seed's key at `index`,
+/// under `scheme`, must give `commit`, the commitment the collective's own
+/// chain holds (its genesis, or the rotation at position `index`). A paper
+/// cannot be checked alone without its blinding; a wrong or missing one
+/// shows as [`ShareError::PaperMismatch`], without saying which.
+pub fn rebuild_from_paper(module: SeedModule, scheme: u8, index: u64, commit: &Hash, papers: &[(u64, [u8; 32])]) -> R<Seed> {
+    if papers.is_empty() {
+        return Err(ShareError::TooFew { have: 0, need: 1 });
+    }
+    if !(2..=3).contains(&scheme) {
+        return Err(ShareError::Unsupported("the chain-key scheme"));
+    }
+    let mut values = Vec::with_capacity(papers.len());
+    for (i, (x, v)) in papers.iter().enumerate() {
+        if *x == 0 {
+            return Err(ShareError::Malformed("share number 0"));
+        }
+        if papers[..i].iter().any(|(y, _)| y == x) {
+            return Err(ShareError::Duplicate { x: *x });
+        }
+        values.push((Scalar::from(*x), scalar(v).ok_or(ShareError::Malformed("value outside the group"))?));
+    }
+    let mut s = Scalar::ZERO;
+    for (i, (xi, vi)) in values.iter().enumerate() {
+        let mut l = Scalar::ONE;
+        for (j, (xj, _)) in values.iter().enumerate() {
+            if i != j {
+                l *= *xj * (*xj - *xi).invert().unwrap();
+            }
+        }
+        s += *vi * l;
+    }
+    let seed = Seed::new(module, bytes(&s));
+    if &seed.key(scheme, index).commitment() != commit {
+        return Err(ShareError::PaperMismatch);
+    }
+    Ok(seed)
+}
+
+#[cfg(test)]
+mod paper_tests {
+    use super::*;
+    use crate::msg::Holder;
+    use rand_core::OsRng;
+
+    #[test]
+    fn paper_shares_rebuild_the_committed_key_and_nothing_else() {
+        let module = SeedModule::Words;
+        let seed = fresh_dealable_seed(module, &mut OsRng);
+        let holders = (0..3).map(|_| Holder { role: crate::msg::Role::Member, identity: None }).collect();
+        let dealt = deal(&seed, 3, 0, 2, holders, &mut OsRng);
+        let commit = dealt[0].dealing.chain_key.commit;
+        let papers: Vec<_> = dealt.iter().map(paper).collect();
+        for pair in [[0, 1], [0, 2], [1, 2]] {
+            let two = [papers[pair[0]], papers[pair[1]]];
+            let rebuilt = rebuild_from_paper(module, 3, 0, &commit, &two).unwrap();
+            assert_eq!(rebuilt.key(3, 0).commitment(), commit);
+        }
+        assert_eq!(rebuild_from_paper(module, 3, 0, &commit, &papers).unwrap().key(3, 0).commitment(), commit);
+        assert_eq!(rebuild_from_paper(module, 3, 0, &commit, &papers[..1]).unwrap_err(), ShareError::PaperMismatch);
+        let mut wrong = papers[1];
+        wrong.1[31] ^= 1;
+        assert_eq!(rebuild_from_paper(module, 3, 0, &commit, &[papers[0], wrong]).unwrap_err(), ShareError::PaperMismatch);
+        assert_eq!(rebuild_from_paper(module, 3, 1, &commit, &papers[..2]).unwrap_err(), ShareError::PaperMismatch);
+        assert_eq!(rebuild_from_paper(module, 3, 0, &commit, &[papers[0], papers[0]]).unwrap_err(), ShareError::Duplicate { x: 1 });
+    }
 }
