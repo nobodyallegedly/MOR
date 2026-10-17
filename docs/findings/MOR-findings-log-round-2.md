@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F342. A specification's optional fields are filled by the person, from their own text (17 October 2026)
+
+**From** `docs/ummia-report.md`, question 1: Development (F322) says a tool writes no optional field it cannot fill from the specification's text; a program cannot read a text's meaning.
+
+**Decided by Nobody, allegedly, 17 October 2026 ("Agreed"):** (A), the build's lean, built: Ummia writes only the optional fields the person fills (tasks, act types, layers, rail fields, predecessor, dependencies, checker), and tells them to fill only what their text says. Two people who fill differently publish two versions of one text, as F322 already shows them. Not chosen: (B) no optional field at all (nothing then discoverable by those fields); (C) a cMIP for marking fields in a text, left to anyone who wants it. *Suggested by the build and the project lead.*
+
+**Core changes:** none.
+
 ## F341. An anchoring publication names the key its batch's output is tweaked from (17 October 2026)
 
 **From** `docs/damgar-report.md`, open question 1: the anchoring cMIP draft 5 publishes each batch as `{ 0 offer, 1 batch, 2 leaves, 3 tx, 4 output }`; with pay-to-contract the output is a key tweaked by the batch's root, and without that key (and the script tree's root, if any) no reader can check from the acts alone that the output commits to the root.
