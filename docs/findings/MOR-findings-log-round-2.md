@@ -16,6 +16,10 @@ Each finding names its pattern before its fix. Round 2 named three; the reaction
 3. **A rule that protects the owner also traps the owner.** Every protection an owner chooses must be removable by the owner's safety key alone; every protection others hold over a party must need that party's signature to change.
 4. **A rule rests on a fact nobody can check.** Make the fact an act someone signs, move the rule to client conformance and say so, or drop it.
 
+## Working rule: the test apps keep the layers apart, and talk through MOR (Nobody, allegedly, 17 October 2026)
+
+"We attempt to keep the layers separate and force information to travel between apps via MOR." For the apps built for the tests and demonstrations: each app keeps to its layer, and whatever one app prepares for another travels as acts on MOR (sealed to oneself where it is private), never through a shared file or a side channel, even where that is absurd as UX ("The absurd was more about Dub not signing a tip"). Roughly: Dub, Text and Envelopes (talking); Damgar, Money; Edubba, Agreements and collectives (with agents and releases); Kišib, the Identity layer's emergencies (chain keys). The apps show how MOR runs by making its record the only road between them. *A later product may fold them together; these are instruments.*
+
 ## Working rule: options with a forced default (Nobody, allegedly, F59)
 
 Where the core offers the owner several options, one of them is the default when none is selected. The default is one of the declared options, never a third, weaker rule. This may be repeated elsewhere in the protocol when needed.

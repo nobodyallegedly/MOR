@@ -60,4 +60,5 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; hom
 - Never write the author's personal name; write "Nobody, allegedly".
 - No server addresses, onion addresses or keys in the repository.
 - Test identities only; regtest or signet only.
+- The test apps keep the layers apart and talk through MOR: what one app prepares for another travels as acts (sealed to oneself where private), never a shared file or a side channel (working rule, 17 October 2026).
 - Work on a `claude/` branch, open a pull request, do not merge.
