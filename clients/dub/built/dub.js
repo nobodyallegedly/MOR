@@ -8380,9 +8380,11 @@ async function namesOf(identity, places, via2 = {}) {
 var PUBLISH_WARNING = "Anyone can read whom this identity follows, now and for good: a later change of mind stops new versions, it does not take this one back. The names you gave them stay in this app.";
 
 // src/people.ts
-var PEOPLE_SPEC = sha2562("People cMIP, draft 1, test value until publication");
+var PEOPLE_SPEC = sha2562("People cMIP, draft 2, test value until publication");
+var PEOPLE_SPEC_1 = sha2562("People cMIP, draft 1, test value until publication");
 var FOLLOW_LIST = 0;
-var NO_PEOPLE = () => ({ follows: [], muted: [], list: "private", published: null, seen: [], inbox: { after: {}, items: [] }, sent: [] });
+var SEALED_LIST = 1;
+var NO_PEOPLE = () => ({ follows: [], muted: [], list: "private", published: null, sealed: null, carried: false, seen: [], inbox: { after: {}, items: [] }, sent: [] });
 function followListPayload(a) {
   const m = /* @__PURE__ */ new Map([[0, a.version]]);
   if (a.previous) m.set(1, unhex(a.previous));
@@ -8410,7 +8412,7 @@ async function readFollowList(identity, places, via2 = {}) {
           } catch {
             continue;
           }
-          if (acts.has(d.id) || !d.public || d.spec !== PEOPLE_SPEC || d.type !== FOLLOW_LIST || d.signer !== identity || !d.payload) continue;
+          if (acts.has(d.id) || !d.public || d.spec !== PEOPLE_SPEC && d.spec !== PEOPLE_SPEC_1 || d.type !== FOLLOW_LIST || d.signer !== identity || !d.payload) continue;
           v.add(it.item);
           if (v.status(d.id) !== "valid") continue;
           try {
@@ -8440,6 +8442,88 @@ async function readFollowList(identity, places, via2 = {}) {
     Object.assign(out, { act: id, version: a.version, ids: a.ids, withdrawn: a.withdrawn });
     at_ = id;
   }
+}
+function sealedListPayload(a) {
+  const m = /* @__PURE__ */ new Map([[0, a.version]]);
+  if (a.previous) m.set(1, unhex(a.previous));
+  m.set(
+    2,
+    a.follows.map((f) => f.name ? [unhex(f.id), f.name] : [unhex(f.id)])
+  );
+  return cborEncode(m);
+}
+async function readSealedList(identity, secrets, homes, via2 = {}) {
+  const out = { act: null, version: 0, follows: [], forked: false, problems: [] };
+  if (!secrets.length) return out;
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  let l;
+  try {
+    l = await lookUp(identity, homes, via2, v);
+  } catch (e2) {
+    out.problems.push(`its homes did not answer (${e2 instanceof Error ? e2.message : String(e2)})`);
+    return out;
+  }
+  const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
+  const acts = /* @__PURE__ */ new Map();
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via2).feed({ to: identity, after });
+        for (const it of page.items) {
+          if (it.kind !== "sealed") continue;
+          let o = null;
+          for (const s of secrets) {
+            try {
+              o = openSealed(it.item, identity, s);
+              break;
+            } catch {
+            }
+          }
+          const d = o?.described;
+          if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== PEOPLE_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
+          if (o.key) l.verifier.addWithKey(o.act, o.key);
+          else l.verifier.add(o.act);
+          if (l.verifier.status(d.id) !== "valid") continue;
+          try {
+            const m = cborDecode(d.payload);
+            const prev = m.get(1);
+            const follows = [];
+            for (const x of m.get(2)) {
+              if (!Array.isArray(x) || !(x[0] instanceof Uint8Array) || x[0].length !== 32) continue;
+              const id = hex(x[0]);
+              if (follows.some((f) => f.id === id)) continue;
+              follows.push({ id, name: typeof x[1] === "string" && x[1].trim() ? x[1].slice(0, 64) : null });
+            }
+            acts.set(d.id, { version: Number(m.get(0)), previous: prev instanceof Uint8Array ? hex(prev) : null, follows });
+          } catch {
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch (e2) {
+      out.problems.push(`${h}: ${e2 instanceof Error ? e2.message : String(e2)}`);
+    }
+  }
+  const best = (from, version) => {
+    const next = [...acts.entries()].filter(([, a]) => a.previous === from && a.version === version + 1);
+    if (next.length > 1) out.forked = true;
+    let pick = null;
+    for (const [id] of next) {
+      const below = best(id, version + 1);
+      const depth = below ? below.depth : version + 1;
+      const tip2 = below ? below.id : id;
+      if (!pick || depth > pick.depth || depth === pick.depth && tip2 < pick.tip) pick = { id: tip2, depth, tip: tip2 };
+    }
+    return pick ? { id: pick.tip, depth: pick.depth } : null;
+  };
+  const tip = best(null, 0);
+  if (tip) {
+    const a = acts.get(tip.id);
+    Object.assign(out, { act: tip.id, version: a.version, follows: a.follows });
+  }
+  return out;
 }
 
 // src/dub.ts
@@ -8545,6 +8629,7 @@ var Dub = class {
         oldChainKey: !!me.f.safety.seeds,
         line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
         list: p.list,
+        sealed: p.sealed ? { version: p.sealed.version, forked: !!p.sealed.forked } : null,
         signing: !!s.signing,
         follows: p.follows.map((f) => this.whoFrom(f.id, me.id, p)),
         muted: p.muted.map((m) => this.whoFrom(m, me.id, p))
@@ -8790,6 +8875,14 @@ var Dub = class {
     lines2.push({ text: LINE_SAY, tone: "warn" });
     return { lines: lines2 };
   }
+  /**
+   * Leave the identity in use (H28): nothing is forgotten, its keys stay
+   * here; the identity window then opens with no identity in use, to choose
+   * one held here, or make or bring another.
+   */
+  async leave() {
+    await this.store.setActive(null);
+  }
   /** Use another identity held here. */
   async use(id) {
     if (!(await this.store.held()).includes(id)) throw new Error("This app does not hold that identity.");
@@ -8987,7 +9080,8 @@ var Dub = class {
    * JPEG pictures are shown; a long-form document is named, with a link to
    * the reader.
    */
-  async feed() {
+  async feed(fresh = false) {
+    const { notes, changed: followsChanged } = await this.refreshFollows(fresh);
     const { me, s, p, hints } = await this.ctx();
     const authors = [me.id, ...p.follows.map((f) => f.id).filter((id) => !p.muted.includes(id))].map((identity) => ({ identity, name: null }));
     const feed = await readFeed(authors, hints, s.via);
@@ -9006,10 +9100,80 @@ var Dub = class {
       items.push(this.item(fp.post, me.id, p, s, "feed", answers, toMe));
     }
     const problems = feed.authors.filter((a) => a.problem).map((a) => `${fingerprint(a.identity)}: ${a.problem}`);
-    return { items, more: feed.more, problems };
+    return { items, more: feed.more, problems, notes, followsChanged };
   }
   unread(fp, me, p) {
     return { id: fp.id, who: this.whoFrom(fp.signer, me, p), standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "feed", problem: fp.problem, seen: true };
+  }
+  // ------------------------------------------------------------ the relay view (H29)
+  /** What each relay was read up to, and its latest acts, by address (this app's memory only). */
+  relays = /* @__PURE__ */ new Map();
+  /**
+   * Every public act at this identity's relays, newest first (H29: a filter
+   * one chooses, never the default): each relay read from where it was left,
+   * its latest acts kept here in memory, newest first in the order each relay
+   * received them (its own order, not a signed time), several relays taken
+   * in turn. Posts are read and judged as the feed's are; any other public act
+   * is named by what it is. Muted identities are left out (the people cMIP,
+   * 2.2), and counted. At most `max` shown.
+   */
+  async relay(max = 30) {
+    const { me, s, p, hints } = await this.ctx();
+    const problems = [];
+    const columns = [];
+    for (const hint of s.relays) {
+      const c = this.relays.get(hint) ?? { after: void 0, acts: [] };
+      try {
+        for (let pages = 0; pages < 50; pages++) {
+          const page = await relayAt(hint, s.via).feed({ after: c.after });
+          for (const it of page.items) {
+            if (it.kind !== "act") continue;
+            try {
+              const d = describeAct(it.item);
+              if (d.public && !c.acts.some((x) => x.id === d.id)) c.acts.push({ id: d.id, act: it.item });
+            } catch {
+            }
+          }
+          if (c.acts.length > 300) c.acts.splice(0, c.acts.length - 300);
+          if (!page.items.length || page.next === c.after) break;
+          c.after = page.next;
+        }
+      } catch (e2) {
+        problems.push(`${hint}: ${message3(e2)}`);
+      }
+      this.relays.set(hint, c);
+      columns.push([...c.acts].reverse().map((x) => ({ ...x, hint })));
+    }
+    const order = [];
+    for (let i = 0; columns.some((c) => i < c.length); i++) for (const c of columns) if (c[i] && !order.some((x) => x.id === c[i].id)) order.push(c[i]);
+    let hidden = 0;
+    const picked = [];
+    for (const x of order) {
+      const d = describeAct(x.act);
+      if (p.muted.includes(d.signer ?? d.id)) {
+        hidden++;
+        continue;
+      }
+      if (picked.length < max) picked.push({ d, hint: x.hint });
+    }
+    await this.warm(picked.map((x) => x.d.signer ?? x.d.id), hints, s.via);
+    const judge = new Judge([.../* @__PURE__ */ new Set([...s.relays, ...hints])], s.via);
+    const items = [];
+    for (const { d, hint } of picked) {
+      const who2 = this.whoFrom(d.signer ?? d.id, me.id, p);
+      if (d.spec === POST_SPECS.text && d.type === TEXT_ACT && d.signer) {
+        try {
+          const shown = await readPost(d.id, [hint, ...s.relays, ...hints], s.via, judge);
+          items.push({ ...this.item(shown, me.id, p, s, "relay", [], false), what: null });
+          continue;
+        } catch (e2) {
+          items.push({ id: d.id, who: who2, standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "relay", problem: message3(e2), seen: true, what: "A post" });
+          continue;
+        }
+      }
+      items.push({ id: d.id, who: who2, standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "relay", problem: null, seen: true, what: whatAct(d) });
+    }
+    return { items, hidden, problems };
   }
   // ------------------------------------------------------------ the inbox: "to you", and the private side
   inboxPlaces(p) {
@@ -9497,12 +9661,99 @@ ${compose(why).text}` : DECLINED, thread, previous: last, acks: [last] }));
   async people(f) {
     return this.serial(async () => {
       const { me, s, p } = await this.ctx();
-      f(p, me);
-      await this.store.savePeople(me.id, p);
-      const lines2 = [];
+      const lines2 = await this.syncFollows(me, s, p, (q) => f(q, me));
       if (p.list === "published") lines2.push(...await this.publishList(me, s, p, false));
       return { lines: lines2 };
     });
+  }
+  /** When the sealed list was last read, by identity (this app's memory only). */
+  synced = /* @__PURE__ */ new Map();
+  /**
+   * The follow list sealed to the identity itself (the people cMIP, draft 2,
+   * section 3): read from its homes; this app's list replaced by it, or, the
+   * first time, this app's own list carried over into it (3.7); `change`
+   * applied to it; and, where it changed, the next version signed, sealed to
+   * the identity's own encryption key and left at its homes. Inside `serial`.
+   * Where this app holds no encryption key of the identity, the list stays
+   * in this app, said.
+   */
+  async syncFollows(me, s, p, change) {
+    const homes = me.f.homes.map((h) => h.hint);
+    const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const save = async () => {
+      this.synced.set(me.id, now());
+      await this.store.savePeople(me.id, p);
+    };
+    if (!secrets.length) {
+      change?.(p);
+      await save();
+      return [{ text: "This app holds no encryption key of this identity, so its follow list cannot be sealed to it: the list stays in this app only.", tone: "warn" }];
+    }
+    const found = await readSealedList(me.id, secrets, homes, s.via);
+    const ours = p.sealed?.version ?? 0;
+    const lines2 = [];
+    let base = p.follows;
+    if (found.act && found.version >= ours) {
+      base = found.follows.map((f) => ({ ...f }));
+      if (!p.carried) {
+        for (const f of p.follows) if (!base.some((x) => x.id === f.id)) base.push({ ...f });
+      }
+      p.sealed = { version: found.version, act: found.act, forked: found.forked };
+    }
+    if (found.forked) lines2.push({ text: "The follow list kept at this identity\u2019s homes was forked: two apps changed it at once. The longer branch is shown; follow again anyone missing.", tone: "warn" });
+    const before = JSON.stringify(found.act ? found.follows : null);
+    p.follows = base;
+    change?.(p);
+    const homesSilent = !found.act && found.problems.length >= homes.length;
+    const needed = JSON.stringify(p.follows) !== before && !(found.act === null && !p.follows.length && !p.sealed);
+    if (!needed || homesSilent) {
+      if (homesSilent && needed) lines2.push({ text: `The follow list was not sealed to the homes, which did not answer (${found.problems.join("; ")}): it is kept here and sealed at the next change.`, tone: "warn" });
+      if (found.act || !p.follows.length) p.carried = true;
+      await save();
+      return lines2;
+    }
+    await this.current(me);
+    const look = await lookUp(me.id, homes, s.via);
+    const held = me.f.encryption.find((e2) => look.encryptionKey && hex(xwingPublic(unhex(e2.secret))) === hex(look.encryptionKey));
+    if (!held || !look.encryptionKey) {
+      await save();
+      return [...lines2, { text: "The encryption key this identity publishes is not one this app holds: the follow list stays in this app, not sealed.", tone: "warn" }];
+    }
+    const version = Math.max(found.version, ours) + 1;
+    const previous = found.act && found.version >= ours ? found.act : p.sealed?.act ?? null;
+    const made = await this.signed(me, async () => me.sign(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version, previous, follows: p.follows }), { public: false, to: [me.id] }));
+    const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
+    let left = 0;
+    for (const h of homes) {
+      try {
+        await relayAt(h, s.via).putSealed(sealed);
+        left++;
+        await relayAt(h, s.via).putAct(made.act);
+      } catch {
+      }
+    }
+    p.sealed = { version, act: made.id };
+    p.carried = true;
+    await save();
+    lines2.push(
+      left ? { text: `The follow list, with the names you gave, is sealed to this identity and kept at its homes (version ${version}): any app holding this identity reads it; nobody else can.`, tone: "ok" } : { text: "No home took the sealed follow list: it is kept here, and sealed again at the next change.", tone: "warn" }
+    );
+    return lines2;
+  }
+  /** Read the sealed follow list again, outside a change (for the feed): at most once a minute, or now when `fresh` (Look again). */
+  async refreshFollows(fresh) {
+    const active = await this.store.active();
+    if (!active || !fresh && (this.synced.get(active) ?? 0) + 60 > now()) return { notes: [], changed: false };
+    try {
+      return await this.serial(async () => {
+        const { me, s, p } = await this.ctx();
+        const was = JSON.stringify(p.follows);
+        const notes = (await this.syncFollows(me, s, p)).filter((l) => l.tone === "warn" || l.tone === "ok").map((l) => l.text);
+        return { notes, changed: JSON.stringify(p.follows) !== was };
+      });
+    } catch (e2) {
+      return { notes: [`The follow list kept at this identity\u2019s homes could not be read: ${message3(e2)}`], changed: false };
+    }
   }
   /** Follow an identity, by its ID or the signer of an act shown; a name for it, if given, stays in this app. */
   follow(a) {
@@ -9602,6 +9853,29 @@ ${compose(why).text}` : DECLINED, thread, previous: last, acks: [last] }));
     });
   }
 };
+function whatAct(d) {
+  if (d.spec === SPECS.identity) {
+    if (d.type === IDENTITY_TYPES.genesis) return "A new identity (its genesis)";
+    if (d.type === IDENTITY_TYPES.rotation) return "A change of keys (a rotation)";
+    if (d.type === IDENTITY_TYPES.routes) return "Where its acts and inbox are (its routes)";
+    if (d.type === IDENTITY_TYPES.witness) return "A witness act: it relies on another act";
+    if (d.type === NAME) return "A display name";
+    if (d.type === NAME_WITHDRAWAL) return "A display name withdrawn";
+    return "An Identity act";
+  }
+  if (d.spec === SPECS.envelopes) {
+    if (d.type === PUBLICATION) return "A publication (a picture or a file)";
+    if (d.type === WITHDRAWAL) return "A publication withdrawn";
+    if (d.type === 4) return "Its encryption key";
+    return "An Envelopes act";
+  }
+  if (d.spec === POST_SPECS.text) return "A text act";
+  if (d.spec === MIRS.agreements) return "An Agreements act (an agreement, a signature, or talk about one)";
+  if (d.spec === MIRS.money) return "A Money act";
+  if (d.spec === MIRS.development) return "A Development act";
+  if (d.spec === PEOPLE_SPEC || d.spec === PEOPLE_SPEC_1) return d.type === FOLLOW_LIST ? "A published follow list" : "A people act";
+  return "An act of another specification";
+}
 function titleOf(text2) {
   const first = text2.split("\n").find((l) => l.trim()) ?? "";
   return first.replace(/^#+\s*/, "").trim().slice(0, 120) || "A document";
@@ -9632,6 +9906,11 @@ async function run(dub2, op, a, p) {
     case "use":
       await dub2.use(text(a.id));
       return {};
+    case "leave":
+      await dub2.leave();
+      return {};
+    case "relay":
+      return dub2.relay();
     case "forget":
       await dub2.forget(text(a.id));
       return {};
@@ -9651,7 +9930,7 @@ async function run(dub2, op, a, p) {
       });
     }
     case "feed":
-      return dub2.feed();
+      return dub2.feed(a.fresh === true);
     case "inbox":
       return dub2.inbox();
     case "message":
@@ -9705,6 +9984,9 @@ var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><stro
 <li>This browser's storage, where the identity's signing key is kept, can be lost, or read by what runs in this page.</li></ol>
 <p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div>`;
 var KEPT_SAY = "Its signing key and its encryption key are kept in this browser\u2019s storage (IndexedDB), as they are, not locked: the only lock this page could put on them is one it could open by itself, and so could whatever else runs in this page. Its signing key\u2019s words are the way out: write them down.";
+function fold(key, summary, body, open) {
+  return `<details class="fold" data-fold="${e(key)}"${open ? " open" : ""}><summary>${e(summary)}</summary>${body}</details>`;
+}
 var note = (kind, html) => `<div class="note ${kind}">${html}</div>`;
 var lines = (ls) => `<ul>${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>`;
 function who(w) {
@@ -9723,7 +10005,7 @@ var via = `<details><summary>Another way to reach an address (rarely needed)</su
 <label>One per line, as address=where (for example an onion home at its local port)</label><textarea name="via"></textarea></details>`;
 function identityWindow(s, web = false, suggested2 = {}) {
   const i = s.identity;
-  const others = s.held.filter((h) => !h.active);
+  const held = s.held;
   const lns = (xs) => e((xs ?? []).join("\n"));
   const make = `<section class="card"><h3>Make a new identity</h3>
 <p class="small">Dub makes it here and shows you 24 words, once: the chain key\u2019s words, to write on paper. Dub keeps nothing of the chain key. Its signing key stays in ${web ? "this browser" : "this app"}.</p>
@@ -9743,13 +10025,13 @@ ${web ? "" : via}
 ${web ? "" : via}
 <p class="small">Never type the chain key\u2019s words here: they belong to MOR Safety, on a device that stays offline.${web ? ` ${e(KEPT_SAY)}` : ""}</p>
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
-  const doors = i ? `<details id="doors"><summary>Another identity: make one, or bring one</summary>${make}${bring}</details>` : `${make}${bring}`;
+  const doors = i ? "" : held.length ? `${fold("make", "Make a new identity", make.replace(/^<section class="card"><h3>Make a new identity<\/h3>/, '<section class="card">'), false)}${fold("bring", "Bring an identity you have", bring.replace(/^<section class="card"><h3>Bring an identity you have<\/h3>/, '<section class="card">'), false)}` : `${make}${bring}`;
   const browsers = web ? "" : `<details><summary>Browsers paired with this app</summary><div class="row"><button data-action="code">A code for another browser on this machine</button><button class="quiet" data-action="unpair">Unpair this browser</button></div><div id="code"></div></details>`;
   return `${top(web, !!i)}
 <div id="status"></div>
 <h2>Identity</h2>
-${i ? current(s) : '<p class="small">Dub opens once an identity is here.</p>'}
-${others.length ? `<div class="held"><span class="label">Also here</span><ul>${others.map((h) => `<li>${who(h.who)}<button data-action="use" data-id="${e(h.id)}">Use this one</button></li>`).join("")}</ul></div>` : ""}
+${i ? current(s) : held.length ? '<p class="small">No identity in use. Choose one held here, or make or bring another.</p>' : '<p class="small">Dub opens once an identity is here.</p>'}
+${!i && held.length ? `<div class="held" id="held"><span class="label">Your identities here</span><ul>${held.map((h) => `<li>${who(h.who)}<button data-action="use" data-id="${e(h.id)}">Use this one</button></li>`).join("")}</ul></div>` : ""}
 ${doors}
 ${browsers}`;
 }
@@ -9764,9 +10046,10 @@ function current(s) {
 <form id="name"><label>Your display name: shown beside your fingerprint, never instead of it. Anyone can take the same name.</label>
 <div class="row"><input class="grow" name="name" maxlength="48" autocomplete="off" value="${e(name)}" placeholder="No name: your fingerprint alone"><button type="submit">Save</button></div></form>
 <div class="row"><label class="small check"><input type="checkbox" id="signing-on" ${i.signing ? "checked" : ""}> Signing: sign agreements of real collectives here. Even more experimental than Dub itself; off unless you turn it on.</label></div>
-<div class="row"><button data-action="carry">Show the signing key\u2019s words</button><button class="quiet" data-action="forget" data-id="${e(i.id)}">Forget it here</button></div>
+<div class="row"><button data-action="carry">Show the signing key\u2019s words</button><button data-action="leave">Switch identity</button><button class="quiet" data-action="forget" data-id="${e(i.id)}">Forget it here</button></div>
+<p class="small">Switch identity: Dub leaves this one first (its keys stay here), then opens this window to choose another, or make or bring one.</p>
 <div id="carry"></div>
-<details><summary>This app\u2019s line, and where it lives</summary>
+<details data-fold="line"><summary>This app\u2019s line, and where it lives</summary>
 <dl class="facts"><dt>Made</dt><dd>${i.kind === "made" ? "Here. Its chain key was shown once as words, and is kept nowhere here." : "Elsewhere, brought here by its signing key\u2019s words. Its chain key is not here."}</dd>
 ${i.oldChainKey ? "<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app\u2019s folder, unused. MOR Safety will take it from there.</dd>" : ""}
 <dt>Private messages</dt><dd>${i.encryption ? "Its encryption key is here: its private messages open here." : "No encryption key here: its private messages cannot be opened here."}</dd>
@@ -9814,7 +10097,7 @@ ${testNotice(web)}
 <div class="to"><input name="to" autocomplete="off" spellcheck="false" placeholder="To an identity: its ID (a public message, left in its inbox too)"></div>
 <div class="row"><label class="quiet-file"><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"><span class="small" data-action="pick">Picture</span></label><button type="button" class="quiet" data-action="address">To\u2026</button><span class="grow small" id="picked"></span><button type="submit" class="primary">Post</button></div>
 </form>
-<div class="filters"><button class="tab on" data-filter="all">Everyone</button><button class="tab" data-filter="toyou">To you<span class="count" id="count-toyou"></span></button><span class="grow"></span><button class="quiet" data-action="feed">Look again</button></div>
+<div class="filters"><button class="tab on" data-filter="all">Everyone</button><button class="tab" data-filter="toyou">To you<span class="count" id="count-toyou"></span></button><button class="tab" data-filter="relay" title="Every public act at this identity\u2019s relays, newest first">Relay</button><span class="grow"></span><button class="quiet" data-action="feed">Look again</button></div>
 ${people(s)}
 <div id="feed"><p class="empty">Reading the feed\u2026</p></div>
 </section>
@@ -9844,9 +10127,10 @@ function proposal(p) {
 ${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines(x.lines)}`).join("")}
 ${r.plain.map((x) => `<h4>${e(x.heading)}</h4><p class="small">As plain text, character for character; any invisible control is shown as &lt;U+\u2026&gt;.</p><div class="plain">${e(x.text)}</div>`).join("")}
 ${r.blocking.length ? note("error", `<strong>It cannot be signed here:</strong>${lines(r.blocking.map((text2) => ({ text: text2 })))}`) : ""}`;
-  const share2 = p.share === "none" ? "" : p.share === "waiting" ? `<p class="small">Your share of the collective\u2019s chain key will arrive once every member has signed and the founder\u2019s Edubba deals the key. Its one-time key waits in this app until then.</p><div class="row"><button class="quiet" data-action="sharehand" data-thread="${e(p.thread)}">I received my share by hand</button></div>` : p.share === "ready" ? `<div class="row"><button class="primary" data-action="share" data-thread="${e(p.thread)}">Show my share of the chain key, once</button></div>` : p.share === "shown" ? shareTypeBack(p.thread, p.positions ?? []) : p.share === "byHand" ? '<p class="small">Your share came by hand. The one-time key is destroyed.</p>' : '<p class="small">Your share is written down. The one-time key is destroyed: nothing of it is here.</p>';
+  const share2 = p.share === "none" ? "" : p.share === "waiting" ? `<p class="small">Your share of the collective\u2019s chain key will arrive once every member has signed and the founder\u2019s Edubba deals the key. Its one-time key waits in this app until then. Dub looks for it by itself while this tab is open.</p><div class="row"><button class="primary" data-action="lookshare">Look for my share</button><button class="quiet" data-action="sharehand" data-thread="${e(p.thread)}">I received my share by hand</button></div>` : p.share === "ready" ? `<div class="row"><button class="primary" data-action="share" data-thread="${e(p.thread)}">Show my share of the chain key, once</button></div>` : p.share === "shown" ? shareTypeBack(p.thread, p.positions ?? []) : p.share === "byHand" ? '<p class="small">Your share came by hand. The one-time key is destroyed.</p>' : '<p class="small">Your share is written down. The one-time key is destroyed: nothing of it is here.</p>';
   const actions = p.answer ? `<p class="state">${e(STATE_OF[p.answer.verdict])}${p.answer.signature ? ` \xB7 signature act <span class="fp" title="${e(p.answer.signature)}">${e(p.answer.signature.slice(0, 8))}\u2026</span>` : ""}</p>` : r.blocking.length ? `<div class="row"><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div>` : `<div class="row"><button class="primary" data-action="accept" data-thread="${e(p.thread)}">Sign it</button><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div><p class="small">Your signature is an act of yours, public: it binds you to exactly what is read above.</p>`;
-  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${body}${actions}${share2}</div>`;
+  const read2 = p.answer ? `<details data-fold="proposal:${e(p.thread)}"><summary>What was proposed, in plain words</summary>${body}</details>` : body;
+  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${read2}${actions}${share2}</div>`;
 }
 function share(s) {
   return `<div class="proposal" id="share-shown" data-thread="${e(s.thread)}"><span class="label">The collective\u2019s chain key share</span>
@@ -9863,16 +10147,20 @@ function shareTypeBack(thread, positions) {
 function people(s) {
   const i = s.identity;
   const row = (w, actions) => `<li>${who(w)}<span class="acts">${actions}</span></li>`;
-  return `<details class="people" id="people"><summary>Following ${i.follows.length}${i.muted.length ? ` \xB7 muted ${i.muted.length}` : ""}</summary>
-<form id="follow" class="row"><input class="grow" name="id" autocomplete="off" spellcheck="false" placeholder="Follow an identity: its ID" required><input class="pet" name="name" autocomplete="off" placeholder="Your name for it (stays here)"><button type="submit">Follow</button></form>
+  return `<details class="people" id="people" data-fold="people"><summary>Following ${i.follows.length}${i.muted.length ? ` \xB7 muted ${i.muted.length}` : ""}</summary>
+<form id="follow" class="row"><input class="grow" name="id" autocomplete="off" spellcheck="false" placeholder="Follow an identity: its ID" required><input class="pet" name="name" autocomplete="off" placeholder="Your name for it (sealed)"><button type="submit">Follow</button></form>
 ${i.follows.length ? `<ul>${i.follows.map((f) => row(f, `<button data-action="call" data-id="${e(f.id)}">Name</button><button data-action="unfollow" data-id="${e(f.id)}">Unfollow</button>`)).join("")}</ul>` : '<p class="small">Nobody yet. Follow by ID, or from any post or message.</p>'}
 ${i.muted.length ? `<span class="label">Muted</span><ul>${i.muted.map((m) => row(m, `<button data-action="unmute" data-id="${e(m.id)}">Unmute</button>`)).join("")}</ul>` : ""}
 <div class="row"><label class="small check"><input type="checkbox" id="publish-list" ${i.list === "published" ? "checked" : ""}> Publish whom this identity follows</label></div>
-<p class="small">${i.list === "published" ? "Published: anyone can read the IDs it follows. The names you gave them stay here." : "Private, the default: the list stays in this app. Muting is always private."}</p>
+<p class="small">${i.list === "published" ? "Published: anyone can read the IDs it follows. The names you gave them stay sealed." : "Private, the default."} ${i.encryption ? `Whom it follows, with the names you gave, is a private act sealed to this identity and kept at its homes${i.sealed ? ` (version ${i.sealed.version})` : ""}: any app holding this identity reads it; nobody else can. Its homes and relays see only that a private act exists, and roughly how big it is; whoever holds the signing key\u2019s words reads it.` : "This app holds no encryption key of this identity, so the list stays in this app only."} Muting stays in this app, always.</p>
+${i.sealed?.forked ? '<p class="small">The list was forked: two apps changed it at once. The longer branch is shown.</p>' : ""}
 </details>`;
 }
 var bad = (standing) => /void|contest|invalid|stolen/.test(standing);
 function post2(p) {
+  if (p.what) {
+    return `<article class="post act" data-post="${e(p.id)}" data-signer="${e(p.who.id)}"><div class="row tight">${who(p.who)}${p.problem ? `<span class="flag">${e(p.problem)}</span>` : ""}</div><div class="small">${e(p.what)} \xB7 act <span class="fp" title="${e(p.id)}">${e(p.id.slice(0, 8))}\u2026</span></div>${p.who.me ? "" : `<div class="acts">${p.who.followed ? `<button data-action="unfollow" data-id="${e(p.who.id)}">Following</button>` : `<button data-action="follow" data-id="${e(p.who.id)}">Follow</button>`}<button data-action="mute" data-id="${e(p.who.id)}">Mute</button></div>`}</article>`;
+  }
   const flag = p.problem ? `<span class="flag ${bad(p.problem) ? "bad" : ""}">${e(p.problem)}</span>` : "";
   const answers = p.answers.map((a) => `<div class="re">\u21B3 answering ${a.who ? who(a.who) : '<span class="fp">an act not found</span>'}${a.snippet ? ` \xB7 <span dir="auto">${e(a.snippet)}</span>` : ""}</div>`).join("");
   const pics = p.pictures.map(
@@ -9916,10 +10204,52 @@ function mount(app3, b) {
   let state = null;
   let feed = [];
   let inbox = null;
+  let relayItems = null;
   let filter = "all";
-  let tab = "public";
+  let tab = remembered();
+  let shareAwaited = false;
   let replying = null;
   let shown = null;
+  function remembered() {
+    try {
+      const t = sessionStorage.getItem("dub:tab");
+      return t === "private" || t === "signing" ? t : "public";
+    } catch {
+      return "public";
+    }
+  }
+  function folds() {
+    try {
+      return JSON.parse(localStorage.getItem("dub:folds") ?? "{}");
+    } catch {
+      return {};
+    }
+  }
+  function applyFolds(root) {
+    const f = folds();
+    root.querySelectorAll("details[data-fold]").forEach((d) => {
+      const k = d.dataset.fold;
+      if (k in f && d.open !== f[k]) d.open = f[k];
+    });
+  }
+  new MutationObserver((ms) => {
+    for (const m of ms) for (const n of m.addedNodes) if (n instanceof HTMLElement) applyFolds(n.parentNode ?? n);
+  }).observe(app3, { childList: true, subtree: true });
+  app3.addEventListener(
+    "toggle",
+    (ev) => {
+      const d = ev.target;
+      if (!(d instanceof HTMLDetailsElement) || !d.dataset.fold) return;
+      const f = folds();
+      if (f[d.dataset.fold] === d.open) return;
+      f[d.dataset.fold] = d.open;
+      try {
+        localStorage.setItem("dub:folds", JSON.stringify(f));
+      } catch {
+      }
+    },
+    true
+  );
   function say(kind, html) {
     const s = $("status");
     if (s) s.innerHTML = html ? note(kind, html) : "";
@@ -9942,7 +10272,9 @@ function mount(app3, b) {
     const el = $(id);
     if (el) el.innerHTML = html;
   };
+  let working = false;
   async function busy(words3, f) {
+    working = true;
     say("", `<span class="small">${e(words3)}</span>`);
     const was = [...app3.querySelectorAll("button")].map((x) => [x, x.disabled]);
     app3.querySelectorAll("button").forEach((x) => x.disabled = true);
@@ -9953,6 +10285,7 @@ function mount(app3, b) {
       return void 0;
     } finally {
       for (const [x, d] of was) x.disabled = d;
+      working = false;
     }
   }
   function toYou() {
@@ -9968,9 +10301,33 @@ function mount(app3, b) {
     fill("count-private", n((inbox?.messages ?? []).filter((m) => !m.seen).length));
   }
   function drawFeed() {
+    if (filter === "relay") {
+      if (!relayItems) {
+        fill("feed", '<p class="empty">Reading every public act at this identity\u2019s relays\u2026</p>');
+        return;
+      }
+      fill(
+        "feed",
+        `<p class="small">Every public act at this identity\u2019s relays, newest first, in the order each relay received them: its own order, not a signed time. Posts of anyone, not only those you follow.</p>${relayItems.length ? relayItems.map(post2).join("") : '<p class="empty">Nothing public at its relays yet.</p>'}`
+      );
+      return;
+    }
     const items = filter === "toyou" ? toYou() : feed;
     const empty = filter === "toyou" ? "Nothing addressed to you yet: replies to your posts, and public messages to you, come here." : "Nothing yet. Write something, or follow someone.";
     fill("feed", items.length ? items.map(post2).join("") : `<p class="empty">${empty}</p>`);
+  }
+  async function readRelay() {
+    relayItems = null;
+    drawFeed();
+    try {
+      const r = await b.ask("relay");
+      relayItems = r.items;
+      if (filter !== "relay") return;
+      drawFeed();
+      $("feed").insertAdjacentHTML("beforeend", (r.hidden ? `<p class="small">${r.hidden} from muted identities, not shown.</p>` : "") + r.problems.map((p) => `<p class="small">${e(p)}</p>`).join(""));
+    } catch (err) {
+      if (filter === "relay") fill("feed", note("error", e(err instanceof Error ? err.message : String(err))));
+    }
   }
   function drawInbox() {
     if (!inbox) return;
@@ -9980,12 +10337,19 @@ function mount(app3, b) {
       (ms.length ? ms.map(msg).join("") : '<p class="empty">No private message yet.</p>') + (inbox.hidden ? `<p class="small">${inbox.hidden} from muted identities, not shown.</p>` : "") + inbox.problems.map((p) => `<p class="small">${e(p)}</p>`).join("") + (ms.length ? '<p class="small">In the order this app found or sent them: its own time, not a signed one.</p>' : "")
     );
   }
-  async function readFeed2() {
+  async function readFeed2(fresh = false) {
     try {
-      const r = await b.ask("feed");
+      const r = await b.ask("feed", { fresh });
       feed = r.items;
+      if (r.followsChanged) {
+        state = await b.ask("state");
+        const el = $("people");
+        if (el && state.identity) el.outerHTML = people(state);
+      }
+      if (filter === "relay") return;
       drawFeed();
-      if (r.problems.length) $("feed").insertAdjacentHTML("beforeend", r.problems.map((p) => `<p class="small">${e(p)}</p>`).join(""));
+      const extra = [...r.notes ?? [], ...r.problems];
+      if (extra.length) $("feed").insertAdjacentHTML("beforeend", extra.map((p) => `<p class="small">${e(p)}</p>`).join(""));
       if (r.items.length) $("feed").insertAdjacentHTML("beforeend", '<p class="small">In signed order: a reply after what it answers. MOR has no clock, so this is not a time.</p>');
     } catch (err) {
       fill("feed", note("error", e(err instanceof Error ? err.message : String(err))));
@@ -10022,6 +10386,10 @@ function mount(app3, b) {
   function setTab(t) {
     if (t === "signing" && !$("signing")) t = "public";
     tab = t;
+    try {
+      sessionStorage.setItem("dub:tab", t);
+    } catch {
+    }
     app3.querySelectorAll("[data-tab]").forEach((x) => x.classList.toggle("on", x.dataset.tab === t));
     $("public").hidden = t !== "public";
     $("private").hidden = t !== "private";
@@ -10030,9 +10398,11 @@ function mount(app3, b) {
     if (t === "private") void seen((inbox?.messages ?? []).filter((m) => !m.seen).map((m) => m.key));
   }
   function setFilter(f) {
+    const was = filter;
     filter = f;
     app3.querySelectorAll("[data-filter]").forEach((x) => x.classList.toggle("on", x.dataset.filter === f));
     drawFeed();
+    if (f === "relay" && (was !== "relay" || !relayItems)) void readRelay();
     if (f === "toyou") void seen(toYou().filter((x) => !x.seen).map((x) => x.id));
   }
   async function refresh() {
@@ -10068,6 +10438,8 @@ function mount(app3, b) {
         fill("signing-waiting", r.waiting ? note("", `${r.waiting === 1 ? "A proposal to sign waits" : `${r.waiting} proposals to sign wait`}. ${e(r.say)}`) : "");
         return;
       }
+      shareAwaited = r.proposals.some((p) => p.share === "waiting" || p.share === "ready");
+      if (app3.querySelector("#share-shown") || [...app3.querySelectorAll("#signing form.share-back input")].some((i) => i.value)) return;
       fill("signing-list", r.proposals.length ? r.proposals.map(proposal).join("") : '<p class="empty">No proposal to sign. When a collective\u2019s founder asks you to sign, it comes here.</p>');
       fill("count-signing", r.waiting ? String(r.waiting) : "");
     } catch (err) {
@@ -10145,10 +10517,29 @@ function mount(app3, b) {
         if (r) {
           feed = [];
           inbox = null;
+          relayItems = null;
+          filter = "all";
           await refresh();
         }
         break;
       }
+      case "leave": {
+        const r = await busy("Leaving this identity\u2026", () => b.ask("leave"));
+        if (r) {
+          feed = [];
+          inbox = null;
+          relayItems = null;
+          filter = "all";
+          await refresh();
+          say("done", "You left that identity: its keys stay here. Choose one, or make or bring another.");
+        }
+        break;
+      }
+      case "lookshare":
+        await busy("Looking for your share\u2026", () => readSigning());
+        say("", "");
+        if (shareAwaited && !app3.querySelector('[data-action="share"]')) say("", '<span class="small">Not arrived yet: the founder\u2019s Edubba sends it once every member has signed. Dub keeps looking while this tab is open.</span>');
+        break;
       case "forget":
         if (!confirm("Forget this identity here? Its keys go with it. Only its signing key\u2019s words, written down, bring it back. Its posts stay published.")) break;
         if (await busy("Forgetting\u2026", () => b.ask("forget", { id: d.id }))) {
@@ -10247,7 +10638,8 @@ function mount(app3, b) {
       }
       case "feed":
         say("", "");
-        await Promise.all([readFeed2(), readInbox()]);
+        if (filter === "relay") void readRelay();
+        await Promise.all([readFeed2(true), readInbox()]);
         await readSigning();
         break;
       case "accept": {
@@ -10419,6 +10811,9 @@ function mount(app3, b) {
       }
     }
   });
+  setInterval(() => {
+    if (tab === "signing" && shareAwaited && state?.stage === "ready" && !document.hidden && !working) void readSigning();
+  }, 15e3);
   return { show };
 }
 
