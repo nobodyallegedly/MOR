@@ -47,12 +47,13 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; hom
 
 1. Kišib (resumed after pull request 73): the rotation and emergency app (F332 amended, F335, F337), with the Edubba pieces that take new words; an icon of the family (a cylinder seal). Then human test 9 (rotation) and the end of human test 10 (the member change). A server session for Dub's web release of pull request 73.
 2. Damgar, a money app (F338): gathers proposed money acts and offers them for signing, with the accepted cMIPs and Modules chosen by the person; no wallet inside; round 1 on regtest on the author's Mac (payments and receipts, prepared in Dub or Edubba and signed in Damgar; Bitcoin anchoring as an option for releases and collectives' acts, asked in Edubba, paid in Damgar); round 2, the split service, defined in the Collectives tab.
-3. An Edubba session for agents: reading and verifying any public act (H21); memory, the exchange handed on and notes sealed to itself on MOR (H22); a pasted Terminal path and a folder picker (H19).
-4. The site session (structure and look; H1, H2, H7; the reader showing display names, H17). Nearer release: the KI tab icon's fit and the tablet in the footer (H13).
-5. The remaining human tests on the cleaned apps.
-6. The freeze-ready drafts, including: Agreements' count aligned with every MIR's format (F295, found under F334); MICS and suite naming Text 9. And **published conformance vectors for every layer** (asked by Nobody, allegedly, 16 October: the first useful test of a frozen MOR is someone rebuilding a verifier from the texts alone, in another language): today `core/vectors/` has part 1 only (tagged hash, CBOR, canonical text, lock, running summary, the three-act sequence, opening acts, the sealed container), checked by an independent Python implementation; missing are signatures (part 2) and verdict vectors (these exact acts give valid, invalid or unknown) for Identity (rotations, contests, receipts, succession), Text, Money, Agreements and Development.
-7. An independent verifier in C, written only from the texts and the vectors, passing every vector (F336: "it will show proof of work").
-8. The step 17 rehearsal, then the freeze.
+3. The developers' app (F339; Ummia proposed): publish specifications, the listing, tracking extensions, releases and their anchoring (moved out of Edubba), reports; acting as oneself or as a collective one belongs to.
+4. An Edubba session for agents: reading and verifying any public act (H21); memory, the exchange handed on and notes sealed to itself on MOR (H22); a pasted Terminal path and a folder picker (H19).
+5. The site session (structure and look; H1, H2, H7; the reader showing display names, H17). Nearer release: the KI tab icon's fit and the tablet in the footer (H13).
+6. The remaining human tests on the cleaned apps.
+7. The freeze-ready drafts, including: Agreements' count aligned with every MIR's format (F295, found under F334); MICS and suite naming Text 9. And **published conformance vectors for every layer** (asked by Nobody, allegedly, 16 October: the first useful test of a frozen MOR is someone rebuilding a verifier from the texts alone, in another language): today `core/vectors/` has part 1 only (tagged hash, CBOR, canonical text, lock, running summary, the three-act sequence, opening acts, the sealed container), checked by an independent Python implementation; missing are signatures (part 2) and verdict vectors (these exact acts give valid, invalid or unknown) for Identity (rotations, contests, receipts, succession), Text, Money, Agreements and Development.
+8. An independent verifier in C, written only from the texts and the vectors, passing every vector (F336: "it will show proof of work").
+9. The step 17 rehearsal, then the freeze.
 
 ## Working rules for sessions
 

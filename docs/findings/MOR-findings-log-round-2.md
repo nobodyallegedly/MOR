@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F339. An app for developers: the Development layer gets its own (17 October 2026)
+
+*Area: presentation and the development layer (a client). Asked by Nobody, allegedly: "Now, do we want an app for developers? So all layers are covered?"*
+
+**The project lead:** Development is the one layer without an app of its own (releases in Edubba; publishing a specification on the command line; the listing as a page of dubsar.org; reports sent through Dub, mirrored from the command line). An app for developers would gather them: publish a specification and see its hash; browse the listing (what exists, by whom, which version); track extensions (which agreements name which cMIPs: "What really matters for MOR2 is the tracking of extensions"); releases, verified file by file; reports sent and answered. Under the working rule (layers apart, talking through MOR), releases would move out of Edubba. A name in the line: Ummia, the master of the tablet house. After Damgar.
+
+**Decided by Nobody, allegedly:** "Yes, I think moving releases and their anchoring out of Edubba makes sense. Log in the devs app, your collectives show there, decide if you act for yourself or a collective." So: releases, and their Bitcoin anchoring (F338), move from Edubba to the developers' app; one logs in with an identity, the collectives it belongs to show, and one chooses to act as oneself or as a collective (a collective's release then proposed there and signed by its members, travelling through MOR). Bitcoin anchoring of a collective's other acts stays in Edubba. *Its name:* Ummia proposed, to confirm.
+
 ## F338. Damgar, a money app that gathers money acts for signing (17 October 2026)
 
 *Area: presentation and the development layer (a client). Asked by Nobody, allegedly, after "What was developed for the Money layer?": the Money layer is built and proven in tests (the core's receipts, obligations, payee pointers, vault, releases; the payment cMIP with the Lightning and on-chain rail Modules; split, conversion, units; Bitcoin anchoring end to end on regtest) but no app makes or signs a payment. "I think it deserves demonstrability."*
