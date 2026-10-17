@@ -13,8 +13,8 @@
 // - No app holds another's key or share: every folder read whole.
 // - A release, counting once two members sign it in their own apps.
 // - A decline; a member change proposed and signed the same way; its
-//   rotation from two paper shares (the repo client standing in for Kišib);
-//   the new shares to the members' new one-time keys.
+//   rotation from two paper shares in Kišib, in the same room; Edubba takes
+//   the collective's new signing key's words, and a release signed with it counts.
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -26,9 +26,9 @@ import { receive } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
-import { encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
+import { encryptionSecret, fromWords, toWords } from '../../../modules/carry/src/carry.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
-import { sealShare } from '../../repo/src/proposals.ts';
+import { Kishib } from '../../kishib/src/kishib.ts';
 import { serve, type Running } from '../src/server.ts';
 import { serve as serveDub, DOMAIN as DUB_DOMAIN, type Running as DubRunning } from '../../dub/src/server.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
@@ -263,32 +263,53 @@ test('three people on three devices: a real collective founded, a release, a mem
   g = await e.c.ask<any>('real gather', { act: clone });
   assert.equal(g.standing.enough, true);
 
-  // The rotation, from two paper shares (Ana's and Bo's): Kišib's work; the repo client stands in.
-  const c = e.app.real.collective(col);
-  const p = g.proposal;
-  const rot = await c.rotateFromPaper({
-    agreement: clone,
-    signatures: p.signers.map((m: string) => p.answers[m].signature),
-    members: p.members,
-    governance: p.governance,
-    holder: p.holder,
-    papers: [papers[ana.id], papers[bo.id]],
-  });
-  assert.ok(await c.settle());
-  writeFileSync(join(e.dir, 'real', 'collectives', `${col}.json`), JSON.stringify(c.f, null, 2));
-  // The new shares, each to the one-time key its member sent with its acceptance of the clone.
-  const founder = e.app.store.identity(nobody);
+  // Edubba says it waits for Kišib, and where the collective's new words will go.
+  const waiting = (await e.c.ask<any>('state')).proposals.find((x: any) => x.act === clone);
+  assert.equal(waiting.rotated, undefined);
+  // The rotation, from two paper shares (Ana's and Bo's), in Kišib: in the same room, the papers typed one after another
+  // (the founder here was made by Edubba, so its words carry no encryption key to open the answers remotely; Kišib's own tests run the remote way).
+  const k = new Kishib();
+  const kr = await k.collectiveStart({ collective: col, address: homes[0].base, room: true, number: String(papers[ana.id].x), shareWords: toWords(papers[ana.id].value).join(' ') });
+  assert.deepEqual(kr.blocking, []);
+  await k.confirm({ plan: kr.plan, digest: kr.digest });
+  await k.collectivePaper({ number: String(papers[bo.id].x), words: toWords(papers[bo.id].value).join(' ') });
+  let ks = await k.collectiveRotate();
+  for (let i = 0; (ks.sitting!.stage as string) === 'sent' && i < 3; i++) ks = await k.resend();
+  assert.equal(ks.sitting!.stage, 'counts', JSON.stringify(ks.sitting!.lines));
+  const rot = { shares: ks.sitting!.shares! };
   for (const s of rot.shares) {
-    if (s.holder === nobody) continue;
-    await sealShare(founder, s.share, Uint8Array.from(Buffer.from(p.answers[s.holder].oneTime, 'base64')), [relay.base]);
+    k.collectiveShare({ holder: s.holder });
+    k.collectiveShareWritten({ holder: s.holder });
   }
-  e.app.store.saveIdentity(founder);
+  const cw = k.showWords();
+  assert.equal(cw.holder, nobody);
+  const kt = k.written();
+  k.typed({ typed: kt.sitting!.positions!.map((n) => cw.words[n - 1]) });
+  // Edubba takes the collective's new words: wrong ones refused; then its copy follows the change.
+  await refused(e.c.ask('real collective renew', { collective: col, words: toWords(papers[ana.id].value).join(' ') }), /do not give this identity’s current signing key/);
+  const renewed = await e.c.ask<Done>('real collective renew', { collective: col, words: cw.words.join(' ') });
+  assert.equal(renewed.title, 'The member change is in force');
+  const inForce = (await e.c.ask<any>('state')).proposals.find((x: any) => x.act === clone);
+  assert.equal(inForce.rotated, ks.sitting!.act);
+  const rc = await e.c.ask<any>('real collective', { collective: col });
+  assert.deepEqual(rc.members, [nobody, ana.id, cy.id]);
+  assert.equal(rc.agreement, clone);
+  // The new shares were shown on Kišib's screen, hand to hand: the members' one-time keys are destroyed unused.
   for (const m of [ana, cy]) {
     const q = (await m.c.ask<any>('proposals')).proposals.find((x: any) => x.act === clone);
-    assert.equal(q.share, 'ready');
-    const s = await receiveShare(m.c, q.thread);
-    assert.equal(s.x, rot.shares.findIndex((x) => x.holder === m.id) + 1);
+    await m.c.ask('sharehand', { thread: q.thread });
   }
+  // A release signed with the collective's new key, by members of the new list, counts.
+  const folder2 = join(mkdtempSync(join(tmpdir(), 'real-release-')), 'tablets');
+  mkdirSync(folder2);
+  writeFileSync(join(folder2, 'clay.txt'), 'a second tablet\n');
+  const rr2 = await e.c.ask<any>('real release prepare', { collective: col, folder: folder2, name: 'tablets', version: '2' });
+  const rel2 = (await e.c.ask<Done>('real confirm', { plan: rr2.plan, digest: rr2.digest })).acts[0];
+  const cr = (await cy.c.ask<any>('proposals')).proposals.find((p: any) => p.act === rel2);
+  await cy.c.ask('accept', { thread: cr.thread });
+  const st2 = await e.c.ask<any>('real release standing', { act: rel2 });
+  assert.ok(st2.ok, JSON.stringify(st2.problems));
+  assert.deepEqual(st2.signers.sort(), [nobody, cy.id].sort());
   // Bo, leaving, gets no new share: its one-time key waits, and it may destroy it.
   const bq = (await bo.c.ask<any>('proposals')).proposals.find((x: any) => x.act === clone);
   assert.equal(bq.share, 'waiting');

@@ -733,6 +733,7 @@ export class CollectiveSitting {
     if (this.founder) this.founder.f.signingSecret = '';
     this.founder = null;
     lines.push({ text: `The new dealing’s fingerprint, for every member to compare: ${grouped(dealt.fingerprint.slice(0, 32))}.` });
+    lines.push({ text: 'Keep Kišib open until the new shares and the collective’s new words are shown. Closed now, what is not yet shown is lost (the shares sealed to members’ Dubs are safe): the collective must then be rotated again, from enough of the new papers that reached their members.', tone: 'warn' });
     this.lines = lines;
     this.stage = 'sent';
     await this.refresh();

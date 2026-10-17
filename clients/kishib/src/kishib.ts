@@ -352,6 +352,7 @@ export class Kishib {
         }
       }
     }
+    lines.push({ text: 'Keep Kišib open until the new words are shown. Closed now, the new signing key is lost: the identity stays yours, and the next change from the same paper installs a key you hold.', tone: 'warn' });
     h.lines = lines;
     return this.refresh();
   }

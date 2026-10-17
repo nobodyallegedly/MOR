@@ -131,6 +131,18 @@ export class Collectives {
       }
       return null;
     };
+    /** The signer of a public act the hints hold, or null. */
+    const signerOf = async (act: string): Promise<string | null> => {
+      for (const h of hints) {
+        try {
+          const a = await relayAt(h, via).getAct(act);
+          if (a) return (describeAct(a) as { signer?: string }).signer ?? null;
+        } catch {
+          // away: the next
+        }
+      }
+      return null;
+    };
     type Current = { agreement: string; frozen: number[]; closed: string | null };
     let cur = null as Current | null;
     // Agreements name what they miss: the agreement its chain declares, then the parties' signature acts on it.
@@ -140,9 +152,18 @@ export class Collectives {
       } catch (e) {
         const missing = /act ([0-9a-f]{64}) is not held/.exec(err(e))?.[1];
         const terms = missing ? await termsAt(missing) : null;
-        if (!terms) throw new Error(`Agreements cannot read ${short(id)} as a collective: ${err(e)}. Nothing was kept.`);
-        for (const p of terms.t.parties) await addAll(p);
-        continue;
+        if (terms) {
+          for (const p of terms.t.parties) await addAll(p);
+          continue;
+        }
+        // Another act it names: a signature a member change's rotation declares, by a joining member
+        // whose acts were not read yet (found with Kišib's rotations). Its signer's acts are read too.
+        const signer = missing ? await signerOf(missing) : null;
+        if (signer && !added.has(signer)) {
+          await addAll(signer);
+          continue;
+        }
+        throw new Error(`Agreements cannot read ${short(id)} as a collective: ${err(e)}. Nothing was kept.`);
       }
       if (!cur) break;
       const terms = await termsAt(cur.agreement);

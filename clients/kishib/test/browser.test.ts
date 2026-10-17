@@ -384,7 +384,7 @@ test('the escape and the succession, by clicks in the web client', async () => {
 });
 
 test('the program’s page on the Mac: a collective rotation from two of three paper shares, F337’s screen read first; a member gives their share in the web client', async () => {
-  const { H, f, fWords, ana, cy, col, clone, papers } = await founded(homes, relay);
+  const { H, e, f, fWords, ana, cy, col, clone, papers } = await founded(homes, relay);
   const aWords = (await ana.c.ask<{ words: string[] }>('carry')).words.join(' ');
   const k = await kishib();
   const context = await browser.newContext({ viewport: { width: 760, height: 900 } });
@@ -449,6 +449,25 @@ test('the program’s page on the Mac: a collective rotation from two of three p
   await button(page, 'Done: back to the start');
   await shot(page, '41-collective-done');
   for (const m of [ana, cy]) await receiveShare(m.c, clone);
+
+  // Edubba, by clicks: the change waits for Kišib, with the box for the collective's new words; given them, it is in force.
+  const ep = await context.newPage();
+  ep.on('pageerror', (x) => problems.push(x.message));
+  await ep.goto(`${e.app.base}/#pair=${e.app.access.newCode()}`);
+  await ep.click('[data-action=tab][data-tab=collectives]');
+  await ep.click(`.entry[data-id="${col}"]`);
+  const box = ep.locator('form#real-renew');
+  await box.waitFor({ timeout: 60_000 });
+  assert.match(await ep.locator('.proposal-status').last().innerText(), /Open Kišib and choose “Rotate a collective”/);
+  await shot(ep, '42-edubba-waits-for-kishib');
+  await box.locator('textarea[name=words]').fill(cw.join(' '));
+  await box.locator('button[type=submit]').click();
+  await ep.locator('#e-status .note.done', { hasText: 'The member change is in force' }).waitFor({ timeout: 60_000 });
+  await ep.locator('.proposal-status', { hasText: 'In force: Kišib’s rotation' }).waitFor({ timeout: 60_000 });
+  await shot(ep, '43-edubba-in-force');
+  // Edubba reads the collective under the change in force: the joining member's signature, declared by the rotation, is read too.
+  await ep.locator('#e-perms', { hasText: 'is a party of it' }).waitFor({ timeout: 60_000 });
+  assert.doesNotMatch(await ep.locator('#e-perms').innerText(), /cannot read/);
   // The program's folder holds no word.
   const folder = everything(k.dir);
   for (const ws of [papers[f.id].words, fWords.split(' '), cw]) for (const x of forms(ws, fromWords(ws))) assert.ok(!folder.includes(x));

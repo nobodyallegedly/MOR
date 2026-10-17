@@ -622,9 +622,10 @@ export function record(r: IdentityRecord): string {
       : '';
   return `<p class="small">As its homes and relays show it now. Nothing here is signed.</p>
 ${r.problems.map((p) => note('warn', e(p))).join('')}
+${r.spent ? `<form id="identity-renew" data-identity="${e(r.id)}" class="card">${note('error', e(RENEW_SAY))}<label>The new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Take the new words</button></div></form>` : ''}
 ${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines(x.lines)}`).join('')}
 <h4>Its lines of acts (${r.lines.length})</h4>
-<p class="small">A change of its signing key (in MOR Safety, with the chain key) must keep every line, or that line’s acts become void (Identity rule 35). Where MOR Safety cannot read a line, give it the latest act, position and summary shown here.</p>
+<p class="small">A change of its signing key (in Kišib, with the chain key) must keep every line, or that line’s acts become void (Identity rule 35). Where Kišib cannot read a line, give it the latest act, position and summary shown here.</p>
 ${r.lines.map((l) => `<div class="item" data-line="${e(l.card?.act ?? '')}"><span class="small">${e(l.words)}</span>${card(l)}</div>`).join('') || '<p class="empty small">No line of acts found yet.</p>'}
 <div class="row"><button class="quiet" data-action="record" data-identity="${e(r.id)}">Read it again</button></div>`;
 }
@@ -913,7 +914,9 @@ export function proposalStatus(s: State, p: RealProposal): string {
         ? `<p class="small">Founded: ${fp(p.founded)}.</p>`
         : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Found it: deal the shares</button></div>`
       : p.kind === 'clone'
-        ? `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button></div>${p.standing.enough ? note('warn', e(WAIT_FOR_KISIB)) : ''}`
+        ? p.rotated
+          ? note('done', `In force: Kišib’s rotation ${fp(p.rotated)} declares it, and Edubba follows it.`)
+          : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button></div>${p.standing.enough ? `${note('warn', e(WAIT_FOR_KISIB))}${renewCollectiveForm(p.collective!)}` : ''}`
         : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button data-action="real-release-standing" data-act="${e(p.act)}">Check it as anyone would</button></div>`;
   return `<section class="card proposal-status" data-proposal="${e(p.act)}"><h3>${what} <span class="small">act ${fp(p.act)}</span></h3>
 <p class="small">${p.standing.signed.length} of ${p.signers.length} signed; ${p.kind === 'release' ? `it counts with ${p.needed}` : 'every one must sign'}.</p>
@@ -921,9 +924,22 @@ export function proposalStatus(s: State, p: RealProposal): string {
 ${next}<div class="here" data-here-proposal="${e(p.act)}" role="status" aria-live="polite"></div></section>`;
 }
 
+/** Said under a member change waiting for Kišib (`src/kishib.ts`, COLLECTIVE_RENEW_SAY), word for word. */
+export const COLLECTIVE_RENEW_SAY =
+  'When Kišib’s rotation counts, it shows the collective’s new signing key’s words once, for the member who holds that key (here). Give them below: Edubba then follows the change, and signs for the collective with the new key.';
+
+/** Said where Edubba's signing key for an identity no longer counts (`src/kishib.ts`, RENEW_SAY), word for word. */
+export const RENEW_SAY =
+  'Its signing key was changed elsewhere (in Kišib, with the chain key’s words). Edubba signs nothing more with the old one. Give the new signing key’s words, as Kišib showed them once, to go on here.';
+
+/** The box for a collective's new signing key's words, after Kišib. */
+function renewCollectiveForm(collective: string): string {
+  return `<form id="real-renew" data-collective="${e(collective)}"><p class="small">${e(COLLECTIVE_RENEW_SAY)}</p><label>The collective’s new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit">Take the new words</button></div></form>`;
+}
+
 /** Said where a member change waits for its rotation (`src/real.ts`, WAIT_FOR_KISIB). */
 export const WAIT_FOR_KISIB =
-  'Every signature is in. The rotation that declares this change needs the chain key, rebuilt from enough members’ paper shares: that is Kišib’s work, not Edubba’s, and Kišib is not built yet. Until then the change waits, signed and not in force.';
+  'Every signature is in. The rotation that declares this change needs the chain key, rebuilt from enough members’ paper shares: that is Kišib’s work, not Edubba’s. Open Kišib and choose “Rotate a collective”: the member who proposed the change starts it there, and the other members give their shares in their own Kišib. Until it counts, the change waits, signed and not in force.';
 
 /** A founding in progress, selected in the list. */
 export function realProposalDetails(s: State, p: RealProposal): string {
@@ -965,7 +981,7 @@ export function realDetails(s: State, id: string, c: RealCollective): string {
   return `<div class="head"><h2>${e(col.name)}</h2><span class="id">${grouped(id)}</span>${copyButton(id)}<span class="tag">real</span></div>
 <div class="row"><button data-action="constitution">Its constitution, in plain words</button></div>
 ${foldCard('e-real-members', 'collective-members', `Its members (${c.members.length})`, `<ul class="plain">${c.members.map((m) => `<li>${person(s, m)}${m === c.holder ? ' <span class="small">holds its signing key, here</span>' : ''}</li>`).join('')}</ul>
-<p class="small">Its chain key: one share per member, kept on paper, any ${c.threshold} rebuilding it. Dealing fingerprint <code>${e(c.fingerprint.match(/.{1,4}/g)!.slice(0, 8).join(' '))}</code>. No app holds a share.</p>
+<p class="small">Its chain key: one share per member, kept on paper, any ${c.threshold} rebuilding it. ${c.fingerprint ? `Dealing fingerprint <code>${e(c.fingerprint.match(/.{1,4}/g)!.slice(0, 8).join(' '))}</code>.` : 'Dealt in Kišib: its fingerprint was shown there and in each member’s Dub.'} No app holds a share.</p>
 ${c.pending ? note('warn', 'A member change was rotated and waits for its homes to count it.') : ''}`)}
 ${sharesHere(s, id, c.toShow)}<div id="e-shares-here"></div>
 <div id="e-perms"><p class="small">Reading its agreement in force…</p></div>
