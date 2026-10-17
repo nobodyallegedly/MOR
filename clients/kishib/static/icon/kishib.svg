@@ -1,30 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Kišib (𒆤, "the cylinder seal"): a stone cylinder seal standing beside the strip of clay it was rolled across, its carving left there in relief. On the visual bible's dark, low saturation, no glow. The Identity layer's glacier blue (#8ec5f0) as a quiet touch only (H36): the rim, #2f4150 (30% of it over the dark, as Kišib's outlines), and a thin edge on the seal's top, #8caac3 (half of it with a neutral grey) at 0.8. -->
-  <rect x="100" y="100" width="824" height="824" rx="184" fill="#06080c"/>
-  <rect x="100.5" y="100.5" width="823" height="823" rx="183.5" fill="none" stroke="#2f4150" stroke-width="3"/>
+  <!-- Kišib (Sumerian KIŠIB, "the cylinder seal"): a stone cylinder seal standing beside the strip of clay it was rolled across, its carving left there in relief, in the family's clay and stone. Tinted with the Identity layer's glacier blue (#8ec5f0; H36, "colors are too subtle, thicker line, and subtle tints on the fills"): a thick edge, #658cac (70% of the layer colour over the dark); the dark #0e131a, the stone #758a9e and #8ca1b5, the clay #8a7563 (each its own colour moved 6%, 25%, 25% and 12% toward the layer colour); a line on the seal's top in the layer colour itself. No cuneiform sign yet: the sign is carved only once checked (H36). No glow. -->
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="#0e131a"/>
+  <rect x="108" y="108" width="808" height="808" rx="176" fill="none" stroke="#658cac" stroke-width="16"/>
   <!-- The seal: a stone cylinder, its top seen as an ellipse with the bore for its cord. -->
-  <path d="M248 300 V720 A86 26 0 0 0 420 720 V300 Z" fill="#6c7683"/>
-  <ellipse cx="334" cy="300" rx="86" ry="26" fill="#8b95a1"/>
-  <ellipse cx="334" cy="300" rx="16" ry="6" fill="#3a414b"/>
-  <ellipse cx="334" cy="300" rx="84" ry="24" fill="none" stroke="#8caac3" stroke-width="4" opacity=".8"/>
+  <path d="M248 300 V720 A86 26 0 0 0 420 720 V300 Z" fill="#758a9e"/>
+  <ellipse cx="334" cy="300" rx="86" ry="26" fill="#8ca1b5"/>
+  <ellipse cx="334" cy="300" rx="16" ry="6" fill="#3a4654"/>
+  <ellipse cx="334" cy="300" rx="83" ry="23" fill="none" stroke="#8ec5f0" stroke-width="6"/>
   <!-- Its carving: a wedge, a standing line, a star, as on the clay, mirrored. -->
-  <g stroke="#454d58" stroke-width="10" stroke-linecap="round" fill="none">
+  <g stroke="#475564" stroke-width="10" stroke-linecap="round" fill="none">
     <path d="M276 382 H392"/>
-    <path d="M300 430 l40 20 l-40 20 z" fill="#454d58" stroke="none"/>
+    <path d="M300 430 l40 20 l-40 20 z" fill="#475564" stroke="none"/>
     <path d="M370 424 V496"/>
     <path d="M334 548 v52 M308 574 h52 M316 556 l36 36 M352 556 l-36 36"/>
     <path d="M276 650 H392"/>
   </g>
   <!-- The strip of clay it leaves: the same marks, twice over, as the seal rolls. -->
-  <rect x="490" y="246" width="282" height="532" rx="40" fill="#8a6a50"/>
-  <rect x="490" y="246" width="282" height="532" rx="40" fill="none" stroke="#a4846a" stroke-width="6" opacity=".55"/>
-  <g stroke="#5e4634" stroke-width="10" stroke-linecap="round" fill="none">
+  <rect x="490" y="246" width="282" height="532" rx="40" fill="#8a7563"/>
+  <rect x="490" y="246" width="282" height="532" rx="40" fill="none" stroke="#a48e7a" stroke-width="6" opacity=".55"/>
+  <g stroke="#5e4c3e" stroke-width="10" stroke-linecap="round" fill="none">
     <path d="M532 300 H730"/>
-    <path d="M598 336 l-40 20 l40 20 z" fill="#5e4634" stroke="none"/>
-    <path d="M556 330 V402" transform="translate(130 0)"/>
+    <path d="M598 336 l-40 20 l40 20 z" fill="#5e4c3e" stroke="none"/>
+    <path d="M686 330 V402"/>
     <path d="M631 430 v52 M605 456 h52 M613 438 l36 36 M649 438 l-36 36"/>
     <path d="M532 510 H730"/>
-    <path d="M598 546 l-40 20 l40 20 z" fill="#5e4634" stroke="none"/>
+    <path d="M598 546 l-40 20 l40 20 z" fill="#5e4c3e" stroke="none"/>
     <path d="M686 540 V612"/>
     <path d="M631 640 v52 M605 666 h52 M613 648 l36 36 M649 648 l-36 36"/>
     <path d="M532 724 H730"/>

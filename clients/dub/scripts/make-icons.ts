@@ -39,12 +39,15 @@ function chromium_(): string {
  * bottom, found by the Kišib session.)
  */
 /** The drawing full bleed: its dark square scaled past the edges, on the same dark, for a phone's home screen. */
-async function renderTouch(page: Page, svg: string, size: number): Promise<Buffer> {
-  // The drawing's square is 824 of 1024 units, centred: scaled a little past the page, so its rim falls outside.
+async function renderTouch(page: Page, drawing: string, size: number): Promise<Buffer> {
+  // The frame (the rounded square's edge) is left out, and the page takes the square's own fill: edge to edge, the phone rounds it.
+  const fill = /<rect x="100" y="100" width="824" height="824" rx="184" fill="(#[0-9a-f]{6})"\/>/.exec(drawing)?.[1] ?? '#06080c';
+  const svg = drawing.replace(/<rect [^>]*rx="1[78]\d(?:\.5)?" fill="none" stroke="[^"]+" stroke-width="\d+"\/>/, '');
+  // The drawing's square is 824 of 1024 units, centred: scaled a little past the page, so its rounded corners fall outside.
   const scaled = Math.ceil((size * 1024) / 800);
   const offset = -Math.round((scaled - size) / 2);
   await page.setViewportSize({ width: size, height: size });
-  await page.setContent(`<html><body style="margin:0;background:#06080c;overflow:hidden"><img src="data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}" width="${scaled}" height="${scaled}" style="display:block;position:absolute;left:${offset}px;top:${offset}px"></body></html>`);
+  await page.setContent(`<html><body style="margin:0;background:${fill};overflow:hidden"><img src="data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}" width="${scaled}" height="${scaled}" style="display:block;position:absolute;left:${offset}px;top:${offset}px"></body></html>`);
   await page.locator('img').evaluate((i) => (i as HTMLImageElement).decode());
   return page.screenshot({ clip: { x: 0, y: 0, width: size, height: size } });
 }

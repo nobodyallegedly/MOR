@@ -81,11 +81,25 @@ In `clients/kishib/README.md`, readings 1 to 13, and its "Costs, stated". The ma
 
 Dub (pearl), Edubba (emerald), Damgar (gold) and Ummia (coral) take theirs the same way from their own layer colour; the visual bible's hex values for those are not in the repository, so they are not computed here. In code: `clients/kishib/src/page/view.ts`, `TINT`, laid over Dub's style; the release test checks the values against the rule.
 
-**The icon's touch**, kept in the family's clay (`#8a6a50`) and stone (`#6c7683`, `#8b95a1`):
-- the icon's rim, in the tinted outline colour: `#2f4150`, 30% of the layer colour over the dark;
-- a thin edge on the seal's top, 4 units of 1024: `#8caac3` at opacity 0.8. That value is the layer colour mixed half and half with a neutral grey, `#8a9096`, which lowers its saturation.
+**The icon, tinted more strongly** (the author, H36: "Colors are too subtle, thicker line, and subtle tints on the fills"). Each value is a colour moved toward the layer colour by a share, channel by channel. The same rule gives Dub (pearl) and Edubba (emerald) theirs later.
 
-For Dub and Edubba later: their rim at 30% of their layer colour over `#06080c`, and one thin line in their layer colour mixed half with `#8a9096`, at 0.8.
+| Part | Rule | Kišib |
+| --- | --- | --- |
+| The thick edge, 16 units of 1024 | the layer colour at 70% over the dark `#06080c` | `#658cac` |
+| The dark square | `#06080c` moved 6% toward it | `#0e131a` |
+| The stone of the seal (body, top) | `#6c7683`, `#8b95a1` moved 25% | `#758a9e`, `#8ca1b5` |
+| The clay | `#8a6a50` moved 12% | `#8a7563` |
+| A line on the seal's top, 6 units | the layer colour itself | `#8ec5f0` |
+
+The home-screen icon leaves the frame out and takes the square's fill, edge to edge; the phone rounds it.
+
+**The name in cuneiform: not carved yet.** H36's rule is that a sign is checked against the ePSD or Borger before it is carved. I could not open either: this environment's network refuses `oracc.museum.upenn.edu`, the ETCSL and Wiktionary. Search results quoting them disagree with 𒆨 as the sign:
+- **𒆨, U+121A8**, is named KISIM₅ in Unicode. The ePSD2 sign list (letter K) gives it only the reading *kisim₅*.
+- **kišib, "seal"**, is a value of the sign **MES**, 𒈩 (U+12229), in the Oracc Sign List's MES entry and in the ETCSL sign list (MES: kišib, meš₃). The Digital Corpus of Ancient West Asian Seals, a project named KIŠIB, says the same: 𒈩 is the logogram for Sumerian kišib and Akkadian kunukku.
+- **kišib₃** is a value of DUB 𒁾, and **kišib₂** of PEŠ₂.
+- **The ePSD2's headword "kišib [seal]"** is written kišib₃, kišib, ^na₄kišib, ^na₄kišib₃.
+
+So the evidence points to 𒈩 MES, not 𒆨 KISIM₅, as the single sign for kišib. Unicode encodes the sign, not its period's shape, so a Neo-Assyrian form is a matter of the font; that may be why the author's find looked right. The 𒆤 (KID) I wrote beside Kišib's name earlier was wrong too, and is removed. Carving also needs a font with Neo-Assyrian forms, and none is here. Asked of the author in the session.
 
 **The releases, rebuilt here:** putting the icons in Dub's web release meant rebuilding it, and Dub's release test requires its core library to equal the display client's. So the display client's release (`clients/site/built/`), Dub's and Kišib's are all rebuilt in this pull request, with the pinned tools of `BUILT-WITH.txt` (Linux x86-64, as the GitHub release workflows). Each `npm run test:build` passes here. GitHub's own build of the display client is compared in its run.
 

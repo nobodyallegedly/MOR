@@ -1,4 +1,4 @@
-// Kišib (𒆤, "the cylinder seal"; F335): the one place where a chain key is
+// Kišib (Sumerian KIŠIB, "the cylinder seal"; F335): the one place where a chain key is
 // used, from paper, and then forgotten. The same code runs in the program on
 // the Mac and in the web client (testing only).
 //
