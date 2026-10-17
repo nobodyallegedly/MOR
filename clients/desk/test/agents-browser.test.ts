@@ -97,6 +97,7 @@ test('its notes, read in its details and retired by a click; its diary shown now
   await unfold('#e-memory-card');
   await page.locator('#e-memory-card .item', { hasText: 'Sign every answer “M.”' }).waitFor();
   assert.match(await page.locator('#e-memory-card').innerText(), /Whoever holds the agent’s signing key’s words can read them/);
+  assert.match(await page.locator('#e-memory-card').innerText(), /every day[\s\S]*on a day it did nothing, it reflects on itself instead[\s\S]*one call to Claude a day, counted under its cap, quiet days included/);
   assert.ok(!(await page.content()).includes('I notice names'), 'the diary is shown nowhere by default');
   await shot(page, 'agents-02-notes');
   await page.click('#e-memory-card [data-action=diary-ask]');

@@ -3272,9 +3272,12 @@ var PUBLICATION = 0;
 var WITHDRAWAL = 3;
 
 // ../barebone/src/corrections.ts
-var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 1, test value until publication");
+var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 2, test value until publication");
+var LONG_FORM_CORRECTION = sha2562(`${CORRECTIONS_SPEC} long-form`);
+var isCorrectionFormat = (format) => format === CORRECTIONS_SPEC || format === LONG_FORM_CORRECTION;
+var isLongForm = (format) => format === POST_SPECS.longform || format === LONG_FORM_CORRECTION;
 function correctionOf(p) {
-  if (p.format !== CORRECTIONS_SPEC) return null;
+  if (!isCorrectionFormat(p.format)) return null;
   const r = p.refs[0];
   if (!r || r.kind !== "act" || !r.actSigner || r.actSigner !== p.signer) return null;
   return r.id;
@@ -5191,7 +5194,7 @@ function picture2(p) {
 <figcaption>JPEG, ${p.picture.shownWidth} \xD7 ${p.picture.shownHeight}, checked against its publication.</figcaption></figure>`;
 }
 function text(post) {
-  return post.format === POST_SPECS.longform ? `<div class="f-text f-lf">${renderHtml(parse(post.text))}</div>` : `<div class="f-text" dir="auto">${escapeHtml(post.text)}</div>`;
+  return isLongForm(post.format) ? `<div class="f-text f-lf">${renderHtml(parse(post.text))}</div>` : `<div class="f-text" dir="auto">${escapeHtml(post.text)}</div>`;
 }
 function note(a, picked, authors) {
   const label = picked ? ` <span class="f-label" data-picked="${picked}">Picked by ${escapeHtml(nameOf(authors, picked))}</span>` : "";

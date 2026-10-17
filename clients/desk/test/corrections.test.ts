@@ -1,10 +1,11 @@
 // Corrections (decided by Nobody, allegedly, 17 October 2026; the
-// corrections cMIP, draft 1, F344), in Edubba against real homes and a relay
+// corrections cMIP, draft 2, F344, F347), in Edubba against real homes and a relay
 // on local ports: an identity corrects its own post by a new act naming the
 // old one; the correction is labelled wherever it is shown (Edubba, the
 // feed Dub reads, Dub's page, the connector's reading) and the original
 // stays signed, "corrected by"; someone else's act is never corrected, and a
-// stranger's text in the corrections format corrects nothing.
+// stranger's text in the corrections format corrects nothing. A long-form
+// act is corrected in long form, and rendered as long form (F347).
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,7 +17,11 @@ import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { post as postAs } from '../../barebone/src/post.ts';
-import { CORRECTIONS_SPEC } from '../../barebone/src/corrections.ts';
+import { CORRECTIONS_SPEC, LONG_FORM_CORRECTION } from '../../barebone/src/corrections.ts';
+import { POST_SPECS } from '../../barebone/src/specs.ts';
+import { readPost } from '../../barebone/src/post.ts';
+import { titleOf } from '../../reader/src/read.ts';
+import { feedHtml } from '../../site/src/shell/feed-view.ts';
 import { readFeed } from '../../site/src/feed.ts';
 import { readAct } from '../../connector/src/read.ts';
 import { post as postHtml } from '../../dub/src/page/view.ts';
@@ -87,4 +92,32 @@ test('never someone else’s act; a stranger’s text in the corrections format 
   assert.equal(f.posts.find((x) => x.id === fake.id)!.corrects, undefined, 'no correction: not its signer’s act');
   const told = await readAct(fake.id, [relay.base, homes[0].base]);
   assert.equal(told.title, 'A text');
+});
+
+test('a long-form act corrected in long form (F347): in Edubba and through a collective’s way of posting; rendered as long form, labelled', async () => {
+  const hints = [relay.base, homes[0].base];
+  const doc = (await app.desk.signAndSend(NA, { spec: SPECS.text, type: 0, payload: cborEncode(new Map<number, unknown>([[0, '# Opening hours\n\nThe house opens at *nine*.'], [1, Buffer.from(POST_SPECS.longform, 'hex')]])) as Uint8Array, public: true, to: [], refs: [] })).id;
+  const d = await c.ask<Done>('identity correct', { identity: NA, act: doc, text: '# Opening hours\n\nThe house opens at *ten*.' });
+  assert.ok(d.lines.some((l) => /in long form, as the act it corrects/.test(l.text)), JSON.stringify(d.lines));
+  const lf = d.acts[0];
+  const x = describeAct((await relayAt(relay.base).getAct(lf))!) as { payload: Uint8Array };
+  assert.equal(hex((cborDecode(x.payload) as Map<number, Uint8Array>).get(1)!), LONG_FORM_CORRECTION, 'its format: the long-form correction');
+  assert.notEqual(LONG_FORM_CORRECTION, CORRECTIONS_SPEC);
+  // A plain act is still corrected plainly (the first test); a long-form one in long form, by the shared post() too (a collective's way).
+  const stranger = TestIdentity.create({ homes: app.store.settings().homes, via: {} });
+  await stranger.publishGenesis();
+  await stranger.publishRoutes([{ scope: null, hints: [relay.base], kind: 0 }]);
+  const theirDoc = await postAs(stranger, { text: '# Notes\n\nOne *two*.', format: POST_SPECS.longform, relays: [relay.base] });
+  const theirFix = await postAs(stranger, { text: '# Notes\n\nOne *three*.', relays: [relay.base], corrects: [theirDoc.id, stranger.id] });
+  assert.equal((await readPost(theirFix.id, hints)).format, LONG_FORM_CORRECTION);
+  // Rendered as long form: the reader's title, the site's feed, the connector; labelled a correction.
+  const shown = await readPost(lf, hints);
+  assert.equal(titleOf(shown), 'Opening hours');
+  const f = await readFeed([{ identity: NA, name: null }], hints);
+  assert.equal(f.posts.find((p) => p.id === lf)!.corrects, doc);
+  const html = feedHtml(f, f.authors, '');
+  assert.match(html, /<em>ten<\/em>/, 'emphasis rendered, as long form');
+  const told = await readAct(lf, hints);
+  assert.equal(told.title, 'A text: a correction');
+  assert.ok(told.sections.some((s) => s.lines.some((l) => /^Correction: it corrects act .*written in long form/.test(l.text))), JSON.stringify(told.sections));
 });

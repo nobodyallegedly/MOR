@@ -46,6 +46,7 @@ import type { Held, Item, Line, Message, Pic, Proposal, ShareShown, State, Who }
 import { sendDraft } from '../../damgar/src/messages.ts';
 import { UNITS_MODULES, readValue } from '../../damgar/src/units.ts';
 import { authorityOfId } from '../../grants/src/grant.ts';
+import { isLongForm } from '../../barebone/src/corrections.ts';
 
 export type { Line, State } from './shapes.ts';
 
@@ -738,7 +739,7 @@ export class Dub {
         withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === 'valid',
       }));
     const doc =
-      sp.format === POST_SPECS.longform
+      isLongForm(sp.format)
         ? { title: titleOf(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) }
         : null;
     return {

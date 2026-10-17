@@ -1,6 +1,6 @@
 // Corrections in Edubba (decided by Nobody, allegedly, 17 October 2026:
 // "Corrections can be achieved via Ummia or Edubba and labeled as such";
-// the corrections cMIP, draft 1, F344): an identity held here corrects one of
+// the corrections cMIP, draft 2, F344, F347): an identity held here corrects one of
 // its own acts by a new text act in the corrections format naming the old
 // one first; a collective's act is corrected through its Act tab, as the
 // collective (the collective client's `preparePost`, `corrects`). The
@@ -9,7 +9,7 @@
 import { SPECS, describeAct } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { textPayload } from '../../barebone/src/post.ts';
-import { CORRECTIONS_SPEC, CORRECTION_LABEL } from '../../barebone/src/corrections.ts';
+import { CORRECTION_LABEL, LONG_FORM_CORRECTION, correctionFormatFor, formatOfPayload } from '../../barebone/src/corrections.ts';
 import { readFeed } from '../../site/src/feed.ts';
 import { compose } from '../../longform/src/text.ts';
 import { escapeControls } from '../../connector/src/words.ts';
@@ -80,14 +80,16 @@ export class Corrections {
       }
     }
     if (!found) throw new Error('The act to correct was not found at the relays and homes in Settings. Nothing was signed.');
-    const d = describeAct(found) as { signer?: string; public: boolean };
+    const d = describeAct(found) as { signer?: string; public: boolean; payload?: Uint8Array };
     if (d.signer !== identity) throw new Error('Only its own acts are corrected: this act was signed by another identity (a reply is the way to answer it). Nothing was signed.');
-    const s = await this.desk.signAndSend(identity, { spec: SPECS.text, type: 0, payload: textPayload(text, CORRECTIONS_SPEC), public: true, to: [], refs: [[id, identity]] });
+    // Long-form where the act it corrects is long-form (the corrections cMIP draft 2, 1.1, F347).
+    const format = correctionFormatFor(formatOfPayload(d.payload));
+    const s = await this.desk.signAndSend(identity, { spec: SPECS.text, type: 0, payload: textPayload(text, format), public: true, to: [], refs: [[id, identity]] });
     const names = this.store.names();
     this.store.record({ time: now(), draft: '', verdict: 'corrected', signer: identity, title: `${names(identity)} corrected its act ${short(id)}`, note: '', act: s.id, causeAct: id, text });
     return {
       title: `${CORRECTION_LABEL} signed`,
-      lines: [{ text: `${CORRECTION_LABEL} ${short(s.id)}, naming ${short(id)}, which stays as signed.`, tone: 'ok' }, ...s.sent.map((x) => ({ text: `${x.to}: ${x.answer}`, tone: (x.accepted ? 'ok' : 'bad') as 'ok' | 'bad' }))],
+      lines: [{ text: `${CORRECTION_LABEL} ${short(s.id)}, naming ${short(id)}, which stays as signed${format === LONG_FORM_CORRECTION ? '; in long form, as the act it corrects' : ''}.`, tone: 'ok' }, ...s.sent.map((x) => ({ text: `${x.to}: ${x.answer}`, tone: (x.accepted ? 'ok' : 'bad') as 'ok' | 'bad' }))],
       acts: [s.id],
     };
   }

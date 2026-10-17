@@ -190,32 +190,58 @@ test('H22, 2: what a note may not keep: an instruction not from a prompt, someon
   assert.ok(nd.lines.some((l) => /made only from your own prompt/.test(l.text)), JSON.stringify(nd.lines));
 });
 
-test('H22, 6: the diary, written once a day for a day it acted, sealed to itself, shown nowhere unless read on purpose', async () => {
-  const n = api.seen.length;
-  today = '2099-01-01';
+test('H22, 6 and F347: the diary, an entry every day: a day it acted, and a quiet day about itself; one call each, under its cap; sealed to itself, shown nowhere unless read on purpose', async () => {
+  const day = (t: number) => {
+    const d = new Date(t);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const diaryCalls = (from: number) => api.seen.slice(from).filter((x) => /Write your diary entry for this day/.test(JSON.stringify(x.body.messages)));
+  // Tomorrow: the entry for today, a day it acted.
+  let n = api.seen.length;
+  today = day(Date.now() + 86_400_000);
   api.reply = answering({ striking: 'Being asked which colour was said.', reflection: 'A small test of memory.', why: 'Because forgetting is what I fear most.' });
   await c.ask('machine look', { agent: MA });
-  const asked = api.seen.slice(n).find((x) => /Write your diary entry for this day/.test(JSON.stringify(x.body.messages)));
-  assert.ok(asked, 'one call for the diary');
-  assert.match(JSON.stringify(asked!.body.messages), /most striking element[\s\S]*what it is in you that created that focus/);
+  let asked = diaryCalls(n);
+  assert.equal(asked.length, 1, 'one call for the diary');
+  assert.match(JSON.stringify(asked[0].body.messages), /most striking element[\s\S]*what it is in you that created that focus/);
+  assert.doesNotMatch(JSON.stringify(asked[0].body.messages), /You did nothing this day/);
   // Once a day: a second look writes none.
-  const k = api.seen.length;
+  n = api.seen.length;
   await c.ask('machine look', { agent: MA });
-  assert.equal(api.seen.slice(k).filter((x) => /Write your diary entry/.test(JSON.stringify(x.body.messages))).length, 0);
+  assert.equal(diaryCalls(n).length, 0);
+  // A quiet day (nothing done the day before): an entry all the same, about itself, its notes given it.
+  n = api.seen.length;
+  today = '2099-01-01';
+  api.reply = answering({ striking: 'A day of stillness.', reflection: 'My notes held still too.', why: 'I look at myself when nothing else moves.' });
+  await c.ask('machine look', { agent: MA });
+  asked = diaryCalls(n);
+  assert.equal(asked.length, 1, 'one call on a quiet day too');
+  assert.equal(app.agents.for(MA).state().callsToday, 1, 'counted under its cap, on the day it was made');
+  const words = JSON.stringify(asked[0].body.messages);
+  assert.match(words, /2098-12-31/);
+  assert.match(words, /You did nothing this day[\s\S]*reflect on yourself rather than on events: your notes, your instructions, your stillness/);
+  assert.match(words, /<your-notes>/, 'its notes given it');
+  // At the cap, no entry: the call is not made, and the day waits for none (a later day writes its own).
+  app.agents.for(MA).setCap({ callsPerDay: 0, maxChars: 1500 });
+  n = api.seen.length;
+  today = '2099-01-03';
+  await c.ask('machine look', { agent: MA });
+  assert.equal(diaryCalls(n).length, 0, 'no call past the cap');
+  app.agents.for(MA).setCap({ callsPerDay: 20, maxChars: 1500 });
   // Shown nowhere by default: not in the state, the details, the notes, the history's words.
   for (const op of [c.ask<any>('state'), c.ask<any>('agent', { agent: MA }), c.ask<any>('agent notes', { agent: MA }), c.ask<any>('agent view', { agent: MA })]) {
-    assert.doesNotMatch(JSON.stringify(await op), /forgetting is what I fear/);
+    assert.doesNotMatch(JSON.stringify(await op), /forgetting is what I fear|when nothing else moves/);
   }
   // Only by the deliberate action, which says plainly what it is.
   await assert.rejects(c.ask('agent diary', { agent: MA }), /You are about to read what Machine, allegedly wrote for itself/);
   const d = await c.ask<any>('agent diary', { agent: MA, reading: true });
-  assert.equal(d.entries.length, 1);
-  assert.equal(d.entries[0].why, 'Because forgetting is what I fear most.');
+  assert.equal(d.entries.length, 2);
+  assert.deepEqual(d.entries.map((x: any) => x.why).sort(), ['Because forgetting is what I fear most.', 'I look at myself when nothing else moves.']);
   // Sealed to itself at its homes: its locked act unreadable there, its spec the memory cMIP's.
   const held = await relayAt(homes[0].base).getAct(d.entries[0].act);
   const x = describeAct(held!) as { public: boolean; payload?: Uint8Array; to?: string[] };
   assert.deepEqual([x.public, x.payload], [false, undefined]);
-  assert.ok((await app.agents.for(MA).memory.read(MA)).diary.length === 1);
+  assert.ok((await app.agents.for(MA).memory.read(MA)).diary.length === 2);
   assert.ok(MEMORY_SPEC.length === 64);
   today = '2026-10-16';
 });

@@ -7593,7 +7593,19 @@ var TEXT_ACT2 = 0;
 var PUBLICATION2 = 0;
 
 // ../barebone/src/corrections.ts
-var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 1, test value until publication");
+var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 2, test value until publication");
+var LONG_FORM_CORRECTION = sha2562(`${CORRECTIONS_SPEC} long-form`);
+var isLongForm = (format) => format === POST_SPECS.longform || format === LONG_FORM_CORRECTION;
+var correctionFormatFor = (corrected) => isLongForm(corrected) ? LONG_FORM_CORRECTION : CORRECTIONS_SPEC;
+function formatOfPayload(payload) {
+  if (!payload) return null;
+  try {
+    const f = cborDecode(payload).get(1);
+    return f instanceof Uint8Array ? hex(f) : null;
+  } catch {
+    return null;
+  }
+}
 
 // ../barebone/src/post.ts
 async function carryChain(by, relays) {
@@ -7634,7 +7646,9 @@ async function post(by, opts) {
   const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
   await carryChain(by, opts.relays);
   const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...opts.refs ?? []];
-  const made = await by.publish(POST_SPECS.text, TEXT_ACT2, textPayload2(opts.text, opts.format ?? (opts.corrects ? CORRECTIONS_SPEC : null)), {
+  const corrected = opts.corrects && opts.format === void 0 ? await fetchAct(typeof opts.corrects === "string" ? opts.corrects : opts.corrects[0], opts.relays, {}) : null;
+  const format = opts.format !== void 0 ? opts.format : opts.corrects ? correctionFormatFor(corrected ? formatOfPayload(describeAct(corrected).payload) : null) : null;
+  const made = await by.publish(POST_SPECS.text, TEXT_ACT2, textPayload2(opts.text, format), {
     public: true,
     relays: opts.relays,
     refs: refs.length ? refs : void 0,
@@ -7655,6 +7669,9 @@ async function leaveInInbox(by, act, inbox) {
     }
   }
   return out;
+}
+async function fetchAct(id, hints, via) {
+  return firstOf(hints.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getAct(id));
 }
 
 // src/reports.ts

@@ -4261,9 +4261,22 @@ var PUBLICATION = 0;
 var WITHDRAWAL = 3;
 
 // ../barebone/src/corrections.ts
-var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 1, test value until publication");
+var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 2, test value until publication");
+var LONG_FORM_CORRECTION = sha2562(`${CORRECTIONS_SPEC} long-form`);
+var isCorrectionFormat = (format) => format === CORRECTIONS_SPEC || format === LONG_FORM_CORRECTION;
+var isLongForm = (format) => format === POST_SPECS.longform || format === LONG_FORM_CORRECTION;
+var correctionFormatFor = (corrected) => isLongForm(corrected) ? LONG_FORM_CORRECTION : CORRECTIONS_SPEC;
+function formatOfPayload(payload) {
+  if (!payload) return null;
+  try {
+    const f = cborDecode(payload).get(1);
+    return f instanceof Uint8Array ? hex(f) : null;
+  } catch {
+    return null;
+  }
+}
 function correctionOf(p) {
-  if (p.format !== CORRECTIONS_SPEC) return null;
+  if (!isCorrectionFormat(p.format)) return null;
   const r = p.refs[0];
   if (!r || r.kind !== "act" || !r.actSigner || r.actSigner !== p.signer) return null;
   return r.id;
@@ -4308,7 +4321,9 @@ async function post(by, opts) {
   const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
   await carryChain(by, opts.relays);
   const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...opts.refs ?? []];
-  const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, opts.format ?? (opts.corrects ? CORRECTIONS_SPEC : null)), {
+  const corrected = opts.corrects && opts.format === void 0 ? await fetchAct(typeof opts.corrects === "string" ? opts.corrects : opts.corrects[0], opts.relays, {}) : null;
+  const format = opts.format !== void 0 ? opts.format : opts.corrects ? correctionFormatFor(corrected ? formatOfPayload(describeAct(corrected).payload) : null) : null;
+  const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, format), {
     public: true,
     relays: opts.relays,
     refs: refs.length ? refs : void 0,
@@ -9572,7 +9587,7 @@ var Dub = class {
       problem: r.problem,
       withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === "valid"
     }));
-    const doc = sp.format === POST_SPECS.longform ? { title: titleOf(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) } : null;
+    const doc = isLongForm(sp.format) ? { title: titleOf(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) } : null;
     return {
       id: sp.id,
       who: this.whoFrom(sp.signer, me, p),

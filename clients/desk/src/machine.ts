@@ -609,21 +609,32 @@ export class Machine {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
+  /** The day before a day given as YYYY-MM-DD. */
+  private static dayBefore(day: string): string {
+    const [y, mo, d] = day.split('-').map(Number);
+    return Machine.dayOf(new Date(y, mo - 1, d - 1, 12).getTime() / 1000);
+  }
+
   /**
-   * The diary (H22, 6): once a day, for the latest day before today on which
-   * the agent acted and that has no entry yet, one call to Claude, the entry
-   * sealed to the agent at its homes. "Not a log": the day's most striking
-   * element, a brief reflection, and why it picked it. Never loaded into an
-   * answer, shown nowhere unless its owner chooses to read it.
+   * The diary (H22, 6; F347, "introspection"): an entry every day. At the
+   * first look of a day, for the day before, if the agent was already on that
+   * day and it has no entry yet: one call to Claude under its cap, quiet days
+   * included, the entry sealed to the agent at its homes. On a day it acted,
+   * "not a log": the day's most striking element, a brief reflection, and why
+   * it picked it. On a day it did nothing, it reflects on itself rather than
+   * on events: its notes, its instructions, its stillness. A day this program
+   * was not running on is written for only if it is that day before; earlier
+   * days get none. Never loaded into an answer, shown nowhere unless its owner
+   * chooses to read it.
    */
   private async diaryIfDue(): Promise<string | null> {
     const m = this.file();
     if (!m.agent || !m.owner || !m.terms || !m.on) return null;
     const today = (this.opts.today ?? localDay)();
-    const mine = this.history().filter((h) => Machine.dayOf(h.time) < today && h.text && (h.signer === m.agent || h.verdict === 'prompted'));
-    if (!mine.length) return null;
-    const day = Machine.dayOf(Math.max(...mine.map((h) => h.time)));
+    const day = Machine.dayBefore(today);
+    if (!m.since || Machine.dayOf(m.since) > day) return null;
     if (m.diaryDays?.includes(day)) return null;
+    const mine = this.history().filter((h) => Machine.dayOf(h.time) === day && h.text && (h.signer === m.agent || h.verdict === 'prompted'));
     const read = await this.memory.read(m.agent);
     if (read.diary.some((e) => e.day === day)) {
       m.diaryDays = [...(m.diaryDays ?? []), day].slice(-60);
@@ -634,15 +645,16 @@ export class Machine {
     const names = this.nameOf();
     const r = this.reading(m);
     const happened = mine
-      .filter((h) => Machine.dayOf(h.time) === day)
       .sort((a, b) => a.time - b.time)
       .map((h) => ({ from: h.verdict === 'prompted' ? `${names(h.signer)}, your owner, prompting you` : `${names(m.agent!)} (you): ${h.title}`, text: h.text! }));
-    const w = await writeDiary({ who: this.who(m, r), day, happened }, key, this.settings(m), this.opts.reach, this.opts.repo);
+    // A quiet day: introspection, on its notes (all it keeps, under the cap) and its instructions.
+    const memory = happened.length ? undefined : loadNotes(read.notes, [...new Set(read.notes.flatMap((n) => (n.about ? [n.about] : [])))], names).text;
+    const w = await writeDiary({ who: this.who(m, r), day, happened, memory, quiet: !happened.length }, key, this.settings(m), this.opts.reach, this.opts.repo);
     const id = await this.memory.writeDiary(m.agent, { day, striking: w.striking, reflection: w.reflection, why: w.why });
     const f = this.file();
     f.diaryDays = [...(f.diaryDays ?? []), day].slice(-60);
     this.save(f);
-    this.note({ time: now(), draft: '', verdict: 'diary', signer: m.agent, title: `${names(m.agent)} wrote its diary for ${day}, sealed to itself`, note: 'Not shown here: read it only by choosing to, in its details.', act: id });
+    this.note({ time: now(), draft: '', verdict: 'diary', signer: m.agent, title: `${names(m.agent)} wrote its diary for ${day}${happened.length ? '' : ', a quiet day: about itself'}, sealed to itself`, note: 'Not shown here: read it only by choosing to, in its details.', act: id });
     return id;
   }
 

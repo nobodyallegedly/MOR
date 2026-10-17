@@ -524,6 +524,10 @@ const DIARY_SCHEMA = {
 /** One day, as the agent's diary is given it: what it did and what it was told, its own record. */
 export interface Day {
   who?: string;
+  /** On a quiet day, its notes as loaded (F347: it reflects on its notes, its instructions, its stillness). */
+  memory?: string;
+  /** Nothing done that day: no prompt, no answer, no post. */
+  quiet?: boolean;
   day: string;
   /** The day's acts, oldest first: its owner's prompts and what it answered, others' acts it answered, its posts. */
   happened: { from: string; text: string }[];
@@ -534,7 +538,9 @@ function diaryContent(d: Day): string {
   return [
     ...remembered(d),
     `<the-day date="${d.day}">\n${happened}\n</the-day>`,
-    'Write your diary entry for this day. Not a log of what you did: pick the day’s single most striking element, reflect on it briefly, then ask yourself why you picked that element, what it is in you that created that focus. It is sealed to you; nobody reads it unless your owner chooses to. At most 600 characters for the element, 1200 for each of the other two.',
+    d.quiet
+      ? 'Write your diary entry for this day. You did nothing this day: no prompt, no answer, no post. So reflect on yourself rather than on events: your notes, your instructions, your stillness. Pick the single most striking thing you find in yourself, reflect on it briefly, then ask yourself why you picked it, what it is in you that created that focus. It is sealed to you; nobody reads it unless your owner chooses to. At most 600 characters for the element, 1200 for each of the other two.'
+      : 'Write your diary entry for this day. Not a log of what you did: pick the day’s single most striking element, reflect on it briefly, then ask yourself why you picked that element, what it is in you that created that focus. It is sealed to you; nobody reads it unless your owner chooses to. At most 600 characters for the element, 1200 for each of the other two.',
   ].join('\n\n');
 }
 

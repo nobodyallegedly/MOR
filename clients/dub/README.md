@@ -37,7 +37,7 @@
 
 **Whom to address (H37).** Public's **To…** and the Private message box offer the people this identity follows, each by the name given here and its display names, the fingerprint always beside them; typing or pasting an ID still works.
 
-**Corrections and grants, shown (F344, F343).** A post in the corrections format naming an act of its own signer is labelled **Correction**; the act it corrects is shown as signed, with **Corrected by**. A post signed under a grant (an agent posting in its owner's name) is shown with on whose authority, as Agreements judge it (the grant read from the relays: `clients/grants`).
+**Corrections and grants, shown (F344, F343).** A post in a corrections format naming an act of its own signer is labelled **Correction** (a long-form correction is linked as a document, as long-form posts are: F347); the act it corrects is shown as signed, with **Corrected by**. A post signed under a grant (an agent posting in its owner's name) is shown with on whose authority, as Agreements judge it (the grant read from the relays: `clients/grants`).
 
 **Money, prepared for Damgar (F338).** **Tip** on a post, and **Ask someone to pay you** (Private tab, folded): each is a draft (the money messages cMIP, `cmips/cmip-money-messages-draft-1.md`), a private act sealed to your own identity at its homes, which Damgar finds, reads in plain words and offers for signing. Dub signs no money act: "Prepared, not signed". Amounts name their unit (the Bitcoin units Module's, regtest by default); nothing assumes satoshis.
 

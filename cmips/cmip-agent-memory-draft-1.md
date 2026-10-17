@@ -1,6 +1,6 @@
 # cMIP: An agent's memory
 
-*Draft 1, 17 October 2026, written by the Edubba agents session (`docs/edubba-agents-report.md`) for H22, for Nobody, allegedly, to approve. **H22**, decided by Nobody, allegedly ("agreed", on the project lead's lean): an agent's own notes "kept on MOR as private acts sealed to itself at its homes, so its memory travels with its identity and survives a lost Mac; the owner reads them in the agent's details and can retire one (a later act marks it dropped: nothing on MOR is deleted)"; their structure, the project lead's proposal ("let's structure the memory"); and a sixth part added by Nobody, allegedly: "a diary where it reflects back on the day, picks the most striking element and reflects on it briefly. then, question why it picked that element, what is it in Machine that created the focus. a diary of self reflection", sealed to the agent and shown nowhere by default ("yes please").*
+*Draft 1, 17 October 2026, written by the Edubba agents session (`docs/edubba-agents-report.md`) for H22, for Nobody, allegedly, to approve. **H22**, decided by Nobody, allegedly ("agreed", on the project lead's lean): an agent's own notes "kept on MOR as private acts sealed to itself at its homes, so its memory travels with its identity and survives a lost Mac; the owner reads them in the agent's details and can retire one (a later act marks it dropped: nothing on MOR is deleted)"; their structure, the project lead's proposal ("let's structure the memory"); and a sixth part added by Nobody, allegedly: "a diary where it reflects back on the day, picks the most striking element and reflects on it briefly. then, question why it picked that element, what is it in Machine that created the focus. a diary of self reflection", sealed to the agent and shown nowhere by default ("yes please").* *Revised in place, 17 October 2026, for **F347**, question 3, decided by Nobody, allegedly ("C, introspection"): an entry every day; on a day the agent did nothing, it reflects on itself rather than on events (its notes, its instructions, its stillness); one call a day under its cap, quiet days included. Rules 5.1, 5.2 and the costs changed, marked "F347"; the act format is unchanged, so the test value is too.*
 
 *Founding cMIP, EXPERIMENTAL. Not approved, not a product; test identities only until MOR is frozen.* Written against the Identity MIR draft 13, the Envelopes MIR draft 10 (private acts, the sealed container), the Text MIR draft 10 (canonical text), the nudge cMIP draft 3 (an agent and its owner), the identity carry Module draft 2, and the findings to F345. It fills no task: an xtype (Development rule 18), defining three act types. Its hash stays a draft hash until its creator is named at step 17; until then its acts name a test value, `sha256("Agent memory cMIP, draft 1, test value until publication")`. Its code is in Edubba (`clients/desk/src/memory.ts`).
 
@@ -10,7 +10,7 @@
 
 *An agent on MOR is an identity whose words a model writes. Between two answers the model forgets everything; what it should remember has to be handed back to it. Some of that is already on MOR: the acts of the exchange it is answering. The rest it writes down itself, as notes: what its owner asked it to always do, what it learnt about someone it deals with, what it has said in public, the threads still open. Each note is a private act the agent signs and seals to itself, left at its homes, so its memory goes wherever its identity goes.*
 
-*Once a day it also writes a diary entry: not a log of what it did, but the day's most striking moment, a short reflection on it, and why that moment caught its attention, what in itself made it look there.*
+*Every day it also writes a diary entry: not a log of what it did, but the day's most striking moment, a short reflection on it, and why that moment caught its attention, what in itself made it look there. On a day it did nothing, it looks at itself instead: its notes, its instructions, its stillness (F347).*
 
 *Nothing on MOR is deleted. A note that is no longer true is retired by a later act; the note stays, marked dropped.*
 
@@ -77,15 +77,15 @@ Dropped notes are never loaded. What does not fit under the cap is left out, the
 ```cddl
 diary-payload = {
   0 => tstr,           ; the day, as the agent's app counts it: "YYYY-MM-DD"
-  1 => tstr,           ; the day's most striking element, at most 600 characters
+  1 => tstr,           ; the day's most striking element (on a quiet day, in itself), at most 600 characters
   2 => tstr,           ; a brief reflection on it, at most 1,200 characters
   3 => tstr            ; why it picked that element: what in itself created the focus, at most 1,200 characters
 }
 ```
 
-5.1. **Not a log** (Nobody, allegedly). The entry names one element of the day, reflects on it briefly, then questions the choice: why this element, what in the agent created that focus.
+5.1. **Not a log** (Nobody, allegedly). The entry names one element of the day, reflects on it briefly, then questions the choice: why this element, what in the agent created that focus. **On a quiet day, introspection** (F347): on a day the agent did nothing (no prompt answered, no act signed), the entry reflects on the agent itself rather than on events: its notes, its instructions, its stillness; it is given its notes, loaded as rule 4 loads them, every identity a note names counted as in the exchange.
 
-5.2. **Once a day**, for a day on which the agent acted, written after the day ends by the app's clock; one entry per day; never loaded into an answer **(mechanic, this draft's)**. *Its readers: "ideally only machine but i get to see it i guess" (Nobody, allegedly).*
+5.2. **Every day** (F347), quiet days included: one entry per day, written after the day ends by the app's clock, at its first look of the next day, for the day before; never loaded into an answer. A day before the agent was set to work gets none; nor does a day the app was not running on the day after, nor a day whose call the cap did not allow: no entry is written late for an earlier day **(mechanic, this draft's)**. *Its readers: "ideally only machine but i get to see it i guess" (Nobody, allegedly).*
 
 5.3. **Shown nowhere by default.** A client shows a diary only by one deliberate action of the owner, which says plainly, before anything is shown, that the owner is about to read what the agent wrote for itself (client conformance). No preview, no count, no excerpt elsewhere.
 
@@ -94,6 +94,7 @@ diary-payload = {
 - **Whoever holds the agent's signing key's words can read its notes and its diary**, as its private messages. "Only the agent" is the app's choice, never the cryptography's.
 - Each note, retirement and entry is an act on the homes: the homes see that a private act exists, and roughly its size.
 - What the app cannot check (a guess about a person, worded as a fact) rests on the model and on the owner reading the notes.
+- **The diary costs one call a day to the model, under the agent's cap, quiet days included** (F347). The app says so where the diary is offered.
 
 ## 7. Open
 

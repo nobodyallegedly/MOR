@@ -919,7 +919,7 @@ ${live.map(one).join('') || '<p class="empty small">No notes yet.</p>'}
 ${dropped.length ? `<details><summary class="small">Dropped (${dropped.length})</summary>${dropped.map(one).join('')}</details>` : ''}
 <p class="small">${e(r.costs)}</p>
 <h4>Its diary</h4>
-<p class="small">A daily reflection it writes for itself, sealed to itself. Shown nowhere unless you choose to read it.</p>
+<p class="small">A reflection it writes for itself every day, sealed to itself; on a day it did nothing, it reflects on itself instead: its notes, its instructions, its stillness. Each entry is one call to Claude a day, counted under its cap, quiet days included. Shown nowhere unless you choose to read it.</p>
 <div class="row"><button data-action="diary-ask">${e(r.diary.button)}</button></div><div id="e-diary"></div>`,
     false,
   );

@@ -23,7 +23,7 @@ import { cannotReach, firstOf, followRef, holdSequence, lookUp, referenceTo, typ
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { NotJpeg, read, strip, type Carried, type Picture } from '../../../modules/jpeg/src/jpeg.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from './specs.ts';
-import { CORRECTIONS_SPEC } from './corrections.ts';
+import { correctionFormatFor, formatOfPayload } from './corrections.ts';
 
 // ---------------------------------------------------------------- posting
 
@@ -112,7 +112,10 @@ export async function post(
   // `refs`: acts the post answers (a reply, Text MIR), after its picture.
   // A correction names the act it corrects first (the corrections cMIP, 1.2).
   const refs: Reference[] = [...(opts.corrects ? [opts.corrects] : []), ...(picture ? [referenceTo(picture.act)] : []), ...(opts.refs ?? [])];
-  const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, opts.format ?? (opts.corrects ? CORRECTIONS_SPEC : null)), {
+  // A correction's format follows the act it corrects: long-form where it is long-form (the corrections cMIP, 1.1, F347).
+  const corrected = opts.corrects && opts.format === undefined ? await fetchAct(typeof opts.corrects === 'string' ? opts.corrects : opts.corrects[0], opts.relays, {}) : null;
+  const format = opts.format !== undefined ? opts.format : opts.corrects ? correctionFormatFor(corrected ? formatOfPayload((describeAct(corrected) as Described).payload) : null) : null;
+  const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, format), {
     public: true,
     relays: opts.relays,
     refs: refs.length ? refs : undefined,
