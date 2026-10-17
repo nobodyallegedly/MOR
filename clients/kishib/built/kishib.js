@@ -1,0 +1,8346 @@
+// ../genesis/wasm/mor_wasm.js
+var Verifier = class {
+  __destroy_into_raw() {
+    const ptr = this.__wbg_ptr;
+    this.__wbg_ptr = 0;
+    VerifierFinalization.unregister(this);
+    return ptr;
+  }
+  free() {
+    const ptr = this.__destroy_into_raw();
+    wasm.__wbg_verifier_free(ptr, 0);
+  }
+  /**
+   * Hold a private act, opened with its content key.
+   * @param {Uint8Array} bytes
+   * @param {Uint8Array} key
+   * @returns {string}
+   */
+  addWithKey(bytes, key) {
+    let deferred4_0;
+    let deferred4_1;
+    try {
+      const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+      const len0 = WASM_VECTOR_LEN;
+      const ptr1 = passArray8ToWasm0(key, wasm.__wbindgen_malloc);
+      const len1 = WASM_VECTOR_LEN;
+      const ret = wasm.verifier_addWithKey(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+      var ptr3 = ret[0];
+      var len3 = ret[1];
+      if (ret[3]) {
+        ptr3 = 0;
+        len3 = 0;
+        throw takeFromExternrefTable0(ret[2]);
+      }
+      deferred4_0 = ptr3;
+      deferred4_1 = len3;
+      return getStringFromWasm0(ptr3, len3);
+    } finally {
+      wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+    }
+  }
+  /**
+   * Hold an act. Returns its id. A malformed act is refused; a validly
+   * shaped act with a bad signature is held and judged invalid.
+   * @param {Uint8Array} bytes
+   * @returns {string}
+   */
+  add(bytes) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+      const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+      const len0 = WASM_VECTOR_LEN;
+      const ret = wasm.verifier_add(this.__wbg_ptr, ptr0, len0);
+      var ptr2 = ret[0];
+      var len2 = ret[1];
+      if (ret[3]) {
+        ptr2 = 0;
+        len2 = 0;
+        throw takeFromExternrefTable0(ret[2]);
+      }
+      deferred3_0 = ptr2;
+      deferred3_1 = len2;
+      return getStringFromWasm0(ptr2, len2);
+    } finally {
+      wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+  }
+  /**
+   * An agreement as held: its parties, who signed, whether it exists (a
+   * deal, founding terms) or is ready to be recorded (a collective's
+   * clone), and the powers its mark must name. `specs`: the six MIR
+   * hashes, and the layers of extensions it adds or drops.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsAgreement(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsAgreement(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Whether an act under a grant binds the collective that issued it.
+   * @param {any} specs
+   * @param {string} act
+   * @returns {any}
+   */
+  agreementsBacking(specs, act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsBacking(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Whether the collective's act `x` counts as made before the line
+   * `line` (a record or a rotation of it), on its own sequences (F109).
+   * @param {any} specs
+   * @param {string} x
+   * @param {string} line
+   * @returns {boolean}
+   */
+  agreementsBefore(specs, x, line) {
+    const ptr0 = passStringToWasm0(x, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(line, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsBefore(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0] !== 0;
+  }
+  /**
+   * Where Agreements read a collective as broken and a rollback can bring it
+   * back (Agreements rule 37d, F185): `{ act, before, reason }`, the broken act
+   * (a rotation of the collective), the agreement in force just before
+   * it, a rollback's parent, and Agreements' reason; null otherwise.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {any}
+   */
+  agreementsBrokenAct(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsBrokenAct(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Why Agreements read a collective as broken (the agreement its latest key
+   * lives under cannot be found: a rotation's declared clone incomplete,
+   * a false mark, rules 37 and 45a), or null where it reads it as working.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {string | undefined}
+   */
+  agreementsBroken(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsBroken(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
+  }
+  /**
+   * Whether a claim on a work is shown as made after its release: the
+   * release, if so (F121, D).
+   * @param {any} specs
+   * @param {string} claim
+   * @param {string} work
+   * @returns {string | undefined}
+   */
+  agreementsClaimAfterRelease(specs, claim, work) {
+    const ptr0 = passStringToWasm0(claim, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(work, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsClaimAfterRelease(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v3;
+    if (ret[0] !== 0) {
+      v3 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v3;
+  }
+  /**
+   * A closing act, judged (rule 47a, F124 N9).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsClosing(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsClosing(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The collective whose genesis declares the root of `agreement`'s
+   * lineage, where held: what null names in its terms (S1).
+   * @param {any} specs
+   * @param {string} agreement
+   * @returns {string | undefined}
+   */
+  agreementsCollectiveOf(specs, agreement) {
+    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsCollectiveOf(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
+  }
+  /**
+   * Agreements' answer for an act of a collective: which areas reach it, and
+   * whether their holders' signature acts meet each (rule 36a, 44d).
+   * @param {any} specs
+   * @param {string} act
+   * @returns {any}
+   */
+  agreementsConsent(specs, act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsConsent(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The collective's state after everything held under its latest key:
+   * the agreement in force, who left, who stepped down from which area,
+   * which areas are frozen, its records. Null if it is not a collective.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {any}
+   */
+  agreementsCurrent(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsCurrent(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * @param {any} specs
+   * @param {string} agreement
+   * @returns {any}
+   */
+  agreementsDealFork(specs, agreement) {
+    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDealFork(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A creditor's release, judged (Money type 4, F126; rule 47b):
+   * whether it ends the obligation it names (signed by that obligation's
+   * creditor, a collective by its Money lane).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsDebtRelease(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDebtRelease(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Who owes an obligation of a collective a fork closed (N13): the
+   * successors it assigns it to, every successor where it assigns it to
+   * none (F125, D1); null where its debtor is not closed by a fork.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {string[] | undefined}
+   */
+  agreementsDebtors(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDebtors(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    }
+    return v2;
+  }
+  /**
+   * @param {any} specs
+   * @param {string} party
+   * @returns {any}
+   */
+  agreementsDeclarationsNaming(specs, party) {
+    const ptr0 = passStringToWasm0(party, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDeclarationsNaming(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The agreement an identity's chain declares at the chain act
+   * `binding`, if any (for a rotation: the clone it declares).
+   * @param {any} specs
+   * @param {string} identity
+   * @param {string} binding
+   * @returns {string | undefined}
+   */
+  agreementsDeclared(specs, identity, binding) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(binding, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDeclared(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v3;
+    if (ret[0] !== 0) {
+      v3 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v3;
+  }
+  /**
+   * Whether an act in a collective's name is done (F126, F128): sealed to
+   * every member, or public; where it is held decides nothing. `{ done,
+   * why }`, or null where the act is not in a collective's name.
+   * @param {any} specs
+   * @param {string} act
+   * @returns {any}
+   */
+  agreementsDone(specs, act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsDone(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Every fork and closing of `collective` held, complete or not: what a
+   * new ending names in its `objects`, `[agreement, ending]` (F131 IT1,
+   * client conformance).
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {string[]}
+   */
+  agreementsEndingActs(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsEndingActs(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+  }
+  /**
+   * Client conformance (rule 45b, F186): the alarm a seller's client and
+   * a split service raise when a payment names a version of the deal that
+   * does not descend from the version they hold. Null where it does;
+   * else `{ named, held, shared, kind, heldLine, namedLine }`, `kind`
+   * "fork" (the alarm), "unheld" (a version this verifier does not hold:
+   * the alarm, F189 3) or "older" (a plain notice, F188 DQ7).
+   * @param {any} specs
+   * @param {string} payment
+   * @param {string} held
+   * @returns {any}
+   */
+  agreementsForkAlarm(specs, payment, held) {
+    const ptr0 = passStringToWasm0(payment, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(held, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsForkAlarm(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A fork of a collective, judged (rule 47a, F121 shape B, F124):
+   * whether it closes the original, the members whose voice remains,
+   * who signed and who leaves on no side, each side's default share, who
+   * every successor keeps as a departed holder, each side's successor's
+   * founding agreement where it fits, and the obligations in the history
+   * it cites that it does not hand out, which keep it from taking effect
+   * (F127, replacing F125 D1).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsFork(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsFork(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * What a fork of `collective` must hand out (F127), its line drawn at
+   * `chain_act` and `tips` (`[{ act, position, summary }]`) with
+   * `agreement` in force there: every obligation in the history it would
+   * cite, its own and those an earlier fork handed to it. Null where the
+   * line does not hold.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {string} agreement
+   * @param {string} chain_act
+   * @param {any} tips
+   * @returns {string[] | undefined}
+   */
+  agreementsHandOut(specs, collective, agreement, chain_act, tips) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, tips);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v4;
+    if (ret[0] !== 0) {
+      v4 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    }
+    return v4;
+  }
+  /**
+   * The agreement in force for an act of a collective (rule 37c, F109),
+   * or null if its signer is not a collective.
+   * @param {any} specs
+   * @param {string} act
+   * @returns {string | undefined}
+   */
+  agreementsInForce(specs, act) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsInForce(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v2;
+    if (ret[0] !== 0) {
+      v2 = getStringFromWasm0(ret[0], ret[1]);
+      wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    }
+    return v2;
+  }
+  /**
+   * The acts the history a line at `chain_act` and `tips` would cite
+   * that this verifier does not hold (F127): a member's client signs no
+   * fork or closing while any is missing (F131 IT2b, client conformance).
+   * @param {any} specs
+   * @param {string} collective
+   * @param {string} chain_act
+   * @param {any} tips
+   * @returns {string[]}
+   */
+  agreementsLineUnheld(specs, collective, chain_act, tips) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, tips);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    var v3 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v3;
+  }
+  /**
+   * Who counts for a power (`{ form, area }`, as `agreementsClonePlan` gives
+   * it) of the collective's agreement in force, at its next line, after
+   * every act held (rule 44d), `leaving` taken out: the agreement, the
+   * parties counted among, the voices that remain, and how many meet it
+   * (null where none remains); or `{ error }`, why there is no such count.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {any} power
+   * @param {string[]} leaving
+   * @returns {any}
+   */
+  agreementsNextVoices(specs, collective, power, leaving) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(leaving, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsNextVoices(this.__wbg_ptr, specs, ptr0, len0, power, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Whether an obligation binds its debtor: for a collective, once done
+   * (F128, N13's public outside withdrawn); null if not one.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {boolean | undefined}
+   */
+  agreementsObligationBinds(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsObligationBinds(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0] === 16777215 ? void 0 : ret[0] !== 0;
+  }
+  /**
+   * The payments a collective received during a broken stretch and owes
+   * back, the sale not signed anew after the rollback (rule 37d, RB2):
+   * open obligations, each `{ payment, to, unit, value, stillBroken }`.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {any}
+   */
+  agreementsOwedBack(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsOwedBack(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * What a collective owes now (F125, D5): its obligations that bind,
+   * and those it owes as a fork's successor, neither paid in full by the
+   * receipts held nor ended by a creditor's release.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {string[]}
+   */
+  agreementsOwes(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsOwes(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+  }
+  /**
+   * What is paid toward an obligation, as a binding answer: an error
+   * coded `agreements/own-attempt` where it rests on this client's own failed
+   * attempts to reach homes, shown as unknown (F153).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {bigint}
+   */
+  agreementsPaid(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPaid(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return BigInt.asUintN(64, ret[0]);
+  }
+  /**
+   * Payer-side splitting (F124 P2): what a paying wallet reading Agreements pays
+   * each holder for `amount` on the stake in `object` (hex, or null for
+   * the collective itself), or why it cannot. Leftovers by largest
+   * remainder; a tied unit is the payer's to decide, at most one per tie
+   * (Agreements rule 15a, F165, F168): this wallet gives it to the tied holder
+   * with the smallest identity hash, a choice, not a rule.
+   * @param {any} specs
+   * @param {string} agreement
+   * @param {string | null | undefined} object
+   * @param {bigint} amount
+   * @returns {any}
+   */
+  agreementsPayerSplit(specs, agreement, object, amount) {
+    const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    var ptr1 = isLikeNone(object) ? 0 : passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The pointer check (rule 18, F123): whether the payee pointer of
+   * `owners` counts for Agreements under `agreement`: "no-split-service",
+   * "ordinary", "bypasses" (with the addresses no service's own pointer
+   * carries, as hex) or "undetermined".
+   * @param {any} specs
+   * @param {string} owners
+   * @param {string} agreement
+   * @returns {any}
+   */
+  agreementsPointerCheck(specs, owners, agreement) {
+    const ptr0 = passStringToWasm0(owners, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPointerCheck(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The payee's pointer acts its own acts hold, for what a payment
+   * follows (an obligation, an agreement or an offer; Money rule 14,
+   * F145, F157, F163, F168): `{ pointers, complete }`, or null where
+   * `fulfils` is none of these.
+   * @param {any} specs
+   * @param {string} fulfils
+   * @param {string} payee
+   * @returns {any}
+   */
+  agreementsPointerHolding(specs, fulfils, payee) {
+    const ptr0 = passStringToWasm0(fulfils, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPointerHolding(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The resignations the parties of a collective's agreement published,
+   * registered or not (rule 37a; F187, 3): departures `{ act, party,
+   * kind, agreement }`. What a client reads beside Agreements' count of the
+   * voices that remain, to warn the last voice.
+   * @param {any} specs
+   * @param {string} collective
+   * @returns {any}
+   */
+  agreementsPublishedResignations(specs, collective) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPublishedResignations(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A payment for a work, judged (F126, F127 W2, F128 W4): "purchase",
+   * "no-purchase" (a refund owed to the payer, with why), or "unrecorded"
+   * (on a request rail, a collective seller's actions chain has not
+   * recorded it yet; on a push rail (`specs.pushRails`), a holder has not
+   * signed its receipt yet, or receipts of one payment name different
+   * claims and the rail has not shown which the payment committed to),
+   * or "wrong-receipt" (F131 IT3: a receipt `specs.railInvalid` names,
+   * whose claim the payment did not commit to; it counts for nothing);
+   * null where the payment is not for a work.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsPurchase(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPurchase(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A record act of a collective, judged: whether it is a line, the
+   * clone it names and whether it puts it in force, and what it registers.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {string} record
+   * @returns {any}
+   */
+  agreementsRecord(specs, collective, record2) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(record2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsRecord(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A public domain release, judged (rule 17, F121 shape D).
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsRelease(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsRelease(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A clone read as a rollback's (Agreements rule 37d, F185): as `agreementsAgreement`,
+   * its mark checked against the powers a rollback names.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsRollbackAgreement(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsRollbackAgreement(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * What a rollback made next would register (rule 37d, RB3; F187 2),
+   * checked from what this verifier holds: `{ error, departures }`, each
+   * departure `{ act, party, kind }` ("resigned", "stepped-down",
+   * "declared"). A client asks it from a fresh reading of the relays
+   * before it sends the rollback's rotation.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {string[]} registers
+   * @returns {any}
+   */
+  agreementsRollbackRegisters(specs, collective, registers) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(registers, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsRollbackRegisters(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Who counts for a power (`{ form, area }`) of the agreement in force
+   * just before a broken collective's broken act, at a rollback made
+   * next (Agreements rules 37d, 44d), `leaving` taken out (the parties whose
+   * resignations the rollback registers): as `agreementsNextVoices`; or
+   * `{ error }`, why there is no such count.
+   * @param {any} specs
+   * @param {string} collective
+   * @param {any} power
+   * @param {string[]} leaving
+   * @returns {any}
+   */
+  agreementsRollbackVoices(specs, collective, power, leaving) {
+    const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(leaving, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsRollbackVoices(this.__wbg_ptr, specs, ptr0, len0, power, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * What a split service owes (Agreements rule 29): every incoming receipt and
+   * payer's claim without its split, and every payout without the
+   * receiver's receipt, each naming one receiver and one agreement.
+   * @param {any} specs
+   * @param {string} service
+   * @returns {any}
+   */
+  agreementsServiceAccount(specs, service) {
+    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsServiceAccount(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The declarations of absence naming `party` this verifier holds (RB3,
+   * client conformance): `{ act, signer, agreement, clause, outcomes,
+   * contests }`, `contests` the party's contests of it (BQ4).
+   * The numbers on the splits a service made under a deal (DQ6, F188):
+   * `{ numbers: [number, split][], gaps, repeated, unnumbered }`. Client
+   * conformance: a holder's client MUST raise the alarm where the
+   * numbers it receives skip (`gaps`).
+   * @param {any} specs
+   * @param {string} service
+   * @param {string} agreement
+   * @returns {any}
+   */
+  agreementsSplitNumbers(specs, service, agreement) {
+    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsSplitNumbers(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Rule 15a's turns (F165, F171): for `stake` (its index) of
+   * `agreement`'s version in force, the leftover units each holder has
+   * received so far from `service`'s splits, as `previous` (the
+   * service's latest split act for the stake, which its next split
+   * cites) carries them in its running count; null `previous`: no split
+   * yet, every count zero. In the order of `holders` (hex). Null where
+   * `previous` is not held, not one of the service's splits for the
+   * stake, or carries no count.
+   * @param {any} specs
+   * @param {string} service
+   * @param {string} agreement
+   * @param {bigint} stake
+   * @param {string[]} holders
+   * @param {string | null} [previous]
+   * @returns {Float64Array | undefined}
+   */
+  agreementsSplitTurns(specs, service, agreement, stake, holders, previous) {
+    const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayJsValueToWasm0(holders, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    var ptr3 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len3 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, stake, ptr2, len2, ptr3, len3);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    let v5;
+    if (ret[0] !== 0) {
+      v5 = getArrayF64FromWasm0(ret[0], ret[1]).slice();
+      wasm.__wbindgen_free(ret[0], ret[1] * 8, 8);
+    }
+    return v5;
+  }
+  /**
+   * A split, judged (rules 20, 21, 26; F121 Q9, F124 N10): whether it
+   * sums to what arrived, each fee and who received it, the holders it
+   * pays and was not delivered to, and every payout that does not match
+   * its stake.
+   * @param {any} specs
+   * @param {string} id
+   * @returns {any}
+   */
+  agreementsSplit(specs, id) {
+    const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsSplit(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Where a deal stands forked (rule 45b, F186): `{ reference, branches,
+   * tangled }`, each branch its versions from the split to its latest,
+   * `tangled` the reason where the fork is tangled (F188, DQ1 to DQ4: the
+   * deal stays on its reference); null where it is not forked. Throws
+   * where the shape is not decided (QH1, refused rather than guessed).
+   * The version of an agreement in force, as rule 45b reads a deal's
+   * forks (F186, F188, F192): while forked or tangled, the reference.
+   * Throws where the shape is not decided (QH1: two settlements, a
+   * judge's among them, neither holding the other). What a buyer's
+   * client checks an offer against before paying (F188, a strong
+   * SHOULD).
+   * @param {any} specs
+   * @param {string} agreement
+   * @returns {string}
+   */
+  agreementsVersionInForce(specs, agreement) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+      const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len0 = WASM_VECTOR_LEN;
+      const ret = wasm.verifier_agreementsVersionInForce(this.__wbg_ptr, specs, ptr0, len0);
+      var ptr2 = ret[0];
+      var len2 = ret[1];
+      if (ret[3]) {
+        ptr2 = 0;
+        len2 = 0;
+        throw takeFromExternrefTable0(ret[2]);
+      }
+      deferred3_0 = ptr2;
+      deferred3_1 = len2;
+      return getStringFromWasm0(ptr2, len2);
+    } finally {
+      wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+  }
+  /**
+   * The standing of an act for everything binding (keeper records,
+   * payments, discharge of debts, agreements, forks, closings): as
+   * `status`, except "unknown" where the answer rests on this client's
+   * own failed attempts to reach homes ("re-homed without audit") or on
+   * what it found at homes (`foundAtHome`), until it no longer does
+   * (Identity, the sentence after rule 17, F153, F159).
+   * Reading and following an identity use `status`.
+   * @param {string} act
+   * @returns {string}
+   */
+  bindingStatus(act) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+      const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len0 = WASM_VECTOR_LEN;
+      const ret = wasm.verifier_bindingStatus(this.__wbg_ptr, ptr0, len0);
+      var ptr2 = ret[0];
+      var len2 = ret[1];
+      if (ret[3]) {
+        ptr2 = 0;
+        len2 = 0;
+        throw takeFromExternrefTable0(ret[2]);
+      }
+      deferred3_0 = ptr2;
+      deferred3_1 = len2;
+      return getStringFromWasm0(ptr2, len2);
+    } finally {
+      wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+  }
+  /**
+   * Record that this client itself tried and failed to reach an operator's home.
+   * @param {string} operator
+   */
+  failedToReach(operator) {
+    const ptr0 = passStringToWasm0(operator, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_failedToReach(this.__wbg_ptr, ptr0, len0);
+    if (ret[1]) {
+      throw takeFromExternrefTable0(ret[0]);
+    }
+  }
+  /**
+   * Record that this client found the act, in its sealed form, at the
+   * home operated by `home` (the operator's identity hash; for a
+   * self-hosted home, the identity itself). A private link act counts
+   * only if found at a home its signer's chain names at its binding;
+   * otherwise it is unknown, never invalid. What was found is this
+   * client's own input: `bindingStatus` shows an answer resting on it
+   * as unknown (Identity, "The envelope", F152, F159).
+   * @param {string} act
+   * @param {string} home
+   */
+  foundAtHome(act, home) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(home, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_foundAtHome(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[1]) {
+      throw takeFromExternrefTable0(ret[0]);
+    }
+  }
+  /**
+   * Every act held, by id.
+   * @returns {string[]}
+   */
+  held() {
+    const ret = wasm.verifier_held(this.__wbg_ptr);
+    var v1 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v1;
+  }
+  /**
+   * The routes act (Identity type 3) or encryption-key act (Envelopes type
+   * 4) that counts for an identity: its valid acts of that spec and type,
+   * followed from version 1 (Identity, "Routes"; Envelopes, "Encryption
+   * key"). Returns the act, whether the chain is contested past it, and
+   * its payload as CBOR.
+   * @param {string} identity
+   * @param {string} spec
+   * @param {number} type_
+   * @returns {any}
+   */
+  latest(identity, spec, type_) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_latest(this.__wbg_ptr, ptr0, len0, ptr1, len1, type_);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * A link between two MOR identities as the act `seenBy` sees it
+   * (Identity rules 23 and 24, F152): "not linked", "linked", "ended"
+   * (`seenBy` holds a termination in its history) or "unknown".
+   * @param {string} claim
+   * @param {string} seen_by
+   * @returns {string}
+   */
+  link(claim, seen_by) {
+    let deferred4_0;
+    let deferred4_1;
+    try {
+      const ptr0 = passStringToWasm0(claim, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len0 = WASM_VECTOR_LEN;
+      const ptr1 = passStringToWasm0(seen_by, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len1 = WASM_VECTOR_LEN;
+      const ret = wasm.verifier_link(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+      var ptr3 = ret[0];
+      var len3 = ret[1];
+      if (ret[3]) {
+        ptr3 = 0;
+        len3 = 0;
+        throw takeFromExternrefTable0(ret[2]);
+      }
+      deferred4_0 = ptr3;
+      deferred4_1 = len3;
+      return getStringFromWasm0(ptr3, len3);
+    } finally {
+      wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+    }
+  }
+  /**
+   * A verifier for the given Identity spec hash (`IDENTITY`; a test value
+   * until the freeze). Given the Money and Agreements spec hashes too, it can
+   * tell which acts may carry acknowledgements (F110); without them, an
+   * act of another specification carrying `acks` is unknown to it. Given
+   * the Envelopes and Text spec hashes, which every client holds (MICS,
+   * "Client conformance"), it decodes their acts strictly (Envelopes
+   * draft 10, rule 30; Text draft 8, rule 14; F295, F296) and shows a text
+   * or Envelopes act carrying `acks` as invalid without the Money and
+   * Agreements hashes (Fable's E5, the clients' half).
+   * @param {string} identity_spec
+   * @param {string | null} [money_spec]
+   * @param {string | null} [agreements_spec]
+   * @param {string | null} [envelopes_spec]
+   * @param {string | null} [text_spec]
+   */
+  constructor(identity_spec, money_spec, agreements_spec, envelopes_spec, text_spec) {
+    const ptr0 = passStringToWasm0(identity_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    var ptr1 = isLikeNone(money_spec) ? 0 : passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len1 = WASM_VECTOR_LEN;
+    var ptr2 = isLikeNone(agreements_spec) ? 0 : passStringToWasm0(agreements_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len2 = WASM_VECTOR_LEN;
+    var ptr3 = isLikeNone(envelopes_spec) ? 0 : passStringToWasm0(envelopes_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len3 = WASM_VECTOR_LEN;
+    var ptr4 = isLikeNone(text_spec) ? 0 : passStringToWasm0(text_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    var len4 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_new(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    this.__wbg_ptr = ret[0];
+    VerifierFinalization.register(this, this.__wbg_ptr, this);
+    return this;
+  }
+  /**
+   * Where to look for an act a reference names beside this signer
+   * (Envelopes draft 9, rule 20, F272): its outbox routes that count,
+   * then the homes in force at its latest position. Hints, each once.
+   * @param {string} signer
+   * @returns {string[]}
+   */
+  places(signer) {
+    const ptr0 = passStringToWasm0(signer, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_places(this.__wbg_ptr, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+  }
+  /**
+   * The home quorum of a counting rotation (Money rule 15, F180): the
+   * receipts the home rule in effect before it requires, each passing
+   * the receipt checks, per home operator, and how many operators are
+   * needed. `kind` is "own" (it counts on its own signatures: anchor the
+   * rotation itself), "homes", or "homeless" (the new homes' receipts,
+   * under the new home rule, F182); null where it is not a counting
+   * rotation. *The owner's client anchors these after a lock
+   * change (Money rule 15, F181).*
+   * @param {string} identity
+   * @param {string} rotation
+   * @returns {any}
+   */
+  quorum(identity, rotation) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(rotation, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_quorum(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Which act counts at each position of an identity chain.
+   * @param {string} identity
+   * @returns {any}
+   */
+  resolve(identity) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_resolve(this.__wbg_ptr, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The standing of an act held: "valid", "disputed", "void", "pending",
+   * "invalid", "unknown", or "scoped" (signed with a key a higher MIR's
+   * act installs, a grant key: Agreements judge it, F128).
+   * @param {string} act
+   * @returns {string}
+   */
+  status(act) {
+    let deferred3_0;
+    let deferred3_1;
+    try {
+      const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len0 = WASM_VECTOR_LEN;
+      const ret = wasm.verifier_status(this.__wbg_ptr, ptr0, len0);
+      var ptr2 = ret[0];
+      var len2 = ret[1];
+      if (ret[3]) {
+        ptr2 = 0;
+        len2 = 0;
+        throw takeFromExternrefTable0(ret[2]);
+      }
+      deferred3_0 = ptr2;
+      deferred3_1 = len2;
+      return getStringFromWasm0(ptr2, len2);
+    } finally {
+      wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+    }
+  }
+  /**
+   * An identity's succession (Identity draft 13, section 8, F300):
+   * `{ state, rotation, successor, confirmation }`, `state` one of
+   * "none", "declared" (shown as declared, never followed), "confirmed"
+   * (followed), "unknown" (a confirmation held whose status cannot be
+   * told), "elsewhere" (another protocol's, confirmed as its link cMIP
+   * says).
+   * @param {string} identity
+   * @returns {any}
+   */
+  succession(identity) {
+    const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_succession(this.__wbg_ptr, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+};
+if (Symbol.dispose) Verifier.prototype[Symbol.dispose] = Verifier.prototype.free;
+function actId(bytes) {
+  let deferred3_0;
+  let deferred3_1;
+  try {
+    const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.actId(ptr0, len0);
+    var ptr2 = ret[0];
+    var len2 = ret[1];
+    if (ret[3]) {
+      ptr2 = 0;
+      len2 = 0;
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    deferred3_0 = ptr2;
+    deferred3_1 = len2;
+    return getStringFromWasm0(ptr2, len2);
+  } finally {
+    wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+  }
+}
+function agreementsClonePlan(parent, clone, specs) {
+  const ptr0 = passArray8ToWasm0(parent, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ptr1 = passArray8ToWasm0(clone, wasm.__wbindgen_malloc);
+  const len1 = WASM_VECTOR_LEN;
+  const ret = wasm.agreementsClonePlan(ptr0, len0, ptr1, len1, specs);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function cborDecode(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.cborDecode(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function cborEncode(v) {
+  const ret = wasm.cborEncode(v);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function chainKeyFromSeeds(scheme, seeds) {
+  const ptr0 = passArray8ToWasm0(seeds, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.chainKeyFromSeeds(scheme, ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function dealChainKey(input) {
+  const ret = wasm.dealChainKey(input);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function describeAct(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.describeAct(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function encryptionKeyPayload(version, previous, _public) {
+  var ptr0 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  var len0 = WASM_VECTOR_LEN;
+  const ptr1 = passArray8ToWasm0(_public, wasm.__wbindgen_malloc);
+  const len1 = WASM_VECTOR_LEN;
+  const ret = wasm.encryptionKeyPayload(version, ptr0, len0, ptr1, len1);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v3;
+}
+function keyDeliveryPayload(target, key, media) {
+  const ptr0 = passStringToWasm0(target, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ptr1 = passArray8ToWasm0(key, wasm.__wbindgen_malloc);
+  const len1 = WASM_VECTOR_LEN;
+  const ret = wasm.keyDeliveryPayload(ptr0, len0, ptr1, len1, media);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v3;
+}
+function lockMedia(plaintext) {
+  const ptr0 = passArray8ToWasm0(plaintext, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.lockMedia(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function makeChainSignature(input) {
+  const ret = wasm.makeChainSignature(input);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function makeEveryday(input) {
+  const ret = wasm.makeEveryday(input);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function makeGenesis(input) {
+  const ret = wasm.makeGenesis(input);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function makeRotation(input) {
+  const ret = wasm.makeRotation(input);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function newEncryptionSecret() {
+  const ret = wasm.newEncryptionSecret();
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function newSigningSecret() {
+  const ret = wasm.newSigningSecret();
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function newTestChainKey(scheme) {
+  const ret = wasm.newTestChainKey(scheme);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function openMedia(locked, key, nonce) {
+  const ptr0 = passArray8ToWasm0(locked, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ptr1 = passArray8ToWasm0(key, wasm.__wbindgen_malloc);
+  const len1 = WASM_VECTOR_LEN;
+  const ptr2 = passArray8ToWasm0(nonce, wasm.__wbindgen_malloc);
+  const len2 = WASM_VECTOR_LEN;
+  const ret = wasm.openMedia(ptr0, len0, ptr1, len1, ptr2, len2);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v4 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v4;
+}
+function openSealed(bytes, me, secret) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  var ptr1 = isLikeNone(me) ? 0 : passStringToWasm0(me, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  var len1 = WASM_VECTOR_LEN;
+  const ptr2 = passArray8ToWasm0(secret, wasm.__wbindgen_malloc);
+  const len2 = WASM_VECTOR_LEN;
+  const ret = wasm.openSealed(ptr0, len0, ptr1, len1, ptr2, len2);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function pickupTag(_public) {
+  let deferred2_0;
+  let deferred2_1;
+  try {
+    const ptr0 = passArray8ToWasm0(_public, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.pickupTag(ptr0, len0);
+    deferred2_0 = ret[0];
+    deferred2_1 = ret[1];
+    return getStringFromWasm0(ret[0], ret[1]);
+  } finally {
+    wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+  }
+}
+function randomBytes(n) {
+  const ret = wasm.randomBytes(n);
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function readKeyDelivery(payload) {
+  const ptr0 = passArray8ToWasm0(payload, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.readKeyDelivery(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function readTerms(payload, specs) {
+  const ptr0 = passArray8ToWasm0(payload, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.readTerms(ptr0, len0, specs);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function rebuildChainKey(shares) {
+  const ptr0 = passArrayJsValueToWasm0(shares, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.rebuildChainKey(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function rebuildChainKeyFromPaper(input) {
+  const ret = wasm.rebuildChainKeyFromPaper(input);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function routesPayload(input) {
+  const ret = wasm.routesPayload(input);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function runningSummary(ids) {
+  let deferred3_0;
+  let deferred3_1;
+  try {
+    const ptr0 = passArrayJsValueToWasm0(ids, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.runningSummary(ptr0, len0);
+    var ptr2 = ret[0];
+    var len2 = ret[1];
+    if (ret[3]) {
+      ptr2 = 0;
+      len2 = 0;
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    deferred3_0 = ptr2;
+    deferred3_1 = len2;
+    return getStringFromWasm0(ptr2, len2);
+  } finally {
+    wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+  }
+}
+function seal(input) {
+  const ret = wasm.seal(input);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
+function sealedParts(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.sealedParts(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function shareOnPaper(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.shareOnPaper(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function signingPublic(secret) {
+  const ptr0 = passArray8ToWasm0(secret, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.signingPublic(ptr0, len0);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v2;
+}
+function verifyShare(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.verifyShare(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function workHash(plaintext) {
+  let deferred2_0;
+  let deferred2_1;
+  try {
+    const ptr0 = passArray8ToWasm0(plaintext, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.workHash(ptr0, len0);
+    deferred2_0 = ret[0];
+    deferred2_1 = ret[1];
+    return getStringFromWasm0(ret[0], ret[1]);
+  } finally {
+    wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+  }
+}
+function xwingPublic(secret) {
+  const ptr0 = passArray8ToWasm0(secret, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.xwingPublic(ptr0, len0);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v2;
+}
+function __wbg_get_imports() {
+  const import0 = {
+    __proto__: null,
+    __wbg_Error_30c8987f7c2ed4e2: function(arg0, arg1) {
+      const ret = Error(getStringFromWasm0(arg0, arg1));
+      return ret;
+    },
+    __wbg_Number_14af1003b8dd5ead: function(arg0) {
+      const ret = Number(arg0);
+      return ret;
+    },
+    __wbg_String_8564e559799eccda: function(arg0, arg1) {
+      const ret = String(arg1);
+      const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len1 = WASM_VECTOR_LEN;
+      getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    },
+    __wbg___wbindgen_bigint_get_as_i64_a2383202b9353e4c: function(arg0, arg1) {
+      const v = arg1;
+      const ret = typeof v === "bigint" ? v : void 0;
+      getDataViewMemory0().setBigInt64(arg0 + 8 * 1, isLikeNone(ret) ? BigInt(0) : ret, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, !isLikeNone(ret), true);
+    },
+    __wbg___wbindgen_boolean_get_5b446f51afd21013: function(arg0) {
+      const v = arg0;
+      const ret = typeof v === "boolean" ? v : void 0;
+      return isLikeNone(ret) ? 16777215 : ret ? 1 : 0;
+    },
+    __wbg___wbindgen_debug_string_4687d8d8c2017d52: function(arg0, arg1) {
+      const ret = debugString(arg1);
+      const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len1 = WASM_VECTOR_LEN;
+      getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    },
+    __wbg___wbindgen_in_92f62ee1427d9e49: function(arg0, arg1) {
+      const ret = arg0 in arg1;
+      return ret;
+    },
+    __wbg___wbindgen_is_bigint_b123553bed3bb382: function(arg0) {
+      const ret = typeof arg0 === "bigint";
+      return ret;
+    },
+    __wbg___wbindgen_is_function_1f9d30630b8b1d3d: function(arg0) {
+      const ret = typeof arg0 === "function";
+      return ret;
+    },
+    __wbg___wbindgen_is_null_e343b7d08827ba72: function(arg0) {
+      const ret = arg0 === null;
+      return ret;
+    },
+    __wbg___wbindgen_is_object_3c45d4f2dde4e749: function(arg0) {
+      const val = arg0;
+      const ret = typeof val === "object" && val !== null;
+      return ret;
+    },
+    __wbg___wbindgen_is_string_90b56bc79aad6f6c: function(arg0) {
+      const ret = typeof arg0 === "string";
+      return ret;
+    },
+    __wbg___wbindgen_is_undefined_8865fb403f8fe9d8: function(arg0) {
+      const ret = arg0 === void 0;
+      return ret;
+    },
+    __wbg___wbindgen_jsval_eq_02babf21faa37971: function(arg0, arg1) {
+      const ret = arg0 === arg1;
+      return ret;
+    },
+    __wbg___wbindgen_jsval_loose_eq_677f21e468d6b461: function(arg0, arg1) {
+      const ret = arg0 == arg1;
+      return ret;
+    },
+    __wbg___wbindgen_number_get_2e0e7dee9f701a71: function(arg0, arg1) {
+      const obj = arg1;
+      const ret = typeof obj === "number" ? obj : void 0;
+      getDataViewMemory0().setFloat64(arg0 + 8 * 1, isLikeNone(ret) ? 0 : ret, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, !isLikeNone(ret), true);
+    },
+    __wbg___wbindgen_string_get_0380ccaa2f57f0d9: function(arg0, arg1) {
+      const obj = arg1;
+      const ret = typeof obj === "string" ? obj : void 0;
+      var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      var len1 = WASM_VECTOR_LEN;
+      getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    },
+    __wbg___wbindgen_throw_41e9ee4f547fc59a: function(arg0, arg1) {
+      throw new Error(getStringFromWasm0(arg0, arg1));
+    },
+    __wbg_call_187d372bd5fdd4aa: function() {
+      return handleError(function(arg0, arg1, arg2) {
+        const ret = arg0.call(arg1, arg2);
+        return ret;
+      }, arguments);
+    },
+    __wbg_call_6137034ef55c9d0f: function() {
+      return handleError(function(arg0, arg1) {
+        const ret = arg0.call(arg1);
+        return ret;
+      }, arguments);
+    },
+    __wbg_crypto_38df2bab126b63dc: function(arg0) {
+      const ret = arg0.crypto;
+      return ret;
+    },
+    __wbg_done_b41a1d26cdb37fb6: function(arg0) {
+      const ret = arg0.done;
+      return ret;
+    },
+    __wbg_entries_3602f27ad32994b8: function(arg0) {
+      const ret = arg0.entries();
+      return ret;
+    },
+    __wbg_entries_fb6397112b1de25f: function(arg0) {
+      const ret = Object.entries(arg0);
+      return ret;
+    },
+    __wbg_from_296ca31f8d0f1c52: function(arg0) {
+      const ret = Array.from(arg0);
+      return ret;
+    },
+    __wbg_getRandomValues_c44a50d8cfdaebeb: function() {
+      return handleError(function(arg0, arg1) {
+        arg0.getRandomValues(arg1);
+      }, arguments);
+    },
+    __wbg_get_658f6698067d9515: function() {
+      return handleError(function(arg0, arg1) {
+        const ret = Reflect.get(arg0, arg1);
+        return ret;
+      }, arguments);
+    },
+    __wbg_get_6c896e0571ddae51: function(arg0, arg1) {
+      const ret = arg0[arg1 >>> 0];
+      return ret;
+    },
+    __wbg_get_unchecked_288889d017702237: function(arg0, arg1) {
+      const ret = arg0[arg1 >>> 0];
+      return ret;
+    },
+    __wbg_get_with_ref_key_6412cf3094599694: function(arg0, arg1) {
+      const ret = arg0[arg1];
+      return ret;
+    },
+    __wbg_instanceof_ArrayBuffer_a99f175873e5d9b8: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof ArrayBuffer;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_instanceof_Map_b2611749102d7ba3: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof Map;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_instanceof_Uint8Array_828cef2aaacafc31: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof Uint8Array;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_isArray_e15a2ff68ffdbef2: function(arg0) {
+      const ret = Array.isArray(arg0);
+      return ret;
+    },
+    __wbg_isSafeInteger_717808ad6a54bd9e: function(arg0) {
+      const ret = Number.isSafeInteger(arg0);
+      return ret;
+    },
+    __wbg_iterator_e3c31c892080e444: function() {
+      const ret = Symbol.iterator;
+      return ret;
+    },
+    __wbg_length_7f3c00c40364105e: function(arg0) {
+      const ret = arg0.length;
+      return ret;
+    },
+    __wbg_length_d4bdea10311bd9cf: function(arg0) {
+      const ret = arg0.length;
+      return ret;
+    },
+    __wbg_msCrypto_bd5a034af96bcba6: function(arg0) {
+      const ret = arg0.msCrypto;
+      return ret;
+    },
+    __wbg_new_1dbf7428bba60a42: function(arg0) {
+      const ret = new Uint8Array(arg0);
+      return ret;
+    },
+    __wbg_new_28744009d011f847: function() {
+      const ret = /* @__PURE__ */ new Map();
+      return ret;
+    },
+    __wbg_new_617a8cdb8bb1130e: function() {
+      const ret = new Object();
+      return ret;
+    },
+    __wbg_new_ee2291f50781bf1d: function() {
+      const ret = new Array();
+      return ret;
+    },
+    __wbg_new_from_slice_9a868026ffa4208a: function(arg0, arg1) {
+      const ret = new Uint8Array(getArrayU8FromWasm0(arg0, arg1));
+      return ret;
+    },
+    __wbg_new_with_length_3da0ad195f6f63ba: function(arg0) {
+      const ret = new Uint8Array(arg0 >>> 0);
+      return ret;
+    },
+    __wbg_next_33784799010f1bbe: function(arg0) {
+      const ret = arg0.next;
+      return ret;
+    },
+    __wbg_next_f4aac29c42af995c: function() {
+      return handleError(function(arg0) {
+        const ret = arg0.next();
+        return ret;
+      }, arguments);
+    },
+    __wbg_node_84ea875411254db1: function(arg0) {
+      const ret = arg0.node;
+      return ret;
+    },
+    __wbg_process_44c7a14e11e9f69e: function(arg0) {
+      const ret = arg0.process;
+      return ret;
+    },
+    __wbg_prototypesetcall_bc27214492979395: function(arg0, arg1, arg2) {
+      Uint8Array.prototype.set.call(getArrayU8FromWasm0(arg0, arg1), arg2);
+    },
+    __wbg_push_2baf45db356cf468: function(arg0, arg1) {
+      const ret = arg0.push(arg1);
+      return ret;
+    },
+    __wbg_randomFillSync_6c25eac9869eb53c: function() {
+      return handleError(function(arg0, arg1) {
+        arg0.randomFillSync(arg1);
+      }, arguments);
+    },
+    __wbg_require_b4edbdcf3e2a1ef0: function() {
+      return handleError(function() {
+        const ret = module.require;
+        return ret;
+      }, arguments);
+    },
+    __wbg_set_6ae97e73113c4f0b: function(arg0, arg1, arg2) {
+      const ret = arg0.set(arg1, arg2);
+      return ret;
+    },
+    __wbg_set_6be42768c690e380: function(arg0, arg1, arg2) {
+      arg0[arg1] = arg2;
+    },
+    __wbg_set_bea140a88be9b277: function(arg0, arg1, arg2) {
+      arg0[arg1 >>> 0] = arg2;
+    },
+    __wbg_static_accessor_GLOBAL_266715b9d96ba635: function() {
+      const ret = typeof global === "undefined" ? null : global;
+      return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    },
+    __wbg_static_accessor_GLOBAL_THIS_10fb7dc1ae063179: function() {
+      const ret = typeof globalThis === "undefined" ? null : globalThis;
+      return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    },
+    __wbg_static_accessor_SELF_0b583911f537483a: function() {
+      const ret = typeof self === "undefined" ? null : self;
+      return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    },
+    __wbg_static_accessor_WINDOW_d7f903d1508cbdc4: function() {
+      const ret = typeof window === "undefined" ? null : window;
+      return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    },
+    __wbg_subarray_002b94d5e13d1411: function(arg0, arg1, arg2) {
+      const ret = arg0.subarray(arg1 >>> 0, arg2 >>> 0);
+      return ret;
+    },
+    __wbg_value_f3c585ee8f5ba40c: function(arg0) {
+      const ret = arg0.value;
+      return ret;
+    },
+    __wbg_versions_276b2795b1c6a219: function(arg0) {
+      const ret = arg0.versions;
+      return ret;
+    },
+    __wbindgen_generic_0000000000000001: function(arg0) {
+      const ret = arg0;
+      return ret;
+    },
+    __wbindgen_generic_0000000000000002: function(arg0) {
+      const ret = arg0;
+      return ret;
+    },
+    __wbindgen_generic_0000000000000003: function(arg0, arg1) {
+      const ret = getArrayU8FromWasm0(arg0, arg1);
+      return ret;
+    },
+    __wbindgen_generic_0000000000000004: function(arg0, arg1) {
+      const ret = getStringFromWasm0(arg0, arg1);
+      return ret;
+    },
+    __wbindgen_generic_0000000000000005: function(arg0) {
+      const ret = BigInt.asUintN(64, arg0);
+      return ret;
+    },
+    __wbindgen_init_externref_table: function() {
+      const table = wasm.__wbindgen_externrefs;
+      const offset = table.grow(4);
+      table.set(0, void 0);
+      table.set(offset + 0, void 0);
+      table.set(offset + 1, null);
+      table.set(offset + 2, true);
+      table.set(offset + 3, false);
+    }
+  };
+  return {
+    __proto__: null,
+    "./mor_wasm_bg.js": import0
+  };
+}
+var VerifierFinalization = typeof FinalizationRegistry === "undefined" ? { register: () => {
+}, unregister: () => {
+} } : new FinalizationRegistry((ptr) => wasm.__wbg_verifier_free(ptr, 1));
+function addToExternrefTable0(obj) {
+  const idx = wasm.__externref_table_alloc();
+  wasm.__wbindgen_externrefs.set(idx, obj);
+  return idx;
+}
+function debugString(val) {
+  const type = typeof val;
+  if (type == "number" || type == "boolean" || val == null) {
+    return `${val}`;
+  }
+  if (type == "string") {
+    return `"${val}"`;
+  }
+  if (type == "symbol") {
+    const description = val.description;
+    if (description == null) {
+      return "Symbol";
+    } else {
+      return `Symbol(${description})`;
+    }
+  }
+  if (type == "function") {
+    const name = val.name;
+    if (typeof name == "string" && name.length > 0) {
+      return `Function(${name})`;
+    } else {
+      return "Function";
+    }
+  }
+  if (Array.isArray(val)) {
+    const length = val.length;
+    let debug = "[";
+    if (length > 0) {
+      debug += debugString(val[0]);
+    }
+    for (let i = 1; i < length; i++) {
+      debug += ", " + debugString(val[i]);
+    }
+    debug += "]";
+    return debug;
+  }
+  const builtInMatches = /\[object ([^\]]+)\]/.exec(toString.call(val));
+  let className;
+  if (builtInMatches && builtInMatches.length > 1) {
+    className = builtInMatches[1];
+  } else {
+    return toString.call(val);
+  }
+  if (className == "Object") {
+    try {
+      return "Object(" + JSON.stringify(val) + ")";
+    } catch (_) {
+      return "Object";
+    }
+  }
+  if (val instanceof Error) {
+    return `${val.name}: ${val.message}
+${val.stack}`;
+  }
+  return className;
+}
+function getArrayF64FromWasm0(ptr, len) {
+  ptr = ptr >>> 0;
+  return getFloat64ArrayMemory0().subarray(ptr / 8, ptr / 8 + len);
+}
+function getArrayJsValueFromWasm0(ptr, len) {
+  ptr = ptr >>> 0;
+  const mem = getDataViewMemory0();
+  const result = [];
+  for (let i = ptr; i < ptr + 4 * len; i += 4) {
+    result.push(wasm.__wbindgen_externrefs.get(mem.getUint32(i, true)));
+  }
+  wasm.__externref_drop_slice(ptr, len);
+  return result;
+}
+function getArrayU8FromWasm0(ptr, len) {
+  ptr = ptr >>> 0;
+  return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+var cachedDataViewMemory0 = null;
+function getDataViewMemory0() {
+  if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || cachedDataViewMemory0.buffer.detached === void 0 && cachedDataViewMemory0.buffer !== wasm.memory.buffer) {
+    cachedDataViewMemory0 = new DataView(wasm.memory.buffer);
+  }
+  return cachedDataViewMemory0;
+}
+var cachedFloat64ArrayMemory0 = null;
+function getFloat64ArrayMemory0() {
+  if (cachedFloat64ArrayMemory0 === null || cachedFloat64ArrayMemory0.byteLength === 0) {
+    cachedFloat64ArrayMemory0 = new Float64Array(wasm.memory.buffer);
+  }
+  return cachedFloat64ArrayMemory0;
+}
+function getStringFromWasm0(ptr, len) {
+  return decodeText(ptr >>> 0, len);
+}
+var cachedUint32ArrayMemory0 = null;
+var cachedUint8ArrayMemory0 = null;
+function getUint8ArrayMemory0() {
+  if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0) {
+    cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
+  }
+  return cachedUint8ArrayMemory0;
+}
+function handleError(f, args) {
+  try {
+    return f.apply(this, args);
+  } catch (e2) {
+    const idx = addToExternrefTable0(e2);
+    wasm.__wbindgen_exn_store(idx);
+  }
+}
+function isLikeNone(x) {
+  return x === void 0 || x === null;
+}
+function passArray8ToWasm0(arg, malloc) {
+  const ptr = malloc(arg.length * 1, 1) >>> 0;
+  getUint8ArrayMemory0().set(arg, ptr / 1);
+  WASM_VECTOR_LEN = arg.length;
+  return ptr;
+}
+function passArrayJsValueToWasm0(array, malloc) {
+  const ptr = malloc(array.length * 4, 4) >>> 0;
+  for (let i = 0; i < array.length; i++) {
+    const add = addToExternrefTable0(array[i]);
+    getDataViewMemory0().setUint32(ptr + 4 * i, add, true);
+  }
+  WASM_VECTOR_LEN = array.length;
+  return ptr;
+}
+function passStringToWasm0(arg, malloc, realloc) {
+  if (realloc === void 0) {
+    const buf = cachedTextEncoder.encode(arg);
+    const ptr2 = malloc(buf.length, 1) >>> 0;
+    getUint8ArrayMemory0().subarray(ptr2, ptr2 + buf.length).set(buf);
+    WASM_VECTOR_LEN = buf.length;
+    return ptr2;
+  }
+  let len = arg.length;
+  let ptr = malloc(len, 1) >>> 0;
+  const mem = getUint8ArrayMemory0();
+  let offset = 0;
+  for (; offset < len; offset++) {
+    const code = arg.charCodeAt(offset);
+    if (code > 127) break;
+    mem[ptr + offset] = code;
+  }
+  if (offset !== len) {
+    if (offset !== 0) {
+      arg = arg.slice(offset);
+    }
+    ptr = realloc(ptr, len, len = offset + arg.length * 3, 1) >>> 0;
+    const view = getUint8ArrayMemory0().subarray(ptr + offset, ptr + len);
+    const ret = cachedTextEncoder.encodeInto(arg, view);
+    offset += ret.written;
+    ptr = realloc(ptr, len, offset, 1) >>> 0;
+  }
+  WASM_VECTOR_LEN = offset;
+  return ptr;
+}
+function takeFromExternrefTable0(idx) {
+  const value = wasm.__wbindgen_externrefs.get(idx);
+  wasm.__externref_table_dealloc(idx);
+  return value;
+}
+var cachedTextDecoder = new TextDecoder("utf-8", { ignoreBOM: true, fatal: true });
+cachedTextDecoder.decode();
+var MAX_SAFARI_DECODE_BYTES = 2146435072;
+var numBytesDecoded = 0;
+function decodeText(ptr, len) {
+  numBytesDecoded += len;
+  if (numBytesDecoded >= MAX_SAFARI_DECODE_BYTES) {
+    cachedTextDecoder = new TextDecoder("utf-8", { ignoreBOM: true, fatal: true });
+    cachedTextDecoder.decode();
+    numBytesDecoded = len;
+  }
+  return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+}
+var cachedTextEncoder = new TextEncoder();
+if (!("encodeInto" in cachedTextEncoder)) {
+  cachedTextEncoder.encodeInto = function(arg, view) {
+    const buf = cachedTextEncoder.encode(arg);
+    view.set(buf);
+    return {
+      read: arg.length,
+      written: buf.length
+    };
+  };
+}
+var WASM_VECTOR_LEN = 0;
+var wasmModule;
+var wasmInstance;
+var wasm;
+function __wbg_finalize_init(instance, module2) {
+  wasmInstance = instance;
+  wasm = instance.exports;
+  wasmModule = module2;
+  cachedDataViewMemory0 = null;
+  cachedFloat64ArrayMemory0 = null;
+  cachedUint32ArrayMemory0 = null;
+  cachedUint8ArrayMemory0 = null;
+  wasm.__wbindgen_start();
+  return wasm;
+}
+async function __wbg_load(module2, imports) {
+  if (typeof Response === "function" && module2 instanceof Response) {
+    if (!module2.ok) {
+      throw new Error(`failed to fetch Wasm: ${module2.status} ${module2.statusText} fetching '${module2.url}'`);
+    }
+    if (typeof WebAssembly.instantiateStreaming === "function") {
+      try {
+        return await WebAssembly.instantiateStreaming(module2, imports);
+      } catch (e2) {
+        const validResponse = expectedResponseType(module2.type);
+        if (validResponse && module2.headers.get("Content-Type") !== "application/wasm") {
+          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e2);
+        } else {
+          throw e2;
+        }
+      }
+    }
+    const bytes = await module2.arrayBuffer();
+    return await WebAssembly.instantiate(bytes, imports);
+  } else {
+    const instance = await WebAssembly.instantiate(module2, imports);
+    if (instance instanceof WebAssembly.Instance) {
+      return { instance, module: module2 };
+    } else {
+      return instance;
+    }
+  }
+  function expectedResponseType(type) {
+    switch (type) {
+      case "basic":
+      case "cors":
+      case "default":
+        return true;
+    }
+    return false;
+  }
+}
+async function __wbg_init(module_or_path) {
+  if (wasm !== void 0) return wasm;
+  if (module_or_path !== void 0) {
+    if (Object.getPrototypeOf(module_or_path) === Object.prototype) {
+      ({ module_or_path } = module_or_path);
+    } else {
+      console.warn("using deprecated parameters for the initialization function; pass a single object instead");
+    }
+  }
+  if (module_or_path === void 0) {
+    module_or_path = new URL("mor_wasm_bg.wasm", import.meta.url);
+  }
+  const imports = __wbg_get_imports();
+  if (typeof module_or_path === "string" || typeof Request === "function" && module_or_path instanceof Request || typeof URL === "function" && module_or_path instanceof URL) {
+    module_or_path = fetch(module_or_path);
+  }
+  const { instance, module: module2 } = await __wbg_load(await module_or_path, imports);
+  return __wbg_finalize_init(instance, module2);
+}
+
+// node_modules/@noble/hashes/_u64.js
+var fromNumH = (n) => n / 2 ** 32 | 0;
+var fromNumL = (n) => n >>> 0;
+function setU64FromNum(view, byteOffset, n, isLE) {
+  const h = fromNumH(n);
+  const l = fromNumL(n);
+  view.setUint32(byteOffset, isLE ? l : h, isLE);
+  view.setUint32(byteOffset + 4, isLE ? h : l, isLE);
+}
+
+// node_modules/@noble/hashes/utils.js
+function isBytes(a) {
+  return a instanceof Uint8Array || ArrayBuffer.isView(a) && a.constructor.name === "Uint8Array" && "BYTES_PER_ELEMENT" in a && a.BYTES_PER_ELEMENT === 1;
+}
+var atitle = (title) => title ? `"${title}" ` : "";
+function anumber(n, title = "") {
+  if (typeof n !== "number")
+    throw new TypeError(atitle(title) + "expected number, got " + typeof n);
+  if (!Number.isSafeInteger(n) || n < 0)
+    throw new RangeError(atitle(title) + "expected integer >= 0, got " + n);
+  return n;
+}
+function abytes(value, length, title = "") {
+  if (isBytes(value) && (length === void 0 || value.length === length))
+    return value;
+  if (length !== void 0)
+    anumber(length, "length");
+  const bytes = isBytes(value);
+  const ofLen = length !== void 0 ? ` of length ${length}` : "";
+  const got = bytes ? `length=${value.length}` : `type=${typeof value}`;
+  const message6 = atitle(title) + "expected Uint8Array" + ofLen + ", got " + got;
+  if (!bytes)
+    throw new TypeError(message6);
+  throw new RangeError(message6);
+}
+var aobject = (value, label) => {
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    throw new TypeError((label === "object" ? "" : `"${label}" `) + "expected object, got type=" + typeof value);
+};
+var aopts = (value, label) => {
+  aobject(value, label);
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null)
+    throw new TypeError(`"${label}" expected plain object`);
+  if (Object.hasOwn(value, "__proto__"))
+    throw new TypeError(`"${label}.__proto__" is not allowed`);
+};
+function aexists(instance, checkFinished = true) {
+  if (instance.destroyed)
+    throw new Error("hash was destroyed");
+  if (checkFinished && instance.finished)
+    throw new Error("digest() was already called");
+}
+function aoutput(out, instance) {
+  abytes(out, void 0, "output");
+  const min = instance.outputLen;
+  if (!(out.length >= min)) {
+    throw new RangeError('"output" expected length >= ' + min);
+  }
+}
+function clean(...arrays) {
+  for (let i = 0; i < arrays.length; i++) {
+    arrays[i].fill(0);
+  }
+}
+function createView(arr) {
+  return new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
+}
+function rotr(word, shift) {
+  return word << 32 - shift | word >>> shift;
+}
+function checkOpts(defaults, opts, title = "opts") {
+  aopts(defaults, "defaults");
+  if (opts !== void 0)
+    aopts(opts, title);
+  const merged = Object.assign(/* @__PURE__ */ Object.create(null), defaults, opts);
+  return merged;
+}
+function createHasher(hashCons, info = {}) {
+  if (typeof hashCons !== "function")
+    throw new TypeError('"hashCons" expected function, got type=' + typeof hashCons);
+  info = checkOpts({}, info, "info");
+  const hashC = (msg, opts) => hashCons(opts).update(msg).digest();
+  const tmp = hashCons(void 0);
+  hashC.outputLen = tmp.outputLen;
+  hashC.blockLen = tmp.blockLen;
+  hashC.canXOF = tmp.canXOF;
+  hashC.create = (opts) => hashCons(opts);
+  Object.assign(hashC, info);
+  return Object.freeze(hashC);
+}
+var oidNist = (suffix) => ({
+  // Current NIST hashAlgs suffixes used here fit in one DER subidentifier octet.
+  // Larger suffix values would need base-128 OID encoding and a different length byte.
+  oid: Uint8Array.from([6, 9, 96, 134, 72, 1, 101, 3, 4, 2, suffix])
+});
+
+// node_modules/@noble/hashes/_md.js
+function Chi(a, b, c) {
+  return a & b ^ ~a & c;
+}
+function Maj(a, b, c) {
+  return a & b ^ a & c ^ b & c;
+}
+var HashMD = class {
+  blockLen;
+  outputLen;
+  canXOF = false;
+  padOffset;
+  isLE;
+  // For partial updates less than block size
+  buffer;
+  view;
+  finished = false;
+  length = 0;
+  pos = 0;
+  destroyed = false;
+  constructor(blockLen, outputLen, padOffset, isLE) {
+    this.blockLen = blockLen;
+    this.outputLen = outputLen;
+    this.padOffset = padOffset;
+    this.isLE = isLE;
+    this.buffer = new Uint8Array(blockLen);
+    this.view = createView(this.buffer);
+  }
+  update(data) {
+    aexists(this);
+    abytes(data);
+    const { view, buffer, blockLen } = this;
+    const len = data.length;
+    let processed = false;
+    for (let pos = 0; pos < len; ) {
+      const take = Math.min(blockLen - this.pos, len - pos);
+      if (take === blockLen) {
+        const dataView = createView(data);
+        for (; blockLen <= len - pos; pos += blockLen)
+          this.process(dataView, pos);
+        processed = true;
+        continue;
+      }
+      buffer.set(pos === 0 && take === len ? data : data.subarray(pos, pos + take), this.pos);
+      this.pos += take;
+      pos += take;
+      if (this.pos === blockLen) {
+        this.process(view, 0);
+        this.pos = 0;
+        processed = true;
+      }
+    }
+    this.length += data.length;
+    if (processed)
+      this.roundClean();
+    return this;
+  }
+  digestInto(out) {
+    aexists(this);
+    aoutput(out, this);
+    this.finished = true;
+    const { buffer, view, blockLen, isLE } = this;
+    let { pos } = this;
+    buffer[pos++] = 128;
+    buffer.fill(0, pos);
+    if (this.padOffset > blockLen - pos) {
+      this.process(view, 0);
+      buffer.fill(0);
+    }
+    setU64FromNum(view, blockLen - 8, this.length * 8, isLE);
+    this.process(view, 0);
+    this.roundClean();
+    const oview = out === buffer ? view : createView(out);
+    const len = this.outputLen;
+    const outLen = len / 4;
+    const state = this.get();
+    if (len % 4 || outLen > state.length)
+      throw new Error("invalid outputLen");
+    for (let i = 0; i < outLen; i++)
+      oview.setUint32(4 * i, state[i], isLE);
+  }
+  digest() {
+    const { buffer, outputLen } = this;
+    this.digestInto(buffer);
+    const res = buffer.slice(0, outputLen);
+    this.destroy();
+    return res;
+  }
+  _cloneIntoMeta(to) {
+    const { buffer, length, finished, destroyed, pos } = this;
+    to.destroyed = destroyed;
+    to.finished = finished;
+    to.length = length;
+    to.pos = pos;
+    if (pos)
+      to.buffer.set(buffer);
+    return to;
+  }
+  clone() {
+    return this._cloneInto();
+  }
+};
+var SHA256_IV = /* @__PURE__ */ Uint32Array.from([
+  1779033703,
+  3144134277,
+  1013904242,
+  2773480762,
+  1359893119,
+  2600822924,
+  528734635,
+  1541459225
+]);
+
+// node_modules/@noble/hashes/sha2.js
+var SHA256_K = /* @__PURE__ */ Uint32Array.from([
+  1116352408,
+  1899447441,
+  3049323471,
+  3921009573,
+  961987163,
+  1508970993,
+  2453635748,
+  2870763221,
+  3624381080,
+  310598401,
+  607225278,
+  1426881987,
+  1925078388,
+  2162078206,
+  2614888103,
+  3248222580,
+  3835390401,
+  4022224774,
+  264347078,
+  604807628,
+  770255983,
+  1249150122,
+  1555081692,
+  1996064986,
+  2554220882,
+  2821834349,
+  2952996808,
+  3210313671,
+  3336571891,
+  3584528711,
+  113926993,
+  338241895,
+  666307205,
+  773529912,
+  1294757372,
+  1396182291,
+  1695183700,
+  1986661051,
+  2177026350,
+  2456956037,
+  2730485921,
+  2820302411,
+  3259730800,
+  3345764771,
+  3516065817,
+  3600352804,
+  4094571909,
+  275423344,
+  430227734,
+  506948616,
+  659060556,
+  883997877,
+  958139571,
+  1322822218,
+  1537002063,
+  1747873779,
+  1955562222,
+  2024104815,
+  2227730452,
+  2361852424,
+  2428436474,
+  2756734187,
+  3204031479,
+  3329325298
+]);
+var SHA256_W = /* @__PURE__ */ new Uint32Array(64);
+var SHA2_32B = class extends HashMD {
+  // We cannot use array here since array allows indexing by variable
+  // which means optimizer/compiler cannot use registers.
+  // Numeric initializers matter: starting the fields as `undefined` changes
+  // V8's field representation and makes sha256 3x slower (measured).
+  A = 0;
+  B = 0;
+  C = 0;
+  D = 0;
+  E = 0;
+  F = 0;
+  G = 0;
+  H = 0;
+  constructor(outputLen, IV) {
+    super(64, outputLen, 8, false);
+    this.A = IV[0] | 0;
+    this.B = IV[1] | 0;
+    this.C = IV[2] | 0;
+    this.D = IV[3] | 0;
+    this.E = IV[4] | 0;
+    this.F = IV[5] | 0;
+    this.G = IV[6] | 0;
+    this.H = IV[7] | 0;
+  }
+  get() {
+    const { A, B, C, D, E, F, G, H } = this;
+    return [A, B, C, D, E, F, G, H];
+  }
+  // prettier-ignore
+  set(A, B, C, D, E, F, G, H) {
+    this.A = A | 0;
+    this.B = B | 0;
+    this.C = C | 0;
+    this.D = D | 0;
+    this.E = E | 0;
+    this.F = F | 0;
+    this.G = G | 0;
+    this.H = H | 0;
+  }
+  _cloneInto(to) {
+    (to ||= new this.constructor()).set(...this.get());
+    return this._cloneIntoMeta(to);
+  }
+  process(view, offset) {
+    for (let i = 0; i < 16; i++, offset += 4)
+      SHA256_W[i] = view.getUint32(offset, false);
+    for (let i = 16; i < 64; i++) {
+      const W15 = SHA256_W[i - 15];
+      const W2 = SHA256_W[i - 2];
+      const s0 = rotr(W15, 7) ^ rotr(W15, 18) ^ W15 >>> 3;
+      const s1 = rotr(W2, 17) ^ rotr(W2, 19) ^ W2 >>> 10;
+      SHA256_W[i] = s1 + SHA256_W[i - 7] + s0 + SHA256_W[i - 16] | 0;
+    }
+    let { A, B, C, D, E, F, G, H } = this;
+    for (let i = 0; i < 64; i++) {
+      const sigma1 = rotr(E, 6) ^ rotr(E, 11) ^ rotr(E, 25);
+      const T1 = H + sigma1 + Chi(E, F, G) + SHA256_K[i] + SHA256_W[i] | 0;
+      const sigma0 = rotr(A, 2) ^ rotr(A, 13) ^ rotr(A, 22);
+      const T2 = sigma0 + Maj(A, B, C) | 0;
+      H = G;
+      G = F;
+      F = E;
+      E = D + T1 | 0;
+      D = C;
+      C = B;
+      B = A;
+      A = T1 + T2 | 0;
+    }
+    A = A + this.A | 0;
+    B = B + this.B | 0;
+    C = C + this.C | 0;
+    D = D + this.D | 0;
+    E = E + this.E | 0;
+    F = F + this.F | 0;
+    G = G + this.G | 0;
+    H = H + this.H | 0;
+    this.set(A, B, C, D, E, F, G, H);
+  }
+  roundClean() {
+    clean(SHA256_W);
+  }
+  destroy() {
+    this.destroyed = true;
+    this.set(0, 0, 0, 0, 0, 0, 0, 0);
+    clean(this.buffer);
+  }
+};
+var _SHA256 = class extends SHA2_32B {
+  constructor() {
+    super(32, SHA256_IV);
+  }
+};
+var sha256 = /* @__PURE__ */ createHasher(
+  () => new _SHA256(),
+  /* @__PURE__ */ oidNist(1)
+);
+
+// ../genesis/src/witness.ts
+var WITNESS_EXPLANATION = 'A witness act says "I received this act and rely on it". It keeps the act visible as disputed even if its author later disowns it. It is public: anyone can see that you rely on this act, though not what it says.';
+
+// ../reader/src/web/common.ts
+var HEX = Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, "0"));
+var hex = (b) => {
+  let s = "";
+  for (const x of b) s += HEX[x];
+  return s;
+};
+var unhex = (s) => {
+  if (s.length % 2 || /[^0-9a-fA-F]/.test(s)) throw new Error("not hex");
+  const out = new Uint8Array(s.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(s.slice(2 * i, 2 * i + 2), 16);
+  return out;
+};
+var base64 = (b) => {
+  let s = "";
+  for (let i = 0; i < b.length; i += 32768) s += String.fromCharCode(...b.subarray(i, i + 32768));
+  return btoa(s);
+};
+var sha2562 = (data) => hex(sha256(typeof data === "string" ? new TextEncoder().encode(data) : data));
+var SPECS = {
+  identity: sha2562("IDENTITY, test value until the freeze"),
+  envelopes: sha2562("ENVELOPE, test value until the freeze"),
+  text: sha2562("TEXT, test value until the freeze")
+};
+var MIRS = {
+  ...SPECS,
+  money: sha2562("FINANCE, test value until the freeze"),
+  agreements: sha2562("LAW, test value until the freeze"),
+  development: sha2562("PRODUCTION, test value until the freeze")
+};
+var ACK_SPECS = [MIRS.identity, MIRS.money, MIRS.agreements];
+var IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15, chainSignature: 16 };
+var ENVELOPES_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 };
+
+// ../reader/src/web/core.ts
+await __wbg_init({ module_or_path: new URL("mor_wasm_bg.wasm", document.baseURI) });
+
+// ../genesis/src/transport.ts
+var RelayError = class extends Error {
+  constructor(code, reason, acts = [], status = 0) {
+    super(`relay error ${code}: ${reason}`);
+    this.code = code;
+    this.reason = reason;
+    this.acts = acts;
+    this.status = status;
+  }
+};
+var CODE = {
+  malformed: 0,
+  invalid: 1,
+  notServed: 2,
+  missingPredecessor: 3,
+  conflict: 4,
+  refused: 5,
+  tooLarge: 6,
+  notAccepted: 7,
+  notHeld: 8,
+  notSupported: 9,
+  slowDown: 10
+};
+var bytesList = (v) => Array.isArray(v) ? v : [];
+var sealedId = (bytes) => {
+  const t = unhex(sha2562("MOR/transport/sealed"));
+  const all = new Uint8Array(64 + bytes.length);
+  all.set(t, 0);
+  all.set(t, 32);
+  all.set(bytes, 64);
+  return sha2562(all);
+};
+var stated = /* @__PURE__ */ new Map();
+var Relay = class {
+  constructor(base, via = base) {
+    this.base = base;
+    this.via = via;
+  }
+  async call(path, init) {
+    const r = await fetch(this.via.replace(/\/$/, "") + path, init);
+    const body = new Uint8Array(await r.arrayBuffer());
+    if (!r.ok) {
+      let code = -1;
+      let reason = `HTTP ${r.status}`;
+      let acts = [];
+      try {
+        const e2 = cborDecode(body);
+        code = e2.get(0);
+        reason = e2.get(1) ?? reason;
+        acts = bytesList(e2.get(2));
+      } catch {
+      }
+      throw new RelayError(code, reason, acts, r.status);
+    }
+    return body;
+  }
+  post(path, body, type = "application/cbor") {
+    return this.call(path, { method: "POST", body, headers: { "content-type": type } });
+  }
+  async info() {
+    return cborDecode(await this.call("/info"));
+  }
+  /** The relay's stated limits, read from `GET /info` once; null when it does not say, and then the relay judges what it is sent. */
+  limits() {
+    let l = stated.get(this.via);
+    if (!l) {
+      l = this.info().then(
+        (m) => {
+          const x = m.get(3);
+          const act = x?.get(0);
+          const media = x?.get(1);
+          return typeof act === "number" && typeof media === "number" ? { act, media } : null;
+        },
+        () => null
+      );
+      stated.set(this.via, l);
+      void l.then((v) => v ?? stated.delete(this.via));
+    }
+    return l;
+  }
+  /**
+   * cMIP draft 3, "Clients", 6: a client SHOULD NOT send a body larger than
+   * the relay's stated limits. Refused here, before anything is sent, with
+   * the relay's own code for "too large".
+   */
+  async fits(size, media) {
+    const l = await this.limits();
+    if (!l) return;
+    const limit = media ? l.media : l.act;
+    if (size > limit) throw new RelayError(CODE.tooLarge, `not sent: ${size} bytes is over this relay's stated limit of ${limit}`);
+  }
+  /** `POST /acts`. The act id in the answer is checked against the act sent. */
+  async putAct(act) {
+    await this.fits(act.length, false);
+    const m = cborDecode(await this.post("/acts", act));
+    const id = hex(m.get(0));
+    if (id !== actId(act)) throw new RelayError(-1, "the relay answered for another act");
+    return {
+      id,
+      arrival: m.get(1),
+      receipt: m.get(2),
+      objection: m.get(3)
+    };
+  }
+  /** `POST /sealed`, with pickup tags for a container sent to a bare key. */
+  async putSealed(sealed, pickup = []) {
+    await this.fits(sealed.length, false);
+    const req = /* @__PURE__ */ new Map([[0, sealed]]);
+    if (pickup.length) req.set(1, pickup.map(unhex));
+    const m = cborDecode(await this.post("/sealed", cborEncode(req)));
+    const id = hex(m.get(0));
+    if (id !== sealedId(sealed)) throw new RelayError(-1, "the relay answered for another container");
+    return { id, arrival: m.get(1) };
+  }
+  /** `GET /acts/{id}`, checked: `null` when the relay does not hold it (which proves nothing). */
+  async getAct(id) {
+    try {
+      const a = await this.call(`/acts/${id}`);
+      return actId(a) === id ? a : null;
+    } catch (e2) {
+      if (e2 instanceof RelayError && e2.code === CODE.notHeld) return null;
+      throw e2;
+    }
+  }
+  /** `POST /media`: the relay's answer is checked against the bytes sent. */
+  async putMedia(locked) {
+    await this.fits(locked.length, true);
+    const m = cborDecode(await this.post("/media", locked, "application/octet-stream"));
+    const lockedHash = hex(m[0]);
+    if (lockedHash !== sha2562(locked) || m[1] !== locked.length) {
+      throw new RelayError(-1, "the relay answered for other media");
+    }
+    return { lockedHash, size: m[1] };
+  }
+  /** `GET /media/{locked hash}`, checked: `null` when not held or not matching. */
+  async getMedia(lockedHash) {
+    try {
+      const b = await this.call(`/media/${lockedHash}`);
+      return sha2562(b) === lockedHash ? b : null;
+    } catch (e2) {
+      if (e2 instanceof RelayError && e2.code === CODE.notHeld) return null;
+      throw e2;
+    }
+  }
+  async feed(q) {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) {
+      if (v === void 0) continue;
+      p.set(k, k === "unaddressed" ? v ? "1" : "0" : String(v));
+    }
+    const m = cborDecode(await this.call(`/feed?${p}`));
+    const items = m.get(0).map(([arrival, kind, item]) => ({
+      arrival,
+      kind: kind === 0 ? "act" : "sealed",
+      item
+    }));
+    return { items, next: m.get(1) };
+  }
+  /** `GET /identity/{id}`: everything the home holds about an identity. */
+  async identity(id) {
+    const m = cborDecode(await this.call(`/identity/${id}`));
+    const got = hex(m.get(0));
+    if (got !== id) throw new RelayError(-1, "an identity record for another identity");
+    return {
+      identity: got,
+      chain: bytesList(m.get(1)),
+      receipts: bytesList(m.get(2)),
+      routes: bytesList(m.get(3)),
+      encryptionKeys: bytesList(m.get(4)),
+      names: bytesList(m.get(5)),
+      links: bytesList(m.get(6)),
+      evidence: bytesList(m.get(7)),
+      otherReceipts: bytesList(m.get(8))
+    };
+  }
+};
+var relayAt = (hint, via = {}) => new Relay(hint, via[hint] ?? hint);
+
+// ../genesis/src/lines.ts
+var IDENTITY_WORDS = {
+  [IDENTITY_TYPES.routes]: "routes: where its acts are found and where to reach it",
+  4: "a name",
+  5: "a name withdrawn",
+  6: "a link claimed",
+  7: "a link confirmed",
+  8: "a link ended",
+  14: "an escape endorsement",
+  [IDENTITY_TYPES.witness]: "a witness act: acts of others it relies on"
+};
+var ENVELOPES_WORDS = {
+  [ENVELOPES_TYPES.publication]: "a publication (a post, a picture, a file)",
+  [ENVELOPES_TYPES.keyDelivery]: "a key delivery",
+  3: "a withdrawal of a publication",
+  [ENVELOPES_TYPES.encryptionKey]: "a new encryption key, to receive sealed messages",
+  5: "a vow"
+};
+var MONEY_WORDS = {
+  0: "a payee pointer: where it is paid",
+  1: "a debt it owes",
+  2: "a receipt of a payment",
+  3: "a claim of a payment it made",
+  4: "a release of a debt owed to it"
+};
+var AGREEMENTS_WORDS = {
+  0: "an agreement proposed",
+  1: "its signature on an agreement",
+  3: "a work claimed",
+  4: "a stake transferred",
+  5: "a release",
+  6: "a standing offer",
+  8: "a split",
+  9: "a grant",
+  10: "a grant revoked",
+  16: "a resignation",
+  17: "a record",
+  19: "a fork",
+  20: "a closing"
+};
+function whatIs(d, specs = MIRS) {
+  if (d.spec === void 0 || d.type === void 0) return "a private act: only those it was meant for can read what it is";
+  const words2 = d.spec === specs.identity ? IDENTITY_WORDS[d.type] : d.spec === specs.envelopes ? ENVELOPES_WORDS[d.type] : d.spec === specs.text ? d.type === 0 ? "a text, such as a post or a message" : void 0 : d.spec === specs.money ? MONEY_WORDS[d.type] : d.spec === specs.agreements ? AGREEMENTS_WORDS[d.type] : void 0;
+  const w = words2 ?? `an act of type ${d.type} under ${d.spec === specs.identity ? "Identity" : d.spec === specs.envelopes ? "Envelopes" : d.spec === specs.money ? "Money" : d.spec === specs.agreements ? "Agreements" : "another specification"}`;
+  return d.public ? w : `${w}, private`;
+}
+async function actsBy(signer, hints, via = {}) {
+  const out = /* @__PURE__ */ new Map();
+  for (const hint of hints) {
+    try {
+      let after;
+      for (; ; ) {
+        const page = await relayAt(hint, via).feed({ signer, after });
+        for (const it of page.items) {
+          if (it.kind !== "act") continue;
+          try {
+            const d = describeAct(it.item);
+            if (!out.has(d.id)) out.set(d.id, it.item);
+          } catch {
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  return [...out.values()];
+}
+function linesOf(o) {
+  const specs = o.specs ?? MIRS;
+  const held = /* @__PURE__ */ new Map();
+  for (const a of o.acts) {
+    let d;
+    try {
+      d = describeAct(a);
+    } catch {
+      continue;
+    }
+    if (d.signer !== o.identity) continue;
+    if (d.spec === specs.identity && (d.type === IDENTITY_TYPES.genesis || d.type === IDENTITY_TYPES.rotation || d.type === IDENTITY_TYPES.chainSignature)) continue;
+    held.set(d.id, d);
+  }
+  const ownPrev = new Map(o.own.map((id, i) => [id, i ? o.own[i - 1] : null]));
+  const prevOf = (id) => {
+    if (ownPrev.has(id)) return { known: true, prev: ownPrev.get(id) };
+    const d = held.get(id);
+    if (!d || d.spec === void 0) return { known: false, prev: null };
+    return { known: true, prev: d.prev ?? null };
+  };
+  const named = /* @__PURE__ */ new Set();
+  for (const id of [...held.keys(), ...o.own]) {
+    const p = prevOf(id);
+    if (p.prev) named.add(p.prev);
+  }
+  const ownTip = o.own[o.own.length - 1];
+  const tips = [...held.values()].filter((d) => !named.has(d.id) && d.binding === o.binding).map((d) => d.id);
+  if (ownTip && !tips.includes(ownTip) && !named.has(ownTip)) tips.push(ownTip);
+  const out = [];
+  for (const tip of tips) {
+    const d = held.get(tip);
+    const latest = d ? whatIs(d, specs) : "an act made on this device";
+    const ids = [];
+    let at = tip;
+    let why;
+    while (at) {
+      if (ids.includes(at)) {
+        why = "its acts name each other in a circle";
+        break;
+      }
+      ids.push(at);
+      const p = prevOf(at);
+      if (!p.known) {
+        why = held.has(at) ? `it holds a private act made elsewhere (${at.slice(0, 12)}\u2026): only the app that made it can read which act comes before it` : `an act in it (${at.slice(0, 12)}\u2026) was not found at its homes or relays`;
+        break;
+      }
+      at = p.prev;
+    }
+    ids.reverse();
+    const position = d?.position ?? (ownPrev.has(tip) ? o.own.indexOf(tip) + 1 : void 0);
+    if (!why && position !== void 0 && position !== ids.length) why = `its latest act says position ${position}, but ${ids.length} acts were found behind it`;
+    out.push({
+      tip,
+      own: tip === ownTip,
+      readable: !why,
+      card: why ? null : { act: tip, position: ids.length, summary: runningSummary(ids) },
+      latest,
+      ...why ? { why } : {}
+    });
+  }
+  return out.sort((a, b) => Number(b.own) - Number(a.own) || (a.tip < b.tip ? -1 : 1));
+}
+function lineWords(l) {
+  const whose = l.own ? "This device\u2019s line" : "A line made elsewhere";
+  if (l.readable && l.card) return `${whose}: ${l.card.position} act${l.card.position === 1 ? "" : "s"}, the latest ${l.card.act} (${l.latest}); summary ${l.card.summary}.`;
+  return `${whose} that this device cannot read, ending at ${l.tip} (${l.latest}): ${l.why}. Give its card (its latest act, position and summary, as the app that made it shows them) to keep it.`;
+}
+function voidWarning(left) {
+  return `${left.length === 1 ? "One line of acts is" : `${left.length} lines of acts are`} left out of this rotation: ${left.map((l) => l.tip).join(", ")}. Every act of ${left.length === 1 ? "that line" : "those lines"}, signed with the key this rotation replaces, becomes void, unless someone relied on it in a way the protocol can see (Identity rules 34 and 35). Leave ${left.length === 1 ? "it" : "them"} out only if you did not make ${left.length === 1 ? "it" : "them"}, or no longer want ${left.length === 1 ? "it" : "them"} to count.`;
+}
+function planLines(lines2, o = {}) {
+  const leaveOut = new Set(o.leaveOut ?? []);
+  const cards = o.cards ?? [];
+  for (const t of leaveOut) if (!lines2.some((l) => l.tip === t)) throw new Error(`no line found ends at ${t}: nothing to leave out`);
+  for (const c of cards) {
+    if (!Number.isSafeInteger(c.position) || c.position < 1 || !/^[0-9a-f]{64}$/.test(c.act) || !/^[0-9a-f]{64}$/.test(c.summary)) {
+      throw new Error("a card is a latest act and a summary (64 hexadecimal characters each) and a position from 1");
+    }
+    const l = lines2.find((x) => x.tip === c.act);
+    if (l?.card && (l.card.position !== c.position || l.card.summary !== c.summary)) {
+      throw new Error(`the card for ${c.act} does not match its line as read here (position ${l.card.position}, summary ${l.card.summary})`);
+    }
+    if (leaveOut.has(c.act)) throw new Error(`${c.act} is both given a card and left out`);
+  }
+  const kept = [];
+  const left = [];
+  const shown = [];
+  for (const l of lines2) {
+    const card = cards.find((c) => c.act === l.tip) ?? l.card;
+    if (leaveOut.has(l.tip)) {
+      left.push(l);
+      shown.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
+    } else if (card) {
+      kept.push(card);
+      shown.push({ text: l.readable ? `${lineWords(l)} Kept.` : `${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`, tone: l.readable ? "ok" : "warn" });
+    } else {
+      left.push(l);
+      shown.push({ text: `${lineWords(l)} No card was given, so it is left out: its acts become void.`, tone: "bad" });
+    }
+  }
+  for (const c of cards) {
+    if (lines2.some((l) => l.tip === c.act)) continue;
+    kept.push(c);
+    shown.push({ text: `A line ending at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}).`, tone: "warn" });
+  }
+  return { kept, left, shown, warning: left.length ? voidWarning(left) : null };
+}
+function checkWarned(plan, warned) {
+  if (plan.warning && warned !== plan.warning) {
+    throw new Error(`Nothing was signed. ${plan.warning} Show this to the owner and pass it back to leave ${plan.left.length === 1 ? "it" : "them"} out, or give a card for each line to keep.`);
+  }
+}
+function readCards(text2) {
+  return text2.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+    const [act, position, summary, ...rest] = l.split(/[\s:,]+/);
+    if (rest.length || !act || !position || !summary) throw new Error(`\u201C${l}\u201D: a card is a latest act, a position and a summary`);
+    return { act: act.toLowerCase(), position: Number(position), summary: summary.toLowerCase() };
+  });
+}
+
+// ../genesis/src/lookup.ts
+var inBrowser = () => typeof globalThis.window !== "undefined" && typeof globalThis.process === "undefined";
+function cannotReach(hint, via = {}) {
+  if (via[hint]) return null;
+  let host;
+  try {
+    host = new URL(hint).hostname;
+  } catch {
+    return "not an address";
+  }
+  if (host.endsWith(".onion")) {
+    return inBrowser() ? "an onion address, which a web browser cannot reach: it is reached only through Tor" : "an onion address, reached only through Tor, and this client has no way in to it";
+  }
+  return null;
+}
+async function firstOf(items, ask2, failed) {
+  if (!items.length) return null;
+  return new Promise((resolve) => {
+    let left = items.length;
+    let done = false;
+    for (const x of items) {
+      ask2(x).then(
+        (r) => {
+          left--;
+          if (r !== null && r !== void 0 && !done) {
+            done = true;
+            resolve(r);
+          } else if (!left && !done) resolve(null);
+        },
+        () => {
+          failed?.(x);
+          left--;
+          if (!left && !done) resolve(null);
+        }
+      );
+    }
+  });
+}
+async function lookUp(identity, hints, via = {}, into) {
+  const v = into ?? new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const asked = /* @__PURE__ */ new Set();
+  const unreachable = [];
+  const notTried = [];
+  const operatorActs = /* @__PURE__ */ new Map();
+  const heldBytes = /* @__PURE__ */ new Map();
+  const keep = (acts) => {
+    for (const a of acts) {
+      try {
+        heldBytes.set(actId(a), a);
+        v.add(a);
+      } catch {
+      }
+    }
+  };
+  const tryable = (hint) => {
+    const why = cannotReach(hint, via);
+    if (!why) return true;
+    if (!notTried.some((n) => n.hint === hint)) notTried.push({ hint, why });
+    return false;
+  };
+  const failed = (hint) => {
+    if (!unreachable.includes(hint)) unreachable.push(hint);
+  };
+  const genesis = await firstOf(hints.filter(tryable), (h) => relayAt(h, via).getAct(identity), failed);
+  if (!genesis) throw new Error(`the genesis of ${identity} was not found at ${hints.join(", ")}`);
+  keep([genesis]);
+  const genesisHomes = () => {
+    try {
+      const d = describeAct(genesis);
+      if (d.spec !== SPECS.identity || d.type !== IDENTITY_TYPES.genesis || !d.payload) return [];
+      const p = cborDecode(d.payload);
+      return (p.get(2) ?? []).map(([op, hint]) => ({ operator: op ? hex(op) : null, hint }));
+    } catch {
+      return [];
+    }
+  };
+  const inForce = () => {
+    const r2 = v.resolve(identity);
+    return r2.homesAt?.length ? r2.homesAt[r2.homesAt.length - 1] : genesisHomes();
+  };
+  const record2 = async (h) => {
+    const rec = await relayAt(h.hint, via).identity(identity);
+    keep([...rec.chain, ...rec.receipts, ...rec.routes, ...rec.encryptionKeys, ...rec.evidence, ...rec.otherReceipts]);
+    for (const a of rec.links) {
+      try {
+        const d = describeAct(a);
+        if (!d.public && d.signer === identity) v.foundAtHome(d.id, h.operator ?? identity);
+      } catch {
+      }
+    }
+  };
+  const answered = () => [...asked].filter((h) => !unreachable.includes(h) && !notTried.some((n) => n.hint === h));
+  const operatorChain = async (op, own) => {
+    const from = async (hint) => {
+      const r2 = relayAt(hint, via);
+      const [g, page] = await Promise.all([r2.getAct(op), r2.feed({ signer: op })]);
+      if (!g) return null;
+      const chain = page.items.filter((i) => i.kind === "act").map((i) => i.item).filter((a) => {
+        try {
+          const d = describeAct(a);
+          return d.spec === SPECS.identity && d.type === IDENTITY_TYPES.rotation;
+        } catch {
+          return false;
+        }
+      });
+      return [g, ...chain];
+    };
+    const ownAnswered = own.filter((h) => answered().includes(h));
+    const got = await firstOf(ownAnswered, from) ?? await firstOf(answered().filter((h) => !own.includes(h)), from);
+    if (!got) return;
+    keep(got);
+    operatorActs.set(op, got);
+  };
+  const homelessHomes = () => {
+    const r2 = v.resolve(identity);
+    const last = r2.links[r2.links.length - 1];
+    if (!last) return [];
+    const out = [];
+    for (const a of heldBytes.values()) {
+      try {
+        const d = describeAct(a);
+        if (d.signer !== identity || d.spec !== SPECS.identity || d.type !== IDENTITY_TYPES.rotation || !d.payload) continue;
+        const p = cborDecode(d.payload);
+        if (p.get(11) !== true || Number(p.get(1)) !== last.position + 1 || hex(p.get(0)) !== last.act) continue;
+        for (const [op, hint] of p.get(6) ?? []) out.push({ operator: op ? hex(op) : null, hint });
+      } catch {
+      }
+    }
+    return out;
+  };
+  for (let round = 0; round < 8; round++) {
+    const homes = inForce();
+    let fresh = homes.filter((h) => !asked.has(h.hint));
+    if (!fresh.length) {
+      const named = homelessHomes();
+      fresh = named.filter((h) => !asked.has(h.hint));
+      if (!fresh.length) break;
+      for (const h of fresh) asked.add(h.hint);
+      await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record2(h).catch(() => failed(h.hint))));
+      const ops2 = [...new Set(named.map((h) => h.operator).filter((o) => !!o && o !== identity && !operatorActs.has(o)))];
+      await Promise.all(ops2.map((op) => operatorChain(op, named.filter((h) => h.operator === op).map((h) => h.hint))));
+      continue;
+    }
+    for (const h of fresh) asked.add(h.hint);
+    await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record2(h).catch(() => failed(h.hint))));
+    const ops = [...new Set(homes.map((h) => h.operator).filter((o) => !!o && o !== identity && !operatorActs.has(o)))];
+    await Promise.all(ops.map((op) => operatorChain(op, homes.filter((h) => h.operator === op).map((h) => h.hint))));
+  }
+  const resolution = v.resolve(identity);
+  const r = v.latest(identity, SPECS.identity, IDENTITY_TYPES.routes);
+  const routes = [];
+  if (r.payload) {
+    const p = cborDecode(r.payload);
+    for (const x of p.get(2)) {
+      routes.push({
+        scope: x[0] ? hex(x[0]) : null,
+        hints: x[1],
+        kind: x[2] ?? 0
+      });
+    }
+  }
+  const e2 = v.latest(identity, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
+  let encryptionKey = null;
+  if (e2.payload) {
+    const p = cborDecode(e2.payload);
+    const [scheme, key] = p.get(2);
+    if (scheme === 4) encryptionKey = key;
+  }
+  const receipts = [];
+  for (const [id, a] of heldBytes) {
+    const d = describeAct(a);
+    if (d.spec !== SPECS.identity || d.type !== IDENTITY_TYPES.receipt || !d.payload) continue;
+    const p = cborDecode(d.payload);
+    if (hex(p.get(0)) === identity && v.status(id) === "valid") receipts.push(a);
+  }
+  return {
+    resolution,
+    verifier: v,
+    receipts,
+    operatorChains: [...operatorActs.values()].flat(),
+    unreachable,
+    notTried,
+    routes: { act: r.act ?? null, contested: r.contested, routes },
+    encryptionKeyAct: e2.act ?? null,
+    encryptionKey,
+    inbox(spec) {
+      const inboxes = routes.filter((x) => x.kind === 1);
+      const hit = inboxes.find((x) => x.scope === spec) ?? inboxes.find((x) => x.scope === null);
+      return hit ? hit.hints : null;
+    }
+  };
+}
+
+// src/web/node-crypto.ts
+function randomBytes2(n) {
+  return crypto.getRandomValues(new Uint8Array(n));
+}
+function createHash(algorithm) {
+  if (algorithm !== "sha256") throw new Error(`${algorithm}: only sha256 in the browser`);
+  const parts = [];
+  const h = {
+    update(data) {
+      parts.push(typeof data === "string" ? new TextEncoder().encode(data) : data);
+      return h;
+    },
+    /** The digest's bytes, or, as Node gives it with "hex", its hexadecimal text (the repo client's spec hashes). */
+    digest(encoding) {
+      const all = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+      let at = 0;
+      for (const p of parts) {
+        all.set(p, at);
+        at += p.length;
+      }
+      const d = sha256(all);
+      if (encoding === void 0) return d;
+      if (encoding !== "hex") throw new Error(`${encoding}: only hex in the browser`);
+      return [...d].map((b) => b.toString(16).padStart(2, "0")).join("");
+    }
+  };
+  return h;
+}
+
+// ../../modules/carry/src/english.ts
+var ENGLISH = [
+  "abandon",
+  "ability",
+  "able",
+  "about",
+  "above",
+  "absent",
+  "absorb",
+  "abstract",
+  "absurd",
+  "abuse",
+  "access",
+  "accident",
+  "account",
+  "accuse",
+  "achieve",
+  "acid",
+  "acoustic",
+  "acquire",
+  "across",
+  "act",
+  "action",
+  "actor",
+  "actress",
+  "actual",
+  "adapt",
+  "add",
+  "addict",
+  "address",
+  "adjust",
+  "admit",
+  "adult",
+  "advance",
+  "advice",
+  "aerobic",
+  "affair",
+  "afford",
+  "afraid",
+  "again",
+  "age",
+  "agent",
+  "agree",
+  "ahead",
+  "aim",
+  "air",
+  "airport",
+  "aisle",
+  "alarm",
+  "album",
+  "alcohol",
+  "alert",
+  "alien",
+  "all",
+  "alley",
+  "allow",
+  "almost",
+  "alone",
+  "alpha",
+  "already",
+  "also",
+  "alter",
+  "always",
+  "amateur",
+  "amazing",
+  "among",
+  "amount",
+  "amused",
+  "analyst",
+  "anchor",
+  "ancient",
+  "anger",
+  "angle",
+  "angry",
+  "animal",
+  "ankle",
+  "announce",
+  "annual",
+  "another",
+  "answer",
+  "antenna",
+  "antique",
+  "anxiety",
+  "any",
+  "apart",
+  "apology",
+  "appear",
+  "apple",
+  "approve",
+  "april",
+  "arch",
+  "arctic",
+  "area",
+  "arena",
+  "argue",
+  "arm",
+  "armed",
+  "armor",
+  "army",
+  "around",
+  "arrange",
+  "arrest",
+  "arrive",
+  "arrow",
+  "art",
+  "artefact",
+  "artist",
+  "artwork",
+  "ask",
+  "aspect",
+  "assault",
+  "asset",
+  "assist",
+  "assume",
+  "asthma",
+  "athlete",
+  "atom",
+  "attack",
+  "attend",
+  "attitude",
+  "attract",
+  "auction",
+  "audit",
+  "august",
+  "aunt",
+  "author",
+  "auto",
+  "autumn",
+  "average",
+  "avocado",
+  "avoid",
+  "awake",
+  "aware",
+  "away",
+  "awesome",
+  "awful",
+  "awkward",
+  "axis",
+  "baby",
+  "bachelor",
+  "bacon",
+  "badge",
+  "bag",
+  "balance",
+  "balcony",
+  "ball",
+  "bamboo",
+  "banana",
+  "banner",
+  "bar",
+  "barely",
+  "bargain",
+  "barrel",
+  "base",
+  "basic",
+  "basket",
+  "battle",
+  "beach",
+  "bean",
+  "beauty",
+  "because",
+  "become",
+  "beef",
+  "before",
+  "begin",
+  "behave",
+  "behind",
+  "believe",
+  "below",
+  "belt",
+  "bench",
+  "benefit",
+  "best",
+  "betray",
+  "better",
+  "between",
+  "beyond",
+  "bicycle",
+  "bid",
+  "bike",
+  "bind",
+  "biology",
+  "bird",
+  "birth",
+  "bitter",
+  "black",
+  "blade",
+  "blame",
+  "blanket",
+  "blast",
+  "bleak",
+  "bless",
+  "blind",
+  "blood",
+  "blossom",
+  "blouse",
+  "blue",
+  "blur",
+  "blush",
+  "board",
+  "boat",
+  "body",
+  "boil",
+  "bomb",
+  "bone",
+  "bonus",
+  "book",
+  "boost",
+  "border",
+  "boring",
+  "borrow",
+  "boss",
+  "bottom",
+  "bounce",
+  "box",
+  "boy",
+  "bracket",
+  "brain",
+  "brand",
+  "brass",
+  "brave",
+  "bread",
+  "breeze",
+  "brick",
+  "bridge",
+  "brief",
+  "bright",
+  "bring",
+  "brisk",
+  "broccoli",
+  "broken",
+  "bronze",
+  "broom",
+  "brother",
+  "brown",
+  "brush",
+  "bubble",
+  "buddy",
+  "budget",
+  "buffalo",
+  "build",
+  "bulb",
+  "bulk",
+  "bullet",
+  "bundle",
+  "bunker",
+  "burden",
+  "burger",
+  "burst",
+  "bus",
+  "business",
+  "busy",
+  "butter",
+  "buyer",
+  "buzz",
+  "cabbage",
+  "cabin",
+  "cable",
+  "cactus",
+  "cage",
+  "cake",
+  "call",
+  "calm",
+  "camera",
+  "camp",
+  "can",
+  "canal",
+  "cancel",
+  "candy",
+  "cannon",
+  "canoe",
+  "canvas",
+  "canyon",
+  "capable",
+  "capital",
+  "captain",
+  "car",
+  "carbon",
+  "card",
+  "cargo",
+  "carpet",
+  "carry",
+  "cart",
+  "case",
+  "cash",
+  "casino",
+  "castle",
+  "casual",
+  "cat",
+  "catalog",
+  "catch",
+  "category",
+  "cattle",
+  "caught",
+  "cause",
+  "caution",
+  "cave",
+  "ceiling",
+  "celery",
+  "cement",
+  "census",
+  "century",
+  "cereal",
+  "certain",
+  "chair",
+  "chalk",
+  "champion",
+  "change",
+  "chaos",
+  "chapter",
+  "charge",
+  "chase",
+  "chat",
+  "cheap",
+  "check",
+  "cheese",
+  "chef",
+  "cherry",
+  "chest",
+  "chicken",
+  "chief",
+  "child",
+  "chimney",
+  "choice",
+  "choose",
+  "chronic",
+  "chuckle",
+  "chunk",
+  "churn",
+  "cigar",
+  "cinnamon",
+  "circle",
+  "citizen",
+  "city",
+  "civil",
+  "claim",
+  "clap",
+  "clarify",
+  "claw",
+  "clay",
+  "clean",
+  "clerk",
+  "clever",
+  "click",
+  "client",
+  "cliff",
+  "climb",
+  "clinic",
+  "clip",
+  "clock",
+  "clog",
+  "close",
+  "cloth",
+  "cloud",
+  "clown",
+  "club",
+  "clump",
+  "cluster",
+  "clutch",
+  "coach",
+  "coast",
+  "coconut",
+  "code",
+  "coffee",
+  "coil",
+  "coin",
+  "collect",
+  "color",
+  "column",
+  "combine",
+  "come",
+  "comfort",
+  "comic",
+  "common",
+  "company",
+  "concert",
+  "conduct",
+  "confirm",
+  "congress",
+  "connect",
+  "consider",
+  "control",
+  "convince",
+  "cook",
+  "cool",
+  "copper",
+  "copy",
+  "coral",
+  "core",
+  "corn",
+  "correct",
+  "cost",
+  "cotton",
+  "couch",
+  "country",
+  "couple",
+  "course",
+  "cousin",
+  "cover",
+  "coyote",
+  "crack",
+  "cradle",
+  "craft",
+  "cram",
+  "crane",
+  "crash",
+  "crater",
+  "crawl",
+  "crazy",
+  "cream",
+  "credit",
+  "creek",
+  "crew",
+  "cricket",
+  "crime",
+  "crisp",
+  "critic",
+  "crop",
+  "cross",
+  "crouch",
+  "crowd",
+  "crucial",
+  "cruel",
+  "cruise",
+  "crumble",
+  "crunch",
+  "crush",
+  "cry",
+  "crystal",
+  "cube",
+  "culture",
+  "cup",
+  "cupboard",
+  "curious",
+  "current",
+  "curtain",
+  "curve",
+  "cushion",
+  "custom",
+  "cute",
+  "cycle",
+  "dad",
+  "damage",
+  "damp",
+  "dance",
+  "danger",
+  "daring",
+  "dash",
+  "daughter",
+  "dawn",
+  "day",
+  "deal",
+  "debate",
+  "debris",
+  "decade",
+  "december",
+  "decide",
+  "decline",
+  "decorate",
+  "decrease",
+  "deer",
+  "defense",
+  "define",
+  "defy",
+  "degree",
+  "delay",
+  "deliver",
+  "demand",
+  "demise",
+  "denial",
+  "dentist",
+  "deny",
+  "depart",
+  "depend",
+  "deposit",
+  "depth",
+  "deputy",
+  "derive",
+  "describe",
+  "desert",
+  "design",
+  "desk",
+  "despair",
+  "destroy",
+  "detail",
+  "detect",
+  "develop",
+  "device",
+  "devote",
+  "diagram",
+  "dial",
+  "diamond",
+  "diary",
+  "dice",
+  "diesel",
+  "diet",
+  "differ",
+  "digital",
+  "dignity",
+  "dilemma",
+  "dinner",
+  "dinosaur",
+  "direct",
+  "dirt",
+  "disagree",
+  "discover",
+  "disease",
+  "dish",
+  "dismiss",
+  "disorder",
+  "display",
+  "distance",
+  "divert",
+  "divide",
+  "divorce",
+  "dizzy",
+  "doctor",
+  "document",
+  "dog",
+  "doll",
+  "dolphin",
+  "domain",
+  "donate",
+  "donkey",
+  "donor",
+  "door",
+  "dose",
+  "double",
+  "dove",
+  "draft",
+  "dragon",
+  "drama",
+  "drastic",
+  "draw",
+  "dream",
+  "dress",
+  "drift",
+  "drill",
+  "drink",
+  "drip",
+  "drive",
+  "drop",
+  "drum",
+  "dry",
+  "duck",
+  "dumb",
+  "dune",
+  "during",
+  "dust",
+  "dutch",
+  "duty",
+  "dwarf",
+  "dynamic",
+  "eager",
+  "eagle",
+  "early",
+  "earn",
+  "earth",
+  "easily",
+  "east",
+  "easy",
+  "echo",
+  "ecology",
+  "economy",
+  "edge",
+  "edit",
+  "educate",
+  "effort",
+  "egg",
+  "eight",
+  "either",
+  "elbow",
+  "elder",
+  "electric",
+  "elegant",
+  "element",
+  "elephant",
+  "elevator",
+  "elite",
+  "else",
+  "embark",
+  "embody",
+  "embrace",
+  "emerge",
+  "emotion",
+  "employ",
+  "empower",
+  "empty",
+  "enable",
+  "enact",
+  "end",
+  "endless",
+  "endorse",
+  "enemy",
+  "energy",
+  "enforce",
+  "engage",
+  "engine",
+  "enhance",
+  "enjoy",
+  "enlist",
+  "enough",
+  "enrich",
+  "enroll",
+  "ensure",
+  "enter",
+  "entire",
+  "entry",
+  "envelope",
+  "episode",
+  "equal",
+  "equip",
+  "era",
+  "erase",
+  "erode",
+  "erosion",
+  "error",
+  "erupt",
+  "escape",
+  "essay",
+  "essence",
+  "estate",
+  "eternal",
+  "ethics",
+  "evidence",
+  "evil",
+  "evoke",
+  "evolve",
+  "exact",
+  "example",
+  "excess",
+  "exchange",
+  "excite",
+  "exclude",
+  "excuse",
+  "execute",
+  "exercise",
+  "exhaust",
+  "exhibit",
+  "exile",
+  "exist",
+  "exit",
+  "exotic",
+  "expand",
+  "expect",
+  "expire",
+  "explain",
+  "expose",
+  "express",
+  "extend",
+  "extra",
+  "eye",
+  "eyebrow",
+  "fabric",
+  "face",
+  "faculty",
+  "fade",
+  "faint",
+  "faith",
+  "fall",
+  "false",
+  "fame",
+  "family",
+  "famous",
+  "fan",
+  "fancy",
+  "fantasy",
+  "farm",
+  "fashion",
+  "fat",
+  "fatal",
+  "father",
+  "fatigue",
+  "fault",
+  "favorite",
+  "feature",
+  "february",
+  "federal",
+  "fee",
+  "feed",
+  "feel",
+  "female",
+  "fence",
+  "festival",
+  "fetch",
+  "fever",
+  "few",
+  "fiber",
+  "fiction",
+  "field",
+  "figure",
+  "file",
+  "film",
+  "filter",
+  "final",
+  "find",
+  "fine",
+  "finger",
+  "finish",
+  "fire",
+  "firm",
+  "first",
+  "fiscal",
+  "fish",
+  "fit",
+  "fitness",
+  "fix",
+  "flag",
+  "flame",
+  "flash",
+  "flat",
+  "flavor",
+  "flee",
+  "flight",
+  "flip",
+  "float",
+  "flock",
+  "floor",
+  "flower",
+  "fluid",
+  "flush",
+  "fly",
+  "foam",
+  "focus",
+  "fog",
+  "foil",
+  "fold",
+  "follow",
+  "food",
+  "foot",
+  "force",
+  "forest",
+  "forget",
+  "fork",
+  "fortune",
+  "forum",
+  "forward",
+  "fossil",
+  "foster",
+  "found",
+  "fox",
+  "fragile",
+  "frame",
+  "frequent",
+  "fresh",
+  "friend",
+  "fringe",
+  "frog",
+  "front",
+  "frost",
+  "frown",
+  "frozen",
+  "fruit",
+  "fuel",
+  "fun",
+  "funny",
+  "furnace",
+  "fury",
+  "future",
+  "gadget",
+  "gain",
+  "galaxy",
+  "gallery",
+  "game",
+  "gap",
+  "garage",
+  "garbage",
+  "garden",
+  "garlic",
+  "garment",
+  "gas",
+  "gasp",
+  "gate",
+  "gather",
+  "gauge",
+  "gaze",
+  "general",
+  "genius",
+  "genre",
+  "gentle",
+  "genuine",
+  "gesture",
+  "ghost",
+  "giant",
+  "gift",
+  "giggle",
+  "ginger",
+  "giraffe",
+  "girl",
+  "give",
+  "glad",
+  "glance",
+  "glare",
+  "glass",
+  "glide",
+  "glimpse",
+  "globe",
+  "gloom",
+  "glory",
+  "glove",
+  "glow",
+  "glue",
+  "goat",
+  "goddess",
+  "gold",
+  "good",
+  "goose",
+  "gorilla",
+  "gospel",
+  "gossip",
+  "govern",
+  "gown",
+  "grab",
+  "grace",
+  "grain",
+  "grant",
+  "grape",
+  "grass",
+  "gravity",
+  "great",
+  "green",
+  "grid",
+  "grief",
+  "grit",
+  "grocery",
+  "group",
+  "grow",
+  "grunt",
+  "guard",
+  "guess",
+  "guide",
+  "guilt",
+  "guitar",
+  "gun",
+  "gym",
+  "habit",
+  "hair",
+  "half",
+  "hammer",
+  "hamster",
+  "hand",
+  "happy",
+  "harbor",
+  "hard",
+  "harsh",
+  "harvest",
+  "hat",
+  "have",
+  "hawk",
+  "hazard",
+  "head",
+  "health",
+  "heart",
+  "heavy",
+  "hedgehog",
+  "height",
+  "hello",
+  "helmet",
+  "help",
+  "hen",
+  "hero",
+  "hidden",
+  "high",
+  "hill",
+  "hint",
+  "hip",
+  "hire",
+  "history",
+  "hobby",
+  "hockey",
+  "hold",
+  "hole",
+  "holiday",
+  "hollow",
+  "home",
+  "honey",
+  "hood",
+  "hope",
+  "horn",
+  "horror",
+  "horse",
+  "hospital",
+  "host",
+  "hotel",
+  "hour",
+  "hover",
+  "hub",
+  "huge",
+  "human",
+  "humble",
+  "humor",
+  "hundred",
+  "hungry",
+  "hunt",
+  "hurdle",
+  "hurry",
+  "hurt",
+  "husband",
+  "hybrid",
+  "ice",
+  "icon",
+  "idea",
+  "identify",
+  "idle",
+  "ignore",
+  "ill",
+  "illegal",
+  "illness",
+  "image",
+  "imitate",
+  "immense",
+  "immune",
+  "impact",
+  "impose",
+  "improve",
+  "impulse",
+  "inch",
+  "include",
+  "income",
+  "increase",
+  "index",
+  "indicate",
+  "indoor",
+  "industry",
+  "infant",
+  "inflict",
+  "inform",
+  "inhale",
+  "inherit",
+  "initial",
+  "inject",
+  "injury",
+  "inmate",
+  "inner",
+  "innocent",
+  "input",
+  "inquiry",
+  "insane",
+  "insect",
+  "inside",
+  "inspire",
+  "install",
+  "intact",
+  "interest",
+  "into",
+  "invest",
+  "invite",
+  "involve",
+  "iron",
+  "island",
+  "isolate",
+  "issue",
+  "item",
+  "ivory",
+  "jacket",
+  "jaguar",
+  "jar",
+  "jazz",
+  "jealous",
+  "jeans",
+  "jelly",
+  "jewel",
+  "job",
+  "join",
+  "joke",
+  "journey",
+  "joy",
+  "judge",
+  "juice",
+  "jump",
+  "jungle",
+  "junior",
+  "junk",
+  "just",
+  "kangaroo",
+  "keen",
+  "keep",
+  "ketchup",
+  "key",
+  "kick",
+  "kid",
+  "kidney",
+  "kind",
+  "kingdom",
+  "kiss",
+  "kit",
+  "kitchen",
+  "kite",
+  "kitten",
+  "kiwi",
+  "knee",
+  "knife",
+  "knock",
+  "know",
+  "lab",
+  "label",
+  "labor",
+  "ladder",
+  "lady",
+  "lake",
+  "lamp",
+  "language",
+  "laptop",
+  "large",
+  "later",
+  "latin",
+  "laugh",
+  "laundry",
+  "lava",
+  "law",
+  "lawn",
+  "lawsuit",
+  "layer",
+  "lazy",
+  "leader",
+  "leaf",
+  "learn",
+  "leave",
+  "lecture",
+  "left",
+  "leg",
+  "legal",
+  "legend",
+  "leisure",
+  "lemon",
+  "lend",
+  "length",
+  "lens",
+  "leopard",
+  "lesson",
+  "letter",
+  "level",
+  "liar",
+  "liberty",
+  "library",
+  "license",
+  "life",
+  "lift",
+  "light",
+  "like",
+  "limb",
+  "limit",
+  "link",
+  "lion",
+  "liquid",
+  "list",
+  "little",
+  "live",
+  "lizard",
+  "load",
+  "loan",
+  "lobster",
+  "local",
+  "lock",
+  "logic",
+  "lonely",
+  "long",
+  "loop",
+  "lottery",
+  "loud",
+  "lounge",
+  "love",
+  "loyal",
+  "lucky",
+  "luggage",
+  "lumber",
+  "lunar",
+  "lunch",
+  "luxury",
+  "lyrics",
+  "machine",
+  "mad",
+  "magic",
+  "magnet",
+  "maid",
+  "mail",
+  "main",
+  "major",
+  "make",
+  "mammal",
+  "man",
+  "manage",
+  "mandate",
+  "mango",
+  "mansion",
+  "manual",
+  "maple",
+  "marble",
+  "march",
+  "margin",
+  "marine",
+  "market",
+  "marriage",
+  "mask",
+  "mass",
+  "master",
+  "match",
+  "material",
+  "math",
+  "matrix",
+  "matter",
+  "maximum",
+  "maze",
+  "meadow",
+  "mean",
+  "measure",
+  "meat",
+  "mechanic",
+  "medal",
+  "media",
+  "melody",
+  "melt",
+  "member",
+  "memory",
+  "mention",
+  "menu",
+  "mercy",
+  "merge",
+  "merit",
+  "merry",
+  "mesh",
+  "message",
+  "metal",
+  "method",
+  "middle",
+  "midnight",
+  "milk",
+  "million",
+  "mimic",
+  "mind",
+  "minimum",
+  "minor",
+  "minute",
+  "miracle",
+  "mirror",
+  "misery",
+  "miss",
+  "mistake",
+  "mix",
+  "mixed",
+  "mixture",
+  "mobile",
+  "model",
+  "modify",
+  "mom",
+  "moment",
+  "monitor",
+  "monkey",
+  "monster",
+  "month",
+  "moon",
+  "moral",
+  "more",
+  "morning",
+  "mosquito",
+  "mother",
+  "motion",
+  "motor",
+  "mountain",
+  "mouse",
+  "move",
+  "movie",
+  "much",
+  "muffin",
+  "mule",
+  "multiply",
+  "muscle",
+  "museum",
+  "mushroom",
+  "music",
+  "must",
+  "mutual",
+  "myself",
+  "mystery",
+  "myth",
+  "naive",
+  "name",
+  "napkin",
+  "narrow",
+  "nasty",
+  "nation",
+  "nature",
+  "near",
+  "neck",
+  "need",
+  "negative",
+  "neglect",
+  "neither",
+  "nephew",
+  "nerve",
+  "nest",
+  "net",
+  "network",
+  "neutral",
+  "never",
+  "news",
+  "next",
+  "nice",
+  "night",
+  "noble",
+  "noise",
+  "nominee",
+  "noodle",
+  "normal",
+  "north",
+  "nose",
+  "notable",
+  "note",
+  "nothing",
+  "notice",
+  "novel",
+  "now",
+  "nuclear",
+  "number",
+  "nurse",
+  "nut",
+  "oak",
+  "obey",
+  "object",
+  "oblige",
+  "obscure",
+  "observe",
+  "obtain",
+  "obvious",
+  "occur",
+  "ocean",
+  "october",
+  "odor",
+  "off",
+  "offer",
+  "office",
+  "often",
+  "oil",
+  "okay",
+  "old",
+  "olive",
+  "olympic",
+  "omit",
+  "once",
+  "one",
+  "onion",
+  "online",
+  "only",
+  "open",
+  "opera",
+  "opinion",
+  "oppose",
+  "option",
+  "orange",
+  "orbit",
+  "orchard",
+  "order",
+  "ordinary",
+  "organ",
+  "orient",
+  "original",
+  "orphan",
+  "ostrich",
+  "other",
+  "outdoor",
+  "outer",
+  "output",
+  "outside",
+  "oval",
+  "oven",
+  "over",
+  "own",
+  "owner",
+  "oxygen",
+  "oyster",
+  "ozone",
+  "pact",
+  "paddle",
+  "page",
+  "pair",
+  "palace",
+  "palm",
+  "panda",
+  "panel",
+  "panic",
+  "panther",
+  "paper",
+  "parade",
+  "parent",
+  "park",
+  "parrot",
+  "party",
+  "pass",
+  "patch",
+  "path",
+  "patient",
+  "patrol",
+  "pattern",
+  "pause",
+  "pave",
+  "payment",
+  "peace",
+  "peanut",
+  "pear",
+  "peasant",
+  "pelican",
+  "pen",
+  "penalty",
+  "pencil",
+  "people",
+  "pepper",
+  "perfect",
+  "permit",
+  "person",
+  "pet",
+  "phone",
+  "photo",
+  "phrase",
+  "physical",
+  "piano",
+  "picnic",
+  "picture",
+  "piece",
+  "pig",
+  "pigeon",
+  "pill",
+  "pilot",
+  "pink",
+  "pioneer",
+  "pipe",
+  "pistol",
+  "pitch",
+  "pizza",
+  "place",
+  "planet",
+  "plastic",
+  "plate",
+  "play",
+  "please",
+  "pledge",
+  "pluck",
+  "plug",
+  "plunge",
+  "poem",
+  "poet",
+  "point",
+  "polar",
+  "pole",
+  "police",
+  "pond",
+  "pony",
+  "pool",
+  "popular",
+  "portion",
+  "position",
+  "possible",
+  "post",
+  "potato",
+  "pottery",
+  "poverty",
+  "powder",
+  "power",
+  "practice",
+  "praise",
+  "predict",
+  "prefer",
+  "prepare",
+  "present",
+  "pretty",
+  "prevent",
+  "price",
+  "pride",
+  "primary",
+  "print",
+  "priority",
+  "prison",
+  "private",
+  "prize",
+  "problem",
+  "process",
+  "produce",
+  "profit",
+  "program",
+  "project",
+  "promote",
+  "proof",
+  "property",
+  "prosper",
+  "protect",
+  "proud",
+  "provide",
+  "public",
+  "pudding",
+  "pull",
+  "pulp",
+  "pulse",
+  "pumpkin",
+  "punch",
+  "pupil",
+  "puppy",
+  "purchase",
+  "purity",
+  "purpose",
+  "purse",
+  "push",
+  "put",
+  "puzzle",
+  "pyramid",
+  "quality",
+  "quantum",
+  "quarter",
+  "question",
+  "quick",
+  "quit",
+  "quiz",
+  "quote",
+  "rabbit",
+  "raccoon",
+  "race",
+  "rack",
+  "radar",
+  "radio",
+  "rail",
+  "rain",
+  "raise",
+  "rally",
+  "ramp",
+  "ranch",
+  "random",
+  "range",
+  "rapid",
+  "rare",
+  "rate",
+  "rather",
+  "raven",
+  "raw",
+  "razor",
+  "ready",
+  "real",
+  "reason",
+  "rebel",
+  "rebuild",
+  "recall",
+  "receive",
+  "recipe",
+  "record",
+  "recycle",
+  "reduce",
+  "reflect",
+  "reform",
+  "refuse",
+  "region",
+  "regret",
+  "regular",
+  "reject",
+  "relax",
+  "release",
+  "relief",
+  "rely",
+  "remain",
+  "remember",
+  "remind",
+  "remove",
+  "render",
+  "renew",
+  "rent",
+  "reopen",
+  "repair",
+  "repeat",
+  "replace",
+  "report",
+  "require",
+  "rescue",
+  "resemble",
+  "resist",
+  "resource",
+  "response",
+  "result",
+  "retire",
+  "retreat",
+  "return",
+  "reunion",
+  "reveal",
+  "review",
+  "reward",
+  "rhythm",
+  "rib",
+  "ribbon",
+  "rice",
+  "rich",
+  "ride",
+  "ridge",
+  "rifle",
+  "right",
+  "rigid",
+  "ring",
+  "riot",
+  "ripple",
+  "risk",
+  "ritual",
+  "rival",
+  "river",
+  "road",
+  "roast",
+  "robot",
+  "robust",
+  "rocket",
+  "romance",
+  "roof",
+  "rookie",
+  "room",
+  "rose",
+  "rotate",
+  "rough",
+  "round",
+  "route",
+  "royal",
+  "rubber",
+  "rude",
+  "rug",
+  "rule",
+  "run",
+  "runway",
+  "rural",
+  "sad",
+  "saddle",
+  "sadness",
+  "safe",
+  "sail",
+  "salad",
+  "salmon",
+  "salon",
+  "salt",
+  "salute",
+  "same",
+  "sample",
+  "sand",
+  "satisfy",
+  "satoshi",
+  "sauce",
+  "sausage",
+  "save",
+  "say",
+  "scale",
+  "scan",
+  "scare",
+  "scatter",
+  "scene",
+  "scheme",
+  "school",
+  "science",
+  "scissors",
+  "scorpion",
+  "scout",
+  "scrap",
+  "screen",
+  "script",
+  "scrub",
+  "sea",
+  "search",
+  "season",
+  "seat",
+  "second",
+  "secret",
+  "section",
+  "security",
+  "seed",
+  "seek",
+  "segment",
+  "select",
+  "sell",
+  "seminar",
+  "senior",
+  "sense",
+  "sentence",
+  "series",
+  "service",
+  "session",
+  "settle",
+  "setup",
+  "seven",
+  "shadow",
+  "shaft",
+  "shallow",
+  "share",
+  "shed",
+  "shell",
+  "sheriff",
+  "shield",
+  "shift",
+  "shine",
+  "ship",
+  "shiver",
+  "shock",
+  "shoe",
+  "shoot",
+  "shop",
+  "short",
+  "shoulder",
+  "shove",
+  "shrimp",
+  "shrug",
+  "shuffle",
+  "shy",
+  "sibling",
+  "sick",
+  "side",
+  "siege",
+  "sight",
+  "sign",
+  "silent",
+  "silk",
+  "silly",
+  "silver",
+  "similar",
+  "simple",
+  "since",
+  "sing",
+  "siren",
+  "sister",
+  "situate",
+  "six",
+  "size",
+  "skate",
+  "sketch",
+  "ski",
+  "skill",
+  "skin",
+  "skirt",
+  "skull",
+  "slab",
+  "slam",
+  "sleep",
+  "slender",
+  "slice",
+  "slide",
+  "slight",
+  "slim",
+  "slogan",
+  "slot",
+  "slow",
+  "slush",
+  "small",
+  "smart",
+  "smile",
+  "smoke",
+  "smooth",
+  "snack",
+  "snake",
+  "snap",
+  "sniff",
+  "snow",
+  "soap",
+  "soccer",
+  "social",
+  "sock",
+  "soda",
+  "soft",
+  "solar",
+  "soldier",
+  "solid",
+  "solution",
+  "solve",
+  "someone",
+  "song",
+  "soon",
+  "sorry",
+  "sort",
+  "soul",
+  "sound",
+  "soup",
+  "source",
+  "south",
+  "space",
+  "spare",
+  "spatial",
+  "spawn",
+  "speak",
+  "special",
+  "speed",
+  "spell",
+  "spend",
+  "sphere",
+  "spice",
+  "spider",
+  "spike",
+  "spin",
+  "spirit",
+  "split",
+  "spoil",
+  "sponsor",
+  "spoon",
+  "sport",
+  "spot",
+  "spray",
+  "spread",
+  "spring",
+  "spy",
+  "square",
+  "squeeze",
+  "squirrel",
+  "stable",
+  "stadium",
+  "staff",
+  "stage",
+  "stairs",
+  "stamp",
+  "stand",
+  "start",
+  "state",
+  "stay",
+  "steak",
+  "steel",
+  "stem",
+  "step",
+  "stereo",
+  "stick",
+  "still",
+  "sting",
+  "stock",
+  "stomach",
+  "stone",
+  "stool",
+  "story",
+  "stove",
+  "strategy",
+  "street",
+  "strike",
+  "strong",
+  "struggle",
+  "student",
+  "stuff",
+  "stumble",
+  "style",
+  "subject",
+  "submit",
+  "subway",
+  "success",
+  "such",
+  "sudden",
+  "suffer",
+  "sugar",
+  "suggest",
+  "suit",
+  "summer",
+  "sun",
+  "sunny",
+  "sunset",
+  "super",
+  "supply",
+  "supreme",
+  "sure",
+  "surface",
+  "surge",
+  "surprise",
+  "surround",
+  "survey",
+  "suspect",
+  "sustain",
+  "swallow",
+  "swamp",
+  "swap",
+  "swarm",
+  "swear",
+  "sweet",
+  "swift",
+  "swim",
+  "swing",
+  "switch",
+  "sword",
+  "symbol",
+  "symptom",
+  "syrup",
+  "system",
+  "table",
+  "tackle",
+  "tag",
+  "tail",
+  "talent",
+  "talk",
+  "tank",
+  "tape",
+  "target",
+  "task",
+  "taste",
+  "tattoo",
+  "taxi",
+  "teach",
+  "team",
+  "tell",
+  "ten",
+  "tenant",
+  "tennis",
+  "tent",
+  "term",
+  "test",
+  "text",
+  "thank",
+  "that",
+  "theme",
+  "then",
+  "theory",
+  "there",
+  "they",
+  "thing",
+  "this",
+  "thought",
+  "three",
+  "thrive",
+  "throw",
+  "thumb",
+  "thunder",
+  "ticket",
+  "tide",
+  "tiger",
+  "tilt",
+  "timber",
+  "time",
+  "tiny",
+  "tip",
+  "tired",
+  "tissue",
+  "title",
+  "toast",
+  "tobacco",
+  "today",
+  "toddler",
+  "toe",
+  "together",
+  "toilet",
+  "token",
+  "tomato",
+  "tomorrow",
+  "tone",
+  "tongue",
+  "tonight",
+  "tool",
+  "tooth",
+  "top",
+  "topic",
+  "topple",
+  "torch",
+  "tornado",
+  "tortoise",
+  "toss",
+  "total",
+  "tourist",
+  "toward",
+  "tower",
+  "town",
+  "toy",
+  "track",
+  "trade",
+  "traffic",
+  "tragic",
+  "train",
+  "transfer",
+  "trap",
+  "trash",
+  "travel",
+  "tray",
+  "treat",
+  "tree",
+  "trend",
+  "trial",
+  "tribe",
+  "trick",
+  "trigger",
+  "trim",
+  "trip",
+  "trophy",
+  "trouble",
+  "truck",
+  "true",
+  "truly",
+  "trumpet",
+  "trust",
+  "truth",
+  "try",
+  "tube",
+  "tuition",
+  "tumble",
+  "tuna",
+  "tunnel",
+  "turkey",
+  "turn",
+  "turtle",
+  "twelve",
+  "twenty",
+  "twice",
+  "twin",
+  "twist",
+  "two",
+  "type",
+  "typical",
+  "ugly",
+  "umbrella",
+  "unable",
+  "unaware",
+  "uncle",
+  "uncover",
+  "under",
+  "undo",
+  "unfair",
+  "unfold",
+  "unhappy",
+  "uniform",
+  "unique",
+  "unit",
+  "universe",
+  "unknown",
+  "unlock",
+  "until",
+  "unusual",
+  "unveil",
+  "update",
+  "upgrade",
+  "uphold",
+  "upon",
+  "upper",
+  "upset",
+  "urban",
+  "urge",
+  "usage",
+  "use",
+  "used",
+  "useful",
+  "useless",
+  "usual",
+  "utility",
+  "vacant",
+  "vacuum",
+  "vague",
+  "valid",
+  "valley",
+  "valve",
+  "van",
+  "vanish",
+  "vapor",
+  "various",
+  "vast",
+  "vault",
+  "vehicle",
+  "velvet",
+  "vendor",
+  "venture",
+  "venue",
+  "verb",
+  "verify",
+  "version",
+  "very",
+  "vessel",
+  "veteran",
+  "viable",
+  "vibrant",
+  "vicious",
+  "victory",
+  "video",
+  "view",
+  "village",
+  "vintage",
+  "violin",
+  "virtual",
+  "virus",
+  "visa",
+  "visit",
+  "visual",
+  "vital",
+  "vivid",
+  "vocal",
+  "voice",
+  "void",
+  "volcano",
+  "volume",
+  "vote",
+  "voyage",
+  "wage",
+  "wagon",
+  "wait",
+  "walk",
+  "wall",
+  "walnut",
+  "want",
+  "warfare",
+  "warm",
+  "warrior",
+  "wash",
+  "wasp",
+  "waste",
+  "water",
+  "wave",
+  "way",
+  "wealth",
+  "weapon",
+  "wear",
+  "weasel",
+  "weather",
+  "web",
+  "wedding",
+  "weekend",
+  "weird",
+  "welcome",
+  "west",
+  "wet",
+  "whale",
+  "what",
+  "wheat",
+  "wheel",
+  "when",
+  "where",
+  "whip",
+  "whisper",
+  "wide",
+  "width",
+  "wife",
+  "wild",
+  "will",
+  "win",
+  "window",
+  "wine",
+  "wing",
+  "wink",
+  "winner",
+  "winter",
+  "wire",
+  "wisdom",
+  "wise",
+  "wish",
+  "witness",
+  "wolf",
+  "woman",
+  "wonder",
+  "wood",
+  "wool",
+  "word",
+  "work",
+  "world",
+  "worry",
+  "worth",
+  "wrap",
+  "wreck",
+  "wrestle",
+  "wrist",
+  "write",
+  "wrong",
+  "yard",
+  "year",
+  "yellow",
+  "you",
+  "young",
+  "youth",
+  "zebra",
+  "zero",
+  "zone",
+  "zoo"
+];
+
+// ../../modules/carry/src/carry.ts
+var Refused = class extends Error {
+};
+var INDEX = new Map(ENGLISH.map((w, i) => [w, i]));
+function toWords(seed) {
+  if (seed.length !== 32) throw new Refused("a signing seed is 32 bytes");
+  const check = createHash("sha256").update(seed).digest()[0];
+  let bits = 0n;
+  for (const b of seed) bits = bits << 8n | BigInt(b);
+  bits = bits << 8n | BigInt(check);
+  const out = [];
+  for (let i = 23; i >= 0; i--) out.push(ENGLISH[Number(bits >> BigInt(i * 11) & 2047n)]);
+  return out;
+}
+function splitWords(written) {
+  return written.toLowerCase().split(/\s+/).filter(Boolean);
+}
+function fromWords(written) {
+  const words2 = typeof written === "string" ? splitWords(written) : written.map((w) => w.trim().toLowerCase());
+  if (words2.length !== 24) throw new Refused(`${words2.length} words, not 24`);
+  let bits = 0n;
+  words2.forEach((w, i) => {
+    const n = INDEX.get(w);
+    if (n === void 0) throw new Refused(`word ${i + 1}, \u201C${w}\u201D, is not on the list: check how it is written`);
+    bits = bits << 11n | BigInt(n);
+  });
+  const seed = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) seed[i] = Number(bits >> BigInt(8 + (31 - i) * 8) & 255n);
+  const check = Number(bits & 255n);
+  if (createHash("sha256").update(seed).digest()[0] !== check) {
+    throw new Refused("the checksum does not match: a word was written or read wrong");
+  }
+  return seed;
+}
+var ENCRYPTION_TAG = "MOR/module/carry/encryption";
+function encryptionSecret(signingSeed) {
+  if (signingSeed.length !== 32) throw new Refused("a signing seed is 32 bytes");
+  const t = createHash("sha256").update(ENCRYPTION_TAG).digest();
+  return new Uint8Array(createHash("sha256").update(t).update(t).update(signingSeed).digest());
+}
+function readId(typed) {
+  const s = typed.replace(/\s+/g, "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(s)) throw new Refused("an ID is 64 characters, 0 to 9 and a to f (spaces do not matter)");
+  return s;
+}
+function threePositions(random) {
+  const out = /* @__PURE__ */ new Set();
+  while (out.size < 3) out.add(1 + random(24));
+  return [...out].sort((a, b) => a - b);
+}
+function typedBack(words2, positions, typed) {
+  return positions.length === 3 && typed.length === 3 && positions.every((p, i) => words2[p - 1] === (typed[i] ?? "").trim().toLowerCase());
+}
+
+// ../dub/src/carryin.ts
+var message = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var NOT_CURRENT = "These words do not give this identity\u2019s current signing key: they are another identity\u2019s, an earlier key\u2019s, or written wrong. Nothing was kept. If these are your chain key\u2019s words, they must never be typed into an online app.";
+async function lookCurrent(id, seed, hints, via) {
+  let pub;
+  try {
+    pub = signingPublic(seed);
+  } catch {
+    throw new Error("The words do not hold a signing key. Nothing was kept.");
+  }
+  let look;
+  try {
+    look = await lookUp(id, hints, via);
+  } catch (e2) {
+    throw new Error(`This identity was not found at ${hints.join(", ")}: ${message(e2)}`);
+  }
+  const r = look.resolution;
+  if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing can be signed for it until they agree.");
+  if (r.stop === "pending" || r.waiting.length) throw new Error("A change of its keys is waiting for its homes: bring it once that change counts, with the new words.");
+  if (!r.signingKey || !r.links.length) throw new Error(`Its chain could not be read (${r.stop}).`);
+  if (hex(r.signingKey) !== hex(pub)) throw new Error(NOT_CURRENT);
+  return look;
+}
+async function servedChain(id, homes, via) {
+  for (const h of homes) {
+    try {
+      const chain = (await relayAt(h.hint, via).identity(id)).chain;
+      if (chain.length) return chain;
+    } catch {
+    }
+  }
+  throw new Error("None of its homes served its chain.");
+}
+function carriedKey(look, seed) {
+  const secret = encryptionSecret(seed);
+  if (!look.encryptionKey || !look.encryptionKeyAct || hex(xwingPublic(secret)) !== hex(look.encryptionKey)) return null;
+  const e2 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
+  const version = e2.payload ? Number(cborDecode(e2.payload).get(0)) : 1;
+  return { version, act: look.encryptionKeyAct, secret: hex(secret) };
+}
+
+// src/shapes.ts
+function taggedHash(tag, data) {
+  const t = unhex(sha2562(tag));
+  const all = new Uint8Array(t.length * 2 + data.length);
+  all.set(t, 0);
+  all.set(t, t.length);
+  all.set(data, t.length * 2);
+  return sha2562(all);
+}
+function fingerprint(scheme, key) {
+  const d = new Uint8Array(1 + key.length);
+  d[0] = scheme;
+  d.set(key, 1);
+  return grouped(taggedHash("MOR/module/airgap/fingerprint", d).slice(0, 32));
+}
+var grouped = (h) => h.match(/.{1,4}/g).join(" ");
+
+// src/read.ts
+var message2 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var short = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+function served(id, bytes, identitySpec) {
+  let d;
+  try {
+    d = describeAct(bytes);
+  } catch {
+    return null;
+  }
+  if (d.signer !== id || d.spec !== identitySpec || d.type !== IDENTITY_TYPES.rotation || !d.payload) return null;
+  const m = cborDecode(d.payload);
+  const key = m.get(2);
+  const commit = m.get(3);
+  const succ = m.get(9);
+  const signingKey = hex(key[1]);
+  return {
+    id: d.id,
+    bytes,
+    position: Number(m.get(1)),
+    previous: hex(m.get(0)),
+    signingKey,
+    signingFingerprint: fingerprint(1, key[1]),
+    reveals: hex(commit[1]),
+    homeless: m.get(11) === true,
+    successor: succ === void 0 ? void 0 : succ === null ? null : hex(succ[1]),
+    kept: m.get(4).length
+  };
+}
+async function readIdentity(id, address2, via, identitySpec) {
+  let look;
+  try {
+    look = await lookUp(id, address2, via);
+  } catch (e2) {
+    throw new Error(`This identity was not found at ${address2.join(", ")}: ${message2(e2)}`);
+  }
+  const r = look.resolution;
+  if (!r.links.length) throw new Error(`Its chain could not be read at ${address2.join(", ")} (${r.stop}).`);
+  const homes = [...new Set([...(r.homesAt ?? []).flat(), ...r.homes].map((h) => h.hint))];
+  const routed = look.routes.routes.flatMap((x) => x.hints);
+  const places = [.../* @__PURE__ */ new Set([...address2, ...homes, ...routed])];
+  const chainActs = /* @__PURE__ */ new Map();
+  for (const hint of places) {
+    try {
+      for (const a of (await relayAt(hint, via).identity(id)).chain) chainActs.set(describeAct(a).id, a);
+    } catch {
+    }
+  }
+  const acts = await actsBy(id, places, via);
+  for (const a of acts) {
+    const s = served(id, a, identitySpec);
+    if (s) chainActs.set(s.id, a);
+  }
+  for (const b of [...chainActs.values(), ...acts]) {
+    try {
+      look.verifier.add(b);
+    } catch {
+    }
+  }
+  look.resolution = look.verifier.resolve(id);
+  const r2 = look.resolution;
+  const latest = r2.links[r2.links.length - 1];
+  const next = [];
+  for (const b of chainActs.values()) {
+    const s = served(id, b, identitySpec);
+    if (s && s.position === latest.position + 1 && s.previous === latest.act) next.push(s);
+  }
+  const lines2 = linesOf({ identity: id, binding: bindingOf(look, chainActs), own: [], acts });
+  return { id, look, chainActs, places, next, lines: lines2, acts };
+}
+function bindingOf(look, chainActs) {
+  const links = look.resolution.links;
+  for (let i = links.length - 1; i > 0; i--) {
+    const b = chainActs.get(links[i].act);
+    const t = b ? describeAct(b).type : IDENTITY_TYPES.rotation;
+    if (t !== IDENTITY_TYPES.chainSignature) return links[i].act;
+  }
+  return links[0].act;
+}
+function linesUnder(rd, binding) {
+  return linesOf({ identity: rd.id, binding, own: [], acts: rd.acts });
+}
+function homesWords(homes, effective) {
+  const list3 = homes.map((h) => h.operator ? `${h.hint} (operator ${short(h.operator)})` : `${h.hint} (self-hosted: the identity is its own home)`).join("; ");
+  const operators = new Set(homes.map((h) => h.operator ?? "own")).size;
+  const k = /^Threshold\((\d+)\)$/.exec(effective ?? "")?.[1];
+  const rule = !effective ? "" : k ? ` A change of its keys counts once homes of ${k} of its ${operators} operators hold it and sign receipts.` : /Own/.test(effective) ? " It is its own home: a change of its keys counts on its own signatures." : " One home decides: a change of its keys counts once that home signs its receipt.";
+  return `Its homes: ${list3}.${rule}`;
+}
+function kishibLineWords(l) {
+  return lineWords(l).replace(/^A line made elsewhere( that this device cannot read)?/, (_, unread) => unread ? "A line Ki\u0161ib cannot read" : "A line of acts");
+}
+function recordWords(rd) {
+  const r = rd.look.resolution;
+  const out = [];
+  out.push({ heading: "Its homes", lines: [{ text: homesWords(r.homes, r.effective) }, ...rd.look.unreachable.length ? [{ text: `Did not answer now: ${rd.look.unreachable.join(", ")}. Silence proves nothing.`, tone: "warn" }] : []] });
+  const receipts = receiptsBy(rd.look.receipts);
+  const chain = r.links.map((l) => {
+    const n = receipts.get(l.act) ?? 0;
+    const what = l.position === 0 ? "its genesis" : `a change of its keys (position ${l.position})`;
+    const how = l.how === "genesis" ? "" : l.how === "homes" ? `, counting by its homes\u2019 receipts` : l.how === "own signatures" ? ", counting on its own signatures (self-hosted)" : `, counting as ${l.how}`;
+    return { text: `${what}: act ${l.act}${how}; ${n} receipt${n === 1 ? "" : "s"} held.`, tone: "ok" };
+  });
+  if (r.stop === "contested") chain.push({ text: `Contested at position ${r.links.length}: two rotations revealing one chain key are served there, and no rule settles them. Until it ends, no change of its keys counts.`, tone: "bad" });
+  if (r.stop === "pending" || r.waiting.length) chain.push({ text: `A change of its keys waits for its homes\u2019 receipts: ${r.waiting.join(", ") || "one rotation"}.`, tone: "warn" });
+  for (const s of rd.next) {
+    const counted = r.links.some((l) => l.act === s.id);
+    if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${s.id}, installing the signing key ${s.signingFingerprint}${s.homeless ? ", homeless" : ""}.`, tone: r.stop === "contested" ? "bad" : "warn" });
+  }
+  out.push({ heading: "Its chain and receipts", lines: chain });
+  const succ = rd.look.verifier.succession(rd.id);
+  if (succ.state !== "none") {
+    out.push({
+      heading: "Its succession",
+      lines: [
+        succ.state === "confirmed" ? { text: `Declared to ${succ.successor}, and confirmed by it (act ${succ.confirmation}): clients follow it.`, tone: "ok" } : succ.state === "declared" ? { text: `Declared to ${succ.successor}, not yet confirmed by it: shown as declared, followed by nobody until it confirms.`, tone: "warn" } : { text: `Declared to ${succ.successor ?? "another protocol"} (${succ.state}).`, tone: "warn" }
+      ]
+    });
+  }
+  out.push({ heading: "Its lines of acts (each app or device keeps one)", lines: rd.lines.length ? rd.lines.map((l) => ({ text: kishibLineWords(l), tone: l.readable ? void 0 : "warn" })) : [{ text: "No everyday act under the key in force was found." }] });
+  return out;
+}
+function receiptsBy(receipts) {
+  const out = /* @__PURE__ */ new Map();
+  for (const b of receipts) {
+    try {
+      const d = describeAct(b);
+      const m = cborDecode(d.payload);
+      const act = hex(m.get(1));
+      out.set(act, (out.get(act) ?? 0) + 1);
+    } catch {
+    }
+  }
+  return out;
+}
+
+// ../dub/src/chainwords.ts
+var WORDS_KEY_TAG = "MOR/module/seed-words/key";
+var cat = (...xs) => {
+  const out = new Uint8Array(xs.reduce((n, x) => n + x.length, 0));
+  let at = 0;
+  for (const x of xs) {
+    out.set(x, at);
+    at += x.length;
+  }
+  return out;
+};
+function taggedHash2(tag, data) {
+  const t = unhex(sha2562(tag));
+  return unhex(sha2562(cat(t, t, data)));
+}
+function keySeeds(seed, scheme, index) {
+  if (seed.length !== 32) throw new Error("a chain-key seed is 32 bytes");
+  const i = new Uint8Array(8);
+  new DataView(i.buffer).setBigUint64(0, index);
+  const a = taggedHash2(WORDS_KEY_TAG, cat(seed, Uint8Array.of(scheme), i, Uint8Array.of(0)));
+  const b = taggedHash2(WORDS_KEY_TAG, cat(seed, Uint8Array.of(scheme), i, Uint8Array.of(1)));
+  return cat(a, b.subarray(0, 16));
+}
+
+// src/words.ts
+function chainKeyAt(seed, scheme, index) {
+  const k = chainKeyFromSeeds(scheme, keySeeds(seed, scheme, BigInt(index)));
+  return { ...k, index };
+}
+function seedOf(words2) {
+  return fromWords(words2);
+}
+function indexOf(seed, scheme, commit, upTo) {
+  for (let i = 0; i <= upTo; i++) {
+    const k = chainKeyAt(seed, scheme, i);
+    k.seeds.fill(0);
+    if (k.commit === commit) return i;
+  }
+  return null;
+}
+function paperOf(number, words2) {
+  const x = Number(number.trim());
+  if (!Number.isSafeInteger(x) || x < 1 || x > 255) throw new Refused("The share\u2019s number is the whole number written beside its 24 words (1, 2, 3, \u2026)");
+  return { x, value: fromWords(words2) };
+}
+function wipe(...xs) {
+  for (const x of xs) x?.fill(0);
+}
+
+// src/web/node-fs.ts
+var none = (name) => () => {
+  throw new Error(`${name}: there are no files in a browser`);
+};
+var readFileSync = none("readFileSync");
+var writeFileSync = none("writeFileSync");
+var renameSync = none("renameSync");
+
+// ../genesis/src/kex.ts
+var kexLog = { recording: false, entries: [] };
+function record(e2) {
+  if (kexLog.recording) kexLog.entries.push(e2);
+}
+
+// ../genesis/src/identity.ts
+var TEST_LABEL = "MOR TEST IDENTITY. The safety key is held in software: a prototype, never for a real identity.";
+var CLOCK_KIND = 1;
+var NO_CLOCK_WARNING = "This identity declares no clock. If its signing key is ever stolen, what the thief does with it until you change your keys, and every payment made to what the thief published, will be your loss, whatever you anchor: payers are compared with your key change only on a clock you named in advance (Money rule 15).";
+var sameRef = (a, b) => a.cmip === b.cmip && a.params === b.params;
+function clockDeclaration(c) {
+  if (!c) return { spec: MIRS.money, kind: CLOCK_KIND };
+  const ref = (r) => [unhex(r.cmip), cborDecode(unhex(r.params))];
+  return { spec: MIRS.money, kind: CLOCK_KIND, cbor: cborEncode([ref(c.main), ...c.backup ? [ref(c.backup)] : []]) };
+}
+var AGREEMENTS_RECORD = 17;
+var b64 = (b) => base64(b);
+var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+var TestIdentity = class _TestIdentity {
+  constructor(f, via = {}) {
+    this.f = f;
+    this.via = via;
+  }
+  get id() {
+    return this.f.identity;
+  }
+  // ------------------------------------------------------------ files
+  static load(path, via = {}) {
+    const f = JSON.parse(readFileSync(path, "utf8"));
+    if (f.label !== TEST_LABEL) throw new Error(`${path} is not a MOR test identity file`);
+    return new _TestIdentity(f, via);
+  }
+  /** Written whole to a temporary file, then renamed, readable by its owner only. */
+  save(path) {
+    const tmp = `${path}.tmp`;
+    writeFileSync(tmp, JSON.stringify(this.f, null, 2) + "\n", { mode: 384 });
+    renameSync(tmp, path);
+  }
+  // ------------------------------------------------------------ genesis
+  /**
+   * A new test identity: an signing key, a chain key held in
+   * software and committed by hash, and a genesis naming its homes. Nothing
+   * is sent yet: save the file first, then `publishGenesis`.
+   */
+  static create(opts) {
+    if (!opts.homes.length) throw new Error("a genesis declares at least one home");
+    const signingSecret = newSigningSecret();
+    const chainKey = opts.chainKey ?? newTestChainKey(opts.scheme ?? 2);
+    const genesis = makeGenesis({
+      identitySpec: SPECS.identity,
+      signingSecret,
+      chainKeyScheme: chainKey.scheme,
+      chainKeyCommit: chainKey.commit,
+      homes: opts.homes,
+      rule: opts.rule,
+      declarations: opts.clock ? [clockDeclaration(opts.clock)] : void 0
+    });
+    const id = actId(genesis);
+    return new _TestIdentity(
+      {
+        label: TEST_LABEL,
+        identity: id,
+        position: 0,
+        binding: id,
+        signingSecret: hex(signingSecret),
+        safety: { scheme: chainKey.scheme, seeds: hex(chainKey.seeds) },
+        chain: [b64(genesis)],
+        homes: opts.homes,
+        rule: opts.rule ?? null,
+        clock: opts.clock ?? null,
+        sequence: [],
+        routes: null,
+        encryption: [],
+        pending: null
+      },
+      opts.via ?? {}
+    );
+  }
+  chainActs() {
+    return this.f.chain.map(unb64);
+  }
+  relay(hint) {
+    return relayAt(hint, this.via);
+  }
+  /**
+   * Send an identity-chain act to each home. A home that lacks the earlier
+   * chain acts (error 3: a home newly named) gets them first, oldest first.
+   */
+  async submitChainAct(act, homes) {
+    const out = [];
+    for (const h of homes) {
+      const r = this.relay(h.hint);
+      try {
+        out.push({ home: h.hint, result: await r.putAct(act) });
+      } catch (e2) {
+        if (e2 instanceof RelayError && e2.code === CODE.missingPredecessor) {
+          try {
+            for (const earlier of this.chainActs()) {
+              if (actId(earlier) !== actId(act)) await r.putAct(earlier);
+            }
+            out.push({ home: h.hint, result: await r.putAct(act) });
+            continue;
+          } catch (e22) {
+            out.push(failure(h.hint, e22));
+            continue;
+          }
+        }
+        out.push(failure(h.hint, e2));
+      }
+    }
+    return out;
+  }
+  /** Send the genesis to every home it names; each signs a receipt. */
+  async publishGenesis() {
+    return this.submitChainAct(this.chainActs()[0], this.f.homes);
+  }
+  // ------------------------------------------------------------ everyday acts
+  everyday(spec, type, payload, opts) {
+    if (opts.acks?.length && !ACK_SPECS.includes(spec)) {
+      throw new Error("only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act");
+    }
+    const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
+    let objects = opts.objects;
+    if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
+      objects = [...objects ?? [], ...this.f.cites.map((d) => [this.f.identity, d])];
+    }
+    const made = makeEveryday({
+      signingSecret: unhex(this.f.signingSecret),
+      signer: this.f.identity,
+      binding: this.f.binding,
+      spec,
+      type,
+      payload,
+      sequence: this.f.sequence,
+      public: opts.public,
+      to: opts.to,
+      objects,
+      refs: opts.refs,
+      acks: opts.acks
+    });
+    this.f.sequence.push(made.id);
+    if (this.f.cites && isRecord) this.f.cites = [made.id];
+    return made;
+  }
+  /** Send an everyday identity act to every home: its standing depends on it (Envelopes, "How acts reach people"). */
+  async toHomes(act) {
+    const out = [];
+    for (const h of this.f.homes) {
+      try {
+        out.push({ home: h.hint, result: await this.relay(h.hint).putAct(act) });
+      } catch (e2) {
+        out.push(failure(h.hint, e2));
+      }
+    }
+    return out;
+  }
+  /**
+   * Publish a new version of the routes (Identity type 3): where this
+   * identity's content is found (outbox) and where others deliver to it
+   * (inbox). Save the file after, since the sequence moved.
+   */
+  async publishRoutes(routes) {
+    const version = (this.f.routes?.version ?? 0) + 1;
+    const payload = routesPayload({ version, previous: this.f.routes?.act, routes });
+    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
+    this.f.routes = { version, act: made.id };
+    return { id: made.id, sent: await this.toHomes(made.act) };
+  }
+  /**
+   * Sign a witness act (Identity type 15, F110): "I received this act and
+   * rely on it", for each act named. It keeps them visible as disputed if
+   * their author later disowns them. Client conformance (Identity rule 18c):
+   * never a side effect; the caller passes back the explanation it showed
+   * the owner, `WITNESS_EXPLANATION`, word for word, or nothing is signed.
+   * Sent to every home and to the relays given, as a public Identity act.
+   */
+  async witness(acts, opts) {
+    if (opts.shown !== WITNESS_EXPLANATION) {
+      throw new Error("a witness act is signed only after the owner was shown what it does (Identity rule 18c)");
+    }
+    if (!acts.length) throw new Error("a witness act names at least one act");
+    if (acts.some((a) => this.f.sequence.includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
+    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(/* @__PURE__ */ new Map()), { public: true, acks: acts });
+    const sent = await this.toHomes(made.act);
+    for (const hint of opts.relays ?? []) await relayAt(hint, this.via).putAct(made.act);
+    return { id: made.id, act: made.act, sent };
+  }
+  /**
+   * Publish a new encryption key (Envelopes type 4): a fresh X-Wing key
+   * pair, or the one `secret` gives (the identity carry Module, draft 2,
+   * derives it from the signing seed); the public half in the act, the
+   * private half kept in the file.
+   */
+  async publishEncryptionKey(given) {
+    const last = this.f.encryption.at(-1);
+    const version = (last?.version ?? 0) + 1;
+    const secret = given ?? newEncryptionSecret();
+    const payload = encryptionKeyPayload(version, last?.act, xwingPublic(secret));
+    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
+    this.f.encryption.push({ version, act: made.id, secret: hex(secret) });
+    return { id: made.id, sent: await this.toHomes(made.act) };
+  }
+  // ------------------------------------------------------------ rotation
+  /**
+   * Every line of this identity's everyday acts that a rotation would judge
+   * (Identity rule 35, was 17; `lines.ts`): read from its homes, the
+   * relays its routes name, and `hints`, each followed back by `prev` to
+   * its first act; this device's own line among them.
+   */
+  async lines(o = {}) {
+    const homes = this.f.homes.map((h) => h.hint);
+    let routed = [];
+    try {
+      routed = (await lookUp(this.f.identity, homes, this.via)).routes.routes.flatMap((r) => r.hints);
+    } catch {
+    }
+    const at = [.../* @__PURE__ */ new Set([...homes, ...routed, ...o.hints ?? []])];
+    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: this.f.sequence, acts: await actsBy(this.f.identity, at, this.via), specs: o.specs });
+  }
+  /**
+   * What a rotation would keep (Identity rule 35, client conformance): the
+   * lines read now, every one kept unless named in `leaveOut` (by its
+   * latest act); a line this device cannot read kept by its card in
+   * `cards`, or, given none, left out. Show `plan.shown` to the owner, and
+   * `plan.warning` where it is not null, before signing.
+   */
+  async planRotation(o = {}) {
+    const lines2 = await this.lines(o);
+    return { lines: lines2, plan: planLines(lines2, o) };
+  }
+  /**
+   * Prepare a rotation: a new signing key, a new committed chain key, and
+   * every line of this identity's acts kept (`planRotation`): its own, the
+   * other apps' and devices', read from its homes and relays, and those it
+   * cannot read by the cards given. A line left out, by name or for want of
+   * a card, is left out only where `warned` is, word for word, the warning
+   * shown (`plan.warning`): otherwise nothing is signed. Optionally new
+   * homes or rule (`rule: []` returns to the default). Signed with the
+   * chain key the current chain act committed. The rotation is stored as
+   * pending; save the file before submitting, so that a retry sends the
+   * same bytes.
+   */
+  async prepareRotation(opts = {}) {
+    if (this.f.pending) throw new Error("a rotation is already pending: submit it again, never sign a second one (Identity rule 8a)");
+    const { plan } = await this.planRotation(opts);
+    checkWarned(plan, opts.warned);
+    if (this.f.pending) throw new Error("a rotation is already pending: submit it again, never sign a second one (Identity rule 8a)");
+    const newSigning = newSigningSecret();
+    const next = newTestChainKey(opts.scheme ?? this.f.safety.scheme);
+    const kept = plan.kept;
+    const chain = this.chainActs();
+    const previous = actId(chain[chain.length - 1]);
+    const rotation = makeRotation({
+      identitySpec: SPECS.identity,
+      identity: this.f.identity,
+      previous,
+      position: chain.length,
+      chainKeyScheme: this.f.safety.scheme,
+      chainKeySeeds: unhex(this.f.safety.seeds),
+      newSigningPublic: signingPublic(newSigning),
+      nextChainKeyScheme: next.scheme,
+      nextChainKeyCommit: next.commit,
+      kept,
+      homes: opts.homes,
+      rule: opts.rule,
+      declarations: opts.clock !== void 0 ? [clockDeclaration(opts.clock)] : void 0
+    });
+    const id = actId(rotation);
+    this.f.pending = {
+      rotation: b64(rotation),
+      id,
+      signingSecret: hex(newSigning),
+      safety: { scheme: next.scheme, seeds: hex(next.seeds) },
+      homes: opts.homes ?? this.f.homes,
+      rule: opts.rule === void 0 ? this.f.rule : opts.rule.length ? opts.rule : null,
+      clock: opts.clock
+    };
+    return id;
+  }
+  /**
+   * What to say plainly before a genesis or a rotation, where it leaves the
+   * identity with no clock (Money rule 14b, F181): `NO_CLOCK_WARNING`, or
+   * null. `clock` is what the act would declare (undefined: unchanged).
+   */
+  clockWarning(clock) {
+    const after = clock === void 0 ? this.f.clock : clock;
+    return after ? null : NO_CLOCK_WARNING;
+  }
+  /**
+   * Submit the pending rotation, the exact same bytes, to the homes whose
+   * receipts count (the current set) and to any new homes it names.
+   */
+  async submitRotation() {
+    const p = this.f.pending;
+    if (!p) throw new Error("no rotation pending");
+    const homes = [...this.f.homes];
+    for (const h of p.homes) if (!homes.some((x) => x.hint === h.hint)) homes.push(h);
+    return this.submitChainAct(unb64(p.rotation), homes);
+  }
+  /**
+   * Look the identity up as any reader would, and if the pending rotation
+   * now counts, take on its keys. Returns whether it counts.
+   */
+  async settleRotation(anchoring = []) {
+    const p = this.f.pending;
+    if (!p) throw new Error("no rotation pending");
+    const lookup = await lookUp(this.f.identity, [...this.f.homes, ...p.homes].map((h) => h.hint), this.via);
+    const links = lookup.resolution.links;
+    const counts = links.some((l) => l.act === p.id);
+    const before = this.f.clock ?? null;
+    let anchored = [];
+    let unanchored;
+    if (counts) {
+      this.f.chain.push(p.rotation);
+      this.f.position = this.f.chain.length - 1;
+      this.f.binding = p.id;
+      this.f.signingSecret = p.signingSecret;
+      this.f.safety = p.safety;
+      this.f.homes = p.homes;
+      this.f.rule = p.rule;
+      if (p.clock !== void 0) this.f.clock = p.clock;
+      this.f.pending = null;
+      if (this.f.cites) this.f.cites = [p.id];
+      await this.spread(lookup);
+      try {
+        anchored = await this.anchorQuorum(lookup, p.id, before, anchoring);
+        this.f.anchored = [...this.f.anchored ?? [], ...anchored.map((a) => ({ act: a.act, on: a.on, proof: b64(a.proof) }))];
+      } catch (e2) {
+        unanchored = e2.message;
+      }
+    }
+    return { counts, lookup, anchored, unanchored };
+  }
+  /**
+   * Anchor a counting rotation's home quorum on `clock` (Money rule 15,
+   * F180, F181): every receipt the core library names as supporting it
+   * under the home rule before it (for a homeless rotation, the new homes'
+   * receipts under the new rule, F182; for a self-hosted identity, the
+   * rotation itself), on the main reference, or, where no anchoring for it is given
+   * or it fails, on the backup. Nothing where no clock was declared: there
+   * is nothing to compare on, and the owner bears (said by `clockWarning`).
+   */
+  async anchorQuorum(lookup, rotation, clock, anchoring) {
+    if (!clock) return [];
+    const q = lookup.verifier.quorum(this.f.identity, rotation);
+    if (!q) return [];
+    const acts = q.supports.flat();
+    const tryOn = async (ref, on) => {
+      const a = ref && anchoring.find((x) => sameRef(x.reference, ref));
+      if (!a) return null;
+      try {
+        const out = [];
+        for (const act of acts) out.push({ act, on, proof: await a.anchor(act) });
+        return out;
+      } catch {
+        return null;
+      }
+    };
+    const done = await tryOn(clock.main, "main") ?? await tryOn(clock.backup, "backup");
+    if (!done) throw new Error("the rotation counts, but its home quorum could not be anchored on the declared clock: anchor it before relying on it (Money rule 15)");
+    return done;
+  }
+  /**
+   * A chain signature (Identity type 16, F132): `signs` signed with the
+   * chain key the latest identity-chain act committed, on the identity
+   * chain, committing a new one; the signing key, homes and rules stay.
+   * Agreements take a member's signature on a fork or closing only in this form.
+   * The chain key is spent once signed, so the act is kept in the chain
+   * file at once and sent to every home, as a rotation is (the same bytes
+   * whenever resent, rule 8a); it counts once the homes hold it. Sent to
+   * `relays` too, beside the act it signs.
+   */
+  async chainSign(signs2, relays = [], shared) {
+    if (this.f.pending) throw new Error("a rotation is pending: submit and settle it first; one chain key signs one identity-chain act (Identity rule 8a)");
+    const fresh = shared ? null : newTestChainKey(this.f.safety.scheme);
+    const next = shared ? shared.next : fresh;
+    const chain = this.chainActs();
+    const act = makeChainSignature({
+      identitySpec: SPECS.identity,
+      identity: this.f.identity,
+      previous: actId(chain[chain.length - 1]),
+      position: chain.length,
+      chainKeyScheme: shared ? shared.scheme : this.f.safety.scheme,
+      chainKeySeeds: shared ? shared.seeds : unhex(this.f.safety.seeds),
+      nextChainKeyScheme: next.scheme,
+      nextChainKeyCommit: next.commit,
+      signs: signs2
+    });
+    const id = actId(act);
+    this.f.chain.push(b64(act));
+    this.f.safety = { scheme: next.scheme, seeds: fresh ? hex(fresh.seeds) : "" };
+    const sent = await this.submitChainAct(act, this.f.homes);
+    for (const hint of relays) await relayAt(hint, this.via).putAct(act);
+    const lookup = await lookUp(this.f.identity, this.f.homes.map((h) => h.hint), this.via);
+    const counts = lookup.resolution.links.some((l) => l.act === id);
+    if (counts) await this.spread(lookup);
+    return { id, counts, sent };
+  }
+  /**
+   * Bring every home up to date, as the owner's client should: the chain
+   * acts a home missed while it was away (the exact same bytes), and the
+   * receipts the other homes signed (cMIP, identity record part 8), so a
+   * reader who reaches a single home can still count the majority.
+   */
+  async spread(lookup) {
+    const l = lookup ?? await lookUp(this.f.identity, this.f.homes.map((h) => h.hint), this.via);
+    const extra = [...l.operatorChains, ...l.receipts];
+    for (const h of this.f.homes) {
+      const r = this.relay(h.hint);
+      try {
+        for (const a of this.chainActs()) await r.putAct(a);
+        for (const rc of extra) {
+          try {
+            await r.putAct(rc);
+          } catch {
+          }
+        }
+      } catch (e2) {
+        if (!(e2 instanceof TypeError) && !(e2 instanceof RelayError)) throw e2;
+      }
+    }
+  }
+  /**
+   * Make a grant key (Agreements, F128): a fresh signing key, its secret kept in
+   * this identity's file under the grant once known; its public part, as
+   * Identity's `[scheme, key]`, goes into the grant (field 9).
+   */
+  makeGrantKey() {
+    const secret = newSigningSecret();
+    return { secret, public: [1, signingPublic(secret)] };
+  }
+  /** Keep a grant key's secret, under the grant that names it (F128). */
+  keepGrantKey(grant, collective, secret) {
+    this.f.grantKeys = [...(this.f.grantKeys ?? []).filter((k) => k.grant !== grant), { grant, collective, secret: hex(secret) }];
+  }
+  /** The public half of the chain key held for the next rotation. */
+  nextChainKey() {
+    const s = chainKeyFromSeeds(this.f.safety.scheme, unhex(this.f.safety.seeds));
+    return { scheme: s.scheme, commit: s.commit };
+  }
+  // ------------------------------------------------------------ keys
+  /**
+   * Deliver a content key to another identity (Envelopes, "Key delivery"):
+   * look up its current encryption key and inbox, make a private key
+   * delivery addressed to it, seal it with X-Wing, and put it in its inbox.
+   */
+  async deliverKey(opts) {
+    const them = await lookUp(opts.to, opts.hints, this.via);
+    const pk = them.encryptionKey;
+    if (!pk) throw new Error("that identity has published no encryption key that counts");
+    const inbox = them.inbox(SPECS.envelopes);
+    if (!inbox) throw new Error("that identity declares no inbox");
+    const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
+    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, {
+      public: false,
+      to: [opts.to]
+    });
+    const sealed = sealFor(made.act, made.key, [{ id: opts.to, key: pk }]);
+    const id = sealedId(sealed);
+    for (const hint of inbox) await relayAt(hint, this.via).putSealed(sealed);
+    return { delivery: made.id, sealed: id, inbox };
+  }
+  /** A fresh bare key for one expected delivery (cMIP: a fresh bare key per delivery). */
+  static newBareKey() {
+    const secret = newEncryptionSecret();
+    const pub = xwingPublic(secret);
+    return { secret, public: pub, pickup: pickupTag(pub) };
+  }
+  /** Deliver a content key to a bare key someone supplied, found by its pickup tag. */
+  async deliverKeyToBare(opts) {
+    const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
+    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, { public: false });
+    const sealed = sealFor(made.act, made.key, [{ key: opts.bareKey }]);
+    for (const hint of opts.relays) await relayAt(hint, this.via).putSealed(sealed, [pickupTag(opts.bareKey)]);
+    return { delivery: made.id, sealed: sealedId(sealed) };
+  }
+  /**
+   * Sign an everyday act, next in this identity's sequence, without sending
+   * it: for a signer that hands the act to someone else to submit. Save the
+   * file before handing the act out, so the next act follows it.
+   */
+  sign(spec, type, payload, opts) {
+    return this.everyday(spec, type, payload, opts);
+  }
+  /**
+   * Publish an act on this identity's own relays, for example a private
+   * post whose key it will deliver. Returns the act id and its content key.
+   */
+  async publish(spec, type, payload, opts) {
+    const made = this.everyday(spec, type, payload, {
+      public: opts.public,
+      to: opts.to,
+      objects: opts.objects,
+      refs: opts.refs,
+      acks: opts.acks
+    });
+    for (const hint of opts.relays) await relayAt(hint, this.via).putAct(made.act);
+    return made;
+  }
+  /**
+   * Acts its homes hold signed by this identity that this file did not make
+   * (F152): each a warning for the owner. A home takes an act of an
+   * identity it serves only signed with the key its binding set, and serves
+   * the identity's private acts too, sealed, as opaque acts by their signer;
+   * so a private link that a thief confirmed with a stolen signing key
+   * counts only once it is published there, where this shows it. The owner
+   * cannot read it, only see that it exists: if they did not make it
+   * elsewhere, the signing key may be stolen, and a rotation ends its use.
+   * Homes that do not answer are skipped: silence proves nothing.
+   */
+  async unrecognised() {
+    const known = /* @__PURE__ */ new Set([...this.f.sequence, ...this.chainActs().map((a) => actId(a))]);
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const h of this.f.homes) {
+      try {
+        let after;
+        for (; ; ) {
+          const page = await this.relay(h.hint).feed({ signer: this.f.identity, after });
+          for (const it of page.items) {
+            if (it.kind !== "act") continue;
+            const d = describeAct(it.item);
+            if (d.signer !== this.f.identity || known.has(d.id) || seen.has(d.id)) continue;
+            seen.add(d.id);
+            out.push({ id: d.id, home: h.hint, private: !d.public });
+          }
+          if (!page.items.length || page.next === after) break;
+          after = page.next;
+        }
+      } catch {
+      }
+    }
+    return out;
+  }
+  /**
+   * Read this identity's inbox: every sealed container addressed to it, opened
+   * with its encryption keys (newest first), the sender looked up and its act
+   * judged by the core library.
+   */
+  async readInbox(opts) {
+    const out = [];
+    const secrets = [...this.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    for (const hint of opts.inbox) {
+      const page = await relayAt(hint, this.via).feed({ to: this.f.identity });
+      for (const it of page.items) {
+        if (it.kind !== "sealed") continue;
+        out.push(await receive(it.item, this.f.identity, secrets, opts.senderHints, this.via));
+      }
+    }
+    return out;
+  }
+};
+async function receive(sealed, me, secrets, senderHints, via = {}) {
+  const id = sealedId(sealed);
+  let parts;
+  try {
+    parts = sealedParts(sealed);
+  } catch (e2) {
+    return { sealed: id, opened: false, error: String(e2) };
+  }
+  const index = me === null ? 0 : parts.to.indexOf(me);
+  if (index < 0) return { sealed: id, opened: false, error: "not addressed to this identity" };
+  let lastError = "no key";
+  for (const secret of secrets) {
+    record({ kind: "decapsulate", secret, ct: parts.capsules[index] });
+    let o;
+    try {
+      o = openSealed(sealed, me ?? void 0, secret);
+    } catch (e2) {
+      lastError = String(e2);
+      continue;
+    }
+    const d = o.described;
+    const r = { sealed: id, opened: true, from: d.signer, act: d.id, type: d.type, spec: d.spec };
+    if (d.spec === SPECS.envelopes && d.type === ENVELOPES_TYPES.keyDelivery && d.payload) {
+      r.delivery = readKeyDelivery(d.payload);
+    }
+    if (d.spec === SPECS.text && d.type === 0 && d.payload) {
+      const t = cborDecode(d.payload).get(0);
+      if (typeof t === "string") r.text = t;
+    }
+    if (d.signer) {
+      try {
+        const them = await lookUp(d.signer, senderHints, via);
+        if (o.key) them.verifier.addWithKey(o.act, o.key);
+        else them.verifier.add(o.act);
+        r.status = them.verifier.status(d.id);
+      } catch (e2) {
+        r.status = `sender not found: ${e2}`;
+      }
+    }
+    return r;
+  }
+  return { sealed: id, opened: false, error: lastError };
+}
+function sealFor(act, key, recipients) {
+  const eseeds = recipients.map(() => new Uint8Array(randomBytes2(64)));
+  const sealed = seal({
+    act,
+    key,
+    recipients,
+    random: {
+      containerKey: new Uint8Array(randomBytes2(32)),
+      nonce: new Uint8Array(randomBytes2(24)),
+      eseeds
+    }
+  });
+  const parts = sealedParts(sealed);
+  recipients.forEach((r, i) => record({ kind: "encapsulate", publicKey: r.key, eseed: eseeds[i], ct: parts.capsules[i] }));
+  return sealed;
+}
+function failure(home, e2) {
+  if (e2 instanceof RelayError) return { home, error: e2.reason, code: e2.code };
+  return { home, error: String(e2) };
+}
+
+// ../repo/src/specs.ts
+var test = (s) => createHash("sha256").update(s).digest("hex");
+var REPO_SPECS = {
+  /** The Agreements MIR (`AGREEMENTS`). */
+  agreements: test("LAW, test value until the freeze"),
+  /** The release manifest cMIP (cmips/cmip-release-manifest-draft-1.md). */
+  manifest: test("release manifest cMIP, draft 1, test value until publication"),
+  /** The payment cMIP: a Module under it must carry fields 11 and 13 (Development draft 10, F301). The core's test value. */
+  payment: test("payment cMIP, draft 2, test value until publication")
+};
+var AGREEMENTS_TYPES = {
+  terms: 0,
+  signature: 1,
+  release: 5,
+  offer: 6,
+  split: 8,
+  grant: 9,
+  /** Liveness (type 12, rule 50): here, an act of the collective acknowledging what it relies on (F303). */
+  liveness: 12,
+  declaration: 13,
+  /** A contest of a declaration of absence (rule 52; BQ4, F188). */
+  contest: 14,
+  /** A party's request that a deal's arbitrator settle its fork (DQ8, F188). */
+  settlementRequest: 22,
+  /** The arbitrator's settlement of a deal's fork (DQ8, F188). */
+  forkSettlement: 23,
+  /** A notice to a payer owed money back who gave no address (rule 37d; F197). */
+  notice: 24,
+  resignation: 16,
+  record: 17,
+  fork: 19,
+  closing: 20
+  // 21, the creditor's release under F125, is retired: a Money act now (F126).
+};
+var TEST_RAIL = test("a test rail Module, no real rail");
+var TEST_TIME = test("a test time reference, no real clock");
+var FOUNDING_AGREEMENT = 0;
+
+// ../repo/src/agreements.ts
+var AGREEMENTS_SPECS = { ...MIRS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] } };
+
+// ../repo/src/proposals.ts
+var NEGOTIATION = 18;
+var SHARE_MEDIA = "f2f9c2b8a6e0c5c1b4a7d1e3f0a9c8b7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1";
+var ONE_TIME_LINE = "One-time key for my share of the chain key: ";
+var SIGNED = "Signed.";
+var negotiationPayload = (text2) => cborEncode(/* @__PURE__ */ new Map([[0, text2.normalize("NFC")]]));
+async function negotiate(by, to, o) {
+  const made = by.sign(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
+    public: false,
+    to: [to.id],
+    objects: o.thread ? [[o.thread, o.previous ?? o.thread]] : void 0,
+    acks: o.acks?.length ? o.acks : void 0,
+    refs: o.refs
+  });
+  const sealed = sealFor(made.act, made.key, [{ id: to.id, key: to.key }]);
+  const left = [];
+  const failed = [];
+  for (const hint of to.inbox) {
+    try {
+      const r = relayAt(hint, by.via);
+      for (const c of by.chainActs()) await r.putAct(c).catch(() => void 0);
+      await r.putSealed(sealed);
+      left.push(hint);
+    } catch (e2) {
+      failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
+    }
+  }
+  return { id: made.id, act: made.act, key: made.key, sealed: sealedId(sealed), left, failed };
+}
+function readMessage(d) {
+  if (d.spec !== REPO_SPECS.agreements || d.type !== NEGOTIATION || !d.payload || !d.signer) return null;
+  const m = cborDecode(d.payload);
+  const text2 = m.get(0);
+  if (typeof text2 !== "string") return null;
+  const link = d.objects?.[0];
+  return {
+    id: d.id,
+    from: d.signer,
+    to: d.to ?? [],
+    text: text2,
+    thread: link ? link[0] : d.id,
+    previous: link ? link[1] : null,
+    acks: d.acks ?? [],
+    refs: (d.refs ?? []).flatMap((r, i) => d.refSigners?.[i] ? [[r, d.refSigners[i]]] : [])
+  };
+}
+function oneTimeKeyOf(text2) {
+  const line = text2.split("\n").find((l) => l.startsWith(ONE_TIME_LINE));
+  if (!line) return null;
+  try {
+    const k = Uint8Array.from(atob(line.slice(ONE_TIME_LINE.length).trim()), (c) => c.charCodeAt(0));
+    return k.length === 1216 ? k : null;
+  } catch {
+    return null;
+  }
+}
+async function sealShare(by, share, oneTime, relays) {
+  const l = lockMedia(share);
+  const payload = cborEncode(
+    /* @__PURE__ */ new Map([
+      [0, unhex(SHARE_MEDIA)],
+      [1, unhex(l.workHash)],
+      [2, unhex(l.lockedHash)],
+      [3, share.length],
+      [4, l.nonce],
+      [5, l.key],
+      [6, relays]
+    ])
+  );
+  const made = by.sign(SPECS.envelopes, 0, payload, { public: false });
+  const sealed = sealFor(made.act, made.key, [{ key: oneTime }]);
+  const tag = pickupTag(oneTime);
+  const left = [];
+  for (const hint of relays) {
+    try {
+      const r = relayAt(hint, by.via);
+      await r.putMedia(l.locked);
+      await r.putSealed(sealed, [tag]);
+      left.push(hint);
+    } catch {
+    }
+  }
+  if (!left.length) throw new Error(`No relay took the share (${relays.join(", ")}).`);
+  return { sealed: sealedId(sealed), publication: made.id, left };
+}
+
+// ../collective/src/explain.ts
+var short2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+function termsOf(payload) {
+  return readTerms(payload, AGREEMENTS_SPECS);
+}
+var KNOWN = {
+  [SPECS.identity]: "the Identity MIR",
+  [SPECS.envelopes]: "the Envelopes MIR",
+  [SPECS.text]: "the Text MIR",
+  [MIRS.money]: "the Money MIR",
+  [MIRS.development]: "the Development MIR",
+  [REPO_SPECS.agreements]: "the Agreements MIR",
+  [REPO_SPECS.manifest]: "the release manifest cMIP (draft 1)"
+};
+var EXTENSIONS = /* @__PURE__ */ new Set([REPO_SPECS.manifest]);
+var specName = (h) => KNOWN[h] ?? `an unknown specification (${short2(h)})`;
+function list(xs) {
+  if (xs.length <= 1) return xs.join("");
+  return `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+}
+function ruleWords(r, parties, names) {
+  switch (r.form) {
+    case "all":
+      return parties.length === 1 ? "the one party" : `all ${parties.length} parties`;
+    case "threshold":
+      return `any ${r.threshold} of the ${parties.length} parties`;
+    case "named":
+      return list((r.named ?? []).map(names));
+    case "share":
+      return `parties holding together at least ${pct(r.share)} of what the voices that remain hold of stake ${r.stake}`;
+    case "holders":
+      return `holders of stake ${r.stake} holding together at least ${pct(r.share)} of it, members or not`;
+    case "allOf":
+      return `all of: ${(r.rules ?? []).map((x) => ruleWords(x, parties, names)).join("; ")}`;
+  }
+}
+function pct(n) {
+  return `${(n ?? 0) / 1e4}%`;
+}
+function constitutionWords(t, names) {
+  const r = t.constitutional;
+  if (!r || r.form === "all") return "every member whose voice remains: nobody loses their say without signing (F103)";
+  if (r.form === "threshold") return `any ${r.threshold} of the ${t.parties.length} members (all of those whose voice remains, if fewer remain)`;
+  if (r.form === "named") return list((r.named ?? []).map(names));
+  return ruleWords(r, t.parties, names);
+}
+function powerWords(p, areas, names) {
+  switch (p.form) {
+    case "constitutional":
+      return "the constitutional change rule";
+    case "clone":
+      return "the clone rule";
+    case "area": {
+      const a = areas.find((x) => x.id === p.area);
+      return a ? `the power of the \u201C${a.name}\u201D area (area ${p.area})` : `the power of area ${p.area}`;
+    }
+    case "plan":
+      return `the succession plan of ${names(p.party ?? "")}`;
+    case "judicial":
+      return "the judicial tier's rule, every member whose voice remains";
+  }
+}
+var TYPE_NAMES = {
+  [SPECS.envelopes]: { 0: "every publication of the collective (a release is one)", 1: "every key delivery of the collective", 4: "every encryption key of the collective" },
+  [REPO_SPECS.agreements]: { 0: "every terms act of the collective", 1: "every signature of the collective" },
+  [SPECS.text]: { 0: "every text of the collective" }
+};
+var FIELD_NAMES = {
+  0: "who the members are",
+  1: "the constitution's words",
+  3: "the keepers",
+  5: "the clone rule",
+  6: "the time reference",
+  7: "the stakes",
+  8: "the split plan",
+  9: "the abandonment clause",
+  12: "the key grammar",
+  13: "the arbitrators",
+  14: "the split service's grant",
+  16: "the succession plans",
+  17: "the refund terms",
+  18: "the constitutional change rule",
+  19: "the areas",
+  28: "the fees"
+};
+function planOf(before, after) {
+  return agreementsClonePlan(before, after, AGREEMENTS_SPECS);
+}
+var powerKey = (p) => p.form === "area" ? `area ${p.area}` : p.form === "plan" ? `plan ${p.party}` : p.form;
+function readChanges(beforePayload, afterPayload, names) {
+  const before = termsOf(beforePayload);
+  const after = termsOf(afterPayload);
+  const out = [];
+  const joined = after.parties.filter((p) => !before.parties.includes(p));
+  const left = before.parties.filter((p) => !after.parties.includes(p));
+  for (const p of joined) out.push({ text: `${names(p)} joins, bound once they sign the clone.` });
+  for (const p of left)
+    out.push({
+      text: `${names(p)} leaves. They hand over nothing: the collective rotates to keys they never held, and from then on they have no say in it. They keep what they own (Agreements rules 37, 46, F100).`
+    });
+  const holder = (t) => t.grammar?.signing.form === "one" ? t.grammar.signing.holder : null;
+  if (holder(before) !== holder(after) && holder(after)) {
+    out.push({ text: `The signing key passes to ${names(holder(after))}${holder(before) ? ` (was ${names(holder(before))})` : ""}.` });
+  }
+  const sb = before.grammar?.chainKey;
+  const sa = after.grammar?.chainKey;
+  if (sa?.form === "shares" && sb?.form === "shares" && JSON.stringify(sa) !== JSON.stringify(sb)) {
+    out.push({
+      text: `The chain key is dealt afresh: ${sa.members.length} shares, any ${sa.threshold} rebuild it (was ${sb.members.length} shares, any ${sb.threshold}). Nobody leaving ever holds a share of the new key.`,
+      tone: sa.threshold === 1 && sb.threshold !== 1 ? "warn" : void 0
+    });
+  }
+  const ids = [...new Set([...before.areas, ...after.areas].map((a) => a.id))];
+  for (const id of ids) {
+    const b = before.areas.find((a2) => a2.id === id);
+    const a = after.areas.find((x) => x.id === id);
+    const held = (x) => x.holders.length ? `any ${x.threshold} of ${list(x.holders.map(names))}` : "nobody: frozen";
+    if (!b && a) out.push({ text: `A new area, \u201C${a.name}\u201D (area ${id}): ${held(a)}.` });
+    else if (b && !a) out.push({ text: `The \u201C${b.name}\u201D area (area ${id}) is dropped.`, tone: "warn" });
+    else if (a && b && JSON.stringify(a) !== JSON.stringify(b)) {
+      out.push({ text: `The \u201C${a.name}\u201D area (area ${id}) is now decided by ${held(a)} (was ${held(b)}).` });
+    }
+  }
+  const rule = (r, parties) => ruleWords(r, parties, names);
+  if (JSON.stringify(before.constitutional) !== JSON.stringify(after.constitutional)) {
+    out.push({ text: `The constitution now changes with ${constitutionWords(after, names)} (was ${constitutionWords(before, names)}).` });
+  }
+  if (JSON.stringify(before.clone) !== JSON.stringify(after.clone)) {
+    out.push({ text: `Other changes now need ${rule(after.clone, after.parties)} (was ${rule(before.clone, before.parties)}).` });
+  }
+  if (JSON.stringify(before.abandonment) !== JSON.stringify(after.abandonment)) {
+    const words2 = (a) => !a ? "no one" : a.authority === "named" ? names(a.identity) : `any ${a.threshold} of the other parties`;
+    out.push({
+      text: `Absence is now judged by ${words2(after.abandonment)} (was ${words2(before.abandonment)}). A protected clause: it changes only with every member's signature, one version for everyone (Agreements rule 46a, F121).`,
+      tone: "warn"
+    });
+  }
+  if (before.text !== after.text) out.push({ text: "The constitution's words change: read the new words below, in full.", tone: "warn" });
+  else out.push({ text: "The constitution's words stay the same." });
+  const wb = new Map(before.areaWords);
+  for (const [id, w] of after.areaWords) {
+    if (wb.get(id) !== w) out.push({ text: `The \u201C${after.areas.find((a) => a.id === id)?.name ?? `area ${id}`}\u201D area's own words change: read them below.`, tone: "warn" });
+  }
+  let plan;
+  try {
+    plan = planOf(beforePayload, afterPayload);
+  } catch (e2) {
+    out.push({ text: `Agreements cannot say what this clone changes: ${e2 instanceof Error ? e2.message : e2}`, tone: "bad" });
+    return out;
+  }
+  const areaName = (id) => before.areas.find((a) => a.id === id)?.name ?? after.areas.find((a) => a.id === id)?.name ?? `area ${id}`;
+  for (const ch of plan.changes) {
+    const what = ch.form === "field" ? FIELD_NAMES[ch.field] ?? `field ${ch.field}` : ch.form === "task" ? `the cMIP for task ${ch.task}` : ch.form === "extension" ? `the extension ${specName(ch.extension)}` : `the \u201C${areaName(ch.area)}\u201D area's own words`;
+    const tier = ch.tier === "constitutional" ? "constitutional" : ch.tier === "judicial" ? "judicial, a protected clause: it changes only with every member's signature, one version for everyone (Agreements rule 46a, F121)" : ch.form === "words" ? `operational, in the \u201C${areaName(ch.area)}\u201D area` : "operational";
+    out.push({ text: `A change to ${what}: ${tier}.` });
+  }
+  if (!plan.changes.length) out.push({ text: "Agreements find nothing changed in the terms." });
+  const areas = before.areas;
+  out.push({ text: `So its mark must name ${list(plan.needs.map((p) => powerWords(p, areas, names)))} (Agreements rule 44c).` });
+  const claimed = (after.mark ?? []).map((e2) => powerKey(e2.power));
+  if (JSON.stringify(claimed) === JSON.stringify(plan.needs.map(powerKey))) {
+    out.push({ text: "Its mark names exactly that.", tone: "ok" });
+  } else {
+    out.push({
+      text: `Its mark names ${list((after.mark ?? []).map((e2) => powerWords(e2.power, areas, names))) || "nothing"}: a false mark sinks the clone (F104).`,
+      tone: "bad"
+    });
+  }
+  return out;
+}
+
+// src/common.ts
+var message3 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var b642 = (b) => {
+  let s = "";
+  for (const x of b) s += String.fromCharCode(x);
+  return btoa(s);
+};
+var FORGOTTEN_SAY = "What you type here is used for this act alone, then overwritten. Ki\u0161ib writes nothing to this device: close it, and nothing of your words remains.";
+var NEW_WORDS_SAY = [
+  "These are the new signing key\u2019s words: whoever holds them can sign as this identity and read its private messages. They are not the chain key\u2019s words.",
+  "Write them on paper, in order. Carry them to Dub or Edubba, which take them (in Dub: the identity window, \u201Ctake the new words\u201D; in Edubba: the identity\u2019s record).",
+  "They are shown once. When you say they are written, they are hidden, three are asked back, and Ki\u0161ib forgets them."
+];
+function addresses(typed) {
+  const out = typed.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
+  for (const a of out) if (!/^https?:\/\/[^\s]+$/.test(a)) throw new Error(`\u201C${a}\u201D: an address starts with https:// (or http://)`);
+  if (!out.length) throw new Error("Give an address where this identity is found: one of its homes.");
+  return out;
+}
+async function put(hint, bytes, before) {
+  const r = relayAt(hint, {});
+  const once = async () => {
+    const res = await r.putAct(bytes);
+    return { text: `${hint}: holds it${res.receipt ? ", and signed its receipt" : ""}.`, tone: "ok" };
+  };
+  try {
+    return await once();
+  } catch (e2) {
+    if (e2 instanceof RelayError && e2.code === CODE.missingPredecessor) {
+      try {
+        for (const b of before) await r.putAct(b).catch(() => void 0);
+        return await once();
+      } catch (e22) {
+        return { text: `${hint}: ${message3(e22)}`, tone: "warn" };
+      }
+    }
+    return { text: `${hint}: ${message3(e2)}`, tone: "warn" };
+  }
+}
+function holding(id, binding, signingSeed, chain, homes) {
+  const f = {
+    label: TEST_LABEL,
+    identity: id,
+    position: 0,
+    binding,
+    signingSecret: hex(signingSeed),
+    safety: { scheme: 0, seeds: "" },
+    chain: chain.map(b642),
+    homes,
+    rule: null,
+    sequence: [],
+    routes: null,
+    encryption: [],
+    pending: null
+  };
+  return new TestIdentity(f, {});
+}
+
+// src/collective.ts
+var EXPIRY = 60 * 60;
+var REQUEST_LABEL = "MOR Ki\u0161ib collective rotation request, version 1";
+var CONTRIBUTION_MEDIA = sha2562("Ki\u0161ib: a paper share given to a collective rotation, test value until publication");
+var DEALER_SAY = [
+  { text: "This device will hold the collective\u2019s whole chain key for a moment: rebuilt from the members\u2019 papers, used once to sign this rotation, then overwritten. It also creates the new chain key and deals its shares, so for that moment it knows the new key whole.", tone: "bad" },
+  { text: "If this device were compromised, or the person holding it dishonest, they could keep the new key and later act alone, past the threshold the members agreed. Nothing can prove a device forgot a key (F97). Founding has the same moment, on the founder\u2019s device.", tone: "bad" },
+  { text: "So choose the cleanest device available: the app rather than the web page; ideally a device used for nothing else. The air-gapped way (an offline device, the bytes carried by QR code) is the gold standard, and comes later.", tone: "warn" },
+  { text: "The practices Ki\u0161ib follows: the key alive only in memory, the rotation signed at once, the new shares dealt, the key overwritten, never written anywhere; the signed bytes kept to send again, not the key; exactly the threshold of papers collected, no more; the waiting one-time key expiring after an hour, shares sealed to it unopenable after; rebuild, rotate and deal in one sitting." },
+  { text: "Afterwards: every member writes their new share on new paper and destroys the old one (it opens nothing once the rotation counts); the new signing key\u2019s words go to whoever holds that key (Edubba); every member\u2019s Dub and Edubba show the rotation." }
+];
+var short3 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var message4 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+function encodeRequest(q) {
+  return cborEncode(
+    /* @__PURE__ */ new Map([
+      [0, REQUEST_LABEL],
+      [1, unhex(q.collective)],
+      [2, unhex(q.previous)],
+      [3, q.position],
+      [4, q.kept.map(([a, p, s]) => [unhex(a), p, unhex(s)])],
+      [5, unhex(q.clone)],
+      [6, q.signatures.map(unhex)],
+      [7, q.members.map(unhex)],
+      [8, q.threshold],
+      [9, q.needed],
+      [10, q.oneTime],
+      [11, q.expires],
+      [12, q.relays],
+      [13, unhex(q.starter)]
+    ])
+  );
+}
+function decodeRequest(b) {
+  const m = cborDecode(b);
+  if (m.get(0) !== REQUEST_LABEL) throw new Error("This is not a Ki\u0161ib rotation request.");
+  const h = (k) => hex(m.get(k));
+  return {
+    collective: h(1),
+    previous: h(2),
+    position: Number(m.get(3)),
+    kept: m.get(4).map((t) => [hex(t[0]), Number(t[1]), hex(t[2])]),
+    clone: h(5),
+    signatures: m.get(6).map(hex),
+    members: m.get(7).map(hex),
+    threshold: Number(m.get(8)),
+    needed: Number(m.get(9)),
+    oneTime: m.get(10),
+    expires: Number(m.get(11)),
+    relays: m.get(12),
+    starter: h(13)
+  };
+}
+function readFingerprint(typed) {
+  const h = typed.replace(/\s+/g, "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(h)) throw new Refused("The rotation\u2019s fingerprint is 64 hexadecimal characters, as the starter\u2019s message gives it (spaces do not matter)");
+  return h;
+}
+var when = (t) => new Date(t * 1e3).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+function declaredAgreement(rd) {
+  let out = null;
+  for (const l of rd.look.resolution.links) {
+    const b = rd.chainActs.get(l.act);
+    if (!b) continue;
+    const d = describeAct(b);
+    const m = cborDecode(d.payload);
+    const decl = d.type === 0 ? m.get(4) : m.get(8);
+    for (const x of decl ?? []) {
+      if (hex(x[0]) !== REPO_SPECS.agreements || Number(x[1]) !== FOUNDING_AGREEMENT || x[2] === null) continue;
+      out = x[2] instanceof Uint8Array ? hex(x[2]) : hex(x[2][0]);
+    }
+  }
+  return out;
+}
+async function fetchAct(id, places, via) {
+  for (const h of places) {
+    try {
+      const a = await relayAt(h, via).getAct(id);
+      if (a) return a;
+    } catch {
+    }
+  }
+  return null;
+}
+async function readCollective(id, address2, via) {
+  const rd = await readIdentity(id, address2, via, SPECS.identity);
+  const r = rd.look.resolution;
+  const agreement = declaredAgreement(rd);
+  if (!agreement) throw new Error(`${short3(id)} declares no agreement: it is not a collective Ki\u0161ib can rotate.`);
+  const bytes = await fetchAct(agreement, rd.places, via);
+  if (!bytes) throw new Error(`Its agreement (${agreement}) was not found at ${rd.places.join(", ")}.`);
+  const agreementPayload = describeAct(bytes).payload;
+  const t = readTerms(agreementPayload, AGREEMENTS_SPECS);
+  const ck = t.grammar?.chainKey;
+  if (!ck || ck.form !== "shares" || !ck.threshold) throw new Error("Its agreement does not split the chain key into members\u2019 shares: Ki\u0161ib rotates only collectives whose key is on their members\u2019 paper.");
+  const latest = r.links[r.links.length - 1];
+  return { rd, agreement, agreementPayload, holders: ck.members ?? t.parties, threshold: ck.threshold, scheme: r.chainKeyScheme, index: latest.position, commit: r.chainKeyCommit, latest };
+}
+function signs(a, signer, act) {
+  try {
+    const d = describeAct(a);
+    if (d.signer !== signer || d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.signature || !d.payload) return null;
+    const named = cborDecode(d.payload).get(0);
+    return named instanceof Uint8Array && hex(named) === act ? d.id : null;
+  } catch {
+    return null;
+  }
+}
+async function changesOf(c, via) {
+  const parties = readTerms(c.agreementPayload, AGREEMENTS_SPECS).parties;
+  const out = [];
+  const byMember = /* @__PURE__ */ new Map();
+  const actsOf = async (m) => {
+    if (!byMember.has(m)) byMember.set(m, await actsBy(m, c.rd.places, via));
+    return byMember.get(m);
+  };
+  for (const p of parties) {
+    for (const a of await actsOf(p)) {
+      let d;
+      try {
+        d = describeAct(a);
+      } catch {
+        continue;
+      }
+      if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.terms || !d.payload) continue;
+      let t;
+      try {
+        t = readTerms(d.payload, AGREEMENTS_SPECS);
+      } catch {
+        continue;
+      }
+      if (t.parent !== c.agreement) continue;
+      const signers = [.../* @__PURE__ */ new Set([...(t.mark ?? []).flatMap((e2) => e2.signers), ...t.parties])];
+      const signatures = {};
+      for (const s of signers) {
+        for (const a2 of await actsOf(s)) {
+          const id = signs(a2, s, d.id);
+          if (id) signatures[s] = id;
+        }
+      }
+      out.push({
+        clone: d.id,
+        payload: d.payload,
+        proposer: d.signer,
+        members: t.parties,
+        threshold: t.grammar?.chainKey.threshold ?? c.threshold,
+        holder: t.grammar?.signing.holder ?? t.parties[0],
+        signers,
+        signatures,
+        missing: signers.filter((s) => !signatures[s])
+      });
+    }
+  }
+  return out;
+}
+async function answersOf(founder, secret, clone, signatures, hints, via) {
+  let inbox = [];
+  try {
+    inbox = (await lookUp(founder.id, hints, via)).inbox(REPO_SPECS.agreements) ?? [];
+  } catch {
+    inbox = [];
+  }
+  const out = {};
+  for (const hint of inbox) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(hint, via).feed({ to: founder.id, after });
+        for (const it of page.items) {
+          if (it.kind !== "sealed") continue;
+          let m = null;
+          try {
+            m = readMessage(openSealed(it.item, founder.id, secret).described);
+          } catch {
+            continue;
+          }
+          if (!m || m.text.split("\n")[0] !== SIGNED) continue;
+          const sig = /act ([0-9a-f]{64})/.exec(m.text)?.[1];
+          if (!sig || signatures[m.from] !== sig) continue;
+          const k = oneTimeKeyOf(m.text);
+          out[m.from] = { ...k ? { oneTime: k } : {}, thread: m.thread, previous: m.id };
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  void clone;
+  return out;
+}
+function contributionBytes(fingerprint2, p) {
+  return cborEncode(/* @__PURE__ */ new Map([[0, unhex(fingerprint2)], [1, p.x], [2, p.value]]));
+}
+var CollectiveSitting = class _CollectiveSitting {
+  constructor(deps) {
+    this.deps = deps;
+  }
+  c = null;
+  change = null;
+  plan = null;
+  room = false;
+  request = null;
+  fingerprint = "";
+  oneTime = null;
+  papers = [];
+  founder = null;
+  answers = {};
+  stage = "waiting";
+  lines = [];
+  bytes = null;
+  act = null;
+  signing = null;
+  positions;
+  /** New shares to show here once, by holder (the starter's own, and members without a one-time key). */
+  toShow = /* @__PURE__ */ new Map();
+  sharePositions = /* @__PURE__ */ new Map();
+  /** Whether nothing is left to do: the shares shown, the words typed back, or the request expired. */
+  over() {
+    return this.stage === "expired" || this.stage === "done" && [...this.toShow.values()].every((s) => s.shown);
+  }
+  view(now) {
+    if (this.stage === "waiting" && this.request && now > this.request.expires) this.expire();
+    const id = this.c?.rd.id ?? "";
+    return {
+      kind: "collective",
+      id,
+      act: this.act,
+      stage: this.stage,
+      title: this.stage === "waiting" ? `A rotation of ${short3(id)} waits for its members\u2019 shares` : this.stage === "expired" ? "The rotation request expired" : `The rotation of ${short3(id)}`,
+      lines: this.lines,
+      ...this.request || this.room ? {
+        request: {
+          fingerprint: grouped(this.fingerprint.slice(0, 32)),
+          full: this.fingerprint,
+          have: this.papers.length,
+          need: this.c?.threshold ?? 0,
+          expires: this.request?.expires ?? 0,
+          room: this.room,
+          from: this.papers.map((p) => p.from)
+        }
+      } : {},
+      ...this.toShow.size ? { shares: [...this.toShow.entries()].map(([holder, s]) => ({ holder, x: s.x, shown: s.shown })) } : {},
+      ...this.positions ? { positions: this.positions } : {}
+    };
+  }
+  expire() {
+    wipe(this.oneTime, ...this.papers.map((p) => p.value));
+    this.oneTime = null;
+    this.papers = [];
+    this.stage = "expired";
+    this.lines = [{ text: "The hour passed before enough shares were in. The one-time key is destroyed: shares sealed to it can never be opened, by anyone. Nothing was signed. Start again when the members are ready.", tone: "warn" }];
+    if (this.founder) this.founder.f.signingSecret = "";
+  }
+  wipe() {
+    wipe(this.oneTime, this.signing, ...this.papers.map((p) => p.value), ...[...this.toShow.values()].map((s) => s.share));
+    this.oneTime = null;
+    this.signing = null;
+    this.papers = [];
+    this.toShow.clear();
+    if (this.founder) this.founder.f.signingSecret = "";
+    this.founder = null;
+  }
+  // ---------------------------------------------------------------- the starter
+  /** The starter's review: the change, its signatures, the lines kept, and F337's plain words, before anything is done. */
+  async start(a) {
+    const via = a.via ?? {};
+    const id = readId(a.collective);
+    this.room = !!a.room;
+    const own = paperOf(a.number, a.shareWords);
+    let founderSeed = null;
+    try {
+      const c = await readCollective(id, addresses(a.address), via);
+      this.c = c;
+      const r = c.rd.look.resolution;
+      const blocking = [];
+      if (r.stop === "contested") blocking.push("Its homes hold two rotations at one position (contested): no rotation can count until that ends.");
+      if (c.rd.next.some((s) => !r.links.some((l) => l.act === s.id))) blocking.push("A rotation of this collective already waits for its homes: send that one again; Ki\u0161ib never signs a second with the same key.");
+      const changes = (await changesOf(c, via)).sort((x, y) => x.missing.length - y.missing.length);
+      if (!changes.length) throw new Error("No member change is proposed under the agreement in force: propose one in Edubba (the collective\u2019s page, \u201CChange its members\u201D), have every member sign it, then come back.");
+      const ch = changes[0];
+      this.change = ch;
+      if (ch.missing.length) blocking.push(`The member change ${short3(ch.clone)} is not signed by everyone it needs yet: waiting for ${ch.missing.map(short3).join(", ")}.`);
+      if (changes.filter((x) => !x.missing.length).length > 1) blocking.push("Several member changes are fully signed under the same agreement: Ki\u0161ib cannot tell which one the members mean. Say which in Edubba.");
+      this.plan = planLines(c.rd.lines, { leaveOut: a.leaveOut });
+      const names = (m) => m === id ? "the collective" : short3(m);
+      const shown = [];
+      if (!this.room) {
+        if (!a.founder?.trim() || !a.founderWords?.trim()) throw new Refused("Remote, the member who proposed the change gives their signing key\u2019s words: only they open the members\u2019 answers, with the one-time keys for their new shares. In the same room, tick \u201CEveryone is here\u201D.");
+        const founder = readId(a.founder);
+        if (founder !== ch.proposer) throw new Error(`The change was proposed by ${short3(ch.proposer)}: that member starts the rotation, since the members\u2019 answers, with their one-time keys, are in their inbox.`);
+        founderSeed = seedOf(a.founderWords);
+        const look = await lookCurrent(founder, founderSeed, c.rd.places, via);
+        const enc = carriedKey(look, founderSeed);
+        if (!enc) throw new Error("These words do not carry the encryption key this identity uses now, so the members\u2019 answers cannot be opened here. Rotate in the same room instead (every new share shown on this screen).");
+        const chain = await servedChain(founder, look.resolution.homes, via);
+        const f = holding(founder, look.resolution.links[look.resolution.links.length - 1].act, founderSeed, chain, look.resolution.homes);
+        this.founder = f;
+        const secret = unhex(enc.secret);
+        this.answers = await answersOf(f, secret, ch.clone, ch.signatures, [...c.rd.places, ...look.resolution.homes.map((h) => h.hint)], via);
+        wipe(secret);
+        for (const m of ch.members) {
+          if (m === founder) shown.push({ text: `${names(m)} (you, the starter): your new share is shown on this screen, once.` });
+          else shown.push(this.answers[m]?.oneTime ? { text: `${names(m)}: sealed to the one-time key its Dub made when it signed, as at the founding.`, tone: "ok" } : { text: `${names(m)}: no one-time key found in its answer: its new share is shown on this screen, once, to hand over in person.`, tone: "warn" });
+        }
+        const others = c.holders.filter((h) => h !== founder);
+        for (const h of others) if (!this.answers[h]) blocking.push(`No answer from ${short3(h)} was found in your inbox: Ki\u0161ib cannot tell it the rotation waits. Have it sign the change in Dub first.`);
+      } else {
+        for (const m of ch.members) shown.push({ text: `${names(m)}: its new share is shown on this screen, once, to write down here.` });
+      }
+      this.papers = [{ ...own, from: this.room ? "typed here" : this.founder?.id ?? "" }];
+      this.oneTime = this.room ? null : newEncryptionSecret();
+      const relays = [...new Set(c.rd.places)];
+      this.request = this.room ? null : {
+        collective: id,
+        previous: c.latest.act,
+        position: c.latest.position + 1,
+        kept: this.plan.kept.map((k) => [k.act, k.position, k.summary]),
+        clone: ch.clone,
+        signatures: ch.signers.map((s) => ch.signatures[s]).filter(Boolean),
+        members: ch.members,
+        threshold: ch.threshold,
+        needed: c.threshold,
+        oneTime: xwingPublic(this.oneTime),
+        expires: this.deps.now() + EXPIRY,
+        relays,
+        starter: this.founder.id
+      };
+      this.fingerprint = this.request ? sha2562(encodeRequest(this.request)) : sha2562(cborEncode(["room", id, c.latest.act, ch.clone]));
+      const sections2 = [
+        { heading: "Before you start: what this device will hold (F337)", lines: DEALER_SAY },
+        ...recordWords(c.rd).filter((s) => !s.heading.startsWith("Its lines")),
+        { heading: "The member change it completes", lines: [{ text: `Clone ${ch.clone}, proposed by ${short3(ch.proposer)}.` }, ...readChanges(c.agreementPayload, ch.payload, names), { text: `Signed by ${Object.keys(ch.signatures).length} of the ${ch.signers.length} it needs: ${ch.signers.map((s) => `${short3(s)} ${ch.signatures[s] ? "\u2713" : "(not yet)"}`).join(", ")}.`, tone: ch.missing.length ? "warn" : "ok" }] },
+        { heading: "The papers", lines: [{ text: `Exactly ${c.threshold} of the ${c.holders.length} members\u2019 paper shares rebuild the chain key (its agreement\u2019s rule); no more are collected.` }, { text: `Yours: share ${own.x}.` }, this.room ? { text: "In the same room: the others type theirs into this Ki\u0161ib, one after another. Nothing is sent." } : { text: `Remote: each other member gives theirs in their own Ki\u0161ib, sealed to a one-time key made here, within an hour (until ${when(this.request.expires)} by this device\u2019s clock; MOR has no clock).` }] },
+        { heading: "Its lines of acts: what the rotation keeps (Identity rule 35)", lines: this.plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u) => u ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
+        { heading: "The new shares", lines: [{ text: `A new chain key, created here at the moment of signing, dealt to ${ch.members.length} members, any ${ch.threshold} rebuilding it.` }, ...shown] }
+      ];
+      const signs2 = [
+        `Ki\u0161ib signs one rotation of the collective ${short3(id)}, with its chain key rebuilt here from exactly ${c.threshold} paper shares, then overwritten.`,
+        `The rotation declares the member change (clone ${short3(ch.clone)}) with its ${ch.signers.length} signatures, keeps the collective\u2019s lines, installs a new signing key (its words shown once, for ${short3(ch.holder)}, who holds it) and commits a new chain key.`,
+        this.room ? "Nothing is signed with anyone\u2019s signing key." : `As ${short3(this.founder.id)}: one message in each member\u2019s thread announcing the rotation, and, after it, each new share sealed to its member\u2019s one-time key, as at the founding. These acts start a new line of your acts; your next change of keys keeps it if it names it.`
+      ];
+      const s0 = founderSeed;
+      founderSeed = null;
+      wipe(s0);
+      return {
+        digest: sha2562(cborEncode(["MOR Ki\u0161ib collective rotation, version 1", this.fingerprint, this.room])),
+        title: `Rotate the collective ${short3(id)}`,
+        summary: [`Collective ${id}. Fingerprint of this rotation: ${grouped(this.fingerprint.slice(0, 32))}.`, FORGOTTEN_SAY],
+        sections: sections2,
+        signs: signs2,
+        warning: this.plan.warning,
+        blocking
+      };
+    } catch (e2) {
+      wipe(founderSeed, own.value, this.oneTime);
+      throw e2;
+    }
+  }
+  /** On confirmation: the request left at the collective's relays, and a message in each member's thread (remote); or the papers awaited here (same room). */
+  async announce() {
+    const c = this.c;
+    if (this.room) {
+      this.lines = [{ text: `Share ${this.papers[0].x} is in. ${c.threshold - 1} more to type here, one after another.` }];
+      return;
+    }
+    const q = this.request;
+    const blob = encodeRequest(q);
+    const left = [];
+    for (const hint of q.relays) {
+      try {
+        await relayAt(hint, {}).putMedia(blob);
+        left.push(hint);
+      } catch {
+      }
+    }
+    if (!left.length) throw new Error(`No relay took the rotation request (${q.relays.join(", ")}). Nothing was signed.`);
+    const f = this.founder;
+    const lines2 = [{ text: `The request is at ${left.join(", ")}. Fingerprint: ${this.fingerprint}.`, tone: "ok" }];
+    for (const m of c.holders) {
+      if (m === f.id) continue;
+      const a = this.answers[m];
+      if (!a) continue;
+      try {
+        const look = await lookUp(m, c.rd.places, {});
+        const inbox = look.inbox(REPO_SPECS.agreements) ?? [];
+        if (!look.encryptionKey || !inbox.length) throw new Error("it declares no inbox or encryption key");
+        await negotiate(f, { id: m, key: look.encryptionKey, inbox }, {
+          thread: a.thread,
+          previous: a.previous,
+          acks: [a.previous],
+          text: [
+            `A rotation of the collective ${c.rd.id} waits for your paper share, in Ki\u0161ib.`,
+            `Fingerprint: ${this.fingerprint}`,
+            `Open Ki\u0161ib, choose \u201CGive my share to a collective\u2019s rotation\u201D, and give the collective and this fingerprint. Ki\u0161ib shows the rotation in plain words before you type anything.`,
+            `It expires at ${when(q.expires)}.`
+          ].join("\n")
+        });
+        lines2.push({ text: `${short3(m)}: told, in its thread.`, tone: "ok" });
+      } catch (e2) {
+        lines2.push({ text: `${short3(m)}: could not be told (${message4(e2)}). Give it the fingerprint another way.`, tone: "warn" });
+      }
+    }
+    this.lines = lines2;
+  }
+  /** In the same room: one more paper. Exactly the threshold, no more. */
+  async paper(a) {
+    if (this.stage !== "waiting") throw new Error("No rotation waits for papers here.");
+    if (!this.room) throw new Error("Remote, each member gives their share in their own Ki\u0161ib.");
+    const p = paperOf(a.number, a.words);
+    if (this.papers.some((x) => x.x === p.x)) {
+      wipe(p.value);
+      throw new Error(`Share ${p.x} is already typed in.`);
+    }
+    if (this.papers.length >= this.c.threshold) {
+      wipe(p.value);
+      throw new Error("Enough shares are in: no more are taken.");
+    }
+    this.papers.push({ ...p, from: "typed here" });
+    this.lines = [{ text: `${this.papers.length} of ${this.c.threshold} shares are in.`, tone: this.papers.length >= this.c.threshold ? "ok" : void 0 }];
+  }
+  /** Look for members' shares sealed to the one-time key, until exactly the threshold is in. */
+  async gather() {
+    if (this.stage !== "waiting" || this.room) return;
+    const q = this.request;
+    if (this.deps.now() > q.expires) {
+      this.expire();
+      return;
+    }
+    const c = this.c;
+    const tag = pickupTag(q.oneTime);
+    const said = [];
+    for (const hint of q.relays) {
+      let items = [];
+      try {
+        items = (await relayAt(hint, {}).feed({ pickup: tag })).items;
+      } catch {
+        continue;
+      }
+      for (const it of items) {
+        if (this.papers.length >= c.threshold) break;
+        if (it.kind !== "sealed") continue;
+        let o;
+        try {
+          o = openSealed(it.item, void 0, this.oneTime);
+        } catch {
+          continue;
+        }
+        const d = o.described;
+        if (d.spec !== SPECS.envelopes || d.type !== 0 || !d.payload || !d.signer) continue;
+        const m = cborDecode(d.payload);
+        if (hex(m.get(0)) !== CONTRIBUTION_MEDIA) continue;
+        let locked = null;
+        for (const h of q.relays) {
+          locked = await relayAt(h, {}).getMedia(hex(m.get(2))).catch(() => null);
+          if (locked) break;
+        }
+        if (!locked) continue;
+        const inner = openMedia(locked, m.get(5), m.get(4));
+        if (workHash(inner) !== hex(m.get(1))) continue;
+        const g = cborDecode(inner);
+        if (hex(g.get(0)) !== this.fingerprint) continue;
+        const x = Number(g.get(1));
+        const value = g.get(2);
+        if (this.papers.some((p) => p.x === x)) continue;
+        if (!c.holders.includes(d.signer)) {
+          said.push({ text: `A share from ${short3(d.signer)}, who holds no share of this collective: not taken.`, tone: "warn" });
+          continue;
+        }
+        if (this.papers.some((p) => p.from === d.signer)) continue;
+        this.papers.push({ x, value, from: d.signer });
+        said.push({ text: `Share ${x} from ${short3(d.signer)}${c.holders[x - 1] !== d.signer ? ` (numbered for ${short3(c.holders[x - 1] ?? "?")}: taken; the rebuild check decides)` : ""}.`, tone: "ok" });
+      }
+    }
+    this.lines = [...this.lines.filter((l) => !/ shares are in\.$/.test(l.text)), ...said, { text: `${this.papers.length} of ${c.threshold} shares are in.`, tone: this.papers.length >= c.threshold ? "ok" : void 0 }];
+  }
+  /** Rebuild, rotate and deal, in one sitting (F337). */
+  async rotate() {
+    const c = this.c;
+    const ch = this.change;
+    if (this.stage === "waiting" && this.request && this.deps.now() > this.request.expires) this.expire();
+    if (this.stage !== "waiting") throw new Error("No rotation waits here.");
+    if (this.papers.length !== c.threshold) throw new Error(`${this.papers.length} of ${c.threshold} shares are in: exactly ${c.threshold} are needed.`);
+    checkWarned(this.plan, this.plan.warning ?? void 0);
+    let rebuilt;
+    try {
+      rebuilt = rebuildChainKeyFromPaper({ seedModule: "words", scheme: c.scheme, index: c.index, commit: c.commit, papers: this.papers.map((p) => ({ x: p.x, value: p.value })) });
+    } catch {
+      wipe(...this.papers.map((p) => p.value));
+      this.papers = this.room ? [] : [];
+      this.lines = [{ text: "These papers do not rebuild the collective\u2019s chain key: one is copied wrong, or belongs to another dealing. Which one cannot be told. Nothing was signed; the papers are forgotten. Type them again (in the same room) or start again.", tone: "bad" }];
+      if (!this.room) this.expire();
+      return;
+    }
+    wipe(...this.papers.map((p) => p.value));
+    const dealt = dealChainKey({ seedModule: "words", scheme: c.scheme, index: c.index + 1, threshold: ch.threshold, holders: ch.members.map((m) => ({ role: 0, identity: m })) });
+    for (const s of dealt.shares) if (verifyShare(s).fingerprint !== dealt.fingerprint) throw new Error("A new share does not lie on its dealing: nothing was signed.");
+    const check = rebuildChainKey(dealt.shares.slice(0, ch.threshold));
+    if (check.commit !== dealt.commit) throw new Error("The new shares do not rebuild the new key: nothing was signed.");
+    const signing = newSigningSecret();
+    let bytes;
+    try {
+      bytes = makeRotation({
+        identitySpec: SPECS.identity,
+        identity: c.rd.id,
+        previous: c.latest.act,
+        position: c.latest.position + 1,
+        chainKeyScheme: rebuilt.scheme,
+        chainKeySeeds: rebuilt.seeds,
+        newSigningPublic: signingPublic(signing),
+        nextChainKeyScheme: dealt.scheme,
+        nextChainKeyCommit: dealt.commit,
+        kept: this.plan.kept,
+        declarations: [{ spec: REPO_SPECS.agreements, kind: FOUNDING_AGREEMENT, value: ch.clone, signatures: ch.signers.map((s) => ch.signatures[s]) }]
+      });
+    } finally {
+      wipe(rebuilt.seeds);
+    }
+    this.papers = [];
+    wipe(this.oneTime);
+    this.oneTime = null;
+    this.bytes = bytes;
+    this.act = actId(bytes);
+    this.signing = signing;
+    const lines2 = [{ text: `Signed: rotation ${this.act}. The chain key is overwritten; the papers are forgotten; the one-time key is destroyed.`, tone: "ok" }];
+    const chain = orderedChain(c.rd);
+    for (const h of c.rd.look.resolution.homes) lines2.push(await put(h.hint, bytes, chain));
+    const relays = [.../* @__PURE__ */ new Set([...c.rd.places, ...this.founder ? this.founder.f.homes.map((h) => h.hint) : []])];
+    dealt.shares.forEach((s, i) => void i);
+    for (let i = 0; i < ch.members.length; i++) {
+      const m = ch.members[i];
+      const share = dealt.shares[i];
+      const k = this.answers[m]?.oneTime;
+      if (!this.room && this.founder && m !== this.founder.id && k) {
+        try {
+          const r = await sealShare(this.founder, share, k, relays);
+          lines2.push({ text: `${short3(m)}: its new share is sealed to its one-time key, at ${r.left.join(", ")}. Its Dub shows it once.`, tone: "ok" });
+          wipe(share);
+          continue;
+        } catch (e2) {
+          lines2.push({ text: `${short3(m)}: its share could not be left (${message4(e2)}): shown here instead.`, tone: "warn" });
+        }
+      }
+      this.toShow.set(m, { share, x: i + 1, shown: false, fingerprint: dealt.fingerprint });
+    }
+    if (this.founder) this.founder.f.signingSecret = "";
+    this.founder = null;
+    lines2.push({ text: `The new dealing\u2019s fingerprint, for every member to compare: ${grouped(dealt.fingerprint.slice(0, 32))}.` });
+    lines2.push({ text: "Keep Ki\u0161ib open until the new shares and the collective\u2019s new words are shown. Closed now, what is not yet shown is lost (the shares sealed to members\u2019 Dubs are safe): the collective must then be rotated again, from enough of the new papers that reached their members.", tone: "warn" });
+    this.lines = lines2;
+    this.stage = "sent";
+    await this.refresh();
+  }
+  async resend() {
+    if (!this.bytes || this.stage !== "sent") throw new Error("Nothing is waiting to be sent again.");
+    const c = this.c;
+    const chain = orderedChain(c.rd);
+    const lines2 = [];
+    for (const h of c.rd.look.resolution.homes) lines2.push(await put(h.hint, this.bytes, chain));
+    this.lines = [...this.lines.filter((l) => !/^It (counts|does not count)/.test(l.text) && !c.rd.look.resolution.homes.some((h) => l.text.startsWith(`${h.hint}:`))), ...lines2];
+    await this.refresh();
+  }
+  async refresh() {
+    if (!this.act || this.stage !== "sent") return;
+    const c = this.c;
+    let counts = false;
+    try {
+      const l = await lookUp(c.rd.id, c.rd.places, {});
+      counts = l.resolution.links.some((x) => x.act === this.act);
+    } catch {
+      counts = false;
+    }
+    this.lines = [...this.lines.filter((l) => !/^It (counts|does not count)/.test(l.text)), counts ? { text: "It counts: the homes\u2019 receipts are in. The member change is in force.", tone: "ok" } : { text: "It does not count yet: send it again (the same bytes).", tone: "warn" }];
+    if (counts) this.stage = "counts";
+  }
+  showWords() {
+    if (!this.signing) throw new Error("No new signing key is held here.");
+    if (this.stage === "sent" || this.stage === "waiting") throw new Error("Not yet: the collective\u2019s new words are shown once the homes\u2019 receipts are in.");
+    this.stage = "counts";
+    this.positions = void 0;
+    return { words: toWords(this.signing), holder: this.change.holder, say: [`These are the collective\u2019s new signing key\u2019s words, for ${short3(this.change.holder)}, who holds that key under the agreement: carry them to Edubba (the collective\u2019s page, \u201Ctake the new words\u201D).`, ...NEW_WORDS_SAY.slice(1)] };
+  }
+  written() {
+    if (!this.signing || this.stage !== "counts") throw new Error("No words are shown.");
+    this.positions = threePositions((n) => crypto.getRandomValues(new Uint8Array(1))[0] % n);
+    this.stage = "shown";
+  }
+  typed(t) {
+    if (!this.signing || this.stage !== "shown" || !this.positions) throw new Error("No words are asked back.");
+    if (!typedBack(toWords(this.signing), this.positions, t)) throw new Error("Not the words asked for. Check the paper: they are shown again with \u201CShow them again\u201D.");
+    wipe(this.signing);
+    this.signing = null;
+    this.bytes = null;
+    this.positions = void 0;
+    this.stage = "done";
+    this.lines = [...this.lines, { text: "The collective\u2019s new signing key is forgotten here.", tone: "ok" }];
+  }
+  shareShow(holder) {
+    const s = this.toShow.get(holder);
+    if (!s || s.shown) throw new Error("No share for this member waits to be shown here.");
+    const p = shareOnPaper(s.share);
+    return {
+      x: p.x,
+      words: toWords(p.value),
+      fingerprint: grouped(s.fingerprint.slice(0, 32)),
+      say: [`The new share ${p.x} of the collective\u2019s chain key, for ${short3(holder)}. Write its number and its 24 words on new paper, labelled with the collective, and destroy the old paper.`, "It is shown once: when you say it is written, it is forgotten here."]
+    };
+  }
+  shareWritten(holder) {
+    const s = this.toShow.get(holder);
+    if (!s || s.shown) throw new Error("No share for this member waits here.");
+    wipe(s.share);
+    s.shown = true;
+  }
+  // ---------------------------------------------------------------- a member
+  /** A member reads a waiting rotation in plain words, by the collective and the fingerprint. */
+  static async readRequest(a, now) {
+    const via = a.via ?? {};
+    const id = readId(a.collective);
+    const fp = readFingerprint(a.fingerprint);
+    const c = await readCollective(id, addresses(a.address), via);
+    let blob = null;
+    for (const h of c.rd.places) {
+      blob = await relayAt(h, via).getMedia(fp).catch(() => null);
+      if (blob) break;
+    }
+    if (!blob) throw new Error(`No rotation request with this fingerprint was found at ${c.rd.places.join(", ")}. Check the fingerprint, or ask the starter.`);
+    const q = decodeRequest(blob);
+    if (q.collective !== id) throw new Error("This request is for another collective.");
+    if (now > q.expires) throw new Error(`This request expired at ${when(q.expires)}: its one-time key is destroyed. Ask the starter to begin again.`);
+    if (q.previous !== c.latest.act) throw new Error("The collective\u2019s keys changed since this request was made: it is stale, and its rotation could never count.");
+    const change = (await changesOf(c, via)).find((x) => x.clone === q.clone) ?? null;
+    const names = (m) => m === id ? "the collective" : short3(m);
+    const sections2 = [
+      { heading: "The rotation you are asked to give your share to", lines: [{ text: `Collective ${id}, its keys changed at position ${q.position}, started by ${short3(q.starter)}.` }, { text: `Fingerprint: ${fp}. Compare it with the starter\u2019s message, character by character.`, tone: "warn" }, { text: `It expires at ${when(q.expires)} (this device\u2019s clock).` }] },
+      { heading: "The member change it completes", lines: change ? [{ text: `Clone ${q.clone}.` }, ...readChanges(c.agreementPayload, change.payload, names), { text: `It declares ${q.signatures.length} signatures.` }] : [{ text: `Clone ${q.clone}, not found here: Ki\u0161ib cannot read it back to you. Do not give your share unless you know it.`, tone: "bad" }] },
+      { heading: "What it keeps and creates", lines: [{ text: `It keeps ${q.kept.length} line${q.kept.length === 1 ? "" : "s"} of the collective\u2019s acts.` }, { text: `A new chain key, created on the starter\u2019s device and dealt to ${q.members.length} members (${q.members.map(short3).join(", ")}), any ${q.threshold} rebuilding it; ${q.needed} of the current papers rebuild the old one.` }] },
+      { heading: "What the starter\u2019s device will hold (F337)", lines: DEALER_SAY.slice(0, 2) }
+    ];
+    return { q, c, sections: sections2, change };
+  }
+  /** Given everything: the member's review, and what runs once confirmed (the share sealed to the one-time key, signed by the member). */
+  static async give(deps, a, done) {
+    const via = a.via ?? {};
+    const paper = paperOf(a.number, a.shareWords);
+    let seed = null;
+    try {
+      const { q, c, sections: sections2 } = await _CollectiveSitting.readRequest(a, deps.now());
+      const member = readId(a.member);
+      if (!c.holders.includes(member)) throw new Error(`${short3(member)} holds no share of this collective\u2019s chain key now.`);
+      if (c.holders[paper.x - 1] && c.holders[paper.x - 1] !== member) sections2.push({ heading: "Your paper", lines: [{ text: `Share ${paper.x} was dealt to ${short3(c.holders[paper.x - 1])}, not to you: check the paper. If it is yours, give it; the rebuild decides.`, tone: "warn" }] });
+      seed = seedOf(a.memberWords);
+      const look = await lookCurrent(member, seed, [.../* @__PURE__ */ new Set([...addresses(a.address), ...c.rd.places])], via);
+      const fp = sha2562(encodeRequest(q));
+      const s0 = seed;
+      seed = null;
+      return {
+        review: {
+          digest: sha2562(cborEncode(["MOR Ki\u0161ib share given, version 1", fp, member, paper.x])),
+          title: `Give share ${paper.x} to the rotation of ${short3(c.rd.id)}`,
+          summary: [FORGOTTEN_SAY],
+          sections: sections2,
+          signs: [`You sign, as ${short3(member)}, one private act carrying your share ${paper.x} and this rotation\u2019s fingerprint, sealed to the starter\u2019s one-time key: only the starter\u2019s Ki\u0161ib can open it, and only within the hour.`, "It starts a new line of your acts; nobody else can read it, and it voids nothing if your next change of keys leaves it out."],
+          warning: null,
+          blocking: []
+        },
+        wipe: () => wipe(s0, paper.value),
+        run: async () => {
+          if (deps.now() > q.expires) throw new Error("The request expired: nothing was sent.");
+          const r = look.resolution;
+          const chain = await servedChain(member, r.homes, via);
+          const me = holding(member, r.links[r.links.length - 1].act, s0, chain, r.homes);
+          const inner = contributionBytes(fp, paper);
+          wipe(paper.value, s0);
+          const l = lockMedia(inner);
+          wipe(inner);
+          const payload = cborEncode(/* @__PURE__ */ new Map([[0, unhex(CONTRIBUTION_MEDIA)], [1, unhex(l.workHash)], [2, unhex(l.lockedHash)], [3, inner.length], [4, l.nonce], [5, l.key], [6, q.relays]]));
+          const made = me.sign(SPECS.envelopes, 0, payload, { public: false });
+          me.f.signingSecret = "";
+          const sealed = sealFor(made.act, made.key, [{ key: q.oneTime }]);
+          const tag = pickupTag(q.oneTime);
+          const left = [];
+          for (const hint of q.relays) {
+            try {
+              const rr = relayAt(hint, via);
+              await rr.putMedia(l.locked);
+              await rr.putSealed(sealed, [tag]);
+              left.push(hint);
+            } catch {
+            }
+          }
+          if (!left.length) throw new Error(`No relay took your share (${q.relays.join(", ")}).`);
+          done({
+            title: `Share ${paper.x} is given`,
+            lines: [
+              { text: `Sealed to the starter\u2019s one-time key and left at ${left.join(", ")}. Only the starter\u2019s Ki\u0161ib can open it, until ${when(q.expires)}.`, tone: "ok" },
+              { text: "Your paper share and your signing words are forgotten here. Keep your paper until the rotation counts: then your new share arrives in Dub (or is handed to you), and the old paper opens nothing." }
+            ]
+          });
+        }
+      };
+    } catch (e2) {
+      wipe(seed, paper.value);
+      throw e2;
+    }
+  }
+};
+function orderedChain(rd) {
+  return rd.look.resolution.links.map((l) => rd.chainActs.get(l.act)).filter(Boolean);
+}
+
+// src/kishib.ts
+var message5 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var short4 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var PLAN_LIFE = 15 * 60 * 1e3;
+var Kishib = class {
+  plans = /* @__PURE__ */ new Map();
+  held = null;
+  col = null;
+  web;
+  now;
+  constructor(opts = {}) {
+    this.web = opts.web ?? false;
+    this.now = opts.now ?? (() => Math.floor(Date.now() / 1e3));
+  }
+  // ------------------------------------------------------------ state
+  state() {
+    this.expirePlans();
+    return { web: this.web, sitting: this.sitting(), expiry: EXPIRY };
+  }
+  sitting() {
+    if (this.col) return this.col.view(this.now());
+    const h = this.held;
+    if (!h) return null;
+    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...h.positions ? { positions: h.positions } : {} };
+  }
+  /** Drop everything this sitting holds: words, keys, bytes. */
+  forget() {
+    for (const p of this.plans.values()) p.wipe();
+    this.plans.clear();
+    if (this.held) wipe(this.held.signing);
+    this.held = null;
+    this.col?.wipe();
+    this.col = null;
+    return this.state();
+  }
+  busy() {
+    if (this.held && this.held.stage !== "done" || this.col && !this.col.over()) {
+      throw new Error("Ki\u0161ib is in the middle of another act: finish it, or forget it, first. One act at a time.");
+    }
+    this.held = null;
+    this.col = null;
+  }
+  expirePlans() {
+    const t = Date.now();
+    for (const [k, p] of this.plans) {
+      if (p.expires < t) {
+        p.wipe();
+        this.plans.delete(k);
+      }
+    }
+  }
+  plan(review2, p) {
+    this.expirePlans();
+    for (const old of this.plans.values()) old.wipe();
+    this.plans.clear();
+    const id = hex(randomBytes(16));
+    this.plans.set(id, { ...p, digest: review2.digest, expires: Date.now() + PLAN_LIFE });
+    return { plan: id, ...review2 };
+  }
+  /** Sign what a review showed, exactly: refused if it changed, expired, or still has something blocking. */
+  async confirm(a) {
+    this.expirePlans();
+    const p = this.plans.get(a.plan);
+    if (!p) throw new Error("That review expired (fifteen minutes) or was replaced, and its words were forgotten. Nothing was signed: start again.");
+    if (p.digest !== a.digest) throw new Error("What you confirm is not what was shown. Nothing was signed.");
+    this.plans.delete(a.plan);
+    try {
+      await p.run(a.warned);
+    } finally {
+      p.wipe();
+    }
+    return this.state();
+  }
+  // ------------------------------------------------------------ may: check paper words, show a record
+  /** Check the chain key's words without signing anything: which key of the identity they give, if any. */
+  async checkWords(a) {
+    const id = readId(a.id);
+    const seed = seedOf(a.words);
+    try {
+      const rd = await readIdentity(id, addresses(a.address), a.via ?? {}, SPECS.identity);
+      const r = rd.look.resolution;
+      const latest = r.links[r.links.length - 1];
+      const idx = indexOf(seed, r.chainKeyScheme, r.chainKeyCommit, latest.position + 8);
+      if (idx !== null) {
+        return {
+          title: "These are the right words",
+          lines: [
+            { text: `They give the chain key this identity\u2019s chain commits to now (key ${idx} of these words): the key the next change of its keys is signed with.`, tone: "ok" },
+            { text: `After that change, the same words give the next key (key ${idx + 1}): keep this paper.` },
+            { text: "Nothing was signed, and the words are forgotten." }
+          ]
+        };
+      }
+      const earlier = rd.look.resolution.links.length;
+      return {
+        title: "These are not the words this identity needs now",
+        lines: [
+          { text: `They do not give the chain key its chain commits to now (checked against keys 0 to ${latest.position + 8} of these words).`, tone: "bad" },
+          { text: `They may be another identity\u2019s chain key words, its signing key\u2019s words (which never change the keys), or a word copied wrong that still passes the checksum. Its chain has ${earlier} act${earlier === 1 ? "" : "s"}.` },
+          { text: "Nothing was signed, and the words are forgotten." }
+        ]
+      };
+    } finally {
+      wipe(seed);
+    }
+  }
+  /** An identity's record in plain words: homes, receipts, lines, any contest. */
+  async record(a) {
+    const id = readId(a.id);
+    const rd = await readIdentity(id, addresses(a.address), a.via ?? {}, SPECS.identity);
+    return { title: `The record of ${short4(id)}`, sections: recordWords(rd) };
+  }
+  // ------------------------------------------------------------ must: rotate an identity
+  /**
+   * Review a rotation of an identity from its chain key's words: everything
+   * read back in plain words before anything is signed. Optional: a
+   * successor declared (F300), or the current succession ended; lines left
+   * out by name; cards for lines another app made that cannot be read here.
+   */
+  async rotatePlan(a) {
+    this.busy();
+    const via = a.via ?? {};
+    const id = readId(a.id);
+    let seed = seedOf(a.words);
+    try {
+      const rd = await readIdentity(id, addresses(a.address), via, SPECS.identity);
+      const r = rd.look.resolution;
+      const latest = r.links[r.links.length - 1];
+      const blocking = [];
+      if (r.stop === "contested") blocking.push("Its homes hold two rotations at one position (contested). A normal rotation cannot settle it: use \u201CEscape a contested position\u201D.");
+      const waiting = rd.next.filter((s) => !r.links.some((l) => l.act === s.id));
+      for (const s of waiting) {
+        blocking.push(`A rotation with this chain key already exists (act ${s.id}, installing the signing key ${s.signingFingerprint}), waiting for its homes. Ki\u0161ib never signs a second rotation with the same key (Identity rule 29): send that one again instead (\u201CSend it again\u201D). If you did not make it, someone holds your chain key\u2019s words: use \u201CEscape a contested position\u201D.`);
+      }
+      const idx = indexOf(seed, r.chainKeyScheme, r.chainKeyCommit, latest.position + 8);
+      if (idx === null) {
+        throw new Refused("These words do not give the chain key this identity\u2019s chain commits to now: they may be another identity\u2019s, its signing key\u2019s words, or copied wrong. Nothing was signed, and the words are forgotten. (\u201CCheck paper words\u201D says more.)");
+      }
+      let successor = null;
+      if (a.successor?.trim()) {
+        successor = readId(a.successor);
+        if (successor === id) throw new Error("An identity cannot name itself as its successor.");
+      }
+      if (successor && a.endSuccession) throw new Error("Name a successor, or end the succession: not both.");
+      const succNow = rd.look.verifier.succession(id);
+      if (a.endSuccession && succNow.state === "none") throw new Error("No succession is declared: there is none to end.");
+      let plan;
+      try {
+        plan = planLines(rd.lines, { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : void 0 });
+      } catch (e2) {
+        throw new Error(message5(e2));
+      }
+      const clock = declaresClock(rd);
+      const sections2 = [
+        ...recordWords(rd).filter((s) => s.heading !== "Its lines of acts (each app or device keeps one)"),
+        { heading: "Its lines of acts: what this rotation keeps (Identity rule 35)", lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u) => u ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
+        {
+          heading: "What changes",
+          lines: [
+            { text: "A new signing key, made now on this device. Its words are shown once, after the homes\u2019 receipts are in. Dub, Edubba and every app holding the old signing key\u2019s words stop signing until given the new ones.", tone: "warn" },
+            { text: `The next chain key: key ${idx + 1} of the same paper words. Keep this paper: it serves the next change too.` },
+            { text: `${homesWords(r.homes, r.effective)} Unchanged.` },
+            successor ? { text: `A succession declared: ${successor} is named as this identity\u2019s successor. Nobody follows it until that identity confirms it, by an act of its own naming this rotation (F300; Ki\u0161ib can make it, \u201CConfirm a succession\u201D). This identity goes on living.`, tone: "warn" } : a.endSuccession ? { text: `The succession to ${succNow.successor ?? "its successor"} is ended.`, tone: "warn" } : { text: succNow.state === "none" ? "No succession." : `The succession stays as it is (${succNow.state}).` },
+            ...clock ? [{ text: "This identity declares a clock (Money rule 15): its client anchors each change of its keys on that clock. Ki\u0161ib does not anchor: anchor it with the genesis client before relying on it.", tone: "warn" }] : []
+          ]
+        }
+      ];
+      const signs2 = [
+        `Ki\u0161ib signs one rotation of ${short4(id)} at position ${latest.position + 1}, with the chain key these words give (key ${idx}), revealed once.`,
+        "It sends the exact same bytes to every home, and again, unchanged, if they stall: never a second rotation.",
+        successor ? `Your rotation names ${short4(successor)} as successor; the successor signs nothing here.` : "It signs nothing else."
+      ];
+      const digest = sha2562(cborEncode(["MOR Ki\u0161ib rotation, version 1", id, latest.act, plan.kept.map((k) => [k.act, k.position, k.summary]), successor ?? "", !!a.endSuccession]));
+      const s0 = seed;
+      seed = null;
+      return this.plan(
+        {
+          digest,
+          title: `Change the keys of ${short4(id)}`,
+          summary: [`Identity ${id}. Its chain was read from ${rd.places.join(", ")}, and judged by the core library.`, FORGOTTEN_SAY],
+          sections: sections2,
+          signs: signs2,
+          warning: plan.warning,
+          blocking
+        },
+        {
+          wipe: () => wipe(s0),
+          run: async (warned) => {
+            if (blocking.length) throw new Error(`Nothing was signed: ${blocking[0]}`);
+            checkWarned(plan, warned);
+            const current = chainKeyAt(s0, r.chainKeyScheme, idx);
+            const next = chainKeyAt(s0, r.chainKeyScheme, idx + 1);
+            const signing = newSigningSecret();
+            let bytes;
+            try {
+              bytes = makeRotation({
+                identitySpec: SPECS.identity,
+                identity: id,
+                previous: latest.act,
+                position: latest.position + 1,
+                chainKeyScheme: r.chainKeyScheme,
+                chainKeySeeds: current.seeds,
+                newSigningPublic: signingPublic(signing),
+                nextChainKeyScheme: r.chainKeyScheme,
+                nextChainKeyCommit: next.commit,
+                kept: plan.kept,
+                ...successor ? { successor } : {},
+                ...a.endSuccession ? { endSuccession: true } : {}
+              });
+            } finally {
+              wipe(current.seeds, next.seeds, s0);
+            }
+            this.held = {
+              kind: "identity",
+              id,
+              bytes,
+              act: actId(bytes),
+              homes: r.homes,
+              before: chainBefore(rd),
+              with: [],
+              places: rd.places,
+              signing,
+              stage: "sent",
+              title: `The rotation of ${short4(id)}`,
+              lines: []
+            };
+            return this.send();
+          }
+        }
+      );
+    } catch (e2) {
+      wipe(seed);
+      throw e2;
+    }
+  }
+  /** Send the act held, the same bytes, to every home (a home lacking the acts before it gets them first), then see whether it counts. */
+  async send() {
+    const h = this.held;
+    const lines2 = [];
+    for (const home of h.homes) {
+      lines2.push(await put(home.hint, h.bytes, h.before));
+    }
+    for (const w of h.with) {
+      for (const hint of w.to) {
+        try {
+          await relayAt(hint, {}).putAct(w.bytes);
+        } catch {
+        }
+      }
+    }
+    lines2.push({ text: "Keep Ki\u0161ib open until the new words are shown. Closed now, the new signing key is lost: the identity stays yours, and the next change from the same paper installs a key you hold.", tone: "warn" });
+    h.lines = lines2;
+    return this.refresh();
+  }
+  /** Send the exact same bytes again (Identity rule 29): never a second rotation. */
+  async resend() {
+    if (this.col) {
+      await this.col.resend();
+      return this.state();
+    }
+    const h = this.held;
+    if (!h || !h.bytes || h.stage !== "sent") throw new Error("Nothing is waiting to be sent again.");
+    await this.send();
+    return this.state();
+  }
+  /** Look again: whether what was sent counts now. */
+  async refresh() {
+    if (this.col) {
+      await this.col.refresh();
+      return this.sitting();
+    }
+    const h = this.held;
+    if (!h || !h.act) throw new Error("Nothing was sent.");
+    if (h.kind === "confirm") return this.sitting();
+    const places = [.../* @__PURE__ */ new Set([...h.homes.map((x) => x.hint), ...h.places])];
+    let counts = false;
+    let say;
+    try {
+      const l = (await readIdentity(h.id, places, {}, SPECS.identity)).look;
+      counts = l.resolution.links.some((x) => x.act === h.act);
+      say = counts ? { text: `It counts: the homes\u2019 receipts are in (${l.resolution.links.find((x) => x.act === h.act).how}).`, tone: "ok" } : { text: `It does not count yet: the receipts its home rule needs are not all in (${l.resolution.stop}). Send it again: the same bytes, never a new rotation.`, tone: "warn" };
+    } catch (e2) {
+      say = { text: `It could not be read back: ${message5(e2)}. Send it again: the same bytes.`, tone: "warn" };
+    }
+    h.lines = [...h.lines.filter((x) => !/^It (counts|does not count|could not)/.test(x.text)), say];
+    if (counts && h.stage === "sent") h.stage = "counts";
+    return this.sitting();
+  }
+  /** The new signing key's words, once the rotation counts: shown, then hidden before three are asked back. */
+  showWords() {
+    if (this.col) return this.col.showWords();
+    const h = this.held;
+    if (!h || !h.signing) throw new Error("No new signing key is held here.");
+    if (h.stage === "sent") throw new Error("Not yet: the new words are shown once the homes\u2019 receipts are in, so they are never words of a key that does not count.");
+    h.stage = "counts";
+    h.positions = void 0;
+    return { words: toWords(h.signing), say: NEW_WORDS_SAY };
+  }
+  /** Hide the words; three positions to type back. */
+  written() {
+    if (this.col) {
+      this.col.written();
+      return this.state();
+    }
+    const h = this.held;
+    if (!h || !h.signing || h.stage !== "counts") throw new Error("No words are shown.");
+    h.positions = threePositions((n) => randomBytes(1)[0] % n);
+    h.stage = "shown";
+    return this.state();
+  }
+  /** The three words typed back: right, and Kišib forgets the key. */
+  typed(a) {
+    if (this.col) {
+      this.col.typed(a.typed);
+      return this.state();
+    }
+    const h = this.held;
+    if (!h || !h.signing || h.stage !== "shown" || !h.positions) throw new Error("No words are asked back.");
+    if (!typedBack(toWords(h.signing), h.positions, a.typed)) throw new Error("Not the words asked for. Check the paper: they are shown again with \u201CShow them again\u201D.");
+    wipe(h.signing);
+    h.signing = null;
+    h.bytes = null;
+    h.positions = void 0;
+    h.stage = "done";
+    h.lines = [...h.lines, { text: "The new signing key is forgotten here. Ki\u0161ib holds nothing of this identity now: only your paper does.", tone: "ok" }];
+    return this.state();
+  }
+  // ------------------------------------------------------------ must: escape a contested position (F299)
+  /**
+   * Review an escape with both keys (Identity section 11): someone else
+   * rotated with this identity's chain key (its paper words were stolen),
+   * or two rotations contest one position of a self-hosted identity. The
+   * owner, holding the chain key's words and the signing key's words bound
+   * before that position, signs a homeless rotation to new homes and an
+   * escape endorsement listing every rotation served at that position as
+   * abandoned.
+   */
+  async escapePlan(a) {
+    this.busy();
+    const via = a.via ?? {};
+    const id = readId(a.id);
+    let seed = seedOf(a.words);
+    let signingSeed = null;
+    try {
+      signingSeed = seedOf(a.signingWords);
+      const rd = await readIdentity(id, addresses(a.address), via, SPECS.identity);
+      const r = rd.look.resolution;
+      const pub = hex(signingPublic(signingSeed));
+      const chain = orderedChain2(rd);
+      let q = null;
+      for (const c of chain) if (keyBoundBy(c.bytes) === pub) q = c;
+      if (!q) throw new Refused("These signing words do not give a signing key this identity\u2019s chain ever bound: they are another identity\u2019s, or the chain key\u2019s words in the wrong box. Nothing was signed, and the words are forgotten.");
+      const p = q.position + 1;
+      const rivals = [];
+      for (const b of rd.chainActs.values()) {
+        const s = served(id, b, SPECS.identity);
+        if (s && s.position === p && s.previous === q.act) rivals.push(s);
+      }
+      if (!rivals.length) throw new Error(`Nothing contests your position: no rotation is served after the act that bound your signing key (${q.act}). If you want to change your keys, use \u201CChange an identity\u2019s keys\u201D.`);
+      const commit = commitOf(q.bytes);
+      const idx = indexOf(seed, commit.scheme, commit.commit, p + 8);
+      if (idx === null) throw new Refused("These words do not give the chain key committed before the contested position. Nothing was signed, and the words are forgotten.");
+      const oldHomes = new Set([...(r.homesAt ?? []).flat(), ...r.homes].map((h) => h.hint));
+      const newHomes = await homesAt(addresses(a.homes), via);
+      if (!newHomes.length) throw new Error("Give one or more new homes: an escape leaves the old homes, which hold the other rotation and refuse any other with the same key.");
+      for (const h of newHomes) if (oldHomes.has(h.hint)) throw new Error(`${h.hint} is one of the old homes: it holds the other rotation, and refuses any other revealing the same chain key (Identity rule 30). Name new homes.`);
+      let plan;
+      try {
+        plan = planLines(linesUnder(rd, q.act), { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : void 0 });
+      } catch (e2) {
+        throw new Error(message5(e2));
+      }
+      const counted = (s) => r.links.some((l) => l.act === s.id);
+      const sections2 = [
+        ...recordWords(rd).filter((s) => !s.heading.startsWith("Its lines")),
+        {
+          heading: `What contests position ${p}`,
+          lines: rivals.map((s) => ({
+            text: `Rotation ${s.id}, revealing your chain key, installing the signing key ${s.signingFingerprint}${counted(s) ? ": it counts now" : r.stop === "contested" ? ": contested" : ": served, not counting"}${s.homeless ? " (homeless)" : ""}.`,
+            tone: "bad"
+          }))
+        },
+        { heading: "Your lines of acts: what the escape keeps (Identity rule 35)", lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u) => u ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
+        {
+          heading: "What changes",
+          lines: [
+            { text: `New homes: ${newHomes.map((h) => `${h.hint} (operator ${short4(h.operator)})`).join("; ")}. The old homes are left.`, tone: "warn" },
+            { text: "Every rotation above is abandoned: it can never count afterwards (Identity section 11).", tone: "warn" },
+            { text: "A new signing key, made now; its words are shown once the new homes\u2019 receipts are in." },
+            { text: `The next chain key: key ${idx + 1} of the same paper words. Whoever stole those words can derive it too: after the escape, consider a change of keys onto new paper (a new identity\u2019s words) as soon as you can.`, tone: "bad" }
+          ]
+        }
+      ];
+      const signs2 = [
+        `With your chain key (key ${idx} of these words): one homeless rotation of ${short4(id)} at position ${p}, naming the new homes.`,
+        `With your signing key (bound by ${short4(q.act)}): one escape endorsement naming that rotation and listing ${rivals.length === 1 ? "the rotation above" : `the ${rivals.length} rotations above`} as abandoned.`,
+        "Both keys together are the strongest proof of ownership MOR sees (Identity rule 53): an escape endorsed with the signing key cannot be voided by an objection. Someone holding both of your keys could do the same: keep them apart."
+      ];
+      const digest = sha2562(cborEncode(["MOR Ki\u0161ib escape, version 1", id, q.act, rivals.map((s) => s.id).sort(), newHomes.map((h) => h.hint), plan.kept.map((k) => [k.act, k.position, k.summary])]));
+      const s0 = seed;
+      const g0 = signingSeed;
+      seed = null;
+      signingSeed = null;
+      const qq = q;
+      return this.plan(
+        { digest, title: `Escape position ${p} of ${short4(id)}, with both keys`, summary: [`Identity ${id}: someone else\u2019s rotation revealing your chain key stands at position ${p}.`, FORGOTTEN_SAY], sections: sections2, signs: signs2, warning: plan.warning, blocking: [] },
+        {
+          wipe: () => wipe(s0, g0),
+          run: async (warned) => {
+            checkWarned(plan, warned);
+            const current = chainKeyAt(s0, commit.scheme, idx);
+            const next = chainKeyAt(s0, commit.scheme, idx + 1);
+            const signing = newSigningSecret();
+            let bytes;
+            let endorsement;
+            try {
+              bytes = makeRotation({
+                identitySpec: SPECS.identity,
+                identity: id,
+                previous: qq.act,
+                position: p,
+                chainKeyScheme: commit.scheme,
+                chainKeySeeds: current.seeds,
+                newSigningPublic: signingPublic(signing),
+                nextChainKeyScheme: commit.scheme,
+                nextChainKeyCommit: next.commit,
+                kept: plan.kept,
+                homes: newHomes,
+                homeless: true
+              });
+              const owner = holding(id, qq.act, g0, chain.filter((c) => c.position <= qq.position).map((c) => c.bytes), newHomes);
+              endorsement = owner.sign(SPECS.identity, ESCAPE_ENDORSEMENT, cborEncode(/* @__PURE__ */ new Map([[0, rivals.map((s) => unhex(s.id))]])), { public: true, objects: [[id, actId(bytes)]] }).act;
+            } finally {
+              wipe(current.seeds, next.seeds, s0, g0);
+            }
+            const everywhere = [.../* @__PURE__ */ new Set([...newHomes.map((h) => h.hint), ...rd.places])];
+            this.held = {
+              kind: "escape",
+              id,
+              bytes,
+              act: actId(bytes),
+              homes: newHomes,
+              before: chain.filter((c) => c.position <= qq.position).map((c) => c.bytes),
+              // The escape goes to the old homes and relays too: a reader meets it there (an old home keeps it as evidence, Identity rule 48) and asks the new homes it names for its receipts.
+              with: [
+                { bytes: endorsement, to: everywhere },
+                { bytes, to: rd.places }
+              ],
+              places: [...newHomes.map((h) => h.hint), ...rd.places],
+              signing,
+              stage: "sent",
+              title: `The escape of ${short4(id)}`,
+              lines: []
+            };
+            for (const hint of everywhere) await relayAt(hint, via).putAct(endorsement).catch(() => void 0);
+            return this.send();
+          }
+        }
+      );
+    } catch (e2) {
+      wipe(seed, signingSeed);
+      throw e2;
+    }
+  }
+  // ------------------------------------------------------------ must: a succession, confirmed by the successor (F300)
+  /**
+   * Review the successor's confirmation of a succession declared by
+   * another identity's rotation (Identity section 8): the successor's own
+   * signing key's words, and an act of the successor naming that rotation.
+   */
+  async confirmPlan(a) {
+    this.busy();
+    const via = a.via ?? {};
+    const owner = readId(a.owner);
+    const successor = readId(a.successor);
+    let seed = seedOf(a.words);
+    try {
+      const rd = await readIdentity(owner, addresses(a.address), via, SPECS.identity);
+      const s = rd.look.verifier.succession(owner);
+      if (s.state === "none") throw new Error(`No succession is declared by ${short4(owner)}: there is nothing to confirm.`);
+      if (s.successor !== successor) throw new Error(`The succession ${short4(owner)} declares names ${s.successor ? short4(s.successor) : "another protocol"}, not ${short4(successor)}.`);
+      if (s.state === "confirmed") throw new Error("This succession is already confirmed.");
+      const look = await lookCurrent(successor, seed, [.../* @__PURE__ */ new Set([...addresses(a.address), ...rd.places])], via);
+      const sections2 = [
+        { heading: "What it confirms", lines: [{ text: `${short4(owner)} declared, in its rotation ${s.rotation}, that ${short4(successor)} succeeds it.` }, { text: "Until the successor confirms, clients show it as declared and follow nobody (F300).", tone: "warn" }] },
+        { heading: "Who signs what", lines: [{ text: `${short4(owner)} signed the rotation that declares the succession, with its chain key. It signs nothing now.` }, { text: `You, ${short4(successor)}, sign one act with your signing key: a confirmation (Identity type 7) naming that rotation. It needs nothing from ${short4(owner)}.` }, { text: `${short4(owner)} goes on living: succession does not end it (Identity rule 39). Its followers and agreements may move across to you.` }] },
+        { heading: "A line of your acts", lines: [{ text: "This act starts a new line of your acts, made here. Your next change of keys keeps it only if it names it: Ki\u0161ib finds every line when it rotates.", tone: "warn" }] }
+      ];
+      const digest = sha2562(cborEncode(["MOR Ki\u0161ib succession confirmation, version 1", owner, successor, s.rotation]));
+      const s0 = seed;
+      seed = null;
+      const r = look.resolution;
+      return this.plan(
+        { digest, title: `Confirm that ${short4(successor)} succeeds ${short4(owner)}`, summary: [FORGOTTEN_SAY], sections: sections2, signs: [`You sign, as ${short4(successor)}, one confirmation naming the rotation ${s.rotation}.`], warning: null, blocking: [] },
+        {
+          wipe: () => wipe(s0),
+          run: async () => {
+            const chain = await servedChain(successor, r.homes, via);
+            const binding = r.links[r.links.length - 1].act;
+            const me = holding(successor, binding, s0, chain, r.homes);
+            const made = me.sign(SPECS.identity, LINK_CONFIRMATION, cborEncode(/* @__PURE__ */ new Map()), { public: true, objects: [[owner, s.rotation]] });
+            wipe(s0, unhex(me.f.signingSecret));
+            me.f.signingSecret = "";
+            const to = [.../* @__PURE__ */ new Set([...r.homes.map((h) => h.hint), ...rd.places])];
+            const lines2 = [];
+            for (const hint of to) lines2.push(await put(hint, made.act, chain));
+            this.held = { kind: "confirm", id: successor, owner, bytes: null, act: made.id, homes: r.homes, before: [], with: [], places: to, signing: null, stage: "done", title: `${short4(successor)} confirmed the succession`, lines: lines2 };
+            const v = await lookUp(owner, to, via);
+            await lookUp(successor, to, via, v.verifier);
+            v.verifier.add(made.act);
+            const now = v.verifier.succession(owner);
+            lines2.push(now.state === "confirmed" ? { text: "Read back as anyone would: the succession is confirmed, and clients follow it.", tone: "ok" } : { text: `Read back: ${now.state}.`, tone: "warn" });
+            lines2.push({ text: "Your signing words are forgotten here.", tone: "ok" });
+            return this.sitting();
+          }
+        }
+      );
+    } catch (e2) {
+      wipe(seed);
+      throw e2;
+    }
+  }
+  // ------------------------------------------------------------ must: rotate a collective (F337)
+  deps() {
+    return { now: this.now, web: this.web };
+  }
+  /** Start a collective's rotation: the starter's review (F337's plain words first). */
+  async collectiveStart(a) {
+    this.busy();
+    const c = new CollectiveSitting(this.deps());
+    const review2 = await c.start(a);
+    const plan = this.plan(review2, {
+      wipe: () => this.col === c ? void 0 : c.wipe(),
+      run: async () => {
+        this.col = c;
+        await c.announce();
+        return this.sitting();
+      }
+    });
+    return plan;
+  }
+  /** In the same room: one more paper typed into this Kišib. */
+  async collectivePaper(a) {
+    if (!this.col) throw new Error("No collective rotation is waiting here.");
+    await this.col.paper(a);
+    return this.state();
+  }
+  /** Look for the members' shares sealed to the one-time key. */
+  async collectiveGather() {
+    if (!this.col) throw new Error("No collective rotation is waiting here.");
+    await this.col.gather();
+    return this.state();
+  }
+  /** Rebuild, rotate and deal, in one sitting, once exactly the threshold is in. */
+  async collectiveRotate() {
+    if (!this.col) throw new Error("No collective rotation is waiting here.");
+    await this.col.rotate();
+    return this.state();
+  }
+  /** A new share shown here once (the starter's own, or a member's by hand). */
+  collectiveShare(a) {
+    if (!this.col) throw new Error("No collective rotation here.");
+    return this.col.shareShow(a.holder);
+  }
+  collectiveShareWritten(a) {
+    if (!this.col) throw new Error("No collective rotation here.");
+    this.col.shareWritten(a.holder);
+    return this.state();
+  }
+  /** A member: read a rotation waiting for its share, by the collective and its fingerprint, before typing anything. */
+  async collectiveRead(a) {
+    const { c, sections: sections2 } = await CollectiveSitting.readRequest(a, this.now());
+    return { title: `A rotation of ${short4(c.rd.id)} asks for your share`, sections: sections2 };
+  }
+  /** A member's share: reviewed with the paper and signing words, then, confirmed, sealed to the starter's one-time key. */
+  async collectiveGive(a) {
+    this.busy();
+    let sent = null;
+    const g = await CollectiveSitting.give(this.deps(), a, (r) => sent = r);
+    return this.plan(g.review, {
+      wipe: g.wipe,
+      run: async () => {
+        await g.run();
+        const s = sent;
+        this.held = { kind: "collective", id: readId(a.collective), bytes: null, act: null, homes: [], before: [], with: [], places: [], signing: null, stage: "done", title: s.title, lines: s.lines };
+        return this.sitting();
+      }
+    });
+  }
+};
+var ESCAPE_ENDORSEMENT = 14;
+var LINK_CONFIRMATION = 7;
+async function homesAt(hints, via) {
+  const out = [];
+  for (const hint of hints) {
+    let info;
+    try {
+      info = await relayAt(hint, via).info();
+    } catch (e2) {
+      throw new Error(`${hint} did not answer: ${message5(e2)}`);
+    }
+    const op = info.get(0);
+    if (!(op instanceof Uint8Array)) throw new Error(`${hint} is not a home: it declares no operator`);
+    out.push({ operator: hex(op), hint });
+  }
+  return out;
+}
+function orderedChain2(rd) {
+  return rd.look.resolution.links.map((l) => ({ act: l.act, position: l.position, bytes: rd.chainActs.get(l.act) })).filter((c) => c.bytes);
+}
+function chainBefore(rd) {
+  return orderedChain2(rd).map((c) => c.bytes);
+}
+function keyBoundBy(bytes) {
+  const d = describeAct(bytes);
+  const m = cborDecode(d.payload);
+  if (d.type === IDENTITY_TYPES.genesis) return hex(m.get(0)[1]);
+  if (d.type === IDENTITY_TYPES.rotation) return hex(m.get(2)[1]);
+  return null;
+}
+function commitOf(bytes) {
+  const d = describeAct(bytes);
+  const m = cborDecode(d.payload);
+  const c = d.type === IDENTITY_TYPES.genesis ? m.get(1) : d.type === IDENTITY_TYPES.rotation ? m.get(3) : m.get(2);
+  return { scheme: Number(c[0]), commit: hex(c[1]) };
+}
+function declaresClock(rd) {
+  for (const c of orderedChain2(rd)) {
+    const d = describeAct(c.bytes);
+    const m = cborDecode(d.payload);
+    const decl = d.type === IDENTITY_TYPES.genesis ? m.get(4) : m.get(8);
+    for (const x of decl ?? []) if (Number(x[1]) === 1 && x[2] !== null) return true;
+  }
+  return false;
+}
+
+// src/ops.ts
+var text = (v) => typeof v === "string" ? v : "";
+var list2 = (v) => Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : [];
+async function run(k, op, a) {
+  switch (op) {
+    case "state":
+      return k.state();
+    case "forget":
+      return k.forget();
+    case "check words":
+      return k.checkWords({ id: text(a.id), address: text(a.address), words: text(a.words) });
+    case "record":
+      return k.record({ id: text(a.id), address: text(a.address) });
+    case "rotate plan":
+      return k.rotatePlan({ id: text(a.id), address: text(a.address), words: text(a.words), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list2(a.leaveOut), cards: text(a.cards) });
+    case "escape plan":
+      return k.escapePlan({ id: text(a.id), address: text(a.address), words: text(a.words), signingWords: text(a.signingWords), homes: text(a.homes), leaveOut: list2(a.leaveOut), cards: text(a.cards) });
+    case "confirm plan":
+      return k.confirmPlan({ owner: text(a.owner), successor: text(a.successor), address: text(a.address), words: text(a.words) });
+    case "collective start":
+      return k.collectiveStart({ collective: text(a.collective), address: text(a.address), founder: text(a.founder), founderWords: text(a.founderWords), number: text(a.number), shareWords: text(a.shareWords), room: a.room === true, leaveOut: list2(a.leaveOut) });
+    case "collective read":
+      return k.collectiveRead({ collective: text(a.collective), fingerprint: text(a.fingerprint), address: text(a.address) });
+    case "collective give":
+      return k.collectiveGive({ collective: text(a.collective), fingerprint: text(a.fingerprint), address: text(a.address), member: text(a.member), memberWords: text(a.memberWords), number: text(a.number), shareWords: text(a.shareWords) });
+    case "confirm":
+      return k.confirm({ plan: text(a.plan), digest: text(a.digest), warned: typeof a.warned === "string" ? a.warned : void 0 });
+    case "resend":
+      return k.resend();
+    case "refresh":
+      await k.refresh();
+      return k.state();
+    case "words show":
+      return k.showWords();
+    case "words written":
+      return k.written();
+    case "words typed":
+      return k.typed({ typed: list2(a.typed) });
+    case "collective paper":
+      return k.collectivePaper({ number: text(a.number), words: text(a.words) });
+    case "collective gather":
+      return k.collectiveGather();
+    case "collective rotate":
+      return k.collectiveRotate();
+    case "collective share":
+      return k.collectiveShare({ holder: text(a.holder) });
+    case "collective share written":
+      return k.collectiveShareWritten({ holder: text(a.holder) });
+    default:
+      throw new Error(`unknown operation ${op}`);
+  }
+}
+
+// ../manage/src/view.ts
+function e(s) {
+  return String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
+// ../dub/src/page/view.ts
+var TEST_ONLY = "Test identities only, until MOR is frozen";
+var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY}. Two risks, in plain words:</p>
+<ol><li>Whoever serves this page's code at the moment an identity is made here could copy its keys.</li>
+<li>This browser's storage, where the identity's signing key is kept, can be lost, or read by what runs in this page.</li></ol>
+<p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div>`;
+var STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
+@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+:root{color-scheme:dark;--bg:#06080c;--raise:#0f131b;--line:#2a313d;--edge:#3a4250;--text:#d6dae1;--soft:#7f8794;--faint:#4c5360;--identity:#8394a8;--envelopes:#9a92ad;--bad:#b4615f;--ok:#7f8794}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font:300 15px/1.55 Inter,"Inter Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:600px;margin:0 auto;padding:0 16px 64px}
+a{color:var(--text);text-decoration:underline;text-decoration-color:var(--faint);text-underline-offset:3px}
+h1,h2,h3{font-weight:400;letter-spacing:.01em;margin:0}
+h2{font-size:17px;margin:28px 0 10px}
+h3{font-size:15px;margin:0 0 6px}
+p{margin:8px 0}
+code,.mono{font:13px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+.small{font-size:13px;color:var(--soft)}
+button{font:inherit;font-size:14px;color:var(--text);background:none;border:1px solid var(--edge);border-radius:999px;padding:5px 14px;cursor:pointer}
+button:hover{border-color:var(--faint)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:400}
+button.quiet,.acts button{border:none;padding:4px 0;color:var(--soft);border-radius:0}
+button.quiet:hover,.acts button:hover{color:var(--text)}
+input,textarea{font:inherit;color:var(--text);background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px;width:100%}
+input:focus,textarea:focus{outline:none;border-color:var(--faint)}
+textarea{min-height:3.2em;resize:vertical}
+label{display:block;margin:12px 0 4px;font-size:13px;color:var(--soft)}
+.row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.grow{flex:1}
+.row.tight{margin:0}
+input.pet{max-width:14em}
+label.check{margin:0;display:flex;gap:8px;align-items:center}
+label.check input{width:auto}
+.bar{position:sticky;top:0;z-index:2;background:var(--bg);display:flex;align-items:center;gap:12px;padding:14px 0 10px;border-bottom:1px solid var(--line)}
+.mark{font-weight:400;letter-spacing:.06em;font-size:15px}
+.tabs{display:flex;gap:4px;margin:0 auto}
+.tab{border:none;border-radius:999px;color:var(--soft);padding:5px 14px}
+.tab.on{color:var(--text);background:var(--raise)}
+.count{display:inline-block;min-width:1.5em;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--line);color:var(--text);font-size:12px;line-height:1.6;text-align:center}
+.count:empty{display:none}
+.me{border:none;padding:4px 0;color:var(--soft);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fp{font:12px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity)}
+.who{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:14px}
+.who .name{color:var(--text);font-weight:400}
+.who .dn{color:var(--soft)}
+.who .you{color:var(--faint);font-size:12px}
+.compose{padding:12px 14px;margin:14px 0;border:1px solid var(--edge);border-radius:12px;background:var(--raise)}
+.compose textarea{border:none;background:none;padding:4px 0;font-size:16px;min-height:2.6em}
+.compose .row{margin:6px 0 0}
+.compose input[type=file]{display:none}
+.compose .to{display:none}
+.compose.addressed .to{display:block}
+.chip{display:inline-flex;gap:8px;align-items:baseline;font-size:13px;color:var(--soft);border:1px solid var(--edge);border-radius:999px;padding:2px 10px}
+.chip button{border:none;padding:0;color:var(--soft)}
+.filters{display:flex;gap:6px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.filters .tab{font-size:13px}
+.post,.msg{padding:12px 14px;margin:10px 0;border:1px solid var(--edge);border-radius:12px;background:var(--raise)}
+.post .text,.msg .text{margin:6px 0 2px;white-space:pre-wrap;overflow-wrap:anywhere}
+.post figure{margin:10px 0 4px}
+.post img{display:block;max-width:100%;height:auto;border-radius:10px;image-orientation:from-image}
+.post .acts{border-top:1px solid var(--line);padding-top:6px}
+.post figcaption,.re{font-size:12px;color:var(--faint)}
+.re{margin-top:2px}
+.doc{display:block;margin:8px 0 2px;padding:10px 12px;border:1px solid var(--edge);background:var(--bg);border-radius:10px;text-decoration:none}
+.doc .small{display:block}
+.acts{display:flex;gap:22px;margin-top:6px}
+.acts button{font-size:13px}
+.flag{font-size:12px;color:var(--soft)}
+.flag.bad{color:var(--bad)}
+.msg.out{margin-left:28px;background:none}
+.msg .sealed{color:var(--envelopes);font-size:12px}
+.note{margin:10px 0;padding:10px 12px;border-left:2px solid var(--line);font-size:14px;color:var(--soft)}
+.note.error{border-left-color:var(--bad);color:var(--text)}
+.note.done{border-left-color:var(--faint);color:var(--text)}
+.note.spent{border-left-color:var(--bad);color:var(--text)}
+.note ul{margin:6px 0 0;padding-left:1.1em}
+.note li.bad{color:var(--bad)}
+.empty{padding:28px 0;color:var(--faint);font-size:14px;text-align:center}
+.card{border:1px solid var(--edge);border-radius:14px;padding:14px 16px;margin:12px 0}
+details{margin:10px 0}
+details>summary{cursor:pointer;color:var(--soft);font-size:14px;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"+ ";color:var(--faint)}
+details[open]>summary::before{content:"\u2212 "}
+.people{padding:6px 0 10px;border-bottom:1px solid var(--line)}
+.people li{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:6px 0;list-style:none}
+.people ul{margin:0;padding:0}
+.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px ui-monospace,"SF Mono",Menlo,monospace}
+.words span{white-space:nowrap}
+.words b{display:inline-block;min-width:2em;color:var(--faint);font-weight:400}
+.say{padding-left:1.1em;color:var(--soft);font-size:14px}
+.say li{margin:4px 0}
+.label{display:inline-block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);margin:0 0 4px}
+.typed{display:flex;flex-wrap:wrap;gap:10px}
+.typed label{margin:0}
+.typed input{width:10em}
+.id{font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);overflow-wrap:anywhere}
+dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13px;margin:8px 0}
+dl.facts dt{color:var(--faint)}
+dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
+.held li{list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.held ul{padding:0;margin:0}
+.banner{margin:12px 0;padding:10px 12px;border:1px solid var(--edge);border-radius:10px;color:var(--soft);font-size:13px}
+.banner p,.banner ol{margin:4px 0}
+.banner ol{padding-left:1.4em}
+#for-testing-only{max-width:568px;margin:12px auto 0}
+@media (max-width:600px){#for-testing-only{margin:12px 16px 0}}
+[hidden]{display:none!important}
+.experimental{margin:10px 0;padding:10px 12px;border:1px solid var(--bad);border-radius:10px;color:var(--soft);font-size:13px}
+.experimental strong{color:var(--text);font-weight:400}
+.proposal{border:1px solid var(--edge);border-radius:12px;background:var(--raise);padding:12px 14px;margin:12px 0}
+.proposal h3{margin:0 0 6px;font-weight:400;font-size:15px}
+.proposal h4{margin:12px 0 4px;font-weight:400;font-size:13px;color:var(--soft)}
+.proposal ul{margin:4px 0;padding-left:1.1em;font-size:14px}
+.proposal .plain{border:1px solid var(--edge);border-radius:10px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;max-height:18em;overflow:auto;background:var(--bg)}
+.proposal .state{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}
+.share-number{font-size:15px;margin:8px 0}
+.post.act{padding:8px 14px}
+.post.act .acts{border-top:none;padding-top:0;margin-top:2px}
+details.fold>summary{font-size:15px;color:var(--text);margin:14px 0 4px}`;
+
+// src/page/view.ts
+var NAME = "Ki\u0161ib";
+var TEST_ONLY2 = "Test identities only, until MOR is frozen";
+var WEB_BANNER2 = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY2}. The risks, in plain words:</p>
+<ol><li>The words you type here are your chain key: whoever serves this page\u2019s code at that moment could copy them, and with them change your identity\u2019s keys, or keep a collective\u2019s whole key.</li>
+<li>This browser, its extensions and whatever else runs on this device see what you type. A collective\u2019s whole chain key is rebuilt in the device that rotates it.</li>
+<li>Ki\u0161ib keeps nothing in this browser\u2019s storage; but nothing can prove a device forgot what it held.</li></ol>
+<p>Use the app on a clean device for anything of value; ideally a device used for nothing else. Never here for a real identity.</p></div>`;
+var TINT = { layer: "#8ec5f0", line: "#24323e", edge: "#2f4150", accent: "#587995" };
+var STYLE2 = `${STYLE}
+:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
+.door{display:block;width:100%;text-align:left;border:1px solid var(--edge);border-radius:14px;padding:12px 16px;margin:10px 0;background:none}
+.door strong{display:block;font-weight:400;font-size:15px;color:var(--text)}
+.door span{display:block;font-size:13px;color:var(--soft);margin-top:2px}
+.door.rare strong{color:var(--soft)}
+.review{border:1px solid var(--edge);border-radius:12px;padding:12px 14px;margin:12px 0;background:var(--raise)}
+.review h3{margin:14px 0 4px;font-size:13px;color:var(--soft)}
+.review ul{margin:4px 0;padding-left:1.1em;font-size:14px}
+.review li{margin:3px 0}
+li.bad{color:var(--bad)}
+li.ok{color:var(--text)}
+li.warn{color:var(--soft)}
+.signs{border:1px solid var(--edge);border-radius:10px;padding:10px 12px;margin:12px 0}
+.signs p{margin:4px 0;font-size:14px}
+.mustread{border:1px solid var(--bad);border-radius:12px;padding:12px 14px;margin:12px 0}
+.mustread h3{margin:0 0 6px;font-weight:400}
+.fpr{font:15px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);letter-spacing:.04em}
+.full{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--soft);overflow-wrap:anywhere}`;
+var note = (kind, html) => `<div class="note ${kind}">${html}</div>`;
+var lines = (ls) => `<ul>${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>`;
+function testNotice(web) {
+  return web ? "" : `<div class="banner" id="test-only">${TEST_ONLY2}. Ki\u0161ib writes nothing of your words to this device; what it holds for an act lives in the program\u2019s memory, and is gone when it stops.</div>`;
+}
+function top(web = false, back = false) {
+  return `<header class="bar"><h1 class="mark">${NAME}</h1><span class="grow"></span>${back ? '<button class="quiet" data-action="home">Back to the start</button>' : `<span class="small">${web ? "web client, for testing only" : "this machine only"}</span>`}</header>
+${testNotice(web)}`;
+}
+function pairing() {
+  return `${top()}
+<h2>Pair this browser</h2>
+<p class="small">This page acts for the Ki\u0161ib program running on this machine. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
+<form id="pair" class="row"><input id="pair-code" class="grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
+<button type="submit">Pair</button></form>
+<div id="pair-status"></div>`;
+}
+function start(web) {
+  const door = (action, title, say, rare = false) => `<button class="door${rare ? " rare" : ""}" data-action="open" data-form="${action}"><strong>${title}</strong><span>${say}</span></button>`;
+  return `${top(web)}
+<p>Ki\u0161ib is the one place where a chain key is used, from paper, and then forgotten. Open it only for the act at hand.</p>
+<h2>What it does</h2>
+${door("rotate", "Change an identity\u2019s keys", "From its chain key\u2019s 24 words on paper: a new signing key, every line of its acts kept. For a lost or stolen phone, or any time.")}
+${door("start", "Rotate a collective", "From its members\u2019 paper shares, completing a member change signed in Edubba. Started by the member who proposed it.")}
+${door("give", "Give my share to a collective\u2019s rotation", "When a member asks for your paper share: read the rotation, then give it.")}
+${door("escape", "Escape a contested position", "Someone else changed your keys with your chain key\u2019s words: leave with both keys, to new homes.")}
+${door("succession", "Name or confirm a successor", "Name the identity that succeeds yours (with the chain key\u2019s words), or, as the successor, confirm it.")}
+<h2>What it may do</h2>
+${door("check", "Check paper words", "Whether these are the right words for an identity. Nothing is signed.", true)}
+${door("record", "Show an identity\u2019s record", "Its homes, receipts, lines and any contest, in plain words.", true)}`;
+}
+var idField = (name, label) => `<label>${label}</label><input name="${name}" type="text" autocomplete="off" spellcheck="false" required>`;
+var words = (name, label) => `<label>${label}</label><textarea name="${name}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>`;
+var address = `<label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>`;
+var forgotten = `<p class="small">What you type is used for this act alone, then overwritten. Nothing is written to this device.</p>`;
+function form(kind, web) {
+  const f = (title, intro, body, button) => `${top(web, true)}<h2>${title}</h2><p class="small">${intro}</p><form id="form-${kind}" data-kind="${kind}">${body}${forgotten}<div class="row"><button type="submit" class="primary">${button}</button></div></form><div id="status"></div>`;
+  switch (kind) {
+    case "rotate":
+      return f(
+        "Change an identity\u2019s keys",
+        "Ki\u0161ib reads the identity from its homes and every relay its routes name, finds every line of its acts (Dub\u2019s, Edubba\u2019s, the web client\u2019s), and reads it all back in plain words before anything is signed.",
+        `${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (the paper written when it was made; never the signing key\u2019s words)")}
+<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>`,
+        "Read it back"
+      );
+    case "succession":
+      return `${top(web, true)}<h2>Name or confirm a successor</h2>
+<p class="small">A succession needs both sides (F300): the identity names its successor in a change of its keys, signed with its chain key; the successor confirms it with an act of its own. Until it confirms, clients show it as declared and follow nobody.</p>
+<h3>Name a successor, as the identity that will be succeeded</h3>
+<form id="form-rotate" data-kind="rotate">${idField("id", "Your identity\u2019s ID")}${address}${words("words", "Your chain key\u2019s 24 words")}${idField("successor", "The successor\u2019s ID")}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form>
+<h3>Confirm, as the successor</h3>
+<form id="form-confirm" data-kind="confirm">${idField("owner", "The ID of the identity that named you")}${idField("successor", "Your ID")}${address}${words("words", "Your signing key\u2019s 24 words (as Dub shows them)")}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
+    case "escape":
+      return f(
+        "Escape a contested position, with both keys",
+        "For when someone else has changed your identity\u2019s keys with your chain key\u2019s words (they were stolen), or two changes contest one position of a self-hosted identity. You need both papers: the chain key\u2019s words, and the signing key\u2019s words of the key you held before. You leave to new homes.",
+        `${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words")}${words("signingWords", "Its signing key\u2019s 24 words, the key you held before the other change")}
+<label>New homes (one address per line): not the old ones, which hold the other change</label><textarea name="homes" required placeholder="https://"></textarea>`,
+        "Read it back"
+      );
+    case "start":
+      return f(
+        "Rotate a collective",
+        "This completes a member change proposed in Edubba and signed by every member. The member who proposed it starts here. Remote: the other members give their shares in their own Ki\u0161ib, within an hour. In the same room: their papers are typed here, one after another.",
+        `${idField("collective", "The collective\u2019s ID")}${address}
+<label>Your share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>
+${words("shareWords", "Your share\u2019s 24 words")}
+<label class="check"><input type="checkbox" name="room"> Everyone is here: type every paper on this device; nothing is sent, and no signing words are needed</label>
+<div data-remote>${idField("founder", "Your ID (you proposed the change)")}${words("founderWords", "Your signing key\u2019s 24 words: they open your members\u2019 answers, with the one-time keys their new shares go to")}</div>`,
+        "Read it back"
+      );
+    case "give":
+      return f(
+        "Give my share to a collective\u2019s rotation",
+        "The member who started the rotation sent you its fingerprint (in Dub, in the proposal\u2019s thread). Ki\u0161ib reads the rotation back to you first.",
+        `${idField("collective", "The collective\u2019s ID")}<label>The rotation\u2019s fingerprint (64 characters)</label><input name="fingerprint" type="text" autocomplete="off" spellcheck="false" required>${address}
+<div class="row"><button type="button" data-action="read request">Read the rotation first</button></div><div id="request"></div>
+${idField("member", "Your ID")}<label>Your share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>
+${words("shareWords", "Your share\u2019s 24 words")}${words("memberWords", "Your signing key\u2019s 24 words (to sign the small act that carries your share)")}`,
+        "Read it back"
+      );
+    case "check":
+      return f("Check paper words", "Ki\u0161ib derives the chain key from the words and compares it with what the identity\u2019s chain commits to. Nothing is signed.", `${idField("id", "The identity\u2019s ID")}${address}${words("words", "The chain key\u2019s 24 words")}`, "Check them");
+    case "record":
+      return f("Show an identity\u2019s record", "As any reader would see it, judged by the core library.", `${idField("id", "The identity\u2019s ID")}${address}`, "Read it");
+    default:
+      return start(web);
+  }
+}
+function sections(ss) {
+  return ss.map((s) => `<h3>${e(s.heading)}</h3>${lines(s.lines)}`).join("");
+}
+function review(r, web, mustRead) {
+  const blocked = r.blocking.length > 0;
+  const must = mustRead ? r.sections[0] : null;
+  const rest = mustRead ? r.sections.slice(1) : r.sections;
+  return `${top(web, true)}<h2>${e(r.title)}</h2>
+${r.summary.map((s) => `<p class="small">${e(s)}</p>`).join("")}
+${must ? `<div class="mustread" id="mustread"><h3>${e(must.heading)}</h3>${lines(must.lines)}<label class="check"><input type="checkbox" id="read-it"> I have read this, and chosen this device knowingly</label></div>` : ""}
+<div class="review">${sections(rest)}</div>
+${blocked ? note("error", `Nothing can be signed yet:${lines(r.blocking.map((t) => ({ text: t, tone: "bad" })))}`) : ""}
+${r.warning ? note("error", `${e(r.warning)}<label class="check"><input type="checkbox" id="warned"> I understand: leave ${"them"} out</label>`) : ""}
+<div class="signs"><span class="label">What is signed</span>${r.signs.map((s) => `<p>${e(s)}</p>`).join("")}</div>
+<div class="row"><button class="primary" data-action="sign" ${blocked ? "disabled" : ""}>Sign it</button><button data-action="home">Cancel, and forget the words</button></div><div id="status"></div>`;
+}
+function wordsShown(ws, say, web, label = "The new signing key\u2019s words") {
+  return `${top(web)}<h2>${e(label)}</h2>${say.map((s) => `<p class="small">${e(s)}</p>`).join("")}
+<div class="words" id="words">${ws.map((w, i) => `<span><b>${i + 1}</b>${e(w)}</span>`).join("")}</div>
+<div class="row"><button class="primary" data-action="written">I have written them down</button></div>`;
+}
+function askBack(positions, web) {
+  return `${top(web)}<h2>Three of the words, from your paper</h2><p class="small">The words are hidden. Type the ones asked, from what you wrote.</p>
+<form id="typed"><div class="typed">${positions.map((p) => `<label>Word ${p}<input name="w${p}" autocomplete="off" spellcheck="false" required></label>`).join("")}</div>
+<div class="row"><button type="submit" class="primary">Check</button><button type="button" data-action="show words">Show them again</button></div></form><div id="status"></div>`;
+}
+function sitting(s, web) {
+  const btn = (action, label, primary = false, extra = "") => `<button ${primary ? 'class="primary" ' : ""}data-action="${action}"${extra}>${label}</button>`;
+  const q = s.request;
+  const req = q ? `<div class="review" id="request-state">${q.room ? `<p>${q.have} of ${q.need} paper shares are in, typed here.</p>` : `<p>Fingerprint of this rotation</p><p class="fpr">${e(q.fingerprint)}</p><p class="full">${e(q.full)}</p><p>${q.have} of ${q.need} shares are in. The one-time key expires at ${e(new Date(q.expires * 1e3).toISOString().replace("T", " ").slice(0, 16))} UTC (this device\u2019s clock).</p>`}</div>` : "";
+  const acts = [];
+  if (s.stage === "sent") acts.push(btn("refresh", "Look again"), btn("resend", "Send it again (the same bytes)", true));
+  if (s.stage === "counts" && s.kind !== "confirm") acts.push(btn("show words", s.kind === "collective" ? "Show the collective\u2019s new signing key\u2019s words" : "Show the new signing key\u2019s words", true));
+  if (s.stage === "shown") acts.push(btn("show words", "Show them again"));
+  if (s.stage === "waiting" && q) {
+    if (!q.room) acts.push(btn("gather", "Look for the members\u2019 shares", q.have < q.need));
+    if (q.have >= q.need) acts.push(btn("rotate collective", "Rebuild, rotate and deal now", true));
+  }
+  const paper = s.stage === "waiting" && q?.room && q.have < q.need ? `<form id="paper"><label>The next share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>${words("words", "Its 24 words")}<div class="row"><button type="submit" class="primary">Add this paper</button></div></form>` : "";
+  const shares = s.shares?.length ? `<h3>New shares to show here, once each</h3><ul class="say">${s.shares.map((x) => `<li>Share ${x.x}, for <span class="fp">${e(x.holder.slice(0, 8))}\u2026${e(x.holder.slice(-4))}</span>: ${x.shown ? "written down, forgotten here" : btn("show share", "Show it", false, ` data-holder="${e(x.holder)}"`)}</li>`).join("")}</ul>` : "";
+  const done = s.stage === "done" || s.stage === "expired";
+  return `${top(web)}<h2>${e(s.title)}</h2>${req}<div class="review">${lines(s.lines)}</div>${paper}${shares}
+<div class="row">${acts.join("")}${done && !(s.shares ?? []).some((x) => !x.shown) ? btn("home", "Done: back to the start", true) : ""}</div><div id="status"></div>`;
+}
+
+// src/page/ui.ts
+function mount(app2, b) {
+  const $ = (id) => document.getElementById(id);
+  let current = null;
+  const fail = (err) => {
+    if (b.unpaired?.(err)) {
+      app2.innerHTML = pairing();
+      return;
+    }
+    const s = $("status");
+    const html = note("error", e(err instanceof Error ? err.message : String(err)));
+    if (s) {
+      s.innerHTML = html;
+      s.scrollIntoView({ block: "nearest" });
+    } else app2.insertAdjacentHTML("beforeend", html);
+  };
+  const busy = (on) => app2.querySelectorAll("button").forEach((x) => x.disabled = on || x.dataset.blocked === "1");
+  async function act(f) {
+    busy(true);
+    try {
+      return await f();
+    } catch (err) {
+      fail(err);
+      return void 0;
+    } finally {
+      app2.querySelectorAll("button").forEach((x) => {
+        if (x.dataset.action === "sign" && current?.review.blocking.length) return;
+        x.disabled = false;
+      });
+    }
+  }
+  async function show(state) {
+    current = null;
+    if (!state.sitting) {
+      app2.innerHTML = start(b.web);
+      return;
+    }
+    if (state.sitting.stage === "shown" && state.sitting.positions) {
+      app2.innerHTML = askBack(state.sitting.positions, b.web);
+      return;
+    }
+    app2.innerHTML = sitting(state.sitting, b.web);
+  }
+  const values = (form2) => {
+    const out = {};
+    for (const el of Array.from(form2.elements)) {
+      if (!el.name) continue;
+      out[el.name] = el.type === "checkbox" ? el.checked : el.value;
+    }
+    return out;
+  };
+  const clear = (form2) => Array.from(form2.elements).forEach((el) => el.tagName === "TEXTAREA" && (el.value = ""));
+  const OPS = { rotate: "rotate plan", escape: "escape plan", confirm: "confirm plan", start: "collective start", give: "collective give" };
+  app2.addEventListener("change", (ev) => {
+    const t = ev.target;
+    if (t.name === "room") {
+      const remote = app2.querySelector("[data-remote]");
+      if (remote) {
+        remote.hidden = t.checked;
+        remote.querySelectorAll("input,textarea").forEach((x) => x.required = !t.checked);
+      }
+    }
+  });
+  app2.addEventListener("submit", async (ev) => {
+    const form2 = ev.target;
+    const id = form2.getAttribute("id") ?? "";
+    if (id === "pair") return;
+    ev.preventDefault();
+    const a = values(form2);
+    if (id.startsWith("form-")) {
+      const kind = form2.dataset.kind;
+      if (kind === "check" || kind === "record") {
+        const r2 = await act(() => b.ask(kind === "check" ? "check words" : "record", a));
+        if (!r2) return;
+        clear(form2);
+        $("status").innerHTML = `<div class="review"><h3>${e(r2.title)}</h3>${r2.lines ? lines(r2.lines) : sections(r2.sections ?? [])}</div>`;
+        return;
+      }
+      const r = await act(() => b.ask(OPS[kind], a));
+      if (!r) return;
+      clear(form2);
+      current = { review: r, must: kind === "start" };
+      app2.innerHTML = review(r, b.web, current.must);
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (id === "typed") {
+      const typed = Object.keys(a).sort((x, y) => Number(x.slice(1)) - Number(y.slice(1))).map((k) => String(a[k]));
+      const s = await act(() => b.ask("words typed", { typed }));
+      if (s) await show(s);
+      return;
+    }
+    if (id === "paper") {
+      const s = await act(() => b.ask("collective paper", a));
+      if (s) await show(s);
+    }
+  });
+  app2.addEventListener("click", async (ev) => {
+    const t = ev.target.closest("[data-action]");
+    if (!t) return;
+    const action = t.dataset.action;
+    switch (action) {
+      case "open":
+        app2.innerHTML = form(t.dataset.form, b.web);
+        return;
+      case "home": {
+        const s = await act(() => b.ask("forget"));
+        if (s) await show(s);
+        return;
+      }
+      case "read request": {
+        const form2 = t.closest("form");
+        const a = values(form2);
+        const r = await act(() => b.ask("collective read", { collective: a.collective, fingerprint: a.fingerprint, address: a.address }));
+        if (r) $("request").innerHTML = `<div class="review"><h3>${e(r.title)}</h3>${sections(r.sections)}</div>`;
+        return;
+      }
+      case "sign": {
+        if (!current) return;
+        if (current.must && !$("read-it")?.checked) return fail(new Error("Read what this device will hold, and say so, before anything is done."));
+        const warned = current.review.warning ? $("warned")?.checked ? current.review.warning : void 0 : void 0;
+        if (current.review.warning && !warned) return fail(new Error("A line of acts would be left out: read the warning and tick it, or go back and give its card."));
+        const s = await act(() => b.ask("confirm", { plan: current.review.plan, digest: current.review.digest, ...warned ? { warned } : {} }));
+        if (s) await show(s);
+        return;
+      }
+      case "refresh":
+      case "resend":
+      case "gather":
+      case "rotate collective": {
+        const op = action === "gather" ? "collective gather" : action === "rotate collective" ? "collective rotate" : action;
+        const s = await act(() => b.ask(op));
+        if (s) await show(s);
+        return;
+      }
+      case "show words": {
+        const w = await act(() => b.ask("words show"));
+        if (w) app2.innerHTML = wordsShown(w.words, w.say, b.web, w.holder ? "The collective\u2019s new signing key\u2019s words" : "The new signing key\u2019s words");
+        return;
+      }
+      case "written": {
+        if (app2.querySelector("#words[data-share]")) {
+          const holder = app2.querySelector("#words").dataset.share;
+          const s2 = await act(() => b.ask("collective share written", { holder }));
+          if (s2) await show(s2);
+          return;
+        }
+        const s = await act(() => b.ask("words written"));
+        if (s) await show(s);
+        return;
+      }
+      case "show share": {
+        const holder = t.dataset.holder;
+        const r = await act(() => b.ask("collective share", { holder }));
+        if (!r) return;
+        app2.innerHTML = wordsShown(r.words, [...r.say, `Share number ${r.x}. The new dealing\u2019s fingerprint: ${r.fingerprint}.`], b.web, `New share ${r.x} of the collective\u2019s chain key`);
+        app2.querySelector("#words").setAttribute("data-share", holder);
+        return;
+      }
+    }
+  });
+  return { show };
+}
+
+// src/web/app.ts
+var app = document.getElementById("app");
+var kishib = new Kishib({ web: true });
+var ask = (op, a = {}) => run(kishib, op, a);
+var ui = mount(app, { web: true, ask, start: start2 });
+async function start2() {
+  if (!crypto?.getRandomValues) {
+    app.innerHTML = `${top(true)}${note("error", "This browser has no secure source of randomness: Ki\u0161ib cannot run here.")}`;
+    return;
+  }
+  await ui.show(kishib.state());
+}
+addEventListener("pagehide", () => kishib.forget());
+void start2();

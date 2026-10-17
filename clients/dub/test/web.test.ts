@@ -35,6 +35,7 @@ const TYPES: Record<string, string> = {
   '.json': 'application/json',
   '.woff2': 'font/woff2',
   '.txt': 'text/plain; charset=utf-8',
+  '.png': 'image/png',
 };
 const shots = process.env.MOR_SCREENSHOTS;
 const shot = async (page: Page, name: string) => {
@@ -76,7 +77,7 @@ before(async () => {
       return;
     }
     try {
-      if (!/^[a-z0-9_.]+$/.test(name)) throw new Error('no');
+      if (!/^[a-z0-9_.-]+$/.test(name)) throw new Error('no');
       const body = readFileSync(join(dist, name));
       res.writeHead(200, {
         'content-type': TYPES[extname(name)] ?? 'application/octet-stream',
@@ -173,6 +174,11 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   await page.goto(`${base}/`);
   await page.getByRole('heading', { name: 'Make a new identity' }).waitFor({ timeout: 60_000 });
   await banner(page, 'the identity window');
+  // H35: the icons load from the page's own files, as images, within its content security policy.
+  const iconSizes = await page.evaluate(() => Promise.all(['icon.png', 'apple-touch-icon.png'].map(async (f) => { const i = new Image(); i.src = f; await i.decode(); return [i.naturalWidth, i.naturalHeight]; })));
+  assert.deepEqual(iconSizes, [[256, 256], [180, 180]]);
+  assert.equal(await page.locator('link[rel=icon]').getAttribute('href'), 'icon.png');
+  assert.equal(await page.locator('link[rel=apple-touch-icon]').getAttribute('href'), 'apple-touch-icon.png');
   assert.equal(await page.locator('form#begin textarea[name=homes]').inputValue(), 'https://home.example');
   assert.equal(await page.locator('textarea[name=via]').count(), 0, 'no other way to reach an address: a browser has none');
   assert.match(await page.locator('form#bring').innerText(), /kept in this browser’s storage \(IndexedDB\), as they are, not locked/);
@@ -228,14 +234,15 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   await page.locator('form#post textarea[name=text]').fill('First, from the web client.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, 'Posted');
-  const first = (await page.locator('#feed .post').first().getAttribute('data-post'))!;
+  const first = (await page.locator('#feed .post', { hasText: 'First, from the web client.' }).getAttribute('data-post', { timeout: 60_000 }))!;
   await page.reload();
   await page.locator('form#post').waitFor({ timeout: 60_000 });
   await banner(page, 'the page after a reload');
   await page.locator('form#post textarea[name=text]').fill('Second, after a reload.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, 'Posted');
-  const second = (await page.locator('#feed .post').first().getAttribute('data-post'))!;
+  // The feed is drawn again after the note, in signed order: each post is found by its text, not its place.
+  const second = (await page.locator('#feed .post', { hasText: 'Second, after a reload.' }).getAttribute('data-post', { timeout: 60_000 }))!;
   const a1 = describeAct((await relayAt(relay.base).getAct(first))!) as { position: number; prev?: string };
   const a2 = describeAct((await relayAt(relay.base).getAct(second))!) as { position: number; prev?: string };
   assert.equal(a2.prev, first, 'the second post follows the first, in the same line');
@@ -285,7 +292,7 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   await page.locator('form#post textarea[name=text]').fill('Fourth, from the web client again.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, 'Posted');
-  const fourth = (await page.locator('#feed .post').first().getAttribute('data-post'))!;
+  const fourth = (await page.locator('#feed .post', { hasText: 'Fourth, from the web client again.' }).getAttribute('data-post', { timeout: 60_000 }))!;
   assert.equal((describeAct((await relayAt(relay.base).getAct(fourth))!) as { prev?: string }).prev, second);
   for (const id of [first, second, onMac.post.id, fourth]) assert.equal((await readPost(id, [relay.base])).standing, 'valid', id);
   assert.deepEqual(new Set(await listPosts(me.identity, relay.base)), new Set([first, second, onMac.post.id, fourth]));
@@ -337,7 +344,7 @@ test('the web client brings an identity made by Dub on the Mac, and refuses wron
     await page.locator('form#post textarea[name=text]').fill('From the web, an identity made on the Mac.');
     await page.getByRole('button', { name: 'Post', exact: true }).click();
     await done(page, 'Posted');
-    const pid = (await page.locator('#feed .post').first().getAttribute('data-post'))!;
+    const pid = (await page.locator('#feed .post', { hasText: 'From the web, an identity made on the Mac.' }).getAttribute('data-post', { timeout: 60_000 }))!;
     assert.equal((describeAct((await relayAt(relay.base).getAct(pid))!) as { position: number }).position, 1, 'its own line');
     assert.equal((await readPost(pid, [relay.base])).standing, 'valid');
     assert.deepEqual(problems, []);

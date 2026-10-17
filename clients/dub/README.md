@@ -55,7 +55,7 @@ Not here, on purpose: no rotation (Kišib's, the collective's too), no notificat
 | `src/web/` | The web client: `app.ts` (Dub's code run in the browser), `keep.ts` (IndexedDB), `headers.ts` (its content security policy), `released.ts` (its files), and two shims the build puts in place of `node:crypto` and `node:fs`. |
 | `scripts/build-web.ts`, `static/web.html`, `built/` | The web client's build (`npm run build` into `dist-web/`; `npm run release` into `built/`, with `BUILT-WITH.txt`). |
 | `scripts/make-app.sh` | Makes `~/Applications/Dub.app` on macOS, which runs `open`, with its icon (`Contents/Resources/AppIcon.icns`). |
-| `static/icon/`, `scripts/make-icons.ts` | The icon (H25): `dub.svg` drawn by hand; `dub.png` (256 pixels, Linux) and `dub.icns` (16 to 1024 pixels, the Mac) rendered from it by Chromium. The script makes Edubba's too, from `../desk/static/icon/edubba.svg`. Run it only when a drawing changes. |
+| `static/icon/`, `scripts/make-icons.ts` | The icon (H25): `dub.svg` drawn by hand; `dub.png` (256 pixels, Linux) and `dub.icns` (16 to 1024 pixels, the Mac) rendered from it by Chromium, in a page whose viewport is exactly each size (until 17 October 2026 a command-line window, whose PNGs came out cut off at the bottom; found and fixed by the Kišib session). The script makes Edubba's and Kišib's too, from `../desk/static/icon/edubba.svg` and `../kishib/static/icon/kishib.svg`. Run it only when a drawing changes. |
 | `scripts/make-desktop.sh` | On Linux, the same: `~/.local/share/applications/dub.desktop` (and a copy on the desktop, if there is a desktop folder), running a launcher, `~/.local/share/mor/dub-launch.sh`, that remembers where Node and this folder are; its icon copied beside it, `~/.local/share/mor/dub.png`. The browser opens with `xdg-open`. |
 
 The words are the identity carry Module's (`modules/module-identity-carry-words-draft-2.md`, code in `modules/carry/` and `modules/airgap/src/carry.rs`). The program's pairing domain line is still `MOR post, version 1`: changing it would unpair every browser already paired with an install.
@@ -179,6 +179,7 @@ It makes an identity as Dub on the Mac does: the chain key's 24 words shown once
 - **A new identity** (`Dub.begin`, the same on the Mac): a 256-bit seed from the secure random source; its 24 words (BIP-39 encoding, the words seed Module); the chain key derived as the Module derives key 0 under scheme 3 (`chainwords.ts`); the genesis committing it. The identity file never holds the chain key. Until three words are typed back, the seed is held in memory only; after, it is dropped.
 - **Kept** in IndexedDB, database `dub`: `identity:ID`, `settings:ID`, `people:ID`, `active`. `WebKeep.saveIdentity` refuses a file holding a chain key. Every signing step runs under a Web Lock. An identity kept before 16 October 2026 is moved under its ID.
 - **The banner** is in the page's HTML itself (`static/web.html`), so it shows even when the script does not run.
+- **Its icon (H35)**: Dub's, as the tab's icon (`icon.png`, 256 pixels) and as the icon a phone keeps when the page is added to its home screen (`apple-touch-icon.png`, 180 pixels, full bleed on the icon's dark, made by `scripts/make-icons.ts`), both files of the release, served from the page's own origin within its policy; the release test checks them.
 - **`dub.json`** beside the page, optional, https only: `{"homes": [...], "relays": [...], "reader": "https://…/"}` fills in the form and names the reader; trusted for nothing else.
 - **The build** (`scripts/build-web.ts`): the shared client code with the reader's browser core library, not minified, reproducible; anything from Node fails the build except two shims. **The release**: `built/`, Inter and its licence included, with `BUILT-WITH.txt`; `mor-dub check URL` compares a server with it.
 
@@ -189,7 +190,7 @@ It makes an identity as Dub on the Mac does: the chain key's 24 words shown once
 
 ### Putting it behind Caddy (a later machine session; not done here)
 
-1. Build the release on GitHub (or `npm run release` with the tools `BUILT-WITH.txt` names), and copy every file of `built/` but `BUILT-WITH.txt` (`index.html`, `dub.js`, `dub.css`, `mor_wasm_bg.wasm`, `inter_light.woff2`, `inter_regular.woff2`, `inter_license.txt`) to `/srv/dub` on the server. Optionally a `dub.json` naming the test homes and relays, and the reader long-form documents open in (`"reader"`, default `https://reader.dubsar.org/`).
+1. Build the release on GitHub (or `npm run release` with the tools `BUILT-WITH.txt` names), and copy every file of `built/` but `BUILT-WITH.txt` (`index.html`, `dub.js`, `dub.css`, `mor_wasm_bg.wasm`, `inter_light.woff2`, `inter_regular.woff2`, `inter_license.txt`, and since H35 `icon.png` and `apple-touch-icon.png`) to `/srv/dub` on the server. Optionally a `dub.json` naming the test homes and relays, and the reader long-form documents open in (`"reader"`, default `https://reader.dubsar.org/`).
 2. DNS: `dub.dubsar.org`, A and AAAA, to the server (the author's to add).
 3. Caddy, then `sudo systemctl reload caddy`:
    ```
@@ -206,4 +207,5 @@ It makes an identity as Dub on the Mac does: the chain key's 24 words shown once
    }
    ```
    **What changes on a server already serving Dub (Inter, 16 October 2026):** one line only, the `Content-Security-Policy` line inside the `header` block of Dub's site, which gains `font-src 'self';` right after `style-src 'self';`. Without it, the browser refuses the fonts and the page falls back to the system font. Caddy's `file_server` gives the `.woff2` files their type (`font/woff2`) by itself. Then reload Caddy, and copy the three new files with the others.
-4. From another machine: `node --import tsx src/cli.ts check https://dub.dubsar.org/` in `clients/dub` says SAME (it compares every file of the release, the fonts and the licence included).
+**What changes on a server already serving Dub (its icon, H35, 17 October 2026):** nothing in Caddy (the policy's `img-src 'self'` already allows the page's own images, and `file_server` gives `.png` its type); copy the two new files, `icon.png` and `apple-touch-icon.png`, with the others.
+4. From another machine: `node --import tsx src/cli.ts check https://dub.dubsar.org/` in `clients/dub` says SAME (it compares every file of the release, the fonts, the licence and the icons included).

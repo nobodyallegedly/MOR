@@ -16,6 +16,7 @@ import { Agents } from './agents.ts';
 import { Collectives } from './collectives.ts';
 import { Setup } from './setup.ts';
 import { Real } from './real.ts';
+import { AfterKishib } from './kishib.ts';
 import { Member } from './member.ts';
 import { listFolders } from './folders.ts';
 import { FONT_FILES, FONTS_DIR } from '../../dub/src/fonts.ts';
@@ -69,6 +70,8 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
   const collectives = new Collectives(opts.collective ?? join(opts.dir, 'collective'), store);
   const setup = new Setup(desk, store);
   const real = new Real(desk, store);
+  // After Kišib: the new signing key's words, for an identity or a real collective held here (`kishib.ts`).
+  const after = new AfterKishib(desk, store, real);
   // H33: Edubba signs as a member, with Dub's own code, for any identity it holds; the names it shows are Edubba's own.
   const member = new Member(store, desk, () => [...store.book().identities.map((i) => ({ id: i.id, name: i.name })), ...real.contacts().map((c) => ({ id: c.id, name: c.name }))]);
   /** A real collective founded here, read as anyone reads it (its relays and homes), with its founder as the member held here. */
@@ -224,6 +227,10 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
         return member.as((d) => d.shareConfirm(text(a.thread), list(a.typed)));
       case 'member sharehand':
         return member.as((d) => d.shareByHand(text(a.thread)));
+      case 'identity renew':
+        return after.renewIdentity(text(a.identity), text(a.words));
+      case 'real collective renew':
+        return after.renewCollective(text(a.collective), text(a.words));
       case 'real lists':
         return real.readLists();
       case 'real contacts':

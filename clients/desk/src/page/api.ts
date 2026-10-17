@@ -261,6 +261,8 @@ export interface IdentityRecord {
   sections: { heading: string; lines: Line[] }[];
   lines: { own: boolean; readable: boolean; words: string; card: { act: string; position: number; summary: string } | null }[];
   problems: string[];
+  /** Its signing key was changed elsewhere: the one Edubba holds no longer counts (the new words are asked for). */
+  spent?: boolean;
 }
 
 /** An act read back before relying on it. */
@@ -298,6 +300,8 @@ export interface RealProposal {
   answers: Record<string, { verdict: 'signed' | 'declined'; signature?: string; oneTime?: string; text: string }>;
   byHand?: string[];
   founded?: string;
+  /** A member change put in force by Kišib's rotation, once Edubba took the collective's new words. */
+  rotated?: string;
   standing: { signed: string[]; declined: string[]; waiting: string[]; enough: boolean };
 }
 

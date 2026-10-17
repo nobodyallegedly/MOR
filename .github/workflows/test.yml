@@ -60,6 +60,9 @@ jobs:
       - name: clients/dub
         if: success() || failure()
         run: cd clients/desk && npm ci --no-audit --no-fund && cd ../dub && npm ci --no-audit --no-fund && npm test
+      - name: clients/kishib
+        if: success() || failure()
+        run: for p in desk dub barebone repo collective assess; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/kishib && npm ci --no-audit --no-fund && npm test
       - name: clients/reader
         if: success() || failure()
         run: cd clients/reader && npm ci --no-audit --no-fund && npm test

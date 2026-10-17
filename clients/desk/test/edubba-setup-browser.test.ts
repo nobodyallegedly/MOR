@@ -30,6 +30,8 @@ import { post as postAs } from '../../barebone/src/post.ts';
 import { encryptionSecret, toWords } from '../../../modules/carry/src/carry.ts';
 import { verifyRelease } from '../../repo/src/release.ts';
 import { serve, type Running } from '../src/server.ts';
+import { Kishib } from '../../kishib/src/kishib.ts';
+import { chainKeyAt } from '../../kishib/src/words.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -246,6 +248,41 @@ test('H15: an identity brought by its signing key’s words', async () => {
   await page.locator('.head .tag', { hasText: 'brought here' }).waitFor();
   await page.locator('#e-record', { hasText: 'Made elsewhere, brought here by its signing key’s words' }).waitFor({ timeout: 60_000 });
   await shot(page, '07-brought');
+});
+
+test('After Kišib: the record says the signing key was changed elsewhere, and takes the new words in its box', async () => {
+  // An identity whose chain key is on paper (the words seed Module, key 0), brought here by its signing words.
+  const seed = crypto.getRandomValues(new Uint8Array(32));
+  const key0 = chainKeyAt(seed, 3, 0);
+  const g = TestIdentity.create({ homes: [homes[0].home], chainKey: { scheme: 3, seeds: key0.seeds, commit: key0.commit } });
+  await g.publishGenesis();
+  await g.publishRoutes([{ scope: null, hints: [relay.base], kind: 0 }, { scope: null, hints: [relay.base], kind: 1 }]);
+  await g.publishEncryptionKey(encryptionSecret(unhex(g.f.signingSecret)));
+  await c.ask('bring', { name: 'Rotated in Kišib', id: g.id, words: toWords(unhex(g.f.signingSecret)).join(' '), address: homes[0].base, linked: false });
+  // Kišib changes its keys from the paper words.
+  const k = new Kishib();
+  const r = await k.rotatePlan({ id: g.id, address: homes[0].base, words: toWords(seed).join(' ') });
+  let s = await k.confirm({ plan: r.plan, digest: r.digest });
+  for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.resend();
+  assert.equal(s.sitting!.stage, 'counts');
+  const fresh = k.showWords().words;
+  // Edubba's record: changed elsewhere, the box for the new words.
+  await page.reload();
+  await page.click('[data-action=tab][data-tab=identities]');
+  await page.click(`.entry[data-id="${g.id}"]`);
+  const box = page.locator('form#identity-renew');
+  await box.waitFor({ timeout: 60_000 });
+  assert.match(await box.innerText(), /changed elsewhere \(in Kišib/);
+  await shot(page, '08-key-changed-in-kishib');
+  await box.locator('textarea[name=words]').fill(toWords(seed).join(' '));
+  await box.locator('button[type=submit]').click();
+  await page.locator('#e-status .note.error', { hasText: 'do not give this identity’s current signing key' }).waitFor({ timeout: 60_000 });
+  await box.locator('textarea[name=words]').fill(fresh.join(' '));
+  await box.locator('button[type=submit]').click();
+  await said('The new signing key is taken');
+  await page.locator('#e-record', { hasText: 'Signing key: the one Edubba holds, current' }).waitFor({ timeout: 60_000 });
+  assert.equal(await page.locator('form#identity-renew').count(), 0);
+  await shot(page, '09-new-words-taken');
 });
 
 test('Collectives: “What you may do for it” folds, remembered across a reload (H14); a collective brought by its ID (H15)', async () => {

@@ -235,10 +235,44 @@ export async function lookUp(identity: string, hints: string[], via: Via = {}, i
     operatorActs.set(op, got);
   };
 
+  // The new homes a held homeless rotation names, at the position after the
+  // latest that counts. Its receipts can come only from them (Identity,
+  // receipt check 3; homeless procedure, step 5), so B2 ("never a home only
+  // a rotation that does not count names") does not reach them: without
+  // asking them, no reader could ever count an escape (found by the Kišib
+  // session). Only homeless rotations, only at that one position.
+  const homelessHomes = (): Home[] => {
+    const r = v.resolve(identity) as Resolution;
+    const last = r.links[r.links.length - 1];
+    if (!last) return [];
+    const out: Home[] = [];
+    for (const a of heldBytes.values()) {
+      try {
+        const d = describeAct(a) as Described;
+        if (d.signer !== identity || d.spec !== SPECS.identity || d.type !== IDENTITY_TYPES.rotation || !d.payload) continue;
+        const p = cborDecode(d.payload) as Map<number, unknown>;
+        if (p.get(11) !== true || Number(p.get(1)) !== last.position + 1 || hex(p.get(0) as Uint8Array) !== last.act) continue;
+        for (const [op, hint] of (p.get(6) as [Uint8Array | null, string][] | undefined) ?? []) out.push({ operator: op ? hex(op) : null, hint });
+      } catch {
+        // malformed: proves nothing
+      }
+    }
+    return out;
+  };
+
   for (let round = 0; round < 8; round++) {
     const homes = inForce();
-    const fresh = homes.filter((h) => !asked.has(h.hint));
-    if (!fresh.length) break;
+    let fresh = homes.filter((h) => !asked.has(h.hint));
+    if (!fresh.length) {
+      const named = homelessHomes();
+      fresh = named.filter((h) => !asked.has(h.hint));
+      if (!fresh.length) break;
+      for (const h of fresh) asked.add(h.hint);
+      await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record(h).catch(() => failed(h.hint))));
+      const ops = [...new Set(named.map((h) => h.operator).filter((o): o is string => !!o && o !== identity && !operatorActs.has(o)))];
+      await Promise.all(ops.map((op) => operatorChain(op, named.filter((h) => h.operator === op).map((h) => h.hint))));
+      continue;
+    }
     for (const h of fresh) asked.add(h.hint);
     await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record(h).catch(() => failed(h.hint))));
     const ops = [...new Set(homes.map((h) => h.operator).filter((o): o is string => !!o && o !== identity && !operatorActs.has(o)))];

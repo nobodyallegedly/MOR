@@ -1,0 +1,29 @@
+Kišib’s web client, as published in the release (testing only; to be served at kishib.dubsar.org).
+Rebuild: cd clients/genesis && npm run wasm; cd ../kishib && npm run release.
+The same tools give the same bytes (test/web-build.test.ts):
+
+rustc: rustc 1.97.0 (2d8144b78 2026-07-07)
+wasm-bindgen: wasm-bindgen 0.2.129
+esbuild: 0.25.12
+
+Work hash of each file (as the display client lists them):
+dc082fe6eca885280e480ab2595405ada32775914d9f677d94dc34d41ecedaa3  index.html
+6f3f146557dd2512d2630767672ee53cd6f35de39413d9f3b4906ecfcb052923  kishib.js
+8c37868eb43cc24c5029734de6377d521e8df5bcb37e4f4351ac789206ced5d5  kishib.css
+ff9f31664f4b819d531a70fd3b06a27ad4e34fa668b2479188b0e5b0470f5708  mor_wasm_bg.wasm
+d72e0f61b65931f575516d8d39caa75d2ad09b04b0ea606aee6a157b2e5eb146  inter_light.woff2
+56958edadcbbe43d1c48f5f952970f0656018291b2e29ea72d732351c99cba65  inter_regular.woff2
+a63d578c41abf416497080d59d2ecd9ecf4fce5458f7543556acc9a8a9d2cc5c  inter_license.txt
+d5249b446b5ed906bf4ae4d3effadf8f48a21a84231a66a2d32b38dec0463830  icon.png
+8f3b50a36bb9ed25ca7c25fad524f6b707d9914f041cd8047ef5c34b7a19dc31  apple-touch-icon.png
+
+SHA-256 of each file (as sha256sum prints it):
+ae19efd38dcda6c2e44556c22b1ce4e50b0082603ac98ddf2eead473c3712435  index.html
+6b26326da04a1fa6263d163363ca06d0d2df8f5ea05a0f436b7bb24fdcec8915  kishib.js
+7fec0f41bbbeba30806fc77becd626451fa335532b1e5441d41193ffdfe74870  kishib.css
+22389b7b09a82ce469de4bcf4ed95acdd882b92dbec446399690709239e6077d  mor_wasm_bg.wasm
+e111a1e2ad914ccda9179b95e83fb10234dd52a1932e0b93c480476227983fd9  inter_light.woff2
+e06f6b1bc553aaea4e4668023ed0ab0a147129c3107f511bc7d03d361b0ae085  inter_regular.woff2
+262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a  inter_license.txt
+1d55dfcd562ef46cd6daecf82fac7ef14d595bdc2c9c9b0a8b06be435dbf6588  icon.png
+a238de240f0b2e88683bb396e20ba29bc41e0af405a04d35fd6031d79f5ff940  apple-touch-icon.png

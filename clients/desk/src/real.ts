@@ -64,7 +64,7 @@ export const REAL_SAY =
 
 /** Said where a member change waits for its rotation (decided by Nobody, allegedly: "Wait for Kišib"). */
 export const WAIT_FOR_KISIB =
-  'Every signature is in. The rotation that declares this change needs the chain key, rebuilt from enough members’ paper shares: that is Kišib’s work, not Edubba’s, and Kišib is not built yet. Until then the change waits, signed and not in force.';
+  'Every signature is in. The rotation that declares this change needs the chain key, rebuilt from enough members’ paper shares: that is Kišib’s work, not Edubba’s. Open Kišib and choose “Rotate a collective”: the member who proposed the change starts it there, and the other members give their shares in their own Kišib. Until it counts, the change waits, signed and not in force.';
 
 /** A contact: an identity added by ID, with the name the user gave it (kept here, never published), or one an agent follows. */
 export interface Contact {
@@ -99,6 +99,8 @@ export interface Proposal {
   byHand?: string[];
   /** Founding: the collective once founded. */
   founded?: string;
+  /** A member change: the rotation, made in Kišib, that put it in force, once Edubba took the collective's new words (`kishib.ts`). */
+  rotated?: string;
   at: number;
 }
 
@@ -262,6 +264,14 @@ export class Real {
 
   private saveCollective(c: TestCollective) {
     c.save(this.collectivePath(c.identity));
+  }
+
+  /** After Kišib's rotation, taken (`kishib.ts`): the collective's copy saved, its member change marked in force. */
+  afterRotation(c: TestCollective, proposal: string, rotation: string): void {
+    this.saveCollective(c);
+    const p = this.proposal(proposal);
+    p.rotated = rotation;
+    this.saveProposal(p);
   }
 
   /** The real collectives founded here: each by its ID, the name given here, and its founder. */

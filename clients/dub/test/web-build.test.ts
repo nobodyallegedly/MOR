@@ -15,6 +15,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sha256, workHash } from '../../genesis/src/core.ts';
 import { BUILT, WEB_FILES } from '../src/web/released.ts';
+import { contentSecurityPolicy } from '../src/web/headers.ts';
 import { WEB_BANNER } from '../src/page/view.ts';
 import { check, defaultDir } from '../src/cli.ts';
 
@@ -32,6 +33,12 @@ test('the release in built/: every file, each with its fingerprints listed, the 
   assert.match(listed, /^wasm-bindgen: /m);
   assert.match(listed, /^esbuild: /m);
   const page = readFileSync(join(BUILT, 'index.html'), 'utf8');
+  // H35: its icon, as the tab's and as a phone's home screen's, from the page's own files (within its policy's img-src 'self').
+  assert.ok(page.includes('<link rel="icon" type="image/png" href="icon.png">'), 'the tab icon');
+  assert.ok(page.includes('<link rel="apple-touch-icon" href="apple-touch-icon.png">'), 'the home-screen icon');
+  assert.deepEqual(readFileSync(join(BUILT, 'icon.png')), readFileSync(join(here, 'static/icon/dub.png')));
+  assert.deepEqual(readFileSync(join(BUILT, 'apple-touch-icon.png')), readFileSync(join(here, 'static/icon/dub-touch.png')));
+  assert.match(contentSecurityPolicy(), /img-src 'self'/);
   assert.ok(page.includes(WEB_BANNER), 'the banner is in the page itself, outside the script');
   const script = readFileSync(join(BUILT, 'dub.js'), 'utf8');
   assert.ok(!/\/(home|Users|root)\//.test(script), 'no build machine folder in the script');

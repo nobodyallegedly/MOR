@@ -957,6 +957,20 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
+  // After Kišib: the new signing key's words, for an identity held here or a real collective (`src/kishib.ts`).
+  if (fid === 'identity-renew' || fid === 'real-renew') {
+    const id = fid === 'identity-renew' ? form.dataset.identity! : form.dataset.collective!;
+    const r = await busy('Reading it from its homes, and checking the words…', () =>
+      fid === 'identity-renew' ? c.ask<Done>('identity renew', { identity: id, words: words(d.get('words')) }) : c.ask<Done>('real collective renew', { collective: id, words: words(d.get('words')) }),
+    );
+    form.reset();
+    if (r) {
+      await refresh();
+      if (fid === 'identity-renew') await drawRecord(id);
+      say('done', v.done(r));
+    }
+    return;
+  }
   if (fid === 'real-share-back') {
     const typed = [...form.querySelectorAll<HTMLInputElement>('input')].map((i) => i.value);
     const r = await busy('Checking the words…', () => c.ask<Done>('real share back', { collective: form.dataset.collective, member: form.dataset.member, typed }));

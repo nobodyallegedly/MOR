@@ -72,6 +72,8 @@ export interface IdentityRecord {
   sections: RecordSection[];
   lines: RecordLine[];
   problems: string[];
+  /** Its signing key was changed elsewhere (in Kišib): the one Edubba holds no longer counts, and the new words are asked for (`kishib.ts`). */
+  spent?: boolean;
 }
 
 /** A file of a release, as listed before anything is signed. */
@@ -209,7 +211,7 @@ export class Setup {
       lines: [
         kind === 'made'
           ? { text: 'Made here, by Edubba. Its chain key is held in this program’s folder, in software, as every test identity’s is: a prototype, never for a real identity.' }
-          : { text: 'Made elsewhere, brought here by its signing key’s words. Its chain key is not here: changing its keys is MOR Safety’s work, with the chain key’s words.' },
+          : { text: 'Made elsewhere, brought here by its signing key’s words. Its chain key is not here: changing its keys is Kišib’s work, with the chain key’s words.' },
       ],
     });
     let look: Awaited<ReturnType<typeof lookUp>> | null = null;
@@ -278,7 +280,8 @@ export class Setup {
     } catch (x) {
       problems.push(`Its lines of acts could not be read: ${err(x)}.`);
     }
-    return { id, kind, sections, lines, problems };
+    const spent = !!r?.signingKey && hex(r.signingKey) !== held;
+    return { id, kind, sections, lines, problems, spent };
   }
 
   // ------------------------------------------------------------ bringing an identity (H15)

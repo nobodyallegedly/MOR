@@ -1,0 +1,84 @@
+// Kišib's operations, by name, as the page asks for them: the same list for
+// the program on the Mac and Linux (`server.ts`, whose requests are signed
+// by a paired browser) and for the web client (`web/app.ts`, in the
+// browser). Each takes plain values from the page and nothing else.
+
+import type { Kishib } from './kishib.ts';
+
+const text = (v: unknown): string => (typeof v === 'string' ? v : '');
+const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : []);
+
+/** The names of every operation, so a page and a test can be checked against them. */
+export const OPS = [
+  'state',
+  'forget',
+  'check words',
+  'record',
+  'rotate plan',
+  'escape plan',
+  'confirm plan',
+  'collective start',
+  'collective read',
+  'collective give',
+  'confirm',
+  'resend',
+  'refresh',
+  'words show',
+  'words written',
+  'words typed',
+  'collective paper',
+  'collective gather',
+  'collective rotate',
+  'collective share',
+  'collective share written',
+] as const;
+
+export async function run(k: Kishib, op: string, a: Record<string, unknown>): Promise<unknown> {
+  switch (op) {
+    case 'state':
+      return k.state();
+    case 'forget':
+      return k.forget();
+    case 'check words':
+      return k.checkWords({ id: text(a.id), address: text(a.address), words: text(a.words) });
+    case 'record':
+      return k.record({ id: text(a.id), address: text(a.address) });
+    case 'rotate plan':
+      return k.rotatePlan({ id: text(a.id), address: text(a.address), words: text(a.words), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list(a.leaveOut), cards: text(a.cards) });
+    case 'escape plan':
+      return k.escapePlan({ id: text(a.id), address: text(a.address), words: text(a.words), signingWords: text(a.signingWords), homes: text(a.homes), leaveOut: list(a.leaveOut), cards: text(a.cards) });
+    case 'confirm plan':
+      return k.confirmPlan({ owner: text(a.owner), successor: text(a.successor), address: text(a.address), words: text(a.words) });
+    case 'collective start':
+      return k.collectiveStart({ collective: text(a.collective), address: text(a.address), founder: text(a.founder), founderWords: text(a.founderWords), number: text(a.number), shareWords: text(a.shareWords), room: a.room === true, leaveOut: list(a.leaveOut) });
+    case 'collective read':
+      return k.collectiveRead({ collective: text(a.collective), fingerprint: text(a.fingerprint), address: text(a.address) });
+    case 'collective give':
+      return k.collectiveGive({ collective: text(a.collective), fingerprint: text(a.fingerprint), address: text(a.address), member: text(a.member), memberWords: text(a.memberWords), number: text(a.number), shareWords: text(a.shareWords) });
+    case 'confirm':
+      return k.confirm({ plan: text(a.plan), digest: text(a.digest), warned: typeof a.warned === 'string' ? a.warned : undefined });
+    case 'resend':
+      return k.resend();
+    case 'refresh':
+      await k.refresh();
+      return k.state();
+    case 'words show':
+      return k.showWords();
+    case 'words written':
+      return k.written();
+    case 'words typed':
+      return k.typed({ typed: list(a.typed) });
+    case 'collective paper':
+      return k.collectivePaper({ number: text(a.number), words: text(a.words) });
+    case 'collective gather':
+      return k.collectiveGather();
+    case 'collective rotate':
+      return k.collectiveRotate();
+    case 'collective share':
+      return k.collectiveShare({ holder: text(a.holder) });
+    case 'collective share written':
+      return k.collectiveShareWritten({ holder: text(a.holder) });
+    default:
+      throw new Error(`unknown operation ${op}`);
+  }
+}
