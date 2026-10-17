@@ -40,7 +40,7 @@ async function rotateThrough(c: Awaited<ReturnType<typeof kishib>>['c'], op: str
   const review = await c.ask<Review>(op, args);
   assert.deepEqual(review.blocking, [], JSON.stringify(review.blocking));
   let state = await c.ask<State>('confirm', { plan: review.plan, digest: review.digest, ...(review.warning ? { warned: review.warning } : {}) });
-  for (let i = 0; state.sitting!.stage === 'sent' && i < 3; i++) state = await c.ask<State>('resend');
+  for (let i = 0; (state.sitting!.stage as string) === 'sent' && i < 3; i++) state = await c.ask<State>('resend');
   assert.equal(state.sitting!.stage, 'counts', JSON.stringify(state.sitting!.lines));
   const shown = await c.ask<{ words: string[] }>('words show');
   state = await c.ask<State>('words written');
@@ -77,7 +77,7 @@ test('someone else changes the keys with stolen paper words; the owner escapes w
     const kept = r.sections.find((s) => s.heading.startsWith('Your lines of acts'))!;
     assert.ok(kept.lines.some((l) => /Kept\.$/.test(l.text)), JSON.stringify(kept));
     let s = await k.c.ask<State>('confirm', { plan: r.plan, digest: r.digest });
-    for (let i = 0; s.sitting!.stage === 'sent' && i < 3; i++) s = await k.c.ask<State>('resend');
+    for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.c.ask<State>('resend');
     assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
     const escape = s.sitting!.act!;
     // As any reader sees it, from the new home and the relay: the escape counts, the thief's change is abandoned.
@@ -137,7 +137,7 @@ test('F299: two rotations served at one position of a self-hosted identity are c
     assert.ok(contest.lines.some((x) => x.text.includes(mine.state.sitting!.act!)));
     assert.ok(contest.lines.every((x) => /contested/.test(x.text)));
     let s = await k.c.ask<State>('confirm', { plan: r.plan, digest: r.digest });
-    for (let i = 0; s.sitting!.stage === 'sent' && i < 3; i++) s = await k.c.ask<State>('resend');
+    for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.c.ask<State>('resend');
     assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
     // As a reader of its homes and relays sees it (the gauntlet's 5.7f reader): the escape counts at the new home.
     const after = await reader(me.id, [base, relay.base, fresh.base]);

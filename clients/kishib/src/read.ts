@@ -162,7 +162,21 @@ export function linesUnder(rd: Read, binding: string): FoundLine[] {
 /** The homes in plain words. */
 export function homesWords(homes: Home[], effective?: string): string {
   const list = homes.map((h) => (h.operator ? `${h.hint} (operator ${short(h.operator)})` : `${h.hint} (self-hosted: the identity is its own home)`)).join('; ');
-  return `Its homes: ${list}.${effective ? ` The rule that counts: ${effective}.` : ''}`;
+  const operators = new Set(homes.map((h) => h.operator ?? 'own')).size;
+  const k = /^Threshold\((\d+)\)$/.exec(effective ?? '')?.[1];
+  const rule = !effective
+    ? ''
+    : k
+      ? ` A change of its keys counts once homes of ${k} of its ${operators} operators hold it and sign receipts.`
+      : /Own/.test(effective)
+        ? ' It is its own home: a change of its keys counts on its own signatures.'
+        : ' One home decides: a change of its keys counts once that home signs its receipt.';
+  return `Its homes: ${list}.${rule}`;
+}
+
+/** A line in plain words, as Kišib sees it: Kišib makes no line of its own, so none is "this device's". */
+export function kishibLineWords(l: FoundLine): string {
+  return lineWords(l).replace(/^A line made elsewhere( that this device cannot read)?/, (_, unread) => (unread ? 'A line Kišib cannot read' : 'A line of acts'));
 }
 
 /** An identity's record, in plain words (Kišib may show it: homes, receipts, lines, any contest). */
@@ -197,7 +211,7 @@ export function recordWords(rd: Read): { heading: string; lines: Line[] }[] {
       ],
     });
   }
-  out.push({ heading: 'Its lines of acts (each app or device keeps one)', lines: rd.lines.length ? rd.lines.map((l) => ({ text: lineWords(l), tone: l.readable ? undefined : ('warn' as const) })) : [{ text: 'No everyday act under the key in force was found.' }] });
+  out.push({ heading: 'Its lines of acts (each app or device keeps one)', lines: rd.lines.length ? rd.lines.map((l) => ({ text: kishibLineWords(l), tone: l.readable ? undefined : ('warn' as const) })) : [{ text: 'No everyday act under the key in force was found.' }] });
   return out;
 }
 

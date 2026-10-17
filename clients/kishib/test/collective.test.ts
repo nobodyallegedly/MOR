@@ -18,9 +18,8 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { fromWords, toWords } from '../../../modules/carry/src/carry.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
-import { closeAll, dub, edubba, everything, forms, kishib, refused, start, type Relay } from './world.ts';
+import { closeAll, everything, forms, founded, kishib, receiveShare, refused, start, type Relay } from './world.ts';
 import type { Review, State } from '../src/shapes.ts';
-import type { Client } from '../../desk/src/page/api.ts';
 
 let homes: Relay[];
 let relay: Relay;
@@ -35,56 +34,8 @@ after(async () => {
   for (const h of [...homes, relay]) await h.stop();
 });
 
-/** A member's share in its Dub: shown once, three words typed back, the one-time key destroyed. */
-async function receiveShare(c: Client, act: string): Promise<{ x: number; words: string[] }> {
-  const p = (await c.ask<any>('proposals')).proposals.find((x: any) => x.act === act);
-  assert.equal(p.share, 'ready', JSON.stringify(p.share));
-  const shown = await c.ask<any>('share', { thread: p.thread });
-  await c.ask('shareback', { thread: p.thread, typed: shown.positions.map((n: number) => shown.words[n - 1]) });
-  return { x: shown.x, words: shown.words };
-}
-
-/** A founded collective with a member change signed by everyone and waiting for Kišib. */
-async function founded() {
-  const H = homes.map((h) => h.base);
-  const e = await edubba(H, [relay.base]);
-  const f = await dub(H, [relay.base]);
-  const fWords = (await f.c.ask<{ words: string[] }>('carry')).words.join(' ');
-  await e.c.ask('bring', { name: 'Nobody, allegedly (test)', id: f.id, words: fWords, address: H[0], linked: false });
-  const ana = await dub([H[0]], [relay.base]);
-  const bo = await dub([H[1]], [relay.base]);
-  const cy = await dub(H, [relay.base]);
-  for (const [m, n] of [[ana, 'Ana'], [bo, 'Bo'], [cy, 'Cy']] as const) await e.c.ask('real contact add', { id: m.id, name: n });
-  const rv = await e.c.ask<any>('real found prepare', { name: 'The tablet house', founder: f.id, members: [ana.id, bo.id], safety: 2, release: 2, clone: 2, others: 2 });
-  const terms = (await e.c.ask<any>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
-  for (const m of [ana, bo]) {
-    await m.c.ask('signing', { on: true });
-    const p = (await m.c.ask<any>('proposals')).proposals.find((x: any) => x.act === terms);
-    await m.c.ask('accept', { thread: p.thread });
-  }
-  await e.c.ask('real gather', { act: terms });
-  const fd = await e.c.ask<any>('real found', { act: terms });
-  const col = fd.acts[0] as string;
-  const mine = await e.c.ask<any>('real show share', { collective: col, member: f.id });
-  await e.c.ask('real share back', { collective: col, member: f.id, typed: mine.positions.map((n: number) => mine.words[n - 1]) });
-  const papers: Record<string, { x: number; words: string[] }> = { [f.id]: { x: mine.x, words: mine.words } };
-  for (const m of [ana, bo]) papers[m.id] = await receiveShare(m.c, terms);
-
-  // The member change: Cy joins, Bo leaves. Every voice and the joining member sign, each in their own Dub.
-  const ch = await e.c.ask<any>('real change prepare', { collective: col, members: [f.id, ana.id, cy.id] });
-  const clone = (await e.c.ask<any>('real confirm', { plan: ch.plan, digest: ch.digest })).acts[0] as string;
-  await cy.c.ask('signing', { on: true });
-  for (const m of [ana, bo, cy]) {
-    const p = (await m.c.ask<any>('proposals')).proposals.find((x: any) => x.act === clone);
-    await m.c.ask('accept', { thread: p.thread });
-  }
-  const g = await e.c.ask<any>('real gather', { act: clone });
-  assert.equal(g.standing.enough, true);
-  return { H, e, f, fWords, ana, bo, cy, col, clone, papers };
-}
-
 test('a collective rotation from two of three paper shares, remote, completes the member change proposed in Edubba; the new shares reach the members’ one-time keys; nothing kept', async () => {
-  const { H, e, f, fWords, ana, bo, cy, col, clone, papers } = await founded();
+  const { H, e, f, fWords, ana, bo, cy, col, clone, papers } = await founded(homes, relay);
   const aWords = (await ana.c.ask<{ words: string[] }>('carry')).words.join(' ');
 
   // The founder starts it in Kišib: F337's plain words first; the change read back; who gets what.
@@ -130,7 +81,7 @@ test('a collective rotation from two of three paper shares, remote, completes th
   assert.equal(s.sitting!.request!.have, 2, JSON.stringify(s.sitting!.lines));
   assert.ok(s.sitting!.request!.from.includes(ana.id));
   s = await k1.c.ask<State>('collective rotate');
-  for (let i = 0; s.sitting!.stage === 'sent' && i < 3; i++) s = await k1.c.ask<State>('resend');
+  for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k1.c.ask<State>('resend');
   assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
   assert.ok(s.sitting!.lines.some((l) => /chain key is overwritten/.test(l.text)));
   assert.equal(s.sitting!.lines.filter((l) => /sealed to its one-time key/.test(l.text)).length, 2, JSON.stringify(s.sitting!.lines));
@@ -179,7 +130,7 @@ test('a collective rotation from two of three paper shares, remote, completes th
 });
 
 test('the hour (F337): a waiting one-time key expires; a share cannot be given after, and nothing can be opened', async () => {
-  const { H, f, fWords, ana, col, papers } = await founded();
+  const { H, f, fWords, ana, col, papers } = await founded(homes, relay);
   const aWords = (await ana.c.ask<{ words: string[] }>('carry')).words.join(' ');
   let clock = Math.floor(Date.now() / 1000);
   const k1 = await kishib(() => clock);
@@ -196,4 +147,34 @@ test('the hour (F337): a waiting one-time key expires; a share cannot be given a
   await refused(k1.c.ask('collective rotate'), /No rotation waits/);
   assert.equal((await lookUp(col, H)).resolution.links.length, 1, 'nothing signed');
   assert.equal((await k1.c.ask<State>('forget')).sitting, null);
+});
+
+test('in the same room: the papers typed one after another into one Kišib, nothing sent, no signing words; every new share shown here once', async () => {
+  const { H, f, ana, bo, cy, col, clone, papers } = await founded(homes, relay);
+  const k = await kishib();
+  const r = await k.c.ask<Review>('collective start', { collective: col, address: H[0], room: true, number: String(papers[bo.id].x), shareWords: papers[bo.id].words.join(' ') });
+  assert.deepEqual(r.blocking, []);
+  assert.match(r.signs[2], /Nothing is signed with anyone’s signing key/);
+  let s = await k.c.ask<State>('confirm', { plan: r.plan, digest: r.digest });
+  assert.deepEqual([s.sitting!.request!.have, s.sitting!.request!.room], [1, true]);
+  await refused(k.c.ask('collective paper', { number: String(papers[bo.id].x), words: papers[bo.id].words.join(' ') }), /already typed/);
+  s = await k.c.ask<State>('collective paper', { number: String(papers[ana.id].x), words: papers[ana.id].words.join(' ') });
+  await refused(k.c.ask('collective paper', { number: String(papers[f.id].x), words: papers[f.id].words.join(' ') }), /no more/);
+  s = await k.c.ask<State>('collective rotate');
+  for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.c.ask<State>('resend');
+  assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
+  assert.deepEqual(s.sitting!.shares!.map((x) => x.holder).sort(), [f.id, ana.id, cy.id].sort(), 'every new share shown here');
+  const xs: number[] = [];
+  for (const m of [f.id, ana.id, cy.id]) {
+    xs.push((await k.c.ask<{ x: number }>('collective share', { holder: m })).x);
+    await k.c.ask('collective share written', { holder: m });
+  }
+  assert.deepEqual(xs.sort(), [1, 2, 3]);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  await lookUp(col, [H[0], relay.base], {}, v);
+  for (const id of [f.id, ana.id, bo.id, cy.id, col]) {
+    if (id !== col) await lookUp(id, [relay.base, ...H], {}, v);
+    for (const it of (await relayAt(relay.base).feed({ signer: id })).items) if (it.kind === 'act') try { v.add(it.item); } catch { /* private */ }
+  }
+  assert.equal((v.agreementsCurrent(AGREEMENTS_SPECS, col) as { agreement: string }).agreement, clone);
 });

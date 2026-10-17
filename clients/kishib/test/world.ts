@@ -117,3 +117,52 @@ export async function reader(id: string, hints: string[]): Promise<{ links: { ac
   }
   return l.verifier.resolve(id) as { links: { act: string; position: number; how: string }[]; stop: string };
 }
+
+/** A member's share in its Dub: shown once, three words typed back, the one-time key destroyed. */
+export async function receiveShare(c: Client, act: string): Promise<{ x: number; words: string[] }> {
+  const p = (await c.ask<any>('proposals')).proposals.find((x: any) => x.act === act);
+  assert.equal(p.share, 'ready', JSON.stringify(p.share));
+  const shown = await c.ask<any>('share', { thread: p.thread });
+  await c.ask('shareback', { thread: p.thread, typed: shown.positions.map((n: number) => shown.words[n - 1]) });
+  return { x: shown.x, words: shown.words };
+}
+
+/** A founded collective with a member change signed by everyone and waiting for Kišib. */
+export async function founded(homes: Relay[], relay: Relay) {
+  const H = homes.map((h) => h.base);
+  const e = await edubba(H, [relay.base]);
+  const f = await dub(H, [relay.base]);
+  const fWords = (await f.c.ask<{ words: string[] }>('carry')).words.join(' ');
+  await e.c.ask('bring', { name: 'Nobody, allegedly (test)', id: f.id, words: fWords, address: H[0], linked: false });
+  const ana = await dub([H[0]], [relay.base]);
+  const bo = await dub([H[1]], [relay.base]);
+  const cy = await dub(H, [relay.base]);
+  for (const [m, n] of [[ana, 'Ana'], [bo, 'Bo'], [cy, 'Cy']] as const) await e.c.ask('real contact add', { id: m.id, name: n });
+  const rv = await e.c.ask<any>('real found prepare', { name: 'The tablet house', founder: f.id, members: [ana.id, bo.id], safety: 2, release: 2, clone: 2, others: 2 });
+  const terms = (await e.c.ask<any>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
+  for (const m of [ana, bo]) {
+    await m.c.ask('signing', { on: true });
+    const p = (await m.c.ask<any>('proposals')).proposals.find((x: any) => x.act === terms);
+    await m.c.ask('accept', { thread: p.thread });
+  }
+  await e.c.ask('real gather', { act: terms });
+  const fd = await e.c.ask<any>('real found', { act: terms });
+  const col = fd.acts[0] as string;
+  const mine = await e.c.ask<any>('real show share', { collective: col, member: f.id });
+  await e.c.ask('real share back', { collective: col, member: f.id, typed: mine.positions.map((n: number) => mine.words[n - 1]) });
+  const papers: Record<string, { x: number; words: string[] }> = { [f.id]: { x: mine.x, words: mine.words } };
+  for (const m of [ana, bo]) papers[m.id] = await receiveShare(m.c, terms);
+
+  // The member change: Cy joins, Bo leaves. Every voice and the joining member sign, each in their own Dub.
+  const ch = await e.c.ask<any>('real change prepare', { collective: col, members: [f.id, ana.id, cy.id] });
+  const clone = (await e.c.ask<any>('real confirm', { plan: ch.plan, digest: ch.digest })).acts[0] as string;
+  await cy.c.ask('signing', { on: true });
+  for (const m of [ana, bo, cy]) {
+    const p = (await m.c.ask<any>('proposals')).proposals.find((x: any) => x.act === clone);
+    await m.c.ask('accept', { thread: p.thread });
+  }
+  const g = await e.c.ask<any>('real gather', { act: clone });
+  assert.equal(g.standing.enough, true);
+  return { H, e, f, fWords, ana, bo, cy, col, clone, papers };
+}
+

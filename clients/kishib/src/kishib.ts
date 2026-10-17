@@ -187,8 +187,6 @@ export class Kishib {
         };
       }
       const earlier = rd.look.resolution.links.length;
-      const used = indexOf(seed, r.chainKeyScheme!, '', 0) !== null;
-      void used;
       return {
         title: 'These are not the words this identity needs now',
         lines: [
@@ -253,7 +251,7 @@ export class Kishib {
       const clock = declaresClock(rd);
       const sections: Section[] = [
         ...recordWords(rd).filter((s) => s.heading !== 'Its lines of acts (each app or device keeps one)'),
-        { heading: 'Its lines of acts: what this rotation keeps (Identity rule 35)', lines: plan.shown.map((x) => ({ text: x.text, tone: x.tone })) },
+        { heading: 'Its lines of acts: what this rotation keeps (Identity rule 35)', lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m: string, u?: string) => (u ? 'A line Kišib cannot read' : 'A line of acts')), tone: x.tone })) },
         {
           heading: 'What changes',
           lines: [
@@ -497,7 +495,7 @@ export class Kishib {
             tone: 'bad' as const,
           })),
         },
-        { heading: 'Your lines of acts: what the escape keeps (Identity rule 35)', lines: plan.shown.map((x) => ({ text: x.text, tone: x.tone })) },
+        { heading: 'Your lines of acts: what the escape keeps (Identity rule 35)', lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m: string, u?: string) => (u ? 'A line Kišib cannot read' : 'A line of acts')), tone: x.tone })) },
         {
           heading: 'What changes',
           lines: [
