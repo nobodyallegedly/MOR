@@ -180,7 +180,7 @@ export function foldCard(id: string, key: string, title: string, body: string, o
   return `<details class="card fold" id="${e(id)}" data-fold="${e(key)}"${open ? ' open' : ''}><summary><h3>${title}</h3>${after}<span class="small hint"></span></summary>${body}</details>`;
 }
 
-function lines(ls: Line[]): string {
+export function lines(ls: Line[]): string {
   return `<ul>${ls.map((l) => `<li class="${e(l.tone ?? '')}">${e(l.text)}</li>`).join('')}</ul>`;
 }
 
@@ -604,6 +604,7 @@ ${foldCard('e-rely', 'identity-rely', 'Rely on an act', `<p class="small">${e(WI
 <form id="rely" class="row"><input name="act" type="text" class="grow" placeholder="The act’s id: 64 hexadecimal characters" autocomplete="off" spellcheck="false" required><button type="submit">Read it back</button></form>
 <div id="e-rely-shown"></div>`, false)}
 ${releaseCard(i)}
+${payCard(i.id)}
 ${foldCard('e-drafts-fold', 'identity-drafts', `Drafts from Claude (${mine.length})`, `<div class="row"><button class="quiet" data-action="drafts">Look for new drafts now</button><span class="small" id="drafts-watch" role="status" aria-live="polite">${WATCHING}</span></div>
 <div id="drafts">${mine.map(draft).join('') || '<p class="empty small">No draft is waiting for it.</p>'}</div>`)}
 ${foldCard('e-received', 'identity-received', 'What it received', `<div class="row"><button data-action="refresh" data-identity="${e(i.id)}">Look for what it received</button></div>
@@ -642,6 +643,58 @@ ${
     ? '<div class="row"><button data-action="rely-cancel">Close</button></div>'
     : `<form id="rely-sign" data-identity="${e(identity)}" data-act="${e(r.act)}"><label>Type RELY to sign the witness act</label><div class="row"><input name="typed" type="text" class="narrow" autocomplete="off" spellcheck="false"><button type="submit" class="primary">Sign the witness act</button><button type="button" data-action="rely-cancel">Cancel</button></div></form>`
 }</div>`;
+}
+
+/** Said wherever Edubba prepares money (F338): kept equal to `MONEY_SAY` in `../money.ts`. */
+export const MONEY_SAY = 'Prepared here, not signed here: Edubba seals a draft to the identity at its homes, and Damgar, holding the same identity, reads it to you and signs it or not. Edubba signs no money act and holds no wallet.';
+
+/** A payment form, prepared for Damgar: to whom, how much, in which unit (filled by the page from `money units`), what for. */
+function payForm(id: string, identity: string, to = ''): string {
+  return `<form id="${e(id)}" data-identity="${e(identity)}" class="money"><label>To: an identity’s ID</label><input name="to" type="text" value="${e(to)}" autocomplete="off" spellcheck="false" required>
+<div class="row"><label>Amount, in the unit’s smallest part <input name="value" type="text" inputmode="numeric" class="narrow" required></label><label>Unit <select name="unit" data-units></select></label></div>
+<label>What for (optional)</label><input name="whatFor" type="text">
+<p class="small">${e(MONEY_SAY)}</p><div class="row"><button type="submit">Prepare it for Damgar</button></div></form>`;
+}
+
+/** F338: a payment from this identity, prepared here and signed in Damgar. */
+export function payCard(identity: string): string {
+  return foldCard('e-pay', 'identity-pay', 'Pay someone (prepared for Damgar)', payForm('pay-someone', identity), false);
+}
+
+/** F338: money for a real collective, from the identity acting here: paying a member; Bitcoin anchoring of one of its acts, an option only. Never its releases (Ummia's, F339). */
+export function realMoney(s: State, id: string, members: string[]): string {
+  const acting = s.acting ?? '';
+  return `${foldCard('e-real-pay', 'collective-pay', 'Pay a member (prepared for Damgar)', `<p class="small">From ${e(s.identities.find((i) => i.id === acting)?.name ?? 'the identity acting here')}: your own payment, never the collective’s (collective payments are round 2).</p>
+<div class="row">${members.filter((m) => m !== acting).map((m) => `<button type="button" data-action="pay-member" data-member="${e(m)}">${person(s, m)}</button>`).join('')}</div>${payForm('pay-member', acting)}`, false)}
+${foldCard('e-real-anchor', 'collective-anchor', 'Anchor one of its acts on Bitcoin (optional)', `<ul class="say">${ANCHOR_SAY.map((t) => `<li>${e(t)}</li>`).join('')}</ul>
+<form id="anchor-offers" data-collective="${e(id)}"><label>The act</label><select name="act" data-anchorable="${e(id)}"></select>
+<label>The anchoring service: its ID</label><div class="row"><input name="service" type="text" class="grow" autocomplete="off" spellcheck="false" required><button type="submit">Read its offer</button></div></form>
+<div id="e-anchor-offer"></div><h4>Anchors asked</h4><div id="e-anchors"><p class="small">Reading…</p></div>`, false)}`;
+}
+
+/** Said where anchoring is offered: kept equal to `ANCHOR_SAY` in `../money.ts`. */
+export const ANCHOR_SAY = [
+  'Optional. An anchor puts this act’s fingerprint on the Bitcoin chain through a pooled anchoring service, so anyone can later see it existed by a given block.',
+  'The service is sent a leaf: the act’s id mixed with a random secret (the blind) Edubba keeps. It never learns the act. A lost blind loses the anchor’s use.',
+  'You pay the service’s price in Damgar, following its standing offer; its ticket promises a batch and a deadline (a block). Left out of its batch, or late, the price is owed back under its offer.',
+  'Round 1 runs on regtest, with a test anchoring service of ours, labelled: its coins are worth nothing.',
+];
+
+/** A service's standing offers, each tier a choice, then the button preparing the payment for Damgar. */
+export function anchorOffers(collective: string, act: string, service: string, offers: { act: string; tiers: { price: number; blocks: number }[]; unit: string; network: number | null; words: string | null }[], units: { hash: string; label: string }[]): string {
+  if (!offers.length) return note('warn', 'No standing offer under the anchoring cMIP was found for that identity.');
+  const unit = (h: string) => units.find((u) => u.hash === h)?.label ?? `unit ${h.slice(0, 8)}…`;
+  return offers
+    .map(
+      (o) => `<form class="card anchor-ask" data-collective="${e(collective)}" data-act="${e(act)}" data-service="${e(service)}" data-offer="${e(o.act)}"><h4>Its standing offer ${fp(o.act)}</h4>${o.words ? `<p class="small">${e(o.words)}</p>` : ''}
+${o.tiers.map((t, i) => `<label class="check"><input type="radio" name="tier" value="${i}"${i === 0 ? ' checked' : ''}> Within ${t.blocks} blocks, for ${t.price} ${e(unit(o.unit))}</label>`).join('')}
+<div class="row"><button type="submit" class="primary">Prepare the payment for Damgar</button></div></form>`,
+    )
+    .join('');
+}
+
+export function anchors(xs: { act: string; label: string; service: string; tier: number; state: string; lines: Line[] }[]): string {
+  return xs.length ? xs.map((x) => `<div class="item"><span class="tag">${e(x.state)}</span> ${e(x.label)} ${fp(x.act)} <span class="small">by ${fp(x.service)}, tier ${x.tier}</span>${lines(x.lines)}</div>`).join('') : '<p class="empty small">None asked yet.</p>';
 }
 
 /** H16: a release under this identity's own name, its folder chosen at each release. */
@@ -998,5 +1051,6 @@ ${foldCard('e-real-release', 'collective-release', 'A release', `<form id="real-
 <div class="row"><label>Its name <input name="name" type="text" class="pet"></label><label>Its version <input name="version" type="text" class="narrow" required></label></div>
 <div class="row"><button type="submit">Review the release</button></div></form>`)}
 <div id="e-real-review"></div>
+${realMoney(s, id, c.members)}
 <h3>Its posts</h3><div id="e-posts"><p class="small">Reading…</p></div>`;
 }

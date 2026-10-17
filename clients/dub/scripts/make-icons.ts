@@ -1,7 +1,9 @@
 // The apps' icons (H25), from their drawings: Dub's (`static/icon/dub.svg`,
 // a tablet), Edubba's (`../desk/static/icon/edubba.svg`, a house of
-// tablets) and Kišib's (`../kishib/static/icon/kishib.svg`, a cylinder seal
-// beside the strip of clay it leaves). Each is rendered by Chromium at the sizes the Mac and Linux ask
+// tablets), Kišib's (`../kishib/static/icon/kishib.svg`, a cylinder seal
+// beside the strip of clay it leaves) and Damgar's
+// (`../damgar/static/icon/damgar.svg`, a clay tablet with a resting duck
+// carved out of it). Each is rendered by Chromium at the sizes the Mac and Linux ask
 // for, then:
 //   NAME.png    256 pixels, for the Linux desktop entry (`make-desktop.sh`);
 //   NAME.icns   the Mac's icon file, its PNG entries 16 to 1024 pixels
@@ -93,6 +95,7 @@ try {
     [join(here, 'static', 'icon'), 'dub'],
     [join(here, '..', 'desk', 'static', 'icon'), 'edubba'],
     [join(here, '..', 'kishib', 'static', 'icon'), 'kishib'],
+    [join(here, '..', 'damgar', 'static', 'icon'), 'damgar'],
   ] as const) {
     const svg = readFileSync(join(dir, `${name}.svg`), 'utf8');
     const pngs = new Map<number, Buffer>();

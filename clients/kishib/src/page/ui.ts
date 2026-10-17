@@ -50,6 +50,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
 
   async function show(state: v.State) {
     current = null;
+    v.setUnits(state.units);
     if (!state.sitting) {
       app.innerHTML = v.start(b.web);
       return;

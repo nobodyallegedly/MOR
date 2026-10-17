@@ -43,6 +43,8 @@ import { carriedKey, lookCurrent, servedChain } from './carryin.ts';
 import { NAME, NAME_WITHDRAWAL, namePayload, namesOf, readName } from './names.ts';
 import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PEOPLE_SPEC_1, PUBLISH_WARNING, SEALED_LIST, followListPayload, readFollowList, readSealedList, sealedListPayload, type Followed, type Kept, type People } from './people.ts';
 import type { Held, Item, Line, Message, Pic, Proposal, ShareShown, State, Who } from './shapes.ts';
+import { sendDraft } from '../../damgar/src/messages.ts';
+import { UNITS_MODULES, readValue } from '../../damgar/src/units.ts';
 
 export type { Line, State } from './shapes.ts';
 
@@ -240,7 +242,9 @@ export class Dub {
       held.push({ id, grouped: groupId(id), who: this.whoFrom(id, active, null), active: id === active, kind: s.kind });
     }
     const pend = await this.store.pending();
-    const out: State = { stage: 'identity', held };
+    const units = UNITS_MODULES.flatMap((m) => m.units.map((u) => ({ hash: u.hash, label: `${u.many} (${m.name})`, regtest: u.network === 3 })));
+    units.sort((a, b) => Number(b.regtest) - Number(a.regtest));
+    const out: State = { stage: 'identity', held, units: units.map(({ hash, label }) => ({ hash, label })) };
     if (pend) {
       out.stage = 'confirm';
       out.confirm = { positions: pend.positions, id: pend.identity.identity };
@@ -1387,6 +1391,46 @@ export class Dub {
       const lines = await this.syncFollows(me, s, p, (q) => f(q, me));
       if (p.list === 'published') lines.push(...(await this.publishList(me, s, p, false)));
       return { lines };
+    });
+  }
+
+  // ------------------------------------------------------------ money, prepared here and signed in Damgar (F338)
+
+  /**
+   * A tip on a post, or a request to be paid, prepared here and never
+   * signed here as money (F338: "the other apps need to be able to offer to
+   * create the acts without signing them"): a draft of the money messages
+   * cMIP, a private act sealed to this identity itself and left at its
+   * homes, where Damgar, holding the same identity, picks it up, reads it in
+   * plain words, and signs or declines it. Dub signs only the draft.
+   */
+  moneyDraft(a: { what: 'pay' | 'ask'; other: string; value: string; unit: string; whatFor?: string; post?: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      let other: string;
+      try {
+        other = readId(a.other);
+      } catch (e) {
+        throw new Error(`${a.what === 'pay' ? 'Whom to tip' : 'Whom to ask'}: ${message(e)}. Nothing was prepared.`);
+      }
+      if (other === me.id) throw new Error('That is this identity itself. Nothing was prepared.');
+      if (!UNITS_MODULES.some((m) => m.units.some((u) => u.hash === a.unit))) throw new Error('Choose a unit. Nothing was prepared.');
+      const value = readValue(a.value);
+      const whatFor = a.whatFor?.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : null;
+      let refs: [string, string][] | undefined;
+      if (a.post) {
+        const d = describeAct((await followRef([readId(a.post), other], [...hints, ...this.inboxPlaces(await this.store.people(me.id))], s.via)).act) as Described;
+        if (d.signer !== other) throw new Error('The post tipped is not signed by the identity tipped. Nothing was prepared.');
+        refs = [[d.id, other]];
+      }
+      await this.current(me);
+      const r = await sendDraft(me, { what: a.what, other, amount: { unit: a.unit, value }, whatFor, app: 'Dub', anchor: null }, { refs, via: s.via, save: () => this.store.saveIdentity(me) });
+      return {
+        lines: [
+          { text: `Prepared, not signed: ${a.what === 'pay' ? 'a tip' : 'a request to be paid'}, sealed to this identity and left at its homes (${r.left.join(', ')}).`, tone: 'ok' },
+          { text: 'Open Damgar with this identity: the draft waits there, in To sign, to be read and signed or declined. Dub signs no money act.' },
+        ],
+      };
     });
   }
 

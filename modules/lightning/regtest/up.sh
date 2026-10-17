@@ -63,4 +63,10 @@ for n in bob carol; do
 done
 C generate 6 >/dev/null
 until [ "$(node alice listchannels | grep -c '"active": *true')" = 2 ]; do sleep 1; done
+# Where each node answers, for programs that use this network (the test wallet, clients/testwallet).
+{ printf '{"nodes": ['; sep=""
+  for spec in $NODES; do IFS=: read -r n rpc p2p rest <<< "$spec"
+    printf '%s\n  {"name": "%s", "rest": %s, "lnddir": "%s"}' "$sep" "$n" "$rest" "$R/$n"; sep=","
+  done
+  printf '\n]}\n'; } > "$R/nodes.json"
 echo "regtest Lightning network ready in $R"

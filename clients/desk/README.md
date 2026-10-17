@@ -55,6 +55,14 @@ Two fixes the Dub report left for the desk: **a private message's locked act als
 
 **+ Bring an existing collective** (H15): by its ID. Edubba reads it from the homes and relays in Settings as anyone could (its chain, the agreement its chain declares, its parties' acts, and Agreements' own reading of the agreement in force), and keeps it only if one of your identities, held by Edubba or in the collective client's folder, is a party of that agreement. **Edubba holds none of its keys**: the collective is listed as "brought here · no key held"; it shows what its agreement says (who holds its key, which areas reach a text or a picture and who must sign), its constitution in plain words, and its posts; nothing can be signed for it from here. Signing as a member on this device comes with real collectives (H18).
 
+### Money, prepared for Damgar (F338)
+
+Edubba signs no money act: it prepares drafts sealed to the identity's own identity (the money messages cMIP), which Damgar reads and signs (`src/money.ts`).
+
+- **Pay someone** (Identities tab, an identity): an amount in a unit the Bitcoin units Module names, to an identity, for what.
+- **Anchor one of its acts on Bitcoin** (Collectives tab, a real collective; optional): one of the collective's acts (never a release: that moves to Ummia), a test anchoring service's standing offer read, a tier chosen. Edubba keeps the leaf's blind (`money/anchors.json`); Damgar pays the service after checking its ticket; Edubba shows the anchor as asked, pending, then anchored at its block, checked against the regtest chain it follows (`npm start -- --regtest RUN_DIR`, `docs/damgar-regtest.md`) by the Bitcoin clock Module's rule.
+- Collective payments and splits: round 2.
+
 ### Agents, folded (H34)
 
 Each section of an agent's page folds, remembered by the program: its terms, its queue, nudging it, its cap and its key (folded at first), its drafts, what it did (folded at first).

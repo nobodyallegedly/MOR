@@ -1,0 +1,26 @@
+{
+  "name": "mor-anchoring-service",
+  "version": "0.1.0",
+  "description": "A TEST pooled anchoring service on regtest (F338): its standing offer, tickets, receipts and published batches, talking only through MOR acts. Never for real money.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsc --noEmit && echo 'The service is tested where it is used: clients/damgar (anchor.test.ts, browser.test.ts, regtest.test.ts).'",
+    "start": "node --import tsx src/cli.ts run"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "typescript": "^5"
+  },
+  "bin": {
+    "mor-anchoring-service": "./src/cli.ts"
+  }
+}

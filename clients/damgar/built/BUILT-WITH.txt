@@ -1,0 +1,29 @@
+Damgar’s web client, as published in the release (testing only; to be served at damgar.dubsar.org).
+Rebuild: cd clients/genesis && npm run wasm; cd ../damgar && npm run release.
+The same tools give the same bytes (test/web-build.test.ts):
+
+rustc: rustc 1.97.0 (2d8144b78 2026-07-07)
+wasm-bindgen: wasm-bindgen 0.2.129
+esbuild: 0.25.12
+
+Work hash of each file (as the display client lists them):
+a7f6321ee36bdce41ae2098b2952f8dbd937bb819cf5ce80378041d40c56be69  index.html
+7100ac1ef9b5f7b953494b40bd0f12621b74497776a04d3b6d0c6e27516b6cad  damgar.js
+cc72e444c3a282321bb646a105157e40bba8c07624ade3bd4388414714fc56ce  damgar.css
+fa027dc5740199fd25c3bf7d707b66b006d68de19aec31939b5592830121fbbb  mor_wasm_bg.wasm
+d72e0f61b65931f575516d8d39caa75d2ad09b04b0ea606aee6a157b2e5eb146  inter_light.woff2
+56958edadcbbe43d1c48f5f952970f0656018291b2e29ea72d732351c99cba65  inter_regular.woff2
+a63d578c41abf416497080d59d2ecd9ecf4fce5458f7543556acc9a8a9d2cc5c  inter_license.txt
+20727dd20b79b510c7643a851822900058e7cc1a5a8da544b47067a9e1f34281  icon.png
+ac1bd1f40cf29d64a9a33a7cf181159def05326d300fa318cd8c1ae5b73f4153  apple-touch-icon.png
+
+SHA-256 of each file (as sha256sum prints it):
+6cfbfe84d83a22d0c0ba7bfcb8ded62e26f3d7b66f0508376c2d4f2012b99a63  index.html
+032f990d9804de45bba0cceb7e338f00bea45113b7c3962d0d4749c44e1251a8  damgar.js
+611e9c7bd16e2ad025ccef5f7620325f34a4adac23a9d0819eb676892bfd557b  damgar.css
+46bf0ec1c3b2558e8e2f9851d7255464aeb54933e6f5e028cfdf78a1b7f9b2b3  mor_wasm_bg.wasm
+e111a1e2ad914ccda9179b95e83fb10234dd52a1932e0b93c480476227983fd9  inter_light.woff2
+e06f6b1bc553aaea4e4668023ed0ab0a147129c3107f511bc7d03d361b0ae085  inter_regular.woff2
+262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a  inter_license.txt
+d13c2721cc032fc588123fb5cd64ca0c13bcf3bb4449413f4094e852ff79dd0a  icon.png
+92319aa30480cf122a7c3c8013383455b2cbcc6606fc524eeaec9f55b19caff7  apple-touch-icon.png

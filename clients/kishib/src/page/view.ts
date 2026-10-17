@@ -109,6 +109,21 @@ const words = (name: string, label: string) => `<label>${label}</label><textarea
 const address = `<label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>`;
 const forgotten = `<p class="small">What you type is used for this act alone, then overwritten. Nothing is written to this device.</p>`;
 
+/** The units a vault may name, as the program lists them (set by the page on each state). */
+let units: { hash: string; label: string; network: number }[] = [];
+export const setUnits = (u: { hash: string; label: string; network: number }[] | undefined) => (units = u ?? []);
+
+/** The vault, in a change of keys (Money rule 2: only with the chain key; decided by Nobody, allegedly: "its setting belongs in Kišib"). Kept unless chosen. */
+const vaultFields = `<details><summary>The vault (optional): keep it, change it, or remove it</summary>
+<p class="small">The vault is where a payment above a limit must go, per unit, and the one place a thief holding only the signing key cannot point payments (Money rules 2 and 3). It changes only with the chain key, so only here. Its node or key should be another than your flow’s, which Damgar names.</p>
+<label>The vault</label><select name="vault"><option value="keep" selected>Keep it as it is</option><option value="set">Declare it anew, as below</option><option value="remove">Remove it (every payment to the flow)</option></select>
+<div class="row"><label>Its unit <select name="vaultUnit" data-vault-units>${'{units}'}</select></label><label>Network <select name="vaultNetwork"><option value="3" selected>regtest</option><option value="2">signet</option></select></label></div>
+<label>Lightning: the vault’s node key (66 hexadecimal characters; not your flow’s node)</label><input name="vaultNode" autocomplete="off" spellcheck="false">
+<label>Its limit: the largest single payment that may still go to the flow (0: every payment to the vault)</label><input name="vaultLightningLimit" inputmode="numeric" value="0">
+<label>On-chain: the vault’s Bitcoin key, x-only (64 hexadecimal characters)</label><input name="vaultKey" autocomplete="off" spellcheck="false">
+<label>Its request key (Damgar’s Settings show one; it signs address requests, and must stay online)</label><input name="vaultRequest" autocomplete="off" spellcheck="false">
+<label>Its limit</label><input name="vaultOnchainLimit" inputmode="numeric" value="0"></details>`;
+
 /** A form for one door. */
 export function form(kind: string, web: boolean): string {
   const f = (title: string, intro: string, body: string, button: string) =>
@@ -119,7 +134,7 @@ export function form(kind: string, web: boolean): string {
         'Change an identity’s keys',
         'Kišib reads the identity from its homes and every relay its routes name, finds every line of its acts (Dub’s, Edubba’s, the web client’s), and reads it all back in plain words before anything is signed.',
         `${idField('id', 'The identity’s ID')}${address}${words('words', 'Its chain key’s 24 words, in order (the paper written when it was made; never the signing key’s words)')}
-<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>`,
+<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultFields.replace('{units}', units.map((u) => `<option value="${e(u.hash)}">${e(u.label)}</option>`).join(''))}`,
         'Read it back',
       );
     case 'succession':

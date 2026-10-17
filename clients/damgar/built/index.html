@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Damgar, for testing only</title>
+<link rel="stylesheet" href="damgar.css">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+</head>
+<body>
+<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> Test identities and test networks only, until MOR is frozen. No real money. The risks, in plain words:</p>
+<ol><li>Whoever serves this page’s code at the moment you bring an identity here could copy its signing key, and the on-chain request key Damgar makes: with them, sign claims and receipts as you, and commit your side to payments you did not intend.</li>
+<li>This browser’s storage, where those keys are kept, can be lost, or read by what runs in this page.</li>
+<li>Damgar holds no wallet: money moves only in your own wallet, on a test network. This page follows no chain, so an on-chain payment is shown paid, not yet checked against the chain.</li></ol>
+<p>Never bring a real identity here, and never pay real money for anything it shows.</p></div>
+<main id="app"><p class="small">Loading the core library…</p></main>
+<noscript><main>This page makes and signs every act in your browser, so it needs JavaScript.</main></noscript>
+<script type="module" src="damgar.js"></script>
+</body>
+</html>

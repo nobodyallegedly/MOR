@@ -1,0 +1,34 @@
+{
+  "name": "mor-damgar",
+  "version": "0.1.0",
+  "description": "Damgar (dam-gàr, the merchant; F338): a money app that holds no wallet. It gathers proposed money acts and offers them for signing, verifies payments from the rails' own evidence, and keeps the account. On the Mac and Linux, a program and its page; on the web, the same page, for testing only. Test identities and test networks only, until MOR is frozen.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-damgar": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "build": "node --import tsx scripts/build-web.ts",
+    "release": "node --import tsx scripts/build-web.ts --release",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts",
+    "test:build": "node --import tsx --test test/build/*.test.ts",
+    "start": "node --import tsx src/cli.ts open"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0",
+    "esbuild": "^0.25",
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@noble/curves": "^2.4.0",
+    "@types/node": "^22.20.4",
+    "playwright-core": "1.56",
+    "typescript": "^5"
+  }
+}

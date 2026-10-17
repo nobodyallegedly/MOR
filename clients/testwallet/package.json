@@ -1,0 +1,27 @@
+{
+  "name": "mor-testwallet",
+  "version": "0.1.0",
+  "description": "A TEST wallet (F338): a plain page over the regtest lnd nodes that modules/lightning/regtest/up.sh starts, to pay and be paid while trying Damgar. Regtest only; never a real wallet, never real money.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-testwallet": "./src/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts",
+    "start": "node --import tsx src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "playwright-core": "1.56",
+    "typescript": "^5"
+  }
+}

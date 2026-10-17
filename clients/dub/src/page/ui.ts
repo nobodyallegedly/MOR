@@ -479,6 +479,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         $<HTMLTextAreaElement>('post')?.querySelector('textarea')?.focus();
         break;
       }
+      case 'tip': {
+        if (!card) break;
+        const t = card.querySelector('.tipping');
+        if (t) t.innerHTML = v.tipForm(state?.units);
+        break;
+      }
+      case 'untip':
+        if (card) card.querySelector('.tipping')!.innerHTML = '';
+        break;
       case 'unreply':
         replying = null;
         fill('replying', '');
@@ -597,6 +606,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     if (name === 'pair') return; // the program's own start handles it (`app.ts`)
     ev.preventDefault();
     const d = new FormData(form);
+    if (form.classList.contains('tip')) {
+      const card = form.closest<HTMLElement>('article');
+      const r = await busy('Sealing the draft to this identity…', () => b.ask<{ lines: v.Line[] }>('tip', { post: card?.dataset.post, signer: card?.dataset.signer, value: String(d.get('value') ?? ''), unit: String(d.get('unit') ?? ''), whatFor: String(d.get('whatFor') ?? '') }));
+      if (r) {
+        form.remove();
+        say('done', v.lines(r.lines));
+      }
+      return;
+    }
     if (form.classList.contains('share-back')) {
       const typed = [...form.querySelectorAll<HTMLInputElement>('input')].map((i) => i.value);
       const r = await busy('Checking the words, then destroying the one-time key…', () => b.ask<{ lines: v.Line[] }>('shareback', { thread: form.dataset.thread, typed }));
@@ -607,6 +625,14 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       return;
     }
     switch (name) {
+      case 'askpaid': {
+        const r = await busy('Sealing the draft to this identity…', () => b.ask<{ lines: v.Line[] }>('ask paid', { to: String(d.get('to') ?? ''), value: String(d.get('value') ?? ''), unit: String(d.get('unit') ?? ''), whatFor: String(d.get('whatFor') ?? '') }));
+        if (r) {
+          form.reset();
+          say('done', v.lines(r.lines));
+        }
+        return;
+      }
       case 'begin': {
         const r = await busy('Asking each home who runs it, and making the identity…', () =>
           b.ask<{ words: string[]; positions: number[]; say: string[] }>('begin', { homes: linesOf(d.get('homes')), relays: linesOf(d.get('relays')), via: viaOf(d.get('via')), name: String(d.get('name') ?? '') }),

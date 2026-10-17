@@ -8,6 +8,21 @@ import type { Kishib } from './kishib.ts';
 const text = (v: unknown): string => (typeof v === 'string' ? v : '');
 const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : []);
 
+/** The vault's change, as the rotate form gives it: kept by default. */
+function vaultOf(a: Record<string, unknown>): import('./kishib.ts').VaultChange {
+  const c = text(a.vault);
+  if (c === 'remove') return { change: 'remove' };
+  if (c !== 'set') return { change: 'keep' };
+  const n = (v: unknown) => Number(text(v) || '0');
+  return {
+    change: 'set',
+    network: Number(text(a.vaultNetwork) || '3'),
+    unit: text(a.vaultUnit),
+    lightning: text(a.vaultNode) ? { node: text(a.vaultNode), limit: n(a.vaultLightningLimit) } : undefined,
+    onchain: text(a.vaultKey) ? { key: text(a.vaultKey), request: text(a.vaultRequest), limit: n(a.vaultOnchainLimit) } : undefined,
+  };
+}
+
 /** The names of every operation, so a page and a test can be checked against them. */
 export const OPS = [
   'state',
@@ -44,7 +59,7 @@ export async function run(k: Kishib, op: string, a: Record<string, unknown>): Pr
     case 'record':
       return k.record({ id: text(a.id), address: text(a.address) });
     case 'rotate plan':
-      return k.rotatePlan({ id: text(a.id), address: text(a.address), words: text(a.words), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list(a.leaveOut), cards: text(a.cards) });
+      return k.rotatePlan({ id: text(a.id), address: text(a.address), words: text(a.words), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list(a.leaveOut), cards: text(a.cards), vault: vaultOf(a) });
     case 'escape plan':
       return k.escapePlan({ id: text(a.id), address: text(a.address), words: text(a.words), signingWords: text(a.signingWords), homes: text(a.homes), leaveOut: list(a.leaveOut), cards: text(a.cards) });
     case 'confirm plan':

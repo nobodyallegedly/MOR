@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Test wallet (regtest)</title>
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<header id="test-label"><strong>TEST WALLET · regtest only.</strong> These are not bitcoins: regtest coins exist only on this computer and are worth nothing. This page is not Damgar and not part of MOR: it stands in for your own wallet while you try Damgar, over the test nodes alice, bob and carol.</header>
+<main>
+<section><h2>Node</h2><div id="nodes"><p>Reading the nodes…</p></div></section>
+<section><h2>Pay an invoice</h2>
+<form id="read"><label for="pay-invoice">Invoice (lnbcrt…)</label><textarea id="pay-invoice" name="invoice" rows="3" spellcheck="false" required></textarea><button type="submit">Read it</button></form>
+<div id="pay-out"></div></section>
+<section><h2>Make an invoice</h2>
+<form id="invoice"><label for="inv-sat">Amount (regtest satoshis)</label><input id="inv-sat" name="sat" inputmode="numeric" required>
+<label for="inv-dh">Description hash (64 hex, as Damgar shows it)</label><input id="inv-dh" name="descriptionHash" spellcheck="false">
+<button type="submit">Make it</button></form>
+<div id="invoice-out"></div></section>
+<section><h2>On-chain</h2>
+<form id="send"><label for="send-address">Address (bcrt1…)</label><input id="send-address" name="address" spellcheck="false" required>
+<label for="send-sat">Amount (regtest satoshis)</label><input id="send-sat" name="sat" inputmode="numeric" required>
+<button type="submit">Send it</button></form>
+<div id="send-out"></div>
+<div class="row"><button id="new-address" type="button">A fresh address of this node</button> <button id="new-key" type="button">A Bitcoin key of this node's wallet</button></div>
+<form id="mine"><label for="mine-n">Mine blocks (confirmations: six for Damgar's on-chain rail)</label><input id="mine-n" name="blocks" value="6" inputmode="numeric"><button type="submit">Mine</button></form>
+<div id="mine-out"></div></section>
+</main>
+<noscript>The test wallet needs JavaScript.</noscript>
+<script type="module" src="page.js"></script>
+</body>
+</html>

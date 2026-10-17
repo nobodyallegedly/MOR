@@ -124,7 +124,10 @@ async function draw() {
       }${v.strayDrafts(state, drafts)}</div>`;
       kept();
       shown = drafts.map((d) => d.digest).join(',');
-      if (at.identity !== 'new') await drawRecord(at.identity, false);
+      if (at.identity !== 'new') {
+        await drawMoney();
+        await drawRecord(at.identity, false);
+      }
       return;
     }
     case 'collectives': {
@@ -146,6 +149,7 @@ async function draw() {
       if (here?.real) {
         const rc = await c.ask<RealCollective>('real collective', { collective: here.id });
         body.innerHTML = `${v.actingAs(state)}${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${v.realDetails(state, here.id, rc)}</div>`;
+        await drawMoney(here.id);
         await drawAct(here.id);
         return;
       }
@@ -235,6 +239,22 @@ function keepForms(): () => void {
       if (x) x.value = val;
     }
   };
+}
+
+/** F338: the units a money draft may name, the acts a collective may anchor, and the anchors asked, filled in after a redraw. */
+let units: { hash: string; label: string }[] | null = null;
+async function drawMoney(collective?: string) {
+  try {
+    units ??= await c.ask<{ hash: string; label: string }[]>('money units');
+    app.querySelectorAll<HTMLSelectElement>('select[data-units]').forEach((x) => (x.innerHTML = units!.map((u) => `<option value="${v.e(u.hash)}">${v.e(u.label)}</option>`).join('')));
+    if (!collective) return;
+    const acts = await c.ask<{ act: string; label: string }[]>('money anchorable', { collective });
+    const sel = app.querySelector<HTMLSelectElement>(`select[data-anchorable="${CSS.escape(collective)}"]`);
+    if (sel) sel.innerHTML = acts.map((a) => `<option value="${v.e(a.act)}">${v.e(a.label)} (${v.e(a.act.slice(0, 8))}…)</option>`).join('');
+    fill('e-anchors', v.anchors(await c.ask('money anchors', { collective })));
+  } catch (err) {
+    fill('e-anchors', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+  }
 }
 
 async function drawAct(id: string) {
@@ -553,6 +573,13 @@ app.addEventListener('click', async (ev) => {
       await busy('Unfollowing…', () => c.ask('agent unfollow', { agent, id: d.id }));
       await draw().catch(fail);
       break;
+    case 'pay-member': {
+      const f = $<HTMLFormElement>('pay-member');
+      const to = f?.elements.namedItem('to') as HTMLInputElement | null;
+      if (to) to.value = d.member ?? '';
+      f?.querySelector<HTMLInputElement>('input[name=value]')?.focus();
+      return;
+    }
     case 'constitution': {
       const r = await busy('Reading its agreement in force…', () => c.ask<Constitution>('collective constitution', { collective: at.collective }));
       if (r) {
@@ -927,6 +954,27 @@ app.addEventListener('submit', async (ev) => {
         const x = $<HTMLFormElement>('real-found')?.elements.namedItem(n) as HTMLInputElement | null;
         if (x) x.value = val;
       }
+    }
+    return;
+  }
+  if (fid === 'pay-someone' || fid === 'pay-member') {
+    const r = await busy('Sealing the draft to the identity…', () => c.ask<Done>('money pay', { identity: form.dataset.identity, to: words(d.get('to')), value: words(d.get('value')), unit: words(d.get('unit')), whatFor: String(d.get('whatFor') ?? '') }), form);
+    if (r) say('done', v.lines(r.lines), form);
+    return;
+  }
+  if (fid === 'anchor-offers') {
+    const service = words(d.get('service'));
+    const act = String(d.get('act') ?? '');
+    const r = await busy('Reading the service’s standing offer…', () => c.ask<Parameters<typeof v.anchorOffers>[3]>('money offers', { service }), form);
+    if (r) fill('e-anchor-offer', v.anchorOffers(form.dataset.collective!, act, service, r, units ?? []));
+    return;
+  }
+  if (form.classList.contains('anchor-ask')) {
+    const tier = Number(d.get('tier') ?? 0);
+    const r = await busy('Making the blind and sealing the draft…', () => c.ask<Done>('money anchor', { identity: state.acting, collective: form.dataset.collective, act: form.dataset.act, service: form.dataset.service, offer: form.dataset.offer, tier }), form);
+    if (r) {
+      say('done', v.lines(r.lines), form);
+      fill('e-anchors', v.anchors(await c.ask('money anchors', { collective: form.dataset.collective })));
     }
     return;
   }

@@ -26,3 +26,13 @@ hex = "0.4"
 # (the core library never draws it); in a browser or Node, from
 # crypto.getRandomValues.
 getrandom = { version = "0.2", features = ["js"] }
+# The Money layer for Damgar (F338): the payment cMIP, the Lightning and
+# on-chain rail Modules (their reference implementations, without the lnd
+# and btcd clients), and the spec hashes of split, conversion and anchoring.
+mor-payment = { path = "../cmips/payment" }
+mor-lightning = { path = "../modules/lightning", default-features = false }
+mor-onchain = { path = "../modules/onchain", default-features = false }
+mor-anchoring = { path = "../cmips/anchoring" }
+mor-conversion = { path = "../cmips/conversion" }
+mor-split = { path = "../cmips/split" }
+k256 = { version = "0.13.4", default-features = false, features = ["schnorr"] }

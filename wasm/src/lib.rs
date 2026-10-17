@@ -37,6 +37,8 @@ use wasm_bindgen::prelude::*;
 
 type R<T> = Result<T, JsError>;
 
+mod money_js;
+
 fn err(s: impl std::fmt::Display) -> JsError {
     JsError::new(&s.to_string())
 }

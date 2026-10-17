@@ -1071,6 +1071,91 @@ var Verifier = class {
     }
   }
   /**
+   * Where a payer pays this payee this amount (the payment cMIP,
+   * "Choosing where to pay"; Money rules 1, 3 and 5): the pointer that
+   * counts and the vault in force, as this verifier holds the payee's
+   * acts, and the first rail, in the payee's order, on a rail Module the
+   * person accepts that carries the unit. `{ to: "flow", pointer, rail,
+   * module, address }`, `{ to: "vault", declaredBy, entry, module,
+   * address }` or `{ to: "nowhere", why }`.
+   * @param {string} money_spec
+   * @param {string} payee
+   * @param {any} amount
+   * @param {string[]} accepted
+   * @returns {any}
+   */
+  moneyChoose(money_spec, payee, amount, accepted) {
+    const ptr0 = passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayJsValueToWasm0(accepted, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyChoose(this.__wbg_ptr, ptr0, len0, ptr1, len1, amount, ptr2, len2);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Judge a receipt or claim this verifier holds, as a Money-only client
+   * with the person's accepted cMIPs and Modules (F338): the act's
+   * standing; the rail's answer, by the rail Module its field 0 names,
+   * adopted only if accepted (a Module, unit or payment cMIP not accepted
+   * is unknown: Development rule 9); and what is judged beside it.
+   * @param {string} act
+   * @param {any} opts
+   * @returns {any}
+   */
+  moneyJudge(act, opts) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyJudge(this.__wbg_ptr, ptr0, len0, opts);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The payee pointer that counts for an identity (Money rule 1), from
+   * the valid pointers this verifier holds: `{ act, version, forked }`,
+   * `act` null where it holds none; `forked` where two name one
+   * predecessor, the pointer that counts the last before the fork.
+   * @param {string} money_spec
+   * @param {string} payee
+   * @returns {any}
+   */
+  moneyPointer(money_spec, payee) {
+    const ptr0 = passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyPointer(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The vault an identity's chain declares in force (Money rule 3), as
+   * this verifier holds the chain: `{ declaredBy, entries }`, or null
+   * where it declares none.
+   * @param {string} money_spec
+   * @param {string} identity
+   * @returns {any}
+   */
+  moneyVault(money_spec, identity) {
+    const ptr0 = passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyVault(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * A verifier for the given Identity spec hash (`IDENTITY`; a test value
    * until the freeze). Given the Money and Agreements spec hashes too, it can
    * tell which acts may carry acknowledgements (F110); without them, an

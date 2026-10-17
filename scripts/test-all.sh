@@ -9,8 +9,9 @@
 # installed on first use), Node 22 or later, and wasm-bindgen-cli 0.2.129:
 #   cargo install wasm-bindgen-cli --version 0.2.129 --locked
 # The site's browser test needs Chromium or Chrome; point MOR_CHROMIUM at it.
-# The Lightning test on regtest is skipped unless MOR_LN_REGTEST is set
-# (docs/core-pass-v21.md, section 5). Test identities only, never real money.
+# The tests on regtest (the Lightning rail Module's, Damgar's and the test
+# wallet's) are skipped unless MOR_LN_REGTEST is set (docs/core-pass-v21.md,
+# section 5; docs/damgar-regtest.md). Test identities only, never real money.
 set -e
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
@@ -24,6 +25,10 @@ echo "== Core library for the clients (WebAssembly)"
 for pkg in clients/* modules/jpeg modules/video modules/carry modules/timestamp; do
   [ -f "$pkg/package.json" ] || continue
   echo "== $pkg"
+  # Damgar's tests run Dub, Edubba, Kišib, the test wallet and the anchoring service beside it.
+  if [ "$pkg" = clients/damgar ]; then
+    for p in desk dub barebone repo collective assess kishib manage anchoring-service testwallet; do (cd "clients/$p" && npm ci --no-audit --no-fund); done
+  fi
   (cd "$pkg" && npm ci --no-audit --no-fund && npm test)
 done
 

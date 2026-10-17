@@ -59,6 +59,8 @@ export interface State {
   sitting: Sitting | null;
   /** How long a waiting one-time key lives, in seconds (F337). */
   expiry: number;
+  /** The units a vault entry may be in (Damgar's units Modules), with the network each is of. */
+  units?: { hash: string; label: string; network: number }[];
 }
 
 /** A tagged hash (Identity, "Hashes"): SHA-256(SHA-256(tag) ‖ SHA-256(tag) ‖ data), in hex. */

@@ -15,9 +15,9 @@
 
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { BUILT, DISPLAY_FILES } from '../../src/released.ts';
@@ -39,11 +39,25 @@ function workspaceMembers(): string[] {
   return [...list[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
 }
 
-/** What the WebAssembly build reads: the Rust workspace and the build script, as committed or changed here. */
+/** Files a crate embeds from outside its own folder (`include_str!`, `include_bytes!`): a Module's text, read by its code
+ * (found 17 October 2026, when the core library's WebAssembly took in the on-chain rail Module, which embeds its text). */
+function embedded(files: string[]): string[] {
+  const out = new Set<string>();
+  for (const f of files.filter((x) => x.endsWith('.rs'))) {
+    for (const m of readFileSync(join(root, f), 'utf8').matchAll(/include_(?:str|bytes)!\(\s*"([^"]+)"\s*\)/g)) {
+      const target = relative(root, resolve(dirname(join(root, f)), m[1]));
+      if (!target.startsWith('..') && existsSync(join(root, target))) out.add(target);
+    }
+  }
+  return [...out];
+}
+
+/** What the WebAssembly build reads: the Rust workspace, what its crates embed, and the build script, as committed or changed here. */
 function copySources(to: string): void {
-  const files = run('git', ['ls-files', '-co', '--exclude-standard', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', ...workspaceMembers(), 'clients/genesis/scripts'], root)
+  const listed = run('git', ['ls-files', '-co', '--exclude-standard', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', ...workspaceMembers(), 'clients/genesis/scripts'], root)
     .split('\n')
     .filter(Boolean);
+  const files = [...new Set([...listed, ...embedded(listed)])];
   for (const f of files) {
     mkdirSync(dirname(join(to, f)), { recursive: true });
     cpSync(join(root, f), join(to, f));
@@ -70,7 +84,9 @@ const cargoHome = process.env.CARGO_HOME ?? join(homedir(), '.cargo');
 
 function namesNoFolder(bytes: Buffer, folders: string[]): void {
   const text = bytes.toString('latin1');
-  for (const f of folders) assert.ok(!text.includes(f), `the build names ${f}`);
+  // A folder is named by a path inside it, so with its separator: a home of /root must not match
+  // the anchoring cMIP's tag "MOR/cmip/anchoring/root" (found 17 October 2026).
+  for (const f of folders) assert.ok(!text.includes(`${f.replace(/\/$/, '')}/`), `the build names ${f}`);
 }
 
 let here: { wasm: Buffer; glue: Buffer };
