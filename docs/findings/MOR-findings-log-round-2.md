@@ -40,6 +40,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Drafting MIPs** (asked: drafts as documents until ready, or each draft a kind 8 MIP at once, F325): **"A) only once the dev is ready it truly published the specs"**. Ummia helps write a MIP in the MIP shape and publishes drafts as signed long-form documents for discussion; only when its author is ready is it published as a specification (kind 8, naming its creator and the MIP it would replace). *Stated limit, said in Ummia:* tracking extensions sees only public agreements; a sealed agreement's use of a cMIP stays invisible unless someone publishes it.
 
+**Ummia's icon:** a round school tablet of the tablet house, the master's model line above and the pupil's copy beneath (the specification, and an implementation checked against it), in the family's clay on dark. The project lead's lean among that, a reed stylus, a single wedge. Nobody, allegedly: "Agreed".
+
 ## F338. Damgar, a money app that gathers money acts for signing (17 October 2026)
 
 *Area: presentation and the development layer (a client). Asked by Nobody, allegedly, after "What was developed for the Money layer?": the Money layer is built and proven in tests (the core's receipts, obligations, payee pointers, vault, releases; the payment cMIP with the Lightning and on-chain rail Modules; split, conversion, units; Bitcoin anchoring end to end on regtest) but no app makes or signs a payment. "I think it deserves demonstrability."*
