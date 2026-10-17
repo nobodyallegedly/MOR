@@ -47,7 +47,7 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; hom
 
 *Decided by Nobody, allegedly, 17 October 2026: "All human tests wait for the break, build until then." Build Kišib, Damgar and Ummia (and the agents and site sessions if tokens allow) until the weekly token limit stops the work; the human tests (9, 10's end, 11, free play, and recruiting a few non-developers) are run during the pause.*
 
-*Cost to plan around (noted by Nobody, allegedly, 17 October 2026): one review by Fable cost nearly half of Fable's weekly allowance, itself about a quarter of the whole weekly budget. A review by Fable is planned for, not run by habit: kept for the moments that need an outside reading (the freeze-ready drafts, the C verifier's results, the rehearsal).*
+*Cost to plan around (noted by Nobody, allegedly, 17 October 2026): one review by Fable cost nearly half of Fable's weekly allowance, itself about a quarter of the whole weekly budget. A review by Fable is planned for, not run by habit: kept for the moments that need an outside reading (the freeze-ready drafts, the C verifier's results, the rehearsal), and run on a Thursday when needed ("reviews by Fable are good on Thursdays, if need be").*
 
 Done: Kišib merged (pull request 74, `docs/kishib-report.md`): rotation from paper, collective rotation, escape, succession, paper check; Edubba takes new words; readers now ask an escape's new homes (a client correction, F299's way out made countable); Kišib's sign 𒈩. A server session later: dubsar.org (the display client, rebuilt), dub.dubsar.org (its icons), kishib.dubsar.org (new). Human tests 9 and 10's end: steps at the end of the Kišib report, during the break.
 
