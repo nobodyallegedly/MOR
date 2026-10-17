@@ -285,7 +285,11 @@ test('H14 and H15 for collectives: “What you may do for it” folded and remem
   assert.deepEqual((await c.ask<any>('state')).unfolded, { [col]: false });
   await c.ask('fold', { collective: col, open: true });
   assert.deepEqual((await c.ask<any>('state')).unfolded, { [col]: true });
-  await refused(c.ask('fold', { collective: 'x', open: true }), /not a collective/);
+  // H26, H34: any other fold by its name; anything else refused.
+  await c.ask('fold', { key: 'identity-record', open: false });
+  assert.deepEqual((await c.ask<any>('state')).unfolded, { [col]: true, 'identity-record': false });
+  await refused(c.ask('fold', { collective: 'X/../y', open: true }), /not a fold/);
+  await refused(c.ask('fold', { key: '__proto__', open: true }), /not a fold/);
 
   // H15: in another Edubba, Ana brought by her words, then the collective by its ID.
   const { c: b } = await edubba();
