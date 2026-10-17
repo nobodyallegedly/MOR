@@ -173,8 +173,10 @@ export interface State {
   collectives: { id: string; name: string; closed: boolean; members: number; brought?: boolean; real?: boolean }[];
   /** Real collectives' proposals sent from here (H18), each with who signed. */
   proposals: RealProposal[];
-  /** The contacts list (H18): added here by ID with a name, and those the agents follow. */
-  contacts: { id: string; name: string; from: 'added' | { agent: string } }[];
+  /** The contacts list (H18): added here by ID with a name, those the agents follow, and those in the follow lists sealed to the identities held here (people cMIP draft 2). */
+  contacts: { id: string; name: string; from: 'added' | { agent: string } | { list: string } }[];
+  /** The identity the Collectives tab acts as (H33). */
+  acting: string | null;
   /** "What you may do for it", folded (false) or unfolded, per collective (H14). */
   unfolded?: Record<string, boolean>;
   paired: { key: string; label: string; added: number; you: boolean }[];

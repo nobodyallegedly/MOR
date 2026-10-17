@@ -265,10 +265,12 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   assert.equal(a3.position, 1, 'the Mac starts its own line');
   // Someone writes privately to the identity: both the web client and the Mac open it.
   const other = await serve({ dir: mkdtempSync(join(tmpdir(), 'mor-dub-other-')), port: 0 });
+  let otherId = '';
   try {
     const ob = await other.dub.begin({ homes: [homes[1].base], relays: [relay.base] });
     await other.dub.confirm(ob.positions.map((p) => ob.words[p - 1]));
     await other.dub.message({ to: me.identity, text: 'For both of your apps.' });
+    otherId = (await other.dub.state()).identity!.id;
   } finally {
     await other.close();
   }
@@ -288,6 +290,13 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   for (const id of [first, second, onMac.post.id, fourth]) assert.equal((await readPost(id, [relay.base])).standing, 'valid', id);
   assert.deepEqual(new Set(await listPosts(me.identity, relay.base)), new Set([first, second, onMac.post.id, fourth]));
   await page.locator('#feed .post', { hasText: 'Third, from Dub on the Mac.' }).waitFor({ timeout: 60_000 });
+  // The follow list sealed to the identity (people cMIP draft 2): followed on the Mac with a name, read here with it.
+  await mac.dub.follow({ id: otherId, name: 'Met on the Mac' });
+  await page.getByRole('button', { name: 'Look again' }).click();
+  if (!(await page.locator('#people[open]').count())) await page.locator('#people summary').click();
+  await page.locator('#people', { hasText: 'Met on the Mac' }).waitFor({ timeout: 60_000 });
+  assert.match(await page.locator('#people').innerText(), /sealed to this identity and kept at its homes \(version 1\)/);
+  await shot(page, '05b-sealed-follow-list');
   for (const f of forms) assert.ok(!(await kept(page)).text.includes(f), 'still nothing of the chain key in storage');
 
   // Forgetting it in this browser leaves nothing of it in storage.

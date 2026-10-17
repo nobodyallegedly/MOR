@@ -155,7 +155,15 @@ dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
 .proposal ul{margin:4px 0;padding-left:1.1em;font-size:14px}
 .proposal .plain{border:1px solid var(--edge);border-radius:10px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;max-height:18em;overflow:auto;background:var(--bg)}
 .proposal .state{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}
-.share-number{font-size:15px;margin:8px 0}`;
+.share-number{font-size:15px;margin:8px 0}
+.post.act{padding:8px 14px}
+.post.act .acts{border-top:none;padding-top:0;margin-top:2px}
+details.fold>summary{font-size:15px;color:var(--text);margin:14px 0 4px}`;
+
+/** A fold (H34): open or closed by default, the person's choice remembered by the page (`ui.ts`, `applyFolds`). */
+export function fold(key: string, summary: string, body: string, open: boolean): string {
+  return `<details class="fold" data-fold="${e(key)}"${open ? ' open' : ''}><summary>${e(summary)}</summary>${body}</details>`;
+}
 
 export const note = (kind: 'error' | 'done' | 'warn' | 'spent' | '', html: string) => `<div class="note ${kind}">${html}</div>`;
 
@@ -200,7 +208,7 @@ const via = `<details><summary>Another way to reach an address (rarely needed)</
  */
 export function identityWindow(s: State, web = false, suggested: Suggested = {}): string {
   const i = s.identity;
-  const others = s.held.filter((h) => !h.active);
+  const held = s.held;
   const lns = (xs?: string[]) => e((xs ?? []).join('\n'));
   const make = `<section class="card"><h3>Make a new identity</h3>
 <p class="small">Dub makes it here and shows you 24 words, once: the chain key’s words, to write on paper. Dub keeps nothing of the chain key. Its signing key stays in ${web ? 'this browser' : 'this app'}.</p>
@@ -220,15 +228,16 @@ ${web ? '' : via}
 ${web ? '' : via}
 <p class="small">Never type the chain key’s words here: they belong to MOR Safety, on a device that stays offline.${web ? ` ${e(KEPT_SAY)}` : ''}</p>
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
-  const doors = i ? `<details id="doors"><summary>Another identity: make one, or bring one</summary>${make}${bring}</details>` : `${make}${bring}`;
+  // H28: with an identity in use, one way out: leave it first; then this window lists those held, and the two doors.
+  const doors = i ? '' : held.length ? `${fold('make', 'Make a new identity', make.replace(/^<section class="card"><h3>Make a new identity<\/h3>/, '<section class="card">'), false)}${fold('bring', 'Bring an identity you have', bring.replace(/^<section class="card"><h3>Bring an identity you have<\/h3>/, '<section class="card">'), false)}` : `${make}${bring}`;
   const browsers = web
     ? ''
     : `<details><summary>Browsers paired with this app</summary><div class="row"><button data-action="code">A code for another browser on this machine</button><button class="quiet" data-action="unpair">Unpair this browser</button></div><div id="code"></div></details>`;
   return `${top(web, !!i)}
 <div id="status"></div>
 <h2>Identity</h2>
-${i ? current(s) : '<p class="small">Dub opens once an identity is here.</p>'}
-${others.length ? `<div class="held"><span class="label">Also here</span><ul>${others.map((h) => `<li>${who(h.who)}<button data-action="use" data-id="${e(h.id)}">Use this one</button></li>`).join('')}</ul></div>` : ''}
+${i ? current(s) : held.length ? '<p class="small">No identity in use. Choose one held here, or make or bring another.</p>' : '<p class="small">Dub opens once an identity is here.</p>'}
+${!i && held.length ? `<div class="held" id="held"><span class="label">Your identities here</span><ul>${held.map((h) => `<li>${who(h.who)}<button data-action="use" data-id="${e(h.id)}">Use this one</button></li>`).join('')}</ul></div>` : ''}
 ${doors}
 ${browsers}`;
 }
@@ -245,9 +254,10 @@ function current(s: State): string {
 <form id="name"><label>Your display name: shown beside your fingerprint, never instead of it. Anyone can take the same name.</label>
 <div class="row"><input class="grow" name="name" maxlength="48" autocomplete="off" value="${e(name)}" placeholder="No name: your fingerprint alone"><button type="submit">Save</button></div></form>
 <div class="row"><label class="small check"><input type="checkbox" id="signing-on" ${i.signing ? 'checked' : ''}> Signing: sign agreements of real collectives here. Even more experimental than Dub itself; off unless you turn it on.</label></div>
-<div class="row"><button data-action="carry">Show the signing key’s words</button><button class="quiet" data-action="forget" data-id="${e(i.id)}">Forget it here</button></div>
+<div class="row"><button data-action="carry">Show the signing key’s words</button><button data-action="leave">Switch identity</button><button class="quiet" data-action="forget" data-id="${e(i.id)}">Forget it here</button></div>
+<p class="small">Switch identity: Dub leaves this one first (its keys stay here), then opens this window to choose another, or make or bring one.</p>
 <div id="carry"></div>
-<details><summary>This app’s line, and where it lives</summary>
+<details data-fold="line"><summary>This app’s line, and where it lives</summary>
 <dl class="facts"><dt>Made</dt><dd>${i.kind === 'made' ? 'Here. Its chain key was shown once as words, and is kept nowhere here.' : 'Elsewhere, brought here by its signing key’s words. Its chain key is not here.'}</dd>
 ${i.oldChainKey ? '<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app’s folder, unused. MOR Safety will take it from there.</dd>' : ''}
 <dt>Private messages</dt><dd>${i.encryption ? 'Its encryption key is here: its private messages open here.' : 'No encryption key here: its private messages cannot be opened here.'}</dd>
@@ -306,7 +316,7 @@ ${testNotice(web)}
 <div class="to"><input name="to" autocomplete="off" spellcheck="false" placeholder="To an identity: its ID (a public message, left in its inbox too)"></div>
 <div class="row"><label class="quiet-file"><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"><span class="small" data-action="pick">Picture</span></label><button type="button" class="quiet" data-action="address">To…</button><span class="grow small" id="picked"></span><button type="submit" class="primary">Post</button></div>
 </form>
-<div class="filters"><button class="tab on" data-filter="all">Everyone</button><button class="tab" data-filter="toyou">To you<span class="count" id="count-toyou"></span></button><span class="grow"></span><button class="quiet" data-action="feed">Look again</button></div>
+<div class="filters"><button class="tab on" data-filter="all">Everyone</button><button class="tab" data-filter="toyou">To you<span class="count" id="count-toyou"></span></button><button class="tab" data-filter="relay" title="Every public act at this identity’s relays, newest first">Relay</button><span class="grow"></span><button class="quiet" data-action="feed">Look again</button></div>
 ${people(s)}
 <div id="feed"><p class="empty">Reading the feed…</p></div>
 </section>
@@ -350,7 +360,7 @@ ${r.blocking.length ? note('error', `<strong>It cannot be signed here:</strong>$
     p.share === 'none'
       ? ''
       : p.share === 'waiting'
-        ? `<p class="small">Your share of the collective’s chain key will arrive once every member has signed and the founder’s Edubba deals the key. Its one-time key waits in this app until then.</p><div class="row"><button class="quiet" data-action="sharehand" data-thread="${e(p.thread)}">I received my share by hand</button></div>`
+        ? `<p class="small">Your share of the collective’s chain key will arrive once every member has signed and the founder’s Edubba deals the key. Its one-time key waits in this app until then. Dub looks for it by itself while this tab is open.</p><div class="row"><button class="primary" data-action="lookshare">Look for my share</button><button class="quiet" data-action="sharehand" data-thread="${e(p.thread)}">I received my share by hand</button></div>`
         : p.share === 'ready'
           ? `<div class="row"><button class="primary" data-action="share" data-thread="${e(p.thread)}">Show my share of the chain key, once</button></div>`
           : p.share === 'shown'
@@ -363,7 +373,9 @@ ${r.blocking.length ? note('error', `<strong>It cannot be signed here:</strong>$
     : r.blocking.length
       ? `<div class="row"><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div>`
       : `<div class="row"><button class="primary" data-action="accept" data-thread="${e(p.thread)}">Sign it</button><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div><p class="small">Your signature is an act of yours, public: it binds you to exactly what is read above.</p>`;
-  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${body}${actions}${share}</div>`;
+  // H34: once answered, the reading folds away (open at a click, remembered); before, it is always shown in full.
+  const read = p.answer ? `<details data-fold="proposal:${e(p.thread)}"><summary>What was proposed, in plain words</summary>${body}</details>` : body;
+  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${read}${actions}${share}</div>`;
 }
 
 /** A share of a collective's chain key, shown once (H18), with nothing asked beside it. */
@@ -388,12 +400,17 @@ export function shareTypeBack(thread: string, positions: number[]): string {
 export function people(s: State): string {
   const i = s.identity!;
   const row = (w: Who, actions: string) => `<li>${who(w)}<span class="acts">${actions}</span></li>`;
-  return `<details class="people" id="people"><summary>Following ${i.follows.length}${i.muted.length ? ` · muted ${i.muted.length}` : ''}</summary>
-<form id="follow" class="row"><input class="grow" name="id" autocomplete="off" spellcheck="false" placeholder="Follow an identity: its ID" required><input class="pet" name="name" autocomplete="off" placeholder="Your name for it (stays here)"><button type="submit">Follow</button></form>
+  return `<details class="people" id="people" data-fold="people"><summary>Following ${i.follows.length}${i.muted.length ? ` · muted ${i.muted.length}` : ''}</summary>
+<form id="follow" class="row"><input class="grow" name="id" autocomplete="off" spellcheck="false" placeholder="Follow an identity: its ID" required><input class="pet" name="name" autocomplete="off" placeholder="Your name for it (sealed)"><button type="submit">Follow</button></form>
 ${i.follows.length ? `<ul>${i.follows.map((f) => row(f, `<button data-action="call" data-id="${e(f.id)}">Name</button><button data-action="unfollow" data-id="${e(f.id)}">Unfollow</button>`)).join('')}</ul>` : '<p class="small">Nobody yet. Follow by ID, or from any post or message.</p>'}
 ${i.muted.length ? `<span class="label">Muted</span><ul>${i.muted.map((m) => row(m, `<button data-action="unmute" data-id="${e(m.id)}">Unmute</button>`)).join('')}</ul>` : ''}
 <div class="row"><label class="small check"><input type="checkbox" id="publish-list" ${i.list === 'published' ? 'checked' : ''}> Publish whom this identity follows</label></div>
-<p class="small">${i.list === 'published' ? 'Published: anyone can read the IDs it follows. The names you gave them stay here.' : 'Private, the default: the list stays in this app. Muting is always private.'}</p>
+<p class="small">${i.list === 'published' ? 'Published: anyone can read the IDs it follows. The names you gave them stay sealed.' : 'Private, the default.'} ${
+    i.encryption
+      ? `Whom it follows, with the names you gave, is a private act sealed to this identity and kept at its homes${i.sealed ? ` (version ${i.sealed.version})` : ''}: any app holding this identity reads it; nobody else can. Its homes and relays see only that a private act exists, and roughly how big it is; whoever holds the signing key’s words reads it.`
+      : 'This app holds no encryption key of this identity, so the list stays in this app only.'
+  } Muting stays in this app, always.</p>
+${i.sealed?.forked ? '<p class="small">The list was forked: two apps changed it at once. The longer branch is shown.</p>' : ''}
 </details>`;
 }
 
@@ -401,6 +418,12 @@ const bad = (standing: string) => /void|contest|invalid|stolen/.test(standing);
 
 /** A post: compact, its action row quiet. A long-form document is not shown: a link opens it in the reader. */
 export function post(p: Item): string {
+  // The relay view (H29): an act that is not a post, named by what it is.
+  if (p.what) {
+    return `<article class="post act" data-post="${e(p.id)}" data-signer="${e(p.who.id)}"><div class="row tight">${who(p.who)}${p.problem ? `<span class="flag">${e(p.problem)}</span>` : ''}</div><div class="small">${e(p.what)} · act <span class="fp" title="${e(p.id)}">${e(p.id.slice(0, 8))}…</span></div>${
+      p.who.me ? '' : `<div class="acts">${p.who.followed ? `<button data-action="unfollow" data-id="${e(p.who.id)}">Following</button>` : `<button data-action="follow" data-id="${e(p.who.id)}">Follow</button>`}<button data-action="mute" data-id="${e(p.who.id)}">Mute</button></div>`
+    }</article>`;
+  }
   const flag = p.problem ? `<span class="flag ${bad(p.problem) ? 'bad' : ''}">${e(p.problem)}</span>` : '';
   const answers = p.answers
     .map((a) => `<div class="re">↳ answering ${a.who ? who(a.who) : '<span class="fp">an act not found</span>'}${a.snippet ? ` · <span dir="auto">${e(a.snippet)}</span>` : ''}</div>`)

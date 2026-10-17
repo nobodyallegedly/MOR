@@ -25,6 +25,8 @@ cat > "$launch" <<SCRIPT
 cd "$here" && exec "$node" --import tsx src/cli.ts open >> "\$HOME/mor-dub-launcher.log" 2>&1
 SCRIPT
 chmod +x "$launch"
+# Its icon (H25), beside the launcher.
+cp "$here/static/icon/dub.png" "$data/mor/dub.png"
 entry="$data/applications/dub.desktop"
 cat > "$entry" <<DESKTOP
 [Desktop Entry]
@@ -33,6 +35,7 @@ Version=1.0
 Name=Dub
 Comment=MOR: one person's public and private life (test identities only)
 Exec="$launch"
+Icon=$data/mor/dub.png
 Terminal=false
 Categories=Network;
 StartupNotify=false

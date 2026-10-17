@@ -646,6 +646,8 @@ export class Desk {
             const page = await relayAt(hint, via).feed({ to: identity, after });
             for (const it of page.items) {
               const item = await this.readItem(it.kind, it.item, identity, secrets, mine, hints);
+              // Its own acts sealed to itself (the follow list, people cMIP draft 2) are not something it received.
+              if (item.from === identity) continue;
               if (!rec.items.some((x) => x.key === item.key)) {
                 rec.items.push(item);
                 added++;
@@ -852,11 +854,11 @@ export class Desk {
     });
   }
 
-  /** H14: "What you may do for it" folded or unfolded for a collective, as the person left it. */
-  fold(collective: string, open: boolean): void {
-    if (!/^[0-9a-f]{64}$/.test(collective)) throw new Error('not a collective');
+  /** H14, H26, H34: a fold open or closed, as the person left it: a collective's "What you may do for it" by its ID, every other fold by its name. */
+  fold(key: string, open: boolean): void {
+    if (!/^[0-9a-f]{64}$/.test(key) && !/^[a-z][a-z-]{0,40}(:[0-9a-f]{64})?$/.test(key)) throw new Error('not a fold');
     const b = this.store.book();
-    b.unfolded = { ...(b.unfolded ?? {}), [collective]: open };
+    b.unfolded = { ...(b.unfolded ?? {}), [key]: open };
     this.store.saveBook(b);
   }
 

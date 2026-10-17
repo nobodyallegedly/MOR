@@ -22,13 +22,13 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { SPECS, base64, cborDecode, cborEncode, describeAct, hex, openSealed, shareOnPaper, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
+import { IDENTITY_TYPES, MIRS, SPECS, base64, cborDecode, cborEncode, describeAct, hex, openSealed, shareOnPaper, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
 import { ownLine } from '../../genesis/src/lines.ts';
 import { TestIdentity, TEST_LABEL, sealFor, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, type Via } from '../../genesis/src/transport.ts';
-import { leaveInInbox, post, readPost, textPayload, withdraw, type ShownPicture, type ShownPost } from '../../barebone/src/post.ts';
-import { POST_SPECS, TEXT_ACT } from '../../barebone/src/specs.ts';
+import { Judge, leaveInInbox, post, readPost, textPayload, withdraw, type ShownPicture, type ShownPost } from '../../barebone/src/post.ts';
+import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from '../../barebone/src/specs.ts';
 import { readFeed, type FeedPost } from '../../site/src/feed.ts';
 import { makeLink } from '../../reader/src/link.ts';
 import { compose } from '../../longform/src/text.ts';
@@ -41,7 +41,7 @@ import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { fetchAct, readProposal, SHARE_SAY, SIGNING_OFF_SAY, SIGNING_SAY } from './signing.ts';
 import { carriedKey, lookCurrent, servedChain } from './carryin.ts';
 import { NAME, NAME_WITHDRAWAL, namePayload, namesOf, readName } from './names.ts';
-import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PUBLISH_WARNING, followListPayload, readFollowList, type Kept, type People } from './people.ts';
+import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PEOPLE_SPEC_1, PUBLISH_WARNING, SEALED_LIST, followListPayload, readFollowList, readSealedList, sealedListPayload, type Followed, type Kept, type People } from './people.ts';
 import type { Held, Item, Line, Message, Pic, Proposal, ShareShown, State, Who } from './shapes.ts';
 
 export type { Line, State } from './shapes.ts';
@@ -262,6 +262,7 @@ export class Dub {
         oldChainKey: !!me.f.safety.seeds,
         line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
         list: p.list,
+        sealed: p.sealed ? { version: p.sealed.version, forked: !!p.sealed.forked } : null,
         signing: !!s.signing,
         follows: p.follows.map((f) => this.whoFrom(f.id, me.id, p)),
         muted: p.muted.map((m) => this.whoFrom(m, me.id, p)),
@@ -530,6 +531,15 @@ export class Dub {
     return { lines };
   }
 
+  /**
+   * Leave the identity in use (H28): nothing is forgotten, its keys stay
+   * here; the identity window then opens with no identity in use, to choose
+   * one held here, or make or bring another.
+   */
+  async leave(): Promise<void> {
+    await this.store.setActive(null);
+  }
+
   /** Use another identity held here. */
   async use(id: string): Promise<void> {
     if (!(await this.store.held()).includes(id)) throw new Error('This app does not hold that identity.');
@@ -711,7 +721,7 @@ export class Dub {
   }
 
   /** A post read and judged, as the page shows it. */
-  private item(sp: ShownPost, me: string, p: People, s: Settings, via: 'feed' | 'inbox', answers: Item['answers'], toMe: boolean): Item {
+  private item(sp: ShownPost, me: string, p: People, s: Settings, via: 'feed' | 'inbox' | 'relay', answers: Item['answers'], toMe: boolean): Item {
     const pictures: Pic[] = sp.refs
       .filter((r): r is ShownPicture => r.kind === 'picture')
       .map((r) => ({
@@ -749,7 +759,8 @@ export class Dub {
    * JPEG pictures are shown; a long-form document is named, with a link to
    * the reader.
    */
-  async feed(): Promise<{ items: Item[]; more: number; problems: string[] }> {
+  async feed(fresh = false): Promise<{ items: Item[]; more: number; problems: string[]; notes: string[]; followsChanged: boolean }> {
+    const { notes, changed: followsChanged } = await this.refreshFollows(fresh);
     const { me, s, p, hints } = await this.ctx();
     const authors = [me.id, ...p.follows.map((f) => f.id).filter((id) => !p.muted.includes(id))].map((identity) => ({ identity, name: null }));
     const feed = await readFeed(authors, hints, s.via);
@@ -768,11 +779,86 @@ export class Dub {
       items.push(this.item(fp.post, me.id, p, s, 'feed', answers, toMe));
     }
     const problems = feed.authors.filter((a) => a.problem).map((a) => `${fingerprint(a.identity)}: ${a.problem}`);
-    return { items, more: feed.more, problems };
+    return { items, more: feed.more, problems, notes, followsChanged };
   }
 
   private unread(fp: FeedPost, me: string, p: People): Item {
     return { id: fp.id, who: this.whoFrom(fp.signer, me, p), standing: 'unknown', text: '', doc: null, pictures: [], answers: [], toMe: false, via: 'feed', problem: fp.problem, seen: true };
+  }
+
+  // ------------------------------------------------------------ the relay view (H29)
+
+  /** What each relay was read up to, and its latest acts, by address (this app's memory only). */
+  private relays = new Map<string, { after: number | undefined; acts: { id: string; act: Uint8Array }[] }>();
+
+  /**
+   * Every public act at this identity's relays, newest first (H29: a filter
+   * one chooses, never the default): each relay read from where it was left,
+   * its latest acts kept here in memory, newest first in the order each relay
+   * received them (its own order, not a signed time), several relays taken
+   * in turn. Posts are read and judged as the feed's are; any other public act
+   * is named by what it is. Muted identities are left out (the people cMIP,
+   * 2.2), and counted. At most `max` shown.
+   */
+  async relay(max = 30): Promise<{ items: Item[]; hidden: number; problems: string[] }> {
+    const { me, s, p, hints } = await this.ctx();
+    const problems: string[] = [];
+    const columns: { id: string; act: Uint8Array; hint: string }[][] = [];
+    for (const hint of s.relays) {
+      const c = this.relays.get(hint) ?? { after: undefined, acts: [] };
+      try {
+        for (let pages = 0; pages < 50; pages++) {
+          const page = await relayAt(hint, s.via).feed({ after: c.after });
+          for (const it of page.items) {
+            if (it.kind !== 'act') continue;
+            try {
+              const d = describeAct(it.item) as Described;
+              if (d.public && !c.acts.some((x) => x.id === d.id)) c.acts.push({ id: d.id, act: it.item });
+            } catch {
+              // not an act this library reads
+            }
+          }
+          if (c.acts.length > 300) c.acts.splice(0, c.acts.length - 300);
+          if (!page.items.length || page.next === c.after) break;
+          c.after = page.next;
+        }
+      } catch (e) {
+        problems.push(`${hint}: ${message(e)}`);
+      }
+      this.relays.set(hint, c);
+      columns.push([...c.acts].reverse().map((x) => ({ ...x, hint })));
+    }
+    const order: { id: string; act: Uint8Array; hint: string }[] = [];
+    for (let i = 0; columns.some((c) => i < c.length); i++) for (const c of columns) if (c[i] && !order.some((x) => x.id === c[i].id)) order.push(c[i]);
+    let hidden = 0;
+    const picked: { d: Described; hint: string }[] = [];
+    for (const x of order) {
+      const d = describeAct(x.act) as Described;
+      if (p.muted.includes(d.signer ?? d.id)) {
+        hidden++;
+        continue;
+      }
+      if (picked.length < max) picked.push({ d, hint: x.hint });
+    }
+    await this.warm(picked.map((x) => x.d.signer ?? x.d.id), hints, s.via);
+    const judge = new Judge([...new Set([...s.relays, ...hints])], s.via);
+    const items: Item[] = [];
+    for (const { d, hint } of picked) {
+      // A genesis carries no signer: the identity it makes is its own id.
+      const who = this.whoFrom(d.signer ?? d.id, me.id, p);
+      if (d.spec === POST_SPECS.text && d.type === TEXT_ACT && d.signer) {
+        try {
+          const shown = await readPost(d.id, [hint, ...s.relays, ...hints], s.via, judge);
+          items.push({ ...this.item(shown, me.id, p, s, 'relay', [], false), what: null });
+          continue;
+        } catch (e) {
+          items.push({ id: d.id, who, standing: 'unknown', text: '', doc: null, pictures: [], answers: [], toMe: false, via: 'relay', problem: message(e), seen: true, what: 'A post' });
+          continue;
+        }
+      }
+      items.push({ id: d.id, who, standing: 'unknown', text: '', doc: null, pictures: [], answers: [], toMe: false, via: 'relay', problem: null, seen: true, what: whatAct(d) });
+    }
+    return { items, hidden, problems };
   }
 
   // ------------------------------------------------------------ the inbox: "to you", and the private side
@@ -1297,12 +1383,105 @@ export class Dub {
   private async people<T>(f: (p: People, me: TestIdentity) => T): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s, p } = await this.ctx();
-      f(p, me);
-      await this.store.savePeople(me.id, p);
-      const lines: Line[] = [];
+      // The change is made to the list as the identity's homes hold it now (the people cMIP, draft 2, 3.6).
+      const lines = await this.syncFollows(me, s, p, (q) => f(q, me));
       if (p.list === 'published') lines.push(...(await this.publishList(me, s, p, false)));
       return { lines };
     });
+  }
+
+  /** When the sealed list was last read, by identity (this app's memory only). */
+  private synced = new Map<string, number>();
+
+  /**
+   * The follow list sealed to the identity itself (the people cMIP, draft 2,
+   * section 3): read from its homes; this app's list replaced by it, or, the
+   * first time, this app's own list carried over into it (3.7); `change`
+   * applied to it; and, where it changed, the next version signed, sealed to
+   * the identity's own encryption key and left at its homes. Inside `serial`.
+   * Where this app holds no encryption key of the identity, the list stays
+   * in this app, said.
+   */
+  private async syncFollows(me: TestIdentity, s: Settings, p: People, change?: (p: People) => void): Promise<Line[]> {
+    const homes = me.f.homes.map((h) => h.hint);
+    const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
+    const save = async () => {
+      this.synced.set(me.id, now());
+      await this.store.savePeople(me.id, p);
+    };
+    if (!secrets.length) {
+      change?.(p);
+      await save();
+      return [{ text: 'This app holds no encryption key of this identity, so its follow list cannot be sealed to it: the list stays in this app only.', tone: 'warn' }];
+    }
+    const found = await readSealedList(me.id, secrets, homes, s.via);
+    const ours = p.sealed?.version ?? 0;
+    const lines: Line[] = [];
+    let base: Followed[] = p.follows;
+    if (found.act && found.version >= ours) {
+      base = found.follows.map((f) => ({ ...f }));
+      // Carried over once (3.7): what this app held that the sealed list lacks is added, with its names; nothing is removed.
+      if (!p.carried) for (const f of p.follows) if (!base.some((x) => x.id === f.id)) base.push({ ...f });
+      p.sealed = { version: found.version, act: found.act, forked: found.forked };
+    }
+    if (found.forked) lines.push({ text: 'The follow list kept at this identity’s homes was forked: two apps changed it at once. The longer branch is shown; follow again anyone missing.', tone: 'warn' });
+    const before = JSON.stringify(found.act ? found.follows : null);
+    p.follows = base;
+    change?.(p);
+    const homesSilent = !found.act && found.problems.length >= homes.length;
+    const needed = JSON.stringify(p.follows) !== before && !(found.act === null && !p.follows.length && !p.sealed);
+    if (!needed || homesSilent) {
+      if (homesSilent && needed) lines.push({ text: `The follow list was not sealed to the homes, which did not answer (${found.problems.join('; ')}): it is kept here and sealed at the next change.`, tone: 'warn' });
+      if (found.act || !p.follows.length) p.carried = true;
+      await save();
+      return lines;
+    }
+    await this.current(me);
+    const look = await lookUp(me.id, homes, s.via);
+    const held = me.f.encryption.find((e) => look.encryptionKey && hex(xwingPublic(unhex(e.secret))) === hex(look.encryptionKey));
+    if (!held || !look.encryptionKey) {
+      await save();
+      return [...lines, { text: 'The encryption key this identity publishes is not one this app holds: the follow list stays in this app, not sealed.', tone: 'warn' }];
+    }
+    const version = Math.max(found.version, ours) + 1;
+    const previous = found.act && found.version >= ours ? found.act : (p.sealed?.act ?? null);
+    const made = await this.signed(me, async () => me.sign(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version, previous, follows: p.follows }), { public: false, to: [me.id] }));
+    const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
+    let left = 0;
+    for (const h of homes) {
+      try {
+        await relayAt(h, s.via).putSealed(sealed);
+        left++;
+        await relayAt(h, s.via).putAct(made.act);
+      } catch {
+        // that home is away: the others hold it
+      }
+    }
+    p.sealed = { version, act: made.id };
+    p.carried = true;
+    await save();
+    lines.push(
+      left
+        ? { text: `The follow list, with the names you gave, is sealed to this identity and kept at its homes (version ${version}): any app holding this identity reads it; nobody else can.`, tone: 'ok' }
+        : { text: 'No home took the sealed follow list: it is kept here, and sealed again at the next change.', tone: 'warn' },
+    );
+    return lines;
+  }
+
+  /** Read the sealed follow list again, outside a change (for the feed): at most once a minute, or now when `fresh` (Look again). */
+  private async refreshFollows(fresh: boolean): Promise<{ notes: string[]; changed: boolean }> {
+    const active = await this.store.active();
+    if (!active || (!fresh && (this.synced.get(active) ?? 0) + 60 > now())) return { notes: [], changed: false };
+    try {
+      return await this.serial(async () => {
+        const { me, s, p } = await this.ctx();
+        const was = JSON.stringify(p.follows);
+        const notes = (await this.syncFollows(me, s, p)).filter((l) => l.tone === 'warn' || l.tone === 'ok').map((l) => l.text);
+        return { notes, changed: JSON.stringify(p.follows) !== was };
+      });
+    } catch (e) {
+      return { notes: [`The follow list kept at this identity’s homes could not be read: ${message(e)}`], changed: false };
+    }
   }
 
   /** Follow an identity, by its ID or the signer of an act shown; a name for it, if given, stays in this app. */
@@ -1415,6 +1594,31 @@ export class Dub {
       return this.signed(me, () => withdraw(me, publication, s.relays));
     });
   }
+}
+
+/** What a public act is, in a few words, for the relay view (H29). */
+function whatAct(d: Described): string {
+  if (d.spec === SPECS.identity) {
+    if (d.type === IDENTITY_TYPES.genesis) return 'A new identity (its genesis)';
+    if (d.type === IDENTITY_TYPES.rotation) return 'A change of keys (a rotation)';
+    if (d.type === IDENTITY_TYPES.routes) return 'Where its acts and inbox are (its routes)';
+    if (d.type === IDENTITY_TYPES.witness) return 'A witness act: it relies on another act';
+    if (d.type === NAME) return 'A display name';
+    if (d.type === NAME_WITHDRAWAL) return 'A display name withdrawn';
+    return 'An Identity act';
+  }
+  if (d.spec === SPECS.envelopes) {
+    if (d.type === PUBLICATION) return 'A publication (a picture or a file)';
+    if (d.type === WITHDRAWAL) return 'A publication withdrawn';
+    if (d.type === 4) return 'Its encryption key';
+    return 'An Envelopes act';
+  }
+  if (d.spec === POST_SPECS.text) return 'A text act';
+  if (d.spec === MIRS.agreements) return 'An Agreements act (an agreement, a signature, or talk about one)';
+  if (d.spec === MIRS.money) return 'A Money act';
+  if (d.spec === MIRS.development) return 'A Development act';
+  if (d.spec === PEOPLE_SPEC || d.spec === PEOPLE_SPEC_1) return d.type === FOLLOW_LIST ? 'A published follow list' : 'A people act';
+  return 'An act of another specification';
 }
 
 /** A document's title: its first line, without the heading's marks. */

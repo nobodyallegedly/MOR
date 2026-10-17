@@ -171,7 +171,9 @@ test('+ Add an agent: a second agent with a key of its own, its own cap; selecte
   assert.equal(second.key.kind, 'own');
   assert.equal(readFileSync(join(home, '.config', 'mor', 'agents', `${second.id}.key`), 'utf8').trim(), OWN);
   assert.match(await page.locator(`.entry[data-id="${second.id}"]`).innerText(), /its own key …QRST/);
-  // Its own cap.
+  // Its own cap: folded at first (H34), opened.
+  assert.equal(await page.locator('#e-cap').evaluate((d) => (d as HTMLDetailsElement).open), false);
+  await page.click('#e-cap > summary');
   await page.fill('#machine-cap input[name=callsPerDay]', '5');
   await page.click('#machine-cap button[type=submit]');
   await page.locator(`.entry[data-id="${second.id}"]`, { hasText: '0 of 5 calls today' }).waitFor();

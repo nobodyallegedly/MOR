@@ -25,6 +25,8 @@ export const OPS = [
   'bring',
   'renew',
   'use',
+  'leave',
+  'relay',
   'forget',
   'carry',
   'check',
@@ -68,6 +70,11 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
     case 'use':
       await dub.use(text(a.id));
       return {};
+    case 'leave':
+      await dub.leave();
+      return {};
+    case 'relay':
+      return dub.relay();
     case 'forget':
       await dub.forget(text(a.id));
       return {};
@@ -87,7 +94,7 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       });
     }
     case 'feed':
-      return dub.feed();
+      return dub.feed(a.fresh === true);
     case 'inbox':
       return dub.inbox();
     case 'message':

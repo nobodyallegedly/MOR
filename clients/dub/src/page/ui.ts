@@ -37,12 +37,61 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
   /** What was read last: the feed and the inbox, for the filter and the counts. */
   let feed: v.Item[] = [];
   let inbox: Inbox | null = null;
-  let filter: 'all' | 'toyou' = 'all';
-  let tab: 'public' | 'private' | 'signing' = 'public';
+  /** The relay view's acts (H29), read when that filter is chosen. */
+  let relayItems: v.Item[] | null = null;
+  let filter: 'all' | 'toyou' | 'relay' = 'all';
+  /** H30: a reload keeps the tab one was on (this browser's session storage: a tab's name, nothing else). */
+  let tab: 'public' | 'private' | 'signing' = remembered();
+  /** A share awaited in the Signing tab (H30): looked for by itself while the tab is open. */
+  let shareAwaited = false;
   /** The post being answered, if any. */
   let replying: { id: string; signer: string } | null = null;
   /** Words shown once, held only until they are hidden (H3). */
   let shown: { positions: number[] } | null = null;
+
+  function remembered(): 'public' | 'private' | 'signing' {
+    try {
+      const t = sessionStorage.getItem('dub:tab');
+      return t === 'private' || t === 'signing' ? t : 'public';
+    } catch {
+      return 'public';
+    }
+  }
+
+  // H34: folds, each remembered by this page (local storage: which fold is open, nothing else).
+  function folds(): Record<string, boolean> {
+    try {
+      return JSON.parse(localStorage.getItem('dub:folds') ?? '{}') as Record<string, boolean>;
+    } catch {
+      return {};
+    }
+  }
+  function applyFolds(root: ParentNode) {
+    const f = folds();
+    root.querySelectorAll<HTMLDetailsElement>('details[data-fold]').forEach((d) => {
+      const k = d.dataset.fold!;
+      if (k in f && d.open !== f[k]) d.open = f[k];
+    });
+  }
+  new MutationObserver((ms) => {
+    for (const m of ms) for (const n of m.addedNodes) if (n instanceof HTMLElement) applyFolds(n.parentNode ?? n);
+  }).observe(app, { childList: true, subtree: true });
+  app.addEventListener(
+    'toggle',
+    (ev) => {
+      const d = ev.target;
+      if (!(d instanceof HTMLDetailsElement) || !d.dataset.fold) return;
+      const f = folds();
+      if (f[d.dataset.fold] === d.open) return;
+      f[d.dataset.fold] = d.open;
+      try {
+        localStorage.setItem('dub:folds', JSON.stringify(f));
+      } catch {
+        // not remembered: the page works the same
+      }
+    },
+    true,
+  );
 
   function say(kind: 'error' | 'done' | 'warn' | '', html: string) {
     const s = $('status');
@@ -70,7 +119,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
   };
 
   /** Busy: the buttons wait, so nothing is sent twice. */
+  let working = false;
   async function busy<T>(words: string, f: () => Promise<T>): Promise<T | undefined> {
+    working = true;
     say('', `<span class="small">${v.e(words)}</span>`);
     const was = [...app.querySelectorAll('button')].map((x) => [x, x.disabled] as const);
     app.querySelectorAll('button').forEach((x) => (x.disabled = true));
@@ -81,6 +132,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       return undefined;
     } finally {
       for (const [x, d] of was) x.disabled = d;
+      working = false;
     }
   }
 
@@ -102,9 +154,37 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
   }
 
   function drawFeed() {
+    if (filter === 'relay') {
+      if (!relayItems) {
+        fill('feed', '<p class="empty">Reading every public act at this identity’s relays…</p>');
+        return;
+      }
+      fill(
+        'feed',
+        `<p class="small">Every public act at this identity’s relays, newest first, in the order each relay received them: its own order, not a signed time. Posts of anyone, not only those you follow.</p>${
+          relayItems.length ? relayItems.map(v.post).join('') : '<p class="empty">Nothing public at its relays yet.</p>'
+        }`,
+      );
+      return;
+    }
     const items = filter === 'toyou' ? toYou() : feed;
     const empty = filter === 'toyou' ? 'Nothing addressed to you yet: replies to your posts, and public messages to you, come here.' : 'Nothing yet. Write something, or follow someone.';
     fill('feed', items.length ? items.map(v.post).join('') : `<p class="empty">${empty}</p>`);
+  }
+
+  /** The relay view (H29): every public act at this identity's relays. */
+  async function readRelay() {
+    relayItems = null;
+    drawFeed();
+    try {
+      const r = await b.ask<{ items: v.Item[]; hidden: number; problems: string[] }>('relay');
+      relayItems = r.items;
+      if (filter !== 'relay') return;
+      drawFeed();
+      $('feed')!.insertAdjacentHTML('beforeend', (r.hidden ? `<p class="small">${r.hidden} from muted identities, not shown.</p>` : '') + r.problems.map((p) => `<p class="small">${v.e(p)}</p>`).join(''));
+    } catch (err) {
+      if (filter === 'relay') fill('feed', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+    }
   }
 
   function drawInbox() {
@@ -119,12 +199,20 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     );
   }
 
-  async function readFeed() {
+  async function readFeed(fresh = false) {
     try {
-      const r = await b.ask<{ items: v.Item[]; more: number; problems: string[] }>('feed');
+      const r = await b.ask<{ items: v.Item[]; more: number; problems: string[]; notes?: string[]; followsChanged?: boolean }>('feed', { fresh });
       feed = r.items;
+      // The follow list sealed to the identity was changed by another app holding it: the people panel is drawn again.
+      if (r.followsChanged) {
+        state = await b.ask<v.State>('state');
+        const el = $('people');
+        if (el && state.identity) el.outerHTML = v.people(state);
+      }
+      if (filter === 'relay') return;
       drawFeed();
-      if (r.problems.length) $('feed')!.insertAdjacentHTML('beforeend', r.problems.map((p) => `<p class="small">${v.e(p)}</p>`).join(''));
+      const extra = [...(r.notes ?? []), ...r.problems];
+      if (extra.length) $('feed')!.insertAdjacentHTML('beforeend', extra.map((p) => `<p class="small">${v.e(p)}</p>`).join(''));
       if (r.items.length) $('feed')!.insertAdjacentHTML('beforeend', '<p class="small">In signed order: a reply after what it answers. MOR has no clock, so this is not a time.</p>');
     } catch (err) {
       fill('feed', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
@@ -168,6 +256,11 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
   function setTab(t: 'public' | 'private' | 'signing') {
     if (t === 'signing' && !$('signing')) t = 'public';
     tab = t;
+    try {
+      sessionStorage.setItem('dub:tab', t);
+    } catch {
+      // not remembered: the page works the same
+    }
     app.querySelectorAll<HTMLElement>('[data-tab]').forEach((x) => x.classList.toggle('on', x.dataset.tab === t));
     $('public')!.hidden = t !== 'public';
     $('private')!.hidden = t !== 'private';
@@ -177,10 +270,12 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     if (t === 'private') void seen((inbox?.messages ?? []).filter((m) => !m.seen).map((m) => m.key));
   }
 
-  function setFilter(f: 'all' | 'toyou') {
+  function setFilter(f: 'all' | 'toyou' | 'relay') {
+    const was = filter;
     filter = f;
     app.querySelectorAll<HTMLElement>('[data-filter]').forEach((x) => x.classList.toggle('on', x.dataset.filter === f));
     drawFeed();
+    if (f === 'relay' && (was !== 'relay' || !relayItems)) void readRelay();
     if (f === 'toyou') void seen(toYou().filter((x) => !x.seen).map((x) => x.id));
   }
 
@@ -220,6 +315,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         fill('signing-waiting', r.waiting ? v.note('', `${r.waiting === 1 ? 'A proposal to sign waits' : `${r.waiting} proposals to sign wait`}. ${v.e(r.say)}`) : '');
         return;
       }
+      shareAwaited = r.proposals.some((p) => p.share === 'waiting' || p.share === 'ready');
+      // A share being shown, or its words being typed back, is never drawn over.
+      if (app.querySelector('#share-shown') || [...app.querySelectorAll<HTMLInputElement>('#signing form.share-back input')].some((i) => i.value)) return;
       fill('signing-list', r.proposals.length ? r.proposals.map(v.proposal).join('') : '<p class="empty">No proposal to sign. When a collective’s founder asks you to sign, it comes here.</p>');
       fill('count-signing', r.waiting ? String(r.waiting) : '');
     } catch (err) {
@@ -275,7 +373,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     if (!el || el instanceof HTMLInputElement) return;
     const d = el.dataset;
     if (d.tab) return setTab(d.tab as 'public' | 'private' | 'signing');
-    if (d.filter) return setFilter(d.filter as 'all' | 'toyou');
+    if (d.filter) return setFilter(d.filter as 'all' | 'toyou' | 'relay');
     const card = el.closest<HTMLElement>('[data-post]');
     switch (d.action) {
       case 'written':
@@ -303,10 +401,30 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         if (r) {
           feed = [];
           inbox = null;
+          relayItems = null;
+          filter = 'all';
           await refresh();
         }
         break;
       }
+      case 'leave': {
+        // H28: leave the identity in use first (its keys stay here), then the window to choose, make or bring one.
+        const r = await busy('Leaving this identity…', () => b.ask('leave'));
+        if (r) {
+          feed = [];
+          inbox = null;
+          relayItems = null;
+          filter = 'all';
+          await refresh();
+          say('done', 'You left that identity: its keys stay here. Choose one, or make or bring another.');
+        }
+        break;
+      }
+      case 'lookshare':
+        await busy('Looking for your share…', () => readSigning());
+        say('', '');
+        if (shareAwaited && !app.querySelector('[data-action="share"]')) say('', '<span class="small">Not arrived yet: the founder’s Edubba sends it once every member has signed. Dub keeps looking while this tab is open.</span>');
+        break;
       case 'forget':
         if (!confirm('Forget this identity here? Its keys go with it. Only its signing key’s words, written down, bring it back. Its posts stay published.')) break;
         if (await busy('Forgetting…', () => b.ask('forget', { id: d.id }))) {
@@ -405,7 +523,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       }
       case 'feed':
         say('', '');
-        await Promise.all([readFeed(), readInbox()]);
+        if (filter === 'relay') void readRelay();
+        await Promise.all([readFeed(true), readInbox()]);
         await readSigning();
         break;
       case 'accept': {
@@ -584,6 +703,11 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       }
     }
   });
+
+  // H30: while the Signing tab is open and a share is awaited, Dub looks for it by itself, every 15 seconds.
+  setInterval(() => {
+    if (tab === 'signing' && shareAwaited && state?.stage === 'ready' && !document.hidden && !working) void readSigning();
+  }, 15000);
 
   return { show };
 }

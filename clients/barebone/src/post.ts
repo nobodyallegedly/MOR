@@ -230,7 +230,7 @@ export interface Judging {
 }
 
 /** Identities already looked up into this verifier. */
-class Judge implements Judging {
+export class Judge implements Judging {
   v: Verifier;
   /** Addresses not tried by any lookup, each with why. */
   notTried: NotTried[] = [];

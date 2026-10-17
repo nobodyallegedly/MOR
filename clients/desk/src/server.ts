@@ -16,6 +16,8 @@ import { Agents } from './agents.ts';
 import { Collectives } from './collectives.ts';
 import { Setup } from './setup.ts';
 import { Real } from './real.ts';
+import { Member } from './member.ts';
+import { listFolders } from './folders.ts';
 import { FONT_FILES, FONTS_DIR } from '../../dub/src/fonts.ts';
 import { Store } from './store.ts';
 import { STYLE } from './page/view.ts';
@@ -67,6 +69,8 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
   const collectives = new Collectives(opts.collective ?? join(opts.dir, 'collective'), store);
   const setup = new Setup(desk, store);
   const real = new Real(desk, store);
+  // H33: Edubba signs as a member, with Dub's own code, for any identity it holds; the names it shows are Edubba's own.
+  const member = new Member(store, desk, () => [...store.book().identities.map((i) => ({ id: i.id, name: i.name })), ...real.contacts().map((c) => ({ id: c.id, name: c.name }))]);
   /** A real collective founded here, read as anyone reads it (its relays and homes), with its founder as the member held here. */
   const realRead = (id: string) => {
     if (!real.isReal(id)) return undefined;
@@ -94,6 +98,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
           collectives: [...collectives.list(), ...real.collectives().map((c) => ({ id: c.id, name: c.name, closed: false, members: c.members, real: true }))],
           proposals: real.proposals().map((p) => ({ ...p, standing: real.standing(p) })),
           contacts: real.contacts(),
+          acting: await member.acting(),
           paired: access.paired().map((p) => ({ ...p, you: p.key === key })),
         };
       // An agent's answering: `agent` names it; without, the first agent (as MOR Identities had one).
@@ -198,8 +203,29 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
         setup.cancelRelease(text(a.plan));
         return {};
       case 'fold':
-        desk.fold(text(a.collective), a.open === true);
+        // H14, H26, H34: a fold as the person left it; a collective's "What you may do for it" by the collective's ID, every other by its name.
+        desk.fold(text(a.key) || text(a.collective), a.open === true);
         return {};
+      case 'folders':
+        // H31: the Mac's folders, browsed by the program for the page, which cannot open the Mac's own dialog.
+        return listFolders(text(a.path));
+      case 'acting as':
+        await member.actAs(text(a.id));
+        return { acting: await member.acting() };
+      case 'member proposals':
+        return member.as((d) => d.proposals());
+      case 'member accept':
+        return member.as((d) => d.signProposal(text(a.thread)));
+      case 'member decline':
+        return member.as((d) => d.declineProposal(text(a.thread), text(a.why)));
+      case 'member share':
+        return member.as((d) => d.shareShow(text(a.thread)));
+      case 'member shareback':
+        return member.as((d) => d.shareConfirm(text(a.thread), list(a.typed)));
+      case 'member sharehand':
+        return member.as((d) => d.shareByHand(text(a.thread)));
+      case 'real lists':
+        return real.readLists();
       case 'real contacts':
         return real.contacts();
       case 'real contact add':

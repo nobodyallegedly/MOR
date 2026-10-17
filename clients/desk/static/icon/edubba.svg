@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Edubba ("the tablet house"): a house whose roof and walls are clay tablets, on the visual bible's dark. Calm, no glow. -->
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="#06080c"/>
+  <rect x="100.5" y="100.5" width="823" height="823" rx="183.5" fill="none" stroke="#2a313d" stroke-width="3"/>
+  <g fill="#8a6a50">
+    <rect x="-34" y="-150" width="68" height="300" rx="16" transform="translate(400 342) rotate(50)"/>
+    <rect x="-34" y="-150" width="68" height="300" rx="16" transform="translate(624 342) rotate(-50)"/>
+    <rect x="300" y="474" width="112" height="318" rx="22"/>
+    <rect x="456" y="474" width="112" height="318" rx="22"/>
+    <rect x="612" y="474" width="112" height="318" rx="22"/>
+  </g>
+  <g stroke="#5e4634" stroke-width="9" stroke-linecap="round">
+    <path d="M326 540 H386 M326 600 H386 M326 660 H372"/>
+    <path d="M482 540 H542 M482 600 H542 M482 660 H528"/>
+    <path d="M638 540 H698 M638 600 H698 M638 660 H684"/>
+  </g>
+</svg>
