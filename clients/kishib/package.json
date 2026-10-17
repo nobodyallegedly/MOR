@@ -1,0 +1,33 @@
+{
+  "name": "mor-kishib",
+  "version": "0.1.0",
+  "description": "Kišib: the one place where a chain key is used, from paper, and then forgotten (F335). Rotate an identity from its chain key's words, keeping every line; rotate a collective from its members' paper shares (F337); escape a contested position with both keys; declare a succession and confirm it. It holds nothing between uses. On the Mac and Linux, a program and its page; on the web (kishib.dubsar.org), the same page, for testing only. Test identities only, until MOR is frozen.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-kishib": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "build": "node --import tsx scripts/build-web.ts",
+    "release": "node --import tsx scripts/build-web.ts --release",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts",
+    "test:build": "node --import tsx --test test/build/*.test.ts",
+    "start": "node --import tsx src/cli.ts open"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0",
+    "esbuild": "^0.25",
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "playwright-core": "1.56",
+    "typescript": "^5"
+  }
+}

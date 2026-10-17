@@ -789,6 +789,16 @@ struct RotationIn {
     rule: Option<Vec<u64>>,
     /// New high-risk settings, replacing those of the same kind.
     declarations: Option<Vec<DeclIn>>,
+    /// A succession to a MOR identity, by its hash (Identity section 8;
+    /// field 9 as `["mor", identity]`). Absent: left in place.
+    successor: Option<String>,
+    /// True: the rotation ends the current succession (field 9, null).
+    #[serde(default)]
+    end_succession: bool,
+    /// True: a homeless rotation (field 11), which must name new homes;
+    /// with an escape endorsement, the escape with both keys (section 11).
+    #[serde(default)]
+    homeless: bool,
 }
 
 /// A rotation (Identity type 1), signed by the revealed chain key.
@@ -831,11 +841,19 @@ pub fn make_rotation(input: JsValue) -> R<Vec<u8>> {
             Some(x) => Some(Some(rule_of(x)?)),
         },
         declarations: declarations_of(&r.declarations)?,
-        successor: None,
+        successor: match (&r.successor, r.end_succession) {
+            (Some(_), true) => return Err(err("a rotation names a successor or ends the succession, not both")),
+            (Some(s), false) => Some(Some(identity::Successor { protocol: "mor".into(), identifier: unhex(s)?.to_vec() })),
+            (None, true) => Some(None),
+            (None, false) => None,
+        },
         audit: None,
-        homeless: false,
+        homeless: r.homeless,
         closure: false,
     };
+    if r.homeless && r.homes.is_none() {
+        return Err(err("a homeless rotation names its new homes (field 6)"));
+    }
     let inside = identity_inside(
         unhex(&r.identity_spec)?,
         identity::types::ROTATION,
