@@ -51,3 +51,8 @@ export { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 
 export const IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15, chainSignature: 16 } as const;
 export const ENVELOPES_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 } as const;
+
+/** The client's verdicts on grants' limits (the grant limits cMIP, F345), as `clients/genesis/src/core.ts` gives them: the same helper for the web clients. */
+export type GrantLimits = [act: string, within: boolean][];
+
+export const withGrantLimits = <T extends object>(specs: T, verdicts: GrantLimits): T & { grantLimits: GrantLimits } => ({ ...specs, grantLimits: verdicts });

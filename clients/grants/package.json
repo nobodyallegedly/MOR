@@ -1,0 +1,20 @@
+{
+  "name": "mor-grants",
+  "version": "0.1.0",
+  "description": "Grants between identities, shared: a person's grant to another identity (Agreements rules 73 to 80, F128), accepted by its grantee's signature, acts signed with the grant key on the grantee's strand, read with on whose authority, and the grant limits cMIP (draft 1, F345): a cap per act and an expiry on a named clock. Used by Edubba's agents; for Damgar's round 2 lanes. Test identities only.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

@@ -287,6 +287,11 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await ed.locator('[data-action=real-gather]').waitFor();
   await ed.locator('.proposal-status', { hasText: '3 of 3 signed' }).waitFor({ timeout: 90_000 });
   await shot(ed, 'edubba-founding-all-signed');
+  // F337: founding refused until what this device will hold is read and ticked.
+  assert.match(await ed.locator('.proposal-status').innerText(), /trusted-dealer weakness[\s\S]*one hour at most/);
+  await ed.click('[data-action=real-found]');
+  await ed.locator('#e-status .note.warn', { hasText: 'Read what this device will hold while founding (F337)' }).waitFor();
+  await ed.check('input[id^=real-found-read-]');
   await ed.click('[data-action=real-found]');
   await done(ed, '#e-status .note.done', '“The tablet house” is founded');
   await ed.locator('#e-to-show').waitFor();
@@ -410,6 +415,7 @@ test('H33: Edubba acting as a member it holds: the proposal read in plain words,
   const entry = ed.locator('.entry', { hasText: 'Two of us' });
   await entry.click();
   await ed.locator('.proposal-status', { hasText: '2 of 2 signed' }).waitFor({ timeout: 90_000 });
+  await ed.check('input[id^=real-found-read-]');
   await ed.click('[data-action=real-found]');
   await done(ed, '#e-status .note.done', '“Two of us” is founded');
 

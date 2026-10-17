@@ -74,6 +74,7 @@ import {
   type TermsRead,
 } from './explain.ts';
 import type { Store } from './store.ts';
+import { folderOf } from '../../desk/src/folders.ts';
 
 /** The MOR repository this program is part of: what a release publishes unless another folder is set. */
 export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
@@ -419,8 +420,9 @@ export class Actions {
       if (!(op instanceof Uint8Array)) throw new Error(`${hint} is not a home: it declares no operator`);
       homes.push({ operator: Buffer.from(op).toString('hex'), hint });
     }
-    if (a.checkout && !existsSync(a.checkout)) throw new Error(`no folder ${a.checkout}`);
-    this.store.saveSettings({ homes, relays: a.relays, via: a.via, checkout: a.checkout || null });
+    // H19: a folder pasted from the Terminal ("\ " a space, quotes, spaces at its end), a near match named (Edubba's reading).
+    const checkout = a.checkout?.trim() ? folderOf(a.checkout) : null;
+    this.store.saveSettings({ homes, relays: a.relays, via: a.via, checkout });
   }
 
   rename(id: string, name: string): void {
@@ -3959,7 +3961,7 @@ export class Actions {
    * then, where an area reaches an act, the signature acts its threshold
    * needs, by the holders held here, yours first (simulated consent, said).
    */
-  async preparePost(a: { collective: string; text: string; jpeg?: string }) {
+  async preparePost(a: { collective: string; text: string; jpeg?: string; corrects?: string }) {
     const c = this.store.collective(a.collective);
     const names = this.store.names();
     const perms = await this.permissions(a.collective);
@@ -3985,9 +3987,13 @@ export class Actions {
       const ordered = [...held.filter((m) => perms.you.includes(m)), ...held.filter((m) => !perms.you.includes(m))];
       return { ...n, signers: ordered.slice(0, n.needed) };
     });
+    // A correction of one of the collective's own acts (the corrections cMIP, F344): its first reference.
+    const corrects = a.corrects?.trim().toLowerCase() || null;
+    if (corrects && !/^[0-9a-f]{64}$/.test(corrects)) blocking.push('A correction names the act it corrects by its ID.');
     const reading: Reading = {
-      title: `A post for the collective “${perms.name}”${stripped ? ', with a picture' : ''}`,
+      title: `${corrects ? 'A correction' : 'A post'} for the collective “${perms.name}”${stripped ? ', with a picture' : ''}`,
       summary: [
+        ...(corrects ? [`Labelled “Correction”: it corrects the collective’s act ${short(corrects)}, which stays as signed; apps that know the corrections cMIP show “corrected by” on it.`] : []),
         `Signed with ${names(c.identity)}'s own key, public: anyone can read it. It is an act of the collective, not of its members.`,
         ...(sign.length ? [`Then ${list(sign.flatMap((n) => n.signers).filter((x, i, xs) => xs.indexOf(x) === i).map(names))} sign it, each with a signature act of their own, as the agreement's areas ask.`] : []),
       ],
@@ -4005,11 +4011,11 @@ export class Actions {
     };
     return this.plan({
       kind: 'post',
-      digest: digestOf('post', a.collective, text, stripped ?? new Uint8Array()),
+      digest: digestOf('post', a.collective, text, stripped ?? new Uint8Array(), ...(corrects ? [corrects] : [])),
       reading,
       depends: [a.collective, ...sign.flatMap((n) => n.signers)],
       run: async () => {
-        const made = await post(c.id, { text, jpeg: stripped ?? undefined, relays: c.f.relays });
+        const made = await post(c.id, { text, jpeg: stripped ?? undefined, relays: c.f.relays, corrects: corrects ? [corrects, c.identity] : undefined });
         this.store.saveCollective(c);
         const lines: Line[] = [{ text: `Posted for “${perms.name}”: ${short(made.id)}${made.picture ? `, with the picture ${short(made.picture.id)}` : ''}.`, tone: 'ok' }];
         const acts = [made.id, ...(made.picture ? [made.picture.id] : [])];

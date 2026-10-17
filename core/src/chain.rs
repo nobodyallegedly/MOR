@@ -1913,9 +1913,11 @@ impl Verifier {
     /// is a collective's pointer to a decision of its own (Agreements rule
     /// 58): its signer's chain declares a founding agreement (Agreements
     /// rule 56), and the act it names is a link of that chain or a record
-    /// (Agreements type 17) the collective signed. `Some(true)` for any act
-    /// this does not concern; `None` (unknown) where the signer's chain or
-    /// the act named is not held, or Agreements' hash is not known here.
+    /// (Agreements type 17) the collective signed; or (Text draft 10, F343)
+    /// an act signed with a grant key naming the grant its binding names,
+    /// which Agreements judge. `Some(true)` for any act this does not
+    /// concern; `None` (unknown) where the signer's chain or the act named
+    /// is not held, or Agreements' hash is not known here.
     fn text_pointer(&self, cx: &mut Cx, x: &Held) -> Option<bool> {
         let Some((_, text)) = self.never_ack_specs else { return Some(true) };
         if x.inside.spec != text || x.inside.objects.is_none() {
@@ -1928,6 +1930,16 @@ impl Verifier {
         let res = self.resolve_cx(cx, signer);
         if res.links.is_empty() {
             return None;
+        }
+        // Text rule 14, its second case (draft 10, F343): an act signed with
+        // a grant key names, as its one object, the grant its binding names,
+        // on its grantor's chain. A binding that is no link of the signer's
+        // identity chain is a scoped key's (Identity rule 8): Agreements
+        // judge whether the grant backs it (rules 73 to 80, `backing`).
+        if let Some(b) = x.act.outside.binding {
+            if o.predecessor == b && res.position_of(&b).is_none() {
+                return Some(true);
+            }
         }
         let collective = res
             .states

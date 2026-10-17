@@ -20,7 +20,9 @@ import { verifyRelease, type Manifest } from '../../repo/src/release.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { count, readAgreement, ruleWords, short, termsOf, type Line, type Section, type TermsRead } from '../../collective/src/explain.ts';
-import { escapeControls } from './words.ts';
+import { escapeControls, fingerprint, quote, sectionsText } from './words.ts';
+import { authorityOf, type Authority } from '../../grants/src/grant.ts';
+import { LONG_FORM_CORRECTION, correctionOf, isCorrectionFormat } from '../../barebone/src/corrections.ts';
 
 /** What the connector says about one act. */
 export interface Told {
@@ -181,6 +183,14 @@ export async function readAct(id: string, hints: string[], via: Via = {}, depth 
   }
   const judge = new Judge(hints, via);
 
+  // An act signed with a grant key (F128, F343): the grantor's own act, its
+  // binding the grant. Read with on whose authority it stands, the grant and
+  // the grantee's acceptance looked for, Agreements' verdict (rule 80).
+  if (d.public && d.binding && d.signer && d.binding !== d.signer) {
+    const a = await authorityOf(act, hints, via).catch(() => null);
+    if (a) return underGrant(id, d, a);
+  }
+
   if (!d.public) {
     const standing = await judge.standing(act, d);
     return told(id, {
@@ -215,6 +225,37 @@ export async function readAct(id: string, hints: string[], via: Via = {}, depth 
   });
 }
 
+// ---------------------------------------------------------------- an act signed under a grant
+
+function underGrant(id: string, d: Described, a: Authority): Told {
+  const counts = a.backing === 'backed' || a.backing === 'binds';
+  const quoted: Told['quoted'] = [];
+  if (d.spec === POST_SPECS.text && d.type === 0 && d.payload) {
+    const t = (cborDecode(d.payload) as Map<number, unknown>).get(0);
+    if (typeof t === 'string') quoted.push({ heading: 'Its words, as its signer wrote them', text: escapeControls(t) });
+  }
+  return told(id, {
+    kind: d.spec === POST_SPECS.text ? 'text' : 'other',
+    title: 'An act signed under a grant',
+    signer: d.signer ?? null,
+    standing: 'scoped',
+    counts,
+    verdict: a.words,
+    sections: [
+      {
+        heading: 'On whose authority',
+        lines: [
+          { text: `In the name of ${names(a.grantor)}, its signer: the grantor.` },
+          { text: `Signed by ${names(a.grantee)}, the grantee, with the key the grant ${short(a.grant)} bound (Agreements rule 73, F128).` },
+          { text: `Agreements: ${a.backing}${a.reason ? `, ${a.reason}` : ''}.`, tone: counts ? undefined : 'warn' },
+          ...(a.limits ? [{ text: a.limits.within === true ? 'Within the grant’s limits (the grant limits cMIP).' : `The grant’s limits: ${a.limits.why}.`, tone: (a.limits.within === true ? undefined : 'warn') as Line['tone'] }] : []),
+        ],
+      },
+    ],
+    quoted,
+  });
+}
+
 // ---------------------------------------------------------------- a text act
 
 async function text(id: string, hints: string[], via: Via): Promise<Told> {
@@ -226,8 +267,17 @@ async function text(id: string, hints: string[], via: Via): Promise<Told> {
   }
   const ok = p.standing === 'valid';
   const lines: Line[] = [{ text: `Signed by the identity ${p.signer}.` }, standingLine(p.standing)];
+  const corrected = correctionOf(p);
   const format =
-    p.format === POST_SPECS.longform ? 'It is written in the long-form text format (formatted text).' : p.format ? `It names a format this connector does not implement (${short(p.format)}); its text is shown plain.` : 'It is plain text.';
+    p.format === POST_SPECS.longform
+      ? 'It is written in the long-form text format (formatted text).'
+      : isCorrectionFormat(p.format)
+        ? corrected
+          ? `Correction: it corrects act ${short(corrected)}, an act of the same signer, which stays as signed (the corrections cMIP)${p.format === LONG_FORM_CORRECTION ? '; written in long form (formatted text, the long-form text format)' : ''}.`
+          : 'It is in the corrections format, but the act it names first is not one of its own signer’s: no correction, an ordinary text naming that act (the corrections cMIP, 1.3).'
+        : p.format
+          ? `It names a format this connector does not implement (${short(p.format)}); its text is shown plain.`
+          : 'It is plain text.';
   const refs: Line[] = p.refs.map((r) =>
     r.kind === 'picture'
       ? { text: r.problem ? `It shows a picture (${short(r.publication)}) that is not shown: ${r.problem}.` : `It shows a picture (${short(r.publication)}), ${r.picture?.width}×${r.picture?.height}, verified.`, tone: r.problem ? 'warn' : undefined }
@@ -235,7 +285,7 @@ async function text(id: string, hints: string[], via: Via): Promise<Told> {
   );
   return told(id, {
     kind: 'text',
-    title: 'A text',
+    title: corrected ? 'A text: a correction' : 'A text',
     signer: p.signer,
     standing: p.standing,
     counts: ok,
@@ -604,4 +654,18 @@ export async function identity(id: string, hints: string[], via: Via = {}, judge
     verdict: `${declared ? 'A collective' : 'An identity'} found at its homes. ${w}`,
     sections: [{ heading: 'Its identity chain', lines }],
   });
+}
+
+/**
+ * What the connector says about one act, as text for Claude: the title, the
+ * verdict, the act and its signer's fingerprint, the sections, and the
+ * signers' words fenced as data. The same reading is given to Edubba's
+ * agents (H21), so an agent reads an act exactly as Claude's app does.
+ */
+export function toldText(t: Told): string {
+  const head = [`# ${t.title}`, t.verdict, `Act: ${t.id}`];
+  if (t.signer) head.push(`${t.kind === 'identity' && t.signer === t.id ? 'Fingerprint' : "Signer's fingerprint"}: ${fingerprint(t.signer)}`);
+  const parts = [head.join('\n'), sectionsText(t.sections)];
+  for (const q of t.quoted) parts.push(quote(q.heading, q.text));
+  return parts.filter(Boolean).join('\n\n');
 }

@@ -14,7 +14,7 @@ import { pageScript, serveLocal } from '../../desk/src/local.ts';
 import { Dub } from './dub.ts';
 import { OPS, run } from './ops.ts';
 import { Store } from './store.ts';
-import { STYLE } from './page/view.ts';
+import { PAGE_STYLE as STYLE } from './page/view.ts';
 import { FONT_FILES, FONTS_DIR } from './fonts.ts';
 import { version } from './version.ts';
 

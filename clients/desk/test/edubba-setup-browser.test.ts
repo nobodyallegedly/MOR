@@ -121,7 +121,7 @@ test('relying on an act: read back in plain words, nothing signed until RELY is 
   await page.fill('#rely-sign input[name=typed]', 'RELY');
   await page.click('#rely-sign button[type=submit]');
   await page.locator('#e-rely-shown .note.done', { hasText: 'Witness act signed and sent' }).waitFor({ timeout: 60_000 });
-  // The record, read again, shows this device's line of one act, its card ready for MOR Safety.
+  // The record, read again, shows this device's line of one act, its card ready for Kišib.
   const n = (await c.ask<any>('state')).identities[0].line.acts;
   await page.locator('#e-record', { hasText: `This device’s line: ${n} acts, the latest` }).waitFor({ timeout: 60_000 });
   await page.locator('#e-record .card-of', { hasText: 'Position' }).first().waitFor();

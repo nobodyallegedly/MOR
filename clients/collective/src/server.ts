@@ -267,7 +267,7 @@ export function collectiveApi(actions: Actions, store: Store): (op: string, a: R
             return actions.prepareDebtRelease({ debt: text(a.debt), against: Array.isArray(a.against) ? a.against.map(String) : [] });
           case 'post':
             // Acting for the collective, text and pictures (Edubba, F333).
-            return actions.preparePost({ collective: text(a.collective), text: text(a.text), jpeg: text(a.jpeg) || undefined });
+            return actions.preparePost({ collective: text(a.collective), text: text(a.text), jpeg: text(a.jpeg) || undefined, corrects: text(a.corrects) || undefined });
           case 'release-work':
             return actions.prepareReleaseWork({ collective: text(a.collective), release: text(a.release) });
           default:

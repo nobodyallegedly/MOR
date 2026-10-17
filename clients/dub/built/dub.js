@@ -1414,6 +1414,15 @@ function makeRotation(input) {
   wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
   return v1;
 }
+function moneyRead(type_, payload) {
+  const ptr0 = passArray8ToWasm0(payload, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.moneyRead(type_, ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
 function moneySpecs() {
   const ret = wasm.moneySpecs();
   if (ret[2]) {
@@ -2636,6 +2645,7 @@ var MIRS = {
 var ACK_SPECS = [MIRS.identity, MIRS.money, MIRS.agreements];
 var IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15, chainSignature: 16 };
 var ENVELOPES_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 };
+var withGrantLimits = (specs, verdicts) => ({ ...specs, grantLimits: verdicts });
 
 // ../reader/src/web/core.ts
 await __wbg_init({ module_or_path: new URL("mor_wasm_bg.wasm", document.baseURI) });
@@ -4250,6 +4260,28 @@ var TEXT_ACT = 0;
 var PUBLICATION = 0;
 var WITHDRAWAL = 3;
 
+// ../barebone/src/corrections.ts
+var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 2, test value until publication");
+var LONG_FORM_CORRECTION = sha2562("Long-form corrections cMIP, draft 1, test value until publication");
+var isCorrectionFormat = (format) => format === CORRECTIONS_SPEC || format === LONG_FORM_CORRECTION;
+var isLongForm = (format) => format === POST_SPECS.longform || format === LONG_FORM_CORRECTION;
+var correctionFormatFor = (corrected) => isLongForm(corrected) ? LONG_FORM_CORRECTION : CORRECTIONS_SPEC;
+function formatOfPayload(payload) {
+  if (!payload) return null;
+  try {
+    const f = cborDecode(payload).get(1);
+    return f instanceof Uint8Array ? hex(f) : null;
+  } catch {
+    return null;
+  }
+}
+function correctionOf(p) {
+  if (!isCorrectionFormat(p.format)) return null;
+  const r = p.refs[0];
+  if (!r || r.kind !== "act" || !r.actSigner || r.actSigner !== p.signer) return null;
+  return r.id;
+}
+
 // ../barebone/src/post.ts
 async function carryChain(by, relays) {
   for (const hint of relays) {
@@ -4288,8 +4320,10 @@ function textPayload(text3, format = null) {
 async function post(by, opts) {
   const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
   await carryChain(by, opts.relays);
-  const refs = [...picture ? [referenceTo(picture.act)] : [], ...opts.refs ?? []];
-  const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, opts.format ?? null), {
+  const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...opts.refs ?? []];
+  const corrected = opts.corrects && opts.format === void 0 ? await fetchAct(typeof opts.corrects === "string" ? opts.corrects : opts.corrects[0], opts.relays, {}) : null;
+  const format = opts.format !== void 0 ? opts.format : opts.corrects ? correctionFormatFor(corrected ? formatOfPayload(describeAct(corrected).payload) : null) : null;
+  const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, format), {
     public: true,
     relays: opts.relays,
     refs: refs.length ? refs : void 0,
@@ -4366,21 +4400,21 @@ async function readPost(id, hints, via2 = {}, judging) {
   const text3 = p.get(0);
   if (typeof text3 !== "string") throw new Error("the text act has no text");
   const f = p.get(1);
-  const judge = judging ?? new Judge(hints, via2);
-  const standing = await judge.standing(act, id, d.signer);
+  const judge2 = judging ?? new Judge(hints, via2);
+  const standing = await judge2.standing(act, id, d.signer);
   const named = (d.refs ?? []).map((r, i) => d.refSigners?.[i] ? [r, d.refSigners[i]] : r);
-  const refs = await Promise.all(named.map((r) => readRef(r, hints, via2, judge)));
-  return { id, signer: d.signer, standing, text: text3, format: f instanceof Uint8Array ? hex(f) : null, refs, notTried: judge.notTried ?? [] };
+  const refs = await Promise.all(named.map((r) => readRef(r, hints, via2, judge2)));
+  return { id, signer: d.signer, standing, text: text3, format: f instanceof Uint8Array ? hex(f) : null, refs, notTried: judge2.notTried ?? [] };
 }
-async function readRef(r, hints, via2, judge) {
+async function readRef(r, hints, via2, judge2) {
   const id = typeof r === "string" ? r : r[0];
   const signer = typeof r === "string" ? void 0 : r[1];
   let act = null;
   try {
     const f = await followRef(r, hints, via2);
     act = f.act;
-    if (judge.notTried) {
-      for (const n of f.notTried) if (!judge.notTried.some((x) => x.hint === n.hint)) judge.notTried.push(n);
+    if (judge2.notTried) {
+      for (const n of f.notTried) if (!judge2.notTried.some((x) => x.hint === n.hint)) judge2.notTried.push(n);
     }
   } catch (e2) {
     const why = e2 instanceof Error ? e2.message : String(e2);
@@ -4393,12 +4427,12 @@ async function readRef(r, hints, via2, judge) {
   } catch (e2) {
     return { kind: "act", id, signer, what: `not a valid act: ${e2 instanceof Error ? e2.message : e2}` };
   }
-  if (!d.public) return { kind: "act", id, signer, what: "a private act" };
-  if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: "act", id, signer, what: "a text act" };
-  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, signer, what: "an act of a specification this client does not implement" };
-  return readPicture(act, d, hints, via2, judge);
+  if (!d.public) return { kind: "act", id, signer, what: "a private act", actSigner: d.signer };
+  if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: "act", id, signer, what: "a text act", actSigner: d.signer };
+  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, signer, what: "an act of a specification this client does not implement", actSigner: d.signer };
+  return readPicture(act, d, hints, via2, judge2);
 }
-async function readPicture(act, d, hints, via2, judge) {
+async function readPicture(act, d, hints, via2, judge2) {
   const out = {
     kind: "picture",
     publication: d.id,
@@ -4411,7 +4445,7 @@ async function readPicture(act, d, hints, via2, judge) {
   };
   const no = (why) => (out.problem = why, out);
   if (!d.signer) return no("the publication has no signer");
-  out.standing = await judge.standing(act, d.id, d.signer);
+  out.standing = await judge2.standing(act, d.id, d.signer);
   if (out.standing !== "valid") return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
   const m = cborDecode(d.payload);
   const spec = m.get(0);
@@ -4425,7 +4459,7 @@ async function readPicture(act, d, hints, via2, judge) {
   if (!(work instanceof Uint8Array) || !(lockedHash instanceof Uint8Array) || typeof size !== "number" || !(nonce instanceof Uint8Array)) {
     return no("the publication does not describe its media");
   }
-  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via2, judge);
+  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via2, judge2);
   if (out.withdrawn) return no("withdrawn by its signer");
   const named = Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : [];
   const media = (places) => firstOf(places.filter((h) => !cannotReach(h, via2)), (h) => relayAt(h, via2).getMedia(hex(lockedHash)));
@@ -4447,7 +4481,7 @@ async function readPicture(act, d, hints, via2, judge) {
   out.bytes = plain;
   return out;
 }
-async function findWithdrawal(publication, signer, forId, hints, via2, judge) {
+async function findWithdrawal(publication, signer, forId, hints, via2, judge2) {
   const who2 = [signer];
   if (forId instanceof Uint8Array) who2.push(hex(forId));
   const search = async (h, s) => {
@@ -4469,7 +4503,7 @@ async function findWithdrawal(publication, signer, forId, hints, via2, judge) {
         }
         if (d.spec !== POST_SPECS.envelopes || d.type !== WITHDRAWAL || !d.signer) continue;
         if (!(d.objects ?? []).some(([chain]) => chain === publication)) continue;
-        if (await judge.standing(it.item, d.id, d.signer) === "valid") return d.id;
+        if (await judge2.standing(it.item, d.id, d.signer) === "valid") return d.id;
       }
       if (!page.items.length || page.next === after) return null;
       after = page.next;
@@ -4576,7 +4610,7 @@ function earliestByNames(acts, own) {
   }
   return out;
 }
-async function readStamps(clock, places, judge, via2 = {}) {
+async function readStamps(clock, places, judge2, via2 = {}) {
   const seen = /* @__PURE__ */ new Map();
   for (const h of places) {
     let after;
@@ -4604,7 +4638,7 @@ async function readStamps(clock, places, judge, via2 = {}) {
   const verified = [];
   for (const { s, act } of seen.values()) {
     try {
-      if (await judge.standing(act, s.stamp, clock) === "valid") verified.push(s);
+      if (await judge2.standing(act, s.stamp, clock) === "valid") verified.push(s);
     } catch {
     }
   }
@@ -4723,21 +4757,21 @@ function signedOrder(acts, rank, times) {
   for (const d of acts.filter((x) => !out.includes(x.id)).sort(before)) out.push(d.id);
   return out.filter((id) => isPost(byId.get(id)));
 }
-async function readOne(id, signer, position, places, via2, judge, lookupProblem) {
+async function readOne(id, signer, position, places, via2, judge2, lookupProblem) {
   const p = { id, signer, position, post: null, problem: null, answers: [] };
   if (lookupProblem) {
     p.problem = `its signer's identity chain could not be looked up: ${lookupProblem}`;
     return p;
   }
   try {
-    p.post = await readPost(id, places, via2, judge);
+    p.post = await readPost(id, places, via2, judge2);
     if (p.post.standing !== "valid") p.problem = `its standing is \u201C${p.post.standing}\u201D, not valid`;
   } catch (err) {
     p.problem = err instanceof Error ? err.message : String(err);
   }
   return p;
 }
-async function causeOf(id, agent, named, places, via2, judge, found) {
+async function causeOf(id, agent, named, places, via2, judge2, found) {
   let act = found.get(id)?.act ?? null;
   for (const h of act ? [] : places) {
     try {
@@ -4768,12 +4802,12 @@ async function causeOf(id, agent, named, places, via2, judge, found) {
   const picked = d.type === NUDGE_TYPES.pick ? f2 instanceof Uint8Array ? hex(f2) : null : null;
   if (d.type === NUDGE_TYPES.pick && !picked) return null;
   if (d.type === NUDGE_TYPES.nudge && !(typeof f2 === "number" && f2 >= 1)) return null;
-  if (await judge.standing(act, id, d.signer) !== "valid") return null;
+  if (await judge2.standing(act, id, d.signer) !== "valid") return null;
   return { type: d.type, signer: d.signer, picked };
 }
 var message = (err) => err instanceof Error ? err.message : String(err);
 async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = null) {
-  const judge = new FeedJudge(relays, via2);
+  const judge2 = new FeedJudge(relays, via2);
   const lines2 = [];
   const found = /* @__PURE__ */ new Map();
   const placesOf = /* @__PURE__ */ new Map();
@@ -4783,7 +4817,7 @@ async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = 
       let l = null;
       let problem = null;
       try {
-        l = await judge.lookUp(a.identity);
+        l = await judge2.lookUp(a.identity);
       } catch (err) {
         problem = message(err);
       }
@@ -4801,14 +4835,14 @@ async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = 
     let l = null;
     let problem = null;
     try {
-      l = await judge.lookUp(clock.identity);
+      l = await judge2.lookUp(clock.identity);
     } catch (err) {
       problem = message(err);
     }
     const { asked, unreachable } = placesFor(l, relays, TIMESTAMP_SPEC);
     clockLine = { ...clock, asked, unreachable, problem, found: 0, verified: 0, placed: 0 };
     if (!problem) {
-      const read2 = await readStamps(clock.identity, asked, judge, via2);
+      const read2 = await readStamps(clock.identity, asked, judge2, via2);
       clockLine.found = read2.found;
       clockLine.verified = read2.verified.length;
       times = earliestByNames([...found.values()].map((x) => ({ id: x.d.id, links: linksOf(x.d) })), read2.earliest);
@@ -4824,7 +4858,7 @@ async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = 
   const posts = await Promise.all(
     shown.map(async (id) => {
       const { d } = found.get(id);
-      const p = await readOne(id, d.signer, d.position ?? null, placesOf.get(d.signer), via2, judge, problems.get(d.signer) ?? null);
+      const p = await readOne(id, d.signer, d.position ?? null, placesOf.get(d.signer), via2, judge2, problems.get(d.signer) ?? null);
       if (byClock) p.time = times.get(id) ?? null;
       return p;
     })
@@ -4866,13 +4900,13 @@ async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = 
       } else if (!isPost(d) || !d.signer) {
         continue;
       } else if (!named.has(d.signer) && (d.to ?? []).some((t) => named.has(t))) {
-        const n = await readOne(r, d.signer, d.position ?? null, everywhere, via2, judge, null);
+        const n = await readOne(r, d.signer, d.position ?? null, everywhere, via2, judge2, null);
         n.note = true;
         answered.set(r, n);
       } else if (!named.has(d.signer)) {
         answered.set(r, { id: r, signer: d.signer, position: d.position ?? null, post: null, problem: null, answers: [] });
       } else {
-        answered.set(r, await readOne(r, d.signer, d.position ?? null, everywhere, via2, judge, problems.get(d.signer) ?? null));
+        answered.set(r, await readOne(r, d.signer, d.position ?? null, everywhere, via2, judge2, problems.get(d.signer) ?? null));
       }
       p.answers.push(r);
     }
@@ -4884,13 +4918,21 @@ async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = 
     const causes = p.post.refs.flatMap((x) => x.kind === "act" && !answered.has(x.id) ? [x.id] : []);
     let nudged = false;
     for (const c of causes) {
-      const cause = await causeOf(c, p.signer, named, everywhere, via2, judge, found);
+      const cause = await causeOf(c, p.signer, named, everywhere, via2, judge2, found);
       if (cause?.type === NUDGE_TYPES.pick && p.picked.has(cause.picked)) p.picked.set(cause.picked, cause.signer);
       if (cause?.type === NUDGE_TYPES.nudge) nudged = true;
     }
     if (nudged) {
       for (const [r, by] of p.picked) if (by === null) p.picked.set(r, p.signer);
     }
+  }
+  for (const p of posts) {
+    if (!p.post || p.problem) continue;
+    const c = correctionOf(p.post);
+    if (!c) continue;
+    p.corrects = c;
+    const o = byId.get(c) ?? answered.get(c);
+    if (o) o.correctedBy = [...o.correctedBy ?? [], p.id];
   }
   for (const line of lines2) {
     const mine = posts.filter((p) => p.signer === line.identity);
@@ -7633,8 +7675,8 @@ function readAgreement(t, names, parent) {
       text: `Backup split services, in order: ${list(t.backups.services.map(service))}. Each payment is tried at the split service first; only if that attempt fails, as the split cMIP ${t.backups.splitCmip ? short(t.backups.splitCmip) : ""} defines failure${t.backups.failure ? " (its terms for it are signed with this agreement)" : " (its defaults)"}, does it go to the next, and the next payment starts again from the first. Money only ever goes to a service named here (Agreements rule 18a, F249, F250).`
     });
   }
-  for (const [judge, next] of t.chain ?? []) {
-    more.push({ text: `If ${judge.startsWith("task ") ? `the judge for ${judge}` : names(judge)} answers \u201Cunknown\u201D, or does not act within its period, ${list(next.map(([hs, p]) => `${names(hs[0])} (after ${p} on the time reference)`))} take${next.length === 1 ? "s" : ""} over, in that order (Agreements rule 34a, F121).` });
+  for (const [judge2, next] of t.chain ?? []) {
+    more.push({ text: `If ${judge2.startsWith("task ") ? `the judge for ${judge2}` : names(judge2)} answers \u201Cunknown\u201D, or does not act within its period, ${list(next.map(([hs, p]) => `${names(hs[0])} (after ${p} on the time reference)`))} take${next.length === 1 ? "s" : ""} over, in that order (Agreements rule 34a, F121).` });
   }
   more.push({
     text: "Whatever is done in the collective's name binds it once it is sealed to every member (or public) and on its chain, citing its latest decision; before that, even signed, it binds no one (Agreements rule 35a, F128). Where it is stored decides nothing: the relays are only where its clients publish and look first."
@@ -8836,10 +8878,186 @@ async function sendToSelf(me, type, payload, opts) {
   return { id: made.id, left };
 }
 
+// ../grants/src/limits.ts
+var GRANT_LIMITS_SPEC = sha2562("Grant limits cMIP, draft 1, test value until publication");
+var CLOCKS = { timestamp: TIMESTAMP_SPEC };
+var h32 = (v) => v instanceof Uint8Array && v.length === 32;
+function readLimits(v) {
+  if (!(v instanceof Map)) throw new Error("the limits are not a map");
+  const m = v;
+  for (const k of m.keys()) if (k !== 0 && k !== 1) throw new Error(`the limits carry a key this cMIP does not define (${k})`);
+  if (!m.size) throw new Error("the limits name neither a cap nor an expiry");
+  const out = {};
+  if (m.has(0)) {
+    const c = m.get(0);
+    if (!Array.isArray(c) || c.length !== 2 || !h32(c[0]) || typeof c[1] !== "number" || c[1] < 0) throw new Error("the cap is not [unit, value]");
+    out.cap = { unit: hex(c[0]), value: c[1] };
+  }
+  if (m.has(1)) {
+    const e2 = m.get(1);
+    if (!Array.isArray(e2) || e2.length !== 3 || !h32(e2[0]) || typeof e2[2] !== "number") throw new Error("the expiry is not [clock, reference, point]");
+    if (hex(e2[0]) === CLOCKS.timestamp) {
+      if (!h32(e2[1])) throw new Error("a timestamp clock is named by its identity");
+      out.expiry = { clock: "timestamp", identity: hex(e2[1]), time: e2[2] };
+    } else {
+      if (typeof e2[1] !== "number") throw new Error("a Bitcoin clock is named by its network");
+      out.expiry = { clock: "height", spec: hex(e2[0]), network: e2[1], height: e2[2] };
+    }
+  }
+  return out;
+}
+function amountOf(act, moneySpec) {
+  if (act.spec !== moneySpec || act.type === void 0 || !act.payload) return null;
+  try {
+    const r = moneyRead(act.type, act.payload);
+    return r.act.amount ? { unit: r.act.amount.unit, value: r.act.amount.value } : null;
+  } catch {
+    return null;
+  }
+}
+function judge(l, act, moneySpec, places = {}) {
+  if (l.cap) {
+    const a = amountOf(act, moneySpec);
+    if (a && a.unit !== l.cap.unit) return { within: false, why: `it moves an amount in another unit than the cap\u2019s (2.2): no conversion is assumed` };
+    if (a && a.value > l.cap.value) return { within: false, why: `it moves ${a.value}, above the cap of ${l.cap.value} per act (2.2)` };
+  }
+  if (l.expiry) {
+    if (l.expiry.clock === "timestamp") {
+      const t = places.stamps?.get(l.expiry.identity)?.get(act.id);
+      if (t === void 0) return { within: null, why: "no stamp of the clock the grant names places it yet: whether it came before the expiry is unknown (3.1)" };
+      if (t > l.expiry.time) return { within: false, why: `the clock the grant names stamped it at ${new Date(t * 1e3).toISOString()}, past the expiry ${new Date(l.expiry.time * 1e3).toISOString()} (3.1)` };
+    } else {
+      const h = places.heights?.get(act.id);
+      if (h === void 0) return { within: null, why: "no anchor placing it on the Bitcoin clock the grant names is checked here: unknown (3.2)" };
+      if (h > l.expiry.height) return { within: false, why: `anchored at height ${h}, past the expiry at height ${l.expiry.height} (3.2)` };
+    }
+  }
+  return { within: true };
+}
+
+// ../grants/src/grant.ts
+var GRANTABLE = [
+  { key: "posts", kind: { spec: SPECS.text, type: 0 }, words: "posts and messages (Text acts)" },
+  { key: "publications", kind: { spec: SPECS.envelopes, type: 0 }, words: "publications, a picture among them (Envelopes)" },
+  { key: "money", kind: { layer: 2 }, words: "money acts: promises to pay, claims and receipts (the Money layer)" }
+];
+function readGrant(payload) {
+  const m = cborDecode(payload);
+  if (!(m instanceof Map)) throw new Error("not a grant");
+  const grantee = m.get(0);
+  if (!(grantee instanceof Uint8Array)) throw new Error("a grant names its grantee");
+  const kinds = m.has(6) ? m.get(6).map((k) => {
+    const a = k;
+    return a[0] === 0 ? { layer: a[1] } : { spec: hex(a[1]), type: a[2] };
+  }) : null;
+  let limits = null;
+  let limitsProblem = null;
+  if (m.has(3) || m.has(4)) {
+    const cmip = m.get(4);
+    if (!(cmip instanceof Uint8Array) || hex(cmip) !== GRANT_LIMITS_SPEC) limitsProblem = "its limits are under a cMIP this app does not implement";
+    else {
+      try {
+        limits = readLimits(m.get(3));
+      } catch (e2) {
+        limitsProblem = `its limits cannot be read: ${e2 instanceof Error ? e2.message : String(e2)}`;
+      }
+    }
+  }
+  const key = m.get(9);
+  return { grantee: hex(grantee), scope: m.get(1), kinds, limits, limitsProblem, key: hex(key[1]) };
+}
+var REVOCATION = 10;
+async function allBy(signer, hints, via2) {
+  const out = [];
+  for (const h of hints) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via2).feed({ signer, after });
+        for (const it of page.items) if (it.kind === "act") out.push(it.item);
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  return out;
+}
+var fetchAct3 = async (id, hints, via2) => {
+  for (const h of hints) {
+    try {
+      const a = await relayAt(h, via2).getAct(id);
+      if (a) return a;
+    } catch {
+    }
+  }
+  return null;
+};
+async function stampsOf(clock, hints, via2 = {}) {
+  const judgeStamp = {
+    standing: async (act, id, signer) => {
+      const l = await lookUp(signer, hints, via2);
+      l.verifier.add(act);
+      return l.verifier.status(id);
+    }
+  };
+  return (await readStamps(clock, hints, judgeStamp, via2)).earliest;
+}
+async function authorityOf(act, hints, via2 = {}, opts = {}) {
+  const d = describeAct(act);
+  if (!d.signer || !d.binding) return null;
+  const grantBytes = await fetchAct3(d.binding, hints, via2);
+  if (!grantBytes) return null;
+  const gd = describeAct(grantBytes);
+  if (gd.spec !== MIRS.agreements || gd.type !== AGREEMENTS_TYPES.grant || !gd.payload) return null;
+  const g = readGrant(gd.payload);
+  const names = opts.names ?? ((id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`);
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  for (const id of [d.signer, g.grantee]) {
+    try {
+      await lookUp(id, hints, via2, v);
+    } catch {
+    }
+  }
+  v.add(grantBytes);
+  for (const a of await allBy(g.grantee, hints, via2)) {
+    const x = describeAct(a);
+    if (x.spec === MIRS.agreements && x.type === AGREEMENTS_TYPES.signature && x.objects?.some((o) => o[0] === d.binding)) v.add(a);
+  }
+  for (const a of await allBy(d.signer, hints, via2)) {
+    const x = describeAct(a);
+    if (x.spec !== MIRS.agreements || x.type !== REVOCATION || !x.payload) continue;
+    const named = cborDecode(x.payload).get(0);
+    if (named instanceof Uint8Array && hex(named) === d.binding) v.add(a);
+  }
+  if (opts.key) v.addWithKey(act, opts.key);
+  else v.add(act);
+  let limits = null;
+  if (g.limits) {
+    let stamps = opts.stamps;
+    if (g.limits.expiry?.clock === "timestamp" && !stamps?.has(g.limits.expiry.identity)) {
+      stamps = new Map(stamps ?? []);
+      try {
+        stamps.set(g.limits.expiry.identity, await stampsOf(g.limits.expiry.identity, hints, via2));
+      } catch {
+      }
+    }
+    limits = judge(g.limits, d, MIRS.money, { stamps });
+  }
+  const verdicts = limits && limits.within !== null ? [[d.id, limits.within]] : [];
+  const b = v.agreementsBacking(withGrantLimits(AGREEMENTS_SPECS, verdicts), d.id);
+  const plain = b.kind === "backed" || b.kind === "binds" ? `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under ${names(d.signer)}\u2019s grant ${d.binding.slice(0, 8)}\u2026: backed (Agreements rule 80).` : b.kind === "not-backed" ? `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026, which does not back it: ${b.reason}.` : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026: whether it backs it is unknown (${b.reason ?? "not readable"}).`;
+  return { grant: d.binding, grantor: d.signer, grantee: g.grantee, backing: b.kind, reason: b.reason ?? null, limits, words: plain };
+}
+async function authorityOfId(id, hints, via2 = {}, opts = {}) {
+  const act = await fetchAct3(id, hints, via2);
+  return act ? authorityOf(act, hints, via2, opts) : null;
+}
+
 // src/dub.ts
 var CHAIN_WORDS_SAY = [
   "These are the chain key\u2019s words. Write them on paper, in order, and keep the paper away from anything that goes online. They are shown once: Dub keeps nothing of the chain key.",
-  "The chain key is the only way to change this identity\u2019s signing key if it is ever stolen or lost. That is done by another app, MOR Safety, never by Dub. Lost paper means no change of keys, ever.",
+  "The chain key is the only way to change this identity\u2019s signing key if it is ever stolen or lost. That is done in another app, Ki\u0161ib, never in Dub. Lost paper means no change of keys, ever.",
   "Never type these words into Dub, or into any app that goes online. They are not the signing key\u2019s words, which Dub shows on request.",
   "They are not a Bitcoin wallet. Never type them into one."
 ];
@@ -8850,8 +9068,8 @@ var CARRY_SAY = [
   "Each place you bring them keeps its own line of acts. A change of the signing key must keep every line, or that line\u2019s posts become void.",
   "They are not a Bitcoin wallet. Never type them into one."
 ];
-var LINE_SAY = "This app keeps its own line of acts for this identity. If the signing key is ever changed (with the chain key, in MOR Safety), that change must keep this line, or every post made here becomes void. The app making the change reads this line from the homes and relays and keeps it, unless you leave it out; if it cannot read it, give it this line\u2019s latest act, position and summary, shown in the identity window.";
-var SPENT_SAY = "This identity\u2019s signing key was changed elsewhere, with its chain key, so the signing key\u2019s words this app holds no longer count. Nothing was signed. Changing keys is MOR Safety\u2019s work, not Dub\u2019s. To go on here, give this app the new signing key\u2019s words.";
+var LINE_SAY = "This app keeps its own line of acts for this identity. If the signing key is ever changed (with the chain key, in Ki\u0161ib), that change must keep this line, or every post made here becomes void. The app making the change reads this line from the homes and relays and keeps it, unless you leave it out; if it cannot read it, give it this line\u2019s latest act, position and summary, shown in the identity window.";
+var SPENT_SAY = "This identity\u2019s signing key was changed elsewhere, with its chain key, so the signing key\u2019s words this app holds no longer count. Nothing was signed. Changing keys is Ki\u0161ib\u2019s work, not Dub\u2019s. To go on here, give this app the new signing key\u2019s words.";
 var NO_KEY_SAY = "This app holds no encryption key for this identity, so its private messages cannot be opened here: its encryption key was not made from its signing key\u2019s words. Messages can still be sent from here.";
 var READER = "https://reader.dubsar.org/";
 var NO_SIGNING = () => ({ answered: {}, waiting: {}, received: {} });
@@ -9369,7 +9587,7 @@ var Dub = class {
       problem: r.problem,
       withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === "valid"
     }));
-    const doc = sp.format === POST_SPECS.longform ? { title: titleOf(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) } : null;
+    const doc = isLongForm(sp.format) ? { title: titleOf(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) } : null;
     return {
       id: sp.id,
       who: this.whoFrom(sp.signer, me, p),
@@ -9409,7 +9627,15 @@ var Dub = class {
         return { id, who: a?.signer ? this.whoFrom(a.signer, me.id, p) : null, snippet: a?.post ? snippet(a.post.text) : null };
       });
       const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
-      items.push(this.item(fp.post, me.id, p, s, "feed", answers, toMe));
+      items.push({ ...this.item(fp.post, me.id, p, s, "feed", fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] });
+    }
+    for (const it of items) {
+      if (it.standing === "valid" || it.via !== "feed") continue;
+      const a = await authorityOfId(it.id, hints, s.via, { names: (id) => this.whoFrom(id, me.id, p).pet ?? this.whoFrom(id, me.id, p).names[0] ?? fingerprint(id) }).catch(() => null);
+      if (!a) continue;
+      const backed = a.backing === "backed" || a.backing === "binds";
+      it.authority = { words: a.words, backed };
+      it.problem = backed ? null : it.problem;
     }
     const problems = feed.authors.filter((a) => a.problem).map((a) => `${fingerprint(a.identity)}: ${a.problem}`);
     return { items, more: feed.more, problems, notes, followsChanged };
@@ -9469,13 +9695,13 @@ var Dub = class {
       if (picked.length < max) picked.push({ d, hint: x.hint });
     }
     await this.warm(picked.map((x) => x.d.signer ?? x.d.id), hints, s.via);
-    const judge = new Judge([.../* @__PURE__ */ new Set([...s.relays, ...hints])], s.via);
+    const judge2 = new Judge([.../* @__PURE__ */ new Set([...s.relays, ...hints])], s.via);
     const items = [];
     for (const { d, hint } of picked) {
       const who2 = this.whoFrom(d.signer ?? d.id, me.id, p);
       if (d.spec === POST_SPECS.text && d.type === TEXT_ACT && d.signer) {
         try {
-          const shown = await readPost(d.id, [hint, ...s.relays, ...hints], s.via, judge);
+          const shown = await readPost(d.id, [hint, ...s.relays, ...hints], s.via, judge2);
           items.push({ ...this.item(shown, me.id, p, s, "relay", [], false), what: null });
           continue;
         } catch (e2) {
@@ -9513,7 +9739,7 @@ var Dub = class {
     }
     const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
     const looked = /* @__PURE__ */ new Map();
-    const judge = async (signer, act, id, key) => {
+    const judge2 = async (signer, act, id, key) => {
       let l = looked.get(signer);
       if (!l) looked.set(signer, l = lookUp(signer, hints, s.via));
       try {
@@ -9531,7 +9757,7 @@ var Dub = class {
         for (; ; ) {
           const page = await relayAt(hint, s.via).feed({ to: me.id, after });
           for (const it of page.items) {
-            const k = await this.readItem(it.kind, it.item, me.id, secrets, judge);
+            const k = await this.readItem(it.kind, it.item, me.id, secrets, judge2);
             if (k && !p.inbox.items.some((x) => x.key === k.key)) p.inbox.items.push(k);
           }
           if (!page.items.length || page.next === after) break;
@@ -9545,7 +9771,7 @@ var Dub = class {
     await this.store.savePeople(me.id, p);
     return problems;
   }
-  async readItem(kind, bytes, me, secrets, judge) {
+  async readItem(kind, bytes, me, secrets, judge2) {
     let act = bytes;
     let key;
     let d;
@@ -9598,7 +9824,7 @@ var Dub = class {
       kind: !isText ? "other" : d.public ? "public" : "private",
       from: d.signer,
       text: text3,
-      standing: await judge(d.signer, act, d.id, key),
+      standing: await judge2(d.signer, act, d.id, key),
       refs: (d.refs ?? []).map((id, i) => ({ id, signer: d.refSigners?.[i] ?? null })),
       to: d.to ?? [],
       found: now(),
@@ -10338,6 +10564,132 @@ var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><stro
 <li>This browser's storage, where the identity's signing key is kept, can be lost, or read by what runs in this page.</li></ol>
 <p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div>`;
 var KEPT_SAY = "Its signing key and its encryption key are kept in this browser\u2019s storage (IndexedDB), as they are, not locked: the only lock this page could put on them is one it could open by itself, and so could whatever else runs in this page. Its signing key\u2019s words are the way out: write them down.";
+var STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
+@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+:root{color-scheme:dark;--bg:#06080c;--raise:#0f131b;--line:#2a313d;--edge:#3a4250;--text:#d6dae1;--soft:#7f8794;--faint:#4c5360;--identity:#8394a8;--envelopes:#9a92ad;--bad:#b4615f;--ok:#7f8794}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font:300 15px/1.55 Inter,"Inter Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:600px;margin:0 auto;padding:0 16px 64px}
+a{color:var(--text);text-decoration:underline;text-decoration-color:var(--faint);text-underline-offset:3px}
+h1,h2,h3{font-weight:400;letter-spacing:.01em;margin:0}
+h2{font-size:17px;margin:28px 0 10px}
+h3{font-size:15px;margin:0 0 6px}
+p{margin:8px 0}
+code,.mono{font:13px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+.small{font-size:13px;color:var(--soft)}
+button{font:inherit;font-size:14px;color:var(--text);background:none;border:1px solid var(--edge);border-radius:999px;padding:5px 14px;cursor:pointer}
+button:hover{border-color:var(--faint)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:400}
+button.quiet,.acts button{border:none;padding:4px 0;color:var(--soft);border-radius:0}
+button.quiet:hover,.acts button:hover{color:var(--text)}
+input,textarea{font:inherit;color:var(--text);background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px;width:100%}
+input:focus,textarea:focus{outline:none;border-color:var(--faint)}
+textarea{min-height:3.2em;resize:vertical}
+select{font:inherit;color:var(--text);background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px}
+label{display:block;margin:12px 0 4px;font-size:13px;color:var(--soft)}
+.row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.grow{flex:1}
+.row.tight{margin:0}
+input.pet{max-width:14em}
+label.check{margin:0;display:flex;gap:8px;align-items:center}
+label.check input{width:auto}
+.bar{position:sticky;top:0;z-index:2;background:var(--bg);display:flex;align-items:center;gap:12px;padding:14px 0 10px;border-bottom:1px solid var(--line)}
+.mark{font-weight:400;letter-spacing:.06em;font-size:15px}
+.tabs{display:flex;gap:4px;margin:0 auto}
+.tab{border:none;border-radius:999px;color:var(--soft);padding:5px 14px}
+.tab.on{color:var(--text);background:var(--raise)}
+.count{display:inline-block;min-width:1.5em;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--line);color:var(--text);font-size:12px;line-height:1.6;text-align:center}
+.count:empty{display:none}
+.me{border:none;padding:4px 0;color:var(--soft);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fp{font:12px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity)}
+.who{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:14px}
+.who .name{color:var(--text);font-weight:400}
+.who .dn{color:var(--soft)}
+.who .you{color:var(--faint);font-size:12px}
+.compose{padding:12px 14px;margin:14px 0;border:1px solid var(--edge);border-radius:12px;background:var(--raise)}
+.compose textarea{border:none;background:none;padding:4px 0;font-size:16px;min-height:2.6em}
+.compose .row{margin:6px 0 0}
+.compose input[type=file]{display:none}
+.compose .to{display:none}
+.compose.addressed .to{display:block}
+.chip{display:inline-flex;gap:8px;align-items:baseline;font-size:13px;color:var(--soft);border:1px solid var(--edge);border-radius:999px;padding:2px 10px}
+.chip button{border:none;padding:0;color:var(--soft)}
+.filters{display:flex;gap:6px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.filters .tab{font-size:13px}
+.post,.msg{padding:12px 14px;margin:10px 0;border:1px solid var(--edge);border-radius:12px;background:var(--raise)}
+.post .text,.msg .text{margin:6px 0 2px;white-space:pre-wrap;overflow-wrap:anywhere}
+.post figure{margin:10px 0 4px}
+.post img{display:block;max-width:100%;height:auto;border-radius:10px;image-orientation:from-image}
+.post .acts{border-top:1px solid var(--line);padding-top:6px}
+.post figcaption,.re{font-size:12px;color:var(--faint)}
+.re{margin-top:2px}
+.doc{display:block;margin:8px 0 2px;padding:10px 12px;border:1px solid var(--edge);background:var(--bg);border-radius:10px;text-decoration:none}
+.doc .small{display:block}
+.acts{display:flex;gap:22px;margin-top:6px}
+.acts button{font-size:13px}
+.flag{font-size:12px;color:var(--soft)}
+.flag.bad{color:var(--bad)}
+.msg.out{margin-left:28px;background:none}
+.msg .sealed{color:var(--envelopes);font-size:12px}
+.note{margin:10px 0;padding:10px 12px;border-left:2px solid var(--line);font-size:14px;color:var(--soft)}
+.note.error{border-left-color:var(--bad);color:var(--text)}
+.note.done{border-left-color:var(--faint);color:var(--text)}
+.note.spent{border-left-color:var(--bad);color:var(--text)}
+.note ul{margin:6px 0 0;padding-left:1.1em}
+.note li.bad{color:var(--bad)}
+.empty{padding:28px 0;color:var(--faint);font-size:14px;text-align:center}
+.card{border:1px solid var(--edge);border-radius:14px;padding:14px 16px;margin:12px 0}
+details{margin:10px 0}
+details>summary{cursor:pointer;color:var(--soft);font-size:14px;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"+ ";color:var(--faint)}
+details[open]>summary::before{content:"\u2212 "}
+.people{padding:6px 0 10px;border-bottom:1px solid var(--line)}
+.people li{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:6px 0;list-style:none}
+.people ul{margin:0;padding:0}
+.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px ui-monospace,"SF Mono",Menlo,monospace}
+.words span{white-space:nowrap}
+.words b{display:inline-block;min-width:2em;color:var(--faint);font-weight:400}
+.say{padding-left:1.1em;color:var(--soft);font-size:14px}
+.say li{margin:4px 0}
+.label{display:inline-block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);margin:0 0 4px}
+.typed{display:flex;flex-wrap:wrap;gap:10px}
+.typed label{margin:0}
+.typed input{width:10em}
+.id{font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);overflow-wrap:anywhere}
+dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13px;margin:8px 0}
+dl.facts dt{color:var(--faint)}
+dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
+.held li{list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.held ul{padding:0;margin:0}
+.banner{margin:12px 0;padding:10px 12px;border:1px solid var(--edge);border-radius:10px;color:var(--soft);font-size:13px}
+.banner p,.banner ol{margin:4px 0}
+.banner ol{padding-left:1.4em}
+#for-testing-only{max-width:568px;margin:12px auto 0}
+@media (max-width:600px){#for-testing-only{margin:12px 16px 0}}
+[hidden]{display:none!important}
+.experimental{margin:10px 0;padding:10px 12px;border:1px solid var(--bad);border-radius:10px;color:var(--soft);font-size:13px}
+.experimental strong{color:var(--text);font-weight:400}
+.proposal{border:1px solid var(--edge);border-radius:12px;background:var(--raise);padding:12px 14px;margin:12px 0}
+.proposal h3{margin:0 0 6px;font-weight:400;font-size:15px}
+.proposal h4{margin:12px 0 4px;font-weight:400;font-size:13px;color:var(--soft)}
+.proposal ul{margin:4px 0;padding-left:1.1em;font-size:14px}
+.proposal .plain{border:1px solid var(--edge);border-radius:10px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;max-height:18em;overflow:auto;background:var(--bg)}
+.proposal .state{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}
+.share-number{font-size:15px;margin:8px 0}
+.post.act{padding:8px 14px}
+.post.act .acts{border-top:none;padding-top:0;margin-top:2px}
+details.fold>summary{font-size:15px;color:var(--text);margin:14px 0 4px}`;
+var TINT = { layer: "#e9dfcd", line: "#383736", edge: "#4a4946", accent: "#8e8980" };
+var PAGE_STYLE = `${STYLE}
+:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
+.correction strong{font-weight:400;color:var(--text)}`;
 function fold(key, summary, body, open) {
   return `<details class="fold" data-fold="${e(key)}"${open ? " open" : ""}><summary>${e(summary)}</summary>${body}</details>`;
 }
@@ -10377,7 +10729,7 @@ ${web ? "" : via}
 <label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>
 <label>Relays for its posts (only if it names none; one per line)</label><textarea name="relays"></textarea>
 ${web ? "" : via}
-<p class="small">Never type the chain key\u2019s words here: they belong to MOR Safety, on a device that stays offline.${web ? ` ${e(KEPT_SAY)}` : ""}</p>
+<p class="small">Never type the chain key\u2019s words here: they belong to Ki\u0161ib, the app where a change of keys is done, and to paper.${web ? ` ${e(KEPT_SAY)}` : ""}</p>
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
   const doors = i ? "" : held.length ? `${fold("make", "Make a new identity", make.replace(/^<section class="card"><h3>Make a new identity<\/h3>/, '<section class="card">'), false)}${fold("bring", "Bring an identity you have", bring.replace(/^<section class="card"><h3>Bring an identity you have<\/h3>/, '<section class="card">'), false)}` : `${make}${bring}`;
   const browsers = web ? "" : `<details><summary>Browsers paired with this app</summary><div class="row"><button data-action="code">A code for another browser on this machine</button><button class="quiet" data-action="unpair">Unpair this browser</button></div><div id="code"></div></details>`;
@@ -10405,12 +10757,12 @@ function current(s) {
 <div id="carry"></div>
 <details data-fold="line"><summary>This app\u2019s line, and where it lives</summary>
 <dl class="facts"><dt>Made</dt><dd>${i.kind === "made" ? "Here. Its chain key was shown once as words, and is kept nowhere here." : "Elsewhere, brought here by its signing key\u2019s words. Its chain key is not here."}</dd>
-${i.oldChainKey ? "<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app\u2019s folder, unused. MOR Safety will take it from there.</dd>" : ""}
+${i.oldChainKey ? "<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app\u2019s folder, unused and untouched. Ki\u0161ib changes keys from paper words only, never from this folder.</dd>" : ""}
 <dt>Private messages</dt><dd>${i.encryption ? "Its encryption key is here: its private messages open here." : "No encryption key here: its private messages cannot be opened here."}</dd>
 <dt>Homes</dt><dd>${e(i.homes.join(", "))}</dd>
 <dt>Relays</dt><dd>${e(i.relays.join(", "))}</dd>
 <dt>This app's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? "" : "s"}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? "")}</code>` : ""}</dd></dl>
-<p class="small">If the signing key is ever changed (in MOR Safety, with the chain key\u2019s words), that change must keep this line, or the posts made here become void: take the line above to it.</p></details>
+<p class="small">If the signing key is ever changed (in Ki\u0161ib, with the chain key\u2019s words), that change must keep this line, or the posts made here become void: take the line above to it.</p></details>
 </div>`;
 }
 function words(ws, say, web = false) {
@@ -10448,7 +10800,7 @@ ${testNotice(web)}
 <form id="post" class="compose">
 <div id="replying"></div>
 <textarea name="text" required placeholder="Write something public"></textarea>
-<div class="to"><input name="to" autocomplete="off" spellcheck="false" placeholder="To an identity: its ID (a public message, left in its inbox too)"></div>
+<div class="to"><input name="to" list="followed" autocomplete="off" spellcheck="false" placeholder="To an identity: someone you follow, or its ID (a public message, left in its inbox too)"></div>
 <div class="row"><label class="quiet-file"><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"><span class="small" data-action="pick">Picture</span></label><button type="button" class="quiet" data-action="address">To\u2026</button><span class="grow small" id="picked"></span><button type="submit" class="primary">Post</button></div>
 </form>
 <div class="filters"><button class="tab on" data-filter="all">Everyone</button><button class="tab" data-filter="toyou">To you<span class="count" id="count-toyou"></span></button><button class="tab" data-filter="relay" title="Every public act at this identity\u2019s relays, newest first">Relay</button><span class="grow"></span><button class="quiet" data-action="feed">Look again</button></div>
@@ -10457,7 +10809,7 @@ ${people(s)}
 </section>
 <section id="private" hidden>
 <form id="message" class="compose">
-<input name="to" autocomplete="off" spellcheck="false" placeholder="To: an identity\u2019s ID" required>
+<input name="to" list="followed" autocomplete="off" spellcheck="false" placeholder="To: someone you follow, or an identity\u2019s ID" required>
 <textarea name="text" required placeholder="Write something private"></textarea>
 <div class="row"><span class="grow small">Sealed to them: only they can open it.</span><button type="submit" class="primary">Send</button></div>
 </form>
@@ -10501,6 +10853,9 @@ function share(s) {
 function shareTypeBack(thread, positions) {
   return `<form class="share-back" data-thread="${e(thread)}"><span class="label">Three words of your share</span><p class="small">From what you wrote down. The one-time key is destroyed only once these are right.</p><div class="typed">${positions.map((p) => `<label>Word ${p} <input name="w${p}" type="text" autocomplete="off" spellcheck="false" required></label>`).join("")}</div><div class="row"><button type="submit" class="primary">Check them</button></div></form>`;
 }
+function followedList(follows) {
+  return `<datalist id="followed">${follows.map((f) => `<option value="${e(f.id)}" label="${e([f.pet, ...f.names.filter((n) => n !== f.pet)].filter(Boolean).join(" \xB7 ") || "no name")} \xB7 ${e(f.short)}"></option>`).join("")}</datalist>`;
+}
 function people(s) {
   const i = s.identity;
   const row = (w, actions) => `<li>${who(w)}<span class="acts">${actions}</span></li>`;
@@ -10511,7 +10866,8 @@ ${i.muted.length ? `<span class="label">Muted</span><ul>${i.muted.map((m) => row
 <div class="row"><label class="small check"><input type="checkbox" id="publish-list" ${i.list === "published" ? "checked" : ""}> Publish whom this identity follows</label></div>
 <p class="small">${i.list === "published" ? "Published: anyone can read the IDs it follows. The names you gave them stay sealed." : "Private, the default."} ${i.encryption ? `Whom it follows, with the names you gave, is a private act sealed to this identity and kept at its homes${i.sealed ? ` (version ${i.sealed.version})` : ""}: any app holding this identity reads it; nobody else can. Its homes and relays see only that a private act exists, and roughly how big it is; whoever holds the signing key\u2019s words reads it.` : "This app holds no encryption key of this identity, so the list stays in this app only."} Muting stays in this app, always.</p>
 ${i.sealed?.forked ? '<p class="small">The list was forked: two apps changed it at once. The longer branch is shown.</p>' : ""}
-</details>`;
+</details>
+${followedList(i.follows)}`;
 }
 var bad = (standing) => /void|contest|invalid|stolen/.test(standing);
 function post2(p) {
@@ -10520,6 +10876,9 @@ function post2(p) {
   }
   const flag = p.problem ? `<span class="flag ${bad(p.problem) ? "bad" : ""}">${e(p.problem)}</span>` : "";
   const answers = p.answers.map((a) => `<div class="re">\u21B3 answering ${a.who ? who(a.who) : '<span class="fp">an act not found</span>'}${a.snippet ? ` \xB7 <span dir="auto">${e(a.snippet)}</span>` : ""}</div>`).join("");
+  const correction = p.corrects ? `<div class="re correction"><strong>Correction</strong> of <span class="fp" title="${e(p.corrects)}">${e(p.corrects.slice(0, 8))}\u2026</span>, which stays as signed</div>` : "";
+  const authority = p.authority ? `<div class="re authority${p.authority.backed ? "" : " warn"}">${e(p.authority.words)}</div>` : "";
+  const correctedBy = p.correctedBy?.length ? `<div class="re corrected">Corrected by ${p.correctedBy.map((c) => `<span class="fp" title="${e(c)}">${e(c.slice(0, 8))}\u2026</span>`).join(", ")}: shown as it was signed</div>` : "";
   const pics = p.pictures.map(
     (x) => x.src ? `<figure><img src="${e(x.src)}" width="${x.width}" height="${x.height}" alt=""></figure>` : `<figure><figcaption>A picture not shown: ${e(x.problem ?? "unknown")}.</figcaption></figure>`
   ).join("");
@@ -10532,7 +10891,7 @@ function post2(p) {
     ...p.pictures.filter((x) => x.withdrawable).map((x) => `<button data-action="withdraw" data-publication="${e(x.publication)}">Withdraw picture</button>`)
   ].join("");
   return `<article class="post" data-post="${e(p.id)}" data-signer="${e(p.who.id)}">
-<div class="row tight">${who(p.who)}${flag}</div>${answers}
+<div class="row tight">${who(p.who)}${flag}</div>${authority}${correction}${answers}${correctedBy}
 ${p.text ? `<div class="text" dir="auto">${e(p.text)}</div>` : ""}${pics}${doc}
 <div class="acts">${acts}</div><div class="tipping"></div></article>`;
 }

@@ -103,7 +103,7 @@ export async function founded(H: string[], R: string[], e: Awaited<ReturnType<ty
     await m.c.ask('accept', { thread: p.thread });
   }
   await e.c.ask('real gather', { act: terms });
-  const fd = await e.c.ask<any>('real found', { act: terms });
+  const fd = await e.c.ask<any>('real found', { act: terms, read: true });
   return { f, ana, bo, col: fd.acts[0] as string };
 }
 

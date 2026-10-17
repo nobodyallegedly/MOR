@@ -8,7 +8,7 @@
 
 **The identity window** comes first, and Dub opens only once an identity is there. It is also where you switch identity, give yourself a display name, and see the words that carry an identity elsewhere.
 
-- **Make a new identity.** Give a home address and, if you like, relays and a display name (H12: published right after the genesis, the naming cMIP; a malformed name is refused before anything is made). Dub shows you **the chain key's 24 words**, once. Write them on paper. They are the only way to change the identity's keys if a device is stolen or lost, which is done by another app, MOR Safety, never by Dub. Dub keeps nothing of the chain key, on the Mac as on the web. When you say they are written down, the words disappear, and only then does Dub ask for three of them back (the human test's H3). The new identity gets its homes, an inbox and an encryption key at once, as the desk's identities do.
+- **Make a new identity.** Give a home address and, if you like, relays and a display name (H12: published right after the genesis, the naming cMIP; a malformed name is refused before anything is made). Dub shows you **the chain key's 24 words**, once. Write them on paper. They are the only way to change the identity's keys if a device is stolen or lost, which is done in another app, Kišib, never in Dub. Dub keeps nothing of the chain key, on the Mac as on the web. When you say they are written down, the words disappear, and only then does Dub ask for three of them back (the human test's H3). The new identity gets its homes, an inbox and an encryption key at once, as the desk's identities do.
 - **Bring an identity you have**: its ID and **the signing key's 24 words**. Dub reads it from its homes and checks the words give its current signing key. They also carry its encryption key, so its private messages open here (the carry Module, draft 2), unless the identity was made by an app that did not make its encryption key from its words; then Dub says so.
 - **Show the signing key's words**: the words that bring this identity into Dub on another computer or device. Whoever holds them can post as you **and read your private messages**. Labelled as the signing key's words, never confused with the chain key's.
 - **Your display name**: a name shown beside your fingerprint, never instead of it. Anyone can take the same name; the fingerprint tells you apart (the naming cMIP).
@@ -20,7 +20,7 @@
 
 **Private.** Your inbox, and a box to write a message to one identity: sealed to it, so only it can open it (F293). A count on the tab until you have seen what came.
 
-**When your key is changed elsewhere.** If the identity's signing key is changed with its chain key (in MOR Safety, later), the words Dub holds stop counting. Dub says so in plain words, signs nothing more with them, and takes the new signing key's words.
+**When your key is changed elsewhere.** If the identity's signing key is changed with its chain key (in Kišib), the words Dub holds stop counting. Dub says so in plain words, on opening and before every act (a change of keys is done in Kišib, never in Dub), signs nothing more with them, and takes the new signing key's words.
 
 **Signing (H18): even more experimental than Dub itself, off by default.** Decided by Nobody, allegedly: "an optional tab only available via settings clearly labeled as even more experimental." Turned on with a box in the identity window (per identity, with a warning first); then a **Signing** tab appears. While it is off, proposals that arrive wait in the inbox, unread, and the Private tab says how many wait. In the tab:
 
@@ -31,7 +31,13 @@
 
 **Folds (H34).** Where a screen gets crowded, it folds: the identity window's doors once identities are held, its line and where it lives, Following, and a proposal's reading once answered (before, it is always shown in full). Each is remembered by the page, as you left it (this browser's storage: which fold is open, nothing else).
 
-**Icons (H25).** Dub's own icon, a clay tablet on the visual bible's dark (`static/icon/dub.svg`), in the Mac's app and the Linux entry.
+**Icons (H25, H36).** Dub's own icon, in the family's style since the agents session: a clay tablet carrying its name **𒁾** (DUB, U+1207E, "tablet"), carved once as one solid recessed carving, its Neo-Assyrian form traced from Noto Sans Cuneiform (SIL OFL 1.1); a thick warm-pearl edge `#a59f93` (70% of `#e9dfcd` over the dark), the dark `#141518`, the clay `#95785f` (the family's moved 12% toward pearl), no glow (`static/icon/dub.svg`), in the Mac's app, the Linux entry and the web client (H35). The sign was checked against the ePSD2 sign list (DUB: dub, kišib₃, ṭup…) and Borger's MZL 242 through search results quoting them: this build's network refused the sites themselves (`docs/edubba-agents-report.md`).
+
+**The tint (H36).** The Text layer's warm pearl `#e9dfcd`, by Kišib's rule: separators 22% `#383736`, outlines 30% `#4a4946`, quiet accents 60% `#8e8980` over `#06080c` (`src/page/view.ts`, `TINT`, laid over the family's base `STYLE` in `PAGE_STYLE`, Dub's own page; the other apps tint the base with their own layer). Red stays for alarms.
+
+**Whom to address (H37).** Public's **To…** and the Private message box offer the people this identity follows, each by the name given here and its display names, the fingerprint always beside them; typing or pasting an ID still works.
+
+**Corrections and grants, shown (F344, F343).** A post in a corrections format naming an act of its own signer is labelled **Correction** (a long-form correction is linked as a document, as long-form posts are: F347); the act it corrects is shown as signed, with **Corrected by**. A post signed under a grant (an agent posting in its owner's name) is shown with on whose authority, as Agreements judge it (the grant read from the relays: `clients/grants`).
 
 **Money, prepared for Damgar (F338).** **Tip** on a post, and **Ask someone to pay you** (Private tab, folded): each is a draft (the money messages cMIP, `cmips/cmip-money-messages-draft-1.md`), a private act sealed to your own identity at its homes, which Damgar finds, reads in plain words and offers for signing. Dub signs no money act: "Prepared, not signed". Amounts name their unit (the Bitcoin units Module's, regtest by default); nothing assumes satoshis.
 
@@ -86,7 +92,7 @@ Where the texts are silent, Dub takes these readings. *To be confirmed by Nobody
 3. **H3:** the words are removed from the page before three are asked back; a reload asks for the three. Three positions, at random, different, in order.
 4. **An inbox and an encryption key at once:** routes naming the relays as outbox and inbox; the encryption key the signing key's words carry (the carry Module, draft 2, 2a).
 5. **An identity brought here publishes no routes and no encryption key** (versioned; a second writer forks them), but may publish and withdraw names (not versioned). After a rotation made elsewhere it renews the encryption key only where it published the last version.
-6. **Before each act it signs, Dub looks the identity up** and refuses if its key is no longer the current one, saying so and pointing to MOR Safety. *Cost:* one look-up per act. The page also checks once when the app opens.
+6. **Before each act it signs, Dub looks the identity up** and refuses if its key is no longer the current one, saying so and pointing to Kišib. *Cost:* one look-up per act. The page also checks once when the app opens.
 7. **The feed is the site's** (website cMIP, draft 6): the identity's own posts and those it follows, at their outbox routes and this identity's relays, judged together, **in signed order**, at most thirty. MOR has no clock; the page says so.
 8. **"To you"** is what the inbox holds that answers one of this identity's posts or names it as recipient, and the feed's posts that answer it. Silence proves nothing: a reply never delivered to the inbox, by someone not followed, is not found.
 9. **Replies** name the post they answer with its signer (F272) and are addressed to its signer, and left unsealed in its inbox, as Dub's public messages are.

@@ -13,7 +13,7 @@
 // feed is the site's (website cMIP, draft 8, in signed order). Display names
 // are the naming cMIP's; follow and mute the people cMIP's. Every act is
 // made and judged by the core library. There is no rotation here: that is
-// MOR Safety's (F332, amended), and when a rotation made there counts, Dub
+// Kišib's (F332, amended; F335), and when a rotation made there counts, Dub
 // says so and takes the new signing key's words.
 //
 // The same code runs in two places: in Dub's program on the Mac, keeping
@@ -45,6 +45,8 @@ import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PEOPLE_SPEC_1, PUBLISH_WARNING, SE
 import type { Held, Item, Line, Message, Pic, Proposal, ShareShown, State, Who } from './shapes.ts';
 import { sendDraft } from '../../damgar/src/messages.ts';
 import { UNITS_MODULES, readValue } from '../../damgar/src/units.ts';
+import { authorityOfId } from '../../grants/src/grant.ts';
+import { isLongForm } from '../../barebone/src/corrections.ts';
 
 export type { Line, State } from './shapes.ts';
 
@@ -54,7 +56,7 @@ export const TEST_ONLY = 'Test identities only, until MOR is frozen';
 /** Said where a new identity's chain key is shown, once (F332, amended; the words seed Module). */
 export const CHAIN_WORDS_SAY = [
   'These are the chain key’s words. Write them on paper, in order, and keep the paper away from anything that goes online. They are shown once: Dub keeps nothing of the chain key.',
-  'The chain key is the only way to change this identity’s signing key if it is ever stolen or lost. That is done by another app, MOR Safety, never by Dub. Lost paper means no change of keys, ever.',
+  'The chain key is the only way to change this identity’s signing key if it is ever stolen or lost. That is done in another app, Kišib, never in Dub. Lost paper means no change of keys, ever.',
   'Never type these words into Dub, or into any app that goes online. They are not the signing key’s words, which Dub shows on request.',
   'They are not a Bitcoin wallet. Never type them into one.',
 ];
@@ -70,11 +72,11 @@ export const CARRY_SAY = [
 
 /** Said where an identity is brought in (the carry Module, 5.1; Identity rule 35). */
 export const LINE_SAY =
-  'This app keeps its own line of acts for this identity. If the signing key is ever changed (with the chain key, in MOR Safety), that change must keep this line, or every post made here becomes void. The app making the change reads this line from the homes and relays and keeps it, unless you leave it out; if it cannot read it, give it this line’s latest act, position and summary, shown in the identity window.';
+  'This app keeps its own line of acts for this identity. If the signing key is ever changed (with the chain key, in Kišib), that change must keep this line, or every post made here becomes void. The app making the change reads this line from the homes and relays and keeps it, unless you leave it out; if it cannot read it, give it this line’s latest act, position and summary, shown in the identity window.';
 
 /** Said when a rotation made elsewhere counts (F332, amended; the carry Module, draft 2, 4.6). Its first words are how the page knows it. */
 export const SPENT_SAY =
-  'This identity’s signing key was changed elsewhere, with its chain key, so the signing key’s words this app holds no longer count. Nothing was signed. Changing keys is MOR Safety’s work, not Dub’s. To go on here, give this app the new signing key’s words.';
+  'This identity’s signing key was changed elsewhere, with its chain key, so the signing key’s words this app holds no longer count. Nothing was signed. Changing keys is Kišib’s work, not Dub’s. To go on here, give this app the new signing key’s words.';
 
 /** Said where the identity's encryption key is not one this app holds (the carry Module, draft 2, 2a.3). */
 export const NO_KEY_SAY =
@@ -737,7 +739,7 @@ export class Dub {
         withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === 'valid',
       }));
     const doc =
-      sp.format === POST_SPECS.longform
+      isLongForm(sp.format)
         ? { title: titleOf(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) }
         : null;
     return {
@@ -780,7 +782,17 @@ export class Dub {
         return { id, who: a?.signer ? this.whoFrom(a.signer, me.id, p) : null, snippet: a?.post ? snippet(a.post.text) : null };
       });
       const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
-      items.push(this.item(fp.post, me.id, p, s, 'feed', answers, toMe));
+      items.push({ ...this.item(fp.post, me.id, p, s, 'feed', fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] });
+    }
+    // A post signed under a grant (an agent posting in its owner's name, F343): its standing is Agreements', said on whose authority.
+    for (const it of items) {
+      // Its feed's verifier holds no grant: unknown there (F298), or scoped; only an act bound to a grant is read so.
+      if (it.standing === 'valid' || it.via !== 'feed') continue;
+      const a = await authorityOfId(it.id, hints, s.via, { names: (id) => this.whoFrom(id, me.id, p).pet ?? this.whoFrom(id, me.id, p).names[0] ?? fingerprint(id) }).catch(() => null);
+      if (!a) continue;
+      const backed = a.backing === 'backed' || a.backing === 'binds';
+      it.authority = { words: a.words, backed };
+      it.problem = backed ? null : it.problem;
     }
     const problems = feed.authors.filter((a) => a.problem).map((a) => `${fingerprint(a.identity)}: ${a.problem}`);
     return { items, more: feed.more, problems, notes, followsChanged };

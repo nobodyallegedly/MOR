@@ -47,7 +47,7 @@ export const RELY = 'RELY';
 
 /** Said where an identity is brought in (the carry Module, 5.1; Identity rule 35), as Dub says it. */
 export const BRING_LINE_SAY =
-  'Edubba keeps its own line of acts for this identity. If its signing key is ever changed (with the chain key, in MOR Safety), that change must keep this line, or every act signed here becomes void. Its record, on this tab, shows this line’s latest act, position and summary.';
+  'Edubba keeps its own line of acts for this identity. If its signing key is ever changed (with the chain key, in Kišib), that change must keep this line, or every act signed here becomes void. Its record, on this tab, shows this line’s latest act, position and summary.';
 
 /** One section of the record, in plain words. */
 export interface RecordSection {

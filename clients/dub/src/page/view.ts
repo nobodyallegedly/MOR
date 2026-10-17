@@ -161,6 +161,26 @@ dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
 .post.act .acts{border-top:none;padding-top:0;margin-top:2px}
 details.fold>summary{font-size:15px;color:var(--text);margin:14px 0 4px}`;
 
+/**
+ * Dub's tint (H36): the Text layer's warm pearl, #e9dfcd (chosen by the
+ * Edubba agents session, the visual bible's value not being in the
+ * repository), laid over #06080c at a share, channel by channel (Kišib's
+ * rule): separators 22% (#383736), outlines of cards, fields and buttons 30%
+ * (#4a4946), quiet accents (a hover or focus outline, a fold's mark, a tab's
+ * count) 60% (#8e8980). Red stays for a contest, a void act or a stolen key.
+ * `STYLE` stays the family's untinted base, which the other apps tint with
+ * their own layer; Dub's own page uses `PAGE_STYLE`.
+ */
+export const TINT = { layer: '#e9dfcd', line: '#383736', edge: '#4a4946', accent: '#8e8980' } as const;
+
+export const PAGE_STYLE = `${STYLE}
+:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
+.correction strong{font-weight:400;color:var(--text)}`;
+
 /** A fold (H34): open or closed by default, the person's choice remembered by the page (`ui.ts`, `applyFolds`). */
 export function fold(key: string, summary: string, body: string, open: boolean): string {
   return `<details class="fold" data-fold="${e(key)}"${open ? ' open' : ''}><summary>${e(summary)}</summary>${body}</details>`;
@@ -227,7 +247,7 @@ ${web ? '' : via}
 <label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>
 <label>Relays for its posts (only if it names none; one per line)</label><textarea name="relays"></textarea>
 ${web ? '' : via}
-<p class="small">Never type the chain key’s words here: they belong to MOR Safety, on a device that stays offline.${web ? ` ${e(KEPT_SAY)}` : ''}</p>
+<p class="small">Never type the chain key’s words here: they belong to Kišib, the app where a change of keys is done, and to paper.${web ? ` ${e(KEPT_SAY)}` : ''}</p>
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
   // H28: with an identity in use, one way out: leave it first; then this window lists those held, and the two doors.
   const doors = i ? '' : held.length ? `${fold('make', 'Make a new identity', make.replace(/^<section class="card"><h3>Make a new identity<\/h3>/, '<section class="card">'), false)}${fold('bring', 'Bring an identity you have', bring.replace(/^<section class="card"><h3>Bring an identity you have<\/h3>/, '<section class="card">'), false)}` : `${make}${bring}`;
@@ -260,12 +280,12 @@ function current(s: State): string {
 <div id="carry"></div>
 <details data-fold="line"><summary>This app’s line, and where it lives</summary>
 <dl class="facts"><dt>Made</dt><dd>${i.kind === 'made' ? 'Here. Its chain key was shown once as words, and is kept nowhere here.' : 'Elsewhere, brought here by its signing key’s words. Its chain key is not here.'}</dd>
-${i.oldChainKey ? '<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app’s folder, unused. MOR Safety will take it from there.</dd>' : ''}
+${i.oldChainKey ? '<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app’s folder, unused and untouched. Kišib changes keys from paper words only, never from this folder.</dd>' : ''}
 <dt>Private messages</dt><dd>${i.encryption ? 'Its encryption key is here: its private messages open here.' : 'No encryption key here: its private messages cannot be opened here.'}</dd>
 <dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd>
 <dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd>
 <dt>This app's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
-<p class="small">If the signing key is ever changed (in MOR Safety, with the chain key’s words), that change must keep this line, or the posts made here become void: take the line above to it.</p></details>
+<p class="small">If the signing key is ever changed (in Kišib, with the chain key’s words), that change must keep this line, or the posts made here become void: take the line above to it.</p></details>
 </div>`;
 }
 
@@ -314,7 +334,7 @@ ${testNotice(web)}
 <form id="post" class="compose">
 <div id="replying"></div>
 <textarea name="text" required placeholder="Write something public"></textarea>
-<div class="to"><input name="to" autocomplete="off" spellcheck="false" placeholder="To an identity: its ID (a public message, left in its inbox too)"></div>
+<div class="to"><input name="to" list="followed" autocomplete="off" spellcheck="false" placeholder="To an identity: someone you follow, or its ID (a public message, left in its inbox too)"></div>
 <div class="row"><label class="quiet-file"><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"><span class="small" data-action="pick">Picture</span></label><button type="button" class="quiet" data-action="address">To…</button><span class="grow small" id="picked"></span><button type="submit" class="primary">Post</button></div>
 </form>
 <div class="filters"><button class="tab on" data-filter="all">Everyone</button><button class="tab" data-filter="toyou">To you<span class="count" id="count-toyou"></span></button><button class="tab" data-filter="relay" title="Every public act at this identity’s relays, newest first">Relay</button><span class="grow"></span><button class="quiet" data-action="feed">Look again</button></div>
@@ -323,7 +343,7 @@ ${people(s)}
 </section>
 <section id="private" hidden>
 <form id="message" class="compose">
-<input name="to" autocomplete="off" spellcheck="false" placeholder="To: an identity’s ID" required>
+<input name="to" list="followed" autocomplete="off" spellcheck="false" placeholder="To: someone you follow, or an identity’s ID" required>
 <textarea name="text" required placeholder="Write something private"></textarea>
 <div class="row"><span class="grow small">Sealed to them: only they can open it.</span><button type="submit" class="primary">Send</button></div>
 </form>
@@ -401,6 +421,18 @@ export function shareTypeBack(thread: string, positions: number[]): string {
 }
 
 /** Follow and mute (the people cMIP): quiet, folded away. */
+/**
+ * H37: the people this identity follows, offered where an identity is
+ * addressed (Public's To… and the Private message box): each by the name
+ * given here and its display names, the fingerprint always beside them.
+ * Typing or pasting an ID still works: the list only suggests.
+ */
+export function followedList(follows: Who[]): string {
+  return `<datalist id="followed">${follows
+    .map((f) => `<option value="${e(f.id)}" label="${e([f.pet, ...f.names.filter((n) => n !== f.pet)].filter(Boolean).join(' · ') || 'no name')} · ${e(f.short)}"></option>`)
+    .join('')}</datalist>`;
+}
+
 export function people(s: State): string {
   const i = s.identity!;
   const row = (w: Who, actions: string) => `<li>${who(w)}<span class="acts">${actions}</span></li>`;
@@ -415,7 +447,8 @@ ${i.muted.length ? `<span class="label">Muted</span><ul>${i.muted.map((m) => row
       : 'This app holds no encryption key of this identity, so the list stays in this app only.'
   } Muting stays in this app, always.</p>
 ${i.sealed?.forked ? '<p class="small">The list was forked: two apps changed it at once. The longer branch is shown.</p>' : ''}
-</details>`;
+</details>
+${followedList(i.follows)}`;
 }
 
 const bad = (standing: string) => /void|contest|invalid|stolen/.test(standing);
@@ -432,6 +465,14 @@ export function post(p: Item): string {
   const answers = p.answers
     .map((a) => `<div class="re">↳ answering ${a.who ? who(a.who) : '<span class="fp">an act not found</span>'}${a.snippet ? ` · <span dir="auto">${e(a.snippet)}</span>` : ''}</div>`)
     .join('');
+  // The corrections cMIP (F344): a correction labelled, the original kept as signed and named "corrected by".
+  const correction = p.corrects
+    ? `<div class="re correction"><strong>Correction</strong> of <span class="fp" title="${e(p.corrects)}">${e(p.corrects.slice(0, 8))}…</span>, which stays as signed</div>`
+    : '';
+  const authority = p.authority ? `<div class="re authority${p.authority.backed ? '' : ' warn'}">${e(p.authority.words)}</div>` : '';
+  const correctedBy = p.correctedBy?.length
+    ? `<div class="re corrected">Corrected by ${p.correctedBy.map((c) => `<span class="fp" title="${e(c)}">${e(c.slice(0, 8))}…</span>`).join(', ')}: shown as it was signed</div>`
+    : '';
   const pics = p.pictures
     .map((x) =>
       x.src
@@ -450,7 +491,7 @@ export function post(p: Item): string {
     ...p.pictures.filter((x) => x.withdrawable).map((x) => `<button data-action="withdraw" data-publication="${e(x.publication)}">Withdraw picture</button>`),
   ].join('');
   return `<article class="post" data-post="${e(p.id)}" data-signer="${e(p.who.id)}">
-<div class="row tight">${who(p.who)}${flag}</div>${answers}
+<div class="row tight">${who(p.who)}${flag}</div>${authority}${correction}${answers}${correctedBy}
 ${p.text ? `<div class="text" dir="auto">${e(p.text)}</div>` : ''}${pics}${doc}
 <div class="acts">${acts}</div><div class="tipping"></div></article>`;
 }

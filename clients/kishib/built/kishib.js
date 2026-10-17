@@ -8347,6 +8347,14 @@ dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
 .post.act{padding:8px 14px}
 .post.act .acts{border-top:none;padding-top:0;margin-top:2px}
 details.fold>summary{font-size:15px;color:var(--text);margin:14px 0 4px}`;
+var TINT = { layer: "#e9dfcd", line: "#383736", edge: "#4a4946", accent: "#8e8980" };
+var PAGE_STYLE = `${STYLE}
+:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
+.correction strong{font-weight:400;color:var(--text)}`;
 
 // src/page/view.ts
 var NAME = "Ki\u0161ib";
@@ -8356,9 +8364,9 @@ var WEB_BANNER2 = `<div class="banner" id="for-testing-only" role="note"><p><str
 <li>This browser, its extensions and whatever else runs on this device see what you type. A collective\u2019s whole chain key is rebuilt in the device that rotates it.</li>
 <li>Ki\u0161ib keeps nothing in this browser\u2019s storage; but nothing can prove a device forgot what it held.</li></ol>
 <p>Use the app on a clean device for anything of value; ideally a device used for nothing else. Never here for a real identity.</p></div>`;
-var TINT = { layer: "#8ec5f0", line: "#24323e", edge: "#2f4150", accent: "#587995" };
+var TINT2 = { layer: "#8ec5f0", line: "#24323e", edge: "#2f4150", accent: "#587995" };
 var STYLE2 = `${STYLE}
-:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+:root{--line:${TINT2.line};--edge:${TINT2.edge};--tint:${TINT2.accent}}
 button:hover,.door:hover{border-color:var(--tint)}
 input:focus,textarea:focus{border-color:var(--tint)}
 details>summary::before{color:var(--tint)}

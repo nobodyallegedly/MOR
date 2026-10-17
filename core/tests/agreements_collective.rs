@@ -15488,3 +15488,98 @@ fn a_collectives_text_names_its_own_decision_f334() {
     let solo = lab.w.add(&a);
     assert_eq!(lab.w.v.status(&solo), Status::Invalid);
 }
+
+/// F343 (Text draft 10, rule 14; Agreements rules 58, 73 and 75): an act
+/// signed with a grant key names, as its one object, the grant its binding
+/// names, on its grantor's chain. A post under a person's grant and under a
+/// collective's grant is valid under Text and backed by Agreements; a
+/// grantee's post naming anything else, or two objects, stays invalid; an
+/// individual's own post naming its own chain stays invalid (F296).
+#[test]
+fn a_post_under_a_grant_names_its_grant_f343() {
+    let text = |s: &str| vec![(Value::Uint(0), Value::Text(s.into()))];
+    let one = |chain: Hash, predecessor: Hash| Some(vec![Object { chain, predecessor }]);
+    fn view(w: &World) -> AgreementsView<'_> {
+        AgreementsView::new(&w.v, mirs())
+    }
+
+    // A person's grant: an owner grants its agent posting in its name.
+    let mut w = World::new();
+    let mut owner = w.genesis("an owner", vec![own_home()], None, None);
+    let mut agent = w.genesis("its agent", vec![own_home()], None, None);
+    let oid = owner.id;
+    let g = agreements_act(&mut w, &mut owner, agreements::types::GRANT, plain_grant(agent.id, false).to_map(), None);
+    sign(&mut w, &mut agent, &g);
+    let mut strand = owner.clone();
+    strand.binding = g;
+    strand.sign = key_of(agent.id);
+    strand.seq = vec![];
+    strand.cite = Some((oid, vec![g]));
+    let a = w.everyday_act(&mut strand, mirs().text, 0, text("Posted for my owner, under its grant."), None, None);
+    let post = w.add(&a);
+    assert_eq!(w.v.status(&post), Status::Scoped, "Identity checks the grant key's signature only (rule 8)");
+    assert_eq!(view(&w).backing(&post).unwrap(), Backing::Backed { grant: g });
+    // Naming another act of the grantor, another chain, or two objects: invalid.
+    let other = agreements_act(&mut w, &mut owner, agreements::types::REVOCATION, agreements::Revocation { grant: sha256(b"no grant") }.to_map(), None);
+    let cases: Vec<(&str, Option<Vec<Object>>)> = vec![
+        ("another act of the grantor", one(oid, other)),
+        ("another chain", one(agent.id, g)),
+        ("two objects", Some(vec![Object { chain: oid, predecessor: g }, Object { chain: oid, predecessor: g }])),
+    ];
+    for (label, objects) in cases {
+        let mut d = strand.clone();
+        d.cite = None;
+        let a = w.everyday_act(&mut d, mirs().text, 0, text(label), objects, None);
+        let id = w.add(&a);
+        assert_eq!(w.v.status(&id), Status::Invalid, "{label}");
+    }
+    // An individual's own post naming its own chain: invalid, as before (F296).
+    let mut own_dev = owner.clone();
+    own_dev.cite = None;
+    let a = w.everyday_act(&mut own_dev, mirs().text, 0, text("My own log."), one(oid, g), None);
+    let solo = w.add(&a);
+    assert_eq!(w.v.status(&solo), Status::Invalid);
+
+    // A collective's grant, naming no area, in a collective with none.
+    let mut lab = Lab::new(&|t| {
+        t.areas = None;
+        t.area_words = None;
+    });
+    let mut grantee = lab.w.genesis("a grantee", vec![own_home()], None, None);
+    let cg = lab.grant(&plain_grant(grantee.id, false));
+    lab.sign(ANA, &cg);
+    sign(&mut lab.w, &mut grantee, &cg);
+    let mut cs = lab.strand(cg, &key_of(grantee.id));
+    let a = lab.w.everyday_act(&mut cs, mirs().text, 0, text("For the house, under its grant."), None, None);
+    let cpost = lab.w.add(&a);
+    assert_eq!(lab.w.v.status(&cpost), Status::Scoped);
+    assert_eq!(lab.view().backing(&cpost).unwrap(), Backing::Backed { grant: cg });
+}
+
+/// F345 (Agreements rule 80, draft 14, F320): a person's grant carrying
+/// limits under a cMIP (fields 3 and 4): with no verdict on them the act is
+/// unknown; with the client's verdict, backed within them and not backed
+/// outside them, the grant quiet.
+#[test]
+fn a_grants_limits_take_a_clients_verdict_f345() {
+    let mut w = World::new();
+    let mut owner = w.genesis("an owner", vec![own_home()], None, None);
+    let mut agent = w.genesis("its agent", vec![own_home()], None, None);
+    let oid = owner.id;
+    let grant = Grant { limits: Some(Value::Uint(1000)), limits_cmip: Some(spec("a grant limits cMIP")), ..plain_grant(agent.id, false) };
+    let g = agreements_act(&mut w, &mut owner, agreements::types::GRANT, grant.to_map(), None);
+    sign(&mut w, &mut agent, &g);
+    let mut strand = owner.clone();
+    strand.binding = g;
+    strand.sign = key_of(agent.id);
+    strand.seq = vec![];
+    strand.cite = Some((oid, vec![g]));
+    let a = w.everyday_act(&mut strand, mirs().text, 0, vec![(Value::Uint(0), Value::Text("Within?".into()))], None, None);
+    let post = w.add(&a);
+    let mut v = AgreementsView::new(&w.v, mirs());
+    assert!(matches!(v.backing(&post).unwrap(), Backing::Unknown { .. }));
+    v.grant_limits.insert(post, true);
+    assert_eq!(v.backing(&post).unwrap(), Backing::Backed { grant: g });
+    v.grant_limits.insert(post, false);
+    assert!(matches!(v.backing(&post).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("limits")));
+}

@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { Access, Refusal } from '../../collective/src/access.ts';
 import { Desk } from './desk.ts';
 import { type MachineOptions } from './machine.ts';
+import { Corrections } from './corrections.ts';
 import { Agents } from './agents.ts';
 import { Collectives } from './collectives.ts';
 import { Setup } from './setup.ts';
@@ -67,6 +68,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
   const access = new Access(opts.dir, { domain: DOMAIN, label: CODE_LABEL });
   const desk = new Desk(store);
   const agents = new Agents(desk, store, opts.machine);
+  const corrections = new Corrections(desk, store);
   // The collective client's folder, read where it is (~/mor-collective), or
   // inside this one for a new install (src/cli.ts).
   const collectives = new Collectives(opts.collective ?? join(opts.dir, 'collective'), store);
@@ -153,6 +155,41 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
         return {};
       case 'agent view':
         return agents.view(text(a.agent));
+      case 'agent grant preview':
+        return agents.grantPreview(text(a.agent), {
+          kinds: list(a.kinds),
+          cap: a.cap === undefined || a.cap === null || a.cap === '' ? null : num(a.cap),
+          expiry: text(a.clock) ? { clock: text(a.clock).toLowerCase(), time: num(a.until) } : null,
+        });
+      case 'agent grant publish':
+        return agents.grantPublish(text(a.agent), text(a.digest));
+      case 'agent grant ask':
+        return agents.grantAsk(text(a.agent), text(a.grant));
+      case 'agent grant revoke':
+        return agents.grants.revoke(text(a.agent), text(a.grant));
+      case 'agent grants':
+        return agents.grants.list(text(a.agent));
+      case 'keys check': {
+        // F335: on opening, every identity held here whose signing key was changed elsewhere, said; a change of keys is Kišib's.
+        const out: { id: string; name: string; say: string }[] = [];
+        for (const i of store.book().identities) {
+          if (!store.holds(i.id)) continue;
+          const w = await desk.keyChanged(i.id);
+          if (w) out.push({ id: i.id, name: i.name, say: w });
+        }
+        return out;
+      }
+      case 'identity posts':
+        return corrections.posts(text(a.identity));
+      case 'identity correct':
+        return corrections.correct(text(a.identity), text(a.act), text(a.text));
+      case 'agent notes':
+        return agents.notes(text(a.agent));
+      case 'agent note retire':
+        return agents.retireNote(text(a.agent), text(a.note), text(a.why));
+      case 'agent diary':
+        // H22, 6: shown only by this one deliberate action, `reading` set once the page said what it means.
+        return agents.diary(text(a.agent), a.reading === true);
       case 'collective constitution':
         return collectives.constitution(text(a.collective), realRead(text(a.collective)));
       case 'collective permissions':
@@ -259,7 +296,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
       case 'real by hand':
         return real.byHand(text(a.act), text(a.member), a.on === true);
       case 'real found':
-        return real.found(text(a.act));
+        return real.found(text(a.act), a.read === true);
       case 'real to show':
         return real.toShow(text(a.collective));
       case 'real show share':

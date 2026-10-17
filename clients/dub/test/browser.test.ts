@@ -162,6 +162,11 @@ test('a person, without a terminal, through every screen of Dub', async () => {
   assert.match(card, /River \(from the test\)/, 'the name given here');
   assert.match(card, /River/, 'its display name');
   assert.ok(card.includes(`${them.slice(0, 8)}…${them.slice(-4)}`), 'beside its fingerprint, always');
+  // H37: the people followed, offered where an identity is addressed (To… and the Private box), by name and fingerprint; an ID still typed.
+  for (const sel of ['form#post input[name=to]', 'form#message input[name=to]']) assert.equal(await page.locator(sel).getAttribute('list'), 'followed');
+  const offered = await page.locator(`#followed option[value="${them}"]`).getAttribute('label');
+  assert.match(offered ?? '', /^River \(from the test\) · River · /);
+  assert.ok(offered!.endsWith(`${them.slice(0, 8)}…${them.slice(-4)}`), 'the fingerprint beside the names');
   // The long-form document: not shown in the feed; a link to the reader.
   const link = post(page, doc.id).locator('a.doc');
   assert.equal(await link.getAttribute('href'), `https://reader.dubsar.org/#${doc.id}`);
@@ -296,13 +301,13 @@ test('a person, without a terminal, through every screen of Dub', async () => {
   await page.locator('[data-tab=public]').waitFor({ timeout: 60_000 });
   await page.locator('[data-action=window]').click();
 
-  // A key changed elsewhere (MOR Safety's work; the genesis client stands in): said, and the new words taken.
+  // A key changed elsewhere (Kišib's work; the genesis client stands in): said, and the new words taken.
   await g.prepareRotation();
   await g.submitRotation();
   assert.ok((await g.settleRotation()).counts);
   await page.getByRole('button', { name: 'Back to Dub' }).click();
   await page.locator('#spent .note.spent').waitFor({ timeout: 60_000 });
-  assert.match(await page.locator('#spent').innerText(), /changed elsewhere.*MOR Safety/s);
+  assert.match(await page.locator('#spent').innerText(), /changed elsewhere.*Kišib/s);
   await shot(page, '12-key-changed-elsewhere');
   await page.locator('form#renew textarea[name=words]').fill(toWords(unhex(g.f.signingSecret)).join(' '));
   await page.getByRole('button', { name: 'Use the new words' }).click();

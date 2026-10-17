@@ -6,7 +6,7 @@
 
 import { parse, title } from '../../longform/src/format.ts';
 import { listPosts, readPost, type ShownPost } from '../../barebone/src/post.ts';
-import { POST_SPECS } from '../../barebone/src/specs.ts';
+import { isLongForm } from '../../barebone/src/corrections.ts';
 import type { Via } from '../../genesis/src/transport.ts';
 import { cannotReach } from '../../genesis/src/lookup.ts';
 
@@ -19,7 +19,7 @@ export interface Shown {
 }
 
 export function titleOf(p: ShownPost): string {
-  if (p.format === POST_SPECS.longform) {
+  if (isLongForm(p.format)) {
     const t = title(parse(p.text));
     if (t) return t;
   }

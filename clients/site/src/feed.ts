@@ -34,6 +34,7 @@ import { relayAddress } from './settings.ts';
 import { NUDGE, NUDGE_TYPES } from './specs.ts';
 import { readStamps, earliestByNames } from '../../../modules/timestamp/src/read.ts';
 import { TIMESTAMP_SPEC } from '../../../modules/timestamp/src/stamp.ts';
+import { correctionOf } from '../../barebone/src/corrections.ts';
 
 /** An identity a feed names, with the page's word for it. */
 export interface Author {
@@ -68,6 +69,10 @@ export interface FeedPost {
   problem: string | null;
   /** The text acts it names (Text MIR: a reply names the post it answers). */
   answers: string[];
+  /** A correction (the corrections cMIP, F344): the act of its own signer it corrects, shown with the label "Correction". */
+  corrects?: string;
+  /** The corrections of this act the feed holds, by its own signer: shown as "corrected by". */
+  correctedBy?: string[];
   /** Set on a visitor's note (draft 7): a public text act addressed to an identity the feed names, by an identity it does not name. */
   note?: boolean;
   /**
@@ -488,6 +493,16 @@ export async function readFeed(authors: Author[], relays: string[], via: Via = {
       if (cause?.type === NUDGE_TYPES.nudge) nudged = true;
     }
     if (nudged) for (const [r, by] of p.picked) if (by === null) p.picked.set(r, p.signer);
+  }
+
+  // Corrections (the corrections cMIP, F344): labelled, and named on what they correct, which stays as signed.
+  for (const p of posts) {
+    if (!p.post || p.problem) continue;
+    const c = correctionOf(p.post);
+    if (!c) continue;
+    p.corrects = c;
+    const o = byId.get(c) ?? answered.get(c);
+    if (o) o.correctedBy = [...(o.correctedBy ?? []), p.id];
   }
 
   for (const line of lines) {

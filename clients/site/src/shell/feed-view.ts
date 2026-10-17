@@ -8,7 +8,7 @@
 
 import { escapeHtml as e, renderHtml, STYLE as LONGFORM_STYLE } from '../../../longform/src/html.ts';
 import { parse } from '../../../longform/src/format.ts';
-import { POST_SPECS } from '../../../barebone/src/specs.ts';
+import { isLongForm } from '../../../barebone/src/corrections.ts';
 import type { ShownPicture, ShownPost } from '../../../barebone/src/post.ts';
 import { base64 } from '../../../genesis/src/core.ts';
 import { fingerprint } from '../../../reader/src/read.ts';
@@ -78,7 +78,7 @@ function picture(p: ShownPicture): string {
 }
 
 function text(post: ShownPost): string {
-  return post.format === POST_SPECS.longform
+  return isLongForm(post.format)
     ? `<div class="f-text f-lf">${renderHtml(parse(post.text))}</div>`
     : `<div class="f-text" dir="auto">${e(post.text)}</div>`;
 }

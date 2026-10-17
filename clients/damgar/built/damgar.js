@@ -8227,6 +8227,14 @@ dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
 .post.act{padding:8px 14px}
 .post.act .acts{border-top:none;padding-top:0;margin-top:2px}
 details.fold>summary{font-size:15px;color:var(--text);margin:14px 0 4px}`;
+var TINT = { layer: "#e9dfcd", line: "#383736", edge: "#4a4946", accent: "#8e8980" };
+var PAGE_STYLE = `${STYLE}
+:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
+.correction strong{font-weight:400;color:var(--text)}`;
 
 // src/page/view.ts
 var NAME = "Damgar";
@@ -8236,9 +8244,9 @@ var WEB_BANNER2 = `<div class="banner" id="for-testing-only" role="note"><p><str
 <li>This browser\u2019s storage, where those keys are kept, can be lost, or read by what runs in this page.</li>
 <li>Damgar holds no wallet: money moves only in your own wallet, on a test network. This page follows no chain, so an on-chain payment is shown paid, not yet checked against the chain.</li></ol>
 <p>Never bring a real identity here, and never pay real money for anything it shows.</p></div>`;
-var TINT = { layer: "#e8b33a", line: "#382e16", edge: "#4a3b1a", accent: "#8e6f28" };
+var TINT2 = { layer: "#e8b33a", line: "#382e16", edge: "#4a3b1a", accent: "#8e6f28" };
 var STYLE2 = `${STYLE}
-:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+:root{--line:${TINT2.line};--edge:${TINT2.edge};--tint:${TINT2.accent}}
 button:hover,.door:hover{border-color:var(--tint)}
 input:focus,textarea:focus{border-color:var(--tint)}
 details>summary::before{color:var(--tint)}

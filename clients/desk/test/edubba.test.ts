@@ -16,7 +16,7 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { cborEncode, describeAct, hex, unhex } from '../../genesis/src/core.ts';
@@ -265,9 +265,31 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   assert.ok(posts.items.some((x: any) => x.text === 'For the house.' && x.standing === 'valid'), JSON.stringify(posts));
   assert.ok(posts.items.some((x: any) => x.pictures.length === 1 && x.standing === 'valid'));
 
+  // A correction of the collective's own post (the corrections cMIP, F344): read back as a correction, signed as the collective, labelled; the original stays.
+  const rc = await c.ask<any>('collective prepare', { kind: 'post', collective: col.id, text: 'For the whole house.', corrects: done.acts[0] });
+  assert.match(rc.reading.title, /^A correction for the collective/);
+  const dc = await c.ask<Done>('collective confirm', { plan: rc.plan, digest: rc.digest });
+  assert.ok(dc.lines.some((l) => /The text: counts for the collective/.test(l.text)), JSON.stringify(dc.lines));
+  const after = await c.ask<any>('collective posts', { collective: col.id });
+  assert.equal(after.items.find((x: any) => x.id === dc.acts[0]).corrects, done.acts[0]);
+  assert.deepEqual(after.items.find((x: any) => x.id === done.acts[0]).correctedBy, [dc.acts[0]]);
+
   // Its constitution, in plain words: the deal-assessment tool's reading of its agreement in force.
   const k = await c.ask<any>('collective constitution', { collective: col.id });
   assert.equal(k.inForce, true);
   assert.equal(k.kind, 'collective');
   assert.ok(k.sections.some((s: any) => s.heading === 'Areas: who decides which acts'));
+});
+
+test('H19: the release folder of a test collective, pasted from the Terminal (“\\ ” a space, quotes, a space at the end), is read as the folder', async () => {
+  const top = mkdtempSync(join(tmpdir(), 'edubba-h19-'));
+  const folder = join(top, 'my release');
+  mkdirSync(folder);
+  const st = await c.ask<any>('collective state');
+  const s = { settings: { homes: st.settings.homes.map((h: any) => (typeof h === 'string' ? h : h.hint)), relays: st.settings.relays } };
+  for (const pasted of [`${folder.replace(/ /g, '\\ ')}  `, `'${folder}'`]) {
+    await c.ask('collective settings', { homes: s.settings.homes, relays: s.settings.relays, via: [], checkout: pasted });
+    assert.equal((await c.ask<any>('collective state')).settings.checkout, realpathSync(folder), pasted);
+  }
+  await assert.rejects(c.ask('collective settings', { homes: s.settings.homes, relays: s.settings.relays, via: [], checkout: join(top, 'my releas') }), /There is no folder at/);
 });
