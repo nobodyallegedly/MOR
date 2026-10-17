@@ -7594,7 +7594,7 @@ var PUBLICATION2 = 0;
 
 // ../barebone/src/corrections.ts
 var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 2, test value until publication");
-var LONG_FORM_CORRECTION = sha2562(`${CORRECTIONS_SPEC} long-form`);
+var LONG_FORM_CORRECTION = sha2562("Long-form corrections cMIP, draft 1, test value until publication");
 var isLongForm = (format) => format === POST_SPECS.longform || format === LONG_FORM_CORRECTION;
 var correctionFormatFor = (corrected) => isLongForm(corrected) ? LONG_FORM_CORRECTION : CORRECTIONS_SPEC;
 function formatOfPayload(payload) {

@@ -1,11 +1,11 @@
 // The corrections cMIP, draft 2 (`cmips/cmip-corrections-draft-2.md`, F344,
-// F347): a correction is a text act whose format is one of this cMIP's two,
-// naming the act it corrects first in `refs`, signed by that act's own signer
-// (a collective's correction by the collective). The plain format's text is
-// plain; the long-form format's text is long-form, and is used where a
-// long-form act is corrected. Clients label it "Correction" and show
-// "corrected by" on the original, which stays signed. Shared by Edubba, Dub,
-// the site's feed, the reader and the connector.
+// F347), and the long-form corrections cMIP it names (F348): a correction is
+// a text act in one of two formats, naming the act it corrects first in
+// `refs`, signed by that act's own signer (a collective's correction by the
+// collective). The plain format's text is plain; the long-form one's is
+// long-form, and is used where a long-form act is corrected. Clients label it
+// "Correction" and show "corrected by" on the original, which stays signed.
+// Shared by Edubba, Dub, the site's feed, the reader and the connector.
 
 import { cborDecode, hex, sha256 } from '../../genesis/src/core.ts';
 import { POST_SPECS } from './specs.ts';
@@ -15,10 +15,10 @@ import type { ShownPost } from './post.ts';
 export const CORRECTIONS_SPEC = sha256('Corrections cMIP, draft 2, test value until publication');
 
 /**
- * Its long-form format (1.1, F347): SHA-256 of the UTF-8 text made of the
- * cMIP's hash in lowercase hex, a space, and "long-form".
+ * Its long-form format (1.1, F347): the long-form corrections cMIP, draft 1,
+ * a specification of its own (F348): a test value until publication.
  */
-export const LONG_FORM_CORRECTION = sha256(`${CORRECTIONS_SPEC} long-form`);
+export const LONG_FORM_CORRECTION = sha256('Long-form corrections cMIP, draft 1, test value until publication');
 
 /** The label a correction carries wherever it is shown (2.1). */
 export const CORRECTION_LABEL = 'Correction';

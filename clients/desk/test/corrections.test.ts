@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { SPECS, cborDecode, cborEncode, describeAct, hex } from '../../genesis/src/core.ts';
+import { SPECS, cborDecode, cborEncode, describeAct, hex, sha256 } from '../../genesis/src/core.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
@@ -94,7 +94,7 @@ test('never someone else’s act; a stranger’s text in the corrections format 
   assert.equal(told.title, 'A text');
 });
 
-test('a long-form act corrected in long form (F347): in Edubba and through a collective’s way of posting; rendered as long form, labelled', async () => {
+test('a long-form act corrected in long form (F347, F348): in Edubba and through a collective’s way of posting; rendered as long form, labelled', async () => {
   const hints = [relay.base, homes[0].base];
   const doc = (await app.desk.signAndSend(NA, { spec: SPECS.text, type: 0, payload: cborEncode(new Map<number, unknown>([[0, '# Opening hours\n\nThe house opens at *nine*.'], [1, Buffer.from(POST_SPECS.longform, 'hex')]])) as Uint8Array, public: true, to: [], refs: [] })).id;
   const d = await c.ask<Done>('identity correct', { identity: NA, act: doc, text: '# Opening hours\n\nThe house opens at *ten*.' });
@@ -102,6 +102,7 @@ test('a long-form act corrected in long form (F347): in Edubba and through a col
   const lf = d.acts[0];
   const x = describeAct((await relayAt(relay.base).getAct(lf))!) as { payload: Uint8Array };
   assert.equal(hex((cborDecode(x.payload) as Map<number, Uint8Array>).get(1)!), LONG_FORM_CORRECTION, 'its format: the long-form correction');
+  assert.equal(LONG_FORM_CORRECTION, sha256('Long-form corrections cMIP, draft 1, test value until publication'), 'a cMIP of its own (F348), not a name derived from the corrections cMIP');
   assert.notEqual(LONG_FORM_CORRECTION, CORRECTIONS_SPEC);
   // A plain act is still corrected plainly (the first test); a long-form one in long form, by the shared post() too (a collective's way).
   const stranger = TestIdentity.create({ homes: app.store.settings().homes, via: {} });
