@@ -20,7 +20,9 @@ for pair in "MOR Desk|org.dubsar.mor-desk<" "MOR Identities|org.dubsar.mor-ident
   fi
 done
 app="$HOME/Applications/Edubba.app"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+# Its icon (H25), drawn in static/icon/edubba.svg and made by scripts/make-icons.ts in clients/dub.
+cp "$here/static/icon/edubba.icns" "$app/Contents/Resources/AppIcon.icns"
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -30,6 +32,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <key>CFBundleIdentifier</key><string>org.dubsar.edubba</string>
 <key>CFBundleExecutable</key><string>edubba</string>
 <key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSUIElement</key><true/>
 </dict></plist>
 PLIST
@@ -38,4 +41,6 @@ cat > "$app/Contents/MacOS/edubba" <<SCRIPT
 cd "$here" && exec "$node" --import tsx src/cli.ts open >> "\$HOME/edubba-launcher.log" 2>&1
 SCRIPT
 chmod +x "$app/Contents/MacOS/edubba"
+# Finder reads an app's icon again once the app is newer than what it remembers.
+touch "$app"
 echo "made $app"

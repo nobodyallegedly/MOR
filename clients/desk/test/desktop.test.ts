@@ -25,6 +25,10 @@ test('make-desktop.sh: a desktop entry named Edubba, running a launcher that sta
   assert.match(text, /^\[Desktop Entry\]\nType=Application\n/);
   assert.match(text, /\nName=Edubba\n/);
   assert.match(text, /\nTerminal=false\n/);
+  // H25: its own icon, copied beside the launcher.
+  const icon = join(home, '.local', 'share', 'mor', 'edubba.png');
+  assert.ok(text.includes(`\nIcon=${icon}\n`), text);
+  assert.deepEqual(readFileSync(icon), readFileSync(join(pkg, 'static', 'icon', 'edubba.png')));
   const launch = join(home, '.local', 'share', 'mor', 'edubba-launch.sh');
   assert.ok(text.includes(`\nExec="${launch}"\n`), text);
   assert.ok(statSync(launch).mode & 0o100, 'the launcher can be run');
@@ -45,4 +49,18 @@ test('make-desktop.sh: a desktop entry named Edubba, running a launcher that sta
   const hello = (await (await fetch(`http://127.0.0.1:${run.port}/hello`)).json()) as { pid: number };
   assert.equal(hello.pid, run.pid);
   execFileSync(process.execPath, ['--import', 'tsx', 'src/cli.ts', 'stop', '--dir', dir], { cwd: pkg, env, encoding: 'utf8' });
+});
+
+test('make-app.sh (H25): Edubba.app carries its own icon, named in its Info.plist', () => {
+  const home = mkdtempSync(join(tmpdir(), 'edubba-app-'));
+  const out = execFileSync('sh', ['scripts/make-app.sh'], { cwd: pkg, env: { ...process.env, HOME: home }, encoding: 'utf8' });
+  const app = join(home, 'Applications', 'Edubba.app');
+  assert.match(out, new RegExp(`made ${app}`));
+  assert.match(readFileSync(join(app, 'Contents', 'Info.plist'), 'utf8'), /<key>CFBundleIconFile<\/key><string>AppIcon<\/string>/);
+  const icns = readFileSync(join(app, 'Contents', 'Resources', 'AppIcon.icns'));
+  assert.deepEqual(icns, readFileSync(join(pkg, 'static', 'icon', 'edubba.icns')));
+  // The Mac's icon format: "icns", its whole length, then PNG entries up to 1024 pixels.
+  assert.equal(icns.subarray(0, 4).toString('ascii'), 'icns');
+  assert.equal(icns.readUInt32BE(4), icns.length);
+  for (const t of ['ic07', 'ic08', 'ic09', 'ic10']) assert.ok(icns.includes(Buffer.from(t, 'ascii')), t);
 });

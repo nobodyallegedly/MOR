@@ -23,7 +23,7 @@ import { DOMAIN, serve, type Running } from '../src/server.ts';
 import { CHAIN_WORDS_SAY, SPENT_SAY, TEST_ONLY } from '../src/dub.ts';
 import { INDEX, SCHEME, keySeeds } from '../src/chainwords.ts';
 import { chainKeyFromSeeds } from '../../genesis/src/core.ts';
-import { readFollowList, PEOPLE_SPEC } from '../src/people.ts';
+import { readFollowList, readSealedList, PEOPLE_SPEC } from '../src/people.ts';
 import { namesOf } from '../src/names.ts';
 import { OPS } from '../src/ops.ts';
 import { PUBLISH_WARNING, TEST_ONLY as SHOWN_TEST_ONLY } from '../src/page/view.ts';
@@ -340,6 +340,115 @@ test('the follow list: private by default, published only after its warning, ver
   await c.ask('unfollow', { id: y.id });
   assert.equal((await readFollowList(me.id, [relay.base])).version, 3, 'private again: nothing more published');
   assert.equal((await c.ask<State>('state')).identity!.list, 'private');
+});
+
+test('the follow list sealed to the identity (people cMIP draft 2): kept at its homes with its names, read and changed by another Dub holding the identity; never in the clear', async () => {
+  const { c: c1, app: app1 } = await dub();
+  const me = await made(c1);
+  const x = TestIdentity.create({ homes: [homes[0].home] });
+  await x.publishGenesis();
+  const y = TestIdentity.create({ homes: [homes[0].home] });
+  await y.publishGenesis();
+  const r = await c1.ask<Lines>('follow', { id: x.id, name: 'Mum (sealed)' });
+  assert.ok(r.lines.some((l) => /sealed to this identity and kept at its homes \(version 1\)/.test(l.text)), JSON.stringify(r));
+  assert.deepEqual((await c1.ask<State>('state')).identity!.sealed, { version: 1, forked: false });
+  // At its home: sealed, addressed to itself; neither the name nor the ID in the clear, anywhere.
+  for (const h of [homes[0], relay]) {
+    for (const i of [...(await relayAt(h.base).feed({ to: me.id })).items, ...(await relayAt(h.base).feed({ signer: me.id })).items]) {
+      assert.ok(!Buffer.from(i.item).includes(Buffer.from('Mum (sealed)')));
+      assert.ok(!Buffer.from(i.item).includes(Buffer.from(x.id, 'hex')));
+    }
+  }
+  assert.ok((await relayAt(homes[0].base).feed({ to: me.id })).items.some((i) => i.kind === 'sealed'));
+  // Read as anyone holding the identity's encryption key reads it.
+  const secret = encryptionSecret(unhex(fileOf(app1, me.id).signingSecret));
+  const l = await readSealedList(me.id, [secret], [homes[0].base]);
+  assert.deepEqual([l.version, l.follows], [1, [{ id: x.id, name: 'Mum (sealed)' }]]);
+  // Nothing public: no published list.
+  assert.equal((await readFollowList(me.id, [relay.base])).version, 0);
+
+  // Another Dub, the identity brought by its signing key's words: it finds the list, names included.
+  const { c: c2 } = await dub();
+  const carried = await c1.ask<{ words: string[] }>('carry');
+  await c2.ask('bring', { id: me.id, words: carried.words.join(' '), address: homes[0].base });
+  await c2.ask('feed', { fresh: true });
+  let st = await c2.ask<State>('state');
+  assert.deepEqual(st.identity!.follows.map((f) => [f.id, f.pet]), [[x.id, 'Mum (sealed)']]);
+  // A change there; the first Dub reads it on looking again.
+  await c2.ask('follow', { id: y.id, name: 'Y' });
+  await c2.ask('unfollow', { id: x.id });
+  await c1.ask('feed', { fresh: true });
+  st = await c1.ask<State>('state');
+  assert.deepEqual(st.identity!.follows.map((f) => [f.id, f.pet]), [[y.id, 'Y']]);
+  assert.deepEqual(st.identity!.sealed, { version: 3, forked: false });
+  // A change in the first goes on from the version read.
+  await c1.ask('call', { id: y.id, name: 'Yves' });
+  assert.equal((await readSealedList(me.id, [secret], [homes[0].base])).version, 4);
+});
+
+test('the follow list carried over (people cMIP draft 2, 3.7): a list kept in the app before is sealed once, nothing removed', async () => {
+  const { c, app } = await dub();
+  const me = await made(c);
+  const x = 'ab'.repeat(32);
+  const y = 'cd'.repeat(32);
+  // As Dub kept it before draft 2: in the app only.
+  const file = app.store.path('identities', me.id, 'people.json');
+  writeFileSync(file, JSON.stringify({ follows: [{ id: x, name: 'Old friend' }, { id: y, name: null }], muted: [], list: 'private', published: null, seen: [], inbox: { after: {}, items: [] }, sent: [] }));
+  await c.ask('feed', { fresh: true });
+  const secret = encryptionSecret(unhex(fileOf(app, me.id).signingSecret));
+  const l = await readSealedList(me.id, [secret], [homes[0].base]);
+  assert.deepEqual([l.version, l.follows], [1, [{ id: x, name: 'Old friend' }, { id: y, name: null }]]);
+  // Read again: nothing new written.
+  await c.ask('feed', { fresh: true });
+  assert.equal((await readSealedList(me.id, [secret], [homes[0].base])).version, 1);
+});
+
+test('switching identity (H28): Dub leaves the one in use first, keeps its keys, then the window lists those held to choose', async () => {
+  const { c } = await dub();
+  const a = await made(c);
+  const b = await made(c, homes[1]);
+  await c.ask('leave');
+  let st = await c.ask<State>('state');
+  assert.equal(st.stage, 'identity');
+  assert.equal(st.identity, undefined);
+  assert.deepEqual(st.held.map((h) => h.id).sort(), [a.id, b.id].sort());
+  assert.ok(st.held.every((h) => !h.active));
+  await refused(c.ask('post', { text: 'nobody in use' }), /No identity in use/);
+  await c.ask('use', { id: a.id });
+  st = await c.ask<State>('state');
+  assert.equal(st.stage, 'ready');
+  assert.equal(st.identity!.id, a.id);
+});
+
+test('the relay view (H29): every public act at the identity’s relays, newest first, posts of anyone, other acts named; muted ones left out and counted', async () => {
+  const { c: ca } = await dub();
+  const { c: cb } = await dub();
+  const a = await made(ca);
+  const b = await made(cb, homes[1]);
+  await cb.ask('post', { text: 'B, not followed by A, first.' });
+  await cb.ask('post', { text: 'B, not followed by A, second.' });
+  await cb.ask('name', { name: 'Bee' });
+  type R = { items: Item[]; hidden: number; problems: string[] };
+  let r = await ca.ask<R>('relay');
+  assert.deepEqual(r.problems, []);
+  const posts = r.items.filter((x) => !x.what);
+  const i1 = posts.findIndex((x) => x.text === 'B, not followed by A, first.');
+  const i2 = posts.findIndex((x) => x.text === 'B, not followed by A, second.');
+  assert.ok(i2 >= 0 && i1 > i2, 'newest first');
+  assert.equal(posts[i2].who.id, b.id);
+  assert.equal(posts[i2].standing, 'valid');
+  assert.equal(posts[i2].via, 'relay');
+  assert.ok(r.items.some((x) => x.what === 'A display name' && x.who.id === b.id), JSON.stringify(r.items.map((x) => x.what)));
+  assert.ok(r.items.findIndex((x) => x.what === 'A display name' && x.who.id === b.id) < i2 + (r.items.length - posts.length), 'the name, signed last, before the posts');
+  assert.ok(!(await feed(ca)).some((x) => x.who.id === b.id), 'the feed itself is unchanged: B is not followed');
+  await ca.ask('mute', { id: b.id });
+  r = await ca.ask<R>('relay');
+  assert.ok(!r.items.some((x) => x.who.id === b.id));
+  assert.ok(r.hidden >= 3);
+  await ca.ask('post', { text: 'A, after the mute.' });
+  r = await ca.ask<R>('relay');
+  assert.equal(r.items[0].text, 'A, after the mute.');
+  assert.equal(r.items[0].who.id, a.id);
 });
 
 test('a display name (the naming cMIP): shown beside the fingerprint, renamed with the old one withdrawn, refused when malformed', async () => {

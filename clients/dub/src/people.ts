@@ -1,19 +1,24 @@
-// Follow and mute, as the people cMIP says (cmips/cmip-people-draft-1.md):
-// both kept in the app; the follow list private by default (F59: an option
-// with a forced default) and published, by choice, as a versioned act; the
-// names given to followed identities never leave the app; muting never
-// published.
+// Follow and mute, as the people cMIP says (cmips/cmip-people-draft-2.md):
+// the follow list, with the names given, a private act sealed to the
+// identity itself and kept at its homes, read by any app holding the
+// identity (private, the default: F59, an option with a forced default);
+// published, by choice, as a versioned act carrying IDs only; muting kept in
+// the app, never published.
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, sha256, unhex } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, openSealed, sha256, unhex } from '../../genesis/src/core.ts';
 import { holdSequence, lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 
-/** The people cMIP's hash: a test value until its creator is named at step 17. */
-export const PEOPLE_SPEC = sha256('People cMIP, draft 1, test value until publication');
-/** The follow list act (section 3.1). */
+/** The people cMIP's hash, draft 2: a test value until its creator is named at step 17. */
+export const PEOPLE_SPEC = sha256('People cMIP, draft 2, test value until publication');
+/** Draft 1's hash: its published follow lists are continued as one chain with draft 2's (section 4.2). */
+export const PEOPLE_SPEC_1 = sha256('People cMIP, draft 1, test value until publication');
+/** The published follow list act (section 4.1). */
 export const FOLLOW_LIST = 0;
+/** The follow list sealed to oneself (section 3.1). */
+export const SEALED_LIST = 1;
 
 /** Said before a follow list is first published (section 3.5), word for word: in `shapes.ts`, which the page shares. */
 export { PUBLISH_WARNING } from './shapes.ts';
@@ -58,8 +63,12 @@ export interface People {
   muted: string[];
   /** The follow list's option (section 1.3): private unless published is chosen. */
   list: 'private' | 'published';
-  /** The latest follow list act this app published or found, to continue its chain (section 3.3). */
+  /** The latest follow list act this app published or found, to continue its chain (section 4.3). */
   published: { version: number; act: string } | null;
+  /** The latest sealed follow list act this app wrote or read (section 3), and whether the list read was forked (3.5). */
+  sealed?: { version: number; act: string; forked?: boolean } | null;
+  /** This app's own list was carried over to the sealed list (section 3.7). */
+  carried?: boolean;
   /** What was seen of the inbox and "to you", by key. */
   seen: string[];
   /** The inbox as read: where each relay was read up to, and the items found. */
@@ -67,7 +76,7 @@ export interface People {
   sent: Sent[];
 }
 
-export const NO_PEOPLE = (): People => ({ follows: [], muted: [], list: 'private', published: null, seen: [], inbox: { after: {}, items: [] }, sent: [] });
+export const NO_PEOPLE = (): People => ({ follows: [], muted: [], list: 'private', published: null, sealed: null, carried: false, seen: [], inbox: { after: {}, items: [] }, sent: [] });
 
 /** A follow list act's payload (section 3.1). */
 export function followListPayload(a: { version: number; previous: string | null; ids: string[]; withdrawn?: boolean }): Uint8Array {
@@ -123,7 +132,7 @@ export async function readFollowList(identity: string, places: string[], via: Vi
           } catch {
             continue;
           }
-          if (acts.has(d.id) || !d.public || d.spec !== PEOPLE_SPEC || d.type !== FOLLOW_LIST || d.signer !== identity || !d.payload) continue;
+          if (acts.has(d.id) || !d.public || (d.spec !== PEOPLE_SPEC && d.spec !== PEOPLE_SPEC_1) || d.type !== FOLLOW_LIST || d.signer !== identity || !d.payload) continue;
           v.add(it.item);
           if (v.status(d.id) !== 'valid') continue;
           try {
@@ -155,4 +164,120 @@ export async function readFollowList(identity: string, places: string[], via: Vi
     Object.assign(out, { act: id, version: a.version, ids: a.ids, withdrawn: a.withdrawn });
     at_ = id;
   }
+}
+
+// ------------------------------------------------------------ the follow list sealed to oneself (section 3)
+
+/** A sealed follow list act's payload (section 3.1): each followed identity as its ID, and the name given it, if any. */
+export function sealedListPayload(a: { version: number; previous: string | null; follows: Followed[] }): Uint8Array {
+  const m = new Map<number, unknown>([[0, a.version]]);
+  if (a.previous) m.set(1, unhex(a.previous));
+  m.set(
+    2,
+    a.follows.map((f) => (f.name ? [unhex(f.id), f.name] : [unhex(f.id)])),
+  );
+  return cborEncode(m);
+}
+
+/** The sealed follow list, as the identity's homes hold it (section 3.4). */
+export interface SealedList {
+  /** The act that counts; null where none was found. */
+  act: string | null;
+  version: number;
+  follows: Followed[];
+  /** Two acts named the same predecessor (3.5). */
+  forked: boolean;
+  /** Homes that did not answer. */
+  problems: string[];
+}
+
+interface Opened {
+  act: Uint8Array;
+  key?: Uint8Array;
+  described: Described;
+}
+
+/**
+ * The identity's own follow list, sealed to itself (section 3.4): at each of
+ * its homes, what is addressed to it; each sealed container opened with its
+ * encryption keys (newest first); the acts of type 1 it signed itself, valid
+ * for its chain; followed from version 1. On a fork, the branch reaching the
+ * highest version, then the smaller act id (3.5). Its names are read too: no
+ * one but the identity can open them.
+ */
+export async function readSealedList(identity: string, secrets: Uint8Array[], homes: string[], via: Via = {}): Promise<SealedList> {
+  const out: SealedList = { act: null, version: 0, follows: [], forked: false, problems: [] };
+  if (!secrets.length) return out;
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  let l: Awaited<ReturnType<typeof lookUp>>;
+  try {
+    l = await lookUp(identity, homes, via, v);
+  } catch (e) {
+    out.problems.push(`its homes did not answer (${e instanceof Error ? e.message : String(e)})`);
+    return out;
+  }
+  const at = [...new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
+  const acts = new Map<string, { version: number; previous: string | null; follows: Followed[] }>();
+  for (const h of at) {
+    let after: number | undefined;
+    try {
+      for (;;) {
+        const page = await relayAt(h, via).feed({ to: identity, after });
+        for (const it of page.items) {
+          if (it.kind !== 'sealed') continue;
+          let o: Opened | null = null;
+          for (const s of secrets) {
+            try {
+              o = openSealed(it.item, identity, s) as Opened;
+              break;
+            } catch {
+              // the next key
+            }
+          }
+          const d = o?.described;
+          if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== PEOPLE_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
+          if (o.key) l.verifier.addWithKey(o.act, o.key);
+          else l.verifier.add(o.act);
+          if (l.verifier.status(d.id) !== 'valid') continue;
+          try {
+            const m = cborDecode(d.payload) as Map<number, unknown>;
+            const prev = m.get(1);
+            const follows: Followed[] = [];
+            for (const x of m.get(2) as unknown[]) {
+              if (!Array.isArray(x) || !(x[0] instanceof Uint8Array) || x[0].length !== 32) continue;
+              const id = hex(x[0]);
+              if (follows.some((f) => f.id === id)) continue;
+              follows.push({ id, name: typeof x[1] === 'string' && x[1].trim() ? x[1].slice(0, 64) : null });
+            }
+            acts.set(d.id, { version: Number(m.get(0)), previous: prev instanceof Uint8Array ? hex(prev) : null, follows });
+          } catch {
+            // not in the format: not a sealed follow list
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch (e) {
+      out.problems.push(`${h}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  // Every chain from version 1; the branch reaching the highest version, then the smaller act id (3.5).
+  const best = (from: string | null, version: number): { id: string; depth: number } | null => {
+    const next = [...acts.entries()].filter(([, a]) => a.previous === from && a.version === version + 1);
+    if (next.length > 1) out.forked = true;
+    let pick: { id: string; depth: number; tip: string } | null = null;
+    for (const [id] of next) {
+      const below = best(id, version + 1);
+      const depth = below ? below.depth : version + 1;
+      const tip = below ? below.id : id;
+      if (!pick || depth > pick.depth || (depth === pick.depth && tip < pick.tip)) pick = { id: tip, depth, tip };
+    }
+    return pick ? { id: pick.tip, depth: pick.depth } : null;
+  };
+  const tip = best(null, 0);
+  if (tip) {
+    const a = acts.get(tip.id)!;
+    Object.assign(out, { act: tip.id, version: a.version, follows: a.follows });
+  }
+  return out;
 }

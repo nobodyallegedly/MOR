@@ -53,8 +53,10 @@ export interface Item {
   answers: { id: string; who: Who | null; snippet: string | null }[];
   /** It answers one of this identity's posts, or is addressed to it. */
   toMe: boolean;
-  /** Where it was found: the feed, or this identity's inbox. */
-  via: 'feed' | 'inbox';
+  /** Where it was found: the feed, this identity's inbox, or the relay view (H29). */
+  via: 'feed' | 'inbox' | 'relay';
+  /** In the relay view, an act that is not a post: what it is, in a few words. */
+  what?: string | null;
   problem: string | null;
   seen: boolean;
 }
@@ -98,6 +100,8 @@ export interface State {
     oldChainKey: boolean;
     line: { acts: number; latest: string | null; summary: string | null };
     list: 'private' | 'published';
+    /** The follow list sealed to this identity at its homes (the people cMIP, draft 2): its version, and whether it was found forked; null until written. */
+    sealed: { version: number; forked: boolean } | null;
     /** The Signing tab is on (H18; off by default). */
     signing: boolean;
     follows: Who[];

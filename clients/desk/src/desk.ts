@@ -646,6 +646,8 @@ export class Desk {
             const page = await relayAt(hint, via).feed({ to: identity, after });
             for (const it of page.items) {
               const item = await this.readItem(it.kind, it.item, identity, secrets, mine, hints);
+              // Its own acts sealed to itself (the follow list, people cMIP draft 2) are not something it received.
+              if (item.from === identity) continue;
               if (!rec.items.some((x) => x.key === item.key)) {
                 rec.items.push(item);
                 added++;

@@ -23,6 +23,8 @@ cat > "$launch" <<SCRIPT
 cd "$here" && exec "$node" --import tsx src/cli.ts open >> "\$HOME/edubba-launcher.log" 2>&1
 SCRIPT
 chmod +x "$launch"
+# Its icon (H25), beside the launcher.
+cp "$here/static/icon/edubba.png" "$data/mor/edubba.png"
 entry="$data/applications/edubba.desktop"
 cat > "$entry" <<DESKTOP
 [Desktop Entry]
@@ -31,6 +33,7 @@ Version=1.0
 Name=Edubba
 Comment=MOR: agents, identities and collectives (test identities only)
 Exec="$launch"
+Icon=$data/mor/edubba.png
 Terminal=false
 Categories=Network;
 StartupNotify=false

@@ -205,6 +205,12 @@ test('a person, without a terminal, through every screen of Dub', async () => {
   assert.equal(await page.locator('#feed .post').count(), 1);
   await empty(page, '#count-toyou');
   await shot(page, '07-to-you');
+  // The relay view (H29): a filter one chooses, never the default; every public act at the relays, newest first.
+  await page.locator('[data-filter=relay]').click();
+  await page.locator('#feed .post', { hasText: 'Thank you for the hello.' }).waitFor({ timeout: 60_000 });
+  await page.locator('#feed .post.act').first().waitFor();
+  assert.match(await page.locator('#feed').innerText(), /newest first/);
+  await shot(page, '07b-relay');
   await page.locator('[data-filter=all]').click();
 
   // The private tab: the message, opened here only; an answer, sealed.
@@ -219,6 +225,15 @@ test('a person, without a terminal, through every screen of Dub', async () => {
   await page.locator('#inbox .msg.out', { hasText: 'And one just for you.' }).waitFor({ timeout: 60_000 });
   assert.ok((await peer.dub.inbox()).messages.some((m) => m.text === 'And one just for you.' && m.who.id === me));
   await shot(page, '08-private');
+
+  // H30: a reload keeps the tab one was on; H34: a fold opened stays open.
+  const peopleOpen = (await page.locator('#people[open]').count()) > 0;
+  await page.reload();
+  await page.locator('[data-tab=private].on').waitFor({ timeout: 60_000 });
+  assert.equal(await page.locator('#private').isVisible(), true);
+  assert.equal(await page.locator('#public').isVisible(), false);
+  assert.equal((await page.locator('#people[open]').count()) > 0, peopleOpen, 'the people fold as it was left');
+  assert.equal(await page.locator('[data-filter=all].on').count(), 1, 'the filter is never kept: Everyone');
 
   // Mute, from the post: nothing of it shown; nobody told.
   await page.locator('[data-tab=public]').click();
@@ -257,8 +272,14 @@ test('a person, without a terminal, through every screen of Dub', async () => {
   const g = TestIdentity.create({ homes: [homes[0].home] });
   await g.publishGenesis();
   await g.publishRoutes([{ scope: null, hints: [relay.base], kind: 0 }]);
+  // H28: switching leaves the identity in use first, then the window to choose, make or bring one.
   await page.locator('[data-action=window]').click();
-  await page.locator('#doors > summary').click();
+  await page.getByRole('button', { name: 'Switch identity' }).click();
+  await done(page, /You left that identity/);
+  assert.equal(await page.locator('#identity').count(), 0, 'no identity in use');
+  await page.locator('#held', { hasText: 'Ada Lovelace' }).waitFor();
+  await shot(page, '10b-left');
+  await page.locator('details[data-fold=bring] > summary').click();
   const bring = page.locator('form#bring');
   await bring.locator('input[name=id]').fill(groupId(g.id));
   await bring.locator('textarea[name=words]').fill(toWords(unhex(g.f.signingSecret)).join(' '));
@@ -266,9 +287,14 @@ test('a person, without a terminal, through every screen of Dub', async () => {
   await bring.getByRole('button', { name: 'Bring it' }).click();
   await done(page, 'The identity is here');
   await page.locator('[data-action=window]').click();
-  await page.getByRole('button', { name: 'Use this one' }).waitFor();
-  await shot(page, '11-two-identities');
   assert.match((await page.locator('#identity').textContent())!, /brought here by its signing key’s words/);
+  await page.getByRole('button', { name: 'Switch identity' }).click();
+  await page.locator('#held li').nth(1).waitFor();
+  assert.equal(await page.locator('#held li').count(), 2);
+  await shot(page, '11-two-identities');
+  await page.locator('#held li').filter({ hasNotText: 'Ada' }).getByRole('button', { name: 'Use this one' }).click();
+  await page.locator('[data-tab=public]').waitFor({ timeout: 60_000 });
+  await page.locator('[data-action=window]').click();
 
   // A key changed elsewhere (MOR Safety's work; the genesis client stands in): said, and the new words taken.
   await g.prepareRotation();
@@ -285,7 +311,8 @@ test('a person, without a terminal, through every screen of Dub', async () => {
 
   // Back to the first identity.
   await page.locator('[data-action=window]').click();
-  await page.getByRole('button', { name: 'Use this one' }).click();
+  await page.getByRole('button', { name: 'Switch identity' }).click();
+  await page.locator('#held li', { hasText: 'Ada' }).getByRole('button', { name: 'Use this one' }).click();
   await page.locator('header .me', { hasText: 'Ada' }).waitFor({ timeout: 60_000 });
 
   assert.deepEqual(problems, []);

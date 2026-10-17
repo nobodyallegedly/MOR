@@ -24,7 +24,9 @@ if [ -f "$old/Contents/MacOS/mor-post" ] && grep -q "clients/poster" "$old/Conte
   echo "removed $old (MOR Post is now Dub)"
 fi
 app="$HOME/Applications/Dub.app"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+# Its icon (H25), drawn in static/icon/dub.svg and made by scripts/make-icons.ts in clients/dub.
+cp "$here/static/icon/dub.icns" "$app/Contents/Resources/AppIcon.icns"
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -34,6 +36,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <key>CFBundleIdentifier</key><string>org.dubsar.dub</string>
 <key>CFBundleExecutable</key><string>dub</string>
 <key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSUIElement</key><true/>
 </dict></plist>
 PLIST
@@ -42,4 +45,6 @@ cat > "$app/Contents/MacOS/dub" <<SCRIPT
 cd "$here" && exec "$node" --import tsx src/cli.ts open >> "\$HOME/mor-dub-launcher.log" 2>&1
 SCRIPT
 chmod +x "$app/Contents/MacOS/dub"
+# Finder reads an app's icon again once the app is newer than what it remembers.
+touch "$app"
 echo "made $app"
