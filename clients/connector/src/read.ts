@@ -21,6 +21,7 @@ import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { count, readAgreement, ruleWords, short, termsOf, type Line, type Section, type TermsRead } from '../../collective/src/explain.ts';
 import { escapeControls, fingerprint, quote, sectionsText } from './words.ts';
+import { authorityOf, type Authority } from '../../grants/src/grant.ts';
 
 /** What the connector says about one act. */
 export interface Told {
@@ -181,6 +182,14 @@ export async function readAct(id: string, hints: string[], via: Via = {}, depth 
   }
   const judge = new Judge(hints, via);
 
+  // An act signed with a grant key (F128, F343): the grantor's own act, its
+  // binding the grant. Read with on whose authority it stands, the grant and
+  // the grantee's acceptance looked for, Agreements' verdict (rule 80).
+  if (d.public && d.binding && d.signer && d.binding !== d.signer) {
+    const a = await authorityOf(act, hints, via).catch(() => null);
+    if (a) return underGrant(id, d, a);
+  }
+
   if (!d.public) {
     const standing = await judge.standing(act, d);
     return told(id, {
@@ -212,6 +221,37 @@ export async function readAct(id: string, hints: string[], via: Via = {}, depth 
     title: 'An act of a specification this connector does not implement',
     verdict: `An act of type ${d.type} of a specification this connector does not implement (${short(d.spec ?? '')}). It can say who signed it, not what it means. ${standingWords(standing).words}`,
     sections: [{ heading: 'Who signed', lines: [{ text: `Signed by the identity ${d.signer}.` }, standingLine(standing)] }],
+  });
+}
+
+// ---------------------------------------------------------------- an act signed under a grant
+
+function underGrant(id: string, d: Described, a: Authority): Told {
+  const counts = a.backing === 'backed' || a.backing === 'binds';
+  const quoted: Told['quoted'] = [];
+  if (d.spec === POST_SPECS.text && d.type === 0 && d.payload) {
+    const t = (cborDecode(d.payload) as Map<number, unknown>).get(0);
+    if (typeof t === 'string') quoted.push({ heading: 'Its words, as its signer wrote them', text: escapeControls(t) });
+  }
+  return told(id, {
+    kind: d.spec === POST_SPECS.text ? 'text' : 'other',
+    title: 'An act signed under a grant',
+    signer: d.signer ?? null,
+    standing: 'scoped',
+    counts,
+    verdict: a.words,
+    sections: [
+      {
+        heading: 'On whose authority',
+        lines: [
+          { text: `In the name of ${names(a.grantor)}, its signer: the grantor.` },
+          { text: `Signed by ${names(a.grantee)}, the grantee, with the key the grant ${short(a.grant)} bound (Agreements rule 73, F128).` },
+          { text: `Agreements: ${a.backing}${a.reason ? `, ${a.reason}` : ''}.`, tone: counts ? undefined : 'warn' },
+          ...(a.limits ? [{ text: a.limits.within === true ? 'Within the grant’s limits (the grant limits cMIP).' : `The grant’s limits: ${a.limits.why}.`, tone: (a.limits.within === true ? undefined : 'warn') as Line['tone'] }] : []),
+        ],
+      },
+    ],
+    quoted,
   });
 }
 

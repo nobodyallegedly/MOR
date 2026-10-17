@@ -36,6 +36,9 @@ pub struct Specs {
     pub identity: Hash,
     /// `ENVELOPES`: publications, encryption keys.
     pub envelopes: Hash,
+    /// `AGREEMENTS`: grants, whose keys sign acts in their grantor's name
+    /// (relay transport draft 5, F346).
+    pub agreements: Hash,
 }
 
 impl Specs {
@@ -43,6 +46,7 @@ impl Specs {
         Specs {
             identity: sha256(b"IDENTITY, test value until the freeze"),
             envelopes: sha256(b"ENVELOPE, test value until the freeze"),
+            agreements: sha256(b"LAW, test value until the freeze"),
         }
     }
 }
@@ -1336,7 +1340,10 @@ impl Node {
 
     /// The binding check (cMIP, "Publishing an act", 1): a home MUST check it
     /// for the identities it serves; any relay checks it where it holds the
-    /// act the binding names.
+    /// act the binding names. Its second case (draft 5, F346): where the
+    /// binding names a grant (Agreements type 9), the key is the one the
+    /// grant bound, and the act is stored as scoped; whether the grant backs
+    /// it is never judged here (Agreements', at every verifier).
     fn check_binding(&self, act: &Act) -> R<()> {
         let (Some(signer), Some(binding)) = (act.outside.signer, act.outside.binding) else {
             return Ok(());
@@ -1344,9 +1351,14 @@ impl Node {
         if self.is_home() && self.store.is_served(&signer)? {
             let states = self.chain_states(&signer)?;
             let Some((_, s)) = states.iter().find(|(h, _)| *h == binding) else {
+                // Not one of the signer's identity-chain acts: a grant of the
+                // signer, the grantor this home serves, or asked for first.
+                if let Some(checked) = self.grant_binding(act, &signer, &binding)? {
+                    return checked;
+                }
                 return wire(
                     code::MISSING_PREDECESSOR,
-                    "the binding names no identity-chain act this home holds for the signer: send the chain acts first",
+                    "the binding names no identity-chain act nor grant this home holds for the signer: send the chain acts, or the grant, first",
                 );
             };
             if !s.signing_key.made(&act.signature) {
@@ -1356,6 +1368,9 @@ impl Node {
                 );
             }
             return Ok(());
+        }
+        if let Some(checked) = self.grant_binding(act, &signer, &binding)? {
+            return checked;
         }
         let Some((bact, inside)) = self.held_opened(&binding)? else {
             return Ok(());
@@ -1380,6 +1395,31 @@ impl Node {
             );
         }
         Ok(())
+    }
+
+    /// Draft 5's second case (F346): where the binding names a grant this
+    /// relay holds, `Some` of the verdict: the grant must be the signer's
+    /// (its signer the act's signer; a collective's founding grant, field 8,
+    /// is signed by a founder, so only its key is checked), and the act's
+    /// signature made by the key the grant bound (field 9). `None` where the
+    /// binding names no grant held here. Never judges whether it is backed.
+    fn grant_binding(&self, act: &Act, signer: &Hash, binding: &Hash) -> R<Option<R<()>>> {
+        let Some((gact, inside)) = self.held_opened(binding)? else {
+            return Ok(None);
+        };
+        if inside.spec != self.specs.agreements || inside.type_ != mor_core::agreements::types::GRANT {
+            return Ok(None);
+        }
+        let Ok(g) = mor_core::agreements::Grant::decode(&inside.payload) else {
+            return Ok(Some(wire(code::INVALID, "the binding names a grant that is not in its format")));
+        };
+        if !g.by_this && gact.outside.signer != Some(*signer) {
+            return Ok(Some(wire(code::INVALID, "the binding names a grant that is not the signer's")));
+        }
+        if !g.key.made(&act.signature) {
+            return Ok(Some(wire(code::INVALID, "the signature's key is not the key its grant bound")));
+        }
+        Ok(Some(Ok(())))
     }
 
     /// The relay's own policy (Envelopes, relays rule 5; Identity rule 12).

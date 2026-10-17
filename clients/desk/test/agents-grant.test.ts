@@ -115,10 +115,11 @@ test('under a nudge, a post in its owner’s name: signed with the grant key, va
   const bytes = (await relayAt(relay.base).getAct(act))!;
   const x = describeAct(bytes) as { signer: string; binding: string; objects: [string, string][]; public: boolean };
   assert.deepEqual([x.signer, x.binding, x.objects, x.public], [NA, grant, [[NA, grant]], true], 'the owner’s own act, bound to the grant, naming it');
-  assert.ok(d.lines.some((l) => /Signed by Machine, allegedly .* in Nobody, allegedly .*’s name, under Nobody, allegedly .*’s grant/.test(l.text)), JSON.stringify(d.lines));
+  assert.ok(d.lines.some((l) => /Signed by Machine, allegedly .* in Nobody, allegedly .*’s name, under the grant .*: whether it backs it is unknown/.test(l.text)), JSON.stringify(d.lines));
   // Identity: scoped (a grant key's act); its standing Agreements' to judge.
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   await lookUp(NA, hints(), {}, v);
+  v.add((await relayAt(relay.base).getAct(grant))!);
   v.add(bytes);
   assert.equal(v.status(act), 'scoped');
   // Any reader: on whose authority. Its expiry is unknown until the clock stamps it.
@@ -132,6 +133,9 @@ test('under a nudge, a post in its owner’s name: signed with the grant key, va
   // The connector's reading says the same: signed with a grant key.
   const told = await readAct(act, hints());
   assert.equal(told.standing, 'scoped');
+  assert.equal(told.title, 'An act signed under a grant');
+  assert.equal(told.counts, true);
+  assert.ok(told.quoted.some((q) => q.text === 'Posted for Nobody, allegedly, under the grant.'));
   // The agent's details list the grant and the act under it.
   const list = await c.ask<any[]>('agent grants', { agent: MA });
   assert.equal(list[0].acts[0].act, act);

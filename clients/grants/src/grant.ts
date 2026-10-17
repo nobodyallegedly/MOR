@@ -123,6 +123,9 @@ export function acceptance(grant: string): { spec: string; type: number; payload
   return { spec: REPO_SPECS.agreements, type: AGREEMENTS_TYPES.signature, payload: signaturePayload(grant) as Uint8Array, objects: [[grant, grant]] };
 }
 
+/** Agreements' revocation type. */
+export const REVOCATION = 10;
+
 /** A revocation (type 10), signed by the grantor: an everyday act of its own key (rule 73). */
 export function revocationPayload(grant: string): Uint8Array {
   return cborEncode(new Map<number, unknown>([[0, unhex(grant)]]));
@@ -227,9 +230,16 @@ export async function authorityOf(act: Uint8Array, hints: string[], via: Via = {
     }
   }
   v.add(grantBytes);
+  // The grantee's acceptance (F128), and the grantor's revocations of this grant (rule 76): an act its revocation's history does not hold is void.
   for (const a of await allBy(g.grantee, hints, via)) {
     const x = describeAct(a) as { spec?: string; type?: number; objects?: [string, string][] };
     if (x.spec === MIRS.agreements && x.type === AGREEMENTS_TYPES.signature && x.objects?.some((o) => o[0] === d.binding)) v.add(a);
+  }
+  for (const a of await allBy(d.signer, hints, via)) {
+    const x = describeAct(a) as { spec?: string; type?: number; payload?: Uint8Array };
+    if (x.spec !== MIRS.agreements || x.type !== REVOCATION || !x.payload) continue;
+    const named = (cborDecode(x.payload) as Map<number, unknown>).get(0);
+    if (named instanceof Uint8Array && hex(named) === d.binding) v.add(a);
   }
   if (opts.key) v.addWithKey(act, opts.key);
   else v.add(act);
