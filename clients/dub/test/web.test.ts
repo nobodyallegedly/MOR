@@ -241,6 +241,8 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   await page.locator('form#post textarea[name=text]').fill('Second, after a reload.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, 'Posted');
+  // The feed redraws after the note: wait for the new post at its top.
+  await page.waitForFunction((f) => { const p = document.querySelector('#feed .post'); return p && p.getAttribute('data-post') !== f; }, first, { timeout: 60_000 });
   const second = (await page.locator('#feed .post').first().getAttribute('data-post'))!;
   const a1 = describeAct((await relayAt(relay.base).getAct(first))!) as { position: number; prev?: string };
   const a2 = describeAct((await relayAt(relay.base).getAct(second))!) as { position: number; prev?: string };
