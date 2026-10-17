@@ -221,7 +221,7 @@ export function payment(p: PaymentShown, forPay = false): string {
         : `<label>Pay exactly ${e(p.pay.amount.said)} to this address, from your wallet</label><div class="copy">${e(p.pay.address ?? '')}</div><button class="quiet" data-action="copy" data-text="${e(p.pay.address ?? '')}">Copy the address</button>
 ${p.stage === 'paid' ? `<div class="row"><button data-action="recheck" data-key="${e(p.key)}" class="primary">Check the chain again</button></div>` : `<form class="paid" data-key="${e(p.key)}"><label>The proof, from your wallet once sent: the transaction’s id (64 hexadecimal characters)</label><input name="proof" required spellcheck="false" autocomplete="off"><div class="row"><button type="submit" class="primary">Check it and sign my claim</button></div></form>`}`
       : '';
-  const ticket = p.ticket ? `<p class="small">An anchor’s ticket: batch ${p.ticket.batch}, tier ${p.ticket.tier}, on the chain by block ${p.ticket.deadline}.</p>` : '';
+  const ticket = p.ticket ? `<p class="small">An anchor’s ticket: batch ${p.ticket.batch}, tier ${p.ticket.tier}, on the chain by block ${p.ticket.deadline}.${p.ticket.checked ? '' : ' Not checked here: this Damgar follows no chain, so whether that block is within the tier’s reach of today’s is unknown. Pay only if you trust the service on it, or check it in Damgar on a computer.'}</p>` : '';
   return `<div class="item" data-payment="${e(p.key)}"><h3>${p.side === 'out' ? 'To' : 'From'} ${who(p.other)} · ${e(p.railName)}${p.to === 'vault' ? ', to the vault' : ''}</h3>
 <div class="meta">${e(p.stageSaid)}</div>${amount(p.amount)}${p.whatFor ? `<p class="small">For “${e(p.whatFor)}”</p>` : ''}${ticket}${lines(p.lines)}${pay}${proofs}</div>`;
 }

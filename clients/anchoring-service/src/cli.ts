@@ -40,7 +40,7 @@ async function main() {
   let port = 18082;
   const nodes = join(run, 'nodes.json');
   if (existsSync(nodes)) {
-    const n = (JSON.parse(readFileSync(nodes, 'utf8')) as { name: string; rest: number }[]).find((x) => x.name === name);
+    const n = (JSON.parse(readFileSync(nodes, 'utf8')) as { nodes: { name: string; rest: number }[] }).nodes.find((x) => x.name === name);
     if (n) port = n.rest;
   }
   const svc = new Service(resolve(o.dir ?? join(homedir(), 'mor-anchoring-service')), lnd({ url: `https://127.0.0.1:${port}`, lnddir: join(run, name) }), chainFrom('', run)!, { homes: o.homes.split(','), relays: o.relays.split(',') });

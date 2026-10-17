@@ -23,6 +23,8 @@ test('on regtest: an invoice made by bob, read and paid by alice; an on-chain se
   assert.equal(d.destination, (await w.nodes.find((n) => n.name === 'bob')!.info()).key);
   const paid = (await answer(w, { op: 'pay', node: 'alice', invoice: inv.invoice })) as { preimage: string };
   assert.equal(createHash('sha256').update(Buffer.from(paid.preimage, 'hex')).digest('hex'), inv.hash);
+  const { key } = (await answer(w, { op: 'key', node: 'bob' })) as { key: string };
+  assert.match(key, /^[0-9a-f]{64}$/, 'a key of the wallet, x-only');
   const { address } = (await answer(w, { op: 'address', node: 'carol' })) as { address: string };
   assert.match(address, /^bcrt1p/);
   const { txid } = (await answer(w, { op: 'send', node: 'alice', address, sat: 30_000 })) as { txid: string };

@@ -161,7 +161,7 @@ export interface Payment {
   /** The draft or request it came from. */
   draft: string | null;
   request: string | null;
-  ticket: { act: string; batch: number; deadline: number; tier: number } | null;
+  ticket: { act: string; batch: number; deadline: number; tier: number; checked?: boolean } | null;
   stage: 'asked' | 'to pay' | 'refused' | 'paid' | 'settled' | 'declined';
   at: number;
 }
@@ -1033,7 +1033,7 @@ export class Damgar {
     const why = anchoringCheckTicket(o.bytes, t.payload!, b64(p.commitment), ir.ticket.leaf, BigInt(nowPoint ?? Math.max(0, tk.deadline - 1))) as string | undefined;
     if (why) return why;
     book.acts[ticket] = { act: base64(t.bytes), from: p.other };
-    p.ticket = { act: ticket, batch: tk.batch, deadline: tk.deadline, tier: tk.tier };
+    p.ticket = { act: ticket, batch: tk.batch, deadline: tk.deadline, tier: tk.tier, checked: nowPoint !== null };
     return null;
   }
 
@@ -1467,7 +1467,7 @@ export class Damgar {
       proofs,
       lines,
       at: p.at,
-      ticket: p.ticket ? { batch: p.ticket.batch, deadline: p.ticket.deadline, tier: p.ticket.tier } : null,
+      ticket: p.ticket ? { batch: p.ticket.batch, deadline: p.ticket.deadline, tier: p.ticket.tier, checked: p.ticket.checked !== false } : null,
     };
   }
 

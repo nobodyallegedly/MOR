@@ -62,6 +62,8 @@ export async function answer(w: Wallet, a: Record<string, unknown>): Promise<unk
     }
     case 'address':
       return { address: await node().address() };
+    case 'key':
+      return { key: await node().bitcoinKey() };
     case 'send':
       return { txid: await node().send(text('address'), sat(a.sat, 'The amount')) };
     case 'mine': {

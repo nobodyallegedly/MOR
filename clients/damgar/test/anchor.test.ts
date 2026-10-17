@@ -18,6 +18,7 @@ import { StubLnd } from './node.ts';
 import { Service } from '../../anchoring-service/src/service.ts';
 import type { PaymentShown, ToSign, Account } from '../src/shapes.ts';
 import { ACCEPTABLE } from '../src/specs.ts';
+import { payment } from '../src/page/view.ts';
 
 let homes: Relay[];
 let relay: Relay;
@@ -73,6 +74,10 @@ test('an anchor of a collective’s act: asked in Edubba, paid from Damgar, anch
   const p = (await g.c.ask<{ payments: PaymentShown[] }>('pay')).payments[0];
   assert.equal(p.stage, 'to pay', JSON.stringify(p));
   assert.deepEqual(p.ticket && { batch: p.ticket.batch, tier: p.ticket.tier }, { batch: 1, tier: 1 });
+  assert.equal(p.ticket!.checked, true, 'its deadline read against the chain this Damgar follows');
+  assert.doesNotMatch(payment(p, true), /Not checked here/);
+  // Where no chain is followed (the web client), the deadline cannot be read: said on the screen.
+  assert.match(payment({ ...p, ticket: { ...p.ticket!, checked: false } }, true), /Not checked here: this Damgar follows no chain/);
 
   // Paid in the "wallet"; the claim; the service sees it settled, signs the receipt, anchors and publishes.
   const preimage = lnd.pay(p.pay!.invoice!);

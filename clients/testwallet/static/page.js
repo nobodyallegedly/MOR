@@ -98,6 +98,11 @@ document.addEventListener('click', (ev) => {
       $('pay-invoice').value = '';
       await nodes();
     });
+  else if (id === 'new-key')
+    busy('send-out', async () => {
+      const r = await ask('key');
+      out('send-out', `<p class="small">A Bitcoin key of <strong>${esc(node)}</strong>'s wallet, x-only: give it to Damgar's Settings (On-chain) to be paid to it. Its coins can be spent only by a wallet told each payment's commitment, which round 1 does not show.</p><code id="bitcoin-key">${esc(r.key)}</code>`);
+    });
   else if (id === 'new-address')
     busy('send-out', async () => {
       const r = await ask('address');

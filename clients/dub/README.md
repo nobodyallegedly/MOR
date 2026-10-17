@@ -33,7 +33,9 @@
 
 **Icons (H25).** Dub's own icon, a clay tablet on the visual bible's dark (`static/icon/dub.svg`), in the Mac's app and the Linux entry.
 
-Not here, on purpose: no rotation (Kišib's, the collective's too), no notification hub, no likes or zaps, no money, no drafts, no founding or proposing (Edubba's).
+**Money, prepared for Damgar (F338).** **Tip** on a post, and **Ask someone to pay you** (Private tab, folded): each is a draft (the money messages cMIP, `cmips/cmip-money-messages-draft-1.md`), a private act sealed to your own identity at its homes, which Damgar finds, reads in plain words and offers for signing. Dub signs no money act: "Prepared, not signed". Amounts name their unit (the Bitcoin units Module's, regtest by default); nothing assumes satoshis.
+
+Not here, on purpose: no rotation (Kišib's, the collective's too), no notification hub, no likes or zaps, no money signed (Damgar's), no founding or proposing (Edubba's).
 
 ## Precisely
 

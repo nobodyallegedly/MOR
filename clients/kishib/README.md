@@ -63,6 +63,10 @@ Shared, changed by this build: `wasm/src/lib.rs` (`makeRotation` takes `successo
 - **The starter types their signing key's words** to open the members' answers and sign the announcement and the sealed shares; those acts start a new line of theirs.
 - **Each member types their signing key's words** beside their paper share.
 
+## The vault (F338)
+
+A change of keys may keep, declare anew or remove the identity's **vault** (Money rules 2 and 3): where a payment above a limit must go, per unit, and the one place a thief holding only the signing key cannot point payments. It changes only with the chain key, so only here (decided by Nobody, allegedly: "its setting belongs in Kišib"); Damgar shows it. The declaration is read back with the rotation and included in what is confirmed (`vaultPlan`, `VaultChange`).
+
 ## Tests
 
 ```

@@ -27,6 +27,8 @@ export interface Node {
   invoice(sat: number, o: { descriptionHash?: string; memo?: string }): Promise<{ invoice: string; hash: string }>;
   /** A fresh Taproot address of the node's own wallet. */
   address(): Promise<string>;
+  /** A public key of the node's own wallet, x-only (64 hex): what Damgar's on-chain rail names as the payee's Bitcoin key. */
+  bitcoinKey(): Promise<string>;
   /** Send `sat` on-chain from the node's wallet: the txid. */
   send(address: string, sat: number): Promise<string>;
 }
@@ -95,6 +97,11 @@ export function lnd(o: { name: string; rest: number; lnddir: string }): Node {
     },
     async address() {
       return (await call('GET', '/v1/newaddress?type=TAPROOT_PUBKEY')).address;
+    },
+    async bitcoinKey() {
+      // A key of the wallet's own, in a key family of its own (lnd's wallet kit), x-only: its first byte (the parity) dropped.
+      const v = await call('POST', '/v2/wallet/key/next', { key_family: 4242 });
+      return hexOf(v.raw_key_bytes).slice(2);
     },
     async send(address, sat) {
       return (await call('POST', '/v1/transactions', { addr: address.trim(), amount: String(sat), target_conf: 1 })).txid;

@@ -82,7 +82,8 @@ export interface PaymentShown {
   lines: Line[];
   at: number;
   /** Paying for an anchor: the ticket. */
-  ticket: { batch: number; deadline: number; tier: number } | null;
+  /** `checked`: its deadline read against the chain followed (never in the web client, which follows none). */
+  ticket: { batch: number; deadline: number; tier: number; checked: boolean } | null;
 }
 
 export interface Account {

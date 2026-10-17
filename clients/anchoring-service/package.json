@@ -7,7 +7,8 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts"
+    "test": "tsc --noEmit && echo 'The service is tested where it is used: clients/damgar (anchor.test.ts, browser.test.ts, regtest.test.ts).'",
+    "start": "node --import tsx src/cli.ts run"
   },
   "engines": {
     "node": ">=22"
@@ -18,5 +19,8 @@
   "devDependencies": {
     "@types/node": "^22.20.4",
     "typescript": "^5"
+  },
+  "bin": {
+    "mor-anchoring-service": "./src/cli.ts"
   }
 }

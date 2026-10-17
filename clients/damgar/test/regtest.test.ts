@@ -16,9 +16,7 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
-import { onchainKey } from '../../genesis/src/core.ts';
 import { lnd, miner } from '../../testwallet/src/lnd.ts';
 import { checkRegtest, nodesOf, serve as serveWallet } from '../../testwallet/src/server.ts';
 import { btcd } from '../src/chain.ts';
@@ -119,8 +117,8 @@ test('regtest, on-chain: an address bound to the payment, sent from the test wal
   const R = [relay.base];
   const alice = await person(H, R, { chain: chain() });
   const bob = await person(H, R, { chain: chain() });
-  // Bob's Bitcoin key is his wallet's; Damgar never holds it. A test key stands in for it here.
-  const bitcoinKey = onchainKey(new Uint8Array(randomBytes(32))) as string;
+  // Bob's Bitcoin key is his wallet's (bob's node), given by the test wallet; Damgar never holds it.
+  const { key: bitcoinKey } = await pay<{ key: string }>('key', { node: 'bob' });
   const rv = await bob.damgar.c.ask<{ digest: string }>('rails review', { onchain: bitcoinKey, network: 3 });
   await bob.damgar.c.ask('rails publish', { onchain: bitcoinKey, network: 3, digest: rv.digest });
   assert.ok((await bob.damgar.c.ask<Rails>('rails')).requestKey);

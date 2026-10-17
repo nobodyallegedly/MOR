@@ -63,6 +63,15 @@ jobs:
       - name: clients/kishib
         if: success() || failure()
         run: for p in desk dub barebone repo collective assess; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/kishib && npm ci --no-audit --no-fund && npm test
+      - name: clients/damgar
+        if: success() || failure()
+        run: for p in desk dub barebone repo collective assess kishib manage anchoring-service testwallet; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/damgar && npm ci --no-audit --no-fund && npm test
+      - name: clients/anchoring-service
+        if: success() || failure()
+        run: cd clients/anchoring-service && npm ci --no-audit --no-fund && npm test
+      - name: clients/testwallet
+        if: success() || failure()
+        run: cd clients/testwallet && npm ci --no-audit --no-fund && npm test
       - name: clients/reader
         if: success() || failure()
         run: cd clients/reader && npm ci --no-audit --no-fund && npm test
@@ -120,3 +129,55 @@ jobs:
           done
           diff clients/site/built/gateway.js "$RUNNER_TEMP/linux-build/gateway.js" | head -4 | cut -c1-300 | while IFS= read -r l; do echo "::warning::gateway.js diff: $l"; done
           diff <(strings -n 8 clients/site/built/mor_wasm_bg.wasm) <(strings -n 8 "$RUNNER_TEMP/linux-build/mor_wasm_bg.wasm") | head -12 | cut -c1-300 | while IFS= read -r l; do echo "::warning::wasm strings diff: $l"; done
+
+  # The money apps end to end on a private regtest network (no real money):
+  # btcd and three lnd nodes from their release archives, each checked
+  # against the SHA-256 in its project's signed manifest, started by
+  # modules/lightning/regtest/up.sh. Damgar's tip, on-chain payment and
+  # anchor, the test wallet, and the Lightning rail Module's own test.
+  regtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MOR_CHROMIUM: /usr/bin/google-chrome
+      BTCD: btcd-linux-amd64-v0.24.2
+      BTCD_SHA256: f7ee4005a0f597d0486eb5cb17218eb51fcb9bed93bbb4d416a57f3975df69e5
+      LND: lnd-linux-amd64-v0.18.5-beta
+      LND_SHA256: ffffa63b28a031a330eae4db234ada1bd27003059757c1a0d3aeb0d8d7351c4f
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.129
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: btcd and lnd, checked
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -sSfLO "https://github.com/btcsuite/btcd/releases/download/v0.24.2/$BTCD.tar.gz"
+          curl -sSfLO "https://github.com/lightningnetwork/lnd/releases/download/v0.18.5-beta/$LND.tar.gz"
+          printf '%s  %s\n' "$BTCD_SHA256" "$BTCD.tar.gz" "$LND_SHA256" "$LND.tar.gz" | sha256sum -c -
+          tar xzf "$BTCD.tar.gz" && tar xzf "$LND.tar.gz"
+      - name: The regtest network
+        run: BTCD_DIR="$RUNNER_TEMP/$BTCD" LND_DIR="$RUNNER_TEMP/$LND" modules/lightning/regtest/up.sh "$RUNNER_TEMP/regtest"
+      - name: Lightning rail Module (Rust)
+        if: success() || failure()
+        run: MOR_LN_REGTEST="$RUNNER_TEMP/regtest" cargo test -p mor-harness --test lightning_rail --locked -- --nocapture
+      - name: Core library for the clients (WebAssembly)
+        if: success() || failure()
+        run: cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
+      - name: clients/testwallet on regtest
+        if: success() || failure()
+        run: cd clients/testwallet && npm ci --no-audit --no-fund && MOR_LN_REGTEST="$RUNNER_TEMP/regtest" node --import tsx --test test/regtest.test.ts
+      - name: clients/damgar on regtest
+        if: success() || failure()
+        run: for p in desk dub barebone repo collective assess kishib manage anchoring-service; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/damgar && npm ci --no-audit --no-fund && MOR_LN_REGTEST="$RUNNER_TEMP/regtest" node --import tsx --test test/regtest.test.ts
+      - name: Stop the network
+        if: always()
+        run: BTCD_DIR="$RUNNER_TEMP/$BTCD" LND_DIR="$RUNNER_TEMP/$LND" modules/lightning/regtest/down.sh "$RUNNER_TEMP/regtest" || true

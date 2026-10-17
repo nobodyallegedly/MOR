@@ -53,6 +53,9 @@ class MemoryNode implements Node {
     this.invoices.set(invoice, { sat, preimage, descriptionHash: o.descriptionHash ?? '', memo: o.memo ?? '', to: this });
     return { invoice, hash: createHash('sha256').update(Buffer.from(preimage, 'hex')).digest('hex') };
   }
+  async bitcoinKey() {
+    return randomBytes(32).toString('hex');
+  }
   async address() {
     return `bcrt1p${randomBytes(20).toString('hex')}`;
   }
@@ -189,6 +192,9 @@ test('the page, by clicks: pay an invoice bob made, as alice; make an invoice wi
     await page.getByRole('button', { name: 'Send it' }).click();
     await page.locator('#sent-txid').waitFor();
     assert.deepEqual(alice.sent, [{ address: 'bcrt1pdamgarpaytocontract', sat: 25000 }]);
+    await page.getByRole('button', { name: "A Bitcoin key of this node's wallet" }).click();
+    await page.locator('#bitcoin-key').waitFor();
+    assert.match(await page.locator('#bitcoin-key').innerText(), /^[0-9a-f]{64}$/);
     await page.getByRole('button', { name: 'Mine' }).click();
     await page.getByText('Mined 6 blocks.').waitFor();
     assert.equal(mined(), 6);
