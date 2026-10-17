@@ -45,6 +45,8 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; hom
 
 ## Open, in order
 
+*Decided by Nobody, allegedly, 17 October 2026: "All human tests wait for the break, build until then." Build Kišib, Damgar and Ummia (and the agents and site sessions if tokens allow) until the weekly token limit stops the work; the human tests (9, 10's end, 11, free play, and recruiting a few non-developers) are run during the pause.*
+
 1. Kišib (resumed after pull request 73): the rotation and emergency app (F332 amended, F335, F337), with the Edubba pieces that take new words; an icon of the family (a cylinder seal). Then human test 9 (rotation) and the end of human test 10 (the member change). A server session for Dub's web release of pull request 73.
 2. Damgar, a money app (F338): gathers proposed money acts and offers them for signing, with the accepted cMIPs and Modules chosen by the person; no wallet inside; round 1 on regtest on the author's Mac (payments and receipts, prepared in Dub or Edubba and signed in Damgar; Bitcoin anchoring as an option for releases and collectives' acts, asked in Edubba, paid in Damgar); round 2, the split service, defined in the Collectives tab.
 3. Ummia, the developers' app (F339): tracking Modules and cMIPs by asking public relays; releasing cMIPs and Modules; a path to drafting MIPs; bug reports; tracking extensions and xtypes; releases of code and their anchoring (moved out of Edubba); acting as oneself or as a collective one belongs to.
