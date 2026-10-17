@@ -31,7 +31,7 @@ Money in MOR is two records of each payment, each signed by one side: the payer'
 | `src/store.ts`, `src/ops.ts`, `src/server.ts`, `src/cli.ts` | The program: its folder (`~/mor-damgar`), the operations by name, the local server on 127.0.0.1 (requests signed by a paired browser, domain line `MOR Damgar, version 1`), the command. |
 | `src/page/` | The page: `view.ts` (every screen), `ui.ts` (what each click does), `app.ts` (the program's page). |
 | `src/web/`, `scripts/build-web.ts` | The web client: the same page and Damgar's code in the browser, its keep in IndexedDB; built into `built/` with the pinned tools, reproducibly (`BUILT-WITH.txt`). |
-| `static/icon/damgar.svg` | The icon (a clay tablet, gold-tinted, with a duck at rest carved into it, its neck folded onto its body, its head low, its bill pointing forward; a thick gold edge, a silver line beneath; made into `damgar.png`, `.icns` and the touch icon by `clients/dub/scripts/make-icons.ts`). |
+| `static/icon/damgar.svg` | The icon (a clay tablet, gold-tinted, with a sleeping duck carved into it as on the Mesopotamian duck weights: an egg-shaped body, the neck turned back, the head laid along the back, the bill toward the tail; a thick gold edge, a silver line beneath; made into `damgar.png`, `.icns` and the touch icon by `clients/dub/scripts/make-icons.ts`). |
 
 The core library does every check: payloads, commitments, rail proofs, the route and the vault, the anchoring ticket (`wasm/src/money_js.rs`, through `clients/genesis/src/core.ts`).
 

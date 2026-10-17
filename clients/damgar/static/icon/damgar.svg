@@ -1,12 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Damgar (dam-gàr, the merchant; F338): a clay tablet with a resting duck carved right out of it, one solid recessed carving of a duck at rest, its neck folded onto its body and its head low, its bill pointing forward (a duck as merchants' weights showed it, by which they weighed silver); no eye, no separate colours. Tinted with the Money layer's gold (#e8b33a; H36, by Kišib's rule): a thick edge, #a4802c (70% of the layer colour over the dark); the dark #14120f, the clay #957359, its lit rim #ac8a64 and the carving #6f5335 (each its own colour moved 6% or 12% toward the layer colour); a line of silver beneath the tablet. No glow. -->
+  <!-- Damgar (dam-gàr, the merchant; F338): a clay tablet with a resting duck carved right out of it, one solid recessed carving of a sleeping duck, its head turned back and laid along its back, as on the Mesopotamian duck weights by which merchants weighed silver; no eye, no separate colours. Tinted with the Money layer's gold (#e8b33a; H36, by Kišib's rule): a thick edge, #a4802c (70% of the layer colour over the dark); the dark #14120f, the clay #957359, its lit rim #ac8a64 and the carving #6f5335 (each its own colour moved 6% or 12% toward the layer colour); a line of silver beneath the tablet. No glow. -->
   <rect x="100" y="100" width="824" height="824" rx="184" fill="#14120f"/>
   <rect x="108" y="108" width="808" height="808" rx="176" fill="none" stroke="#a4802c" stroke-width="16"/>
   <!-- The tablet: a pillow of clay, a little uneven, as tablets are. -->
   <path d="M236 330 Q232 286 280 282 L742 276 Q792 274 792 324 L796 676 Q798 726 748 728 L282 732 Q232 734 232 684 Z" fill="#957359"/>
   <path d="M236 330 Q232 286 280 282 L742 276 Q792 274 792 324 L796 676 Q798 726 748 728 L282 732 Q232 734 232 684 Z" fill="none" stroke="#ac8a64" stroke-width="7" opacity=".6"/>
-  <!-- The duck, carved out: one recessed shape in one colour, at rest: its neck folded down onto its body, so the head sits low on the breast; the back sloping gently from the tail up into the head; the head long and low, its bill pointing forward. -->
-  <path fill="#6f5335" d="M250 498 C290 512 340 524 400 524 C460 524 510 500 540 452 C566 412 626 396 668 418 C690 430 700 448 702 462 C726 466 756 472 774 486 C778 496 770 504 754 506 C734 508 712 506 700 506 C704 522 716 536 728 556 C750 596 744 640 706 662 C650 690 400 690 330 664 C280 646 258 600 256 560 C254 536 250 516 250 498 Z"/>
+  <!-- The duck, carved out as the Mesopotamian duck weights show it: a smooth egg of a body on its base; the neck rising from the breast and turned back, the head laid along the back, its bill toward the tail; one recessed shape in one colour, bare clay left inside the fold of the neck; no eye. -->
+  <g fill="#6f5335">
+    <path d="M250 586 C250 524 360 488 500 488 C640 488 750 524 750 596 C750 654 690 686 600 686 L400 686 C310 686 250 650 250 586 Z"/>
+    <path d="M706 604 C772 566 778 468 724 440 C680 418 628 432 610 474" fill="none" stroke="#6f5335" stroke-width="54" stroke-linecap="round"/>
+    <ellipse cx="566" cy="476" rx="60" ry="36"/>
+    <path d="M520 458 C488 458 456 462 424 470 C418 478 424 486 436 486 C468 484 500 484 530 488 Z"/>
+  </g>
   <!-- A line of silver beneath. -->
   <path d="M300 792 H724" stroke="#aab0b8" stroke-width="10" stroke-linecap="round"/>
 </svg>
