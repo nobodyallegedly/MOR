@@ -29,6 +29,7 @@ export interface PostShown {
   id: string;
   text: string;
   standing: string;
+  pictures: string[];
   /** Labelled "Correction": the act it corrects. */
   corrects: string | null;
   /** Shown "corrected by": its corrections. */
@@ -48,7 +49,14 @@ export class Corrections {
     try {
       const f = await readFeed([{ identity, name: null }], hints, via);
       return {
-        items: f.posts.map((x) => ({ id: x.id, text: escapeControls(x.post?.text ?? ''), standing: x.post?.standing ?? x.problem ?? 'unknown', corrects: x.corrects ?? null, correctedBy: x.correctedBy ?? [] })),
+        items: f.posts.map((x) => ({
+          id: x.id,
+          text: escapeControls(x.post?.text ?? ''),
+          standing: x.post?.standing ?? x.problem ?? 'unknown',
+          pictures: (x.post?.refs ?? []).flatMap((r) => (r.kind === 'picture' && r.bytes ? [`data:image/jpeg;base64,${Buffer.from(r.bytes).toString('base64')}`] : [])),
+          corrects: x.corrects ?? null,
+          correctedBy: x.correctedBy ?? [],
+        })),
         problems: f.authors.filter((a) => a.problem).map((a) => a.problem!),
       };
     } catch (e) {

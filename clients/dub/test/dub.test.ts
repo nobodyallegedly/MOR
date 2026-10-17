@@ -95,7 +95,7 @@ test('a new identity: the chain key’s words shown once and kept nowhere, three
   assert.equal(b.positions.length, 3);
   assert.deepEqual(b.say, CHAIN_WORDS_SAY);
   assert.match(b.say[0], /These are the chain key’s words/);
-  assert.match(b.say.join(' '), /MOR Safety/);
+  assert.match(b.say.join(' '), /Kišib/);
   const st = await c.ask<State>('state');
   assert.equal(st.stage, 'confirm');
   assert.ok(!JSON.stringify(st).includes(b.words.join(' ')), 'the words are not shown again');
@@ -576,13 +576,13 @@ test('an identity made by the genesis client, brought by its words: refused sets
   const position = async (id: string) => (describeAct((await relayAt(relay.base).getAct(id))!) as { position?: number }).position;
   assert.equal(await position(bp.post.id), 1, 'Dub starts its own line');
 
-  // Rotation is not Dub's (F332, amended): the genesis client, standing in for MOR Safety, rotates and keeps every line.
+  // Rotation is not Dub's (F332, amended): the genesis client, standing in for Kišib, rotates and keeps every line.
   assert.deepEqual(await c.ask('check'), { current: true, say: null });
   await g.prepareRotation();
   await g.submitRotation();
   assert.ok((await g.settleRotation()).counts);
   for (const id of [gp.id, gp2.id, bp.post.id]) assert.equal((await reader(id)).standing, 'valid', `kept: ${id}`);
-  await refused(c.ask('post', { text: 'After the rotation.' }), /changed elsewhere.*Nothing was signed.*MOR Safety/);
+  await refused(c.ask('post', { text: 'After the rotation.' }), /changed elsewhere.*Nothing was signed.*Kišib/);
   assert.deepEqual(await c.ask('check'), { current: false, say: SPENT_SAY });
   // The old words again: refused. The new signing key's words: taken; a new line; posts again.
   await refused(c.ask('renew', { words: words.join(' ') }), /do not give this identity’s current signing key/);
@@ -602,7 +602,7 @@ test('after a rotation made elsewhere with the chain key’s words, Dub takes th
   await cb.ask('message', { to: a.id, text: 'Before the rotation.' });
   assert.ok((await inbox(c)).messages.some((m) => m.text === 'Before the rotation.'));
   const p = await c.ask<{ post: Item }>('post', { text: 'Before.' });
-  // MOR Safety, as the genesis client's code stands in for it: the identity from its homes, the chain key from its paper words.
+  // Kišib, as the genesis client's code stands in for it: the identity from its homes, the chain key from its paper words.
   const f = fileOf(app, a.id);
   const safety = new TestIdentity({ ...f, sequence: [], encryption: [], routes: null, safety: { scheme: SCHEME, seeds: hex(keySeeds(fromWords(a.chainWords), SCHEME, INDEX)) } });
   await safety.prepareRotation({ hints: [relay.base] });

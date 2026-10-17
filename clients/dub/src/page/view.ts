@@ -334,7 +334,7 @@ ${testNotice(web)}
 <form id="post" class="compose">
 <div id="replying"></div>
 <textarea name="text" required placeholder="Write something public"></textarea>
-<div class="to"><input name="to" autocomplete="off" spellcheck="false" placeholder="To an identity: its ID (a public message, left in its inbox too)"></div>
+<div class="to"><input name="to" list="followed" autocomplete="off" spellcheck="false" placeholder="To an identity: someone you follow, or its ID (a public message, left in its inbox too)"></div>
 <div class="row"><label class="quiet-file"><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"><span class="small" data-action="pick">Picture</span></label><button type="button" class="quiet" data-action="address">To…</button><span class="grow small" id="picked"></span><button type="submit" class="primary">Post</button></div>
 </form>
 <div class="filters"><button class="tab on" data-filter="all">Everyone</button><button class="tab" data-filter="toyou">To you<span class="count" id="count-toyou"></span></button><button class="tab" data-filter="relay" title="Every public act at this identity’s relays, newest first">Relay</button><span class="grow"></span><button class="quiet" data-action="feed">Look again</button></div>
@@ -343,7 +343,7 @@ ${people(s)}
 </section>
 <section id="private" hidden>
 <form id="message" class="compose">
-<input name="to" autocomplete="off" spellcheck="false" placeholder="To: an identity’s ID" required>
+<input name="to" list="followed" autocomplete="off" spellcheck="false" placeholder="To: someone you follow, or an identity’s ID" required>
 <textarea name="text" required placeholder="Write something private"></textarea>
 <div class="row"><span class="grow small">Sealed to them: only they can open it.</span><button type="submit" class="primary">Send</button></div>
 </form>
@@ -421,6 +421,18 @@ export function shareTypeBack(thread: string, positions: number[]): string {
 }
 
 /** Follow and mute (the people cMIP): quiet, folded away. */
+/**
+ * H37: the people this identity follows, offered where an identity is
+ * addressed (Public's To… and the Private message box): each by the name
+ * given here and its display names, the fingerprint always beside them.
+ * Typing or pasting an ID still works: the list only suggests.
+ */
+export function followedList(follows: Who[]): string {
+  return `<datalist id="followed">${follows
+    .map((f) => `<option value="${e(f.id)}" label="${e([f.pet, ...f.names.filter((n) => n !== f.pet)].filter(Boolean).join(' · ') || 'no name')} · ${e(f.short)}"></option>`)
+    .join('')}</datalist>`;
+}
+
 export function people(s: State): string {
   const i = s.identity!;
   const row = (w: Who, actions: string) => `<li>${who(w)}<span class="acts">${actions}</span></li>`;
@@ -435,7 +447,8 @@ ${i.muted.length ? `<span class="label">Muted</span><ul>${i.muted.map((m) => row
       : 'This app holds no encryption key of this identity, so the list stays in this app only.'
   } Muting stays in this app, always.</p>
 ${i.sealed?.forked ? '<p class="small">The list was forked: two apps changed it at once. The longer branch is shown.</p>' : ''}
-</details>`;
+</details>
+${followedList(i.follows)}`;
 }
 
 const bad = (standing: string) => /void|contest|invalid|stolen/.test(standing);
