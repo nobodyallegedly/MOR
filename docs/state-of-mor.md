@@ -46,7 +46,7 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; hom
 ## Open, in order
 
 1. Kišib (resumed after pull request 73): the rotation and emergency app (F332 amended, F335, F337), with the Edubba pieces that take new words; an icon of the family (a cylinder seal). Then human test 9 (rotation) and the end of human test 10 (the member change). A server session for Dub's web release of pull request 73.
-2. Damgar, a money app (F338): gathers proposed money acts and offers them for signing, with the accepted cMIPs and Modules chosen by the person; no wallet inside; a test network (signet) for evidence, and Bitcoin anchoring demonstrable with it.
+2. Damgar, a money app (F338): gathers proposed money acts and offers them for signing, with the accepted cMIPs and Modules chosen by the person; no wallet inside; round 1 on regtest on the author's Mac (payments and receipts, prepared in Dub or Edubba and signed in Damgar; Bitcoin anchoring as an option for releases and collectives' acts, asked in Edubba, paid in Damgar); round 2, the split service, defined in the Collectives tab.
 3. An Edubba session for agents: reading and verifying any public act (H21); memory, the exchange handed on and notes sealed to itself on MOR (H22); a pasted Terminal path and a folder picker (H19).
 4. The site session (structure and look; H1, H2, H7; the reader showing display names, H17). Nearer release: the KI tab icon's fit and the tablet in the footer (H13).
 5. The remaining human tests on the cleaned apps.
