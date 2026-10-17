@@ -854,11 +854,11 @@ export class Desk {
     });
   }
 
-  /** H14: "What you may do for it" folded or unfolded for a collective, as the person left it. */
-  fold(collective: string, open: boolean): void {
-    if (!/^[0-9a-f]{64}$/.test(collective)) throw new Error('not a collective');
+  /** H14, H26, H34: a fold open or closed, as the person left it: a collective's "What you may do for it" by its ID, every other fold by its name. */
+  fold(key: string, open: boolean): void {
+    if (!/^[0-9a-f]{64}$/.test(key) && !/^[a-z][a-z-]{0,40}(:[0-9a-f]{64})?$/.test(key)) throw new Error('not a fold');
     const b = this.store.book();
-    b.unfolded = { ...(b.unfolded ?? {}), [collective]: open };
+    b.unfolded = { ...(b.unfolded ?? {}), [key]: open };
     this.store.saveBook(b);
   }
 

@@ -304,3 +304,62 @@ test('three people on three devices: a real collective founded, a release, a mem
   void shareOnPaper;
   void statSync;
 });
+
+test('H33: Edubba acting as a member it holds, with Dub’s own signing; people cMIP draft 2: the follow list sealed in Dub joins Edubba’s contacts', async () => {
+  const e = await edubba();
+  const nobody = (await e.c.ask<Done>('identity', { name: 'Nobody, allegedly', linked: false })).acts[0];
+  const dee = (await e.c.ask<Done>('identity', { name: 'Dee', linked: false })).acts[0];
+  assert.equal((await e.c.ask<any>('state')).acting, nobody, 'the first identity held, by default');
+  await refused(e.c.ask('acting as', { id: '0'.repeat(64) }), /does not hold that identity/);
+  const r = await e.c.ask<{ plan: string; digest: string }>('real found prepare', { name: 'Two of us', founder: nobody, members: [dee], safety: 1, release: 1, clone: 2, others: 1, words: '' });
+  const proposed = await e.c.ask<Done>('real confirm', r);
+  const act = proposed.acts[0];
+
+  // As Dee: the proposal, read in plain words, as Dub reads it.
+  await e.c.ask('acting as', { id: dee });
+  assert.equal((await e.c.ask<any>('state')).acting, dee);
+  const ps = await e.c.ask<any>('member proposals');
+  assert.equal(ps.on, true);
+  const p = ps.proposals[0];
+  assert.equal(p.reading.kind, 'founding');
+  assert.equal(p.act, act);
+  assert.ok(p.reading.sections.some((s: { heading: string }) => /Who decides what/.test(s.heading)));
+  assert.match(p.from.pet, /Nobody, allegedly/, 'named as Edubba names it');
+  const signed = await e.c.ask<{ signature: string }>('member accept', { thread: p.thread });
+  await refused(e.c.ask('member accept', { thread: p.thread }), /already signed/);
+  // A one-time key waits, in Edubba's folder only while the share does.
+  const sigFile = () => JSON.parse(readFileSync(join(e.dir, 'member', `${dee}.signing.json`), 'utf8'));
+  assert.equal(Object.keys(sigFile().waiting).length, 1);
+  assert.equal(statSync(join(e.dir, 'member', `${dee}.signing.json`)).mode & 0o077, 0, 'owner-only');
+
+  // As the founder: both signed, founded; Dee's share sealed to its one-time key.
+  await e.c.ask('acting as', { id: nobody });
+  const g = await e.c.ask<any>('real gather', { act });
+  assert.deepEqual(g.standing.signed.sort(), [nobody, dee].sort());
+  assert.ok(g.proposal.answers[dee].signature === signed.signature);
+  const founded = await e.c.ask<Done & { show: string[] }>('real found', { act });
+  assert.equal((await e.c.ask<any>('state')).collectives.find((c: { id: string }) => c.id === founded.acts[0]).real, true);
+
+  // As Dee: the share, shown once; three words back; the one-time key gone; nothing of the share in the folder.
+  await e.c.ask('acting as', { id: dee });
+  const shown = await e.c.ask<any>('member share', { thread: p.thread });
+  await refused(e.c.ask('member share', { thread: p.thread }), /shown once already/);
+  await e.c.ask('member shareback', { thread: p.thread, typed: shown.positions.map((i: number) => shown.words[i - 1]) });
+  assert.deepEqual(sigFile().waiting, {});
+  const all = everything(e.dir);
+  for (const f of forms(fromWords(shown.words.join(' ')))) assert.ok(!all.includes(f), 'no share in Edubba’s folder');
+
+  // The follow list sealed to Nobody, written by a Dub holding it, read into Edubba's contacts with its names.
+  const d = await dub();
+  const f = JSON.parse(readFileSync(join(e.dir, 'identities', `${nobody}.json`), 'utf8'));
+  const { toWords } = await import('../../../modules/carry/src/carry.ts');
+  await d.c.ask('bring', { id: nobody, words: toWords(unhex(f.signingSecret)).join(' '), address: homes[0].base });
+  await d.c.ask('follow', { id: d.id, name: 'Ezra (sealed)' });
+  assert.ok(!(await e.c.ask<any>('state')).contacts.some((c: { id: string }) => c.id === d.id), 'not before it is read');
+  const lists = await e.c.ask<{ read: number; problems: string[] }>('real lists');
+  assert.ok(lists.read >= 1, JSON.stringify(lists));
+  const contact = (await e.c.ask<any>('state')).contacts.find((c: { id: string }) => c.id === d.id);
+  assert.deepEqual(contact, { id: d.id, name: 'Ezra (sealed)', from: { list: 'Nobody, allegedly' } });
+  // Not in Edubba's own contacts file: read each time, kept in memory.
+  assert.ok(!all.includes('Ezra (sealed)') && !everything(e.dir).includes('Ezra (sealed)'));
+});

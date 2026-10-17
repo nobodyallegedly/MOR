@@ -45,6 +45,7 @@ import { fromRules, standardWords, type Rules } from '../../collective/src/actio
 import { readAgreement, readChanges, readRelease, termsOf, withAgreements, rulesHints, type Line, type Reading, type Section } from '../../collective/src/explain.ts';
 import { beforeSigning } from '../../assess/src/assess.ts';
 import { filesOf, folderOf } from './setup.ts';
+import { readSealedList, type Followed } from '../../dub/src/people.ts';
 import type { Desk, Done } from './desk.ts';
 import type { Store } from './store.ts';
 
@@ -55,7 +56,11 @@ const b64 = (b: Uint8Array) => Buffer.from(b).toString('base64');
 
 /** Said wherever the present test mode is offered (H18: kept, "clearly labelled as test mode"). */
 export const TEST_MODE_SAY =
-  'Test mode: every member is held here, in this program’s folder, and their consent is simulated: one person decides for all of them. For quick trials and the tests. A real collective is founded with “+ Found a real collective”.';
+  'Test mode: every member is held in this Edubba, and their consent is simulated: you decide for all of them. The shares of its chain key are kept in this Edubba’s folder. For trying things alone, and for the tests: nobody else is asked, and nothing it signs binds anyone but you.';
+
+/** Said beside "+ Found a real collective" (H27; the page's REAL_SAY, `page/view.ts`), word for word. */
+export const REAL_SAY =
+  'A real collective: each member is a person with their own identity, on their own device. Each reads the founding in plain words and signs it in their own app (Dub’s Signing tab, or Edubba). Its chain key is dealt as one share per member, written on paper; no app keeps a share.';
 
 /** Said where a member change waits for its rotation (decided by Nobody, allegedly: "Wait for Kišib"). */
 export const WAIT_FOR_KISIB =
@@ -65,8 +70,8 @@ export const WAIT_FOR_KISIB =
 export interface Contact {
   id: string;
   name: string;
-  /** Where it comes from: added here, or followed by an agent (its name). */
-  from: 'added' | { agent: string };
+  /** Where it comes from: added here, followed by an agent (its name), or in the follow list sealed to an identity held here (its name; people cMIP draft 2). */
+  from: 'added' | { agent: string } | { list: string };
 }
 
 /** A proposal sent from here, and the answers gathered. */
@@ -109,6 +114,8 @@ const PLAN_LIFE = 15 * 60 * 1000;
 
 export class Real {
   private plans = new Map<string, Plan>();
+  /** The follow lists sealed to the identities held here (people cMIP draft 2), as last read: in memory only. */
+  private listed = new Map<string, Followed[]>();
   /** Shares waiting to be shown here once (hand to hand, and the founder's own): in memory only, by `collective member`. */
   private waiting = new Map<string, { share: Uint8Array; positions?: number[] }>();
 
@@ -154,7 +161,41 @@ export class Real {
         out.push({ id: f.id, name: f.name ?? short(f.id), from: { agent: names.get(agent) ?? short(agent) } });
       }
     }
+    const held = new Set(this.store.book().identities.map((i) => i.id));
+    for (const [identity, follows] of this.listed) {
+      for (const f of follows) {
+        if (out.some((c) => c.id === f.id) || held.has(f.id)) continue;
+        out.push({ id: f.id, name: f.name ?? short(f.id), from: { list: names.get(identity) ?? short(identity) } });
+      }
+    }
     return out;
+  }
+
+  /**
+   * Read the follow list sealed to each identity held here (people cMIP
+   * draft 2, section 3), at its homes, opened with its encryption keys: its
+   * followed identities, with the names given in Dub, join the contacts.
+   * Kept in memory only; read again when asked.
+   */
+  async readLists(): Promise<{ read: number; problems: string[] }> {
+    const problems: string[] = [];
+    let read = 0;
+    for (const e of this.store.book().identities) {
+      const me = this.store.identity(e.id);
+      const secrets = [...me.f.encryption].reverse().map((x) => unhex(x.secret));
+      if (!secrets.length) continue;
+      try {
+        const l = await readSealedList(e.id, secrets, me.f.homes.map((h) => h.hint), this.via);
+        if (l.act) {
+          this.listed.set(e.id, l.follows);
+          read++;
+        }
+        problems.push(...l.problems.map((x) => `${e.name}: ${x}`));
+      } catch (x) {
+        problems.push(`${e.name}: ${err(x)}`);
+      }
+    }
+    return { read, problems };
   }
 
   addContact(typed: string, name: string): Contact {

@@ -11,6 +11,9 @@ import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
 import { reading } from '../../../collective/src/page/view.ts';
 import type { Review } from '../../../collective/src/page/api.ts';
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
+import type { Proposal as MemberProposal, ShareShown } from '../../../dub/src/shapes.ts';
+import { shareTypeBack } from '../../../dub/src/page/view.ts';
+import type { Listing } from '../folders.ts';
 
 const app = document.getElementById('app')!;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
@@ -126,22 +129,27 @@ async function draw() {
     }
     case 'collectives': {
       const proposalOf = (k: string | null) => (k?.startsWith('p:') ? state.proposals.find((p) => p.act === k.slice(2) && !p.founded) : undefined);
-      if (!at.collective || (!['found', 'bring', 'real'].includes(at.collective) && !proposalOf(at.collective) && !state.collectives.some((x) => x.id === at.collective))) at.collective = state.collectives[0]?.id ?? 'real';
+      if (at.collective === 'sign') {
+        body.innerHTML = `${v.actingAs(state)}${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${v.memberSigning(state, null)}</div>`;
+        await readMember();
+        return;
+      }
+      if (!at.collective || (!['found', 'bring', 'real', 'sign'].includes(at.collective) && !proposalOf(at.collective) && !state.collectives.some((x) => x.id === at.collective))) at.collective = state.collectives[0]?.id ?? 'real';
       const here = state.collectives.find((x) => x.id === at.collective);
       const brought = here?.brought;
       realReview = null;
       if (at.collective === 'real' || proposalOf(at.collective)) {
         const p = proposalOf(at.collective);
-        body.innerHTML = `${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${p ? v.realProposalDetails(state, p) : v.realFound(state)}</div>`;
+        body.innerHTML = `${v.actingAs(state)}${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${p ? v.realProposalDetails(state, p) : v.realFound(state)}</div>`;
         return;
       }
       if (here?.real) {
         const rc = await c.ask<RealCollective>('real collective', { collective: here.id });
-        body.innerHTML = `${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${v.realDetails(state, here.id, rc)}</div>`;
+        body.innerHTML = `${v.actingAs(state)}${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${v.realDetails(state, here.id, rc)}</div>`;
         await drawAct(here.id);
         return;
       }
-      body.innerHTML = `${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${
+      body.innerHTML = `${v.actingAs(state)}${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${
         at.collective === 'found' ? v.foundCollective() : at.collective === 'bring' ? v.bringCollective() : brought ? v.broughtDetails(state, at.collective) : v.collectiveDetails(state, at.collective, at.sub)
       }</div>`;
       if (at.collective === 'bring') return;
@@ -203,7 +211,7 @@ async function drawRecord(id: string, again = true) {
     records.set(id, r);
     if (at.identity === id) fill('e-record', v.record(r));
   } catch (err) {
-    if (at.identity === id) fill('e-record', `<h3>Its record</h3>${v.note('error', v.e(err instanceof Error ? err.message : String(err)))}`);
+    if (at.identity === id) fill('e-record', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
   }
 }
 
@@ -247,6 +255,130 @@ async function drawAct(id: string) {
 async function refresh() {
   state = await c.ask<State>('state');
   await draw();
+}
+
+// ---------------------------------------------------------------- signing as a member (H33)
+
+/** A share awaited in the member's view: looked for by itself while the view is open. */
+let memberAwaits = false;
+
+/** The proposals to sign as the identity acted as, read in plain words (Dub's own reading). A share being shown, or its words being typed, is never drawn over. */
+async function readMember() {
+  try {
+    const r = await c.ask<{ proposals: MemberProposal[]; problems: string[] }>('member proposals');
+    memberAwaits = r.proposals.some((p) => !p.answer || p.share === 'waiting' || p.share === 'ready');
+    if (at.tab !== 'collectives' || at.collective !== 'sign') return;
+    if ($('share-shown') || [...app.querySelectorAll<HTMLInputElement>('#e-signing form.share-back input')].some((i) => i.value)) return;
+    fill('e-detail', v.memberSigning(state, r));
+  } catch (err) {
+    fill('e-signing', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+  }
+}
+
+/** A member's step, by Dub's names for them (`accept`, `decline`, `share`, `share-written`, `sharehand`, `lookshare`). */
+async function memberAction(b: HTMLElement): Promise<void> {
+  const d = b.dataset;
+  switch (d.action) {
+    case 'accept': {
+      if (!confirm('Sign it? Your signature is public, and binds this identity to exactly what you read here.')) return;
+      const r = await busy('Signing, and answering the proposer…', () => c.ask<{ lines: { text: string }[] }>('member accept', { thread: d.thread }));
+      if (r) {
+        await readMember();
+        say('done', `<strong>Signed.</strong><ul>${r.lines.map((l) => `<li>${v.e(l.text)}</li>`).join('')}</ul>`);
+      }
+      return;
+    }
+    case 'decline': {
+      const why = prompt('Decline it. Your reason, if you like (sent to the proposer, sealed):');
+      if (why === null) return;
+      const r = await busy('Declining…', () => c.ask<{ lines: { text: string }[] }>('member decline', { thread: d.thread, why }));
+      if (r) {
+        await readMember();
+        say('done', r.lines.map((l) => v.e(l.text)).join(' '));
+      }
+      return;
+    }
+    case 'share': {
+      const r = await busy('Opening the share with its one-time key, and checking it against the dealing…', () => c.ask<ShareShown>('member share', { thread: d.thread }));
+      // Shown once: on the page now and nowhere else; a reload asks for three of its words instead.
+      if (r) {
+        say('', '');
+        const card = app.querySelector<HTMLElement>(`#e-signing .proposal[data-thread="${CSS.escape(r.thread)}"]`);
+        if (card) card.outerHTML = v.memberShare(r);
+      }
+      return;
+    }
+    case 'share-written': {
+      const card = $('share-shown');
+      if (card) card.outerHTML = `<div class="proposal" data-thread="${v.e(d.thread!)}">${shareTypeBack(d.thread!, (d.positions ?? '').split(',').map(Number))}</div>`;
+      return;
+    }
+    case 'sharehand': {
+      if (!confirm('The share came by hand, shown on the founder’s screen? The one-time key is destroyed: a share sealed to it could never be opened.')) return;
+      const r = await busy('Destroying the one-time key…', () => c.ask<{ lines: { text: string }[] }>('member sharehand', { thread: d.thread }));
+      if (r) {
+        await readMember();
+        say('done', r.lines.map((l) => v.e(l.text)).join(' '));
+      }
+      return;
+    }
+    case 'lookshare':
+      await busy('Looking for the share…', readMember);
+      say('', '');
+      return;
+  }
+}
+
+// ---------------------------------------------------------------- answers looked for by themselves (H32)
+
+/** The proposals sent from here that still wait for answers. */
+const pendingProposals = () =>
+  state.proposals.filter((p) => (p.kind === 'founding' ? !p.founded : p.kind === 'clone' ? !p.standing.enough : !p.standing.enough));
+
+let gathering = false;
+/** Look for answers to every proposal that waits, as "Look for answers" does; redraw only what changed, never a form being filled. */
+async function gatherAll() {
+  if (gathering || working || !c || !state) return;
+  const waiting = pendingProposals();
+  if (!waiting.length) return;
+  gathering = true;
+  try {
+    let changed = false;
+    for (const p of waiting) {
+      const before = JSON.stringify(p.standing);
+      try {
+        const r = await c.ask<{ standing: State['proposals'][number]['standing'] }>('real gather', { act: p.act });
+        if (JSON.stringify(r.standing) !== before) changed = true;
+      } catch {
+        // its relays did not answer: the next look tries again
+      }
+    }
+    if (!changed || working) return;
+    state = await c.ask<State>('state');
+    if (at.tab !== 'collectives') return;
+    // Only the list and the cards of proposals are drawn again: forms keep what is typed.
+    const list = app.querySelector('.list[aria-label=Collectives]');
+    if (list) list.outerHTML = v.collectiveList(state, at.collective);
+    for (const p of state.proposals) {
+      const card = app.querySelector(`section.proposal-status[data-proposal="${CSS.escape(p.act)}"]`);
+      if (card) card.outerHTML = v.proposalStatus(state, p);
+    }
+  } finally {
+    gathering = false;
+  }
+}
+
+// ---------------------------------------------------------------- the folder picker (H31)
+
+async function picker(target: string, path?: string) {
+  try {
+    const l = await c.ask<Listing>('folders', path ? { path } : {});
+    fill('e-dialog-body', v.folderPicker(l, target));
+    const dlg = $<HTMLDialogElement>('e-dialog')!;
+    if (!dlg.open) dlg.showModal();
+  } catch (err) {
+    fail(err);
+  }
 }
 
 async function readDrafts() {
@@ -336,7 +468,36 @@ app.addEventListener('click', async (ev) => {
   if (b.closest('[data-collective-root]')) return;
   const d = b.dataset;
   const agent = at.agent ?? undefined;
+  // H33: a member's steps, in the "To sign" view, by Dub's names for them.
+  if (b.closest('#e-signing')) return memberAction(b);
   switch (d.action) {
+    case 'member-look':
+      await busy('Reading the inbox for proposals and shares…', readMember);
+      say('', '');
+      break;
+    case 'pick-folder':
+      await picker(d.target!);
+      break;
+    case 'folder-open':
+      await picker(b.closest<HTMLElement>('.picker')!.dataset.target!, d.path);
+      break;
+    case 'folder-use': {
+      const target = b.closest<HTMLElement>('.picker')!.dataset.target!;
+      const input = $<HTMLFormElement>(target)?.elements.namedItem('folder') as HTMLInputElement | null;
+      if (input) input.value = d.path!;
+      $<HTMLDialogElement>('e-dialog')!.close();
+      // A release's folder is used at once: as "Use this folder".
+      if (target === 'release-folder') $<HTMLFormElement>('release-folder')?.requestSubmit();
+      break;
+    }
+    case 'real-lists': {
+      const r = await busy('Reading the follow lists sealed to your identities…', () => c.ask<{ read: number; problems: string[] }>('real lists'));
+      if (r) {
+        await refresh();
+        say(r.problems.length ? 'warn' : 'done', `${r.read === 1 ? 'One follow list read' : `${r.read} follow lists read`}.${r.problems.map((p) => `<br>${v.e(p)}`).join('')}`);
+      }
+      break;
+    }
     case 'tab':
       at.tab = d.tab as v.Tab;
       at.seeing = false;
@@ -529,6 +690,8 @@ app.addEventListener('click', async (ev) => {
       const r = await busy('Reading the act back…', () => c.ask<ActRead>('read act', { identity: d.identity, act: d.act }), $('e-rely-shown'));
       if (r) {
         fill('e-rely-shown', v.relyShown(d.identity!, r));
+        const fold = $<HTMLDetailsElement>('e-rely');
+        if (fold) fold.open = true;
         $('e-rely')?.scrollIntoView({ block: 'start' });
       }
       break;
@@ -660,6 +823,16 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
+  if (form.classList.contains('share-back') && form.closest('#e-signing')) {
+    const typed = [...form.querySelectorAll<HTMLInputElement>('input')].map((i) => i.value);
+    const r = await busy('Checking the words, then destroying the one-time key…', () => c.ask<{ lines: { text: string }[] }>('member shareback', { thread: form.dataset.thread, typed }));
+    if (r) {
+      await readMember();
+      say('done', `<strong>The share is written down.</strong> ${r.lines.map((l) => v.e(l.text)).join(' ')}`);
+    }
+    return;
+  }
+  if (fid === 'acting-as') return;
   if (form.classList.contains('send-back')) {
     return after(await busy('Sending it back to Claude…', () => c.ask<Done>('send back', { digest: form.dataset.digest, note: words(d.get('note')) })));
   }
@@ -774,7 +947,7 @@ app.addEventListener('submit', async (ev) => {
           })
         : fid === 'real-change'
           ? c.ask<Review>('real change prepare', { collective: form.dataset.collective, members: [...members, ...typed] })
-          : c.ask<Review>('real release prepare', { collective: form.dataset.collective, folder: words(d.get('folder')), name: words(d.get('name')), version: words(d.get('version')) }),
+          : c.ask<Review>('real release prepare', { collective: form.dataset.collective, folder: String(d.get('folder') ?? ''), name: words(d.get('name')), version: words(d.get('version')) }),
     );
     if (r) {
       realReview = { plan: r.plan, digest: r.digest };
@@ -819,7 +992,7 @@ app.addEventListener('submit', async (ev) => {
   }
   if (fid === 'release-folder') {
     const i = state.identities.find((x) => x.id === at.identity)!;
-    const r = await busy('Looking at the folder…', () => c.ask<{ folder: string; how: 'git' | 'plain'; name: string; previous: string | null }>('release folder', { identity: i.id, folder: words(d.get('folder')) }), $('e-release-form'));
+    const r = await busy('Looking at the folder…', () => c.ask<{ folder: string; how: 'git' | 'plain'; name: string; previous: string | null }>('release folder', { identity: i.id, folder: String(d.get('folder') ?? '') }), $('e-release-form'));
     if (r) {
       fill('e-release-review', '');
       fill('e-release-form', v.releaseForm(i, r));
@@ -907,11 +1080,29 @@ async function start() {
   } catch (err) {
     fail(err);
   }
+  // On opening: answers waiting for proposals sent from here (H32), and the follow lists sealed to the identities held here (people cMIP draft 2).
+  void gatherAll();
+  void c
+    .ask<{ read: number }>('real lists')
+    .then(async (r) => {
+      if (!r.read) return;
+      state = await c.ask<State>('state');
+      if (at.tab === 'collectives' && !working) await draw();
+    })
+    .catch(() => undefined);
 }
 
 // H18: a member's share shown here, hand to hand, rather than sealed to a one-time key.
 app.addEventListener('change', async (ev) => {
   const el = ev.target as HTMLInputElement;
+  if (el.id === 'acting-select') {
+    const r = await busy('Acting as another identity…', () => c.ask('acting as', { id: el.value }));
+    if (r) {
+      await refresh();
+      say('done', `Acting as ${v.e(state.identities.find((i) => i.id === state.acting)?.name ?? 'it')}.`);
+    }
+    return;
+  }
   if (el.dataset.action !== 'real-byhand') return;
   try {
     await c.ask('real by hand', { act: el.dataset.act, member: el.dataset.member, on: el.checked });
@@ -922,22 +1113,47 @@ app.addEventListener('change', async (ev) => {
   }
 });
 
-// H14: "What you may do for it" folds and unfolds at the person's choice, remembered per collective by the program.
+// H14, H26, H34: every fold opens and closes at the person's choice, remembered by the program ("What you may do for it" per collective, every other by its name).
 app.addEventListener(
   'toggle',
   (ev) => {
     const el = ev.target as HTMLElement;
-    if (!(el instanceof HTMLDetailsElement) || el.id !== 'e-may') return;
-    const id = el.dataset.collective!;
+    if (!(el instanceof HTMLDetailsElement) || !el.dataset.fold) return;
+    const key = el.dataset.fold;
     const open = el.open;
-    const hint = el.querySelector('summary .small');
-    if (hint) hint.textContent = open ? 'Fold' : 'Unfold';
-    if ((state.unfolded?.[id] !== false) === open) return;
-    state.unfolded = { ...(state.unfolded ?? {}), [id]: open };
-    void c.ask('fold', { collective: id, open }).catch(fail);
+    if (el.id === 'e-may') {
+      const hint = el.querySelector('summary .small');
+      if (hint) hint.textContent = open ? 'Fold' : 'Unfold';
+    }
+    const was = state.unfolded?.[key];
+    if (was === open || (was === undefined && el.dataset.default === String(open))) return;
+    state.unfolded = { ...(state.unfolded ?? {}), [key]: open };
+    void c.ask('fold', { key, open }).catch(fail);
   },
   true,
 );
+
+/** Folds drawn as the person left them. */
+new MutationObserver((ms) => {
+  if (!state) return;
+  for (const m of ms)
+    for (const n of m.addedNodes) {
+      if (!(n instanceof HTMLElement)) continue;
+      const all = [...(n.matches('details[data-fold]') ? [n] : []), ...n.querySelectorAll<HTMLDetailsElement>('details[data-fold]')] as HTMLDetailsElement[];
+      for (const d of all) {
+        d.dataset.default ??= String(d.open);
+        const want = state.unfolded?.[d.dataset.fold!];
+        if (want !== undefined && d.open !== want) d.open = want;
+      }
+    }
+}).observe(app, { childList: true, subtree: true });
+
+// H32: answers to proposals sent from here are looked for by themselves, every 20 seconds and on opening; H33: proposals and shares to sign, while that view is open.
+setInterval(() => {
+  if (document.hidden) return;
+  void gatherAll();
+  if (at.tab === 'collectives' && at.collective === 'sign' && memberAwaits && !working) void readMember();
+}, 20000);
 
 setInterval(() => void watch(), 4000);
 document.addEventListener('visibilitychange', () => void watch());

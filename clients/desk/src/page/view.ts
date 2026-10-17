@@ -13,8 +13,10 @@
 // stolen key; no glow; each item in its own clearly outlined card.
 
 import { e } from '../../../manage/src/view.ts';
-import { STYLE as DUB } from '../../../dub/src/page/view.ts';
+import { STYLE as DUB, proposal as dubProposal, share as dubShare, SIGNING_LABEL } from '../../../dub/src/page/view.ts';
+import type { Proposal as MemberProposal, ShareShown } from '../../../dub/src/shapes.ts';
 import { STYLE as TEXT, plainHtml } from '../../../longform/src/html.ts';
+import type { Listing } from '../folders.ts';
 import type { ActRead, RealCollective, RealProposal, ShareHere, AgentDetails, AgentSummary, AgentView, Constitution, Done, DraftView, IdentityRecord, Item, Line, MachineState, Permissions, ReleaseReview, Sorted, State } from './api.ts';
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 
@@ -33,7 +35,11 @@ export const PROMPT_SAY =
 /** Said where the key is plugged in (src/agents.ts, KEY_SAY). */
 /** Said wherever the present test mode is offered (`src/real.ts`, TEST_MODE_SAY), word for word. */
 export const TEST_MODE_SAY =
-  'Test mode: every member is held here, in this program’s folder, and their consent is simulated: one person decides for all of them. For quick trials and the tests. A real collective is founded with “+ Found a real collective”.';
+  'Test mode: every member is held in this Edubba, and their consent is simulated: you decide for all of them. The shares of its chain key are kept in this Edubba’s folder. For trying things alone, and for the tests: nobody else is asked, and nothing it signs binds anyone but you.';
+
+/** Said beside "+ Found a real collective" (H27; `src/real.ts`, REAL_SAY), word for word. */
+export const REAL_SAY =
+  'A real collective: each member is a person with their own identity, on their own device. Each reads the founding in plain words and signs it in their own app (Dub’s Signing tab, or Edubba). Its chain key is dealt as one share per member, written on paper; no app keeps a share.';
 
 export const KEY_SAY =
   'The key goes from this page to the program once, and is kept in a file on this Mac that only your account can read (~/.config/mor). This page never holds it again: it is shown by its last four characters only.';
@@ -143,7 +149,16 @@ dl.card-of{margin:6px 0 0}
 details.fold>summary{display:flex;align-items:baseline;gap:12px;cursor:pointer;list-style:none}
 details.fold>summary::-webkit-details-marker{display:none}
 details.fold>summary h3{margin:0;flex:1}
-details.fold[open]>summary{margin-bottom:8px}`;
+details.fold[open]>summary{margin-bottom:8px}
+details.fold>summary .hint::after{content:"Unfold"}
+details.fold[open]>summary .hint::after{content:"Fold"}
+.choose{font-size:13px;color:var(--soft);margin:-2px 0 12px;padding-left:2px}
+.acting{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0 0;font-size:14px}
+.acting select{max-width:22em}
+.picker li{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);list-style:none}
+.picker ul{padding:0;margin:8px 0;max-height:50vh;overflow:auto}
+.picker .path{font:13px ui-monospace,Menlo,monospace;color:var(--identity);overflow-wrap:anywhere;white-space:pre-wrap}
+.picker .spaced{color:var(--soft);font-size:12px}`;
 
 /** A fingerprint, shortened on screen, whole on hover. */
 export function fp(h: string): string {
@@ -156,6 +171,14 @@ const bare = (n: string | null | undefined) => (n ?? '').replace(/ \[[0-9a-f]{8}
 const grouped = (id: string) => e(id.match(/.{1,4}/g)!.join(' '));
 
 export const note = (kind: 'error' | 'done' | 'warn' | '', html: string) => `<div class="note ${kind}">${html}</div>`;
+
+/**
+ * A card that folds (H14, H26, H34): open or closed by default; the person's
+ * choice remembered by the program, by `key` (`app.ts`, "toggle").
+ */
+export function foldCard(id: string, key: string, title: string, body: string, open = true, after = ''): string {
+  return `<details class="card fold" id="${e(id)}" data-fold="${e(key)}"${open ? ' open' : ''}><summary><h3>${title}</h3>${after}<span class="small hint"></span></summary>${body}</details>`;
+}
 
 function lines(ls: Line[]): string {
   return `<ul>${ls.map((l) => `<li class="${e(l.tone ?? '')}">${e(l.text)}</li>`).join('')}</ul>`;
@@ -253,7 +276,61 @@ export function collectiveList(s: State, selected: string | null): string {
     .join('')}${s.proposals
     .filter((p) => p.kind === 'founding' && !p.founded)
     .map((p) => entry({ action: 'pick-collective', key: 'proposal', id: `p:${p.act}`, current: selected === `p:${p.act}`, title: p.name, meta: `founding · ${p.standing.signed.length} of ${p.signers.length} signed${p.standing.declined.length ? ` · ${p.standing.declined.length} declined` : ''}` }).replace(/<span class="fp">[^<]*<\/span>/, ''))
-    .join('')}<button class="entry add" data-action="pick-collective" data-id="real">+ Found a real collective</button><button class="entry add" data-action="pick-collective" data-id="found">+ Found a test collective (test mode)</button><button class="entry add" data-action="pick-collective" data-id="bring">+ Bring an existing collective</button></div>`;
+    .join('')}${
+    s.acting
+      ? entry({ action: 'pick-collective', key: 'sign', id: 'sign', current: selected === 'sign', title: `To sign, as ${s.identities.find((i) => i.id === s.acting)?.name ?? 'you'}`, meta: 'proposals from founders, read in plain words', count: 0 }).replace(/<span class="fp">[^<]*<\/span>/, '').replace('data-id="sign"', 'data-id="sign" id="e-to-sign"')
+      : ''
+  }<button class="entry add" data-action="pick-collective" data-id="real">+ Found a real collective: members on their own devices</button>
+<p class="choose">${e(REAL_SAY)}</p>
+<button class="entry add" data-action="pick-collective" data-id="found">+ Found a test collective: everyone held here, for trying alone</button>
+<p class="choose">${e(TEST_MODE_SAY)}</p>
+<button class="entry add" data-action="pick-collective" data-id="bring">+ Bring an existing collective</button></div>`;
+}
+
+/** H33: which of Edubba's identities the Collectives tab acts as, with a switch among them. */
+export function actingAs(s: State): string {
+  if (!s.identities.length) return '';
+  return `<form id="acting-as" class="acting"><label for="acting-select" class="small">Acting as</label><select id="acting-select" name="id">${s.identities
+    .map((i) => `<option value="${e(i.id)}"${i.id === s.acting ? ' selected' : ''}>${e(i.name)} (${e(i.id.slice(0, 8))}…)</option>`)
+    .join('')}</select><span class="small">The identity that signs proposals here as a member, and founds by default. Test-mode collectives sign with their own members.</span></form>`;
+}
+
+/** H33: proposals to sign as the identity acted as, read in plain words, as Dub's Signing tab shows them. */
+export function memberSigning(s: State, r: { proposals: MemberProposal[]; problems: string[] } | null): string {
+  const me = s.identities.find((i) => i.id === s.acting);
+  return `<h2>To sign, as ${e(me?.name ?? 'you')}</h2>
+<div class="experimental"><strong>Even more experimental</strong>${e(SIGNING_LABEL.slice('Even more experimental'.length).replace('than Dub itself', 'than Edubba itself'))}</div>
+<p class="small">Proposals sent to ${e(me?.name ?? 'this identity')} by a collective’s founder, read in plain words from the exact act each names. Signing is an act of yours, public; a share of a collective’s chain key is shown here once, then kept nowhere. Edubba looks for new ones by itself while this is open.</p>
+<div class="row"><button data-action="member-look">Look for proposals and shares now</button></div>
+<div id="e-signing">${
+    r
+      ? (r.proposals.length ? r.proposals.map(dubProposal).join('') : '<p class="empty small">No proposal to sign. When a founder asks this identity to sign, it comes here.</p>') + r.problems.map((x) => `<p class="small">${e(x)}</p>`).join('')
+      : '<p class="small">Reading its inbox…</p>'
+  }</div>`;
+}
+
+/** A member's share, shown once here (H33), as Dub shows it. */
+export const memberShare = (r: ShareShown) => dubShare({ ...r, say: r.say.map((x) => x.replace(/\bDub\b/g, 'Edubba')) });
+
+/** The folder picker (H31): the Mac's folders, browsed by the program; names shown as they are, a space at the end said. */
+export function folderPicker(l: Listing, target: string): string {
+  return `<button class="close" data-action="dialog-close">Close</button>
+<h2>Choose a folder</h2>
+<div class="picker" data-target="${e(target)}">
+<div class="row">${l.places.map((p) => `<button class="quiet" data-action="folder-open" data-path="${e(p.path)}">${e(p.name)}</button>`).join('')}</div>
+<p class="path" id="e-picker-path">${e(l.path)}</p>
+${l.problem ? note('error', e(l.problem)) : ''}
+<div class="row">${l.parent ? `<button data-action="folder-open" data-path="${e(l.parent)}">↑ Up</button>` : ''}<span class="grow"></span><button class="primary" data-action="folder-use" data-path="${e(l.path)}"${l.problem ? ' disabled' : ''}>Use this folder</button></div>
+<ul>${
+    l.folders
+      .map(
+        (f) =>
+          `<li><button class="quiet" data-action="folder-open" data-path="${e(f.path)}">${f.spaced ? `“${e(f.name)}”` : e(f.name)}</button><span>${f.spaced ? `<span class="spaced">${e(f.spaced)}</span> ` : ''}${f.git ? '<span class="tag">git</span>' : ''}</span></li>`,
+      )
+      .join('') || '<li class="small">No folder inside.</li>'
+  }</ul>
+${l.hidden ? `<p class="small">${l.hidden} hidden folder${l.hidden === 1 ? '' : 's'} (a name starting with a dot), not listed.</p>` : ''}
+</div>`;
 }
 
 // ---------------------------------------------------------------- agents
@@ -331,11 +408,11 @@ export function agentDetails(s: State, a: AgentDetails, drafts: DraftView[] = []
 <div class="here" id="e-agent-here" role="status" aria-live="polite"></div>
 ${a.stopped ? note('error', `<strong>Stopped:</strong> ${e(a.stopped)}`) : ''}
 
-<section class="card" id="e-terms-card"><h3>Its terms${a.terms ? ` <span class="small">act ${fp(a.terms.act)}</span>` : ''}</h3>${a.terms ? lines(a.terms.words.map((text) => ({ text }))) : '<p class="small">Not signed.</p>'}
+${foldCard('e-terms-card', 'agent-terms', `Its terms${a.terms ? ` <span class="small">act ${fp(a.terms.act)}</span>` : ''}`, `${a.terms ? lines(a.terms.words.map((text) => ({ text }))) : '<p class="small">Not signed.</p>'}
 <div class="switch" role="group" aria-label="Answering"><span>Answering</span> ${switchB(true, 'On')}${switchB(false, 'Off')}</div>
-<p class="small">${a.on ? `On: ${e(owner || 'its owner')}’s own messages and public acts to it are answered at once; others wait in its queue until you pick them.` : 'Off: nothing is answered and no call is made.'}</p></section>
+<p class="small">${a.on ? `On: ${e(owner || 'its owner')}’s own messages and public acts to it are answered at once; others wait in its queue until you pick them.` : 'Off: nothing is answered and no call is made.'}</p>`)}
 
-<section class="card" id="e-queue"><h3>Its queue: acts to pick from (${a.notified.length})</h3>
+${foldCard('e-queue', 'agent-queue', `Its queue: acts to pick from (${a.notified.length})`, `
 <p class="small">Other people’s interactions with it. Nothing is drafted for these until you pick one: each pick is signed and published, and it answers at once, naming your pick. What it says is its own.</p>
 ${a.notified.map(notifiedItem).join('') || '<p class="empty small">Nothing waits.</p>'}
 ${a.notified.length > 1 ? '<div class="row"><button data-action="machine-picks">Pick the selected: show them together first</button></div>' : ''}
@@ -354,28 +431,27 @@ ${
         .join('')}`
     : ''
 }
-<div class="row"><button data-action="machine-look">Look now for what it received</button></div></section>
+<div class="row"><button data-action="machine-look">Look now for what it received</button></div>`)}
 
-<section class="card" id="e-nudge"><h3>Nudge it</h3>
+${foldCard('e-nudge', 'agent-nudge', 'Nudge it', `
 <form id="machine-nudge"><p class="small">A public act of yours naming it, with a number of actions: it may then answer anyone, comment on its feed, post, or write to you, up to that number, each naming your nudge. It chooses.</p>
 <div class="row"><label>Actions <input name="count" type="number" min="1" max="20" value="1" required class="narrow"></label></div>
 <label>Your words with the nudge (optional, public)</label><textarea name="context"></textarea>
-<div class="row"><button type="submit">Nudge</button></div></form></section>
+<div class="row"><button type="submit">Nudge</button></div></form>`)}
 
-<section class="card" id="e-cap"><h3>Its cap and its key</h3>
+${foldCard('e-cap', 'agent-cap', 'Its cap and its key', `
 <form id="machine-cap" class="row"><label>Calls to Claude a day <input name="callsPerDay" type="number" min="0" max="1000" value="${a.callsPerDay}" class="narrow"></label>
 <label>Each answer at most <input name="maxChars" type="number" min="50" max="20000" value="${a.maxChars}" class="narrow"> characters</label><button type="submit">Save the cap</button></form>
 <p class="small">Calls today: ${a.callsToday} of ${a.callsPerDay}.</p>
 <p class="small">${keyLine}. The key is never shown here beyond its last four characters.</p>
 <form id="agent-key"><div class="switch" role="radiogroup" aria-label="Its key"><label class="check"><input type="radio" name="own" value="shared"${a.key.kind === 'own' ? '' : ' checked'}> The shared key</label><label class="check"><input type="radio" name="own" value="own"${a.key.kind === 'own' ? ' checked' : ''}> A key of its own</label></div>
 <input name="key" type="password" autocomplete="off" spellcheck="false" placeholder="Its own key, if it has one">
-<div class="row"><button type="submit">Save its key</button></div></form></section>
+<div class="row"><button type="submit">Save its key</button></div></form>`, false)}
 
-<h3>Drafts from Claude for it (${mine.length})</h3>
-<div class="row"><button class="quiet" data-action="drafts">Look for new drafts now</button><span class="small" id="drafts-watch" role="status" aria-live="polite">${WATCHING}</span></div>
-<div id="drafts">${mine.map(draft).join('') || '<p class="empty small">No draft is waiting for it.</p>'}</div>
+${foldCard('e-agent-drafts', 'agent-drafts', `Drafts from Claude for it (${mine.length})`, `<div class="row"><button class="quiet" data-action="drafts">Look for new drafts now</button><span class="small" id="drafts-watch" role="status" aria-live="polite">${WATCHING}</span></div>
+<div id="drafts">${mine.map(draft).join('') || '<p class="empty small">No draft is waiting for it.</p>'}</div>`)}
 
-<details class="card"><summary>What it did (${a.history.length})</summary>${history(a.history)}</details>
+${foldCard('e-agent-history', 'agent-history', `What it did (${a.history.length})`, history(a.history), false)}
 
 <section class="card" id="e-prompt"><h3>Prompt it</h3>
 <div class="chat">${
@@ -523,20 +599,17 @@ export function identityDetails(s: State, id: string, drafts: DraftView[]): stri
 <dl class="facts"><dt>This desk's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
 ${linkSwitch(i.id, i.linked)}
 <div class="here" data-here="${e(i.id)}" role="status" aria-live="polite"></div></div>
-<section class="card" id="e-record"><h3>Its record</h3><p class="small">Reading it from its homes and relays…</p></section>
-<section class="card" id="e-rely"><h3>Rely on an act</h3>
-<p class="small">${e(WITNESS_EXPLANATION)}</p>
+${foldCard('e-record-fold', 'identity-record', 'Its record', '<div id="e-record"><p class="small">Reading it from its homes and relays…</p></div>')}
+${foldCard('e-rely', 'identity-rely', 'Rely on an act', `<p class="small">${e(WITNESS_EXPLANATION)}</p>
 <form id="rely" class="row"><input name="act" type="text" class="grow" placeholder="The act’s id: 64 hexadecimal characters" autocomplete="off" spellcheck="false" required><button type="submit">Read it back</button></form>
-<div id="e-rely-shown"></div></section>
+<div id="e-rely-shown"></div>`, false)}
 ${releaseCard(i)}
-<h3>Drafts from Claude (${mine.length})</h3>
-<div class="row"><button class="quiet" data-action="drafts">Look for new drafts now</button><span class="small" id="drafts-watch" role="status" aria-live="polite">${WATCHING}</span></div>
-<div id="drafts">${mine.map(draft).join('') || '<p class="empty small">No draft is waiting for it.</p>'}</div>
-<h3>What it received</h3>
-<div class="row"><button data-action="refresh" data-identity="${e(i.id)}">Look for what it received</button></div>
+${foldCard('e-drafts-fold', 'identity-drafts', `Drafts from Claude (${mine.length})`, `<div class="row"><button class="quiet" data-action="drafts">Look for new drafts now</button><span class="small" id="drafts-watch" role="status" aria-live="polite">${WATCHING}</span></div>
+<div id="drafts">${mine.map(draft).join('') || '<p class="empty small">No draft is waiting for it.</p>'}</div>`)}
+${foldCard('e-received', 'identity-received', 'What it received', `<div class="row"><button data-action="refresh" data-identity="${e(i.id)}">Look for what it received</button></div>
 <div class="here" data-here-received="${e(i.id)}" role="status" aria-live="polite"></div>
-${piles}
-<details class="card"><summary>What you answered for it (${answered.length})</summary>${history(answered)}</details>`;
+${piles}`)}
+${foldCard('e-answered', 'identity-answered', `What you answered for it (${answered.length})`, history(answered), false)}`;
 }
 
 type Held = State['identities'][number];
@@ -547,8 +620,7 @@ export function record(r: IdentityRecord): string {
     l.card
       ? `<dl class="facts card-of"><dt>Latest act</dt><dd><code>${e(l.card.act)}</code></dd><dt>Position</dt><dd>${l.card.position}</dd><dt>Summary</dt><dd><code>${e(l.card.summary)}</code></dd></dl>`
       : '';
-  return `<h3>Its record</h3>
-<p class="small">As its homes and relays show it now. Nothing here is signed.</p>
+  return `<p class="small">As its homes and relays show it now. Nothing here is signed.</p>
 ${r.problems.map((p) => note('warn', e(p))).join('')}
 ${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines(x.lines)}`).join('')}
 <h4>Its lines of acts (${r.lines.length})</h4>
@@ -573,16 +645,16 @@ ${
 
 /** H16: a release under this identity's own name, its folder chosen at each release. */
 export function releaseCard(i: Held): string {
-  return `<section class="card" id="e-release"><h3>A release under its own name</h3>
-<p class="small">Publishes the files of a folder you choose now, signed by this identity alone. A git folder gives the files git tracks there; a plain folder gives every file but hidden ones. Every file is listed with its size and fingerprint, and the libraries it depends on, before anything is signed.</p>
-<form id="release-folder" class="row"><input name="folder" type="text" class="grow" placeholder="The folder: /Users/you/Projects/site or ~/Projects/site" autocomplete="off" spellcheck="false" required><button type="submit">Choose this folder</button></form>
+  return foldCard('e-release', 'identity-release', 'A release under its own name', `<p class="small">Publishes the files of a folder you choose now, signed by this identity alone. A git folder gives the files git tracks there; a plain folder gives every file but hidden ones. Every file is listed with its size and fingerprint, and the libraries it depends on, before anything is signed.</p>
+<div class="row"><button type="button" data-action="pick-folder" data-target="release-folder">Choose a folder…</button><span class="small">or paste its path, as Finder or the Terminal gives it</span></div>
+<form id="release-folder" class="row"><input name="folder" type="text" class="grow" placeholder="The folder: /Users/you/Projects/site or ~/Projects/site" autocomplete="off" spellcheck="false" required><button type="submit">Use this folder</button></form>
 <div id="e-release-form"></div>
 <div id="e-release-review"></div>
 ${
   i.releases.length
     ? `<details><summary>Its releases here (${i.releases.length})</summary><ul class="plain">${i.releases.map((r) => `<li>${e(r.name)} ${e(r.version)} ${fp(r.id)} <span class="small">from ${e(r.folder)}</span></li>`).join('')}</ul></details>`
     : ''
-}</section>`;
+}`);
 }
 
 /** The release's name, version and the release before it, once the folder is chosen. */
@@ -701,7 +773,7 @@ ${
 
 /** "+ Found a collective": the collective client's founding form and the members held here. A release under one's own name is on the Identities tab now (H16). */
 export function foundCollective(): string {
-  return `<h2>Found a test collective</h2>${note('warn', `<strong>Test mode.</strong> ${e(TEST_MODE_SAY)}`)}<div class="colroot" data-collective-root id="e-col-root"><div id="status"></div><div id="review"></div>
+  return `<h2>Found a test collective</h2>${note('warn', `<strong>Test mode, for trying things alone.</strong> ${e(TEST_MODE_SAY)} To found one with other people, each on their own device, choose “+ Found a real collective”.`)}<div class="colroot" data-collective-root id="e-col-root"><div id="status"></div><div id="review"></div>
 <section class="card"><h3>Its founding</h3><div id="found"></div></section>
 <section class="card"><h3>Members held here</h3><p class="small">Yourself, and the simulated members a test collective needs: held in the collective client's folder.</p><div id="identities"></div></section></div>
 <p class="small">A release under one’s own name is on the Identities tab, as an action of the identity selected.</p>`;
@@ -730,7 +802,7 @@ const STATE_WORDS = { yes: 'You may', 'with others': 'With others’ signatures'
 
 /** What this user may do for the collective, each permission naming the rule it rests on. */
 export function permissions(p: Permissions, open = true): string {
-  return `<details class="card fold" id="e-may" data-collective="${e(p.collective)}"${open ? ' open' : ''}><summary><h3>What you may do for it</h3><span class="small">${open ? 'Fold' : 'Unfold'}</span></summary>
+  return `<details class="card fold" id="e-may" data-fold="${e(p.collective)}" data-collective="${e(p.collective)}"${open ? ' open' : ''}><summary><h3>What you may do for it</h3><span class="small">${open ? 'Fold' : 'Unfold'}</span></summary>
 ${p.notes.length ? lines(p.notes) : ''}
 ${p.items
   .map((i) => `<div class="item" data-may="${e(i.what)}"><div class="row tight"><strong>${e(i.what)}</strong><span class="grow"></span>${i.byAgreement ? `<span class="state">By its agreement: ${STATE_WORDS[i.byAgreement]}</span><span class="state no">· now: ${STATE_WORDS[i.state]}</span>` : `<span class="state ${i.state === 'no' ? 'no' : ''}">${STATE_WORDS[i.state]}</span>`}</div>${lines(i.lines)}</div>`)
@@ -776,6 +848,9 @@ function person(s: State, id: string): string {
   return `${n ? `<span class="name">${e(n)}</span> ` : ''}${fp(id)}`;
 }
 
+/** Where a contact comes from, in a few words. */
+const whence = (c: State['contacts'][number]) => (c.from === 'added' ? '' : 'agent' in c.from ? `followed by ${e(c.from.agent)}` : `in ${e(c.from.list)}’s follow list`);
+
 /** The contacts list, with checkboxes to choose members (H18). */
 function contactPicks(s: State, picked: string[], skip: string[] = []): string {
   const rows = s.contacts.filter((c) => !skip.includes(c.id));
@@ -783,7 +858,7 @@ function contactPicks(s: State, picked: string[], skip: string[] = []): string {
     ? `<div class="picks">${rows
         .map(
           (c) =>
-            `<label class="check"><input type="checkbox" name="member" value="${e(c.id)}"${picked.includes(c.id) ? ' checked' : ''}> ${e(c.name)} ${fp(c.id)} <span class="small">${c.from === 'added' ? '' : `followed by ${e(c.from.agent)}`}</span></label>`,
+            `<label class="check"><input type="checkbox" name="member" value="${e(c.id)}"${picked.includes(c.id) ? ' checked' : ''}> ${e(c.name)} ${fp(c.id)} <span class="small">${whence(c)}</span></label>`,
         )
         .join('')}</div>`
     : '<p class="small">No contact yet: add one below, or type IDs.</p>';
@@ -792,8 +867,8 @@ function contactPicks(s: State, picked: string[], skip: string[] = []): string {
 /** The contacts card: add by ID with a name, kept here; remove. */
 export function contactsCard(s: State): string {
   return `<section class="card" id="e-contacts"><h3>Contacts (${s.contacts.length})</h3>
-<p class="small">Identities you add by ID, with a name you give them, kept on this Mac and never published (as the people cMIP keeps names), and those your agents follow.</p>
-${s.contacts.length ? `<ul class="plain">${s.contacts.map((c) => `<li>${e(c.name)} ${fp(c.id)} ${c.from === 'added' ? `<button class="quiet" data-action="contact-remove" data-id="${e(c.id)}">Remove</button>` : `<span class="small">followed by ${e(c.from.agent)}</span>`}</li>`).join('')}</ul>` : ''}
+<p class="small">Identities you add by ID, with a name you give them, kept on this Mac and never published; those your agents follow; and those in the follow list sealed to an identity held here (as Dub keeps it, with the names given there: people cMIP draft 2). <button class="quiet" data-action="real-lists">Read the follow lists again</button></p>
+${s.contacts.length ? `<ul class="plain">${s.contacts.map((c) => `<li>${e(c.name)} ${fp(c.id)} ${c.from === 'added' ? `<button class="quiet" data-action="contact-remove" data-id="${e(c.id)}">Remove</button>` : `<span class="small">${whence(c)}</span>`}</li>`).join('')}</ul>` : ''}
 <form id="contact-add" class="row"><input name="id" type="text" class="grow" placeholder="An identity’s ID" autocomplete="off" spellcheck="false" required><input name="name" type="text" class="pet" placeholder="Its name here" required><button type="submit">Add</button></form></section>`;
 }
 
@@ -801,10 +876,11 @@ ${s.contacts.length ? `<ul class="plain">${s.contacts.map((c) => `<li>${e(c.name
 export function realFound(s: State): string {
   const founders = s.identities.filter((i) => !s.agents.some((a) => a.id === i.id));
   return `<h2>Found a real collective</h2>
-${note('', 'Each member signs in their own Dub, on their own device, after reading the founding terms in plain words (Dub’s Signing tab, turned on in its identity window). The collective is founded once every one has signed. Its chain key is then dealt as one share per member, kept on paper: a member’s share goes sealed to a one-time key their Dub makes when they sign, or is shown here, hand to hand; yours is shown here once. No app keeps a share.')}
+${note('', `<strong>Real, not a test.</strong> ${e(REAL_SAY)}`)}
+${note('', 'How: each member reads the founding terms in plain words and signs on their own device (Dub’s Signing tab, turned on in its identity window; or “To sign” in an Edubba holding them). The collective is founded once every one has signed. Its chain key is then dealt as one share per member, kept on paper: a member’s share goes sealed to a one-time key their Dub makes when they sign, or is shown here, hand to hand; yours is shown here once. No app keeps a share.')}
 <section class="card"><form id="real-found">
 <label>Its name, kept on this Mac</label><input name="name" type="text" required>
-<label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}">${e(i.name)}</option>`).join('')}</select>
+<label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}"${i.id === s.acting ? ' selected' : ''}>${e(i.name)}</option>`).join('')}</select>
 <label>Its other members, from your contacts</label>${contactPicks(s, [])}
 <label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
 <fieldset><legend>Its rules</legend><div class="row">
@@ -888,23 +964,23 @@ export function realDetails(s: State, id: string, c: RealCollective): string {
   const mine = s.proposals.filter((p) => p.collective === id && p.kind !== 'founding');
   return `<div class="head"><h2>${e(col.name)}</h2><span class="id">${grouped(id)}</span>${copyButton(id)}<span class="tag">real</span></div>
 <div class="row"><button data-action="constitution">Its constitution, in plain words</button></div>
-<section class="card"><h3>Its members (${c.members.length})</h3><ul class="plain">${c.members.map((m) => `<li>${person(s, m)}${m === c.holder ? ' <span class="small">holds its signing key, here</span>' : ''}</li>`).join('')}</ul>
+${foldCard('e-real-members', 'collective-members', `Its members (${c.members.length})`, `<ul class="plain">${c.members.map((m) => `<li>${person(s, m)}${m === c.holder ? ' <span class="small">holds its signing key, here</span>' : ''}</li>`).join('')}</ul>
 <p class="small">Its chain key: one share per member, kept on paper, any ${c.threshold} rebuilding it. Dealing fingerprint <code>${e(c.fingerprint.match(/.{1,4}/g)!.slice(0, 8).join(' '))}</code>. No app holds a share.</p>
-${c.pending ? note('warn', 'A member change was rotated and waits for its homes to count it.') : ''}</section>
+${c.pending ? note('warn', 'A member change was rotated and waits for its homes to count it.') : ''}`)}
 ${sharesHere(s, id, c.toShow)}<div id="e-shares-here"></div>
 <div id="e-perms"><p class="small">Reading its agreement in force…</p></div>
 ${mine.map((p) => proposalStatus(s, p)).join('')}
-<section class="card"><h3>Change its members</h3><form id="real-change" data-collective="${e(id)}">
+${foldCard('e-real-change', 'collective-change', 'Change its members', `<form id="real-change" data-collective="${e(id)}">
 <p class="small">Tick who is a member after the change. Every member whose voice remains signs it, and each joining member, each in their own app; then it waits for Kišib.</p>
 <div class="picks">${c.members.map((m) => `<label class="check"><input type="checkbox" name="member" value="${e(m)}" checked> ${person(s, m)}</label>`).join('')}</div>
 ${contactPicks(s, [], c.members)}
 <label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
-<div class="row"><button type="submit">Review the change</button></div></form></section>
-<section class="card"><h3>A release</h3><form id="real-release" data-collective="${e(id)}">
+<div class="row"><button type="submit">Review the change</button></div></form>`, false)}
+${foldCard('e-real-release', 'collective-release', 'A release', `<form id="real-release" data-collective="${e(id)}">
 <p class="small">Published by the collective, from a folder chosen now (a git folder: what git tracks; a plain folder: every file but hidden ones). It counts once enough members sign it, each in their own app.</p>
-<label>The folder</label><input name="folder" type="text" required spellcheck="false">
+<label>The folder</label><div class="row"><input name="folder" type="text" class="grow" required spellcheck="false" autocomplete="off"><button type="button" data-action="pick-folder" data-target="real-release">Choose a folder…</button></div>
 <div class="row"><label>Its name <input name="name" type="text" class="pet"></label><label>Its version <input name="version" type="text" class="narrow" required></label></div>
-<div class="row"><button type="submit">Review the release</button></div></form></section>
+<div class="row"><button type="submit">Review the release</button></div></form>`)}
 <div id="e-real-review"></div>
 <h3>Its posts</h3><div id="e-posts"><p class="small">Reading…</p></div>`;
 }

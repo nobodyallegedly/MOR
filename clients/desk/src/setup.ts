@@ -109,15 +109,8 @@ interface ReleasePlan {
 /** How long a review stays good to sign, in milliseconds (as the collective client's). */
 const PLAN_FOR = 15 * 60 * 1000;
 
-/** The folder a person typed: `~` for their home folder; an absolute path. */
-export function folderOf(typed: string): string {
-  const t = typed.trim();
-  if (!t) throw new Error('Choose a folder: its path, as Finder or the Terminal shows it (for example ~/Projects/site).');
-  const p = t === '~' ? homedir() : t.startsWith('~/') ? join(homedir(), t.slice(2)) : t;
-  if (!isAbsolute(p)) throw new Error(`“${t}”: give the whole path, starting with / or ~/.`);
-  if (!existsSync(p) || !statSync(p).isDirectory()) throw new Error(`There is no folder at ${p}.`);
-  return realpathSync(resolve(p));
-}
+import { folderOf } from './folders.ts';
+export { folderOf };
 
 /** Whether git tracks this folder: it is inside a git working tree. */
 function inGit(folder: string): boolean {
