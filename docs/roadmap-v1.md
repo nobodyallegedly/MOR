@@ -359,6 +359,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 V1 is frozen at inception, and nobody is appointed to decide what comes next. "That is a problem they can deal with if they become curious and excited… and they can do so without me. I can move on to other things." A successor is anyone's to build, and users move to it by choice, as the core already provides.
 
+*MOR 2 research (17 October 2026, F337):* generating a collective's chain key jointly, so no device ever holds it whole (no trusted dealer at founding or rotation), with a post-quantum signature that allows it.
+
 ### Ideas above the core, for builders
 
 *Private acts that say less (16 to 17 October 2026, from the sealed follow list; Nobody, allegedly: "that cost will always exist unless someone finds a way of chopping acts across multiple relays"; "absolutely"):* padding private acts to a few fixed sizes; decoy private acts to hide existence and timing; reading over Tor to hide the reader; splitting an act across independent relays so no single relay holds anything meaningful (no defence against relays that compare notes). All above the core: cMIPs and relay-market choices.

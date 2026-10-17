@@ -24,6 +24,18 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F337. A collective's rotation: how shares travel, the risks, and saying so (17 October 2026)
+
+*Area: development layer and presentation (Kišib), with a stated cost of the core's split chain key. Asked by the Kišib session; Nobody, allegedly, asked the project lead's view: "how the key shares travel to the one app that executes the rotation".*
+
+**How shares travel (the project lead's view, to weigh against the session's lean):** as they went out at founding. Remote by default: the member who starts the rotation opens Kišib, which makes a one-time key and announces a rotation waiting; each other member types their paper share into their own Kišib, which seals it to that one-time key and sends it. In the same room: the papers typed one after another into one Kišib, nothing sent. A rotation retires the old key, so an old share leaked on the way is worthless once it completes.
+
+**Best practice, to minimise the risks** ("What would be best practice to minimize the risks."): the key alive only in memory, the rotation signed at once, the new shares dealt, the key wiped, never written anywhere; the signed bytes kept for resending, not the key; the cleanest device (the app rather than the web page; ideally a device used for nothing else; the air-gapped way as the gold standard); each member consenting to this rotation, shown in plain words with its fingerprint, the share sealed with that fingerprint; exactly the threshold collected, no more; the waiting one-time key expiring (an hour, say), unused shares unopenable after; rebuild, rotate and deal in one sitting; afterwards new paper replacing old, and the rotation shown in every member's Dub and Edubba.
+
+**The weakness, named** ("Is this a big weakness?"): the rotating device, like the founder's at founding, creates the new chain key and deals its shares, so for that moment it knows the new key whole and, if compromised or dishonest, could keep it and later act alone, past the threshold. A trusted dealer at two moments of a collective's life (founding and each rotation); already the Module's stated price (F97); common to most split-key systems; individual identities unaffected. The project lead's assessment: real but bounded, acceptable for MOR 1 if stated plainly; the cure (generating the key jointly, never whole anywhere) is not practical yet for the hash-based signature the chain key uses: a MOR 2 research item.
+
+**Decided by Nobody, allegedly:** "Kišib needs to lay all this properly to its users." Kišib (and Edubba at founding) says it plainly, before anything is done: who sees the whole key and when, what that device could do if it were not honest, how to choose it, and the practices above.
+
 ## F336. Conformance vectors for every layer, and an independent verifier in C, before the freeze (16 October 2026)
 
 *Area: development layer and the freeze. Asked by Nobody, allegedly: "If we were to freeze as is… the first useful test another person could do is to rebuild it from documents, correct?"*
