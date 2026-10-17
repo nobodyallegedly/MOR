@@ -55,7 +55,7 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; hom
 6. The remaining human tests on the cleaned apps.
 7. The freeze-ready drafts, including: Agreements' count aligned with every MIR's format (F295, found under F334); MICS and suite naming Text 9. And **published conformance vectors for every layer** (asked by Nobody, allegedly, 16 October: the first useful test of a frozen MOR is someone rebuilding a verifier from the texts alone, in another language): today `core/vectors/` has part 1 only (tagged hash, CBOR, canonical text, lock, running summary, the three-act sequence, opening acts, the sealed container), checked by an independent Python implementation; missing are signatures (part 2) and verdict vectors (these exact acts give valid, invalid or unknown) for Identity (rotations, contests, receipts, succession), Text, Money, Agreements and Development.
 8. An independent verifier in C, written only from the texts and the vectors, passing every vector (F336: "it will show proof of work").
-9. The step 17 rehearsal, then the freeze.
+9. The step 17 rehearsal, then the freeze. Before the first wave, when the repository goes public: tighten main's protection (pull requests and passing checks required, the release workflows allowed to commit); for now only force pushes and deletion of main are blocked (17 October 2026).
 
 ## Working rules for sessions
 
