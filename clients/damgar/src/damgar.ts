@@ -1175,7 +1175,7 @@ export class Damgar {
           lines.push({ text: message(e), tone: 'warn' });
         }
       }
-      if (dr.what === 'anchor' && dr.anchor) lines.push({ text: `For an anchor of one act on the Bitcoin clock, through the service’s standing offer ${short(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret Edubba keeps), never the act. Whether the payment follows its offer is Agreements’ to judge: unknown here.` });
+      if (dr.what === 'anchor' && dr.anchor) lines.push({ text: `For an anchor of one act on the Bitcoin clock, through the service’s standing offer ${short(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements’ to judge: unknown here.` });
     }
     return { id, kind: 'draft', from: this.who(me.id, me.id), app: dr.app, title: dr.what === 'ask' ? 'A request to send' : dr.what === 'anchor' ? 'A payment for an anchor' : 'A payment to make', lines, amount: { ...dr.amount, said: say(dr.amount, acc) }, unknown, offers: unknown ? ['decline'] : ['sign', 'decline'], found: x.found };
   }

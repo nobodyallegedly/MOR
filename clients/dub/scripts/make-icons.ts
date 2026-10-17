@@ -3,7 +3,8 @@
 // tablets), Kišib's (`../kishib/static/icon/kishib.svg`, a cylinder seal
 // beside the strip of clay it leaves) and Damgar's
 // (`../damgar/static/icon/damgar.svg`, a clay tablet with a resting duck
-// carved out of it). Each is rendered by Chromium at the sizes the Mac and Linux ask
+// carved out of it) and Ummia's (`../ummia/static/icon/ummia.svg`, a round
+// school tablet, the master's line above and the pupil's copy beneath). Each is rendered by Chromium at the sizes the Mac and Linux ask
 // for, then:
 //   NAME.png    256 pixels, for the Linux desktop entry (`make-desktop.sh`);
 //   NAME.icns   the Mac's icon file, its PNG entries 16 to 1024 pixels
@@ -13,7 +14,8 @@
 //               (apple-touch-icon; H35). The phone rounds its corners itself.
 // Both are kept in the repository beside the drawing, so making an app needs
 // nothing more; run this again only when a drawing changes:
-//   node --import tsx scripts/make-icons.ts
+//   node --import tsx scripts/make-icons.ts [NAME...]
+// With names (dub, edubba, kishib, damgar, ummia), only those are made.
 // Chromium: /opt/pw-browsers or MOR_CHROMIUM (as the tests find it).
 
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -96,7 +98,9 @@ try {
     [join(here, '..', 'desk', 'static', 'icon'), 'edubba'],
     [join(here, '..', 'kishib', 'static', 'icon'), 'kishib'],
     [join(here, '..', 'damgar', 'static', 'icon'), 'damgar'],
+    [join(here, '..', 'ummia', 'static', 'icon'), 'ummia'],
   ] as const) {
+    if (process.argv.length > 2 && !process.argv.slice(2).includes(name)) continue;
     const svg = readFileSync(join(dir, `${name}.svg`), 'utf8');
     const pngs = new Map<number, Buffer>();
     for (const n of [16, 32, 64, 128, 256, 512, 1024]) pngs.set(n, await render(page, svg, n));

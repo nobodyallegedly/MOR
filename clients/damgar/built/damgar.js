@@ -6266,7 +6266,7 @@ var ACCEPTABLE = [
     draft: 5,
     hashes: [SPEC.anchoring],
     does: "Putting an act\u2019s fingerprint on a clock everyone can read (the Bitcoin chain), through a pooled service paid per fingerprint: its offer, the ticket it signs for each paid fingerprint, the batches it publishes.",
-    here: "Edubba asks for an anchor of a collective\u2019s act; the payment for it arrives here, and is signed here. Its ticket is shown with it.",
+    here: "Edubba asks for an anchor of a collective\u2019s act, Ummia of a release; the payment for it arrives here, and is signed here. Its ticket is shown with it.",
     built: true,
     needs: ["payment", "lightning", "bitcoin-units", "bitcoin-clock"]
   },
@@ -7507,7 +7507,7 @@ var Damgar = class {
           lines2.push({ text: message2(e2), tone: "warn" });
         }
       }
-      if (dr.what === "anchor" && dr.anchor) lines2.push({ text: `For an anchor of one act on the Bitcoin clock, through the service\u2019s standing offer ${short(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret Edubba keeps), never the act. Whether the payment follows its offer is Agreements\u2019 to judge: unknown here.` });
+      if (dr.what === "anchor" && dr.anchor) lines2.push({ text: `For an anchor of one act on the Bitcoin clock, through the service\u2019s standing offer ${short(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements\u2019 to judge: unknown here.` });
     }
     return { id, kind: "draft", from: this.who(me.id, me.id), app: dr.app, title: dr.what === "ask" ? "A request to send" : dr.what === "anchor" ? "A payment for an anchor" : "A payment to make", lines: lines2, amount: { ...dr.amount, said: say(dr.amount, acc) }, unknown, offers: unknown ? ["decline"] : ["sign", "decline"], found: x.found };
   }

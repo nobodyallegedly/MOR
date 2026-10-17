@@ -29,6 +29,10 @@ for pkg in clients/* modules/jpeg modules/video modules/carry modules/timestamp;
   if [ "$pkg" = clients/damgar ]; then
     for p in desk dub barebone repo collective assess kishib manage anchoring-service testwallet; do (cd "clients/$p" && npm ci --no-audit --no-fund); done
   fi
+  # Ummia's run Dub, Edubba, Damgar, Kišib, the anchoring service, the site's listing and the reports mirror beside it.
+  if [ "$pkg" = clients/ummia ]; then
+    for p in desk dub barebone repo collective assess kishib manage anchoring-service damgar site longform connector reader reports; do (cd "clients/$p" && npm ci --no-audit --no-fund); done
+  fi
   (cd "$pkg" && npm ci --no-audit --no-fund && npm test)
 done
 

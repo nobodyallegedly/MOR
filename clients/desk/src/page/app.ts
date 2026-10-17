@@ -4,7 +4,7 @@
 // Constitution sub-tab is the collective client's own page logic
 // (`clients/collective/src/page/mount.ts`), mounted here.
 
-import { Client, Refused, type ActRead, type IdentityRecord, type ReleaseReview, type RealCollective, type ShareHere, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Permissions, type State } from './api.ts';
+import { Client, Refused, type ActRead, type IdentityRecord, type RealCollective, type ShareHere, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Permissions, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
@@ -220,15 +220,15 @@ async function drawRecord(id: string, again = true) {
 }
 
 /**
- * What is being written or reviewed on the Identities tab (a folder chosen,
- * a release reviewed, an act read back), kept across a redraw, as notes on
+ * What is being written or reviewed on the Identities tab (an act read
+ * back), kept across a redraw, as notes on
  * drafts are: a new draft arriving must not lose them.
  */
 function keepForms(): () => void {
-  const ids = ['e-rely-shown', 'e-release-form', 'e-release-review'];
+  const ids = ['e-rely-shown'];
   const html = new Map(ids.map((i) => [i, $(i)?.innerHTML ?? '']));
   const values = new Map<string, string>();
-  for (const f of ['rely', 'release-folder', 'release-prepare']) $<HTMLFormElement>(f)?.querySelectorAll<HTMLInputElement>('input,select,textarea').forEach((x) => values.set(`${f}:${x.name}`, x.value));
+  for (const f of ['rely']) $<HTMLFormElement>(f)?.querySelectorAll<HTMLInputElement>('input,select,textarea').forEach((x) => values.set(`${f}:${x.name}`, x.value));
   const was = at.identity;
   return () => {
     if (at.identity !== was) return;
@@ -506,8 +506,6 @@ app.addEventListener('click', async (ev) => {
       const input = $<HTMLFormElement>(target)?.elements.namedItem('folder') as HTMLInputElement | null;
       if (input) input.value = d.path!;
       $<HTMLDialogElement>('e-dialog')!.close();
-      // A release's folder is used at once: as "Use this folder".
-      if (target === 'release-folder') $<HTMLFormElement>('release-folder')?.requestSubmit();
       break;
     }
     case 'real-lists': {
@@ -729,23 +727,6 @@ app.addEventListener('click', async (ev) => {
     case 'record':
       await drawRecord(d.identity!);
       break;
-    case 'release-cancel':
-      void c.ask('release cancel', { plan: d.plan }).catch(() => undefined);
-      fill('e-release-review', '');
-      say('', 'Nothing was signed.', $('e-release-review'));
-      break;
-    case 'release-sign': {
-      const r = await busy('Signing the release and publishing its files…', () => c.ask<Done>('release confirm', { plan: d.plan, digest: d.digest }), $('e-release-review'));
-      if (r) {
-        records.delete(at.identity!);
-        // Signed: the folder chosen and its review are done with, and are not kept across the redraw.
-        fill('e-release-review', '');
-        fill('e-release-form', '');
-        await refresh();
-        say('done', v.done(r));
-      }
-      break;
-    }
     case 'sort':
       try {
         await c.ask('sort', { identity: d.identity, key: d.key, sorted: d.sorted });
@@ -1049,27 +1030,6 @@ app.addEventListener('submit', async (ev) => {
       fill('e-rely-shown', '');
       void drawRecord(form.dataset.identity!);
       say('done', `<strong>Witness act signed and sent.</strong><br>Act ${v.e(r.id)}.`, $('e-rely-shown'));
-    }
-    return;
-  }
-  if (fid === 'release-folder') {
-    const i = state.identities.find((x) => x.id === at.identity)!;
-    const r = await busy('Looking at the folder…', () => c.ask<{ folder: string; how: 'git' | 'plain'; name: string; previous: string | null }>('release folder', { identity: i.id, folder: String(d.get('folder') ?? '') }), $('e-release-form'));
-    if (r) {
-      fill('e-release-review', '');
-      fill('e-release-form', v.releaseForm(i, r));
-    }
-    return;
-  }
-  if (fid === 'release-prepare') {
-    const r = await busy(
-      'Reading every file, locking each, and making the manifest…',
-      () => c.ask<ReleaseReview>('release prepare', { identity: at.identity, folder: form.dataset.folder, name: words(d.get('name')), version: words(d.get('version')), previous: words(d.get('previous')) }),
-      $('e-release-review'),
-    );
-    if (r) {
-      fill('e-release-review', v.releaseReview(r));
-      $('e-release-review')?.scrollIntoView({ block: 'start' });
     }
     return;
   }

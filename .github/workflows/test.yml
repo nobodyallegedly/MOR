@@ -66,6 +66,9 @@ jobs:
       - name: clients/damgar
         if: success() || failure()
         run: for p in desk dub barebone repo collective assess kishib manage anchoring-service testwallet; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/damgar && npm ci --no-audit --no-fund && npm test
+      - name: clients/ummia
+        if: success() || failure()
+        run: for p in desk dub barebone repo collective assess kishib manage anchoring-service damgar site longform connector reader reports; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/ummia && npm ci --no-audit --no-fund && npm test
       - name: clients/anchoring-service
         if: success() || failure()
         run: cd clients/anchoring-service && npm ci --no-audit --no-fund && npm test

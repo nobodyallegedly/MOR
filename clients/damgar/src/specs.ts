@@ -139,7 +139,7 @@ export const ACCEPTABLE: Acceptable[] = [
     draft: 5,
     hashes: [SPEC.anchoring],
     does: 'Putting an act’s fingerprint on a clock everyone can read (the Bitcoin chain), through a pooled service paid per fingerprint: its offer, the ticket it signs for each paid fingerprint, the batches it publishes.',
-    here: 'Edubba asks for an anchor of a collective’s act; the payment for it arrives here, and is signed here. Its ticket is shown with it.',
+    here: 'Edubba asks for an anchor of a collective’s act, Ummia of a release; the payment for it arrives here, and is signed here. Its ticket is shown with it.',
     built: true,
     needs: ['payment', 'lightning', 'bitcoin-units', 'bitcoin-clock'],
   },

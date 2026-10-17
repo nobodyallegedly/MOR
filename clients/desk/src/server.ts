@@ -200,15 +200,6 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
         return setup.record(text(a.identity));
       case 'bring':
         return setup.bring({ name: text(a.name), id: text(a.id), words: text(a.words), address: text(a.address), linked: a.linked === true });
-      case 'release folder':
-        return setup.suggest(text(a.identity), text(a.folder));
-      case 'release prepare':
-        return setup.prepareRelease({ identity: text(a.identity), folder: text(a.folder), name: text(a.name), version: text(a.version), previous: text(a.previous) || null });
-      case 'release confirm':
-        return setup.confirmRelease(text(a.plan), text(a.digest));
-      case 'release cancel':
-        setup.cancelRelease(text(a.plan));
-        return {};
       case 'fold':
         // H14, H26, H34: a fold as the person left it; a collective's "What you may do for it" by the collective's ID, every other by its name.
         desk.fold(text(a.key) || text(a.collective), a.open === true);

@@ -17,7 +17,7 @@ import { STYLE as DUB, proposal as dubProposal, share as dubShare, SIGNING_LABEL
 import type { Proposal as MemberProposal, ShareShown } from '../../../dub/src/shapes.ts';
 import { STYLE as TEXT, plainHtml } from '../../../longform/src/html.ts';
 import type { Listing } from '../folders.ts';
-import type { ActRead, RealCollective, RealProposal, ShareHere, AgentDetails, AgentSummary, AgentView, Constitution, Done, DraftView, IdentityRecord, Item, Line, MachineState, Permissions, ReleaseReview, Sorted, State } from './api.ts';
+import type { ActRead, RealCollective, RealProposal, ShareHere, AgentDetails, AgentSummary, AgentView, Constitution, Done, DraftView, IdentityRecord, Item, Line, MachineState, Permissions, Sorted, State } from './api.ts';
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 
 export { e };
@@ -697,48 +697,17 @@ export function anchors(xs: { act: string; label: string; service: string; tier:
   return xs.length ? xs.map((x) => `<div class="item"><span class="tag">${e(x.state)}</span> ${e(x.label)} ${fp(x.act)} <span class="small">by ${fp(x.service)}, tier ${x.tier}</span>${lines(x.lines)}</div>`).join('') : '<p class="empty small">None asked yet.</p>';
 }
 
-/** H16: a release under this identity's own name, its folder chosen at each release. */
+/** H16, moved (F339): releases under one's own name are made in Ummia, the developers' app; the releases made here before are listed. */
+export const RELEASES_MOVED =
+  'Releases under one’s own name, and their anchoring on Bitcoin, are made in Ummia, the developers’ app, since 17 October 2026 (F339): bring this identity into Ummia by its signing key’s words. A collective’s releases stay here, in the Collectives tab, until Ummia’s second round.';
+
 export function releaseCard(i: Held): string {
-  return foldCard('e-release', 'identity-release', 'A release under its own name', `<p class="small">Publishes the files of a folder you choose now, signed by this identity alone. A git folder gives the files git tracks there; a plain folder gives every file but hidden ones. Every file is listed with its size and fingerprint, and the libraries it depends on, before anything is signed.</p>
-<div class="row"><button type="button" data-action="pick-folder" data-target="release-folder">Choose a folder…</button><span class="small">or paste its path, as Finder or the Terminal gives it</span></div>
-<form id="release-folder" class="row"><input name="folder" type="text" class="grow" placeholder="The folder: /Users/you/Projects/site or ~/Projects/site" autocomplete="off" spellcheck="false" required><button type="submit">Use this folder</button></form>
-<div id="e-release-form"></div>
-<div id="e-release-review"></div>
+  return foldCard('e-release', 'identity-release', 'Releases under its own name: in Ummia', `<p class="small">${e(RELEASES_MOVED)}</p>
 ${
   i.releases.length
-    ? `<details><summary>Its releases here (${i.releases.length})</summary><ul class="plain">${i.releases.map((r) => `<li>${e(r.name)} ${e(r.version)} ${fp(r.id)} <span class="small">from ${e(r.folder)}</span></li>`).join('')}</ul></details>`
+    ? `<details><summary>Its releases made here before (${i.releases.length})</summary><ul class="plain">${i.releases.map((r) => `<li>${e(r.name)} ${e(r.version)} ${fp(r.id)} <span class="small">from ${e(r.folder)}</span></li>`).join('')}</ul></details>`
     : ''
 }`);
-}
-
-/** The release's name, version and the release before it, once the folder is chosen. */
-export function releaseForm(i: Held, f: { folder: string; how: 'git' | 'plain'; name: string; previous: string | null }): string {
-  const opts = [`<option value=""${f.previous ? '' : ' selected'}>None: a new release line</option>`, ...i.releases.map((r) => `<option value="${e(r.id)}"${r.id === f.previous ? ' selected' : ''}>${e(r.name)} ${e(r.version)} (${e(r.id.slice(0, 8))}…), from ${e(r.folder)}</option>`)].join('');
-  return `<form id="release-prepare" data-folder="${e(f.folder)}">
-<p class="small">${e(f.folder)}: ${f.how === 'git' ? 'a git folder: the files git tracks there.' : 'a plain folder: every file but hidden ones.'}</p>
-<label>Its name</label><input name="name" type="text" value="${e(f.name)}" required>
-<label>Its version</label><input name="version" type="text" placeholder="For example 1.0" required>
-<label>The release before it</label><select name="previous">${opts}</select>
-<p class="small">Pre-set to this identity’s last release of the same name, if any. The review says which release it follows and what changed since.</p>
-<div class="row"><button type="submit">Review the release</button></div></form>`;
-}
-
-const size = (n: number) => (n < 1024 ? `${n} bytes` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`);
-
-/** The release read back: every file with its size and fingerprint, the libraries, then the one button that signs exactly that. */
-export function releaseReview(r: ReleaseReview): string {
-  const blocked = r.blocking.length ? note('error', `<strong>This cannot be signed:</strong><ul>${r.blocking.map((b) => `<li>${e(b)}</li>`).join('')}</ul>`) : '';
-  return `<div class="card review" id="e-release-shown"><h3>${e(r.title)}</h3>
-${r.summary.map((x) => `<p>${e(x)}</p>`).join('')}
-${blocked}
-${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines(x.lines)}`).join('')}
-<h4>Every file (${r.files.length})</h4>
-<div class="files"><table><tr><th>File</th><th>Size</th><th>Fingerprint</th></tr>${r.files.map((f) => `<tr><td dir="auto">${e(f.path)}</td><td>${e(size(f.size))}</td><td><code title="${e(f.fingerprint)}">${e(f.fingerprint.slice(0, 16))}…</code></td></tr>`).join('')}</table></div>
-<h4>The libraries it depends on (${r.dependencies.length})</h4>
-${r.dependencies.length ? `<div class="files"><table><tr><th>Where</th><th>Library</th><th>Version</th></tr>${r.dependencies.map((d) => `<tr><td>${e(d.registry)}</td><td>${e(d.name)}</td><td>${e(d.version)}</td></tr>`).join('')}</table></div>` : '<p class="small">None: it names no lock file (Cargo.lock, package-lock.json).</p>'}
-${r.skipped.length ? `<h4>Not in the release (${r.skipped.length})</h4><ul>${r.skipped.map((x) => `<li class="warn">${e(x)}</li>`).join('')}</ul>` : ''}
-<p class="digest">Digest of exactly what is signed: ${e(r.digest.match(/.{1,4}/g)!.join(' '))}</p>
-<div class="row"><button class="primary" data-action="release-sign" data-plan="${e(r.plan)}" data-digest="${e(r.digest)}"${r.blocking.length ? ' disabled' : ''}>Sign and publish</button><button data-action="release-cancel" data-plan="${e(r.plan)}">Cancel</button></div></div>`;
 }
 
 /** Drafts naming an identity this desk does not hold: shown so nothing waits unseen. */
@@ -825,12 +794,12 @@ ${
 }`;
 }
 
-/** "+ Found a collective": the collective client's founding form and the members held here. A release under one's own name is on the Identities tab now (H16). */
+/** "+ Found a collective": the collective client's founding form and the members held here. A release under one's own name is Ummia's now (F339). */
 export function foundCollective(): string {
   return `<h2>Found a test collective</h2>${note('warn', `<strong>Test mode, for trying things alone.</strong> ${e(TEST_MODE_SAY)} To found one with other people, each on their own device, choose “+ Found a real collective”.`)}<div class="colroot" data-collective-root id="e-col-root"><div id="status"></div><div id="review"></div>
 <section class="card"><h3>Its founding</h3><div id="found"></div></section>
 <section class="card"><h3>Members held here</h3><p class="small">Yourself, and the simulated members a test collective needs: held in the collective client's folder.</p><div id="identities"></div></section></div>
-<p class="small">A release under one’s own name is on the Identities tab, as an action of the identity selected.</p>`;
+<p class="small">A release under one’s own name is made in Ummia, the developers’ app (F339).</p>`;
 }
 
 /** "+ Bring an existing collective" (H15): by its ID, read from its homes, one of your identities among its members. */
