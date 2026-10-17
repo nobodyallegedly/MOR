@@ -45,7 +45,7 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; hom
 
 ## Open, in order
 
-1. Human test 10, real collectives on three devices (the author; the steps at the end of `docs/real-collectives-report.md`). In parallel, if wished, the Edubba session for agents (item 2).
+1. A Dub and Edubba session after human test 10 (passed, H24): H19, H23, H25 to H34 in `docs/human-tests-v1-findings.md` (icons, folds, clearer test mode, switching identity, a relay filter, following by ID, the follow list sealed to oneself (people cMIP draft 2), a reload keeping its tab, looking for answers and shares by itself, a folder picker and near-match names, "acting as" and member signing in Edubba).
 2. An Edubba session for agents: reading and verifying any public act (H21); memory, the exchange handed on and notes sealed to itself on MOR (H22); a pasted Terminal path and a folder picker (H19).
 3. The site session (structure and look; H1, H2, H7; the reader showing display names, H17). Nearer release: the KI tab icon's fit and the tablet in the footer (H13).
 4. Kišib (was "MOR Safety"), the rotation and emergency app (F332 amended, F335).
