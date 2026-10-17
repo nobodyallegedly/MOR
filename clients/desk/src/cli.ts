@@ -11,12 +11,15 @@ import { fileURLToPath } from 'node:url';
 import { serve } from './server.ts';
 import { version } from './version.ts';
 import { openProgram, stopProgram, runFile } from './launch.ts';
+import { chainFrom, rememberRegtest } from '../../damgar/src/chain.ts';
 
 const HELP = `mor-desk: Edubba, the tablet house: agents, identities and collectives, with no command line.
 TEST IDENTITIES ONLY: every key is held in software, in its folders.
 
-  open [--dir DIR] [--collective DIR] [--port N]   Start the program if it is not running,
-                                and open its page in the browser, paired by a one-time link.
+  open [--dir DIR] [--collective DIR] [--port N] [--regtest RUN_DIR]
+                                Start the program if it is not running, and open its page in
+                                the browser, paired by a one-time link. With --regtest, Edubba
+                                follows that regtest network's chain, to check Bitcoin anchors.
   run  [--dir DIR] [--collective DIR] [--port N]   Run the program here, in the foreground.
   stop [--dir DIR]              Stop the running program.
 
@@ -63,7 +66,7 @@ async function main() {
   const port = Number(o.port ?? 8471);
   switch (cmd) {
     case 'run': {
-      const r = await serve({ dir, port, collective });
+      const r = await serve({ dir, port, collective, chain: chainFrom(dir, o.regtest) });
       console.log(`mor-desk: ${r.base}/ (folder ${dir})`);
       const stop = () => void r.close().then(() => process.exit(0));
       process.on('SIGTERM', stop);
@@ -74,6 +77,7 @@ async function main() {
       // The collective client's own program, if left running, holds the same
       // folder: it is stopped, so two programs never sign from one file.
       if (runFile(collective)) await stopProgram(collective);
+      if (o.regtest) rememberRegtest(dir, o.regtest);
       await openProgram({ dir, port, cli: fileURLToPath(import.meta.url), cwd: pkg, log: 'desk.log', version });
       break;
     case 'stop':

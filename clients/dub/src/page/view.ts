@@ -65,6 +65,7 @@ button.quiet:hover,.acts button:hover{color:var(--text)}
 input,textarea{font:inherit;color:var(--text);background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px;width:100%}
 input:focus,textarea:focus{outline:none;border-color:var(--faint)}
 textarea{min-height:3.2em;resize:vertical}
+select{font:inherit;color:var(--text);background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px}
 label{display:block;margin:12px 0 4px;font-size:13px;color:var(--soft)}
 .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:10px 0}
 .grow{flex:1}
@@ -326,6 +327,9 @@ ${people(s)}
 <textarea name="text" required placeholder="Write something private"></textarea>
 <div class="row"><span class="grow small">Sealed to them: only they can open it.</span><button type="submit" class="primary">Send</button></div>
 </form>
+<details class="fold" data-fold="askpaid"><summary>Ask someone to pay you</summary><form id="askpaid" class="compose"><input name="to" autocomplete="off" spellcheck="false" placeholder="Who: an identity’s ID" required>
+<div class="row tight"><input name="value" inputmode="numeric" class="pet" placeholder="Amount" required><select name="unit">${unitOptions(s.units)}</select></div><input name="whatFor" placeholder="What for (optional)">
+<p class="small">${e(MONEY_SAY)} A request is not a debt: they may pay it, accept it as a debt, or decline.</p><div class="row"><button type="submit" class="primary">Prepare it for Damgar</button></div></form></details>
 ${i.encryption ? '' : `<div class="note">No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.</div>`}
 <div id="signing-waiting"></div>
 <div id="inbox"><p class="empty">Reading the inbox…</p></div>
@@ -440,6 +444,7 @@ export function post(p: Item): string {
     : '';
   const acts = [
     `<button data-action="reply">Reply</button>`,
+    p.who.me ? '' : `<button data-action="tip">Tip</button>`,
     p.who.me ? '' : p.who.followed ? `<button data-action="unfollow" data-id="${e(p.who.id)}">Following</button>` : `<button data-action="follow" data-id="${e(p.who.id)}">Follow</button>`,
     p.who.me ? '' : `<button data-action="mute" data-id="${e(p.who.id)}">Mute</button>`,
     ...p.pictures.filter((x) => x.withdrawable).map((x) => `<button data-action="withdraw" data-publication="${e(x.publication)}">Withdraw picture</button>`),
@@ -447,7 +452,21 @@ export function post(p: Item): string {
   return `<article class="post" data-post="${e(p.id)}" data-signer="${e(p.who.id)}">
 <div class="row tight">${who(p.who)}${flag}</div>${answers}
 ${p.text ? `<div class="text" dir="auto">${e(p.text)}</div>` : ''}${pics}${doc}
-<div class="acts">${acts}</div></article>`;
+<div class="acts">${acts}</div><div class="tipping"></div></article>`;
+}
+
+/** The units a money draft may name (Damgar's units Modules: round 1, Bitcoin's four), regtest first, as the program lists them. */
+export function unitOptions(units: { hash: string; label: string }[] = []): string {
+  return units.map((u) => `<option value="${e(u.hash)}">${e(u.label)}</option>`).join('');
+}
+
+/** Said where Dub prepares money (F338): prepared here, signed in Damgar. */
+export const MONEY_SAY = 'Prepared here, not signed here: Dub seals a draft to this identity at its homes, and Damgar, holding the same identity, reads it to you and signs it or not. Dub signs no money act and holds no wallet.';
+
+/** A tip on a post: its amount, its unit, what for. */
+export function tipForm(units: { hash: string; label: string }[] = []): string {
+  return `<form class="tip compose"><label>Tip: an amount, in the unit's smallest part</label><div class="row tight"><input name="value" inputmode="numeric" class="pet" required><select name="unit">${unitOptions(units)}</select></div>
+<input name="whatFor" placeholder="What for (optional)"><p class="small">${e(MONEY_SAY)}</p><div class="row"><button type="submit" class="primary">Prepare it for Damgar</button><button type="button" class="quiet" data-action="untip">Cancel</button></div></form>`;
 }
 
 /** A private message, received or sent here. */

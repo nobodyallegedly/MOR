@@ -17,6 +17,8 @@ import { Collectives } from './collectives.ts';
 import { Setup } from './setup.ts';
 import { Real } from './real.ts';
 import { AfterKishib } from './kishib.ts';
+import { EdubbaMoney } from './money.ts';
+import type { ChainSource } from '../../damgar/src/chain.ts';
 import { Member } from './member.ts';
 import { listFolders } from './folders.ts';
 import { FONT_FILES, FONTS_DIR } from '../../dub/src/fonts.ts';
@@ -59,7 +61,7 @@ export const MACHINE_EVERY = 60_000;
  * looks (milliseconds; 0, never by itself); `machine`: where its API and key
  * are, for the tests.
  */
-export async function serve(opts: { dir: string; port: number; drafts?: string; machineEvery?: number; machine?: MachineOptions; collective?: string }): Promise<Running> {
+export async function serve(opts: { dir: string; port: number; drafts?: string; machineEvery?: number; machine?: MachineOptions; collective?: string; chain?: ChainSource | null }): Promise<Running> {
   const store = new Store(opts.dir);
   if (opts.drafts) store.saveSettings({ ...store.settings(), drafts: opts.drafts });
   const access = new Access(opts.dir, { domain: DOMAIN, label: CODE_LABEL });
@@ -72,6 +74,8 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
   const real = new Real(desk, store);
   // After Kišib: the new signing key's words, for an identity or a real collective held here (`kishib.ts`).
   const after = new AfterKishib(desk, store, real);
+  // Money, prepared here and signed in Damgar (F338): a payment from an identity held here, Bitcoin anchoring of a collective's act.
+  const money = new EdubbaMoney(desk, store, real, opts.chain ?? null);
   // H33: Edubba signs as a member, with Dub's own code, for any identity it holds; the names it shows are Edubba's own.
   const member = new Member(store, desk, () => [...store.book().identities.map((i) => ({ id: i.id, name: i.name })), ...real.contacts().map((c) => ({ id: c.id, name: c.name }))]);
   /** A real collective founded here, read as anyone reads it (its relays and homes), with its founder as the member held here. */
@@ -277,6 +281,18 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
         const c = real.collective(text(a.collective));
         return { id: c.identity, members: c.f.members, holder: c.f.signingHolder, agreement: c.f.agreement, relays: c.f.relays, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint, pending: !!c.f.pending, releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })), toShow: real.toShow(c.identity) };
       }
+      case 'money units':
+        return money.units();
+      case 'money pay':
+        return money.pay({ identity: text(a.identity), to: text(a.to), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor) });
+      case 'money anchorable':
+        return money.anchorable(text(a.collective));
+      case 'money offers':
+        return money.offers(text(a.service));
+      case 'money anchor':
+        return money.ask({ identity: text(a.identity), collective: text(a.collective), act: text(a.act), service: text(a.service), offer: text(a.offer), tier: num(a.tier) });
+      case 'money anchors':
+        return money.anchors(text(a.collective));
       case 'collective bring':
         return collectives.bring({ id: text(a.id), name: text(a.name) });
       case 'sort':

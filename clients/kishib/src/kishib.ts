@@ -21,7 +21,9 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { SPECS, IDENTITY_TYPES, actId, cborDecode, cborEncode, describeAct, hex, makeRotation, newSigningSecret, randomBytes, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, IDENTITY_TYPES, actId, cborDecode, cborEncode, describeAct, hex, lightningAddress, makeRotation, newSigningSecret, onchainAddress, randomBytes, readLightningAddress, readOnchainAddress, sha256, signingPublic, unhex, vaultDeclaration } from '../../genesis/src/core.ts';
+import { SPEC as MONEY_SPECS } from '../../damgar/src/specs.ts';
+import { UNITS_MODULES, say as sayAmount, unitOf } from '../../damgar/src/units.ts';
 import type { Home } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { CODE, RelayError, relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -102,7 +104,9 @@ export class Kishib {
 
   state(): State {
     this.expirePlans();
-    return { web: this.web, sitting: this.sitting(), expiry: EXPIRY };
+    const units = UNITS_MODULES.flatMap((m) => m.units.map((u) => ({ hash: u.hash, label: `${u.many} (${m.name})`, network: u.network ?? -1 })));
+    units.sort((x, y) => Number(y.network === 3) - Number(x.network === 3));
+    return { web: this.web, sitting: this.sitting(), expiry: EXPIRY, units };
   }
 
   private sitting(): Sitting | null {
@@ -215,7 +219,7 @@ export class Kishib {
    * successor declared (F300), or the current succession ended; lines left
    * out by name; cards for lines another app made that cannot be read here.
    */
-  async rotatePlan(a: { id: string; address: string; words: string; successor?: string; endSuccession?: boolean; leaveOut?: string[]; cards?: string; via?: Via }): Promise<Review> {
+  async rotatePlan(a: { id: string; address: string; words: string; successor?: string; endSuccession?: boolean; leaveOut?: string[]; cards?: string; vault?: VaultChange; via?: Via }): Promise<Review> {
     this.busy();
     const via = a.via ?? {};
     const id = readId(a.id);
@@ -249,6 +253,9 @@ export class Kishib {
         throw new Error(message(e));
       }
       const clock = declaresClock(rd);
+      // The vault (Money rule 2: changed only with the chain key, so here; decided by Nobody, allegedly, 17 October 2026: "its setting belongs in Kišib").
+      const vaultNow = rd.look.verifier.moneyVault(MIRS.money, id) as { entries: { unit: string; railModule: string; source: Uint8Array; limit: number }[] } | null;
+      const vault = vaultPlan(a.vault, vaultNow?.entries ?? null);
       const sections: Section[] = [
         ...recordWords(rd).filter((s) => s.heading !== 'Its lines of acts (each app or device keeps one)'),
         { heading: 'Its lines of acts: what this rotation keeps (Identity rule 35)', lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m: string, u?: string) => (u ? 'A line Kišib cannot read' : 'A line of acts')), tone: x.tone })) },
@@ -266,13 +273,14 @@ export class Kishib {
             ...(clock ? [{ text: 'This identity declares a clock (Money rule 15): its client anchors each change of its keys on that clock. Kišib does not anchor: anchor it with the genesis client before relying on it.', tone: 'warn' as const }] : []),
           ],
         },
+        { heading: 'The vault (Money: where payments above a limit must go)', lines: vault.lines },
       ];
       const signs = [
         `Kišib signs one rotation of ${short(id)} at position ${latest.position + 1}, with the chain key these words give (key ${idx}), revealed once.`,
         'It sends the exact same bytes to every home, and again, unchanged, if they stall: never a second rotation.',
         successor ? `Your rotation names ${short(successor)} as successor; the successor signs nothing here.` : 'It signs nothing else.',
       ];
-      const digest = sha256(cborEncode(['MOR Kišib rotation, version 1', id, latest.act, plan.kept.map((k) => [k.act, k.position, k.summary]), successor ?? '', !!a.endSuccession]));
+      const digest = sha256(cborEncode(['MOR Kišib rotation, version 1', id, latest.act, plan.kept.map((k) => [k.act, k.position, k.summary]), successor ?? '', !!a.endSuccession, ...(vault.declaration ? [cborEncode([vault.declaration.kind, vault.declaration.cbor ?? null])] : [])]));
       const s0 = seed;
       seed = null;
       return this.plan(
@@ -308,6 +316,7 @@ export class Kishib {
                 kept: plan.kept,
                 ...(successor ? { successor } : {}),
                 ...(a.endSuccession ? { endSuccession: true } : {}),
+                ...(vault.declaration ? { declarations: [vault.declaration] } : {}),
               });
             } finally {
               wipe(current.seeds, next.seeds, s0);
@@ -780,3 +789,58 @@ function declaresClock(rd: Read): boolean {
 }
 
 export { fingerprint, grouped, bindingOf };
+
+/** A change of the vault in a rotation: kept as it is (the default), removed, or declared anew, its entries on the Lightning or on-chain rail Modules, each with its limit. */
+export type VaultChange =
+  | { change: 'keep' }
+  | { change: 'remove' }
+  | { change: 'set'; network: number; unit: string; lightning?: { node: string; limit: number }; onchain?: { key: string; request: string; limit: number } };
+
+const NETWORK = ['Bitcoin', 'testnet', 'signet', 'regtest'];
+
+/** An entry of a vault in words: its unit, its rail, and what its limit means for a payment. */
+function vaultEntryWords(e: { unit: string; railModule: string; source: Uint8Array; limit: number }): string {
+  const units = new Set([e.unit]);
+  const rail = e.railModule === MONEY_SPECS.lightning.hash ? 'on Lightning' : e.railModule === MONEY_SPECS.onchain.hash ? 'on-chain' : `on rail Module ${e.railModule.slice(0, 8)}…`;
+  const where = e.railModule === MONEY_SPECS.lightning.hash ? (readLightningAddress(e.source) as { node: string } | null)?.node.slice(0, 16) : (readOnchainAddress(e.source) as { key: string } | null)?.key.slice(0, 16);
+  const unit = unitOf(e.unit)?.unit.name ?? `unit ${e.unit.slice(0, 8)}…`;
+  return `${unit}, ${rail} (${where ?? '?'}…): ${e.limit === 0 ? 'every payment in this unit goes to the vault (flow off)' : `a single payment above ${sayAmount({ unit: e.unit, value: e.limit }, units)} must go to the vault, not the flow`}.`;
+}
+
+/** The vault this rotation leaves, in words, and the declaration it carries (none where it keeps the vault). */
+export function vaultPlan(v: VaultChange | undefined, now: { unit: string; railModule: string; source: Uint8Array; limit: number }[] | null): { lines: Line[]; declaration: { spec: string; kind: number; cbor?: Uint8Array } | null } {
+  const change = v ?? { change: 'keep' };
+  if (change.change === 'keep') {
+    return { lines: now ? [{ text: 'Kept as it is:' }, ...now.map((e) => ({ text: vaultEntryWords(e) }))] : [{ text: 'None declared, and none is declared now: every payment goes to the flow; no protection chosen (Money rule 3).' }], declaration: null };
+  }
+  if (change.change === 'remove') {
+    if (!now) throw new Error('This identity declares no vault: there is none to remove.');
+    return {
+      lines: [{ text: 'Removed: from this rotation on, every payment goes to the flow, whatever its size, and a thief holding the signing key could point the flow anywhere (Money rule 3).', tone: 'warn' }],
+      declaration: vaultDeclaration(MIRS.money, null) as { spec: string; kind: number },
+    };
+  }
+  if (!unitOf(change.unit)) throw new Error('Choose the vault’s unit.');
+  const entries: { unit: string; railModule: string; source: Uint8Array; limit: number }[] = [];
+  const limit = (n: number) => {
+    if (!Number.isInteger(n) || n < 0) throw new Error('A limit is a whole number, 0 or more (0: every payment goes to the vault).');
+    return n;
+  };
+  if (change.lightning?.node?.trim()) entries.push({ unit: change.unit, railModule: MONEY_SPECS.lightning.hash, source: lightningAddress({ network: change.network, node: change.lightning.node.trim().toLowerCase() }) as Uint8Array, limit: limit(change.lightning.limit) });
+  if (change.onchain?.key?.trim()) entries.push({ unit: change.unit, railModule: MONEY_SPECS.onchain.hash, source: onchainAddress({ network: change.network, key: change.onchain.key.trim().toLowerCase(), request: change.onchain.request.trim().toLowerCase() }) as Uint8Array, limit: limit(change.onchain.limit) });
+  if (!entries.length) throw new Error('A vault names at least one rail: its node (Lightning) or its Bitcoin key (on-chain).');
+  if (unitOf(change.unit)?.unit.network !== change.network) throw new Error(`The unit is not the ${NETWORK[change.network]} network’s.`);
+  return {
+    lines: [
+      { text: 'Declared anew, with the chain key (Money rule 2): only another change of keys can change it.', tone: 'warn' },
+      ...entries.map((e) => ({ text: vaultEntryWords(e) })),
+      ...(entries.length > 1 ? [{ text: 'Several entries for one unit: the smallest limit applies (F114).' }] : []),
+      { text: 'A payment in a unit the vault has no entry for cannot be paid to the flow at all (fail closed, Money rule 3).' },
+      { text: 'The vault’s node or key should be another than the flow’s: the vault is only as safe as the key it names.', tone: 'warn' },
+    ],
+    declaration: vaultDeclaration(
+      MIRS.money,
+      entries.map((e) => ({ unit: e.unit, railModule: e.railModule, source: e.source, limit: e.limit })),
+    ) as { spec: string; kind: number; cbor: Uint8Array },
+  };
+}

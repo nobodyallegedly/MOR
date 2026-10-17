@@ -50,6 +50,8 @@ export const OPS = [
   'share',
   'shareback',
   'sharehand',
+  'tip',
+  'ask paid',
 ] as const;
 
 export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: Platform): Promise<unknown> {
@@ -130,6 +132,10 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.shareConfirm(text(a.thread), list(a.typed));
     case 'sharehand':
       return dub.shareByHand(text(a.thread));
+    case 'tip':
+      return dub.moneyDraft({ what: 'pay', other: text(a.signer), post: text(a.post), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor) });
+    case 'ask paid':
+      return dub.moneyDraft({ what: 'ask', other: text(a.to), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor) });
     default:
       throw new Error(`unknown operation ${op}`);
   }

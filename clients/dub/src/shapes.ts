@@ -85,6 +85,8 @@ export interface Held {
 export interface State {
   /** The identity window (no identity in use), three words to type back, or the app. */
   stage: 'identity' | 'confirm' | 'ready';
+  /** The units a money draft may name (Damgar's units Modules), regtest first, each with how Dub writes it. */
+  units?: { hash: string; label: string }[];
   confirm?: { positions: number[]; id: string };
   held: Held[];
   identity?: {
