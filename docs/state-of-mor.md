@@ -2,7 +2,7 @@
 
 *A living file: what exists today, not how it came to be. Updated by the project lead at every merge. Every session reads it first. The history is in `docs/roadmap-v1.md`; the reasons are in `docs/findings/`. If this file and the code disagree, the code's own README wins, and this file is corrected.*
 
-*Last updated: 17 October 2026, morning, after pull request 72 (real collectives) and the Mac session servers-2026-10-17b (Dub's web client, the gateway and the reader on the new WebAssembly).*
+*Last updated: 17 October 2026, after pull request 73 (after human test 10: icons, folds, the sealed follow list, acting as and member signing in Edubba).*
 
 ## Where we are
 
@@ -45,14 +45,13 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; hom
 
 ## Open, in order
 
-1. A Dub and Edubba session after human test 10 (passed, H24): H19, H23, H25 to H34 in `docs/human-tests-v1-findings.md` (icons, folds, clearer test mode, switching identity, a relay filter, following by ID, the follow list sealed to oneself (people cMIP draft 2), a reload keeping its tab, looking for answers and shares by itself, a folder picker and near-match names, "acting as" and member signing in Edubba).
+1. Kišib (resumed after pull request 73): the rotation and emergency app (F332 amended, F335, F337), with the Edubba pieces that take new words; an icon of the family (a cylinder seal). Then human test 9 (rotation) and the end of human test 10 (the member change). A server session for Dub's web release of pull request 73.
 2. An Edubba session for agents: reading and verifying any public act (H21); memory, the exchange handed on and notes sealed to itself on MOR (H22); a pasted Terminal path and a folder picker (H19).
 3. The site session (structure and look; H1, H2, H7; the reader showing display names, H17). Nearer release: the KI tab icon's fit and the tablet in the footer (H13).
-4. Kišib (was "MOR Safety"), the rotation and emergency app (F332 amended, F335).
-5. The remaining human tests on the cleaned apps.
-6. The freeze-ready drafts, including: Agreements' count aligned with every MIR's format (F295, found under F334); MICS and suite naming Text 9. And **published conformance vectors for every layer** (asked by Nobody, allegedly, 16 October: the first useful test of a frozen MOR is someone rebuilding a verifier from the texts alone, in another language): today `core/vectors/` has part 1 only (tagged hash, CBOR, canonical text, lock, running summary, the three-act sequence, opening acts, the sealed container), checked by an independent Python implementation; missing are signatures (part 2) and verdict vectors (these exact acts give valid, invalid or unknown) for Identity (rotations, contests, receipts, succession), Text, Money, Agreements and Development.
-7. An independent verifier in C, written only from the texts and the vectors, passing every vector (F336: "it will show proof of work").
-8. The step 17 rehearsal, then the freeze.
+4. The remaining human tests on the cleaned apps.
+5. The freeze-ready drafts, including: Agreements' count aligned with every MIR's format (F295, found under F334); MICS and suite naming Text 9. And **published conformance vectors for every layer** (asked by Nobody, allegedly, 16 October: the first useful test of a frozen MOR is someone rebuilding a verifier from the texts alone, in another language): today `core/vectors/` has part 1 only (tagged hash, CBOR, canonical text, lock, running summary, the three-act sequence, opening acts, the sealed container), checked by an independent Python implementation; missing are signatures (part 2) and verdict vectors (these exact acts give valid, invalid or unknown) for Identity (rotations, contests, receipts, succession), Text, Money, Agreements and Development.
+6. An independent verifier in C, written only from the texts and the vectors, passing every vector (F336: "it will show proof of work").
+7. The step 17 rehearsal, then the freeze.
 
 ## Working rules for sessions
 
