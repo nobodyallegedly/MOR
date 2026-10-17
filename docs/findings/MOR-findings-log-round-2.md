@@ -74,6 +74,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Its icon:** a Mesopotamian duck weight (a stone weight carved as a sleeping duck, its neck folded onto its body, used by merchants to weigh silver), dark stone on the family's dark, perhaps a thin line of silver beside it. The project lead's lean among a duck weight, a balance, a coil of silver rings. Nobody, allegedly: "I love the duck".
 
+**Round 2: Damgar grants rights to other apps** (asked: "Could Damgar be used to grant right to push to other apps?"). The project lead's reading: Damgar issues a grant (a scoped key, F128, F129) letting another app sign certain money acts itself, within limits (a tip up to an amount, until a date; expiry and limits through the limits cMIP, no sub-granting, F320), revoked by one act in Damgar, the grant travelling on MOR; this removes the detour of a tip through Damgar, by Damgar's leave. To confirm in its session that the grant and limits pieces fit as written. **Decided by Nobody, allegedly:** "Round 2 of course. But it keeps the use of Damgar as safety and separation of layers, but other apps can inherit it from there. Let's build something that can evolve… which in this case is Damgar granting rights for apps that don't exist yet." So the grant names a key, never a known app: any app, including ones not yet written, can hold a scoped key Damgar granted.
+
 ## F337. A collective's rotation: how shares travel, the risks, and saying so (17 October 2026)
 
 *Area: development layer and presentation (Kišib), with a stated cost of the core's split chain key. Asked by the Kišib session; Nobody, allegedly, asked the project lead's view: "how the key shares travel to the one app that executes the rotation".*
