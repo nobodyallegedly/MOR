@@ -1,0 +1,25 @@
+Kišib’s web client, as published in the release (testing only; to be served at kishib.dubsar.org).
+Rebuild: cd clients/genesis && npm run wasm; cd ../kishib && npm run release.
+The same tools give the same bytes (test/web-build.test.ts):
+
+rustc: rustc 1.97.0 (2d8144b78 2026-07-07)
+wasm-bindgen: wasm-bindgen 0.2.129
+esbuild: 0.25.12
+
+Work hash of each file (as the display client lists them):
+a9cb3f5a5be1c8fe55258d69643887bf3d5342f00fedec1f6ac1dd2e2baff32c  index.html
+33c7d2fc46514e2d4cb834c9acf4b2394b4a2fb3aad8ce8f2669b5c8fa54a724  kishib.js
+00c700e6354e305ed0a2a7c998059fd05fb17f01566aa2cd5f0c6f186acf792f  kishib.css
+ff9f31664f4b819d531a70fd3b06a27ad4e34fa668b2479188b0e5b0470f5708  mor_wasm_bg.wasm
+d72e0f61b65931f575516d8d39caa75d2ad09b04b0ea606aee6a157b2e5eb146  inter_light.woff2
+56958edadcbbe43d1c48f5f952970f0656018291b2e29ea72d732351c99cba65  inter_regular.woff2
+a63d578c41abf416497080d59d2ecd9ecf4fce5458f7543556acc9a8a9d2cc5c  inter_license.txt
+
+SHA-256 of each file (as sha256sum prints it):
+2d9ec6c30d0ce26cdf741bb13ef4e9850f3f54e4769dd977b2b45567ce8bf42d  index.html
+f9c1b7790978e561e9edf08a09cd78a02cd6372e25b382563d9f4f75dc70d6ba  kishib.js
+db41455b4b9c4bc184d64d767ed40c8c82eefd6b9bdb8253059d2a4547a3da3b  kishib.css
+22389b7b09a82ce469de4bcf4ed95acdd882b92dbec446399690709239e6077d  mor_wasm_bg.wasm
+e111a1e2ad914ccda9179b95e83fb10234dd52a1932e0b93c480476227983fd9  inter_light.woff2
+e06f6b1bc553aaea4e4668023ed0ab0a147129c3107f511bc7d03d361b0ae085  inter_regular.woff2
+262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a  inter_license.txt
