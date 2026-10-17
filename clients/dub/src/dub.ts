@@ -780,7 +780,7 @@ export class Dub {
         return { id, who: a?.signer ? this.whoFrom(a.signer, me.id, p) : null, snippet: a?.post ? snippet(a.post.text) : null };
       });
       const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
-      items.push(this.item(fp.post, me.id, p, s, 'feed', answers, toMe));
+      items.push({ ...this.item(fp.post, me.id, p, s, 'feed', fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] });
     }
     const problems = feed.authors.filter((a) => a.problem).map((a) => `${fingerprint(a.identity)}: ${a.problem}`);
     return { items, more: feed.more, problems, notes, followsChanged };

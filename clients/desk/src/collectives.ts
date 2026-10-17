@@ -329,7 +329,7 @@ export class Collectives {
   }
 
   /** The collective's own posts, as the site's feed reads them (it shown as an identity). */
-  async posts(collective: string, real?: BroughtCollective): Promise<{ items: { id: string; text: string; standing: string; pictures: string[] }[]; problems: string[] }> {
+  async posts(collective: string, real?: BroughtCollective): Promise<{ items: { id: string; text: string; standing: string; pictures: string[]; corrects: string | null; correctedBy: string[] }[]; problems: string[] }> {
     this.places();
     const b = real ?? this.broughtOne(collective);
     const s = this.store.settings();
@@ -345,6 +345,9 @@ export class Collectives {
           text: escapeControls(x.post?.text ?? ''),
           standing: x.post?.standing ?? x.problem ?? 'unknown',
           pictures: (x.post?.refs ?? []).flatMap((r) => (r.kind === 'picture' && r.bytes ? [`data:image/jpeg;base64,${Buffer.from(r.bytes).toString('base64')}`] : [])),
+          // The corrections cMIP (F344): labelled "Correction", or "corrected by".
+          corrects: x.corrects ?? null,
+          correctedBy: x.correctedBy ?? [],
         })),
         problems: f.authors.filter((a) => a.problem).map((a) => a.problem!),
       };

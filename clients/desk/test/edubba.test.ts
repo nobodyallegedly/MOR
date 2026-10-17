@@ -265,6 +265,15 @@ test('collectives: what you may do, each naming its rule; a post; a picture need
   assert.ok(posts.items.some((x: any) => x.text === 'For the house.' && x.standing === 'valid'), JSON.stringify(posts));
   assert.ok(posts.items.some((x: any) => x.pictures.length === 1 && x.standing === 'valid'));
 
+  // A correction of the collective's own post (the corrections cMIP, F344): read back as a correction, signed as the collective, labelled; the original stays.
+  const rc = await c.ask<any>('collective prepare', { kind: 'post', collective: col.id, text: 'For the whole house.', corrects: done.acts[0] });
+  assert.match(rc.reading.title, /^A correction for the collective/);
+  const dc = await c.ask<Done>('collective confirm', { plan: rc.plan, digest: rc.digest });
+  assert.ok(dc.lines.some((l) => /The text: counts for the collective/.test(l.text)), JSON.stringify(dc.lines));
+  const after = await c.ask<any>('collective posts', { collective: col.id });
+  assert.equal(after.items.find((x: any) => x.id === dc.acts[0]).corrects, done.acts[0]);
+  assert.deepEqual(after.items.find((x: any) => x.id === done.acts[0]).correctedBy, [dc.acts[0]]);
+
   // Its constitution, in plain words: the deal-assessment tool's reading of its agreement in force.
   const k = await c.ask<any>('collective constitution', { collective: col.id });
   assert.equal(k.inForce, true);

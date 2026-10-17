@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { Access, Refusal } from '../../collective/src/access.ts';
 import { Desk } from './desk.ts';
 import { type MachineOptions } from './machine.ts';
+import { Corrections } from './corrections.ts';
 import { Agents } from './agents.ts';
 import { Collectives } from './collectives.ts';
 import { Setup } from './setup.ts';
@@ -67,6 +68,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
   const access = new Access(opts.dir, { domain: DOMAIN, label: CODE_LABEL });
   const desk = new Desk(store);
   const agents = new Agents(desk, store, opts.machine);
+  const corrections = new Corrections(desk, store);
   // The collective client's folder, read where it is (~/mor-collective), or
   // inside this one for a new install (src/cli.ts).
   const collectives = new Collectives(opts.collective ?? join(opts.dir, 'collective'), store);
@@ -167,6 +169,10 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
         return agents.grants.revoke(text(a.agent), text(a.grant));
       case 'agent grants':
         return agents.grants.list(text(a.agent));
+      case 'identity posts':
+        return corrections.posts(text(a.identity));
+      case 'identity correct':
+        return corrections.correct(text(a.identity), text(a.act), text(a.text));
       case 'agent notes':
         return agents.notes(text(a.agent));
       case 'agent note retire':

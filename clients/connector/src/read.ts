@@ -22,6 +22,7 @@ import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { count, readAgreement, ruleWords, short, termsOf, type Line, type Section, type TermsRead } from '../../collective/src/explain.ts';
 import { escapeControls, fingerprint, quote, sectionsText } from './words.ts';
 import { authorityOf, type Authority } from '../../grants/src/grant.ts';
+import { CORRECTIONS_SPEC, correctionOf } from '../../barebone/src/corrections.ts';
 
 /** What the connector says about one act. */
 export interface Told {
@@ -266,8 +267,17 @@ async function text(id: string, hints: string[], via: Via): Promise<Told> {
   }
   const ok = p.standing === 'valid';
   const lines: Line[] = [{ text: `Signed by the identity ${p.signer}.` }, standingLine(p.standing)];
+  const corrected = correctionOf(p);
   const format =
-    p.format === POST_SPECS.longform ? 'It is written in the long-form text format (formatted text).' : p.format ? `It names a format this connector does not implement (${short(p.format)}); its text is shown plain.` : 'It is plain text.';
+    p.format === POST_SPECS.longform
+      ? 'It is written in the long-form text format (formatted text).'
+      : p.format === CORRECTIONS_SPEC
+        ? corrected
+          ? `Correction: it corrects act ${short(corrected)}, an act of the same signer, which stays as signed (the corrections cMIP).`
+          : 'It is in the corrections format, but the act it names first is not one of its own signer’s: no correction, an ordinary text naming that act (the corrections cMIP, 1.3).'
+        : p.format
+          ? `It names a format this connector does not implement (${short(p.format)}); its text is shown plain.`
+          : 'It is plain text.';
   const refs: Line[] = p.refs.map((r) =>
     r.kind === 'picture'
       ? { text: r.problem ? `It shows a picture (${short(r.publication)}) that is not shown: ${r.problem}.` : `It shows a picture (${short(r.publication)}), ${r.picture?.width}×${r.picture?.height}, verified.`, tone: r.problem ? 'warn' : undefined }
@@ -275,7 +285,7 @@ async function text(id: string, hints: string[], via: Via): Promise<Told> {
   );
   return told(id, {
     kind: 'text',
-    title: 'A text',
+    title: corrected ? 'A text: a correction' : 'A text',
     signer: p.signer,
     standing: p.standing,
     counts: ok,

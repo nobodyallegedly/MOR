@@ -23,6 +23,7 @@ import { cannotReach, firstOf, followRef, holdSequence, lookUp, referenceTo, typ
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { NotJpeg, read, strip, type Carried, type Picture } from '../../../modules/jpeg/src/jpeg.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from './specs.ts';
+import { CORRECTIONS_SPEC } from './corrections.ts';
 
 // ---------------------------------------------------------------- posting
 
@@ -104,13 +105,14 @@ export interface Posted {
  */
 export async function post(
   by: TestIdentity,
-  opts: { text: string; jpeg?: Uint8Array; format?: string | null; relays: string[]; to?: string[]; refs?: Reference[] },
+  opts: { text: string; jpeg?: Uint8Array; format?: string | null; relays: string[]; to?: string[]; refs?: Reference[]; corrects?: Reference },
 ): Promise<Posted> {
   const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
   await carryChain(by, opts.relays);
   // `refs`: acts the post answers (a reply, Text MIR), after its picture.
-  const refs: Reference[] = [...(picture ? [referenceTo(picture.act)] : []), ...(opts.refs ?? [])];
-  const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, opts.format ?? null), {
+  // A correction names the act it corrects first (the corrections cMIP, 1.2).
+  const refs: Reference[] = [...(opts.corrects ? [opts.corrects] : []), ...(picture ? [referenceTo(picture.act)] : []), ...(opts.refs ?? [])];
+  const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, opts.format ?? (opts.corrects ? CORRECTIONS_SPEC : null)), {
     public: true,
     relays: opts.relays,
     refs: refs.length ? refs : undefined,
@@ -193,6 +195,8 @@ export interface OtherRef {
   signer?: string;
   /** What it is, in a few words, when it was found and opened. */
   what: string;
+  /** The signer of the act found, as the act itself names it (a correction names one of its own signer's acts, the corrections cMIP). */
+  actSigner?: string;
 }
 
 export interface ShownPost {
@@ -310,9 +314,9 @@ async function readRef(r: Reference, hints: string[], via: Via, judge: Judging):
   } catch (e) {
     return { kind: 'act', id, signer, what: `not a valid act: ${e instanceof Error ? e.message : e}` };
   }
-  if (!d.public) return { kind: 'act', id, signer, what: 'a private act' };
-  if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: 'act', id, signer, what: 'a text act' };
-  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: 'act', id, signer, what: 'an act of a specification this client does not implement' };
+  if (!d.public) return { kind: 'act', id, signer, what: 'a private act', actSigner: d.signer };
+  if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: 'act', id, signer, what: 'a text act', actSigner: d.signer };
+  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: 'act', id, signer, what: 'an act of a specification this client does not implement', actSigner: d.signer };
   return readPicture(act, d, hints, via, judge);
 }
 

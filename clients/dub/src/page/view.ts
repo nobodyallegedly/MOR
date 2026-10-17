@@ -432,6 +432,13 @@ export function post(p: Item): string {
   const answers = p.answers
     .map((a) => `<div class="re">↳ answering ${a.who ? who(a.who) : '<span class="fp">an act not found</span>'}${a.snippet ? ` · <span dir="auto">${e(a.snippet)}</span>` : ''}</div>`)
     .join('');
+  // The corrections cMIP (F344): a correction labelled, the original kept as signed and named "corrected by".
+  const correction = p.corrects
+    ? `<div class="re correction"><strong>Correction</strong> of <span class="fp" title="${e(p.corrects)}">${e(p.corrects.slice(0, 8))}…</span>, which stays as signed</div>`
+    : '';
+  const correctedBy = p.correctedBy?.length
+    ? `<div class="re corrected">Corrected by ${p.correctedBy.map((c) => `<span class="fp" title="${e(c)}">${e(c.slice(0, 8))}…</span>`).join(', ')}: shown as it was signed</div>`
+    : '';
   const pics = p.pictures
     .map((x) =>
       x.src
@@ -450,7 +457,7 @@ export function post(p: Item): string {
     ...p.pictures.filter((x) => x.withdrawable).map((x) => `<button data-action="withdraw" data-publication="${e(x.publication)}">Withdraw picture</button>`),
   ].join('');
   return `<article class="post" data-post="${e(p.id)}" data-signer="${e(p.who.id)}">
-<div class="row tight">${who(p.who)}${flag}</div>${answers}
+<div class="row tight">${who(p.who)}${flag}</div>${correction}${answers}${correctedBy}
 ${p.text ? `<div class="text" dir="auto">${e(p.text)}</div>` : ''}${pics}${doc}
 <div class="acts">${acts}</div><div class="tipping"></div></article>`;
 }
