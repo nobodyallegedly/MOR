@@ -10,7 +10,7 @@ Money in MOR is two records of each payment, each signed by one side: the payer'
 
 **First use.** Bring an identity you have, by its ID and its signing key's words, as in Dub (Damgar never makes one). Then choose what you accept: each payment specification and Module, with its version and what it does (payments, the Lightning rail, the on-chain rail, Bitcoin's units, split, conversion, anchoring, the Bitcoin clock, the money messages). A money act under something you do not accept is shown **unknown** and is never signed. Your choice is sealed to your identity and kept at its homes, so every app holding the identity reads the same list (F340); you can change it in Settings.
 
-**To sign.** Payments prepared in Dub (a tip on a post; a request to be paid) and in Edubba (a payment from an identity; the payment for anchoring a collective's act), each a draft sealed to your own identity; requests to be paid that others sent; invoices to make when someone pays you; receipts to sign once a payment to you is proven. Each is read in plain words, with its rail, then signed or declined.
+**To sign.** Payments prepared in Dub (a tip on a post; a request to be paid), in Edubba (a payment from an identity; the payment for anchoring a collective's act) and in Ummia (the payment for anchoring a release), each a draft sealed to your own identity; requests to be paid that others sent; invoices to make when someone pays you; receipts to sign once a payment to you is proven. Each is read in plain words, with its rail, then signed or declined.
 
 **Pay.** The invoice to pay, or an on-chain address bound to that one payment. You pay in your own wallet and paste the proof back (the preimage, or the transaction's id); Damgar checks it and signs your claim.
 
@@ -43,7 +43,7 @@ The core library does every check: payloads, commitments, rail proofs, the route
 - **The on-chain request key** (option (A), on the project lead's lean): Damgar makes it and keeps it beside the signing key, and answers address requests by itself as they arrive through MOR; the Bitcoin key stays in the wallet. Its cost is said where it is made; replacing it is a new payee pointer naming a new key.
 - **The vault** is set in Kišib (it changes what the identity's chain declares); Damgar shows it.
 - **Collective payments and splits** are round 2.
-- **Anchoring** is offered for a collective's acts only, never a release (that moves to Ummia), and kept simple (decided by Nobody, allegedly): it shows that anchoring exists. A request from Edubba appears in To sign, is paid on regtest to the pooled service, and its ticket is shown; no tier beyond what the offer states, no refund or default handling here.
+- **Anchoring** is asked in Edubba for a collective's acts, and in Ummia for a release under one's own name (F339), and kept simple (decided by Nobody, allegedly): it shows that anchoring exists. A request from Edubba appears in To sign, is paid on regtest to the pooled service, and its ticket is shown; no tier beyond what the offer states, no refund or default handling here.
 - **A money message it cannot read** is shown unknown in To sign, never guessed, nothing signed for it; it may be set aside (the messages cMIP, section 6).
 
 ## Costs, stated

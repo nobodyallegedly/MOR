@@ -12,19 +12,17 @@
 // - relying on an act: a witness act (Identity type 15, F110), read back in
 //   plain words and signed only once RELY is typed, as the genesis client's
 //   command does (Identity rule 18c);
-// - a release under its own name (H16): the folder chosen at each release,
-//   every file listed with its size and fingerprint, and the libraries it
-//   depends on, before anything is signed; the release before it chosen by
-//   hand, pre-set to the last of the same name (decided by Nobody,
-//   allegedly).
+// - releases under its own name moved to Ummia (F339): the releases made
+//   here before are listed; `filesOf` stays, for a collective's releases
+//   (Collectives tab) and for Ummia.
 //
 // TEST IDENTITIES ONLY: every key is held in software in Edubba's folder.
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, isAbsolute, join, resolve } from 'node:path';
-import { IDENTITY_TYPES, SPECS, base64, cborDecode, describeAct, hex, sha256, signingPublic, unhex, workHash } from '../../genesis/src/core.ts';
+import { join, resolve } from 'node:path';
+import { IDENTITY_TYPES, SPECS, base64, cborDecode, describeAct, hex, signingPublic, unhex } from '../../genesis/src/core.ts';
 import { TestIdentity, TEST_LABEL, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { lineWords, whatIs } from '../../genesis/src/lines.ts';
@@ -33,8 +31,7 @@ import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
 import { Refused, fromWords, readId } from '../../../modules/carry/src/carry.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { namesOf } from '../../dub/src/names.ts';
-import { decodeManifest, gitSource, prepareRelease, publishPrepared, validPath, type FileIn, type Manifest, type Prepared, type Publisher } from '../../repo/src/release.ts';
-import { readRelease } from '../../collective/src/explain.ts';
+import { decodeManifest, type FileIn, type Manifest } from '../../repo/src/release.ts';
 import { escapeControls } from '../../connector/src/words.ts';
 import type { Desk, Done } from './desk.ts';
 import type { Line } from '../../collective/src/explain.ts';
@@ -83,33 +80,6 @@ export interface ListedFile {
   /** Its work hash, the fingerprint the manifest names. */
   fingerprint: string;
 }
-
-/** A release prepared and read back, not signed. */
-export interface ReleaseReview {
-  plan: string;
-  digest: string;
-  title: string;
-  summary: string[];
-  sections: RecordSection[];
-  files: ListedFile[];
-  dependencies: { registry: string; name: string; version: string }[];
-  skipped: string[];
-  blocking: string[];
-}
-
-interface ReleasePlan {
-  identity: string;
-  folder: string;
-  how: 'git' | 'plain';
-  prepared: Prepared;
-  previous: string | null;
-  digest: string;
-  expires: number;
-  blocking: string[];
-}
-
-/** How long a review stays good to sign, in milliseconds (as the collective client's). */
-const PLAN_FOR = 15 * 60 * 1000;
 
 import { folderOf } from './folders.ts';
 export { folderOf };
@@ -170,8 +140,6 @@ export function filesOf(folder: string): { how: 'git' | 'plain'; files: FileIn[]
 }
 
 export class Setup {
-  private plans = new Map<string, ReleasePlan>();
-
   constructor(
     readonly desk: Desk,
     readonly store: Store,
@@ -436,138 +404,6 @@ export class Setup {
   }
 
   // ------------------------------------------------------------ releases under one's own name (H16)
-
-  /** This identity's releases, newest first, for the "release before" list. */
-  releases(identity: string): { id: string; name: string; version: string; folder: string }[] {
-    return [...(this.entry(identity).releases ?? [])].reverse().map(({ id, name, version, folder }) => ({ id, name, version, folder }));
-  }
-
-  /** The folder's name, to suggest as a release's name, and the release before it pre-set by that name (decided by Nobody, allegedly). */
-  suggest(identity: string, typed: string): { folder: string; how: 'git' | 'plain'; name: string; previous: string | null } {
-    const folder = folderOf(typed);
-    const name = basename(folder);
-    const prior = [...(this.entry(identity).releases ?? [])].reverse().find((x) => x.name === name);
-    return { folder, how: inGit(folder) ? 'git' : 'plain', name, previous: prior?.id ?? null };
-  }
-
-  /**
-   * A release of a folder under this identity's own name, made and read back,
-   * not signed (H16): every file listed with its size and fingerprint, and
-   * the libraries it depends on, if any; what changed since the release
-   * before it, chosen by hand (`previous`, or none: a new release line).
-   */
-  async prepareRelease(a: { identity: string; folder: string; name: string; version: string; previous: string | null }): Promise<ReleaseReview> {
-    const e = this.entry(a.identity);
-    const me = this.store.identity(a.identity);
-    const s = this.store.settings();
-    const relays = s.relays.length ? s.relays : s.homes.map((h) => h.hint);
-    const folder = folderOf(a.folder);
-    const name = a.name.trim();
-    const version = a.version.trim();
-    const blocking: string[] = [];
-    if (!name) blocking.push('Give the release a name (by default, the folder’s).');
-    if (!version) blocking.push('Give the release a version, for example 1.0.');
-    if (!relays.length) blocking.push('Name at least one relay first, under Settings: the files go there.');
-    if (me.f.pending) blocking.push('A change of this identity’s keys is waiting to count: nothing is signed with it until it does.');
-    const all = e.releases ?? [];
-    const before = a.previous ? all.find((x) => x.id === a.previous) : undefined;
-    if (a.previous && !before) throw new Error('That release before it is not one of this identity’s releases here.');
-    if (all.some((x) => x.name === name && x.version === version)) blocking.push(`${name} ${version} was already released by this identity. Choose another version.`);
-    const { how, files, skipped } = filesOf(folder);
-    if (!files.length) blocking.push(how === 'git' ? 'Git tracks no file in this folder.' : 'This folder holds no file but hidden ones.');
-    const bad = files.filter((f) => !validPath(f.path)).map((f) => f.path);
-    if (bad.length) blocking.push(`These names cannot be in a release (release manifest cMIP, paths): ${bad.slice(0, 10).join(', ')}${bad.length > 10 ? ', …' : ''}.`);
-    const source = how === 'git' ? gitSource(folder) : undefined;
-    const p: Publisher = { id: me, relays, releases: before ? [{ id: before.id, version: before.version, manifest: before.manifest }] : [] };
-    const prepared = prepareRelease(p, { name: name || basename(folder), version: version || '0', files: files.filter((f) => validPath(f.path)), source });
-    const m = prepared.manifest;
-    const digest = sha256(Buffer.concat([Buffer.from('MOR Edubba release review, version 1\n'), Buffer.from(a.identity), prepared.payload, prepared.encoded]));
-    const plan = sha256(`${digest}${Math.random()}${Date.now()}`).slice(0, 32);
-    this.plans.set(plan, { identity: a.identity, folder, how, prepared, previous: before?.id ?? null, digest, expires: Date.now() + PLAN_FOR, blocking });
-    const names = this.store.names();
-    const who: Line[] = [
-      { text: `It is published under ${names(a.identity)}’s own name, signed by this identity alone: a release as soon as it is published (release manifest cMIP, “What counts as a release”).` },
-      { text: `The manifest and every new file go to ${relays.join(', ')}. Anyone can then fetch the release by its id and check every file against the list.` },
-    ];
-    const line: Line[] = before
-      ? [{ text: `It follows ${before.name} ${before.version} (${before.id}), released from ${before.folder}: that release is named as the one before it, and what changed is said below.` }]
-      : [{ text: 'It names no release before it: it starts a new release line.' }];
-    const sections: RecordSection[] = [
-      { heading: 'Where its files come from', lines: [{ text: how === 'git' ? `${folder} is in a git folder: every file git tracks there, as it is on disk.` : `${folder} is a plain folder: every file in it, except hidden ones (a name starting with a dot, and what is inside a hidden folder).` }] },
-      { heading: 'The release before it', lines: line },
-      ...readRelease(m, prepared.before),
-      { heading: 'Who signs', lines: who },
-    ];
-    return {
-      plan,
-      digest,
-      title: `Publish ${m.name} ${m.version} under ${names(a.identity).replace(/ \[[0-9a-f]{8}…[0-9a-f]{4}\]$/, '')}’s own name`,
-      summary: [
-        `${plural(m.files.length, 'file')} listed below, each with its size and fingerprint (its work hash, as the manifest names it)${m.dependencies.length ? `, and ${plural(m.dependencies.length, 'library', 'libraries')} it depends on, from its lock files` : ''}. ${plural(prepared.upload.length, 'file is', 'files are')} new since the release before it and uploaded.`,
-        'Nothing is signed until you press Sign and publish.',
-      ],
-      sections,
-      files: m.files.map((f) => ({ path: f.path, size: f.size, fingerprint: f.work })),
-      dependencies: m.dependencies.map((d) => ({ registry: d.registry, name: d.name, version: d.version })),
-      skipped,
-      blocking,
-    };
-  }
-
-  /**
-   * Sign and publish a release exactly as reviewed: only with the review's
-   * digest, within 15 minutes, once, and only if every file is still as it
-   * was read (each file read again and compared with its fingerprint).
-   */
-  confirmRelease(planId: string, digest: string): Promise<Done> {
-    return this.desk.serial(async () => {
-      const plan = this.plans.get(planId);
-      if (!plan || plan.expires < Date.now()) {
-        this.plans.delete(planId);
-        throw new Error('This review is no longer good: review the release again. Nothing was signed.');
-      }
-      if (plan.digest !== digest) throw new Error('The digest is not the review’s. Nothing was signed.');
-      if (plan.blocking.length) throw new Error(`${plan.blocking.join(' ')} Nothing was signed.`);
-      this.plans.delete(planId);
-      const now = filesOf(plan.folder);
-      const listed = plan.prepared.manifest.files;
-      const changed =
-        now.files.length !== listed.length ||
-        now.files.some((f, i) => f.path !== listed[i].path || f.bytes.length !== listed[i].size || workHash(f.bytes) !== listed[i].work);
-      if (changed) throw new Error(`Files in ${plan.folder} changed since the review: review the release again. Nothing was signed.`);
-      const me = this.store.identity(plan.identity);
-      const s = this.store.settings();
-      const relays = s.relays.length ? s.relays : s.homes.map((h) => h.hint);
-      const e = this.entry(plan.identity);
-      const before = plan.previous ? (e.releases ?? []).find((x) => x.id === plan.previous) : undefined;
-      const p: Publisher = { id: me, relays, releases: before ? [{ id: before.id, version: before.version, manifest: before.manifest }] : [] };
-      let out;
-      try {
-        out = await publishPrepared(p, plan.prepared, s.via);
-      } finally {
-        this.store.saveIdentity(me);
-      }
-      const rel: OwnRelease = { id: out.id, name: out.manifest.name, version: out.manifest.version, manifest: Buffer.from(plan.prepared.encoded).toString('base64'), folder: plan.folder };
-      const b = this.store.book();
-      const entry = b.identities.find((x) => x.id === plan.identity)!;
-      entry.releases = [...(entry.releases ?? []), rel];
-      this.store.saveBook(b);
-      this.store.record({ time: Math.floor(Date.now() / 1000), draft: '', verdict: 'released', signer: plan.identity, title: `${rel.name} ${rel.version} released under its own name`, note: '', act: out.id });
-      return {
-        title: `${rel.name} ${rel.version} is published`,
-        lines: [
-          { text: `Release ${out.id}.`, tone: 'ok' },
-          { text: `${plural(out.manifest.files.length, 'file')}, ${out.uploaded} uploaded new.` },
-          ...out.refused.map((r) => ({ text: `Refused by ${r}`, tone: 'warn' as const })),
-        ],
-        acts: [out.id],
-      };
-    });
-  }
-
-  cancelRelease(plan: string): void {
-    this.plans.delete(plan);
-  }
 }
 
 /** A manifest kept here, read again (for tests and the page's list). */

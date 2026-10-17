@@ -212,6 +212,9 @@ export class Relay {
     to?: string;
     pickup?: string;
     unaddressed?: boolean;
+    /** Only public acts naming this spec hash, and this type within it (relay transport cMIP, "Following: the feed"). */
+    spec?: string;
+    type?: number;
     after?: number;
     limit?: number;
     wait?: number;

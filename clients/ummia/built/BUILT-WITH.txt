@@ -1,0 +1,29 @@
+Ummia’s web client, as published in the release (testing only; to be served at ummia.dubsar.org).
+Rebuild: cd clients/genesis && npm run wasm; cd ../ummia && npm run release.
+The same tools give the same bytes (test/web-build.test.ts):
+
+rustc: rustc 1.97.0 (2d8144b78 2026-07-07)
+wasm-bindgen: wasm-bindgen 0.2.129
+esbuild: 0.25.12
+
+Work hash of each file (as the display client lists them):
+858f68c66a8a61ddccdaba0799c796656a9715be940196459af40b5fec357692  index.html
+53811e132f501f039ce3d42e8161e966ce959f3711c614597a36eebd5ef4f81f  ummia.js
+c37b6056629d8ee2737b87ce8e04aebd3b0d1283c5b6e8025a9b62bbc65b2f51  ummia.css
+fa027dc5740199fd25c3bf7d707b66b006d68de19aec31939b5592830121fbbb  mor_wasm_bg.wasm
+d72e0f61b65931f575516d8d39caa75d2ad09b04b0ea606aee6a157b2e5eb146  inter_light.woff2
+56958edadcbbe43d1c48f5f952970f0656018291b2e29ea72d732351c99cba65  inter_regular.woff2
+a63d578c41abf416497080d59d2ecd9ecf4fce5458f7543556acc9a8a9d2cc5c  inter_license.txt
+6bafdfeab3134ac3a21c115da2c11ad9ca0ac636a37e9bf8b104707636039330  icon.png
+fa274136d844d370bb422a6df90ba2314756e2f554651ea6ff5d39671145c956  apple-touch-icon.png
+
+SHA-256 of each file (as sha256sum prints it):
+d348ac00f1ba511ed300bded62c90c308bb29ff9f6bd1a39b25136885a93ce29  index.html
+1b7be48d73002b7ee573bdb19644ce1f0069940f9db71b001769a5e7add02dfe  ummia.js
+4fac61609bac5704732d4225e1e1f17b5271f13e9ec0011292bfbe47e877088d  ummia.css
+46bf0ec1c3b2558e8e2f9851d7255464aeb54933e6f5e028cfdf78a1b7f9b2b3  mor_wasm_bg.wasm
+e111a1e2ad914ccda9179b95e83fb10234dd52a1932e0b93c480476227983fd9  inter_light.woff2
+e06f6b1bc553aaea4e4668023ed0ab0a147129c3107f511bc7d03d361b0ae085  inter_regular.woff2
+262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a  inter_license.txt
+4aaff570dfcf9efb7bf1324f60f5b51e95579e9149bf34535993125e120a0c7f  icon.png
+2cf215c73c4718bf44cce1e35d349d5056f4adf65377505743f50c1e04d72452  apple-touch-icon.png

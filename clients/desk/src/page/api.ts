@@ -275,17 +275,6 @@ export interface ActRead {
 }
 
 /** A release under one's own name, read back before it is signed (H16). */
-export interface ReleaseReview {
-  plan: string;
-  digest: string;
-  title: string;
-  summary: string[];
-  sections: { heading: string; lines: Line[] }[];
-  files: { path: string; size: number; fingerprint: string }[];
-  dependencies: { registry: string; name: string; version: string }[];
-  skipped: string[];
-  blocking: string[];
-}
 
 /** A proposal sent from here for a real collective (H18). */
 export interface RealProposal {

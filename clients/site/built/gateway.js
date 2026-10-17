@@ -5641,11 +5641,20 @@ async function openAt(m, places, via) {
   }
   return null;
 }
-async function readRelay(line, via, into) {
+function queriesOf(f) {
+  return [{ spec: SPECS.envelopes, type: PUBLICATION2, signer: f.signer }, { spec: MIRS.agreements, type: AGREEMENTS_TERMS }, { spec: MIRS.agreements, type: AGREEMENTS_SIGNATURE }];
+}
+async function readRelay(line, via, into, queries = [{}]) {
+  for (const q of queries) {
+    await readQuery(line, via, into, q);
+    if (line.stopped || line.problem) return;
+  }
+}
+async function readQuery(line, via, into, q) {
   let after;
   try {
     for (; ; ) {
-      const page = await relayAt(line.address, via).feed({ after });
+      const page = await relayAt(line.address, via).feed({ ...q, after });
       for (const it of page.items) {
         if (line.read >= LISTING_READ) {
           line.stopped = true;
@@ -5673,7 +5682,7 @@ async function readRelay(line, via, into) {
     line.problem = message2(e);
   }
 }
-async function readListing(relays, gatewayRelays, via = {}) {
+async function readListing(relays, gatewayRelays, via = {}, filtered) {
   const lines = relays.map((r) => ({ ...r, asked: relayAddress(r.address) !== null, problem: null, read: 0, specs: 0, stopped: false, private: 0, terms: 0 }));
   const asked = lines.filter((l) => l.asked).map((l) => relayAddress(l.address));
   for (const l of lines) if (l.asked) l.address = relayAddress(l.address);
@@ -5681,7 +5690,7 @@ async function readListing(relays, gatewayRelays, via = {}) {
   const at = /* @__PURE__ */ new Map();
   for (const l of lines.filter((x) => x.asked)) {
     const before = new Set(found.keys());
-    await readRelay(l, via, found);
+    await readRelay(l, via, found, filtered ? queriesOf(filtered) : void 0);
     for (const id of found.keys()) if (!before.has(id)) at.set(id, l.address);
   }
   const places = [.../* @__PURE__ */ new Set([...asked, ...gatewayRelays])];
@@ -5769,6 +5778,7 @@ async function readListing(relays, gatewayRelays, via = {}) {
   );
   for (const l of byHash.values()) l.releases.sort((a, b) => Number(!!a.problem) - Number(!!b.problem) || (a.id < b.id ? -1 : 1));
   const { extensions, agreements } = await readExtensions(found, byHash, judge, lines.reduce((n, l) => n + l.private, 0));
+  if (filtered) for (const x of [...byHash.values()].filter((l) => isXtype(l.spec))) for (const l of lines.filter((y) => y.asked && !y.problem)) await readQuery(l, via, found, { spec: x.hash });
   const xtypes = await countUse(found, byHash, judge);
   const all = [...byHash.values()];
   return {

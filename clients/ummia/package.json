@@ -1,0 +1,34 @@
+{
+  "name": "mor-ummia",
+  "version": "0.1.0",
+  "description": "Ummia (ummia, the master of the tablet house; F339): the developers' app, the Development layer's. It holds the developer's identity: releases of code with optional anchoring, specifications published as acts, tracking of cMIPs, Modules, extensions and xtypes on the relays one names, MIP drafts, bug reports, and the accepted list. On the Mac and Linux, a program and its page; on the web, the same page, for testing only. Test identities only, until MOR is frozen.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mor-ummia": "./src/cli.ts"
+  },
+  "scripts": {
+    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "build": "node --import tsx scripts/build-web.ts",
+    "release": "node --import tsx scripts/build-web.ts --release",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts",
+    "test:build": "node --import tsx --test test/build/*.test.ts",
+    "start": "node --import tsx src/cli.ts open"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@noble/hashes": "2.4.0",
+    "esbuild": "^0.25",
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@noble/curves": "^2.4.0",
+    "@types/node": "^22.20.4",
+    "playwright-core": "1.56",
+    "typescript": "^5"
+  }
+}

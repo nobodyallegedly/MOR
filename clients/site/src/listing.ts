@@ -501,12 +501,32 @@ async function openAt(m: Media, places: string[], via: Via): Promise<Uint8Array 
   return null;
 }
 
-/** Everything a relay serves, up to `LISTING_READ` acts, described. */
-async function readRelay(line: RelayLine, via: Via, into: Map<string, { d: Described; act: Uint8Array }>): Promise<void> {
+/** A filtered read (Ummia's look-up, F339): the relays asked with the filters they already have, never read whole. */
+export interface Filtered {
+  /** Only the publications of this signer: whose specifications and releases are looked up. */
+  signer?: string;
+}
+
+type Query = { signer?: string; spec?: string; type?: number };
+
+/** What a filtered read asks each relay: publications (specifications and releases), Agreements' terms and signatures. */
+function queriesOf(f: Filtered): Query[] {
+  return [{ spec: SPECS.envelopes, type: PUBLICATION, signer: f.signer }, { spec: MIRS.agreements, type: AGREEMENTS_TERMS }, { spec: MIRS.agreements, type: AGREEMENTS_SIGNATURE }];
+}
+
+/** Everything a relay serves for each query (with none, everything), up to `LISTING_READ` acts, described. */
+async function readRelay(line: RelayLine, via: Via, into: Map<string, { d: Described; act: Uint8Array }>, queries: Query[] = [{}]): Promise<void> {
+  for (const q of queries) {
+    await readQuery(line, via, into, q);
+    if (line.stopped || line.problem) return;
+  }
+}
+
+async function readQuery(line: RelayLine, via: Via, into: Map<string, { d: Described; act: Uint8Array }>, q: Query): Promise<void> {
   let after: number | undefined;
   try {
     for (;;) {
-      const page = await relayAt(line.address, via).feed({ after });
+      const page = await relayAt(line.address, via).feed({ ...q, after });
       for (const it of page.items) {
         if (line.read >= LISTING_READ) {
           line.stopped = true;
@@ -540,7 +560,7 @@ async function readRelay(line: RelayLine, via: Via, into: Map<string, { d: Descr
  * checked, grouped into lines of drafts. Never throws: what could not be
  * read or verified is said, relay by relay and publication by publication.
  */
-export async function readListing(relays: ListedRelay[], gatewayRelays: string[], via: Via = {}): Promise<Listing> {
+export async function readListing(relays: ListedRelay[], gatewayRelays: string[], via: Via = {}, filtered?: Filtered): Promise<Listing> {
   const lines: RelayLine[] = relays.map((r) => ({ ...r, asked: relayAddress(r.address) !== null, problem: null, read: 0, specs: 0, stopped: false, private: 0, terms: 0 }));
   const asked = lines.filter((l) => l.asked).map((l) => relayAddress(l.address)!);
   for (const l of lines) if (l.asked) l.address = relayAddress(l.address)!;
@@ -548,7 +568,7 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
   const at = new Map<string, string>();
   for (const l of lines.filter((x) => x.asked)) {
     const before = new Set(found.keys());
-    await readRelay(l, via, found);
+    await readRelay(l, via, found, filtered ? queriesOf(filtered) : undefined);
     for (const id of found.keys()) if (!before.has(id)) at.set(id, l.address);
   }
   // Places to look up signers and fetch content: the relays named, then the gateway's.
@@ -645,6 +665,8 @@ export async function readListing(relays: ListedRelay[], gatewayRelays: string[]
   for (const l of byHash.values()) l.releases.sort((a, b) => Number(!!a.problem) - Number(!!b.problem) || (a.id < b.id ? -1 : 1));
 
   const { extensions, agreements } = await readExtensions(found, byHash, judge, lines.reduce((n, l) => n + l.private, 0));
+  // A filtered read asks for each xtype's acts by its spec hash (the feed's `spec` filter), relay by relay.
+  if (filtered) for (const x of [...byHash.values()].filter((l) => isXtype(l.spec))) for (const l of lines.filter((y) => y.asked && !y.problem)) await readQuery(l, via, found, { spec: x.hash });
   const xtypes = await countUse(found, byHash, judge);
   const all = [...byHash.values()];
   return {

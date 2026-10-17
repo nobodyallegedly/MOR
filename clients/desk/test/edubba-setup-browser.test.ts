@@ -5,14 +5,11 @@
 // - the Identities tab as an identity setup page (F333): the record in plain
 //   words, relying on an act read back and signed only once RELY is typed;
 // - an identity brought by its signing key's words (H15);
-// - a release under its own name (H16): a folder chosen, every file listed
-//   with its size and fingerprint, the libraries, then signed;
+// - releases under one's own name said to be Ummia's (F339; H16, and the
+//   folder checks of H19, H23 and H31, run in clients/ummia's tests);
 // - "What you may do for it" folded and unfolded, remembered across a
 //   reload (H14); a collective brought by its ID (H15);
 // - the Identities tab's sections folding, remembered across a reload (H26);
-// - a folder chosen with the picker, browsing the Mac's folders from the
-//   program (H31); a Terminal path with "\ " read as a space, and a near match
-//   named for a name with a space at its end (H19, H23).
 //
 // MOR_SCREENSHOTS=DIR keeps a picture of every screen.
 
@@ -131,42 +128,13 @@ test('relying on an act: read back in plain words, nothing signed until RELY is 
   await shot(page, '04-relied');
 });
 
-test('H16: a release under its own name from a folder chosen now; every file with its size and fingerprint before anything is signed', async () => {
-  const folder = join(mkdtempSync(join(tmpdir(), 'edubba-folder-')), 'tablets');
-  mkdirSync(join(folder, 'src'), { recursive: true });
-  writeFileSync(join(folder, 'README.md'), '# Tablets\n');
-  writeFileSync(join(folder, 'src', 'main.ts'), 'export const clay = true;\n');
-  writeFileSync(join(folder, '.secret'), 'never released\n');
-  writeFileSync(join(folder, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages: { '': { name: 'tablets' }, 'node_modules/stylus': { version: '0.1.0', integrity: 'sha512-x' } } }));
-  await page.fill('#release-folder input[name=folder]', folder);
-  await page.click('#release-folder button[type=submit]');
-  await page.locator('#release-prepare input[name=name]').waitFor({ timeout: 30_000 });
-  assert.equal(await page.inputValue('#release-prepare input[name=name]'), 'tablets');
-  assert.equal(await page.inputValue('#release-prepare select[name=previous]'), '', 'a new release line');
-  await page.fill('#release-prepare input[name=version]', '1.0');
-  await page.click('#release-prepare button[type=submit]');
-  const review = page.locator('#e-release-shown');
-  await review.waitFor({ timeout: 60_000 });
-  const rows = await review.locator('.files').first().locator('tr').allInnerTexts();
-  assert.equal(rows.length, 4, 'a header and three files: no hidden one');
-  assert.match(rows[1], /README\.md\s+10 bytes\s+[0-9a-f]{16}…/);
-  assert.ok(!(await review.innerText()).includes('.secret'));
-  assert.match(await review.innerText(), /npm\s+stylus\s+0\.1\.0/);
-  assert.match(await review.innerText(), /a plain folder: every file in it, except hidden ones/);
-  assert.match(await review.innerText(), /starts a new release line/);
-  await shot(page, '05-release-review');
-  assert.equal((await c.ask<any>('state')).identities[0].releases.length, 0, 'nothing signed by the review');
-  await review.locator('[data-action=release-sign]').click();
-  await said('tablets 1.0 is published');
-  const rel = (await c.ask<any>('state')).identities[0].releases[0];
-  assert.ok((await verifyRelease(rel.id, [relay.base])).ok);
-  await page.locator('#e-release summary', { hasText: 'Its releases here (1)' }).waitFor();
-  // Chosen again: pre-set to the last release of the same name.
-  await page.fill('#release-folder input[name=folder]', folder);
-  await page.click('#release-folder button[type=submit]');
-  await page.locator('#release-prepare select[name=previous]').waitFor({ timeout: 30_000 });
-  assert.equal(await page.inputValue('#release-prepare select[name=previous]'), rel.id);
-  await shot(page, '06-release-again');
+test('F339: releases under one’s own name are Ummia’s; the card says so', async () => {
+  const card = page.locator('#e-release');
+  await card.waitFor({ timeout: 30_000 });
+  assert.match(await card.innerText(), /Releases under its own name: in Ummia/);
+  assert.match(await card.innerText(), /made in Ummia, the developers’ app/);
+  assert.equal(await page.locator('#release-folder').count(), 0, 'no release form here');
+  await shot(page, '05-releases-moved');
 });
 
 test('H26: the Identities tab’s sections fold, each remembered by the program across a reload', async () => {
@@ -183,48 +151,6 @@ test('H26: the Identities tab’s sections fold, each remembered by the program 
   assert.equal(await page.locator('#e-release').evaluate((d) => (d as HTMLDetailsElement).open), true);
   await shot(page, '06b-folds');
   await page.locator('#e-record-fold > summary').click();
-});
-
-test('H19, H23, H31: a folder chosen in the picker; a Terminal path read with “\\ ” as a space; a name with a space at its end named as a near match', async () => {
-  const was = process.env.HOME;
-  const home = mkdtempSync(join(tmpdir(), 'edubba-home-'));
-  mkdirSync(join(home, 'Projects', 'testrelease '), { recursive: true });
-  mkdirSync(join(home, 'Projects', '.hidden'), { recursive: true });
-  writeFileSync(join(home, 'Projects', 'testrelease ', 'notes.txt'), 'clay\n');
-  process.env.HOME = home;
-  try {
-    // Typed without the space at its end, as Finder shows it: no such folder, and the near match named.
-    await page.fill('#release-folder input[name=folder]', '~/Projects/testrelease');
-    await page.click('#release-folder button[type=submit]');
-    const err = page.locator('#e-release-form .note.error');
-    await err.waitFor({ timeout: 30_000 });
-    assert.match(await err.innerText(), /There is no folder at .*testrelease\. Did you mean “testrelease ” \(with a space at the end\)\?/);
-    await shot(page, '06c-near-match');
-    // Pasted from the Terminal: "\ " is a space.
-    await page.fill('#release-folder input[name=folder]', '~/Projects/testrelease\\ ');
-    await page.click('#release-folder button[type=submit]');
-    await page.locator('#release-prepare', { hasText: 'testrelease ' }).waitFor({ timeout: 30_000 });
-    assert.equal(await page.inputValue('#release-prepare input[name=name]'), 'testrelease ');
-    // Quoted, as Finder's “Copy as Pathname” pasted into the Terminal may be.
-    await page.fill('#release-folder input[name=folder]', `'${join(home, 'Projects', 'testrelease ')}'`);
-    await page.click('#release-folder button[type=submit]');
-    await page.locator('#release-prepare').waitFor({ timeout: 30_000 });
-    // The picker: the Mac's folders, browsed by the program; the space at the end said; hidden folders counted, not listed.
-    await page.click('#e-release [data-action=pick-folder]');
-    const dlg = page.locator('#e-dialog');
-    await dlg.locator('.picker .path', { hasText: home }).waitFor({ timeout: 30_000 });
-    await dlg.locator('.picker li', { hasText: 'Projects' }).locator('button').click();
-    await dlg.locator('.picker li', { hasText: 'with a space at the end' }).waitFor({ timeout: 30_000 });
-    assert.match(await dlg.innerText(), /1 hidden folder/);
-    await shot(page, '06d-picker');
-    await dlg.locator('.picker li', { hasText: 'testrelease' }).locator('button').click();
-    await dlg.locator('.picker .path', { hasText: 'testrelease' }).waitFor();
-    await dlg.locator('[data-action=folder-use]').click();
-    await page.locator('#release-prepare', { hasText: 'a plain folder' }).waitFor({ timeout: 30_000 });
-    assert.equal(await page.inputValue('#release-folder input[name=folder]'), join(home, 'Projects', 'testrelease '));
-  } finally {
-    process.env.HOME = was;
-  }
 });
 
 test('H15: an identity brought by its signing key’s words', async () => {

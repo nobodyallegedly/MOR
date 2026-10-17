@@ -9,10 +9,9 @@
 //   line of its acts with the latest act, position and summary;
 // - relying on an act: read back in plain words, signed only once RELY is
 //   typed (the genesis client's witness);
-// - a release under its own name (H16): a git folder gives what git tracks,
-//   a plain folder every file but hidden ones; every file listed with its
-//   size and fingerprint, the libraries it depends on, before anything is
-//   signed; the release before it chosen by hand, pre-set by name;
+// - releases under one's own name moved to Ummia (F339; H16's checks run in
+//   clients/ummia/test/releases.test.ts): the operations gone, the card
+//   saying where;
 // - "What you may do for it" folded and remembered per collective (H14);
 // - a collective brought by its ID, one of your identities among its
 //   members (H15).
@@ -34,7 +33,7 @@ import { encryptionSecret, groupId, toWords } from '../../../modules/carry/src/c
 import { verifyRelease } from '../../repo/src/release.ts';
 import { serve, type Running } from '../src/server.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
-import { manifestOf } from '../src/setup.ts';
+import { releaseCard } from '../src/page/view.ts';
 
 let homes: Relay[];
 let relay: Relay;
@@ -180,91 +179,14 @@ test('relying on an act: read back in plain words, signed only once RELY is type
   await refused(c.ask('read act', { identity: me, act: 'xyz' }), /64 hexadecimal/);
 });
 
-test('H16: a release under its own name, the folder chosen at each release; every file with its size and fingerprint, and its libraries, before anything is signed', async () => {
-  const { app, c } = await edubba();
+test('F339: releases under one’s own name moved to Ummia: the operations gone, the card saying where they are, the releases made before still listed', async () => {
+  const { c } = await edubba();
   const me = (await c.ask<Done>('identity', { name: 'Releaser', linked: false })).acts[0];
-  const top = mkdtempSync(join(tmpdir(), 'edubba-release-'));
-
-  // A plain folder: every file but hidden ones.
-  const plain = join(top, 'site');
-  mkdirSync(join(plain, 'pages'), { recursive: true });
-  mkdirSync(join(plain, '.cache'));
-  writeFileSync(join(plain, 'index.html'), '<h1>Hello</h1>\n');
-  writeFileSync(join(plain, 'pages', 'about.html'), '<p>About</p>\n');
-  writeFileSync(join(plain, '.env'), 'SECRET=never\n');
-  writeFileSync(join(plain, '.cache', 'x'), 'hidden\n');
-  writeFileSync(join(plain, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages: { '': { name: 'site' }, 'node_modules/left-pad': { version: '1.3.0', integrity: 'sha512-test' } } }));
-  const sug = await c.ask<any>('release folder', { identity: me, folder: plain });
-  assert.deepEqual([sug.how, sug.name, sug.previous], ['plain', 'site', null]);
-  await refused(c.ask('release folder', { identity: me, folder: 'relative/path' }), /whole path/);
-  await refused(c.ask('release folder', { identity: me, folder: join(top, 'nothing') }), /no folder/);
-  const before = await actsBy(me);
-  const r = await c.ask<any>('release prepare', { identity: me, folder: plain, name: 'site', version: '1.0', previous: '' });
-  assert.deepEqual(r.files.map((f: any) => f.path), ['index.html', 'package-lock.json', 'pages/about.html'], 'no hidden file, nothing in a hidden folder');
-  const idx = r.files[0];
-  assert.equal(idx.size, 15);
-  assert.equal(idx.fingerprint, workHash(new TextEncoder().encode('<h1>Hello</h1>\n')));
-  assert.deepEqual(r.dependencies, [{ registry: 'npm', name: 'left-pad', version: '1.3.0' }]);
-  assert.deepEqual(r.blocking, []);
-  assert.match(JSON.stringify(r.sections), /a plain folder: every file in it, except hidden ones/);
-  assert.match(JSON.stringify(r.sections), /starts a new release line/);
-  assert.match(r.summary[0], /3 files listed below, each with its size and fingerprint.*1 library it depends on/);
-  assert.equal(await actsBy(me), before, 'nothing signed by the review');
-  await refused(c.ask('release confirm', { plan: r.plan, digest: '00'.repeat(32) }), /not the review’s.*Nothing was signed/);
-  // A file changed after the review: refused, nothing signed.
-  writeFileSync(join(plain, 'index.html'), '<h1>Changed</h1>\n');
-  await refused(c.ask('release confirm', { plan: r.plan, digest: r.digest }), /changed since the review.*Nothing was signed/);
-  assert.equal(await actsBy(me), before);
-  await refused(c.ask('release confirm', { plan: r.plan, digest: r.digest }), /no longer good/);
-  const r1 = await c.ask<any>('release prepare', { identity: me, folder: plain, name: 'site', version: '1.0', previous: '' });
-  const d1 = await c.ask<Done>('release confirm', { plan: r1.plan, digest: r1.digest });
-  const v1 = await verifyRelease(d1.acts[0], [relay.base]);
-  assert.ok(v1.ok, JSON.stringify(v1.problems));
-  assert.equal(v1.manifest!.files.length, 3);
-  assert.equal(v1.manifest!.previous, null);
-
-  // A git folder: the files git tracks, as they are on disk.
-  const repo = join(top, 'library');
-  mkdirSync(repo);
-  const git = (...a: string[]) => execFileSync('git', a, { cwd: repo, stdio: 'ignore' });
-  git('init', '-q');
-  git('config', 'user.email', 'test@example.invalid');
-  git('config', 'user.name', 'Test');
-  writeFileSync(join(repo, 'lib.ts'), 'export const x = 1;\n');
-  writeFileSync(join(repo, '.gitignore'), 'build/\n');
-  writeFileSync(join(repo, 'untracked.txt'), 'not tracked\n');
-  git('add', 'lib.ts', '.gitignore');
-  git('commit', '-qm', 'one');
-  const sg = await c.ask<any>('release folder', { identity: me, folder: repo });
-  assert.deepEqual([sg.how, sg.name, sg.previous], ['git', 'library', null], 'another name: a new line by default');
-  const g = await c.ask<any>('release prepare', { identity: me, folder: repo, name: 'library', version: '0.1', previous: '' });
-  assert.deepEqual(g.files.map((f: any) => f.path), ['.gitignore', 'lib.ts'], 'what git tracks, a hidden tracked file included, nothing untracked');
-  assert.deepEqual(g.dependencies, []);
-  assert.match(JSON.stringify(g.sections), /in a git folder: every file git tracks there/);
-  assert.match(JSON.stringify(g.sections), /Made from git [0-9a-f]{40}/);
-  await c.ask('release cancel', { plan: g.plan });
-  await refused(c.ask('release confirm', { plan: g.plan, digest: g.digest }), /no longer good/);
-
-  // The plain folder again: the release before it pre-set by name, chosen by hand.
-  const again = await c.ask<any>('release folder', { identity: me, folder: plain });
-  assert.equal(again.previous, d1.acts[0], 'pre-set to the last release of the same name');
-  await refused(c.ask('release prepare', { identity: me, folder: plain, name: 'site', version: '2.0', previous: 'f'.repeat(64) }), /not one of this identity’s releases/);
-  const same = await c.ask<any>('release prepare', { identity: me, folder: plain, name: 'site', version: '1.0', previous: d1.acts[0] });
-  assert.ok(same.blocking.some((b: string) => /already released/.test(b)));
-  writeFileSync(join(plain, 'pages', 'contact.html'), '<p>Write</p>\n');
-  const r2 = await c.ask<any>('release prepare', { identity: me, folder: plain, name: 'site', version: '2.0', previous: d1.acts[0] });
-  assert.match(JSON.stringify(r2.sections), /It follows site 1\.0/);
-  assert.match(JSON.stringify(r2.sections), /Since site 1\.0: 1 file added, 0 changed, 0 removed; 3 files the same/);
-  assert.match(r2.summary[0], /1 file is new since the release before it/);
-  const d2 = await c.ask<Done>('release confirm', { plan: r2.plan, digest: r2.digest });
-  const v2 = await verifyRelease(d2.acts[0], [relay.base]);
-  assert.ok(v2.ok, JSON.stringify(v2.problems));
-  assert.equal(v2.manifest!.previous, d1.acts[0]);
-  const s = await c.ask<any>('state');
-  const held = s.identities.find((i: any) => i.id === me);
-  assert.deepEqual(held.releases.map((x: any) => [x.name, x.version]), [['site', '2.0'], ['site', '1.0']]);
-  assert.equal(manifestOf(app.store.book().identities.find((i) => i.id === me)!.releases![1]).version, '2.0');
-  assert.ok(s.history.some((h: any) => h.verdict === 'released' && h.act === d2.acts[0]));
+  for (const op of ['release folder', 'release prepare', 'release confirm', 'release cancel']) await refused(c.ask(op, { identity: me, folder: tmpdir() }), /unknown operation/);
+  const held = (await c.ask<any>('state')).identities.find((i: any) => i.id === me);
+  assert.match(releaseCard(held), /made in Ummia, the developers’ app/);
+  assert.match(releaseCard(held), /A collective’s releases stay here, in the Collectives tab, until Ummia’s second round/);
+  assert.match(releaseCard({ ...held, releases: [{ id: 'a'.repeat(64), name: 'site', version: '1.0', folder: '/tmp/site' }] }), /Its releases made here before \(1\)/);
 });
 
 test('H14 and H15 for collectives: “What you may do for it” folded and remembered per collective; a collective brought by its ID, one of your identities among its members', async () => {
