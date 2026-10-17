@@ -50,6 +50,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **The wallet for round 1:** a plain test-wallet page over the regtest Lightning nodes, separate from Damgar and labelled as a test, used as one would use a real wallet (the invoice copied out of Damgar, paid in the wallet, the proof pasted back). Nobody, allegedly: "Yes, as it would with a real wallet no? No wallet connect, at least not now."
 
+**Its icon:** a Mesopotamian duck weight (a stone weight carved as a sleeping duck, its neck folded onto its body, used by merchants to weigh silver), dark stone on the family's dark, perhaps a thin line of silver beside it. The project lead's lean among a duck weight, a balance, a coil of silver rings. Nobody, allegedly: "I love the duck".
+
 ## F337. A collective's rotation: how shares travel, the risks, and saying so (17 October 2026)
 
 *Area: development layer and presentation (Kišib), with a stated cost of the core's split chain key. Asked by the Kišib session; Nobody, allegedly, asked the project lead's view: "how the key shares travel to the one app that executes the rotation".*
