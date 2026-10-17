@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F346. Relays and homes store an act signed under a grant, as scoped (17 October 2026)
+
+**Found by the Edubba agents session**, publishing an agent's act under its owner's grant to a real relay for the first time: the relay transport cMIP draft 4 ("Publishing an act", 1) says a relay SHOULD, and a home MUST, check that the act's key is the one the named identity-chain act bound. An act signed with a scoped key has a binding naming a held act of a higher MIR (Identity draft 13, rule 8 and everyday check 2): valid under Identity as far as its signature, status "scoped", judged by Agreements. So any relay holding the grant rejected it ("the binding does not name an identity-chain act of the signer"), and the grantor's homes always did (`relay/src/node.rs`, `check_binding`). Every grant key is affected, a collective's split service included. The core is right; the cMIP predates scoped keys.
+
+**Decided by Nobody, allegedly, 17 October 2026 ("Agreed"):** (a), the project lead's lean: relay transport draft 5 gives the binding check a second case. Where the binding names a grant, a relay that holds the grant checks the signature against the key the grant bound and stores the act as scoped; it never judges whether the act is backed (Agreements', at every verifier). The grantor's homes MUST accept it on the same terms. Not chosen: (b) relays judging the grant in full (relays made Agreements verifiers, refusing what they cannot judge); (c) no binding check for grant-signed acts (junk under invented grants). *Stated cost:* a grantee can fill the grantor's homes, bounded by revocation and each home's policy, as any identity's acts are. *Suggested by the project lead.*
+
+**Core changes:** none; relay transport cMIP draft 5 and the relay's `check_binding`.
+
 ## F345. A grant's limits are a cMIP's: a cap per act and an expiry against a named clock (17 October 2026)
 
 **Found by the Edubba agents session:** a grant's limits (fields 3 and 4) are "as the grant's cMIP defines", and none exists; rule 73 judges an expiry "against a time reference", and MOR has no clock of its own. Today the core answers unknown for any grant carrying limits; it can take a limits verdict from a client (`grant_limits`), not yet exposed through WebAssembly.
