@@ -116,3 +116,9 @@ dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
 .post.act{padding:8px 14px}
 .post.act .acts{border-top:none;padding-top:0;margin-top:2px}
 details.fold>summary{font-size:15px;color:var(--text);margin:14px 0 4px}
+:root{--line:#383736;--edge:#4a4946;--tint:#8e8980}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
+.correction strong{font-weight:400;color:var(--text)}

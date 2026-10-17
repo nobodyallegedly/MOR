@@ -19,7 +19,6 @@ import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import type { Reference } from '../../genesis/src/identity.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
-import { allBy } from '../../repo/src/release.ts';
 import { readStamps } from '../../../modules/timestamp/src/read.ts';
 import { GRANT_LIMITS_SPEC, judge, limitsValue, readLimits, type Limits, type Verdict } from './limits.ts';
 
@@ -181,6 +180,25 @@ export interface Authority {
   words: string;
 }
 
+/** Every act the places hold signed by `signer` (as the repo client's `allBy`, here without anything from Node, for the web clients). */
+async function allBy(signer: string, hints: string[], via: Via): Promise<Uint8Array[]> {
+  const out: Uint8Array[] = [];
+  for (const h of hints) {
+    let after: number | undefined;
+    try {
+      for (;;) {
+        const page = await relayAt(h, via).feed({ signer, after });
+        for (const it of page.items) if (it.kind === 'act') out.push(it.item);
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+      // that place is away: the others may hold them
+    }
+  }
+  return out;
+}
+
 const fetchAct = async (id: string, hints: string[], via: Via): Promise<Uint8Array | null> => {
   for (const h of hints) {
     try {
@@ -265,4 +283,10 @@ export async function authorityOf(act: Uint8Array, hints: string[], via: Via = {
         ? `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…, which does not back it: ${b.reason}.`
         : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…: whether it backs it is unknown (${b.reason ?? 'not readable'}).`;
   return { grant: d.binding, grantor: d.signer, grantee: g.grantee, backing: b.kind, reason: b.reason ?? null, limits, words: plain };
+}
+
+/** On whose authority an act stands, by its id: fetched where acts are looked for, then read as `authorityOf` does. Null where not found, or not under a grant. */
+export async function authorityOfId(id: string, hints: string[], via: Via = {}, opts: { names?: (id: string) => string } = {}): Promise<Authority | null> {
+  const act = await fetchAct(id, hints, via);
+  return act ? authorityOf(act, hints, via, opts) : null;
 }

@@ -7592,6 +7592,9 @@ var POST_SPECS = {
 var TEXT_ACT2 = 0;
 var PUBLICATION2 = 0;
 
+// ../barebone/src/corrections.ts
+var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 1, test value until publication");
+
 // ../barebone/src/post.ts
 async function carryChain(by, relays) {
   for (const hint of relays) {
@@ -7630,8 +7633,8 @@ function textPayload2(text3, format = null) {
 async function post(by, opts) {
   const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
   await carryChain(by, opts.relays);
-  const refs = [...picture ? [referenceTo(picture.act)] : [], ...opts.refs ?? []];
-  const made = await by.publish(POST_SPECS.text, TEXT_ACT2, textPayload2(opts.text, opts.format ?? null), {
+  const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...opts.refs ?? []];
+  const made = await by.publish(POST_SPECS.text, TEXT_ACT2, textPayload2(opts.text, opts.format ?? (opts.corrects ? CORRECTIONS_SPEC : null)), {
     public: true,
     relays: opts.relays,
     refs: refs.length ? refs : void 0,
@@ -8737,6 +8740,14 @@ dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
 .post.act{padding:8px 14px}
 .post.act .acts{border-top:none;padding-top:0;margin-top:2px}
 details.fold>summary{font-size:15px;color:var(--text);margin:14px 0 4px}`;
+var TINT = { layer: "#e9dfcd", line: "#383736", edge: "#4a4946", accent: "#8e8980" };
+var PAGE_STYLE = `${STYLE}
+:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
+.correction strong{font-weight:400;color:var(--text)}`;
 
 // src/page/view.ts
 var NAME = "Ummia";
@@ -8746,9 +8757,9 @@ var WEB_BANNER2 = `<div class="banner" id="for-testing-only" role="note"><p><str
 <li>This browser\u2019s storage, where that key is kept, can be lost, or read by what runs in this page.</li>
 <li>What you publish here is public and for good: a specification is never updated, only succeeded. This page reads no folder, so it makes no release, and follows no chain, so it checks no anchor: use Ummia on a computer for those.</li></ol>
 <p>Never bring a real identity here.</p></div>`;
-var TINT = { layer: "#ee8b74", line: "#392523", edge: "#4c2f2b", accent: "#91574a" };
+var TINT2 = { layer: "#ee8b74", line: "#392523", edge: "#4c2f2b", accent: "#91574a" };
 var STYLE2 = `${STYLE}
-:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+:root{--line:${TINT2.line};--edge:${TINT2.edge};--tint:${TINT2.accent}}
 button:hover,.door:hover{border-color:var(--tint)}
 input:focus,textarea:focus,select:focus{border-color:var(--tint)}
 details>summary::before{color:var(--tint)}

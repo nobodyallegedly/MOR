@@ -3271,6 +3271,15 @@ var TEXT_ACT = 0;
 var PUBLICATION = 0;
 var WITHDRAWAL = 3;
 
+// ../barebone/src/corrections.ts
+var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 1, test value until publication");
+function correctionOf(p) {
+  if (p.format !== CORRECTIONS_SPEC) return null;
+  const r = p.refs[0];
+  if (!r || r.kind !== "act" || !r.actSigner || r.actSigner !== p.signer) return null;
+  return r.id;
+}
+
 // ../barebone/src/post.ts
 function textPayload(text2, format = null) {
   const m = /* @__PURE__ */ new Map([[0, text2]]);
@@ -3351,9 +3360,9 @@ async function readRef(r, hints, via, judge) {
   } catch (e) {
     return { kind: "act", id, signer, what: `not a valid act: ${e instanceof Error ? e.message : e}` };
   }
-  if (!d.public) return { kind: "act", id, signer, what: "a private act" };
-  if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: "act", id, signer, what: "a text act" };
-  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, signer, what: "an act of a specification this client does not implement" };
+  if (!d.public) return { kind: "act", id, signer, what: "a private act", actSigner: d.signer };
+  if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: "act", id, signer, what: "a text act", actSigner: d.signer };
+  if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, signer, what: "an act of a specification this client does not implement", actSigner: d.signer };
   return readPicture(act, d, hints, via, judge);
 }
 async function readPicture(act, d, hints, via, judge) {
@@ -5091,6 +5100,14 @@ async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT, clock = n
     if (nudged) {
       for (const [r, by] of p.picked) if (by === null) p.picked.set(r, p.signer);
     }
+  }
+  for (const p of posts) {
+    if (!p.post || p.problem) continue;
+    const c = correctionOf(p.post);
+    if (!c) continue;
+    p.corrects = c;
+    const o = byId.get(c) ?? answered2.get(c);
+    if (o) o.correctedBy = [...o.correctedBy ?? [], p.id];
   }
   for (const line of lines) {
     const mine = posts.filter((p) => p.signer === line.identity);

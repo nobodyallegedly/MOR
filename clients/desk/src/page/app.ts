@@ -784,9 +784,10 @@ app.addEventListener('click', async (ev) => {
       break;
     }
     case 'copy': {
+      const was = b.textContent;
       const ok = await copy(d.id ?? '');
       b.textContent = ok ? 'Copied' : 'Copy failed: select the fingerprint';
-      setTimeout(() => (b.textContent = 'Copy ID'), 2000);
+      setTimeout(() => (b.textContent = was), 2000);
       break;
     }
     case 'link': {

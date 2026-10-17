@@ -53,6 +53,8 @@ export interface Item {
   answers: { id: string; who: Who | null; snippet: string | null }[];
   /** It answers one of this identity's posts, or is addressed to it. */
   toMe: boolean;
+  /** Signed under a grant (F128, F343): by whom, in whose name, and whether the grant backs it (Agreements rule 80). */
+  authority?: { words: string; backed: boolean } | null;
   /** A correction (the corrections cMIP, F344): the act of its own signer it corrects; labelled "Correction". */
   corrects?: string | null;
   /** Its corrections the feed holds: shown "corrected by", the post itself as signed. */

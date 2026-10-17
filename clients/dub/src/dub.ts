@@ -45,6 +45,7 @@ import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PEOPLE_SPEC_1, PUBLISH_WARNING, SE
 import type { Held, Item, Line, Message, Pic, Proposal, ShareShown, State, Who } from './shapes.ts';
 import { sendDraft } from '../../damgar/src/messages.ts';
 import { UNITS_MODULES, readValue } from '../../damgar/src/units.ts';
+import { authorityOfId } from '../../grants/src/grant.ts';
 
 export type { Line, State } from './shapes.ts';
 
@@ -781,6 +782,16 @@ export class Dub {
       });
       const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
       items.push({ ...this.item(fp.post, me.id, p, s, 'feed', fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] });
+    }
+    // A post signed under a grant (an agent posting in its owner's name, F343): its standing is Agreements', said on whose authority.
+    for (const it of items) {
+      // Its feed's verifier holds no grant: unknown there (F298), or scoped; only an act bound to a grant is read so.
+      if (it.standing === 'valid' || it.via !== 'feed') continue;
+      const a = await authorityOfId(it.id, hints, s.via, { names: (id) => this.whoFrom(id, me.id, p).pet ?? this.whoFrom(id, me.id, p).names[0] ?? fingerprint(id) }).catch(() => null);
+      if (!a) continue;
+      const backed = a.backing === 'backed' || a.backing === 'binds';
+      it.authority = { words: a.words, backed };
+      it.problem = backed ? null : it.problem;
     }
     const problems = feed.authors.filter((a) => a.problem).map((a) => `${fingerprint(a.identity)}: ${a.problem}`);
     return { items, more: feed.more, problems, notes, followsChanged };

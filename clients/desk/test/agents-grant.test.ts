@@ -26,7 +26,9 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import { obligationPayload } from '../../repo/src/agreements.ts';
 import { answering, fakeApi, type Fake } from '../../assess/test/fake-api.ts';
 import { readAct } from '../../connector/src/read.ts';
-import { authorityOf, signUnderGrant } from '../../grants/src/grant.ts';
+import { authorityOf, authorityOfId, signUnderGrant } from '../../grants/src/grant.ts';
+import { readFeed } from '../../site/src/feed.ts';
+import { post as dubPost } from '../../dub/src/page/view.ts';
 import { STAMP_TYPE, TIMESTAMP_SPEC, encodeStamp } from '../../../modules/timestamp/src/stamp.ts';
 import { serve, type Running } from '../src/server.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
@@ -136,6 +138,16 @@ test('under a nudge, a post in its owner’s name: signed with the grant key, va
   assert.equal(told.title, 'An act signed under a grant');
   assert.equal(told.counts, true);
   assert.ok(told.quoted.some((q) => q.text === 'Posted for Nobody, allegedly, under the grant.'));
+  // The feed Dub reads shows it, its standing Agreements' to judge; read by its id, on whose authority.
+  const f = await readFeed([{ identity: NA, name: null }], hints());
+  const fp = f.posts.find((x) => x.id === act);
+  assert.ok(fp, 'in the owner’s feed');
+  assert.ok(['scoped', 'unknown'].includes(fp!.post!.standing), 'not valid by Identity alone: the grant is Agreements’ (unknown where the feed holds no grant, F298)');
+  const au = (await authorityOfId(act, hints()))!;
+  assert.equal(au.backing, 'backed');
+  // Dub shows it so, beside the post (its feed reads each such post's authority).
+  const html = dubPost({ id: act, who: { id: NA, short: 'NA', names: [], pet: null, me: false, followed: true, muted: false }, standing: 'unknown', text: 'x', doc: null, pictures: [], answers: [], toMe: false, via: 'feed', problem: null, seen: true, authority: { words: au.words, backed: true } });
+  assert.match(html, /class="re authority">Signed by .* in .*’s name, under .*’s grant .*: backed/);
   // The agent's details list the grant and the act under it.
   const list = await c.ask<any[]>('agent grants', { agent: MA });
   assert.equal(list[0].acts[0].act, act);

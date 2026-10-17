@@ -858,7 +858,7 @@ export function posts(r: { items: { id: string; text: string; standing: string; 
     r.problems.map((p) => `<p class="small">${e(p)}</p>`).join('') +
     (r.items
       .map(
-        (p) => `<div class="post" data-post="${e(p.id)}"><div class="who">${p.corrects ? '<span class="label">Correction</span>' : ''}${fp(p.id)}${p.standing === 'valid' ? '' : `<span class="flag bad">${e(p.standing)}</span>`}</div>${
+        (p) => `<div class="post" data-post="${e(p.id)}"><div class="who">${p.corrects ? '<span class="label">Correction</span>' : ''}${fp(p.id)} <button class="copy" data-action="copy" data-id="${e(p.id)}" title="Copies the act’s whole ID: an agent can read it by that ID">Copy act ID</button>${p.standing === 'valid' ? '' : `<span class="flag bad">${e(p.standing)}</span>`}</div>${
           p.corrects ? `<div class="small">Corrects ${fp(p.corrects)}, which stays as it was signed.</div>` : ''
         }<div class="text" dir="auto">${e(p.text)}</div>${p.pictures.map((src) => `<figure><img alt="A picture of the post" src="${e(src)}"></figure>`).join('')}${
           p.correctedBy?.length ? `<div class="small">Corrected by ${p.correctedBy.map(fp).join(', ')}: shown as it was signed.</div>` : ''
