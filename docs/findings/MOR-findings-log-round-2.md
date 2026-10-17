@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F341. An anchoring publication names the key its batch's output is tweaked from (17 October 2026)
+
+**From** `docs/damgar-report.md`, open question 1: the anchoring cMIP draft 5 publishes each batch as `{ 0 offer, 1 batch, 2 leaves, 3 tx, 4 output }`; with pay-to-contract the output is a key tweaked by the batch's root, and without that key (and the script tree's root, if any) no reader can check from the acts alone that the output commits to the root.
+
+**Decided by Nobody, allegedly, 17 October 2026 ("A is agreed"):** (A), the build's lean, already built in the test service: two more fields in the publication, `5` the x-only key the output is tweaked from, `6` the script tree's root where there is one. Not chosen: (B) the key once in the offer's terms (every batch then shares one key on the chain, linking them); (C) out of band (the check would need something outside MOR). *Suggested by the build and the project lead.* A correction of the cMIP's text, not new building for the pool (the pool stays as built, decided the same day).
+
+**Core changes:** none; the anchoring cMIP's next draft (6) carries fields 5 and 6.
+
 ## F340. What a person accepts: one sealed list, travelling with the identity (17 October 2026)
 
 *Area: the development layer and presentation (every app). Found by Nobody, allegedly, during Damgar's build: "Found something else that needs to travel, a list of cMIPs and modules the user accepts. Ideally configured from Ummia."*
