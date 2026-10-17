@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F343. An act signed under a grant may name its grant (17 October 2026)
+
+**Found by the Edubba agents session** (an agent acting under its owner's grant): Agreements draft 14, rule 73, says a person's grantee signs the person's own act citing the grant on the person's chain (for a collective, rules 58 and 75 ask for the grant in `objects`); Text draft 9, rule 14, lets a text act carry `objects` only where its signer is a collective naming its own latest decision (F334). So a post under a grant is invalid by Text if it cites the grant, and not backed by Agreements if it does not: rule 73's "posting" could never count, for a person's grantee or a collective's. The core does both (`core/src/agreements/view.rs`, backing; `core/src/chain.rs`, `text_pointer`).
+
+**Decided by Nobody, allegedly, 17 October 2026 ("Agreed"):** (a), the session's and the project lead's lean: Text rule 14 opens for one more case: an act signed with a grant key may carry exactly one object, `[grantor, grant]`, the grant its binding names; any other object stays invalid. Not chosen: (b) no posts under a grant (rule 73's posting a dead letter; film 2's agent unshowable); (c) the binding counting as the citation (rules 58, 73 and 75 changed, and a person's grantee act on no chain, so the tie rule could not order it against a revocation). *Suggested by the build and the project lead.*
+
+**Core changes:** Text draft 10 (rule 14's second case) and the matching check in the core library; MICS and the suite to name Text 10 in the freeze-ready drafts.
+
 ## F342. A specification's optional fields are filled by the person, from their own text (17 October 2026)
 
 **From** `docs/ummia-report.md`, question 1: Development (F322) says a tool writes no optional field it cannot fill from the specification's text; a program cannot read a text's meaning.
