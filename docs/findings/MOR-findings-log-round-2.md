@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F345. A grant's limits are a cMIP's: a cap per act and an expiry against a named clock (17 October 2026)
+
+**Found by the Edubba agents session:** a grant's limits (fields 3 and 4) are "as the grant's cMIP defines", and none exists; rule 73 judges an expiry "against a time reference", and MOR has no clock of its own. Today the core answers unknown for any grant carrying limits; it can take a limits verdict from a client (`grant_limits`), not yet exposed through WebAssembly.
+
+**Decided by Nobody, allegedly, 17 October 2026 ("Agreed"):** (a), the session's and the project lead's lean: a grant limits cMIP, draft 1, drafted in the agents session as the shared piece Damgar's round 2 lanes reuse (F338's grants: "Per act cap is fine"): a per-act cap in a named units Module, and an expiry judged against a named clock (the timestamp clock Module's stamp of the act, or a block height by the Bitcoin clock on regtest). Edubba feeds the core its verdict; a verifier not knowing the cMIP still answers unknown. Not chosen: (b) limits in the grant's words only, enforced by Edubba's refusal to sign (client conformance; any other verifier would see an act past them as backed). *Suggested by the build and the project lead.*
+
+**Core changes:** none to the texts; the core library's limits input exposed through WebAssembly.
+
 ## F344. A correction is labelled by a cMIP; the core already makes the link (17 October 2026)
 
 **Found by the Edubba agents session:** Text draft 9 and Envelopes draft 10 say nothing about corrections; a reference means only "look at this" (Envelopes rule 20), so it cannot say "this corrects that".
