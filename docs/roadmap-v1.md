@@ -317,6 +317,8 @@ After the first two Nostr developers answered that they had no time, the origina
 
 *16 October 2026, night: Edubba built (branch `claude/edubba`, report `docs/edubba-report.md`): three tabs in Dub's look; several agents (a first-use window, the key owner-only and shown by its last four characters, each its own cap, the prompt box a signed private act, MOR as seen by each, its follows read under a nudge); the identities that are no agents; collectives with the permissions their agreement gives, their constitution as a pop-up, the collective client's page taken in. Found while building: Agreements rule 58 and Text rule 14 (F296) left no way for a collective's text to count; answered by F334 (a collective's text may carry its one pointer), written into Text draft 9 and the core, and Edubba posts for collectives.*
 
+*17 October 2026: after human test 10 (pull request 73), Kišib built and merged (pull request 74, `docs/kishib-report.md`): changes of keys from paper, collective rotation, escape, succession, a paper check. Damgar, round 1, built and merged (pull request 75, `docs/damgar-report.md`, F338, F340, F341): a money app with no wallet inside, on regtest; its web release rebuilt the same bytes. Decided the same day (details in `docs/state-of-mor.md`): Damgar in three rounds, single user first, collectives last; Edubba gains a Publishing tab (protected files and vows) and puts Identities last; the anchoring pool stays as built; keepers, a missed deadline and a vow sale in round 3; only what serves the core is pursued among the steps still reasoned; the C verifier insulated, pure text; reviews by Fable on Thursdays, if needed; the path to the freeze settled.*
+
 ## Decisions due along the way
 
 | Decision | Before |
