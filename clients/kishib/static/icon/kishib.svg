@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Kišib (Sumerian KIŠIB, "the cylinder seal"): a stone cylinder seal standing beside the strip of clay it was rolled across, its carving, the name, left there, in the family's clay and stone. Tinted with the Identity layer's glacier blue (#8ec5f0; H36, "colors are too subtle, thicker line, and subtle tints on the fills"): a thick edge, #658cac (70% of the layer colour over the dark); the dark #0e131a, the stone #758a9e and #8ca1b5, the clay #8a7563 (each its own colour moved 6%, 25%, 25% and 12% toward the layer colour); a line on the seal's top in the layer colour itself. Its name carved in cuneiform (H36): 𒈩, the sign MES, read kišib (U+12229; confirmed by the author against Wiktionary after the session found 𒆨 KISIM₅ not to read kišib), traced by hand from the author's picture of it; twice on the clay, as the seal rolls, and mirrored on the seal, as a seal is cut. No glow. -->
+  <!-- Kišib (Sumerian KIŠIB, "the cylinder seal"): a stone cylinder seal standing beside the strip of clay it was rolled across, its carving, the name, left there, in the family's clay and stone. Tinted with the Identity layer's glacier blue (#8ec5f0; H36, "colors are too subtle, thicker line, and subtle tints on the fills"): a thick edge, #658cac (70% of the layer colour over the dark); the dark #0e131a, the stone #758a9e and #8ca1b5, the clay #8a7563 (each its own colour moved 6%, 25%, 25% and 12% toward the layer colour); a line on the seal's top in the layer colour itself. Its name carved in cuneiform (H36): 𒈩, the sign MES, read kišib (U+12229; confirmed by the author against Wiktionary after the session found 𒆨 KISIM₅ not to read kišib), traced by hand from the author's picture of it; once on the seal, mirrored, at the top, as a seal is cut, and once on the clay, at the bottom, as it leaves it (the author: "Bottom on the right, and top on the left"). No glow. -->
   <defs>
   <!-- 𒈩 (MES, kišib): eleven wedges, in a 1024 by 731 box, the sign within x 68 to 920 and y 57 to 645. -->
   <g id="kisib">
@@ -24,17 +24,15 @@
   <ellipse cx="334" cy="300" rx="86" ry="26" fill="#8ca1b5"/>
   <ellipse cx="334" cy="300" rx="16" ry="6" fill="#3a4654"/>
   <ellipse cx="334" cy="300" rx="83" ry="23" fill="none" stroke="#8ec5f0" stroke-width="6"/>
-  <!-- Its carving: the name, mirrored, twice. -->
+  <!-- Its carving: the name, mirrored, at the top. -->
   <g fill="#475564">
     <use href="#kisib" transform="translate(406 372) scale(-0.17 0.17) translate(-68 -57)"/>
-    <use href="#kisib" transform="translate(406 560) scale(-0.17 0.17) translate(-68 -57)"/>
   </g>
   <!-- The strip of clay it leaves: the same marks, twice over, as the seal rolls. -->
   <rect x="490" y="246" width="282" height="532" rx="40" fill="#8a7563"/>
   <rect x="490" y="246" width="282" height="532" rx="40" fill="none" stroke="#a48e7a" stroke-width="6" opacity=".55"/>
-  <!-- The name it leaves on the clay, twice over, as the seal rolls. -->
+  <!-- The name it leaves on the clay, at the bottom. -->
   <g fill="#5e4c3e">
-    <use href="#kisib" transform="translate(516 292) scale(0.27 0.27) translate(-68 -57)"/>
     <use href="#kisib" transform="translate(516 550) scale(0.27 0.27) translate(-68 -57)"/>
   </g>
 </svg>
