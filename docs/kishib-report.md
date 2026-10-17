@@ -93,13 +93,12 @@ Dub (pearl), Edubba (emerald), Damgar (gold) and Ummia (coral) take theirs the s
 
 The home-screen icon leaves the frame out and takes the square's fill, edge to edge; the phone rounds it.
 
-**The name in cuneiform: not carved yet.** H36's rule is that a sign is checked against the ePSD or Borger before it is carved. I could not open either: this environment's network refuses `oracc.museum.upenn.edu`, the ETCSL and Wiktionary. Search results quoting them disagree with 𒆨 as the sign:
-- **𒆨, U+121A8**, is named KISIM₅ in Unicode. The ePSD2 sign list (letter K) gives it only the reading *kisim₅*.
-- **kišib, "seal"**, is a value of the sign **MES**, 𒈩 (U+12229), in the Oracc Sign List's MES entry and in the ETCSL sign list (MES: kišib, meš₃). The Digital Corpus of Ancient West Asian Seals, a project named KIŠIB, says the same: 𒈩 is the logogram for Sumerian kišib and Akkadian kunukku.
+**The name in cuneiform: 𒈩, carved.** H36's rule: a sign is checked against a standard reference before it is carved. This environment's network refuses the ePSD (`oracc.museum.upenn.edu`), the ETCSL and Wiktionary, so I worked from search results quoting them. They disagreed with 𒆨 as the sign:
+- **𒆨, U+121A8**, is named KISIM₅ in Unicode; the ePSD2 sign list (letter K) gives it only the reading *kisim₅*.
+- **kišib, "seal"**, is a value of the sign **MES**, 𒈩 (U+12229), in the Oracc Sign List's MES entry and in the ETCSL sign list (MES: kišib, meš₃). The Digital Corpus of Ancient West Asian Seals (the KIŠIB project) says the same: 𒈩 is the logogram for Sumerian kišib and Akkadian kunukku.
 - **kišib₃** is a value of DUB 𒁾, and **kišib₂** of PEŠ₂.
-- **The ePSD2's headword "kišib [seal]"** is written kišib₃, kišib, ^na₄kišib, ^na₄kišib₃.
 
-So the evidence points to 𒈩 MES, not 𒆨 KISIM₅, as the single sign for kišib. Unicode encodes the sign, not its period's shape, so a Neo-Assyrian form is a matter of the font; that may be why the author's find looked right. The 𒆤 (KID) I wrote beside Kišib's name earlier was wrong too, and is removed. Carving also needs a font with Neo-Assyrian forms, and none is here. Asked of the author in the session.
+The author confirmed **𒈩 (kišib)** against Wiktionary and sent its picture. Noto Sans Cuneiform, the only cuneiform font reachable here, draws the same structure. I traced the picture's eleven wedges by hand into the icon's drawing, then laid my tracing over the picture to check them wedge by wedge. It is carved twice on the clay, as the seal leaves it when rolled, and mirrored on the seal, as a seal is cut. The 𒆤 (KID) I had written beside Kišib's name earlier was wrong, and is removed. For Dub (𒁾) and Ummia (𒌝𒈪𒀀): the same check, then a traced or drawn form the author approves.
 
 **The releases, rebuilt here:** putting the icons in Dub's web release meant rebuilding it, and Dub's release test requires its core library to equal the display client's. So the display client's release (`clients/site/built/`), Dub's and Kišib's are all rebuilt in this pull request, with the pinned tools of `BUILT-WITH.txt` (Linux x86-64, as the GitHub release workflows). Each `npm run test:build` passes here. GitHub's own build of the display client is compared in its run.
 
