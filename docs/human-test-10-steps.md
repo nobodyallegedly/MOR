@@ -6,7 +6,7 @@
 
 | Device | App | Homes and relays |
 | --- | --- | --- |
-| **A**, the Mac (founder) | Edubba | home1 only |
+| **A**, the Mac (founder) | Dub to make the identity, Edubba to bring it in and found | home1 only |
 | **B**, the iPad | Dub on the web, Safari | home2 only |
 | **C**, the iPhone | Dub on the web, Safari | home1 and home2 |
 | The collective | (made by Edubba) | home1 and home2 |
@@ -15,10 +15,11 @@
 
 ## Steps
 
-1. **The Mac.** In Terminal, from the MOR folder: `git pull`, then `cd clients/desk && npm install && sh scripts/make-app.sh`. Open Edubba.
+1. **The Mac.** In Terminal, from the MOR folder: `git pull`, then `cd clients/desk && npm install && sh scripts/make-app.sh`, then `cd ../dub && npm install && sh scripts/make-app.sh`.
 2. **Edubba's places (A).** Settings: homes `https://home1.dubsar.org` only; relays the same, only. The collective's own settings (under Constitution, its settings): homes and relays `https://home1.dubsar.org` and `https://home2.dubsar.org`.
 3. **Three identities, made separately.**
-   - **A:** Edubba, Identities tab, **+ A new identity**: "Nobody, allegedly (test)". Copy its ID.
+   - **A, made in Dub on the Mac** (this also tests bringing an identity into Edubba, H15): open Dub, make a new identity with home `https://home1.dubsar.org` only, relays the same, display name "Nobody, allegedly (test)". Write the chain key's 24 words on paper, type the three asked. In the identity window, **Copy ID**, then **Show the signing key's words** and write those 24 on a second paper, labelled *signing key*.
+   - **A, brought into Edubba:** Edubba, Identities tab, **+ A new identity**, **bring one you have**: its ID and the signing key's 24 words. Check: nothing is signed by bringing it; its record shows its homes, its display name and Dub's line of acts. From here on, sign as this identity in Edubba only, not in Dub, so the test stays clear.
    - **B (iPad):** open `https://dub.dubsar.org` in Safari. In the make form, homes: delete the prefilled ones and write `https://home2.dubsar.org` only; relays the same. Display name "B". Write the chain key's 24 words on paper, press the button, type the three asked. In the identity window, **Copy ID**, and send it to yourself.
    - **C (iPhone):** the same at `https://dub.dubsar.org`, keeping both homes as prefilled. Display name "C". Copy its ID.
    - If a home refuses a new identity (its daily limit), allow it on that home's management page, as before.
