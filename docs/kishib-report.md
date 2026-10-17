@@ -61,9 +61,37 @@ In `clients/kishib/README.md`, readings 1 to 13, and its "Costs, stated". The ma
 - **Every existing test** was run here after these changes: the Rust workspace and every client and Module package (results in the pull request). The GitHub run is in the pull request.
 - **Screenshots** of every screen were sent in the session.
 
+## H35 and H36: the web clients' icons, and Kišib's tint
+
+**H35, the web pages' icons.**
+- **Dub's web client and Kišib's** each show their app's icon:
+  - as the page's tab icon: `icon.png`, the 256-pixel PNG;
+  - as the icon a phone keeps when the page is added to its home screen: `apple-touch-icon.png`, 180 pixels.
+- **The home-screen icon is full bleed**: the icon's dark square is scaled just past the edges, and the phone rounds the corners itself. `clients/dub/scripts/make-icons.ts` now makes it for every app (`NAME-touch.png`).
+- **Served from the page's own files**, within the existing policy (`img-src 'self'`). Nothing in Caddy changes; the two files are copied with the others.
+- **Checked:** both files are in each release, and the release test checks the page's links and the bytes. The browser tests load both icons as images under the policy.
+
+**H36, Kišib's tint.** The Identity layer's glacier blue, `#8ec5f0`. It goes on outlines, separators and quiet accents only, never on text that must be read. Red (`#b4615f`) stays for a contest, a void act or a stolen key. **The rule, for every app to match:** each value is the layer colour laid over the background `#06080c` at a share, channel by channel:
+
+| Use | Share | Kišib (glacier `#8ec5f0`) |
+| --- | --- | --- |
+| Separators (`--line`) | 22% | `#24323e` |
+| Outlines of cards, fields, buttons (`--edge`) | 30% | `#2f4150` |
+| Quiet accents (`--tint`): a hover or focus outline, a fold's mark | 60% | `#587995` |
+
+Dub (pearl), Edubba (emerald), Damgar (gold) and Ummia (coral) take theirs the same way from their own layer colour; the visual bible's hex values for those are not in the repository, so they are not computed here. In code: `clients/kishib/src/page/view.ts`, `TINT`, laid over Dub's style; the release test checks the values against the rule.
+
+**The icon's touch**, kept in the family's clay (`#8a6a50`) and stone (`#6c7683`, `#8b95a1`):
+- the icon's rim, in the tinted outline colour: `#2f4150`, 30% of the layer colour over the dark;
+- a thin edge on the seal's top, 4 units of 1024: `#8caac3` at opacity 0.8. That value is the layer colour mixed half and half with a neutral grey, `#8a9096`, which lowers its saturation.
+
+For Dub and Edubba later: their rim at 30% of their layer colour over `#06080c`, and one thin line in their layer colour mixed half with `#8a9096`, at 0.8.
+
+**The releases, rebuilt here:** putting the icons in Dub's web release meant rebuilding it, and Dub's release test requires its core library to equal the display client's. So the display client's release (`clients/site/built/`), Dub's and Kišib's are all rebuilt in this pull request, with the pinned tools of `BUILT-WITH.txt` (Linux x86-64, as the GitHub release workflows). Each `npm run test:build` passes here. GitHub's own build of the display client is compared in its run.
+
 ## After the merge
 
-- **The WebAssembly changed** (`makeRotation`'s new fields). Release the display client and Dub's web client again (their `built/` hold the old core library), and Kišib's (`[release kishib web]`). On main, the display client's reproducible-build check fails until its release follows, as after every core change.
+- **The releases are rebuilt in this pull request** (the display client's, Dub's web client's and Kišib's: the core library and the look-up changed, and H35). A server session copies them: `dubsar.org` (the display client), `dub.dubsar.org` (its two new icon files with the rest), and later `kishib.dubsar.org`. If GitHub's build of the display client differs from these bytes, release again with `[release display client]` and `[release dub web]`.
 - **`kishib.dubsar.org`**: a later server session copies `clients/kishib/built/` (Caddy as Dub's, `root * /srv/kishib`). Until then, Kišib is the Mac and Linux app; a member on a phone gives their share in the same room instead (below).
 - **For Edubba's next session**: F337's plain words where Edubba founds a collective (the founder's device as dealer); and the warning that sends a person to Kišib when a key was changed elsewhere (Edubba's record now takes the new words; the warning on opening and before every act is that session's). Dub's screens still say "MOR Safety" in two places; that session or Dub's next.
 

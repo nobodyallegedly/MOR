@@ -5,7 +5,10 @@
 // for, then:
 //   NAME.png    256 pixels, for the Linux desktop entry (`make-desktop.sh`);
 //   NAME.icns   the Mac's icon file, its PNG entries 16 to 1024 pixels
-//               (`make-app.sh` puts it in the app as AppIcon.icns).
+//               (`make-app.sh` puts it in the app as AppIcon.icns);
+//   NAME-touch.png  180 pixels, full bleed on the icon's dark: the icon a
+//               phone keeps when a web client is added to its home screen
+//               (apple-touch-icon; H35). The phone rounds its corners itself.
 // Both are kept in the repository beside the drawing, so making an app needs
 // nothing more; run this again only when a drawing changes:
 //   node --import tsx scripts/make-icons.ts
@@ -35,6 +38,17 @@ function chromium_(): string {
  * shorter than the window at small sizes: the PNGs came out cut off at the
  * bottom, found by the Kišib session.)
  */
+/** The drawing full bleed: its dark square scaled past the edges, on the same dark, for a phone's home screen. */
+async function renderTouch(page: Page, svg: string, size: number): Promise<Buffer> {
+  // The drawing's square is 824 of 1024 units, centred: scaled a little past the page, so its rim falls outside.
+  const scaled = Math.ceil((size * 1024) / 800);
+  const offset = -Math.round((scaled - size) / 2);
+  await page.setViewportSize({ width: size, height: size });
+  await page.setContent(`<html><body style="margin:0;background:#06080c;overflow:hidden"><img src="data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}" width="${scaled}" height="${scaled}" style="display:block;position:absolute;left:${offset}px;top:${offset}px"></body></html>`);
+  await page.locator('img').evaluate((i) => (i as HTMLImageElement).decode());
+  return page.screenshot({ clip: { x: 0, y: 0, width: size, height: size } });
+}
+
 async function render(page: Page, svg: string, size: number): Promise<Buffer> {
   await page.setViewportSize({ width: size, height: size });
   await page.setContent(`<html><body style="margin:0;background:transparent"><img src="data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}" width="${size}" height="${size}" style="display:block"></body></html>`);
@@ -82,7 +96,8 @@ try {
     for (const n of [16, 32, 64, 128, 256, 512, 1024]) pngs.set(n, await render(page, svg, n));
     writeFileSync(join(dir, `${name}.png`), pngs.get(256)!);
     writeFileSync(join(dir, `${name}.icns`), icns(pngs));
-    console.log(`made ${join(dir, `${name}.png`)} and ${name}.icns`);
+    writeFileSync(join(dir, `${name}-touch.png`), await renderTouch(page, svg, 180));
+    console.log(`made ${join(dir, `${name}.png`)}, ${name}.icns and ${name}-touch.png`);
   }
 } finally {
   await browser.close();

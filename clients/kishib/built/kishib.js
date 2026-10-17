@@ -8007,9 +8007,14 @@ var WEB_BANNER2 = `<div class="banner" id="for-testing-only" role="note"><p><str
 <li>This browser, its extensions and whatever else runs on this device see what you type. A collective\u2019s whole chain key is rebuilt in the device that rotates it.</li>
 <li>Ki\u0161ib keeps nothing in this browser\u2019s storage; but nothing can prove a device forgot what it held.</li></ol>
 <p>Use the app on a clean device for anything of value; ideally a device used for nothing else. Never here for a real identity.</p></div>`;
+var TINT = { layer: "#8ec5f0", line: "#24323e", edge: "#2f4150", accent: "#587995" };
 var STYLE2 = `${STYLE}
+:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
 .door{display:block;width:100%;text-align:left;border:1px solid var(--edge);border-radius:14px;padding:12px 16px;margin:10px 0;background:none}
-.door:hover{border-color:var(--faint)}
 .door strong{display:block;font-weight:400;font-size:15px;color:var(--text)}
 .door span{display:block;font-size:13px;color:var(--soft);margin-top:2px}
 .door.rare strong{color:var(--soft)}

@@ -1,11 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Kišib (𒆤, "the cylinder seal"): a stone cylinder seal standing beside the strip of clay it was rolled across, its carving left there in relief. On the visual bible's dark, low saturation, no glow. -->
+  <!-- Kišib (𒆤, "the cylinder seal"): a stone cylinder seal standing beside the strip of clay it was rolled across, its carving left there in relief. On the visual bible's dark, low saturation, no glow. The Identity layer's glacier blue (#8ec5f0) as a quiet touch only (H36): the rim, #2f4150 (30% of it over the dark, as Kišib's outlines), and a thin edge on the seal's top, #8caac3 (half of it with a neutral grey) at 0.8. -->
   <rect x="100" y="100" width="824" height="824" rx="184" fill="#06080c"/>
-  <rect x="100.5" y="100.5" width="823" height="823" rx="183.5" fill="none" stroke="#2a313d" stroke-width="3"/>
+  <rect x="100.5" y="100.5" width="823" height="823" rx="183.5" fill="none" stroke="#2f4150" stroke-width="3"/>
   <!-- The seal: a stone cylinder, its top seen as an ellipse with the bore for its cord. -->
   <path d="M248 300 V720 A86 26 0 0 0 420 720 V300 Z" fill="#6c7683"/>
   <ellipse cx="334" cy="300" rx="86" ry="26" fill="#8b95a1"/>
   <ellipse cx="334" cy="300" rx="16" ry="6" fill="#3a414b"/>
+  <ellipse cx="334" cy="300" rx="84" ry="24" fill="none" stroke="#8caac3" stroke-width="4" opacity=".8"/>
   <!-- Its carving: a wedge, a standing line, a star, as on the clay, mirrored. -->
   <g stroke="#454d58" stroke-width="10" stroke-linecap="round" fill="none">
     <path d="M276 382 H392"/>

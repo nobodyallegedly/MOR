@@ -98,6 +98,10 @@ copyFileSync(here('../genesis/wasm/mor_wasm_bg.wasm'), `${out}/mor_wasm_bg.wasm`
 // Inter and its licence, copied byte for byte (F332, "Inter bundled").
 for (const f of Object.keys(FONT_FILES)) copyFileSync(here(`../dub/${FONTS_DIR}/${f}`), `${out}/${f}`);
 
+// Its icon (H35): the tab's (the 256-pixel PNG) and the one a phone keeps when the page is added to its home screen (180 pixels, full bleed), from the page's own files.
+copyFileSync(here('static/icon/kishib.png'), `${out}/icon.png`);
+copyFileSync(here('static/icon/kishib-touch.png'), `${out}/apple-touch-icon.png`);
+
 if (release) {
   // What made these bytes, so that anyone can rebuild them from source, and each file's fingerprints.
   const version = (cmd: string, a: string[]) => execFileSync(cmd, a, { encoding: 'utf8' }).trim();

@@ -45,6 +45,7 @@ const TYPES: Record<string, string> = {
   '.json': 'application/json',
   '.woff2': 'font/woff2',
   '.txt': 'text/plain; charset=utf-8',
+  '.png': 'image/png',
 };
 const shots = process.env.MOR_SCREENSHOTS;
 const shot = async (page: Page, name: string) => {
@@ -79,7 +80,7 @@ async function serveBuilt(dist: string, policy: string): Promise<string> {
       return;
     }
     try {
-      if (!/^[a-z0-9_.]+$/.test(name)) throw new Error('no');
+      if (!/^[a-z0-9_.-]+$/.test(name)) throw new Error('no');
       const body = readFileSync(join(dist, name));
       res.writeHead(200, { 'content-type': TYPES[extname(name)] ?? 'application/octet-stream', 'content-security-policy': `${policy}; report-uri /csp`, 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'cache-control': 'no-cache' });
       res.end(body);
@@ -231,6 +232,11 @@ test('the web client: a personal rotation of an identity made in Dub’s web cli
   const { context, page } = await open(`${kishibWeb}/`);
   await page.locator('button.door').first().waitFor({ timeout: 60_000 });
   await banner(page, 'the first screen');
+  // H35: the icons load from the page's own files, as images, within its content security policy.
+  const iconSizes = await page.evaluate(() => Promise.all(['icon.png', 'apple-touch-icon.png'].map(async (f) => { const i = new Image(); i.src = f; await i.decode(); return [i.naturalWidth, i.naturalHeight]; })));
+  assert.deepEqual(iconSizes, [[256, 256], [180, 180]]);
+  assert.equal(await page.locator('link[rel=icon]').getAttribute('href'), 'icon.png');
+  assert.equal(await page.locator('link[rel=apple-touch-icon]').getAttribute('href'), 'apple-touch-icon.png');
   await shot(page, '01-start');
   assert.ok((await kept(page)).empty, 'nothing kept at the start');
 

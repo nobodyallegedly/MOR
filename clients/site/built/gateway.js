@@ -2762,10 +2762,36 @@ async function lookUp(identity, hints, via = {}, into) {
     keep(got);
     operatorActs.set(op, got);
   };
+  const homelessHomes = () => {
+    const r2 = v.resolve(identity);
+    const last = r2.links[r2.links.length - 1];
+    if (!last) return [];
+    const out = [];
+    for (const a of heldBytes.values()) {
+      try {
+        const d = describeAct(a);
+        if (d.signer !== identity || d.spec !== SPECS.identity || d.type !== IDENTITY_TYPES.rotation || !d.payload) continue;
+        const p = cborDecode(d.payload);
+        if (p.get(11) !== true || Number(p.get(1)) !== last.position + 1 || hex(p.get(0)) !== last.act) continue;
+        for (const [op, hint] of p.get(6) ?? []) out.push({ operator: op ? hex(op) : null, hint });
+      } catch {
+      }
+    }
+    return out;
+  };
   for (let round = 0; round < 8; round++) {
     const homes = inForce();
-    const fresh = homes.filter((h) => !asked.has(h.hint));
-    if (!fresh.length) break;
+    let fresh = homes.filter((h) => !asked.has(h.hint));
+    if (!fresh.length) {
+      const named = homelessHomes();
+      fresh = named.filter((h) => !asked.has(h.hint));
+      if (!fresh.length) break;
+      for (const h of fresh) asked.add(h.hint);
+      await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record2(h).catch(() => failed(h.hint))));
+      const ops2 = [...new Set(named.map((h) => h.operator).filter((o) => !!o && o !== identity && !operatorActs.has(o)))];
+      await Promise.all(ops2.map((op) => operatorChain(op, named.filter((h) => h.operator === op).map((h) => h.hint))));
+      continue;
+    }
     for (const h of fresh) asked.add(h.hint);
     await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record2(h).catch(() => failed(h.hint))));
     const ops = [...new Set(homes.map((h) => h.operator).filter((o) => !!o && o !== identity && !operatorActs.has(o)))];

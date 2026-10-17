@@ -16,7 +16,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sha256, workHash } from '../../genesis/src/core.ts';
 import { BUILT, WEB_FILES } from '../src/web/released.ts';
-import { WEB_BANNER, TEST_ONLY } from '../src/page/view.ts';
+import { contentSecurityPolicy } from '../src/web/headers.ts';
+import { WEB_BANNER, TEST_ONLY, STYLE, TINT } from '../src/page/view.ts';
 import { OPS } from '../src/ops.ts';
 import { check } from '../src/cli.ts';
 
@@ -32,6 +33,12 @@ test('the release in built/: every file, each with its fingerprints listed, the 
   }
   for (const t of ['rustc', 'wasm-bindgen', 'esbuild']) assert.match(listed, new RegExp(`^${t}: `, 'm'));
   const page = readFileSync(join(BUILT, 'index.html'), 'utf8');
+  // H35: its icon, as the tab's and as a phone's home screen's, from the page's own files (within its policy's img-src 'self').
+  assert.ok(page.includes('<link rel="icon" type="image/png" href="icon.png">'), 'the tab icon');
+  assert.ok(page.includes('<link rel="apple-touch-icon" href="apple-touch-icon.png">'), 'the home-screen icon');
+  assert.deepEqual(readFileSync(join(BUILT, 'icon.png')), readFileSync(join(here, 'static/icon/kishib.png')));
+  assert.deepEqual(readFileSync(join(BUILT, 'apple-touch-icon.png')), readFileSync(join(here, 'static/icon/kishib-touch.png')));
+  assert.match(contentSecurityPolicy(), /img-src 'self'/);
   assert.ok(page.includes(WEB_BANNER), 'the banner is in the page itself, outside the script');
   assert.equal(TEST_ONLY, 'Test identities only, until MOR is frozen');
   const script = readFileSync(join(BUILT, 'kishib.js'), 'utf8');
@@ -84,4 +91,17 @@ test('mor-kishib check: a server serving the release is SAME; one altering the s
   } finally {
     server.close();
   }
+});
+
+test('Kišib’s tint (H36): the glacier blue of the Identity layer, at low saturation, on outlines, separators and quiet accents only', () => {
+  assert.deepEqual(TINT, { layer: '#8ec5f0', line: '#24323e', edge: '#2f4150', accent: '#587995' });
+  // Each value is the layer colour laid over the background #06080c at its share.
+  const over = (share: number) => '#' + [0, 2, 4].map((i) => Math.round(parseInt('06080c'.slice(i, i + 2), 16) + share * (parseInt(TINT.layer.slice(1 + i, 3 + i), 16) - parseInt('06080c'.slice(i, i + 2), 16))).toString(16).padStart(2, '0')).join('');
+  assert.deepEqual([over(0.22), over(0.3), over(0.6)], [TINT.line, TINT.edge, TINT.accent]);
+  assert.match(STYLE, /:root\{--line:#24323e;--edge:#2f4150;--tint:#587995\}/);
+  // Never on text that must be read: the accent colours a fold's mark only, borders otherwise.
+  const textUses = [...STYLE.matchAll(/([^{}]+)\{[^}]*(?<![-a-z])color:var\(--tint\)/g)].map((m) => m[1].trim());
+  assert.deepEqual(textUses, ['details>summary::before']);
+  // Red stays the alarm's: --bad unchanged from Dub's.
+  assert.match(STYLE, /--bad:#b4615f/);
 });

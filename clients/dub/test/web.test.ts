@@ -35,6 +35,7 @@ const TYPES: Record<string, string> = {
   '.json': 'application/json',
   '.woff2': 'font/woff2',
   '.txt': 'text/plain; charset=utf-8',
+  '.png': 'image/png',
 };
 const shots = process.env.MOR_SCREENSHOTS;
 const shot = async (page: Page, name: string) => {
@@ -76,7 +77,7 @@ before(async () => {
       return;
     }
     try {
-      if (!/^[a-z0-9_.]+$/.test(name)) throw new Error('no');
+      if (!/^[a-z0-9_.-]+$/.test(name)) throw new Error('no');
       const body = readFileSync(join(dist, name));
       res.writeHead(200, {
         'content-type': TYPES[extname(name)] ?? 'application/octet-stream',
@@ -173,6 +174,11 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   await page.goto(`${base}/`);
   await page.getByRole('heading', { name: 'Make a new identity' }).waitFor({ timeout: 60_000 });
   await banner(page, 'the identity window');
+  // H35: the icons load from the page's own files, as images, within its content security policy.
+  const iconSizes = await page.evaluate(() => Promise.all(['icon.png', 'apple-touch-icon.png'].map(async (f) => { const i = new Image(); i.src = f; await i.decode(); return [i.naturalWidth, i.naturalHeight]; })));
+  assert.deepEqual(iconSizes, [[256, 256], [180, 180]]);
+  assert.equal(await page.locator('link[rel=icon]').getAttribute('href'), 'icon.png');
+  assert.equal(await page.locator('link[rel=apple-touch-icon]').getAttribute('href'), 'apple-touch-icon.png');
   assert.equal(await page.locator('form#begin textarea[name=homes]').inputValue(), 'https://home.example');
   assert.equal(await page.locator('textarea[name=via]').count(), 0, 'no other way to reach an address: a browser has none');
   assert.match(await page.locator('form#bring').innerText(), /kept in this browser’s storage \(IndexedDB\), as they are, not locked/);

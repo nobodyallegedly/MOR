@@ -115,8 +115,12 @@ dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
 .post.act{padding:8px 14px}
 .post.act .acts{border-top:none;padding-top:0;margin-top:2px}
 details.fold>summary{font-size:15px;color:var(--text);margin:14px 0 4px}
+:root{--line:#24323e;--edge:#2f4150;--tint:#587995}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
 .door{display:block;width:100%;text-align:left;border:1px solid var(--edge);border-radius:14px;padding:12px 16px;margin:10px 0;background:none}
-.door:hover{border-color:var(--faint)}
 .door strong{display:block;font-weight:400;font-size:15px;color:var(--text)}
 .door span{display:block;font-size:13px;color:var(--soft);margin-top:2px}
 .door.rare strong{color:var(--soft)}

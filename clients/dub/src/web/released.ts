@@ -5,8 +5,8 @@
 
 import { fileURLToPath } from 'node:url';
 
-/** The web client's files, in the order they are listed: its page, script, style and core library, then Inter and its licence (`../fonts.ts`). */
-export const WEB_FILES = ['index.html', 'dub.js', 'dub.css', 'mor_wasm_bg.wasm', 'inter_light.woff2', 'inter_regular.woff2', 'inter_license.txt'] as const;
+/** The web client's files, in the order they are listed: its page, script, style and core library, then Inter and its licence (`../fonts.ts`), then its icon, as the tab's and as a phone's home screen's (H35). */
+export const WEB_FILES = ['index.html', 'dub.js', 'dub.css', 'mor_wasm_bg.wasm', 'inter_light.woff2', 'inter_regular.woff2', 'inter_license.txt', 'icon.png', 'apple-touch-icon.png'] as const;
 
 /** The web client as published in the release. */
 export const BUILT = fileURLToPath(new URL('../../built', import.meta.url));
