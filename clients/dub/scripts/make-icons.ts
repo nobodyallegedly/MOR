@@ -4,7 +4,7 @@
 // beside the strip of clay it leaves) and Damgar's
 // (`../damgar/static/icon/damgar.svg`, a clay tablet with a resting duck
 // carved out of it) and Ummia's (`../ummia/static/icon/ummia.svg`, a round
-// school tablet, the master's line above and the pupil's copy beneath). Each is rendered by Chromium at the sizes the Mac and Linux ask
+// school tablet, its name carved once between two ruled lines). Each is rendered by Chromium at the sizes the Mac and Linux ask
 // for, then:
 //   NAME.png    256 pixels, for the Linux desktop entry (`make-desktop.sh`);
 //   NAME.icns   the Mac's icon file, its PNG entries 16 to 1024 pixels
