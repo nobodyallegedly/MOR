@@ -1,0 +1,18 @@
+:root { color-scheme: light dark; --bg: #f6f6f4; --fg: #1d1d1b; --soft: #66665f; --line: #d4d4cc; --label: #b4300f; --box: #fff; }
+@media (prefers-color-scheme: dark) { :root { --bg: #121212; --fg: #e8e8e4; --soft: #a0a09a; --line: #34342f; --label: #ff8a65; --box: #1c1c1a; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+#test-label { background: var(--label); color: #fff; padding: 12px 16px; }
+main { max-width: 640px; margin: 0 auto; padding: 8px 16px 48px; }
+h2 { font-size: 16px; margin: 24px 0 8px; }
+section { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+label { display: block; color: var(--soft); font-size: 13px; margin: 8px 0 2px; }
+input, textarea { box-sizing: border-box; width: 100%; font: 13px ui-monospace, monospace; padding: 6px 8px; border: 1px solid var(--line); background: var(--box); color: var(--fg); border-radius: 4px; }
+button { margin-top: 8px; font: inherit; padding: 4px 14px; border-radius: 4px; border: 1px solid var(--soft); background: var(--box); color: var(--fg); cursor: pointer; }
+button:disabled { opacity: .5; }
+.row { margin-top: 4px; }
+.node { display: block; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; margin: 4px 0; background: var(--box); }
+.node input { width: auto; margin-right: 6px; }
+.small { font-size: 13px; color: var(--soft); }
+.mono, .out code { font: 12px ui-monospace, monospace; word-break: break-all; }
+.out { margin-top: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--box); }
+.out.error { border-color: var(--label); color: var(--label); }

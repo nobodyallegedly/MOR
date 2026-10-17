@@ -116,7 +116,7 @@ export function btcd(o: { url: string; user: string; pass: string; cert: string 
       const v = await call('getrawtransaction', [txid, 1]);
       const raw = stripWitness(unhex(v.hex));
       if (!v.blockhash) return { raw, block: null };
-      const b = await call('getblock', [v.blockhash, true]);
+      const b = await call('getblock', [v.blockhash, 1]);
       const ids: string[] = b.tx.map((t: string | { txid: string }) => (typeof t === 'string' ? t : t.txid));
       return { raw, block: { height: b.height, index: ids.indexOf(txid), txids: ids.map(internal) } };
     },
