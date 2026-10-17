@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F340. What a person accepts: one sealed list, travelling with the identity (17 October 2026)
+
+*Area: the development layer and presentation (every app). Found by Nobody, allegedly, during Damgar's build: "Found something else that needs to travel, a list of cMIPs and modules the user accepts. Ideally configured from Ummia."*
+
+**The project lead's shape:** one list of the cMIPs and Modules a person accepts, as a private act sealed to their own identity at its homes (as the people cMIP's sealed follow list), read by any app holding the identity on any device; each app applies the part it understands (Damgar the rails and units, Edubba the agreement and split cMIPs, Dub the formats it shows); configured in Ummia, where each specification is seen with its versions, publisher and users before it is ticked; private by default, publishing it the other option (F59). Until Ummia exists, Damgar's Settings write and read the same act.
+
+**Decided by Nobody, allegedly:** "Yes, but I think the other apps should be able to push the decision, in case a user does not use Ummia." So every app may change the list, each for the part it understands, writing a new version on the latest; Ummia shows it whole. *To build with it:* two apps changing it at once must not lose a change (each writes on the latest version it read and checks again before sending; a fork is shown and merged, never silently dropped).
+
 ## F339. An app for developers: the Development layer gets its own (17 October 2026)
 
 *Area: presentation and the development layer (a client). Asked by Nobody, allegedly: "Now, do we want an app for developers? So all layers are covered?"*
