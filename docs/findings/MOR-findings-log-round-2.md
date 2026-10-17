@@ -48,6 +48,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **The network for round 1:** regtest on the author's Mac. Nobody, allegedly: "Regtest is enough, no? It simulates MOR side of things effectively, no?" The project lead agreed: the proofs are real Lightning and Bitcoin proofs on a private chain, so everything MOR does with them (acts, receipts, verification, anchoring) is the same; what regtest does not show is the outside world (other people's nodes, fees, delays, liquidity), and it is demonstrable only from the Mac. Signet, and the phones, for later if wished. Nobody, allegedly: "Round 2 could get something else. As needed… I understand the missing variables and see their value."
 
+**The wallet for round 1:** a plain test-wallet page over the regtest Lightning nodes, separate from Damgar and labelled as a test, used as one would use a real wallet (the invoice copied out of Damgar, paid in the wallet, the proof pasted back). Nobody, allegedly: "Yes, as it would with a real wallet no? No wallet connect, at least not now."
+
 ## F337. A collective's rotation: how shares travel, the risks, and saying so (17 October 2026)
 
 *Area: development layer and presentation (Kišib), with a stated cost of the core's split chain key. Asked by the Kišib session; Nobody, allegedly, asked the project lead's view: "how the key shares travel to the one app that executes the rotation".*
