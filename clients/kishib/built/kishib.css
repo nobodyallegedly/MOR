@@ -21,6 +21,7 @@ button.quiet:hover,.acts button:hover{color:var(--text)}
 input,textarea{font:inherit;color:var(--text);background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px;width:100%}
 input:focus,textarea:focus{outline:none;border-color:var(--faint)}
 textarea{min-height:3.2em;resize:vertical}
+select{font:inherit;color:var(--text);background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px}
 label{display:block;margin:12px 0 4px;font-size:13px;color:var(--soft)}
 .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:10px 0}
 .grow{flex:1}

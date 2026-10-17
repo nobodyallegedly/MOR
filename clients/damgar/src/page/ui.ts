@@ -113,7 +113,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     const r = await b.ask<{ items: ToSign[]; problems: string[] }>('to sign');
     const target = $('sign-list');
     if (!target) return;
+    // What is being typed survives the redraw (the look every 20 seconds may land mid-paste).
+    const typed = [...target.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('form[data-id] [name]')].filter((x) => x.value).map((x) => ({ form: (x.form as HTMLFormElement).dataset.id, name: x.name, value: x.value, focused: document.activeElement === x }));
     target.innerHTML = v.toSign(r.items, [...r.problems, ...(looked?.problems ?? [])]);
+    for (const t of typed) {
+      const x = target.querySelector<HTMLInputElement | HTMLTextAreaElement>(`form[data-id="${CSS.escape(t.form ?? '')}"] [name="${CSS.escape(t.name)}"]`);
+      if (!x) continue;
+      x.value = t.value;
+      if (t.focused) x.focus();
+    }
     if (looked?.lines.length && !quiet) say('done', v.lines(looked.lines));
     await counts();
   }

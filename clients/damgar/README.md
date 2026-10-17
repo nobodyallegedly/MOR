@@ -14,7 +14,7 @@ Money in MOR is two records of each payment, each signed by one side: the payer'
 
 **Pay.** The invoice to pay, or an on-chain address bound to that one payment. You pay in your own wallet and paste the proof back (the preimage, or the transaction's id); Damgar checks it and signs your claim.
 
-**The account.** What came in, what went out, what is pending, what is owed: each with its claim and receipt, and whether each verifies. Totals are per unit, never added across units.
+**The account.** What came in, what went out, what is pending, what is owed: each with its claim and receipt, and whether each verifies. A payment paid and confirmed (settled, its claim and receipt each valid) is folded to one line; open it to see its record. Totals are per unit, never added across units.
 
 **Settings.** Where you are paid (a Lightning node, a Bitcoin key: your payee pointer, with each rail's stated costs read back before it is signed), what you accept, the vault limit (shown; set in Kišib), homes and relays.
 
@@ -31,7 +31,7 @@ Money in MOR is two records of each payment, each signed by one side: the payer'
 | `src/store.ts`, `src/ops.ts`, `src/server.ts`, `src/cli.ts` | The program: its folder (`~/mor-damgar`), the operations by name, the local server on 127.0.0.1 (requests signed by a paired browser, domain line `MOR Damgar, version 1`), the command. |
 | `src/page/` | The page: `view.ts` (every screen), `ui.ts` (what each click does), `app.ts` (the program's page). |
 | `src/web/`, `scripts/build-web.ts` | The web client: the same page and Damgar's code in the browser, its keep in IndexedDB; built into `built/` with the pinned tools, reproducibly (`BUILT-WITH.txt`). |
-| `static/icon/damgar.svg` | The icon (a clay tablet, gold-tinted, with a resting duck carved into it, a thick gold edge, a silver line beneath; made into `damgar.png`, `.icns` and the touch icon by `clients/dub/scripts/make-icons.ts`). |
+| `static/icon/damgar.svg` | The icon (a clay tablet, gold-tinted, with a duck at rest carved into it, its long neck folded back and its head on its back, as on the Mesopotamian duck weights; a thick gold edge, a silver line beneath; made into `damgar.png`, `.icns` and the touch icon by `clients/dub/scripts/make-icons.ts`). |
 
 The core library does every check: payloads, commitments, rail proofs, the route and the vault, the anchoring ticket (`wasm/src/money_js.rs`, through `clients/genesis/src/core.ts`).
 
@@ -43,7 +43,8 @@ The core library does every check: payloads, commitments, rail proofs, the route
 - **The on-chain request key** (option (A), on the project lead's lean): Damgar makes it and keeps it beside the signing key, and answers address requests by itself as they arrive through MOR; the Bitcoin key stays in the wallet. Its cost is said where it is made; replacing it is a new payee pointer naming a new key.
 - **The vault** is set in Kišib (it changes what the identity's chain declares); Damgar shows it.
 - **Collective payments and splits** are round 2.
-- **Anchoring** is offered for a collective's acts only, never a release (that moves to Ummia).
+- **Anchoring** is offered for a collective's acts only, never a release (that moves to Ummia), and kept simple (decided by Nobody, allegedly): it shows that anchoring exists. A request from Edubba appears in To sign, is paid on regtest to the pooled service, and its ticket is shown; no tier beyond what the offer states, no refund or default handling here.
+- **A money message it cannot read** is shown unknown in To sign, never guessed, nothing signed for it; it may be set aside (the messages cMIP, section 6).
 
 ## Costs, stated
 
@@ -59,7 +60,7 @@ The core library does every check: payloads, commitments, rail proofs, the route
 | Test | What |
 | --- | --- |
 | `tip.test.ts` | A tip prepared in Dub, signed in Damgar, its invoice made by a test node (real BOLT 11), paid, claimed, verified, receipted; invoices from another node, for another amount, or with a plain description, refused. |
-| `requests.test.ts` | A request to be paid, asked in Dub and sent from Damgar: accepted as a debt (the obligation), paid, the debt shown unknown (M5). Under a Module not accepted: shown unknown, never signed; an invoice request on a rail the payee does not accept, refused, saying why. |
+| `requests.test.ts` | A request to be paid, asked in Dub and sent from Damgar: accepted as a debt (the obligation), paid, the debt shown unknown (M5). Under a Module not accepted: shown unknown, never signed; an invoice request on a rail the payee does not accept, refused, saying why. A message it cannot read (an undefined type, an undefined key): shown unknown, nothing signed, set aside. |
 | `accepted.test.ts` | The accepted list: asked at first use, sealed at the homes, read by a second Damgar, another app's part kept, nothing in the clear; two apps writing at once (the fork shown and merged against the last common version, an addition and a removal both kept); private by default, published only by choice, and withdrawn. |
 | `onchain.test.ts` | On-chain: the address bound to the payment, answered by the payee's Damgar with its request key; pending, then valid at six confirmations; the receipt; the request key replaced. The web client says it follows no chain. |
 | `anchor.test.ts` | An anchor of a collective's act: asked in Edubba, its ticket checked, paid from Damgar, anchored by the test service, checked in Edubba; the unchecked deadline said where no chain is followed. |

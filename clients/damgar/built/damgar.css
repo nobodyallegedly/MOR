@@ -139,6 +139,10 @@ li.warn{color:var(--soft)}
 .v.invalid{color:var(--bad);border-color:var(--bad)}
 .proofs{border-top:1px solid var(--line);margin-top:8px;padding-top:6px;font-size:13px}
 .proofs .p{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin:4px 0}
+details.settled{border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin:8px 0}
+details.settled>summary{font-size:14px;color:var(--text);cursor:pointer}
+details.settled[open]>summary{margin-bottom:4px}
+details.settled .item{border:0;padding:0;margin:4px 0 0;background:none}
 .totals{border:1px solid var(--edge);border-radius:12px;padding:10px 14px;margin:12px 0}
 .totals dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:0;font-size:14px}
 .totals dt{color:var(--soft)}

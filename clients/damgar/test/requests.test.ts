@@ -12,6 +12,10 @@ import { TestNode } from './node.ts';
 import type { Account, PaymentShown, ToSign } from '../src/shapes.ts';
 import { SPEC } from '../src/specs.ts';
 import { DEBT_SAY } from '../src/damgar.ts';
+import { join } from 'node:path';
+import { cborEncode } from '../../genesis/src/core.ts';
+import { TestIdentity } from '../../genesis/src/identity.ts';
+import { sendToSelf, TYPES } from '../src/messages.ts';
 
 let homes: Relay[];
 let relay: Relay;
@@ -109,4 +113,31 @@ test('under a Module not accepted: shown unknown, never signed; an invoice reque
   const g = (await items(gus)).find((i) => i.kind === 'draft')!;
   assert.equal(g.unknown, true);
   assert.match(g.amount!.said, /^10 of unit [0-9a-f]{8}… \(Bitcoin units, not accepted here\)$/);
+});
+
+test('a money message it cannot read: shown unknown, never guessed; nothing to sign; set aside, nothing sent', async () => {
+  const H = homes.map((h) => h.base);
+  const R = [relay.base];
+  const ann = await person(H, R);
+  // Another app holding the same identity sends what this Damgar cannot read: a type the cMIP does not define,
+  // and a draft whose payload carries a key the cMIP does not define.
+  const other = TestIdentity.load(join(ann.dub.dir, 'identities', ann.id, 'identity.json'));
+  const save = async () => undefined;
+  const strange = await sendToSelf(other, 9, cborEncode(new Map([[0, 1]])) as Uint8Array, { save });
+  const odd = await sendToSelf(other, TYPES.draft, cborEncode(new Map<number, unknown>([[0, 0], [1, new Uint8Array(32)], [2, [new Uint8Array(32), 5]], [4, 'Elsewhere'], [9, 'more']])) as Uint8Array, { save });
+  const looked = await ann.damgar.c.ask<{ lines: { text: string }[] }>('look');
+  assert.equal(looked.lines.filter((l) => /cannot read: shown unknown/.test(l.text)).length, 2, JSON.stringify(looked));
+  const shown = (await items(ann)).filter((i) => i.kind === 'unknown');
+  assert.deepEqual(shown.map((i) => i.id).sort(), [strange.id, odd.id].sort());
+  for (const i of shown) {
+    assert.equal(i.unknown, true);
+    assert.equal(i.amount, null, 'no amount guessed from it');
+    assert.deepEqual(i.offers, ['decline'], 'nothing to sign');
+  }
+  assert.match(shown.find((i) => i.id === strange.id)!.lines[0].text, /type 9, which the money messages cMIP draft 1 does not define/);
+  assert.match(shown.find((i) => i.id === odd.id)!.lines[0].text, /an unknown key 9/);
+  await refused(ann.damgar.c.ask('sign draft', { id: odd.id }), /./);
+  const aside = await ann.damgar.c.ask<{ lines: { text: string }[] }>('decline', { id: strange.id });
+  assert.match(aside.lines[0].text, /Set aside, unread: nothing was signed, nothing was sent/);
+  assert.deepEqual((await items(ann)).filter((i) => i.kind === 'unknown').map((i) => i.id), [odd.id]);
 });

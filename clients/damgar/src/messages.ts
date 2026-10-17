@@ -98,6 +98,11 @@ export function readDraft(payload: Uint8Array): Draft {
  * message: no Money act.
  */
 export async function sendDraft(me: TestIdentity, d: Draft, opts: { refs?: [string, string][]; via?: Via; save: () => Promise<void> }): Promise<{ id: string; left: string[] }> {
+  return sendToSelf(me, TYPES.draft, draftPayload(d), opts);
+}
+
+/** A message of this cMIP, of any type and payload, signed and left sealed to the identity itself at its homes (`sendDraft`'s way). */
+export async function sendToSelf(me: TestIdentity, type: number, payload: Uint8Array, opts: { refs?: [string, string][]; via?: Via; save: () => Promise<void> }): Promise<{ id: string; left: string[] }> {
   const homes = me.f.homes.map((h) => h.hint);
   const look = await lookUp(me.id, homes, opts.via ?? {});
   if (!look.encryptionKey) throw new Error('This identity publishes no encryption key, so nothing can be sealed to it: the draft cannot travel to Damgar. Nothing was signed.');
@@ -107,7 +112,7 @@ export async function sendDraft(me: TestIdentity, d: Draft, opts: { refs?: [stri
   }
   let made: { act: Uint8Array; id: string; key: Uint8Array };
   try {
-    made = me.sign(MESSAGES_SPEC, TYPES.draft, draftPayload(d), { public: false, to: [me.id], refs: opts.refs });
+    made = me.sign(MESSAGES_SPEC, type, payload, { public: false, to: [me.id], refs: opts.refs });
   } finally {
     await opts.save();
   }

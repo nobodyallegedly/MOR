@@ -7010,6 +7010,18 @@ var Damgar = class {
     const t = now();
     const signer = d.signer;
     if (d.spec === MESSAGES_SPEC) {
+      const unread = (why) => {
+        (book.unread ??= {})[d.id] = { from: signer, found: t, type: d.type ?? -1, why, stage: "new" };
+        lines2.push({ text: `A money message from ${short(signer)} that Damgar cannot read: shown unknown, in To sign.`, tone: "warn" });
+      };
+      if (d.type === TYPES.draft && signer !== me.id) return;
+      const readers = { [TYPES.draft]: readDraft, [TYPES.request]: readRequest, [TYPES.invoiceRequest]: readInvoiceRequest, [TYPES.answer]: readAnswer };
+      if (!readers[d.type]) return unread(`a message of type ${d.type}, which the money messages cMIP draft 1 does not define`);
+      try {
+        readers[d.type](d.payload);
+      } catch (e2) {
+        return unread(message2(e2));
+      }
       if (d.type === TYPES.draft) {
         if (signer !== me.id) return;
         readDraft(d.payload);
@@ -7372,7 +7384,7 @@ var Damgar = class {
     const why = anchoringCheckTicket(o.bytes, t.payload, b642(p.commitment), ir.ticket.leaf, BigInt(nowPoint ?? Math.max(0, tk.deadline - 1)));
     if (why) return why;
     book.acts[ticket] = { act: base64(t.bytes), from: p.other };
-    p.ticket = { act: ticket, batch: tk.batch, deadline: tk.deadline, tier: tk.tier };
+    p.ticket = { act: ticket, batch: tk.batch, deadline: tk.deadline, tier: tk.tier, checked: nowPoint !== null };
     return null;
   }
   // ------------------------------------------------------------ To sign
@@ -7391,6 +7403,24 @@ var Damgar = class {
         } catch (e2) {
           problems.push(`A draft ${short(id)}: ${message2(e2)}`);
         }
+      }
+      for (const [id, x] of Object.entries(book.unread ?? {})) {
+        if (x.stage !== "new") continue;
+        items.push({
+          id,
+          kind: "unknown",
+          from: this.who(x.from, me.id),
+          app: null,
+          title: "A money message Damgar cannot read",
+          lines: [
+            { text: `It cannot be read here (${x.why}): unknown. Nothing is guessed from it, and nothing can be signed for it.`, tone: "warn" },
+            { text: "It may come from a newer app or another draft of the money messages cMIP. Setting it aside signs nothing and sends nothing." }
+          ],
+          amount: null,
+          unknown: true,
+          offers: ["decline"],
+          found: x.found
+        });
       }
       for (const [id, x] of Object.entries(book.requestsIn)) {
         if (x.stage !== "new" && x.stage !== "debt") continue;
@@ -7522,7 +7552,11 @@ var Damgar = class {
       const { me, book } = await this.ctx();
       if (book.drafts[id]?.stage === "new") book.drafts[id].stage = "declined";
       else if (book.requestsIn[id] && (book.requestsIn[id].stage === "new" || book.requestsIn[id].stage === "debt")) book.requestsIn[id].stage = "declined";
-      else throw new Error("Nothing is waiting there.");
+      else if (book.unread?.[id]?.stage === "new") {
+        book.unread[id].stage = "set aside";
+        await this.saveBook(me.id, book);
+        return { lines: [{ text: "Set aside, unread: nothing was signed, nothing was sent." }] };
+      } else throw new Error("Nothing is waiting there.");
       await this.saveBook(me.id, book);
       return { lines: [{ text: "Declined: nothing was signed, nothing was sent." }] };
     });
@@ -7785,7 +7819,7 @@ var Damgar = class {
       proofs,
       lines: lines2,
       at: p.at,
-      ticket: p.ticket ? { batch: p.ticket.batch, deadline: p.ticket.deadline, tier: p.ticket.tier } : null
+      ticket: p.ticket ? { batch: p.ticket.batch, deadline: p.ticket.deadline, tier: p.ticket.tier, checked: p.ticket.checked !== false } : null
     };
   }
   /** Pay: the payments of this identity waiting to be paid or checked again. */
@@ -8227,6 +8261,10 @@ li.warn{color:var(--soft)}
 .v.invalid{color:var(--bad);border-color:var(--bad)}
 .proofs{border-top:1px solid var(--line);margin-top:8px;padding-top:6px;font-size:13px}
 .proofs .p{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin:4px 0}
+details.settled{border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin:8px 0}
+details.settled>summary{font-size:14px;color:var(--text);cursor:pointer}
+details.settled[open]>summary{margin-bottom:4px}
+details.settled .item{border:0;padding:0;margin:4px 0 0;background:none}
 .totals{border:1px solid var(--edge);border-radius:12px;padding:10px 14px;margin:12px 0}
 .totals dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:0;font-size:14px}
 .totals dt{color:var(--soft)}
@@ -8326,7 +8364,7 @@ function toSign(items, problems) {
         case "sign":
           return btn("sign draft", t.id, t.kind === "draft" && t.title.startsWith("A request") ? "Sign and send the request" : "Sign it", true);
         case "decline":
-          return btn("decline", t.id, "Decline");
+          return btn("decline", t.id, t.kind === "unknown" ? "Set it aside" : "Decline");
         case "debt":
           return btn("accept debt", t.id, "Accept as a debt (sign an obligation)");
         case "pay":
@@ -8349,15 +8387,20 @@ function payment(p, forPay = false) {
   const pay = forPay && p.pay ? p.pay.invoice ? `<label>Pay this invoice in your wallet</label><div class="copy">${e(p.pay.invoice)}</div><button class="quiet" data-action="copy" data-text="${e(p.pay.invoice)}">Copy the invoice</button>
 <form class="paid" data-key="${e(p.key)}"><label>The proof, from your wallet once paid: the preimage (64 hexadecimal characters)</label><input name="proof" required spellcheck="false" autocomplete="off"><div class="row"><button type="submit" class="primary">Check it and sign my claim</button></div></form>` : `<label>Pay exactly ${e(p.pay.amount.said)} to this address, from your wallet</label><div class="copy">${e(p.pay.address ?? "")}</div><button class="quiet" data-action="copy" data-text="${e(p.pay.address ?? "")}">Copy the address</button>
 ${p.stage === "paid" ? `<div class="row"><button data-action="recheck" data-key="${e(p.key)}" class="primary">Check the chain again</button></div>` : `<form class="paid" data-key="${e(p.key)}"><label>The proof, from your wallet once sent: the transaction\u2019s id (64 hexadecimal characters)</label><input name="proof" required spellcheck="false" autocomplete="off"><div class="row"><button type="submit" class="primary">Check it and sign my claim</button></div></form>`}` : "";
-  const ticket = p.ticket ? `<p class="small">An anchor\u2019s ticket: batch ${p.ticket.batch}, tier ${p.ticket.tier}, on the chain by block ${p.ticket.deadline}.</p>` : "";
+  const ticket = p.ticket ? `<p class="small">An anchor\u2019s ticket: batch ${p.ticket.batch}, tier ${p.ticket.tier}, on the chain by block ${p.ticket.deadline}.${p.ticket.checked ? "" : " Not checked here: this Damgar follows no chain, so whether that block is within the tier\u2019s reach of today\u2019s is unknown. Pay only if you trust the service on it, or check it in Damgar on a computer."}</p>` : "";
   return `<div class="item" data-payment="${e(p.key)}"><h3>${p.side === "out" ? "To" : "From"} ${who(p.other)} \xB7 ${e(p.railName)}${p.to === "vault" ? ", to the vault" : ""}</h3>
 <div class="meta">${e(p.stageSaid)}</div>${amount(p.amount)}${p.whatFor ? `<p class="small">For \u201C${e(p.whatFor)}\u201D</p>` : ""}${ticket}${lines(p.lines)}${pay}${proofs}</div>`;
+}
+var confirmed = (p) => p.stage === "settled" && ["claim", "receipt"].every((k) => p.proofs.some((x) => x.kind === k && x.rail.answer === "valid" && x.standing === "valid"));
+function accountPayment(p) {
+  if (!confirmed(p)) return payment(p);
+  return `<details class="fold settled" data-settled="${e(p.key)}"><summary>${p.side === "out" ? "To" : "From"} ${e(p.other.short)} \xB7 ${e(p.railName)} \xB7 ${e(p.amount.said)} \xB7 <span class="v valid">paid and confirmed</span></summary>${payment(p)}</details>`;
 }
 function account(a) {
   const totals2 = `<div class="totals"><dl>${a.totals.map((t) => `<dt>${e(t.label)}</dt><dd>${t.amounts.length ? t.amounts.map((x) => e(x.said)).join("<br>") : '<span class="small">none</span>'}</dd>`).join("")}</dl></div>`;
   const asks = a.asks.length ? `<h2>Requests and debts</h2>${a.asks.map((x) => `<div class="item"><h3>${x.side === "out" ? "You asked" : "Asked of you by"} ${who(x.other)}</h3><div class="meta">${e(x.state)}</div>${amount(x.amount)}${x.whatFor ? `<p class="small">For \u201C${e(x.whatFor)}\u201D</p>` : ""}${lines(x.lines)}</div>`).join("")}` : "";
   return `<p class="small">Totals are per unit, never added across units.</p>${totals2}
-<h2>Payments</h2>${a.payments.length ? a.payments.map((p) => payment(p)).join("") : '<p class="empty">No payment yet.</p>'}
+<h2>Payments</h2>${a.payments.length ? `${a.payments.some(confirmed) ? '<p class="small">Payments paid and confirmed are folded: open one to see its record.</p>' : ""}${a.payments.map(accountPayment).join("")}` : '<p class="empty">No payment yet.</p>'}
 ${asks}
 <details class="fold"><summary>What this account does not judge</summary>${lines(a.notes.map((t) => ({ text: t })))}</details>
 ${a.problems.length ? note("warn", lines(a.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}`;
@@ -8485,7 +8528,14 @@ function mount(app3, b) {
     const r = await b.ask("to sign");
     const target = $("sign-list");
     if (!target) return;
+    const typed = [...target.querySelectorAll("form[data-id] [name]")].filter((x) => x.value).map((x) => ({ form: x.form.dataset.id, name: x.name, value: x.value, focused: document.activeElement === x }));
     target.innerHTML = toSign(r.items, [...r.problems, ...looked?.problems ?? []]);
+    for (const t of typed) {
+      const x = target.querySelector(`form[data-id="${CSS.escape(t.form ?? "")}"] [name="${CSS.escape(t.name)}"]`);
+      if (!x) continue;
+      x.value = t.value;
+      if (t.focused) x.focus();
+    }
     if (looked?.lines.length && !quiet) say2("done", lines(looked.lines));
     await counts();
   }
@@ -8619,24 +8669,25 @@ function mount(app3, b) {
   });
   app3.addEventListener("submit", async (ev) => {
     const f = ev.target;
-    if (f.id === "pair") return;
+    const fid = f.getAttribute("id");
+    if (fid === "pair") return;
     ev.preventDefault();
     const fd = form(f);
-    if (f.id === "bring") {
+    if (fid === "bring") {
       const r = await act(() => b.ask("bring", { id: str(fd, "id"), words: str(fd, "words"), address: str(fd, "address"), relays: str(fd, "relays") }));
       if (r) {
         screen = "app";
         await show(await b.ask("state"));
         done(r);
       }
-    } else if (f.id === "renew") {
+    } else if (fid === "renew") {
       const r = await act(() => b.ask("renew", { words: str(fd, "words") }));
       if (r) {
         screen = "app";
         await show(await b.ask("state"));
         done(r);
       }
-    } else if (f.id === "accept") {
+    } else if (fid === "accept") {
       const keys = [...f.querySelectorAll("input[name=accept]:checked")].map((x) => x.value);
       const r = await act(() => b.ask("accept", { keys }));
       if (r) {
@@ -8661,14 +8712,14 @@ function mount(app3, b) {
         await open("pay");
         done(r);
       }
-    } else if (f.id === "rails") {
+    } else if (fid === "rails") {
       const a = { lightning: str(fd, "lightning"), onchain: str(fd, "onchain"), network: Number(str(fd, "network") || 3), newRequestKey: fd.get("newRequestKey") === "on" };
       const r = await act(() => b.ask("rails review", a));
       if (r) {
         reviewed = a;
         $("rails-review").innerHTML = railsReview(r);
       }
-    } else if (f.id === "relays") {
+    } else if (fid === "relays") {
       const r = await act(() => b.ask("relays", { relays: str(fd, "relays") }));
       if (r) {
         state = await b.ask("state");

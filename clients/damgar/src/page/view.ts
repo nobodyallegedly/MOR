@@ -58,6 +58,10 @@ li.warn{color:var(--soft)}
 .v.invalid{color:var(--bad);border-color:var(--bad)}
 .proofs{border-top:1px solid var(--line);margin-top:8px;padding-top:6px;font-size:13px}
 .proofs .p{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin:4px 0}
+details.settled{border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin:8px 0}
+details.settled>summary{font-size:14px;color:var(--text);cursor:pointer}
+details.settled[open]>summary{margin-bottom:4px}
+details.settled .item{border:0;padding:0;margin:4px 0 0;background:none}
 .totals{border:1px solid var(--edge);border-radius:12px;padding:10px 14px;margin:12px 0}
 .totals dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;margin:0;font-size:14px}
 .totals dt{color:var(--soft)}
@@ -184,7 +188,7 @@ export function toSign(items: ToSign[], problems: string[]): string {
               case 'sign':
                 return btn('sign draft', t.id, t.kind === 'draft' && t.title.startsWith('A request') ? 'Sign and send the request' : 'Sign it', true);
               case 'decline':
-                return btn('decline', t.id, 'Decline');
+                return btn('decline', t.id, t.kind === 'unknown' ? 'Set it aside' : 'Decline');
               case 'debt':
                 return btn('accept debt', t.id, 'Accept as a debt (sign an obligation)');
               case 'pay':
@@ -226,13 +230,23 @@ ${p.stage === 'paid' ? `<div class="row"><button data-action="recheck" data-key=
 <div class="meta">${e(p.stageSaid)}</div>${amount(p.amount)}${p.whatFor ? `<p class="small">For “${e(p.whatFor)}”</p>` : ''}${ticket}${lines(p.lines)}${pay}${proofs}</div>`;
 }
 
+/** Paid and confirmed: settled, its receipt and a claim each valid by the rail's own evidence, and counting. */
+export const confirmed = (p: PaymentShown): boolean =>
+  p.stage === 'settled' && (['claim', 'receipt'] as const).every((k) => p.proofs.some((x) => x.kind === k && x.rail.answer === 'valid' && x.standing === 'valid'));
+
+/** A payment in the account: folded once paid and confirmed, its record one click away. */
+function accountPayment(p: PaymentShown): string {
+  if (!confirmed(p)) return payment(p);
+  return `<details class="fold settled" data-settled="${e(p.key)}"><summary>${p.side === 'out' ? 'To' : 'From'} ${e(p.other.short)} · ${e(p.railName)} · ${e(p.amount.said)} · <span class="v valid">paid and confirmed</span></summary>${payment(p)}</details>`;
+}
+
 export function account(a: Account): string {
   const totals = `<div class="totals"><dl>${a.totals.map((t) => `<dt>${e(t.label)}</dt><dd>${t.amounts.length ? t.amounts.map((x) => e(x.said)).join('<br>') : '<span class="small">none</span>'}</dd>`).join('')}</dl></div>`;
   const asks = a.asks.length
     ? `<h2>Requests and debts</h2>${a.asks.map((x) => `<div class="item"><h3>${x.side === 'out' ? 'You asked' : 'Asked of you by'} ${who(x.other)}</h3><div class="meta">${e(x.state)}</div>${amount(x.amount)}${x.whatFor ? `<p class="small">For “${e(x.whatFor)}”</p>` : ''}${lines(x.lines)}</div>`).join('')}`
     : '';
   return `<p class="small">Totals are per unit, never added across units.</p>${totals}
-<h2>Payments</h2>${a.payments.length ? a.payments.map((p) => payment(p)).join('') : '<p class="empty">No payment yet.</p>'}
+<h2>Payments</h2>${a.payments.length ? `${a.payments.some(confirmed) ? '<p class="small">Payments paid and confirmed are folded: open one to see its record.</p>' : ''}${a.payments.map(accountPayment).join('')}` : '<p class="empty">No payment yet.</p>'}
 ${asks}
 <details class="fold"><summary>What this account does not judge</summary>${lines(a.notes.map((t) => ({ text: t })))}</details>
 ${a.problems.length ? note('warn', lines(a.problems.map((t) => ({ text: t, tone: 'warn' })))) : ''}`;

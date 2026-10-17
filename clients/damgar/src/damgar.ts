@@ -175,6 +175,8 @@ export interface Book {
   requestsIn: Record<string, { from: string; found: number; stage: 'new' | 'declined' | 'debt' | 'asked' | 'paid'; obligation: string | null; payment: string | null }>;
   requestsOut: Record<string, { to: string; at: number; obligation: string | null; payment: string | null }>;
   invoices: Record<string, { from: string; found: number; stage: 'new' | 'answered' | 'refused'; payment: string | null; why: string | null }>;
+  /** Money messages this Damgar cannot read (a type it does not know, a payload not as the cMIP writes it): shown unknown, never guessed (money messages cMIP, 6.1). Absent in books written before. */
+  unread?: Record<string, { from: string; found: number; type: number; why: string; stage: 'new' | 'set aside' }>;
   payments: Record<string, Payment>;
   /** The payee pointers this identity published from here, by act, newest last. */
   pointers: string[];
@@ -651,6 +653,20 @@ export class Damgar {
     const t = now();
     const signer = d.signer!;
     if (d.spec === MESSAGES_SPEC) {
+      // A message it cannot read is kept as such and shown unknown: nothing is guessed from it, nothing signed for it.
+      const unread = (why: string) => {
+        (book.unread ??= {})[d.id] = { from: signer, found: t, type: d.type ?? -1, why, stage: 'new' };
+        lines.push({ text: `A money message from ${short(signer)} that Damgar cannot read: shown unknown, in To sign.`, tone: 'warn' });
+      };
+      // A draft is only ever one's own (1.1): one signed by anyone else is not for this identity.
+      if (d.type === TYPES.draft && signer !== me.id) return;
+      const readers: Record<number, (b: Uint8Array) => unknown> = { [TYPES.draft]: readDraft, [TYPES.request]: readRequest, [TYPES.invoiceRequest]: readInvoiceRequest, [TYPES.answer]: readAnswer };
+      if (!readers[d.type!]) return unread(`a message of type ${d.type}, which the money messages cMIP draft 1 does not define`);
+      try {
+        readers[d.type!](d.payload!);
+      } catch (e) {
+        return unread(message(e));
+      }
       if (d.type === TYPES.draft) {
         if (signer !== me.id) return;
         readDraft(d.payload!);
@@ -1055,6 +1071,24 @@ export class Damgar {
           problems.push(`A draft ${short(id)}: ${message(e)}`);
         }
       }
+      for (const [id, x] of Object.entries(book.unread ?? {})) {
+        if (x.stage !== 'new') continue;
+        items.push({
+          id,
+          kind: 'unknown',
+          from: this.who(x.from, me.id),
+          app: null,
+          title: 'A money message Damgar cannot read',
+          lines: [
+            { text: `It cannot be read here (${x.why}): unknown. Nothing is guessed from it, and nothing can be signed for it.`, tone: 'warn' },
+            { text: 'It may come from a newer app or another draft of the money messages cMIP. Setting it aside signs nothing and sends nothing.' },
+          ],
+          amount: null,
+          unknown: true,
+          offers: ['decline'],
+          found: x.found,
+        });
+      }
       for (const [id, x] of Object.entries(book.requestsIn)) {
         if (x.stage !== 'new' && x.stage !== 'debt') continue;
         const r = this.requestOf(book, id);
@@ -1188,7 +1222,11 @@ export class Damgar {
       const { me, book } = await this.ctx();
       if (book.drafts[id]?.stage === 'new') book.drafts[id].stage = 'declined';
       else if (book.requestsIn[id] && (book.requestsIn[id].stage === 'new' || book.requestsIn[id].stage === 'debt')) book.requestsIn[id].stage = 'declined';
-      else throw new Error('Nothing is waiting there.');
+      else if (book.unread?.[id]?.stage === 'new') {
+        book.unread[id].stage = 'set aside';
+        await this.saveBook(me.id, book);
+        return { lines: [{ text: 'Set aside, unread: nothing was signed, nothing was sent.' }] };
+      } else throw new Error('Nothing is waiting there.');
       await this.saveBook(me.id, book);
       return { lines: [{ text: 'Declined: nothing was signed, nothing was sent.' }] };
     });

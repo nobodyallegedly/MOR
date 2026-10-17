@@ -229,6 +229,10 @@ test('Damgar by clicks: the web client and the program’s page, a tip from Dub 
   await shot(bp, 'damgar-to-sign-invoice');
   const made = node.invoice(1500, dh);
   await bp.locator('form.invoice [name=invoice]').fill(made.invoice);
+  // A redraw of To sign (the look every 20 seconds, or Look again) keeps what was pasted.
+  await bp.getByRole('button', { name: 'Look again' }).click();
+  await settled(bp);
+  assert.equal(await bp.locator('form.invoice [name=invoice]').inputValue(), made.invoice, 'the pasted invoice survives a redraw');
   await done(bp, bp.getByRole('button', { name: 'Check it and send it' }), 'invoice-sent');
 
   // Alice: Pay shows the invoice; the proof pasted back; her claim signed.
@@ -251,13 +255,20 @@ test('Damgar by clicks: the web client and the program’s page, a tip from Dub 
   await ap.getByRole('button', { name: 'Look again' }).click();
   await settled(ap);
   await ap.locator('button.tab[data-tab=account]').click();
-  await sees(ap, '#account-body .proofs', 'web-account');
-  assert.equal(await ap.locator('#account-body .proofs .v.valid').count() >= 2, true);
+  // Paid and confirmed: folded, its record one click away.
+  await sees(ap, '#account-body details.settled', 'web-account');
+  const folded = ap.locator('#account-body details.settled').first();
+  assert.match(await folded.locator('summary').innerText(), /^To .* · Lightning · 1 500 regtest satoshis · paid and confirmed$/i);
+  assert.equal(await folded.locator('.proofs').isVisible(), false, 'folded once paid and confirmed');
   assert.match(await ap.locator('.totals').innerText(), /Went out \(verified\)\s*1 500 regtest satoshis/);
   await banner(ap, 'the account');
   await shot(ap, 'damgar-web-account');
+  await folded.locator('summary').click();
+  await sees(ap, '#account-body details.settled .proofs', 'web-account-open');
+  assert.equal(await folded.locator('.proofs .v.valid').count() >= 2, true);
+  await shot(ap, 'damgar-web-account-record');
   await bp.locator('button.tab[data-tab=account]').click();
-  await sees(bp, '#account-body .proofs', 'account');
+  await sees(bp, '#account-body details.settled', 'account');
   await shot(bp, 'damgar-account');
   await ap.locator('button.tab[data-tab=settings]').click();
   await sees(ap, 'form#rails', 'web-settings');

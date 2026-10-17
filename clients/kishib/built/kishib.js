@@ -1053,6 +1053,91 @@ var Verifier = class {
     }
   }
   /**
+   * Where a payer pays this payee this amount (the payment cMIP,
+   * "Choosing where to pay"; Money rules 1, 3 and 5): the pointer that
+   * counts and the vault in force, as this verifier holds the payee's
+   * acts, and the first rail, in the payee's order, on a rail Module the
+   * person accepts that carries the unit. `{ to: "flow", pointer, rail,
+   * module, address }`, `{ to: "vault", declaredBy, entry, module,
+   * address }` or `{ to: "nowhere", why }`.
+   * @param {string} money_spec
+   * @param {string} payee
+   * @param {any} amount
+   * @param {string[]} accepted
+   * @returns {any}
+   */
+  moneyChoose(money_spec, payee, amount, accepted) {
+    const ptr0 = passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayJsValueToWasm0(accepted, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyChoose(this.__wbg_ptr, ptr0, len0, ptr1, len1, amount, ptr2, len2);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Judge a receipt or claim this verifier holds, as a Money-only client
+   * with the person's accepted cMIPs and Modules (F338): the act's
+   * standing; the rail's answer, by the rail Module its field 0 names,
+   * adopted only if accepted (a Module, unit or payment cMIP not accepted
+   * is unknown: Development rule 9); and what is judged beside it.
+   * @param {string} act
+   * @param {any} opts
+   * @returns {any}
+   */
+  moneyJudge(act, opts) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyJudge(this.__wbg_ptr, ptr0, len0, opts);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The payee pointer that counts for an identity (Money rule 1), from
+   * the valid pointers this verifier holds: `{ act, version, forked }`,
+   * `act` null where it holds none; `forked` where two name one
+   * predecessor, the pointer that counts the last before the fork.
+   * @param {string} money_spec
+   * @param {string} payee
+   * @returns {any}
+   */
+  moneyPointer(money_spec, payee) {
+    const ptr0 = passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyPointer(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The vault an identity's chain declares in force (Money rule 3), as
+   * this verifier holds the chain: `{ declaredBy, entries }`, or null
+   * where it declares none.
+   * @param {string} money_spec
+   * @param {string} identity
+   * @returns {any}
+   */
+  moneyVault(money_spec, identity) {
+    const ptr0 = passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyVault(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * A verifier for the given Identity spec hash (`IDENTITY`; a test value
    * until the freeze). Given the Money and Agreements spec hashes too, it can
    * tell which acts may carry acknowledgements (F110); without them, an
@@ -1293,6 +1378,15 @@ function keyDeliveryPayload(target, key, media) {
   wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
   return v3;
 }
+function lightningAddress(input) {
+  const ret = wasm.lightningAddress(input);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
+}
 function lockMedia(plaintext) {
   const ptr0 = passArray8ToWasm0(plaintext, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
@@ -1336,6 +1430,13 @@ function makeRotation(input) {
   wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
   return v1;
 }
+function moneySpecs() {
+  const ret = wasm.moneySpecs();
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
 function newEncryptionSecret() {
   const ret = wasm.newEncryptionSecret();
   var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
@@ -1354,6 +1455,15 @@ function newTestChainKey(scheme) {
     throw takeFromExternrefTable0(ret[1]);
   }
   return takeFromExternrefTable0(ret[0]);
+}
+function onchainAddress(input) {
+  const ret = wasm.onchainAddress(input);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v1;
 }
 function openMedia(locked, key, nonce) {
   const ptr0 = passArray8ToWasm0(locked, wasm.__wbindgen_malloc);
@@ -1407,6 +1517,24 @@ function readKeyDelivery(payload) {
   const ptr0 = passArray8ToWasm0(payload, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
   const ret = wasm.readKeyDelivery(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function readLightningAddress(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.readLightningAddress(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function readOnchainAddress(bytes) {
+  const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.readOnchainAddress(ptr0, len0);
   if (ret[2]) {
     throw takeFromExternrefTable0(ret[1]);
   }
@@ -1504,6 +1632,15 @@ function signingPublic(secret) {
   var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
   wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
   return v2;
+}
+function vaultDeclaration(money_spec, entries) {
+  const ptr0 = passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.vaultDeclaration(ptr0, len0, entries);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
 }
 function verifyShare(bytes) {
   const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
@@ -2549,6 +2686,154 @@ var ENVELOPES_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 };
 
 // ../reader/src/web/core.ts
 await __wbg_init({ module_or_path: new URL("mor_wasm_bg.wasm", document.baseURI) });
+
+// ../damgar/src/units.ts
+var u = moneySpecs().units;
+var BITCOIN_UNITS = {
+  key: "bitcoin-units",
+  name: "Bitcoin units",
+  text: "modules/units-bitcoin-draft-1.md",
+  draft: 1,
+  does: "The satoshi on Bitcoin, and the satoshi of each of Bitcoin\u2019s test networks, which is not a satoshi: four units, each its own specification, so that a test payment can never pay a real debt.",
+  units: [
+    { hash: u.bitcoin, name: "satoshi (Bitcoin)", one: "satoshi", many: "satoshis", test: false, network: 0 },
+    { hash: u.testnet, name: "satoshi (testnet)", one: "testnet satoshi", many: "testnet satoshis", test: true, network: 1 },
+    { hash: u.signet, name: "satoshi (signet)", one: "signet satoshi", many: "signet satoshis", test: true, network: 2 },
+    { hash: u.regtest, name: "satoshi (regtest)", one: "regtest satoshi", many: "regtest satoshis", test: true, network: 3 }
+  ]
+};
+var UNITS_MODULES = [BITCOIN_UNITS];
+var unitOf = (hash) => {
+  for (const m of UNITS_MODULES) {
+    const x = m.units.find((y) => y.hash === hash);
+    if (x) return { unit: x, module: m };
+  }
+  return null;
+};
+var grouped = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+function say(a, accepted) {
+  const k = unitOf(a.unit);
+  if (!k || !accepted.has(a.unit)) return `${grouped(a.value)} of unit ${a.unit.slice(0, 8)}\u2026 (${k ? `${k.module.name}, not accepted here` : "a units Module Damgar does not know"})`;
+  return `${grouped(a.value)} ${a.value === 1 ? k.unit.one : k.unit.many}`;
+}
+
+// ../damgar/src/specs.ts
+var MONEY = MIRS.money;
+var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 1, test value until publication");
+var ACCEPTED_SPEC = sha2562("Accepted cMIP, draft 1, test value until publication");
+var SPEC = moneySpecs();
+var unitsEntry = (u2) => ({
+  key: u2.key,
+  name: u2.name,
+  kind: "Module",
+  text: u2.text,
+  draft: u2.draft,
+  hashes: u2.units.map((x) => x.hash),
+  does: u2.does,
+  here: "Every amount names its unit; Damgar shows an amount in these units with their names, and never adds or compares amounts of different units.",
+  built: true,
+  needs: []
+});
+var ACCEPTABLE = [
+  {
+    key: "payment",
+    name: "Payment",
+    kind: "cMIP",
+    text: "cmips/cmip-payment-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.payment],
+    does: "The common language of a payment: the commitment a rail carries (who pays whom, how much, for what), the proof a receipt or claim carries, and how both are checked by the rail Module they name.",
+    here: "Needed for every payment: without it, every receipt and claim is unknown here.",
+    built: true,
+    needs: []
+  },
+  {
+    key: "lightning",
+    name: "Lightning rail",
+    kind: "Module",
+    text: "modules/module-lightning-rail-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.lightning.hash],
+    does: "Payments over Lightning: the payee\u2019s node signs an invoice committing to the payment; paying it reveals a secret (the preimage), which is the proof. A request rail, its proof binding the payee and the purpose (its fields 11 and 13).",
+    here: "You are shown an invoice to pay in your own wallet, and paste back the preimage; to be paid, you paste an invoice your wallet made.",
+    built: true,
+    needs: ["payment", "bitcoin-units"]
+  },
+  {
+    key: "onchain",
+    name: "On-chain rail",
+    kind: "Module",
+    text: "modules/module-onchain-rail-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.onchain.hash],
+    does: "Payments on the Bitcoin chain itself: a fresh address bound to each payment (pay-to-contract, no OP_RETURN), the transaction and its block as the proof, counted at six confirmations. A request rail, its proof binding the payee and the purpose.",
+    here: "You are shown an address bound to the payment, to pay from your own wallet, and paste back the transaction\u2019s id. Checked against the chain Damgar follows: on this computer, the regtest node you name; in the web client, none (paid, not yet checked against the chain).",
+    built: true,
+    needs: ["payment", "bitcoin-units"]
+  },
+  unitsEntry(BITCOIN_UNITS),
+  {
+    key: "split",
+    name: "Split",
+    kind: "cMIP",
+    text: "cmips/cmip-split-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.split],
+    does: "How a payment to a collective or a deal is divided among its owners by a split service: an agreement\u2019s choice, defined with the agreement.",
+    here: "Not used in round 1: splits are defined in Edubba\u2019s Collectives tab, in round 2, and never approved here. Accepting it records your choice for the apps that read it.",
+    built: false,
+    needs: ["payment"]
+  },
+  {
+    key: "conversion",
+    name: "Conversion",
+    kind: "cMIP",
+    text: "cmips/cmip-conversion-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.conversion],
+    does: "A conversion service that receives on one rail or unit and pays on another, at the rate of its own offer: the only way two amounts of different units are ever read together.",
+    here: "Not used in round 1. Accepting it records your choice.",
+    built: false,
+    needs: ["payment"]
+  },
+  {
+    key: "anchoring",
+    name: "Anchoring",
+    kind: "cMIP",
+    text: "cmips/cmip-anchoring-draft-5.md",
+    draft: 5,
+    hashes: [SPEC.anchoring],
+    does: "Putting an act\u2019s fingerprint on a clock everyone can read (the Bitcoin chain), through a pooled service paid per fingerprint: its offer, the ticket it signs for each paid fingerprint, the batches it publishes.",
+    here: "Edubba asks for an anchor of a collective\u2019s act; the payment for it arrives here, and is signed here. Its ticket is shown with it.",
+    built: true,
+    needs: ["payment", "lightning", "bitcoin-units", "bitcoin-clock"]
+  },
+  {
+    key: "bitcoin-clock",
+    name: "Bitcoin clock",
+    kind: "Module",
+    text: "modules/module-bitcoin-clock-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.bitcoinClock],
+    does: "The Bitcoin chain read as a clock: a moment on it is a block. The clock an anchoring service\u2019s offer names; and the clock an owner may declare, so that a theft\u2019s window ends at a block (Money rule 29).",
+    here: "Shown with an anchor\u2019s ticket (its deadline is a block). Damgar does not judge Money rule 29, which needs Agreements\u2019 reading of the payee\u2019s acts: said where it applies.",
+    built: true,
+    needs: ["anchoring"]
+  },
+  {
+    key: "messages",
+    name: "Money messages",
+    kind: "cMIP",
+    text: "cmips/cmip-money-messages-draft-1.md",
+    draft: 1,
+    hashes: [MESSAGES_SPEC],
+    does: "The four messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request, and its answer. Written by Damgar\u2019s build, awaiting approval.",
+    here: "Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.",
+    built: true,
+    needs: ["payment"]
+  }
+];
+var OURS = new Set(ACCEPTABLE.flatMap((a) => a.hashes));
 
 // ../genesis/src/transport.ts
 var RelayError = class extends Error {
@@ -5300,9 +5585,9 @@ function fingerprint(scheme, key) {
   const d = new Uint8Array(1 + key.length);
   d[0] = scheme;
   d.set(key, 1);
-  return grouped(taggedHash("MOR/module/airgap/fingerprint", d).slice(0, 32));
+  return grouped2(taggedHash("MOR/module/airgap/fingerprint", d).slice(0, 32));
 }
-var grouped = (h) => h.match(/.{1,4}/g).join(" ");
+var grouped2 = (h) => h.match(/.{1,4}/g).join(" ");
 
 // src/read.ts
 var message2 = (e2) => e2 instanceof Error ? e2.message : String(e2);
@@ -6703,7 +6988,7 @@ var CollectiveSitting = class _CollectiveSitting {
       lines: this.lines,
       ...this.request || this.room ? {
         request: {
-          fingerprint: grouped(this.fingerprint.slice(0, 32)),
+          fingerprint: grouped2(this.fingerprint.slice(0, 32)),
           full: this.fingerprint,
           have: this.papers.length,
           need: this.c?.threshold ?? 0,
@@ -6804,7 +7089,7 @@ var CollectiveSitting = class _CollectiveSitting {
         ...recordWords(c.rd).filter((s) => !s.heading.startsWith("Its lines")),
         { heading: "The member change it completes", lines: [{ text: `Clone ${ch.clone}, proposed by ${short3(ch.proposer)}.` }, ...readChanges(c.agreementPayload, ch.payload, names), { text: `Signed by ${Object.keys(ch.signatures).length} of the ${ch.signers.length} it needs: ${ch.signers.map((s) => `${short3(s)} ${ch.signatures[s] ? "\u2713" : "(not yet)"}`).join(", ")}.`, tone: ch.missing.length ? "warn" : "ok" }] },
         { heading: "The papers", lines: [{ text: `Exactly ${c.threshold} of the ${c.holders.length} members\u2019 paper shares rebuild the chain key (its agreement\u2019s rule); no more are collected.` }, { text: `Yours: share ${own.x}.` }, this.room ? { text: "In the same room: the others type theirs into this Ki\u0161ib, one after another. Nothing is sent." } : { text: `Remote: each other member gives theirs in their own Ki\u0161ib, sealed to a one-time key made here, within an hour (until ${when(this.request.expires)} by this device\u2019s clock; MOR has no clock).` }] },
-        { heading: "Its lines of acts: what the rotation keeps (Identity rule 35)", lines: this.plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u) => u ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
+        { heading: "Its lines of acts: what the rotation keeps (Identity rule 35)", lines: this.plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u2) => u2 ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
         { heading: "The new shares", lines: [{ text: `A new chain key, created here at the moment of signing, dealt to ${ch.members.length} members, any ${ch.threshold} rebuilding it.` }, ...shown] }
       ];
       const signs2 = [
@@ -6818,7 +7103,7 @@ var CollectiveSitting = class _CollectiveSitting {
       return {
         digest: sha2562(cborEncode(["MOR Ki\u0161ib collective rotation, version 1", this.fingerprint, this.room])),
         title: `Rotate the collective ${short3(id)}`,
-        summary: [`Collective ${id}. Fingerprint of this rotation: ${grouped(this.fingerprint.slice(0, 32))}.`, FORGOTTEN_SAY],
+        summary: [`Collective ${id}. Fingerprint of this rotation: ${grouped2(this.fingerprint.slice(0, 32))}.`, FORGOTTEN_SAY],
         sections: sections2,
         signs: signs2,
         warning: this.plan.warning,
@@ -7017,7 +7302,7 @@ var CollectiveSitting = class _CollectiveSitting {
     }
     if (this.founder) this.founder.f.signingSecret = "";
     this.founder = null;
-    lines2.push({ text: `The new dealing\u2019s fingerprint, for every member to compare: ${grouped(dealt.fingerprint.slice(0, 32))}.` });
+    lines2.push({ text: `The new dealing\u2019s fingerprint, for every member to compare: ${grouped2(dealt.fingerprint.slice(0, 32))}.` });
     lines2.push({ text: "Keep Ki\u0161ib open until the new shares and the collective\u2019s new words are shown. Closed now, what is not yet shown is lost (the shares sealed to members\u2019 Dubs are safe): the collective must then be rotated again, from enough of the new papers that reached their members.", tone: "warn" });
     this.lines = lines2;
     this.stage = "sent";
@@ -7074,7 +7359,7 @@ var CollectiveSitting = class _CollectiveSitting {
     return {
       x: p.x,
       words: toWords(p.value),
-      fingerprint: grouped(s.fingerprint.slice(0, 32)),
+      fingerprint: grouped2(s.fingerprint.slice(0, 32)),
       say: [`The new share ${p.x} of the collective\u2019s chain key, for ${short3(holder)}. Write its number and its 24 words on new paper, labelled with the collective, and destroy the old paper.`, "It is shown once: when you say it is written, it is forgotten here."]
     };
   }
@@ -7198,7 +7483,9 @@ var Kishib = class {
   // ------------------------------------------------------------ state
   state() {
     this.expirePlans();
-    return { web: this.web, sitting: this.sitting(), expiry: EXPIRY };
+    const units2 = UNITS_MODULES.flatMap((m) => m.units.map((u2) => ({ hash: u2.hash, label: `${u2.many} (${m.name})`, network: u2.network ?? -1 })));
+    units2.sort((x, y) => Number(y.network === 3) - Number(x.network === 3));
+    return { web: this.web, sitting: this.sitting(), expiry: EXPIRY, units: units2 };
   }
   sitting() {
     if (this.col) return this.col.view(this.now());
@@ -7334,9 +7621,11 @@ var Kishib = class {
         throw new Error(message5(e2));
       }
       const clock = declaresClock(rd);
+      const vaultNow = rd.look.verifier.moneyVault(MIRS.money, id);
+      const vault = vaultPlan(a.vault, vaultNow?.entries ?? null);
       const sections2 = [
         ...recordWords(rd).filter((s) => s.heading !== "Its lines of acts (each app or device keeps one)"),
-        { heading: "Its lines of acts: what this rotation keeps (Identity rule 35)", lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u) => u ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
+        { heading: "Its lines of acts: what this rotation keeps (Identity rule 35)", lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u2) => u2 ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
         {
           heading: "What changes",
           lines: [
@@ -7346,14 +7635,15 @@ var Kishib = class {
             successor ? { text: `A succession declared: ${successor} is named as this identity\u2019s successor. Nobody follows it until that identity confirms it, by an act of its own naming this rotation (F300; Ki\u0161ib can make it, \u201CConfirm a succession\u201D). This identity goes on living.`, tone: "warn" } : a.endSuccession ? { text: `The succession to ${succNow.successor ?? "its successor"} is ended.`, tone: "warn" } : { text: succNow.state === "none" ? "No succession." : `The succession stays as it is (${succNow.state}).` },
             ...clock ? [{ text: "This identity declares a clock (Money rule 15): its client anchors each change of its keys on that clock. Ki\u0161ib does not anchor: anchor it with the genesis client before relying on it.", tone: "warn" }] : []
           ]
-        }
+        },
+        { heading: "The vault (Money: where payments above a limit must go)", lines: vault.lines }
       ];
       const signs2 = [
         `Ki\u0161ib signs one rotation of ${short4(id)} at position ${latest.position + 1}, with the chain key these words give (key ${idx}), revealed once.`,
         "It sends the exact same bytes to every home, and again, unchanged, if they stall: never a second rotation.",
         successor ? `Your rotation names ${short4(successor)} as successor; the successor signs nothing here.` : "It signs nothing else."
       ];
-      const digest = sha2562(cborEncode(["MOR Ki\u0161ib rotation, version 1", id, latest.act, plan.kept.map((k) => [k.act, k.position, k.summary]), successor ?? "", !!a.endSuccession]));
+      const digest = sha2562(cborEncode(["MOR Ki\u0161ib rotation, version 1", id, latest.act, plan.kept.map((k) => [k.act, k.position, k.summary]), successor ?? "", !!a.endSuccession, ...vault.declaration ? [cborEncode([vault.declaration.kind, vault.declaration.cbor ?? null])] : []]));
       const s0 = seed;
       seed = null;
       return this.plan(
@@ -7388,7 +7678,8 @@ var Kishib = class {
                 nextChainKeyCommit: next.commit,
                 kept: plan.kept,
                 ...successor ? { successor } : {},
-                ...a.endSuccession ? { endSuccession: true } : {}
+                ...a.endSuccession ? { endSuccession: true } : {},
+                ...vault.declaration ? { declarations: [vault.declaration] } : {}
               });
             } finally {
               wipe(current.seeds, next.seeds, s0);
@@ -7457,15 +7748,15 @@ var Kishib = class {
     if (h.kind === "confirm") return this.sitting();
     const places = [.../* @__PURE__ */ new Set([...h.homes.map((x) => x.hint), ...h.places])];
     let counts = false;
-    let say;
+    let say2;
     try {
       const l = (await readIdentity(h.id, places, {}, SPECS.identity)).look;
       counts = l.resolution.links.some((x) => x.act === h.act);
-      say = counts ? { text: `It counts: the homes\u2019 receipts are in (${l.resolution.links.find((x) => x.act === h.act).how}).`, tone: "ok" } : { text: `It does not count yet: the receipts its home rule needs are not all in (${l.resolution.stop}). Send it again: the same bytes, never a new rotation.`, tone: "warn" };
+      say2 = counts ? { text: `It counts: the homes\u2019 receipts are in (${l.resolution.links.find((x) => x.act === h.act).how}).`, tone: "ok" } : { text: `It does not count yet: the receipts its home rule needs are not all in (${l.resolution.stop}). Send it again: the same bytes, never a new rotation.`, tone: "warn" };
     } catch (e2) {
-      say = { text: `It could not be read back: ${message5(e2)}. Send it again: the same bytes.`, tone: "warn" };
+      say2 = { text: `It could not be read back: ${message5(e2)}. Send it again: the same bytes.`, tone: "warn" };
     }
-    h.lines = [...h.lines.filter((x) => !/^It (counts|does not count|could not)/.test(x.text)), say];
+    h.lines = [...h.lines.filter((x) => !/^It (counts|does not count|could not)/.test(x.text)), say2];
     if (counts && h.stage === "sent") h.stage = "counts";
     return this.sitting();
   }
@@ -7563,7 +7854,7 @@ var Kishib = class {
             tone: "bad"
           }))
         },
-        { heading: "Your lines of acts: what the escape keeps (Identity rule 35)", lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u) => u ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
+        { heading: "Your lines of acts: what the escape keeps (Identity rule 35)", lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u2) => u2 ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
         {
           heading: "What changes",
           lines: [
@@ -7816,10 +8107,67 @@ function declaresClock(rd) {
   }
   return false;
 }
+var NETWORK = ["Bitcoin", "testnet", "signet", "regtest"];
+function vaultEntryWords(e2) {
+  const units2 = /* @__PURE__ */ new Set([e2.unit]);
+  const rail = e2.railModule === SPEC.lightning.hash ? "on Lightning" : e2.railModule === SPEC.onchain.hash ? "on-chain" : `on rail Module ${e2.railModule.slice(0, 8)}\u2026`;
+  const where = e2.railModule === SPEC.lightning.hash ? readLightningAddress(e2.source)?.node.slice(0, 16) : readOnchainAddress(e2.source)?.key.slice(0, 16);
+  const unit = unitOf(e2.unit)?.unit.name ?? `unit ${e2.unit.slice(0, 8)}\u2026`;
+  return `${unit}, ${rail} (${where ?? "?"}\u2026): ${e2.limit === 0 ? "every payment in this unit goes to the vault (flow off)" : `a single payment above ${say({ unit: e2.unit, value: e2.limit }, units2)} must go to the vault, not the flow`}.`;
+}
+function vaultPlan(v, now) {
+  const change = v ?? { change: "keep" };
+  if (change.change === "keep") {
+    return { lines: now ? [{ text: "Kept as it is:" }, ...now.map((e2) => ({ text: vaultEntryWords(e2) }))] : [{ text: "None declared, and none is declared now: every payment goes to the flow; no protection chosen (Money rule 3)." }], declaration: null };
+  }
+  if (change.change === "remove") {
+    if (!now) throw new Error("This identity declares no vault: there is none to remove.");
+    return {
+      lines: [{ text: "Removed: from this rotation on, every payment goes to the flow, whatever its size, and a thief holding the signing key could point the flow anywhere (Money rule 3).", tone: "warn" }],
+      declaration: vaultDeclaration(MIRS.money, null)
+    };
+  }
+  if (!unitOf(change.unit)) throw new Error("Choose the vault\u2019s unit.");
+  const entries = [];
+  const limit = (n) => {
+    if (!Number.isInteger(n) || n < 0) throw new Error("A limit is a whole number, 0 or more (0: every payment goes to the vault).");
+    return n;
+  };
+  if (change.lightning?.node?.trim()) entries.push({ unit: change.unit, railModule: SPEC.lightning.hash, source: lightningAddress({ network: change.network, node: change.lightning.node.trim().toLowerCase() }), limit: limit(change.lightning.limit) });
+  if (change.onchain?.key?.trim()) entries.push({ unit: change.unit, railModule: SPEC.onchain.hash, source: onchainAddress({ network: change.network, key: change.onchain.key.trim().toLowerCase(), request: change.onchain.request.trim().toLowerCase() }), limit: limit(change.onchain.limit) });
+  if (!entries.length) throw new Error("A vault names at least one rail: its node (Lightning) or its Bitcoin key (on-chain).");
+  if (unitOf(change.unit)?.unit.network !== change.network) throw new Error(`The unit is not the ${NETWORK[change.network]} network\u2019s.`);
+  return {
+    lines: [
+      { text: "Declared anew, with the chain key (Money rule 2): only another change of keys can change it.", tone: "warn" },
+      ...entries.map((e2) => ({ text: vaultEntryWords(e2) })),
+      ...entries.length > 1 ? [{ text: "Several entries for one unit: the smallest limit applies (F114)." }] : [],
+      { text: "A payment in a unit the vault has no entry for cannot be paid to the flow at all (fail closed, Money rule 3)." },
+      { text: "The vault\u2019s node or key should be another than the flow\u2019s: the vault is only as safe as the key it names.", tone: "warn" }
+    ],
+    declaration: vaultDeclaration(
+      MIRS.money,
+      entries.map((e2) => ({ unit: e2.unit, railModule: e2.railModule, source: e2.source, limit: e2.limit }))
+    )
+  };
+}
 
 // src/ops.ts
 var text = (v) => typeof v === "string" ? v : "";
 var list2 = (v) => Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : [];
+function vaultOf(a) {
+  const c = text(a.vault);
+  if (c === "remove") return { change: "remove" };
+  if (c !== "set") return { change: "keep" };
+  const n = (v) => Number(text(v) || "0");
+  return {
+    change: "set",
+    network: Number(text(a.vaultNetwork) || "3"),
+    unit: text(a.vaultUnit),
+    lightning: text(a.vaultNode) ? { node: text(a.vaultNode), limit: n(a.vaultLightningLimit) } : void 0,
+    onchain: text(a.vaultKey) ? { key: text(a.vaultKey), request: text(a.vaultRequest), limit: n(a.vaultOnchainLimit) } : void 0
+  };
+}
 async function run(k, op, a) {
   switch (op) {
     case "state":
@@ -7831,7 +8179,7 @@ async function run(k, op, a) {
     case "record":
       return k.record({ id: text(a.id), address: text(a.address) });
     case "rotate plan":
-      return k.rotatePlan({ id: text(a.id), address: text(a.address), words: text(a.words), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list2(a.leaveOut), cards: text(a.cards) });
+      return k.rotatePlan({ id: text(a.id), address: text(a.address), words: text(a.words), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list2(a.leaveOut), cards: text(a.cards), vault: vaultOf(a) });
     case "escape plan":
       return k.escapePlan({ id: text(a.id), address: text(a.address), words: text(a.words), signingWords: text(a.signingWords), homes: text(a.homes), leaveOut: list2(a.leaveOut), cards: text(a.cards) });
     case "confirm plan":
@@ -7904,6 +8252,7 @@ button.quiet:hover,.acts button:hover{color:var(--text)}
 input,textarea{font:inherit;color:var(--text);background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px;width:100%}
 input:focus,textarea:focus{outline:none;border-color:var(--faint)}
 textarea{min-height:3.2em;resize:vertical}
+select{font:inherit;color:var(--text);background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px}
 label{display:block;margin:12px 0 4px;font-size:13px;color:var(--soft)}
 .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:10px 0}
 .grow{flex:1}
@@ -8049,7 +8398,7 @@ function pairing() {
 <div id="pair-status"></div>`;
 }
 function start(web) {
-  const door = (action, title, say, rare = false) => `<button class="door${rare ? " rare" : ""}" data-action="open" data-form="${action}"><strong>${title}</strong><span>${say}</span></button>`;
+  const door = (action, title, say2, rare = false) => `<button class="door${rare ? " rare" : ""}" data-action="open" data-form="${action}"><strong>${title}</strong><span>${say2}</span></button>`;
   return `${top(web)}
 <p>Ki\u0161ib is the one place where a chain key is used, from paper, and then forgotten. Open it only for the act at hand.</p>
 <h2>What it does</h2>
@@ -8066,6 +8415,17 @@ var idField = (name, label) => `<label>${label}</label><input name="${name}" typ
 var words = (name, label) => `<label>${label}</label><textarea name="${name}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>`;
 var address = `<label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>`;
 var forgotten = `<p class="small">What you type is used for this act alone, then overwritten. Nothing is written to this device.</p>`;
+var units = [];
+var setUnits = (u2) => units = u2 ?? [];
+var vaultFields = `<details><summary>The vault (optional): keep it, change it, or remove it</summary>
+<p class="small">The vault is where a payment above a limit must go, per unit, and the one place a thief holding only the signing key cannot point payments (Money rules 2 and 3). It changes only with the chain key, so only here. Its node or key should be another than your flow\u2019s, which Damgar names.</p>
+<label>The vault</label><select name="vault"><option value="keep" selected>Keep it as it is</option><option value="set">Declare it anew, as below</option><option value="remove">Remove it (every payment to the flow)</option></select>
+<div class="row"><label>Its unit <select name="vaultUnit" data-vault-units>${"{units}"}</select></label><label>Network <select name="vaultNetwork"><option value="3" selected>regtest</option><option value="2">signet</option></select></label></div>
+<label>Lightning: the vault\u2019s node key (66 hexadecimal characters; not your flow\u2019s node)</label><input name="vaultNode" autocomplete="off" spellcheck="false">
+<label>Its limit: the largest single payment that may still go to the flow (0: every payment to the vault)</label><input name="vaultLightningLimit" inputmode="numeric" value="0">
+<label>On-chain: the vault\u2019s Bitcoin key, x-only (64 hexadecimal characters)</label><input name="vaultKey" autocomplete="off" spellcheck="false">
+<label>Its request key (Damgar\u2019s Settings show one; it signs address requests, and must stay online)</label><input name="vaultRequest" autocomplete="off" spellcheck="false">
+<label>Its limit</label><input name="vaultOnchainLimit" inputmode="numeric" value="0"></details>`;
 function form(kind, web) {
   const f = (title, intro, body, button) => `${top(web, true)}<h2>${title}</h2><p class="small">${intro}</p><form id="form-${kind}" data-kind="${kind}">${body}${forgotten}<div class="row"><button type="submit" class="primary">${button}</button></div></form><div id="status"></div>`;
   switch (kind) {
@@ -8074,7 +8434,7 @@ function form(kind, web) {
         "Change an identity\u2019s keys",
         "Ki\u0161ib reads the identity from its homes and every relay its routes name, finds every line of its acts (Dub\u2019s, Edubba\u2019s, the web client\u2019s), and reads it all back in plain words before anything is signed.",
         `${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (the paper written when it was made; never the signing key\u2019s words)")}
-<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>`,
+<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultFields.replace("{units}", units.map((u2) => `<option value="${e(u2.hash)}">${e(u2.label)}</option>`).join(""))}`,
         "Read it back"
       );
     case "succession":
@@ -8137,8 +8497,8 @@ ${r.warning ? note("error", `${e(r.warning)}<label class="check"><input type="ch
 <div class="signs"><span class="label">What is signed</span>${r.signs.map((s) => `<p>${e(s)}</p>`).join("")}</div>
 <div class="row"><button class="primary" data-action="sign" ${blocked ? "disabled" : ""}>Sign it</button><button data-action="home">Cancel, and forget the words</button></div><div id="status"></div>`;
 }
-function wordsShown(ws, say, web, label = "The new signing key\u2019s words") {
-  return `${top(web)}<h2>${e(label)}</h2>${say.map((s) => `<p class="small">${e(s)}</p>`).join("")}
+function wordsShown(ws, say2, web, label = "The new signing key\u2019s words") {
+  return `${top(web)}<h2>${e(label)}</h2>${say2.map((s) => `<p class="small">${e(s)}</p>`).join("")}
 <div class="words" id="words">${ws.map((w, i) => `<span><b>${i + 1}</b>${e(w)}</span>`).join("")}</div>
 <div class="row"><button class="primary" data-action="written">I have written them down</button></div>`;
 }
@@ -8199,6 +8559,7 @@ function mount(app2, b) {
   }
   async function show(state) {
     current = null;
+    setUnits(state.units);
     if (!state.sitting) {
       app2.innerHTML = start(b.web);
       return;

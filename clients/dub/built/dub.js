@@ -1053,6 +1053,91 @@ var Verifier = class {
     }
   }
   /**
+   * Where a payer pays this payee this amount (the payment cMIP,
+   * "Choosing where to pay"; Money rules 1, 3 and 5): the pointer that
+   * counts and the vault in force, as this verifier holds the payee's
+   * acts, and the first rail, in the payee's order, on a rail Module the
+   * person accepts that carries the unit. `{ to: "flow", pointer, rail,
+   * module, address }`, `{ to: "vault", declaredBy, entry, module,
+   * address }` or `{ to: "nowhere", why }`.
+   * @param {string} money_spec
+   * @param {string} payee
+   * @param {any} amount
+   * @param {string[]} accepted
+   * @returns {any}
+   */
+  moneyChoose(money_spec, payee, amount, accepted) {
+    const ptr0 = passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayJsValueToWasm0(accepted, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyChoose(this.__wbg_ptr, ptr0, len0, ptr1, len1, amount, ptr2, len2);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * Judge a receipt or claim this verifier holds, as a Money-only client
+   * with the person's accepted cMIPs and Modules (F338): the act's
+   * standing; the rail's answer, by the rail Module its field 0 names,
+   * adopted only if accepted (a Module, unit or payment cMIP not accepted
+   * is unknown: Development rule 9); and what is judged beside it.
+   * @param {string} act
+   * @param {any} opts
+   * @returns {any}
+   */
+  moneyJudge(act, opts) {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyJudge(this.__wbg_ptr, ptr0, len0, opts);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The payee pointer that counts for an identity (Money rule 1), from
+   * the valid pointers this verifier holds: `{ act, version, forked }`,
+   * `act` null where it holds none; `forked` where two name one
+   * predecessor, the pointer that counts the last before the fork.
+   * @param {string} money_spec
+   * @param {string} payee
+   * @returns {any}
+   */
+  moneyPointer(money_spec, payee) {
+    const ptr0 = passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyPointer(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The vault an identity's chain declares in force (Money rule 3), as
+   * this verifier holds the chain: `{ declaredBy, entries }`, or null
+   * where it declares none.
+   * @param {string} money_spec
+   * @param {string} identity
+   * @returns {any}
+   */
+  moneyVault(money_spec, identity) {
+    const ptr0 = passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_moneyVault(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * A verifier for the given Identity spec hash (`IDENTITY`; a test value
    * until the freeze). Given the Money and Agreements spec hashes too, it can
    * tell which acts may carry acknowledgements (F110); without them, an
@@ -1328,6 +1413,13 @@ function makeRotation(input) {
   var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
   wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
   return v1;
+}
+function moneySpecs() {
+  const ret = wasm.moneySpecs();
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
 }
 function newEncryptionSecret() {
   const ret = wasm.newEncryptionSecret();
@@ -4188,8 +4280,8 @@ async function publishPicture(by, jpeg, relays) {
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, picture: s.picture, work: l.workHash, size: s.bytes.length };
 }
-function textPayload(text2, format = null) {
-  const m = /* @__PURE__ */ new Map([[0, text2]]);
+function textPayload(text3, format = null) {
+  const m = /* @__PURE__ */ new Map([[0, text3]]);
   if (format) m.set(1, unhex(format));
   return cborEncode(m);
 }
@@ -4271,14 +4363,14 @@ async function readPost(id, hints, via2 = {}, judging) {
   if (d.spec !== POST_SPECS.text || d.type !== TEXT_ACT) throw new Error("the act is not a text act");
   if (!d.signer) throw new Error("the act has no signer");
   const p = cborDecode(d.payload);
-  const text2 = p.get(0);
-  if (typeof text2 !== "string") throw new Error("the text act has no text");
+  const text3 = p.get(0);
+  if (typeof text3 !== "string") throw new Error("the text act has no text");
   const f = p.get(1);
   const judge = judging ?? new Judge(hints, via2);
   const standing = await judge.standing(act, id, d.signer);
   const named = (d.refs ?? []).map((r, i) => d.refSigners?.[i] ? [r, d.refSigners[i]] : r);
   const refs = await Promise.all(named.map((r) => readRef(r, hints, via2, judge)));
-  return { id, signer: d.signer, standing, text: text2, format: f instanceof Uint8Array ? hex(f) : null, refs, notTried: judge.notTried ?? [] };
+  return { id, signer: d.signer, standing, text: text3, format: f instanceof Uint8Array ? hex(f) : null, refs, notTried: judge.notTried ?? [] };
 }
 async function readRef(r, hints, via2, judge) {
   const id = typeof r === "string" ? r : r[0];
@@ -4390,15 +4482,15 @@ async function findWithdrawal(publication, signer, forId, hints, via2, judge) {
 // ../site/src/settings.ts
 function relayAddress(s) {
   if (typeof s !== "string") return null;
-  let u;
+  let u2;
   try {
-    u = new URL(s);
+    u2 = new URL(s);
   } catch {
     return null;
   }
-  const local = u.hostname === "127.0.0.1" || u.hostname === "localhost" || u.hostname === "[::1]";
-  if (u.protocol !== "https:" && !(u.protocol === "http:" && local)) return null;
-  if (u.username || u.password || u.search || u.hash) return null;
+  const local = u2.hostname === "127.0.0.1" || u2.hostname === "localhost" || u2.hostname === "[::1]";
+  if (u2.protocol !== "https:" && !(u2.protocol === "http:" && local)) return null;
+  if (u2.username || u2.password || u2.search || u2.hash) return null;
   return s.replace(/\/$/, "");
 }
 
@@ -7020,7 +7112,7 @@ var SHARE_MEDIA = "f2f9c2b8a6e0c5c1b4a7d1e3f0a9c8b7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f
 var ONE_TIME_LINE = "One-time key for my share of the chain key: ";
 var SIGNED = "Signed.";
 var DECLINED = "Declined.";
-var negotiationPayload = (text2) => cborEncode(/* @__PURE__ */ new Map([[0, text2.normalize("NFC")]]));
+var negotiationPayload = (text3) => cborEncode(/* @__PURE__ */ new Map([[0, text3.normalize("NFC")]]));
 async function negotiate(by, to, o) {
   const made = by.sign(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
     public: false,
@@ -7047,14 +7139,14 @@ async function negotiate(by, to, o) {
 function readMessage(d) {
   if (d.spec !== REPO_SPECS.agreements || d.type !== NEGOTIATION || !d.payload || !d.signer) return null;
   const m = cborDecode(d.payload);
-  const text2 = m.get(0);
-  if (typeof text2 !== "string") return null;
+  const text3 = m.get(0);
+  if (typeof text3 !== "string") return null;
   const link = d.objects?.[0];
   return {
     id: d.id,
     from: d.signer,
     to: d.to ?? [],
-    text: text2,
+    text: text3,
     thread: link ? link[0] : d.id,
     previous: link ? link[1] : null,
     acks: d.acks ?? [],
@@ -8124,7 +8216,7 @@ function decodeManifest(bytes) {
   const m = cborDecode(bytes);
   if (!(m instanceof Map)) throw new Error("a manifest is a map");
   for (const k of m.keys()) if (typeof k !== "number" || k < 0 || k > 6) throw new Error(`manifest: unknown field ${k}`);
-  const text2 = (v, w) => {
+  const text3 = (v, w) => {
     if (typeof v !== "string") throw new Error(`manifest: ${w}`);
     return v;
   };
@@ -8143,7 +8235,7 @@ function decodeManifest(bytes) {
     const size = a[2];
     if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 0) throw new Error("manifest: file size");
     return {
-      path: text2(a[0], "file path"),
+      path: text3(a[0], "file path"),
       work: hex(bytesOf(a[1], 32, "work hash")),
       size,
       locked: hex(bytesOf(a[3], 32, "locked hash")),
@@ -8160,10 +8252,10 @@ function decodeManifest(bytes) {
     const a = list5(x, "dependency");
     if (a.length !== 4) throw new Error("manifest: a dependency has four fields");
     return {
-      registry: text2(a[0], "registry"),
-      name: text2(a[1], "dependency name"),
-      version: text2(a[2], "dependency version"),
-      checksum: text2(a[3], "dependency checksum")
+      registry: text3(a[0], "registry"),
+      name: text3(a[1], "dependency name"),
+      version: text3(a[2], "dependency version"),
+      checksum: text3(a[3], "dependency checksum")
     };
   });
   let impl;
@@ -8180,12 +8272,12 @@ function decodeManifest(bytes) {
     impl = entries;
   }
   return {
-    name: text2(m.get(0), "name"),
-    version: text2(m.get(1), "version"),
+    name: text3(m.get(0), "name"),
+    version: text3(m.get(1), "version"),
     previous: prev === null ? null : hex(bytesOf(prev, 32, "previous")),
     files,
     dependencies,
-    source: m.has(5) ? text2(m.get(5), "source") : void 0,
+    source: m.has(5) ? text3(m.get(5), "source") : void 0,
     implements: impl
   };
 }
@@ -8552,6 +8644,198 @@ async function readSealedList(identity, secrets, homes, via2 = {}) {
   return out;
 }
 
+// ../damgar/src/units.ts
+var u = moneySpecs().units;
+var BITCOIN_UNITS = {
+  key: "bitcoin-units",
+  name: "Bitcoin units",
+  text: "modules/units-bitcoin-draft-1.md",
+  draft: 1,
+  does: "The satoshi on Bitcoin, and the satoshi of each of Bitcoin\u2019s test networks, which is not a satoshi: four units, each its own specification, so that a test payment can never pay a real debt.",
+  units: [
+    { hash: u.bitcoin, name: "satoshi (Bitcoin)", one: "satoshi", many: "satoshis", test: false, network: 0 },
+    { hash: u.testnet, name: "satoshi (testnet)", one: "testnet satoshi", many: "testnet satoshis", test: true, network: 1 },
+    { hash: u.signet, name: "satoshi (signet)", one: "signet satoshi", many: "signet satoshis", test: true, network: 2 },
+    { hash: u.regtest, name: "satoshi (regtest)", one: "regtest satoshi", many: "regtest satoshis", test: true, network: 3 }
+  ]
+};
+var UNITS_MODULES = [BITCOIN_UNITS];
+function readValue(typed) {
+  const t = typed.replace(/[\s_]/g, "");
+  if (!/^\d{1,15}$/.test(t) || Number(t) === 0) throw new Error("An amount is a whole number above zero, in the unit\u2019s smallest part.");
+  return Number(t);
+}
+
+// ../damgar/src/specs.ts
+var MONEY = MIRS.money;
+var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 1, test value until publication");
+var ACCEPTED_SPEC = sha2562("Accepted cMIP, draft 1, test value until publication");
+var SPEC = moneySpecs();
+var unitsEntry = (u2) => ({
+  key: u2.key,
+  name: u2.name,
+  kind: "Module",
+  text: u2.text,
+  draft: u2.draft,
+  hashes: u2.units.map((x) => x.hash),
+  does: u2.does,
+  here: "Every amount names its unit; Damgar shows an amount in these units with their names, and never adds or compares amounts of different units.",
+  built: true,
+  needs: []
+});
+var ACCEPTABLE = [
+  {
+    key: "payment",
+    name: "Payment",
+    kind: "cMIP",
+    text: "cmips/cmip-payment-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.payment],
+    does: "The common language of a payment: the commitment a rail carries (who pays whom, how much, for what), the proof a receipt or claim carries, and how both are checked by the rail Module they name.",
+    here: "Needed for every payment: without it, every receipt and claim is unknown here.",
+    built: true,
+    needs: []
+  },
+  {
+    key: "lightning",
+    name: "Lightning rail",
+    kind: "Module",
+    text: "modules/module-lightning-rail-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.lightning.hash],
+    does: "Payments over Lightning: the payee\u2019s node signs an invoice committing to the payment; paying it reveals a secret (the preimage), which is the proof. A request rail, its proof binding the payee and the purpose (its fields 11 and 13).",
+    here: "You are shown an invoice to pay in your own wallet, and paste back the preimage; to be paid, you paste an invoice your wallet made.",
+    built: true,
+    needs: ["payment", "bitcoin-units"]
+  },
+  {
+    key: "onchain",
+    name: "On-chain rail",
+    kind: "Module",
+    text: "modules/module-onchain-rail-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.onchain.hash],
+    does: "Payments on the Bitcoin chain itself: a fresh address bound to each payment (pay-to-contract, no OP_RETURN), the transaction and its block as the proof, counted at six confirmations. A request rail, its proof binding the payee and the purpose.",
+    here: "You are shown an address bound to the payment, to pay from your own wallet, and paste back the transaction\u2019s id. Checked against the chain Damgar follows: on this computer, the regtest node you name; in the web client, none (paid, not yet checked against the chain).",
+    built: true,
+    needs: ["payment", "bitcoin-units"]
+  },
+  unitsEntry(BITCOIN_UNITS),
+  {
+    key: "split",
+    name: "Split",
+    kind: "cMIP",
+    text: "cmips/cmip-split-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.split],
+    does: "How a payment to a collective or a deal is divided among its owners by a split service: an agreement\u2019s choice, defined with the agreement.",
+    here: "Not used in round 1: splits are defined in Edubba\u2019s Collectives tab, in round 2, and never approved here. Accepting it records your choice for the apps that read it.",
+    built: false,
+    needs: ["payment"]
+  },
+  {
+    key: "conversion",
+    name: "Conversion",
+    kind: "cMIP",
+    text: "cmips/cmip-conversion-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.conversion],
+    does: "A conversion service that receives on one rail or unit and pays on another, at the rate of its own offer: the only way two amounts of different units are ever read together.",
+    here: "Not used in round 1. Accepting it records your choice.",
+    built: false,
+    needs: ["payment"]
+  },
+  {
+    key: "anchoring",
+    name: "Anchoring",
+    kind: "cMIP",
+    text: "cmips/cmip-anchoring-draft-5.md",
+    draft: 5,
+    hashes: [SPEC.anchoring],
+    does: "Putting an act\u2019s fingerprint on a clock everyone can read (the Bitcoin chain), through a pooled service paid per fingerprint: its offer, the ticket it signs for each paid fingerprint, the batches it publishes.",
+    here: "Edubba asks for an anchor of a collective\u2019s act; the payment for it arrives here, and is signed here. Its ticket is shown with it.",
+    built: true,
+    needs: ["payment", "lightning", "bitcoin-units", "bitcoin-clock"]
+  },
+  {
+    key: "bitcoin-clock",
+    name: "Bitcoin clock",
+    kind: "Module",
+    text: "modules/module-bitcoin-clock-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.bitcoinClock],
+    does: "The Bitcoin chain read as a clock: a moment on it is a block. The clock an anchoring service\u2019s offer names; and the clock an owner may declare, so that a theft\u2019s window ends at a block (Money rule 29).",
+    here: "Shown with an anchor\u2019s ticket (its deadline is a block). Damgar does not judge Money rule 29, which needs Agreements\u2019 reading of the payee\u2019s acts: said where it applies.",
+    built: true,
+    needs: ["anchoring"]
+  },
+  {
+    key: "messages",
+    name: "Money messages",
+    kind: "cMIP",
+    text: "cmips/cmip-money-messages-draft-1.md",
+    draft: 1,
+    hashes: [MESSAGES_SPEC],
+    does: "The four messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request, and its answer. Written by Damgar\u2019s build, awaiting approval.",
+    here: "Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.",
+    built: true,
+    needs: ["payment"]
+  }
+];
+var OURS = new Set(ACCEPTABLE.flatMap((a) => a.hashes));
+
+// ../damgar/src/messages.ts
+var TYPES = { draft: 1, request: 2, invoiceRequest: 3, answer: 4 };
+var WHAT = { pay: 0, ask: 1, anchor: 2 };
+var amountValue = (a) => [unhex(a.unit), a.value];
+var text = (v, what) => {
+  if (typeof v !== "string" || v.length > 280 || /[\u0000-\u0009\u000b-\u001f]/.test(v)) throw new Error(`${what}: not a short text`);
+  return v;
+};
+function draftPayload(d) {
+  const m = /* @__PURE__ */ new Map([
+    [0, WHAT[d.what]],
+    [1, unhex(d.other)],
+    [2, amountValue(d.amount)]
+  ]);
+  if (d.whatFor) m.set(3, text(d.whatFor, "what for"));
+  m.set(4, text(d.app, "the app"));
+  if (d.what === "anchor") {
+    if (!d.anchor) throw new Error("A draft paying for an anchor names the offer, the tier and the leaf.");
+    m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf)]);
+  }
+  return cborEncode(m);
+}
+async function sendDraft(me, d, opts) {
+  return sendToSelf(me, TYPES.draft, draftPayload(d), opts);
+}
+async function sendToSelf(me, type, payload, opts) {
+  const homes = me.f.homes.map((h) => h.hint);
+  const look = await lookUp(me.id, homes, opts.via ?? {});
+  if (!look.encryptionKey) throw new Error("This identity publishes no encryption key, so nothing can be sealed to it: the draft cannot travel to Damgar. Nothing was signed.");
+  if (!me.f.encryption.some((e2) => hex(xwingPublic(unhex(e2.secret))) === hex(look.encryptionKey))) {
+    throw new Error("The encryption key this identity publishes is not one this app holds: Damgar, holding the same words, could not open the draft either. Nothing was signed.");
+  }
+  let made;
+  try {
+    made = me.sign(MESSAGES_SPEC, type, payload, { public: false, to: [me.id], refs: opts.refs });
+  } finally {
+    await opts.save();
+  }
+  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
+  const left = [];
+  for (const h of homes) {
+    try {
+      await relayAt(h, opts.via ?? {}).putSealed(sealed);
+      await relayAt(h, opts.via ?? {}).putAct(made.act);
+      left.push(h);
+    } catch {
+    }
+  }
+  if (!left.length) throw new Error(`No home took the draft (${homes.join(", ")}). It was signed but went nowhere: prepare it again later.`);
+  return { id: made.id, left };
+}
+
 // src/dub.ts
 var CHAIN_WORDS_SAY = [
   "These are the chain key\u2019s words. Write them on paper, in order, and keep the paper away from anything that goes online. They are shown once: Dub keeps nothing of the chain key.",
@@ -8633,7 +8917,9 @@ var Dub = class {
       held.push({ id, grouped: groupId(id), who: this.whoFrom(id, active, null), active: id === active, kind: s.kind });
     }
     const pend = await this.store.pending();
-    const out = { stage: "identity", held };
+    const units = UNITS_MODULES.flatMap((m) => m.units.map((u2) => ({ hash: u2.hash, label: `${u2.many} (${m.name})`, regtest: u2.network === 3 })));
+    units.sort((a, b) => Number(b.regtest) - Number(a.regtest));
+    const out = { stage: "identity", held, units: units.map(({ hash, label }) => ({ hash, label })) };
     if (pend) {
       out.stage = "confirm";
       out.confirm = { positions: pend.positions, id: pend.identity.identity };
@@ -9011,8 +9297,8 @@ var Dub = class {
   post(a) {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
-      const { text: text2, changes } = compose(a.text);
-      if (!text2.trim()) throw new Error("Write something to post.");
+      const { text: text3, changes } = compose(a.text);
+      if (!text3.trim()) throw new Error("Write something to post.");
       const to = [];
       if (a.to?.trim()) {
         let id;
@@ -9052,7 +9338,7 @@ var Dub = class {
         }
       }
       await this.current(me);
-      const made = await this.signed(me, () => post(me, { text: text2, jpeg: a.jpeg, relays: s.relays, to: to.length ? to.map((t) => t.id) : void 0, refs }));
+      const made = await this.signed(me, () => post(me, { text: text3, jpeg: a.jpeg, relays: s.relays, to: to.length ? to.map((t) => t.id) : void 0, refs }));
       const lines2 = changes.map((c) => ({ text: `Text: ${c}.` }));
       for (const t of to) {
         if (!t.inbox?.length) {
@@ -9299,19 +9585,19 @@ var Dub = class {
     }
     if (!d.signer || d.signer === me) return null;
     const isText = d.spec === POST_SPECS.text && d.type === TEXT_ACT && !!d.payload;
-    let text2 = null;
+    let text3 = null;
     if (isText) {
       const t = cborDecode(d.payload).get(0);
-      if (typeof t === "string") text2 = t;
+      if (typeof t === "string") text3 = t;
     }
     const talk = readMessage(d);
-    if (talk) text2 = talk.text;
+    if (talk) text3 = talk.text;
     return {
       ...talk ? { talk: { thread: talk.thread, previous: talk.previous, acks: talk.acks } } : {},
       key: d.id,
       kind: !isText ? "other" : d.public ? "public" : "private",
       from: d.signer,
-      text: text2,
+      text: text3,
       standing: await judge(d.signer, act, d.id, key),
       refs: (d.refs ?? []).map((id, i) => ({ id, signer: d.refSigners?.[i] ?? null })),
       to: d.to ?? [],
@@ -9393,8 +9679,8 @@ var Dub = class {
         throw new Error(`To: ${message3(e2)}. Nothing was sent.`);
       }
       if (to === me.id) throw new Error("To: that is this identity itself. Nothing was sent.");
-      const { text: text2 } = compose(a.text);
-      if (!text2.trim()) throw new Error("Write something to send.");
+      const { text: text3 } = compose(a.text);
+      if (!text3.trim()) throw new Error("Write something to send.");
       let l;
       try {
         l = await lookUp(to, hints, s.via);
@@ -9405,7 +9691,7 @@ var Dub = class {
       const inbox = l.inbox(SPECS.text);
       if (!inbox?.length) throw new Error(`To: the identity ${fingerprint(to)} declares no inbox. Nothing was sent.`);
       await this.current(me);
-      const made = await this.signed(me, async () => me.sign(SPECS.text, TEXT_ACT, textPayload(text2), { public: false, to: [to] }));
+      const made = await this.signed(me, async () => me.sign(SPECS.text, TEXT_ACT, textPayload(text3), { public: false, to: [to] }));
       const sealed = sealFor(made.act, made.key, [{ id: to, key: l.encryptionKey }]);
       const lines2 = [];
       let left = 0;
@@ -9424,7 +9710,7 @@ var Dub = class {
         } catch {
         }
       }
-      p.sent.push({ id: made.id, to, text: text2, at: now() });
+      p.sent.push({ id: made.id, to, text: text3, at: now() });
       await this.store.savePeople(me.id, p);
       lines2.unshift({ text: `Sealed to ${fingerprint(to)} and left in its inbox: only it can open it.`, tone: "ok" });
       return { lines: lines2 };
@@ -9692,6 +9978,44 @@ ${compose(why).text}` : DECLINED, thread, previous: last, acks: [last] }));
       return { lines: lines2 };
     });
   }
+  // ------------------------------------------------------------ money, prepared here and signed in Damgar (F338)
+  /**
+   * A tip on a post, or a request to be paid, prepared here and never
+   * signed here as money (F338: "the other apps need to be able to offer to
+   * create the acts without signing them"): a draft of the money messages
+   * cMIP, a private act sealed to this identity itself and left at its
+   * homes, where Damgar, holding the same identity, picks it up, reads it in
+   * plain words, and signs or declines it. Dub signs only the draft.
+   */
+  moneyDraft(a) {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      let other;
+      try {
+        other = readId(a.other);
+      } catch (e2) {
+        throw new Error(`${a.what === "pay" ? "Whom to tip" : "Whom to ask"}: ${message3(e2)}. Nothing was prepared.`);
+      }
+      if (other === me.id) throw new Error("That is this identity itself. Nothing was prepared.");
+      if (!UNITS_MODULES.some((m) => m.units.some((u2) => u2.hash === a.unit))) throw new Error("Choose a unit. Nothing was prepared.");
+      const value = readValue(a.value);
+      const whatFor = a.whatFor?.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : null;
+      let refs;
+      if (a.post) {
+        const d = describeAct((await followRef([readId(a.post), other], [...hints, ...this.inboxPlaces(await this.store.people(me.id))], s.via)).act);
+        if (d.signer !== other) throw new Error("The post tipped is not signed by the identity tipped. Nothing was prepared.");
+        refs = [[d.id, other]];
+      }
+      await this.current(me);
+      const r = await sendDraft(me, { what: a.what, other, amount: { unit: a.unit, value }, whatFor, app: "Dub", anchor: null }, { refs, via: s.via, save: () => this.store.saveIdentity(me) });
+      return {
+        lines: [
+          { text: `Prepared, not signed: ${a.what === "pay" ? "a tip" : "a request to be paid"}, sealed to this identity and left at its homes (${r.left.join(", ")}).`, tone: "ok" },
+          { text: "Open Damgar with this identity: the draft waits there, in To sign, to be read and signed or declined. Dub signs no money act." }
+        ]
+      };
+    });
+  }
   /** When the sealed list was last read, by identity (this app's memory only). */
   synced = /* @__PURE__ */ new Map();
   /**
@@ -9902,35 +10226,35 @@ function whatAct(d) {
   if (d.spec === PEOPLE_SPEC || d.spec === PEOPLE_SPEC_1) return d.type === FOLLOW_LIST ? "A published follow list" : "A people act";
   return "An act of another specification";
 }
-function titleOf(text2) {
-  const first = text2.split("\n").find((l) => l.trim()) ?? "";
+function titleOf(text3) {
+  const first = text3.split("\n").find((l) => l.trim()) ?? "";
   return first.replace(/^#+\s*/, "").trim().slice(0, 120) || "A document";
 }
-function snippet(text2) {
-  const one = text2.replace(/\s+/g, " ").trim();
+function snippet(text3) {
+  const one = text3.replace(/\s+/g, " ").trim();
   return one.length > 80 ? `${one.slice(0, 79)}\u2026` : one;
 }
 
 // src/ops.ts
-var text = (v) => typeof v === "string" ? v : "";
+var text2 = (v) => typeof v === "string" ? v : "";
 var list3 = (v) => Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : [];
 async function run(dub2, op, a, p) {
   switch (op) {
     case "state":
       return dub2.state();
     case "begin":
-      return dub2.begin({ homes: list3(a.homes), relays: list3(a.relays), via: p.via(a.via), name: text(a.name) });
+      return dub2.begin({ homes: list3(a.homes), relays: list3(a.relays), via: p.via(a.via), name: text2(a.name) });
     case "confirm":
       return dub2.confirm(list3(a.typed));
     case "abandon":
       await dub2.abandon();
       return {};
     case "bring":
-      return dub2.bring({ id: text(a.id), words: text(a.words), address: text(a.address), relays: list3(a.relays), via: p.via(a.via) });
+      return dub2.bring({ id: text2(a.id), words: text2(a.words), address: text2(a.address), relays: list3(a.relays), via: p.via(a.via) });
     case "renew":
-      return dub2.renew(text(a.words));
+      return dub2.renew(text2(a.words));
     case "use":
-      await dub2.use(text(a.id));
+      await dub2.use(text2(a.id));
       return {};
     case "leave":
       await dub2.leave();
@@ -9938,21 +10262,21 @@ async function run(dub2, op, a, p) {
     case "relay":
       return dub2.relay();
     case "forget":
-      await dub2.forget(text(a.id));
+      await dub2.forget(text2(a.id));
       return {};
     case "carry":
       return dub2.carry();
     case "check":
       return dub2.check();
     case "name":
-      return dub2.setName(text(a.name));
+      return dub2.setName(text2(a.name));
     case "post": {
       const reply = a.reply && typeof a.reply === "object" ? a.reply : null;
       return dub2.post({
-        text: text(a.text),
-        jpeg: text(a.jpeg) ? p.bytes(text(a.jpeg)) : void 0,
-        to: text(a.to),
-        reply: reply ? { id: text(reply.id), signer: text(reply.signer) } : void 0
+        text: text2(a.text),
+        jpeg: text2(a.jpeg) ? p.bytes(text2(a.jpeg)) : void 0,
+        to: text2(a.to),
+        reply: reply ? { id: text2(reply.id), signer: text2(reply.signer) } : void 0
       });
     }
     case "feed":
@@ -9960,38 +10284,42 @@ async function run(dub2, op, a, p) {
     case "inbox":
       return dub2.inbox();
     case "message":
-      return dub2.message({ to: text(a.to), text: text(a.text) });
+      return dub2.message({ to: text2(a.to), text: text2(a.text) });
     case "seen":
       await dub2.seen(list3(a.keys));
       return {};
     case "follow":
-      return dub2.follow({ id: text(a.id), name: text(a.name) });
+      return dub2.follow({ id: text2(a.id), name: text2(a.name) });
     case "unfollow":
-      return dub2.unfollow(text(a.id));
+      return dub2.unfollow(text2(a.id));
     case "call":
-      return dub2.callIt({ id: text(a.id), name: text(a.name) });
+      return dub2.callIt({ id: text2(a.id), name: text2(a.name) });
     case "mute":
-      return dub2.mute(text(a.id));
+      return dub2.mute(text2(a.id));
     case "unmute":
-      return dub2.unmute(text(a.id));
+      return dub2.unmute(text2(a.id));
     case "list":
-      return dub2.listOption({ published: a.published === true, shown: text(a.shown) });
+      return dub2.listOption({ published: a.published === true, shown: text2(a.shown) });
     case "withdraw":
-      return dub2.withdraw(text(a.publication));
+      return dub2.withdraw(text2(a.publication));
     case "signing":
       return dub2.setSigning(a.on === true);
     case "proposals":
       return dub2.proposals();
     case "accept":
-      return dub2.signProposal(text(a.thread));
+      return dub2.signProposal(text2(a.thread));
     case "decline":
-      return dub2.declineProposal(text(a.thread), text(a.why));
+      return dub2.declineProposal(text2(a.thread), text2(a.why));
     case "share":
-      return dub2.shareShow(text(a.thread));
+      return dub2.shareShow(text2(a.thread));
     case "shareback":
-      return dub2.shareConfirm(text(a.thread), list3(a.typed));
+      return dub2.shareConfirm(text2(a.thread), list3(a.typed));
     case "sharehand":
-      return dub2.shareByHand(text(a.thread));
+      return dub2.shareByHand(text2(a.thread));
+    case "tip":
+      return dub2.moneyDraft({ what: "pay", other: text2(a.signer), post: text2(a.post), value: text2(a.value), unit: text2(a.unit), whatFor: text2(a.whatFor) });
+    case "ask paid":
+      return dub2.moneyDraft({ what: "ask", other: text2(a.to), value: text2(a.value), unit: text2(a.unit), whatFor: text2(a.whatFor) });
     default:
       throw new Error(`unknown operation ${op}`);
   }
@@ -10133,6 +10461,9 @@ ${people(s)}
 <textarea name="text" required placeholder="Write something private"></textarea>
 <div class="row"><span class="grow small">Sealed to them: only they can open it.</span><button type="submit" class="primary">Send</button></div>
 </form>
+<details class="fold" data-fold="askpaid"><summary>Ask someone to pay you</summary><form id="askpaid" class="compose"><input name="to" autocomplete="off" spellcheck="false" placeholder="Who: an identity\u2019s ID" required>
+<div class="row tight"><input name="value" inputmode="numeric" class="pet" placeholder="Amount" required><select name="unit">${unitOptions(s.units)}</select></div><input name="whatFor" placeholder="What for (optional)">
+<p class="small">${e(MONEY_SAY)} A request is not a debt: they may pay it, accept it as a debt, or decline.</p><div class="row"><button type="submit" class="primary">Prepare it for Damgar</button></div></form></details>
 ${i.encryption ? "" : `<div class="note">No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.</div>`}
 <div id="signing-waiting"></div>
 <div id="inbox"><p class="empty">Reading the inbox\u2026</p></div>
@@ -10152,7 +10483,7 @@ function proposal(p) {
   const body = `${r.summary.map((x) => `<p>${e(x)}</p>`).join("")}
 ${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines(x.lines)}`).join("")}
 ${r.plain.map((x) => `<h4>${e(x.heading)}</h4><p class="small">As plain text, character for character; any invisible control is shown as &lt;U+\u2026&gt;.</p><div class="plain">${e(x.text)}</div>`).join("")}
-${r.blocking.length ? note("error", `<strong>It cannot be signed here:</strong>${lines(r.blocking.map((text2) => ({ text: text2 })))}`) : ""}`;
+${r.blocking.length ? note("error", `<strong>It cannot be signed here:</strong>${lines(r.blocking.map((text3) => ({ text: text3 })))}`) : ""}`;
   const share2 = p.share === "none" ? "" : p.share === "waiting" ? `<p class="small">Your share of the collective\u2019s chain key will arrive once every member has signed and the founder\u2019s Edubba deals the key. Its one-time key waits in this app until then. Dub looks for it by itself while this tab is open.</p><div class="row"><button class="primary" data-action="lookshare">Look for my share</button><button class="quiet" data-action="sharehand" data-thread="${e(p.thread)}">I received my share by hand</button></div>` : p.share === "ready" ? `<div class="row"><button class="primary" data-action="share" data-thread="${e(p.thread)}">Show my share of the chain key, once</button></div>` : p.share === "shown" ? shareTypeBack(p.thread, p.positions ?? []) : p.share === "byHand" ? '<p class="small">Your share came by hand. The one-time key is destroyed.</p>' : '<p class="small">Your share is written down. The one-time key is destroyed: nothing of it is here.</p>';
   const actions = p.answer ? `<p class="state">${e(STATE_OF[p.answer.verdict])}${p.answer.signature ? ` \xB7 signature act <span class="fp" title="${e(p.answer.signature)}">${e(p.answer.signature.slice(0, 8))}\u2026</span>` : ""}</p>` : r.blocking.length ? `<div class="row"><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div>` : `<div class="row"><button class="primary" data-action="accept" data-thread="${e(p.thread)}">Sign it</button><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div><p class="small">Your signature is an act of yours, public: it binds you to exactly what is read above.</p>`;
   const read2 = p.answer ? `<details data-fold="proposal:${e(p.thread)}"><summary>What was proposed, in plain words</summary>${body}</details>` : body;
@@ -10195,6 +10526,7 @@ function post2(p) {
   const doc = p.doc ? `<a class="doc" href="${e(p.doc.link)}" target="_blank" rel="noopener noreferrer"><span dir="auto">${e(p.doc.title)}</span><span class="small">A long-form document: open it in the reader</span></a>` : "";
   const acts = [
     `<button data-action="reply">Reply</button>`,
+    p.who.me ? "" : `<button data-action="tip">Tip</button>`,
     p.who.me ? "" : p.who.followed ? `<button data-action="unfollow" data-id="${e(p.who.id)}">Following</button>` : `<button data-action="follow" data-id="${e(p.who.id)}">Follow</button>`,
     p.who.me ? "" : `<button data-action="mute" data-id="${e(p.who.id)}">Mute</button>`,
     ...p.pictures.filter((x) => x.withdrawable).map((x) => `<button data-action="withdraw" data-publication="${e(x.publication)}">Withdraw picture</button>`)
@@ -10202,7 +10534,15 @@ function post2(p) {
   return `<article class="post" data-post="${e(p.id)}" data-signer="${e(p.who.id)}">
 <div class="row tight">${who(p.who)}${flag}</div>${answers}
 ${p.text ? `<div class="text" dir="auto">${e(p.text)}</div>` : ""}${pics}${doc}
-<div class="acts">${acts}</div></article>`;
+<div class="acts">${acts}</div><div class="tipping"></div></article>`;
+}
+function unitOptions(units = []) {
+  return units.map((u2) => `<option value="${e(u2.hash)}">${e(u2.label)}</option>`).join("");
+}
+var MONEY_SAY = "Prepared here, not signed here: Dub seals a draft to this identity at its homes, and Damgar, holding the same identity, reads it to you and signs it or not. Dub signs no money act and holds no wallet.";
+function tipForm(units = []) {
+  return `<form class="tip compose"><label>Tip: an amount, in the unit's smallest part</label><div class="row tight"><input name="value" inputmode="numeric" class="pet" required><select name="unit">${unitOptions(units)}</select></div>
+<input name="whatFor" placeholder="What for (optional)"><p class="small">${e(MONEY_SAY)}</p><div class="row"><button type="submit" class="primary">Prepare it for Damgar</button><button type="button" class="quiet" data-action="untip">Cancel</button></div></form>`;
 }
 function msg(m) {
   const flag = m.problem ? `<span class="flag ${bad(m.problem) ? "bad" : ""}">${e(m.problem)}</span>` : "";
@@ -10472,9 +10812,9 @@ function mount(app3, b) {
       fill("signing-list", note("error", e(err instanceof Error ? err.message : String(err))));
     }
   }
-  async function copy(text2) {
+  async function copy(text3) {
     try {
-      await navigator.clipboard.writeText(text2);
+      await navigator.clipboard.writeText(text3);
       return true;
     } catch {
       return false;
@@ -10620,6 +10960,15 @@ function mount(app3, b) {
         $("post")?.querySelector("textarea")?.focus();
         break;
       }
+      case "tip": {
+        if (!card) break;
+        const t = card.querySelector(".tipping");
+        if (t) t.innerHTML = tipForm(state?.units);
+        break;
+      }
+      case "untip":
+        if (card) card.querySelector(".tipping").innerHTML = "";
+        break;
       case "unreply":
         replying = null;
         fill("replying", "");
@@ -10729,6 +11078,15 @@ function mount(app3, b) {
     if (name === "pair") return;
     ev.preventDefault();
     const d = new FormData(form);
+    if (form.classList.contains("tip")) {
+      const card = form.closest("article");
+      const r = await busy("Sealing the draft to this identity\u2026", () => b.ask("tip", { post: card?.dataset.post, signer: card?.dataset.signer, value: String(d.get("value") ?? ""), unit: String(d.get("unit") ?? ""), whatFor: String(d.get("whatFor") ?? "") }));
+      if (r) {
+        form.remove();
+        say("done", lines(r.lines));
+      }
+      return;
+    }
     if (form.classList.contains("share-back")) {
       const typed = [...form.querySelectorAll("input")].map((i) => i.value);
       const r = await busy("Checking the words, then destroying the one-time key\u2026", () => b.ask("shareback", { thread: form.dataset.thread, typed }));
@@ -10739,6 +11097,14 @@ function mount(app3, b) {
       return;
     }
     switch (name) {
+      case "askpaid": {
+        const r = await busy("Sealing the draft to this identity\u2026", () => b.ask("ask paid", { to: String(d.get("to") ?? ""), value: String(d.get("value") ?? ""), unit: String(d.get("unit") ?? ""), whatFor: String(d.get("whatFor") ?? "") }));
+        if (r) {
+          form.reset();
+          say("done", lines(r.lines));
+        }
+        return;
+      }
       case "begin": {
         const r = await busy(
           "Asking each home who runs it, and making the identity\u2026",

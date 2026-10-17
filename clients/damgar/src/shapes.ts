@@ -45,7 +45,7 @@ export interface Accept {
 export interface ToSign {
   /** The act it comes from (a draft, a request, an invoice request, a claim). */
   id: string;
-  kind: 'draft' | 'request' | 'invoice' | 'receipt';
+  kind: 'draft' | 'request' | 'invoice' | 'receipt' | 'unknown';
   from: Who;
   /** Prepared in another app: its name. */
   app: string | null;
