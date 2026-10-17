@@ -8,7 +8,7 @@
 // desk reads the file again, checks its bytes hash to that digest, reads it
 // again, and signs only if nothing blocks it. What you sign is what you saw.
 
-import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPES_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts, unhex } from '../../genesis/src/core.ts';
+import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPES_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts, unhex, xwingPublic } from '../../genesis/src/core.ts';
 import { encryptionSecret } from '../../../modules/carry/src/carry.ts';
 import { NAME, namePayload, readName } from '../../dub/src/names.ts';
 import { TestIdentity, sealFor, type Home, type Reference } from '../../genesis/src/identity.ts';
@@ -461,7 +461,7 @@ export class Desk {
    */
   async signAndSend(
     signer: string,
-    a: { spec: string; type: number; payload: Uint8Array; public: boolean; to: string[]; refs: Reference[] },
+    a: { spec: string; type: number; payload: Uint8Array; public: boolean; to: string[]; refs: Reference[]; objects?: [string, string][] },
   ): Promise<{ id: string; act: Uint8Array; key: Uint8Array; sent: NonNullable<Answer['sent']> }> {
     return this.serial(async () => {
       if (!this.store.holds(signer)) throw new Error(`This desk does not hold the identity ${signer}.`);
@@ -470,7 +470,7 @@ export class Desk {
       const agency = this.agency(signer, a);
       if (agency) throw new Error(`${agency} Nothing was signed.`);
       const recipient = a.public ? null : await recipientOf(a.to[0], this.hints(), this.via);
-      const made = me.sign(a.spec, a.type, a.payload, { public: a.public, to: a.to.length ? a.to : undefined, refs: a.refs.length ? a.refs : undefined });
+      const made = me.sign(a.spec, a.type, a.payload, { public: a.public, to: a.to.length ? a.to : undefined, refs: a.refs.length ? a.refs : undefined, objects: a.objects?.length ? a.objects : undefined });
       // The sequence is saved before anything leaves, so no later act can fork from this one.
       this.store.saveIdentity(me);
       this.store.keepAct(made.id, made.act, a.public ? undefined : made.key);
@@ -478,6 +478,45 @@ export class Desk {
       this.store.saveSigned(rec);
       const sent = await this.send(rec, me);
       return { id: made.id, act: made.act, key: made.key, sent };
+    });
+  }
+
+  /**
+   * Sign a private act of an identity held here, addressed to itself, and
+   * leave it sealed to its own current encryption key at its homes, with its
+   * locked act beside it (Identity rule 35): an agent's notes and diary
+   * (H22), as Damgar's drafts travel (the money messages cMIP's
+   * `sendToSelf`). Refused, before anything is signed, where the encryption
+   * key its homes serve is not one held here: nothing sealed to it could be
+   * opened again.
+   */
+  async sealToSelf(signer: string, a: { spec: string; type: number; payload: Uint8Array }): Promise<{ id: string; left: string[] }> {
+    return this.serial(async () => {
+      if (!this.store.holds(signer)) throw new Error(`This desk does not hold the identity ${signer}.`);
+      const me = this.store.identity(signer);
+      if (me.f.pending) throw new Error('A rotation of this identity is waiting to count: nothing is signed with it until it does.');
+      const homes = me.f.homes.map((h) => h.hint);
+      const look = await lookUp(me.id, homes, this.via);
+      if (!look.encryptionKey) throw new Error('This identity publishes no encryption key, so nothing can be sealed to it. Nothing was signed.');
+      if (!me.f.encryption.some((e) => hex(xwingPublic(unhex(e.secret))) === hex(look.encryptionKey!))) {
+        throw new Error('The encryption key this identity publishes is not one Edubba holds: what is sealed to it would not open here. Nothing was signed.');
+      }
+      const made = me.sign(a.spec, a.type, a.payload, { public: false, to: [me.id] });
+      this.store.saveIdentity(me);
+      this.store.keepAct(made.id, made.act, made.key);
+      const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
+      const left: string[] = [];
+      for (const h of homes) {
+        try {
+          await relayAt(h, this.via).putSealed(sealed);
+          await relayAt(h, this.via).putAct(made.act);
+          left.push(h);
+        } catch {
+          // that home is away: the others hold it
+        }
+      }
+      if (!left.length) throw new Error(`No home took it (${homes.join(', ')}): it was signed but went nowhere.`);
+      return { id: made.id, left };
     });
   }
 

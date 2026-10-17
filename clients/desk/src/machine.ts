@@ -28,7 +28,11 @@ import { recipientOf } from '../../connector/src/draft.ts';
 import { escapeControls } from '../../connector/src/words.ts';
 import { NUDGE_SPECS, NUDGE_TYPES, TEXT_ACT, KIND, type KindNumber } from '../../nudge/src/specs.ts';
 import { Reading, encodeNudge, encodePick, encodeTerms, entryFor, termsInWords, type Terms } from '../../nudge/src/nudge.ts';
-import { ClaudeError, DEFAULT_MODEL, findKey, inRepository, lastFour, writeAnswer, writeNudged, type Answering, type Reach, type Settings } from './claude.ts';
+import { ClaudeError, DEFAULT_MODEL, findKey, inRepository, lastFour, writeAcceptance, writeAnswer, writeDiary, writeNudged, type Answering, type MemoryChanges, type Reach, type Read, type Settings, type Tools } from './claude.ts';
+import { Memory, PER_ANSWER, loadNotes, noteProblem, shortName, type Note } from './memory.ts';
+import type { AgentGrants } from './grants.ts';
+import { identity as lookIdentity, readAct, toldText } from '../../connector/src/read.ts';
+import { parseTarget } from '../../connector/src/target.ts';
 import { readFeed } from '../../site/src/feed.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import type { Desk, Done } from './desk.ts';
@@ -80,6 +84,8 @@ export interface MachineFile {
   keyKind?: 'shared' | 'own';
   /** Its display name as published (the naming cMIP), the act; absent where none was published from here. */
   named?: { name: string; act: string } | null;
+  /** The days whose diary entry was written from here (H22, 6): the homes hold the entries; this only spares a look. */
+  diaryDays?: string[];
   causes: Record<string, Cause>;
 }
 
@@ -149,8 +155,28 @@ const localDay = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+/** What an answer is given besides the act: who it is, its exchange and its notes (H22). */
+interface Context {
+  who: string;
+  memory: string;
+  thread: { from: string; text: string }[];
+  /** The identities in the exchange: notes about them are loaded, and may be written. */
+  identities: string[];
+  /** Private messages it received: a note copies none of them into a note about someone else. */
+  privates: { from: string; text: string }[];
+  notes: Note[];
+}
+
 export class Machine {
   private running: Promise<unknown> = Promise.resolve();
+  private memoryOf: Memory | null = null;
+  /** The grants its owner gave it (set by Edubba's agents): under a nudge, it may post in its owner's name. */
+  grants: AgentGrants | null = null;
+
+  /** Its notes and diary, sealed to itself at its homes (H22). */
+  get memory(): Memory {
+    return (this.memoryOf ??= new Memory(this.desk, this.store));
+  }
 
   /**
    * One agent's answering (Edubba keeps several, F333). `agentId`: the agent,
@@ -294,19 +320,133 @@ export class Machine {
   }
 
   /** The thread an act belongs to: the acts it names that are held, oldest first, one level back each, at most five. */
-  private thread(r: Reading, id: string, skip: string[]): { from: string; text: string }[] {
+  private thread(r: Reading, id: string, skip: string[]): { from: string; text: string; act: string; signer: string }[] {
     const names = this.nameOf();
-    const out: { from: string; text: string }[] = [];
+    const out: { from: string; text: string; act: string; signer: string }[] = [];
     let cur = r.held(id);
     const seen = new Set<string>([id]);
     while (cur && out.length < 5) {
       const next = cur.refs.map((x) => r.held(x)).find((h) => h && !seen.has(h.id) && !skip.includes(h.id) && this.textOf(r, h.id) !== null);
       if (!next) break;
       seen.add(next.id);
-      out.unshift({ from: names(next.signer), text: this.textOf(r, next.id)! });
+      out.unshift({ from: names(next.signer), text: this.textOf(r, next.id)!, act: next.id, signer: next.signer });
       cur = next;
     }
     return out;
+  }
+
+  /**
+   * The exchange an act belongs to (H22, 1): the acts it names, back a few
+   * steps, then the earlier acts between the agent and the same counterpart
+   * that Edubba holds (what the counterpart sent it, and what it answered),
+   * oldest first, at most eight. "Right now it's not even aware of the
+   * previous message" (Nobody, allegedly): a prompt names nothing, so the
+   * conversation is found by who it is with.
+   */
+  private exchange(m: MachineFile, r: Reading, act: string, counterpart: string): { from: string; text: string; act: string; signer: string }[] {
+    const agent = m.agent!;
+    const names = this.nameOf();
+    const refs = this.thread(r, act, []);
+    const items = this.store.received(agent).items.filter((x) => x.from === counterpart && x.act && x.act !== act && x.text !== undefined);
+    const theirs = new Set(items.map((x) => x.act!));
+    const earlier: { from: string; text: string; act: string; signer: string; time: number }[] = items.map((x) => ({ from: names(counterpart), text: x.text!, act: x.act!, signer: counterpart, time: x.found }));
+    for (const h of this.store.history()) {
+      if (h.agent !== agent && h.signer !== agent) continue;
+      if (h.verdict === 'answered' && h.act && h.text && h.causeAct && theirs.has(h.causeAct)) earlier.push({ from: `${names(agent)} (you)`, text: h.text, act: h.act, signer: agent, time: h.time });
+    }
+    const named = new Set(refs.map((x) => x.act));
+    const rest = earlier
+      .filter((x) => !named.has(x.act))
+      .sort((a, b) => a.time - b.time)
+      .slice(-8)
+      .map(({ time: _t, ...x }) => x);
+    return [...rest, ...refs];
+  }
+
+  /** Who the agent is, in plain words: loaded each time, not a note (H22). */
+  private who(m: MachineFile, r: Reading): string {
+    const names = this.nameOf();
+    const terms = this.termsNow(r, m);
+    return [
+      `You are ${names(m.agent!)}, the MOR identity ${m.agent}.`,
+      `Your owner is ${names(m.owner!)}, the identity ${m.owner}.`,
+      'Your signed terms (the nudge cMIP), in plain words:',
+      ...(terms ? termsInWords(terms, names).map((l) => `- ${l}`) : ['- (your terms could not be read here)']),
+    ].join('\n');
+  }
+
+  /** What an answer is given besides the act (H22): who it is, the exchange, its notes loaded under the cap. */
+  private async context(m: MachineFile, r: Reading, act: string, counterpart: string, more: string[] = []): Promise<Context> {
+    const names = this.nameOf();
+    const thread = this.exchange(m, r, act, counterpart);
+    const identities = [...new Set([counterpart, ...more, ...thread.map((t) => t.signer)])].filter((x) => x !== m.agent);
+    const privates = this.store
+      .received(m.agent!)
+      .items.filter((x) => x.private && x.from && x.text)
+      .map((x) => ({ from: x.from!, text: x.text! }));
+    let notes: Note[] = [];
+    let memory: string;
+    try {
+      notes = (await this.memory.read(m.agent!)).notes;
+      memory = loadNotes(notes, identities, names).text;
+    } catch (e) {
+      memory = `(Your notes could not be read from your homes: ${err(e)})`;
+    }
+    const people = identities.map((id) => `- ${names(id)}: fingerprint ${id}`).join('\n');
+    return { who: `${this.who(m, r)}\n\nIdentities in this exchange:\n${people || '- none but you'}`, memory, thread: thread.map(({ from, text }) => ({ from, text })), identities, privates, notes };
+  }
+
+  /**
+   * The notes an answer asked for, checked, then signed and sealed to itself
+   * (H22): an owner's instruction only from the owner's own prompt; a note
+   * about an identity only about one in the exchange; no key, no seed words,
+   * no private content in a note about someone else; at most three added
+   * and three retired. What is refused is said, never signed.
+   */
+  private async remember(m: MachineFile, ctx: Context, changes: MemoryChanges, cause: { prompt: string | null }): Promise<string[]> {
+    const said: string[] = [];
+    const agent = m.agent!;
+    for (const a of changes.add.slice(0, PER_ANSWER)) {
+      let about: string | null = null;
+      if (a.kind === 'person') {
+        const t = (a.about ?? '').toLowerCase().replace(/[^0-9a-f]/g, '');
+        about = t.length >= 8 ? (ctx.identities.find((id) => id.startsWith(t) || id.endsWith(t)) ?? null) : null;
+        if (!about) {
+          said.push('A note about someone not in this exchange was not kept.');
+          continue;
+        }
+      }
+      if (a.kind === 'instruction' && !cause.prompt) {
+        said.push('A standing instruction was not kept: one is made only from your own prompt to it.');
+        continue;
+      }
+      const why = noteProblem({ kind: a.kind, about, text: a.text }, ctx.privates, m.owner);
+      if (why) {
+        said.push(`A note was not kept: ${why}`);
+        continue;
+      }
+      try {
+        const id = await this.memory.write(agent, { kind: a.kind, about, text: a.text, from: a.kind === 'instruction' ? cause.prompt : null });
+        said.push(`Noted (${a.kind}${about ? `, about ${this.nameOf()(about)}` : ''}): ${shortName(id)}.`);
+      } catch (e) {
+        said.push(`A note was not kept: ${err(e)}`);
+      }
+    }
+    if (changes.add.length > PER_ANSWER) said.push(`Only ${PER_ANSWER} new notes are kept from one answer.`);
+    for (const short of changes.retire.slice(0, PER_ANSWER)) {
+      const n = ctx.notes.find((x) => shortName(x.id) === short.trim().toLowerCase() && !x.dropped);
+      if (!n) {
+        said.push(`No live note named ${short.slice(0, 12)} to retire.`);
+        continue;
+      }
+      try {
+        await this.memory.retire(agent, n.id, 'agent');
+        said.push(`Retired its note ${shortName(n.id)}.`);
+      } catch (e) {
+        said.push(`A note was not retired: ${err(e)}`);
+      }
+    }
+    return said;
   }
 
   /** Acts sent to Machine, allegedly by anyone but its owner, that nothing answered yet: the "Notified" pile. */
@@ -357,6 +497,46 @@ export class Machine {
     m.stopped = null;
     this.save(m);
     return key;
+  }
+
+  /**
+   * The connector's read-and-verify tools, for this agent (H21): any public
+   * act fetched by its id from the places Edubba reads (and the relays a
+   * link names), judged by the core library, and said as the connector says
+   * it; an identity looked up at its homes. Read only: nothing here signs,
+   * keeps or sends anything. Each further round of reading is one more call
+   * under the agent's daily cap.
+   */
+  private tools(): Tools {
+    const { hints, via } = this.desk.places;
+    return {
+      run: async (name, input) => {
+        if (name === 'mor_read') {
+          const t = parseTarget(String(input.target ?? ''));
+          return { text: toldText(await readAct(t.id, [...new Set([...t.relays, ...hints])], via)), ok: true };
+        }
+        if (name === 'mor_identity') {
+          const id = String(input.identity ?? '').trim().toLowerCase();
+          if (!/^[0-9a-f]{64}$/.test(id)) return { text: 'An identity is its hash: 64 hex digits.', ok: false };
+          return { text: toldText(await lookIdentity(id, hints, via)), ok: true };
+        }
+        return { text: `No tool named ${name}.`, ok: false };
+      },
+      canMore: () => {
+        const m = this.file();
+        const day = (this.opts.today ?? localDay)();
+        return (m.usage.day === day ? m.usage.calls : 0) < m.callsPerDay;
+      },
+      more: () => {
+        const m = this.file();
+        const day = (this.opts.today ?? localDay)();
+        if (m.usage.day !== day) m.usage = { day, calls: 0 };
+        if (m.usage.calls >= m.callsPerDay) return false;
+        m.usage.calls++;
+        this.save(m);
+        return true;
+      },
+    };
   }
 
   private settings(m: MachineFile): Settings {
@@ -414,12 +594,60 @@ export class Machine {
           throw e;
         }
       }
+      try {
+        await this.diaryIfDue();
+      } catch (e) {
+        if (!(e instanceof Stopped)) problems.push(`Its diary was not written: ${err(e)}`);
+      }
       return { answered, stopped: this.file().stopped, problems };
     });
   }
 
+  /** The day a record belongs to, by this machine's clock. */
+  private static dayOf(time: number): string {
+    const d = new Date(time * 1000);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  /**
+   * The diary (H22, 6): once a day, for the latest day before today on which
+   * the agent acted and that has no entry yet, one call to Claude, the entry
+   * sealed to the agent at its homes. "Not a log": the day's most striking
+   * element, a brief reflection, and why it picked it. Never loaded into an
+   * answer, shown nowhere unless its owner chooses to read it.
+   */
+  private async diaryIfDue(): Promise<string | null> {
+    const m = this.file();
+    if (!m.agent || !m.owner || !m.terms || !m.on) return null;
+    const today = (this.opts.today ?? localDay)();
+    const mine = this.history().filter((h) => Machine.dayOf(h.time) < today && h.text && (h.signer === m.agent || h.verdict === 'prompted'));
+    if (!mine.length) return null;
+    const day = Machine.dayOf(Math.max(...mine.map((h) => h.time)));
+    if (m.diaryDays?.includes(day)) return null;
+    const read = await this.memory.read(m.agent);
+    if (read.diary.some((e) => e.day === day)) {
+      m.diaryDays = [...(m.diaryDays ?? []), day].slice(-60);
+      this.save(m);
+      return null;
+    }
+    const key = this.spend(m);
+    const names = this.nameOf();
+    const r = this.reading(m);
+    const happened = mine
+      .filter((h) => Machine.dayOf(h.time) === day)
+      .sort((a, b) => a.time - b.time)
+      .map((h) => ({ from: h.verdict === 'prompted' ? `${names(h.signer)}, your owner, prompting you` : `${names(m.agent!)} (you): ${h.title}`, text: h.text! }));
+    const w = await writeDiary({ who: this.who(m, r), day, happened }, key, this.settings(m), this.opts.reach, this.opts.repo);
+    const id = await this.memory.writeDiary(m.agent, { day, striking: w.striking, reflection: w.reflection, why: w.why });
+    const f = this.file();
+    f.diaryDays = [...(f.diaryDays ?? []), day].slice(-60);
+    this.save(f);
+    this.note({ time: now(), draft: '', verdict: 'diary', signer: m.agent, title: `${names(m.agent)} wrote its diary for ${day}, sealed to itself`, note: 'Not shown here: read it only by choosing to, in its details.', act: id });
+    return id;
+  }
+
   /** Record a cause and its outcome, in machine.json and the desk's history. */
-  private done(cause: Cause, history: { title: string; text?: string; act?: string; why: string; notClaimed?: string[] }): void {
+  private done(cause: Cause, history: { title: string; text?: string; act?: string; why: string; notClaimed?: string[]; read?: Read[] }): void {
     const m = this.file();
     m.causes[cause.act] = cause;
     this.save(m);
@@ -434,6 +662,7 @@ export class Machine {
       cause: history.why,
       causeAct: cause.act,
       text: history.text,
+      read: history.read?.length ? history.read : undefined,
     });
   }
 
@@ -469,13 +698,15 @@ export class Machine {
       if (e instanceof Stopped) this.stop(e);
       throw e;
     }
-    const answering: Answering = { from: `${names(owner)}, your owner`, how, text: it.text ?? '', thread: this.thread(r, it.act!, []), why: 'his own act: you answer him at once' };
+    const ctx = await this.context(m, r, it.act!, owner);
+    const answering: Answering = { who: ctx.who, memory: ctx.memory, from: `${names(owner)}, your owner`, how, text: it.text ?? '', thread: ctx.thread, why: 'his own act: you answer him at once' };
     try {
-      const w = await writeAnswer(answering, key, this.settings(m), this.opts.reach, this.opts.repo);
+      const w = await writeAnswer(answering, key, this.settings(m), this.opts.reach, this.opts.repo, this.tools());
       const refs: Reference[] = [it.private ? it.act! : [it.act!, owner]];
       const s = await this.desk.signAndSend(agent, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: textPayload(w.text), public: !it.private, to: [owner], refs });
-      Object.assign(cause, { status: 'answered', actions: [s.id], answered: [it.act!], note: delivered(s.sent) });
-      this.done(cause, { title: `${names(agent)} answered ${names(owner)}’s ${it.private ? 'message, privately' : 'act, publicly'}`, text: w.text, act: s.id, why, notClaimed: w.notClaimed });
+      const noted = await this.remember(m, ctx, w.memory, { prompt: it.private ? it.act! : null });
+      Object.assign(cause, { status: 'answered', actions: [s.id], answered: [it.act!], note: [delivered(s.sent), ...noted].join(' ') });
+      this.done(cause, { title: `${names(agent)} answered ${names(owner)}’s ${it.private ? 'message, privately' : 'act, publicly'}`, text: w.text, act: s.id, why, notClaimed: w.notClaimed, read: w.read });
     } catch (e) {
       cause.note = err(e);
       this.done(cause, { title: `Not answered: ${names(owner)}’s ${it.private ? 'message' : 'act'}`, why });
@@ -487,6 +718,27 @@ export class Machine {
     if (!m.terms) return null;
     const t = r.termsAct(m.terms);
     return t && 'terms' in t ? t.terms : null;
+  }
+
+  /**
+   * The agent is asked whether it accepts a grant from its owner (F128: the
+   * grantee signs to accept it): one call to Claude under its cap, with who
+   * it is and the grant in plain words.
+   */
+  async askAcceptance(words: string[]): Promise<{ accept: boolean; why: string }> {
+    return this.alone(async () => {
+      const m = this.file();
+      if (!m.agent || !m.terms) throw new Error('Sign its terms first.');
+      let key: string;
+      try {
+        key = this.spend(m);
+      } catch (e) {
+        if (e instanceof Stopped) this.stop(e);
+        throw e;
+      }
+      const a = await writeAcceptance({ who: this.who(m, this.reading(m)), grant: words }, key, this.settings(m), this.opts.reach, this.opts.repo);
+      return { accept: a.accept, why: a.why };
+    });
   }
 
   /** The owner picks an act someone sent: his pick is signed and delivered, then Machine, allegedly answers it at once. */
@@ -650,18 +902,21 @@ export class Machine {
       if (e instanceof Stopped) this.stop(e);
       throw e;
     }
+    const ctx = await this.context(m, r, it.act!, it.from);
     try {
       const w = await writeAnswer(
-        { from: names(it.from), how: it.private ? 'a private message to you' : 'a public act addressed to you', text: it.text ?? '', thread: this.thread(r, it.act!, []), why: `picked by ${names(p.signer)}, your owner: he chose that it be answered, never what you say` },
+        { who: ctx.who, memory: ctx.memory, from: names(it.from), how: it.private ? 'a private message to you' : 'a public act addressed to you', text: it.text ?? '', thread: ctx.thread, why: `picked by ${names(p.signer)}, your owner: he chose that it be answered, never what you say` },
         key,
         this.settings(m),
         this.opts.reach,
         this.opts.repo,
+        this.tools(),
       );
       const refs: Reference[] = [[pickId, p.signer], it.private ? it.act! : [it.act!, it.from]];
       const s = await this.desk.signAndSend(agent, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: textPayload(w.text), public: !it.private, to: [it.from], refs });
-      Object.assign(cause, { status: 'answered', actions: [s.id], answered: [it.act!], note: `${this.wordsOf(s.id)} ${delivered(s.sent)}` });
-      this.done(cause, { title: `${names(agent)} answered ${names(it.from)}’s ${it.private ? 'message, privately' : 'act, publicly'}`, text: w.text, act: s.id, why, notClaimed: w.notClaimed });
+      const noted = await this.remember(m, ctx, w.memory, { prompt: null });
+      Object.assign(cause, { status: 'answered', actions: [s.id], answered: [it.act!], note: [this.wordsOf(s.id), delivered(s.sent), ...noted].join(' ') });
+      this.done(cause, { title: `${names(agent)} answered ${names(it.from)}’s ${it.private ? 'message, privately' : 'act, publicly'}`, text: w.text, act: s.id, why, notClaimed: w.notClaimed, read: w.read });
     } catch (e) {
       cause.note = err(e);
       this.done(cause, { title: `Not answered: ${names(it.from)}’s ${it.private ? 'message' : 'act'}`, why });
@@ -762,14 +1017,17 @@ export class Machine {
       if (e instanceof Stopped) this.stop(e);
       throw e;
     }
+    const ctx = await this.context(m, r, nudgeId, owner, candidates.map((c) => c.from));
+    const grant = this.grants?.live(agent, NUDGE_SPECS.text, TEXT_ACT) ?? null;
     let chosen: Awaited<ReturnType<typeof writeNudged>>;
     try {
       chosen = await writeNudged(
-        { count, context: n.nudge.context ?? null, named, candidates: candidates.map((c, i) => ({ n: i + 1, from: names(c.from), how: c.how, text: c.text ?? '' })) },
+        { who: ctx.who, memory: ctx.memory, grant: grant ? this.grants!.wordsOf(grant).join('\n') : undefined, count, context: n.nudge.context ?? null, named, candidates: candidates.map((c, i) => ({ n: i + 1, from: names(c.from), how: c.how, text: c.text ?? '' })) },
         key,
         this.settings(m),
         this.opts.reach,
         this.opts.repo,
+        this.tools(),
       );
     } catch (e) {
       cause.note = err(e);
@@ -783,7 +1041,22 @@ export class Machine {
       let to: string[] = [];
       let pub = true;
       let answered: string | null = null;
-      if (a.kind === 'message to the owner') {
+      if (a.kind === 'post in your owner’s name') {
+        // Signed with the grant key, the owner's own act on the agent's strand (Agreements rule 73, F343).
+        if (!grant) {
+          notes.push('A post in its owner’s name was left out: it holds no live grant for posts.');
+          continue;
+        }
+        try {
+          const g = await this.grants!.sign(agent, grant.grant, { spec: NUDGE_SPECS.text, type: TEXT_ACT, payload: textPayload(a.text), public: true, refs });
+          cause.actions.push(g.act);
+          texts.push(a.text);
+          notes.push(g.authority?.words ?? `Signed under the grant ${short(grant.grant)}.`);
+        } catch (e) {
+          notes.push(`A post in its owner’s name was not signed: ${err(e)}`);
+        }
+        continue;
+      } else if (a.kind === 'message to the owner') {
         to = [owner];
         pub = false;
       } else if (a.kind === 'answer') {
@@ -822,11 +1095,12 @@ export class Machine {
         notes.push(`An action was not sent: ${err(e)}`);
       }
     }
+    notes.push(...(await this.remember(m, ctx, chosen.memory, { prompt: null })));
     if (chosen.actions.length > count) notes.push(`Claude proposed ${chosen.actions.length} actions; only the first ${count} were taken (the nudge’s number).`);
     if (!chosen.actions.length) notes.push('Machine, allegedly chose to do nothing.');
     cause.status = cause.actions.length ? 'answered' : 'not answered';
     cause.note = notes.join(' ');
-    this.done(cause, { title: `${names(agent)}, nudged: ${cause.actions.length === 1 ? 'one action' : `${cause.actions.length} actions`} of ${count}`, text: texts.join('\n\n———\n\n'), act: cause.actions[0], why, notClaimed: chosen.notClaimed });
+    this.done(cause, { title: `${names(agent)}, nudged: ${cause.actions.length === 1 ? 'one action' : `${cause.actions.length} actions`} of ${count}`, text: texts.join('\n\n———\n\n'), act: cause.actions[0], why, notClaimed: chosen.notClaimed, read: chosen.read });
   }
 
   /** Try again a cause that was not answered (an error, a sender out of reach): it is forgotten, and handled anew. */

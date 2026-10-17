@@ -25,6 +25,8 @@ import { escapeControls } from '../../connector/src/words.ts';
 import { readId } from '../../../modules/carry/src/carry.ts';
 import { agentKeyFile, saveKey, sharedKeyFile, findKey, lastFour } from './claude.ts';
 import { Machine, type MachineOptions } from './machine.ts';
+import { MEMORY_COST_SAY, diarySay, shortName } from './memory.ts';
+import { AgentGrants, GRANT_SAY, type GrantAsk } from './grants.ts';
 import type { Desk, Done } from './desk.ts';
 import type { Store } from './store.ts';
 import { homedir } from 'node:os';
@@ -57,6 +59,8 @@ export interface Seen {
 export class Agents {
   private machines = new Map<string, Machine>();
   private none: Machine;
+  /** What owners granted their agents (the shared grant piece, `clients/grants`). */
+  readonly grants: AgentGrants;
 
   constructor(
     private readonly desk: Desk,
@@ -64,6 +68,7 @@ export class Agents {
     private readonly opts: MachineOptions = {},
   ) {
     this.none = new Machine(desk, store, opts, null);
+    this.grants = new AgentGrants(desk, store);
   }
 
   private get home(): string {
@@ -82,6 +87,7 @@ export class Agents {
     let m = this.machines.get(id);
     if (!m) {
       m = new Machine(this.desk, this.store, this.opts, id);
+      m.grants = this.grants;
       this.machines.set(id, m);
     }
     return m;
@@ -292,6 +298,80 @@ export class Agents {
       .sort((a, b) => b.found - a.found)
       .map((x) => ({ key: x.key, kind: x.kind, from: x.from, fromName: x.from ? names(x.from) : null, private: x.private, standing: x.standing, text: x.text === undefined ? undefined : escapeControls(x.text), found: x.found }));
     return { follows: p.follows, feed, problems, inbox };
+  }
+
+  // ------------------------------------------------------------ its memory (H22)
+
+  /**
+   * Its notes, as its homes hold them, for its owner to read in its details
+   * (never its diary): each with its kind, whom it is about, its words, and
+   * whether a later act dropped it. The stated cost beside them.
+   */
+  async notes(agent: string): Promise<{ notes: unknown[]; problems: string[]; costs: string; diary: { say: string; button: string } }> {
+    if (!this.store.isAgent(agent)) throw new Error('Not an agent of this desk.');
+    const names = this.store.names();
+    const r = await this.for(agent).memory.read(agent);
+    return {
+      notes: r.notes.map((n) => ({
+        id: n.id,
+        short: shortName(n.id),
+        kind: n.kind,
+        about: n.about,
+        aboutName: n.about ? names(n.about) : null,
+        text: escapeControls(n.text),
+        from: n.from,
+        dropped: n.dropped ? { by: n.dropped.by, why: n.dropped.why === null ? null : escapeControls(n.dropped.why) } : null,
+      })),
+      problems: r.problems,
+      costs: MEMORY_COST_SAY,
+      // Nothing of the diary here but what reading it means (cMIP 5.3): no count, no excerpt.
+      diary: { say: diarySay(this.plainName(agent)), button: `Read ${this.plainName(agent)}’s diary` },
+    };
+  }
+
+  /** Its name as given here (its display name), without the fingerprint: "Read Machine's diary". */
+  private plainName(agent: string): string {
+    return this.store.book().identities.find((i) => i.id === agent)?.name ?? short(agent);
+  }
+
+  /** Its owner retires a note: a later act, signed by the agent, marks it dropped; the note stays. */
+  async retireNote(agent: string, note: string, why: string): Promise<Done> {
+    if (!this.store.isAgent(agent)) throw new Error('Not an agent of this desk.');
+    const id = await this.for(agent).memory.retire(agent, note, 'owner', why.trim() || null);
+    const names = this.store.names();
+    this.store.record({ time: now(), draft: '', verdict: 'note retired', agent, signer: agent, title: `${names(agent)}’s note ${shortName(note)} retired, at its owner’s request`, note: why.trim(), act: id });
+    return { title: 'Note retired', lines: [{ text: `A later act, ${short(id)}, marks the note ${shortName(note)} dropped: it is no longer loaded. The note itself stays, signed.`, tone: 'ok' }], acts: [id] };
+  }
+
+  /**
+   * "Read Machine's diary" (H22, 6): the one deliberate action that shows
+   * it. Asked with `reading: true` only after the page said plainly that the
+   * owner is about to read what the agent wrote for itself.
+   */
+  async diary(agent: string, reading: boolean): Promise<{ say: string; entries: { day: string; striking: string; reflection: string; why: string; act: string }[] }> {
+    if (!this.store.isAgent(agent)) throw new Error('Not an agent of this desk.');
+    const say = diarySay(this.plainName(agent));
+    if (!reading) throw new Error(say);
+    const r = await this.for(agent).memory.read(agent);
+    return { say, entries: r.diary.map((e) => ({ day: e.day, striking: escapeControls(e.striking), reflection: escapeControls(e.reflection), why: escapeControls(e.why), act: e.id })) };
+  }
+
+  // ------------------------------------------------------------ a grant from its owner (film 2)
+
+  /** The grant read back in plain words, nothing signed; by its owner, to this agent. */
+  grantPreview(agent: string, a: GrantAsk): { lines: string[]; digest: string; say: string } {
+    const st = this.for(agent).state();
+    if (!st.terms || !st.owner) throw new Error('Sign its terms first.');
+    return { ...this.grants.preview(agent, st.owner, a), say: GRANT_SAY };
+  }
+
+  /** The owner signs the grant shown; the agent is asked, and signs its acceptance if it accepts. */
+  grantPublish(agent: string, digest: string) {
+    return this.grants.publish(agent, digest, (words) => this.for(agent).askAcceptance(words));
+  }
+
+  grantAsk(agent: string, grant: string) {
+    return this.grants.askAgain(agent, grant, (words) => this.for(agent).askAcceptance(words));
   }
 
   // ------------------------------------------------------------ the page's state

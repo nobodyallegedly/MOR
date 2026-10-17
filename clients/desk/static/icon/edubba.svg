@@ -1,17 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Edubba ("the tablet house"): a house whose roof and walls are clay tablets, on the visual bible's dark. Calm, no glow. -->
-  <rect x="100" y="100" width="824" height="824" rx="184" fill="#06080c"/>
-  <rect x="100.5" y="100.5" width="823" height="823" rx="183.5" fill="none" stroke="#2a313d" stroke-width="3"/>
-  <g fill="#8a6a50">
-    <rect x="-34" y="-150" width="68" height="300" rx="16" transform="translate(400 342) rotate(50)"/>
-    <rect x="-34" y="-150" width="68" height="300" rx="16" transform="translate(624 342) rotate(-50)"/>
-    <rect x="300" y="474" width="112" height="318" rx="22"/>
-    <rect x="456" y="474" width="112" height="318" rx="22"/>
-    <rect x="612" y="474" width="112" height="318" rx="22"/>
+  <!-- Edubba ("the tablet house"; H25, H36): a clay tablet with a house carved out of it, its roof and walls themselves tablets: two leaning together as the roof, three standing as the walls, each with its lines of writing left in bare clay. One solid carving in one colour, recessed into the clay; no glow, no name (none verified for it). Tinted with the Agreements layer's emerald, #48c08c (Kišib's rule, H36): a thick edge, #348966 (70% of the layer colour over the dark); the dark #0a1314, the clay #827457, its lit rim #998b6e and the carving #5b553f (each the family's own colour moved 6% or 12% toward the layer colour). -->
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="#0a1314"/>
+  <rect x="108" y="108" width="808" height="808" rx="176" fill="none" stroke="#348966" stroke-width="16"/>
+  <!-- The tablet: a pillow of clay, a little uneven, standing. -->
+  <path d="M262 262 Q258 214 306 212 L716 208 Q766 206 766 256 L770 768 Q772 818 722 818 L308 822 Q258 824 258 774 Z" fill="#827457"/>
+  <path d="M262 262 Q258 214 306 212 L716 208 Q766 206 766 256 L770 768 Q772 818 722 818 L308 822 Q258 824 258 774 Z" fill="none" stroke="#998b6e" stroke-width="7" opacity=".6"/>
+  <!-- The carving: the roof's two tablets, leaning together; the three wall tablets. -->
+  <g fill="#5b553f">
+    <rect x="-36" y="-132" width="72" height="264" rx="16" transform="translate(432 368) rotate(52)"/>
+    <rect x="-36" y="-132" width="72" height="264" rx="16" transform="translate(592 368) rotate(-52)"/>
+    <rect x="322" y="476" width="104" height="276" rx="20"/>
+    <rect x="460" y="476" width="104" height="276" rx="20"/>
+    <rect x="598" y="476" width="104" height="276" rx="20"/>
   </g>
-  <g stroke="#5e4634" stroke-width="9" stroke-linecap="round">
-    <path d="M326 540 H386 M326 600 H386 M326 660 H372"/>
-    <path d="M482 540 H542 M482 600 H542 M482 660 H528"/>
-    <path d="M638 540 H698 M638 600 H698 M638 660 H684"/>
+  <!-- The walls' writing, left in bare clay. -->
+  <g stroke="#827457" stroke-width="10" stroke-linecap="round">
+    <path d="M348 534 H400 M348 592 H400 M348 650 H384"/>
+    <path d="M486 534 H538 M486 592 H538 M486 650 H522"/>
+    <path d="M624 534 H676 M624 592 H676 M624 650 H660"/>
   </g>
 </svg>

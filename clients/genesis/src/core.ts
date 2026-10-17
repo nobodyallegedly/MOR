@@ -46,3 +46,16 @@ export const ACK_SPECS: readonly string[] = [MIRS.identity, MIRS.money, MIRS.agr
 
 export { WITNESS_EXPLANATION } from './witness.ts';
 export const ENVELOPES_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 } as const;
+
+/**
+ * A grant's limits, as the client read the grant's limits cMIP (Agreements
+ * rule 80, grant fields 3 and 4; F320, F345): for each act signed with a
+ * grant key whose grant carries limits, whether it lies within them. Given
+ * to every Agreements reading (`agreementsBacking`, `agreementsConsent`, …)
+ * as the `grantLimits` field of the specs object; an act not listed is
+ * unknown there, as for a verifier that knows no limits cMIP.
+ */
+export type GrantLimits = [act: string, within: boolean][];
+
+/** The specs object with the client's verdicts on grants' limits added. */
+export const withGrantLimits = <T extends object>(specs: T, verdicts: GrantLimits): T & { grantLimits: GrantLimits } => ({ ...specs, grantLimits: verdicts });

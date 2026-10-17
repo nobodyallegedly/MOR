@@ -153,6 +153,27 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
         return {};
       case 'agent view':
         return agents.view(text(a.agent));
+      case 'agent grant preview':
+        return agents.grantPreview(text(a.agent), {
+          kinds: list(a.kinds),
+          cap: a.cap === undefined || a.cap === null || a.cap === '' ? null : num(a.cap),
+          expiry: text(a.clock) ? { clock: text(a.clock).toLowerCase(), time: num(a.until) } : null,
+        });
+      case 'agent grant publish':
+        return agents.grantPublish(text(a.agent), text(a.digest));
+      case 'agent grant ask':
+        return agents.grantAsk(text(a.agent), text(a.grant));
+      case 'agent grant revoke':
+        return agents.grants.revoke(text(a.agent), text(a.grant));
+      case 'agent grants':
+        return agents.grants.list(text(a.agent));
+      case 'agent notes':
+        return agents.notes(text(a.agent));
+      case 'agent note retire':
+        return agents.retireNote(text(a.agent), text(a.note), text(a.why));
+      case 'agent diary':
+        // H22, 6: shown only by this one deliberate action, `reading` set once the page said what it means.
+        return agents.diary(text(a.agent), a.reading === true);
       case 'collective constitution':
         return collectives.constitution(text(a.collective), realRead(text(a.collective)));
       case 'collective permissions':

@@ -1739,6 +1739,14 @@ struct SpecsIn {
     /// as the client read that time reference.
     #[serde(default)]
     notices_lapsed: Vec<String>,
+    /// A grant's limits (Agreements rule 80, grant fields 3 and 4; F320,
+    /// F345): pairs `[act, within]` for acts signed with a grant key whose
+    /// grant carries limits, `within` as the client read the grant's limits
+    /// cMIP (a cap per act, an expiry against its clock). Listed true, the
+    /// act lies within them; false, outside them, not backed, the grant
+    /// quiet. Not listed, whether it lies within them is unknown.
+    #[serde(default)]
+    grant_limits: Vec<(String, bool)>,
 }
 
 impl SpecsIn {
@@ -1790,6 +1798,9 @@ impl SpecsIn {
         }
         for n in &self.notices_lapsed {
             view.notices_lapsed.insert(unhex(n)?);
+        }
+        for (a, within) in &self.grant_limits {
+            view.grant_limits.insert(unhex(a)?, *within);
         }
         Ok(view)
     }

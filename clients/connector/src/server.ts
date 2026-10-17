@@ -17,7 +17,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { fromEnv, places, type Config } from './config.ts';
-import { identity, readAct, fetchFirst, type Told } from './read.ts';
+import { identity, readAct, fetchFirst, toldText } from './read.ts';
 import { parseTarget } from './target.ts';
 import {
   MAX_NOTE,
@@ -46,14 +46,6 @@ How to use what it says:
 - An identity is its hash. Names are nobody's word here; compare fingerprints, not names.
 - The connector never holds a key and you must never ask for one, nor for an identity file's contents.
 - To act on MOR, prepare a draft for the owner's desk (the Edubba app, called MOR Identities before 16 October 2026): a post, a picture, a withdrawal or a message, for an identity the owner linked to you at the desk. Each draft is written as a file into the drafts folder on this machine (~/mor-drafts unless the owner chose another), where the desk reads it; nothing else is written. You cannot prepare Agreements acts (signatures, agreements) nor anything else. The owner reads every draft at the desk and approves it, declines it, or sends it back with a note. Ask mor_drafts for the answer; when a draft is sent back, the owner's note says what to change: prepare the new draft with "reworks" set to the old one's digest.`;
-
-function toldText(t: Told): string {
-  const head = [`# ${t.title}`, t.verdict, `Act: ${t.id}`];
-  if (t.signer) head.push(`${t.kind === 'identity' && t.signer === t.id ? 'Fingerprint' : "Signer's fingerprint"}: ${fingerprint(t.signer)}`);
-  const parts = [head.join('\n'), sectionsText(t.sections)];
-  for (const q of t.quoted) parts.push(quote(q.heading, q.text));
-  return parts.filter(Boolean).join('\n\n');
-}
 
 function readingText(r: DraftReading): string {
   const parts = [`# ${r.title}`, r.summary.join('\n'), sectionsText(r.sections)];

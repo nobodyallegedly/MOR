@@ -20,7 +20,7 @@ import { verifyRelease, type Manifest } from '../../repo/src/release.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { count, readAgreement, ruleWords, short, termsOf, type Line, type Section, type TermsRead } from '../../collective/src/explain.ts';
-import { escapeControls } from './words.ts';
+import { escapeControls, fingerprint, quote, sectionsText } from './words.ts';
 
 /** What the connector says about one act. */
 export interface Told {
@@ -604,4 +604,18 @@ export async function identity(id: string, hints: string[], via: Via = {}, judge
     verdict: `${declared ? 'A collective' : 'An identity'} found at its homes. ${w}`,
     sections: [{ heading: 'Its identity chain', lines }],
   });
+}
+
+/**
+ * What the connector says about one act, as text for Claude: the title, the
+ * verdict, the act and its signer's fingerprint, the sections, and the
+ * signers' words fenced as data. The same reading is given to Edubba's
+ * agents (H21), so an agent reads an act exactly as Claude's app does.
+ */
+export function toldText(t: Told): string {
+  const head = [`# ${t.title}`, t.verdict, `Act: ${t.id}`];
+  if (t.signer) head.push(`${t.kind === 'identity' && t.signer === t.id ? 'Fingerprint' : "Signer's fingerprint"}: ${fingerprint(t.signer)}`);
+  const parts = [head.join('\n'), sectionsText(t.sections)];
+  for (const q of t.quoted) parts.push(quote(q.heading, q.text));
+  return parts.filter(Boolean).join('\n\n');
 }

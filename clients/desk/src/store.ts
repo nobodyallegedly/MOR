@@ -143,7 +143,7 @@ export interface Answered {
   time: number;
   /** The draft answered; empty for what Machine, allegedly's answering did. */
   draft: string;
-  verdict: 'approved' | 'declined' | 'sent back' | 'terms published' | 'picked' | 'nudged' | 'answered' | 'not answered' | 'prompted' | 'named' | 'released';
+  verdict: 'approved' | 'declined' | 'sent back' | 'terms published' | 'picked' | 'nudged' | 'answered' | 'not answered' | 'prompted' | 'named' | 'released' | 'diary' | 'note retired' | 'granted' | 'accepted' | 'under grant' | 'corrected';
   /** The agent it concerns (Edubba, several agents); absent in records made before 16 October 2026, which concern Machine, allegedly. */
   agent?: string;
   signer: string;
@@ -156,6 +156,8 @@ export interface Answered {
   causeAct?: string;
   /** Machine, allegedly's words, as signed. */
   text?: string;
+  /** The public acts and identities the agent read to answer (H21): what it asked, and the reading's title. */
+  read?: { tool: string; target: string; said: string; ok: boolean }[];
 }
 
 /** An act signed from a draft, kept to send again if a relay or inbox was away. */
@@ -329,6 +331,20 @@ export class Store {
 
   savePeople(id: string, p: AgentPeople): void {
     writeJson(this.agentPath(id, 'people.json'), p);
+  }
+
+  /**
+   * The grants this agent holds as grantee, and what its owner granted it
+   * (agents/ID.grants.json, owner-only): each grant key's secret and its
+   * strand, never published.
+   */
+  grants<T>(id: string): T[] {
+    const p = this.agentPath(id, 'grants.json');
+    return existsSync(p) ? (JSON.parse(readFileSync(p, 'utf8')) as T[]) : [];
+  }
+
+  saveGrants(id: string, g: unknown[]): void {
+    writeJson(this.agentPath(id, 'grants.json'), g);
   }
 
   /** An act kept for the answering's readings, with its content key where private. */
