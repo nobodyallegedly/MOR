@@ -28,6 +28,18 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F347. The Edubba agents session's three questions (17 October 2026)
+
+**From** `docs/edubba-agents-report.md`, questions 1 to 3, each decided by Nobody, allegedly, 17 October 2026, on the project lead's questions:
+
+1. **Correcting a long-form document** (a MIP draft in Ummia, any long-form post): a text act has one format. **(b), "Agreed"**: the corrections cMIP's next draft defines a second format, a correction in long form, whose text is long-form. Not chosen: (a) a correction always plain text; (c) a long-form correction labelled by its first reference alone (indistinguishable from a long-form reply). *The session's and the project lead's lean.*
+2. **Money acts under a grant, on Edubba's page**: **(a), "Agreed"**: kept for Damgar's round 2 lanes, the layers apart; the grant already reaches money acts in code. Not chosen: (b) a nudge offering a promise to pay in the owner's name. *The session's and the project lead's lean.*
+3. **The diary on a day the agent did nothing**: **(c), Nobody, allegedly's own: "C, introspection."** An entry every day; on a day with nothing done, the agent reflects on itself rather than on events (its notes, its instructions, its stillness). *Cost:* one call a day under its cap, quiet days included. Not chosen: (a) no entry (the session's and the project lead's lean); (b) an entry every day about the day.
+
+Also: the two colours (Dub warm pearl `#e9dfcd`, Edubba emerald `#48c08c`) and the sign 𒁾 on Dub's icon, "Fine for now", to be looked at again on the Mac.
+
+**Core changes:** none.
+
 ## F346. Relays and homes store an act signed under a grant, as scoped (17 October 2026)
 
 **Found by the Edubba agents session**, publishing an agent's act under its owner's grant to a real relay for the first time: the relay transport cMIP draft 4 ("Publishing an act", 1) says a relay SHOULD, and a home MUST, check that the act's key is the one the named identity-chain act bound. An act signed with a scoped key has a binding naming a held act of a higher MIR (Identity draft 13, rule 8 and everyday check 2): valid under Identity as far as its signature, status "scoped", judged by Agreements. So any relay holding the grant rejected it ("the binding does not name an identity-chain act of the signer"), and the grantor's homes always did (`relay/src/node.rs`, `check_binding`). Every grant key is affected, a collective's split service included. The core is right; the cMIP predates scoped keys.
