@@ -24,6 +24,18 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F338. Damgar, a money app that gathers money acts for signing (17 October 2026)
+
+*Area: presentation and the development layer (a client). Asked by Nobody, allegedly, after "What was developed for the Money layer?": the Money layer is built and proven in tests (the core's receipts, obligations, payee pointers, vault, releases; the payment cMIP with the Lightning and on-chain rail Modules; split, conversion, units; Bitcoin anchoring end to end on regtest) but no app makes or signs a payment. "I think it deserves demonstrability."*
+
+**Decided by Nobody, allegedly:** "For now, let's give MOR a money app, ideally with a field to pick the cMIPs and modules it accepts. All it does is gather the proposed money acts and offer them for signing." "It does not have to be elegant. It needs to offer ways to showcase how MOR runs." "Yes, we will build a single implementation of it for the tests, but the app is built in a way that can evolve."
+
+**The project lead's notes, agreed in the exchange:** MOR keeps the record and rails move the money, so the app holds no wallet and no Lightning node: money moves in whatever wallet a person uses, and the app gathers, verifies and signs what MOR says about it (requests, receipts, obligations, releases), arriving as acts addressed to the person, as proposals do in Dub's Signing tab. The accepted cMIPs and Modules are a visible choice per person; a money act under one not accepted is shown unknown and not signed, as the core treats a specification it does not implement. Verifying a payment still needs the rail's evidence (a Lightning proof from the payer's wallet; block data for on-chain), so a test network is still needed for real demonstrations, to produce evidence only. Its own app, in the family, for the Mac, Linux and the web, testing only.
+
+**The name.** Proposed: Nigka (níĝ-ka₉, the balanced account), Kubabbar (silver), Damgar (dam-gàr, the merchant); the project lead leaned Nigka. Nobody, allegedly: "Dumgar offers a nicer sound." On the spelling (the word is dam-gàr; "dumu" is "child"): **"Damgar"**.
+
+**Before it:** whether the test network is signet (on the author's Mac, or a server asked first) and how phones take part are to settle with its session; Bitcoin anchoring on the same network becomes demonstrable with it.
+
 ## F337. A collective's rotation: how shares travel, the risks, and saying so (17 October 2026)
 
 *Area: development layer and presentation (Kišib), with a stated cost of the core's split chain key. Asked by the Kišib session; Nobody, allegedly, asked the project lead's view: "how the key shares travel to the one app that executes the rotation".*
