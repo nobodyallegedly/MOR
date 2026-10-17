@@ -8,7 +8,7 @@ esbuild: 0.25.12
 
 Work hash of each file (as the display client lists them):
 a9cb3f5a5be1c8fe55258d69643887bf3d5342f00fedec1f6ac1dd2e2baff32c  index.html
-33c7d2fc46514e2d4cb834c9acf4b2394b4a2fb3aad8ce8f2669b5c8fa54a724  kishib.js
+6469df66f34bcfb65fcf4dd2a2e7aa343ba377315d9423548c1bcf1b7baebfc7  kishib.js
 00c700e6354e305ed0a2a7c998059fd05fb17f01566aa2cd5f0c6f186acf792f  kishib.css
 ff9f31664f4b819d531a70fd3b06a27ad4e34fa668b2479188b0e5b0470f5708  mor_wasm_bg.wasm
 d72e0f61b65931f575516d8d39caa75d2ad09b04b0ea606aee6a157b2e5eb146  inter_light.woff2
@@ -17,7 +17,7 @@ a63d578c41abf416497080d59d2ecd9ecf4fce5458f7543556acc9a8a9d2cc5c  inter_license.
 
 SHA-256 of each file (as sha256sum prints it):
 2d9ec6c30d0ce26cdf741bb13ef4e9850f3f54e4769dd977b2b45567ce8bf42d  index.html
-f9c1b7790978e561e9edf08a09cd78a02cd6372e25b382563d9f4f75dc70d6ba  kishib.js
+868950c5d2f2e03ac95170eb3074f4c3ea0e75e812bc839ed58518a1f91f13e5  kishib.js
 db41455b4b9c4bc184d64d767ed40c8c82eefd6b9bdb8253059d2a4547a3da3b  kishib.css
 22389b7b09a82ce469de4bcf4ed95acdd882b92dbec446399690709239e6077d  mor_wasm_bg.wasm
 e111a1e2ad914ccda9179b95e83fb10234dd52a1932e0b93c480476227983fd9  inter_light.woff2

@@ -7018,6 +7018,7 @@ var CollectiveSitting = class _CollectiveSitting {
     if (this.founder) this.founder.f.signingSecret = "";
     this.founder = null;
     lines2.push({ text: `The new dealing\u2019s fingerprint, for every member to compare: ${grouped(dealt.fingerprint.slice(0, 32))}.` });
+    lines2.push({ text: "Keep Ki\u0161ib open until the new shares and the collective\u2019s new words are shown. Closed now, what is not yet shown is lost (the shares sealed to members\u2019 Dubs are safe): the collective must then be rotated again, from enough of the new papers that reached their members.", tone: "warn" });
     this.lines = lines2;
     this.stage = "sent";
     await this.refresh();
@@ -7430,6 +7431,7 @@ var Kishib = class {
         }
       }
     }
+    lines2.push({ text: "Keep Ki\u0161ib open until the new words are shown. Closed now, the new signing key is lost: the identity stays yours, and the next change from the same paper installs a key you hold.", tone: "warn" });
     h.lines = lines2;
     return this.refresh();
   }
