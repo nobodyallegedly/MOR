@@ -28,6 +28,16 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F344. A correction is labelled by a cMIP; the core already makes the link (17 October 2026)
+
+**Found by the Edubba agents session:** Text draft 9 and Envelopes draft 10 say nothing about corrections; a reference means only "look at this" (Envelopes rule 20), so it cannot say "this corrects that".
+
+**Asked by Nobody, allegedly:** "The core already creates the connection, it simply does not label it, right?" *The project lead:* yes: a new act names the old in `refs`, and the same signer is checkable; what the core does not carry is the link's meaning.
+
+**Decided by Nobody, allegedly, 17 October 2026 ("Agreed"):** (a), the session's and the project lead's lean: a corrections cMIP, draft 1. A correction is a plain text act whose format (Text field 1) is that cMIP's hash, naming the corrected act first in `refs`, signed by the same signer (or by the collective, for a collective's act); clients label it "Correction" and show "corrected by" on the original, which stays signed. A client not knowing the cMIP sees an ordinary post naming the old act. Not chosen: (b) a field in the Text MIR (a core change); (c) a client label from the wording (other clients cannot tell). *Suggested by the build and the project lead.*
+
+**Core changes:** none.
+
 ## F343. An act signed under a grant may name its grant (17 October 2026)
 
 **Found by the Edubba agents session** (an agent acting under its owner's grant): Agreements draft 14, rule 73, says a person's grantee signs the person's own act citing the grant on the person's chain (for a collective, rules 58 and 75 ask for the grant in `objects`); Text draft 9, rule 14, lets a text act carry `objects` only where its signer is a collective naming its own latest decision (F334). So a post under a grant is invalid by Text if it cites the grant, and not backed by Agreements if it does not: rule 73's "posting" could never count, for a person's grantee or a collective's. The core does both (`core/src/agreements/view.rs`, backing; `core/src/chain.rs`, `text_pointer`).
