@@ -8,7 +8,7 @@ esbuild: 0.25.12
 
 Work hash of each file (as the display client lists them):
 a7f6321ee36bdce41ae2098b2952f8dbd937bb819cf5ce80378041d40c56be69  index.html
-c84177499ff69fdb5ef0da76d55c3fc3a9d0a81f8522f4ab8a146e166a3e613e  damgar.js
+e4803ac51eacb52e7a894dccf1ded1d66db8958e0dbc178b1292bdbe08bf3152  damgar.js
 cc72e444c3a282321bb646a105157e40bba8c07624ade3bd4388414714fc56ce  damgar.css
 910ebc9424671c29183cc3ab7fc651ce043f6318d080fe1726d4e93a6ccde850  mor_wasm_bg.wasm
 d72e0f61b65931f575516d8d39caa75d2ad09b04b0ea606aee6a157b2e5eb146  inter_light.woff2
@@ -19,7 +19,7 @@ ac1bd1f40cf29d64a9a33a7cf181159def05326d300fa318cd8c1ae5b73f4153  apple-touch-ic
 
 SHA-256 of each file (as sha256sum prints it):
 6cfbfe84d83a22d0c0ba7bfcb8ded62e26f3d7b66f0508376c2d4f2012b99a63  index.html
-62ce2fc857a8e126d5fbd5b3267c5505b9f5f7e44fc5a777e3dffbf5bf097bed  damgar.js
+550d29f96c86b5041728d6277f610038764ba63f8c9d972aeb82b20c8fb07fa8  damgar.js
 611e9c7bd16e2ad025ccef5f7620325f34a4adac23a9d0819eb676892bfd557b  damgar.css
 24c3f691d726326b67b3fa295a0000a9eabae0ed6f55965fdaab2a671a5747c4  mor_wasm_bg.wasm
 e111a1e2ad914ccda9179b95e83fb10234dd52a1932e0b93c480476227983fd9  inter_light.woff2

@@ -11553,7 +11553,7 @@ var Damgar = class {
         await this.store.write(me.id, "keys", keys);
       }
       await this.saveBook(me.id, book);
-      return { lines: [{ text: `\u201C${l.label}\u201D is revoked, published at ${left} place${left === 1 ? "" : "s"}: an act signed under it after this counts for nothing.`, tone: "ok" }] };
+      return { lines: [{ text: `\u201C${l.label}\u201D is revoked, published at ${left} place${left === 1 ? "" : "s"}: an act signed under it after this counts for nothing. It cites the ${under.length} act${under.length === 1 ? "" : "s"} signed under it that its places hold, which keep counting; one held nowhere it reads would not (Agreements rule 76).`, tone: "ok" }] };
     });
   }
   /** Every lane granted here, in plain words, with every act signed under it that its homes and relays hold. */
@@ -12054,6 +12054,7 @@ var LANE_SAY = [
   "A lane lets Dub pay by itself, without opening Damgar: a tip, or a sealed post, up to a cap per payment, until a date if you give one.",
   "Dub makes a key of its own for the lane and asks Damgar for it, sealed to yourself. Damgar shows you the lane in plain words; only once you grant it there can Dub sign with it. Every payment Dub signs under it is shown, in Damgar and to every reader, as signed under this lane, not with your own key.",
   "Revoke it in Damgar (Lanes) at any time: one public act ends it.",
+  "Its key is kept in this app\u2019s folder: someone who takes that folder can pay within the cap until you revoke the lane.",
   "Money still moves only in your own wallet: Dub shows the invoice to pay, and takes the proof back."
 ];
 var DamgarKeepInDub = class {

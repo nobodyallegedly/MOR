@@ -97,8 +97,8 @@ A tip today takes a round trip: the payer's app asks, the payee's Damgar answers
 
 ## Tests
 
-- **The core** (`cargo test --workspace`): RESULT_RUST.
-- **Every client** (`npm test` in each): RESULT_CLIENTS.
+- **The core** (`cargo test --workspace`): 752 passed, 0 failed.
+- **Every client** (`npm test` in each): 529 passed, 0 failed (genesis 32, grants 4, barebone 11, Edubba 89, Dub 39, Kišib 18, Damgar 23, Ummia 22, the reader 21, the connector 13, the site 86, the test wallet 4, collective 44, longform 26, nudge 25, assess 51, repo 21; the anchoring service typechecks, tested in Damgar's).
 - **Lanes** (`clients/damgar/test/lanes.test.ts`): a lane asked in Dub, read in plain words and granted in Damgar; a tip from Dub within it; the payee's Damgar answering through a receive-only link and receipting by itself; the account's how; the connector reading the grant and the sealed claim under it; refused past the cap, after the expiry, and once revoked, each saying why; every step by hand, off by default and, when on, every signature waiting; a permission that reads the balance refused. An act under a lane read as backed by Damgar, Dub and the connector.
 - **Pay-per-view** (`payperview.test.ts`): the seller at one relay, the reposter at both, the buyer at the other only. The buyer finds the post only through the repost, buys it from Dub naming the repost, and the key is delivered on the receipt. The post opens; the referral share is paid; the accounts agree.
 - **On regtest, with real btcd v0.24.2 and lnd v0.18.5-beta** (`regtest.test.ts`, `MOR_LN_REGTEST`): round 1's three, and round 2. A tip under Dub's lane, its invoice made by the payee's own lnd through `receive.macaroon` (the admin macaroon refused), receipted by itself; a sealed post bought through a repost on another relay and opened; the referral share paid. All four pass here.

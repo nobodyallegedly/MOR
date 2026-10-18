@@ -8832,7 +8832,7 @@ var Damgar = class {
         await this.store.write(me.id, "keys", keys);
       }
       await this.saveBook(me.id, book);
-      return { lines: [{ text: `\u201C${l.label}\u201D is revoked, published at ${left} place${left === 1 ? "" : "s"}: an act signed under it after this counts for nothing.`, tone: "ok" }] };
+      return { lines: [{ text: `\u201C${l.label}\u201D is revoked, published at ${left} place${left === 1 ? "" : "s"}: an act signed under it after this counts for nothing. It cites the ${under.length} act${under.length === 1 ? "" : "s"} signed under it that its places hold, which keep counting; one held nowhere it reads would not (Agreements rule 76).`, tone: "ok" }] };
     });
   }
   /** Every lane granted here, in plain words, with every act signed under it that its homes and relays hold. */
@@ -9641,7 +9641,7 @@ function lanes(r, units) {
 ${lines(l.words.map((text3) => ({ text: text3 })))}
 <details class="fold"><summary>Signed under it: ${l.acts.length} act${l.acts.length === 1 ? "" : "s"}</summary>${l.acts.length ? lines(l.acts.map((a) => ({ text: `${a.said} \xB7 ${a.id.slice(0, 12)}\u2026` }))) : '<p class="small">None yet.</p>'}</details>
 ${l.state === "in force" ? `<div class="row"><button data-action="revoke lane" data-grant="${e(l.grant)}">Revoke it</button></div>` : ""}</div>`
-  ).join("") : '<p class="empty">No lane yet. An app asks for one (in Dub: its identity window, Ask Damgar for a lane), and it waits in To sign.</p>';
+  ).join("") : '<p class="empty">No lane yet. An app asks for one (in Dub: its identity window, \u201CPaying from Dub: a lane from Damgar\u201D), and it waits in To sign.</p>';
   const unitOptions = units.map((u2) => `<option value="${e(u2.hash)}"${/regtest/.test(u2.label) ? " selected" : ""}>${e(u2.label)}</option>`).join("");
   const own = (role, title, say2) => `<form class="own-lane" data-role="${role}"><h3>${title}</h3><p class="small">${say2}</p>
 <div class="row"><label>At most, per act <input name="cap" inputmode="numeric" required></label><label>Unit <select name="unit">${unitOptions}</select></label></div>
