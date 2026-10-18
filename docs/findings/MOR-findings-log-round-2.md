@@ -28,6 +28,17 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F354. The web Edubba's four questions (18 October 2026)
+
+**From** `docs/edubba-web-report.md`, each decided by Nobody, allegedly, on the project lead's questions:
+
+1. **Founding on the web:** "Agreed": (a) allowed, as built, with the banner and the "This is a web page" warning beside F337's (whoever serves the page is one more party who could abuse the trusted dealer's moment). *The session's and the project lead's lean.*
+2. **Leaving a real collective from one's own app:** "Agreed": (b) a member signs their own resignation (rule 70, "a member can always leave alone"), from Edubba or Dub's Signing tab, gathered by the founder's Edubba as a member change; in round 3. *The session's and the project lead's lean.*
+3. **Short fingerprints:** the shortened form written for people (`mid1yu9vu4…wlvss7jplw`), not hexadecimal, so one ID never shows in two forms on one screen; "As long as the full version can be accessed with a click or hover". For the site session, across every app. *The project lead's lean, against the session's.*
+4. **Money on the web Edubba:** "Agreed. Especially with the grants at founding.": (a) left out. A member holding a money area pays for the collective from Damgar with their own key (F353); anchoring stays off the web for good (no chain followed there).
+
+**Core changes:** none.
+
 ## F353. A collective's members act with their own keys, granted by the founding itself (18 October 2026)
 
 **Asked by Nobody, allegedly**, from the web Edubba's question on money ("the signee who have the right to act on money can do so for the collective in the other apps; the question is how"), then the second signature, then: "let's try to solve it now, there is an opportunity hiding somewhere near". Today a collective's acts need its one signing key, held by the founder's Edubba (Agreements rule 59: one holder, a threshold, or a custodian); Ummia round 1 and Damgar round 2 met the same wall.
