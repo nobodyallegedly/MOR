@@ -6,7 +6,7 @@
 
 ## Where we are
 
-The human tests (`docs/human-tests-v1.md`, findings in `docs/human-tests-v1-findings.md`, H1 to H12) found that the apps needed a look from a user's point of view. Decided by Nobody, allegedly: clean the apps first, then finish the tests on the cleaned apps. Dub and Edubba are done; the site and Kišib are next.
+The human tests (one sheet since 18 October: `docs/human-tests-v2.md`, gathering every test's steps; earlier `docs/human-tests-v1.md`, findings in `docs/human-tests-v1-findings.md`, H1 to H12) found that the apps needed a look from a user's point of view. Decided by Nobody, allegedly: clean the apps first, then finish the tests on the cleaned apps. Dub and Edubba are done; the site and Kišib are next.
 
 The order to the freeze: the human tests; a session on the site's structure and look; the freeze-ready drafts, corrected by the findings; the step 17 rehearsal on the frozen texts; the freeze.
 
