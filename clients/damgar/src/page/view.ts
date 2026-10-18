@@ -310,7 +310,7 @@ ${lines(l.words.map((text) => ({ text })))}
 ${l.state === 'in force' ? `<div class="row"><button data-action="revoke lane" data-grant="${e(l.grant)}">Revoke it</button></div>` : ''}</div>`,
         )
         .join('')
-    : '<p class="empty">No lane yet. An app asks for one (in Dub: its identity window, Ask Damgar for a lane), and it waits in To sign.</p>';
+    : '<p class="empty">No lane yet. An app asks for one (in Dub: its identity window, “Paying from Dub: a lane from Damgar”), and it waits in To sign.</p>';
   const unitOptions = units.map((u) => `<option value="${e(u.hash)}"${/regtest/.test(u.label) ? ' selected' : ''}>${e(u.label)}</option>`).join('');
   const own = (role: string, title: string, say: string) => `<form class="own-lane" data-role="${role}"><h3>${title}</h3><p class="small">${say}</p>
 <div class="row"><label>At most, per act <input name="cap" inputmode="numeric" required></label><label>Unit <select name="unit">${unitOptions}</select></label></div>

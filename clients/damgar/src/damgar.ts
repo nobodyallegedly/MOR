@@ -2031,7 +2031,7 @@ export class Damgar {
         await this.store.write(me.id, 'keys', keys);
       }
       await this.saveBook(me.id, book);
-      return { lines: [{ text: `“${l.label}” is revoked, published at ${left} place${left === 1 ? '' : 's'}: an act signed under it after this counts for nothing.`, tone: 'ok' }] };
+      return { lines: [{ text: `“${l.label}” is revoked, published at ${left} place${left === 1 ? '' : 's'}: an act signed under it after this counts for nothing. It cites the ${under.length} act${under.length === 1 ? '' : 's'} signed under it that its places hold, which keep counting; one held nowhere it reads would not (Agreements rule 76).`, tone: 'ok' }] };
     });
   }
 
