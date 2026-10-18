@@ -10,6 +10,7 @@ import { start, type Running as Relay } from '../../genesis/test/world.ts';
 import { Client, newKey } from '../../desk/src/page/api.ts';
 import { serve as serveDub, DOMAIN as DUB_DOMAIN, type Running as DubRunning } from '../../dub/src/server.ts';
 import type { ChainSource } from '../src/chain.ts';
+import type { InvoiceLink, LinkConfig } from '../src/link.ts';
 import { serve, DOMAIN, type Running } from '../src/server.ts';
 import { ACCEPTABLE } from '../src/specs.ts';
 
@@ -22,9 +23,9 @@ export async function closeAll() {
 }
 
 /** A Damgar program in a folder of its own, paired. */
-export async function damgar(chain?: ChainSource | null): Promise<{ app: Running; c: Client; dir: string }> {
+export async function damgar(chain?: ChainSource | null, link?: (c: LinkConfig) => Promise<InvoiceLink>): Promise<{ app: Running; c: Client; dir: string }> {
   const dir = join(mkdtempSync(join(tmpdir(), 'damgar-')), 'mor-damgar');
-  const app = await serve({ dir, port: 0, chain });
+  const app = await serve({ dir, port: 0, chain, link });
   apps.push(app);
   const c = await Client.open(await newKey(), app.base, DOMAIN);
   await c.ask('pair', { code: app.access.newCode(), label: 'test' });
@@ -46,9 +47,9 @@ export async function dub(homes: string[], relays: string[]): Promise<{ app: Dub
 }
 
 /** A person: an identity made in Dub, brought into a Damgar by its signing words, everything accepted but what is given. */
-export async function person(homes: string[], relays: string[], o: { accept?: string[] | null; chain?: ChainSource | null } = {}) {
+export async function person(homes: string[], relays: string[], o: { accept?: string[] | null; chain?: ChainSource | null; link?: (c: LinkConfig) => Promise<InvoiceLink> } = {}) {
   const d = await dub(homes, relays);
-  const g = await damgar(o.chain);
+  const g = await damgar(o.chain, o.link);
   await g.c.ask('bring', { id: d.id, words: d.words, address: homes[0] });
   if (o.accept !== null) await g.c.ask('accept', { keys: o.accept ?? ACCEPTABLE.map((a) => a.key) });
   return { dub: d, damgar: g, id: d.id };
@@ -116,4 +117,27 @@ export async function kishib() {
   const c = await Client.open(await newKey(), app.base, KISHIB_DOMAIN);
   await c.ask('pair', { code: app.access.newCode(), label: 'test' });
   return { app, c, dir };
+}
+
+/**
+ * A receive-only link to a test node (F351), standing in for lnd with a
+ * macaroon baked for invoices alone: it makes invoices, and keeps each
+ * one's preimage so the test can pay it as a wallet would. `wide`: a
+ * permission that can read the balance, which Damgar refuses.
+ */
+export function testLink(node: { invoice(sat: number, hash: string): { invoice: string; preimage: string } }, o: { wide?: boolean } = {}) {
+  const preimages = new Map<string, string>();
+  const made: string[] = [];
+  const factory = async (): Promise<InvoiceLink> => ({
+    async invoice(sat, descriptionHash) {
+      const x = node.invoice(sat, descriptionHash);
+      preimages.set(x.invoice, x.preimage);
+      made.push(x.invoice);
+      return x.invoice;
+    },
+    async tooWide() {
+      return !!o.wide;
+    },
+  });
+  return { factory, preimages, made, config: { rest: 'https://127.0.0.1:1', macaroon: 'ab'.repeat(16), cert: 'test' } };
 }

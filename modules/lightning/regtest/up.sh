@@ -63,10 +63,12 @@ for n in bob carol; do
 done
 C generate 6 >/dev/null
 until [ "$(node alice listchannels | grep -c '"active": *true')" = 2 ]; do sleep 1; done
-# Where each node answers, for programs that use this network (the test wallet, clients/testwallet).
+# A receive-only permission per node (F351): it makes invoices and reads them, nothing else (no paying, no balance), for Damgar's receive-only link.
+for n in alice bob carol; do node $n bakemacaroon --save_to="$R/$n/receive.macaroon" invoices:write invoices:read >/dev/null; done
+# Where each node answers, for programs that use this network (the test wallet, clients/testwallet; Damgar's link: `receive`).
 { printf '{"nodes": ['; sep=""
   for spec in $NODES; do IFS=: read -r n rpc p2p rest <<< "$spec"
-    printf '%s\n  {"name": "%s", "rest": %s, "lnddir": "%s"}' "$sep" "$n" "$rest" "$R/$n"; sep=","
+    printf '%s\n  {"name": "%s", "rest": %s, "lnddir": "%s", "receive": "%s"}' "$sep" "$n" "$rest" "$R/$n" "$R/$n/receive.macaroon"; sep=","
   done
   printf '\n]}\n'; } > "$R/nodes.json"
 echo "regtest Lightning network ready in $R"

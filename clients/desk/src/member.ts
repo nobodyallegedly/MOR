@@ -104,6 +104,15 @@ export class MemberKeep implements Keep {
     this.write(`${id}.signing.json`, s);
   }
 
+  /** Edubba signs no money under a lane: nothing kept for it (Dub's round 2 lanes are Dub's own). */
+  async money<T>(): Promise<T | null> {
+    return null;
+  }
+
+  async saveMoney(): Promise<void> {
+    throw new Error('Edubba keeps no lane: money under a lane is Dub’s.');
+  }
+
   async forget(): Promise<void> {
     throw new Error('Identities are forgotten on the Identities tab, not here.');
   }

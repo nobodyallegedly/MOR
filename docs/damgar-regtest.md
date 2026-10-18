@@ -59,6 +59,8 @@ It takes a minute or two and ends with "regtest Lightning network ready in …/m
 modules/lightning/regtest/down.sh ~/mor-regtest
 ```
 
+It also bakes, for each node, a **receive-only permission** (`~/mor-regtest/NODE/receive.macaroon`, `invoices:write invoices:read`: it makes invoices and nothing else), for Damgar's receive-only link (round 2, F351; below).
+
 *Ports it uses, on 127.0.0.1 only: btcd 18334 (and 18444); lnd 10009 to 10011, 9735 to 9737, and REST 18080 to 18082. Close anything else using them first.*
 
 ## The test wallet
@@ -97,3 +99,13 @@ cd clients/damgar && MOR_LN_REGTEST=~/mor-regtest node --import tsx --test test/
 ```
 
 Damgar's: a tip prepared in Dub, signed in Damgar, its invoice made by bob's node, paid by alice from the test wallet, the claim and the receipt verified by both Damgars; an on-chain payment to an address bound to it, mined to six confirmations; and a collective's act anchored through the test service on carol, checked in Edubba. Homes and a relay run on the Mac for these tests, on local ports.
+
+## Round 2: Damgar making invoices by itself (the receive-only link)
+
+In Damgar, as the payee (bob's node, for example), **Settings**, "Making invoices by itself (receive-only)":
+
+- **Your node's REST address**: `https://127.0.0.1:18081` (bob; alice 18080, carol 18082).
+- **The receive-only permission's file**: `~/mor-regtest/bob/receive.macaroon`.
+- **The node's certificate file**: `~/mor-regtest/bob/tls.cert`.
+
+**Check it and keep it.** Damgar first asks the node for its balance with it, and refuses a permission that can read it (try `~/mor-regtest/bob/data/chain/bitcoin/regtest/admin.macaroon`: refused). Then, in **Lanes**, sign "Receipts and invoices, by itself" with a cap: a Lightning payment to you below it needs nothing from you. *Remove it in Settings at any time; with "Follow every step by hand" on, nothing is signed by itself.*

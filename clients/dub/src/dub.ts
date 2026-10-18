@@ -33,7 +33,8 @@ import { readFeed, type FeedPost } from '../../site/src/feed.ts';
 import { makeLink } from '../../reader/src/link.ts';
 import { compose } from '../../longform/src/text.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
-import { Refused, encryptionSecret, fromWords, groupId, readId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { idForm, idWhere, readId, readIdWhere } from '../../genesis/src/forms.ts';
 import { newChainKey } from './chainwords.ts';
 import { readMessage, acceptanceText, negotiate, openShare, DECLINED } from '../../repo/src/proposals.ts';
 import { sign as signAct } from '../../repo/src/agreements.ts';
@@ -46,6 +47,8 @@ import type { Held, Item, Line, Message, Pic, Proposal, ShareShown, State, Who }
 import { sendDraft } from '../../damgar/src/messages.ts';
 import { UNITS_MODULES, readValue } from '../../damgar/src/units.ts';
 import { authorityOfId } from '../../grants/src/grant.ts';
+import { DubMoney, LANE_SAY, type LaneShownHere, type SealedShown } from './money.ts';
+import type { PaymentShown } from '../../damgar/src/shapes.ts';
 import { isLongForm } from '../../barebone/src/corrections.ts';
 
 export type { Line, State } from './shapes.ts';
@@ -132,6 +135,10 @@ export interface Pending {
  * across every page or program holding the same keep: a sequence must never
  * be signed twice at one position.
  */
+/** What Dub keeps for money, by name (round 2): Damgar's code's settings, book and keys (its lane), and the keys of posts sold and bought. */
+export const MONEY_KEPT = ['settings', 'book', 'keys', 'sold', 'bought'] as const;
+export type MoneyKept = (typeof MONEY_KEPT)[number];
+
 export interface Keep {
   /** The identities held, by ID. */
   held(): Promise<string[]>;
@@ -149,6 +156,9 @@ export interface Keep {
   saveSigning(id: string, s: SigningState): Promise<void>;
   /** Forget an identity here: its keys and everything kept about it. */
   forget(id: string): Promise<void>;
+  /** What Dub keeps for money (round 2): by name. */
+  money<T>(id: string, name: MoneyKept): Promise<T | null>;
+  saveMoney(id: string, name: MoneyKept, v: unknown): Promise<void>;
   pending(): Promise<Pending | null>;
   savePending(p: Pending): Promise<void>;
   dropPending(): Promise<void>;
@@ -193,10 +203,15 @@ export class Dub {
   private names = new Map<string, { names: string[]; at: number }>();
 
   /** `web`: Dub's web client (F281). `reader`: where long-form documents open. */
+  /** Money, round 2: a lane asked here, payments signed under it, sealed posts (`money.ts`). */
+  readonly money: DubMoney;
+
   constructor(
     readonly store: Keep,
     readonly opts: { web?: boolean; reader?: string } = {},
-  ) {}
+  ) {
+    this.money = new DubMoney(store, { web: !!opts.web, app: opts.web ? 'Dub on the web' : 'Dub on this computer' });
+  }
 
   /** One thing at a time: a sequence must never be signed twice at once. */
   private serial<T>(f: () => Promise<T>): Promise<T> {
@@ -260,6 +275,8 @@ export class Dub {
       out.identity = {
         id: me.id,
         grouped: groupId(me.id),
+        form: idForm(me.id),
+        where: idWhere(me.id, [...me.f.homes.map((h) => h.hint).slice(0, 1), ...s.relays.filter((r) => !me.f.homes.some((h) => h.hint === r)).slice(0, 1)]),
         who: this.whoFrom(me.id, me.id, p),
         kind: s.kind,
         homes: me.f.homes.map((h) => h.hint),
@@ -283,7 +300,7 @@ export class Dub {
     if (!me) throw new Error('No identity in use: make one, or bring one, in the identity window.');
     const s = await this.store.settings(me.id);
     const p = await this.store.people(me.id);
-    return { me, s, p, hints: [...new Set([...s.relays, ...me.f.homes.map((h) => h.hint)])] };
+    return { me, s, p, hints: [...new Set([...s.relays, ...me.f.homes.map((h) => h.hint), ...Object.values(p.where ?? {}).flat()])] };
   }
 
   /** Each home's operator, as it declares itself (relay transport cMIP, `info`). */
@@ -665,15 +682,16 @@ export class Dub {
       const to: { id: string; inbox: string[] | null; why?: string }[] = [];
       if (a.to?.trim()) {
         let id: string;
+        let where: string[] = [];
         try {
-          id = readId(a.to);
+          ({ id, hints: where } = readIdWhere(a.to));
         } catch (e) {
           throw new Error(`To: ${message(e)}. Nothing was posted.`);
         }
         if (id === me.id) throw new Error('To: that is this identity itself. Nothing was posted.');
         let inbox: string[] | null;
         try {
-          inbox = (await lookUp(id, hints, s.via)).inbox(SPECS.text);
+          inbox = (await lookUp(id, [...where, ...hints], s.via)).inbox(SPECS.text);
         } catch (e) {
           throw new Error(`To: the identity ${fingerprint(id)} was not found: ${message(e)}. Nothing was posted.`);
         }
@@ -782,7 +800,17 @@ export class Dub {
         return { id, who: a?.signer ? this.whoFrom(a.signer, me.id, p) : null, snippet: a?.post ? snippet(a.post.text) : null };
       });
       const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
-      items.push({ ...this.item(fp.post, me.id, p, s, 'feed', fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] });
+      const it: Item = { ...this.item(fp.post, me.id, p, s, 'feed', fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
+      // A sealed post (round 2): its publication has no key; read with its offer, and opened where its key is here.
+      if (fp.post.refs.some((r) => r.kind === 'picture' && !r.bytes)) {
+        const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.map((r) => (r.kind === 'picture' ? { id: r.publication, signer: r.signer || undefined } : { id: r.id, signer: r.signer ?? r.actSigner }))).catch(() => null);
+        if (sealed) {
+          it.sealed = sealed;
+          it.pictures = it.pictures.filter((x) => x.publication !== sealed.publication);
+          if (sealed.seller !== fp.signer) it.repost = { by: this.whoFrom(fp.signer, me.id, p), of: this.whoFrom(sealed.seller, me.id, p) };
+        }
+      }
+      items.push(it);
     }
     // A post signed under a grant (an agent posting in its owner's name, F343): its standing is Agreements', said on whose authority.
     for (const it of items) {
@@ -1079,8 +1107,9 @@ export class Dub {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
       let to: string;
+      let where: string[] = [];
       try {
-        to = readId(a.to);
+        ({ id: to, hints: where } = readIdWhere(a.to));
       } catch (e) {
         throw new Error(`To: ${message(e)}. Nothing was sent.`);
       }
@@ -1089,7 +1118,7 @@ export class Dub {
       if (!text.trim()) throw new Error('Write something to send.');
       let l: Lookup;
       try {
-        l = await lookUp(to, hints, s.via);
+        l = await lookUp(to, [...where, ...hints], s.via);
       } catch (e) {
         throw new Error(`To: the identity ${fingerprint(to)} was not found: ${message(e)}. Nothing was sent.`);
       }
@@ -1446,6 +1475,157 @@ export class Dub {
     });
   }
 
+  // ------------------------------------------------------------ where it lives (H39)
+
+  /** Said where relays are changed: homes are the chain key's (H39). */
+  static readonly HOMES_SAY = 'Its homes are named in its identity chain and change only with the chain key: in Kišib, “Change an identity’s keys”, from the chain key’s paper.';
+
+  /**
+   * Read back new relays for this identity (H39): a new routes act
+   * (Identity type 3), its outbox and inbox the relays given. Only for an
+   * identity Dub made and whose routes Dub wrote (reading 5: a second writer
+   * would fork its routes). Nothing is signed until `relaysPublish` with the
+   * same digest.
+   */
+  async relaysReview(relays: string[]): Promise<{ digest: string; lines: Line[] }> {
+    const { me, s } = await this.ctx();
+    const r = list(relays);
+    if (!r.length) throw new Error('Give at least one relay.');
+    for (const x of r) if (!/^https?:\/\//.test(x)) throw new Error(`“${x}”: an address starts with https:// (or http://)`);
+    if (s.kind !== 'made' || !me.f.routes) throw new Error('This identity was brought here, or its routes were written by another app: Dub publishes no routes for it (Dub’s reading 5: a second writer would fork them). Change them in the app that made it.');
+    const look = await lookUp(me.id, me.f.homes.map((h) => h.hint), s.via);
+    if (look.routes.act !== me.f.routes.act) throw new Error('Its routes in force are not the version Dub wrote: another app changed them. Nothing to sign here.');
+    const lines: Line[] = [
+      { text: `Its acts will be found at ${r.join(', ')} (its outbox), and others will leave what is for it there (its inbox).` },
+      { text: `A new routes act, version ${me.f.routes.version + 1}, public, replacing version ${me.f.routes.version} (now: ${list(look.routes.routes.flatMap((x) => x.hints)).join(', ') || 'none'}). Its identity chain and its acts stay as they are.` },
+      { text: 'Those who follow it find its new relays through its homes; a where-it-lives form copied before still names the old ones (hints guide, never decide).' },
+      { text: Dub.HOMES_SAY },
+    ];
+    return { digest: await digestOf(JSON.stringify({ me: me.id, r, act: me.f.routes.act })), lines };
+  }
+
+  relaysPublish(relays: string[], digest: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const r = list(relays);
+      if (!me.f.routes || (await digestOf(JSON.stringify({ me: me.id, r, act: me.f.routes.act }))) !== digest) throw new Error('This is not what was read back: read it back again.');
+      await this.current(me);
+      // Read back first: the routes in force are still the version Dub wrote.
+      const look = await lookUp(me.id, me.f.homes.map((h) => h.hint), s.via);
+      if (look.routes.act !== me.f.routes.act) throw new Error('Its routes changed meanwhile, from another app. Nothing was signed.');
+      const made = await this.signed(me, () => me.publishRoutes([
+        { scope: null, hints: r, kind: 0 },
+        { scope: null, hints: r, kind: 1 },
+      ]));
+      await this.store.saveSettings(me.id, { ...s, relays: r });
+      for (const x of r) {
+        for (const act of me.chainActs()) {
+          try {
+            await relayAt(x, s.via).putAct(act);
+          } catch {
+            // that relay's policy
+          }
+        }
+      }
+      return { lines: [{ text: `New routes published (act ${made.id.slice(0, 12)}…): its relays are now ${r.join(', ')}.`, tone: 'ok' }] };
+    });
+  }
+
+  // ------------------------------------------------------------ money under a lane, round 2 (F338, F351)
+
+  /** Ask Damgar for a lane (sealed to oneself); nothing is paid until it is granted there. */
+  laneAsk(a: { label: string; cap: string; unit: string; until: number | null; clock: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      if (!UNITS_MODULES.some((m) => m.units.some((u) => u.hash === a.unit))) throw new Error('Choose a unit. Nothing was asked.');
+      const lines = await this.money.askLane(me, s, { label: a.label, cap: readValue(a.cap), unit: a.unit, until: a.until, clock: a.clock.trim().toLowerCase() || null, app: this.money.engine.opts.app! });
+      return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** The lanes asked here, and where each stands. */
+  lanes(): Promise<{ lanes: LaneShownHere[]; say: string[] }> {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      return { lanes: await this.money.lanes(me, s, hints), say: LANE_SAY };
+    });
+  }
+
+  /** A tip on a post, paid now under the lane (refused, saying why, past its cap or expiry). */
+  tipNow(a: { post: string; signer: string; value: string; unit: string; whatFor?: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      await this.money.lanes(me, s, hints);
+      const signer = readId(a.signer);
+      if (signer === me.id) throw new Error('That is this identity itself. Nothing was signed.');
+      const whatFor = a.whatFor?.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : 'a tip';
+      const lines = await this.money.tip({ post: readId(a.post), signer, amount: { unit: a.unit, value: readValue(a.value) }, whatFor });
+      return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Payments signed here under the lane: to pay in the wallet, or done. */
+  payments(): Promise<{ payments: PaymentShown[]; done: PaymentShown[]; problems: string[] }> {
+    return this.serial(async () => {
+      await this.ctx();
+      return this.money.payments();
+    });
+  }
+
+  /** The proof from the wallet: checked, and the claim signed under the lane. */
+  paidNow(key: string, proof: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      await this.ctx();
+      return { lines: (await this.money.paid(key, proof)).map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** A post sealed with a price (pay-per-view), its offer, its key kept here for each buyer. */
+  sell(a: { text: string; teaser?: string; value: string; unit: string; referral?: string }): Promise<{ post: string; lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      const text = compose(a.text.trim()).text;
+      if (!text) throw new Error('Write the sealed text. Nothing was posted.');
+      const teaser = compose((a.teaser ?? '').trim() || 'A sealed post.').text;
+      const referral = a.referral?.trim() ? Number(a.referral) : null;
+      const r = await this.money.sell(me, s, { text, teaser, price: { unit: a.unit, value: readValue(a.value) }, referral });
+      return { post: r.post, lines: r.lines.map((t) => ({ text: t, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Buy a sealed post under the lane, naming the repost it was found through, if any. */
+  buy(a: { publication: string; seller: string; repost?: string; reposter?: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      await this.money.lanes(me, s, hints);
+      const repost = a.repost && a.reposter ? { id: readId(a.repost), by: readId(a.reposter) } : null;
+      const lines = await this.money.buy(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readId(a.publication), seller: readId(a.seller), repost });
+      return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Repost a sealed post at this identity's relays, holding what it names there too. */
+  repost(a: { post: string; signer: string }): Promise<{ id: string; lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      await this.current(me);
+      const r = await this.money.repost(me, s, [...hints, ...this.inboxPlaces(p)], { post: readId(a.post), signer: readId(a.signer) });
+      return { id: r.id, lines: r.lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Keys to deliver for sales the seller's Damgar told of; keys arrived for posts bought. */
+  moneyLook(): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, p } = await this.ctx();
+      const inbox = await this.inboxOf(me.id, [...new Set([...s.relays, ...me.f.homes.map((h) => h.hint)])], s.via).catch(() => this.inboxPlaces(p));
+      const lines = [...(await this.money.deliver(me, s)), ...(await this.money.keysArrived(me, s, inbox))];
+      return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
   /** When the sealed list was last read, by identity (this app's memory only). */
   private synced = new Map<string, number>();
 
@@ -1542,10 +1722,12 @@ export class Dub {
 
   /** Follow an identity, by its ID or the signer of an act shown; a name for it, if given, stays in this app. */
   follow(a: { id: string; name?: string }) {
-    const id = readId(a.id);
+    // H38: an ID, its where-it-lives form, or an ID with a home address beside it.
+    const { id, hints } = readIdWhere(a.id);
     const name = a.name?.trim() ? a.name.trim().slice(0, 64) : null;
     return this.people((p, me) => {
       if (id === me.id) throw new Error('That is this identity itself: its own posts are always in its feed.');
+      if (hints.length) (p.where ??= {})[id] = [...new Set([...(p.where?.[id] ?? []), ...hints])];
       const f = p.follows.find((x) => x.id === id);
       if (f) f.name = name ?? f.name;
       else p.follows.push({ id, name });
@@ -1690,3 +1872,8 @@ function snippet(text: string): string {
 }
 
 export { NO_PEOPLE, PUBLISH_WARNING };
+
+async function digestOf(x: string): Promise<string> {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(x));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}

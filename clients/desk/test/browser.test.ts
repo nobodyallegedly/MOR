@@ -3,6 +3,7 @@
 // clicks and typing into the page. Claude's side is the connector, driven
 // over MCP as Claude's app drives it. Real homes and a relay.
 
+import { shownId } from '../../genesis/src/shown.ts';
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
@@ -108,11 +109,11 @@ test('the author, without a terminal: a draft from Claude sent back, reworked, a
   const refused = await claude.ask('mor_prepare_post', { signer: 'Me', text: 'Not for Claude.' });
   assert.equal(refused.isError, true);
 
-  // Copy ID: the whole ID, without the spaces the fingerprint is shown with.
+  // Copy ID: the ID written for people (F349), mid1…, read back by every app as the same ID.
   await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: app.base });
   await page.locator('.head [data-action=copy]').click();
   await page.locator('.head [data-action=copy]', { hasText: 'Copied' }).waitFor();
-  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), me);
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), shownId(me));
 
   // Claude prepares a post for Machine, allegedly; it appears without a click or a reload.
   await page.locator('[data-action=copy]', { hasText: 'Copy ID' }).first().waitFor();

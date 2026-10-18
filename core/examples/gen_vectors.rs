@@ -528,4 +528,62 @@ fn main() {
     write(&dir, "sequence-three-acts.json", &three_acts());
     write(&dir, "open-act.json", &invalid_acts());
     write(&dir, "sealed.json", &sealed_container());
+    write(&dir, "textual-forms.json", &textual_forms());
+}
+
+/// The textual forms (Identity draft 14, "Written for people"; F349): each
+/// label's short form; the where-it-lives form; bare hex; and the strings
+/// refused, each with why: a character mistyped, the string cut, a wrong
+/// label (an act where an identity is wanted), mixed case, a label the core
+/// does not define.
+fn textual_forms() -> J {
+    use mor_core::textual::{self as tf, Kind};
+    let key = cbor::encode(&Value::Array(vec![Value::Uint(1), Value::Bytes(fixed("a signing key").to_vec())]));
+    let cases: Vec<(Kind, Vec<u8>)> = vec![
+        (Kind::Identity, fixed("an identity").to_vec()),
+        (Kind::Act, fixed("an act").to_vec()),
+        (Kind::Key, key.clone()),
+        (Kind::Spec, fixed("a specification").to_vec()),
+        (Kind::Work, fixed("a work").to_vec()),
+    ];
+    let forms: Vec<J> = cases.iter().map(|(k, d)| json!({ "kind": k.label(), "data": hx(d), "form": tf::encode(*k, d) })).collect();
+    let id = tf::encode(Kind::Identity, &fixed("an identity"));
+    let act = tf::encode(Kind::Act, &fixed("an act"));
+    // One character changed, in the data part.
+    let mut typo = id.clone().into_bytes();
+    let at = 10;
+    typo[at] = if typo[at] == b'q' { b'p' } else { b'q' };
+    let typo = String::from_utf8(typo).unwrap();
+    let cut = id[..id.len() - 1].to_string();
+    let mixed = format!("{}{}", &id[..5].to_ascii_uppercase(), &id[5..]);
+    // A valid bech32m string under a label no core kind has (a cMIP's, say).
+    let unknown = tf::encode_label("mvow", &fixed("an identity"));
+    let refuse = |s: &str, want: Kind| -> String {
+        match tf::read(s, want) {
+            Ok(_) => "accepted".into(),
+            Err(e) => match e {
+                tf::Refusal::Checksum => "checksum".into(),
+                tf::Refusal::MixedCase => "mixed case".into(),
+                tf::Refusal::UnknownLabel(_) => "unknown label".into(),
+                tf::Refusal::WrongKind { got, wanted } => format!("wrong kind: {} where {} is wanted", got.label(), wanted.label()),
+                tf::Refusal::NotAForm(_) => "not a form".into(),
+                tf::Refusal::Shape(_) => "shape".into(),
+            },
+        }
+    };
+    let hints = ["https://home1.example.org", "https://relay.example.org/mor"];
+    json!({
+        "about": "Identity draft 14, part three, \"Written for people\" (F349): bech32m (BIP-350), lowercase; labels mid, mact, mkey, mspec, mwork; a key's data is Identity's [scheme, key] in deterministic CBOR; the where-it-lives form is the short form, then ?r= hints, percent-encoded, outside the checksum; bare hex (64 characters) accepted for a 32-byte hash.",
+        "forms": forms,
+        "upper": { "form": id.to_ascii_uppercase(), "want": "mid", "data": hx(&fixed("an identity")) },
+        "lives": { "form": tf::with_hints(Kind::Identity, &fixed("an identity"), &hints), "want": "mid", "data": hx(&fixed("an identity")), "hints": hints },
+        "bare": { "form": hx(&fixed("an act")), "want": "mact", "data": hx(&fixed("an act")) },
+        "refused": [
+            { "form": typo, "want": "mid", "why": refuse(&typo, Kind::Identity) },
+            { "form": cut, "want": "mid", "why": refuse(&cut, Kind::Identity) },
+            { "form": act, "want": "mid", "why": refuse(&act, Kind::Identity) },
+            { "form": mixed, "want": "mid", "why": refuse(&mixed, Kind::Identity) },
+            { "form": unknown, "want": "mid", "why": refuse(&unknown, Kind::Identity) },
+        ],
+    })
 }

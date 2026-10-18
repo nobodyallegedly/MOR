@@ -7,6 +7,7 @@ import { renderPost, STYLE as POST_STYLE } from '../../barebone/src/html.ts';
 import type { Settings } from './settings.ts';
 import { fingerprint, standingWords, type Shown } from './read.ts';
 import { MAX_MESSAGE } from './message.ts';
+import { shownAct, shownId } from '../../genesis/src/shown.ts';
 
 export const STYLE = `${POST_STYLE}
 :root{color-scheme:light dark;--line:color-mix(in srgb,CanvasText 22%,transparent);--soft:color-mix(in srgb,CanvasText 70%,Canvas);--ok:#1a7f37;--bad:#b3261e}
@@ -51,9 +52,9 @@ function signer(s: Shown, settings: Settings): string {
     : `<strong>Not the identity this reader names as ${e(settings.name)}.</strong>`;
   return `<div class="signer" id="signer">
 <div class="standing ${w.ok ? 'ok' : 'bad'}">${e(w.words)}</div>
-<div>Signed by the identity</div><span class="fp" title="the identity hash">${fingerprint(s.post.signer)}</span>
+<div>Signed by the identity</div><span class="fp" title="the identity hash">${fingerprint(s.post.signer)}</span><span class="fp" title="its ID written for people (F349)">${e(shownId(s.post.signer))}</span>
 <div>${who} The name is this reader's setting; the identity is what was checked.</div>
-<div class="small">Act <code>${e(s.post.id)}</code></div>
+<div class="small">Act <code>${e(shownAct(s.post.id))}</code> (hex <code>${e(s.post.id)}</code>)</div>
 </div>`;
 }
 

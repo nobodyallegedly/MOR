@@ -14,8 +14,8 @@ export interface Backend {
   unpaired?(err: unknown): boolean;
 }
 
-type Tab = 'sign' | 'account' | 'pay' | 'settings';
-const TABS: Tab[] = ['sign', 'account', 'pay', 'settings'];
+type Tab = 'sign' | 'account' | 'pay' | 'lanes' | 'settings';
+const TABS: Tab[] = ['sign', 'account', 'pay', 'lanes', 'settings'];
 
 export function mount(app: HTMLElement, b: Backend): { show(state: State): Promise<void> } {
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
@@ -25,6 +25,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   let timer: ReturnType<typeof setInterval> | null = null;
   /** The pointer reviewed, until published or left. */
   let reviewed: Record<string, unknown> | null = null;
+  /** A lane of Damgar's own read back, until signed or left. */
+  let laneAsked: Record<string, unknown> | null = null;
 
   try {
     const t = sessionStorage.getItem('damgar:tab') as Tab | null;
@@ -149,6 +151,11 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       if (p) $('pay-list')!.innerHTML = v.payList(p.payments);
       await counts();
     }
+    if (t === 'lanes') {
+      const l = await act(() => b.ask<{ lanes: v.LaneShown[]; manual: boolean }>('lanes'));
+      const units = (state?.accept ?? []).filter((x) => x.key === 'bitcoin-units').flatMap((x) => x.hashes.map((h, i) => ({ hash: h, label: ['Bitcoin', 'testnet', 'signet', 'regtest'][i] ?? h.slice(0, 8) })));
+      if (l) $('lanes-body')!.innerHTML = v.lanes(l, units);
+    }
     if (t === 'settings') {
       let r: Rails | null = null;
       let problem: string | null = null;
@@ -157,7 +164,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       } catch (err) {
         problem = err instanceof Error ? err.message : String(err);
       }
-      $('settings-body')!.innerHTML = v.settings(state!, r, problem);
+      const l = await b.ask<{ manual: boolean; link: boolean; linkSay: string[]; clock: string | null }>('lanes').catch(() => null);
+      $('settings-body')!.innerHTML = v.settings(state!, r, problem) + (l ? v.byHand(l, b.web) : '');
     }
   }
 
@@ -207,10 +215,44 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'look':
         await act(() => refreshSign());
         return;
+      case 'revoke lane review': {
+        const r = await act(() => b.ask<{ lines: v.Line[] }>('revoke lane review', { grant: el.dataset.grant }));
+        const at = app.querySelector<HTMLElement>(`[data-revoke="${CSS.escape(el.dataset.grant ?? '')}"]`);
+        if (r && at) at.innerHTML = v.revokeReview(el.dataset.grant ?? '', r.lines);
+        return;
+      }
+      case 'revoke lane': {
+        const r = await act(() => b.ask<{ lines: v.Line[] }>('revoke lane', { grant: el.dataset.grant }));
+        if (r) {
+          await open('lanes');
+          done(r);
+        }
+        return;
+      }
+      case 'own lane': {
+        if (!laneAsked) return;
+        const r = await act(() => b.ask<{ lines: v.Line[] }>('own lane', { ...laneAsked, digest: el.dataset.digest }));
+        if (r) {
+          laneAsked = null;
+          await open('lanes');
+          done(r);
+        }
+        return;
+      }
+      case 'link remove': {
+        const r = await act(() => b.ask<{ lines: v.Line[] }>('link', { remove: true }));
+        if (r) {
+          await open('settings');
+          done(r);
+        }
+        return;
+      }
       case 'sign draft':
       case 'decline':
       case 'accept debt':
       case 'pay request':
+      case 'grant lane':
+      case 'answer address':
       case 'sign receipt': {
         const r = await act(() => b.ask<{ lines: v.Line[] }>(a, a === 'sign receipt' ? { key: id } : { id }));
         if (r) {
@@ -256,6 +298,12 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         return;
       }
     }
+  });
+
+  app.addEventListener('change', async (ev) => {
+    const el = ev.target as HTMLInputElement;
+    if (el.id !== 'manual') return;
+    done(await act(() => b.ask<{ lines: v.Line[] }>('manual', { on: el.checked })));
   });
 
   app.addEventListener('submit', async (ev) => {
@@ -310,6 +358,22 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       if (r) {
         reviewed = a;
         $('rails-review')!.innerHTML = v.railsReview(r);
+      }
+    } else if (f.classList.contains('own-lane')) {
+      const until = str(fd, 'until');
+      const a = { role: f.dataset.role, cap: str(fd, 'cap'), unit: str(fd, 'unit'), until: until ? Math.floor(new Date(until).getTime() / 1000) : null };
+      const r = await act(() => b.ask<{ digest: string; lines: v.Line[] }>('own lane review', a));
+      if (r) {
+        laneAsked = a;
+        $('lane-review')!.innerHTML = v.laneReview(r);
+      }
+    } else if (fid === 'clock') {
+      done(await act(() => b.ask<{ lines: v.Line[] }>('clock', { clock: str(fd, 'clock') })));
+    } else if (fid === 'link') {
+      const r = await act(() => b.ask<{ lines: v.Line[] }>('link', { rest: str(fd, 'rest'), macaroonFile: str(fd, 'macaroonFile'), certFile: str(fd, 'certFile') }));
+      if (r) {
+        await open('settings');
+        done(r);
       }
     } else if (fid === 'relays') {
       const r = await act(() => b.ask<{ lines: v.Line[] }>('relays', { relays: str(fd, 'relays') }));

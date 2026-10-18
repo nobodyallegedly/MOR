@@ -3,6 +3,7 @@
 // real relay on local ports, run from the relay program of step 4. The
 // browser itself is tested in browser.test.ts.
 
+import { actForm, idForm } from '../../genesis/src/forms.ts';
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -84,6 +85,7 @@ test('a link carries the act id in the fragment, and relays beside the reader\'s
   assert.deepEqual(parseLink(''), { act: null, relays: [] });
   assert.deepEqual(parseLink(`#${id}`), { act: id, relays: [] });
   const l = makeLink('https://reader.dubsar.org/#old', id, ['https://relay.example.org']);
+  // Made in hex while readers served before F349 open only hex; its form written for people is read too.
   assert.equal(l, `https://reader.dubsar.org/#${id}?r=https%3A%2F%2Frelay.example.org`);
   const p = parseLink(new URL(l).hash);
   assert.deepEqual(p, { act: id, relays: ['https://relay.example.org'] });
@@ -91,6 +93,8 @@ test('a link carries the act id in the fragment, and relays beside the reader\'s
   assert.deepEqual(parseLink(`#${id}?r=http://evil.example&r=javascript:x`).relays, [], 'only https relays are asked');
   assert.throws(() => parseLink('#not-an-id'), /act id/);
   assert.equal(parseLink(`#${id.toUpperCase()}`).act, id);
+  assert.equal(parseLink(`#${actForm(id)}`).act, id);
+  assert.throws(() => parseLink(`#${idForm(id)}`), /this is an identity \(mid\), not an act \(mact\)/);
 });
 
 test('the browser\'s helpers give the same answers as the genesis client\'s core', () => {

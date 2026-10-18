@@ -7,6 +7,7 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
+import { actForm, idForm } from '../../genesis/src/forms.ts';
 import { IDENTITY_TYPES, cborDecode, describeAct, hex } from '../../genesis/src/core.ts';
 import { lookUp, type Home, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -183,19 +184,21 @@ export function kishibLineWords(l: FoundLine): string {
 export function recordWords(rd: Read): { heading: string; lines: Line[] }[] {
   const r = rd.look.resolution;
   const out: { heading: string; lines: Line[] }[] = [];
+  // Its ID and acts written for people (Identity draft 14, F349), the hexadecimal beside.
+  if (r.links[0]) out.push({ heading: 'Its ID', lines: [{ text: `${idForm(r.links[0].act)} (in hexadecimal: ${r.links[0].act})` }] });
   out.push({ heading: 'Its homes', lines: [{ text: homesWords(r.homes, r.effective) }, ...(rd.look.unreachable.length ? [{ text: `Did not answer now: ${rd.look.unreachable.join(', ')}. Silence proves nothing.`, tone: 'warn' as const }] : [])] });
   const receipts = receiptsBy(rd.look.receipts);
   const chain: Line[] = r.links.map((l) => {
     const n = receipts.get(l.act) ?? 0;
     const what = l.position === 0 ? 'its genesis' : `a change of its keys (position ${l.position})`;
     const how = l.how === 'genesis' ? '' : l.how === 'homes' ? `, counting by its homes’ receipts` : l.how === 'own signatures' ? ', counting on its own signatures (self-hosted)' : `, counting as ${l.how}`;
-    return { text: `${what}: act ${l.act}${how}; ${n} receipt${n === 1 ? '' : 's'} held.`, tone: 'ok' as const };
+    return { text: `${what}: act ${actForm(l.act)}${how}; ${n} receipt${n === 1 ? '' : 's'} held.`, tone: 'ok' as const };
   });
   if (r.stop === 'contested') chain.push({ text: `Contested at position ${r.links.length}: two rotations revealing one chain key are served there, and no rule settles them. Until it ends, no change of its keys counts.`, tone: 'bad' });
   if (r.stop === 'pending' || r.waiting.length) chain.push({ text: `A change of its keys waits for its homes’ receipts: ${r.waiting.join(', ') || 'one rotation'}.`, tone: 'warn' });
   for (const s of rd.next) {
     const counted = r.links.some((l) => l.act === s.id);
-    if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${s.id}, installing the signing key ${s.signingFingerprint}${s.homeless ? ', homeless' : ''}.`, tone: r.stop === 'contested' ? 'bad' : 'warn' });
+    if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${actForm(s.id)}, installing the signing key ${s.signingFingerprint}${s.homeless ? ', homeless' : ''}.`, tone: r.stop === 'contested' ? 'bad' : 'warn' });
   }
   out.push({ heading: 'Its chain and receipts', lines: chain });
   const succ = rd.look.verifier.succession(rd.id) as { state: string; successor?: string; confirmation?: string };

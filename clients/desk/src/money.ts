@@ -26,7 +26,7 @@ import { join } from 'node:path';
 import { anchoringBatch, anchoringLeaf, anchoringReadOffer, anchoringReadPublication, batchAnchor, batchAnchorCheck, describeAct, hex, merkleBranch, randomBytes } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
-import { readId } from '../../../modules/carry/src/carry.ts';
+import { readId } from '../../genesis/src/forms.ts';
 import { sendDraft } from '../../damgar/src/messages.ts';
 import { SPEC } from '../../damgar/src/specs.ts';
 import { UNITS_MODULES, readValue, say } from '../../damgar/src/units.ts';

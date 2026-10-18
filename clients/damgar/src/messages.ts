@@ -14,7 +14,7 @@ import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { MESSAGES_SPEC } from './specs.ts';
 import type { Amount } from './units.ts';
 
-export const TYPES = { draft: 1, request: 2, invoiceRequest: 3, answer: 4 } as const;
+export const TYPES = { draft: 1, request: 2, invoiceRequest: 3, answer: 4, laneRequest: 5, sale: 6 } as const;
 
 /** A draft's "what" (2.1). */
 export const WHAT = { pay: 0, ask: 1, anchor: 2 } as const;
@@ -214,6 +214,8 @@ export interface Answer {
   bound: Bound;
   /** The ticket an anchoring service signed for it. */
   ticket: string | null;
+  /** The amount it binds, the commitment's (draft 3, F352): so a lane's cap is judged on the answer itself (the grant limits cMIP, 2.1). Absent in drafts 1 and 2. */
+  amount?: Amount | null;
 }
 
 export function answerPayload(a: Answer): Uint8Array {
@@ -225,12 +227,13 @@ export function answerPayload(a: Answer): Uint8Array {
     [2, bound],
   ]);
   if (a.ticket) m.set(3, unhex(a.ticket));
+  if (a.amount) m.set(4, amountValue(a.amount));
   return cborEncode(m);
 }
 
 export function readAnswer(payload: Uint8Array): Answer {
   const m = asMap(payload, 'an answer');
-  closed(m, [0, 1, 2, 3], 'an answer');
+  closed(m, [0, 1, 2, 3, 4], 'an answer');
   const b = m.get(2);
   if (!Array.isArray(b)) throw new Error('an answer: its bound');
   let bound: Bound;
@@ -238,5 +241,98 @@ export function readAnswer(payload: Uint8Array): Answer {
   else if (b[0] === 1 && (b.length === 2 || b.length === 3) && b[1] instanceof Uint8Array && b[1].length === 64) bound = { kind: 'request', request: b[1], confirmations: b.length === 3 ? Number(b[2]) : null };
   else if (b[0] === 2 && b.length === 2) bound = { kind: 'refused', why: text(b[1], 'why') };
   else throw new Error('an answer: its bound');
-  return { to: h32(m.get(0), 'the request answered'), commitment: h32(m.get(1), 'the commitment'), bound, ticket: m.has(3) ? h32(m.get(3), 'the ticket') : null };
+  const amount = m.has(4) ? amountOf(m.get(4)) : null;
+  return { to: h32(m.get(0), 'the request answered'), commitment: h32(m.get(1), 'the commitment'), bound, ticket: m.has(3) ? h32(m.get(3), 'the ticket') : null, amount };
+}
+
+// ------------------------------------------------------------ type 5: a lane asked (draft 2)
+
+/** What a lane may sign (a grant's field 6): one type of one specification. */
+export interface LaneKind {
+  spec: string;
+  type: number;
+}
+
+/**
+ * A lane asked by an app (draft 2, 7.1): sealed to the identity itself at
+ * its homes, as a draft is, signed with the identity's own key by the app
+ * asking. It carries the grant key the app made (its public part), the
+ * lane's words ("Dub on the Mac"), what it may sign, and the limits the app
+ * asks for, in the grant limits cMIP's own format. Damgar reads it in plain
+ * words and grants it, or declines; granting signs a public grant of the
+ * identity to itself, naming that key (Agreements draft 15, rule 73, F351).
+ */
+export interface LaneRequest {
+  /** The grant key's public part, hex (scheme 1). */
+  key: string;
+  label: string;
+  kinds: LaneKind[];
+  /** The limits asked, as the grant limits cMIP encodes them (any CBOR value), or none. */
+  limits: unknown | null;
+  /** The app that asked, as it names itself. */
+  app: string;
+}
+
+export function laneRequestPayload(r: LaneRequest): Uint8Array {
+  if (!r.kinds.length) throw new Error('A lane names what it may sign.');
+  const m = new Map<number, unknown>([
+    [0, [1, unhex(r.key)]],
+    [1, text(r.label, 'the lane’s words')],
+    [2, r.kinds.map((k) => [unhex(k.spec), k.type])],
+  ]);
+  if (r.limits !== null && r.limits !== undefined) m.set(3, r.limits);
+  m.set(4, text(r.app, 'the app'));
+  return cborEncode(m);
+}
+
+export function readLaneRequest(payload: Uint8Array): LaneRequest {
+  const m = asMap(payload, 'a lane request');
+  closed(m, [0, 1, 2, 3, 4], 'a lane request');
+  const k = m.get(0);
+  if (!Array.isArray(k) || k.length !== 2 || k[0] !== 1 || !(k[1] instanceof Uint8Array) || k[1].length !== 32) throw new Error('a lane request: its key is not a signing key of scheme 1');
+  const kinds = m.get(2);
+  if (!Array.isArray(kinds) || !kinds.length) throw new Error('a lane request: what it may sign');
+  return {
+    key: hex(k[1]),
+    label: text(m.get(1), 'the lane’s words'),
+    kinds: kinds.map((x) => {
+      if (!Array.isArray(x) || x.length !== 2 || typeof x[1] !== 'number') throw new Error('a lane request: a kind');
+      return { spec: h32(x[0], 'a kind’s specification'), type: x[1] };
+    }),
+    limits: m.has(3) ? m.get(3) : null,
+    app: text(m.get(4), 'the app'),
+  };
+}
+
+// ------------------------------------------------------------ type 6: a sale, told to oneself (draft 2)
+
+/**
+ * A sale (draft 2, 7.2): the seller's Damgar, having signed the receipt of a
+ * payment following one of the seller's offers, tells the seller's own apps,
+ * sealed to the identity itself at its homes: which offer, who bought, the
+ * receipt, and the publication sold, so the seller's Dub delivers the key
+ * (Envelopes type 1). Damgar signs no Envelopes act.
+ */
+export interface Sale {
+  offer: string;
+  buyer: string;
+  receipt: string;
+  publication: string;
+}
+
+export function salePayload(x: Sale): Uint8Array {
+  return cborEncode(
+    new Map<number, unknown>([
+      [0, unhex(x.offer)],
+      [1, unhex(x.buyer)],
+      [2, unhex(x.receipt)],
+      [3, unhex(x.publication)],
+    ]),
+  );
+}
+
+export function readSale(payload: Uint8Array): Sale {
+  const m = asMap(payload, 'a sale');
+  closed(m, [0, 1, 2, 3], 'a sale');
+  return { offer: h32(m.get(0), 'the offer'), buyer: h32(m.get(1), 'the buyer'), receipt: h32(m.get(2), 'the receipt'), publication: h32(m.get(3), 'the publication') };
 }

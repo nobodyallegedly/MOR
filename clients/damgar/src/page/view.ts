@@ -11,10 +11,10 @@
 
 import { e } from '../../../manage/src/view.ts';
 import { STYLE as DUB_STYLE } from '../../../dub/src/page/view.ts';
-import type { Account, Accept, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from '../shapes.ts';
+import type { Account, Accept, LaneShown, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from '../shapes.ts';
 
 export { e };
-export type { Account, Accept, Line, PaymentShown, Rails, State, ToSign };
+export type { Account, Accept, LaneShown, Line, PaymentShown, Rails, State, ToSign };
 
 export const NAME = 'Damgar';
 export const TEST_ONLY = 'Test identities and test networks only, until MOR is frozen. No real money';
@@ -108,7 +108,7 @@ export function identityWindow(s: State, web: boolean): string {
     : '';
   const i = s.identity;
   const mine = i
-    ? `<section class="card"><h3>In use</h3><p class="id">${e(i.grouped)}</p>
+    ? `<section class="card"><h3>In use</h3><p class="id">${e(i.form)}</p><p class="small">In hexadecimal, as before: <span class="fp">${e(i.grouped)}</span></p>
 <dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd><dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd><dt>Damgar’s line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `: its card, for Kišib, <code class="card-line">${e(i.line.latest)} ${i.line.acts} ${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
 <p class="small">Most of Damgar’s acts are sealed, so Kišib cannot read its line from the homes: when the signing key is changed there, give Kišib this card (latest act, position, summary), or every claim and receipt signed here becomes void (Identity rule 35).</p>
 ${i.encryption ? '' : note('warn', 'Damgar holds no encryption key for this identity: nothing sealed to it opens here.')}
@@ -121,7 +121,7 @@ ${i.encryption ? '' : note('warn', 'Damgar holds no encryption key for this iden
 ${mine}
 ${held}
 <section class="card"><h3>Bring an identity you have</h3>
-<form id="bring"><label>Its ID</label><input name="id" autocomplete="off" spellcheck="false" required>
+<form id="bring"><label>Its ID (mid1…, or its hexadecimal)</label><input name="id" autocomplete="off" spellcheck="false" required>
 <label>Its signing key’s 24 words (never the chain key’s)</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes)</label><input name="address" placeholder="https://" required>
 <details><summary>Relays, if it names none</summary><label>One per line</label><textarea name="relays"></textarea></details>
@@ -162,7 +162,7 @@ export function app(s: State, web: boolean): string {
   const i = s.identity!;
   const tab = (k: string, label: string, count = '') => `<button class="tab${k === 'sign' ? ' on' : ''}" data-tab="${k}">${label}<span class="count" id="count-${k}">${count}</span></button>`;
   return `<header class="bar"><h1 class="mark">${NAME}</h1>
-<nav class="tabs">${tab('sign', 'To sign', s.counts.toSign ? String(s.counts.toSign) : '')}${tab('account', 'The account')}${tab('pay', 'Pay', s.counts.toPay ? String(s.counts.toPay) : '')}${tab('settings', 'Settings')}</nav>
+<nav class="tabs">${tab('sign', 'To sign', s.counts.toSign ? String(s.counts.toSign) : '')}${tab('account', 'The account')}${tab('pay', 'Pay', s.counts.toPay ? String(s.counts.toPay) : '')}${tab('lanes', 'Lanes')}${tab('settings', 'Settings')}</nav>
 <button class="me" data-action="window" title="The identity">${who({ id: i.id, short: i.short, me: true })}</button></header>
 ${testNotice(web)}
 <div id="spent"></div>
@@ -170,6 +170,7 @@ ${testNotice(web)}
 <section id="sign"><div class="row"><span class="grow small">Drafts prepared in Dub and Edubba, requests others sent, invoices to make, receipts to sign. Nothing is signed until you choose.</span><button class="quiet" data-action="look">Look again</button></div><div id="sign-list"><p class="empty">Looking…</p></div></section>
 <section id="account" hidden><div id="account-body"><p class="empty">Reading the account…</p></div></section>
 <section id="pay" hidden><p class="small">Damgar holds no wallet. For each payment it shows what to pay; pay it in your own wallet, then paste the proof back here.</p><div id="pay-list"><p class="empty">Reading…</p></div></section>
+<section id="lanes" hidden><p class="small">A lane lets an app (Dub, or Damgar itself) sign some of your money acts by itself, within a cap per act and until a date: a grant of your identity to itself, its key held by that app (F338, F351). Every act signed under one is shown so, here and to every reader. One revocation ends it.</p><div id="lanes-body"><p class="empty">Reading…</p></div></section>
 <section id="settings" hidden><div id="settings-body"><p class="empty">Reading…</p></div></section>`;
 }
 
@@ -197,6 +198,10 @@ export function toSign(items: ToSign[], problems: string[]): string {
                 return btn('sign receipt', t.id, 'Check it, and sign the receipt', true);
               case 'refuse':
                 return btn('refuse invoice', t.id, 'Refuse');
+              case 'grant':
+                return btn('grant lane', t.id, 'Grant this lane', true);
+              case 'address':
+                return btn('answer address', t.id, 'Give an address bound to it', true);
               default:
                 return '';
             }
@@ -215,7 +220,7 @@ export function toSign(items: ToSign[], problems: string[]): string {
 
 export function payment(p: PaymentShown, forPay = false): string {
   const proofs = p.proofs.length
-    ? `<div class="proofs">${p.proofs.map((x) => `<div class="p"><span>${x.kind === 'claim' ? 'Claim' : 'Receipt'} by ${who(x.by)}</span>${verdict(x.rail)}<span class="small">rail: ${e(x.rail.why || 'the rail’s own evidence holds')}</span>${x.confirmations ? `<span class="small">${x.confirmations[0]} of ${x.confirmations[1]} confirmations</span>` : ''}</div><div class="p small">Beside it: ${verdict(x.beside)} ${e(x.beside.why)}${x.standing !== 'valid' ? ` · the act itself: ${e(x.standing)}` : ''}</div>`).join('')}</div>`
+    ? `<div class="proofs">${p.proofs.map((x) => `<div class="p"><span>${x.kind === 'claim' ? 'Claim' : 'Receipt'} by ${who(x.by)}</span><span class="small how">${e(x.how)}</span>${verdict(x.rail)}<span class="small">rail: ${e(x.rail.why || 'the rail’s own evidence holds')}</span>${x.confirmations ? `<span class="small">${x.confirmations[0]} of ${x.confirmations[1]} confirmations</span>` : ''}</div><div class="p small">Beside it: ${verdict(x.beside)} ${e(x.beside.why)}${x.standing !== 'valid' ? ` · the act itself: ${e(x.standing)}` : ''}</div>`).join('')}</div>`
     : '';
   const pay =
     forPay && p.pay
@@ -291,4 +296,55 @@ ${r.costs.length ? `<div class="costs"><h3>What each rail costs you, stated by i
 
 export function spent(say: string): string {
   return note('spent', `${e(say)} <button data-action="window">Give the new words</button>`);
+}
+
+// ------------------------------------------------------------------ lanes (round 2)
+
+export function lanes(r: { lanes: LaneShown[]; manual: boolean }, units: { hash: string; label: string }[]): string {
+  const list = r.lanes.length
+    ? r.lanes
+        .map(
+          (l) => `<div class="item lane${l.state === 'in force' ? '' : ' unknown'}" data-lane="${e(l.grant)}"><h3>${e(l.label)}</h3><div class="meta">${e(l.state)} · its key held by ${e(l.here ? 'this Damgar' : l.app)} · grant <span class="fp" title="${e(l.grant)}">${e(l.grant.slice(0, 8))}…</span></div>
+${lines(l.words.map((text) => ({ text })))}
+<details class="fold"><summary>Signed under it: ${l.acts.length} act${l.acts.length === 1 ? '' : 's'}</summary>${l.acts.length ? lines(l.acts.map((a) => ({ text: `${a.said} · ${a.id.slice(0, 12)}…` }))) : '<p class="small">None yet.</p>'}</details>
+${l.state === 'in force' ? `<div data-revoke="${e(l.grant)}"><div class="row"><button data-action="revoke lane review" data-grant="${e(l.grant)}">Revoke it</button></div></div>` : ''}</div>`,
+        )
+        .join('')
+    : '<p class="empty">No lane yet. An app asks for one (in Dub: its identity window, “Paying from Dub: a lane from Damgar”), and it waits in To sign.</p>';
+  const unitOptions = units.map((u) => `<option value="${e(u.hash)}"${/regtest/.test(u.label) ? ' selected' : ''}>${e(u.label)}</option>`).join('');
+  const own = (role: string, title: string, say: string) => `<form class="own-lane" data-role="${role}"><h3>${title}</h3><p class="small">${say}</p>
+<div class="row"><label>At most, per act <input name="cap" inputmode="numeric" required></label><label>Unit <select name="unit">${unitOptions}</select></label></div>
+<label>Until (optional; judged on the timestamp clock named in Settings)</label><input name="until" type="datetime-local">
+<div class="row"><button type="submit">Read it back</button></div></form>`;
+  return `${r.manual ? note('warn', 'Every step is followed by hand (Settings): the lanes Damgar holds sign nothing until you turn it off. Lanes other apps hold still sign there.') : ''}
+<h2>Your lanes</h2>${list}
+<h2>Damgar by itself</h2>
+<p class="small">With these, a payment to you needs nothing from you: Damgar answers and signs the receipt by itself, below the cap. Without them, everything waits in To sign, as in round 1.</p>
+${own('receipts', 'Receipts and invoices, by itself', 'Damgar checks a payment to you from the rail’s own evidence and signs the receipt; it answers an invoice request with an address, or with an invoice your node made through its receive-only link (Settings).')}
+${own('payouts', 'Referral shares, by itself', 'When someone buys your work through a repost and your offer promises the reposter a share, Damgar asks for that payment by itself; you still pay it in your wallet, from Pay.')}
+<div id="lane-review"></div>`;
+}
+
+/** A lane's revocation, read back with its cost before it is signed (F352). */
+export function revokeReview(grant: string, said: Line[]): string {
+  return `<div class="item"><h3>The revocation, read back</h3>${lines(said)}</div><div class="row"><button class="primary" data-action="revoke lane" data-grant="${e(grant)}">Sign the revocation</button></div>`;
+}
+
+export function laneReview(r: { digest: string; lines: Line[] }): string {
+  return `<div class="item"><h3>The lane, read back</h3>${lines(r.lines)}</div><div class="row"><button class="primary" data-action="own lane" data-digest="${e(r.digest)}">Sign this lane</button></div>`;
+}
+
+export function byHand(r: { manual: boolean; link: boolean; linkSay: string[]; clock: string | null }, web: boolean): string {
+  return `<h2>Every step by hand</h2>
+<p class="small">For those who want to follow the real process step by step: every signature waits for you, as in round 1. Off by default.</p>
+<label class="check"><input type="checkbox" id="manual"${r.manual ? ' checked' : ''}> Follow every step by hand (a clear demonstration of the real process)</label>
+<h2>The clock for lanes</h2>
+<p class="small">A lane’s expiry is judged on a timestamp clock you name (the grant limits cMIP, 3.1): until it stamps an act, whether it came before the expiry is unknown.</p>
+<form id="clock" class="row"><input name="clock" class="grow" placeholder="its ID" value="${e(r.clock ?? '')}" spellcheck="false"><button type="submit">Save the clock</button></form>
+<h2>Making invoices by itself (receive-only)</h2>
+${lines(r.linkSay.map((text) => ({ text })))}
+${web ? note('warn', 'The web client never makes a link to a node: use Damgar on your computer.') : r.link ? `<p>A receive-only link is kept.</p><div class="row"><button data-action="link remove">Remove it</button></div>` : `<form id="link"><label>Your node’s REST address</label><input name="rest" placeholder="https://127.0.0.1:8080" spellcheck="false" required>
+<label>The receive-only permission’s file (on lnd, the macaroon baked with invoices:write and invoices:read)</label><input name="macaroonFile" spellcheck="false" required>
+<label>The node’s certificate file (tls.cert)</label><input name="certFile" spellcheck="false" required>
+<div class="row"><button type="submit">Check it and keep it</button></div></form>`}`;
 }

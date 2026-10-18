@@ -1365,6 +1365,40 @@ function encryptionKeyPayload(version, previous, _public) {
   wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
   return v3;
 }
+function formEncode(label, data) {
+  let deferred4_0;
+  let deferred4_1;
+  try {
+    const ptr0 = passStringToWasm0(label, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.formEncode(ptr0, len0, ptr1, len1);
+    var ptr3 = ret[0];
+    var len3 = ret[1];
+    if (ret[3]) {
+      ptr3 = 0;
+      len3 = 0;
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    deferred4_0 = ptr3;
+    deferred4_1 = len3;
+    return getStringFromWasm0(ptr3, len3);
+  } finally {
+    wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+  }
+}
+function formRead(s, want) {
+  const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ptr1 = passStringToWasm0(want, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len1 = WASM_VECTOR_LEN;
+  const ret = wasm.formRead(ptr0, len0, ptr1, len1);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
 function keyDeliveryPayload(target, key, media) {
   const ptr0 = passStringToWasm0(target, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
   const len0 = WASM_VECTOR_LEN;
@@ -2717,9 +2751,19 @@ function say(a, accepted) {
   return `${grouped(a.value)} ${a.value === 1 ? k.unit.one : k.unit.many}`;
 }
 
+// ../../modules/timestamp/src/stamp.ts
+var TIMESTAMP_SPEC = sha2562("timestamp clock Module, draft 1, test value until publication");
+
+// ../grants/src/limits.ts
+var GRANT_LIMITS_SPEC = sha2562("Grant limits cMIP, draft 1, test value until publication");
+var MESSAGES = { specs: [] };
+
 // ../damgar/src/specs.ts
 var MONEY = MIRS.money;
-var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 1, test value until publication");
+var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 2, test value until publication");
+var MESSAGES_SPEC_1 = sha2562("Money messages cMIP, draft 1, test value until publication");
+var MESSAGES_SPECS = [MESSAGES_SPEC, MESSAGES_SPEC_1];
+MESSAGES.specs = MESSAGES_SPECS;
 var ACCEPTED_SPEC = sha2562("Accepted cMIP, draft 1, test value until publication");
 var SPEC = moneySpecs();
 var unitsEntry = (u2) => ({
@@ -2824,11 +2868,23 @@ var ACCEPTABLE = [
     key: "messages",
     name: "Money messages",
     kind: "cMIP",
-    text: "cmips/cmip-money-messages-draft-1.md",
-    draft: 1,
-    hashes: [MESSAGES_SPEC],
-    does: "The four messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request, and its answer. Written by Damgar\u2019s build, awaiting approval.",
+    text: "cmips/cmip-money-messages-draft-2.md",
+    draft: 2,
+    hashes: [MESSAGES_SPEC, MESSAGES_SPEC_1],
+    does: "The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2). Written by Damgar\u2019s builds, awaiting approval.",
     here: "Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.",
+    built: true,
+    needs: ["payment"]
+  },
+  {
+    key: "grant-limits",
+    name: "Grant limits",
+    kind: "cMIP",
+    text: "cmips/cmip-grant-limits-draft-1.md",
+    draft: 1,
+    hashes: [GRANT_LIMITS_SPEC],
+    does: "A grant\u2019s limits: how much one act may move, in a named unit, and until when, on a named clock. Written by Edubba\u2019s agents session (F345).",
+    here: "Every lane (round 2) carries its limits under it: a cap per act, and an expiry if you give one. Without it, an act under a lane is unknown here, and no lane is granted.",
     built: true,
     needs: ["payment"]
   }
@@ -5517,11 +5573,6 @@ function encryptionSecret(signingSeed) {
   const t = createHash("sha256").update(ENCRYPTION_TAG).digest();
   return new Uint8Array(createHash("sha256").update(t).update(t).update(signingSeed).digest());
 }
-function readId(typed) {
-  const s = typed.replace(/\s+/g, "").toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(s)) throw new Refused("an ID is 64 characters, 0 to 9 and a to f (spaces do not matter)");
-  return s;
-}
 function threePositions(random) {
   const out = /* @__PURE__ */ new Set();
   while (out.size < 3) out.add(1 + random(24));
@@ -5530,6 +5581,25 @@ function threePositions(random) {
 function typedBack(words2, positions, typed) {
   return positions.length === 3 && typed.length === 3 && positions.every((p, i) => words2[p - 1] === (typed[i] ?? "").trim().toLowerCase());
 }
+
+// ../genesis/src/forms.ts
+var form = (label, hex2) => formEncode(label, unhex(hex2));
+var idForm = (id) => form("mid", id);
+var actForm = (id) => form("mact", id);
+function readForm(typed, want) {
+  const t = typed.trim();
+  const squeezed = t.replace(/\s+/g, "");
+  if (want !== "mkey" && /^[0-9a-fA-F]{64}$/.test(squeezed)) return { hex: squeezed.toLowerCase(), hints: [], bare: true };
+  if (!/^m[a-z]+1/i.test(t)) throw new Refused(`${WHAT[want]} is 64 characters, 0 to 9 and a to f (spaces do not matter), or its form written for people, ${want}1\u2026`);
+  try {
+    const r = formRead(t, want);
+    return { hex: r.data, hints: r.hints, bare: r.bare };
+  } catch (e2) {
+    throw new Refused(e2 instanceof Error ? e2.message : String(e2));
+  }
+}
+var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
+var readId = (typed) => readForm(typed, "mid").hex;
 
 // ../dub/src/carryin.ts
 var message = (e2) => e2 instanceof Error ? e2.message : String(e2);
@@ -5684,19 +5754,20 @@ function kishibLineWords(l) {
 function recordWords(rd) {
   const r = rd.look.resolution;
   const out = [];
+  if (r.links[0]) out.push({ heading: "Its ID", lines: [{ text: `${idForm(r.links[0].act)} (in hexadecimal: ${r.links[0].act})` }] });
   out.push({ heading: "Its homes", lines: [{ text: homesWords(r.homes, r.effective) }, ...rd.look.unreachable.length ? [{ text: `Did not answer now: ${rd.look.unreachable.join(", ")}. Silence proves nothing.`, tone: "warn" }] : []] });
   const receipts = receiptsBy(rd.look.receipts);
   const chain = r.links.map((l) => {
     const n = receipts.get(l.act) ?? 0;
     const what = l.position === 0 ? "its genesis" : `a change of its keys (position ${l.position})`;
     const how = l.how === "genesis" ? "" : l.how === "homes" ? `, counting by its homes\u2019 receipts` : l.how === "own signatures" ? ", counting on its own signatures (self-hosted)" : `, counting as ${l.how}`;
-    return { text: `${what}: act ${l.act}${how}; ${n} receipt${n === 1 ? "" : "s"} held.`, tone: "ok" };
+    return { text: `${what}: act ${actForm(l.act)}${how}; ${n} receipt${n === 1 ? "" : "s"} held.`, tone: "ok" };
   });
   if (r.stop === "contested") chain.push({ text: `Contested at position ${r.links.length}: two rotations revealing one chain key are served there, and no rule settles them. Until it ends, no change of its keys counts.`, tone: "bad" });
   if (r.stop === "pending" || r.waiting.length) chain.push({ text: `A change of its keys waits for its homes\u2019 receipts: ${r.waiting.join(", ") || "one rotation"}.`, tone: "warn" });
   for (const s of rd.next) {
     const counted = r.links.some((l) => l.act === s.id);
-    if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${s.id}, installing the signing key ${s.signingFingerprint}${s.homeless ? ", homeless" : ""}.`, tone: r.stop === "contested" ? "bad" : "warn" });
+    if (!counted) chain.push({ text: `Served at position ${s.position}, not counting: act ${actForm(s.id)}, installing the signing key ${s.signingFingerprint}${s.homeless ? ", homeless" : ""}.`, tone: r.stop === "contested" ? "bad" : "warn" });
   }
   out.push({ heading: "Its chain and receipts", lines: chain });
   const succ = rd.look.verifier.succession(rd.id);
@@ -8411,6 +8482,7 @@ function start(web) {
 <p>Ki\u0161ib is the one place where a chain key is used, from paper, and then forgotten. Open it only for the act at hand.</p>
 <h2>What it does</h2>
 ${door("rotate", "Change an identity\u2019s keys", "From its chain key\u2019s 24 words on paper: a new signing key, every line of its acts kept. For a lost or stolen phone, or any time.")}
+${door("vault", "Change the vault", "Declare, change or remove where payments above a limit must go, and the limit. A change of keys: the chain key\u2019s paper is needed, and a new signing key\u2019s paper is written.")}
 ${door("start", "Rotate a collective", "From its members\u2019 paper shares, completing a member change signed in Edubba. Started by the member who proposed it.")}
 ${door("give", "Give my share to a collective\u2019s rotation", "When a member asks for your paper share: read the rotation, then give it.")}
 ${door("escape", "Escape a contested position", "Someone else changed your keys with your chain key\u2019s words: leave with both keys, to new homes.")}
@@ -8419,22 +8491,28 @@ ${door("succession", "Name or confirm a successor", "Name the identity that succ
 ${door("check", "Check paper words", "Whether these are the right words for an identity. Nothing is signed.", true)}
 ${door("record", "Show an identity\u2019s record", "Its homes, receipts, lines and any contest, in plain words.", true)}`;
 }
-var idField = (name, label) => `<label>${label}</label><input name="${name}" type="text" autocomplete="off" spellcheck="false" required>`;
+var idField = (name, label) => `<label>${label} (mid1\u2026, or its hexadecimal)</label><input name="${name}" type="text" autocomplete="off" spellcheck="false" required>`;
 var words = (name, label) => `<label>${label}</label><textarea name="${name}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>`;
 var address = `<label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>`;
 var forgotten = `<p class="small">What you type is used for this act alone, then overwritten. Nothing is written to this device.</p>`;
 var units = [];
 var setUnits = (u2) => units = u2 ?? [];
-var vaultFields = `<details><summary>The vault (optional): keep it, change it, or remove it</summary>
+var vaultFields = `<details{open}><summary>The vault (optional): keep it, change it, or remove it</summary>
 <p class="small">The vault is where a payment above a limit must go, per unit, and the one place a thief holding only the signing key cannot point payments (Money rules 2 and 3). It changes only with the chain key, so only here. Its node or key should be another than your flow\u2019s, which Damgar names.</p>
-<label>The vault</label><select name="vault"><option value="keep" selected>Keep it as it is</option><option value="set">Declare it anew, as below</option><option value="remove">Remove it (every payment to the flow)</option></select>
+<label>The vault</label><select name="vault"><option value="keep"{keep}>Keep it as it is</option><option value="set"{set}>Declare it anew, as below</option><option value="remove">Remove it (every payment to the flow)</option></select>
 <div class="row"><label>Its unit <select name="vaultUnit" data-vault-units>${"{units}"}</select></label><label>Network <select name="vaultNetwork"><option value="3" selected>regtest</option><option value="2">signet</option></select></label></div>
 <label>Lightning: the vault\u2019s node key (66 hexadecimal characters; not your flow\u2019s node)</label><input name="vaultNode" autocomplete="off" spellcheck="false">
 <label>Its limit: the largest single payment that may still go to the flow (0: every payment to the vault)</label><input name="vaultLightningLimit" inputmode="numeric" value="0">
 <label>On-chain: the vault\u2019s Bitcoin key, x-only (64 hexadecimal characters)</label><input name="vaultKey" autocomplete="off" spellcheck="false">
 <label>Its request key (Damgar\u2019s Settings show one; it signs address requests, and must stay online)</label><input name="vaultRequest" autocomplete="off" spellcheck="false">
 <label>Its limit</label><input name="vaultOnchainLimit" inputmode="numeric" value="0"></details>`;
-function form(kind, web) {
+var VAULT_SAY = [
+  "Changing the vault or its limit is a change of keys. Only the chain key changes the vault (Money rules 2 and 3), so a thief holding only the signing key can never move it.",
+  "You need the chain key\u2019s paper, the 24 words written when the identity was made. Ki\u0161ib signs a change of keys that keeps every line of acts and declares the vault anew (or removes it), then shows a new signing key\u2019s 24 words: write them on a new paper, and give them to Dub and Damgar.",
+  "The old signing key\u2019s words stop counting once the homes receipt the change."
+];
+var vaultHtml = (open) => vaultFields.replace("{open}", open ? " open" : "").replace("{keep}", open ? "" : " selected").replace("{set}", open ? " selected" : "").replace("{units}", units.map((u2) => `<option value="${e(u2.hash)}">${e(u2.label)}</option>`).join(""));
+function form2(kind, web) {
   const f = (title, intro, body, button) => `${top(web, true)}<h2>${title}</h2><p class="small">${intro}</p><form id="form-${kind}" data-kind="${kind}">${body}${forgotten}<div class="row"><button type="submit" class="primary">${button}</button></div></form><div id="status"></div>`;
   switch (kind) {
     case "rotate":
@@ -8442,9 +8520,14 @@ function form(kind, web) {
         "Change an identity\u2019s keys",
         "Ki\u0161ib reads the identity from its homes and every relay its routes name, finds every line of its acts (Dub\u2019s, Edubba\u2019s, the web client\u2019s), and reads it all back in plain words before anything is signed.",
         `${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (the paper written when it was made; never the signing key\u2019s words)")}
-<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultFields.replace("{units}", units.map((u2) => `<option value="${e(u2.hash)}">${e(u2.label)}</option>`).join(""))}`,
+<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(false)}`,
         "Read it back"
       );
+    case "vault":
+      return `${top(web, true)}<h2>Change the vault</h2>
+<div class="review" id="vault-say">${lines(VAULT_SAY.map((text2) => ({ text: text2 })))}</div>
+<form id="form-rotate" data-kind="rotate">${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (the paper written when it was made; never the signing key\u2019s words)")}
+<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(true)}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
     case "succession":
       return `${top(web, true)}<h2>Name or confirm a successor</h2>
 <p class="small">A succession needs both sides (F300): the identity names its successor in a change of its keys, signed with its chain key; the successor confirms it with an act of its own. Until it confirms, clients show it as declared and follow nobody.</p>
@@ -8578,15 +8661,15 @@ function mount(app2, b) {
     }
     app2.innerHTML = sitting(state.sitting, b.web);
   }
-  const values = (form2) => {
+  const values = (form3) => {
     const out = {};
-    for (const el of Array.from(form2.elements)) {
+    for (const el of Array.from(form3.elements)) {
       if (!el.name) continue;
       out[el.name] = el.type === "checkbox" ? el.checked : el.value;
     }
     return out;
   };
-  const clear = (form2) => Array.from(form2.elements).forEach((el) => el.tagName === "TEXTAREA" && (el.value = ""));
+  const clear = (form3) => Array.from(form3.elements).forEach((el) => el.tagName === "TEXTAREA" && (el.value = ""));
   const OPS = { rotate: "rotate plan", escape: "escape plan", confirm: "confirm plan", start: "collective start", give: "collective give" };
   app2.addEventListener("change", (ev) => {
     const t = ev.target;
@@ -8599,23 +8682,23 @@ function mount(app2, b) {
     }
   });
   app2.addEventListener("submit", async (ev) => {
-    const form2 = ev.target;
-    const id = form2.getAttribute("id") ?? "";
+    const form3 = ev.target;
+    const id = form3.getAttribute("id") ?? "";
     if (id === "pair") return;
     ev.preventDefault();
-    const a = values(form2);
+    const a = values(form3);
     if (id.startsWith("form-")) {
-      const kind = form2.dataset.kind;
+      const kind = form3.dataset.kind;
       if (kind === "check" || kind === "record") {
         const r2 = await act(() => b.ask(kind === "check" ? "check words" : "record", a));
         if (!r2) return;
-        clear(form2);
+        clear(form3);
         $("status").innerHTML = `<div class="review"><h3>${e(r2.title)}</h3>${r2.lines ? lines(r2.lines) : sections(r2.sections ?? [])}</div>`;
         return;
       }
       const r = await act(() => b.ask(OPS[kind], a));
       if (!r) return;
-      clear(form2);
+      clear(form3);
       current = { review: r, must: kind === "start" };
       app2.innerHTML = review(r, b.web, current.must);
       window.scrollTo(0, 0);
@@ -8638,7 +8721,7 @@ function mount(app2, b) {
     const action = t.dataset.action;
     switch (action) {
       case "open":
-        app2.innerHTML = form(t.dataset.form, b.web);
+        app2.innerHTML = form2(t.dataset.form, b.web);
         return;
       case "home": {
         const s = await act(() => b.ask("forget"));
@@ -8646,8 +8729,8 @@ function mount(app2, b) {
         return;
       }
       case "read request": {
-        const form2 = t.closest("form");
-        const a = values(form2);
+        const form3 = t.closest("form");
+        const a = values(form3);
         const r = await act(() => b.ask("collective read", { collective: a.collective, fingerprint: a.fingerprint, address: a.address }));
         if (r) $("request").innerHTML = `<div class="review"><h3>${e(r.title)}</h3>${sections(r.sections)}</div>`;
         return;

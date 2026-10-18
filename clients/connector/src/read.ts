@@ -21,7 +21,9 @@ import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { count, readAgreement, ruleWords, short, termsOf, type Line, type Section, type TermsRead } from '../../collective/src/explain.ts';
 import { escapeControls, fingerprint, quote, sectionsText } from './words.ts';
-import { authorityOf, type Authority } from '../../grants/src/grant.ts';
+import { authorityOf, fetchAct, grantInWords, readGrant, type Authority } from '../../grants/src/grant.ts';
+import { revocationsOf } from '../../grants/src/lanes.ts';
+import { actForm, idForm } from '../../genesis/src/forms.ts';
 import { LONG_FORM_CORRECTION, correctionOf, isCorrectionFormat } from '../../barebone/src/corrections.ts';
 
 /** What the connector says about one act. */
@@ -191,6 +193,11 @@ export async function readAct(id: string, hints: string[], via: Via = {}, depth 
     if (a) return underGrant(id, d, a);
   }
 
+  // A private act signed under a grant (a lane, F351): its grant is public and read; what the act is stays sealed.
+  if (!d.public && d.binding && d.signer && d.binding !== d.signer) {
+    const g = await underGrantSealed(id, d, hints, via).catch(() => null);
+    if (g) return g;
+  }
   if (!d.public) {
     const standing = await judge.standing(act, d);
     return told(id, {
@@ -212,6 +219,7 @@ export async function readAct(id: string, hints: string[], via: Via = {}, depth 
   }
   if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.terms) return agreement(act, d, judge);
   if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.signature) return signature(act, d, judge, depth);
+  if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.grant) return grant(act, d, judge, hints, via);
   if (d.spec === SPECS.identity) return identityAct(act, d, judge);
 
   const standing = await judge.standing(act, d);
@@ -253,6 +261,49 @@ function underGrant(id: string, d: Described, a: Authority): Told {
       },
     ],
     quoted,
+  });
+}
+
+// ---------------------------------------------------------------- a grant, a lane among them (F128, F351)
+
+async function grant(act: Uint8Array, d: Described, judge: Judge, hints: string[], via: Via): Promise<Told> {
+  const standing = await judge.standing(act, d);
+  let g;
+  try {
+    g = readGrant(d.payload!);
+  } catch (e) {
+    return told(d.id, { title: 'A grant that cannot be read', signer: d.signer ?? null, standing, counts: false, verdict: `A grant whose payload is not as Agreements write it: ${err(e)}.` });
+  }
+  const lane = g.grantee === d.signer;
+  const revoked = (await revocationsOf(d.signer!, d.id, hints, via).catch(() => [])).length > 0;
+  const lines = grantInWords(g, d.signer!, names).map((text) => ({ text }));
+  return told(d.id, {
+    title: lane ? 'A lane: a grant of an identity to itself' : 'A grant',
+    signer: d.signer ?? null,
+    standing,
+    counts: standing === 'valid' && !revoked,
+    verdict: `${lane ? `A lane of ${names(d.signer!)}: its key held by an app, which signs ${names(d.signer!)}’s acts within it (Agreements draft 15, rule 73, F351).` : `${names(d.signer!)} grants ${names(g.grantee)} authority to act in its name.`} ${revoked ? 'Revoked: an act signed under it after the revocation counts for nothing.' : 'Not revoked at the places asked.'} ${standingWords(standing).words}`,
+    sections: [{ heading: 'What it grants', lines }, { heading: 'Its standing', lines: [standingLine(standing), { text: revoked ? 'A revocation naming it was found (rule 76).' : 'No revocation naming it was found at the places asked; silence proves nothing.', tone: revoked ? 'bad' : undefined }] }],
+  });
+}
+
+/** A private act signed under a grant: who signed it, under which grant, whether that grant stands; what it is, sealed. */
+async function underGrantSealed(id: string, d: Described, hints: string[], via: Via): Promise<Told | null> {
+  const gBytes = await fetchAct(d.binding!, hints, via);
+  if (!gBytes) return null;
+  const gd = describeAct(gBytes) as Described;
+  if (gd.spec !== REPO_SPECS.agreements || gd.type !== AGREEMENTS_TYPES.grant || !gd.payload) return null;
+  const g = readGrant(gd.payload);
+  const lane = g.grantee === d.signer;
+  const revoked = (await revocationsOf(d.signer!, d.binding!, hints, via).catch(() => [])).length > 0;
+  return told(id, {
+    kind: 'private',
+    title: lane ? 'A private act signed under a lane' : 'A private act signed under a grant',
+    signer: d.signer ?? null,
+    standing: 'scoped',
+    counts: null,
+    verdict: `Signed under ${lane ? `a lane of ${names(d.signer!)} (a grant to itself, ${short(d.binding!)})` : `${names(d.signer!)}’s grant ${short(d.binding!)} to ${names(g.grantee)}`}, ${revoked ? 'revoked' : 'in force at the places asked'}. Its content is sealed: what it is, and whether the ${lane ? 'lane' : 'grant'} reaches it and backs it, only those it was delivered to can judge (Agreements rule 80).`,
+    sections: [{ heading: 'Its grant', lines: grantInWords(g, d.signer!, names).map((text) => ({ text })) }],
   });
 }
 
@@ -663,8 +714,9 @@ export async function identity(id: string, hints: string[], via: Via = {}, judge
  * agents (H21), so an agent reads an act exactly as Claude's app does.
  */
 export function toldText(t: Told): string {
-  const head = [`# ${t.title}`, t.verdict, `Act: ${t.id}`];
-  if (t.signer) head.push(`${t.kind === 'identity' && t.signer === t.id ? 'Fingerprint' : "Signer's fingerprint"}: ${fingerprint(t.signer)}`);
+  // Ids written for people (Identity draft 14, F349), their hex beside.
+  const head = [`# ${t.title}`, t.verdict, `Act: ${actForm(t.id)} (hex ${t.id})`];
+  if (t.signer) head.push(`${t.kind === 'identity' && t.signer === t.id ? 'Fingerprint' : "Signer's fingerprint"}: ${fingerprint(t.signer)} (${idForm(t.signer)})`);
   const parts = [head.join('\n'), sectionsText(t.sections)];
   for (const q of t.quoted) parts.push(quote(q.heading, q.text));
   return parts.filter(Boolean).join('\n\n');

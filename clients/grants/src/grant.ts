@@ -10,10 +10,10 @@
 // second case, F343), on the grantee's own strand. Every reader sees on
 // whose authority: the grant names its grantee, who signed to accept it.
 //
-// Shared: Edubba's agents now; Damgar's round 2 lanes (grants to apps)
-// reuse it, with a lane's grantee an app's key.
+// Shared: Edubba's agents; Damgar's round 2 lanes (`lanes.ts`), a grant whose
+// grantee is its own grantor, its key held by an app (F351).
 
-import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, makeEveryday, newSigningSecret, signaturePayload, signingPublic, unhex, withGrantLimits } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, makeEveryday, newSigningSecret, openWithKey, signaturePayload, signingPublic, unhex, withGrantLimits } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import type { Reference } from '../../genesis/src/identity.ts';
@@ -173,6 +173,8 @@ export interface Authority {
   grant: string;
   grantor: string;
   grantee: string;
+  /** A lane: a grant whose grantee is its grantor (F351). */
+  lane: boolean;
   /** Agreements' verdict (rule 80): backed, binds, not-backed, unknown. */
   backing: string;
   reason: string | null;
@@ -181,7 +183,7 @@ export interface Authority {
 }
 
 /** Every act the places hold signed by `signer` (as the repo client's `allBy`, here without anything from Node, for the web clients). */
-async function allBy(signer: string, hints: string[], via: Via): Promise<Uint8Array[]> {
+export async function allBy(signer: string, hints: string[], via: Via): Promise<Uint8Array[]> {
   const out: Uint8Array[] = [];
   for (const h of hints) {
     let after: number | undefined;
@@ -199,7 +201,7 @@ async function allBy(signer: string, hints: string[], via: Via): Promise<Uint8Ar
   return out;
 }
 
-const fetchAct = async (id: string, hints: string[], via: Via): Promise<Uint8Array | null> => {
+export const fetchAct = async (id: string, hints: string[], via: Via): Promise<Uint8Array | null> => {
   for (const h of hints) {
     try {
       const a = await relayAt(h, via).getAct(id);
@@ -231,7 +233,8 @@ export async function stampsOf(clock: string, hints: string[], via: Via = {}): P
  * 80). Null for an act not signed under a grant.
  */
 export async function authorityOf(act: Uint8Array, hints: string[], via: Via = {}, opts: { key?: Uint8Array; names?: (id: string) => string; stamps?: Map<string, Map<string, number>> } = {}): Promise<Authority | null> {
-  const d = describeAct(act) as { id: string; signer?: string; binding?: string; spec?: string; type?: number; payload?: Uint8Array };
+  // A private act is judged by its inside: its amount is there (the cap, 2.1).
+  const d = (opts.key ? openWithKey(act, opts.key) : describeAct(act)) as { id: string; signer?: string; binding?: string; spec?: string; type?: number; payload?: Uint8Array };
   if (!d.signer || !d.binding) return null;
   const grantBytes = await fetchAct(d.binding, hints, via);
   if (!grantBytes) return null;
@@ -276,13 +279,15 @@ export async function authorityOf(act: Uint8Array, hints: string[], via: Via = {
   }
   const verdicts: [string, boolean][] = limits && limits.within !== null ? [[d.id, limits.within]] : [];
   const b = v.agreementsBacking(withGrantLimits(AGREEMENTS_SPECS, verdicts), d.id) as { kind: string; grant?: string; reason?: string };
+  const lane = g.grantee === d.signer;
+  const laneBy = `Signed under a lane of ${names(d.signer)} (a grant to itself, ${d.binding.slice(0, 8)}…, its key held by an app; F351)`;
   const plain =
     b.kind === 'backed' || b.kind === 'binds'
-      ? `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under ${names(d.signer)}’s grant ${d.binding.slice(0, 8)}…: backed (Agreements rule 80).`
+      ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under ${names(d.signer)}’s grant ${d.binding.slice(0, 8)}…`}: backed (Agreements rule 80).`
       : b.kind === 'not-backed'
-        ? `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…, which does not back it: ${b.reason}.`
-        : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…: whether it backs it is unknown (${b.reason ?? 'not readable'}).`;
-  return { grant: d.binding, grantor: d.signer, grantee: g.grantee, backing: b.kind, reason: b.reason ?? null, limits, words: plain };
+        ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…`}, which does not back it: ${b.reason}.`
+        : `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…`}: whether it backs it is unknown (${b.reason ?? 'not readable'}).`;
+  return { grant: d.binding, grantor: d.signer, grantee: g.grantee, lane, backing: b.kind, reason: b.reason ?? null, limits, words: plain };
 }
 
 /** On whose authority an act stands, by its id: fetched where acts are looked for, then read as `authorityOf` does. Null where not found, or not under a grant. */

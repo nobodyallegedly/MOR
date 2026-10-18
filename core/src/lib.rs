@@ -60,6 +60,7 @@ pub mod merkle;
 pub mod mmr;
 pub mod sig;
 pub mod text;
+pub mod textual;
 pub mod xwing;
 
 pub use act::{Act, ActError, Inside, Outside};

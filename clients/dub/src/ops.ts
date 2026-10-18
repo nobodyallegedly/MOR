@@ -16,6 +16,15 @@ export interface Platform {
   via(v: unknown): Record<string, string>;
 }
 
+/** An expiry, as seconds since 1970, from a number or a date the page sends; none where empty. */
+const untilOf = (v: unknown): number | null => {
+  if (v === undefined || v === null || v === '') return null;
+  if (typeof v === 'number') return Math.floor(v);
+  const t = Date.parse(String(v));
+  if (Number.isNaN(t)) throw new Error('Until: a date and time, or nothing.');
+  return Math.floor(t / 1000);
+};
+
 /** The names of every operation, so a page and a test can be checked against them. */
 export const OPS = [
   'state',
@@ -52,6 +61,17 @@ export const OPS = [
   'sharehand',
   'tip',
   'ask paid',
+  'lane ask',
+  'lanes',
+  'tip now',
+  'payments',
+  'paid',
+  'sell',
+  'buy',
+  'repost',
+  'money look',
+  'relays review',
+  'relays publish',
 ] as const;
 
 export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: Platform): Promise<unknown> {
@@ -134,6 +154,28 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.shareByHand(text(a.thread));
     case 'tip':
       return dub.moneyDraft({ what: 'pay', other: text(a.signer), post: text(a.post), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor) });
+    case 'relays review':
+      return dub.relaysReview(list(a.relays));
+    case 'relays publish':
+      return dub.relaysPublish(list(a.relays), text(a.digest));
+    case 'lane ask':
+      return dub.laneAsk({ label: text(a.label), cap: text(a.cap), unit: text(a.unit), until: untilOf(a.until), clock: text(a.clock) });
+    case 'lanes':
+      return dub.lanes();
+    case 'tip now':
+      return dub.tipNow({ post: text(a.post), signer: text(a.signer), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor) });
+    case 'payments':
+      return dub.payments();
+    case 'paid':
+      return dub.paidNow(text(a.key), text(a.proof));
+    case 'sell':
+      return dub.sell({ text: text(a.text), teaser: text(a.teaser), value: text(a.value), unit: text(a.unit), referral: text(a.referral) });
+    case 'buy':
+      return dub.buy({ publication: text(a.publication), seller: text(a.seller), repost: text(a.repost) || undefined, reposter: text(a.reposter) || undefined });
+    case 'repost':
+      return dub.repost({ post: text(a.post), signer: text(a.signer) });
+    case 'money look':
+      return dub.moneyLook();
     case 'ask paid':
       return dub.moneyDraft({ what: 'ask', other: text(a.to), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor) });
     default:

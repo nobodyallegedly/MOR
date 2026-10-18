@@ -45,7 +45,7 @@ export interface Accept {
 export interface ToSign {
   /** The act it comes from (a draft, a request, an invoice request, a claim). */
   id: string;
-  kind: 'draft' | 'request' | 'invoice' | 'receipt' | 'unknown';
+  kind: 'draft' | 'request' | 'invoice' | 'address' | 'receipt' | 'lane' | 'unknown';
   from: Who;
   /** Prepared in another app: its name. */
   app: string | null;
@@ -56,7 +56,7 @@ export interface ToSign {
   /** Nothing can be signed for it: under something not accepted, or refused by a rule. */
   unknown: boolean;
   /** The buttons offered. */
-  offers: ('sign' | 'decline' | 'debt' | 'pay' | 'invoice' | 'refuse' | 'receipt')[];
+  offers: ('sign' | 'decline' | 'debt' | 'pay' | 'invoice' | 'address' | 'refuse' | 'receipt' | 'grant')[];
   /** For an invoice request on Lightning: the description hash to give the wallet. */
   descriptionHash?: string;
   found: number;
@@ -78,7 +78,7 @@ export interface PaymentShown {
   /** What to pay, in Pay: a Lightning invoice, or an address and the exact amount. */
   pay: { invoice?: string; address?: string; amount: Shown } | null;
   /** The claims and receipts held for it, each with its verdict. */
-  proofs: { act: string; kind: 'claim' | 'receipt'; by: Who; rail: Verdict; beside: Verdict; standing: string; confirmations: [number, number] | null }[];
+  proofs: { act: string; kind: 'claim' | 'receipt'; by: Who; rail: Verdict; beside: Verdict; standing: string; confirmations: [number, number] | null; how: string }[];
   lines: Line[];
   at: number;
   /** Paying for an anchor: the ticket. */
@@ -115,6 +115,8 @@ export interface State {
   identity: null | {
     id: string;
     grouped: string;
+    /** Its ID written for people (Identity draft 14, F349): `mid1…`. */
+    form: string;
     short: string;
     homes: string[];
     relays: string[];
@@ -125,4 +127,17 @@ export interface State {
   /** Where the accepted list stands: its version, whether it was forked and merged, published or private. */
   list: { version: number; merged: string[]; published: boolean; problems: string[] };
   counts: { toSign: number; toPay: number };
+}
+
+/** A lane granted from here (round 2, F351), as Lanes shows it. */
+export interface LaneShown {
+  grant: string;
+  label: string;
+  app: string;
+  /** Its key is held by this Damgar (its own receipts or payouts lane). */
+  here: boolean;
+  state: string;
+  words: string[];
+  /** Every act its places hold signed under it. */
+  acts: { id: string; said: string }[];
 }

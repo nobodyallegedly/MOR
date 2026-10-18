@@ -1436,6 +1436,17 @@ function encryptionKeyPayload(version, previous, _public) {
   wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
   return v3;
 }
+function formRead(s, want) {
+  const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ptr1 = passStringToWasm0(want, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len1 = WASM_VECTOR_LEN;
+  const ret = wasm.formRead(ptr0, len0, ptr1, len1);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
 function keyDeliveryPayload(target, key, media) {
   const ptr0 = passStringToWasm0(target, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
   const len0 = WASM_VECTOR_LEN;
@@ -6000,12 +6011,23 @@ function encryptionSecret(signingSeed) {
   const t = createHash("sha256").update(ENCRYPTION_TAG).digest();
   return new Uint8Array(createHash("sha256").update(t).update(t).update(signingSeed).digest());
 }
-function readId(typed) {
-  const s = typed.replace(/\s+/g, "").toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(s)) throw new Refused("an ID is 64 characters, 0 to 9 and a to f (spaces do not matter)");
-  return s;
-}
 var groupId = (id) => id.match(/.{1,4}/g).join(" ");
+
+// ../genesis/src/forms.ts
+function readForm(typed, want) {
+  const t = typed.trim();
+  const squeezed = t.replace(/\s+/g, "");
+  if (want !== "mkey" && /^[0-9a-fA-F]{64}$/.test(squeezed)) return { hex: squeezed.toLowerCase(), hints: [], bare: true };
+  if (!/^m[a-z]+1/i.test(t)) throw new Refused(`${WHAT[want]} is 64 characters, 0 to 9 and a to f (spaces do not matter), or its form written for people, ${want}1\u2026`);
+  try {
+    const r = formRead(t, want);
+    return { hex: r.data, hints: r.hints, bare: r.bare };
+  } catch (e2) {
+    throw new Refused(e2 instanceof Error ? e2.message : String(e2));
+  }
+}
+var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
+var readId = (typed) => readForm(typed, "mid").hex;
 
 // ../dub/src/carryin.ts
 var message = (e2) => e2 instanceof Error ? e2.message : String(e2);
@@ -6078,9 +6100,19 @@ function say(a, accepted2) {
   return `${grouped(a.value)} ${a.value === 1 ? k.unit.one : k.unit.many}`;
 }
 
+// ../../modules/timestamp/src/stamp.ts
+var TIMESTAMP_SPEC = sha2562("timestamp clock Module, draft 1, test value until publication");
+
+// ../grants/src/limits.ts
+var GRANT_LIMITS_SPEC = sha2562("Grant limits cMIP, draft 1, test value until publication");
+var MESSAGES = { specs: [] };
+
 // ../damgar/src/specs.ts
 var MONEY = MIRS.money;
-var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 1, test value until publication");
+var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 2, test value until publication");
+var MESSAGES_SPEC_1 = sha2562("Money messages cMIP, draft 1, test value until publication");
+var MESSAGES_SPECS = [MESSAGES_SPEC, MESSAGES_SPEC_1];
+MESSAGES.specs = MESSAGES_SPECS;
 var ACCEPTED_SPEC = sha2562("Accepted cMIP, draft 1, test value until publication");
 var SPEC = moneySpecs();
 var unitsEntry = (u2) => ({
@@ -6185,11 +6217,23 @@ var ACCEPTABLE = [
     key: "messages",
     name: "Money messages",
     kind: "cMIP",
-    text: "cmips/cmip-money-messages-draft-1.md",
-    draft: 1,
-    hashes: [MESSAGES_SPEC],
-    does: "The four messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request, and its answer. Written by Damgar\u2019s build, awaiting approval.",
+    text: "cmips/cmip-money-messages-draft-2.md",
+    draft: 2,
+    hashes: [MESSAGES_SPEC, MESSAGES_SPEC_1],
+    does: "The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2). Written by Damgar\u2019s builds, awaiting approval.",
     here: "Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.",
+    built: true,
+    needs: ["payment"]
+  },
+  {
+    key: "grant-limits",
+    name: "Grant limits",
+    kind: "cMIP",
+    text: "cmips/cmip-grant-limits-draft-1.md",
+    draft: 1,
+    hashes: [GRANT_LIMITS_SPEC],
+    does: "A grant\u2019s limits: how much one act may move, in a named unit, and until when, on a named clock. Written by Edubba\u2019s agents session (F345).",
+    here: "Every lane (round 2) carries its limits under it: a cap per act, and an expiry if you give one. Without it, an act under a lane is unknown here, and no lane is granted.",
     built: true,
     needs: ["payment"]
   }
@@ -6409,8 +6453,8 @@ function chooserHtml(all, now2, o = {}) {
 }
 
 // ../damgar/src/messages.ts
-var TYPES = { draft: 1, request: 2, invoiceRequest: 3, answer: 4 };
-var WHAT = { pay: 0, ask: 1, anchor: 2 };
+var TYPES = { draft: 1, request: 2, invoiceRequest: 3, answer: 4, laneRequest: 5, sale: 6 };
+var WHAT2 = { pay: 0, ask: 1, anchor: 2 };
 var amountValue = (a) => [unhex(a.unit), a.value];
 var text = (v, what) => {
   if (typeof v !== "string" || v.length > 280 || /[\u0000-\u0009\u000b-\u001f]/.test(v)) throw new Error(`${what}: not a short text`);
@@ -6418,7 +6462,7 @@ var text = (v, what) => {
 };
 function draftPayload(d) {
   const m = /* @__PURE__ */ new Map([
-    [0, WHAT[d.what]],
+    [0, WHAT2[d.what]],
     [1, unhex(d.other)],
     [2, amountValue(d.amount)]
   ]);
@@ -7745,8 +7789,12 @@ var MIR_OF_LAYER = Object.fromEntries(Object.entries(LAYERS).map(([hash, name]) 
 var HEX64 = /^[0-9a-f]{64}$/;
 function readHash(s, what) {
   const h = s.replace(/\s+/g, "").toLowerCase();
-  if (!HEX64.test(h)) throw new Error(`${what}: a spec hash is 64 hexadecimal characters.`);
-  return h;
+  if (HEX64.test(h)) return h;
+  try {
+    return readForm(s, "mspec").hex;
+  } catch (e2) {
+    throw new Error(`${what}: ${e2 instanceof Error ? e2.message : String(e2)} (a spec hash is mspec1\u2026, or 64 hexadecimal characters).`);
+  }
 }
 function specContent(f, creator) {
   const m = /* @__PURE__ */ new Map([[0, f.kind]]);
@@ -8633,6 +8681,41 @@ function e(s) {
   return String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
+// ../genesis/src/shown.ts
+var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+function polymod(values) {
+  const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
+  let chk = 1;
+  for (const v of values) {
+    const b = chk >>> 25;
+    chk = (chk & 33554431) << 5 ^ v;
+    for (let i = 0; i < 5; i++) if (b >>> i & 1) chk ^= G[i];
+  }
+  return chk >>> 0;
+}
+function shownForm(label, hex3) {
+  if (!/^([0-9a-f]{2})+$/i.test(hex3)) return hex3;
+  const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
+  const five = [];
+  let acc = 0;
+  let bits = 0;
+  for (const b of bytes) {
+    acc = (acc << 8 | b) & 65535;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      five.push(acc >> bits & 31);
+    }
+  }
+  if (bits > 0) five.push(acc << 5 - bits & 31);
+  const hrp = [...label].map((c) => c.charCodeAt(0));
+  const values = [...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...five, 0, 0, 0, 0, 0, 0];
+  const pm = polymod(values) ^ 734539939;
+  const check = [0, 1, 2, 3, 4, 5].map((i) => pm >>> 5 * (5 - i) & 31);
+  return `${label}1${[...five, ...check].map((v) => CHARSET[v]).join("")}`;
+}
+var shownSpec = (hex3) => shownForm("mspec", hex3);
+
 // ../dub/src/page/view.ts
 var TEST_ONLY = "Test identities only, until MOR is frozen";
 var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY}. Two risks, in plain words:</p>
@@ -8877,7 +8960,7 @@ function review(r, confirmAction = "confirm") {
   const files = r.files ? `<details class="fold" open><summary>Its files (${r.files.length}), each with its size and fingerprint</summary><div class="files">${r.files.map((f) => `<div><span>${e(f.path)}</span><span>${f.size} bytes</span><code>${e(f.fingerprint)}</code></div>`).join("")}</div></details>${r.skipped?.length ? `<p class="small">Left out: ${e(r.skipped.join("; "))}</p>` : ""}
 <details class="fold"><summary>The libraries it depends on (${r.dependencies?.length ?? 0})</summary>${r.dependencies?.length ? `<div class="files">${r.dependencies.map((d) => `<div><span>${e(d.registry)}</span><span>${e(d.name)}</span><span>${e(d.version)}</span></div>`).join("")}</div>` : '<p class="small">None: it names no lock file (Cargo.lock, package-lock.json).</p>'}</details>` : "";
   return `<div class="item review" data-plan="${e(r.plan)}"><h3>${e(r.title)}</h3>
-${r.hash ? `<label>Its spec hash</label><div class="hash" id="review-hash">${e(r.hash)}</div>` : ""}
+${r.hash ? `<label>Its spec hash</label><div class="hash" id="review-hash" title="${e(r.hash)}">${e(shownSpec(r.hash))}</div><p class="small">In hexadecimal: ${e(r.hash)}</p>` : ""}
 ${says(r.summary)}
 ${r.sections.map((x) => `<p class="small"><b>${e(x.heading)}</b></p>${lines(x.lines)}`).join("")}
 ${files}
@@ -8941,7 +9024,7 @@ function specs(choices, published) {
 <label class="check"><input type="checkbox" name="checker"> It checks proofs of delivery of proven offers</label></details>
 <div class="row"><button type="submit">Read it back, with its hash</button></div></form>
 <div id="spec-review"></div>
-<h2>Published from here</h2>${published.length ? published.map((p) => `<div class="item"><h3>${e(p.name)}</h3><div class="meta">${e(p.kind)} \xB7 publication ${fp(p.id)}</div><div class="hash">${e(p.hash)}</div></div>`).join("") : '<p class="empty">None yet.</p>'}`;
+<h2>Published from here</h2>${published.length ? published.map((p) => `<div class="item"><h3>${e(p.name)}</h3><div class="meta">${e(p.kind)} \xB7 publication ${fp(p.id)}</div><div class="hash" title="${e(p.hash)}">${e(shownSpec(p.hash))}</div></div>`).join("") : '<p class="empty">None yet.</p>'}`;
 }
 function specCard(x, accepted2) {
   const release = x.releases.length ? `<p class="small">Code released: ${x.releases.map((r) => `${e(r.name ?? "a release")} ${e(r.version ?? "")}${r.problem ? ` (not verified: ${e(r.problem)})` : ""}`).join(", ")}.</p>` : "";
@@ -8949,7 +9032,7 @@ function specCard(x, accepted2) {
   return `<div class="item spec-card" data-hash="${e(x.hash)}"><h3>${e(x.name)}</h3>
 <div class="meta">${e(x.kind)} \xB7 ${e(x.layer)}${x.draft > 1 ? ` \xB7 draft ${x.draft} in its line` : ""} \xB7 by ${x.creator ? fp(x.creator) : "no creator"}${x.creator ? x.claimed ? "" : " (unclaimed: its creator never published it)" : ""}</div>
 ${lines(x.role.map((t) => ({ text: t })))}${x.otherCreator ? note("warn", "Its creator is not its predecessor\u2019s (Development rule 25).") : ""}${release}${use}
-<div class="hash">${e(x.hash)}</div>
+<div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div>
 <div class="row">${accepted2.has(x.hash) ? '<span class="small">Accepted</span>' : `<button data-action="accept spec" data-hash="${e(x.hash)}" data-label="${e(`${x.name}`.slice(0, 120))}">Accept it</button>`}</div></div>`;
 }
 function trackForm(s) {
@@ -8964,7 +9047,7 @@ function trackForm(s) {
 }
 function tracked(t, accepted2) {
   const relays = `<p class="small">${t.relays.map((r) => `${e(r.address)}: ${r.problem ? e(r.problem) : `${r.read} acts read, ${r.specs} specification${r.specs === 1 ? "" : "s"}${r.stopped ? " (stopped: more than a look reads)" : ""}`}`).join("<br>")}</p>`;
-  const ext = t.extensions.length ? t.extensions.map((x) => `<div class="item"><h3>${e(x.name ?? `A cMIP not found on these relays`)}</h3><div class="meta">named by ${x.agreements} public agreement${x.agreements === 1 ? "" : "s"}${x.layers ? ` \xB7 touches ${e(x.layers.join(", "))}` : ""}</div><div class="hash">${e(x.hash)}</div></div>`).join("") : '<p class="empty">No public agreement found naming an extension.</p>';
+  const ext = t.extensions.length ? t.extensions.map((x) => `<div class="item"><h3>${e(x.name ?? `A cMIP not found on these relays`)}</h3><div class="meta">named by ${x.agreements} public agreement${x.agreements === 1 ? "" : "s"}${x.layers ? ` \xB7 touches ${e(x.layers.join(", "))}` : ""}</div><div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div></div>`).join("") : '<p class="empty">No public agreement found naming an extension.</p>';
   const mips2 = t.mips.length ? t.mips.map((m) => `<div class="item"><h3>${e(m.name)}</h3><div class="meta">${fp(m.root)}</div>${m.forks.length ? lines(m.forks.map((f) => ({ text: `${f.name}, by ${f.creator ? `${f.creator.slice(0, 8)}\u2026` : "no creator"} (${f.total} fork${f.total === 1 ? "" : "s"} under it)` }))) : '<p class="small">No MIP forks it here.</p>'}</div>`).join("") : '<p class="empty">No MIP found.</p>';
   return `<div class="limit">${says(t.limit)}</div>${relays}
 <h2>Extensions public agreements name</h2><p class="small">Each marks work the core did not foresee: the raw material of MOR 2. Agreements counted: ${t.agreements.counted} (${t.agreements.proposed} proposed, not signed by every party; ${t.agreements.notCounted} not verified; ${t.agreements.private} private items unread).</p>${ext}
@@ -9008,7 +9091,7 @@ function accepted(a) {
 ${a.problems.length ? note("warn", lines(a.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}
 ${a.forked ? note("warn", `Two apps changed it at once. Shown merged, nothing dropped: ${lines(a.merged.map((t) => ({ text: t })))} Your next change writes the merge.`) : ""}
 <p class="small">${a.version ? `Version ${a.version}.` : "Nothing accepted yet: the default, under which no app signs anything under any specification."}</p>
-${a.entries.length ? a.entries.map((x) => `<div class="item"><h3>${e(x.label ?? "A specification with no label")}</h3><div class="meta">${e(x.part)}</div><div class="hash">${e(x.hash)}</div><div class="row"><button class="quiet" data-action="accepted remove" data-hash="${e(x.hash)}">Remove it</button></div></div>`).join("") : ""}
+${a.entries.length ? a.entries.map((x) => `<div class="item"><h3>${e(x.label ?? "A specification with no label")}</h3><div class="meta">${e(x.part)}</div><div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div><div class="row"><button class="quiet" data-action="accepted remove" data-hash="${e(x.hash)}">Remove it</button></div></div>`).join("") : ""}
 <form id="accept-add"><label>Accept a specification by its spec hash (or press \u201CAccept it\u201D on one found under Tracking)</label><input name="hash" spellcheck="false" required><label>Its label (its name and draft)</label><input name="label" maxlength="120">
 <div class="row"><button type="submit">Accept it</button></div></form>
 <div class="row"><span class="grow small">${a.published ? "Published: anyone can read which specifications you accept." : "Private: sealed to yourself (the default)."}</span><button data-action="accepted publish" data-on="${a.published ? "false" : "true"}">${a.published ? "Make it private again" : "Publish it"}</button></div>`;

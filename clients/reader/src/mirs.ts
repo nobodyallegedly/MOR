@@ -16,11 +16,11 @@ import { mirHash } from '../../genesis/src/core.ts';
 
 /** The six, in the MICS's order, with the file each is shipped as. */
 export const MIR_TEXTS = [
-  { layer: 'Identity', file: 'MIR-identity-draft-13.md' },
+  { layer: 'Identity', file: 'MIR-identity-draft-14.md' },
   { layer: 'Envelopes', file: 'MIR-envelopes-draft-10.md' },
   { layer: 'Text', file: 'MIR-text-draft-10.md' },
-  { layer: 'Money', file: 'MIR-money-draft-8.md' },
-  { layer: 'Agreements', file: 'MIR-agreements-draft-14.md' },
+  { layer: 'Money', file: 'MIR-money-draft-9.md' },
+  { layer: 'Agreements', file: 'MIR-agreements-draft-15.md' },
   { layer: 'Development', file: 'MIR-development-draft-10.md' },
 ] as const;
 

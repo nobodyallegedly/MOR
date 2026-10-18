@@ -9,7 +9,7 @@
 // Shared: Edubba's agents now, Damgar's round 2 lanes next. Nothing here
 // reads a relay: the stamps are handed in.
 
-import { cborDecode, cborEncode, hex, moneyRead, sha256, unhex } from '../../genesis/src/core.ts';
+import { cborDecode, cborEncode, hex, moneyRead, readCommitment, sha256, unhex } from '../../genesis/src/core.ts';
 import { TIMESTAMP_SPEC } from '../../../modules/timestamp/src/stamp.ts';
 
 /** The grant limits cMIP, draft 1: a test value until publication. */
@@ -77,9 +77,33 @@ export function readLimits(v: unknown): Limits {
   return out;
 }
 
-/** The amount an act moves (2.1): a Money act's, or none. */
+/**
+ * The money messages cMIP's drafts, whose acts carry an amount (2.1): an
+ * invoice request (type 3) carries the payment's commitment, whose amount it
+ * is. Set by the app that reads them (Damgar's `MESSAGES_SPECS`); empty, no
+ * message act moves anything here.
+ */
+export const MESSAGES: { specs: string[] } = { specs: [] };
+
+/** The amount an act moves (2.1): a Money act's, an invoice request's commitment's (a money messages cMIP act), or none. */
 export function amountOf(act: { spec?: string; type?: number; payload?: Uint8Array }, moneySpec: string): Cap | null {
-  if (act.spec !== moneySpec || act.type === undefined || !act.payload) return null;
+  if (act.type === undefined || !act.payload) return null;
+  if (act.spec && MESSAGES.specs.includes(act.spec)) {
+    // The money messages cMIP: a draft's amount (type 1, field 2), a request's (type 2, field 0), an invoice request's commitment's (type 3), an answer's (type 4, field 4, draft 3; F352).
+    try {
+      const m = cborDecode(act.payload) as Map<number, unknown>;
+      const pair = (x: unknown): Cap | null => (Array.isArray(x) && x.length === 2 && x[0] instanceof Uint8Array ? { unit: hex(x[0]), value: Number(x[1]) } : null);
+      if (act.type === 1) return pair(m.get(2));
+      if (act.type === 2) return pair(m.get(0));
+      if (act.type === 4) return pair(m.get(4));
+      if (act.type !== 3) return null;
+      const c = readCommitment(cborEncode(m.get(0))) as { amount: { unit: string; value: number } };
+      return { unit: c.amount.unit, value: c.amount.value };
+    } catch {
+      return null;
+    }
+  }
+  if (act.spec !== moneySpec) return null;
   try {
     const r = moneyRead(act.type, act.payload) as { act: { amount?: { unit: string; value: number } } };
     return r.act.amount ? { unit: r.act.amount.unit, value: r.act.amount.value } : null;

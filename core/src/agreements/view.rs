@@ -234,6 +234,10 @@ pub struct AgreementsView<'a> {
     pub grant_limits: BTreeMap<Hash, bool>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
+    /// Money receipts and claims signed with a grant key, judged by their
+    /// grant's backing (F350), once each; and those being judged.
+    money_backed: RefCell<BTreeMap<Hash, bool>>,
+    money_judging: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
     ending: RefCell<BTreeSet<Hash>>,
     citing: RefCell<BTreeSet<Hash>>,
@@ -576,6 +580,8 @@ impl<'a> AgreementsView<'a> {
             grant_limits: BTreeMap::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
+            money_backed: RefCell::new(BTreeMap::new()),
+            money_judging: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
             ending: RefCell::new(BTreeSet::new()),
             citing: RefCell::new(BTreeSet::new()),
@@ -638,6 +644,8 @@ impl<'a> AgreementsView<'a> {
             grant_limits: self.grant_limits.clone(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
+            money_backed: RefCell::new(BTreeMap::new()),
+            money_judging: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
             ending: RefCell::new(BTreeSet::new()),
             citing: RefCell::new(BTreeSet::new()),
@@ -740,16 +748,66 @@ impl<'a> AgreementsView<'a> {
 
     /// Whether an act stands under Identity, for Agreements: valid; or signed with
     /// a grant key (Identity's `Scoped`, F128) whose grant itself stands.
-    /// Whether the grant backs the act is [`Self::backing`].
+    /// Whether the grant backs the act is [`Self::backing`]. A Money
+    /// receipt or claim signed with a person's grant key stands only where
+    /// that grant reaches its type (Money draft 9, rule 7; F350): a lane that
+    /// does not reach receipts signs none that counts. *Its revocation and
+    /// limits are rule 80's, judged by [`Self::backing`].*
     fn valid(&self, id: &Hash) -> bool {
         match self.status(id) {
             Status::Valid => true,
-            Status::Scoped => self
-                .v
-                .get(id)
-                .and_then(|h| self.key_grant(h))
-                .is_some_and(|(g, _)| self.status(&g.id) == Status::Valid),
+            Status::Scoped => {
+                let Some(h) = self.v.get(id) else { return false };
+                let Some((g, grant)) = self.key_grant(h) else { return false };
+                if self.status(&g.id) != Status::Valid {
+                    return false;
+                }
+                let money = h.inside.spec == self.mirs.money && (h.inside.type_ == crate::money::types::RECEIPT || h.inside.type_ == crate::money::types::CLAIM);
+                let person = h.act.outside.signer.is_some_and(|c| {
+                    let col = self.col(&c);
+                    !(0..col.res.links.len()).any(|k| self.declares(&col, k))
+                });
+                !(money && person) || self.person_grant_reaches(&grant, &h.inside.spec, h.inside.type_)
+            }
             _ => false,
+        }
+    }
+
+    /// Whether a Money receipt or claim counts where Money counts payments
+    /// (debts paid, a payer's claims, a payment's receipts): it stands
+    /// ([`Self::valid`]), and, signed with a grant key, its grant backs it
+    /// (Money draft 9, rule 7; Agreements rule 80, F350): not revoked before
+    /// it, within its limits. Judged once per act; asked again while being
+    /// judged, it does not count.
+    fn money_counts(&self, h: &Held) -> bool {
+        if !self.valid(&h.id) {
+            return false;
+        }
+        if self.status(&h.id) != Status::Scoped {
+            return true;
+        }
+        if let Some(b) = self.money_backed.borrow().get(&h.id) {
+            return *b;
+        }
+        if !self.money_judging.borrow_mut().insert(h.id) {
+            return false;
+        }
+        let b = matches!(self.backing(&h.id), Ok(Backing::Backed { .. } | Backing::Binds { .. }));
+        self.money_judging.borrow_mut().remove(&h.id);
+        self.money_backed.borrow_mut().insert(h.id, b);
+        b
+    }
+
+    /// Whether a person's grant reaches an act of this specification and
+    /// type: the kinds it names (a MIR's layer, or a type of a
+    /// specification); naming none, every act but a decision (rule 73).
+    fn person_grant_reaches(&self, g: &Grant, spec: &Hash, ty: u64) -> bool {
+        match &g.kinds {
+            Some(k) => k.iter().any(|k| match k {
+                Kind::Layer(l) => self.mirs.layer(spec) == Some(*l),
+                Kind::Type { spec: s2, type_ } => s2 == spec && *type_ == ty,
+            }),
+            None => true,
         }
     }
 
@@ -7566,7 +7624,7 @@ impl<'a> AgreementsView<'a> {
     /// so relied on is kept whatever its signer's later rotation disowned
     /// (F302), shown as a dispute.
     fn paid_toward_if(&self, obligation: &Hash, relied: &dyn Fn(&Held) -> bool, placed: bool) -> u64 {
-        let standing = |r: &Held| self.valid(&r.id) || (placed && matches!(self.status(&r.id), Status::Void | Status::Disputed));
+        let standing = |r: &Held| self.money_counts(r) || (placed && matches!(self.status(&r.id), Status::Void | Status::Disputed));
         use crate::money::Payload as Fin;
         let o = match self.v.get(obligation).map(|o| (o, Fin::decode(o.inside.type_, &o.inside.payload))) {
             Some((x, Ok(Fin::Obligation(o)))) if x.inside.spec == self.mirs.money => o,
@@ -8033,7 +8091,7 @@ impl<'a> AgreementsView<'a> {
         use crate::money::{self as fin, Payload as Fin};
         let Ok(p @ Fin::Claim(_)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return false };
         h.inside.spec == self.mirs.money
-            && self.valid(&h.id)
+            && self.money_counts(h)
             && h.act.outside.signer.is_some_and(|s| fin::check_signer(&p, &s, &fin::Citations::of(&h.inside)).is_ok())
     }
 
@@ -8046,7 +8104,7 @@ impl<'a> AgreementsView<'a> {
             .filter(|r| r.inside.spec == self.mirs.money)
             .filter_map(|r| match Fin::decode(r.inside.type_, &r.inside.payload) {
                 Ok(p @ Fin::Receipt(_))
-                    if self.valid(&r.id)
+                    if self.money_counts(r)
                         && r.act.outside.signer.is_some_and(|s| fin::check_signer(&p, &s, &fin::Citations::of(&r.inside)).is_ok()) =>
                 {
                     match p {

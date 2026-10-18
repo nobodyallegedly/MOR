@@ -46,3 +46,5 @@ libcrux-sha3 = "0.0.10"
 # (`tests/agreements_invariants.rs`): random histories, every failure reduced to
 # its smallest example.
 proptest = { version = "1", default-features = false, features = ["std"] }
+# A second bech32m (BIP-350), to check the core's own textual forms against (F349).
+bech32 = "0.11"

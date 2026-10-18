@@ -14,6 +14,7 @@ A post with a picture is two acts. The picture is published first: stripped to t
 | `src/html.ts` | A post as HTML: its text (plain, or long-form when it names that format), its pictures under their own signers, standing, and the plain text one tap away. |
 | `src/cli.ts` | `mor-post post`, `show`, `feed`, `withdraw` (run `npm run cli` for help). |
 | `src/specs.ts` | The spec hashes a post names (test values). |
+| `src/sealed.ts` | A pay-per-view post (round 2): a text sealed with a price (an Envelopes publication, its key absent, its price in field 7), a lone seller's offer selling it, a post naming both (`postSealed`); read (`readSealed`, `readOffer`); its key delivered (`keyDeliveryPayload`, Envelopes type 1) and opened against its work hash (`openSealedText`); a repost holding what it names at the reposter's relays (`repost`). |
 
 ## Run
 

@@ -22,7 +22,7 @@ import { SPECS, cborEncode } from '../../genesis/src/core.ts';
 import { readFeed } from '../../site/src/feed.ts';
 import { compose } from '../../longform/src/text.ts';
 import { escapeControls } from '../../connector/src/words.ts';
-import { readId } from '../../../modules/carry/src/carry.ts';
+import { readId } from '../../genesis/src/forms.ts';
 import { agentKeyFile, saveKey, sharedKeyFile, findKey, lastFour } from './claude.ts';
 import { Machine, type MachineOptions } from './machine.ts';
 import { MEMORY_COST_SAY, diarySay, shortName } from './memory.ts';
