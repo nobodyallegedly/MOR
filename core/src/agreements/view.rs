@@ -463,7 +463,24 @@ pub struct AreaCount {
     pub needed: usize,
     /// Those who did, by a signature act that counts.
     pub signers: Vec<Hash>,
+    /// Among the signers, those who signed with their own member key (F353):
+    /// the act itself, or the collective's signature act naming it.
+    pub by_key: Vec<Hash>,
+    /// Where the area carries limits (key 6, F353): how the limits cMIP
+    /// judged the act, a second key asked above them.
+    pub limits: Option<AreaLimits>,
     pub met: bool,
+}
+
+/// How an area's limits cMIP judged an act (F353, draft 16).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AreaLimits {
+    /// Within: the area's number as written.
+    Within,
+    /// Above: one more holder's key than the area's number.
+    Above,
+    /// This verifier holds no verdict of the cMIP: the act is unknown.
+    Unknown,
 }
 
 /// Whether an act signed with a grant key binds the collective whose key it
@@ -746,6 +763,85 @@ impl<'a> AgreementsView<'a> {
             || t.chain.iter().flatten().any(|l| l.successors().contains(&g.id))
     }
 
+    // ------------------------------------------------------------ members' keys (F353)
+
+    /// Where `h` is signed with a member's key (F353, Agreements draft 16):
+    /// its binding names a signature act (type 1) of a holder on a founding
+    /// or clone of the collective that signs `h`, carrying (field 1) the key
+    /// that made `h`'s signature. The holder and that signature act. Whether
+    /// the key is in force for the act, under the agreement in force for
+    /// it, is [`Self::member_key_problem`].
+    fn member_key(&self, h: &Held) -> Option<(Hash, &'a Held, Hash)> {
+        let b = h.act.outside.binding.as_ref()?;
+        let s = self.v.get(b)?;
+        if !self.is_agreements(s, types::SIGNATURE) || s.id == h.id || h.verdict != crate::sig::Verdict::Valid {
+            return None;
+        }
+        let (terms, key) = decode_signature_key(&s.inside).ok()?;
+        let key = key?;
+        if !key.made(&h.act.signature) {
+            return None;
+        }
+        let holder = s.act.outside.signer?;
+        let c = h.act.outside.signer?;
+        if c == holder {
+            return None;
+        }
+        let root = self.lineage(&terms).ok()?.last()?.0;
+        (self.founding_of(&c) == Some(root)).then_some((holder, s, terms))
+    }
+
+    /// Why a member's key does not act for the collective under the
+    /// agreement `ag` in force for its act, or nothing (F353): the holder's
+    /// signature naming it must be on a version of `ag`'s lineage, valid,
+    /// and the holder's latest signature naming a key there; the holder
+    /// must hold an area in `ag`. The key counts from the moment the
+    /// founding or clone it was named on is complete: in force, or an
+    /// ancestor of the version in force.
+    fn member_key_problem(&self, holder: &Hash, sig: &Held, terms: &Hash, ag: &Hash) -> R<Option<String>> {
+        let lineage = self.lineage(ag)?;
+        if !lineage.iter().any(|(i, _)| i == terms) {
+            return Ok(Some("the member's key was named on a version that is not complete, or not on the agreement in force's line: it counts only from the moment its founding or clone is complete (F353)".into()));
+        }
+        if self.status(&sig.id) != Status::Valid {
+            return Ok(Some("the holder's signature naming the key does not stand under Identity (F353)".into()));
+        }
+        // The holder's latest key: the newest version of the line on which
+        // a valid signature of theirs names a key.
+        for (v, _) in &lineage {
+            let named = self.v.signed_by(holder).any(|h| {
+                self.is_agreements(h, types::SIGNATURE)
+                    && self.status(&h.id) == Status::Valid
+                    && matches!(decode_signature_key(&h.inside), Ok((x, Some(_))) if x == *v)
+            });
+            if !named {
+                continue;
+            }
+            if v != terms {
+                return Ok(Some("a later version names another key of this member: this one no longer acts (F353)".into()));
+            }
+            break;
+        }
+        let t = self.terms(ag)?;
+        if !t.areas().iter().any(|a| a.holders.contains(holder)) {
+            return Ok(Some("the member holds no area in the agreement in force: their key reaches nothing (F353)".into()));
+        }
+        // A key is its holder's alone: one another party's signature on the
+        // same line also names is no member's.
+        if let Ok((_, Some(key))) = decode_signature_key(&sig.inside) {
+            for p in t.parties.iter().filter(|p| *p != holder) {
+                let twice = self.v.signed_by(p).any(|h| {
+                    self.is_agreements(h, types::SIGNATURE)
+                        && matches!(decode_signature_key(&h.inside), Ok((x, Some(k))) if k == key && lineage.iter().any(|(i, _)| *i == x))
+                });
+                if twice {
+                    return Ok(Some("another party's signature names the same key: it is no member's (F353)".into()));
+                }
+            }
+        }
+        Ok(None)
+    }
+
     /// Whether an act stands under Identity, for Agreements: valid; or signed with
     /// a grant key (Identity's `Scoped`, F128) whose grant itself stands.
     /// Whether the grant backs the act is [`Self::backing`]. A Money
@@ -758,6 +854,11 @@ impl<'a> AgreementsView<'a> {
             Status::Valid => true,
             Status::Scoped => {
                 let Some(h) = self.v.get(id) else { return false };
+                if let Some((_, sig, _)) = self.member_key(h) {
+                    // F353: a member's key stands where the signature
+                    // naming it does; Agreements judge its reach.
+                    return self.status(&sig.id) == Status::Valid;
+                }
                 let Some((g, grant)) = self.key_grant(h) else { return false };
                 if self.status(&g.id) != Status::Valid {
                     return false;
@@ -833,6 +934,20 @@ impl<'a> AgreementsView<'a> {
         }
         if h.act.outside.signer != Some(col.id) {
             return None;
+        }
+        if self.member_key(h).is_some() {
+            // F353: a member's key acts under the decisions it cites.
+            let mut k = None;
+            for y in Self::cites(h, &col.id) {
+                if let Some(d) = self.v.get(&y) {
+                    if self.is_decision(col, d) {
+                        if let Some(l) = self.decision_link(col, d) {
+                            k = Some(k.map_or(l, |m: usize| m.max(l)));
+                        }
+                    }
+                }
+            }
+            return k;
         }
         let (g, _) = self.key_grant(h)?;
         let mut k = self.decision_link(col, g)?;
@@ -4371,7 +4486,25 @@ impl<'a> AgreementsView<'a> {
                 });
             }
         }
-        let Some(b) = col.pos(x) else {
+        let member = if col.pos(x).is_none() { self.member_key(x) } else { None };
+        // F353: a member's key never signs a decision: records, grants,
+        // revocations and the collective's identity chain are the
+        // collective's own key's.
+        if let Some((_, sig, _)) = member {
+            if self.is_agreements(x, types::RECORD) || self.is_agreements(x, types::GRANT) || self.is_agreements(x, types::REVOCATION) {
+                return Ok(Consent::Ungranted { grant: sig.id, reason: "a member's key signs no decision of the collective: records, grants and revocations are its own key's (F353)".into() });
+            }
+        }
+        let pos = match &member {
+            Some(_) => self.link(&col, x),
+            None => col.pos(x),
+        };
+        let Some(b) = pos else {
+            if let Some((_, sig, _)) = member {
+                return Ok(Consent::Uncited {
+                    reason: format!("signed with a member's key (F353, named by {}), it cites no decision of the collective (rule 58)", hex_of(&sig.id)),
+                });
+            }
             return Err(AgreementsError::Check("the act's binding does not count"));
         };
         if !self.declares(&col, b) {
@@ -4417,6 +4550,11 @@ impl<'a> AgreementsView<'a> {
             return Ok(Consent::Uncited { reason });
         }
         let ag = self.in_force_action(&col, x, b, base)?.agreement;
+        if let Some((holder, sig, terms)) = member {
+            if let Some(reason) = self.member_key_problem(&holder, sig, &terms, &ag)? {
+                return Ok(Consent::Ungranted { grant: sig.id, reason });
+            }
+        }
         if let Some(reason) = self.not_done(x, &ag)? {
             return Ok(Consent::NotDone { agreement: ag, reason });
         }
@@ -4522,6 +4660,9 @@ impl<'a> AgreementsView<'a> {
             }
         }
         if reaching.is_empty() {
+            if let Some((_, sig, _)) = member {
+                return Ok(Consent::Ungranted { grant: sig.id, reason: "no area reaches the act: a member's key acts only within the areas its holder holds (F353)".into() });
+            }
             return Ok(Consent::NoArea { agreement: ag });
         }
         self.count_areas(&col, act, Point::Act(x), ag, reaching)
@@ -4532,6 +4673,28 @@ impl<'a> AgreementsView<'a> {
     /// signature acts naming it, meeting the area's number.
     fn count_areas(&self, col: &Col, act: &Hash, point: Point<'a>, ag: Hash, reaching: Vec<&Area>) -> R<Consent> {
         let lineage: Vec<Hash> = self.lineage(&ag)?.into_iter().map(|(i, _)| i).collect();
+        // F353: the members' keys that signed for the act: the act itself,
+        // and the collective's signature acts naming it, each signed with
+        // the key its holder named, in force under `ag`.
+        let mut keyed: BTreeMap<Hash, Vec<Hash>> = BTreeMap::new();
+        let in_force_key = |h: &Held| -> R<Option<Hash>> {
+            let Some((holder, sig, terms)) = self.member_key(h) else { return Ok(None) };
+            Ok(self.member_key_problem(&holder, sig, &terms, &ag)?.is_none().then_some(holder))
+        };
+        if let Some(x) = self.v.get(act) {
+            if x.act.outside.signer == Some(col.id) {
+                if let Some(p) = in_force_key(x)? {
+                    keyed.entry(p).or_default().push(x.id);
+                }
+            }
+        }
+        for h in self.v.signed_by(&col.id) {
+            if self.is_agreements(h, types::SIGNATURE) && decode_signature(&h.inside).ok() == Some(*act) {
+                if let Some(p) = in_force_key(h)? {
+                    keyed.entry(p).or_default().push(h.id);
+                }
+            }
+        }
         let mut out = vec![];
         for a in reaching {
             // Holders' signature acts naming the act, that count.
@@ -4545,18 +4708,39 @@ impl<'a> AgreementsView<'a> {
                         by.entry(*p).or_default().push(h.id);
                     }
                 }
+                if let Some(k) = keyed.get(p) {
+                    by.entry(*p).or_default().extend(k.iter().copied());
+                }
             }
             let (voices, remaining) =
                 self.voices(col, point, &ag, &a.holders, Some(a.id), &by, &[])?;
             let frozen = remaining.is_empty();
-            let needed = a.rule().needed(voices.len());
+            let mut needed = a.rule().needed(voices.len());
             let mut signers = vec![];
             for p in &voices {
                 if by.contains_key(p) && lineage.iter().any(|v| !self.signers(v, &[*p]).is_empty()) {
                     signers.push(*p);
                 }
             }
-            let met = !frozen && needed.is_some_and(|n| signers.len() >= n);
+            let by_key: Vec<Hash> = signers.iter().filter(|p| keyed.contains_key(*p)).copied().collect();
+            // F353, draft 16: an area's limits (key 6) are a cMIP's, judged
+            // on its holders' keys. The grant limits cMIP's draft 2 makes an
+            // act's counting at the area's number conditional on lying
+            // within them; above them it asks one more holder's key. A
+            // verifier holding no verdict answers unknown: the act does not
+            // count here. It adds to rule 60, never relaxes it.
+            let limits = match &a.limits {
+                None => None,
+                Some(_) => Some(match self.grant_limits.get(act) {
+                    Some(true) => AreaLimits::Within,
+                    Some(false) => {
+                        needed = needed.map(|n| n + 1);
+                        AreaLimits::Above
+                    }
+                    None => AreaLimits::Unknown,
+                }),
+            };
+            let met = !frozen && limits != Some(AreaLimits::Unknown) && needed.is_some_and(|n| signers.len() >= n);
             out.push(AreaCount {
                 area: a.id,
                 name: a.name.clone(),
@@ -4564,6 +4748,8 @@ impl<'a> AgreementsView<'a> {
                 voices,
                 needed: needed.unwrap_or(0),
                 signers,
+                by_key,
+                limits,
                 met,
             });
         }

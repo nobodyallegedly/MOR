@@ -1956,6 +1956,10 @@ struct AreaOut {
     threshold: u64,
     kinds: Vec<KindOut>,
     fields: Vec<FieldRefOut>,
+    /// Key 6 (F353, draft 16): the cMIP judging limits on its holders' keys,
+    /// and its parameters as deterministic CBOR in hex.
+    limits_cmip: Option<String>,
+    limits: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -2213,6 +2217,8 @@ pub fn read_terms(payload: &[u8], specs: JsValue) -> R<JsValue> {
                         },
                     })
                     .collect(),
+                limits_cmip: a.limits.as_ref().map(|(c, _)| hx(c)),
+                limits: a.limits.as_ref().map(|(_, l)| hex::encode(cbor::encode(l))),
             })
             .collect(),
         area_words: t.area_words.clone().unwrap_or_default(),
@@ -2734,6 +2740,10 @@ struct AreaCountOut {
     voices: Vec<String>,
     needed: usize,
     signers: Vec<String>,
+    /// Among the signers, those who signed with their member key (F353).
+    by_key: Vec<String>,
+    /// "within", "above" or "unknown" where the area carries limits (F353).
+    limits: Option<String>,
     met: bool,
 }
 
@@ -3018,6 +3028,12 @@ impl Verifier {
                         voices: a.voices.iter().map(hx).collect(),
                         needed: a.needed,
                         signers: a.signers.iter().map(hx).collect(),
+                        by_key: a.by_key.iter().map(hx).collect(),
+                        limits: a.limits.map(|l| match l {
+                            agreements::AreaLimits::Within => "within".into(),
+                            agreements::AreaLimits::Above => "above".into(),
+                            agreements::AreaLimits::Unknown => "unknown".into(),
+                        }),
                         met: a.met,
                     })
                     .collect();
