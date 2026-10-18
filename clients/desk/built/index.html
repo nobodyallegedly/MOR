@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Edubba, for testing only</title>
+<link rel="stylesheet" href="edubba.css">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+</head>
+<body>
+<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> Test identities only, until MOR is frozen; regtest or signet only. The risks, in plain words:</p>
+<ol><li>Whoever serves this page’s code at the moment you bring an identity here could copy its signing key: with it, sign as you (proposals, signatures, a collective’s acts) and read its private messages.</li>
+<li>This browser’s storage keeps, as they are and not locked: the signing and encryption keys of each identity you bring; the signing key of each collective you found here; and, while you sign as a member, the one-time key for your share until you have written the share down. That storage can be lost (cleared, a private window, the browser tidying up), or read by what runs in this page.</li>
+<li>Founding a collective here deals its chain key in this page: for a moment this page holds the whole chain key, in its memory, never in its storage; your share and any shown hand to hand wait there, an hour at most, until shown, and a reload or a closed tab loses them. If this page’s code or this device were not honest, it could keep the chain key and later act alone (F337). For a collective that matters, found it in Edubba on a computer.</li>
+<li>No agents, no API key and nothing from Claude here: those need Edubba on the Mac.</li></ol>
+<p>Never bring a real identity here.</p></div>
+<main id="app"><p class="small">Loading the core library…</p></main>
+<noscript><main>This page makes and signs every act in your browser, so it needs JavaScript.</main></noscript>
+<script type="module" src="edubba.js"></script>
+</body>
+</html>

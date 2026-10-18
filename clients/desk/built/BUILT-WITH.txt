@@ -1,0 +1,29 @@
+Edubba’s web client, as published in the release (testing only; to be served at edubba.dubsar.org).
+Rebuild: cd clients/genesis && npm run wasm; cd ../desk && npm run release.
+The same tools give the same bytes (test/web-build.test.ts):
+
+rustc: rustc 1.97.0 (2d8144b78 2026-07-07)
+wasm-bindgen: wasm-bindgen 0.2.129
+esbuild: 0.25.12
+
+Work hash of each file (as the display client lists them):
+6ff73fdd6c0fb06cf03df3e3c07bc6bc37af7b68b019d56fee9732e683b7b810  index.html
+ed813b61bf55eb26a8029c6bbc2c27bdc87d847b94e7cb237056f340484338e7  edubba.js
+e99e2a5a4d0df0428d6d1791df54d7dd7db478e7855ecf572dd9f17042fbf45e  edubba.css
+910ebc9424671c29183cc3ab7fc651ce043f6318d080fe1726d4e93a6ccde850  mor_wasm_bg.wasm
+d72e0f61b65931f575516d8d39caa75d2ad09b04b0ea606aee6a157b2e5eb146  inter_light.woff2
+56958edadcbbe43d1c48f5f952970f0656018291b2e29ea72d732351c99cba65  inter_regular.woff2
+a63d578c41abf416497080d59d2ecd9ecf4fce5458f7543556acc9a8a9d2cc5c  inter_license.txt
+59113738aa66470199916c8d28b8176ca2935bbf3ca6e307801c44e5ce08994c  icon.png
+822bf70b01e79d5cdbc5bd605fdfd807e3a596e894ef9be21642bd72315a48ef  apple-touch-icon.png
+
+SHA-256 of each file (as sha256sum prints it):
+f8f8e838d278f37aa6d704dac47a5ae71128c126d773f3b12bbb18ae7adfb790  index.html
+2bff366f01ce5341e0a685614b3ddacf0f37f89db6e17fe5c27390ad702a7344  edubba.js
+199cd636b22e2dce6afd0289236a5a12e314ee8e9cf63f950173cd5a1885694c  edubba.css
+24c3f691d726326b67b3fa295a0000a9eabae0ed6f55965fdaab2a671a5747c4  mor_wasm_bg.wasm
+e111a1e2ad914ccda9179b95e83fb10234dd52a1932e0b93c480476227983fd9  inter_light.woff2
+e06f6b1bc553aaea4e4668023ed0ab0a147129c3107f511bc7d03d361b0ae085  inter_regular.woff2
+262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a  inter_license.txt
+ab63c0d804d49844734c61d9dab0694b73dd879a0ee10c1fe53b0dac705fbc4f  icon.png
+82b49060d3ece05a9dfddc5cf5c3785e10eab8e2322ceecec5746c0963804117  apple-touch-icon.png

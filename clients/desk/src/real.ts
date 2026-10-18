@@ -37,6 +37,7 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { readId } from '../../genesis/src/forms.ts';
+import { shownAct, shownId } from '../../genesis/src/shown.ts';
 import { TestCollective, type Governance } from '../../repo/src/collective.ts';
 import { proposePayload, sign } from '../../repo/src/agreements.ts';
 import { negotiate, oneTimeKeyOf, readMessage, sealShare, DECLINED, SIGNED, type Reach } from '../../repo/src/proposals.ts';
@@ -431,7 +432,7 @@ export class Real {
         this.store.saveIdentity(me);
         const own = await sign(me, terms.id, relays);
         this.store.saveIdentity(me);
-        lines.push({ text: `The terms are act ${terms.id}; ${names(a.founder)} signed them (${own.id}).`, tone: 'ok' });
+        lines.push({ text: `The terms are act ${shownAct(terms.id)}; ${names(a.founder)} signed them (${shownAct(own.id)}).`, tone: 'ok' });
         const p: Proposal = {
           act: terms.id,
           kind: 'founding',
@@ -576,7 +577,7 @@ export class Real {
       p.founded = c.identity;
       p.collective = c.identity;
       this.saveProposal(p);
-      const lines: Line[] = [{ text: `The collective is born: ${c.identity}. Its genesis declares the agreement ${p.act}.`, tone: 'ok' }];
+      const lines: Line[] = [{ text: `The collective is born: ${shownId(c.identity)}. Its genesis declares the agreement ${shownAct(p.act)}.`, tone: 'ok' }];
       const me = this.store.identity(p.founder);
       const show: string[] = [];
       for (const sh of shares) {
@@ -757,7 +758,7 @@ export class Real {
         const me = this.store.identity(founder);
         const own = await sign(me, out.id, this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)]));
         this.store.saveIdentity(me);
-        const lines: Line[] = [{ text: `Release ${out.id}, signed by ${names(founder)} (${own.id}).`, tone: 'ok' }];
+        const lines: Line[] = [{ text: `Release ${shownAct(out.id)}, signed by ${names(founder)} (${shownAct(own.id)}).`, tone: 'ok' }];
         const name = this.collectives().find((x) => x.id === a.collective)?.name ?? short(a.collective);
         const p: Proposal = {
           act: out.id,

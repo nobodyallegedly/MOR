@@ -23,6 +23,38 @@ import { shownAct, shownId } from '../../../genesis/src/shown.ts';
 
 export { e };
 
+/**
+ * The web client (for testing only; `../web/app.ts`): the same page without
+ * the Agents tab, nothing of Claude's, no folder, no pairing, and its banner
+ * in the page's HTML on every screen (`WEB_BANNER`). Set once, at the start.
+ */
+let WEB = false;
+export function setWeb(on: boolean): void {
+  WEB = on;
+}
+export const isWeb = () => WEB;
+
+/** Where Edubba keeps a name or a contact: on the Mac, its folder; on the web, this browser's storage. */
+const kept = () => (WEB ? 'kept in this browser' : 'kept on this Mac');
+
+/** Said where the web client keeps an identity's keys (as Dub's web client says it, `KEPT_SAY`). */
+export const WEB_KEPT_SAY =
+  'Its signing key and its encryption key are kept in this browser’s storage (IndexedDB, for this site only), as they are, not locked: the only lock this page could put on them is one it could open by itself, and so could whatever else runs in this page. Never bring a real identity here.';
+
+/**
+ * The web client's banner, on every screen (as Dub's, Kišib's, Damgar's and
+ * Ummia's): for testing only, and the risks in plain words. It is in the
+ * page's HTML itself (`static/web.html`, written there by the build),
+ * outside what the script draws, so it shows even when the script does not
+ * run.
+ */
+export const WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> Test identities only, until MOR is frozen; regtest or signet only. The risks, in plain words:</p>
+<ol><li>Whoever serves this page’s code at the moment you bring an identity here could copy its signing key: with it, sign as you (proposals, signatures, a collective’s acts) and read its private messages.</li>
+<li>This browser’s storage keeps, as they are and not locked: the signing and encryption keys of each identity you bring; the signing key of each collective you found here; and, while you sign as a member, the one-time key for your share until you have written the share down. That storage can be lost (cleared, a private window, the browser tidying up), or read by what runs in this page.</li>
+<li>Founding a collective here deals its chain key in this page: for a moment this page holds the whole chain key, in its memory, never in its storage; your share and any shown hand to hand wait there, an hour at most, until shown, and a reload or a closed tab loses them. If this page’s code or this device were not honest, it could keep the chain key and later act alone (F337). For a collective that matters, found it in Edubba on a computer.</li>
+<li>No agents, no API key and nothing from Claude here: those need Edubba on the Mac.</li></ol>
+<p>Never bring a real identity here.</p></div>`;
+
 /** The app's name, as the person sees it (decided by Nobody, allegedly, F333: "Edubba it is"). */
 export const NAME = 'Edubba';
 
@@ -71,12 +103,17 @@ details>summary::before{color:var(--tint)}
 .label{display:inline-block;font-size:12px;color:var(--soft);border:1px solid var(--tint);border-radius:999px;padding:0 8px;margin-right:6px}
 main{max-width:760px}
 .bar .tabs{margin:0 0 0 18px}
+.bar{flex-wrap:wrap;row-gap:6px}
+.tabs{flex-wrap:wrap;min-width:0}
+.card,.item,.note,.entry{overflow-wrap:anywhere;min-width:0}
 .bar .grow{flex:1}
 .testonly{margin:10px 0 0;font-size:12px;color:var(--faint)}
 h2{font-size:16px}
 h3{font-size:15px}
 h4{font-weight:400;font-size:14px;color:var(--soft);margin:16px 0 6px}
 .list{display:flex;flex-direction:column;gap:8px;margin:16px 0}
+.list,.feed,.picks{max-height:min(60vh,32em);overflow-y:auto;overscroll-behavior:contain;padding-right:4px}
+.feed{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:8px 0}
 .entry{display:flex;gap:14px;align-items:baseline;justify-content:space-between;text-align:left;width:100%;border:1px solid var(--edge);border-radius:12px;background:var(--raise);padding:10px 14px;color:var(--text);font-size:14px}
 .entry[aria-current=true]{border-color:var(--identity)}
 .entry .meta{font-size:12px;color:var(--soft);text-align:right}
@@ -220,10 +257,11 @@ export type Tab = 'agents' | 'collectives' | 'publishing' | 'identities' | 'sett
 export function top(tab: Tab | null = null, counts: Partial<Record<Tab, number>> = {}): string {
   const t = (k: Tab, words: string) =>
     `<button class="tab${tab === k ? ' on' : ''}" data-action="tab" data-tab="${k}" aria-pressed="${tab === k}">${words}<span class="count">${counts[k] ? counts[k] : ''}</span></button>`;
+  // On the web, no Agents tab (decided by Nobody, allegedly): the agents and their API key stay on the Mac.
   return `<header class="bar"><h1 class="mark">${NAME}</h1>${
-    tab ? `<nav class="tabs" aria-label="Edubba">${t('agents', 'Agents')}${t('collectives', 'Collectives')}${t('publishing', 'Publishing')}${t('identities', 'Identities')}</nav><span class="grow"></span>${t('settings', 'Settings')}` : '<span class="grow"></span><span class="small">this machine only</span>'
+    tab ? `<nav class="tabs" aria-label="Edubba">${WEB ? '' : t('agents', 'Agents')}${t('collectives', 'Collectives')}${t('publishing', 'Publishing')}${t('identities', 'Identities')}</nav><span class="grow"></span>${t('settings', 'Settings')}` : `<span class="grow"></span><span class="small">${WEB ? 'for testing only' : 'this machine only'}</span>`
   }</header>
-<p class="testonly">Test identities only, until MOR is frozen. Every key is held in software in this program’s folders: a prototype, never for a real identity.</p>`;
+${WEB ? '' : '<p class="testonly">Test identities only, until MOR is frozen. Every key is held in software in this program’s folders: a prototype, never for a real identity.</p>'}`;
 }
 
 export function pairing(): string {
@@ -284,7 +322,7 @@ export function identityList(s: State, selected: string | null, drafts: DraftVie
         count: waiting + fresh,
       });
     })
-    .join('')}<button class="entry add" data-action="pick-identity" data-id="new">+ A new identity</button></div>`;
+    .join('')}<button class="entry add" data-action="pick-identity" data-id="new">${WEB ? '+ Bring an identity' : '+ A new identity'}</button></div>`;
 }
 
 export function collectiveList(s: State, selected: string | null): string {
@@ -301,9 +339,12 @@ export function collectiveList(s: State, selected: string | null): string {
       : ''
   }<button class="entry add" data-action="pick-collective" data-id="real">+ Found a real collective: members on their own devices</button>
 <p class="choose">${e(REAL_SAY)}</p>
-<button class="entry add" data-action="pick-collective" data-id="found">+ Found a test collective: everyone held here, for trying alone</button>
-<p class="choose">${e(TEST_MODE_SAY)}</p>
-<button class="entry add" data-action="pick-collective" data-id="bring">+ Bring an existing collective</button></div>`;
+${
+    WEB
+      ? ''
+      : `<button class="entry add" data-action="pick-collective" data-id="found">+ Found a test collective: everyone held here, for trying alone</button>
+<p class="choose">${e(TEST_MODE_SAY)}</p>`
+  }<button class="entry add" data-action="pick-collective" data-id="bring">+ Bring an existing collective</button></div>`;
 }
 
 /** H33: which of Edubba's identities the Collectives tab acts as, with a switch among them. */
@@ -613,22 +654,27 @@ export function identityDetails(s: State, id: string, drafts: DraftView[]): stri
   const mine = drafts.filter((d) => d.signer === id);
   const piles = PILES.map(([k, w]) => {
     const xs = i.received.filter((x) => x.sorted === k);
-    return `<div data-pile="${e(k)}"><h4>${e(w)} (${xs.length})</h4>${xs.map((x) => item(i.id, x)).join('') || '<p class="small">None.</p>'}</div>`;
+    return `<div data-pile="${e(k)}"><h4>${e(w)} (${xs.length})</h4>${xs.length ? `<div class="feed">${xs.map((x) => item(i.id, x)).join('')}</div>` : '<p class="small">None.</p>'}</div>`;
   }).join('');
   const answered = s.history.filter((h) => h.signer === id);
   return `<div class="head"><h2>${e(i.name)}</h2><span class="id">${grouped(i.id)}</span>${copyButton(i.id)}<span class="tag">${i.kind === 'brought' ? 'brought here' : 'made here'}</span></div>
 <div class="card" data-identity="${e(i.id)}">
 <dl class="facts"><dt>This desk's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
-${linkSwitch(i.id, i.linked)}
+${WEB ? `<p class="small">${e(WEB_KEPT_SAY)}</p>` : linkSwitch(i.id, i.linked)}
 <div class="here" data-here="${e(i.id)}" role="status" aria-live="polite"></div></div>
 ${foldCard('e-record-fold', 'identity-record', 'Its record', '<div id="e-record"><p class="small">Reading it from its homes and relays…</p></div>')}
 ${foldCard('e-rely', 'identity-rely', 'Rely on an act', `<p class="small">${e(WITNESS_EXPLANATION)}</p>
 <form id="rely" class="row"><input name="act" type="text" class="grow" placeholder="The act’s id: 64 hexadecimal characters" autocomplete="off" spellcheck="false" required><button type="submit">Read it back</button></form>
 <div id="e-rely-shown"></div>`, false)}
 ${releaseCard(i)}
-${payCard(i.id)}
+${
+  // On the web: no money drafts (Damgar's web client prepares none from here either) and no drafts from Claude.
+  WEB
+    ? ''
+    : `${payCard(i.id)}
 ${foldCard('e-drafts-fold', 'identity-drafts', `Drafts from Claude (${mine.length})`, `<div class="row"><button class="quiet" data-action="drafts">Look for new drafts now</button><span class="small" id="drafts-watch" role="status" aria-live="polite">${WATCHING}</span></div>
-<div id="drafts">${mine.map(draft).join('') || '<p class="empty small">No draft is waiting for it.</p>'}</div>`)}
+<div id="drafts">${mine.map(draft).join('') || '<p class="empty small">No draft is waiting for it.</p>'}</div>`)}`
+}
 ${foldCard('e-received', 'identity-received', 'What it received', `<div class="row"><button data-action="refresh" data-identity="${e(i.id)}">Look for what it received</button></div>
 <div class="here" data-here-received="${e(i.id)}" role="status" aria-live="polite"></div>
 ${piles}`)}
@@ -641,7 +687,7 @@ type Held = State['identities'][number];
 export function record(r: IdentityRecord): string {
   const card = (l: IdentityRecord['lines'][number]) =>
     l.card
-      ? `<dl class="facts card-of"><dt>Latest act</dt><dd><code>${e(l.card.act)}</code></dd><dt>Position</dt><dd>${l.card.position}</dd><dt>Summary</dt><dd><code>${e(l.card.summary)}</code></dd></dl>`
+      ? `<dl class="facts card-of"><dt>Latest act</dt><dd><code title="${e(l.card.act)}">${e(shownAct(l.card.act))}</code></dd><dt>Position</dt><dd>${l.card.position}</dd><dt>Summary</dt><dd><code>${e(l.card.summary)}</code></dd></dl>`
       : '';
   return `<p class="small">As its homes and relays show it now. Nothing here is signed.</p>
 ${r.problems.map((p) => note('warn', e(p))).join('')}
@@ -739,6 +785,7 @@ export function strayDrafts(s: State, drafts: DraftView[]): string {
 }
 
 export function newIdentity(): string {
+  if (WEB) return bringIdentityWeb();
   return `<h2>A new identity, or one you have</h2><section class="card"><h3>Make a new identity</h3><form id="new-identity"><label>Its name, kept on this Mac</label><input name="name" type="text" placeholder="A name" required>
 <label class="check"><input name="linked" type="checkbox"> Claude may prepare drafts for it</label>
 <div class="row"><button type="submit" class="primary">Make it</button></div></form>
@@ -754,7 +801,20 @@ export function newIdentity(): string {
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
 }
 
+/** On the web, the one door: bring an identity you have (no identity is made here, as in Damgar's and Ummia's web clients). */
+function bringIdentityWeb(): string {
+  return `<h2>Bring an identity you have</h2><section class="card">
+<p class="small">Its ID and its signing key’s words, as Dub shows them (“Show the signing key’s words”). Edubba reads it from its homes and keeps it only if the words give its current signing key. Nothing is signed or published by bringing it. A new identity is made in Dub, or in Edubba on a computer.</p>
+<form id="bring-identity"><label>Its name, kept in this browser</label><input name="name" type="text" placeholder="A name" required>
+<label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" placeholder="mid1…" required>
+<label>Its signing key’s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
+<label>An address where it is found (one of its homes; empty: the homes and relays in Settings)</label><input name="address" type="text" placeholder="https://">
+<p class="small">Never type the chain key’s words here: they belong to Kišib, the app where a change of keys is done, and to paper. ${e(WEB_KEPT_SAY)}</p>
+<div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
+}
+
 export function settings(s: State): string {
+  if (WEB) return settingsWeb(s);
   const via = Object.entries(s.settings.via).map(([a, b]) => `${a}=${b}`).join('\n');
   return `<form id="desk-settings">
 <label>Homes, one address per line: where new identities live</label><textarea name="homes">${e(s.settings.homes.map((h) => h.hint).join('\n'))}</textarea>
@@ -765,9 +825,19 @@ export function settings(s: State): string {
 <div class="here" id="settings-status" role="status" aria-live="polite"></div></form>`;
 }
 
+/** On the web: homes and relays only (a browser reaches https addresses, so no other way to reach one; no drafts folder). */
+function settingsWeb(s: State): string {
+  return `<form id="desk-settings">
+<label>Homes, one address per line: where the identities you bring are looked up, and where a collective founded here lives</label><textarea name="homes">${e(s.settings.homes.map((h) => h.hint).join('\n'))}</textarea>
+<label>Relays, one per line: where acts are published (empty: the homes)</label><textarea name="relays">${e(s.settings.relays.join('\n'))}</textarea>
+<p class="small">Kept in this browser. Each address is reached over https from this page.</p>
+<div class="row"><button type="submit">Save settings</button></div>
+<div class="here" id="settings-status" role="status" aria-live="polite"></div></form>`;
+}
+
 export function history(hs: State['history']): string {
   if (!hs.length) return '<p class="small">Nothing yet.</p>';
-  return `<ul class="plain">${hs
+  return `<ul class="plain feed">${hs
     .map(
       (h) =>
         `<li>${e(new Date(h.time * 1000).toLocaleString())}: <strong>${e(h.verdict)}</strong>, ${e(h.draft ? h.title.toLowerCase() : h.title)}${h.act ? `: act ${fp(h.act)}` : ''}${
@@ -786,6 +856,7 @@ export function browsers(s: State): string {
 }
 
 export function settingsTab(s: State): string {
+  if (WEB) return `<h2>Settings</h2><section class="card"><h3>Homes and relays</h3>${settings(s)}</section>`;
   return `<h2>Settings</h2><section class="card"><h3>Homes and relays</h3>${settings(s)}</section>
 <section class="card colroot" data-collective-root id="e-col-settings"><h3>For collectives</h3><p class="small">The collective client's own settings, kept in its folder.</p><div id="status"></div><div id="settings"></div></section>
 <section class="card"><h3>Browsers paired with this program</h3>${browsers(s)}</section>`;
@@ -828,7 +899,7 @@ export function foundCollective(): string {
 export function bringCollective(): string {
   return `<h2>Bring an existing collective</h2><section class="card"><form id="bring-collective">
 <label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" required>
-<label>A name for it, kept on this Mac</label><input name="name" type="text" required>
+<label>A name for it, ${kept()}</label><input name="name" type="text" required>
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form>
 <p class="small">Edubba reads it from the homes and relays in Settings: its chain, and its agreement in force as Agreements read it. It is brought only if one of your identities held here (or in the collective client’s folder) is among the parties of that agreement. Edubba holds none of its keys: nothing is signed for it by bringing it, and nothing can be signed with its key here.</p></section>`;
 }
@@ -855,9 +926,11 @@ ${p.items
 ${p.agreement ? `<p class="small">As its agreement in force ${fp(p.agreement)} says, read by Agreements from its relays and homes.</p>` : ''}</details>`;
 }
 
+/** H42 (a rule for every app, decided by Nobody, allegedly): every feed or list in its own scrollable box. */
 export function posts(r: { items: { id: string; text: string; standing: string; pictures: string[]; corrects?: string | null; correctedBy?: string[] }[]; problems: string[] }, correct: { kind: 'identity' | 'collective'; id: string } | null = null): string {
   return (
     r.problems.map((p) => `<p class="small">${e(p)}</p>`).join('') +
+    (r.items.length ? '<div class="feed" role="feed">' : '') +
     (r.items
       .map(
         (p) => `<div class="post" data-post="${e(p.id)}"><div class="who">${p.corrects ? '<span class="label">Correction</span>' : ''}${fp(p.id)} <button class="copy" data-action="copy" data-id="${e(shownAct(p.id))}" title="Copies the act’s ID written for people (mact1…): an agent can read it by that ID">Copy act ID</button>${p.standing === 'valid' ? '' : `<span class="flag bad">${e(p.standing)}</span>`}</div>${
@@ -870,7 +943,8 @@ export function posts(r: { items: { id: string; text: string; standing: string; 
             : ''
         }</div>`,
       )
-      .join('') || '<p class="empty small">Nothing posted for it yet.</p>')
+      .join('') || '<p class="empty small">Nothing posted for it yet.</p>') +
+    (r.items.length ? '</div>' : '')
   );
 }
 
@@ -1037,8 +1111,8 @@ function contactPicks(s: State, picked: string[], skip: string[] = []): string {
 /** The contacts card: add by ID with a name, kept here; remove. */
 export function contactsCard(s: State): string {
   return `<section class="card" id="e-contacts"><h3>Contacts (${s.contacts.length})</h3>
-<p class="small">Identities you add by ID, with a name you give them, kept on this Mac and never published; those your agents follow; and those in the follow list sealed to an identity held here (as Dub keeps it, with the names given there: people cMIP draft 2). <button class="quiet" data-action="real-lists">Read the follow lists again</button></p>
-${s.contacts.length ? `<ul class="plain">${s.contacts.map((c) => `<li>${e(c.name)} ${fp(c.id)} ${c.from === 'added' ? `<button class="quiet" data-action="contact-remove" data-id="${e(c.id)}">Remove</button>` : `<span class="small">${whence(c)}</span>`}</li>`).join('')}</ul>` : ''}
+<p class="small">Identities you add by ID, with a name you give them, ${kept()} and never published; those your agents follow; and those in the follow list sealed to an identity held here (as Dub keeps it, with the names given there: people cMIP draft 2). <button class="quiet" data-action="real-lists">Read the follow lists again</button></p>
+${s.contacts.length ? `<ul class="plain feed">${s.contacts.map((c) => `<li>${e(c.name)} ${fp(c.id)} ${c.from === 'added' ? `<button class="quiet" data-action="contact-remove" data-id="${e(c.id)}">Remove</button>` : `<span class="small">${whence(c)}</span>`}</li>`).join('')}</ul>` : ''}
 <form id="contact-add" class="row"><input name="id" type="text" class="grow" placeholder="An identity’s ID" autocomplete="off" spellcheck="false" required><input name="name" type="text" class="pet" placeholder="Its name here" required><button type="submit">Add</button></form></section>`;
 }
 
@@ -1047,9 +1121,10 @@ export function realFound(s: State): string {
   const founders = s.identities.filter((i) => !s.agents.some((a) => a.id === i.id));
   return `<h2>Found a real collective</h2>
 ${note('', `<strong>Real, not a test.</strong> ${e(REAL_SAY)}`)}
+${WEB ? note('warn', `<strong>This is a web page.</strong> ${e(WEB_FOUNDING_SAY)}`) : ''}
 ${note('', 'How: each member reads the founding terms in plain words and signs on their own device (Dub’s Signing tab, turned on in its identity window; or “To sign” in an Edubba holding them). The collective is founded once every one has signed. Its chain key is then dealt as one share per member, kept on paper: a member’s share goes sealed to a one-time key their Dub makes when they sign, or is shown here, hand to hand; yours is shown here once. No app keeps a share.')}
 <section class="card"><form id="real-found">
-<label>Its name, kept on this Mac</label><input name="name" type="text" required>
+<label>Its name, ${kept()}</label><input name="name" type="text" required>
 <label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}"${i.id === s.acting ? ' selected' : ''}>${e(i.name)}</option>`).join('')}</select>
 <label>Its other members, from your contacts</label>${contactPicks(s, [])}
 <label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
@@ -1122,7 +1197,7 @@ ${proposalStatus(s, p)}
 export function sharesHere(s: State, collective: string, members: string[]): string {
   if (!members.length) return '';
   return `<section class="card" id="e-to-show"><h3>Shares to show here, once</h3>
-<p class="small">Each is shown once, to its member, here: written on paper, then three words typed back, then forgotten. They wait in this program’s memory only: if it stops, they are lost.</p>
+<p class="small">Each is shown once, to its member, here: written on paper, then three words typed back, then forgotten. ${WEB ? 'They wait in this page’s memory only, never in its storage: a reload or a closed tab loses them.' : 'They wait in this program’s memory only: if it stops, they are lost.'}</p>
 <div class="row">${members.map((m) => `<button data-action="real-show-share" data-collective="${e(collective)}" data-member="${e(m)}">Show ${e(nm(s, m) || 'a member')}’s share</button>`).join('')}</div></section>`;
 }
 
@@ -1143,6 +1218,14 @@ export function shareBackHere(collective: string, member: string, positions: num
     .join('')}</div><div class="row"><button type="submit" class="primary">Check them</button></div></form></section>`;
 }
 
+/** Said on the web where a collective is founded (F337: the cleanest device, "this app rather than any web page"). */
+export const WEB_FOUNDING_SAY =
+  'Founding deals the collective’s chain key here, in this page, from code a server sent: the trusted-dealer weakness below applies to that server too. This web client is for testing with test identities. A collective that is to hold anything is founded in Edubba on a computer.';
+
+/** Said on the web where a collective's release would be made (`../ops.ts`, RELEASE_ON_WEB), word for word. */
+export const RELEASE_ON_WEB =
+  'A collective’s release is made in Edubba on a computer (the Mac, or Linux), where Edubba reads the folder itself: what git tracks in a git folder, every file but hidden ones in a plain folder, links never followed. A page in a browser cannot tell a link from a file in a folder you choose, nor what git tracks, so it would publish what Edubba on a computer leaves out. A release proposed there can be signed here, in “To sign”, and checked here as anyone would. A release under your own name is made in Ummia.';
+
 /** A real collective founded here: who it is, its proposals, a member change, a release. */
 export function realDetails(s: State, id: string, c: RealCollective): string {
   const col = s.collectives.find((x) => x.id === id)!;
@@ -1161,12 +1244,12 @@ ${foldCard('e-real-change', 'collective-change', 'Change its members', `<form id
 ${contactPicks(s, [], c.members)}
 <label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
 <div class="row"><button type="submit">Review the change</button></div></form>`, false)}
-${foldCard('e-real-release', 'collective-release', 'A release', `<form id="real-release" data-collective="${e(id)}">
+${WEB ? foldCard('e-real-release', 'collective-release', 'A release: on a computer', `<p class="small">${e(RELEASE_ON_WEB)}</p>`) : foldCard('e-real-release', 'collective-release', 'A release', `<form id="real-release" data-collective="${e(id)}">
 <p class="small">Published by the collective, from a folder chosen now (a git folder: what git tracks; a plain folder: every file but hidden ones). It counts once enough members sign it, each in their own app.</p>
 <label>The folder</label><div class="row"><input name="folder" type="text" class="grow" required spellcheck="false" autocomplete="off"><button type="button" data-action="pick-folder" data-target="real-release">Choose a folder…</button></div>
 <div class="row"><label>Its name <input name="name" type="text" class="pet"></label><label>Its version <input name="version" type="text" class="narrow" required></label></div>
 <div class="row"><button type="submit">Review the release</button></div></form>`)}
 <div id="e-real-review"></div>
-${realMoney(s, id, c.members)}
+${WEB ? '' : realMoney(s, id, c.members)}
 <h3>Its posts</h3><div id="e-posts"><p class="small">Reading…</p></div>`;
 }

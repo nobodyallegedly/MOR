@@ -30,6 +30,7 @@ import { relayAt } from '../../genesis/src/transport.ts';
 import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
 import { Refused, fromWords } from '../../../modules/carry/src/carry.ts';
 import { readId } from '../../genesis/src/forms.ts';
+import { shownAct } from '../../genesis/src/shown.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { namesOf } from '../../dub/src/names.ts';
 import { decodeManifest, type FileIn, type Manifest } from '../../repo/src/release.ts';
@@ -207,7 +208,7 @@ export class Setup {
         ? [
             { text: out.length ? `Its acts are published at ${out.join(', ')}.` : 'It names no place for its acts: they are found at its homes.' },
             { text: inbox.length ? `Its inbox is at ${inbox.join(', ')}: messages for it are left there.` : 'It declares no inbox: nothing can be delivered to it.', tone: inbox.length ? undefined : 'warn' },
-            ...(look.routes.act ? [{ text: `Declared by act ${look.routes.act}.` }] : []),
+            ...(look.routes.act ? [{ text: `Declared by act ${shownAct(look.routes.act)}.` }] : []),
             ...(look.routes.contested ? [{ text: 'Two versions of its routes contest each other: readers cannot tell which counts.', tone: 'bad' as const }] : []),
           ]
         : [{ text: 'Not read.' }],
@@ -218,7 +219,7 @@ export class Setup {
       const position = r.links.length ? r.links[r.links.length - 1].position : null;
       keys.push(
         r.signingKey && hex(r.signingKey) === held
-          ? { text: `Signing key: the one Edubba holds, current${position !== null ? ` (key position ${position}, bound by ${r.links[r.links.length - 1].act})` : ''}.`, tone: 'ok' }
+          ? { text: `Signing key: the one Edubba holds, current${position !== null ? ` (key position ${position}, bound by ${shownAct(r.links[r.links.length - 1].act)})` : ''}.`, tone: 'ok' }
           : { text: 'Signing key: changed elsewhere. The one Edubba holds no longer counts: nothing more is signed with it here.', tone: 'bad' },
       );
       keys.push({ text: `Chain key: committed as ${r.chainKeyCommit ?? 'unknown'} (scheme ${r.chainKeyScheme ?? '?'}). ${me.f.safety.seeds ? 'Held in this program’s folder (a test identity).' : 'Not held here.'}` });
@@ -229,7 +230,7 @@ export class Setup {
     if (look?.encryptionKeyAct) {
       const ours = me.f.encryption.some((x) => x.act === look!.encryptionKeyAct);
       keys.push({
-        text: `Encryption key: published by ${look.encryptionKeyAct}. ${ours ? 'Edubba holds it: messages sealed to it open here.' : 'Edubba does not hold it: messages sealed to it cannot be opened here.'}`,
+        text: `Encryption key: published by ${shownAct(look.encryptionKeyAct)}. ${ours ? 'Edubba holds it: messages sealed to it open here.' : 'Edubba does not hold it: messages sealed to it cannot be opened here.'}`,
         tone: ours ? undefined : 'warn',
       });
     } else keys.push({ text: enc ? `Encryption key: version ${enc.version} held here, not found published now.` : 'Encryption key: none published: private messages cannot be sealed to it.', tone: 'warn' });

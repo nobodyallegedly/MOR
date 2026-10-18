@@ -11,8 +11,11 @@
   },
   "scripts": {
     "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "build": "node --import tsx scripts/build-web.ts",
+    "release": "node --import tsx scripts/build-web.ts --release",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
+    "test:build": "node --import tsx --test test/build/*.test.ts",
     "start": "node --import tsx src/cli.ts open"
   },
   "engines": {
@@ -20,6 +23,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.133.0",
+    "@noble/hashes": "2.4.0",
     "esbuild": "^0.25",
     "tsx": "^4"
   },
