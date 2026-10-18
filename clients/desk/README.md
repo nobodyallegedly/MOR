@@ -100,6 +100,9 @@ Homes and relays, the drafts folder shared with the connector; the collective cl
 - **The drafts folder** shared with the connector (`~/mor-drafts`) and its format are unchanged; so are the local format labels (`MOR desk, version 1`), so pairings carry over.
 - **The app**: `sh scripts/make-app.sh` makes `~/Applications/Edubba.app` and removes `MOR Identities.app`, `MOR Desk.app` and `MOR Collective.app` if these scripts made them.
 
+
+**Round 2 (F349).** Copy ID copies the ID written for people (`mid1…`), Copy act ID the act's (`mact1…`); IDs are shown so, the hexadecimal in their title, and taken in either form wherever one is typed. Edubba keeps no lane (money under a lane is Dub's and Damgar's).
+
 ## Precisely
 
 | File | What |

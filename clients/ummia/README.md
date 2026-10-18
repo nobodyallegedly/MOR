@@ -24,6 +24,9 @@
 
 **Settings.** The relays your acts go to, the relays tracking asks, the reporting identity.
 
+
+**Round 2 (F349).** A specification's hash is shown written for people (`mspec1…`), the hexadecimal beside, and taken in either form.
+
 ## Precisely
 
 | File | What |

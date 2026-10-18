@@ -19,6 +19,9 @@ What it does:
 
 What it may do: **check paper words** without signing anything ("these are the right words", or not, and which key of the words they give); **show an identity's record** (homes, receipts, lines, any contest, any succession).
 
+
+**Change the vault (H40, round 2).** A door of its own on the first screen opens the change of keys at The vault, saying first, in plain words, that changing the vault or its limit is a change of keys: the chain-key paper needed, a new signing key's paper written. An identity's record shows its ID written for people (`mid1…`) and its acts as `mact1…`, the hexadecimal beside; IDs are taken in either form (F349).
+
 ## Precisely
 
 | File | What |

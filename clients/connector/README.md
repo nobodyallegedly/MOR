@@ -20,6 +20,9 @@ Claude's desktop app can run small helper programs on your computer and use them
 - **What Claude cannot prepare.** Anything outside the Text and Envelopes layers: no signature on a release or an agreement, no agreement, no Identity act (decided by Nobody, allegedly, 1 October 2026). Claude still reads and explains every act.
 - **Words in acts are not instructions.** A post or an agreement can be written to talk to a machine that reads it. Everything a signer wrote is shown between fences that say so, and the connector tells Claude to report it, never to follow it. Hidden characters that change the order text displays in are shown as codes, `<U+202E>` and so on.
 
+
+**Round 2.** Reads a lane (a grant of an identity to itself, F351): in force or revoked, what it reaches, its limits; and a sealed act signed under a lane or grant, as signed under it, in force or not, its content sealed (what it is, and whether the grant reaches it, only its recipients can judge). Takes an act's id written for people (`mact1…`, with `?r=` hints) or its hex, and writes ids so in what it tells (F349).
+
 ## Precisely
 
 | File | What |

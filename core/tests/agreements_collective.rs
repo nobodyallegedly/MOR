@@ -15667,10 +15667,19 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     drop(v);
 
     // Revoked before it signs: the next receipt under it pays nothing.
-    let rev = agreements_act(&mut w, &mut q, agreements::types::REVOCATION, agreements::Revocation { grant: rl }.to_map(), None);
-    let _ = rev;
+    // Revoked, its revocation citing the act signed under the lane before it (rule 76: an act the revocation's history holds binds).
+    let rev = agreements_act(&mut w, &mut q, agreements::types::REVOCATION, agreements::Revocation { grant: rl }.to_map(), Some(vec![Object { chain: qid, predecessor: good }]));
+    assert_eq!(w.v.status(&rev), Status::Valid);
     let late = receipt(&mut w, &mut rs);
     let mut v = AgreementsView::new(&w.v, mirs());
     v.rail_valid.insert(late, PaidAt::VaultEntry(qid, 0));
     assert!(!matches!(v.backing(&late).unwrap(), Backing::Backed { .. }), "after its revocation, a lane backs nothing");
+    // Paid toward the debt: the receipt its revocation's history holds, as Money counts payments (rule 76).
+    v.rail_valid.insert(good, PaidAt::VaultEntry(qid, 0));
+    assert!(matches!(v.backing(&good).unwrap(), Backing::Binds { .. } | Backing::Backed { .. }), "{:?}", v.backing(&good));
+    assert_eq!(v.paid_toward(&debt), 1000);
+    drop(v);
+    let mut v = AgreementsView::new(&w.v, mirs());
+    v.rail_valid.insert(late, PaidAt::VaultEntry(qid, 0));
+    assert_eq!(v.paid_toward(&debt), 0, "a receipt under a revoked lane pays nothing");
 }

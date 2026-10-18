@@ -13,14 +13,17 @@ A grant lets someone act in your name, within limits, with a key of their own (A
 | File | What |
 | --- | --- |
 | `src/grant.ts` | A person's grant (Agreements type 9, scope 2: acting for the grantor) with its kinds (field 6), limits (fields 3 and 4) and grant key (field 9): `personGrantPayload`, `readGrant`, `grantInWords`; the grantee's key (`makeGrantKey`) and acceptance (`acceptance`, a signature act naming the grant); a revocation (`revocationPayload`); signing with the grant key on the grantee's strand, citing `[grantor, grant]` (Text rule 14's second case, F343; `signUnderGrant`); on whose authority an act stands, as any reader judges it: the grant, the acceptance and the grantor's revocations looked for, the limits judged, Agreements' backing (rule 80) through the core's limits input (`authorityOf`, `authorityOfId`); a timestamp clock's stamps read (`stampsOf`). |
+| `src/lanes.ts` | Lanes (round 2, F351): a grant whose grantee is its own grantor, its key held by an app: the grants of a person for a key (`grantsForKey`), the revocations of a grant (`revocationsOf`), the acts its places hold under a grant (`actsUnder`), whether a grant reaches an act (`reaches`). Used by Damgar, Dub and the connector. |
 | `src/limits.ts` | The grant limits cMIP, draft 1 (`cmips/cmip-grant-limits-draft-1.md`, F345): the format (`encodeLimits`, `readLimits`), the amount an act moves (`amountOf`), each act judged (`judge`: within, outside, unknown), and the grantee's client refusing before signing (`refuseBeforeSigning`). |
 
 Relays and homes store an act signed under a grant as scoped (relay transport cMIP draft 5, F346; `relay/src/node.rs`, `check_binding`).
 
+`authorityOf` judges a private act's limits from its inside, opened with its key (round 2: a sealed claim above the cap was read as within it, judged from its outside alone). Its words for a lane: "Signed under a lane of … (a grant to itself, …)".
+
 ## Readings
 
 1. **A person's grant offered to an agent** reaches Text posts, Envelopes publications, or the Money layer (`GRANTABLE`); scope 2.
-2. **A cap applies to the amount a Money act names**; an act naming none moves nothing.
+2. **A cap applies to the amount a Money act names**, and to an invoice request's (the money messages cMIP, its commitment's amount, round 2); an act naming none moves nothing.
 3. **An expiry on a timestamp clock** is judged by the earliest verified stamp of that clock naming the act; with none, unknown.
 
 ## Tests

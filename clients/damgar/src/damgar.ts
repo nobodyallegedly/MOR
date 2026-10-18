@@ -2005,9 +2005,12 @@ export class Damgar {
       if (!l) throw new Error('No lane of this identity, granted here, is that one.');
       if (l.revoked) throw new Error('That lane is revoked already.');
       await this.current(me);
+      // Its history holds every act signed under the lane that its places hold, each cited (Agreements rule 76: an act the revocation's history holds binds; one racing it is void). The lane's sealed acts are named by their ids, their insides unread.
+      const { hints } = await this.ctx();
+      const under = await actsUnder(me.id, grant, hints, s.via).catch(() => []);
       let r: { act: Uint8Array; id: string };
       try {
-        r = me.sign(MIRS.agreements, REVOCATION, revocationPayload(grant), { public: true });
+        r = me.sign(MIRS.agreements, REVOCATION, revocationPayload(grant), { public: true, objects: under.length ? under.map((a): [string, string] => [me.id, a.id]) : undefined });
       } finally {
         await this.store.saveIdentity(me);
       }

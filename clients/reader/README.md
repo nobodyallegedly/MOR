@@ -105,3 +105,6 @@ For it, the shared client code no longer needs Node outside `clients/genesis/src
    }
    ```
 6. **Check on a fresh device** (a phone off the home network, in a private window): open `https://reader.dubsar.org/`, open a document, and see "Verified" and the fingerprint, the same as `mor-genesis show` gives. Send a message from the page, then on the author's machine `npm run cli -- inbox --file me.json --at https://home1.dubsar.org` in `clients/genesis` shows it, `valid`.
+
+
+**Round 2 (F349).** A link's fragment may carry the act's id written for people (`mact1…`) or its hex; another kind (an `mid`) is refused, saying so. Links are still made in hex, while readers served before F349 open only hex: once every served reader opens both (a server session), they carry `mact1…`. The signer is shown also as `mid1…`. It ships Identity draft 14, Money draft 9 and Agreements draft 15.

@@ -168,7 +168,9 @@ export class AgentGrants {
     const h = all.find((x) => x.grant === grant);
     if (!h) throw new Error('No such grant.');
     if (h.revoked) throw new Error('This grant is revoked already.');
-    const s = await this.desk.signAndSend(h.grantor, { spec: MIRS.agreements, type: REVOCATION, payload: revocationPayload(grant), public: true, to: [], refs: [] });
+    // Its history holds what the agent signed under it (rule 76: an act the revocation's history holds binds; any other racing it is void): the strand's latest act cited, which cites the rest by `prev`.
+    const tip = h.strand?.at(-1);
+    const s = await this.desk.signAndSend(h.grantor, { spec: MIRS.agreements, type: REVOCATION, payload: revocationPayload(grant), public: true, to: [], refs: [], objects: tip ? [[h.grantor, tip]] : undefined });
     h.revoked = s.id;
     this.save(agent, all);
     return { title: 'Grant revoked', lines: [{ text: `Revoked by ${short(s.id)}: its key backs nothing after it (Agreements rule 76).`, tone: 'ok' }], acts: [s.id] };
