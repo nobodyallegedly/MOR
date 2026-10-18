@@ -76,7 +76,7 @@ import { TestIdentity, TEST_LABEL, sealFor, type IdentityFile } from '../../gene
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { Refused, fromWords, groupId, toWords } from '../../../modules/carry/src/carry.ts';
-import { readId } from '../../genesis/src/forms.ts';
+import { idForm, readId } from '../../genesis/src/forms.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { changeAccepted, publishAccepted, readAccepted, type Accepted } from './accepted.ts';
 import type { ChainSource } from './chain.ts';
@@ -557,6 +557,7 @@ export class Damgar {
     out.identity = {
       id: me.id,
       grouped: groupId(me.id),
+      form: idForm(me.id),
       short: short(me.id),
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,

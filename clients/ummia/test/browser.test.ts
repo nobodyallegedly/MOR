@@ -201,7 +201,10 @@ test('Ummia by clicks, the program’s page: a release, a specification tracked 
   await page.locator('form#spec [name=types]').fill('0 note note = tstr');
   await page.getByRole('button', { name: 'Read it back, with its hash' }).click();
   await sees(page, '#review-hash', 'spec-review');
-  const hash = (await page.locator('#review-hash').innerText()).trim();
+  // Shown written for people (F349, mspec1…), its hexadecimal beside.
+  const shown = (await page.locator('#review-hash').innerText()).trim();
+  assert.match(shown, /^mspec1[02-9ac-hj-np-z]{58}$/);
+  const hash = (await page.locator('#review-hash').getAttribute('title'))!;
   assert.match(hash, /^[0-9a-f]{64}$/);
   await shot(page, 'ummia-spec-review');
   assert.match(await done(page, page.locator('#spec-review').getByRole('button', { name: 'Sign and publish' }), 'spec-published'), new RegExp(hash));
@@ -216,7 +219,7 @@ test('Ummia by clicks, the program’s page: a release, a specification tracked 
   await done(page, page.locator(`.spec-card[data-hash="${hash}"] button[data-action="accept spec"]`).first(), 'accepted');
   await page.locator('button.tab[data-tab=accepted]').click();
   await sees(page, '#accepted-body .hash', 'accepted-tab');
-  assert.match(await page.locator('#accepted-body').innerText(), new RegExp(hash));
+  assert.match(await page.locator('#accepted-body').innerText(), new RegExp(shown));
   await shot(page, 'ummia-accepted');
 
   // A MIP: started in the MIP shape, its draft published for discussion.

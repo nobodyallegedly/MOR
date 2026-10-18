@@ -5,6 +5,7 @@
 // never fetched and has no say in what the act is.
 
 import { parseLink } from '../../reader/src/link.ts';
+import { readForm } from '../../genesis/src/forms.ts';
 
 export interface Target {
   id: string;
@@ -17,6 +18,11 @@ const HEX64 = /^[0-9a-f]{64}$/;
 export function parseTarget(s: string): Target {
   const t = s.trim();
   if (HEX64.test(t.toLowerCase())) return { id: t.toLowerCase(), relays: [] };
+  // Its id written for people (`mact1…`, Identity draft 14, F349), with where it lives if given; another kind refused, saying so.
+  if (/^m[a-z]+1/i.test(t)) {
+    const r = readForm(t, 'mact');
+    return { id: r.hex, relays: r.hints.filter((h) => /^https:\/\//.test(h)) };
+  }
   const hash = t.indexOf('#');
   if (hash >= 0) {
     const l = parseLink(t.slice(hash));
@@ -26,5 +32,5 @@ export function parseTarget(s: string): Target {
   const ids = [...new Set(t.toLowerCase().match(/(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])/g) ?? [])];
   if (ids.length === 1) return { id: ids[0], relays: [] };
   if (ids.length > 1) throw new Error('this link names more than one act id: give the one to read');
-  throw new Error('this is neither an act id (64 hex digits) nor a link that carries one');
+  throw new Error('this is neither an act id (mact1…, or 64 hex digits) nor a link that carries one');
 }

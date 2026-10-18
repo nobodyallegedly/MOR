@@ -19,6 +19,7 @@ import { STYLE as TEXT, plainHtml } from '../../../longform/src/html.ts';
 import type { Listing } from '../folders.ts';
 import type { ActRead, RealCollective, RealProposal, ShareHere, AgentDetails, AgentSummary, AgentView, Constitution, Done, DraftView, IdentityRecord, Item, Line, MachineState, Permissions, Sorted, State } from './api.ts';
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
+import { shownAct, shownId } from '../../../genesis/src/shown.ts';
 
 export { e };
 
@@ -185,7 +186,8 @@ export function fp(h: string): string {
 /** A name as the program gives it, without the fingerprint it appends: the fingerprint is shown beside it. */
 const bare = (n: string | null | undefined) => (n ?? '').replace(/ \[[0-9a-f]{8}…[0-9a-f]{4}\]$/, '');
 
-const grouped = (id: string) => e(id.match(/.{1,4}/g)!.join(' '));
+/** An ID shown written for people (Identity draft 14, F349), its hexadecimal in the title. */
+const grouped = (id: string) => `<span title="${e(id.match(/.{1,4}/g)!.join(' '))}">${e(shownId(id))}</span>`;
 
 export const note = (kind: 'error' | 'done' | 'warn' | '', html: string) => `<div class="note ${kind}">${html}</div>`;
 
@@ -209,7 +211,7 @@ export function done(d: Done): string {
 /** Text already written out with <U+…> for each invisible control, shown character for character. */
 const plain = (text: string) => `<div class="plain">${plainHtml(text)}</div>`;
 
-const copyButton = (id: string) => `<button class="copy" data-action="copy" data-id="${e(id)}" title="Copies the whole ID, without spaces, to paste where an identity is asked for">Copy ID</button>`;
+const copyButton = (id: string) => `<button class="copy" data-action="copy" data-id="${e(shownId(id))}" title="Copies the ID written for people (mid1…), to paste where an identity is asked for">Copy ID</button>`;
 
 // ---------------------------------------------------------------- the frame
 
@@ -858,7 +860,7 @@ export function posts(r: { items: { id: string; text: string; standing: string; 
     r.problems.map((p) => `<p class="small">${e(p)}</p>`).join('') +
     (r.items
       .map(
-        (p) => `<div class="post" data-post="${e(p.id)}"><div class="who">${p.corrects ? '<span class="label">Correction</span>' : ''}${fp(p.id)} <button class="copy" data-action="copy" data-id="${e(p.id)}" title="Copies the act’s whole ID: an agent can read it by that ID">Copy act ID</button>${p.standing === 'valid' ? '' : `<span class="flag bad">${e(p.standing)}</span>`}</div>${
+        (p) => `<div class="post" data-post="${e(p.id)}"><div class="who">${p.corrects ? '<span class="label">Correction</span>' : ''}${fp(p.id)} <button class="copy" data-action="copy" data-id="${e(shownAct(p.id))}" title="Copies the act’s ID written for people (mact1…): an agent can read it by that ID">Copy act ID</button>${p.standing === 'valid' ? '' : `<span class="flag bad">${e(p.standing)}</span>`}</div>${
           p.corrects ? `<div class="small">Corrects ${fp(p.corrects)}, which stays as it was signed.</div>` : ''
         }<div class="text" dir="auto">${e(p.text)}</div>${p.pictures.map((src) => `<figure><img alt="A picture of the post" src="${e(src)}"></figure>`).join('')}${
           p.correctedBy?.length ? `<div class="small">Corrected by ${p.correctedBy.map(fp).join(', ')}: shown as it was signed.</div>` : ''

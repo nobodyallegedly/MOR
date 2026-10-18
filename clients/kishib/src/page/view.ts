@@ -105,7 +105,7 @@ ${door('check', 'Check paper words', 'Whether these are the right words for an i
 ${door('record', 'Show an identity’s record', 'Its homes, receipts, lines and any contest, in plain words.', true)}`;
 }
 
-const idField = (name: string, label: string) => `<label>${label}</label><input name="${name}" type="text" autocomplete="off" spellcheck="false" required>`;
+const idField = (name: string, label: string) => `<label>${label} (mid1…, or its hexadecimal)</label><input name="${name}" type="text" autocomplete="off" spellcheck="false" required>`;
 const words = (name: string, label: string) => `<label>${label}</label><textarea name="${name}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>`;
 const address = `<label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>`;
 const forgotten = `<p class="small">What you type is used for this act alone, then overwritten. Nothing is written to this device.</p>`;

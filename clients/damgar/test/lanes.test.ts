@@ -14,6 +14,7 @@ import { closeAll, person, refused, start, testLink, type Relay } from './world.
 import { TestNode } from './node.ts';
 import type { Account, LaneShown, PaymentShown, ToSign } from '../src/shapes.ts';
 import { SPEC } from '../src/specs.ts';
+import { readAct, toldText } from '../../connector/src/read.ts';
 
 let homes: Relay[];
 let relay: Relay;
@@ -107,6 +108,18 @@ test('a lane: asked in Dub, granted in Damgar, a tip within it paid from Dub; th
   assert.equal(al[0].label, 'Dub on the Mac');
   assert.equal(al[0].state, 'in force');
   assert.deepEqual(al[0].acts.map((a) => a.said).sort(), ['a private act, sealed (its kind is read by its recipient only)', 'a private act, sealed (its kind is read by its recipient only)']);
+
+  // Claude's connector, an outsider: the lane's grant read as a lane in force; the claim, sealed, read as signed under that lane, in force, its content sealed.
+  const places = [...H, relay.base];
+  const g = await readAct(al[0].grant, places);
+  assert.equal(g.title, 'A lane: a grant of an identity to itself');
+  assert.equal(g.counts, true);
+  assert.match(g.verdict, /Not revoked/);
+  const sealed = await readAct(claim.act, places);
+  assert.equal(sealed.title, 'A private act signed under a lane');
+  assert.match(sealed.verdict, /in force at the places asked/);
+  assert.match(sealed.verdict, /only those it was delivered to can judge/);
+  assert.match(toldText(sealed), /Act: mact1/);
 
   // Past the cap: Dub refuses before signing, saying why.
   await refused(alice.dub.c.ask('tip now', { post: post.post.id, signer: bob.id, value: '2500', unit: R }), /2500 is above the grant’s cap of 2000 per act/);

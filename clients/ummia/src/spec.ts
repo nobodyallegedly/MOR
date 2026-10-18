@@ -16,6 +16,7 @@
 //
 // Nothing from Node: the same code runs in the web client.
 
+import { readForm } from '../../genesis/src/forms.ts';
 import { MIRS, SPECS, cborEncode, checkText, lockMedia, unhex } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
@@ -53,11 +54,15 @@ export interface SpecForm {
 
 const HEX64 = /^[0-9a-f]{64}$/;
 
-/** A spec hash, as typed: 64 hexadecimal characters, spaces taken out. */
+/** A spec hash, as typed: its form written for people (`mspec1…`, Identity draft 14, F349), or 64 hexadecimal characters, spaces taken out; another kind refused, saying so. */
 export function readHash(s: string, what: string): string {
   const h = s.replace(/\s+/g, '').toLowerCase();
-  if (!HEX64.test(h)) throw new Error(`${what}: a spec hash is 64 hexadecimal characters.`);
-  return h;
+  if (HEX64.test(h)) return h;
+  try {
+    return readForm(s, 'mspec').hex;
+  } catch (e) {
+    throw new Error(`${what}: ${e instanceof Error ? e.message : String(e)} (a spec hash is mspec1…, or 64 hexadecimal characters).`);
+  }
 }
 
 /**

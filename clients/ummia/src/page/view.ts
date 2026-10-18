@@ -10,6 +10,7 @@
 // red only for an alarm (a check that fails, a key changed elsewhere).
 
 import { e } from '../../../manage/src/view.ts';
+import { shownSpec } from '../../../genesis/src/shown.ts';
 import { STYLE as DUB_STYLE } from '../../../dub/src/page/view.ts';
 import { chooserHtml } from '../acting.ts';
 import type { AcceptedEntry, Line, Review, State } from '../shapes.ts';
@@ -162,7 +163,7 @@ export function review(r: Review, confirmAction = 'confirm'): string {
 <details class="fold"><summary>The libraries it depends on (${r.dependencies?.length ?? 0})</summary>${r.dependencies?.length ? `<div class="files">${r.dependencies.map((d) => `<div><span>${e(d.registry)}</span><span>${e(d.name)}</span><span>${e(d.version)}</span></div>`).join('')}</div>` : '<p class="small">None: it names no lock file (Cargo.lock, package-lock.json).</p>'}</details>`
     : '';
   return `<div class="item review" data-plan="${e(r.plan)}"><h3>${e(r.title)}</h3>
-${r.hash ? `<label>Its spec hash</label><div class="hash" id="review-hash">${e(r.hash)}</div>` : ''}
+${r.hash ? `<label>Its spec hash</label><div class="hash" id="review-hash" title="${e(r.hash)}">${e(shownSpec(r.hash))}</div><p class="small">In hexadecimal: ${e(r.hash)}</p>` : ''}
 ${says(r.summary)}
 ${r.sections.map((x) => `<p class="small"><b>${e(x.heading)}</b></p>${lines(x.lines)}`).join('')}
 ${files}
@@ -246,7 +247,7 @@ export function specs(choices: { tasks: { n: number; layer: string; name: string
 <label class="check"><input type="checkbox" name="checker"> It checks proofs of delivery of proven offers</label></details>
 <div class="row"><button type="submit">Read it back, with its hash</button></div></form>
 <div id="spec-review"></div>
-<h2>Published from here</h2>${published.length ? published.map((p) => `<div class="item"><h3>${e(p.name)}</h3><div class="meta">${e(p.kind)} · publication ${fp(p.id)}</div><div class="hash">${e(p.hash)}</div></div>`).join('') : '<p class="empty">None yet.</p>'}`;
+<h2>Published from here</h2>${published.length ? published.map((p) => `<div class="item"><h3>${e(p.name)}</h3><div class="meta">${e(p.kind)} · publication ${fp(p.id)}</div><div class="hash" title="${e(p.hash)}">${e(shownSpec(p.hash))}</div></div>`).join('') : '<p class="empty">None yet.</p>'}`;
 }
 
 // ------------------------------------------------------------------ tracking
@@ -257,7 +258,7 @@ function specCard(x: TrackedSpec, accepted: Set<string>): string {
   return `<div class="item spec-card" data-hash="${e(x.hash)}"><h3>${e(x.name)}</h3>
 <div class="meta">${e(x.kind)} · ${e(x.layer)}${x.draft > 1 ? ` · draft ${x.draft} in its line` : ''} · by ${x.creator ? fp(x.creator) : 'no creator'}${x.creator ? (x.claimed ? '' : ' (unclaimed: its creator never published it)') : ''}</div>
 ${lines(x.role.map((t) => ({ text: t })))}${x.otherCreator ? note('warn', 'Its creator is not its predecessor’s (Development rule 25).') : ''}${release}${use}
-<div class="hash">${e(x.hash)}</div>
+<div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div>
 <div class="row">${accepted.has(x.hash) ? '<span class="small">Accepted</span>' : `<button data-action="accept spec" data-hash="${e(x.hash)}" data-label="${e(`${x.name}`.slice(0, 120))}">Accept it</button>`}</div></div>`;
 }
 
@@ -275,7 +276,7 @@ export function trackForm(s: State): string {
 export function tracked(t: Tracked, accepted: Set<string>): string {
   const relays = `<p class="small">${t.relays.map((r) => `${e(r.address)}: ${r.problem ? e(r.problem) : `${r.read} acts read, ${r.specs} specification${r.specs === 1 ? '' : 's'}${r.stopped ? ' (stopped: more than a look reads)' : ''}`}`).join('<br>')}</p>`;
   const ext = t.extensions.length
-    ? t.extensions.map((x) => `<div class="item"><h3>${e(x.name ?? `A cMIP not found on these relays`)}</h3><div class="meta">named by ${x.agreements} public agreement${x.agreements === 1 ? '' : 's'}${x.layers ? ` · touches ${e(x.layers.join(', '))}` : ''}</div><div class="hash">${e(x.hash)}</div></div>`).join('')
+    ? t.extensions.map((x) => `<div class="item"><h3>${e(x.name ?? `A cMIP not found on these relays`)}</h3><div class="meta">named by ${x.agreements} public agreement${x.agreements === 1 ? '' : 's'}${x.layers ? ` · touches ${e(x.layers.join(', '))}` : ''}</div><div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div></div>`).join('')
     : '<p class="empty">No public agreement found naming an extension.</p>';
   const mips = t.mips.length
     ? t.mips.map((m) => `<div class="item"><h3>${e(m.name)}</h3><div class="meta">${fp(m.root)}</div>${m.forks.length ? lines(m.forks.map((f) => ({ text: `${f.name}, by ${f.creator ? `${f.creator.slice(0, 8)}…` : 'no creator'} (${f.total} fork${f.total === 1 ? '' : 's'} under it)` }))) : '<p class="small">No MIP forks it here.</p>'}</div>`).join('')
@@ -341,7 +342,7 @@ export function accepted(a: { entries: AcceptedEntry[]; version: number; forked:
 ${a.problems.length ? note('warn', lines(a.problems.map((t) => ({ text: t, tone: 'warn' })))) : ''}
 ${a.forked ? note('warn', `Two apps changed it at once. Shown merged, nothing dropped: ${lines(a.merged.map((t) => ({ text: t })))} Your next change writes the merge.`) : ''}
 <p class="small">${a.version ? `Version ${a.version}.` : 'Nothing accepted yet: the default, under which no app signs anything under any specification.'}</p>
-${a.entries.length ? a.entries.map((x) => `<div class="item"><h3>${e(x.label ?? 'A specification with no label')}</h3><div class="meta">${e(x.part)}</div><div class="hash">${e(x.hash)}</div><div class="row"><button class="quiet" data-action="accepted remove" data-hash="${e(x.hash)}">Remove it</button></div></div>`).join('') : ''}
+${a.entries.length ? a.entries.map((x) => `<div class="item"><h3>${e(x.label ?? 'A specification with no label')}</h3><div class="meta">${e(x.part)}</div><div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div><div class="row"><button class="quiet" data-action="accepted remove" data-hash="${e(x.hash)}">Remove it</button></div></div>`).join('') : ''}
 <form id="accept-add"><label>Accept a specification by its spec hash (or press “Accept it” on one found under Tracking)</label><input name="hash" spellcheck="false" required><label>Its label (its name and draft)</label><input name="label" maxlength="120">
 <div class="row"><button type="submit">Accept it</button></div></form>
 <div class="row"><span class="grow small">${a.published ? 'Published: anyone can read which specifications you accept.' : 'Private: sealed to yourself (the default).'}</span><button data-action="accepted publish" data-on="${a.published ? 'false' : 'true'}">${a.published ? 'Make it private again' : 'Publish it'}</button></div>`;

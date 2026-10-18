@@ -5,7 +5,13 @@
 //
 //   https://reader.dubsar.org/#ACT_ID
 //   https://reader.dubsar.org/#ACT_ID?r=https://relay.example&r=...
+//
+// ACT_ID is the act's id written for people (`mact1…`, Identity draft 14,
+// F349: a link's fragment is then exactly the act's where-it-lives form),
+// or its 64 hex digits, as links made before carry; both are read, by the
+// core library.
 
+import { formEncode, formRead } from '../../genesis/src/core.ts';
 import { relayAddress } from './settings.ts';
 
 export interface Link {
@@ -19,8 +25,13 @@ export function parseLink(hash: string): Link {
   const h = hash.replace(/^#/, '');
   if (!h) return { act: null, relays: [] };
   const q = h.indexOf('?');
-  const id = (q < 0 ? h : h.slice(0, q)).toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(id)) throw new Error('this link does not name an act: an act id is 64 hex digits');
+  const head = q < 0 ? h : h.slice(0, q);
+  let id: string;
+  try {
+    id = (formRead(head, 'mact') as { data: string }).data;
+  } catch (e) {
+    throw new Error(`this link does not name an act id: ${e instanceof Error ? e.message : String(e)}`);
+  }
   const relays: string[] = [];
   if (q >= 0) {
     for (const r of new URLSearchParams(h.slice(q + 1)).getAll('r')) {
@@ -34,8 +45,10 @@ export function parseLink(hash: string): Link {
 export function makeLink(page: string, act: string, relays: string[] = []): string {
   const base = page.replace(/#.*$/, '');
   const q = relays.length ? '?' + relays.map((r) => `r=${encodeURIComponent(r)}`).join('&') : '';
-  return `${base}#${act}${q}`;
+  return `${base}#${formEncode('mact', unhexOf(act))}${q}`;
 }
+
+const unhexOf = (h: string) => Uint8Array.from(h.match(/../g)!.map((b) => parseInt(b, 16)));
 
 /** The relays to ask: the reader's own first, then those the link names. */
 export function relaysFor(own: string[], link: Link): string[] {

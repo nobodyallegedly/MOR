@@ -108,7 +108,7 @@ export function identityWindow(s: State, web: boolean): string {
     : '';
   const i = s.identity;
   const mine = i
-    ? `<section class="card"><h3>In use</h3><p class="id">${e(i.grouped)}</p>
+    ? `<section class="card"><h3>In use</h3><p class="id">${e(i.form)}</p><p class="small">In hexadecimal, as before: <span class="fp">${e(i.grouped)}</span></p>
 <dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd><dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd><dt>Damgar’s line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `: its card, for Kišib, <code class="card-line">${e(i.line.latest)} ${i.line.acts} ${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
 <p class="small">Most of Damgar’s acts are sealed, so Kišib cannot read its line from the homes: when the signing key is changed there, give Kišib this card (latest act, position, summary), or every claim and receipt signed here becomes void (Identity rule 35).</p>
 ${i.encryption ? '' : note('warn', 'Damgar holds no encryption key for this identity: nothing sealed to it opens here.')}
@@ -121,7 +121,7 @@ ${i.encryption ? '' : note('warn', 'Damgar holds no encryption key for this iden
 ${mine}
 ${held}
 <section class="card"><h3>Bring an identity you have</h3>
-<form id="bring"><label>Its ID</label><input name="id" autocomplete="off" spellcheck="false" required>
+<form id="bring"><label>Its ID (mid1…, or its hexadecimal)</label><input name="id" autocomplete="off" spellcheck="false" required>
 <label>Its signing key’s 24 words (never the chain key’s)</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes)</label><input name="address" placeholder="https://" required>
 <details><summary>Relays, if it names none</summary><label>One per line</label><textarea name="relays"></textarea></details>

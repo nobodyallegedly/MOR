@@ -115,6 +115,8 @@ export interface State {
   identity: null | {
     id: string;
     grouped: string;
+    /** Its ID written for people (Identity draft 14, F349): `mid1…`. */
+    form: string;
     short: string;
     homes: string[];
     relays: string[];
