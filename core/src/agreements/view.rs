@@ -234,6 +234,9 @@ pub struct AgreementsView<'a> {
     pub grant_limits: BTreeMap<Hash, bool>,
     cache: RefCell<BTreeMap<Hash, Rc<RecordEval>>>,
     busy: RefCell<BTreeSet<Hash>>,
+    /// Money receipts and claims whose backing is being judged, so that
+    /// judging it never asks again whether it stands (F350).
+    backing_now: RefCell<BTreeSet<Hash>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
     ending: RefCell<BTreeSet<Hash>>,
     citing: RefCell<BTreeSet<Hash>>,
@@ -576,6 +579,7 @@ impl<'a> AgreementsView<'a> {
             grant_limits: BTreeMap::new(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
+            backing_now: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
             ending: RefCell::new(BTreeSet::new()),
             citing: RefCell::new(BTreeSet::new()),
@@ -638,6 +642,7 @@ impl<'a> AgreementsView<'a> {
             grant_limits: self.grant_limits.clone(),
             cache: RefCell::new(BTreeMap::new()),
             busy: RefCell::new(BTreeSet::new()),
+            backing_now: RefCell::new(BTreeSet::new()),
             closed: RefCell::new(BTreeMap::new()),
             ending: RefCell::new(BTreeSet::new()),
             citing: RefCell::new(BTreeSet::new()),
@@ -740,17 +745,35 @@ impl<'a> AgreementsView<'a> {
 
     /// Whether an act stands under Identity, for Agreements: valid; or signed with
     /// a grant key (Identity's `Scoped`, F128) whose grant itself stands.
-    /// Whether the grant backs the act is [`Self::backing`].
+    /// Whether the grant backs the act is [`Self::backing`], save for a
+    /// Money receipt or claim: one signed with a grant key stands only where
+    /// its grant backs it (Money draft 9, rule 7; F350), so a lane that does
+    /// not reach receipts, is revoked or past its limits pays nothing.
     fn valid(&self, id: &Hash) -> bool {
         match self.status(id) {
             Status::Valid => true,
-            Status::Scoped => self
-                .v
-                .get(id)
-                .and_then(|h| self.key_grant(h))
-                .is_some_and(|(g, _)| self.status(&g.id) == Status::Valid),
+            Status::Scoped => {
+                let Some(h) = self.v.get(id) else { return false };
+                if !self.key_grant(h).is_some_and(|(g, _)| self.status(&g.id) == Status::Valid) {
+                    return false;
+                }
+                let receipt_or_claim = h.inside.spec == self.mirs.money && (h.inside.type_ == crate::money::types::RECEIPT || h.inside.type_ == crate::money::types::CLAIM);
+                !receipt_or_claim || self.money_backed(id)
+            }
             _ => false,
         }
+    }
+
+    /// Money draft 9, rule 7 (F350): whether a receipt or claim signed with a
+    /// grant key is backed by its grant (rule 80). Asked again while it is
+    /// being judged, it does not stand.
+    fn money_backed(&self, id: &Hash) -> bool {
+        if !self.backing_now.borrow_mut().insert(*id) {
+            return false;
+        }
+        let b = self.backing(id);
+        self.backing_now.borrow_mut().remove(id);
+        matches!(b, Ok(Backing::Backed { .. } | Backing::Binds { .. }))
     }
 
     /// Whether `h` is signed with the collective's own key: bound to a link

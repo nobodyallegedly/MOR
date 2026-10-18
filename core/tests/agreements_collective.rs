@@ -15583,3 +15583,94 @@ fn a_grants_limits_take_a_clients_verdict_f345() {
     v.grant_limits.insert(post, false);
     assert!(matches!(v.backing(&post).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("limits")));
 }
+
+/// F350 (Money draft 9, rule 7): a receipt or a claim may be signed with a
+/// grant key its party granted (a person's lane), whose grant reaches that
+/// act type; judged as scoped, by Agreements (rules 73 and 80). A payer's
+/// claim under a person's lane and a payee's receipt under a person's
+/// receipt lane both count for a verifier reading Agreements; Identity alone
+/// (a Money-only client) sees them scoped, never valid; a lane whose grant
+/// does not reach receipts backs no receipt, and its receipt pays nothing.
+#[test]
+fn a_persons_lane_signs_its_receipts_and_claims_f350() {
+    use mor_core::money::{types as money_types, Amount, Claim, Obligation, Payer, Payload as Fin, PaidAt, Receipt};
+    let mut w = World::new();
+    let mut p = w.genesis("a payer", vec![own_home()], None, None);
+    let mut q = w.genesis("a payee", vec![own_home()], None, None);
+    let (pid, qid) = (p.id, q.id);
+    let ptr = pointer_of(&mut w, &mut q, 1, None, &[b"its node"]);
+    let unit = spec("a unit");
+    let debt = {
+        let o = Fin::Obligation(Obligation { debtor: pid, creditor: qid, amount: Amount { unit, value: 1000 }, pointer: ptr, agreement: None });
+        let a = w.everyday_act(&mut p, mirs().money, money_types::OBLIGATION, o.to_map(), None, None);
+        w.add(&a)
+    };
+    // A lane: the person's own grant to itself (F338, F350), reaching one Money type, its key held by an app.
+    let lane = |w: &mut World, who: &mut Person, name: &str, ty: u64| -> (Hash, SchnorrKey) {
+        let (k, key) = grant_key(name);
+        let g = Grant { kinds: Some(vec![Kind::Type { spec: mirs().money, type_: ty }]), key, ..plain_grant(who.id, false) };
+        let id = agreements_act(w, who, agreements::types::GRANT, g.to_map(), None);
+        sign(w, who, &id);
+        (id, k)
+    };
+    let strand = |who: &Person, g: Hash, k: &SchnorrKey| {
+        let mut s = who.clone();
+        s.binding = g;
+        s.sign = k.clone();
+        s.seq = vec![];
+        s.cite = Some((who.id, vec![g]));
+        s
+    };
+    let proof = b"the rail's proof".to_vec();
+    let receipt = |w: &mut World, by: &mut Person| {
+        let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.clone(), payer: Some(Payer::Identity(pid)), payee: qid, amount: Amount { unit, value: 1000 }, fulfils: debt, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(by, mirs().money, money_types::RECEIPT, r.to_map(), None, None);
+        w.add(&a)
+    };
+
+    // The payer's claim, signed by Dub under the payer's lane for claims.
+    let (pl, pk) = lane(&mut w, &mut p, "the payer's lane", money_types::CLAIM);
+    let mut ps = strand(&p, pl, &pk);
+    let claim = {
+        let c = Fin::Claim(Claim { rail: spec("a rail Module"), proof: proof.clone(), payee: qid, amount: Amount { unit, value: 1000 }, fulfils: debt, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let a = w.everyday_act(&mut ps, mirs().money, money_types::CLAIM, c.to_map(), None, None);
+        w.add(&a)
+    };
+    assert_eq!(w.v.status(&claim), Status::Scoped, "a Money-only client: scoped, shown unknown, never valid (Identity rule 8)");
+    let mut v = AgreementsView::new(&w.v, mirs());
+    v.rail_valid.insert(claim, PaidAt::VaultEntry(qid, 0));
+    assert_eq!(v.backing(&claim).unwrap(), Backing::Backed { grant: pl });
+    assert_eq!(v.payers_claims(&proof), vec![claim], "the payer's claim, under its lane, counts");
+    drop(v);
+
+    // A lane reaching claims only, used to sign a receipt: not backed, and the receipt pays nothing.
+    let (wrong, wk) = lane(&mut w, &mut q, "a lane for claims only", money_types::CLAIM);
+    let mut ws = strand(&q, wrong, &wk);
+    let bad = receipt(&mut w, &mut ws);
+    assert_eq!(w.v.status(&bad), Status::Scoped);
+    let mut v = AgreementsView::new(&w.v, mirs());
+    v.rail_valid.insert(bad, PaidAt::VaultEntry(qid, 0));
+    assert!(matches!(v.backing(&bad).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("reach")));
+    assert_eq!(v.paid_toward(&debt), 0, "a grant not reaching receipts signs none that counts");
+    drop(v);
+
+    // The payee's receipt lane: its receipt counts toward the debt.
+    let (rl, rk) = lane(&mut w, &mut q, "the payee's receipt lane", money_types::RECEIPT);
+    let mut rs = strand(&q, rl, &rk);
+    let good = receipt(&mut w, &mut rs);
+    assert_eq!(w.v.status(&good), Status::Scoped, "a Money-only client: scoped, shown unknown");
+    let mut v = AgreementsView::new(&w.v, mirs());
+    v.rail_valid.insert(bad, PaidAt::VaultEntry(qid, 0));
+    v.rail_valid.insert(good, PaidAt::VaultEntry(qid, 0));
+    assert_eq!(v.backing(&good).unwrap(), Backing::Backed { grant: rl });
+    assert_eq!(v.paid_toward(&debt), 1000, "the receipt under the receipt lane counts");
+    drop(v);
+
+    // Revoked before it signs: the next receipt under it pays nothing.
+    let rev = agreements_act(&mut w, &mut q, agreements::types::REVOCATION, agreements::Revocation { grant: rl }.to_map(), None);
+    let _ = rev;
+    let late = receipt(&mut w, &mut rs);
+    let mut v = AgreementsView::new(&w.v, mirs());
+    v.rail_valid.insert(late, PaidAt::VaultEntry(qid, 0));
+    assert!(!matches!(v.backing(&late).unwrap(), Backing::Backed { .. }), "after its revocation, a lane backs nothing");
+}
