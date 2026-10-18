@@ -28,6 +28,16 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F349. The core fixes how its own keys and hashes are written for people: a prefix and a checksum (18 October 2026)
+
+**From** the author's human tests, 18 October (with H38): every identity, act, key and specification shows as 64 hex characters, alike; one pasted where another is meant, or a typo, is not caught. *Asked by Nobody, allegedly:* "All these keys could do with a prefix don't you think?"
+
+**The project lead** first leaned to a cMIP ("textual forms"), the core never reading these strings. **Nobody, allegedly:** "Depends. Why would people want to change prefix?" *The project lead:* almost never: a prefix's only value is that everyone uses the same one; competition there can only break copying between apps; so the lean moved to the core.
+
+**Decided by Nobody, allegedly, 18 October 2026 ("Yes, it is core business, how core keys are labeled."):** the core fixes the textual form of its own objects (an identity, an act, a key, a specification, and any other core hash a person copies): each with its own prefix and a checksum that refuses a mistyped or cut string; and a longer form carrying an identity with where it lives (its homes as hints, the relay transport's address form; hints guide, never decide). Bare hex stays accepted. A kind of object a cMIP defines may register its own prefix in its own text, never reusing the core's. *Suggested by the project lead, the core placement decided by Nobody, allegedly.*
+
+**Core changes:** a short section in a MIR (where it sits, and the encoding's exact choice, for the session writing it to settle with Nobody, allegedly), the core library's encode and decode, conformance vectors for both, every app showing and accepting the forms. Builds on H38.
+
 ## F348. Every format is a specification: a long-form correction is its own cMIP (17 October 2026)
 
 **From** `docs/edubba-agents-report.md`, "After F347", a reading to confirm: the corrections cMIP draft 2 named its second format (a correction in long form) by a hash derived from the cMIP's hash and the word `long-form`, a name that is no published specification's hash. Text's field 1 names the one cMIP that gives a text its meaning.
