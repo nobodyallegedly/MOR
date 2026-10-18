@@ -22,6 +22,7 @@ import { escapeControls } from '../../connector/src/words.ts';
 import { MIRS, SPECS, Verifier, cborDecode, describeAct } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
+import { readId } from '../../genesis/src/forms.ts';
 import { allBy } from '../../repo/src/release.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
@@ -183,10 +184,15 @@ export class Collectives {
    * force. Nothing is signed; none of its keys is held here.
    */
   async bring(a: { id: string; name: string }): Promise<Done> {
-    const id = a.id.replace(/\s+/g, '').toLowerCase();
+    // Its ID written for people (mid1…, F349) or its 64 hexadecimal characters.
+    let id: string;
+    try {
+      id = readId(a.id);
+    } catch {
+      throw new Error('A collective is named by its ID: its form written for people (mid1…), or 64 hexadecimal characters.');
+    }
     const name = a.name.trim();
-    if (!/^[0-9a-f]{64}$/.test(id)) throw new Error('A collective is named by its ID: 64 hexadecimal characters.');
-    if (!name) throw new Error('Give it a name, so you can tell it apart here. The name stays on this Mac.');
+    if (!name) throw new Error('Give it a name, so you can tell it apart here. The name stays where Edubba keeps it.');
     if (this.list().some((x) => x.id === id)) throw new Error('This collective is already here.');
     const r = await this.read(id);
     const parties = r.terms.t.parties;
