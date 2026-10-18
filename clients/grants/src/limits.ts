@@ -89,9 +89,14 @@ export const MESSAGES: { specs: string[] } = { specs: [] };
 export function amountOf(act: { spec?: string; type?: number; payload?: Uint8Array }, moneySpec: string): Cap | null {
   if (act.type === undefined || !act.payload) return null;
   if (act.spec && MESSAGES.specs.includes(act.spec)) {
-    if (act.type !== 3) return null;
+    // The money messages cMIP: a draft's amount (type 1, field 2), a request's (type 2, field 0), an invoice request's commitment's (type 3), an answer's (type 4, field 4, draft 3; F352).
     try {
       const m = cborDecode(act.payload) as Map<number, unknown>;
+      const pair = (x: unknown): Cap | null => (Array.isArray(x) && x.length === 2 && x[0] instanceof Uint8Array ? { unit: hex(x[0]), value: Number(x[1]) } : null);
+      if (act.type === 1) return pair(m.get(2));
+      if (act.type === 2) return pair(m.get(0));
+      if (act.type === 4) return pair(m.get(4));
+      if (act.type !== 3) return null;
       const c = readCommitment(cborEncode(m.get(0))) as { amount: { unit: string; value: number } };
       return { unit: c.amount.unit, value: c.amount.value };
     } catch {

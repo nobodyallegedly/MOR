@@ -215,8 +215,13 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'look':
         await act(() => refreshSign());
         return;
+      case 'revoke lane review': {
+        const r = await act(() => b.ask<{ lines: v.Line[] }>('revoke lane review', { grant: el.dataset.grant }));
+        const at = app.querySelector<HTMLElement>(`[data-revoke="${CSS.escape(el.dataset.grant ?? '')}"]`);
+        if (r && at) at.innerHTML = v.revokeReview(el.dataset.grant ?? '', r.lines);
+        return;
+      }
       case 'revoke lane': {
-        if (!confirm('Revoke this lane? One public act ends it: what it signed after this counts for nothing.')) return;
         const r = await act(() => b.ask<{ lines: v.Line[] }>('revoke lane', { grant: el.dataset.grant }));
         if (r) {
           await open('lanes');

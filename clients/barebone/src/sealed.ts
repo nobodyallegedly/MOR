@@ -26,7 +26,7 @@ import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT } from './specs.ts';
 import { textPayload } from './post.ts';
 
-/** The media spec of a sealed text: the Text MIR itself (its bytes canonical text, UTF-8). A reading, to confirm. */
+/** The media spec of a sealed text: the Text MIR itself (its bytes canonical text, UTF-8). Confirmed by Nobody, allegedly (F352). */
 export const SEALED_TEXT = POST_SPECS.text;
 
 /** Agreements' standing offer (type 6) and Envelopes' key delivery (type 1). */

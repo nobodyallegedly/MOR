@@ -132,6 +132,14 @@ test('a lane: asked in Dub, granted in Damgar, a tip within it paid from Dub; th
   const second = (await alice.damgar.c.ask<{ items: ToSign[] }>('to sign')).items.find((i) => i.kind === 'lane')!;
   assert.ok(second.lines.some((l) => /^Until: /.test(l.text)), 'its expiry said, on the clock named');
   await alice.damgar.c.ask('grant lane', { id: second.id });
+  // Read back first (F352): it cites every act under the lane its places hold, its cost said.
+  const rr = await alice.damgar.c.ask<{ acts: number; lines: { text: string }[] }>('revoke lane review', { grant: al[0].grant });
+  const rsaid = rr.lines.map((l) => l.text).join(' ');
+  assert.ok(rr.acts >= 2, `${rr.acts}`);
+  assert.match(rsaid, new RegExp(`It cites the ${rr.acts} acts signed under the lane`));
+  assert.match(rsaid, /lists the id of every act it cites/);
+  assert.match(rsaid, /a lane used long makes a long revocation/);
+  assert.match(rsaid, /is not cited, and is void from then on/);
   await alice.damgar.c.ask('revoke lane', { grant: al[0].grant });
   await new Promise((r) => setTimeout(r, 2500));
   const e = alice.dub.c.ask('tip now', { post: post.post.id, signer: bob.id, value: '1000', unit: R });

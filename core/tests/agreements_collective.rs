@@ -15682,4 +15682,48 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
     let mut v = AgreementsView::new(&w.v, mirs());
     v.rail_valid.insert(late, PaidAt::VaultEntry(qid, 0));
     assert_eq!(v.paid_toward(&debt), 0, "a receipt under a revoked lane pays nothing");
+
+    // F352 (A'): a lane's acts are chained on its strand, each naming the one
+    // before; a payee holds only its own act, sealed to it. A revocation
+    // citing every act under the lane keeps each counted for its payee; one
+    // citing only the last does not, since the chain runs inside acts that
+    // payee cannot open (Inside field 2): the reason the revocation cites them all.
+    let chained = |w: &mut World, q: &mut Person, name: &str| {
+        let (l, k) = lane(w, q, name, money_types::RECEIPT);
+        let mut s = strand(q, l, &k);
+        let acts = [receipt(w, &mut s), receipt(w, &mut s), receipt(w, &mut s)];
+        (l, acts)
+    };
+    // What one payee holds: everything public, and of the lane's acts its own alone.
+    let payee_of = |w: &World, own: Hash, others: &[Hash]| {
+        let mut f = World::new();
+        for (a, k) in &w.log {
+            if others.contains(&a.id()) && a.id() != own {
+                continue;
+            }
+            let _ = f.v.add_with_key(a.clone(), k.as_ref());
+        }
+        f
+    };
+    let (all, acts) = chained(&mut w, &mut q, "a lane revoked citing every act");
+    let objects = acts.iter().map(|a| Object { chain: qid, predecessor: *a }).collect();
+    agreements_act(&mut w, &mut q, agreements::types::REVOCATION, agreements::Revocation { grant: all }.to_map(), Some(objects));
+    for own in acts {
+        let f = payee_of(&w, own, &acts);
+        let v = AgreementsView::new(&f.v, mirs());
+        assert!(matches!(v.backing(&own).unwrap(), Backing::Binds { .. } | Backing::Backed { .. }), "each payee, holding only its own act, finds it counted: {:?}", v.backing(&own));
+    }
+    let (last, acts) = chained(&mut w, &mut q, "a lane revoked citing its last act only");
+    agreements_act(&mut w, &mut q, agreements::types::REVOCATION, agreements::Revocation { grant: last }.to_map(), Some(vec![Object { chain: qid, predecessor: acts[2] }]));
+    let v = AgreementsView::new(&w.v, mirs());
+    for a in acts {
+        assert!(matches!(v.backing(&a).unwrap(), Backing::Binds { .. } | Backing::Backed { .. }), "a reader holding every act follows the chain: {:?}", v.backing(&a));
+    }
+    drop(v);
+    let f = payee_of(&w, acts[0], &acts);
+    let v = AgreementsView::new(&f.v, mirs());
+    assert!(
+        matches!(v.backing(&acts[0]).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("tie rule")),
+        "the first payee cannot follow the chain through acts it cannot open: its act is void"
+    );
 }

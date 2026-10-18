@@ -307,7 +307,7 @@ export function lanes(r: { lanes: LaneShown[]; manual: boolean }, units: { hash:
           (l) => `<div class="item lane${l.state === 'in force' ? '' : ' unknown'}" data-lane="${e(l.grant)}"><h3>${e(l.label)}</h3><div class="meta">${e(l.state)} · its key held by ${e(l.here ? 'this Damgar' : l.app)} · grant <span class="fp" title="${e(l.grant)}">${e(l.grant.slice(0, 8))}…</span></div>
 ${lines(l.words.map((text) => ({ text })))}
 <details class="fold"><summary>Signed under it: ${l.acts.length} act${l.acts.length === 1 ? '' : 's'}</summary>${l.acts.length ? lines(l.acts.map((a) => ({ text: `${a.said} · ${a.id.slice(0, 12)}…` }))) : '<p class="small">None yet.</p>'}</details>
-${l.state === 'in force' ? `<div class="row"><button data-action="revoke lane" data-grant="${e(l.grant)}">Revoke it</button></div>` : ''}</div>`,
+${l.state === 'in force' ? `<div data-revoke="${e(l.grant)}"><div class="row"><button data-action="revoke lane review" data-grant="${e(l.grant)}">Revoke it</button></div></div>` : ''}</div>`,
         )
         .join('')
     : '<p class="empty">No lane yet. An app asks for one (in Dub: its identity window, “Paying from Dub: a lane from Damgar”), and it waits in To sign.</p>';
@@ -323,6 +323,11 @@ ${l.state === 'in force' ? `<div class="row"><button data-action="revoke lane" d
 ${own('receipts', 'Receipts and invoices, by itself', 'Damgar checks a payment to you from the rail’s own evidence and signs the receipt; it answers an invoice request with an address, or with an invoice your node made through its receive-only link (Settings).')}
 ${own('payouts', 'Referral shares, by itself', 'When someone buys your work through a repost and your offer promises the reposter a share, Damgar asks for that payment by itself; you still pay it in your wallet, from Pay.')}
 <div id="lane-review"></div>`;
+}
+
+/** A lane's revocation, read back with its cost before it is signed (F352). */
+export function revokeReview(grant: string, said: Line[]): string {
+  return `<div class="item"><h3>The revocation, read back</h3>${lines(said)}</div><div class="row"><button class="primary" data-action="revoke lane" data-grant="${e(grant)}">Sign the revocation</button></div>`;
 }
 
 export function laneReview(r: { digest: string; lines: Line[] }): string {

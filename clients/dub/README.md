@@ -116,7 +116,7 @@ Where the texts are silent, Dub takes these readings. *To be confirmed by Nobody
 21. **A reload keeps the tab** (H30) in this browser's session storage (`dub:tab`); the filter is never kept (Everyone again). **Folds** (H34) in its local storage (`dub:folds`). Neither holds anything of a key or a person.
 22. **Look for my share** (H30) reads the inbox again, as opening the Signing tab does; the automatic look runs every 15 seconds while the tab is open and a share or an answer is awaited.
 23. **A lane's key is made and kept here**, beside the identity's keys (`money-keys.json`), its strand with it; Dub signs no money act with the identity's own key.
-24. **A sealed post's text is the media of a publication whose media spec is the Text MIR's hash** (its bytes canonical text, UTF-8): a reading, to confirm. Its key is kept here, delivered once per buyer, signed with the identity's own key (an Envelopes act, Dub's layer).
+24. **A sealed post's text is the media of a publication whose media spec is the Text MIR's hash** (its bytes canonical text, UTF-8): confirmed by Nobody, allegedly (F352). Its key is kept here, delivered once per buyer, signed with the identity's own key (an Envelopes act, Dub's layer).
 25. **Where an identity lives, as given, stays in this app** (`people.json`, `where`): the people cMIP's sealed list carries no hints.
 13. **A long-form document** (a text act naming the long-form format) is shown as its title and a link to the reader (`https://reader.dubsar.org/#ACT`, or the reader `dub.json` names).
 

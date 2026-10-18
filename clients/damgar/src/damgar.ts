@@ -766,6 +766,8 @@ export class Damgar {
         const a = readAnswer(d.payload!);
         const p = Object.values(book.payments).find((x) => x.side === 'out' && x.invoiceRequest === a.to);
         if (!p || p.other !== signer || p.key !== a.commitment) throw new Error('an answer to no invoice request of this identity');
+        // Draft 3 (F352): the answer names the amount it binds, the commitment's; a draft 3 answer without it, or naming another, is refused.
+        if (a.amount ? a.amount.unit !== p.amount.unit || a.amount.value !== p.amount.value : d.spec === MESSAGES_SPEC) throw new Error('an answer naming no amount, or another than the payment’s (the money messages cMIP draft 3, 5.1)');
         await this.onAnswer(me, s, book, p, d.id, a.bound, a.ticket);
         lines.push({ text: p.stage === 'to pay' ? `${short(signer)} answered: a payment is ready, in Pay.` : `${short(signer)} refused to bind the payment: ${p.bound?.kind === 'refused' ? p.bound.why : ''}`, tone: p.stage === 'to pay' ? 'ok' : 'warn' });
       }
@@ -872,7 +874,7 @@ export class Damgar {
     const ir = checked.ir;
     const f = ir.fields;
     if (checked.why) {
-      await this.sendAnswer(me, s, book, id, f.hash, { kind: 'refused', why: checked.why.slice(0, 280) }, inv.from, null);
+      await this.sendAnswer(me, s, book, id, f.hash, { kind: 'refused', why: checked.why.slice(0, 280) }, inv.from, null, undefined, f.amount);
       inv.stage = 'refused';
       inv.why = checked.why;
       lines.push({ text: `An invoice request from ${short(inv.from)} was refused: ${checked.why}.`, tone: 'warn' });
@@ -911,7 +913,7 @@ export class Damgar {
       const secret = [keys.request, ...keys.earlier].find((k) => k && addr && onchainKey(unhex(k)) === addr.request);
       if (!secret) {
         const why = 'the request key this address names is not held by this Damgar';
-        await this.sendAnswer(me, s, book, id, f.hash, { kind: 'refused', why }, inv.from, null);
+        await this.sendAnswer(me, s, book, id, f.hash, { kind: 'refused', why }, inv.from, null, undefined, f.amount);
         inv.stage = 'refused';
         inv.why = why;
         delete book.payments[f.hash];
@@ -924,8 +926,8 @@ export class Damgar {
       }
       const sig = onchainRequest(unhex(secret), f.hash, undefined) as Uint8Array;
       const bound: Bound = { kind: 'request', request: sig, confirmations: null };
-      const how = (await this.payeeAuto(me, s, MESSAGES_SPEC, TYPES.answer, answerPayload({ to: id, commitment: f.hash, bound, ticket: null }), f.amount)) ?? { by: 'itself' as const };
-      const answer = await this.sendAnswer(me, s, book, id, f.hash, bound, inv.from, null, how);
+      const how = (await this.payeeAuto(me, s, MESSAGES_SPEC, TYPES.answer, answerPayload({ to: id, commitment: f.hash, bound, ticket: null, amount: f.amount }))) ?? { by: 'itself' as const };
+      const answer = await this.sendAnswer(me, s, book, id, f.hash, bound, inv.from, null, how, f.amount);
       inv.stage = 'answered';
       p.answer = answer;
       p.bound = { kind: 'request', request: base64(sig), confirmations: null };
@@ -934,14 +936,15 @@ export class Damgar {
     } else {
       // Lightning: an invoice from the person's node, through the receive-only link (F351), under the receipts lane and within its cap; otherwise it waits.
       const keys = await this.keys(me.id);
-      const auto = keys.link && this.opts.link ? await this.payeeAuto(me, s, MESSAGES_SPEC, TYPES.answer, answerPayload({ to: id, commitment: f.hash, bound: { kind: 'invoice', invoice: '' }, ticket: null }), f.amount) : null;
+      const lane = keys.link && this.opts.link ? await this.payeeLane(me, s, MESSAGES_SPEC, TYPES.answer, answerPayload({ to: id, commitment: f.hash, bound: { kind: 'invoice', invoice: '' }, ticket: null, amount: f.amount })) : null;
+      const auto = lane && !('why' in lane) ? lane : null;
       if (auto && keys.link) {
         try {
           const link = await this.opts.link!(keys.link);
           const invoice = await link.invoice(f.amount.value, f.hash);
           const problems = this.invoiceProblems(p, invoice);
           if (problems.length) throw new Error(problems.join('; '));
-          p.answer = await this.sendAnswer(me, s, book, id, p.key, { kind: 'invoice', invoice }, inv.from, null, auto);
+          p.answer = await this.sendAnswer(me, s, book, id, p.key, { kind: 'invoice', invoice }, inv.from, null, auto, f.amount);
           p.bound = { kind: 'invoice', invoice };
           p.stage = 'to pay';
           inv.stage = 'answered';
@@ -952,7 +955,7 @@ export class Damgar {
           return;
         }
       }
-      lines.push({ text: `${short(inv.from)} wants to pay you ${say(f.amount, acc)} on Lightning: make an invoice in your wallet, in To sign.`, tone: 'ok' });
+      lines.push({ text: `${short(inv.from)} wants to pay you ${say(f.amount, acc)} on Lightning: make an invoice in your wallet, in To sign.${lane && 'why' in lane && !s.manual ? ` Not answered by itself: ${lane.why.replace(/\.? ?Nothing was signed\.?$/, '')}.` : ''}`, tone: 'ok' });
     }
   }
 
@@ -1032,8 +1035,9 @@ export class Damgar {
     return { ir, why: null, address };
   }
 
-  private async sendAnswer(me: TestIdentity, s: Settings, book: Book, to: string, commitment: string, bound: Bound, payer: string, ticket: string | null, how: How = { by: 'hand' }): Promise<string> {
-    return this.deliver(me, s, book, MESSAGES_SPEC, TYPES.answer, answerPayload({ to, commitment, bound, ticket }), payer, undefined, how);
+  /** An answer carries the amount it binds, the commitment's (draft 3, F352), so a lane's cap is judged on it by the grant limits cMIP. */
+  private async sendAnswer(me: TestIdentity, s: Settings, book: Book, to: string, commitment: string, bound: Bound, payer: string, ticket: string | null, how: How = { by: 'hand' }, amount: Amount | null = book.payments[commitment]?.amount ?? null): Promise<string> {
+    return this.deliver(me, s, book, MESSAGES_SPEC, TYPES.answer, answerPayload({ to, commitment, bound, ticket, amount }), payer, undefined, how);
   }
 
   /**
@@ -1626,7 +1630,7 @@ export class Damgar {
     }
     const c = (moneyRead(3, this.opened(book, claim).payload) as { act: { rail: string; proof: Uint8Array; amount: Amount; fulfils: string; referral?: { identity: string; evidence: string } | null } }).act;
     const made = moneyPayload({ type: 'receipt', rail: c.rail, proof: new Uint8Array(c.proof), payer: p.other, payee: me.id, amount: c.amount, fulfils: c.fulfils }) as { type: number; payload: Uint8Array };
-    const as = how ?? (await this.payeeAuto(me, s, MONEY, made.type, made.payload, c.amount));
+    const as = how ?? (await this.payeeAuto(me, s, MONEY, made.type, made.payload));
     if (!as) return [];
     const receipt = await this.deliver(me, s, book, MONEY, made.type, made.payload, p.other, undefined, as);
     p.receipts.push(receipt);
@@ -1997,6 +2001,24 @@ export class Damgar {
     });
   }
 
+  /**
+   * What revoking a lane does, read back before it is signed (F352): the
+   * revocation cites every act signed under the lane that the identity's
+   * places hold, so each payee, holding only its own act, finds it counted;
+   * its cost said: the public revocation lists every act's id, a long lane
+   * makes a long revocation, and an act held nowhere Damgar reads is voided.
+   */
+  revokeLaneReview(grant: string): Promise<{ lines: Line[]; acts: number }> {
+    return this.serial(async () => {
+      const { me, s, book, hints } = await this.ctx();
+      const l = book.lanes?.[grant];
+      if (!l) throw new Error('No lane of this identity, granted here, is that one.');
+      if (l.revoked) throw new Error('That lane is revoked already.');
+      const under = await actsUnder(me.id, grant, hints, s.via).catch(() => []);
+      return { acts: under.length, lines: [...REVOKE_SAY(l.label, under.length).map((text) => ({ text })), { text: REVOKE_COST, tone: 'warn' as const }] };
+    });
+  }
+
   /** Revoke a lane (Agreements type 10, an everyday act, public): one act ends it (rule 76). */
   revokeLane(grant: string): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
@@ -2287,7 +2309,7 @@ export class Damgar {
   private async deliver(me: TestIdentity, s: Settings, book: Book, spec: string, type: number, payload: Uint8Array, to: string, refs?: [string, string][], how: How = { by: 'hand' }): Promise<string> {
     const l = await lookUp(to, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via);
     if (!l.encryptionKey) throw new Error(`${short(to)} publishes no encryption key: nothing can be sealed to it. Nothing was sent.`);
-    const inbox = l.inbox(spec) ?? l.inbox(MESSAGES_SPECS.includes(spec) ? MESSAGES_SPEC_1 : spec) ?? [];
+    const inbox = l.inbox(spec) ?? (MESSAGES_SPECS.includes(spec) ? MESSAGES_SPECS.map((x) => l.inbox(x)).find((x) => x) : undefined) ?? [];
     if (!inbox.length) throw new Error(`${short(to)} declares no inbox: nothing can be left for it. Nothing was sent.`);
     await this.current(me);
     let made: { act: Uint8Array; id: string; key: Uint8Array };
@@ -2349,16 +2371,29 @@ export class Damgar {
     return { by: 'lane', grant: f.lane.grant };
   }
 
-  /** How the payee's act is signed by Damgar itself: under its receipts lane, within its cap, unless every step is followed by hand. Null: it waits for the person. */
-  private async payeeAuto(me: TestIdentity, s: Settings, spec: string, type: number, payload: Uint8Array, amount: Amount): Promise<How | null> {
-    if (s.manual || this.opts.app) return null;
+  /** How the payee's act is signed by Damgar itself: under its receipts lane, unless every step is followed by hand. Its cap is judged on the act itself by the grant limits cMIP (`laneFor`): a receipt's amount, an answer's (draft 3, F352). Null: it waits for the person. */
+  private async payeeAuto(me: TestIdentity, s: Settings, spec: string, type: number, payload: Uint8Array): Promise<How | null> {
+    const f = await this.payeeLane(me, s, spec, type, payload);
+    return 'why' in f ? null : f;
+  }
+
+  /** As `payeeAuto`, with why it waits. */
+  private async payeeLane(me: TestIdentity, s: Settings, spec: string, type: number, payload: Uint8Array): Promise<How | { why: string }> {
+    if (s.manual || this.opts.app) return { why: 'every step is followed by hand' };
     const f = await this.laneFor(me, s, spec, type, payload, 'receipts');
-    if ('why' in f) return null;
-    const cap = f.lane.limits?.cap;
-    if (!cap || cap.unit !== amount.unit || amount.value > cap.value) return null;
+    if ('why' in f) return f;
     return { by: 'lane', grant: f.lane.grant };
   }
 }
+
+/** Said before a lane is revoked (F352): what the revocation does. */
+export const REVOKE_SAY = (label: string, acts: number): string[] => [
+  `Revoking “${label}” signs one public act: from it on, nothing signed under the lane counts.`,
+  `It cites the ${acts} act${acts === 1 ? '' : 's'} signed under the lane that your homes and relays hold, each by its id, so every payment already made under it keeps counting for the one paid, who holds only their own (Agreements rule 76).`,
+];
+
+/** Its cost, stated (F352). */
+export const REVOKE_COST = 'The cost: the revocation is public and lists the id of every act it cites (what each says stays sealed); a lane used long makes a long revocation; an act signed under the lane that Damgar does not find at your homes and relays is not cited, and is void from then on.';
 
 /**
  * The referral share an offer's words promise (F351, round 2): the one

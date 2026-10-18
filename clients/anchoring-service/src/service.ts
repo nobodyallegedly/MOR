@@ -238,7 +238,7 @@ export class Service {
     const ir = readInvoiceRequest(payload);
     const f = ir.fields;
     const refuse = async (why: string) => {
-      await this.deliver(MESSAGES_SPEC, TYPES.answer, answerPayload({ to: id, commitment: f.hash, bound: { kind: 'refused', why }, ticket: null }), signer);
+      await this.deliver(MESSAGES_SPEC, TYPES.answer, answerPayload({ to: id, commitment: f.hash, bound: { kind: 'refused', why }, ticket: null, amount: f.amount }), signer);
       return `Refused ${signer.slice(0, 8)}…: ${why}.`;
     };
     if (!ir.ticket) return refuse('this service sells anchors only: no leaf was asked');
@@ -254,7 +254,7 @@ export class Service {
     this.save();
     await this.publish(t.act);
     this.s.tickets.push({ ticket: t.id, leaf: ir.ticket.leaf, tier: ir.ticket.tier, batch: this.s.batch, deadline: tip + tier.blocks, payer: signer, commitment: base64(ir.commitment), invoice: inv.invoice, hash: inv.hash, paid: false, receipt: null });
-    await this.deliver(MESSAGES_SPEC, TYPES.answer, answerPayload({ to: id, commitment: f.hash, bound: { kind: 'invoice', invoice: inv.invoice }, ticket: t.id }), signer);
+    await this.deliver(MESSAGES_SPEC, TYPES.answer, answerPayload({ to: id, commitment: f.hash, bound: { kind: 'invoice', invoice: inv.invoice }, ticket: t.id, amount: f.amount }), signer);
     return `Ticket for ${signer.slice(0, 8)}…: batch ${this.s.batch}, by block ${tip + tier.blocks}; an invoice of its node sent.`;
   }
 

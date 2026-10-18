@@ -40,6 +40,7 @@ export const OPS = [
   'grant lane',
   'own lane review',
   'own lane',
+  'revoke lane review',
   'revoke lane',
   'manual',
   'clock',
@@ -120,6 +121,8 @@ export async function run(d: Damgar, op: string, a: Record<string, unknown>): Pr
       return d.ownLaneReview({ role: a.role === 'payouts' ? 'payouts' : 'receipts', cap: text(a.cap), unit: text(a.unit), until: untilOf(a.until) });
     case 'own lane':
       return d.ownLane({ role: a.role === 'payouts' ? 'payouts' : 'receipts', cap: text(a.cap), unit: text(a.unit), until: untilOf(a.until), digest: text(a.digest) });
+    case 'revoke lane review':
+      return d.revokeLaneReview(text(a.grant));
     case 'revoke lane':
       return d.revokeLane(text(a.grant));
     case 'manual':

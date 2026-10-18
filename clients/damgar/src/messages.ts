@@ -214,6 +214,8 @@ export interface Answer {
   bound: Bound;
   /** The ticket an anchoring service signed for it. */
   ticket: string | null;
+  /** The amount it binds, the commitment's (draft 3, F352): so a lane's cap is judged on the answer itself (the grant limits cMIP, 2.1). Absent in drafts 1 and 2. */
+  amount?: Amount | null;
 }
 
 export function answerPayload(a: Answer): Uint8Array {
@@ -225,12 +227,13 @@ export function answerPayload(a: Answer): Uint8Array {
     [2, bound],
   ]);
   if (a.ticket) m.set(3, unhex(a.ticket));
+  if (a.amount) m.set(4, amountValue(a.amount));
   return cborEncode(m);
 }
 
 export function readAnswer(payload: Uint8Array): Answer {
   const m = asMap(payload, 'an answer');
-  closed(m, [0, 1, 2, 3], 'an answer');
+  closed(m, [0, 1, 2, 3, 4], 'an answer');
   const b = m.get(2);
   if (!Array.isArray(b)) throw new Error('an answer: its bound');
   let bound: Bound;
@@ -238,7 +241,8 @@ export function readAnswer(payload: Uint8Array): Answer {
   else if (b[0] === 1 && (b.length === 2 || b.length === 3) && b[1] instanceof Uint8Array && b[1].length === 64) bound = { kind: 'request', request: b[1], confirmations: b.length === 3 ? Number(b[2]) : null };
   else if (b[0] === 2 && b.length === 2) bound = { kind: 'refused', why: text(b[1], 'why') };
   else throw new Error('an answer: its bound');
-  return { to: h32(m.get(0), 'the request answered'), commitment: h32(m.get(1), 'the commitment'), bound, ticket: m.has(3) ? h32(m.get(3), 'the ticket') : null };
+  const amount = m.has(4) ? amountOf(m.get(4)) : null;
+  return { to: h32(m.get(0), 'the request answered'), commitment: h32(m.get(1), 'the commitment'), bound, ticket: m.has(3) ? h32(m.get(3), 'the ticket') : null, amount };
 }
 
 // ------------------------------------------------------------ type 5: a lane asked (draft 2)
