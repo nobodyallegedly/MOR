@@ -66,7 +66,9 @@ Edubba now has a web page for testing, so a collective can be founded and run fr
 | `test/web-browser.test.ts`: the banner on every screen and at a phone's width; no Agents tab, nothing of Claude's, no test collective; Settings; an identity brought by `mid1…` and words, wrong words refused, its ID and acts in the forms; kept across a reload, no chain key in storage; one tab at a time; a correction; a real collective founded with two members signing in Dub's web client, the shares dealt and kept nowhere (every browser's storage read whole); a member change signed in Dub on the web, then waiting for Kišib; a collective brought read only; H42's boxes; no console error | 2 tests, both pass |
 | `test/web-build.test.ts`: the release's files and fingerprints, the banner's risks, Edubba's icons, built twice the same in two folders, nothing of the program in the script, `check`, the emerald tint, the operations answered and refused | 5 tests, all pass |
 | `test/build/reproducible.test.ts` (`npm run test:build`): built here, the release byte for byte | passes |
-| Edubba's whole suite (`npm test`), the Mac's program and page after the operations moved and the page split | see the pull request's description |
+| Edubba's whole suite (`npm test`), the Mac's program and page after the operations moved and the page split, the new tests included | 96 tests, all pass |
+| Kišib's browser test, which drives Edubba's page on the Mac (a collective's new words taken by clicks) | 3 tests, all pass |
+| Type-checks of Dub, Kišib, Damgar, Ummia and the collective client, which import Edubba's code | all pass |
 
 ## Human test: Edubba on the iPad and the iPhone
 
