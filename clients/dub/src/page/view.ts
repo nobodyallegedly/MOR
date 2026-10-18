@@ -257,14 +257,14 @@ ${web ? '' : via}
   return `${top(web, !!i)}
 <div id="status"></div>
 <h2>Identity</h2>
-${i ? current(s) : held.length ? '<p class="small">No identity in use. Choose one held here, or make or bring another.</p>' : '<p class="small">Dub opens once an identity is here.</p>'}
+${i ? current(s, web) : held.length ? '<p class="small">No identity in use. Choose one held here, or make or bring another.</p>' : '<p class="small">Dub opens once an identity is here.</p>'}
 ${!i && held.length ? `<div class="held" id="held"><span class="label">Your identities here</span><ul>${held.map((h) => `<li>${who(h.who)}<button data-action="use" data-id="${e(h.id)}">Use this one</button></li>`).join('')}</ul></div>` : ''}
 ${doors}
 ${browsers}`;
 }
 
 /** The identity in use: its name, its words on request, its line. */
-function current(s: State): string {
+function current(s: State, web = false): string {
   const i = s.identity!;
   const name = i.who.names.join(' / ');
   return `<div class="card" id="identity">
@@ -274,6 +274,13 @@ function current(s: State): string {
 <div class="row"><button class="quiet" data-action="copy" data-id="${e(i.id)}">Copy ID</button></div>
 <form id="name"><label>Your display name: shown beside your fingerprint, never instead of it. Anyone can take the same name.</label>
 <div class="row"><input class="grow" name="name" maxlength="48" autocomplete="off" value="${e(name)}" placeholder="No name: your fingerprint alone"><button type="submit">Save</button></div></form>
+<details data-fold="lane"><summary>Paying from Dub: a lane from Damgar</summary>
+<ul class="say">${LANE_SAY_SHOWN.map((t) => `<li>${e(t)}</li>`).join('')}</ul>
+<div id="lanes"><p class="small">Reading the lanes…</p></div>
+<form id="lane" class="compose"><input name="label" value="${web ? 'Dub on the web' : 'Dub on this computer'}" maxlength="80" autocomplete="off">
+<div class="row tight"><input name="cap" inputmode="numeric" class="pet" placeholder="At most, per payment" required><select name="unit">${unitOptions(s.units)}</select></div>
+<label class="small">Until (optional), judged on a timestamp clock: its ID</label><div class="row tight"><input name="until" type="datetime-local"><input name="clock" class="grow" placeholder="the clock’s ID" spellcheck="false"></div>
+<div class="row"><button type="submit">Ask Damgar for this lane</button></div></form></details>
 <div class="row"><label class="small check"><input type="checkbox" id="signing-on" ${i.signing ? 'checked' : ''}> Signing: sign agreements of real collectives here. Even more experimental than Dub itself; off unless you turn it on.</label></div>
 <div class="row"><button data-action="carry">Show the signing key’s words</button><button data-action="leave">Switch identity</button><button class="quiet" data-action="forget" data-id="${e(i.id)}">Forget it here</button></div>
 <p class="small">Switch identity: Dub leaves this one first (its keys stay here), then opens this window to choose another, or make or bring one.</p>
@@ -337,6 +344,7 @@ ${testNotice(web)}
 <div class="to"><input name="to" list="followed" autocomplete="off" spellcheck="false" placeholder="To an identity: someone you follow, or its ID (a public message, left in its inbox too)"></div>
 <div class="row"><label class="quiet-file"><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"><span class="small" data-action="pick">Picture</span></label><button type="button" class="quiet" data-action="address">To…</button><span class="grow small" id="picked"></span><button type="submit" class="primary">Post</button></div>
 </form>
+${sellForm(s.units)}
 <div class="filters"><button class="tab on" data-filter="all">Everyone</button><button class="tab" data-filter="toyou">To you<span class="count" id="count-toyou"></span></button><button class="tab" data-filter="relay" title="Every public act at this identity’s relays, newest first">Relay</button><span class="grow"></span><button class="quiet" data-action="feed">Look again</button></div>
 ${people(s)}
 <div id="feed"><p class="empty">Reading the feed…</p></div>
@@ -350,6 +358,7 @@ ${people(s)}
 <details class="fold" data-fold="askpaid"><summary>Ask someone to pay you</summary><form id="askpaid" class="compose"><input name="to" autocomplete="off" spellcheck="false" placeholder="Who: an identity’s ID" required>
 <div class="row tight"><input name="value" inputmode="numeric" class="pet" placeholder="Amount" required><select name="unit">${unitOptions(s.units)}</select></div><input name="whatFor" placeholder="What for (optional)">
 <p class="small">${e(MONEY_SAY)} A request is not a debt: they may pay it, accept it as a debt, or decline.</p><div class="row"><button type="submit" class="primary">Prepare it for Damgar</button></div></form></details>
+<details class="fold" data-fold="payments"><summary>Payments, under the lane</summary><div id="payments"><p class="empty">Reading…</p></div></details>
 ${i.encryption ? '' : `<div class="note">No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.</div>`}
 <div id="signing-waiting"></div>
 <div id="inbox"><p class="empty">Reading the inbox…</p></div>
@@ -486,13 +495,14 @@ export function post(p: Item): string {
   const acts = [
     `<button data-action="reply">Reply</button>`,
     p.who.me ? '' : `<button data-action="tip">Tip</button>`,
+    p.sealed && p.sealed.seller !== p.who.id ? '' : p.sealed && !p.who.me ? `<button data-action="repost">Repost</button>` : '',
     p.who.me ? '' : p.who.followed ? `<button data-action="unfollow" data-id="${e(p.who.id)}">Following</button>` : `<button data-action="follow" data-id="${e(p.who.id)}">Follow</button>`,
     p.who.me ? '' : `<button data-action="mute" data-id="${e(p.who.id)}">Mute</button>`,
     ...p.pictures.filter((x) => x.withdrawable).map((x) => `<button data-action="withdraw" data-publication="${e(x.publication)}">Withdraw picture</button>`),
   ].join('');
   return `<article class="post" data-post="${e(p.id)}" data-signer="${e(p.who.id)}">
 <div class="row tight">${who(p.who)}${flag}</div>${authority}${correction}${answers}${correctedBy}
-${p.text ? `<div class="text" dir="auto">${e(p.text)}</div>` : ''}${pics}${doc}
+${p.text && !p.repost ? `<div class="text" dir="auto">${e(p.text)}</div>` : ''}${p.sealed ? sealedBox(p) : ''}${pics}${doc}
 <div class="acts">${acts}</div><div class="tipping"></div></article>`;
 }
 
@@ -507,7 +517,33 @@ export const MONEY_SAY = 'Prepared here, not signed here: Dub seals a draft to t
 /** A tip on a post: its amount, its unit, what for. */
 export function tipForm(units: { hash: string; label: string }[] = []): string {
   return `<form class="tip compose"><label>Tip: an amount, in the unit's smallest part</label><div class="row tight"><input name="value" inputmode="numeric" class="pet" required><select name="unit">${unitOptions(units)}</select></div>
-<input name="whatFor" placeholder="What for (optional)"><p class="small">${e(MONEY_SAY)}</p><div class="row"><button type="submit" class="primary">Prepare it for Damgar</button><button type="button" class="quiet" data-action="untip">Cancel</button></div></form>`;
+<input name="whatFor" placeholder="What for (optional)"><p class="small">${e(LANE_PAY_SAY)}</p><div class="row"><button type="submit" class="primary" name="how" value="lane">Pay now, under the lane</button><button type="submit" name="how" value="draft">Prepare it for Damgar</button><button type="button" class="quiet" data-action="untip">Cancel</button></div></form>`;
+}
+
+/** Said where a payment is made from Dub (round 2): under its lane, or prepared for Damgar as in round 1. */
+export const LANE_PAY_SAY = 'Pay now: Dub signs it under its lane, within the cap Damgar granted, and shows you the invoice to pay in your wallet (Payments, in the Private tab). Or prepare it for Damgar, which reads it to you and signs it there.';
+
+/** A sealed post (pay-per-view): its price, its words, its state; its text once its key arrived. */
+function sealedBox(p: Item): string {
+  const x = p.sealed!;
+  const repostOf = p.repost ? `<div class="re">↻ ${who(p.repost.by)} reposted ${who(p.repost.of)}’s sealed post</div>` : '';
+  const state =
+    x.state === 'opened' || x.state === 'yours'
+      ? `<div class="text" dir="auto">${e(x.text ?? '')}</div><p class="small">${x.state === 'yours' ? 'Your sealed post: its key is here, delivered to each buyer once your Damgar signs the receipt.' : 'Opened: its key arrived from its seller, and its text matches the fingerprint it was published with.'}</p>`
+      : x.state === 'paying'
+        ? '<p class="small">Bought: pay it in your wallet (Payments, in the Private tab). Its key arrives once the seller’s Damgar signs the receipt.</p>'
+        : `<p class="small">Sealed: its text opens once paid. ${e(x.price)}.</p><div class="row"><button class="primary" data-action="buy" data-publication="${e(x.publication)}" data-seller="${e(x.seller)}"${p.repost ? ` data-repost="${e(p.id)}" data-reposter="${e(p.repost.by.id)}"` : ''}>Buy it, under the lane</button></div>`;
+  return `${repostOf}<div class="sealed-post"><span class="label">A sealed post · ${e(x.price)}</span>${x.words ? `<p class="small">${e(x.words)}</p>` : ''}${state}${x.problem ? `<p class="small flag">${e(x.problem)}</p>` : ''}</div>`;
+}
+
+/** Sealing a post with a price (pay-per-view, round 2). */
+export function sellForm(units: { hash: string; label: string }[] = []): string {
+  return `<details class="fold" data-fold="sell"><summary>Seal a post with a price</summary><form id="sell" class="compose">
+<textarea name="text" required placeholder="The sealed text: opened by each buyer once paid"></textarea>
+<input name="teaser" placeholder="What everyone sees (optional): “A recipe, sealed.”">
+<div class="row tight"><input name="value" inputmode="numeric" class="pet" placeholder="Price" required><select name="unit">${unitOptions(units)}</select><input name="referral" inputmode="numeric" class="pet" placeholder="Referral %"></div>
+<p class="small">The post is public, its text sealed: an offer sells it at this price; once a buyer’s payment is receipted by your Damgar, Dub delivers its key to them, sealed. A referral share is promised in the offer’s words to the repost a buyer names, paid by your Damgar: a promise in words, not judged (F351).</p>
+<div class="row"><button type="submit" class="primary">Seal it and post it</button></div></form></details>`;
 }
 
 /** A private message, received or sent here. */
@@ -533,4 +569,33 @@ export function spent(say: string): string {
     'spent',
     `<p>${e(say)}</p><form id="renew"><label>The new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Use the new words</button></div></form>`,
   );
+}
+
+/** Said in the identity window, beside the lane (round 2). */
+export const LANE_SAY_SHOWN = [
+  'A lane lets Dub pay by itself, without opening Damgar (a tip, a sealed post), up to a cap per payment, until a date if you give one.',
+  'Dub asks Damgar for it, sealed to yourself; Damgar reads it to you in plain words, and you grant it there. Revoke it in Damgar (Lanes).',
+];
+
+/** The lanes asked here, and where each stands. */
+export function lanesHere(ls: { label: string; state: string; cap: string; until: number | null }[]): string {
+  return ls.length ? `<ul>${ls.map((l) => `<li>${e(l.label)} · ${e(l.state)} · at most ${e(l.cap)} a payment${l.until ? ` · until ${e(new Date(l.until * 1000).toISOString().slice(0, 16).replace('T', ' '))} UTC` : ''}</li>`).join('')}</ul>` : '<p class="small">No lane yet: Dub pays nothing by itself.</p>';
+}
+
+/** Payments signed here under the lane: the invoice to pay in the wallet, and the proof taken back; those done. */
+export function paymentsHere(r: { payments: PaymentShownHere[]; done: PaymentShownHere[]; problems: string[] }): string {
+  const one = (p: PaymentShownHere) => `<article class="msg"><div class="row tight"><span class="small">to</span><span class="fp" title="${e(p.other.id)}">${e(p.other.short)}</span><span class="grow"></span><span class="small">${e(p.amount.said)}</span></div><p class="small">${e(p.stageSaid)}</p>
+${p.pay?.invoice ? `<div class="copy">${e(p.pay.invoice)}</div><button class="quiet" data-action="copy-text" data-text="${e(p.pay.invoice)}">Copy the invoice</button><form class="paid compose" data-key="${e(p.key)}"><input name="proof" required spellcheck="false" autocomplete="off" placeholder="The preimage, from your wallet once paid"><div class="row"><button type="submit" class="primary">Check it and sign the claim, under the lane</button></div></form>` : ''}
+${p.proofs.length ? `<ul class="say">${p.proofs.map((x) => `<li>${x.kind === 'claim' ? 'Claim' : 'Receipt'}: ${e(x.rail.answer)} · ${e(x.how)}</li>`).join('')}</ul>` : ''}</article>`;
+  return `${r.payments.map(one).join('')}${r.done.length ? `<span class="label">Done</span>${r.done.map(one).join('')}` : ''}${!r.payments.length && !r.done.length ? '<p class="empty">No payment made from Dub yet.</p>' : ''}${r.problems.map((x) => `<p class="small">${e(x)}</p>`).join('')}`;
+}
+
+/** A payment as Damgar's code shows it, the part Dub draws. */
+export interface PaymentShownHere {
+  key: string;
+  other: { id: string; short: string };
+  amount: { said: string };
+  stageSaid: string;
+  pay: { invoice?: string; address?: string } | null;
+  proofs: { kind: string; rail: { answer: string }; how: string }[];
 }

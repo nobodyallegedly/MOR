@@ -220,6 +220,29 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     counts();
   }
 
+  /** The lanes asked here (round 2), in the identity window. */
+  async function readLanes() {
+    if (!$('lanes')) return;
+    try {
+      const r = await b.ask<{ lanes: { label: string; state: string; cap: string; until: number | null }[] }>('lanes');
+      fill('lanes', v.lanesHere(r.lanes));
+    } catch (err) {
+      fill('lanes', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+    }
+  }
+
+  /** Payments made here under the lane; keys to deliver and keys arrived for sealed posts (round 2). */
+  async function readPayments() {
+    try {
+      await b.ask('money look');
+      if (!$('payments')) return;
+      const r = await b.ask<{ payments: v.PaymentShownHere[]; done: v.PaymentShownHere[]; problems: string[] }>('payments');
+      fill('payments', v.paymentsHere(r));
+    } catch (err) {
+      fill('payments', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+    }
+  }
+
   async function readInbox() {
     try {
       inbox = await b.ask<Inbox>('inbox');
@@ -297,13 +320,14 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     }
     if (s.stage === 'identity') {
       app.innerHTML = v.identityWindow(s, b.web, b.suggested?.() ?? {});
+      void readLanes();
       return;
     }
     app.innerHTML = v.app(s, b.web);
     setTab(tab);
     setFilter(filter);
     void check();
-    await Promise.all([readFeed(), readInbox()]);
+    await Promise.all([readFeed(), readInbox(), readPayments()]);
     await readSigning();
   }
 
@@ -350,6 +374,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         const s = await b.ask<v.State>('state');
         state = s;
         app.innerHTML = v.identityWindow(s, b.web, b.suggested?.() ?? {});
+      void readLanes();
         say(on ? 'warn' : 'done', v.lines(r.lines));
       } else el.checked = !on;
       return;
@@ -391,7 +416,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         }
         break;
       case 'window':
-        if (state) app.innerHTML = v.identityWindow(state, b.web, b.suggested?.() ?? {});
+        if (state) {
+          app.innerHTML = v.identityWindow(state, b.web, b.suggested?.() ?? {});
+          void readLanes();
+        }
         break;
       case 'back':
         await refresh();
@@ -485,6 +513,29 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         if (t) t.innerHTML = v.tipForm(state?.units);
         break;
       }
+      case 'buy': {
+        if (!confirm('Buy it, under the lane? Dub signs the request to pay within the lane’s cap; you then pay the invoice in your wallet (Payments, in the Private tab).')) break;
+        const r = await busy('Asking the seller where to pay, under the lane…', () => b.ask<{ lines: v.Line[] }>('buy', { publication: d.publication, seller: d.seller, repost: d.repost, reposter: d.reposter }));
+        if (r) {
+          say('done', v.lines(r.lines));
+          await readFeed();
+        }
+        break;
+      }
+      case 'repost': {
+        if (!card) break;
+        const r = await busy('Reposting, with the sealed post held at your relays…', () => b.ask<{ lines: v.Line[] }>('repost', { post: card.dataset.post, signer: card.dataset.signer }));
+        if (r) {
+          say('done', v.lines(r.lines));
+          await readFeed();
+        }
+        break;
+      }
+      case 'copy-text': {
+        const ok = await copy(d.text ?? '');
+        el.textContent = ok ? 'Copied' : 'Select it and copy it';
+        break;
+      }
       case 'untip':
         if (card) card.querySelector('.tipping')!.innerHTML = '';
         break;
@@ -533,6 +584,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       case 'feed':
         say('', '');
         if (filter === 'relay') void readRelay();
+        await readPayments();
         await Promise.all([readFeed(true), readInbox()]);
         await readSigning();
         break;
@@ -608,10 +660,21 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     const d = new FormData(form);
     if (form.classList.contains('tip')) {
       const card = form.closest<HTMLElement>('article');
-      const r = await busy('Sealing the draft to this identity…', () => b.ask<{ lines: v.Line[] }>('tip', { post: card?.dataset.post, signer: card?.dataset.signer, value: String(d.get('value') ?? ''), unit: String(d.get('unit') ?? ''), whatFor: String(d.get('whatFor') ?? '') }));
+      const lane = (ev as SubmitEvent).submitter?.getAttribute('value') === 'lane';
+      const a = { post: card?.dataset.post, signer: card?.dataset.signer, value: String(d.get('value') ?? ''), unit: String(d.get('unit') ?? ''), whatFor: String(d.get('whatFor') ?? '') };
+      const r = await busy(lane ? 'Asking where to pay, under the lane…' : 'Sealing the draft to this identity…', () => b.ask<{ lines: v.Line[] }>(lane ? 'tip now' : 'tip', a));
       if (r) {
         form.remove();
         say('done', v.lines(r.lines));
+        if (lane) await readPayments();
+      }
+      return;
+    }
+    if (form.classList.contains('paid')) {
+      const r = await busy('Checking the proof, then signing the claim under the lane…', () => b.ask<{ lines: v.Line[] }>('paid', { key: form.dataset.key, proof: String(d.get('proof') ?? '') }));
+      if (r) {
+        say('done', v.lines(r.lines));
+        await readPayments();
       }
       return;
     }
@@ -625,6 +688,28 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       return;
     }
     switch (name) {
+      case 'lane': {
+        const until = String(d.get('until') ?? '');
+        const r = await busy('Sealing the lane’s request to this identity…', () =>
+          b.ask<{ lines: v.Line[] }>('lane ask', { label: String(d.get('label') ?? ''), cap: String(d.get('cap') ?? ''), unit: String(d.get('unit') ?? ''), until: until ? Math.floor(new Date(until).getTime() / 1000) : '', clock: String(d.get('clock') ?? '') }),
+        );
+        if (r) {
+          say('done', v.lines(r.lines));
+          await readLanes();
+        }
+        return;
+      }
+      case 'sell': {
+        const r = await busy('Sealing the post, its offer, and posting…', () =>
+          b.ask<{ lines: v.Line[] }>('sell', { text: String(d.get('text') ?? ''), teaser: String(d.get('teaser') ?? ''), value: String(d.get('value') ?? ''), unit: String(d.get('unit') ?? ''), referral: String(d.get('referral') ?? '') }),
+        );
+        if (r) {
+          form.reset();
+          say('done', v.lines(r.lines));
+          await readFeed();
+        }
+        return;
+      }
       case 'askpaid': {
         const r = await busy('Sealing the draft to this identity…', () => b.ask<{ lines: v.Line[] }>('ask paid', { to: String(d.get('to') ?? ''), value: String(d.get('value') ?? ''), unit: String(d.get('unit') ?? ''), whatFor: String(d.get('whatFor') ?? '') }));
         if (r) {
@@ -686,6 +771,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
           const s = await b.ask<v.State>('state');
           state = s;
           app.innerHTML = v.identityWindow(s, b.web, b.suggested?.() ?? {});
+      void readLanes();
           say('done', r.lines.length ? v.lines(r.lines) : 'Nothing changed.');
         }
         return;
