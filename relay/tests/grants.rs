@@ -157,3 +157,43 @@ async fn a_home_asks_for_the_grant_first() {
     home.client.put_act(&g.encode()).await.unwrap();
     home.client.put_act(&post.encode()).await.expect("stored once the grant is held");
 }
+
+/// A member's own key (F353; relay transport cMIP draft 6): an act in the
+/// collective's name bound to the member's signature of its founding, the
+/// signature naming the key (field 1): stored by a relay and by the
+/// collective's home, its key checked; signed with another key, refused;
+/// bound to a signature naming no key, refused.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_act_under_a_members_own_key_is_stored() {
+    let home = Running::start(Role::Home, Policy::Open).await;
+    let relay = Running::start(Role::Relay, Policy::Open).await;
+    let (cg, collective) = genesis("collective", vec![home.home()], None, None);
+    let (mg, mut member) = genesis("member", vec![home.home()], None, None);
+    for r in [&home, &relay] {
+        r.client.put_act(&cg.encode()).await.unwrap();
+        r.client.put_act(&mg.encode()).await.unwrap();
+    }
+    let founding = sha256(b"the founding terms");
+    let key = schnorr("member's key", 0);
+    let k = SigningKey { scheme: sig::SCHNORR, key: key.public().to_vec() };
+    let o = Some(vec![Object { chain: founding, predecessor: founding }]);
+    let with_key = everyday(&mut member, specs().agreements, 1, mor_core::agreements::signature_payload_with_key(&founding, &k), o.clone(), None, true);
+    let plain = everyday(&mut member, specs().agreements, 1, mor_core::agreements::signature_payload(&founding), o, None, true);
+    for r in [&home, &relay] {
+        r.client.put_act(&with_key.encode()).await.unwrap();
+        r.client.put_act(&plain.encode()).await.unwrap();
+    }
+    let mut s = strand(&collective, with_key.id(), key);
+    let act = under(&mut s, collective.id, cg.id(), "Published by a member, with their own key.");
+    for r in [&relay, &home] {
+        r.client.put_act(&act.encode()).await.expect("stored under the member's key, its key checked");
+    }
+    let mut forged = strand(&collective, with_key.id(), schnorr("someone else", 0));
+    let bad = under(&mut forged, collective.id, cg.id(), "Not the member's key.");
+    let e = wire_err(relay.client.put_act(&bad.encode()).await);
+    assert!(e.reason.as_deref().unwrap_or("").contains("not the member key"), "{:?}", e.reason);
+    let mut none = strand(&collective, plain.id(), schnorr("member's key", 0));
+    let bad = under(&mut none, collective.id, cg.id(), "Bound to a signature naming no key.");
+    let e = wire_err(relay.client.put_act(&bad.encode()).await);
+    assert!(e.reason.as_deref().unwrap_or("").contains("names no member key"), "{:?}", e.reason);
+}

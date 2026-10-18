@@ -166,7 +166,6 @@ fn label_terms(ids: &[Hash], authority: Hash, keeper: Hash, f: &dyn Fn(&mut Term
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
-        member_keys: None,
     };
     f(&mut t);
     t
@@ -3093,7 +3092,6 @@ fn a_deal_changes_only_with_everyone() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
-        member_keys: None,
     };
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
     sign(&mut w, &mut m[0], &d);
@@ -3179,7 +3177,6 @@ fn in_a_deal_a_declaration_draws_its_own_line() {
             holders_rules: None,
             transfers_counted: None,
             issues_under: None,
-            member_keys: None,
         };
         let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, deal.to_map(), None);
         for p in m.iter_mut() {
@@ -3282,7 +3279,6 @@ fn in_a_deal_the_absence_authority_is_one_identity() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
-        member_keys: None,
     };
     for k in [1, 2] {
         let got = deal(Authority::Others(k)).check(&mirs());
@@ -3458,7 +3454,6 @@ fn the_reference_absence_proof_module_judges_by_anchors() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
-        member_keys: None,
     };
     assert_eq!(terms.check(&mirs()), Ok(()));
     let d = agreements_act(&mut w, &mut m[0], agreements::types::TERMS, terms.to_map(), None);
@@ -4768,7 +4763,6 @@ fn payer_side_splitting_follows_the_claim() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
-        member_keys: None,
     };
     let d = agreements_act(&mut lab.w, &mut lab.m[ANA], agreements::types::TERMS, deal.to_map(), None);
     let got = lab.view().payer_split(&d, &Who::Id(work), 1000).unwrap().unwrap();
@@ -4817,7 +4811,6 @@ fn leftovers_go_by_largest_remainder_whatever_the_order() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
-        member_keys: None,
     };
     let listed = [vec![(ids[ANA], 333_333), (ids[BEN], 333_333), (ids[CY], 333_334)], vec![(ids[CY], 333_334), (ids[ANA], 333_333), (ids[BEN], 333_333)]];
     for holders in listed.iter() {
@@ -5512,7 +5505,6 @@ fn a_work_is_released_to_the_public_domain() {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
-        member_keys: None,
     };
     let t = terms(&ana, &ben, &cy, None);
     let d = agreements_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
@@ -5818,7 +5810,6 @@ fn a_timed_release() {
             holders_rules: None,
             transfers_counted: None,
             issues_under: None,
-            member_keys: None,
         };
         let x = agreements_act(w, ana, agreements::types::TERMS, t.to_map(), None);
         sign(w, ana, &x);
@@ -15740,4 +15731,201 @@ fn a_persons_lane_signs_its_receipts_and_claims_f350() {
         matches!(v.backing(&acts[0]).unwrap(), Backing::NotBacked { ref reason, .. } if reason.contains("tie rule")),
         "the first payee cannot follow the chain through acts it cannot open: its act is void"
     );
+}
+
+// ---------------------------------------------------------------- members' own keys (F353)
+
+impl Lab {
+    /// A holder's signature of `terms` naming a member key (F353, draft
+    /// 16): the public half of a key their app made as they signed.
+    fn key_sign(&mut self, by: usize, terms: &Hash, name: &str) -> (Hash, SchnorrKey) {
+        let (k, p) = grant_key(&format!("{name}/member"));
+        let s = agreements_act(
+            &mut self.w,
+            &mut self.m[by],
+            agreements::types::SIGNATURE,
+            agreements::signature_payload_with_key(terms, &p),
+            obj(*terms),
+        );
+        (s, k)
+    }
+
+    /// The member's strand of the label's actions chain: acts signed with
+    /// their member key, bound to the signature naming it, citing the
+    /// decisions the label's devices know (rule 58).
+    fn member_strand(&self, sig: Hash, k: &SchnorrKey) -> Person {
+        let mut p = self.c[0].clone();
+        p.binding = sig;
+        p.sign = k.clone();
+        p.seq = vec![];
+        p
+    }
+
+    /// A signature act of the label, made with a member's key, naming `x`:
+    /// the second key a two-signature area asks for (F353).
+    fn key_cosign(&mut self, st: &mut Person, x: &Hash) -> Hash {
+        let a = self.w.everyday_act(st, mirs().agreements, agreements::types::SIGNATURE, agreements::signature_payload(x), obj(*x), None);
+        self.w.add(&a)
+    }
+}
+
+fn by_key(c: &Consent) -> Vec<Vec<Hash>> {
+    match c {
+        Consent::Areas { areas, .. } => areas.iter().map(|a| a.by_key.clone()).collect(),
+        other => panic!("no area reaches it: {other:?}"),
+    }
+}
+
+/// F353, Agreements draft 16: each holder's signature of the founding names
+/// a key of their own; it acts for the collective within the areas the
+/// founding gives them, counted as their signature there (rule 60). A
+/// one-signature area takes one member's act; a two-signature area takes
+/// one member's act and another member's signature, made with their key.
+/// It never signs a decision, nor acts where its holder holds nothing, and
+/// a key named on another agreement's terms is no member key.
+#[test]
+fn members_act_with_their_own_keys() {
+    let mut lab = Lab::new(&|t| {
+        // Money: Ana and Ben, two keys.
+        let a = t.areas.as_mut().unwrap().iter_mut().find(|a| a.id == 2).unwrap();
+        a.holders = vec![t.parties[ANA], t.parties[BEN]];
+        a.threshold = 2;
+    });
+    let f = lab.founding;
+    let (sa, ka) = lab.key_sign(ANA, &f, "ana");
+    let (sb, kb) = lab.key_sign(BEN, &f, "ben");
+    let (sc, kc) = lab.key_sign(CY, &f, "cy");
+    let (ana, ben) = (lab.m[ANA].id, lab.m[BEN].id);
+    let mut a = lab.member_strand(sa, &ka);
+    let mut b = lab.member_strand(sb, &kb);
+    // Ana alone publishes: the Releases area, one key.
+    let p = {
+        let x = lab.w.everyday_act(&mut a, mirs().envelopes, 0, publication(vec![]), None, None);
+        lab.w.add(&x)
+    };
+    assert_eq!(lab.w.v.status(&p), Status::Scoped);
+    assert!(lab.counts(&p), "{:?}", lab.consent(&p));
+    assert_eq!(by_key(&lab.consent(&p)), vec![vec![ana]], "the act shows which member signed");
+    // Ben's money act: one key of two.
+    let m = {
+        let x = lab.w.everyday_act(&mut b, pay(), 0, vec![(Value::Uint(0), Value::Text("a payment".into()))], None, None);
+        lab.w.add(&x)
+    };
+    assert!(!lab.counts(&m));
+    assert_eq!(areas(&lab.consent(&m)), vec![(2, false, false, vec![ben])]);
+    // Ana's key signs it: the second key.
+    let s = lab.key_cosign(&mut a, &m);
+    assert_eq!(lab.w.v.status(&s), Status::Scoped);
+    assert!(lab.counts(&m), "{:?}", lab.consent(&m));
+    assert_eq!(by_key(&lab.consent(&m)).into_iter().map(sorted).collect::<Vec<_>>(), vec![sorted(vec![ana, ben])]);
+    // Ben's key alone cannot publish: he holds no Releases area.
+    let q = {
+        let x = lab.w.everyday_act(&mut b, mirs().envelopes, 0, publication(vec![]), None, None);
+        lab.w.add(&x)
+    };
+    assert_eq!(areas(&lab.consent(&q)), vec![(1, false, false, vec![])]);
+    // Cy holds no area: his key reaches nothing.
+    let mut c = lab.member_strand(sc, &kc);
+    let r = {
+        let x = lab.w.everyday_act(&mut c, mirs().envelopes, 0, publication(vec![]), None, None);
+        lab.w.add(&x)
+    };
+    assert!(matches!(lab.consent(&r), Consent::Ungranted { ref reason, .. } if reason.contains("holds no area")), "{:?}", lab.consent(&r));
+    // A member's key signs no decision.
+    let rec = {
+        let rr = Record { clone: None, signatures: None, kept: vec![], registers: None };
+        let x = lab.w.everyday_act(&mut a, mirs().agreements, agreements::types::RECORD, rr.to_map(), obj(f), None);
+        lab.w.add(&x)
+    };
+    assert!(matches!(lab.consent(&rec), Consent::Ungranted { ref reason, .. } if reason.contains("no decision")), "{:?}", lab.consent(&rec));
+    // A key named on terms of no collective of this label acts for nothing.
+    let other = lab.propose(ANA, &label_terms(&lab.ids(), lab.authority.id, lab.keeper.id, &|t| t.text = "Another label.".into()));
+    let (so, ko) = lab.key_sign(ANA, &other, "ana-other");
+    let mut o = lab.member_strand(so, &ko);
+    let x = {
+        let x = lab.w.everyday_act(&mut o, mirs().envelopes, 0, publication(vec![]), None, None);
+        lab.w.add(&x)
+    };
+    assert!(!lab.view().consent(&x).map(|c| c.counts()).unwrap_or(false));
+}
+
+/// F353, draft 16, and the grant limits cMIP's draft 2: an area's limits
+/// (key 6) are a cMIP's. Money held by Ana and Ben at one key, with a cap:
+/// within it, one key counts; above it, the cMIP asks a second; a verifier
+/// with no verdict answers unknown, and the act does not count.
+#[test]
+fn a_lanes_limits_ask_a_second_key_above_them() {
+    let cap = spec("the grant limits cMIP, draft 2");
+    let mut lab = Lab::new(&|t| {
+        let a = t.areas.as_mut().unwrap().iter_mut().find(|a| a.id == 2).unwrap();
+        a.holders = vec![t.parties[ANA], t.parties[BEN]];
+        a.threshold = 1;
+        a.limits = Some((cap, Value::Map(vec![(Value::Uint(0), Value::Array(vec![Value::Bytes(spec("a unit").to_vec()), Value::Uint(10_000)]))])));
+    });
+    let f = lab.founding;
+    let (sa, ka) = lab.key_sign(ANA, &f, "ana");
+    let (sb, kb) = lab.key_sign(BEN, &f, "ben");
+    let mut a = lab.member_strand(sa, &ka);
+    let mut b = lab.member_strand(sb, &kb);
+    let small = {
+        let x = lab.w.everyday_act(&mut b, pay(), 0, vec![(Value::Uint(0), Value::Text("1,000".into()))], None, None);
+        lab.w.add(&x)
+    };
+    let large = {
+        let x = lab.w.everyday_act(&mut b, pay(), 0, vec![(Value::Uint(0), Value::Text("50,000".into()))], None, None);
+        lab.w.add(&x)
+    };
+    let judged = |lab: &Lab, x: &Hash, within: Option<bool>| -> Consent {
+        let mut v = lab.view();
+        if let Some(w) = within {
+            v.grant_limits.insert(*x, w);
+        }
+        v.consent(x).unwrap()
+    };
+    // No verdict: unknown, never counted.
+    let c = judged(&lab, &small, None);
+    assert!(!c.counts());
+    assert!(matches!(&c, Consent::Areas { areas, .. } if areas[0].limits == Some(agreements::AreaLimits::Unknown)));
+    assert!(judged(&lab, &small, Some(true)).counts(), "within the cap, one key");
+    assert!(!judged(&lab, &large, Some(false)).counts(), "above it, a second key is asked");
+    lab.key_cosign(&mut a, &large);
+    let c = judged(&lab, &large, Some(false));
+    assert!(c.counts(), "{c:?}");
+    assert!(matches!(&c, Consent::Areas { areas, .. } if areas[0].needed == 2 && areas[0].limits == Some(agreements::AreaLimits::Above)));
+}
+
+/// F353: a key counts from the moment its founding or clone is complete,
+/// and the holder's latest key replaces the earlier: once a clone the
+/// holder signed with a new key is in force, the old one acts no more.
+/// A key named on a draft no line put in force acts for nothing.
+#[test]
+fn a_member_key_counts_once_complete_and_the_latest_replaces_it() {
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let (sa, ka) = lab.key_sign(ANA, &f, "ana");
+    let mut a = lab.member_strand(sa, &ka);
+    // A clone of the clone rule's (two of three), its words changed: Ana
+    // names a new key on it; a draft until recorded.
+    let t = lab.clone_terms(&f, vec![(Power::Area(1), vec![ANA])], &|t| words(t, 1, "Releases go out on Mondays."));
+    let cl = lab.propose(ANA, &t);
+    let (s2, k2) = lab.key_sign(ANA, &cl, "ana-2");
+    let mut a2 = lab.member_strand(s2, &k2);
+    let publish = |lab: &mut Lab, st: &mut Person| -> Hash {
+        let x = lab.w.everyday_act(st, mirs().envelopes, 0, publication(vec![]), None, None);
+        lab.w.add(&x)
+    };
+    let early = publish(&mut lab, &mut a2);
+    assert!(matches!(lab.consent(&early), Consent::Ungranted { ref reason, .. } if reason.contains("complete")), "{:?}", lab.consent(&early));
+    let meanwhile = publish(&mut lab, &mut a);
+    assert!(lab.counts(&meanwhile), "the founding's key acts meanwhile");
+    let rec = lab.record(0, Some((cl, vec![s2])), &[], vec![], cl);
+    assert_eq!(puts(&lab, &rec), Some(cl), "{:?}", lab.view().record(&lab.c[0].id, &rec));
+    for st in [&mut a, &mut a2] {
+        let (c, ds) = lab.c[0].cite.clone().unwrap();
+        st.cite = Some((c, ds));
+    }
+    let new = publish(&mut lab, &mut a2);
+    assert!(lab.counts(&new), "{:?}", lab.consent(&new));
+    let old = publish(&mut lab, &mut a);
+    assert!(matches!(lab.consent(&old), Consent::Ungranted { ref reason, .. } if reason.contains("later version")), "{:?}", lab.consent(&old));
 }

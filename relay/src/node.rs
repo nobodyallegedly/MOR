@@ -1358,7 +1358,7 @@ impl Node {
                 }
                 return wire(
                     code::MISSING_PREDECESSOR,
-                    "the binding names no identity-chain act nor grant this home holds for the signer: send the chain acts, or the grant, first",
+                    "the binding names no identity-chain act nor grant this home holds for the signer: send the chain acts, or the grant (for a member's key, the signature naming it), first",
                 );
             };
             if !s.signing_key.made(&act.signature) {
@@ -1407,6 +1407,25 @@ impl Node {
         let Some((gact, inside)) = self.held_opened(binding)? else {
             return Ok(None);
         };
+        if inside.spec == self.specs.agreements && inside.type_ == mor_core::agreements::types::SIGNATURE {
+            // F353 (relay transport draft 6): a member's key, named by its
+            // holder's signature of the collective's founding or clone. Only
+            // the key is checked, as for a founding grant: which collective
+            // the founding is the signer's is Agreements', at every verifier.
+            let Ok((_, key)) = mor_core::agreements::decode_signature_key(&inside) else {
+                return Ok(Some(wire(code::INVALID, "the binding names a signature act that is not in its format")));
+            };
+            let Some(key) = key else {
+                return Ok(Some(wire(code::INVALID, "the binding names a signature act that names no member key")));
+            };
+            if gact.outside.signer == Some(*signer) {
+                return Ok(Some(wire(code::INVALID, "a member's key acts for the collective, never for the member who named it")));
+            }
+            if !key.made(&act.signature) {
+                return Ok(Some(wire(code::INVALID, "the signature's key is not the member key its binding names")));
+            }
+            return Ok(Some(Ok(())));
+        }
         if inside.spec != self.specs.agreements || inside.type_ != mor_core::agreements::types::GRANT {
             return Ok(None);
         }

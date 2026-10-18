@@ -119,7 +119,6 @@ fn label() -> Terms {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
-        member_keys: None,
     }
 }
 
