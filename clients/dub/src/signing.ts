@@ -12,7 +12,7 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { SPECS, cborDecode, describeAct, hex, openMedia, workHash } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, cborDecode, describeAct, hex, moneyRead, openMedia, workHash } from '../../genesis/src/core.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { assess } from '../../assess/src/assess.ts';
 import { readChanges, readRelease, termsOf, type Line, type Names, type Section } from '../../collective/src/explain.ts';
@@ -35,7 +35,7 @@ export const SHARE_SAY = [
   'It is not your own chain key, nor your signing key, nor a Bitcoin wallet.',
 ];
 
-export type ProposalKind = 'founding' | 'clone' | 'release' | 'other';
+export type ProposalKind = 'founding' | 'clone' | 'release' | 'act' | 'other';
 
 /** A proposal read in plain words. */
 export interface Reading {
@@ -56,6 +56,7 @@ export interface Reading {
 interface Described {
   id: string;
   signer?: string;
+  binding?: string;
   public: boolean;
   spec?: string;
   type?: number;
@@ -148,5 +149,62 @@ export async function readProposal(act: Uint8Array, names: Names, hints: string[
       collective: d.signer ?? null,
     };
   }
-  return { kind: 'other', title: 'An act Dub does not sign', summary: ['Dub signs founding terms, clones of a collective’s agreement, and releases.'], sections: [], plain: [], risks: [], blocking: ['Not something Dub signs.'], collective: null };
+  // Round 3 (F353): an act of a collective a lane reaches, made with one
+  // member's key, waiting for another holder's key (rule 60): read in plain
+  // words from its bytes, then signed as the collective with your own key.
+  const act2 = actOfCollective(d, names);
+  if (act2) return act2;
+  return { kind: 'other', title: 'An act Dub does not sign', summary: ['Dub signs founding terms, clones of a collective’s agreement, releases, and a collective’s acts waiting for a second key.'], sections: [], plain: [], risks: [], blocking: ['Not something Dub signs.'], collective: null };
+}
+
+/** An act of a collective, in plain words, where Dub can read it: a Money act, a post, a publication, an offer. */
+function actOfCollective(d: Described, names: Names): Reading | null {
+  if (!d.signer || !d.payload) return null;
+  const by = d.binding && d.binding !== d.signer ? ' It was made with one member’s own key (F353).' : '';
+  const base = (title: string, lines: string[], plain: { heading: string; text: string }[] = []): Reading => ({
+    kind: 'act',
+    title,
+    summary: [`An act of the collective ${names(d.signer!)}, waiting for your signature: the lane that reaches it asks one more key than it has.${by} Signing adds yours, with your own key for this collective where your apps hold it (Agreements rule 60, F353).`],
+    sections: [{ heading: 'What it is', lines: lines.map((text) => ({ text })) }],
+    plain,
+    risks: [],
+    blocking: [],
+    collective: d.signer!,
+  });
+  try {
+    if (d.spec === MIRS.money) {
+      const r = (moneyRead(d.type!, d.payload) as { act: Record<string, unknown> & { type: string } }).act;
+      const amount = r.amount as { unit: string; value: number } | undefined;
+      const lines = [`A Money act: ${r.type}.`];
+      if (amount) lines.push(`Amount: ${amount.value.toLocaleString('en')} in unit ${amount.unit.slice(0, 12)}… (the Bitcoin units Module names regtest satoshis so).`);
+      for (const k of ['payer', 'payee', 'debtor', 'creditor'] as const) if (typeof r[k] === 'string') lines.push(`${k[0].toUpperCase()}${k.slice(1)}: ${names(r[k] as string)}.`);
+      return base(`Sign a money act of the collective: ${r.type}`, lines);
+    }
+    if (d.spec === SPECS.text && d.type === 0) {
+      const m = cborDecode(d.payload) as Map<number, unknown>;
+      const text = typeof m.get(0) === 'string' ? (m.get(0) as string) : '';
+      return base('Sign a post of the collective', ['A post (Text), in the collective’s name.'], [{ heading: 'Its words', text: escapeControls(text) }]);
+    }
+    if (d.spec === SPECS.envelopes && d.type === 0) return base('Sign a publication of the collective', ['A publication (Envelopes), in the collective’s name.']);
+    if (d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.offer) {
+      const m = cborDecode(d.payload) as Map<number, unknown>;
+      const price = m.get(2) as unknown[] | undefined;
+      return base('Sign an offer of the collective', [`A standing offer, always public.${Array.isArray(price) ? ` Its price: ${String(price[1])}.` : ''}`], typeof m.get(4) === 'string' ? [{ heading: 'Its words', text: escapeControls(m.get(4) as string) }] : []);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/** Whether `member` holds an area in the terms `act` names (F353: a holder names a key of their own in their signature). */
+export async function holdsAnArea(act: string, hints: string[], member: string, via: Via = {}): Promise<boolean> {
+  const got = await fetchAct(act, hints, via);
+  const d = got ? (describeAct(got.act) as Described) : null;
+  if (!d?.payload || d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.terms) return false;
+  try {
+    return termsOf(d.payload).areas.some((a) => a.holders.includes(member));
+  } catch {
+    return false;
+  }
 }

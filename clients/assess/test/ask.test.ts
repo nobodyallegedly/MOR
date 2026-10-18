@@ -246,7 +246,8 @@ test('asking stays in the local process: no page’s code imports it, nor the SD
   walk(clients);
   // The desk's answering program (Machine, allegedly) also asks Claude, from its local process on the author's Mac,
   // never from its page: its own test builds the page and finds neither the SDK nor this code in it.
-  assert.deepEqual(offenders.sort(), ['assess/src/ask.ts', 'assess/src/cli.ts', 'assess/test/ask.test.ts', 'desk/src/claude.ts'].sort());
+  // The web Edubba's build test names the SDK only to check its bundle holds none of it.
+  assert.deepEqual(offenders.sort(), ['assess/src/ask.ts', 'assess/src/cli.ts', 'assess/test/ask.test.ts', 'desk/src/claude.ts', 'desk/test/web-build.test.ts'].sort());
   // The module the desk and the collective client bundle imports neither.
   const shared = readFileSync(join(clients, 'assess', 'src', 'assess.ts'), 'utf8');
   assert.doesNotMatch(shared, /from '[^']*(node:|ask\.ts|rules\.ts|@anthropic-ai)/);

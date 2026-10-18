@@ -14,8 +14,8 @@ export interface Backend {
   unpaired?(err: unknown): boolean;
 }
 
-type Tab = 'sign' | 'account' | 'pay' | 'lanes' | 'settings';
-const TABS: Tab[] = ['sign', 'account', 'pay', 'lanes', 'settings'];
+type Tab = 'sign' | 'account' | 'pay' | 'lanes' | 'collectives' | 'settings';
+const TABS: Tab[] = ['sign', 'account', 'pay', 'lanes', 'collectives', 'settings'];
 
 export function mount(app: HTMLElement, b: Backend): { show(state: State): Promise<void> } {
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
@@ -156,6 +156,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       const units = (state?.accept ?? []).filter((x) => x.key === 'bitcoin-units').flatMap((x) => x.hashes.map((h, i) => ({ hash: h, label: ['Bitcoin', 'testnet', 'signet', 'regtest'][i] ?? h.slice(0, 8) })));
       if (l) $('lanes-body')!.innerHTML = v.lanes(l, units);
     }
+    if (t === 'collectives') {
+      const r = await act(() => b.ask<Parameters<typeof v.collectives>[0]>('collectives'));
+      if (r) $('collectives-body')!.innerHTML = v.collectives(r);
+    }
     if (t === 'settings') {
       let r: Rails | null = null;
       let problem: string | null = null;
@@ -182,6 +186,17 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     const a = el.dataset.action!;
     const id = el.dataset.id ?? '';
     switch (a) {
+      case 'collective-promise': {
+        const f = el.closest<HTMLFormElement>('form.collective-promise');
+        if (!f) return;
+        const fd = form(f);
+        const r = await act(() => b.ask<{ lines: v.Line[] }>('collective promise', { collective: f.dataset.collective, to: str(fd, 'to'), value: str(fd, 'value'), unit: '', whatFor: str(fd, 'whatFor'), digest: el.dataset.digest }));
+        if (r) {
+          await open('collectives');
+          done(r);
+        }
+        return;
+      }
       case 'window':
         screen = 'window';
         await show(await b.ask<State>('state'));
@@ -313,6 +328,21 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     if (fid === 'pair') return;
     ev.preventDefault();
     const fd = form(f);
+    if (fid === 'collective-add') {
+      const r = await act(() => b.ask<{ lines: v.Line[] }>('collective add', { id: str(fd, 'id') }));
+      if (r) {
+        await open('collectives');
+        done(r);
+      }
+      return;
+    }
+    if (f.classList.contains('collective-promise')) {
+      const args = { collective: f.dataset.collective, to: str(fd, 'to'), value: str(fd, 'value'), unit: '', whatFor: str(fd, 'whatFor') };
+      const r = await act(() => b.ask<{ lines: v.Line[]; digest: string }>('collective promise read', args));
+      const box = f.querySelector<HTMLElement>('.promise-read');
+      if (r && box) box.innerHTML = v.promiseRead(r);
+      return;
+    }
     if (fid === 'bring') {
       const r = await act(() => b.ask<{ lines: v.Line[] }>('bring', { id: str(fd, 'id'), words: str(fd, 'words'), address: str(fd, 'address'), relays: str(fd, 'relays') }));
       if (r) {

@@ -16,8 +16,10 @@ import { reading } from '../../../collective/src/page/view.ts';
 import type { Review } from '../../../collective/src/page/api.ts';
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 import type { Proposal as MemberProposal, ShareShown } from '../../../dub/src/shapes.ts';
-import { shareTypeBack } from '../../../dub/src/page/view.ts';
+import { leaveRead as dubLeaveRead, shareTypeBack } from '../../../dub/src/page/view.ts';
 import type { Listing } from '../folders.ts';
+import { defaultGrid, type Grid, type Lane } from '../grid.ts';
+import { gridTable } from './grid-view.ts';
 
 const app = document.getElementById('app')!;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
@@ -50,6 +52,129 @@ let collectiveMount: Mounted | null = null;
 let postReview: Review | null = null;
 /** A real collective's review (H18): founding, a member change, a release. Nothing is signed until confirmed. */
 let realReview: { plan: string; digest: string } | null = null;
+
+// ---------------------------------------------------------------- the founding grid (round 3)
+
+/** The grid of each form being filled: the founding's, a member change's. */
+const grids = new Map<string, Grid>();
+/** The grids the person changed: until then, a founding's grid is drawn afresh for the members chosen. */
+const touched = new Set<string>();
+
+const gridName = (id: string) => state.identities.find((i) => i.id === id)?.name ?? state.contacts.find((x) => x.id === id)?.name ?? `${id.slice(0, 8)}…`;
+
+/** The members a form names now: the founder first, then the boxes ticked, then the IDs typed. */
+function formMembers(fid: string): string[] {
+  const form = $<HTMLFormElement>(fid);
+  if (!form) return [];
+  const founder = (form.elements.namedItem('founder') as HTMLSelectElement | null)?.value;
+  const picked = [...form.querySelectorAll<HTMLInputElement>('input[name=member]:checked')].map((x) => x.value);
+  const typed = String((form.elements.namedItem('typed') as HTMLTextAreaElement | null)?.value ?? '').split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  return [...new Set([...(founder ? [founder] : []), ...picked, ...typed])];
+}
+
+function drawGrid(fid: string): void {
+  const g = grids.get(fid);
+  const box = $(`e-grid-${fid}`);
+  if (!g || !box) return;
+  box.innerHTML = gridTable(fid, g, gridName);
+}
+
+/** The grid follows the members chosen: new columns empty (the constitution's box filled where every member had one), removed ones gone. */
+async function syncGrid(fid: string): Promise<void> {
+  const members = formMembers(fid);
+  let g = fid === 'real-found' && !touched.has(fid) ? undefined : grids.get(fid);
+  if (!g) {
+    if (fid === 'real-change') {
+      const form = $<HTMLFormElement>(fid);
+      const r = await c.ask<{ grid: Grid }>('real grid', { collective: form?.dataset.collective, members }).catch(() => null);
+      g = r?.grid ?? defaultGrid(members);
+    } else g = defaultGrid(members);
+  }
+  const all = g.members.every((m) => g!.constitution.holders.includes(m));
+  const keep = (xs: string[]) => xs.filter((x) => members.includes(x));
+  const added = members.filter((m) => !g!.members.includes(m));
+  g = {
+    ...g,
+    members,
+    constitution: { holders: [...keep(g.constitution.holders), ...(all ? added : [])], number: all && g.constitution.number >= g.members.length ? members.length : g.constitution.number },
+    lanes: g.lanes.map((l) => ({ ...l, holders: keep(l.holders) })),
+  };
+  grids.set(fid, g);
+  drawGrid(fid);
+}
+
+/** A tap or a change in a grid (`grid-view.ts`): the grid's state changed, then drawn again. */
+function gridEvent(el: HTMLElement): boolean {
+  const box = el.closest<HTMLElement>('[data-grid-form]');
+  if (!box) return false;
+  const fid = box.dataset.gridForm!;
+  const g = grids.get(fid);
+  if (!g) return false;
+  touched.add(fid);
+  const d = el.dataset;
+  const lane = (i: string | undefined): Lane | undefined => (i === undefined ? undefined : g.lanes[Number(i)]);
+  const toggle = (xs: string[], m: string) => (xs.includes(m) ? xs.filter((x) => x !== m) : [...xs, m]);
+  if (d.gridCell !== undefined) {
+    const m = d.m!;
+    if (d.gridCell === 'const') g.constitution = { ...g.constitution, holders: toggle(g.constitution.holders, m) };
+    else {
+      const l = lane(d.gridCell.split(':')[1])!;
+      l.holders = toggle(l.holders, m);
+      l.number = Math.max(1, Math.min(l.number, l.holders.length || 1));
+    }
+  } else if (d.gridAdd !== undefined) {
+    g.lanes.push({ name: '', layer: 2, holders: [], number: 1 });
+  } else if (d.gridRemove !== undefined) {
+    g.lanes.splice(Number(d.gridRemove), 1);
+  } else if (d.gridNum !== undefined) {
+    const n = Number((el as HTMLInputElement).value);
+    if (d.gridNum === 'const') g.constitution = { ...g.constitution, number: n };
+    else if (d.gridNum === 'chain') g.chainKey = n;
+    else if (d.gridNum === 'absence') g.absence = n;
+    else if (d.gridNum === 'clone') g.clone = n;
+    else lane(d.gridNum.split(':')[1])!.number = n;
+  } else if (d.gridLayer !== undefined) {
+    const l = lane(d.gridLayer)!;
+    l.layer = Number((el as HTMLSelectElement).value);
+    if (l.kinds) l.kinds = [];
+    if (l.layer !== 2) delete l.cap;
+  } else if (d.gridSome !== undefined) {
+    const l = lane(d.gridSome)!;
+    if ((el as HTMLInputElement).checked) l.kinds = [];
+    else delete l.kinds;
+  } else if (d.gridKind !== undefined) {
+    const l = lane(d.gridKind)!;
+    l.kinds = toggle(l.kinds ?? [], (el as HTMLInputElement).value);
+  } else if (d.gridCap !== undefined) {
+    const x = (el as HTMLInputElement).value.trim();
+    const l = lane(d.gridCap)!;
+    if (x) l.cap = Number(x);
+    else delete l.cap;
+  } else if (d.gridName !== undefined) {
+    lane(d.gridName)!.name = (el as HTMLInputElement).value;
+    return true;
+  } else return false;
+  drawGrid(fid);
+  return true;
+}
+
+app.addEventListener('click', (ev) => {
+  const el = (ev.target as HTMLElement).closest<HTMLElement>('[data-grid-cell],[data-grid-add],[data-grid-remove]');
+  if (el && gridEvent(el)) ev.preventDefault();
+});
+app.addEventListener('change', (ev) => {
+  const el = ev.target as HTMLElement;
+  if (el.closest('[data-grid-form]')) {
+    gridEvent(el);
+    return;
+  }
+  const form = el.closest('form');
+  if (form && (form.id === 'real-found' || form.id === 'real-change') && (el.getAttribute('name') === 'member' || el.getAttribute('name') === 'typed' || el.getAttribute('name') === 'founder')) void syncGrid(form.id);
+});
+app.addEventListener('input', (ev) => {
+  const el = ev.target as HTMLElement;
+  if (el.dataset.gridName !== undefined) gridEvent(el);
+});
 
 const unpaired = (err: unknown) => err instanceof Refused && err.status === 401 && /not paired/.test(err.message);
 
@@ -160,11 +285,15 @@ async function draw() {
       if (at.collective === 'real' || proposalOf(at.collective)) {
         const p = proposalOf(at.collective);
         body.innerHTML = `${v.actingAs(state)}${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${p ? v.realProposalDetails(state, p) : v.realFound(state)}</div>`;
+        if (!p) await syncGrid('real-found');
         return;
       }
       if (here?.real) {
         const rc = await c.ask<RealCollective>('real collective', { collective: here.id });
         body.innerHTML = `${v.actingAs(state)}${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${v.realDetails(state, here.id, rc)}</div>`;
+        grids.delete('real-change');
+        touched.delete('real-change');
+        await syncGrid('real-change');
         await drawMoney(here.id);
         await drawAct(here.id);
         return;
@@ -350,6 +479,21 @@ async function memberAction(b: HTMLElement): Promise<void> {
       if (r) {
         await readMember();
         say('done', `<strong>Signed.</strong><ul>${r.lines.map((l) => `<li>${v.e(l.text)}</li>`).join('')}</ul>`);
+      }
+      return;
+    }
+    case 'leave-read': {
+      const r = await busy('Reading the collective’s agreement in force…', () => c.ask<{ lines: { text: string; tone?: string }[]; digest: string }>('member leave read', { thread: d.thread }));
+      const box = app.querySelector<HTMLElement>(`#e-signing [data-leave="${CSS.escape(d.thread!)}"]`);
+      if (r && box) box.innerHTML = dubLeaveRead(d.thread!, r as never);
+      return;
+    }
+    case 'leave-collective': {
+      if (!confirm('Resign from this collective? Your resignation is public, and needs nobody else.')) return;
+      const r = await busy('Signing the resignation, and telling the founder…', () => c.ask<{ lines: { text: string }[] }>('member leave', { thread: d.thread, digest: d.digest }));
+      if (r) {
+        await readMember();
+        say('done', `<strong>Resigned.</strong><ul>${r.lines.map((l) => `<li>${v.e(l.text)}</li>`).join('')}</ul>`);
       }
       return;
     }
@@ -543,6 +687,14 @@ app.addEventListener('click', async (ev) => {
     case 'pick-folder':
       await picker(d.target!);
       break;
+    case 'real-register-resignation': {
+      const r = await busy('Drawing the collective’s line, registering the resignation…', () => c.ask<Done>('real register resignation', { collective: d.collective, act: d.act }));
+      if (r) {
+        await draw().catch(fail);
+        say('done', v.lines(r.lines));
+      }
+      break;
+    }
     case 'folder-open':
       await picker(b.closest<HTMLElement>('.picker')!.dataset.target!, d.path);
       break;
@@ -1104,14 +1256,11 @@ app.addEventListener('submit', async (ev) => {
             name: words(d.get('name')),
             founder: words(d.get('founder')),
             members: [...members, ...typed],
-            safety: Number(words(d.get('safety'))),
-            release: Number(words(d.get('release'))),
-            clone: Number(words(d.get('clone'))),
-            others: Number(words(d.get('others'))),
+            grid: grids.get('real-found'),
             words: words(d.get('words')),
           })
         : fid === 'real-change'
-          ? c.ask<Review>('real change prepare', { collective: form.dataset.collective, members: [...members, ...typed] })
+          ? c.ask<Review>('real change prepare', { collective: form.dataset.collective, members: [...members, ...typed], grid: grids.get('real-change') })
           : c.ask<Review>('real release prepare', { collective: form.dataset.collective, folder: String(d.get('folder') ?? ''), name: words(d.get('name')), version: words(d.get('version')) }),
     );
     if (r) {

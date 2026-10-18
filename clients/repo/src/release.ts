@@ -124,6 +124,8 @@ export interface Published {
 /** Whoever publishes releases: a collective (`TestCollective.publisher`), or one identity under its own name (as at step 17). */
 export interface Publisher {
   id: TestIdentity;
+  /** Where the publication is signed otherwise than with `id`'s own key: a collective's act made with a member's own key (F353, round 3). */
+  sign?: (payload: Uint8Array) => Promise<{ id: string }>;
   /** Where the release and its files go. */
   relays: string[];
   /** Releases already published, newest last; a new one is pushed here. */
@@ -313,9 +315,9 @@ export function prepareRelease(
 export async function publishPrepared(p: Publisher, r: Prepared, via: Via = {}): Promise<Published> {
   const last = p.releases.at(-1);
   if ((last?.id ?? null) !== r.manifest.previous) throw new Error('another release was published since this one was made: make it again');
-  await carryChain(p.id, p.relays);
+  if (!p.sign) await carryChain(p.id, p.relays);
   // The publication first: a relay that keeps media only for publications it holds then takes the manifest.
-  const made = await p.id.publish(SPECS.envelopes, 0, r.payload, { public: true, relays: p.relays });
+  const made = p.sign ? await p.sign(r.payload) : await p.id.publish(SPECS.envelopes, 0, r.payload, { public: true, relays: p.relays });
   const refused = await toRelays(p.relays, via, (x) => x.putMedia(r.lockedManifest));
   for (const u of r.upload) refused.push(...(await toRelays(p.relays, via, (x) => x.putMedia(u))));
   p.releases.push({ id: made.id, version: r.manifest.version, manifest: b64(r.encoded) });
@@ -466,8 +468,22 @@ export async function verifyRelease(
       // a private act, or malformed
     }
   }
+  // Bound to a member's signature naming their key (F353): that act too, wherever it is.
+  if (d.binding && d.binding !== d.signer) {
+    const b = await fetchFirst([...new Set([...hints, ...homes])], via, (x) => x.getAct(d.binding!));
+    if (b) {
+      try {
+        v.add(b);
+      } catch {
+        // malformed: the release stays unknown
+      }
+    }
+  }
   const standing = v.status(release);
-  if (standing !== 'valid') return fail(`the publication is ${standing}, not valid, for its signer's identity chain`);
+  // A collective's release made with a member's own key (F353, round 3) is
+  // scoped under Identity: Agreements judge it, below, as any act of the
+  // collective (rules 60 and 73).
+  if (standing !== 'valid' && standing !== 'scoped') return fail(`the publication is ${standing}, not valid, for its signer's identity chain`);
 
   // 3. Agreements: the agreements the collective declared, their parties' chains and signature acts.
   const places = [...new Set([...hints, ...((media.get(6) as string[]) ?? []), ...homes])];
@@ -549,6 +565,7 @@ export async function verifyRelease(
   } catch (e) {
     return fail(`Agreements: ${e instanceof Error ? e.message : e}`);
   }
+  if (standing === 'scoped' && (consent.kind === 'not-collective' || consent.kind === 'no-area')) return fail('the publication is signed with a scoped key, and no collective’s lane backs it');
   r.agreement = consent.agreement;
   r.agreements = { kind: consent.kind, ...(consent.reason ? { reason: consent.reason } : {}) };
   r.signers = consent.areas.flatMap((a) => a.signers);

@@ -22,6 +22,7 @@ import type { Real } from './real.ts';
 import type { Setup } from './setup.ts';
 import type { Store } from './store.ts';
 import type { Listing } from './folders.ts';
+import type { Grid } from './grid.ts';
 
 /** What the operations act on. The program gives every part; the web client neither the agents, the pairing, money nor the folder picker. */
 export interface Parts {
@@ -70,6 +71,8 @@ export const WEB_OPS: readonly string[] = [
   'member proposals',
   'member accept',
   'member decline',
+  'member leave read',
+  'member leave',
   'member share',
   'member shareback',
   'member sharehand',
@@ -81,6 +84,7 @@ export const WEB_OPS: readonly string[] = [
   'real contact remove',
   'real found prepare',
   'real change prepare',
+  'real grid',
   'real confirm',
   'real cancel',
   'real gather',
@@ -91,11 +95,12 @@ export const WEB_OPS: readonly string[] = [
   'real share back',
   'real release standing',
   'real collective',
+  'real register resignation',
 ];
 
 /** Said where a collective's release would be made: the web client chooses no folder (`docs/edubba-web-report.md`, "Releases"). */
 export const RELEASE_ON_WEB =
-  'A collective’s release is made in Edubba on a computer (the Mac, or Linux), where Edubba reads the folder itself: what git tracks in a git folder, every file but hidden ones in a plain folder, links never followed. A page in a browser cannot tell a link from a file in a folder you choose, nor what git tracks, so it would publish what Edubba on a computer leaves out. A release proposed there can be signed here, in “To sign”, and checked here as anyone would. A release under your own name is made in Ummia.';
+  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the lane that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
 
 /** Said for any other operation the web client does not answer. */
 export const ON_A_COMPUTER =
@@ -291,6 +296,10 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return member.as((d) => d.signProposal(text(a.thread)));
       case 'member decline':
         return member.as((d) => d.declineProposal(text(a.thread), text(a.why)));
+      case 'member leave read':
+        return member.as((d) => d.leaveRead(text(a.thread)));
+      case 'member leave':
+        return member.as((d) => d.leaveCollective(text(a.thread), text(a.digest)));
       case 'member share':
         return member.as((d) => d.shareShow(text(a.thread)));
       case 'member shareback':
@@ -315,13 +324,17 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
           name: text(a.name),
           founder: text(a.founder),
           members: list(a.members),
-          rules: { safety: num(a.safety), release: num(a.release), clone: num(a.clone), others: num(a.others) },
+          ...(a.grid ? { grid: a.grid as Grid } : { rules: { safety: num(a.safety), release: num(a.release), clone: num(a.clone), others: num(a.others) } }),
           words: text(a.words),
         });
       case 'real change prepare':
-        return real.prepareChange({ collective: text(a.collective), members: list(a.members) });
+        return real.prepareChange({ collective: text(a.collective), members: list(a.members), ...(a.grid ? { grid: a.grid as Grid } : {}) });
+      case 'real grid':
+        // The grid a member change starts from: the agreement in force's, its columns these members (round 3).
+        return real.gridFor(text(a.collective), list(a.members));
       case 'real release prepare':
-        return real.prepareRelease({ collective: text(a.collective), folder: text(a.folder), name: text(a.name), version: text(a.version) });
+        // Round 3 (F339): a collective's releases moved to Ummia, signed there with the member's own key.
+        throw p.refuse(400, RELEASE_ON_WEB);
       case 'real confirm':
         return real.confirm(text(a.plan), text(a.digest));
       case 'real cancel':
@@ -343,9 +356,11 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return real.confirmShare(text(a.collective), text(a.member), list(a.typed));
       case 'real release standing':
         return real.releaseStanding(text(a.act));
+      case 'real register resignation':
+        return real.registerResignation(text(a.collective), text(a.act));
       case 'real collective': {
         const c = real.collective(text(a.collective));
-        return { id: c.identity, members: c.f.members, holder: c.f.signingHolder, agreement: c.f.agreement, relays: c.f.relays, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint, pending: !!c.f.pending, releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })), toShow: real.toShow(c.identity) };
+        return { id: c.identity, members: c.f.members, holder: c.f.signingHolder, agreement: c.f.agreement, relays: c.f.relays, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint, pending: !!c.f.pending, releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })), toShow: real.toShow(c.identity), resigned: await real.resignations(c.identity).catch(() => []) };
       }
       case 'money units':
         return money!.units();

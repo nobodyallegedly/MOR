@@ -39,7 +39,7 @@ import { threePositions, toWords, typedBack } from '../../../modules/carry/src/c
 import { readId } from '../../genesis/src/forms.ts';
 import { shownAct, shownId } from '../../genesis/src/shown.ts';
 import { TestCollective, type Governance } from '../../repo/src/collective.ts';
-import { proposePayload, sign } from '../../repo/src/agreements.ts';
+import { proposePayload, record, sign } from '../../repo/src/agreements.ts';
 import { negotiate, oneTimeKeyOf, readMessage, sealShare, DECLINED, SIGNED, type Reach } from '../../repo/src/proposals.ts';
 import { allBy, prepareRelease, publishPrepared, verifyRelease, gitSource, type Prepared } from '../../repo/src/release.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
@@ -47,6 +47,9 @@ import { fromRules, standardWords, type Rules } from '../../collective/src/actio
 import { readAgreement, readChanges, readRelease, termsOf, withAgreements, rulesHints, type Line, type Reading, type Section } from '../../collective/src/explain.ts';
 import { beforeSigning } from '../../assess/src/assess.ts';
 import { filesOf, folderOf } from './setup.ts';
+import { governanceOf, gridOf, gridSay, type Grid } from './grid.ts';
+import { collectiveNow, makeMemberKey, sealMemberKey } from '../../grants/src/member.ts';
+import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { readSealedList, type Followed } from '../../dub/src/people.ts';
 import type { Desk, Done } from './desk.ts';
 import type { Store } from './store.ts';
@@ -133,6 +136,24 @@ interface Plan {
 }
 
 const PLAN_LIFE = 15 * 60 * 1000;
+
+/** A grid as the page sent it, every ID read as the core reads one (`mid1…` or hex), its columns `members`. */
+function normalGrid(g: Grid, members: string[]): Grid {
+  const id = (x: string) => {
+    try {
+      return readId(x);
+    } catch {
+      return x;
+    }
+  };
+  const ids = (xs: string[]) => [...new Set(xs.map(id))].filter((x) => members.includes(x));
+  return { ...g, members, constitution: { ...g.constitution, holders: ids(g.constitution.holders) }, lanes: g.lanes.map((l) => ({ ...l, holders: ids(l.holders) })) };
+}
+
+/** The words everyone signs, drawn from the grid when none are typed: the collective's name, then each band's sentences. */
+export function gridWords(name: string, said: { heading: string; lines: string[] }[]): string {
+  return [`“${name}”, a MOR test collective. Test acts only, wiped before the first real acts. A member may leave alone at any time, keeping what they own.`, ...said.filter((x) => x.heading !== 'Each member').map((x) => `${x.heading}: ${x.lines.join(' ')}`)].join('\n\n');
+}
 
 export class Real {
   private plans = new Map<string, Plan>();
@@ -343,6 +364,31 @@ export class Real {
     return { id, key: l.encryptionKey, inbox };
   }
 
+  /**
+   * The proposer's own signature of a founding or a member change (F353): a
+   * holder of an area names a key of their own in it, made now, its private
+   * half sealed to themself at their homes (the member keys cMIP).
+   */
+  private async signWithKey(me: TestIdentity, act: string, relays: string[], members: string[], g: Governance, lines: Line[]) {
+    const holds = members.includes(me.id) && (g.areas ? g.areas.some((a) => a.holders.includes(me.id)) : !(g.releaseOut ?? []).includes(me.id));
+    const key = holds ? makeMemberKey() : null;
+    let own;
+    try {
+      own = await sign(me, act, relays, key?.public);
+    } finally {
+      this.store.saveIdentity(me);
+    }
+    if (key) {
+      try {
+        await sealMemberKey(me, { terms: act, signature: own.id, public: key.public, secret: key.secret }, () => this.store.saveIdentity(me));
+        lines.push({ text: `${this.names()(me.id)}’s own key for this collective is named in the signature and sealed to them at their homes: once it is complete, it signs for them in the lanes they hold (F353).`, tone: 'ok' });
+      } catch (e) {
+        lines.push({ text: `The signature names a key of ${this.names()(me.id)}’s own, but it could not be sealed to them: ${err(e)}`, tone: 'bad' });
+      }
+    }
+    return own;
+  }
+
   /** Send a proposal to each signer but the founder, one thread each; returns the threads. */
   private async invite(founder: string, act: string, signer: string, others: string[], text: string, collective: string | null, lines: Line[]): Promise<Record<string, string>> {
     const me = this.store.identity(founder);
@@ -369,7 +415,7 @@ export class Real {
    * deal-assessment tool's reading, nothing signed. Confirmed, the founder
    * proposes them, signs them, and sends them to each other member.
    */
-  prepareFounding(a: { name: string; founder: string; members: string[]; rules: Rules; words?: string }) {
+  prepareFounding(a: { name: string; founder: string; members: string[]; rules?: Rules; grid?: Grid; words?: string }) {
     const names = this.names();
     const s = this.store.settings();
     const name = a.name.trim();
@@ -388,19 +434,39 @@ export class Real {
     }
     const members = [a.founder, ...others];
     if (members.length < 2) blocking.push('A collective has at least two members.');
-    let rules;
-    try {
-      rules = fromRules(a.rules);
-    } catch (e) {
-      blocking.push(err(e));
-      rules = fromRules({ safety: 2, release: 2, clone: 2, others: Math.max(1, members.length - 1) });
+    let g: Governance;
+    let said: { heading: string; lines: string[] }[] = [];
+    if (a.grid) {
+      // Round 3: the founding grid (rules 60 and 62; `grid.ts`), its columns
+      // the members, the founder first.
+      const grid: Grid = normalGrid(a.grid, members);
+      said = gridSay(grid, names);
+      const words = a.words?.trim() || gridWords(name || 'unnamed', said);
+      const r = governanceOf(grid, words);
+      blocking.push(...r.blocking);
+      g = r.governance;
+    } else {
+      let rules;
+      try {
+        rules = fromRules(a.rules ?? { safety: 2, release: 2, clone: 2, others: Math.max(1, members.length - 1) });
+      } catch (e) {
+        blocking.push(err(e));
+        rules = fromRules({ safety: 2, release: 2, clone: 2, others: Math.max(1, members.length - 1) });
+      }
+      g = { ...rules, text: a.words?.trim() || standardWords(name || 'unnamed', rules) };
     }
-    const g: Governance = { ...rules, text: a.words?.trim() || standardWords(name || 'unnamed', rules) };
     const relays = s.relays.length ? s.relays : s.homes.map((h) => h.hint);
-    const payload = TestCollective.foundingTerms(g, members);
+    let payload: Uint8Array;
+    try {
+      payload = TestCollective.foundingTerms(g, members);
+    } catch (e) {
+      // Agreements refuse the terms the grid draws: said, nothing signed.
+      blocking.push(`Agreements refuse these terms: ${err(e)}`);
+      return this.plan({ digest: sha256(`refused founding ${Date.now()}`), reading: { title: `Found the collective “${name}”`, summary: [], sections: said.map((x) => ({ heading: x.heading, lines: x.lines.map((text) => ({ text })) })), plain: [], blocking }, run: async () => ({ title: '', lines: [], acts: [] }) });
+    }
     const t = termsOf(payload);
     const read = readAgreement(t, names);
-    blocking.push(...withAgreements(rulesHints({ safety: g.safetyThreshold, release: g.releaseThreshold, clone: g.cloneThreshold, others: g.abandonmentOthers }, members.length), read.blocking));
+    blocking.push(...withAgreements(a.grid ? [] : rulesHints({ safety: g.safetyThreshold, release: g.releaseThreshold, clone: g.cloneThreshold, others: g.abandonmentOthers }, members.length), read.blocking));
     const reading: Reading = {
       title: `Propose to found the collective “${name}”`,
       summary: [
@@ -408,6 +474,7 @@ export class Real {
         `Then this Edubba founds it: the collective’s chain key is dealt as ${members.length} shares, any ${g.safetyThreshold} rebuilding it. Each member’s share goes sealed to a one-time key their Dub makes when they sign (or is shown here, hand to hand), and is kept by no app; yours is shown here once. ${names(a.founder)} holds the collective’s signing key, here.`,
       ],
       sections: [
+        ...said.map((x) => ({ heading: x.heading, lines: x.lines.map((text) => ({ text })) })),
         ...read.sections,
         {
           heading: 'How it travels',
@@ -430,8 +497,7 @@ export class Real {
         const lines: Line[] = [];
         const terms = await proposePayload(me, payload, undefined, relays);
         this.store.saveIdentity(me);
-        const own = await sign(me, terms.id, relays);
-        this.store.saveIdentity(me);
+        const own = await this.signWithKey(me, terms.id, relays, members, g, lines);
         lines.push({ text: `The terms are act ${shownAct(terms.id)}; ${names(a.founder)} signed them (${shownAct(own.id)}).`, tone: 'ok' });
         const p: Proposal = {
           act: terms.id,
@@ -649,7 +715,7 @@ export class Real {
   // ------------------------------------------------------------ a member change
 
   /** A member change: the clone read back (what it changes, the tool's reading); confirmed, proposed, signed by the founder, sent to every other signer. */
-  prepareChange(a: { collective: string; members: string[] }) {
+  prepareChange(a: { collective: string; members: string[]; grid?: Grid }) {
     const c = this.collective(a.collective);
     const names = this.names();
     const blocking: string[] = [];
@@ -667,8 +733,18 @@ export class Real {
     if (!members.includes(founder) && !this.store.holds(founder)) blocking.push('The founder held here must stay a member, or another identity held here propose.');
     if (c.f.pending) blocking.push('A member change already waits for its rotation (Kišib).');
     let clone: ReturnType<TestCollective['cloneFor']>;
+    let said: { heading: string; lines: string[] }[] = [];
+    let governance: Governance | undefined;
+    if (a.grid) {
+      // Round 3: the same grid as the founding, filled from the agreement in force (`grid.ts`).
+      const grid: Grid = normalGrid(a.grid, members);
+      said = gridSay(grid, names);
+      const r = governanceOf(grid, c.f.governance.text, (c.f.governance.areas ?? []).map((x) => x.id));
+      blocking.push(...r.blocking);
+      governance = r.governance;
+    }
     try {
-      clone = c.cloneFor(members);
+      clone = c.cloneFor(members, governance);
     } catch (e) {
       // Agreements refuse the clone as it stands (its numbers no longer fit the members): said, nothing made.
       const reading: Reading = {
@@ -676,7 +752,7 @@ export class Real {
         summary: [`Agreements refuse it: ${err(e)}.`, 'With fewer members, the rules’ numbers (shares that rebuild the key, who judges absence) must change with them; changing them in the same proposal is not offered here yet.'],
         sections: [],
         plain: [],
-        blocking: [`Agreements refuse it: ${err(e)}.`],
+        blocking: [...blocking, `Agreements refuse it: ${err(e)}.`],
       };
       return this.plan({ digest: sha256(`refused ${a.collective} ${members.join(',')}`), reading, run: async () => ({ title: '', lines: [], acts: [] }) });
     }
@@ -687,7 +763,7 @@ export class Real {
         `A clone of its agreement, naming ${members.map(names).join(', ')} as its members, proposed by ${names(founder)}. Membership is constitutional: every member whose voice remains must sign it, and each joining member signs to be bound (Agreements rules 1, 64, 69). Each signs in their own app.`,
         'It comes into force only with the rotation that declares it, which needs enough members’ paper shares: Kišib’s work. It waits for Kišib.',
       ],
-      sections: [{ heading: 'What it changes', lines: readChanges(parent, clone.payload, names) }, { heading: 'Who signs', lines: [{ text: `${clone.signers.map(names).join(', ')}.` }] }, ...beforeSigning(clone.payload, names)],
+      sections: [...said.map((x) => ({ heading: x.heading, lines: x.lines.map((text) => ({ text })) })), { heading: 'What it changes', lines: readChanges(parent, clone.payload, names) }, { heading: 'Who signs', lines: [{ text: `${clone.signers.map(names).join(', ')}.` }] }, ...beforeSigning(clone.payload, names)],
       plain: [],
       blocking,
     };
@@ -699,8 +775,7 @@ export class Real {
         const lines: Line[] = [];
         const proposed = await proposePayload(me, clone.payload, c.f.agreement, c.f.relays);
         this.store.saveIdentity(me);
-        const own = await sign(me, proposed.id, this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)]));
-        this.store.saveIdentity(me);
+        const own = await this.signWithKey(me, proposed.id, this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)]), members, clone.governance, lines);
         const name = this.collectives().find((x) => x.id === a.collective)?.name ?? short(a.collective);
         const p: Proposal = {
           act: proposed.id,
@@ -725,6 +800,62 @@ export class Real {
         return { title: 'The member change is proposed', lines, acts: [proposed.id] };
       },
     });
+  }
+
+  // ------------------------------------------------------------ leaving alone (rule 70)
+
+  /**
+   * The resignations of this collective's members, as its relays and homes
+   * hold them (rule 70, F354 question 2): each with whether this collective's
+   * line registered it here, a record drawn with its signing key.
+   */
+  async resignations(collective: string): Promise<{ member: string; act: string; registered: string | null }[]> {
+    const c = this.collective(collective);
+    const hints = this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint), ...this.store.settings().relays]);
+    const now = await collectiveNow(collective, hints, this.via).catch(() => null);
+    const out: { member: string; act: string; registered: string | null }[] = [];
+    for (const r of now?.resignations ?? []) {
+      if (r.kind !== 'resigned' || !c.f.members.includes(r.party)) continue;
+      const d = (c.f.departed ?? []).find((x) => x.resignation === r.act);
+      out.push({ member: r.party, act: r.act, registered: d?.record ?? null });
+    }
+    return out;
+  }
+
+  /**
+   * Register a member's resignation at the collective's line: a record of the
+   * collective, signed with its signing key held here, naming it (record
+   * field 3). From that line on, their signature counts in no rule and no
+   * area; the change of members without them is proposed next, and waits for
+   * Kišib as any member change.
+   */
+  async registerResignation(collective: string, act: string): Promise<Done> {
+    return this.desk.serial(async () => {
+      const c = this.collective(collective);
+      const r = (await this.resignations(collective)).find((x) => x.act === act);
+      if (!r) throw new Error('No such resignation of a member was found at the collective’s relays.');
+      if (r.registered) throw new Error('It is registered already.');
+      const line = await record(c.id, { registers: [act], inForce: c.f.agreement }, c.f.relays);
+      c.f.departed = [...(c.f.departed ?? []), { member: r.member, resignation: act, record: line.id }];
+      c.f.records = [...(c.f.records ?? []), line.id];
+      this.saveCollective(c);
+      const names = this.names();
+      return {
+        title: `${names(r.member)}’s resignation is registered`,
+        lines: [
+          { text: `The collective’s line ${shownAct(line.id)} registers it: from there, ${names(r.member)}’s voice counts in no rule and no lane (rule 70). They keep their stake, as a departed holder (rule 68).`, tone: 'ok' },
+          { text: 'Now propose the change of members without them (“Change its members”): every member whose voice remains signs it, then it waits for Kišib.' },
+        ],
+        acts: [line.id],
+      };
+    });
+  }
+
+  /** The grid a member change of `collective` starts from (round 3): the agreement in force's rows, these members as its columns. */
+  gridFor(collective: string, members: string[]): { grid: Grid } {
+    const c = this.collective(collective);
+    const ids = members.length ? members.map((m) => readId(m)) : c.f.members;
+    return { grid: gridOf(c.f.governance, ids) };
   }
 
   // ------------------------------------------------------------ a release

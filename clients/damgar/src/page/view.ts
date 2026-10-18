@@ -162,7 +162,7 @@ export function app(s: State, web: boolean): string {
   const i = s.identity!;
   const tab = (k: string, label: string, count = '') => `<button class="tab${k === 'sign' ? ' on' : ''}" data-tab="${k}">${label}<span class="count" id="count-${k}">${count}</span></button>`;
   return `<header class="bar"><h1 class="mark">${NAME}</h1>
-<nav class="tabs">${tab('sign', 'To sign', s.counts.toSign ? String(s.counts.toSign) : '')}${tab('account', 'The account')}${tab('pay', 'Pay', s.counts.toPay ? String(s.counts.toPay) : '')}${tab('lanes', 'Lanes')}${tab('settings', 'Settings')}</nav>
+<nav class="tabs">${tab('sign', 'To sign', s.counts.toSign ? String(s.counts.toSign) : '')}${tab('account', 'The account')}${tab('pay', 'Pay', s.counts.toPay ? String(s.counts.toPay) : '')}${tab('lanes', 'Lanes')}${tab('collectives', 'For a collective')}${tab('settings', 'Settings')}</nav>
 <button class="me" data-action="window" title="The identity">${who({ id: i.id, short: i.short, me: true })}</button></header>
 ${testNotice(web)}
 <div id="spent"></div>
@@ -171,6 +171,7 @@ ${testNotice(web)}
 <section id="account" hidden><div id="account-body"><p class="empty">Reading the account…</p></div></section>
 <section id="pay" hidden><p class="small">Damgar holds no wallet. For each payment it shows what to pay; pay it in your own wallet, then paste the proof back here.</p><div id="pay-list"><p class="empty">Reading…</p></div></section>
 <section id="lanes" hidden><p class="small">A lane lets an app (Dub, or Damgar itself) sign some of your money acts by itself, within a cap per act and until a date: a grant of your identity to itself, its key held by that app (F338, F351). Every act signed under one is shown so, here and to every reader. One revocation ends it.</p><div id="lanes-body"><p class="empty">Reading…</p></div></section>
+<section id="collectives" hidden><p class="small">For a collective whose Money lane you hold: Damgar acts for it with your own key for it, made as you signed its founding and sealed to you at your homes (F353). Within the lane’s cap, your key alone; above it, another holder’s key too, as its constitution writes it.</p><div id="collectives-body"><p class="empty">Reading…</p></div></section>
 <section id="settings" hidden><div id="settings-body"><p class="empty">Reading…</p></div></section>`;
 }
 
@@ -347,4 +348,35 @@ ${web ? note('warn', 'The web client never makes a link to a node: use Damgar on
 <label>The receive-only permission’s file (on lnd, the macaroon baked with invoices:write and invoices:read)</label><input name="macaroonFile" spellcheck="false" required>
 <label>The node’s certificate file (tls.cert)</label><input name="certFile" spellcheck="false" required>
 <div class="row"><button type="submit">Check it and keep it</button></div></form>`}`;
+}
+
+/** For a collective (round 3, F353): each collective acted for, its Money lane, a promise to pay, and the promises signed here with how they stand. */
+export function collectives(r: { collectives: { id: string; lane: { name: string; holders: string[]; number: number; cap: { value: number } | null } | null; why: string | null; acts: { act: string; to: string; amount: { value: number }; whatFor: string; standing: { met: boolean; areas: { signers: string[]; needed: number; byKey: string[]; limits?: string | null }[] } | null }[] }[] }): string {
+  const one = (c: (typeof r.collectives)[number]) => {
+    const lane = c.lane;
+    const acts = c.acts.length
+      ? lines(
+          c.acts.map((a) => {
+            const st = a.standing;
+            const keys = st?.areas[0];
+            return { text: `${a.amount.value.toLocaleString('en')} to ${a.to.slice(0, 8)}…${a.whatFor ? ` (${a.whatFor})` : ''}: ${st ? (st.met ? 'counts for the collective' : 'does not count yet') : 'not read'}${keys ? `, ${keys.signers.length} of ${keys.needed} keys${keys.limits === 'above' ? ', above the cap' : ''}` : ''} · ${a.act.slice(0, 12)}…`, tone: st?.met ? 'ok' : 'warn' };
+          }),
+        )
+      : '<p class="small">No promise signed here yet.</p>';
+    return `<div class="item" data-collective="${e(c.id)}"><h3>Collective <span class="fp" title="${e(c.id)}">${e(c.id.slice(0, 8))}…${e(c.id.slice(-4))}</span></h3>
+${lane ? `<p class="small">Its Money lane, “${e(lane.name)}”: ${lane.holders.length} holder${lane.holders.length === 1 ? '' : 's'}, ${lane.number} key${lane.number === 1 ? '' : 's'}${lane.cap ? `; above ${lane.cap.value.toLocaleString('en')} an act, one more` : ''}.</p>` : ''}
+${c.why ? note('warn', e(c.why)) : `<form class="collective-promise" data-collective="${e(c.id)}"><h4>A promise to pay, from the collective</h4>
+<label>To whom (an ID)</label><input name="to" type="text" required autocomplete="off" spellcheck="false">
+<div class="row"><label>How much (regtest satoshis) <input name="value" type="text" inputmode="numeric" required class="narrow"></label></div>
+<label>What for</label><input name="whatFor" type="text">
+<div class="row"><button type="submit">Read it back</button></div><div class="promise-read"></div></form>`}
+<h4>Promises signed here</h4>${acts}</div>`;
+  };
+  return `${r.collectives.map(one).join('') || '<p class="empty">No collective yet.</p>'}
+<form id="collective-add" class="row"><input name="id" type="text" class="grow" placeholder="A collective’s ID (mid1… or hex)" autocomplete="off" spellcheck="false" required><button type="submit">Act for it</button></form>`;
+}
+
+/** A promise read back, before it is signed. */
+export function promiseRead(r: { lines: Line[]; digest: string }): string {
+  return `${lines(r.lines)}<div class="row"><button class="primary" data-action="collective-promise" data-digest="${e(r.digest)}">Sign it for the collective, with my own key</button></div>`;
 }

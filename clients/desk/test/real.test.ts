@@ -32,6 +32,7 @@ import { Kishib } from '../../kishib/src/kishib.ts';
 import { serve, type Running } from '../src/server.ts';
 import { serve as serveDub, DOMAIN as DUB_DOMAIN, type Running as DubRunning } from '../../dub/src/server.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
+import { ummiaFor } from './ummia.ts';
 
 let homes: Relay[];
 let relay: Relay;
@@ -225,28 +226,26 @@ test('three people on three devices: a real collective founded, a release, a mem
   }
   assert.ok(!folders.ana.includes(JSON.parse(readFileSync(join(e.dir, 'identities', `${nobody}.json`), 'utf8')).signingSecret));
 
-  // A release of the collective: published by Edubba, counting once two members sign it, each in its own app.
-  const folder = join(mkdtempSync(join(tmpdir(), 'real-release-')), 'tablets');
-  mkdirSync(folder);
-  writeFileSync(join(folder, 'clay.txt'), 'a tablet\n');
-  const rr = await e.c.ask<any>('real release prepare', { collective: col, folder, name: 'tablets', version: '1' });
-  const rel = (await e.c.ask<Done>('real confirm', { plan: rr.plan, digest: rr.digest })).acts[0];
-  let standing = await e.c.ask<any>('real release standing', { act: rel });
-  assert.equal(standing.ok, false, 'one signature of two');
+  // A release of the collective: made in Ummia (round 3, F339), signed with the founder's own key (F353), counting once Ana signs it too, in her own app.
+  const founderSecret = JSON.parse(readFileSync(join(e.dir, 'identities', `${nobody}.json`), 'utf8')).signingSecret as string;
+  const um = await ummiaFor({ id: nobody, secret: founderSecret, home: homes[0].base, relays: [relay.base], collective: col, apps });
+  const rel = await um.release('tablets', '1', 'a tablet\n');
+  let standing = await um.standing(rel);
+  assert.equal(standing.met, false, 'one key of two');
   const ar = (await ana.c.ask<any>('proposals')).proposals.find((p: any) => p.act === rel);
   assert.equal(ar.reading.kind, 'release');
   assert.match(ar.reading.title, /Sign a release: tablets 1/);
   assert.ok(ar.reading.sections.some((s: any) => s.lines.some((l: any) => /clay\.txt: 9 bytes/.test(l.text))));
   await ana.c.ask('accept', { thread: ar.thread });
-  standing = await e.c.ask<any>('real release standing', { act: rel });
-  assert.ok(standing.ok, JSON.stringify(standing.problems));
-  assert.deepEqual(standing.signers.sort(), [nobody, ana.id].sort());
+  standing = await um.standing(rel);
+  assert.ok(standing.met, JSON.stringify(standing.lines));
+  assert.ok((await um.check(rel)).ok);
+  // Edubba no longer makes a collective's release: it says where.
+  await refused(e.c.ask('real release prepare', { collective: col, folder: '/', name: 'x', version: '1' }), /made in Ummia/);
   // Bo declines it: a negotiation message, nothing signed.
   const br = (await bo.c.ask<any>('proposals')).proposals.find((p: any) => p.act === rel);
   await bo.c.ask('decline', { thread: br.thread, why: 'Not checked yet.' });
-  g = await e.c.ask<any>('real gather', { act: rel });
-  assert.equal(g.proposal.answers[bo.id].verdict, 'declined');
-  assert.match(g.proposal.answers[bo.id].text, /Not checked yet/);
+  assert.equal((await bo.c.ask<any>('proposals')).proposals.find((p: any) => p.act === rel).answer.verdict, 'declined');
 
   // A member change: Cy joins, Bo leaves. Every voice and the joining member sign, each in its own app.
   await e.c.ask('real contact add', { id: cy.id, name: 'Cy' });
@@ -300,17 +299,13 @@ test('three people on three devices: a real collective founded, a release, a mem
     const q = (await m.c.ask<any>('proposals')).proposals.find((x: any) => x.act === clone);
     await m.c.ask('sharehand', { thread: q.thread });
   }
-  // A release signed with the collective's new key, by members of the new list, counts.
-  const folder2 = join(mkdtempSync(join(tmpdir(), 'real-release-')), 'tablets');
-  mkdirSync(folder2);
-  writeFileSync(join(folder2, 'clay.txt'), 'a second tablet\n');
-  const rr2 = await e.c.ask<any>('real release prepare', { collective: col, folder: folder2, name: 'tablets', version: '2' });
-  const rel2 = (await e.c.ask<Done>('real confirm', { plan: rr2.plan, digest: rr2.digest })).acts[0];
+  // A release by the new members, each with the key they named in the change's clone (F353), counts.
+  const rel2 = await um.release('tablets', '2', 'a second tablet\n');
   const cr = (await cy.c.ask<any>('proposals')).proposals.find((p: any) => p.act === rel2);
   await cy.c.ask('accept', { thread: cr.thread });
-  const st2 = await e.c.ask<any>('real release standing', { act: rel2 });
-  assert.ok(st2.ok, JSON.stringify(st2.problems));
-  assert.deepEqual(st2.signers.sort(), [nobody, cy.id].sort());
+  const st2 = await um.standing(rel2);
+  assert.ok(st2.met, JSON.stringify(st2.lines));
+  assert.match(st2.lines[0].text, /2 of 2 keys, 2 with their own key/);
   // Bo, leaving, gets no new share: its one-time key waits, and it may destroy it.
   const bq = (await bo.c.ask<any>('proposals')).proposals.find((x: any) => x.act === clone);
   assert.equal(bq.share, 'waiting');

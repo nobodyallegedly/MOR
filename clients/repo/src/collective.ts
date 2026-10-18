@@ -44,6 +44,7 @@ import {
   type Stake,
   type Power,
   type Rule,
+  type AreaSpec,
 } from './agreements.ts';
 import { FOUNDING_AGREEMENT, REPO_SPECS } from './specs.ts';
 
@@ -88,6 +89,8 @@ export interface Governance {
   releaseOut?: string[];
   /** A threshold of the other parties decides absence. */
   abandonmentOthers: number;
+  /** The areas the founding grid draws (round 3, rules 60 and 62); absent, the one Releases area above. */
+  areas?: AreaSpec[];
   text: string;
   /** Stakes (terms field 7): the collective's own (object null, F124 S1:
    * a share of all its income, F121 Q8), keyed by holder, and works it
@@ -240,6 +243,7 @@ export function collectiveTerms(g: Governance, members: string[], holder: string
     departed: g.departed,
     // Field 23 is for founding terms only: a clone never carries it.
     forkedFrom: parent ? undefined : g.forkedFrom,
+    areas: g.areas?.map((a) => ({ ...a, holders: a.holders.filter((h) => members.includes(h)) })),
   };
 }
 

@@ -1745,6 +1745,15 @@ function readPaymentProof(bytes) {
   }
   return takeFromExternrefTable0(ret[0]);
 }
+function readTerms(payload, specs) {
+  const ptr0 = passArray8ToWasm0(payload, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.readTerms(ptr0, len0, specs);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
 function routesPayload(input) {
   const ret = wasm.routesPayload(input);
   if (ret[3]) {
@@ -3395,6 +3404,17 @@ async function lookUp(identity, hints, via = {}, into) {
     }
   };
 }
+async function chainOf(identity, hints, via = {}) {
+  const l = await lookUp(identity, hints, via);
+  const r = l.resolution;
+  const homes = [...new Set([...r.homesAt?.length ? r.homesAt[r.homesAt.length - 1] : r.homes, ...r.homes].map((h) => h.hint))].filter((h) => !cannotReach(h, via));
+  const chain = await firstOf(homes, async (h) => {
+    const rec = await relayAt(h, via).identity(identity);
+    return rec.chain.length && actId(rec.chain[0]) === identity ? rec.chain : null;
+  });
+  if (!chain) throw new Error(`no home of ${identity} served its identity chain (${homes.join(", ") || "none reachable"})`);
+  return chain;
+}
 
 // src/web/node-crypto.ts
 function randomBytes2(n) {
@@ -3461,9 +3481,20 @@ var AGREEMENTS_TYPES = {
 };
 var TEST_RAIL = test("a test rail Module, no real rail");
 var TEST_TIME = test("a test time reference, no real clock");
+var FOUNDING_AGREEMENT = 0;
 
 // ../repo/src/agreements.ts
 var AGREEMENTS_SPECS = { ...MIRS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] } };
+function obligationPayload(o) {
+  return cborEncode(
+    /* @__PURE__ */ new Map([
+      [0, unhex(o.debtor)],
+      [1, unhex(o.creditor)],
+      [2, [unhex(o.unit), o.value]],
+      [3, unhex(o.pointer)]
+    ])
+  );
+}
 
 // ../../modules/timestamp/src/stamp.ts
 var TIMESTAMP_SPEC = sha2562("timestamp clock Module, draft 1, test value until publication");
@@ -4473,6 +4504,329 @@ function sealFor(act, key, recipients) {
 function failure(home, e2) {
   if (e2 instanceof RelayError) return { home, error: e2.reason, code: e2.code };
   return { home, error: String(e2) };
+}
+
+// ../repo/src/proposals.ts
+var NEGOTIATION = 18;
+var negotiationPayload = (text3) => cborEncode(/* @__PURE__ */ new Map([[0, text3.normalize("NFC")]]));
+async function negotiate(by, to, o) {
+  const made = by.sign(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
+    public: false,
+    to: [to.id],
+    objects: o.thread ? [[o.thread, o.previous ?? o.thread]] : void 0,
+    acks: o.acks?.length ? o.acks : void 0,
+    refs: o.refs
+  });
+  const sealed = sealFor(made.act, made.key, [{ id: to.id, key: to.key }]);
+  const left = [];
+  const failed = [];
+  for (const hint of to.inbox) {
+    try {
+      const r = relayAt(hint, by.via);
+      for (const c of by.chainActs()) await r.putAct(c).catch(() => void 0);
+      await r.putSealed(sealed);
+      left.push(hint);
+    } catch (e2) {
+      failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
+    }
+  }
+  return { id: made.id, act: made.act, key: made.key, sealed: sealedId(sealed), left, failed };
+}
+
+// ../grants/src/member.ts
+var MEMBER_KEYS_SPEC = sha2562("Member keys cMIP, draft 1, test value until publication");
+var MEMBER_KEY = 0;
+function readPayload(p) {
+  try {
+    const m = cborDecode(p);
+    if (!(m instanceof Map) || [...m.keys()].some((k) => ![0, 1, 2, 3].includes(k))) return null;
+    const [t, s, pub, sec] = [m.get(0), m.get(1), m.get(2), m.get(3)];
+    if (!(t instanceof Uint8Array) || t.length !== 32 || !(s instanceof Uint8Array) || s.length !== 32) return null;
+    if (!Array.isArray(pub) || typeof pub[0] !== "number" || !(pub[1] instanceof Uint8Array) || !(sec instanceof Uint8Array)) return null;
+    return { terms: hex(t), signature: hex(s), public: [pub[0], pub[1]], secret: sec };
+  } catch {
+    return null;
+  }
+}
+async function readMemberKeys(identity, secrets, homes, via = {}) {
+  const out = /* @__PURE__ */ new Map();
+  if (!secrets.length) return [];
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  let l;
+  try {
+    l = await lookUp(identity, homes, via, v);
+  } catch {
+    return [];
+  }
+  const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via).feed({ to: identity, after });
+        for (const it of page.items) {
+          if (it.kind !== "sealed") continue;
+          let o = null;
+          for (const s of secrets) {
+            try {
+              o = openSealed(it.item, identity, s);
+              break;
+            } catch {
+            }
+          }
+          const d = o?.described;
+          if (!o || !d || out.has(d.id) || d.public || d.signer !== identity || d.spec !== MEMBER_KEYS_SPEC || d.type !== MEMBER_KEY || !d.payload) continue;
+          if (o.key) l.verifier.addWithKey(o.act, o.key);
+          else l.verifier.add(o.act);
+          const st = l.verifier.status(d.id);
+          if (st !== "valid" && st !== "disputed") continue;
+          const x = readPayload(d.payload);
+          if (x) out.set(d.id, { ...x, act: d.id, position: d.position ?? 0 });
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  return [...out.values()].sort((a, b) => a.position - b.position);
+}
+async function foundingOf(collective, hints, via) {
+  const l = await lookUp(collective, hints, via);
+  const links = l.resolution.links.map((x) => x.act);
+  const chain = await chainOf(collective, hints, via);
+  const g = chain.find((b) => describeAct(b).id === collective);
+  const d = g ? describeAct(g) : null;
+  const decl = d?.payload ? cborDecode(d.payload).get(4) : void 0;
+  for (const x of decl ?? []) {
+    if (x[0] instanceof Uint8Array && hex(x[0]) === REPO_SPECS.agreements && Number(x[1]) === FOUNDING_AGREEMENT && x[2] instanceof Uint8Array) return { founding: hex(x[2]), links };
+  }
+  throw new Error("The collective\u2019s genesis declares no founding agreement.");
+}
+async function rootOf(terms, hints, via) {
+  let cur = terms;
+  for (let i = 0; i < 64; i++) {
+    let a = null;
+    for (const h of hints) {
+      a = await relayAt(h, via).getAct(cur).catch(() => null);
+      if (a) break;
+    }
+    if (!a) return null;
+    const d = describeAct(a);
+    if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.terms || !d.payload) return null;
+    const t = readTerms(d.payload, AGREEMENTS_SPECS);
+    if (!t.parent) return cur;
+    cur = t.parent;
+  }
+  return null;
+}
+async function memberKeyFor(keys, collective, hints, via = {}) {
+  const { founding } = await foundingOf(collective, hints, via);
+  for (const k of [...keys].reverse()) if (await rootOf(k.terms, hints, via) === founding) return k;
+  return null;
+}
+async function chainFor(collective, k, hints, via = {}) {
+  const { links } = await foundingOf(collective, hints, via);
+  const latest = links[links.length - 1];
+  let decision = latest;
+  let best = -1;
+  const strand = [];
+  for (const a of await allBy(collective, hints, via)) {
+    const d = describeAct(a);
+    if (d.binding === latest && d.spec === REPO_SPECS.agreements && d.type === AGREEMENTS_TYPES.record && (d.position ?? 0) > best) {
+      best = d.position ?? 0;
+      decision = d.id;
+    }
+    if (d.binding === k.signature && !strand.some((x) => x.id === d.id)) strand.push({ id: d.id, position: d.position ?? 0 });
+  }
+  return { decision, strand: strand.sort((a, b) => a.position - b.position).map((x) => x.id) };
+}
+function signAsMember(collective, k, at, a) {
+  const made = makeEveryday({
+    signingSecret: k.secret,
+    signer: collective,
+    binding: k.signature,
+    spec: a.spec,
+    type: a.type,
+    payload: a.payload,
+    sequence: at.strand,
+    public: a.public,
+    to: a.to?.length ? a.to : void 0,
+    objects: [...a.objects ?? [], [collective, at.decision]],
+    refs: a.refs?.length ? a.refs : void 0
+  });
+  at.strand.push(made.id);
+  return made;
+}
+async function publishAt(acts, places, via = {}) {
+  const ok = [];
+  for (const p of places) {
+    try {
+      for (const a of acts) await relayAt(p, via).putAct(a);
+      ok.push(p);
+    } catch {
+    }
+  }
+  return ok;
+}
+async function collectiveVerifier(collective, hints, via = {}, acts = []) {
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const add = (a) => {
+    try {
+      v.add(a);
+    } catch {
+    }
+  };
+  const hold = async (id) => {
+    let places = hints;
+    try {
+      const l = await lookUp(id, hints, via, v);
+      places = [.../* @__PURE__ */ new Set([...hints, ...l.resolution.homes.map((h) => h.hint), ...l.routes.routes.flatMap((r) => r.hints)])];
+    } catch {
+    }
+    for (const a of await allBy(id, places, via)) add(a);
+  };
+  await hold(collective);
+  const { founding } = await foundingOf(collective, hints, via);
+  const parties = /* @__PURE__ */ new Set();
+  const seen = /* @__PURE__ */ new Set();
+  const termsOfId = async (id) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    for (const h of hints) {
+      const a = await relayAt(h, via).getAct(id).catch(() => null);
+      if (!a) continue;
+      add(a);
+      const d = describeAct(a);
+      if (d.payload) for (const p of readTerms(d.payload, AGREEMENTS_SPECS).parties) parties.add(p);
+      break;
+    }
+  };
+  await termsOfId(founding);
+  for (const a of await allBy(collective, hints, via)) {
+    const d = describeAct(a);
+    if (d.spec === SPECS.identity && d.type === 1 && d.payload) {
+      for (const x of cborDecode(d.payload).get(8) ?? []) {
+        if (x[0] instanceof Uint8Array && hex(x[0]) === REPO_SPECS.agreements && Array.isArray(x[2])) await termsOfId(hex(x[2][0]));
+      }
+    }
+  }
+  for (const p of parties) await hold(p);
+  for (const id of acts) {
+    {
+      for (const h of hints) {
+        const a = await relayAt(h, via).getAct(id).catch(() => null);
+        if (a) {
+          add(a);
+          break;
+        }
+      }
+    }
+  }
+  return { v, founding, parties: [...parties] };
+}
+async function collectiveNow(collective, hints, via = {}) {
+  const { v, parties } = await collectiveVerifier(collective, hints, via);
+  const cur = v.agreementsCurrent(AGREEMENTS_SPECS, collective);
+  let resignations = [];
+  try {
+    resignations = v.agreementsPublishedResignations(AGREEMENTS_SPECS, collective);
+  } catch {
+  }
+  return { agreement: cur?.agreement ?? null, departed: cur?.departed ?? [], resignations, parties };
+}
+async function judgeCollective(collective, acts, hints, via = {}, limits = []) {
+  const { v } = await collectiveVerifier(collective, hints, via, acts);
+  const out = /* @__PURE__ */ new Map();
+  for (const id of acts) {
+    try {
+      out.set(id, v.agreementsConsent(withGrantLimits(AGREEMENTS_SPECS, limits), id));
+    } catch (e2) {
+      out.set(id, { kind: "unread", reason: e2 instanceof Error ? e2.message : String(e2), met: false, areas: [] });
+    }
+  }
+  return out;
+}
+
+// src/collective.ts
+var MONEY_LAYER = 2;
+function capOf(hexed) {
+  if (!hexed) return null;
+  try {
+    const m = cborDecode(unhex(hexed));
+    const c = m instanceof Map ? m.get(0) : null;
+    return Array.isArray(c) && c[0] instanceof Uint8Array && typeof c[1] === "number" ? { unit: hex(c[0]), value: c[1] } : null;
+  } catch {
+    return null;
+  }
+}
+async function termsOf(id, hints, via) {
+  for (const h of hints) {
+    const a = await relayAt(h, via).getAct(id).catch(() => null);
+    if (!a) continue;
+    const d = describeAct(a);
+    if (d.spec !== REPO_SPECS.agreements || d.type !== 0 || !d.payload) return null;
+    return readTerms(d.payload, AGREEMENTS_SPECS);
+  }
+  return null;
+}
+async function readCollective(me, id, hints, via) {
+  const now2 = await collectiveNow(id, hints, via);
+  if (!now2.agreement) return { id, agreement: null, lane: null, key: null, why: "Its agreement in force could not be read from its relays and homes." };
+  const t = await termsOf(now2.agreement, hints, via);
+  const a = t?.areas.find((x) => x.kinds.some((k) => k.form === "layer" && k.layer === MONEY_LAYER || k.spec === AGREEMENTS_SPECS.money));
+  const lane = a ? { area: a.id, name: a.name, holders: a.holders, number: a.threshold, cap: capOf(a.limits) } : null;
+  const keys = await readMemberKeys(me.id, me.f.encryption.map((e2) => unhex(e2.secret)), me.f.homes.map((h) => h.hint), via).catch(() => []);
+  const key = keys.length ? await memberKeyFor(keys, id, hints, via).catch(() => null) : null;
+  let why = null;
+  if (!lane) why = "Its constitution draws no Money lane: the collective\u2019s money acts count on its own key, held by its founder\u2019s Edubba.";
+  else if (!lane.holders.includes(me.id)) why = `You hold no box in its Money lane (\u201C${lane.name}\u201D): your key does not count there.`;
+  else if (!key) why = "No key of yours for this collective was found sealed to you at your homes: it is made when you sign its founding or a member change.";
+  return { id, agreement: now2.agreement, lane, key, why };
+}
+var withinCap = (lane, amount2) => !lane.cap || lane.cap.unit === amount2.unit && amount2.value <= lane.cap.value;
+function promiseSay(c, me, a, names) {
+  const lane = c.lane;
+  const above = !withinCap(lane, a.amount);
+  const need = lane.number + (above ? 1 : 0);
+  const others = lane.holders.filter((h) => h !== me);
+  const lines2 = [
+    `A promise to pay, by the collective ${names(c.id)}: it owes ${names(a.to)} ${a.amount.value.toLocaleString("en")} (a Money obligation, public, signed with your own key for the collective; F353).`,
+    `What for: ${a.whatFor || "nothing said"}.`,
+    `Its Money lane, \u201C${lane.name}\u201D: ${lane.holders.map(names).join(", ")}; ${lane.number} key${lane.number === 1 ? "" : "s"}${lane.cap ? `; above ${lane.cap.value.toLocaleString("en")} an act, one more (the grant limits cMIP, draft 2)` : ""}.`,
+    above ? `It is above the cap: it counts only with ${need} keys. Yours signs it now; ${others.map(names).join(", ")} ${others.length === 1 ? "is" : "are"} asked for theirs, in their own app.` : need === 1 ? "Within the lane: your key alone makes it count." : `The lane asks ${need} keys: yours signs it now; the others are asked for theirs.`,
+    "Damgar holds no wallet: paying the promise is a payment like any other."
+  ];
+  return { lines: lines2, above, others: need > 1 ? others : [] };
+}
+var promiseDigest = (c, payload) => sha2562(new Uint8Array([...new TextEncoder().encode(`MOR Damgar collective promise, version 1
+${c.id}
+`), ...payload]));
+var promisePayload = (c, a) => obligationPayload({ debtor: c.id, creditor: a.to, unit: a.amount.unit, value: a.amount.value, pointer: a.pointer });
+async function signPromise(me, c, payload, ask2, text3, hints, via) {
+  const at = await chainFor(c.id, c.key, hints, via);
+  const made = signAsMember(c.id, c.key, at, { spec: AGREEMENTS_SPECS.money, type: 1, payload, public: true });
+  const places = await publishAt([made.act], hints, via);
+  if (!places.length) throw new Error("No relay took the promise: nothing counts. Try again.");
+  const asked = [];
+  const notAsked = [];
+  for (const h of ask2) {
+    try {
+      const l = await lookUp(h, hints, via);
+      const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((r) => r.hints);
+      if (!l.encryptionKey || !inbox?.length) throw new Error("no inbox or encryption key");
+      await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: text3, refs: [[made.id, c.id], [c.id, c.id]] });
+      asked.push(h);
+    } catch {
+      notAsked.push(h);
+    }
+  }
+  return { act: made.id, places, asked, notAsked };
+}
+async function standing(c, act, amount2, hints, via) {
+  const lane = c.lane;
+  const verdicts = lane?.cap ? [[act, withinCap(lane, amount2)]] : [];
+  return (await judgeCollective(c.id, [act], hints, via, verdicts)).get(act);
 }
 
 // ../../modules/carry/src/english.ts
@@ -6662,6 +7016,11 @@ function totals(xs) {
   for (const x of xs) by.set(x.unit, (by.get(x.unit) ?? 0) + x.value);
   return [...by.entries()].map(([unit, value]) => ({ unit, value }));
 }
+function readValue(typed) {
+  const t = typed.replace(/[\s_]/g, "");
+  if (!/^\d{1,15}$/.test(t) || Number(t) === 0) throw new Error("An amount is a whole number above zero, in the unit\u2019s smallest part.");
+  return Number(t);
+}
 
 // src/specs.ts
 var MONEY = MIRS.money;
@@ -7481,6 +7840,97 @@ var Damgar = class {
     };
     return out;
   }
+  // ------------------------------------------------------------ for a collective (round 3, F353)
+  /** The collectives this identity acts for in money, each as its relays and homes show it now, with the promises signed here. */
+  collectives() {
+    return this.serial(async () => {
+      const { me, s, book, hints } = await this.ctx();
+      const out = [];
+      for (const id of s.collectives ?? []) {
+        const places = await this.collectivePlaces(id, hints, s.via);
+        let c;
+        try {
+          c = await readCollective(me, id, places, s.via);
+        } catch (e2) {
+          c = { id, agreement: null, lane: null, key: null, why: message2(e2) };
+        }
+        const acts = [];
+        for (const [act, x] of Object.entries(book.collectiveActs ?? {}).filter(([, x2]) => x2.collective === id)) {
+          acts.push({ act, to: x.to, amount: x.amount, whatFor: x.whatFor, standing: c.lane ? await standing(c, act, x.amount, places, s.via).catch(() => null) : null });
+        }
+        out.push({ ...c, key: c.key ? { ...c.key, secret: new Uint8Array() } : null, acts });
+      }
+      return { collectives: out };
+    });
+  }
+  async collectivePlaces(id, hints, via) {
+    try {
+      const l = await lookUp(id, hints, via);
+      return [.../* @__PURE__ */ new Set([...hints, ...l.resolution.homes.map((h) => h.hint), ...l.routes.routes.flatMap((r) => r.hints)])];
+    } catch {
+      return hints;
+    }
+  }
+  /** Act for a collective, by its ID: kept only if this identity holds a box in its Money lane and its own key for it is found. */
+  collectiveAdd(typed) {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      const id = readId(typed);
+      const c = await readCollective(me, id, await this.collectivePlaces(id, hints, s.via), s.via);
+      if (c.why) throw new Error(`${c.why} Nothing was kept.`);
+      s.collectives = [.../* @__PURE__ */ new Set([...s.collectives ?? [], id])];
+      await this.store.write(me.id, "settings", s);
+      const lane = c.lane;
+      return {
+        lines: [
+          { text: `Damgar acts for ${short(id)} in money, with your own key for it (F353).`, tone: "ok" },
+          { text: `Its Money lane, \u201C${lane.name}\u201D: ${lane.holders.map(short).join(", ")}; ${lane.number} key${lane.number === 1 ? "" : "s"}${lane.cap ? `; above ${lane.cap.value.toLocaleString("en")} an act, one more` : ""}.` }
+        ]
+      };
+    });
+  }
+  /** A promise to pay from the collective, read back: what it says, and how many keys it needs (the lane, its cap). Nothing is signed. */
+  collectivePromiseRead(a) {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      const r = await this.collectivePromiseMake(me, s, hints, a);
+      return { lines: r.say.lines.map((text3) => ({ text: text3 })), digest: r.digest };
+    });
+  }
+  async collectivePromiseMake(me, s, hints, a) {
+    if (!(s.collectives ?? []).includes(a.collective)) throw new Error("Damgar does not act for that collective: add it first, by its ID.");
+    const places = await this.collectivePlaces(a.collective, hints, s.via);
+    const c = await readCollective(me, a.collective, places, s.via);
+    if (c.why) throw new Error(`${c.why} Nothing was signed.`);
+    const to = readId(a.to);
+    const amount2 = { unit: a.unit || SPEC.units.regtest, value: readValue(a.value) };
+    const acc = this.acceptedSet(await this.accepted(me));
+    const pointer = (await this.payee(to, me, s)).look.verifier.moneyPointer(MONEY, to);
+    if (!pointer.act) throw new Error(`${short(to)} publishes no payee pointer: there is nowhere the promise could be paid. Nothing was signed.`);
+    const payload = promisePayload(c, { to, amount: amount2, pointer: pointer.act });
+    const say_ = promiseSay(c, me.id, { to, amount: amount2, whatFor: a.whatFor.trim() }, short);
+    if (!acc.has(amount2.unit)) say_.lines.push(`Its unit is not one you accept: shown ${say(amount2, acc)}.`);
+    return { c, payload, say: say_, digest: promiseDigest(c, payload), to, amount: amount2, places };
+  }
+  /** Sign the promise read back, as the collective with your own key; where the lane needs more keys, the other holders are asked. */
+  collectivePromise(a) {
+    return this.serial(async () => {
+      const { me, s, book, hints } = await this.ctx();
+      const r = await this.collectivePromiseMake(me, s, hints, a);
+      if (r.digest !== a.digest) throw new Error("It is not the promise read back: read it again. Nothing was signed.");
+      const text3 = `A promise of the collective ${short(r.c.id)} to pay ${short(r.to)} ${r.amount.value.toLocaleString("en")}${a.whatFor.trim() ? `, for ${a.whatFor.trim()}` : ""}: ${r.say.above ? "above its Money lane\u2019s cap, it" : "it"} needs your key too. Read it in your Signing tab, then sign it with your own key for the collective.`;
+      const made = await signPromise(me, r.c, r.payload, r.say.others, text3, r.places, s.via);
+      await this.store.saveIdentity(me);
+      book.collectiveActs = { ...book.collectiveActs ?? {}, [made.act]: { collective: r.c.id, to: r.to, amount: r.amount, whatFor: a.whatFor.trim(), asked: made.asked, at: now() } };
+      await this.saveBook(me.id, book);
+      const st = await standing(r.c, made.act, r.amount, r.places, s.via).catch(() => null);
+      const lines2 = [{ text: `Signed for the collective with your own key: act ${short(made.act)}, public at ${made.places.join(", ")}.`, tone: "ok" }];
+      if (made.asked.length) lines2.push({ text: `Asked for their key: ${made.asked.map(short).join(", ")}, in their own app.` });
+      if (made.notAsked.length) lines2.push({ text: `Not reached: ${made.notAsked.map(short).join(", ")} (no inbox or encryption key found).`, tone: "warn" });
+      lines2.push(st?.met ? { text: "It counts for the collective: its Money lane is met.", tone: "ok" } : { text: `It does not count yet: ${st ? st.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join("; ") : "not read"}.`, tone: "warn" });
+      return { lines: lines2, act: made.act };
+    });
+  }
   // ------------------------------------------------------------ reading what arrived
   /** Where this identity's inbox is, as its routes say. */
   async inboxOf(me, s) {
@@ -7552,7 +8002,7 @@ var Damgar = class {
         }
       }
       const looked = /* @__PURE__ */ new Map();
-      const standing = async (o) => {
+      const standing2 = async (o) => {
         const signer = o.described.signer;
         let l = looked.get(signer);
         if (!l) looked.set(signer, l = lookUp(signer, [...places, ...s.relays], s.via));
@@ -7568,7 +8018,7 @@ var Damgar = class {
       for (const o of fresh) {
         const d = o.described;
         if (!d.signer || !d.payload) continue;
-        let st = await standing(o);
+        let st = await standing2(o);
         const underGrant = (st === "scoped" || st === "unknown") && !!o.described.binding;
         const a = underGrant ? await this.authority(o, [...places, ...s.relays], s.via) : null;
         if (a) {
@@ -8635,14 +9085,14 @@ var Damgar = class {
     });
   }
   /** How an act was signed, in words (round 2, 2b): by hand, by Damgar itself, under a lane (named), or, for another's act, on whose authority. */
-  howSaid(book, act, standing) {
+  howSaid(book, act, standing2) {
     const h = book.how?.[act];
     if (h?.by === "hand") return "signed by hand";
     if (h?.by === "itself") return "signed by Damgar itself (an address bound to the payment, as in round 1)";
     if (h?.by === "lane") return `signed under the lane \u201C${book.lanes?.[h.grant]?.label ?? `${h.grant.slice(0, 8)}\u2026`}\u201D`;
     const theirs = book.authorities?.[act];
     if (theirs) return theirs;
-    return standing === "scoped" ? "signed under a grant: unknown to a Money-only reading" : "signed with its signer\u2019s own key";
+    return standing2 === "scoped" ? "signed under a grant: unknown to a Money-only reading" : "signed with its signer\u2019s own key";
   }
   showPayment(p, me, acc, proofs) {
     const amount2 = { ...p.amount, said: say(p.amount, acc) };
@@ -9296,6 +9746,14 @@ async function run(d, op, a) {
       return d.setRelays(list2(a.relays));
     case "lanes":
       return d.lanes();
+    case "collectives":
+      return d.collectives();
+    case "collective add":
+      return d.collectiveAdd(text2(a.id));
+    case "collective promise read":
+      return d.collectivePromiseRead({ collective: text2(a.collective), to: text2(a.to), value: text2(a.value), unit: text2(a.unit), whatFor: text2(a.whatFor) });
+    case "collective promise":
+      return d.collectivePromise({ collective: text2(a.collective), to: text2(a.to), value: text2(a.value), unit: text2(a.unit), whatFor: text2(a.whatFor), digest: text2(a.digest) });
     case "grant lane":
       return d.grantLane(text2(a.id));
     case "own lane review":
@@ -9572,7 +10030,7 @@ function app(s, web) {
   const i = s.identity;
   const tab = (k, label, count = "") => `<button class="tab${k === "sign" ? " on" : ""}" data-tab="${k}">${label}<span class="count" id="count-${k}">${count}</span></button>`;
   return `<header class="bar"><h1 class="mark">${NAME}</h1>
-<nav class="tabs">${tab("sign", "To sign", s.counts.toSign ? String(s.counts.toSign) : "")}${tab("account", "The account")}${tab("pay", "Pay", s.counts.toPay ? String(s.counts.toPay) : "")}${tab("lanes", "Lanes")}${tab("settings", "Settings")}</nav>
+<nav class="tabs">${tab("sign", "To sign", s.counts.toSign ? String(s.counts.toSign) : "")}${tab("account", "The account")}${tab("pay", "Pay", s.counts.toPay ? String(s.counts.toPay) : "")}${tab("lanes", "Lanes")}${tab("collectives", "For a collective")}${tab("settings", "Settings")}</nav>
 <button class="me" data-action="window" title="The identity">${who({ id: i.id, short: i.short, me: true })}</button></header>
 ${testNotice(web)}
 <div id="spent"></div>
@@ -9581,6 +10039,7 @@ ${testNotice(web)}
 <section id="account" hidden><div id="account-body"><p class="empty">Reading the account\u2026</p></div></section>
 <section id="pay" hidden><p class="small">Damgar holds no wallet. For each payment it shows what to pay; pay it in your own wallet, then paste the proof back here.</p><div id="pay-list"><p class="empty">Reading\u2026</p></div></section>
 <section id="lanes" hidden><p class="small">A lane lets an app (Dub, or Damgar itself) sign some of your money acts by itself, within a cap per act and until a date: a grant of your identity to itself, its key held by that app (F338, F351). Every act signed under one is shown so, here and to every reader. One revocation ends it.</p><div id="lanes-body"><p class="empty">Reading\u2026</p></div></section>
+<section id="collectives" hidden><p class="small">For a collective whose Money lane you hold: Damgar acts for it with your own key for it, made as you signed its founding and sealed to you at your homes (F353). Within the lane\u2019s cap, your key alone; above it, another holder\u2019s key too, as its constitution writes it.</p><div id="collectives-body"><p class="empty">Reading\u2026</p></div></section>
 <section id="settings" hidden><div id="settings-body"><p class="empty">Reading\u2026</p></div></section>`;
 }
 var amount = (a) => a ? `<p class="amount">${e(a.said)}</p>` : "";
@@ -9712,9 +10171,34 @@ ${web ? note("warn", "The web client never makes a link to a node: use Damgar on
 <label>The node\u2019s certificate file (tls.cert)</label><input name="certFile" spellcheck="false" required>
 <div class="row"><button type="submit">Check it and keep it</button></div></form>`}`;
 }
+function collectives(r) {
+  const one = (c) => {
+    const lane = c.lane;
+    const acts = c.acts.length ? lines(
+      c.acts.map((a) => {
+        const st = a.standing;
+        const keys = st?.areas[0];
+        return { text: `${a.amount.value.toLocaleString("en")} to ${a.to.slice(0, 8)}\u2026${a.whatFor ? ` (${a.whatFor})` : ""}: ${st ? st.met ? "counts for the collective" : "does not count yet" : "not read"}${keys ? `, ${keys.signers.length} of ${keys.needed} keys${keys.limits === "above" ? ", above the cap" : ""}` : ""} \xB7 ${a.act.slice(0, 12)}\u2026`, tone: st?.met ? "ok" : "warn" };
+      })
+    ) : '<p class="small">No promise signed here yet.</p>';
+    return `<div class="item" data-collective="${e(c.id)}"><h3>Collective <span class="fp" title="${e(c.id)}">${e(c.id.slice(0, 8))}\u2026${e(c.id.slice(-4))}</span></h3>
+${lane ? `<p class="small">Its Money lane, \u201C${e(lane.name)}\u201D: ${lane.holders.length} holder${lane.holders.length === 1 ? "" : "s"}, ${lane.number} key${lane.number === 1 ? "" : "s"}${lane.cap ? `; above ${lane.cap.value.toLocaleString("en")} an act, one more` : ""}.</p>` : ""}
+${c.why ? note("warn", e(c.why)) : `<form class="collective-promise" data-collective="${e(c.id)}"><h4>A promise to pay, from the collective</h4>
+<label>To whom (an ID)</label><input name="to" type="text" required autocomplete="off" spellcheck="false">
+<div class="row"><label>How much (regtest satoshis) <input name="value" type="text" inputmode="numeric" required class="narrow"></label></div>
+<label>What for</label><input name="whatFor" type="text">
+<div class="row"><button type="submit">Read it back</button></div><div class="promise-read"></div></form>`}
+<h4>Promises signed here</h4>${acts}</div>`;
+  };
+  return `${r.collectives.map(one).join("") || '<p class="empty">No collective yet.</p>'}
+<form id="collective-add" class="row"><input name="id" type="text" class="grow" placeholder="A collective\u2019s ID (mid1\u2026 or hex)" autocomplete="off" spellcheck="false" required><button type="submit">Act for it</button></form>`;
+}
+function promiseRead(r) {
+  return `${lines(r.lines)}<div class="row"><button class="primary" data-action="collective-promise" data-digest="${e(r.digest)}">Sign it for the collective, with my own key</button></div>`;
+}
 
 // src/page/ui.ts
-var TABS = ["sign", "account", "pay", "lanes", "settings"];
+var TABS = ["sign", "account", "pay", "lanes", "collectives", "settings"];
 function mount(app3, b) {
   const $ = (id) => document.getElementById(id);
   let state = null;
@@ -9841,6 +10325,10 @@ function mount(app3, b) {
       const units = (state?.accept ?? []).filter((x) => x.key === "bitcoin-units").flatMap((x) => x.hashes.map((h, i) => ({ hash: h, label: ["Bitcoin", "testnet", "signet", "regtest"][i] ?? h.slice(0, 8) })));
       if (l) $("lanes-body").innerHTML = lanes(l, units);
     }
+    if (t === "collectives") {
+      const r = await act(() => b.ask("collectives"));
+      if (r) $("collectives-body").innerHTML = collectives(r);
+    }
     if (t === "settings") {
       let r = null;
       let problem = null;
@@ -9865,6 +10353,17 @@ function mount(app3, b) {
     const a = el.dataset.action;
     const id = el.dataset.id ?? "";
     switch (a) {
+      case "collective-promise": {
+        const f = el.closest("form.collective-promise");
+        if (!f) return;
+        const fd = form2(f);
+        const r = await act(() => b.ask("collective promise", { collective: f.dataset.collective, to: str(fd, "to"), value: str(fd, "value"), unit: "", whatFor: str(fd, "whatFor"), digest: el.dataset.digest }));
+        if (r) {
+          await open("collectives");
+          done(r);
+        }
+        return;
+      }
       case "window":
         screen = "window";
         await show(await b.ask("state"));
@@ -9993,6 +10492,21 @@ function mount(app3, b) {
     if (fid === "pair") return;
     ev.preventDefault();
     const fd = form2(f);
+    if (fid === "collective-add") {
+      const r = await act(() => b.ask("collective add", { id: str(fd, "id") }));
+      if (r) {
+        await open("collectives");
+        done(r);
+      }
+      return;
+    }
+    if (f.classList.contains("collective-promise")) {
+      const args = { collective: f.dataset.collective, to: str(fd, "to"), value: str(fd, "value"), unit: "", whatFor: str(fd, "whatFor") };
+      const r = await act(() => b.ask("collective promise read", args));
+      const box = f.querySelector(".promise-read");
+      if (r && box) box.innerHTML = promiseRead(r);
+      return;
+    }
     if (fid === "bring") {
       const r = await act(() => b.ask("bring", { id: str(fd, "id"), words: str(fd, "words"), address: str(fd, "address"), relays: str(fd, "relays") }));
       if (r) {

@@ -8,7 +8,7 @@
 // tool (roadmap step 14): who is bound, what each rule does, who decides
 // what (Agreements draft 7: tiers and areas), what changes.
 
-import { MIRS, SPECS, agreementsClonePlan, readTerms } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, agreementsClonePlan, cborDecode, readTerms, unhex } from '../../genesis/src/core.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
 import type { Manifest } from '../../repo/src/release.ts';
@@ -85,6 +85,9 @@ export interface AreaRead {
   threshold: number;
   kinds: { form: 'layer' | 'type'; layer?: number | null; spec?: string | null; type?: number | null }[];
   fields: { form: 'field' | 'task'; number: number }[];
+  /** Key 6 (F353, Agreements draft 16): the cMIP judging limits on its holders' keys, and its parameters as CBOR hex. */
+  limitsCmip?: string | null;
+  limits?: string | null;
 }
 
 /** Why Agreements refuse terms: its code, and its own words. */
@@ -434,6 +437,18 @@ export function absenceSection(t: Pick<TermsRead, 'abandonment'>, names: Names, 
  * comes into force, who decides what. From the core's own reading of the
  * exact payload. `parent`: the agreement a clone replaces, if fetched.
  */
+/** The cap a grant limits cMIP's parameters name (key 0, `[unit, value]`), from their CBOR hex, or null. */
+function capOf(hexed: string | null | undefined): number | null {
+  if (!hexed) return null;
+  try {
+    const v = cborDecode(unhex(hexed)) as Map<number, unknown>;
+    const c = v instanceof Map ? (v.get(0) as unknown[]) : null;
+    return Array.isArray(c) && typeof c[1] === 'number' ? c[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | null): { sections: Section[]; blocking: string[]; plain: Plain[] } {
   const blocking: string[] = [];
   const plain: Plain[] = [];
@@ -535,6 +550,15 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
       );
       const reach = [...a.kinds.map(kindWords), ...a.fields.map(fieldRefWords)];
       al.push({ text: `It reaches ${list(reach) || 'nothing'}.` });
+      if (a.limitsCmip) {
+        const cap = capOf(a.limits);
+        al.push({
+          text: cap !== null
+            ? `Above ${cap.toLocaleString('en')} an act, one more holder's key than its number: limits the grant limits cMIP judges on each act, a cMIP's rule beside the core's count of keys (Agreements draft 16, F353). An app that does not read that cMIP shows such an act as unknown.`
+            : `Its holders' keys are judged under limits of cMIP ${short(a.limitsCmip)}, a cMIP's rule beside the core's count of keys (Agreements draft 16, F353); an app that does not read it shows its acts as unknown.`,
+          tone: 'warn',
+        });
+      }
       const releases = a.kinds.some((k) => k.form === 'type' && k.spec === MIRS.envelopes && k.type === 0);
       al.push({
         text: `${releases ? 'A release' : 'An act it reaches'} counts only once that many of its holders have signed it, each with a visible act of their own, under the agreement in force when the collective signed it (Agreements rule 36a, F100).`,
@@ -546,6 +570,7 @@ export function readAgreement(t: TermsRead, names: Names, parent?: TermsRead | n
       }
     }
     if (t.areas.length) {
+      al.push({ text: "Each holder may name a key of their own in their signature of these terms (at founding, and at each member change): an act made with it counts as that member's signature in the areas they hold, and shows which member signed (Agreements draft 16, F353). An area of one takes one member's act; an area of two takes one member's act and another member's signature." });
       al.push({ text: 'In an area, its holders alone decide, and may grant within it (Q5). Its holders, and how many of them decide, change only by the constitutional change rule.' });
       al.push({
         text: 'A holder may step down at once, alone. The other holders carry on: their number stands while enough of them remain, and all of them together meet it when fewer do (Agreements rule 44d). With no holder left, the area is frozen: its acts count for nothing until the members refit it (Agreements rule 37b).',

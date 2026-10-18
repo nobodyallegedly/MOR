@@ -47,6 +47,8 @@ export const OPS = [
   'carry',
   'check',
   'acting',
+  'collective add',
+  'collective release standing',
   'settings',
   'confirm',
   'cancel',
@@ -95,6 +97,10 @@ export async function run(u: Ummia, op: string, a: Record<string, unknown>): Pro
       return u.check();
     case 'acting':
       return u.setActing(text(a.id));
+    case 'collective add':
+      return u.collectiveAdd(text(a.id));
+    case 'collective release standing':
+      return u.collectiveReleaseStanding(text(a.id));
     case 'settings':
       return u.setSettings({ relays: a.relays === undefined ? undefined : list(a.relays), track: a.track === undefined ? undefined : list(a.track), reports: a.reports === undefined ? undefined : text(a.reports) });
     case 'confirm':

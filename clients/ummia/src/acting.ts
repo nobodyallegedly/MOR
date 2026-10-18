@@ -21,15 +21,18 @@ export interface Actor {
   why: string | null;
 }
 
-/** Said where the chooser is shown, word for word. */
+/** Said where the chooser is shown, word for word (round 2: collectives, F353). */
 export const COLLECTIVES_LATER =
-  'Acting as a collective you belong to comes in a second round: its act would be proposed here and signed by its members in their own apps (Dub’s Signing tab, Edubba). For now, a collective’s releases are made in Edubba’s Collectives tab.';
+  'A collective you belong to acts here with your own key for it, made as you signed its founding and sealed to you at your homes (F353): its act counts as your signature in the lanes you hold; where a lane asks more keys, its other holders are asked, and sign in their own apps (Dub’s Signing tab, Edubba). Add a collective by its ID.';
 
 const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
 
-/** The choices, from the identities an app holds: each as itself. Collectives: round 2. */
-export function actors(held: string[]): Actor[] {
-  return held.map((id) => ({ id, short: short(id), kind: 'self' as const, available: true, why: null }));
+/** The choices: the identities an app holds, each as itself; then the collectives the one in use acts for (round 2), each available where its key was found. */
+export function actors(held: string[], collectives: { id: string; available: boolean; why: string | null }[] = []): Actor[] {
+  return [
+    ...held.map((id) => ({ id, short: short(id), kind: 'self' as const, available: true, why: null })),
+    ...collectives.map((c) => ({ id: c.id, short: short(c.id), kind: 'collective' as const, available: c.available, why: c.why })),
+  ];
 }
 
 /** Who acts, given the one chosen: the chosen if it can act, else the first that can. */
@@ -47,5 +50,6 @@ export function chooserHtml(all: Actor[], now: string | null, o: { title?: strin
         `<label class="check"><input type="radio" name="actor" value="${esc(a.id)}"${a.id === now ? ' checked' : ''}${a.available ? '' : ' disabled'}> <span class="fp" title="${esc(a.id)}">${esc(a.short)}</span> <span class="small">${a.kind === 'self' ? 'yourself' : 'a collective'}${a.why ? `: ${esc(a.why)}` : ''}</span></label>`,
     )
     .join('');
-  return `<section class="card acting"><h3>${esc(o.title ?? 'Who acts')}</h3><form id="acting">${rows || '<p class="small">No identity held here.</p>'}</form><p class="small">${esc(COLLECTIVES_LATER)}</p></section>`;
+  return `<section class="card acting"><h3>${esc(o.title ?? 'Who acts')}</h3><form id="acting">${rows || '<p class="small">No identity held here.</p>'}</form><p class="small">${esc(COLLECTIVES_LATER)}</p>
+<form id="collective-add" class="row"><input name="collective" type="text" class="grow" placeholder="A collective’s ID (mid1… or hex)" autocomplete="off" spellcheck="false" required><button type="submit">Act for it</button></form></section>`;
 }
