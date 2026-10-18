@@ -72,6 +72,8 @@ import { actsUnder, reaches, revocationsOf, type HeldLane } from '../../grants/s
 import { AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
 import type { InvoiceLink, LinkConfig } from './link.ts';
 import { LINK_SAY } from './link-say.ts';
+import { promiseDigest, promisePayload, promiseSay, readCollective, signPromise, standing, type CollectiveHere } from './collective.ts';
+import type { ConsentRead } from '../../grants/src/member.ts';
 import { TestIdentity, TEST_LABEL, sealFor, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -82,7 +84,7 @@ import { changeAccepted, publishAccepted, readAccepted, type Accepted } from './
 import type { ChainSource } from './chain.ts';
 import { TYPES, answerPayload, draftPayload, invoiceRequestPayload, readAnswer, readCommitmentFields, readDraft, readInvoiceRequest, readLaneRequest, readRequest, readSale, requestPayload, salePayload, sendToSelf, type Bound, type CommitmentFields, type Draft, type LaneKind, type LaneRequest } from './messages.ts';
 import { ACCEPTABLE, MESSAGES_SPEC, MESSAGES_SPEC_1, MESSAGES_SPECS, MONEY, OURS, SPEC, isAccepted, labelOf } from './specs.ts';
-import { say, totals, unitOf, type Amount } from './units.ts';
+import { readValue, say, totals, unitOf, type Amount } from './units.ts';
 import type { Account, Accept, LaneShown, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from './shapes.ts';
 
 export type { State } from './shapes.ts';
@@ -145,6 +147,8 @@ export interface Settings {
   manual?: boolean;
   /** The timestamp clock a lane's expiry is judged on (the grant limits cMIP, 3.1), by its identity. */
   clock?: string;
+  /** Collectives this identity acts for in money, by ID (round 3, F353). */
+  collectives?: string[];
 }
 
 /** How an act was signed, as the account shows it (round 2, 2b). */
@@ -196,6 +200,8 @@ export interface Book {
   /** Money messages this Damgar cannot read (a type it does not know, a payload not as the cMIP writes it): shown unknown, never guessed (money messages cMIP, 6.1). Absent in books written before. */
   unread?: Record<string, { from: string; found: number; type: number; why: string; stage: 'new' | 'set aside' }>;
   payments: Record<string, Payment>;
+  /** Promises signed here for a collective with this member's own key (round 3, F353), by act. */
+  collectiveActs?: Record<string, { collective: string; to: string; amount: Amount; whatFor: string; asked: string[]; at: number }>;
   /** The payee pointers this identity published from here, by act, newest last. */
   pointers: string[];
   /** The published accepted list's chain, where published (the accepted cMIP, 3). */
@@ -584,6 +590,104 @@ export class Damgar {
       toPay: Object.values(book.payments).filter((p) => p.side === 'out' && p.stage === 'to pay').length,
     };
     return out;
+  }
+
+  // ------------------------------------------------------------ for a collective (round 3, F353)
+
+  /** The collectives this identity acts for in money, each as its relays and homes show it now, with the promises signed here. */
+  collectives(): Promise<{ collectives: (CollectiveHere & { acts: { act: string; to: string; amount: Amount; whatFor: string; standing: ConsentRead | null }[] })[] }> {
+    return this.serial(async () => {
+      const { me, s, book, hints } = await this.ctx();
+      const out = [];
+      for (const id of s.collectives ?? []) {
+        const places = await this.collectivePlaces(id, hints, s.via);
+        let c: CollectiveHere;
+        try {
+          c = await readCollective(me, id, places, s.via);
+        } catch (e) {
+          c = { id, agreement: null, lane: null, key: null, why: message(e) };
+        }
+        const acts = [];
+        for (const [act, x] of Object.entries(book.collectiveActs ?? {}).filter(([, x]) => x.collective === id)) {
+          acts.push({ act, to: x.to, amount: x.amount, whatFor: x.whatFor, standing: c.lane ? await standing(c, act, x.amount, places, s.via).catch(() => null) : null });
+        }
+        out.push({ ...c, key: c.key ? { ...c.key, secret: new Uint8Array() } : null, acts });
+      }
+      return { collectives: out };
+    });
+  }
+
+  private async collectivePlaces(id: string, hints: string[], via: Via): Promise<string[]> {
+    try {
+      const l = await lookUp(id, hints, via);
+      return [...new Set([...hints, ...l.resolution.homes.map((h) => h.hint), ...l.routes.routes.flatMap((r) => r.hints)])];
+    } catch {
+      return hints;
+    }
+  }
+
+  /** Act for a collective, by its ID: kept only if this identity holds a box in its Money lane and its own key for it is found. */
+  collectiveAdd(typed: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      const id = readId(typed);
+      const c = await readCollective(me, id, await this.collectivePlaces(id, hints, s.via), s.via);
+      if (c.why) throw new Error(`${c.why} Nothing was kept.`);
+      s.collectives = [...new Set([...(s.collectives ?? []), id])];
+      await this.store.write(me.id, 'settings', s);
+      const lane = c.lane!;
+      return {
+        lines: [
+          { text: `Damgar acts for ${short(id)} in money, with your own key for it (F353).`, tone: 'ok' },
+          { text: `Its Money lane, “${lane.name}”: ${lane.holders.map(short).join(', ')}; ${lane.number} key${lane.number === 1 ? '' : 's'}${lane.cap ? `; above ${lane.cap.value.toLocaleString('en')} an act, one more` : ''}.` },
+        ],
+      };
+    });
+  }
+
+  /** A promise to pay from the collective, read back: what it says, and how many keys it needs (the lane, its cap). Nothing is signed. */
+  collectivePromiseRead(a: { collective: string; to: string; value: string; unit: string; whatFor: string }): Promise<{ lines: Line[]; digest: string }> {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      const r = await this.collectivePromiseMake(me, s, hints, a);
+      return { lines: r.say.lines.map((text) => ({ text })), digest: r.digest };
+    });
+  }
+
+  private async collectivePromiseMake(me: TestIdentity, s: Settings, hints: string[], a: { collective: string; to: string; value: string; unit: string; whatFor: string }) {
+    if (!(s.collectives ?? []).includes(a.collective)) throw new Error('Damgar does not act for that collective: add it first, by its ID.');
+    const places = await this.collectivePlaces(a.collective, hints, s.via);
+    const c = await readCollective(me, a.collective, places, s.via);
+    if (c.why) throw new Error(`${c.why} Nothing was signed.`);
+    const to = readId(a.to);
+    const amount: Amount = { unit: a.unit || SPEC.units.regtest, value: readValue(a.value) };
+    const acc = this.acceptedSet(await this.accepted(me));
+    const pointer = (await this.payee(to, me, s)).look.verifier.moneyPointer(MONEY, to) as { act: string | null };
+    if (!pointer.act) throw new Error(`${short(to)} publishes no payee pointer: there is nowhere the promise could be paid. Nothing was signed.`);
+    const payload = promisePayload(c, { to, amount, pointer: pointer.act });
+    const say_ = promiseSay(c, me.id, { to, amount, whatFor: a.whatFor.trim() }, short);
+    if (!acc.has(amount.unit)) say_.lines.push(`Its unit is not one you accept: shown ${say(amount, acc)}.`);
+    return { c, payload, say: say_, digest: promiseDigest(c, payload), to, amount, places };
+  }
+
+  /** Sign the promise read back, as the collective with your own key; where the lane needs more keys, the other holders are asked. */
+  collectivePromise(a: { collective: string; to: string; value: string; unit: string; whatFor: string; digest: string }): Promise<{ lines: Line[]; act: string }> {
+    return this.serial(async () => {
+      const { me, s, book, hints } = await this.ctx();
+      const r = await this.collectivePromiseMake(me, s, hints, a);
+      if (r.digest !== a.digest) throw new Error('It is not the promise read back: read it again. Nothing was signed.');
+      const text = `A promise of the collective ${short(r.c.id)} to pay ${short(r.to)} ${r.amount.value.toLocaleString('en')}${a.whatFor.trim() ? `, for ${a.whatFor.trim()}` : ''}: ${r.say.above ? 'above its Money lane’s cap, it' : 'it'} needs your key too. Read it in your Signing tab, then sign it with your own key for the collective.`;
+      const made = await signPromise(me, r.c, r.payload, r.say.others, text, r.places, s.via);
+      await this.store.saveIdentity(me);
+      book.collectiveActs = { ...(book.collectiveActs ?? {}), [made.act]: { collective: r.c.id, to: r.to, amount: r.amount, whatFor: a.whatFor.trim(), asked: made.asked, at: now() } };
+      await this.saveBook(me.id, book);
+      const st = await standing(r.c, made.act, r.amount, r.places, s.via).catch(() => null);
+      const lines: Line[] = [{ text: `Signed for the collective with your own key: act ${short(made.act)}, public at ${made.places.join(', ')}.`, tone: 'ok' }];
+      if (made.asked.length) lines.push({ text: `Asked for their key: ${made.asked.map(short).join(', ')}, in their own app.` });
+      if (made.notAsked.length) lines.push({ text: `Not reached: ${made.notAsked.map(short).join(', ')} (no inbox or encryption key found).`, tone: 'warn' });
+      lines.push(st?.met ? { text: 'It counts for the collective: its Money lane is met.', tone: 'ok' } : { text: `It does not count yet: ${st ? st.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join('; ') : 'not read'}.`, tone: 'warn' });
+      return { lines, act: made.act };
+    });
   }
 
   // ------------------------------------------------------------ reading what arrived

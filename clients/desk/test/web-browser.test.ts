@@ -260,7 +260,8 @@ async function shareIn(page: Page): Promise<string[]> {
 /** At an iPhone's width (the viewport set to 390 pixels): nothing wider than the screen, and the banner there. */
 async function narrow(page: Page, where: string) {
   const wide = await page.evaluate(() =>
-    [...document.querySelectorAll('body *')].filter((x) => x.getBoundingClientRect().right > 391).map((x) => `${x.tagName.toLowerCase()}.${x.className} ${Math.round(x.getBoundingClientRect().right)}`),
+    // A grid scrolls sideways inside its own box (round 3): what lies within it is not the page's width.
+    [...document.querySelectorAll('body *')].filter((x) => !x.closest('.gridbox') && x.getBoundingClientRect().right > 391).map((x) => `${x.tagName.toLowerCase()}.${x.className} ${Math.round(x.getBoundingClientRect().right)}`),
   );
   assert.deepEqual(wide, [], `nothing wider than the phone on ${where}`);
   assert.ok((await page.evaluate(() => document.documentElement.scrollWidth)) <= 390, `no sideways scrolling on ${where}`);
@@ -399,9 +400,39 @@ test('a real collective founded in the web client, its members signing in Dub on
   }
   await ed.fill('#real-found input[name=name]', 'The tablet house');
   for (const id of [anaId, boId]) await ed.check(`#real-found input[name=member][value="${id}"]`);
+  // Round 3: the grid. Members are its columns, the founder first; three bands, the constitution first.
+  const grid = ed.locator('#e-grid-real-found table.grid');
+  await grid.waitFor({ timeout: 30_000 });
+  assert.deepEqual((await grid.locator('thead th[scope=col]').allInnerTexts()).length, 3, 'one column per member');
+  assert.deepEqual((await grid.locator('tr.band th').allTextContents()).map((x) => x.trim()), ['The constitution', 'The judges', 'The lanes: operations']);
+  // A Money lane: Nobody and Ana's keys, one key, two above 10,000.
+  await ed.click('[data-grid-add=real-found]');
+  const money = grid.locator('tr[data-lane="1"]');
+  await money.locator('input.lanename').fill('Money');
+  await money.locator('select[data-grid-layer]').selectOption('2');
+  for (const id of [nobody.id, anaId]) await grid.locator(`tr[data-lane="1"] button[data-grid-cell="lane:1"][data-m="${id}"]`).click();
+  await grid.locator('tr[data-lane="1"] input[data-grid-cap]').fill('10000');
+  await grid.locator('tr[data-lane="1"] input[data-grid-cap]').press('Tab');
+  await grid.locator('tr[data-lane="1"] td.say', { hasText: 'above 10,000, 2 keys' }).waitFor({ timeout: 10_000 });
+  assert.match(await grid.locator('tfoot').innerText(), /Money/);
+  // A second lane over all of Money is refused in plain words, then removed.
+  await ed.click('[data-grid-add=real-found]');
+  await grid.locator('tr[data-lane="2"] input.lanename').fill('More money');
+  await grid.locator(`tr[data-lane="2"] button[data-grid-cell="lane:2"][data-m="${boId}"]`).click();
+  await ed.click('#real-found button[type=submit]');
+  await ed.locator('#e-real-review', { hasText: 'reach the same acts' }).waitFor({ timeout: 90_000 });
+  await grid.locator('[data-grid-remove="2"]').click();
+  // At a phone's width the grid scrolls in its own box; the page does not.
+  await ed.setViewportSize({ width: 390, height: 844 });
+  assert.ok(await ed.locator('#e-grid-real-found .gridbox').evaluate((b) => b.scrollWidth > b.clientWidth), 'the grid scrolls sideways in its own box');
+  assert.ok(await ed.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'nothing else scrolls sideways');
+  await ed.setViewportSize({ width: 900, height: 1000 });
   await shot(ed, 'found-form');
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading h2', { hasText: 'Propose to found the collective “The tablet house”' }).waitFor({ timeout: 90_000 });
+  const rv = await ed.locator('#e-real-review').innerText();
+  assert.match(rv, /The lanes[\s\S]*“Money”: all money \(the Money layer\)\. Any one of [\s\S]*above 10,000 regtest satoshis an act, 2 keys/);
+  assert.match(rv, /Above 10,000 an act, one more holder's key/);
   await banner(ed, 'the founding review');
   await ed.click('#e-real-review [data-action=confirm]');
   await done(ed, '#e-status .note.done', 'The founding of “The tablet house” is proposed');
@@ -454,7 +485,7 @@ test('a real collective founded in the web client, its members signing in Dub on
 
   // The collective's page: what its agreement lets you do; a release said to be made on a computer; no money drafts.
   await ed.locator('#e-may').waitFor({ timeout: 60_000 });
-  assert.match(await ed.locator('#e-real-release').innerText(), /made in Edubba on a computer/);
+  assert.match(await ed.locator('#e-real-release').innerText(), /made in Ummia/);
   assert.ok((await ed.locator('#e-real-release').innerText()).includes(RELEASE_ON_WEB));
   assert.equal(await ed.locator('#real-release, [data-action=pick-folder], [data-anchorable]').count(), 0);
   assert.equal(await ed.locator('#e-posts [data-action=correct], #e-posts details.correct').count(), 0, 'a real collective posts nothing from here, so nothing to correct');
@@ -462,7 +493,13 @@ test('a real collective founded in the web client, its members signing in Dub on
 
   // A member change: Cy joins. Every member whose voice remains signs, and Cy, each in Dub on the web; then it waits for Kišib.
   await ed.click('#e-real-change > summary');
+  // The same grid, filled from the agreement in force: its lanes, the Money lane's cap.
+  const cg = ed.locator('#e-grid-real-change table.grid');
+  await cg.waitFor({ timeout: 60_000 });
+  assert.equal(await cg.locator('input.lanename').nth(1).inputValue(), 'Money');
+  assert.equal(await cg.locator('input[data-grid-cap]').first().inputValue(), '10000');
   await ed.check(`#real-change input[name=member][value="${cyId}"]`);
+  await cg.locator('thead th[scope=col]', { hasText: 'Cy' }).waitFor({ timeout: 10_000 });
   await ed.click('#real-change button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 60_000 });
   await banner(ed, 'the member change review');

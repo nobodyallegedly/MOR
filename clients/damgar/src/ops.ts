@@ -46,6 +46,10 @@ export const OPS = [
   'clock',
   'link',
   'answer address',
+  'collectives',
+  'collective add',
+  'collective promise read',
+  'collective promise',
 ] as const;
 
 /** An expiry, as seconds since 1970, from a number or a date the page sends; none where empty. */
@@ -115,6 +119,14 @@ export async function run(d: Damgar, op: string, a: Record<string, unknown>): Pr
       return d.setRelays(list(a.relays));
     case 'lanes':
       return d.lanes();
+    case 'collectives':
+      return d.collectives();
+    case 'collective add':
+      return d.collectiveAdd(text(a.id));
+    case 'collective promise read':
+      return d.collectivePromiseRead({ collective: text(a.collective), to: text(a.to), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor) });
+    case 'collective promise':
+      return d.collectivePromise({ collective: text(a.collective), to: text(a.to), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor), digest: text(a.digest) });
     case 'grant lane':
       return d.grantLane(text(a.id));
     case 'own lane review':

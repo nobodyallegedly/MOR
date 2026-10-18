@@ -124,7 +124,7 @@ export class Releases {
   }
 
   /** A release of a folder, made and read back, not signed. */
-  async prepare(me: TestIdentity, own: OwnRelease[], a: { folder: string; name: string; version: string; previous: string | null; implements: string[]; relays: string[]; via: Via }): Promise<Review> {
+  async prepare(me: TestIdentity, own: OwnRelease[], a: { folder: string; name: string; version: string; previous: string | null; implements: string[]; relays: string[]; via: Via; as?: { collective: string; lane: { name: string; holders: string[]; number: number } | null } }): Promise<Review> {
     const folder = folderOf(a.folder);
     const name = a.name.trim();
     const version = a.version.trim();
@@ -134,7 +134,8 @@ export class Releases {
     if (!a.relays.length) blocking.push('Name at least one relay first, under Settings: the files go there.');
     const before = a.previous ? own.find((x) => x.id === a.previous) : undefined;
     if (a.previous && !before) throw new Error('That release before it is not one of this identity’s releases here.');
-    if (own.some((x) => x.name === name && x.version === version)) blocking.push(`${name} ${version} was already released by this identity. Choose another version.`);
+    if (own.some((x) => x.name === name && x.version === version)) blocking.push(`${name} ${version} was already released by ${a.as ? 'this collective' : 'this identity'}. Choose another version.`);
+    if (a.as && !a.as.lane) blocking.push('No lane of the collective’s constitution reaches its releases: they count on its own key, held by its founder’s Edubba.');
     const { how, files, skipped } = filesOf(folder);
     if (!files.length) blocking.push(how === 'git' ? 'Git tracks no file in this folder.' : 'This folder holds no file but hidden ones.');
     const bad = files.filter((f) => !validPath(f.path)).map((f) => f.path);
@@ -145,7 +146,7 @@ export class Releases {
     const p: Publisher = { id: me, relays: a.relays, releases: before ? [{ id: before.id, version: before.version, manifest: before.manifest }] : [] };
     const prepared = prepareRelease(p, { name: name || basename(folder), version: version || '0', files: files.filter((f) => validPath(f.path)), source: how === 'git' ? gitSource(folder) : undefined, implements: impl.entries });
     const m = prepared.manifest;
-    const digest = sha256(Buffer.concat([Buffer.from('MOR Ummia release review, version 1\n'), Buffer.from(me.id), prepared.payload, prepared.encoded]));
+    const digest = sha256(Buffer.concat([Buffer.from('MOR Ummia release review, version 1\n'), Buffer.from(a.as ? `${me.id} for ${a.as.collective}` : me.id), prepared.payload, prepared.encoded]));
     const plan = sha256(`${digest}${Math.random()}${Date.now()}`).slice(0, 32);
     this.plans.set(plan, { identity: me.id, folder, prepared, previous: before?.id ?? null, digest, expires: Date.now() + PLAN_FOR, blocking });
     const line: Line[] = before
@@ -154,7 +155,7 @@ export class Releases {
     return {
       plan,
       digest,
-      title: `Publish ${m.name} ${m.version} under your own name`,
+      title: a.as ? `Publish ${m.name} ${m.version} for the collective ${a.as.collective.slice(0, 8)}…` : `Publish ${m.name} ${m.version} under your own name`,
       summary: [
         `${plural(m.files.length, 'file')} listed below, each with its size and fingerprint (its work hash, as the manifest names it)${m.dependencies.length ? `, and ${plural(m.dependencies.length, 'library', 'libraries')} it depends on, from its lock files` : ''}. ${plural(prepared.upload.length, 'file is', 'files are')} new since the release before it and uploaded.`,
         'Nothing is signed until you press Sign and publish.',
@@ -167,7 +168,9 @@ export class Releases {
         {
           heading: 'Who signs',
           lines: [
-            { text: 'It is published under your own name, signed by this identity alone: a release as soon as it is published (release manifest cMIP, “What counts as a release”).' },
+            a.as
+              ? { text: `It is published by the collective, signed with your own key for it (F353): it counts as the collective’s release once its lane “${a.as.lane?.name ?? '?'}” is met, ${a.as.lane?.number ?? '?'} key${a.as.lane?.number === 1 ? '' : 's'} of ${a.as.lane?.holders.length ?? '?'}${(a.as.lane?.number ?? 1) > 1 ? '; its other holders are asked for theirs, in their own app' : ''} (Agreements rule 60).` }
+              : { text: 'It is published under your own name, signed by this identity alone: a release as soon as it is published (release manifest cMIP, “What counts as a release”).' },
             { text: `The manifest and every new file go to ${a.relays.join(', ')}. Anyone can then fetch the release by its id and check every file against the list.` },
           ],
         },
@@ -180,7 +183,7 @@ export class Releases {
   }
 
   /** Sign and publish exactly as reviewed: only with its digest, within 15 minutes, once, every file read again and compared. */
-  async confirm(me: TestIdentity, own: OwnRelease[], planId: string, digest: string, relays: string[], via: Via): Promise<{ done: Done; release: OwnRelease }> {
+  async confirm(me: TestIdentity, own: OwnRelease[], planId: string, digest: string, relays: string[], via: Via, sign?: (payload: Uint8Array) => Promise<{ id: string }>): Promise<{ done: Done; release: OwnRelease }> {
     const plan = this.plans.get(planId);
     if (!plan || plan.expires < Date.now() || plan.identity !== me.id) {
       this.plans.delete(planId);
@@ -194,7 +197,7 @@ export class Releases {
     const changed = now.length !== listed.length || now.some((f, i) => f.path !== listed[i].path || f.bytes.length !== listed[i].size || workHash(f.bytes) !== listed[i].work);
     if (changed) throw new Error(`Files in ${plan.folder} changed since the review: review the release again. Nothing was signed.`);
     const before = plan.previous ? own.find((x) => x.id === plan.previous) : undefined;
-    const p: Publisher = { id: me, relays, releases: before ? [{ id: before.id, version: before.version, manifest: before.manifest }] : [] };
+    const p: Publisher = { id: me, sign, relays, releases: before ? [{ id: before.id, version: before.version, manifest: before.manifest }] : [] };
     const out = await publishPrepared(p, plan.prepared, via);
     const release: OwnRelease = { id: out.id, name: out.manifest.name, version: out.manifest.version, manifest: Buffer.from(plan.prepared.encoded).toString('base64'), folder: plan.folder };
     return {

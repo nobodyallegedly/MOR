@@ -18,7 +18,8 @@
 //
 // TEST IDENTITIES ONLY.
 
-import { cborDecode, describeAct, hex, signingPublic } from '../../genesis/src/core.ts';
+import { cborDecode, describeAct, hex, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
+import { resealMemberKeys } from '../../grants/src/member.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { Refused, encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
 import { carriedKey, lookCurrent, servedChain, NOT_CURRENT } from '../../dub/src/carryin.ts';
@@ -93,6 +94,9 @@ export class AfterKishib {
       } else if (last && look.encryptionKeyAct === last.act) {
         this.store.saveIdentity(me);
         await me.publishEncryptionKey(encryptionSecret(seed));
+        // F353: the member keys sealed to this identity, sealed again to its new encryption key (the member keys cMIP, 4.1).
+        const resealed = await resealMemberKeys(me.id, me.f.encryption.slice(0, -1).map((e) => unhex(e.secret)), xwingPublic(encryptionSecret(seed)), me.f.homes.map((h) => h.hint), me.via).catch(() => 0);
+        if (resealed) lines.push({ text: `Its ${resealed} member key${resealed === 1 ? '' : 's'} for collectives, sealed to it, sealed again to the new encryption key: unchanged, so its apps still act with them (F353).`, tone: 'ok' });
         this.store.saveIdentity(me);
         lines.push({ text: 'Its encryption key was renewed from the new words (Edubba published the last one): messages sealed from now on open only with them.', tone: 'ok' });
       } else {

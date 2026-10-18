@@ -244,6 +244,11 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'folder use':
         await useFolder(el.dataset.path ?? '');
         return;
+      case 'release standing': {
+        const c = await act(() => b.ask<{ met: boolean; lines: v.Line[] }>('collective release standing', { id }));
+        if (c) $(`check-${id}`)!.innerHTML = v.lines(c.lines);
+        return;
+      }
       case 'release check': {
         const c = await act(() => b.ask<{ ok: boolean; lines: v.Line[] }>('release check', { id }));
         if (c) $(`check-${id}`)!.innerHTML = v.checked(c);
@@ -307,6 +312,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     if (fid === 'pair') return;
     ev.preventDefault();
     const fd = new FormData(f);
+    if (fid === 'collective-add') {
+      const r = await act(() => b.ask<{ lines: v.Line[] }>('collective add', { id: str(fd, 'collective') }));
+      if (r) {
+        state = await b.ask<State>('state');
+        await show(state);
+        done(r);
+      }
+      return;
+    }
     if (fid === 'bring') {
       const r = await act(() => b.ask<{ lines: v.Line[] }>('bring', { id: str(fd, 'id'), words: str(fd, 'words'), address: str(fd, 'address'), relays: str(fd, 'relays') }));
       if (r) {

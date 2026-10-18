@@ -143,7 +143,7 @@ export interface Proposal {
   act: string;
   collective: string | null;
   reading: {
-    kind: 'founding' | 'clone' | 'release' | 'other';
+    kind: 'founding' | 'clone' | 'release' | 'act' | 'other';
     title: string;
     summary: string[];
     sections: { heading: string; lines: Line[] }[];
@@ -159,6 +159,8 @@ export interface Proposal {
   /** Once shown: the three positions asked back. */
   positions: number[] | null;
   seen: boolean;
+  /** A collective left alone from here (rule 70): the resignation. */
+  left?: string | null;
 }
 
 /** A share of a collective's chain key, shown once (H18). */

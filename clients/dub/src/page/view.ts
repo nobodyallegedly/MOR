@@ -414,7 +414,19 @@ ${r.blocking.length ? note('error', `<strong>It cannot be signed here:</strong>$
       : `<div class="row"><button class="primary" data-action="accept" data-thread="${e(p.thread)}">Sign it</button><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div><p class="small">Your signature is an act of yours, public: it binds you to exactly what is read above.</p>`;
   // H34: once answered, the reading folds away (open at a click, remembered); before, it is always shown in full.
   const read = p.answer ? `<details data-fold="proposal:${e(p.thread)}"><summary>What was proposed, in plain words</summary>${body}</details>` : body;
-  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${read}${actions}${share}</div>`;
+  // Rule 70 (F354): a member can always leave alone, from here, once the collective is founded.
+  const leave =
+    p.answer?.verdict === 'signed' && p.collective && (r.kind === 'founding' || r.kind === 'clone') && (p.share === 'received' || p.share === 'byHand')
+      ? p.left
+        ? `<p class="small">You resigned: act <span class="fp" title="${e(p.left)}">${e(p.left.slice(0, 8))}…</span>. It takes effect once the collective registers it.</p>`
+        : `<div class="row"><button class="quiet" data-action="leave-read" data-thread="${e(p.thread)}">Leave this collective…</button></div><div class="leave" data-leave="${e(p.thread)}"></div>`
+      : '';
+  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${read}${actions}${share}${leave}</div>`;
+}
+
+/** Leaving a collective alone, read back before anything is signed (rule 70). */
+export function leaveRead(thread: string, r: { lines: Line[]; digest: string }): string {
+  return `<div class="say-leave">${lines(r.lines)}<div class="row"><button class="primary" data-action="leave-collective" data-thread="${e(thread)}" data-digest="${e(r.digest)}">Sign my resignation</button></div><p class="small">Your resignation is an act of yours, public. Nobody else signs it.</p></div>`;
 }
 
 /** A share of a collective's chain key, shown once (H18), with nothing asked beside it. */

@@ -56,6 +56,8 @@ export const OPS = [
   'proposals',
   'accept',
   'decline',
+  'leave read',
+  'leave collective',
   'share',
   'shareback',
   'sharehand',
@@ -146,6 +148,10 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.signProposal(text(a.thread));
     case 'decline':
       return dub.declineProposal(text(a.thread), text(a.why));
+    case 'leave read':
+      return dub.leaveRead(text(a.thread));
+    case 'leave collective':
+      return dub.leaveCollective(text(a.thread), text(a.digest));
     case 'share':
       return dub.shareShow(text(a.thread));
     case 'shareback':

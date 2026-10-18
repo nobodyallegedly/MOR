@@ -65,6 +65,15 @@ The core library does every check: payloads, commitments, rail proofs, the route
 - The chain Damgar follows on a computer is a regtest node it trusts, said where it is used.
 - The rails' own costs, shown before a rail is declared (`LIGHTNING_COSTS`, `ONCHAIN_COSTS`).
 
+## Round 3: for a collective (F353)
+
+*Decided by Nobody, allegedly, 18 and 19 October 2026 (F353; Agreements draft 16; the grant limits cMIP draft 2; the member keys cMIP draft 1). Money on the web Edubba is left out (F354, question 4): "A member holding a money area pays for the collective from Damgar with their own key".*
+
+- **For a collective** (a tab): give a collective's ID (`mid1…` or hex). Damgar reads it as anyone does (its chain, the agreement in force, its Money lane: holders, number of keys, cap) and finds your own key for it, sealed to you at your homes when you signed its founding or a member change. It is kept only if you hold a box in its Money lane and your key is found; otherwise it says why.
+- **A promise to pay, from the collective**: to whom, how much (regtest satoshis), what for; read back first, with what the lane needs (within the cap, your key alone; above it, one more holder's key, as the constitution writes it); then **Sign it for the collective, with my own key**. It is a Money obligation, the collective the debtor, public, signed as the collective with your key (Agreements draft 16, rule 73). Where more keys are needed, the lane's other holders are asked, each sent a negotiation message in their inbox, as Edubba sends a release to sign; they sign in Dub's Signing tab or Edubba's To sign, with their own keys.
+- **Promises signed here** are listed with how each stands, read as anyone reads it: counting or not, how many keys of how many, above the cap or not. Damgar judges the cap itself (it implements the grant limits cMIP, draft 2); a reader that does not shows such an act as unknown.
+- *Not built:* paying the promise from the collective's own money (the collective's income goes to its split service, Part C, then to its members); a payee pointer of the collective (the split service is its designated pointer).
+
 ## Tests
 
 `npm test` (Node, and headless Chromium for `browser.test.ts`; `MOR_CHROMIUM` names the browser):
@@ -82,6 +91,7 @@ The core library does every check: payloads, commitments, rail proofs, the route
 | `answer-amount.test.ts` | Draft 3 of the money messages cMIP (F352): an answer naming its amount, judged by the grant limits cMIP; above the receipts lane's cap, the payee's Damgar waits and says why; within it, it answers by itself. |
 | `payperview.test.ts` | Round 2: a sealed post sold through a repost on another relay (the seller at one relay, the reposter at both, the buyer at the other only); bought from Dub under its lane, naming the repost; the receipt by itself, the sale told to the seller's Dub, the key delivered, the post opened; the referral share paid to the reposter under the seller's referral lane. |
 | `regtest.test.ts` | On regtest, with real btcd and lnd (skipped unless `MOR_LN_REGTEST` names the network's folder): a tip, an on-chain payment and an anchor, each paid from the test wallet; and round 2 on the real nodes (a tip under a lane, the invoice made by the payee's lnd through its receive-only macaroon, the admin macaroon refused; a sealed post bought through a repost; the referral share paid). |
+| `collective.test.ts` | Round 3 (F353): a collective founded from Edubba's grid, its Money lane A and iPa, one key, two above 10,000. A's Damgar adds it (iPh's, holding no Money box, refused); a promise of 2,000 counts on A's key alone; one of 50,000 asks iPa, counts once iPa signs it in Dub with iPa's own key; the page is shown nothing of the key's secret. |
 | `desktop.test.ts`, `web-build.test.ts`, `build/reproducible.test.ts` | The Mac app and the Linux desktop entry; the release in `built/` (fingerprints, banner, icons), built twice the same, the page asking only for operations both sides answer, `check`, the tint (H36); the release rebuilt byte for byte (`npm run test:build`). |
 
 ## Using it

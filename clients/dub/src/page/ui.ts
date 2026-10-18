@@ -608,6 +608,21 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         }
         break;
       }
+      case 'leave-read': {
+        const r = await busy('Reading the collective’s agreement in force…', () => b.ask<{ lines: v.Line[]; digest: string }>('leave read', { thread: d.thread }));
+        const box = app.querySelector<HTMLElement>(`[data-leave="${CSS.escape(d.thread!)}"]`);
+        if (r && box) box.innerHTML = v.leaveRead(d.thread!, r);
+        break;
+      }
+      case 'leave-collective': {
+        if (!confirm('Resign from this collective? Your resignation is public, and needs nobody else.')) break;
+        const r = await busy('Signing your resignation, and telling the founder…', () => b.ask<{ lines: v.Line[] }>('leave collective', { thread: d.thread, digest: d.digest }));
+        if (r) {
+          await readSigning();
+          say('done', `<strong>Resigned.</strong>${v.lines(r.lines)}`);
+        }
+        break;
+      }
       case 'decline': {
         const why = prompt('Decline it. Your reason, if you like (sent to the proposer, sealed):');
         if (why === null) break;

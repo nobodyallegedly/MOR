@@ -20,6 +20,7 @@ import type { Listing } from '../folders.ts';
 import type { ActRead, RealCollective, RealProposal, ShareHere, AgentDetails, AgentSummary, AgentView, Constitution, Done, DraftView, IdentityRecord, Item, Line, MachineState, Permissions, Sorted, State } from './api.ts';
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 import { shownAct, shownId } from '../../../genesis/src/shown.ts';
+import { GRID_STYLE } from './grid-view.ts';
 
 export { e };
 
@@ -93,7 +94,7 @@ export const KEY_SAY =
  */
 export const TINT = { layer: '#48c08c', line: '#153028', edge: '#1a3f32', accent: '#2e7659' } as const;
 
-export const STYLE = `${DUB}
+export const STYLE = `${DUB}${GRID_STYLE}
 ${TEXT}
 :root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
 button:hover,.door:hover{border-color:var(--tint)}
@@ -1128,13 +1129,10 @@ ${note('', 'How: each member reads the founding terms in plain words and signs o
 <label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}"${i.id === s.acting ? ' selected' : ''}>${e(i.name)}</option>`).join('')}</select>
 <label>Its other members, from your contacts</label>${contactPicks(s, [])}
 <label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
-<fieldset><legend>Its rules</legend><div class="row">
-<label>Shares that rebuild the chain key <input name="safety" type="number" min="1" value="2" class="narrow"></label>
-<label>Signatures a release needs <input name="release" type="number" min="1" value="2" class="narrow"></label>
-<label>Signatures an operational change needs <input name="clone" type="number" min="1" value="2" class="narrow"></label>
-<label>Members who judge absence <input name="others" type="number" min="1" value="2" class="narrow"></label></div>
-<p class="small">Changes of members or rules need every member whose voice remains (Agreements rule 64). A way to rotate must survive the loss of any one member’s share (F96): fewer shares than members.</p></fieldset>
-<label>The words everyone signs (empty: the standard words for these rules)</label><textarea name="words"></textarea>
+<h3>Who decides what</h3>
+<p class="small">Members are the columns; tap a box to give that member’s key power in that row. The constitution first, then the judges, then the lanes (Agreements rules 60 and 62). Each member signs with a key of their own, made as they sign (F353).</p>
+<div id="e-grid-real-found"><p class="small">Choose the members above: the grid follows.</p></div>
+<label>The words everyone signs (empty: the grid’s sentences)</label><textarea name="words"></textarea>
 <div class="row"><button type="submit" class="primary">Review the founding</button></div></form></section>
 <div id="e-real-review"></div>
 ${contactsCard(s)}`;
@@ -1224,7 +1222,7 @@ export const WEB_FOUNDING_SAY =
 
 /** Said on the web where a collective's release would be made (`../ops.ts`, RELEASE_ON_WEB), word for word. */
 export const RELEASE_ON_WEB =
-  'A collective’s release is made in Edubba on a computer (the Mac, or Linux), where Edubba reads the folder itself: what git tracks in a git folder, every file but hidden ones in a plain folder, links never followed. A page in a browser cannot tell a link from a file in a folder you choose, nor what git tracks, so it would publish what Edubba on a computer leaves out. A release proposed there can be signed here, in “To sign”, and checked here as anyone would. A release under your own name is made in Ummia.';
+  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the lane that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
 
 /** A real collective founded here: who it is, its proposals, a member change, a release. */
 export function realDetails(s: State, id: string, c: RealCollective): string {
@@ -1235,20 +1233,21 @@ export function realDetails(s: State, id: string, c: RealCollective): string {
 ${foldCard('e-real-members', 'collective-members', `Its members (${c.members.length})`, `<ul class="plain">${c.members.map((m) => `<li>${person(s, m)}${m === c.holder ? ' <span class="small">holds its signing key, here</span>' : ''}</li>`).join('')}</ul>
 <p class="small">Its chain key: one share per member, kept on paper, any ${c.threshold} rebuilding it. ${c.fingerprint ? `Dealing fingerprint <code>${e(c.fingerprint.match(/.{1,4}/g)!.slice(0, 8).join(' '))}</code>.` : 'Dealt in Kišib: its fingerprint was shown there and in each member’s Dub.'} No app holds a share.</p>
 ${c.pending ? note('warn', 'A member change was rotated and waits for its homes to count it.') : ''}`)}
+${(c.resigned ?? []).length ? `<section class="card" id="e-resigned"><h3>Leaving alone (rule 70)</h3><ul class="plain">${(c.resigned ?? [])
+  .map((r) => `<li>${person(s, r.member)} resigned, act ${fp(r.act)}. ${r.registered ? `Registered at the collective’s line ${fp(r.registered)}: now propose the change of members without them, below.` : `<button data-action="real-register-resignation" data-collective="${e(id)}" data-act="${e(r.act)}">Register it at the collective’s line</button>`}</li>`)
+  .join('')}</ul><p class="small">A member can always leave alone: nobody else signs a resignation. It takes effect at the collective’s line registering it; the change of members without them then waits for Kišib, as any member change.</p></section>` : ''}
 ${sharesHere(s, id, c.toShow)}<div id="e-shares-here"></div>
 <div id="e-perms"><p class="small">Reading its agreement in force…</p></div>
 ${mine.map((p) => proposalStatus(s, p)).join('')}
 ${foldCard('e-real-change', 'collective-change', 'Change its members', `<form id="real-change" data-collective="${e(id)}">
-<p class="small">Tick who is a member after the change. Every member whose voice remains signs it, and each joining member, each in their own app; then it waits for Kišib.</p>
+<p class="small">Tick who is a member after the change. Every member whose voice remains signs it, and each joining member, each in their own app, each naming a new key of their own; then it waits for Kišib.</p>
 <div class="picks">${c.members.map((m) => `<label class="check"><input type="checkbox" name="member" value="${e(m)}" checked> ${person(s, m)}</label>`).join('')}</div>
 ${contactPicks(s, [], c.members)}
 <label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
+<h3>Who decides what, after the change</h3>
+<div id="e-grid-real-change"><p class="small">Reading its agreement in force…</p></div>
 <div class="row"><button type="submit">Review the change</button></div></form>`, false)}
-${WEB ? foldCard('e-real-release', 'collective-release', 'A release: on a computer', `<p class="small">${e(RELEASE_ON_WEB)}</p>`) : foldCard('e-real-release', 'collective-release', 'A release', `<form id="real-release" data-collective="${e(id)}">
-<p class="small">Published by the collective, from a folder chosen now (a git folder: what git tracks; a plain folder: every file but hidden ones). It counts once enough members sign it, each in their own app.</p>
-<label>The folder</label><div class="row"><input name="folder" type="text" class="grow" required spellcheck="false" autocomplete="off"><button type="button" data-action="pick-folder" data-target="real-release">Choose a folder…</button></div>
-<div class="row"><label>Its name <input name="name" type="text" class="pet"></label><label>Its version <input name="version" type="text" class="narrow" required></label></div>
-<div class="row"><button type="submit">Review the release</button></div></form>`)}
+${foldCard('e-real-release', 'collective-release', 'A release: in Ummia', `<p class="small">${e(RELEASE_ON_WEB)}</p>`)}
 <div id="e-real-review"></div>
 ${WEB ? '' : realMoney(s, id, c.members)}
 <h3>Its posts</h3><div id="e-posts"><p class="small">Reading…</p></div>`;
