@@ -22,7 +22,7 @@
 // TEST IDENTITIES ONLY (F281).
 
 import { TestIdentity, TEST_LABEL, type IdentityFile } from '../../../genesis/src/identity.ts';
-import { NO_SIGNING, type Keep, type Pending, type Settings, type SigningState } from '../dub.ts';
+import { MONEY_KEPT, NO_SIGNING, type Keep, type MoneyKept, type Pending, type Settings, type SigningState } from '../dub.ts';
 import { NO_PEOPLE, type People } from '../people.ts';
 
 export const DB = 'dub';
@@ -137,10 +137,19 @@ export class WebKeep implements Keep {
     await this.put(`signing:${id}`, s);
   }
 
+  /** What Dub keeps for money (round 2), `money-NAME:ID`: its lane's key and strand, the payments signed under it, the keys of posts sold or bought. */
+  async money<T>(id: string, name: MoneyKept): Promise<T | null> {
+    return (await this.get<T>(`money-${name}:${id}`)) ?? null;
+  }
+
+  async saveMoney(id: string, name: MoneyKept, v: unknown): Promise<void> {
+    await this.put(`money-${name}:${id}`, v);
+  }
+
   /** Forget an identity in this browser: its keys and everything kept about it. Only its signing key's words, if written down, bring it back. */
   async forget(id: string): Promise<void> {
     await this.write((s) => {
-      for (const k of ['identity', 'settings', 'people', 'signing']) s.delete(`${k}:${id}`);
+      for (const k of ['identity', 'settings', 'people', 'signing', ...MONEY_KEPT.map((m) => `money-${m}`)]) s.delete(`${k}:${id}`);
     });
   }
 

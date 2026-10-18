@@ -13,7 +13,7 @@ use mor_core::cbor::{self, Value};
 use mor_core::chain::Status;
 use mor_core::hash::Hash;
 use mor_core::identity::Payload as Id;
-use mor_core::money::{self, Amount, Citations, Claim, Obligation, PayeePointer, Payer, Payload, Rail, Receipt, VaultEntry};
+use mor_core::money::{self, Amount, Citations, Claim, Obligation, PayeePointer, Payer, Payload, Rail, Receipt, Referral, VaultEntry};
 use mor_lightning::bolt11::{self, Network as LnNetwork};
 use mor_lightning::{Lightning, LnAddress, LnProof};
 use mor_onchain::chain::HeaderChain;
@@ -110,6 +110,14 @@ impl RailIn {
     }
 }
 
+/// A claim's referral (Money field 6; rule 20): who led the payer to this
+/// payment, and the act (a repost) the payer followed.
+#[derive(Deserialize, Serialize)]
+struct ReferralIn {
+    identity: String,
+    evidence: String,
+}
+
 /// A Money act's payload, as the page and the client name its fields.
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
@@ -122,7 +130,7 @@ enum MoneyIn {
     #[serde(rename_all = "camelCase")]
     Receipt { rail: String, proof: ByteBuf, payer: Option<String>, payee: String, amount: AmountIn, fulfils: String },
     #[serde(rename_all = "camelCase")]
-    Claim { rail: String, proof: ByteBuf, payee: String, amount: AmountIn, fulfils: String, disagrees: Option<String>, refund: Option<RailIn> },
+    Claim { rail: String, proof: ByteBuf, payee: String, amount: AmountIn, fulfils: String, disagrees: Option<String>, refund: Option<RailIn>, #[serde(default)] referral: Option<ReferralIn> },
     #[serde(rename_all = "camelCase")]
     Release { obligation: String },
 }
@@ -159,14 +167,14 @@ impl MoneyIn {
                 batch: None,
                 purchase: None,
             }),
-            MoneyIn::Claim { rail, proof, payee, amount, fulfils, disagrees, refund } => Payload::Claim(Claim {
+            MoneyIn::Claim { rail, proof, payee, amount, fulfils, disagrees, refund, referral } => Payload::Claim(Claim {
                 rail: unhex(rail)?,
                 proof: proof.to_vec(),
                 payee: unhex(payee)?,
                 amount: amount.core()?,
                 fulfils: unhex(fulfils)?,
                 disagrees: opt(disagrees)?,
-                referral: None,
+                referral: referral.as_ref().map(|r| -> R<Referral> { Ok(Referral { identity: unhex(&r.identity)?, evidence: unhex(&r.evidence)? }) }).transpose()?,
                 refund: refund.as_ref().map(RailIn::core).transpose()?,
                 anonymous: None,
                 purchase: None,
@@ -226,9 +234,6 @@ impl MoneyIn {
                 }
             }
             Payload::Claim(c) => {
-                if c.referral.is_some() {
-                    more.push("a referral");
-                }
                 if c.anonymous.is_some() {
                     more.push("an anonymous payer's key");
                 }
@@ -246,6 +251,7 @@ impl MoneyIn {
                     fulfils: hx(&c.fulfils),
                     disagrees: c.disagrees.as_ref().map(hx),
                     refund: c.refund.as_ref().map(RailIn::of),
+                    referral: c.referral.as_ref().map(|r| ReferralIn { identity: hx(&r.identity), evidence: hx(&r.evidence) }),
                 }
             }
             Payload::Release(r) => {

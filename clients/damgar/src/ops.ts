@@ -36,7 +36,25 @@ export const OPS = [
   'rails review',
   'rails publish',
   'relays',
+  'lanes',
+  'grant lane',
+  'own lane review',
+  'own lane',
+  'revoke lane',
+  'manual',
+  'clock',
+  'link',
+  'answer address',
 ] as const;
+
+/** An expiry, as seconds since 1970, from a number or a date the page sends; none where empty. */
+const untilOf = (v: unknown): number | null => {
+  if (v === undefined || v === null || v === '') return null;
+  if (typeof v === 'number') return Math.floor(v);
+  const t = Date.parse(String(v));
+  if (Number.isNaN(t)) throw new Error('Until: a date and time, or nothing.');
+  return Math.floor(t / 1000);
+};
 
 export async function run(d: Damgar, op: string, a: Record<string, unknown>): Promise<unknown> {
   switch (op) {
@@ -94,6 +112,24 @@ export async function run(d: Damgar, op: string, a: Record<string, unknown>): Pr
       return d.publishRails({ lightning: text(a.lightning), onchain: text(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true, digest: text(a.digest) });
     case 'relays':
       return d.setRelays(list(a.relays));
+    case 'lanes':
+      return d.lanes();
+    case 'grant lane':
+      return d.grantLane(text(a.id));
+    case 'own lane review':
+      return d.ownLaneReview({ role: a.role === 'payouts' ? 'payouts' : 'receipts', cap: text(a.cap), unit: text(a.unit), until: untilOf(a.until) });
+    case 'own lane':
+      return d.ownLane({ role: a.role === 'payouts' ? 'payouts' : 'receipts', cap: text(a.cap), unit: text(a.unit), until: untilOf(a.until), digest: text(a.digest) });
+    case 'revoke lane':
+      return d.revokeLane(text(a.grant));
+    case 'manual':
+      return d.setManual(a.on === true);
+    case 'clock':
+      return d.setClock(text(a.clock));
+    case 'link':
+      return d.setLink(a.remove === true ? null : { rest: text(a.rest), macaroon: text(a.macaroon).replace(/\s+/g, '').toLowerCase(), cert: text(a.cert) });
+    case 'answer address':
+      return d.answerAddress(text(a.id));
     default:
       throw new Error(`unknown operation ${op}`);
   }

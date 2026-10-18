@@ -46,6 +46,8 @@ import type { Held, Item, Line, Message, Pic, Proposal, ShareShown, State, Who }
 import { sendDraft } from '../../damgar/src/messages.ts';
 import { UNITS_MODULES, readValue } from '../../damgar/src/units.ts';
 import { authorityOfId } from '../../grants/src/grant.ts';
+import { DubMoney, LANE_SAY, type LaneShownHere, type SealedShown } from './money.ts';
+import type { PaymentShown } from '../../damgar/src/shapes.ts';
 import { isLongForm } from '../../barebone/src/corrections.ts';
 
 export type { Line, State } from './shapes.ts';
@@ -132,6 +134,10 @@ export interface Pending {
  * across every page or program holding the same keep: a sequence must never
  * be signed twice at one position.
  */
+/** What Dub keeps for money, by name (round 2): Damgar's code's settings, book and keys (its lane), and the keys of posts sold and bought. */
+export const MONEY_KEPT = ['settings', 'book', 'keys', 'sold', 'bought'] as const;
+export type MoneyKept = (typeof MONEY_KEPT)[number];
+
 export interface Keep {
   /** The identities held, by ID. */
   held(): Promise<string[]>;
@@ -149,6 +155,9 @@ export interface Keep {
   saveSigning(id: string, s: SigningState): Promise<void>;
   /** Forget an identity here: its keys and everything kept about it. */
   forget(id: string): Promise<void>;
+  /** What Dub keeps for money (round 2): by name. */
+  money<T>(id: string, name: MoneyKept): Promise<T | null>;
+  saveMoney(id: string, name: MoneyKept, v: unknown): Promise<void>;
   pending(): Promise<Pending | null>;
   savePending(p: Pending): Promise<void>;
   dropPending(): Promise<void>;
@@ -193,10 +202,15 @@ export class Dub {
   private names = new Map<string, { names: string[]; at: number }>();
 
   /** `web`: Dub's web client (F281). `reader`: where long-form documents open. */
+  /** Money, round 2: a lane asked here, payments signed under it, sealed posts (`money.ts`). */
+  readonly money: DubMoney;
+
   constructor(
     readonly store: Keep,
     readonly opts: { web?: boolean; reader?: string } = {},
-  ) {}
+  ) {
+    this.money = new DubMoney(store, { web: !!opts.web, app: opts.web ? 'Dub on the web' : 'Dub on this computer' });
+  }
 
   /** One thing at a time: a sequence must never be signed twice at once. */
   private serial<T>(f: () => Promise<T>): Promise<T> {
@@ -782,7 +796,17 @@ export class Dub {
         return { id, who: a?.signer ? this.whoFrom(a.signer, me.id, p) : null, snippet: a?.post ? snippet(a.post.text) : null };
       });
       const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
-      items.push({ ...this.item(fp.post, me.id, p, s, 'feed', fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] });
+      const it: Item = { ...this.item(fp.post, me.id, p, s, 'feed', fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
+      // A sealed post (round 2): its publication has no key; read with its offer, and opened where its key is here.
+      if (fp.post.refs.some((r) => r.kind === 'picture' && !r.bytes)) {
+        const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.map((r) => (r.kind === 'picture' ? { id: r.publication, signer: r.signer || undefined } : { id: r.id, signer: r.signer ?? r.actSigner }))).catch(() => null);
+        if (sealed) {
+          it.sealed = sealed;
+          it.pictures = it.pictures.filter((x) => x.publication !== sealed.publication);
+          if (sealed.seller !== fp.signer) it.repost = { by: this.whoFrom(fp.signer, me.id, p), of: this.whoFrom(sealed.seller, me.id, p) };
+        }
+      }
+      items.push(it);
     }
     // A post signed under a grant (an agent posting in its owner's name, F343): its standing is Agreements', said on whose authority.
     for (const it of items) {
@@ -1443,6 +1467,101 @@ export class Dub {
           { text: 'Open Damgar with this identity: the draft waits there, in To sign, to be read and signed or declined. Dub signs no money act.' },
         ],
       };
+    });
+  }
+
+  // ------------------------------------------------------------ money under a lane, round 2 (F338, F351)
+
+  /** Ask Damgar for a lane (sealed to oneself); nothing is paid until it is granted there. */
+  laneAsk(a: { label: string; cap: string; unit: string; until: number | null; clock: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      if (!UNITS_MODULES.some((m) => m.units.some((u) => u.hash === a.unit))) throw new Error('Choose a unit. Nothing was asked.');
+      const lines = await this.money.askLane(me, s, { label: a.label, cap: readValue(a.cap), unit: a.unit, until: a.until, clock: a.clock.trim().toLowerCase() || null, app: this.money.engine.opts.app! });
+      return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** The lanes asked here, and where each stands. */
+  lanes(): Promise<{ lanes: LaneShownHere[]; say: string[] }> {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      return { lanes: await this.money.lanes(me, s, hints), say: LANE_SAY };
+    });
+  }
+
+  /** A tip on a post, paid now under the lane (refused, saying why, past its cap or expiry). */
+  tipNow(a: { post: string; signer: string; value: string; unit: string; whatFor?: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      await this.money.lanes(me, s, hints);
+      const signer = readId(a.signer);
+      if (signer === me.id) throw new Error('That is this identity itself. Nothing was signed.');
+      const whatFor = a.whatFor?.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : 'a tip';
+      const lines = await this.money.tip({ post: readId(a.post), signer, amount: { unit: a.unit, value: readValue(a.value) }, whatFor });
+      return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Payments signed here under the lane: to pay in the wallet, or done. */
+  payments(): Promise<{ payments: PaymentShown[]; done: PaymentShown[]; problems: string[] }> {
+    return this.serial(async () => {
+      await this.ctx();
+      return this.money.payments();
+    });
+  }
+
+  /** The proof from the wallet: checked, and the claim signed under the lane. */
+  paidNow(key: string, proof: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      await this.ctx();
+      return { lines: (await this.money.paid(key, proof)).map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** A post sealed with a price (pay-per-view), its offer, its key kept here for each buyer. */
+  sell(a: { text: string; teaser?: string; value: string; unit: string; referral?: string }): Promise<{ post: string; lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      const text = compose(a.text.trim()).text;
+      if (!text) throw new Error('Write the sealed text. Nothing was posted.');
+      const teaser = compose((a.teaser ?? '').trim() || 'A sealed post.').text;
+      const referral = a.referral?.trim() ? Number(a.referral) : null;
+      const r = await this.money.sell(me, s, { text, teaser, price: { unit: a.unit, value: readValue(a.value) }, referral });
+      return { post: r.post, lines: r.lines.map((t) => ({ text: t, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Buy a sealed post under the lane, naming the repost it was found through, if any. */
+  buy(a: { publication: string; seller: string; repost?: string; reposter?: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      await this.money.lanes(me, s, hints);
+      const repost = a.repost && a.reposter ? { id: readId(a.repost), by: readId(a.reposter) } : null;
+      const lines = await this.money.buy(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readId(a.publication), seller: readId(a.seller), repost });
+      return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Repost a sealed post at this identity's relays, holding what it names there too. */
+  repost(a: { post: string; signer: string }): Promise<{ id: string; lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      await this.current(me);
+      const r = await this.money.repost(me, s, [...hints, ...this.inboxPlaces(p)], { post: readId(a.post), signer: readId(a.signer) });
+      return { id: r.id, lines: r.lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Keys to deliver for sales the seller's Damgar told of; keys arrived for posts bought. */
+  moneyLook(): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, p } = await this.ctx();
+      const inbox = await this.inboxOf(me.id, [...new Set([...s.relays, ...me.f.homes.map((h) => h.hint)])], s.via).catch(() => this.inboxPlaces(p));
+      const lines = [...(await this.money.deliver(me, s)), ...(await this.money.keysArrived(me, s, inbox))];
+      return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
     });
   }
 

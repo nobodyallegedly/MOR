@@ -61,6 +61,10 @@ export interface Item {
   correctedBy?: string[];
   /** Where it was found: the feed, this identity's inbox, or the relay view (H29). */
   via: 'feed' | 'inbox' | 'relay';
+  /** A sealed post (pay-per-view, round 2): its price, its state, its text once opened. */
+  sealed?: { publication: string; offer: string | null; seller: string; price: string; words: string | null; state: 'for sale' | 'paying' | 'opened' | 'yours'; text: string | null; problem: string | null } | null;
+  /** A repost of a sealed post: who reposted it, whose it is. */
+  repost?: { by: Who; of: Who } | null;
   /** In the relay view, an act that is not a post: what it is, in a few words. */
   what?: string | null;
   problem: string | null;

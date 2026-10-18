@@ -11,11 +11,20 @@
 
 import { MIRS, moneySpecs, sha256 } from '../../genesis/src/core.ts';
 import { BITCOIN_UNITS, type UnitsModule } from './units.ts';
+import { GRANT_LIMITS_SPEC, MESSAGES } from '../../grants/src/limits.ts';
 
 export const MONEY = MIRS.money;
 
-/** The money messages cMIP, draft 1 (`cmips/cmip-money-messages-draft-1.md`): a test value until publication. */
-export const MESSAGES_SPEC = sha256('Money messages cMIP, draft 1, test value until publication');
+/** The money messages cMIP, draft 2 (`cmips/cmip-money-messages-draft-2.md`, round 2: lane requests and sale notices): a test value until publication. Every message is written under it. */
+export const MESSAGES_SPEC = sha256('Money messages cMIP, draft 2, test value until publication');
+
+/** Draft 1 (`cmips/cmip-money-messages-draft-1.md`), still read: its four types are draft 2's. */
+export const MESSAGES_SPEC_1 = sha256('Money messages cMIP, draft 1, test value until publication');
+
+/** Every draft of the money messages cMIP read here, newest first. */
+export const MESSAGES_SPECS = [MESSAGES_SPEC, MESSAGES_SPEC_1];
+// An invoice request moves the amount its commitment names (the grant limits cMIP, 2.1).
+MESSAGES.specs = MESSAGES_SPECS;
 
 /** The accepted cMIP, draft 1 (`cmips/cmip-accepted-draft-1.md`, F340): a test value until publication. */
 export const ACCEPTED_SPEC = sha256('Accepted cMIP, draft 1, test value until publication');
@@ -159,11 +168,23 @@ export const ACCEPTABLE: Acceptable[] = [
     key: 'messages',
     name: 'Money messages',
     kind: 'cMIP',
-    text: 'cmips/cmip-money-messages-draft-1.md',
-    draft: 1,
-    hashes: [MESSAGES_SPEC],
-    does: 'The four messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request, and its answer. Written by Damgar’s build, awaiting approval.',
+    text: 'cmips/cmip-money-messages-draft-2.md',
+    draft: 2,
+    hashes: [MESSAGES_SPEC, MESSAGES_SPEC_1],
+    does: 'The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2). Written by Damgar’s builds, awaiting approval.',
     here: 'Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.',
+    built: true,
+    needs: ['payment'],
+  },
+  {
+    key: 'grant-limits',
+    name: 'Grant limits',
+    kind: 'cMIP',
+    text: 'cmips/cmip-grant-limits-draft-1.md',
+    draft: 1,
+    hashes: [GRANT_LIMITS_SPEC],
+    does: 'A grant’s limits: how much one act may move, in a named unit, and until when, on a named clock. Written by Edubba’s agents session (F345).',
+    here: 'Every lane (round 2) carries its limits under it: a cap per act, and an expiry if you give one. Without it, an act under a lane is unknown here, and no lane is granted.',
     built: true,
     needs: ['payment'],
   },

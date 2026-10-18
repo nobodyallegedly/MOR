@@ -31,7 +31,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { TestIdentity, TEST_LABEL, type IdentityFile } from '../../genesis/src/identity.ts';
-import { NO_SIGNING, type Keep, type Pending, type Settings, type SigningState } from './dub.ts';
+import { NO_SIGNING, type Keep, type MoneyKept, type Pending, type Settings, type SigningState } from './dub.ts';
 import { NO_PEOPLE, type People } from './people.ts';
 
 export const SETTINGS_LABEL = 'DUB. A test identity, its keys held in software in this folder: a prototype, never for a real identity.';
@@ -137,6 +137,16 @@ export class Store implements Keep {
 
   async saveSigning(id: string, s: SigningState): Promise<void> {
     writeJson(join(this.idDir(id), 'signing.json'), s);
+  }
+
+  /** What Dub keeps for money (round 2): `identities/ID/money-NAME.json`, owner-only: its lane's key and strand, the payments it signs under it, the keys of posts sold or bought. */
+  async money<T>(id: string, name: MoneyKept): Promise<T | null> {
+    const p = this.path('identities', id, `money-${name}.json`);
+    return existsSync(p) ? readJson<T>(p) : null;
+  }
+
+  async saveMoney(id: string, name: MoneyKept, v: unknown): Promise<void> {
+    writeJson(join(this.idDir(id), `money-${name}.json`), v);
   }
 
   async forget(id: string): Promise<void> {
