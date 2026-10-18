@@ -158,7 +158,7 @@ test('Ummia by clicks, the program’s page: a release, a specification tracked 
   await bring(page, me, H[0]);
   // Who acts: the chooser, yourself checked, collectives said to come later.
   assert.equal(await page.locator('#acting input[name=actor]:checked').getAttribute('value'), me.id);
-  assert.match(await page.locator('.acting').innerText(), /Acting as a collective you belong to comes in a second round/);
+  assert.match(await page.locator('.acting').innerText(), /A collective you belong to acts here with your own key for it/);
   await shot(page, 'ummia-releases');
 
   // A release: the folder chosen with the picker, read back with every file, signed, checked as anyone would.
