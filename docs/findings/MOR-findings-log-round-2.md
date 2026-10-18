@@ -28,6 +28,16 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F353. A collective's members act with their own keys, granted by the founding itself (18 October 2026)
+
+**Asked by Nobody, allegedly**, from the web Edubba's question on money ("the signee who have the right to act on money can do so for the collective in the other apps; the question is how"), then the second signature, then: "let's try to solve it now, there is an opportunity hiding somewhere near". Today a collective's acts need its one signing key, held by the founder's Edubba (Agreements rule 59: one holder, a threshold, or a custodian); Ummia round 1 and Damgar round 2 met the same wall.
+
+**Nobody, allegedly:** "I think we need to rethink what 'collective keys are'… it is a single key, but it does not need to be, because the ID is a hash… Each member has its own so the collective chain still knows who did what." *The project lead* laid out (1) the identity binding several signing keys (an Identity change, reopened before the freeze) and (2) grant keys, already core ("like a device of the collective limited to that scope", F128). **Nobody, allegedly:** "2 works because it is exactly that, the collective granting powers to the members, but it should not require an extra step."
+
+**Decided by Nobody, allegedly, 18 October 2026 ("Agreed"):** each member acts for the collective with a key of their own: the founding names, for each holder of an area, a key their app makes when they sign the founding (as it makes the one-time key for their share); the founding is the grant, the holder's founding signature its acceptance; a member change does the same in its clone (a new member's key named, a leaving member's dropped). Each act shows which member signed; an area needing two signatures takes one member's act and another member's signature; the collective's own signing key is needed only for rare constitutional acts, and may itself be held as shares (rule 59's threshold) so no one holds it day to day. *Suggested by the project lead on Nobody, allegedly's idea.*
+
+**Core changes:** one sentence in Agreements (next draft), beside F351's: a founding or clone may name, for a holder of an area, a key; it is a grant key within that area, the founding or clone its grant, the holder's signature its acceptance. No change to Identity. Built in round 3 (Edubba founding and member changes, Dub's Signing tab, Damgar and Ummia acting for a collective).
+
 ## F352. Damgar round 2's four questions (18 October 2026)
 
 **From** `docs/damgar-round-2-report.md`, questions 1 to 4, each decided by Nobody, allegedly, 18 October 2026, on the project lead's questions:
