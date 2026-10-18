@@ -28,6 +28,17 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F352. Damgar round 2's four questions (18 October 2026)
+
+**From** `docs/damgar-round-2-report.md`, questions 1 to 4, each decided by Nobody, allegedly, 18 October 2026, on the project lead's questions:
+
+1. **A lane's revocation and the tie rule** (Agreements rule 76): an act under a grant counts only if the revocation's history holds it, so a revocation voids every act under the lane it does not cite, receipts for payments made included. **"Agreed":** (A) as built (the app keeps its lane acts at the identity's places; Damgar cites every act it finds and says how many) **and** (B) in Dub: its acts under a lane are chained, each naming the one before, so a revocation citing the last holds them all; rule 76 as written already allows it, a client change, not a core one. Not chosen: (C) a clock's stamp on every lane act. *The project lead's lean.*
+2. **A grant carries no words** (a lane's name travels only privately): **"Agreed":** not now. A name on a public act tells the world which apps and devices one uses; the scope and limits already say what the grant permits. *The session's and the project lead's lean.*
+3. **An answer to an invoice request names no amount**, so the grant limits cMIP cannot judge a receipts lane's cap on it: **"Agreed":** the money messages cMIP's next draft puts the amount in the answer, so every act under a lane is judged by the core rather than the app's word. *The session's and the project lead's lean.* Asked with it: should the money messages cMIP be core? *The project lead, on the admission test:* no; a verifier never judges these messages, a lost one wrongs nobody, and they follow today's rails (an invoice per payment), which reusable offers would remove; unlike the textual forms (F349), better alternatives wait. **"Understood."**
+4. **The sealed post's media specification**: plain text sealed as an Envelopes publication names the Text MIR's hash as its media specification. **"Confirmed".**
+
+**Core changes:** none (the money messages cMIP draft 3; Dub's lane acts chained).
+
 ## F351. A lane is a grant to oneself; a payee's Damgar may hold a receive-only link to its node (18 October 2026)
 
 **From** the Damgar round 2 session's questions before building.
