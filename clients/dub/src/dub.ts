@@ -33,7 +33,8 @@ import { readFeed, type FeedPost } from '../../site/src/feed.ts';
 import { makeLink } from '../../reader/src/link.ts';
 import { compose } from '../../longform/src/text.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
-import { Refused, encryptionSecret, fromWords, groupId, readId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { idForm, idWhere, readId, readIdWhere } from '../../genesis/src/forms.ts';
 import { newChainKey } from './chainwords.ts';
 import { readMessage, acceptanceText, negotiate, openShare, DECLINED } from '../../repo/src/proposals.ts';
 import { sign as signAct } from '../../repo/src/agreements.ts';
@@ -274,6 +275,8 @@ export class Dub {
       out.identity = {
         id: me.id,
         grouped: groupId(me.id),
+        form: idForm(me.id),
+        where: idWhere(me.id, [...me.f.homes.map((h) => h.hint).slice(0, 1), ...s.relays.filter((r) => !me.f.homes.some((h) => h.hint === r)).slice(0, 1)]),
         who: this.whoFrom(me.id, me.id, p),
         kind: s.kind,
         homes: me.f.homes.map((h) => h.hint),
@@ -297,7 +300,7 @@ export class Dub {
     if (!me) throw new Error('No identity in use: make one, or bring one, in the identity window.');
     const s = await this.store.settings(me.id);
     const p = await this.store.people(me.id);
-    return { me, s, p, hints: [...new Set([...s.relays, ...me.f.homes.map((h) => h.hint)])] };
+    return { me, s, p, hints: [...new Set([...s.relays, ...me.f.homes.map((h) => h.hint), ...Object.values(p.where ?? {}).flat()])] };
   }
 
   /** Each home's operator, as it declares itself (relay transport cMIP, `info`). */
@@ -679,15 +682,16 @@ export class Dub {
       const to: { id: string; inbox: string[] | null; why?: string }[] = [];
       if (a.to?.trim()) {
         let id: string;
+        let where: string[] = [];
         try {
-          id = readId(a.to);
+          ({ id, hints: where } = readIdWhere(a.to));
         } catch (e) {
           throw new Error(`To: ${message(e)}. Nothing was posted.`);
         }
         if (id === me.id) throw new Error('To: that is this identity itself. Nothing was posted.');
         let inbox: string[] | null;
         try {
-          inbox = (await lookUp(id, hints, s.via)).inbox(SPECS.text);
+          inbox = (await lookUp(id, [...where, ...hints], s.via)).inbox(SPECS.text);
         } catch (e) {
           throw new Error(`To: the identity ${fingerprint(id)} was not found: ${message(e)}. Nothing was posted.`);
         }
@@ -1103,8 +1107,9 @@ export class Dub {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
       let to: string;
+      let where: string[] = [];
       try {
-        to = readId(a.to);
+        ({ id: to, hints: where } = readIdWhere(a.to));
       } catch (e) {
         throw new Error(`To: ${message(e)}. Nothing was sent.`);
       }
@@ -1113,7 +1118,7 @@ export class Dub {
       if (!text.trim()) throw new Error('Write something to send.');
       let l: Lookup;
       try {
-        l = await lookUp(to, hints, s.via);
+        l = await lookUp(to, [...where, ...hints], s.via);
       } catch (e) {
         throw new Error(`To: the identity ${fingerprint(to)} was not found: ${message(e)}. Nothing was sent.`);
       }
@@ -1470,6 +1475,62 @@ export class Dub {
     });
   }
 
+  // ------------------------------------------------------------ where it lives (H39)
+
+  /** Said where relays are changed: homes are the chain key's (H39). */
+  static readonly HOMES_SAY = 'Its homes are named in its identity chain and change only with the chain key: in Kišib, “Change an identity’s keys”, from the chain key’s paper.';
+
+  /**
+   * Read back new relays for this identity (H39): a new routes act
+   * (Identity type 3), its outbox and inbox the relays given. Only for an
+   * identity Dub made and whose routes Dub wrote (reading 5: a second writer
+   * would fork its routes). Nothing is signed until `relaysPublish` with the
+   * same digest.
+   */
+  async relaysReview(relays: string[]): Promise<{ digest: string; lines: Line[] }> {
+    const { me, s } = await this.ctx();
+    const r = list(relays);
+    if (!r.length) throw new Error('Give at least one relay.');
+    for (const x of r) if (!/^https?:\/\//.test(x)) throw new Error(`“${x}”: an address starts with https:// (or http://)`);
+    if (s.kind !== 'made' || !me.f.routes) throw new Error('This identity was brought here, or its routes were written by another app: Dub publishes no routes for it (Dub’s reading 5: a second writer would fork them). Change them in the app that made it.');
+    const look = await lookUp(me.id, me.f.homes.map((h) => h.hint), s.via);
+    if (look.routes.act !== me.f.routes.act) throw new Error('Its routes in force are not the version Dub wrote: another app changed them. Nothing to sign here.');
+    const lines: Line[] = [
+      { text: `Its acts will be found at ${r.join(', ')} (its outbox), and others will leave what is for it there (its inbox).` },
+      { text: `A new routes act, version ${me.f.routes.version + 1}, public, replacing version ${me.f.routes.version} (now: ${list(look.routes.routes.flatMap((x) => x.hints)).join(', ') || 'none'}). Its identity chain and its acts stay as they are.` },
+      { text: 'Those who follow it find its new relays through its homes; a where-it-lives form copied before still names the old ones (hints guide, never decide).' },
+      { text: Dub.HOMES_SAY },
+    ];
+    return { digest: await digestOf(JSON.stringify({ me: me.id, r, act: me.f.routes.act })), lines };
+  }
+
+  relaysPublish(relays: string[], digest: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const r = list(relays);
+      if (!me.f.routes || (await digestOf(JSON.stringify({ me: me.id, r, act: me.f.routes.act }))) !== digest) throw new Error('This is not what was read back: read it back again.');
+      await this.current(me);
+      // Read back first: the routes in force are still the version Dub wrote.
+      const look = await lookUp(me.id, me.f.homes.map((h) => h.hint), s.via);
+      if (look.routes.act !== me.f.routes.act) throw new Error('Its routes changed meanwhile, from another app. Nothing was signed.');
+      const made = await this.signed(me, () => me.publishRoutes([
+        { scope: null, hints: r, kind: 0 },
+        { scope: null, hints: r, kind: 1 },
+      ]));
+      await this.store.saveSettings(me.id, { ...s, relays: r });
+      for (const x of r) {
+        for (const act of me.chainActs()) {
+          try {
+            await relayAt(x, s.via).putAct(act);
+          } catch {
+            // that relay's policy
+          }
+        }
+      }
+      return { lines: [{ text: `New routes published (act ${made.id.slice(0, 12)}…): its relays are now ${r.join(', ')}.`, tone: 'ok' }] };
+    });
+  }
+
   // ------------------------------------------------------------ money under a lane, round 2 (F338, F351)
 
   /** Ask Damgar for a lane (sealed to oneself); nothing is paid until it is granted there. */
@@ -1661,10 +1722,12 @@ export class Dub {
 
   /** Follow an identity, by its ID or the signer of an act shown; a name for it, if given, stays in this app. */
   follow(a: { id: string; name?: string }) {
-    const id = readId(a.id);
+    // H38: an ID, its where-it-lives form, or an ID with a home address beside it.
+    const { id, hints } = readIdWhere(a.id);
     const name = a.name?.trim() ? a.name.trim().slice(0, 64) : null;
     return this.people((p, me) => {
       if (id === me.id) throw new Error('That is this identity itself: its own posts are always in its feed.');
+      if (hints.length) (p.where ??= {})[id] = [...new Set([...(p.where?.[id] ?? []), ...hints])];
       const f = p.follows.find((x) => x.id === id);
       if (f) f.name = name ?? f.name;
       else p.follows.push({ id, name });
@@ -1809,3 +1872,8 @@ function snippet(text: string): string {
 }
 
 export { NO_PEOPLE, PUBLISH_WARNING };
+
+async function digestOf(x: string): Promise<string> {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(x));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}

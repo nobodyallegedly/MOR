@@ -473,9 +473,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         fill('carry', '');
         break;
       case 'copy': {
+        const label = el.textContent;
         const ok = await copy(d.id ?? '');
         el.textContent = ok ? 'Copied' : 'Copy failed: select the ID';
-        setTimeout(() => (el.textContent = 'Copy ID'), 2000);
+        setTimeout(() => (el.textContent = label), 2000);
         break;
       }
       case 'code': {
@@ -511,6 +512,14 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         if (!card) break;
         const t = card.querySelector('.tipping');
         if (t) t.innerHTML = v.tipForm(state?.units);
+        break;
+      }
+      case 'relays publish': {
+        const r = await busy('Publishing the new routes…', () => b.ask<{ lines: v.Line[] }>('relays publish', { relays: (d.relays ?? '').split('\n'), digest: d.digest }));
+        if (r) {
+          await refresh();
+          say('done', v.lines(r.lines));
+        }
         break;
       }
       case 'buy': {
@@ -688,6 +697,12 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       return;
     }
     switch (name) {
+      case 'relays': {
+        const relays = linesOf(d.get('relays'));
+        const r = await busy('Reading it back…', () => b.ask<{ digest: string; lines: v.Line[] }>('relays review', { relays }));
+        if (r) fill('relays-review', `<div class="card">${v.lines(r.lines)}<div class="row"><button class="primary" data-action="relays publish" data-digest="${v.e(r.digest)}" data-relays="${v.e(relays.join('\n'))}">Sign and publish the new routes</button></div></div>`);
+        return;
+      }
       case 'lane': {
         const until = String(d.get('until') ?? '');
         const r = await busy('Sealing the lane’s request to this identity…', () =>

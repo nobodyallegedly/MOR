@@ -270,8 +270,10 @@ function current(s: State, web = false): string {
   return `<div class="card" id="identity">
 <span class="label">In use</span>
 <p>${who(i.who)}</p>
-<p class="id">${e(i.grouped)}</p>
-<div class="row"><button class="quiet" data-action="copy" data-id="${e(i.id)}">Copy ID</button></div>
+<p class="id">${e(i.form)}</p>
+<p class="small">The same ID in hexadecimal, as before: <span class="fp">${e(i.grouped)}</span></p>
+<div class="row"><button class="quiet" data-action="copy" data-id="${e(i.form)}">Copy ID</button><button class="quiet" data-action="copy" data-id="${e(i.where)}" title="${e(i.where)}">Copy ID with where it lives</button></div>
+<p class="small">Someone on other homes and relays finds you by the second: it carries one of your homes and one relay, as hints (H38). Follow and To… take either, or an ID with a home address beside it.</p>
 <form id="name"><label>Your display name: shown beside your fingerprint, never instead of it. Anyone can take the same name.</label>
 <div class="row"><input class="grow" name="name" maxlength="48" autocomplete="off" value="${e(name)}" placeholder="No name: your fingerprint alone"><button type="submit">Save</button></div></form>
 <details data-fold="lane"><summary>Paying from Dub: a lane from Damgar</summary>
@@ -289,10 +291,14 @@ function current(s: State, web = false): string {
 <dl class="facts"><dt>Made</dt><dd>${i.kind === 'made' ? 'Here. Its chain key was shown once as words, and is kept nowhere here.' : 'Elsewhere, brought here by its signing key’s words. Its chain key is not here.'}</dd>
 ${i.oldChainKey ? '<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app’s folder, unused and untouched. Kišib changes keys from paper words only, never from this folder.</dd>' : ''}
 <dt>Private messages</dt><dd>${i.encryption ? 'Its encryption key is here: its private messages open here.' : 'No encryption key here: its private messages cannot be opened here.'}</dd>
-<dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd>
+<dt>Homes</dt><dd>${e(i.homes.join(', '))} <span class="small">(changed only with the chain key: in Kišib, “Change an identity’s keys”)</span></dd>
 <dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd>
 <dt>This app's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
 <p class="small">If the signing key is ever changed (in Kišib, with the chain key’s words), that change must keep this line, or the posts made here become void: take the line above to it.</p></details>
+<details data-fold="relays"><summary>Change its relays</summary>${i.kind === 'made'
+    ? `<form id="relays" class="compose"><label>Its relays, one per line: where its acts are found and its inbox is</label><textarea name="relays">${e(i.relays.join('\n'))}</textarea><div class="row"><button type="submit">Read it back</button></div></form><div id="relays-review"></div>`
+    : '<p class="small">This identity was brought here: Dub publishes no routes for it (a second writer would fork them). Change its relays in the app that made it.</p>'}
+<p class="small">Its homes are named in its identity chain and change only with the chain key: in Kišib, “Change an identity’s keys”, from the chain key’s paper.</p></details>
 </div>`;
 }
 
@@ -446,7 +452,7 @@ export function people(s: State): string {
   const i = s.identity!;
   const row = (w: Who, actions: string) => `<li>${who(w)}<span class="acts">${actions}</span></li>`;
   return `<details class="people" id="people" data-fold="people"><summary>Following ${i.follows.length}${i.muted.length ? ` · muted ${i.muted.length}` : ''}</summary>
-<form id="follow" class="row"><input class="grow" name="id" autocomplete="off" spellcheck="false" placeholder="Follow an identity: its ID" required><input class="pet" name="name" autocomplete="off" placeholder="Your name for it (sealed)"><button type="submit">Follow</button></form>
+<form id="follow" class="row"><input class="grow" name="id" autocomplete="off" spellcheck="false" placeholder="Follow an identity: its ID (mid1…), with where it lives if you have it" required><input class="pet" name="name" autocomplete="off" placeholder="Your name for it (sealed)"><button type="submit">Follow</button></form>
 ${i.follows.length ? `<ul>${i.follows.map((f) => row(f, `<button data-action="call" data-id="${e(f.id)}">Name</button><button data-action="unfollow" data-id="${e(f.id)}">Unfollow</button>`)).join('')}</ul>` : '<p class="small">Nobody yet. Follow by ID, or from any post or message.</p>'}
 ${i.muted.length ? `<span class="label">Muted</span><ul>${i.muted.map((m) => row(m, `<button data-action="unmute" data-id="${e(m.id)}">Unmute</button>`)).join('')}</ul>` : ''}
 <div class="row"><label class="small check"><input type="checkbox" id="publish-list" ${i.list === 'published' ? 'checked' : ''}> Publish whom this identity follows</label></div>

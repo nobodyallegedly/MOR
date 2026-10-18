@@ -4288,3 +4288,49 @@ pub fn open_media(locked: &[u8], key: &[u8], nonce: &[u8]) -> R<Vec<u8>> {
     )
     .map_err(|_| err("the key does not open these bytes"))
 }
+
+// ---------------------------------------------------------------- written for people (Identity draft 14, F349)
+
+fn form_kind(label: &str) -> R<mor_core::textual::Kind> {
+    mor_core::textual::Kind::of_label(label).ok_or_else(|| err(format!("no such label: {label} (mid, mact, mkey, mspec, mwork)")))
+}
+
+/// An object's short form: bech32m, lowercase, under its label (`mid`,
+/// `mact`, `mkey`, `mspec`, `mwork`). A key's data is Identity's
+/// `[scheme, key]` in deterministic CBOR; every other is a 32-byte hash.
+#[wasm_bindgen(js_name = formEncode)]
+pub fn form_encode(label: &str, data: &[u8]) -> R<String> {
+    let k = form_kind(label)?;
+    if k.is_hash() && data.len() != 32 {
+        return Err(err(format!("{} is a 32-byte hash", k.words())));
+    }
+    Ok(mor_core::textual::encode(k, data))
+}
+
+/// The where-it-lives form: the short form, then each hint after `?r=`.
+#[wasm_bindgen(js_name = formWithHints)]
+pub fn form_with_hints(label: &str, data: &[u8], hints: Vec<String>) -> R<String> {
+    let k = form_kind(label)?;
+    let h: Vec<&str> = hints.iter().map(String::as_str).collect();
+    Ok(mor_core::textual::with_hints(k, data, &h))
+}
+
+#[derive(Serialize)]
+struct FormRead {
+    label: &'static str,
+    data: String,
+    hints: Vec<String>,
+    bare: bool,
+}
+
+/// Read a string where `want` is asked: its short form, its where-it-lives
+/// form, or bare hex for a 32-byte hash. Refused, in words, otherwise: a
+/// broken checksum, mixed case, a label the core does not define, or
+/// another kind than the one asked ("this is an act (mact), not an identity
+/// (mid)").
+#[wasm_bindgen(js_name = formRead)]
+pub fn form_read(s: &str, want: &str) -> R<JsValue> {
+    let k = form_kind(want)?;
+    let r = mor_core::textual::read(s, k).map_err(|e| err(e.to_string()))?;
+    to_js(&FormRead { label: r.kind.label(), data: hex::encode(&r.data), hints: r.hints, bare: r.bare })
+}

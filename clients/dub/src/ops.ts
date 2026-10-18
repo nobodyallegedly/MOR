@@ -70,6 +70,8 @@ export const OPS = [
   'buy',
   'repost',
   'money look',
+  'relays review',
+  'relays publish',
 ] as const;
 
 export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: Platform): Promise<unknown> {
@@ -152,6 +154,10 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.shareByHand(text(a.thread));
     case 'tip':
       return dub.moneyDraft({ what: 'pay', other: text(a.signer), post: text(a.post), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor) });
+    case 'relays review':
+      return dub.relaysReview(list(a.relays));
+    case 'relays publish':
+      return dub.relaysPublish(list(a.relays), text(a.digest));
     case 'lane ask':
       return dub.laneAsk({ label: text(a.label), cap: text(a.cap), unit: text(a.unit), until: untilOf(a.until), clock: text(a.clock) });
     case 'lanes':

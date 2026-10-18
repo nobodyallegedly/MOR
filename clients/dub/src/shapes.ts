@@ -102,6 +102,10 @@ export interface State {
   identity?: {
     id: string;
     grouped: string;
+    /** Its ID written for people (Identity draft 14, F349): `mid1…`. */
+    form: string;
+    /** With where it lives (H38): one of its homes, one relay, as `?r=` hints. */
+    where: string;
     who: Who;
     kind: 'made' | 'brought';
     homes: string[];

@@ -74,6 +74,8 @@ export interface People {
   /** The inbox as read: where each relay was read up to, and the items found. */
   inbox: { after: Record<string, number>; items: Kept[] };
   sent: Sent[];
+  /** Where an identity followed or written to lives, as it was given (H38: its where-it-lives form, or a home beside its ID): hints, kept in this app only, never in the sealed list (the people cMIP carries none). Hints guide, never decide. */
+  where?: Record<string, string[]>;
 }
 
 export const NO_PEOPLE = (): People => ({ follows: [], muted: [], list: 'private', published: null, sealed: null, carried: false, seen: [], inbox: { after: {}, items: [] }, sent: [] });

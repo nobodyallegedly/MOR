@@ -124,8 +124,8 @@ test('a lane: asked in Dub, granted in Damgar, a tip within it paid from Dub; th
   const e = alice.dub.c.ask('tip now', { post: post.post.id, signer: bob.id, value: '1000', unit: R });
   await refused(e, /expired|revoked/);
   await refused(alice.dub.c.ask('tip now', { post: post.post.id, signer: bob.id, value: '1000', unit: R }), /The grant expired on .*Nothing was signed/);
-  lanes = (await alice.dub.c.ask<{ lanes: { label: string; state: string }[] }>('lanes')).lanes;
-  assert.deepEqual(lanes.map((l) => [l.label, l.state]).sort(), [['Dub on the Mac', 'revoked'], ['Dub, for a minute', 'past its expiry']]);
+  const after = (await alice.dub.c.ask<{ lanes: { label: string; state: string }[] }>('lanes')).lanes;
+  assert.deepEqual(after.map((l) => [l.label, l.state]).sort(), [['Dub on the Mac', 'revoked'], ['Dub, for a minute', 'past its expiry']]);
   assert.equal((await alice.damgar.c.ask<{ lanes: LaneShown[] }>('lanes')).lanes.find((l) => l.label === 'Dub on the Mac')!.state, 'revoked');
 });
 

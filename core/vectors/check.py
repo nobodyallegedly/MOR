@@ -379,6 +379,65 @@ def open_act(outside, locked):
 
 # ------------------------------------------------------------ the checks
 
+# ---------------------------------------------------------------- textual forms (Identity draft 14, F349)
+
+B32 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+LABELS = {"mid", "mact", "mkey", "mspec", "mwork"}
+
+
+def b32_polymod(values):
+    gen = [0x3B6A57B2, 0x26508E6D, 0x1EA119FA, 0x3D4233DD, 0x2A1462B3]
+    chk = 1
+    for v in values:
+        b = chk >> 25
+        chk = ((chk & 0x1FFFFFF) << 5) ^ v
+        for i in range(5):
+            if (b >> i) & 1:
+                chk ^= gen[i]
+    return chk
+
+
+def b32_expand(hrp):
+    return [ord(c) >> 5 for c in hrp] + [0] + [ord(c) & 31 for c in hrp]
+
+
+def textual_read(s, want):
+    """A string where `want` is asked: (data, hints), or raise Reject with why, as the MIR says."""
+    head, hints = (s.split("?", 1) + [""])[:2] if "?" in s else (s, "")
+    hs = []
+    for part in hints.split("&") if hints else []:
+        if part.startswith("r="):
+            from urllib.parse import unquote
+            hs.append(unquote(part[2:]))
+    if want != "mkey" and len(head) == 64 and all(c in "0123456789abcdefABCDEF" for c in head):
+        return bytes.fromhex(head), hs
+    if any(c.islower() for c in head) and any(c.isupper() for c in head):
+        raise Reject("mixed case")
+    head = head.lower()
+    sep = head.rfind("1")
+    hrp, rest = head[:sep], head[sep + 1:]
+    if sep < 1 or len(rest) < 6 or any(c not in B32 for c in rest):
+        raise Reject("checksum")
+    data5 = [B32.index(c) for c in rest]
+    if b32_polymod(b32_expand(hrp) + data5) != 0x2BC830A3:
+        raise Reject("checksum")
+    if hrp not in LABELS:
+        raise Reject("unknown label")
+    if hrp != want:
+        raise Reject(f"wrong kind: {hrp} where {want} is wanted")
+    acc = bits = 0
+    out = bytearray()
+    for v in data5[:-6]:
+        acc = (acc << 5) | v
+        bits += 5
+        if bits >= 8:
+            bits -= 8
+            out.append((acc >> bits) & 0xFF)
+    if bits >= 5 or acc & ((1 << bits) - 1):
+        raise Reject("checksum")
+    return bytes(out), hs
+
+
 def main():
     H = bytes.fromhex
     assert unicodedata2.unidata_version == "17.0.0", unicodedata2.unidata_version
@@ -455,6 +514,26 @@ def main():
         check_outside_shape(o)
         assert open_act(o, H(v["locked"])) == v["result"], v["why"]
         n += 1
+
+    f = load("textual-forms.json")
+    for v in f["forms"]:
+        assert textual_read(v["form"], v["kind"])[0] == H(v["data"]), v
+        assert v["form"] == v["form"].lower()
+        n += 1
+    for k in ("upper", "lives", "bare"):
+        data, hs = textual_read(f[k]["form"], f[k]["want"])
+        assert data == H(f[k]["data"]), k
+        if k == "lives":
+            assert hs == f[k]["hints"], hs
+        n += 1
+    for v in f["refused"]:
+        try:
+            textual_read(v["form"], v["want"])
+        except Reject as e:
+            assert str(e) == v["why"], (str(e), v["why"])
+            n += 1
+            continue
+        raise AssertionError("accepted " + v["form"])
 
     print(f"all {n} vectors agree")
 
