@@ -2760,9 +2760,10 @@ var MESSAGES = { specs: [] };
 
 // ../damgar/src/specs.ts
 var MONEY = MIRS.money;
-var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 2, test value until publication");
+var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 3, test value until publication");
+var MESSAGES_SPEC_2 = sha2562("Money messages cMIP, draft 2, test value until publication");
 var MESSAGES_SPEC_1 = sha2562("Money messages cMIP, draft 1, test value until publication");
-var MESSAGES_SPECS = [MESSAGES_SPEC, MESSAGES_SPEC_1];
+var MESSAGES_SPECS = [MESSAGES_SPEC, MESSAGES_SPEC_2, MESSAGES_SPEC_1];
 MESSAGES.specs = MESSAGES_SPECS;
 var ACCEPTED_SPEC = sha2562("Accepted cMIP, draft 1, test value until publication");
 var SPEC = moneySpecs();
@@ -2868,10 +2869,10 @@ var ACCEPTABLE = [
     key: "messages",
     name: "Money messages",
     kind: "cMIP",
-    text: "cmips/cmip-money-messages-draft-2.md",
-    draft: 2,
-    hashes: [MESSAGES_SPEC, MESSAGES_SPEC_1],
-    does: "The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2). Written by Damgar\u2019s builds, awaiting approval.",
+    text: "cmips/cmip-money-messages-draft-3.md",
+    draft: 3,
+    hashes: [MESSAGES_SPEC, MESSAGES_SPEC_2, MESSAGES_SPEC_1],
+    does: "The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2); the amount in an answer, so a lane\u2019s cap is judged on it (draft 3). Written by Damgar\u2019s builds, awaiting approval.",
     here: "Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.",
     built: true,
     needs: ["payment"]
