@@ -43,6 +43,8 @@ export function readForm(typed: string, want: Label): FormRead {
   const t = typed.trim();
   const squeezed = t.replace(/\s+/g, '');
   if (want !== 'mkey' && /^[0-9a-fA-F]{64}$/.test(squeezed)) return { hex: squeezed.toLowerCase(), hints: [], bare: true };
+  // Neither hex nor anything shaped like a form: said as before, with the form named.
+  if (!/^m[a-z]+1/i.test(t)) throw new Refused(`${WHAT[want]} is 64 characters, 0 to 9 and a to f (spaces do not matter), or its form written for people, ${want}1…`);
   try {
     const r = formRead(t, want) as { data: string; hints: string[]; bare: boolean };
     return { hex: r.data, hints: r.hints, bare: r.bare };
@@ -50,6 +52,8 @@ export function readForm(typed: string, want: Label): FormRead {
     throw new Refused(e instanceof Error ? e.message : String(e));
   }
 }
+
+const WHAT: Record<Label, string> = { mid: 'an ID', mact: 'an act id', mkey: 'a key', mspec: 'a spec hash', mwork: 'a work hash' };
 
 /** An identity, as typed: its `mid` form or its hex (64 characters, spaces ignored). */
 export const readId = (typed: string): string => readForm(typed, 'mid').hex;

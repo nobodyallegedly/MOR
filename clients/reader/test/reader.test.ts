@@ -85,8 +85,8 @@ test('a link carries the act id in the fragment, and relays beside the reader\'s
   assert.deepEqual(parseLink(''), { act: null, relays: [] });
   assert.deepEqual(parseLink(`#${id}`), { act: id, relays: [] });
   const l = makeLink('https://reader.dubsar.org/#old', id, ['https://relay.example.org']);
-  // The fragment is the act's id written for people (F349); links made before, with its hex, still read.
-  assert.equal(l, `https://reader.dubsar.org/#${actForm(id)}?r=https%3A%2F%2Frelay.example.org`);
+  // Made in hex while readers served before F349 open only hex; its form written for people is read too.
+  assert.equal(l, `https://reader.dubsar.org/#${id}?r=https%3A%2F%2Frelay.example.org`);
   const p = parseLink(new URL(l).hash);
   assert.deepEqual(p, { act: id, relays: ['https://relay.example.org'] });
   assert.deepEqual(relaysFor(['https://home1.dubsar.org'], p), ['https://home1.dubsar.org', 'https://relay.example.org']);

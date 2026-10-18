@@ -280,13 +280,13 @@ export async function authorityOf(act: Uint8Array, hints: string[], via: Via = {
   const verdicts: [string, boolean][] = limits && limits.within !== null ? [[d.id, limits.within]] : [];
   const b = v.agreementsBacking(withGrantLimits(AGREEMENTS_SPECS, verdicts), d.id) as { kind: string; grant?: string; reason?: string };
   const lane = g.grantee === d.signer;
-  const by = lane ? `Signed under a lane of ${names(d.signer)} (a grant to itself, ${d.binding.slice(0, 8)}…, its key held by an app; F351)` : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under ${names(d.signer)}’s grant ${d.binding.slice(0, 8)}…`;
+  const laneBy = `Signed under a lane of ${names(d.signer)} (a grant to itself, ${d.binding.slice(0, 8)}…, its key held by an app; F351)`;
   const plain =
     b.kind === 'backed' || b.kind === 'binds'
-      ? `${by}: backed (Agreements rule 80).`
+      ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under ${names(d.signer)}’s grant ${d.binding.slice(0, 8)}…`}: backed (Agreements rule 80).`
       : b.kind === 'not-backed'
-        ? `${by}, which does not back it: ${b.reason}.`
-        : `${by}: whether it backs it is unknown (${b.reason ?? 'not readable'}).`;
+        ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…`}, which does not back it: ${b.reason}.`
+        : `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…`}: whether it backs it is unknown (${b.reason ?? 'not readable'}).`;
   return { grant: d.binding, grantor: d.signer, grantee: g.grantee, lane, backing: b.kind, reason: b.reason ?? null, limits, words: plain };
 }
 

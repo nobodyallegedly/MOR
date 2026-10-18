@@ -150,6 +150,10 @@ test('regtest, anchoring: a collective’s act, paid from Damgar via the test wa
   const H = homes.map((h) => h.base);
   const R = [relay.base];
   const carol = nodesOf(run!).find((n) => n.name === 'carol')!;
+  // The service's batch transaction spends from carol's own wallet: funded here, so this test does not rest on the test wallet's having run first.
+  const { address } = await pay<{ address: string }>('address', { node: 'carol' });
+  await pay('send', { node: 'alice', address, sat: 30_000 });
+  await pay('mine', { blocks: 1 });
   const svc = new Service(join(mkdtempSync(join(tmpdir(), 'damgar-svc-')), 'svc'), serviceLnd({ url: `https://127.0.0.1:${carol.rest}`, lnddir: carol.lnddir }), chain(), { homes: H, relays: R });
   await svc.start();
   const e = await edubba(H, R, chain());
@@ -179,4 +183,94 @@ test('regtest, anchoring: a collective’s act, paid from Damgar via the test wa
   await pay('mine', { blocks: 6 });
   const done = await e.c.ask<{ state: string; lines: { text: string }[] }[]>('money anchors', { collective: col });
   assert.equal(done[0].state, 'anchored', JSON.stringify(done));
+});
+
+// ------------------------------------------------------------ round 2, on regtest (F338, F350, F351)
+
+test('regtest, round 2: a tip from Dub under its lane, the invoice made by the payee’s own lnd through a receive-only link, receipted by itself; a sealed post bought through a repost on another relay, opened; the referral share paid', { skip, timeout: 600_000 }, async () => {
+  const H = homes.map((h) => h.base);
+  const other = await start('relay');
+  try {
+    const R = [relay.base];
+    const regtest = SPEC.units.regtest;
+    const nodes = await pay<{ name: string; key: string }[]>('nodes', {});
+    const key = (n: string) => nodes.find((x) => x.name === n)!.key;
+    const alice = await person(H, [other.base], { chain: chain() });
+    const bob = await person(H, R, { chain: chain() });
+    const critic = await person(H, [relay.base, other.base], { chain: chain() });
+    const lnddir = (n: string) => join(run!, n);
+    const linked = async (p: Awaited<ReturnType<typeof person>>, n: string, rest: number, payouts = false) => {
+      const rv = await p.damgar.c.ask<{ digest: string }>('rails review', { lightning: key(n), network: 3 });
+      await p.damgar.c.ask('rails publish', { lightning: key(n), network: 3, digest: rv.digest });
+      // The admin permission is refused as too wide; the receive-only one kept.
+      await assert.rejects(p.damgar.c.ask('link', { rest: `https://127.0.0.1:${rest}`, macaroonFile: join(lnddir(n), 'data/chain/bitcoin/regtest/admin.macaroon'), certFile: join(lnddir(n), 'tls.cert') }), /can read your node’s balance/);
+      await p.damgar.c.ask('link', { rest: `https://127.0.0.1:${rest}`, macaroonFile: join(lnddir(n), 'receive.macaroon'), certFile: join(lnddir(n), 'tls.cert') });
+      const own = await p.damgar.c.ask<{ digest: string }>('own lane review', { role: 'receipts', cap: '100000', unit: regtest });
+      await p.damgar.c.ask('own lane', { role: 'receipts', cap: '100000', unit: regtest, digest: own.digest });
+      if (payouts) {
+        const po = await p.damgar.c.ask<{ digest: string }>('own lane review', { role: 'payouts', cap: '1000', unit: regtest });
+        await p.damgar.c.ask('own lane', { role: 'payouts', cap: '1000', unit: regtest, digest: po.digest });
+      }
+    };
+    await linked(bob, 'bob', 18081, true);
+    await linked(critic, 'carol', 18082);
+
+    // Alice's lane: asked in Dub, granted in Damgar.
+    await alice.dub.c.ask('lane ask', { label: 'Dub on the Mac', cap: '5000', unit: regtest });
+    const lane = (await items(alice)).find((i) => i.kind === 'lane')!;
+    await alice.damgar.c.ask('grant lane', { id: lane.id });
+
+    // A tip from Dub, under the lane: bob's lnd makes the invoice, through the link; alice pays it from her wallet.
+    await alice.dub.c.ask('follow', { id: `${bob.id} ${relay.base}` });
+    const post = await bob.dub.c.ask<{ post: { id: string } }>('post', { text: 'Tip me under a lane.' });
+    await alice.dub.c.ask('tip now', { post: post.post.id, signer: bob.id, value: '2100', unit: regtest });
+    const bl = await bob.damgar.c.ask<{ lines: { text: string }[] }>('look');
+    assert.ok(bl.lines.some((l) => /invoice your node made through its receive-only link/.test(l.text)), JSON.stringify(bl.lines));
+    const tp = (await alice.dub.c.ask<{ payments: PaymentShown[] }>('payments')).payments[0];
+    const read = await pay<{ sat: number; destination: string }>('decode', { node: 'alice', invoice: tp.pay!.invoice });
+    assert.deepEqual([read.sat, read.destination], [2100, key('bob')]);
+    const { preimage } = await pay<{ preimage: string }>('pay', { node: 'alice', invoice: tp.pay!.invoice });
+    await alice.dub.c.ask('paid', { key: tp.key, proof: preimage });
+    const bl2 = await bob.damgar.c.ask<{ lines: { text: string }[] }>('look');
+    assert.ok(bl2.lines.some((l) => /signed your receipt by itself/.test(l.text)), JSON.stringify(bl2.lines));
+    const done = (await alice.dub.c.ask<{ done: PaymentShown[] }>('payments')).done[0];
+    assert.equal(done.stage, 'settled');
+    assert.deepEqual(done.proofs.map((x) => `${x.kind} ${x.rail.answer}`).sort(), ['claim valid', 'receipt valid']);
+
+    // A sealed post, reposted by the critic at both relays; alice reads only the other.
+    const sold = await bob.dub.c.ask<{ post: string }>('sell', { text: 'Sealed on regtest.', value: '1000', unit: regtest, referral: '10' });
+    await critic.dub.c.ask('follow', { id: `${bob.id} ${relay.base}` });
+    await critic.dub.c.ask('feed', { fresh: true });
+    const rp = await critic.dub.c.ask<{ id: string }>('repost', { post: sold.post, signer: bob.id });
+    await alice.dub.c.ask('follow', { id: critic.id });
+    const seen = (await alice.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === rp.id);
+    assert.equal(seen.sealed.state, 'for sale');
+    await alice.dub.c.ask('buy', { publication: seen.sealed.publication, seller: bob.id, repost: rp.id, reposter: critic.id });
+    await bob.damgar.c.ask('look');
+    const bp = (await alice.dub.c.ask<{ payments: PaymentShown[] }>('payments')).payments[0];
+    const paid = await pay<{ preimage: string }>('pay', { node: 'alice', invoice: bp.pay!.invoice });
+    await alice.dub.c.ask('paid', { key: bp.key, proof: paid.preimage });
+    const sl = await bob.damgar.c.ask<{ lines: { text: string }[] }>('look');
+    assert.ok(sl.lines.some((l) => /A sale of your offer/.test(l.text)), JSON.stringify(sl.lines));
+    await bob.dub.c.ask('money look');
+    await alice.dub.c.ask('money look');
+    const opened = (await alice.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === rp.id);
+    assert.equal(opened.sealed.text, 'Sealed on regtest.');
+
+    // The referral share: asked by bob's Damgar under its referral lane, invoiced by carol's lnd through the critic's link. Paid from alice's
+    // node: on this network only alice's has spendable funds (bob's few thousand received sit below its channel's reserve); MOR checks the
+    // invoice carol's node signed and the preimage, never which wallet paid.
+    await bob.damgar.c.ask('look');
+    await critic.damgar.c.ask('look');
+    await bob.damgar.c.ask('look');
+    const share = (await bob.damgar.c.ask<{ payments: PaymentShown[] }>('pay')).payments.find((p) => p.other.id === critic.id)!;
+    assert.equal(share.amount.said, '100 regtest satoshis');
+    const sp = await pay<{ preimage: string }>('pay', { node: 'alice', invoice: share.pay!.invoice! });
+    await bob.damgar.c.ask('paid', { key: share.key, proof: sp.preimage });
+    await critic.damgar.c.ask('look');
+    const c = await critic.damgar.c.ask<Account>('account');
+    assert.deepEqual(c.totals.find((t) => t.label.startsWith('Came in'))!.amounts.map((x) => x.said), ['100 regtest satoshis']);
+  } finally {
+    await other.stop();
+  }
 });

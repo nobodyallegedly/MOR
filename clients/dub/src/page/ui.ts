@@ -567,7 +567,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         if (r) {
           const open = $<HTMLDetailsElement>('people')?.open;
           await refresh();
-          if (open) $<HTMLDetailsElement>('people')!.open = true;
+          const people = $<HTMLDetailsElement>('people');
+          if (open && people) people.open = true;
           if (r.lines.length) say('done', v.lines(r.lines));
         }
         break;
@@ -577,7 +578,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         if (name === null) break;
         if (await busy('Saving…', () => b.ask('call', { id: d.id, name }))) {
           await refresh();
-          $<HTMLDetailsElement>('people')!.open = true;
+          const people = $<HTMLDetailsElement>('people');
+          if (people) people.open = true;
         }
         break;
       }
@@ -823,7 +825,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         const r = await busy('Following…', () => b.ask<{ lines: v.Line[] }>('follow', { id: words(d.get('id')), name: words(d.get('name')) }));
         if (r) {
           await refresh();
-          $<HTMLDetailsElement>('people')!.open = true;
+          const people = $<HTMLDetailsElement>('people');
+          if (people) people.open = true;
           say('done', `<strong>Followed.</strong>${r.lines.length ? v.lines(r.lines) : ''}`);
         }
         return;

@@ -11,7 +11,7 @@
 // or its 64 hex digits, as links made before carry; both are read, by the
 // core library.
 
-import { formEncode, formRead } from '../../genesis/src/core.ts';
+import { formRead } from '../../genesis/src/core.ts';
 import { relayAddress } from './settings.ts';
 
 export interface Link {
@@ -42,13 +42,16 @@ export function parseLink(hash: string): Link {
   return { act: id, relays };
 }
 
+/**
+ * A link to an act. Its id in hex, for now: a reader already served before
+ * F349 opens only hex links. Every reader from this one opens both; once
+ * every served reader does (a server session), links carry `mact1…`.
+ */
 export function makeLink(page: string, act: string, relays: string[] = []): string {
   const base = page.replace(/#.*$/, '');
   const q = relays.length ? '?' + relays.map((r) => `r=${encodeURIComponent(r)}`).join('&') : '';
-  return `${base}#${formEncode('mact', unhexOf(act))}${q}`;
+  return `${base}#${act}${q}`;
 }
-
-const unhexOf = (h: string) => Uint8Array.from(h.match(/../g)!.map((b) => parseInt(b, 16)));
 
 /** The relays to ask: the reader's own first, then those the link names. */
 export function relaysFor(own: string[], link: Link): string[] {
