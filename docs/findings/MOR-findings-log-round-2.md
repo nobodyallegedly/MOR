@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F350. A person's grant may sign that person's receipts and claims (18 October 2026)
+
+**Found by the Damgar round 2 session** (lanes): Money draft 8, rule 7, lets a receipt be signed with a grant key only for a collective (its own grant key, its split service's) and for a payee whose deal names a split service; a person's own grant (a lane) is not listed, so a receipt signed under a person's receipt lane would not count. A claim is "signed by the payer", grant keys unmentioned; Agreements rule 73 makes an act signed under a person's grant that person's own act, so a verifier would have to guess. Both of round 2's lanes rested on rules Money did not state.
+
+**Decided by Nobody, allegedly, 18 October 2026 ("Agreed"):** the project lead's lean: Money rule 7 opens, in the shape the collective case already has: a receipt or a claim may be signed with a grant key its party granted (a person's or a collective's) whose grant reaches that act type; judged as scoped, by Agreements (Identity's scoped key; Agreements rules 73 and 80, F128), a Money-only client showing it unknown, as for a split service today; the limits on a split service's grant key unchanged. *Suggested by the project lead.*
+
+**Core changes:** Money draft 9 (rule 7) and the matching check in the core library.
+
 ## F349. The core fixes how its own keys and hashes are written for people: a prefix and a checksum (18 October 2026)
 
 **From** the author's human tests, 18 October (with H38): every identity, act, key and specification shows as 64 hex characters, alike; one pasted where another is meant, or a typo, is not caught. *Asked by Nobody, allegedly:* "All these keys could do with a prefix don't you think?"
