@@ -95,6 +95,7 @@ export function start(web: boolean): string {
 <p>Kišib is the one place where a chain key is used, from paper, and then forgotten. Open it only for the act at hand.</p>
 <h2>What it does</h2>
 ${door('rotate', 'Change an identity’s keys', 'From its chain key’s 24 words on paper: a new signing key, every line of its acts kept. For a lost or stolen phone, or any time.')}
+${door('vault', 'Change the vault', 'Declare, change or remove where payments above a limit must go, and the limit. A change of keys: the chain key’s paper is needed, and a new signing key’s paper is written.')}
 ${door('start', 'Rotate a collective', 'From its members’ paper shares, completing a member change signed in Edubba. Started by the member who proposed it.')}
 ${door('give', 'Give my share to a collective’s rotation', 'When a member asks for your paper share: read the rotation, then give it.')}
 ${door('escape', 'Escape a contested position', 'Someone else changed your keys with your chain key’s words: leave with both keys, to new homes.')}
@@ -114,15 +115,29 @@ let units: { hash: string; label: string; network: number }[] = [];
 export const setUnits = (u: { hash: string; label: string; network: number }[] | undefined) => (units = u ?? []);
 
 /** The vault, in a change of keys (Money rule 2: only with the chain key; decided by Nobody, allegedly: "its setting belongs in Kišib"). Kept unless chosen. */
-const vaultFields = `<details><summary>The vault (optional): keep it, change it, or remove it</summary>
+const vaultFields = `<details{open}><summary>The vault (optional): keep it, change it, or remove it</summary>
 <p class="small">The vault is where a payment above a limit must go, per unit, and the one place a thief holding only the signing key cannot point payments (Money rules 2 and 3). It changes only with the chain key, so only here. Its node or key should be another than your flow’s, which Damgar names.</p>
-<label>The vault</label><select name="vault"><option value="keep" selected>Keep it as it is</option><option value="set">Declare it anew, as below</option><option value="remove">Remove it (every payment to the flow)</option></select>
+<label>The vault</label><select name="vault"><option value="keep"{keep}>Keep it as it is</option><option value="set"{set}>Declare it anew, as below</option><option value="remove">Remove it (every payment to the flow)</option></select>
 <div class="row"><label>Its unit <select name="vaultUnit" data-vault-units>${'{units}'}</select></label><label>Network <select name="vaultNetwork"><option value="3" selected>regtest</option><option value="2">signet</option></select></label></div>
 <label>Lightning: the vault’s node key (66 hexadecimal characters; not your flow’s node)</label><input name="vaultNode" autocomplete="off" spellcheck="false">
 <label>Its limit: the largest single payment that may still go to the flow (0: every payment to the vault)</label><input name="vaultLightningLimit" inputmode="numeric" value="0">
 <label>On-chain: the vault’s Bitcoin key, x-only (64 hexadecimal characters)</label><input name="vaultKey" autocomplete="off" spellcheck="false">
 <label>Its request key (Damgar’s Settings show one; it signs address requests, and must stay online)</label><input name="vaultRequest" autocomplete="off" spellcheck="false">
 <label>Its limit</label><input name="vaultOnchainLimit" inputmode="numeric" value="0"></details>`;
+
+/** Said first under Change the vault (H40): changing the vault, or its limit, is a change of keys. */
+export const VAULT_SAY = [
+  'Changing the vault or its limit is a change of keys. Only the chain key changes the vault (Money rules 2 and 3), so a thief holding only the signing key can never move it.',
+  'You need the chain key’s paper, the 24 words written when the identity was made. Kišib signs a change of keys that keeps every line of acts and declares the vault anew (or removes it), then shows a new signing key’s 24 words: write them on a new paper, and give them to Dub and Damgar.',
+  'The old signing key’s words stop counting once the homes receipt the change.',
+];
+
+const vaultHtml = (open: boolean) =>
+  vaultFields
+    .replace('{open}', open ? ' open' : '')
+    .replace('{keep}', open ? '' : ' selected')
+    .replace('{set}', open ? ' selected' : '')
+    .replace('{units}', units.map((u) => `<option value="${e(u.hash)}">${e(u.label)}</option>`).join(''));
 
 /** A form for one door. */
 export function form(kind: string, web: boolean): string {
@@ -134,9 +149,14 @@ export function form(kind: string, web: boolean): string {
         'Change an identity’s keys',
         'Kišib reads the identity from its homes and every relay its routes name, finds every line of its acts (Dub’s, Edubba’s, the web client’s), and reads it all back in plain words before anything is signed.',
         `${idField('id', 'The identity’s ID')}${address}${words('words', 'Its chain key’s 24 words, in order (the paper written when it was made; never the signing key’s words)')}
-<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultFields.replace('{units}', units.map((u) => `<option value="${e(u.hash)}">${e(u.label)}</option>`).join(''))}`,
+<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(false)}`,
         'Read it back',
       );
+    case 'vault':
+      return `${top(web, true)}<h2>Change the vault</h2>
+<div class="review" id="vault-say">${lines(VAULT_SAY.map((text) => ({ text })))}</div>
+<form id="form-rotate" data-kind="rotate">${idField('id', 'The identity’s ID')}${address}${words('words', 'Its chain key’s 24 words, in order (the paper written when it was made; never the signing key’s words)')}
+<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(true)}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
     case 'succession':
       return `${top(web, true)}<h2>Name or confirm a successor</h2>
 <p class="small">A succession needs both sides (F300): the identity names its successor in a change of its keys, signed with its chain key; the successor confirms it with an act of its own. Until it confirms, clients show it as declared and follow nobody.</p>
