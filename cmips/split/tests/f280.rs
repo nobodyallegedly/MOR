@@ -66,6 +66,7 @@ fn terms(top: Vec<u64>) -> Terms {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        member_keys: None,
     }
 }
 

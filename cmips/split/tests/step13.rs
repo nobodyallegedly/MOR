@@ -161,6 +161,7 @@ fn deal(parties: Vec<Hash>, words: &str) -> Terms {
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        member_keys: None,
     }
 }
 

@@ -605,6 +605,7 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, work: Hash) -> Terms 
         kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]),
         fields: None,
         id: 2,
+        limits: None,
     });
     Terms {
         parties: ids.to_vec(),
@@ -643,6 +644,7 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, work: Hash) -> Terms 
         holders_rules: None,
         transfers_counted: None,
         issues_under: None,
+        member_keys: None,
     }
 }
 
@@ -2339,6 +2341,7 @@ impl DealWorld {
             holders_rules: None,
             transfers_counted: None,
             issues_under: None,
+            member_keys: None,
         };
         assert_eq!(t.check(&mirs()), Ok(()), "the generator's own deal terms");
         let deal = agreements_act(&mut w, &mut p[0], agreements::types::TERMS, t.to_map(), None);

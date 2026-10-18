@@ -98,6 +98,9 @@ pub const TIME_REFERENCE_TASK: u64 = 10;
 /// F250). Judicial, as field 14 (rule 44a).
 pub const BACKUPS_FIELD: u64 = 29;
 
+/// Terms field 33: the members' own keys (F353, Agreements draft 16).
+pub const MEMBER_KEYS_FIELD: u64 = 33;
+
 /// Stakes and succession shares are written in millionths.
 pub const MILLION: u64 = 1_000_000;
 
@@ -758,6 +761,11 @@ pub struct Area {
     pub fields: Option<Vec<FieldRef>>,
     /// 5: its permanent id.
     pub id: u64,
+    /// 6: limits a cMIP judges on its holders' own keys (F353, draft 16):
+    /// the cMIP and its parameters; the grant limits cMIP's draft 2 makes
+    /// one key's act counting alone conditional on lying within them, a
+    /// second holder's key needed above (it adds, never relaxes, rule 60).
+    pub limits: Option<(Hash, Value)>,
 }
 
 impl Area {
@@ -777,6 +785,9 @@ impl Area {
             ));
         }
         m.push((Value::Uint(5), Value::Uint(self.id)));
+        if let Some((c, l)) = &self.limits {
+            m.push((Value::Uint(6), Value::Array(vec![b(c), l.clone()])));
+        }
         Value::Map(m)
     }
 
@@ -1265,6 +1276,13 @@ pub struct Terms {
     /// it follows, or none under the stake's standing waiver (rule 96; F309,
     /// F328).
     pub issues_under: Option<IssuesUnder>,
+    /// 33: the members' own keys (F353, Agreements draft 16): for each party
+    /// holding an area, one key of the collective, made by that member's
+    /// app as they signed; the founding or clone naming it is its grant, the
+    /// party's signature its acceptance. It acts within every area its
+    /// party holds, counted as that party's signature there (rule 60). One
+    /// per party, ascending by party, none twice; only with field 12.
+    pub member_keys: Option<Vec<(Hash, SigningKey)>>,
 }
 
 impl Terms {
@@ -1477,7 +1495,23 @@ impl Terms {
             Some(IssuesUnder::Waived) => m.push((Value::Uint(32), Value::Array(vec![Value::Uint(0)]))),
             None => {}
         }
+        if let Some(k) = &self.member_keys {
+            m.push((
+                Value::Uint(MEMBER_KEYS_FIELD),
+                Value::Array(k.iter().map(|(p, key)| Value::Array(vec![b(p), key.to_value()])).collect()),
+            ));
+        }
         m
+    }
+
+    /// The member key of `party` (field 33), if these terms name one.
+    pub fn member_key(&self, party: &Hash) -> Option<&SigningKey> {
+        self.member_keys.iter().flatten().find(|(p, _)| p == party).map(|(_, k)| k)
+    }
+
+    /// The party whose member key (field 33) made `sig`, if any.
+    pub fn member_of_key(&self, sig: &crate::act::Signature) -> Option<Hash> {
+        self.member_keys.iter().flatten().find(|(_, k)| k.made(sig)).map(|(p, _)| *p)
     }
 
     /// The holders' rule of a stake (field 30), every holder where the
@@ -1524,7 +1558,7 @@ impl Terms {
                         "terms field 25 (the relays) is withdrawn: an act is done by its signatures, seals and citations, wherever held (F128)",
                     ))
                 }
-                Value::Uint(n) if *n <= 24 || (26..=32).contains(n) => f.push((*n, v)),
+                Value::Uint(n) if *n <= 24 || (26..=33).contains(n) => f.push((*n, v)),
                 _ => return Err(AgreementsError::Shape("terms: unknown field")),
             }
         }
@@ -1661,6 +1695,19 @@ impl Terms {
                 .map(|v| match v {
                     Value::Array(a) if a.len() == 1 && a[0] == Value::Uint(0) => Ok(IssuesUnder::Waived),
                     _ => Ok(IssuesUnder::Offer(hash(v, "issues under: the issuance offer, or [0] (F309, F328)")?)),
+                })
+                .transpose()?,
+            member_keys: get(MEMBER_KEYS_FIELD)
+                .map(|v| {
+                    nonempty(v, "members' keys")?
+                        .iter()
+                        .map(|e| {
+                            let a = tuple(e, 2, "members' keys: an entry is [party, signing-key] (F353)")?;
+                            let key = crate::identity::signing_key(&a[1])
+                                .map_err(|_| AgreementsError::Shape("members' keys: a key is a signing key, [scheme, key] (F353)"))?;
+                            Ok((hash(&a[0], "members' keys: the party")?, key))
+                        })
+                        .collect()
                 })
                 .transpose()?,
         })
@@ -2238,6 +2285,27 @@ impl Terms {
             return Err(AgreementsError::Check(
                 "field 32 is a collective's clone's: an issuance in a deal is signed by every holder (rule 96; new in draft 14, F309, F314)",
             ));
+        }
+        if let Some(k) = &self.member_keys {
+            if !self.is_collective() {
+                return Err(AgreementsError::Check("field 33, the members' keys, is a collective's: only with field 12 (F353)"));
+            }
+            if k.windows(2).any(|w| w[0].0 >= w[1].0) {
+                return Err(AgreementsError::Check("field 33: one key per party, ascending by party, none twice (F353)"));
+            }
+            for (i, (p, key)) in k.iter().enumerate() {
+                if !self.areas().iter().any(|a| a.holders.contains(p)) {
+                    return Err(AgreementsError::Check("field 33 names a key only for a party holding an area (F353)"));
+                }
+                if k[..i].iter().any(|(_, o)| o == key) {
+                    return Err(AgreementsError::Check("field 33: each member's key is its own, never two parties' (F353)"));
+                }
+            }
+        }
+        for a in self.areas() {
+            if a.limits.is_some() && self.member_keys.is_none() {
+                return Err(AgreementsError::Check("an area's limits (key 6) are judged on members' keys: only with field 33 (F353)"));
+            }
         }
         if self.issues_under == Some(IssuesUnder::Waived) {
             let waived = self.holders_rules.iter().flatten().any(|e| e.waived);
@@ -4350,7 +4418,7 @@ fn field_ref(v: &Value) -> R<FieldRef> {
 }
 
 fn area(v: &Value) -> R<Area> {
-    let f = map_fields(v, 6, "area")?;
+    let f = map_fields(v, 7, "area")?;
     let Some(Value::Text(name)) = field(&f, 0) else {
         return Err(AgreementsError::Shape("area name"));
     };
@@ -4369,6 +4437,12 @@ fn area(v: &Value) -> R<Area> {
             .map(|v| nonempty(v, "area fields")?.iter().map(field_ref).collect())
             .transpose()?,
         id: uint(field(&f, 5).ok_or(AgreementsError::Shape("area id"))?, "area id")?,
+        limits: field(&f, 6)
+            .map(|v| {
+                let a = tuple(v, 2, "area limits: [cmip, limits] (F353)")?;
+                Ok((hash(&a[0], "area limits: the cMIP")?, a[1].clone()))
+            })
+            .transpose()?,
     })
 }
 
