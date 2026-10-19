@@ -491,6 +491,28 @@ test('a real collective founded in the web client, its members signing in Dub on
   assert.equal(await ed.locator('#e-posts [data-action=correct], #e-posts details.correct').count(), 0, 'a real collective posts nothing from here, so nothing to correct');
   await shot(ed, 'collective');
 
+  // Round 3, part C: its money, read back by clicks (shares, a referral share, its split service and keepers); nothing signed. Its keepers' card: none named yet.
+  await ed.locator('#e-real-keepers', { hasText: 'names no keepers' }).waitFor({ timeout: 60_000 });
+  await ed.click('#e-real-money > summary');
+  const shares = ed.locator('#real-money input[name=share]');
+  assert.equal(await shares.count(), 3);
+  await shares.nth(0).fill('50');
+  await shares.nth(1).fill('30');
+  await shares.nth(2).fill('20');
+  await ed.fill('#real-money input[name=referral]', '10');
+  await ed.fill('#real-money input[name=service]', cyId);
+  await ed.fill('#real-money input[name=serviceKey]', '11'.repeat(32));
+  await ed.fill('#real-money textarea[name=keepers]', cyId);
+  await ed.click('#real-money button[type=submit]');
+  await ed.locator('#e-real-review #reading h2', { hasText: 'The money of “The tablet house”' }).waitFor({ timeout: 60_000 });
+  const moneyRead = await ed.locator('#e-real-review').innerText();
+  assert.match(moneyRead, /a referral share of 10%/);
+  assert.match(moneyRead, /50%[\s\S]*30%[\s\S]*20%/);
+  await banner(ed, 'the money review');
+  await shot(ed, 'money-review');
+  await ed.click('#e-real-review [data-action=cancel]');
+  await done(ed, '#e-status', /Nothing was signed/);
+
   // A member change: Cy joins. Every member whose voice remains signs, and Cy, each in Dub on the web; then it waits for Kišib.
   await ed.click('#e-real-change > summary');
   // The same grid, filled from the agreement in force: its areas, the Money area's cap.
