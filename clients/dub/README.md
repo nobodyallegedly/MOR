@@ -236,3 +236,12 @@ It makes an identity as Dub on the Mac does: the chain key's 24 words shown once
 - **After a change of your keys** (Kišib), as Dub takes the new words and publishes the new encryption key, the member keys sealed to you are sealed again to it: unchanged.
 
 Tests: `clients/desk/test/member-keys.test.ts` drives Dub's Signing tab for all of it, beside Edubba.
+
+## Round 3: sealed pictures and vows (part B)
+
+- **A sealed picture.** A protected file published from Edubba's Publishing tab may be a JPEG picture as well as a text: in a feed, **A sealed picture** with its price and **Buy it, under the lane**; once its key arrives, the picture opens, checked against its fingerprint. Buying from the seller's own post (not only through a repost) reads the offer the post names. A collective's offer shows; buying it is its split service's (part C).
+- **A vow.** A post naming a vow and its offer shows **A vow** with its words, its price and **Buy it, under the lane**. Bought under the lane, its claim, once paid, is also signed in public (a reading, the build's: otherwise sealed to the payee), so the sale can be seen: it is the sale, pending until you say.
+- **Vows you bought** (Signing tab): each with its sale's state as the relays read it. **Confirm: it was kept** signs a public claim of the same payment acknowledging the vow, under the lane (Agreements rule 13: a confirmation is in a payer's claim). **Contest it** signs a contest naming the sale, with what was not kept, in words, if you say it (F253). Either is public; neither moves money; a contest voids nothing.
+- `src/vows.ts`: the vow and its offer (`publishVow`, `readVow`, `readVowOffer`), the contest (`contestSale`), and the look-up (`vowSales`), shared with Edubba. `src/delivery.ts`: a sold work's key delivered on a sale, shared with Edubba.
+
+Tests: `clients/desk/test/publishing.test.ts` (a picture bought in Dub and opened; a vow bought by three buyers in Dub, one confirming and one contesting in the Signing tab, the look-up reading each) and `clients/desk/test/web-browser.test.ts` (the sealed picture and the vow seen in Dub on the web).

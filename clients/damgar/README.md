@@ -74,6 +74,10 @@ The core library does every check: payloads, commitments, rail proofs, the route
 - **Promises signed here** are listed with how each stands, read as anyone reads it: counting or not, how many keys of how many, above the cap or not. Damgar judges the cap itself (it implements the grant limits cMIP, draft 2); a reader that does not shows such an act as unknown.
 - *Not built:* paying the promise from the collective's own money (the collective's income goes to its split service, Part C, then to its members); a payee pointer of the collective (the split service is its designated pointer).
 
+## Round 3: a vow's claim in public (part B)
+
+A payment an app makes under its lane for a vow (Dub's **Buy it**) is marked visible: once paid, its claim is signed again in public, so anyone looking at the relays sees the sale (Agreements rule 13; a reading, the build's). `confirmPurchase` signs one more public claim of the same payment acknowledging what was bought (the vow): the sale reads confirmed. Each is signed as the payment's claim was, under the same lane or by hand, and its proof is the one the payment carried (kept as `proof`).
+
 ## Tests
 
 `npm test` (Node, and headless Chromium for `browser.test.ts`; `MOR_CHROMIUM` names the browser):

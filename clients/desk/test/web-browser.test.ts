@@ -535,3 +535,71 @@ test('a real collective founded in the web client, its members signing in Dub on
   await shot(other, 'brought');
   assert.deepEqual(problems, []);
 });
+
+test('the Publishing tab in the web client by clicks: who acts; a protected text and picture read back and signed; a vow; the look-up; both seen sealed and for sale in Dub on the web', async () => {
+  const ed = await pageOf(edubbaBase);
+  await ed.locator('h1.mark', { hasText: 'Edubba' }).waitFor({ timeout: 60_000 });
+  await places(ed);
+  const seller = await elsewhere();
+  await bringIn(ed, 'The seller', seller);
+  await ed.click('[data-action=tab][data-tab=publishing]');
+  await ed.locator('form#acting').waitFor({ timeout: 60_000 });
+  await banner(ed, 'the Publishing tab');
+  assert.equal(await ed.locator('form#acting input[name=actor]:checked').getAttribute('value'), seller.id, 'acting as the identity held');
+  assert.match(await ed.locator('#e-body').innerText(), /A text, or a JPEG picture/);
+  await shot(ed, 'publishing');
+
+  // A text, read back, then signed.
+  await ed.fill('#pub-work textarea[name=text]', 'Three verses, sealed.');
+  await ed.fill('#pub-work input[name=title]', 'Verses, sealed');
+  await ed.fill('#pub-work input[name=price]', '1500');
+  await ed.click('#pub-work button[type=submit]');
+  await ed.locator('#e-pub-review #reading').waitFor({ timeout: 60_000 });
+  assert.match(await ed.locator('#e-pub-review').innerText(), /lone seller’s: itself the agreement between you and each buyer/);
+  await shot(ed, 'publishing-review');
+  await ed.click('#e-pub-review [data-action=confirm]');
+  await done(ed, '#e-status .note.done', 'Published, sealed');
+  await ed.locator('.item[data-work] h3', { hasText: 'Verses, sealed' }).waitFor({ timeout: 60_000 });
+
+  // A picture, chosen as a file: stripped to the picture alone, read back, signed.
+  const jpeg = readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url));
+  await ed.check('#pub-work input[name=media][value=picture]');
+  await ed.setInputFiles('#pub-work input[name=file]', { name: 'tablet.jpg', mimeType: 'image/jpeg', buffer: jpeg });
+  await ed.fill('#pub-work input[name=title]', 'A tablet, photographed');
+  await ed.fill('#pub-work input[name=price]', '2000');
+  await ed.click('#pub-work button[type=submit]');
+  await done(ed, '#e-pub-review #reading', /stripped to the picture alone/);
+  await ed.click('#e-pub-review [data-action=confirm]');
+  await done(ed, '#e-status .note.done', 'Published, sealed');
+
+  // A vow, read back, signed; the look-up of the seller's vow sales, asked of the relay: none yet.
+  await ed.fill('#pub-vow textarea[name=words]', 'A seat at the reading of the tablets.');
+  await ed.fill('#pub-vow input[name=title]', 'A seat, vowed');
+  await ed.fill('#pub-vow input[name=price]', '500');
+  await ed.click('#pub-vow button[type=submit]');
+  await done(ed, '#e-vow-review #reading', /confirms it \(kept\) or contests it \(not kept\)/);
+  await ed.click('#e-vow-review [data-action=confirm]');
+  await done(ed, '#e-status .note.done', 'A vow, published');
+  await ed.fill('#pub-vow-sales textarea[name=relays]', relay.base);
+  await ed.click('#pub-vow-sales button[type=submit]');
+  await done(ed, '#e-vow-sales', /No sale seen/);
+  assert.match(await ed.locator('#e-vow-sales').innerText(), /nothing is indexed/);
+  await shot(ed, 'publishing-vow-sales');
+  await ed.setViewportSize({ width: 390, height: 844 });
+  await narrow(ed, 'the Publishing tab');
+  await ed.setViewportSize({ width: 900, height: 1000 });
+
+  // In Dub on the web, a reader following the seller sees the picture sealed and the vow for sale.
+  const reader = await pageOf(dubBase);
+  await makeIn(reader);
+  await reader.locator('#people summary').click();
+  await reader.locator('form#follow input[name=id]').fill(shownId(seller.id));
+  await reader.locator('form#follow').getByRole('button', { name: 'Follow' }).click();
+  await done(reader, '#status .note.done', 'Followed');
+  await reader.locator('.sealed-post .label', { hasText: 'A sealed picture' }).waitFor({ timeout: 90_000 });
+  await reader.locator('.vow-post', { hasText: 'A seat at the reading of the tablets.' }).waitFor({ timeout: 90_000 });
+  assert.ok(await reader.locator('.vow-post [data-action=buy-vow]').isVisible(), 'the vow can be bought, under the lane');
+  assert.equal(await reader.locator('img.sealed-picture').count(), 0, 'nothing of the picture shown before it is bought');
+  await shot(reader, 'dub-sealed-and-vow');
+  assert.deepEqual(problems, []);
+});

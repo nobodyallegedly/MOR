@@ -39,14 +39,13 @@ import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, moneyR
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp, referenceTo } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
-import { allBy } from '../../repo/src/release.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { OFFER, offerPayload, type Amount } from '../../barebone/src/sealed.ts';
 import { POST_SPECS, TEXT_ACT } from '../../barebone/src/specs.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { ACCEPTABLE } from '../../damgar/src/specs.ts';
 import { judge as judgeLimits } from '../../grants/src/limits.ts';
-import { readGrant } from '../../grants/src/grant.ts';
+import { allBy, readGrant } from '../../grants/src/grant.ts';
 
 /** The vow (Envelopes type 5), and the contest (Agreements type 14). */
 export const VOW = 5;
