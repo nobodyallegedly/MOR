@@ -112,6 +112,8 @@ export const WEB_OPS: readonly string[] = [
   'real register resignation',
   'real money prepare',
   'real money record',
+  'real keepers',
+  'real keep',
 ];
 
 /** Said where a collective's release would be made: the web client chooses no folder (`docs/edubba-web-report.md`, "Releases"). */
@@ -394,6 +396,10 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         });
       case 'real money record':
         return real.recordMoney(text(a.act));
+      case 'real keepers':
+        return real.keepers(text(a.collective));
+      case 'real keep':
+        return real.keep(text(a.collective), readIdOr(text(a.keeper)));
       case 'real register resignation':
         return real.registerResignation(text(a.collective), text(a.act));
       case 'real collective': {

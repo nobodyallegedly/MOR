@@ -306,6 +306,7 @@ async function draw() {
         touched.delete('real-change');
         await syncGrid('real-change');
         await drawMoney(here.id);
+        await drawKeepers(here.id);
         await drawAct(here.id);
         return;
       }
@@ -410,6 +411,16 @@ async function drawMoney(collective?: string) {
     fill('e-anchors', v.anchors(await c.ask('money anchors', { collective })));
   } catch (err) {
     fill('e-anchors', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+  }
+}
+
+/** A real collective's keepers, and the disowned signatures shown as disputes (rules 36 to 44; C5, F302). */
+async function drawKeepers(id: string) {
+  try {
+    const k = await c.ask<v.KeepersShown>('real keepers', { collective: id });
+    if (at.collective === id) fill('e-keepers', v.keepersShown(state, id, k));
+  } catch (err) {
+    fill('e-keepers', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
   }
 }
 
@@ -924,6 +935,14 @@ app.addEventListener('click', async (ev) => {
     case 'contact-remove':
       if (await busy('Removing…', () => c.ask('real contact remove', { id: d.id }))) await refresh();
       break;
+    case 'real-keep': {
+      const r = await busy('Recording what arrived, its signers’ chains checked first…', () => c.ask<Done>('real keep', { collective: d.collective, keeper: d.keeper }), $('e-keepers'));
+      if (r) {
+        say('done', v.lines(r.lines), $('e-keepers'));
+        await drawKeepers(d.collective!);
+      }
+      break;
+    }
     case 'real-money-record': {
       const where = () => app.querySelector<HTMLElement>(`[data-here-proposal="${CSS.escape(d.act!)}"]`);
       const r = await busy('Recording it on the collective’s line, and pointing its payee pointer at the service…', () => c.ask<Done>('real money record', { act: d.act }), where());

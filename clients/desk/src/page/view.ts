@@ -1318,6 +1318,44 @@ export const RELEASE_ON_WEB =
 export const JUDGED_SAY =
   'Without a service, the referral share is a promise in words, paid by your Damgar. With one, the work gets a deal of its own, you its one party holding its whole stake, its split plan carrying the referral share off the top: the service answers buyers, signs their receipts with a key you grant it, and pays you and the reposter, as Agreements judges.';
 
+/** Said where a collective's keepers are shown: kept to Agreements rules 36 to 44, C5 and F302. */
+export const KEEPERS_SAY = [
+  'A keeper is a notary the agreement names: it records each act around the collective as it arrives, in its own sequence, and signs each record. It sees act IDs and signers, never content.',
+  'Before recording a member’s act, it checks their identity chain and records any rotation first: an act recorded before a rotation stays a visible dispute if that rotation disowns it, never a void (rule 41).',
+];
+
+/** A collective's keepers and disputes, as Edubba reads them (`../real.ts`, KeepersShown). */
+export interface KeepersShown {
+  keepers: { id: string; name: string; here: boolean; agent: boolean; records: number; ofThis: number }[];
+  rule: 'all' | number | null;
+  disputes: { member: string; signature: string; version: string; what: string; status: string; rotation: string | null; keepers: string[]; counts: boolean }[];
+}
+
+/** Its keepers' card and the disputes shown (a disowned signature the line or a keeper placed). */
+export function keepersShown(s: State, id: string, k: KeepersShown): string {
+  const keepers = k.keepers.length
+    ? `<ul class="plain">${k.keepers
+        .map(
+          (x) =>
+            `<li>${person(s, x.id)}${x.agent ? ' <span class="tag">agent here</span>' : x.here ? ' <span class="tag">here</span>' : ''}: ${x.ofThis} record${x.ofThis === 1 ? '' : 's'} of this collective’s acts.${x.here ? ` <button data-action="real-keep" data-collective="${e(id)}" data-keeper="${e(x.id)}">Record what arrived</button>` : ''}</li>`,
+        )
+        .join('')}</ul><p class="small">An act counts as recorded once ${k.rule === 'all' ? 'every keeper' : k.rule === 1 ? 'any one keeper' : `${k.rule} keepers`} recorded it.</p>`
+    : '<p class="small">Its agreement in force names no keepers: set them with its money terms, above.</p>';
+  const disputes = k.disputes.length
+    ? `<h4>Disputes, not voids</h4><ul class="plain">${k.disputes
+        .map(
+          (d) =>
+            `<li class="${d.counts || d.keepers.length ? 'warn' : 'bad'}">${person(s, d.member)}’s signature on ${e(d.what)} (${fp(d.signature)}) was disowned by their own rotation${d.rotation ? ` (${fp(d.rotation)})` : ''}: under Identity it is ${e(d.status)}. ${
+              d.counts || d.keepers.length
+                ? `Shown as a dispute, not a void:${d.counts ? ' the collective’s line placed it before any line registering that rotation, so the version it signed stays in force for the collective (C5, F302);' : ''}${d.keepers.length ? ` ${d.keepers.map((x) => person(s, x)).join(', ')} recorded it before recording the rotation (rule 41).` : ''}`
+                : 'Nothing placed it before the rotation: it counts for nothing.'
+            }</li>`,
+        )
+        .join('')}</ul>`
+    : '';
+  return foldCard('e-real-keepers', 'collective-keepers', `Its keepers (${k.keepers.length})`, `<ul class="say">${KEEPERS_SAY.map((t) => `<li>${e(t)}</li>`).join('')}</ul>${keepers}${disputes}`, k.disputes.length > 0);
+}
+
 /** Said where a collective's money is set (round 3, part C): kept to Agreements rules 8, 16 to 23 and 67. */
 export const COLLECTIVE_MONEY_SAY = [
   'Who owns its income: each member’s share, adding up to 100%. Every holder signs the stakes their share sets.',
@@ -1372,6 +1410,7 @@ ${contactPicks(s, [], c.members)}
 <div id="e-grid-real-change"><p class="small">Reading its agreement in force…</p></div>
 <div class="row"><button type="submit">Review the change</button></div></form>`, false)}
 ${moneyCard(s, id, c)}
+<div id="e-keepers"><p class="small">Reading its keepers…</p></div>
 ${foldCard('e-real-release', 'collective-release', 'A release: in Ummia', `<p class="small">${e(RELEASE_ON_WEB)}</p>`)}
 <div id="e-real-review"></div>
 ${WEB ? '' : realMoney(s, id, c.members)}

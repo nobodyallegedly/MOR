@@ -48,7 +48,8 @@ import { readAgreement, readChanges, readRelease, termsOf, withAgreements, rules
 import { beforeSigning } from '../../assess/src/assess.ts';
 import { filesOf, folderOf } from './setup.ts';
 import { governanceOf, gridOf, gridSay, type Grid } from './grid.ts';
-import { collectiveNow, makeMemberKey, sealMemberKey } from '../../grants/src/member.ts';
+import { collectiveNow, collectivePlaces, collectiveVerifier, makeMemberKey, sealMemberKey } from '../../grants/src/member.ts';
+import { keep, keeperLogs, recordedBefore } from '../../grants/src/keeper.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { readSealedList, type Followed } from '../../dub/src/people.ts';
 import type { Desk, Done } from './desk.ts';
@@ -125,6 +126,14 @@ export interface Proposal {
   /** A member change: the rotation, made in Kišib, that put it in force, once Edubba took the collective's new words (`kishib.ts`). */
   rotated?: string;
   at: number;
+}
+
+/** A collective's keepers and the disputes they and its line show (`Real.keepers`). */
+export interface KeepersShown {
+  keepers: { id: string; name: string; here: boolean; agent: boolean; records: number; ofThis: number }[];
+  /** What counts as recorded: every keeper ('all'), a number of them, or null (none named). */
+  rule: 'all' | number | null;
+  disputes: { member: string; signature: string; version: string; what: string; status: string; rotation: string | null; keepers: string[]; counts: boolean }[];
 }
 
 /** A review: what would be signed, in plain words, with its digest. Nothing is signed until confirmed. */
@@ -998,6 +1007,89 @@ export class Real {
         lines.push({ text: `Its payee pointer could not be pointed at the split service yet: ${err(e)}`, tone: 'warn' });
       }
       return { title: 'In force', lines, acts: [r] };
+    });
+  }
+
+  // ------------------------------------------------------------ keepers (rules 36 to 44)
+
+  /**
+   * Its keepers, as its agreement in force names them (terms field 3), each
+   * with what it recorded of this collective; and every signature a
+   * recorded version relies on that its signer's own rotation disowned,
+   * shown as a dispute where the collective's line placed it before any
+   * line registering that rotation (C5, F302), or a keeper named recorded
+   * it before recording the rotation (rule 41): never as a void.
+   */
+  async keepers(collective: string): Promise<KeepersShown> {
+    const c = this.collective(collective);
+    const names = this.names();
+    const places = await collectivePlaces(c.identity, [...c.f.relays, ...this.store.settings().homes.map((h) => h.hint)], this.via);
+    const k = c.f.governance.keepers;
+    const ids = k?.ids ?? [];
+    const logs = await keeperLogs(ids, places, this.via);
+    const mine = new Set([c.identity, ...c.f.agreements, ...c.f.members]);
+    const keepers = ids.map((id) => ({
+      id,
+      name: names(id),
+      here: this.store.holds(id),
+      agent: this.store.isAgent(id),
+      records: (logs[id] ?? []).length,
+      ofThis: (logs[id] ?? []).filter((a) => mine.has(a)).length,
+    }));
+    const disputes: KeepersShown['disputes'] = [];
+    const recorded = this.proposals().filter((p) => p.collective === collective && p.rotated && p.kind !== 'release');
+    const sigs = recorded.flatMap((p) => p.signers.filter((m) => p.answers[m]?.signature).map((m) => ({ p, m, sig: p.answers[m].signature! })));
+    if (sigs.length) {
+      const { v } = await collectiveVerifier(c.identity, places, this.via, sigs.map((x) => x.sig));
+      const inForce = (await collectiveNow(c.identity, places, this.via).catch(() => null))?.agreement ?? c.f.agreement;
+      for (const x of sigs) {
+        let status = 'unknown';
+        try {
+          status = v.status(x.sig) as string;
+        } catch {
+          // not held
+        }
+        if (status !== 'void' && status !== 'disputed') continue;
+        const rotations = (await allBy(x.m, places, this.via)).map((a) => describeAct(a) as { id: string; signer?: string; spec?: string; type?: number }).filter((d) => d.signer === x.m && d.spec === MIRS.identity && d.type === 1).map((d) => d.id);
+        const rotation = rotations.find((r) => ids.some((kp) => (logs[kp] ?? []).includes(r))) ?? rotations.at(-1) ?? null;
+        const before = rotation ? ids.filter((kp) => recordedBefore(logs[kp] ?? [], x.sig, rotation)) : [];
+        const still = c.f.agreements.indexOf(inForce) >= c.f.agreements.indexOf(x.p.act) && c.f.agreements.includes(x.p.act);
+        disputes.push({
+          member: x.m,
+          signature: x.sig,
+          version: x.p.act,
+          what: x.p.kind === 'money' ? 'its money terms' : x.p.kind === 'founding' ? 'its founding terms' : 'a member change',
+          status,
+          rotation,
+          keepers: before,
+          counts: still,
+        });
+      }
+    }
+    return { keepers, rule: k ? ('all' in k.rule ? 'all' : 'threshold' in k.rule ? k.rule.threshold : null) : null, disputes };
+  }
+
+  /** One round of keeping for this collective, by a keeper it names that is held here (an Edubba agent, say): what it recorded (rules 37, 40). */
+  keep(collective: string, keeper: string): Promise<Done> {
+    return this.desk.serial(async () => {
+      const c = this.collective(collective);
+      if (!(c.f.governance.keepers?.ids ?? []).includes(keeper)) throw new Error('That identity is no keeper its agreement in force names (rule 36).');
+      if (!this.store.holds(keeper)) throw new Error('That keeper is not held here: it keeps in its own app.');
+      const me = this.store.identity(keeper);
+      const places = await collectivePlaces(c.identity, [...c.f.relays, ...this.store.settings().homes.map((h) => h.hint)], this.via);
+      try {
+        const made = await keep(me, { collective: c.identity, agreements: c.f.agreements, parties: c.f.members, places, via: this.via });
+        const names = this.names();
+        return {
+          title: made.length ? `${names(keeper)} recorded ${made.length} act${made.length === 1 ? '' : 's'}` : 'Nothing new to record',
+          lines: made.length
+            ? made.map((m) => ({ text: `${m.rotation ? 'A rotation of ' : 'An act of '}${names(m.signer)} (${short(m.act)}): recorded, ${short(m.record)}.`, tone: 'ok' as const }))
+            : [{ text: 'Every act around the collective found now is recorded already.' }],
+          acts: made.map((m) => m.record),
+        };
+      } finally {
+        this.store.saveIdentity(me);
+      }
     });
   }
 
