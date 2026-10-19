@@ -21,39 +21,29 @@ The six releases are rebuilt in this pull request (site, Dub, Edubba, Kišib, Da
 **Where it stopped:** at the end. The pull request is open and not merged, as asked.
 
 **What needs you:**
-- **Five questions**, below. The first is the most pressing.
+- **One question**, below; four were answered on 19 October 2026 (F358), and the first is built in this round.
 - **Readings to confirm**, each with its cost.
 - **Human test 15**, at the end of this report.
 
-## Questions for Nobody, allegedly
+## Questions for Nobody, allegedly, and their answers (F358)
 
-One at a time, in this order. None of them stopped the build: each place where the drafts are silent was built as the reading named below, and the reading is marked in the code.
+Four of the five were answered on 19 October 2026 (F358, in the findings log). One is still open.
 
-1. **Who signs the collective's payee pointer to its split service?** For payments to reach the service, the collective's payee pointer (Money type 0) has to lead to the service's rails.
-   - Money reads a pointer only if its signature is valid under Identity. A member's own key (F353) is a grant key, so Identity reads its acts as "scoped" and Money does not read the pointer.
-   - So Edubba signs the pointer with the collective's own signing key, which the founder's Edubba holds, when it records the money terms.
-   - **Choices:**
-     - (a) Keep it so: the pointer is a rare act, like a record.
-     - (b) Money reads a pointer signed by a Money area's holder with their member key, judged by Agreements as other collective acts are.
-
-   I lean (a) for round 3. (b) is a core change.
-2. **A lone seller's deal: which pointer does the buyer pay?** Agreements field 14 says the split service "is the agreement's designated pointer". A lone seller's own payee pointer stays theirs, since their tips should not go to a service. So for an offer under a deal naming a service, Damgar pays the service's own pointer, and the commitment's "paid to" names that pointer while the payee is still the seller.
-   - (a) Keep that.
-   - (b) The seller's pointer must lead to the service, as a collective's does.
-
-   I lean (a).
-3. **A deadline shown missed "by a named keeper"** (Agreements rule 33). What was built shows a missed deadline only through the anchoring cMIP: the ticket's deadline, then an anchor after it or the chain past it (item 12).
-   - A keeper records acts in order, but nothing in its record places them in time, so a keeper alone cannot show that something did not happen before a block.
-   - Is a keeper's evidence meant to come with an anchor of its records (its sequence placed on the clock)?
-   - Or is the keeper's own word, that it saw nothing before the deadline, the evidence (trust in keepers, like rule 42's stated trust)?
-
-   Nothing was built for the keeper path.
-4. **The keeper record goes into the next Agreements draft.** OF21 (a, d) was decided in text: one public act per record, `{ 0 => [act, signer] }`. The client now makes these records as Agreements type 2.
-   - The core's type dispatcher still refuses type 2 ("its format is open"). Agreements draft 16 says "In MOR 1 the keeper record (type 2) has no format and no client makes one, so nothing yet rests on this" (Part three, the F329 line).
-   - Now a client does make them. The core takes keepers' logs as the client states them, so nothing judged changed, but the text and the dispatcher should follow. This is the flaw in the MIR that building exposed, named here.
-   - (a) Write OF21's format into the next draft and let the core read type 2 into the logs itself.
-   - (b) Keep the logs client-stated until the freeze-ready draft.
-5. **What a keeper records "around the deal".** Built:
+1. **Who signs the collective's payee pointer to its split service. Decided, (b)**: "It is a money matter and money areas should be able to do it. A founder should not have a special position if the constitution does not say so."
+   - **Built in this round:**
+     - Money draft 10, rule 7: a collective's pointer may be signed with the member keys of its area reaching Money, judged by Agreements with that area's holders and threshold.
+     - Edubba signs the pointer with a Money area holder's own key and asks the area's other holders for theirs. The collective's own key signs none of it.
+     - Damgar pays a collective through the pointer Agreements count.
+     - The core's test shows the rule.
+   - Reading 1 (the collective's own key) is withdrawn.
+   - *Cost:* a Money-only client shows such a pointer unknown and cannot pay through it.
+2. **A lone seller's deal: which pointer the buyer pays. Decided ("Agreed"), (a)**: the service's own pointer. The commitment's payee is still the seller, and its "paid to" names the service's pointer, as field 14 makes the service the agreement's designated pointer. The seller's own pointer stays theirs, for tips. As built.
+3. **and 4. Keepers, redefined.** A keeper is a signed ordering mechanism serving proofs: it signs a sequence, checkable from any copy.
+   - Its record format (OF21's `{ 0 => [act, signer] }`, type 2) goes into the core, which will read it.
+   - Only anchors place anything on the clock. A keeper may anchor its own sequence.
+   - Rule 33 becomes: a deadline is shown missed by an anchor, of the act itself or of a keeper's sequence. A keeper's word alone never says late.
+   - **Where:** the freeze-ready drafts. Until then, round 3 leaves the keeper deadline path unbuilt, and its keeper logs stay client-stated, as built.
+5. **Still open: what a keeper records "around the deal".** Built:
    - the collective's own public acts;
    - every member's public act whose objects name one of the collective's agreement versions (signatures, resignations);
    - every member's rotation, recorded before their other acts (rule 40).
@@ -79,7 +69,11 @@ One at a time, in this order. None of them stopped the build: each place where t
   - **Review it** reads it back in Agreements' own words, with the deal-assessment tool's risks.
   - It is refused in plain words where the shares do not add up to 100, the service is a member, or the key is malformed.
   - Signing makes one clone. The collective's key signs the service's grant (field 14), and every member signs in Dub's Signing tab (rules 8 and 67).
-  - **Record it** writes the clone on the collective's line (rule 72) and points the collective's payee pointer at the service (question 1).
+  - **Record it** writes the clone on the collective's line (rule 72) and points the collective's payee pointer at the service (question 1, F358):
+    - the pointer is signed with a Money area holder's own key (the proposer's where they hold one), never the collective's own;
+    - where the area needs more keys, its other holders are asked, each in their own app (Dub's Signing tab says where the pointer sends the money);
+    - until enough have signed, a buyer's payment is refused before anything is signed.
+- **Money draft 10** (`spec/MIR-money-draft-10.md`, F358): rule 7 and the payee pointer's format. A collective's pointer may be signed with the member keys of its area reaching Money, judged as scoped by Agreements with that area's holders and threshold. The WebAssembly gains `agreementsPointer` and `agreementsChoose` (the core's `payee_pointer`). Damgar pays a collective through the pointer Agreements count (`collectivePointer`, `clients/grants/src/member.ts`). The reader ships draft 10.
 - **Damgar** (money messages draft 4, F357):
   - It reads field 14 of the agreement an offer is made under (field 0), or of a collective payee's agreement in force.
   - It sends the invoice request to the service and accepts the service's answer.
@@ -144,29 +138,32 @@ It runs on test nodes by default, and with `MOR_LN_REGTEST=RUN_DIR` on the regte
    - the rail verdicts stated to the core (`railValid`), which a vow's sales are read with;
    - the vow's judgment itself (`agreementsVow`);
    - a purchase in the payment commitment (`purchase`, the payment cMIP's eighth element), in both directions.
-2. **Money's pointer needs a valid binding**, so a member's scoped key cannot sign a collective's pointer that Money reads (question 1).
-3. **The keeper record is decided in text and refused by the core** (question 4): the flaw in the MIR this build exposed.
+2. **Money's pointer needed a valid binding**, so a member's scoped key could not sign a collective's pointer that Money reads (question 1). Answered (F358): Money draft 10 lets the Money area's keys sign it, judged by Agreements. The core already counted such a pointer in its Agreements view (`valid` stands a member key where its naming signature does; the area's consent applies); only Money's text and a Money-only client refused it. Built in this round.
+3. **The keeper record is decided in text and refused by the core** (question 4): the flaw in the MIR this build exposed. Answered (F358): its format goes into the core in the freeze-ready drafts.
 4. **On regtest only alice can pay.** The split service's node, carol, receives a few thousand satoshis that sit below its channel's reserve, so it cannot pay the payouts. This is the same finding as human test 14 (bob's referral share). The service's command line gained `--payer alice`, and the end-to-end test pays every payout from alice. MOR checks the invoice each holder's node signed and the preimage, never which wallet paid.
-5. **A keeper cannot show "not before" alone** (question 3). The missed deadline was built on the anchoring cMIP, whose item 12 already says exactly how.
+5. **A keeper cannot show "not before" alone** (question 3). The missed deadline was built on the anchoring cMIP, whose item 12 already says exactly how. Answered (F358): only anchors place anything on the clock, a keeper's sequence among what may be anchored.
 6. **Kišib leaves out the lines it cannot read.** A member's Dub makes private acts, so Kišib cannot follow that line without its card, and a rotation without cards leaves it out (its acts void). In the keepers test the disowned signature was on a line Kišib could read and was left out by name. In human test 15, Kišib's warning says which lines go.
 7. **An Edubba agent becomes an agent only once its terms are published.** Until then the keepers' card shows it as an identity held here, not as an agent.
 8. **Edubba's anchors list now shows the ticket's deadline**, so its old last line ("Anchored at block …") is followed by "By its deadline … delivered" or a missed deadline. The anchoring test was updated to match.
 
 ## Readings (to confirm), and costs
 
-1. **The collective's payee pointer is signed with its own signing key**, held in the founder's Edubba, when the money terms are recorded (question 1). *Cost:* that Edubba must be the one recording, and the collective's key signs one more act.
-2. **A lone seller's deal pays the service's own pointer** (question 2). *Cost:* the commitment names a pointer that is not the payee's own. A reader must follow field 14 to see why it counts.
-3. **The split waits three of the service's rounds for the buyer's claim** before splitting without one. *Cost:* a buyer who never sends a claim names no reposter, and the referral share goes to the stake. A buyer can also delay the split by those rounds and no more.
-4. **The sale is told to each member** (draft 4, 7.2.3, a mechanic) so a member's app can deliver the key. *Cost:* the service learns who the members are, which it already does from the terms.
-5. **A vow's claim is signed again in public** (part B) so its sale can be seen. *Cost:* the buyers of a vow are public.
-6. **A vault transfer's `fulfils` names the person's own payee pointer in force** (F355, as decided). The payment cMIP's next draft lets it name the vault declaration (F355 c).
-7. **H46's warning** says "this money can then be spent only with the chain key and its record". On screen, "its record" is spelled out: the vault's own key, declared with your chain key in Kišib, and the record Damgar keeps sealed to you.
-8. **The keeper's sequence is its operator's line** (records naming the one before). Records off that line follow in the order a place gave them, as one device keeps. *Cost:* a keeper on two devices would need its lines merged by cards, as any identity does.
-9. **What a keeper records** (question 5): the collective's acts, its members' acts naming its agreements, and their rotations first. *Cost:* the records are public and list act IDs and signers, which those acts' outsides already show (OF21 d).
-10. **A dispute is shown from three facts**: Identity's status, the core's agreement in force, and the keepers' order. The core decides whether the signature still counts; Edubba only shows it.
-11. **The clock's depth is six blocks** (the Bitcoin clock Module, draft 3), written as a constant in Edubba's anchors list.
-12. **The service's payouts on regtest are paid from alice** (found 4). Off regtest, a service pays from its own node.
-13. **A collective's referral is its split plan's role share, judged**: the role off the top (rule 22), its evidence the repost the buyer's claim names. The payout carries the role (key 3) and its evidence (key 4).
+*Reading 1 of the first report (the collective's own key signing its pointer) is withdrawn: F358 decided (b), built in this round.*
+
+1. **A pointer moves no amount**, so where the Money area carries the grant limits cMIP's cap, each pointer is stated within it (2.2 judges amounts only) when Damgar and Edubba ask Agreements for the collective's pointer (F358). *Cost:* none known; an area's limits cMIP that judged more than amounts would need its own verdict here.
+2. **Who signs the pointer first**: the identity that proposed the money terms where it holds a box in the Money area with its own key, otherwise another identity held in that Edubba that does. Where the area needs more than one key, every other holder is asked, each in their own app, as Damgar asks for a promise above its cap. Until enough have signed, a buyer's payment to the collective is refused before anything is signed ("It cannot be paid").
+3. **A lone seller's deal pays the service's own pointer** (question 2, decided as built, F358). *Cost:* the commitment names a pointer that is not the payee's own. A reader must follow field 14 to see why it counts.
+4. **The split waits three of the service's rounds for the buyer's claim** before splitting without one. *Cost:* a buyer who never sends a claim names no reposter, and the referral share goes to the stake. A buyer can also delay the split by those rounds and no more.
+5. **The sale is told to each member** (draft 4, 7.2.3, a mechanic) so a member's app can deliver the key. *Cost:* the service learns who the members are, which it already does from the terms.
+6. **A vow's claim is signed again in public** (part B) so its sale can be seen. *Cost:* the buyers of a vow are public.
+7. **A vault transfer's `fulfils` names the person's own payee pointer in force** (F355, as decided). The payment cMIP's next draft lets it name the vault declaration (F355 c).
+8. **H46's warning** says "this money can then be spent only with the chain key and its record". On screen, "its record" is spelled out: the vault's own key, declared with your chain key in Kišib, and the record Damgar keeps sealed to you.
+9. **The keeper's sequence is its operator's line** (records naming the one before). Records off that line follow in the order a place gave them, as one device keeps. *Cost:* a keeper on two devices would need its lines merged by cards, as any identity does. Until the freeze-ready drafts (F358), the logs are client-stated.
+10. **What a keeper records** (question 5, open): the collective's acts, its members' acts naming its agreements, and their rotations first. *Cost:* the records are public and list act IDs and signers, which those acts' outsides already show (OF21 d).
+11. **A dispute is shown from three facts**: Identity's status, the core's agreement in force, and the keepers' order. The core decides whether the signature still counts; Edubba only shows it.
+12. **The clock's depth is six blocks** (the Bitcoin clock Module, draft 3), written as a constant in Edubba's anchors list.
+13. **The service's payouts on regtest are paid from alice** (found 4). Off regtest, a service pays from its own node.
+14. **A collective's referral is its split plan's role share, judged**: the role off the top (rule 22), its evidence the repost the buyer's claim names. The payout carries the role (key 3) and its evidence (key 4).
 
 *Stated costs, unchanged and said on screen:*
 - the service holds the money between receipt and payouts (rule 32);
@@ -179,17 +176,20 @@ It runs on test nodes by default, and with `MOR_LN_REGTEST=RUN_DIR` on the regte
 
   | Client | Passed | Failed |
   | --- | --- | --- |
-  | Edubba | 109 | 0 |
+  | Edubba | 110 | 0 |
   | Damgar | 27 | 0 |
   | Dub | 39 | 0 |
   | Ummia | 23 | 0 |
+  | Kišib | 18 | 0 |
+  | the reader | 21 | 0 |
   | repo | 21 | 0 |
   | grants | 4 | 0 |
 
   The split service and the anchoring service type-check; they are tested in Edubba's and Damgar's suites.
-- **The core** (`cargo test --workspace`): 756 passed, 0 failed.
+- **The core** (`cargo test --workspace`): 757 passed, 0 failed (with F358's test).
 - **New in round 3, part C and D:**
-  - `split.test.ts`: the split service end to end, and the judged referral (200 to the reposter, 800 to the seller).
+  - `split.test.ts`: the split service end to end, and the judged referral (200 to the reposter, 800 to the seller). Since F358: the Money area is A and iPa at two keys; the pointer, signed with A's own key, is scoped; a Money-only reader reads none; a buyer is refused until iPa signs it in Dub's Signing tab, which says where the pointer sends the money.
+  - The core's `a_collectives_pointer_signed_by_its_money_area_f358`: one key of two puts no pointer in force; with the second it is the collective's; a key holding no box in Money never moves it.
   - `keepers.test.ts`: an Edubba agent keeping; a rotation in Kišib leaving out the line iPh's Dub signed on; the dispute.
   - `round-3.test.ts`: the end-to-end test.
   - Damgar's `anchor.test.ts`: one anchor late, one defaulted, nothing said missed before the chain shows it.
@@ -275,7 +275,7 @@ It runs on test nodes by default, and with `MOR_LN_REGTEST=RUN_DIR` on the regte
     - Try 50 / 30 / 10 first: refused, "add up to 90%".
     - Then sign it.
 15. **iPa and iPh sign it in Dub on the web** (Signing tab).
-16. **Record it.** Back in Edubba, on its card, **Look for answers**, then **Record it**. Check: "Its payee pointer now leads to the split service". In the service's window: "grant … accepted".
+16. **Record it.** Back in Edubba, on its card, **Look for answers**, then **Record it**. Check: "Its payee pointer now leads to the split service …, signed with A's own key in its area “Money”" (F358: the Money area signs it, never the collective's own key), and "One key of the area". In the service's window: "grant … accepted".
 17. **The keeper.** The collective's page, **Its keepers**: the agent, **Record what arrived**. It lists each record. Press it again: nothing new to record.
 
 **A protected file, bought through a repost**

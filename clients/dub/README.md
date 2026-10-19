@@ -235,6 +235,8 @@ It makes an identity as Dub on the Mac does: the chain key's 24 words shown once
 - **Leave this collective…** On a founding you signed, once your share is written down: read back first (you resign alone; it takes effect at the collective's line; you keep your stake as a departed holder; the last-voice warning where it applies), then **Sign my resignation**. The founder is told in the founding's thread. Operations `leave read`, `leave collective`.
 - **After a change of your keys** (Kišib), as Dub takes the new words and publishes the new encryption key, the member keys sealed to you are sealed again to it: unchanged.
 
+- **A collective's payee pointer** (F358, Money draft 10, rule 7), asked of a holder of its Money area: read with where payments to the collective go from then on (each rail, the version it replaces), then signed with your own key for the collective, as any act of that area.
+
 Tests: `clients/desk/test/member-keys.test.ts` drives Dub's Signing tab for all of it, beside Edubba.
 
 ## Round 3: sealed pictures and vows (part B)

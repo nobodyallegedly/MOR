@@ -462,6 +462,28 @@ var Verifier = class {
     return v2;
   }
   /**
+   * As `moneyChoose`, the pointer in force read by Agreements (Money
+   * draft 10, rule 7, F358): for a collective, a pointer signed with the
+   * member keys of its area reaching Money counts where that area's
+   * holders and threshold are met. `specs` as for every Agreements call.
+   * @param {any} specs
+   * @param {string} payee
+   * @param {any} amount
+   * @param {string[]} accepted
+   * @returns {any}
+   */
+  agreementsChoose(specs, payee, amount, accepted) {
+    const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(accepted, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsChoose(this.__wbg_ptr, specs, ptr0, len0, amount, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * Whether a claim on a work is shown as made after its release: the
    * release, if so (F121, D).
    * @param {any} specs
@@ -953,6 +975,22 @@ var Verifier = class {
     const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsPointerHolding(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The payee pointer in force as Agreements judge it (F358): `{ act,
+   * version, why }`, `act` null and `why` said where none counts.
+   * @param {any} specs
+   * @param {string} payee
+   * @returns {any}
+   */
+  agreementsPointer(specs, payee) {
+    const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPointer(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -8431,6 +8469,141 @@ async function authorityOfId(id, hints, via = {}, opts = {}) {
   return act ? authorityOf(act, hints, via, opts) : null;
 }
 
+// ../repo/src/proposals.ts
+var NEGOTIATION = 18;
+var SHARE_MEDIA = "f2f9c2b8a6e0c5c1b4a7d1e3f0a9c8b7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1";
+var ONE_TIME_LINE = "One-time key for my share of the chain key: ";
+var SIGNED = "Signed.";
+var DECLINED = "Declined.";
+var RESIGNED = "Resigned.";
+var negotiationPayload = (text4) => cborEncode(/* @__PURE__ */ new Map([[0, text4.normalize("NFC")]]));
+async function negotiate(by, to, o) {
+  const made = by.sign(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
+    public: false,
+    to: [to.id],
+    objects: o.thread ? [[o.thread, o.previous ?? o.thread]] : void 0,
+    acks: o.acks?.length ? o.acks : void 0,
+    refs: o.refs
+  });
+  const sealed = sealFor(made.act, made.key, [{ id: to.id, key: to.key }]);
+  const left = [];
+  const failed = [];
+  for (const hint of to.inbox) {
+    try {
+      const r = relayAt(hint, by.via);
+      for (const c2 of by.chainActs()) await r.putAct(c2).catch(() => void 0);
+      await r.putSealed(sealed);
+      left.push(hint);
+    } catch (e2) {
+      failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
+    }
+  }
+  return { id: made.id, act: made.act, key: made.key, sealed: sealedId(sealed), left, failed };
+}
+function readMessage(d) {
+  if (d.spec !== REPO_SPECS.agreements || d.type !== NEGOTIATION || !d.payload || !d.signer) return null;
+  const m = cborDecode(d.payload);
+  const text4 = m.get(0);
+  if (typeof text4 !== "string") return null;
+  const link = d.objects?.[0];
+  return {
+    id: d.id,
+    from: d.signer,
+    to: d.to ?? [],
+    text: text4,
+    thread: link ? link[0] : d.id,
+    previous: link ? link[1] : null,
+    acks: d.acks ?? [],
+    refs: (d.refs ?? []).flatMap((r, i) => d.refSigners?.[i] ? [[r, d.refSigners[i]]] : [])
+  };
+}
+function oneTimeKeyOf(text4) {
+  const line = text4.split("\n").find((l) => l.startsWith(ONE_TIME_LINE));
+  if (!line) return null;
+  try {
+    const k = Uint8Array.from(atob(line.slice(ONE_TIME_LINE.length).trim()), (c2) => c2.charCodeAt(0));
+    return k.length === 1216 ? k : null;
+  } catch {
+    return null;
+  }
+}
+function acceptanceText(signature2, oneTime) {
+  return [SIGNED, `My signature is act ${signature2}.`, ...oneTime ? [`${ONE_TIME_LINE}${base64(oneTime)}`] : []].join("\n");
+}
+async function sealShare(by, share2, oneTime, relays) {
+  const l = lockMedia(share2);
+  const payload = cborEncode(
+    /* @__PURE__ */ new Map([
+      [0, unhex(SHARE_MEDIA)],
+      [1, unhex(l.workHash)],
+      [2, unhex(l.lockedHash)],
+      [3, share2.length],
+      [4, l.nonce],
+      [5, l.key],
+      [6, relays]
+    ])
+  );
+  const made = by.sign(SPECS.envelopes, 0, payload, { public: false });
+  const sealed = sealFor(made.act, made.key, [{ key: oneTime }]);
+  const tag = pickupTag(oneTime);
+  const left = [];
+  for (const hint of relays) {
+    try {
+      const r = relayAt(hint, by.via);
+      await r.putMedia(l.locked);
+      await r.putSealed(sealed, [tag]);
+      left.push(hint);
+    } catch {
+    }
+  }
+  if (!left.length) throw new Error(`No relay took the share (${relays.join(", ")}).`);
+  return { sealed: sealedId(sealed), publication: made.id, left };
+}
+async function openShare(secret, relays, senderHints, via = {}) {
+  const tag = pickupTag(xwingPublic(secret));
+  for (const hint of relays) {
+    let items = [];
+    try {
+      items = (await relayAt(hint, via).feed({ pickup: tag })).items;
+    } catch {
+      continue;
+    }
+    for (const it of items) {
+      if (it.kind !== "sealed") continue;
+      const r = await receive(it.item, null, [secret], senderHints, via);
+      if (!r.opened || !r.act) continue;
+      const opened2 = await openedAct(it.item, secret);
+      if (!opened2) continue;
+      const m = cborDecode(opened2.payload);
+      if (hex(m.get(0)) !== SHARE_MEDIA) throw new Error("What was sealed to this one-time key is not a share.");
+      const lockedHash = hex(m.get(2));
+      for (const h of [.../* @__PURE__ */ new Set([...m.get(6) ?? [], ...relays])]) {
+        let locked2 = null;
+        try {
+          locked2 = await relayAt(h, via).getMedia(lockedHash);
+        } catch {
+          locked2 = null;
+        }
+        if (!locked2) continue;
+        const share2 = openMedia(locked2, m.get(5), m.get(4));
+        if (workHash(share2) !== hex(m.get(1))) throw new Error("The share does not match its fingerprint.");
+        return { share: share2, from: r.from ?? "", status: r.status ?? "unknown" };
+      }
+      throw new Error("The share was sealed to this key, but its contents were not found at the relays.");
+    }
+  }
+  return null;
+}
+async function openedAct(sealed, secret) {
+  try {
+    const o = openSealed(sealed, void 0, secret);
+    if (o.described.spec !== SPECS.envelopes || o.described.type !== 0 || !o.described.payload) return null;
+    return { payload: o.described.payload };
+  } catch {
+    return null;
+  }
+}
+
 // ../grants/src/member.ts
 var MEMBER_KEYS_SPEC = sha2562("Member keys cMIP, draft 1, test value until publication");
 var MEMBER_KEY = 0;
@@ -8705,6 +8878,40 @@ async function collectiveNow(collective, hints, via = {}) {
   } catch {
   }
   return { agreement: cur?.agreement ?? null, departed: cur?.departed ?? [], resignations, parties };
+}
+async function signAndAsk(me, collective, key, act, ask, text4, hints, via = {}) {
+  const at2 = await chainFor(collective, key, hints, via);
+  const made = signAsMember(collective, key, at2, { ...act, public: true });
+  const places = await publishAt([made.act], hints, via);
+  if (!places.length) throw new Error("No relay took the act: nothing counts. Try again.");
+  const asked = [];
+  const notAsked = [];
+  for (const h of ask) {
+    try {
+      const l = await lookUp(h, hints, via);
+      const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((r) => r.hints);
+      if (!l.encryptionKey || !inbox?.length) throw new Error("no inbox or encryption key");
+      await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: text4, refs: [[made.id, collective], [collective, collective]] });
+      asked.push(h);
+    } catch {
+      notAsked.push(h);
+    }
+  }
+  return { act: made.id, places, asked, notAsked };
+}
+async function collectivePointer(collective, hints, via = {}, pay) {
+  const places = await collectivePlaces(collective, hints, via);
+  const { v, founding } = await collectiveVerifier(collective, places, via).catch(() => ({ v: null, founding: null }));
+  if (!v || !founding) return null;
+  const pointers = [];
+  for (const a of await allBy(collective, places, via)) {
+    const d = describeAct(a);
+    if (d.spec === MIRS.money && d.type === 0) pointers.push([d.id, true]);
+  }
+  const specs = withGrantLimits(AGREEMENTS_SPECS, pointers);
+  const p = v.agreementsPointer(specs, collective);
+  const choice = pay ? v.agreementsChoose(specs, collective, pay.amount, pay.accepted) : null;
+  return { pointer: p.act ?? null, version: p.version ?? 0, why: p.why ?? null, choice };
 }
 async function judgeCollective(collective, acts, hints, via = {}, limits = []) {
   const { v } = await collectiveVerifier(collective, hints, via, acts);
@@ -13264,7 +13471,7 @@ async function readDraft2(d, hints, via = {}) {
   const extra = [];
   if (d.note !== null && d.note.length > MAX_NOTE) extra.push(`Claude's note is longer than ${MAX_NOTE} characters.`);
   let r;
-  if (d.spec === POST_SPECS.text && d.type === 0) r = d.public ? await readPost2(d, who3, hints, via) : await readMessage(d, who3, hints, via);
+  if (d.spec === POST_SPECS.text && d.type === 0) r = d.public ? await readPost2(d, who3, hints, via) : await readMessage2(d, who3, hints, via);
   else if (d.spec === POST_SPECS.envelopes && d.type === PUBLICATION) r = await readPicture2(d, who3);
   else if (d.spec === POST_SPECS.envelopes && d.type === WITHDRAWAL) r = await readWithdrawal(d, who3, hints, via);
   else r = { kind: "refused", title: "An act Claude does not prepare", summary: [], sections: [{ heading: "Who signs", lines: who3 }], quoted: [], blocking: [notPreparable(d.spec, d.type)] };
@@ -13370,7 +13577,7 @@ async function recipientOf(to, hints, via) {
   if (!inbox?.length) throw new Error(`the identity ${to} declares no inbox, so it cannot receive a message`);
   return { key: l.encryptionKey, inbox, homes: l.resolution.homes.map((h) => h.hint) };
 }
-async function readMessage(d, who3, hints, via) {
+async function readMessage2(d, who3, hints, via) {
   const blocking = [];
   const { text: text4, what } = textOf(d, blocking);
   const lines4 = [...who3];
@@ -16386,141 +16593,6 @@ var TestCollective = class _TestCollective {
     return counts2;
   }
 };
-
-// ../repo/src/proposals.ts
-var NEGOTIATION = 18;
-var SHARE_MEDIA = "f2f9c2b8a6e0c5c1b4a7d1e3f0a9c8b7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1";
-var ONE_TIME_LINE = "One-time key for my share of the chain key: ";
-var SIGNED = "Signed.";
-var DECLINED = "Declined.";
-var RESIGNED = "Resigned.";
-var negotiationPayload = (text4) => cborEncode(/* @__PURE__ */ new Map([[0, text4.normalize("NFC")]]));
-async function negotiate(by, to, o) {
-  const made = by.sign(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
-    public: false,
-    to: [to.id],
-    objects: o.thread ? [[o.thread, o.previous ?? o.thread]] : void 0,
-    acks: o.acks?.length ? o.acks : void 0,
-    refs: o.refs
-  });
-  const sealed = sealFor(made.act, made.key, [{ id: to.id, key: to.key }]);
-  const left = [];
-  const failed = [];
-  for (const hint of to.inbox) {
-    try {
-      const r = relayAt(hint, by.via);
-      for (const c2 of by.chainActs()) await r.putAct(c2).catch(() => void 0);
-      await r.putSealed(sealed);
-      left.push(hint);
-    } catch (e2) {
-      failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
-    }
-  }
-  return { id: made.id, act: made.act, key: made.key, sealed: sealedId(sealed), left, failed };
-}
-function readMessage2(d) {
-  if (d.spec !== REPO_SPECS.agreements || d.type !== NEGOTIATION || !d.payload || !d.signer) return null;
-  const m = cborDecode(d.payload);
-  const text4 = m.get(0);
-  if (typeof text4 !== "string") return null;
-  const link = d.objects?.[0];
-  return {
-    id: d.id,
-    from: d.signer,
-    to: d.to ?? [],
-    text: text4,
-    thread: link ? link[0] : d.id,
-    previous: link ? link[1] : null,
-    acks: d.acks ?? [],
-    refs: (d.refs ?? []).flatMap((r, i) => d.refSigners?.[i] ? [[r, d.refSigners[i]]] : [])
-  };
-}
-function oneTimeKeyOf(text4) {
-  const line = text4.split("\n").find((l) => l.startsWith(ONE_TIME_LINE));
-  if (!line) return null;
-  try {
-    const k = Uint8Array.from(atob(line.slice(ONE_TIME_LINE.length).trim()), (c2) => c2.charCodeAt(0));
-    return k.length === 1216 ? k : null;
-  } catch {
-    return null;
-  }
-}
-function acceptanceText(signature2, oneTime) {
-  return [SIGNED, `My signature is act ${signature2}.`, ...oneTime ? [`${ONE_TIME_LINE}${base64(oneTime)}`] : []].join("\n");
-}
-async function sealShare(by, share2, oneTime, relays) {
-  const l = lockMedia(share2);
-  const payload = cborEncode(
-    /* @__PURE__ */ new Map([
-      [0, unhex(SHARE_MEDIA)],
-      [1, unhex(l.workHash)],
-      [2, unhex(l.lockedHash)],
-      [3, share2.length],
-      [4, l.nonce],
-      [5, l.key],
-      [6, relays]
-    ])
-  );
-  const made = by.sign(SPECS.envelopes, 0, payload, { public: false });
-  const sealed = sealFor(made.act, made.key, [{ key: oneTime }]);
-  const tag = pickupTag(oneTime);
-  const left = [];
-  for (const hint of relays) {
-    try {
-      const r = relayAt(hint, by.via);
-      await r.putMedia(l.locked);
-      await r.putSealed(sealed, [tag]);
-      left.push(hint);
-    } catch {
-    }
-  }
-  if (!left.length) throw new Error(`No relay took the share (${relays.join(", ")}).`);
-  return { sealed: sealedId(sealed), publication: made.id, left };
-}
-async function openShare(secret, relays, senderHints, via = {}) {
-  const tag = pickupTag(xwingPublic(secret));
-  for (const hint of relays) {
-    let items = [];
-    try {
-      items = (await relayAt(hint, via).feed({ pickup: tag })).items;
-    } catch {
-      continue;
-    }
-    for (const it of items) {
-      if (it.kind !== "sealed") continue;
-      const r = await receive(it.item, null, [secret], senderHints, via);
-      if (!r.opened || !r.act) continue;
-      const opened2 = await openedAct(it.item, secret);
-      if (!opened2) continue;
-      const m = cborDecode(opened2.payload);
-      if (hex(m.get(0)) !== SHARE_MEDIA) throw new Error("What was sealed to this one-time key is not a share.");
-      const lockedHash = hex(m.get(2));
-      for (const h of [.../* @__PURE__ */ new Set([...m.get(6) ?? [], ...relays])]) {
-        let locked2 = null;
-        try {
-          locked2 = await relayAt(h, via).getMedia(lockedHash);
-        } catch {
-          locked2 = null;
-        }
-        if (!locked2) continue;
-        const share2 = openMedia(locked2, m.get(5), m.get(4));
-        if (workHash(share2) !== hex(m.get(1))) throw new Error("The share does not match its fingerprint.");
-        return { share: share2, from: r.from ?? "", status: r.status ?? "unknown" };
-      }
-      throw new Error("The share was sealed to this key, but its contents were not found at the relays.");
-    }
-  }
-  return null;
-}
-async function openedAct(sealed, secret) {
-  try {
-    const o = openSealed(sealed, void 0, secret);
-    if (o.described.spec !== SPECS.envelopes || o.described.type !== 0 || !o.described.payload) return null;
-    return { payload: o.described.payload };
-  } catch {
-    return null;
-  }
-}
 
 // src/web/node-url.ts
 var fileURLToPath = (u2) => decodeURIComponent(new URL(String(u2)).pathname);
@@ -20589,7 +20661,7 @@ var Real = class {
                 } catch {
                 }
               }
-              const m = o ? readMessage2(o.described) : null;
+              const m = o ? readMessage(o.described) : null;
               if (!m) continue;
               const member = threads.get(m.thread);
               if (!member || m.from !== member || p.answers[member]) continue;
@@ -20900,7 +20972,7 @@ var Real = class {
             { text: "Computed by the split cMIP, draft 2; no fee." }
           ]
         },
-        { heading: "Who divides it (the split service, field 14)", lines: [{ text: `${service ? names2(service) : "\u2026"}, by a grant of the collective naming the key it made for this collective (${key ? `${key.slice(0, 16)}\u2026` : "\u2026"}). The grant counts once the service signs to accept it. Its key signs only receipts for money coming in under the collective\u2019s own offers (rule 16).` }, { text: "Where the collective is paid: once it is recorded, Edubba signs the collective\u2019s payee pointer leading to the service\u2019s own rails, with the collective\u2019s signing key held here (the pointer check, rule 16), so every buyer\u2019s Damgar reads it." }] },
+        { heading: "Who divides it (the split service, field 14)", lines: [{ text: `${service ? names2(service) : "\u2026"}, by a grant of the collective naming the key it made for this collective (${key ? `${key.slice(0, 16)}\u2026` : "\u2026"}). The grant counts once the service signs to accept it. Its key signs only receipts for money coming in under the collective\u2019s own offers (rule 16).` }, { text: "Where the collective is paid: once it is recorded, its payee pointer leads to the service\u2019s own rails (the pointer check, rule 16), signed with the keys of its area reaching Money, a holder\u2019s own key here and the others\u2019 asked where the area needs more (Money draft 10, rule 7, F358). The collective\u2019s own key signs none of it." }] },
         { heading: "Who keeps its record (keepers, field 3)", lines: keepers.length ? [{ text: `${keepers.map(names2).join(", ")}; an act counts as recorded once ${a.keepersNeeded === keepers.length ? "every one of them" : `${a.keepersNeeded} of them`} recorded it (rules 36 to 44). A keeper sees the acts it records; one may be an Edubba agent.` }] : [{ text: "None named." }] },
         ...preview ? [{ heading: "What it changes", lines: readChanges(TestCollective.foundingTerms(c2.f.governance, c2.f.members), preview.payload, names2) }, ...beforeSigning(preview.payload, names2)] : []
       ],
@@ -20945,9 +21017,17 @@ var Real = class {
       }
     });
   }
-  /** The collective's payee pointer, a new version naming its split service's own rails (rule 16), signed with its own key; its id. */
-  async pointToService(c2, grant2) {
-    const hints = this.hints([...c2.f.relays, ...c2.f.identity.homes.map((h) => h.hint)]);
+  /**
+   * The collective's payee pointer, a new version naming its split service's
+   * own rails (rule 16), signed with a member's own key in the area reaching
+   * Money (Money draft 10, rule 7, F358, decided by Nobody, allegedly, 19
+   * October 2026: "A founder should not have a special position if the
+   * constitution does not say so"): `by`, or another identity held here
+   * holding a box there; the area's other holders asked for their key where
+   * it needs more than one. The collective's own key signs none of it.
+   */
+  async pointToService(c2, grant2, by) {
+    const hints = this.hints([...c2.f.relays, ...c2.f.identity.homes.map((h) => h.hint), ...this.store.settings().homes.map((h) => h.hint)]);
     let g = null;
     for (const h of hints) {
       g = await relayAt(h, this.via).getAct(grant2).catch(() => null);
@@ -20972,18 +21052,31 @@ var Real = class {
     }
     if (!spAct) throw new Error("the split service\u2019s pointer was not found");
     const rails = moneyRead(0, describeAct(spAct).payload).act.rails;
-    const own = await lookUp(c2.identity, hints, this.via).catch(() => null);
-    if (own) for (const a of await allBy2(c2.identity, hints, this.via)) {
-      try {
-        own.verifier.add(a);
-      } catch {
+    const places = await collectivePlaces(c2.identity, hints, this.via);
+    const { area } = await areaReaching(c2.identity, places, { spec: MIRS.money, type: 0 }, this.via);
+    if (!area) throw new Error("no area of its constitution reaches Money: its payee pointer is signed by the holders of that area (F358), and there is none");
+    let signer = null;
+    for (const id of [by, ...this.store.book().identities.map((i) => i.id)].filter((x, i, xs) => xs.indexOf(x) === i)) {
+      if (!area.holders.includes(id) || !this.store.holds(id)) continue;
+      const me = this.store.identity(id);
+      const keys = await readMemberKeys(me.id, me.f.encryption.map((e2) => unhex(e2.secret)), me.f.homes.map((h) => h.hint), this.via).catch(() => []);
+      const key = keys.length ? await memberKeyFor(keys, c2.identity, places, this.via).catch(() => null) : null;
+      if (key) {
+        signer = { me, key };
+        break;
       }
     }
-    const cur = own ? own.verifier.moneyPointer(MIRS.money, c2.identity) : { act: null, version: 0 };
-    const payload = pointerPayload({ payee: c2.identity, version: cur.version + 1, ...cur.act ? { previous: cur.act } : {}, rails: rails.map((x) => [x.module, new Uint8Array(x.address)]) });
-    const made = await c2.id.publish(MIRS.money, 0, payload, { public: true, relays: c2.f.relays });
-    this.saveCollective(c2);
-    return made.id;
+    if (!signer) throw new Error(`no identity held here holds a box in its area \u201C${area.name}\u201D with its own key for the collective: one of ${area.holders.map(this.names()).join(", ")} signs it, in Damgar or here`);
+    const cur = await collectivePointer(c2.identity, places, this.via).catch(() => null);
+    const payload = pointerPayload({ payee: c2.identity, version: (cur?.version ?? 0) + 1, ...cur?.pointer ? { previous: cur.pointer } : {}, rails: rails.map((x) => [x.module, new Uint8Array(x.address)]) });
+    const others = area.number > 1 ? area.holders.filter((h) => h !== signer.me.id) : [];
+    const names2 = this.names();
+    try {
+      const made = await signAndAsk(signer.me, c2.identity, signer.key, { spec: MIRS.money, type: 0, payload }, others, `${names2(signer.me.id)} signed the payee pointer of the collective, leading to its split service ${names2(service)}, with their own key in its area \u201C${area.name}\u201D, which asks ${area.number} keys. Read it in your Signing tab, then sign it with yours.`, places, this.via);
+      return { act: made.act, signer: signer.me.id, area: area.name, needed: area.number, asked: made.asked, notAsked: made.notAsked };
+    } finally {
+      this.store.saveIdentity(signer.me);
+    }
   }
   /** Record a money clone every member signed (rule 72): from then on it is in force. */
   recordMoney(act) {
@@ -20999,13 +21092,19 @@ var Real = class {
       p.rotated = r;
       this.saveProposal(p);
       const lines4 = [{ text: `Recorded on the collective\u2019s line (${short7(r)}): its stakes, split plan, split service${p.governance.keepers ? " and keepers" : ""} are in force.`, tone: "ok" }];
+      const acts = [r];
       try {
-        const ptr = await this.pointToService(c2, p.governance.splitGrant);
-        lines4.push({ text: `Its payee pointer now leads to the split service (${short7(ptr)}): a buyer\u2019s payment goes there, the service answering for the collective.`, tone: "ok" });
+        const ptr = await this.pointToService(c2, p.governance.splitGrant, p.founder);
+        acts.push(ptr.act);
+        const names2 = this.names();
+        lines4.push({ text: `Its payee pointer now leads to the split service (${short7(ptr.act)}), signed with ${names2(ptr.signer)}\u2019s own key in its area \u201C${ptr.area}\u201D.`, tone: "ok" });
+        lines4.push(
+          ptr.needed > 1 ? { text: `The area asks ${ptr.needed} keys: ${ptr.asked.length ? `${ptr.asked.map(names2).join(", ")} ${ptr.asked.length === 1 ? "is" : "are"} asked for theirs, in their own app` : "nobody could be asked"}${ptr.notAsked.length ? `; not reached: ${ptr.notAsked.map(names2).join(", ")}` : ""}. Until then a buyer\u2019s payment cannot reach the service.`, tone: "warn" } : { text: "One key of the area: a buyer\u2019s payment goes there now, the service answering for the collective.", tone: "ok" }
+        );
       } catch (e2) {
         lines4.push({ text: `Its payee pointer could not be pointed at the split service yet: ${err6(e2)}`, tone: "warn" });
       }
-      return { title: "In force", lines: lines4, acts: [r] };
+      return { title: "In force", lines: lines4, acts };
     });
   }
   // ------------------------------------------------------------ keepers (rules 36 to 44)
@@ -21798,6 +21897,12 @@ function actOfCollective(d, names2) {
       const lines4 = [`A Money act: ${r.type}.`];
       if (amount) lines4.push(`Amount: ${amount.value.toLocaleString("en")} in unit ${amount.unit.slice(0, 12)}\u2026 (the Bitcoin units Module names regtest satoshis so).`);
       for (const k of ["payer", "payee", "debtor", "creditor"]) if (typeof r[k] === "string") lines4.push(`${k[0].toUpperCase()}${k.slice(1)}: ${names2(r[k])}.`);
+      if (r.type === "pointer") {
+        const rails = r.rails ?? [];
+        lines4.push(`Where payments to the collective go from now on (its payee pointer, version ${r.version}${r.previous ? `, replacing ${String(r.previous).slice(0, 12)}\u2026` : ""}):`);
+        for (const [i, x] of rails.entries()) lines4.push(`Rail ${i + 1}: ${labelOf(x.module) ?? `a rail Module not known here (${x.module.slice(0, 12)}\u2026)`}, address ${hex(new Uint8Array(x.address)).slice(0, 24)}\u2026`);
+        lines4.push("Signing it with your key counts as your consent in the area reaching Money: check that these rails are the ones the collective agreed (its split service\u2019s, say).");
+      }
       return base(`Sign a money act of the collective: ${r.type}`, lines4);
     }
     if (d.spec === SPECS.text && d.type === 0) {
@@ -21891,24 +21996,7 @@ ${c2.id}
 `), ...payload]));
 var promisePayload = (c2, a) => obligationPayload({ debtor: c2.id, creditor: a.to, unit: a.amount.unit, value: a.amount.value, pointer: a.pointer });
 async function signPromise(me, c2, payload, ask, text4, hints, via) {
-  const at2 = await chainFor(c2.id, c2.key, hints, via);
-  const made = signAsMember(c2.id, c2.key, at2, { spec: AGREEMENTS_SPECS.money, type: 1, payload, public: true });
-  const places = await publishAt([made.act], hints, via);
-  if (!places.length) throw new Error("No relay took the promise: nothing counts. Try again.");
-  const asked = [];
-  const notAsked = [];
-  for (const h of ask) {
-    try {
-      const l = await lookUp(h, hints, via);
-      const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((r) => r.hints);
-      if (!l.encryptionKey || !inbox?.length) throw new Error("no inbox or encryption key");
-      await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: text4, refs: [[made.id, c2.id], [c2.id, c2.id]] });
-      asked.push(h);
-    } catch {
-      notAsked.push(h);
-    }
-  }
-  return { act: made.id, places, asked, notAsked };
+  return signAndAsk(me, c2.id, c2.key, { spec: AGREEMENTS_SPECS.money, type: 1, payload }, ask, text4, hints, via);
 }
 async function standing(c2, act, amount, hints, via) {
   const area = c2.area;
@@ -22989,8 +23077,13 @@ var Damgar = class {
    */
   async route(me, s, payee, amount, acc) {
     const { look } = await this.payee(payee, me, s);
-    const c2 = look.verifier.moneyChoose(MONEY, payee, amount, [...acc]);
-    const ptr = look.verifier.moneyPointer(MONEY, payee);
+    let c2 = look.verifier.moneyChoose(MONEY, payee, amount, [...acc]);
+    let ptr = look.verifier.moneyPointer(MONEY, payee);
+    const col = await collectivePointer(payee, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via, { amount, accepted: [...acc] }).catch(() => null);
+    if (col?.choice) {
+      c2 = col.choice;
+      ptr = { act: col.pointer };
+    }
     if (c2.to === "nowhere") throw new Error(`It cannot be paid: ${c2.why}. The payee could be told why, in a message.`);
     return {
       to: c2.to,
@@ -25737,7 +25830,7 @@ var Dub = class _Dub {
       const t = cborDecode(d.payload).get(0);
       if (typeof t === "string") text4 = t;
     }
-    const talk = readMessage2(d);
+    const talk = readMessage(d);
     if (talk) text4 = talk.text;
     return {
       ...talk ? { talk: { thread: talk.thread, previous: talk.previous, acks: talk.acks } } : {},

@@ -159,6 +159,28 @@ var Verifier = class {
     return v2;
   }
   /**
+   * As `moneyChoose`, the pointer in force read by Agreements (Money
+   * draft 10, rule 7, F358): for a collective, a pointer signed with the
+   * member keys of its area reaching Money counts where that area's
+   * holders and threshold are met. `specs` as for every Agreements call.
+   * @param {any} specs
+   * @param {string} payee
+   * @param {any} amount
+   * @param {string[]} accepted
+   * @returns {any}
+   */
+  agreementsChoose(specs2, payee, amount, accepted2) {
+    const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(accepted2, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsChoose(this.__wbg_ptr, specs2, ptr0, len0, amount, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * Whether a claim on a work is shown as made after its release: the
    * release, if so (F121, D).
    * @param {any} specs
@@ -650,6 +672,22 @@ var Verifier = class {
     const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsPointerHolding(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The payee pointer in force as Agreements judge it (F358): `{ act,
+   * version, why }`, `act` null and `why` said where none counts.
+   * @param {any} specs
+   * @param {string} payee
+   * @returns {any}
+   */
+  agreementsPointer(specs2, payee) {
+    const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPointer(this.__wbg_ptr, specs2, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }

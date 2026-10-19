@@ -159,6 +159,28 @@ var Verifier = class {
     return v2;
   }
   /**
+   * As `moneyChoose`, the pointer in force read by Agreements (Money
+   * draft 10, rule 7, F358): for a collective, a pointer signed with the
+   * member keys of its area reaching Money counts where that area's
+   * holders and threshold are met. `specs` as for every Agreements call.
+   * @param {any} specs
+   * @param {string} payee
+   * @param {any} amount
+   * @param {string[]} accepted
+   * @returns {any}
+   */
+  agreementsChoose(specs, payee, amount2, accepted) {
+    const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(accepted, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsChoose(this.__wbg_ptr, specs, ptr0, len0, amount2, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * Whether a claim on a work is shown as made after its release: the
    * release, if so (F121, D).
    * @param {any} specs
@@ -650,6 +672,22 @@ var Verifier = class {
     const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsPointerHolding(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The payee pointer in force as Agreements judge it (F358): `{ act,
+   * version, why }`, `act` null and `why` said where none counts.
+   * @param {any} specs
+   * @param {string} payee
+   * @returns {any}
+   */
+  agreementsPointer(specs, payee) {
+    const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPointer(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -4758,6 +4796,40 @@ async function collectiveNow(collective, hints, via = {}) {
   }
   return { agreement: cur?.agreement ?? null, departed: cur?.departed ?? [], resignations, parties };
 }
+async function signAndAsk(me, collective, key, act, ask2, text3, hints, via = {}) {
+  const at = await chainFor(collective, key, hints, via);
+  const made = signAsMember(collective, key, at, { ...act, public: true });
+  const places = await publishAt([made.act], hints, via);
+  if (!places.length) throw new Error("No relay took the act: nothing counts. Try again.");
+  const asked = [];
+  const notAsked = [];
+  for (const h of ask2) {
+    try {
+      const l = await lookUp(h, hints, via);
+      const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((r) => r.hints);
+      if (!l.encryptionKey || !inbox?.length) throw new Error("no inbox or encryption key");
+      await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: text3, refs: [[made.id, collective], [collective, collective]] });
+      asked.push(h);
+    } catch {
+      notAsked.push(h);
+    }
+  }
+  return { act: made.id, places, asked, notAsked };
+}
+async function collectivePointer(collective, hints, via = {}, pay) {
+  const places = await collectivePlaces(collective, hints, via);
+  const { v, founding } = await collectiveVerifier(collective, places, via).catch(() => ({ v: null, founding: null }));
+  if (!v || !founding) return null;
+  const pointers = [];
+  for (const a of await allBy(collective, places, via)) {
+    const d = describeAct(a);
+    if (d.spec === MIRS.money && d.type === 0) pointers.push([d.id, true]);
+  }
+  const specs = withGrantLimits(AGREEMENTS_SPECS, pointers);
+  const p = v.agreementsPointer(specs, collective);
+  const choice = pay ? v.agreementsChoose(specs, collective, pay.amount, pay.accepted) : null;
+  return { pointer: p.act ?? null, version: p.version ?? 0, why: p.why ?? null, choice };
+}
 async function judgeCollective(collective, acts, hints, via = {}, limits = []) {
   const { v } = await collectiveVerifier(collective, hints, via, acts);
   const out = /* @__PURE__ */ new Map();
@@ -4868,24 +4940,7 @@ ${c.id}
 `), ...payload]));
 var promisePayload = (c, a) => obligationPayload({ debtor: c.id, creditor: a.to, unit: a.amount.unit, value: a.amount.value, pointer: a.pointer });
 async function signPromise(me, c, payload, ask2, text3, hints, via) {
-  const at = await chainFor(c.id, c.key, hints, via);
-  const made = signAsMember(c.id, c.key, at, { spec: AGREEMENTS_SPECS.money, type: 1, payload, public: true });
-  const places = await publishAt([made.act], hints, via);
-  if (!places.length) throw new Error("No relay took the promise: nothing counts. Try again.");
-  const asked = [];
-  const notAsked = [];
-  for (const h of ask2) {
-    try {
-      const l = await lookUp(h, hints, via);
-      const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((r) => r.hints);
-      if (!l.encryptionKey || !inbox?.length) throw new Error("no inbox or encryption key");
-      await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: text3, refs: [[made.id, c.id], [c.id, c.id]] });
-      asked.push(h);
-    } catch {
-      notAsked.push(h);
-    }
-  }
-  return { act: made.id, places, asked, notAsked };
+  return signAndAsk(me, c.id, c.key, { spec: AGREEMENTS_SPECS.money, type: 1, payload }, ask2, text3, hints, via);
 }
 async function standing(c, act, amount2, hints, via) {
   const area = c.area;
@@ -8487,8 +8542,13 @@ var Damgar = class {
    */
   async route(me, s, payee, amount2, acc) {
     const { look } = await this.payee(payee, me, s);
-    const c = look.verifier.moneyChoose(MONEY, payee, amount2, [...acc]);
-    const ptr = look.verifier.moneyPointer(MONEY, payee);
+    let c = look.verifier.moneyChoose(MONEY, payee, amount2, [...acc]);
+    let ptr = look.verifier.moneyPointer(MONEY, payee);
+    const col = await collectivePointer(payee, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via, { amount: amount2, accepted: [...acc] }).catch(() => null);
+    if (col?.choice) {
+      c = col.choice;
+      ptr = { act: col.pointer };
+    }
     if (c.to === "nowhere") throw new Error(`It cannot be paid: ${c.why}. The payee could be told why, in a message.`);
     return {
       to: c.to,

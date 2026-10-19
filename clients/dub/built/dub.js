@@ -159,6 +159,28 @@ var Verifier = class {
     return v2;
   }
   /**
+   * As `moneyChoose`, the pointer in force read by Agreements (Money
+   * draft 10, rule 7, F358): for a collective, a pointer signed with the
+   * member keys of its area reaching Money counts where that area's
+   * holders and threshold are met. `specs` as for every Agreements call.
+   * @param {any} specs
+   * @param {string} payee
+   * @param {any} amount
+   * @param {string[]} accepted
+   * @returns {any}
+   */
+  agreementsChoose(specs, payee, amount, accepted) {
+    const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(accepted, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsChoose(this.__wbg_ptr, specs, ptr0, len0, amount, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * Whether a claim on a work is shown as made after its release: the
    * release, if so (F121, D).
    * @param {any} specs
@@ -650,6 +672,22 @@ var Verifier = class {
     const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsPointerHolding(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
+   * The payee pointer in force as Agreements judge it (F358): `{ act,
+   * version, why }`, `act` null and `why` said where none counts.
+   * @param {any} specs
+   * @param {string} payee
+   * @returns {any}
+   */
+  agreementsPointer(specs, payee) {
+    const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPointer(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -8781,6 +8819,288 @@ function escapeControls(s) {
   return s.replace(INVISIBLE2, (c) => `<U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}>`);
 }
 
+// ../damgar/src/units.ts
+var u = moneySpecs().units;
+var BITCOIN_UNITS = {
+  key: "bitcoin-units",
+  name: "Bitcoin units",
+  text: "modules/units-bitcoin-draft-1.md",
+  draft: 1,
+  does: "The satoshi on Bitcoin, and the satoshi of each of Bitcoin\u2019s test networks, which is not a satoshi: four units, each its own specification, so that a test payment can never pay a real debt.",
+  units: [
+    { hash: u.bitcoin, name: "satoshi (Bitcoin)", one: "satoshi", many: "satoshis", test: false, network: 0 },
+    { hash: u.testnet, name: "satoshi (testnet)", one: "testnet satoshi", many: "testnet satoshis", test: true, network: 1 },
+    { hash: u.signet, name: "satoshi (signet)", one: "signet satoshi", many: "signet satoshis", test: true, network: 2 },
+    { hash: u.regtest, name: "satoshi (regtest)", one: "regtest satoshi", many: "regtest satoshis", test: true, network: 3 }
+  ]
+};
+var UNITS_MODULES = [BITCOIN_UNITS];
+var unitOf = (hash) => {
+  for (const m of UNITS_MODULES) {
+    const x = m.units.find((y) => y.hash === hash);
+    if (x) return { unit: x, module: m };
+  }
+  return null;
+};
+var grouped = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+function say(a, accepted) {
+  const k = unitOf(a.unit);
+  if (!k || !accepted.has(a.unit)) return `${grouped(a.value)} of unit ${a.unit.slice(0, 8)}\u2026 (${k ? `${k.module.name}, not accepted here` : "a units Module Damgar does not know"})`;
+  return `${grouped(a.value)} ${a.value === 1 ? k.unit.one : k.unit.many}`;
+}
+function totals(xs) {
+  const by = /* @__PURE__ */ new Map();
+  for (const x of xs) by.set(x.unit, (by.get(x.unit) ?? 0) + x.value);
+  return [...by.entries()].map(([unit, value]) => ({ unit, value }));
+}
+function readValue(typed) {
+  const t = typed.replace(/[\s_]/g, "");
+  if (!/^\d{1,15}$/.test(t) || Number(t) === 0) throw new Error("An amount is a whole number above zero, in the unit\u2019s smallest part.");
+  return Number(t);
+}
+
+// ../grants/src/limits.ts
+var GRANT_LIMITS_SPEC = sha2562("Grant limits cMIP, draft 1, test value until publication");
+var CLOCKS = { timestamp: TIMESTAMP_SPEC };
+function encodeLimits(l) {
+  if (!l.cap && !l.expiry) throw new Error("Limits name a cap, an expiry, or both.");
+  const m = /* @__PURE__ */ new Map();
+  if (l.cap) {
+    if (!Number.isSafeInteger(l.cap.value) || l.cap.value < 0) throw new Error("The cap is a whole amount.");
+    m.set(0, [unhex(l.cap.unit), l.cap.value]);
+  }
+  if (l.expiry) {
+    if (l.expiry.clock === "timestamp") m.set(1, [unhex(CLOCKS.timestamp), unhex(l.expiry.identity), l.expiry.time]);
+    else m.set(1, [unhex(l.expiry.spec), l.expiry.network, l.expiry.height]);
+  }
+  return cborEncode(m);
+}
+function limitsValue(l) {
+  return cborDecode(encodeLimits(l));
+}
+var h32 = (v) => v instanceof Uint8Array && v.length === 32;
+function readLimits(v) {
+  if (!(v instanceof Map)) throw new Error("the limits are not a map");
+  const m = v;
+  for (const k of m.keys()) if (k !== 0 && k !== 1) throw new Error(`the limits carry a key this cMIP does not define (${k})`);
+  if (!m.size) throw new Error("the limits name neither a cap nor an expiry");
+  const out = {};
+  if (m.has(0)) {
+    const c = m.get(0);
+    if (!Array.isArray(c) || c.length !== 2 || !h32(c[0]) || typeof c[1] !== "number" || c[1] < 0) throw new Error("the cap is not [unit, value]");
+    out.cap = { unit: hex(c[0]), value: c[1] };
+  }
+  if (m.has(1)) {
+    const e2 = m.get(1);
+    if (!Array.isArray(e2) || e2.length !== 3 || !h32(e2[0]) || typeof e2[2] !== "number") throw new Error("the expiry is not [clock, reference, point]");
+    if (hex(e2[0]) === CLOCKS.timestamp) {
+      if (!h32(e2[1])) throw new Error("a timestamp clock is named by its identity");
+      out.expiry = { clock: "timestamp", identity: hex(e2[1]), time: e2[2] };
+    } else {
+      if (typeof e2[1] !== "number") throw new Error("a Bitcoin clock is named by its network");
+      out.expiry = { clock: "height", spec: hex(e2[0]), network: e2[1], height: e2[2] };
+    }
+  }
+  return out;
+}
+var MESSAGES = { specs: [] };
+function amountOf(act, moneySpec) {
+  if (act.type === void 0 || !act.payload) return null;
+  if (act.spec && MESSAGES.specs.includes(act.spec)) {
+    try {
+      const m = cborDecode(act.payload);
+      const pair = (x) => Array.isArray(x) && x.length === 2 && x[0] instanceof Uint8Array ? { unit: hex(x[0]), value: Number(x[1]) } : null;
+      if (act.type === 1) return pair(m.get(2));
+      if (act.type === 2) return pair(m.get(0));
+      if (act.type === 4) return pair(m.get(4));
+      if (act.type !== 3) return null;
+      const c = readCommitment(cborEncode(m.get(0)));
+      return { unit: c.amount.unit, value: c.amount.value };
+    } catch {
+      return null;
+    }
+  }
+  if (act.spec !== moneySpec) return null;
+  try {
+    const r = moneyRead(act.type, act.payload);
+    return r.act.amount ? { unit: r.act.amount.unit, value: r.act.amount.value } : null;
+  } catch {
+    return null;
+  }
+}
+function judge(l, act, moneySpec, places = {}) {
+  if (l.cap) {
+    const a = amountOf(act, moneySpec);
+    if (a && a.unit !== l.cap.unit) return { within: false, why: `it moves an amount in another unit than the cap\u2019s (2.2): no conversion is assumed` };
+    if (a && a.value > l.cap.value) return { within: false, why: `it moves ${a.value}, above the cap of ${l.cap.value} per act (2.2)` };
+  }
+  if (l.expiry) {
+    if (l.expiry.clock === "timestamp") {
+      const t = places.stamps?.get(l.expiry.identity)?.get(act.id);
+      if (t === void 0) return { within: null, why: "no stamp of the clock the grant names places it yet: whether it came before the expiry is unknown (3.1)" };
+      if (t > l.expiry.time) return { within: false, why: `the clock the grant names stamped it at ${new Date(t * 1e3).toISOString()}, past the expiry ${new Date(l.expiry.time * 1e3).toISOString()} (3.1)` };
+    } else {
+      const h = places.heights?.get(act.id);
+      if (h === void 0) return { within: null, why: "no anchor placing it on the Bitcoin clock the grant names is checked here: unknown (3.2)" };
+      if (h > l.expiry.height) return { within: false, why: `anchored at height ${h}, past the expiry at height ${l.expiry.height} (3.2)` };
+    }
+  }
+  return { within: true };
+}
+function refuseBeforeSigning(l, act, moneySpec, nowSeconds) {
+  if (!l) return null;
+  if (l.cap) {
+    const a = amountOf(act, moneySpec);
+    if (a && a.unit !== l.cap.unit) return "The grant\u2019s cap is in another unit: an act moving this unit is outside it. Nothing was signed.";
+    if (a && a.value > l.cap.value) return `${a.value} is above the grant\u2019s cap of ${l.cap.value} per act. Nothing was signed.`;
+  }
+  if (l.expiry?.clock === "timestamp" && nowSeconds > l.expiry.time) return `The grant expired on ${new Date(l.expiry.time * 1e3).toISOString().slice(0, 16).replace("T", " ")} UTC (this device\u2019s clock). Nothing was signed.`;
+  return null;
+}
+
+// ../damgar/src/specs.ts
+var MONEY = MIRS.money;
+var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 4, test value until publication");
+var MESSAGES_SPEC_3 = sha2562("Money messages cMIP, draft 3, test value until publication");
+var MESSAGES_SPEC_2 = sha2562("Money messages cMIP, draft 2, test value until publication");
+var MESSAGES_SPEC_1 = sha2562("Money messages cMIP, draft 1, test value until publication");
+var MESSAGES_SPECS = [MESSAGES_SPEC, MESSAGES_SPEC_3, MESSAGES_SPEC_2, MESSAGES_SPEC_1];
+MESSAGES.specs = MESSAGES_SPECS;
+var ACCEPTED_SPEC = sha2562("Accepted cMIP, draft 1, test value until publication");
+var SPEC = moneySpecs();
+var unitsEntry = (u2) => ({
+  key: u2.key,
+  name: u2.name,
+  kind: "Module",
+  text: u2.text,
+  draft: u2.draft,
+  hashes: u2.units.map((x) => x.hash),
+  does: u2.does,
+  here: "Every amount names its unit; Damgar shows an amount in these units with their names, and never adds or compares amounts of different units.",
+  built: true,
+  needs: []
+});
+var ACCEPTABLE = [
+  {
+    key: "payment",
+    name: "Payment",
+    kind: "cMIP",
+    text: "cmips/cmip-payment-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.payment],
+    does: "The common language of a payment: the commitment a rail carries (who pays whom, how much, for what), the proof a receipt or claim carries, and how both are checked by the rail Module they name.",
+    here: "Needed for every payment: without it, every receipt and claim is unknown here.",
+    built: true,
+    needs: []
+  },
+  {
+    key: "lightning",
+    name: "Lightning rail",
+    kind: "Module",
+    text: "modules/module-lightning-rail-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.lightning.hash],
+    does: "Payments over Lightning: the payee\u2019s node signs an invoice committing to the payment; paying it reveals a secret (the preimage), which is the proof. A request rail, its proof binding the payee and the purpose (its fields 11 and 13).",
+    here: "You are shown an invoice to pay in your own wallet, and paste back the preimage; to be paid, you paste an invoice your wallet made.",
+    built: true,
+    needs: ["payment", "bitcoin-units"]
+  },
+  {
+    key: "onchain",
+    name: "On-chain rail",
+    kind: "Module",
+    text: "modules/module-onchain-rail-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.onchain.hash],
+    does: "Payments on the Bitcoin chain itself: a fresh address bound to each payment (pay-to-contract, no OP_RETURN), the transaction and its block as the proof, counted at six confirmations. A request rail, its proof binding the payee and the purpose.",
+    here: "You are shown an address bound to the payment, to pay from your own wallet, and paste back the transaction\u2019s id. Checked against the chain Damgar follows: on this computer, the regtest node you name; in the web client, none (paid, not yet checked against the chain).",
+    built: true,
+    needs: ["payment", "bitcoin-units"]
+  },
+  unitsEntry(BITCOIN_UNITS),
+  {
+    key: "split",
+    name: "Split",
+    kind: "cMIP",
+    text: "cmips/cmip-split-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.split],
+    does: "How a payment to a collective or a deal is divided among its owners by a split service: an agreement\u2019s choice, defined with the agreement.",
+    here: "Not used in round 1: splits are defined in Edubba\u2019s Collectives tab, in round 2, and never approved here. Accepting it records your choice for the apps that read it.",
+    built: false,
+    needs: ["payment"]
+  },
+  {
+    key: "conversion",
+    name: "Conversion",
+    kind: "cMIP",
+    text: "cmips/cmip-conversion-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.conversion],
+    does: "A conversion service that receives on one rail or unit and pays on another, at the rate of its own offer: the only way two amounts of different units are ever read together.",
+    here: "Not used in round 1. Accepting it records your choice.",
+    built: false,
+    needs: ["payment"]
+  },
+  {
+    key: "anchoring",
+    name: "Anchoring",
+    kind: "cMIP",
+    text: "cmips/cmip-anchoring-draft-5.md",
+    draft: 5,
+    hashes: [SPEC.anchoring],
+    does: "Putting an act\u2019s fingerprint on a clock everyone can read (the Bitcoin chain), through a pooled service paid per fingerprint: its offer, the ticket it signs for each paid fingerprint, the batches it publishes.",
+    here: "Edubba asks for an anchor of a collective\u2019s act, Ummia of a release; the payment for it arrives here, and is signed here. Its ticket is shown with it.",
+    built: true,
+    needs: ["payment", "lightning", "bitcoin-units", "bitcoin-clock"]
+  },
+  {
+    key: "bitcoin-clock",
+    name: "Bitcoin clock",
+    kind: "Module",
+    text: "modules/module-bitcoin-clock-draft-3.md",
+    draft: 3,
+    hashes: [SPEC.bitcoinClock],
+    does: "The Bitcoin chain read as a clock: a moment on it is a block. The clock an anchoring service\u2019s offer names; and the clock an owner may declare, so that a theft\u2019s window ends at a block (Money rule 29).",
+    here: "Shown with an anchor\u2019s ticket (its deadline is a block). Damgar does not judge Money rule 29, which needs Agreements\u2019 reading of the payee\u2019s acts: said where it applies.",
+    built: true,
+    needs: ["anchoring"]
+  },
+  {
+    key: "messages",
+    name: "Money messages",
+    kind: "cMIP",
+    text: "cmips/cmip-money-messages-draft-4.md",
+    draft: 4,
+    hashes: [MESSAGES_SPEC, MESSAGES_SPEC_3, MESSAGES_SPEC_2, MESSAGES_SPEC_1],
+    does: "The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2); the amount in an answer, so a lane\u2019s cap is judged on it (draft 3); an invoice request sent to a collective\u2019s split service, and a purchase confirmed from Edubba (draft 4). Written by Damgar\u2019s builds, awaiting approval.",
+    here: "Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.",
+    built: true,
+    needs: ["payment"]
+  },
+  {
+    key: "grant-limits",
+    name: "Grant limits",
+    kind: "cMIP",
+    text: "cmips/cmip-grant-limits-draft-1.md",
+    draft: 1,
+    hashes: [GRANT_LIMITS_SPEC],
+    does: "A grant\u2019s limits: how much one act may move, in a named unit, and until when, on a named clock. Written by Edubba\u2019s agents session (F345).",
+    here: "Every lane (round 2) carries its limits under it: a cap per act, and an expiry if you give one. Without it, an act under a lane is unknown here, and no lane is granted.",
+    built: true,
+    needs: ["payment"]
+  }
+];
+var OURS = new Set(ACCEPTABLE.flatMap((a) => a.hashes));
+var labelOf = (hash) => {
+  const a = ACCEPTABLE.find((x) => x.hashes.includes(hash));
+  if (!a) return void 0;
+  if (a.hashes.length === 1) return `${a.name} ${a.kind}, draft ${a.draft}`;
+  const u2 = BITCOIN_UNITS.units.find((x) => x.hash === hash);
+  return `${a.name}, draft ${a.draft}: ${u2?.name ?? "a unit"}`;
+};
+var isAccepted = (a, accepted) => a.hashes.every((h) => accepted.has(h));
+
 // src/signing.ts
 var SIGNING_SAY = "Even more experimental than Dub itself. Here you sign agreements for real collectives: founding one, changing its members, its releases. A signature binds you, and it is public. Read every proposal in full before signing; when in doubt, decline.";
 var SIGNING_OFF_SAY = "Signing is off: proposals to sign wait in your inbox, unread, until you turn Signing on in the identity window.";
@@ -8894,6 +9214,12 @@ function actOfCollective(d, names) {
       const lines2 = [`A Money act: ${r.type}.`];
       if (amount) lines2.push(`Amount: ${amount.value.toLocaleString("en")} in unit ${amount.unit.slice(0, 12)}\u2026 (the Bitcoin units Module names regtest satoshis so).`);
       for (const k of ["payer", "payee", "debtor", "creditor"]) if (typeof r[k] === "string") lines2.push(`${k[0].toUpperCase()}${k.slice(1)}: ${names(r[k])}.`);
+      if (r.type === "pointer") {
+        const rails = r.rails ?? [];
+        lines2.push(`Where payments to the collective go from now on (its payee pointer, version ${r.version}${r.previous ? `, replacing ${String(r.previous).slice(0, 12)}\u2026` : ""}):`);
+        for (const [i, x] of rails.entries()) lines2.push(`Rail ${i + 1}: ${labelOf(x.module) ?? `a rail Module not known here (${x.module.slice(0, 12)}\u2026)`}, address ${hex(new Uint8Array(x.address)).slice(0, 24)}\u2026`);
+        lines2.push("Signing it with your key counts as your consent in the area reaching Money: check that these rails are the ones the collective agreed (its split service\u2019s, say).");
+      }
       return base(`Sign a money act of the collective: ${r.type}`, lines2);
     }
     if (d.spec === SPECS.text && d.type === 0) {
@@ -9186,288 +9512,6 @@ async function readSealedList(identity, secrets, homes, via2 = {}) {
   }
   return out;
 }
-
-// ../damgar/src/units.ts
-var u = moneySpecs().units;
-var BITCOIN_UNITS = {
-  key: "bitcoin-units",
-  name: "Bitcoin units",
-  text: "modules/units-bitcoin-draft-1.md",
-  draft: 1,
-  does: "The satoshi on Bitcoin, and the satoshi of each of Bitcoin\u2019s test networks, which is not a satoshi: four units, each its own specification, so that a test payment can never pay a real debt.",
-  units: [
-    { hash: u.bitcoin, name: "satoshi (Bitcoin)", one: "satoshi", many: "satoshis", test: false, network: 0 },
-    { hash: u.testnet, name: "satoshi (testnet)", one: "testnet satoshi", many: "testnet satoshis", test: true, network: 1 },
-    { hash: u.signet, name: "satoshi (signet)", one: "signet satoshi", many: "signet satoshis", test: true, network: 2 },
-    { hash: u.regtest, name: "satoshi (regtest)", one: "regtest satoshi", many: "regtest satoshis", test: true, network: 3 }
-  ]
-};
-var UNITS_MODULES = [BITCOIN_UNITS];
-var unitOf = (hash) => {
-  for (const m of UNITS_MODULES) {
-    const x = m.units.find((y) => y.hash === hash);
-    if (x) return { unit: x, module: m };
-  }
-  return null;
-};
-var grouped = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-function say(a, accepted) {
-  const k = unitOf(a.unit);
-  if (!k || !accepted.has(a.unit)) return `${grouped(a.value)} of unit ${a.unit.slice(0, 8)}\u2026 (${k ? `${k.module.name}, not accepted here` : "a units Module Damgar does not know"})`;
-  return `${grouped(a.value)} ${a.value === 1 ? k.unit.one : k.unit.many}`;
-}
-function totals(xs) {
-  const by = /* @__PURE__ */ new Map();
-  for (const x of xs) by.set(x.unit, (by.get(x.unit) ?? 0) + x.value);
-  return [...by.entries()].map(([unit, value]) => ({ unit, value }));
-}
-function readValue(typed) {
-  const t = typed.replace(/[\s_]/g, "");
-  if (!/^\d{1,15}$/.test(t) || Number(t) === 0) throw new Error("An amount is a whole number above zero, in the unit\u2019s smallest part.");
-  return Number(t);
-}
-
-// ../grants/src/limits.ts
-var GRANT_LIMITS_SPEC = sha2562("Grant limits cMIP, draft 1, test value until publication");
-var CLOCKS = { timestamp: TIMESTAMP_SPEC };
-function encodeLimits(l) {
-  if (!l.cap && !l.expiry) throw new Error("Limits name a cap, an expiry, or both.");
-  const m = /* @__PURE__ */ new Map();
-  if (l.cap) {
-    if (!Number.isSafeInteger(l.cap.value) || l.cap.value < 0) throw new Error("The cap is a whole amount.");
-    m.set(0, [unhex(l.cap.unit), l.cap.value]);
-  }
-  if (l.expiry) {
-    if (l.expiry.clock === "timestamp") m.set(1, [unhex(CLOCKS.timestamp), unhex(l.expiry.identity), l.expiry.time]);
-    else m.set(1, [unhex(l.expiry.spec), l.expiry.network, l.expiry.height]);
-  }
-  return cborEncode(m);
-}
-function limitsValue(l) {
-  return cborDecode(encodeLimits(l));
-}
-var h32 = (v) => v instanceof Uint8Array && v.length === 32;
-function readLimits(v) {
-  if (!(v instanceof Map)) throw new Error("the limits are not a map");
-  const m = v;
-  for (const k of m.keys()) if (k !== 0 && k !== 1) throw new Error(`the limits carry a key this cMIP does not define (${k})`);
-  if (!m.size) throw new Error("the limits name neither a cap nor an expiry");
-  const out = {};
-  if (m.has(0)) {
-    const c = m.get(0);
-    if (!Array.isArray(c) || c.length !== 2 || !h32(c[0]) || typeof c[1] !== "number" || c[1] < 0) throw new Error("the cap is not [unit, value]");
-    out.cap = { unit: hex(c[0]), value: c[1] };
-  }
-  if (m.has(1)) {
-    const e2 = m.get(1);
-    if (!Array.isArray(e2) || e2.length !== 3 || !h32(e2[0]) || typeof e2[2] !== "number") throw new Error("the expiry is not [clock, reference, point]");
-    if (hex(e2[0]) === CLOCKS.timestamp) {
-      if (!h32(e2[1])) throw new Error("a timestamp clock is named by its identity");
-      out.expiry = { clock: "timestamp", identity: hex(e2[1]), time: e2[2] };
-    } else {
-      if (typeof e2[1] !== "number") throw new Error("a Bitcoin clock is named by its network");
-      out.expiry = { clock: "height", spec: hex(e2[0]), network: e2[1], height: e2[2] };
-    }
-  }
-  return out;
-}
-var MESSAGES = { specs: [] };
-function amountOf(act, moneySpec) {
-  if (act.type === void 0 || !act.payload) return null;
-  if (act.spec && MESSAGES.specs.includes(act.spec)) {
-    try {
-      const m = cborDecode(act.payload);
-      const pair = (x) => Array.isArray(x) && x.length === 2 && x[0] instanceof Uint8Array ? { unit: hex(x[0]), value: Number(x[1]) } : null;
-      if (act.type === 1) return pair(m.get(2));
-      if (act.type === 2) return pair(m.get(0));
-      if (act.type === 4) return pair(m.get(4));
-      if (act.type !== 3) return null;
-      const c = readCommitment(cborEncode(m.get(0)));
-      return { unit: c.amount.unit, value: c.amount.value };
-    } catch {
-      return null;
-    }
-  }
-  if (act.spec !== moneySpec) return null;
-  try {
-    const r = moneyRead(act.type, act.payload);
-    return r.act.amount ? { unit: r.act.amount.unit, value: r.act.amount.value } : null;
-  } catch {
-    return null;
-  }
-}
-function judge(l, act, moneySpec, places = {}) {
-  if (l.cap) {
-    const a = amountOf(act, moneySpec);
-    if (a && a.unit !== l.cap.unit) return { within: false, why: `it moves an amount in another unit than the cap\u2019s (2.2): no conversion is assumed` };
-    if (a && a.value > l.cap.value) return { within: false, why: `it moves ${a.value}, above the cap of ${l.cap.value} per act (2.2)` };
-  }
-  if (l.expiry) {
-    if (l.expiry.clock === "timestamp") {
-      const t = places.stamps?.get(l.expiry.identity)?.get(act.id);
-      if (t === void 0) return { within: null, why: "no stamp of the clock the grant names places it yet: whether it came before the expiry is unknown (3.1)" };
-      if (t > l.expiry.time) return { within: false, why: `the clock the grant names stamped it at ${new Date(t * 1e3).toISOString()}, past the expiry ${new Date(l.expiry.time * 1e3).toISOString()} (3.1)` };
-    } else {
-      const h = places.heights?.get(act.id);
-      if (h === void 0) return { within: null, why: "no anchor placing it on the Bitcoin clock the grant names is checked here: unknown (3.2)" };
-      if (h > l.expiry.height) return { within: false, why: `anchored at height ${h}, past the expiry at height ${l.expiry.height} (3.2)` };
-    }
-  }
-  return { within: true };
-}
-function refuseBeforeSigning(l, act, moneySpec, nowSeconds) {
-  if (!l) return null;
-  if (l.cap) {
-    const a = amountOf(act, moneySpec);
-    if (a && a.unit !== l.cap.unit) return "The grant\u2019s cap is in another unit: an act moving this unit is outside it. Nothing was signed.";
-    if (a && a.value > l.cap.value) return `${a.value} is above the grant\u2019s cap of ${l.cap.value} per act. Nothing was signed.`;
-  }
-  if (l.expiry?.clock === "timestamp" && nowSeconds > l.expiry.time) return `The grant expired on ${new Date(l.expiry.time * 1e3).toISOString().slice(0, 16).replace("T", " ")} UTC (this device\u2019s clock). Nothing was signed.`;
-  return null;
-}
-
-// ../damgar/src/specs.ts
-var MONEY = MIRS.money;
-var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 4, test value until publication");
-var MESSAGES_SPEC_3 = sha2562("Money messages cMIP, draft 3, test value until publication");
-var MESSAGES_SPEC_2 = sha2562("Money messages cMIP, draft 2, test value until publication");
-var MESSAGES_SPEC_1 = sha2562("Money messages cMIP, draft 1, test value until publication");
-var MESSAGES_SPECS = [MESSAGES_SPEC, MESSAGES_SPEC_3, MESSAGES_SPEC_2, MESSAGES_SPEC_1];
-MESSAGES.specs = MESSAGES_SPECS;
-var ACCEPTED_SPEC = sha2562("Accepted cMIP, draft 1, test value until publication");
-var SPEC = moneySpecs();
-var unitsEntry = (u2) => ({
-  key: u2.key,
-  name: u2.name,
-  kind: "Module",
-  text: u2.text,
-  draft: u2.draft,
-  hashes: u2.units.map((x) => x.hash),
-  does: u2.does,
-  here: "Every amount names its unit; Damgar shows an amount in these units with their names, and never adds or compares amounts of different units.",
-  built: true,
-  needs: []
-});
-var ACCEPTABLE = [
-  {
-    key: "payment",
-    name: "Payment",
-    kind: "cMIP",
-    text: "cmips/cmip-payment-draft-3.md",
-    draft: 3,
-    hashes: [SPEC.payment],
-    does: "The common language of a payment: the commitment a rail carries (who pays whom, how much, for what), the proof a receipt or claim carries, and how both are checked by the rail Module they name.",
-    here: "Needed for every payment: without it, every receipt and claim is unknown here.",
-    built: true,
-    needs: []
-  },
-  {
-    key: "lightning",
-    name: "Lightning rail",
-    kind: "Module",
-    text: "modules/module-lightning-rail-draft-3.md",
-    draft: 3,
-    hashes: [SPEC.lightning.hash],
-    does: "Payments over Lightning: the payee\u2019s node signs an invoice committing to the payment; paying it reveals a secret (the preimage), which is the proof. A request rail, its proof binding the payee and the purpose (its fields 11 and 13).",
-    here: "You are shown an invoice to pay in your own wallet, and paste back the preimage; to be paid, you paste an invoice your wallet made.",
-    built: true,
-    needs: ["payment", "bitcoin-units"]
-  },
-  {
-    key: "onchain",
-    name: "On-chain rail",
-    kind: "Module",
-    text: "modules/module-onchain-rail-draft-3.md",
-    draft: 3,
-    hashes: [SPEC.onchain.hash],
-    does: "Payments on the Bitcoin chain itself: a fresh address bound to each payment (pay-to-contract, no OP_RETURN), the transaction and its block as the proof, counted at six confirmations. A request rail, its proof binding the payee and the purpose.",
-    here: "You are shown an address bound to the payment, to pay from your own wallet, and paste back the transaction\u2019s id. Checked against the chain Damgar follows: on this computer, the regtest node you name; in the web client, none (paid, not yet checked against the chain).",
-    built: true,
-    needs: ["payment", "bitcoin-units"]
-  },
-  unitsEntry(BITCOIN_UNITS),
-  {
-    key: "split",
-    name: "Split",
-    kind: "cMIP",
-    text: "cmips/cmip-split-draft-3.md",
-    draft: 3,
-    hashes: [SPEC.split],
-    does: "How a payment to a collective or a deal is divided among its owners by a split service: an agreement\u2019s choice, defined with the agreement.",
-    here: "Not used in round 1: splits are defined in Edubba\u2019s Collectives tab, in round 2, and never approved here. Accepting it records your choice for the apps that read it.",
-    built: false,
-    needs: ["payment"]
-  },
-  {
-    key: "conversion",
-    name: "Conversion",
-    kind: "cMIP",
-    text: "cmips/cmip-conversion-draft-3.md",
-    draft: 3,
-    hashes: [SPEC.conversion],
-    does: "A conversion service that receives on one rail or unit and pays on another, at the rate of its own offer: the only way two amounts of different units are ever read together.",
-    here: "Not used in round 1. Accepting it records your choice.",
-    built: false,
-    needs: ["payment"]
-  },
-  {
-    key: "anchoring",
-    name: "Anchoring",
-    kind: "cMIP",
-    text: "cmips/cmip-anchoring-draft-5.md",
-    draft: 5,
-    hashes: [SPEC.anchoring],
-    does: "Putting an act\u2019s fingerprint on a clock everyone can read (the Bitcoin chain), through a pooled service paid per fingerprint: its offer, the ticket it signs for each paid fingerprint, the batches it publishes.",
-    here: "Edubba asks for an anchor of a collective\u2019s act, Ummia of a release; the payment for it arrives here, and is signed here. Its ticket is shown with it.",
-    built: true,
-    needs: ["payment", "lightning", "bitcoin-units", "bitcoin-clock"]
-  },
-  {
-    key: "bitcoin-clock",
-    name: "Bitcoin clock",
-    kind: "Module",
-    text: "modules/module-bitcoin-clock-draft-3.md",
-    draft: 3,
-    hashes: [SPEC.bitcoinClock],
-    does: "The Bitcoin chain read as a clock: a moment on it is a block. The clock an anchoring service\u2019s offer names; and the clock an owner may declare, so that a theft\u2019s window ends at a block (Money rule 29).",
-    here: "Shown with an anchor\u2019s ticket (its deadline is a block). Damgar does not judge Money rule 29, which needs Agreements\u2019 reading of the payee\u2019s acts: said where it applies.",
-    built: true,
-    needs: ["anchoring"]
-  },
-  {
-    key: "messages",
-    name: "Money messages",
-    kind: "cMIP",
-    text: "cmips/cmip-money-messages-draft-4.md",
-    draft: 4,
-    hashes: [MESSAGES_SPEC, MESSAGES_SPEC_3, MESSAGES_SPEC_2, MESSAGES_SPEC_1],
-    does: "The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2); the amount in an answer, so a lane\u2019s cap is judged on it (draft 3); an invoice request sent to a collective\u2019s split service, and a purchase confirmed from Edubba (draft 4). Written by Damgar\u2019s builds, awaiting approval.",
-    here: "Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.",
-    built: true,
-    needs: ["payment"]
-  },
-  {
-    key: "grant-limits",
-    name: "Grant limits",
-    kind: "cMIP",
-    text: "cmips/cmip-grant-limits-draft-1.md",
-    draft: 1,
-    hashes: [GRANT_LIMITS_SPEC],
-    does: "A grant\u2019s limits: how much one act may move, in a named unit, and until when, on a named clock. Written by Edubba\u2019s agents session (F345).",
-    here: "Every lane (round 2) carries its limits under it: a cap per act, and an expiry if you give one. Without it, an act under a lane is unknown here, and no lane is granted.",
-    built: true,
-    needs: ["payment"]
-  }
-];
-var OURS = new Set(ACCEPTABLE.flatMap((a) => a.hashes));
-var labelOf = (hash) => {
-  const a = ACCEPTABLE.find((x) => x.hashes.includes(hash));
-  if (!a) return void 0;
-  if (a.hashes.length === 1) return `${a.name} ${a.kind}, draft ${a.draft}`;
-  const u2 = BITCOIN_UNITS.units.find((x) => x.hash === hash);
-  return `${a.name}, draft ${a.draft}: ${u2?.name ?? "a unit"}`;
-};
-var isAccepted = (a, accepted) => a.hashes.every((h) => accepted.has(h));
 
 // ../damgar/src/messages.ts
 var TYPES = { draft: 1, request: 2, invoiceRequest: 3, answer: 4, laneRequest: 5, sale: 6 };
@@ -10128,6 +10172,40 @@ async function collectiveNow(collective, hints, via2 = {}) {
   }
   return { agreement: cur?.agreement ?? null, departed: cur?.departed ?? [], resignations, parties };
 }
+async function signAndAsk(me, collective, key, act, ask2, text3, hints, via2 = {}) {
+  const at = await chainFor(collective, key, hints, via2);
+  const made = signAsMember(collective, key, at, { ...act, public: true });
+  const places = await publishAt([made.act], hints, via2);
+  if (!places.length) throw new Error("No relay took the act: nothing counts. Try again.");
+  const asked = [];
+  const notAsked = [];
+  for (const h of ask2) {
+    try {
+      const l = await lookUp(h, hints, via2);
+      const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((r) => r.hints);
+      if (!l.encryptionKey || !inbox?.length) throw new Error("no inbox or encryption key");
+      await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: text3, refs: [[made.id, collective], [collective, collective]] });
+      asked.push(h);
+    } catch {
+      notAsked.push(h);
+    }
+  }
+  return { act: made.id, places, asked, notAsked };
+}
+async function collectivePointer(collective, hints, via2 = {}, pay) {
+  const places = await collectivePlaces(collective, hints, via2);
+  const { v, founding } = await collectiveVerifier(collective, places, via2).catch(() => ({ v: null, founding: null }));
+  if (!v || !founding) return null;
+  const pointers = [];
+  for (const a of await allBy(collective, places, via2)) {
+    const d = describeAct(a);
+    if (d.spec === MIRS.money && d.type === 0) pointers.push([d.id, true]);
+  }
+  const specs = withGrantLimits(AGREEMENTS_SPECS, pointers);
+  const p = v.agreementsPointer(specs, collective);
+  const choice = pay ? v.agreementsChoose(specs, collective, pay.amount, pay.accepted) : null;
+  return { pointer: p.act ?? null, version: p.version ?? 0, why: p.why ?? null, choice };
+}
 async function judgeCollective(collective, acts, hints, via2 = {}, limits = []) {
   const { v } = await collectiveVerifier(collective, hints, via2, acts);
   const out = /* @__PURE__ */ new Map();
@@ -10283,24 +10361,7 @@ ${c.id}
 `), ...payload]));
 var promisePayload = (c, a) => obligationPayload({ debtor: c.id, creditor: a.to, unit: a.amount.unit, value: a.amount.value, pointer: a.pointer });
 async function signPromise(me, c, payload, ask2, text3, hints, via2) {
-  const at = await chainFor(c.id, c.key, hints, via2);
-  const made = signAsMember(c.id, c.key, at, { spec: AGREEMENTS_SPECS.money, type: 1, payload, public: true });
-  const places = await publishAt([made.act], hints, via2);
-  if (!places.length) throw new Error("No relay took the promise: nothing counts. Try again.");
-  const asked = [];
-  const notAsked = [];
-  for (const h of ask2) {
-    try {
-      const l = await lookUp(h, hints, via2);
-      const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((r) => r.hints);
-      if (!l.encryptionKey || !inbox?.length) throw new Error("no inbox or encryption key");
-      await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: text3, refs: [[made.id, c.id], [c.id, c.id]] });
-      asked.push(h);
-    } catch {
-      notAsked.push(h);
-    }
-  }
-  return { act: made.id, places, asked, notAsked };
+  return signAndAsk(me, c.id, c.key, { spec: AGREEMENTS_SPECS.money, type: 1, payload }, ask2, text3, hints, via2);
 }
 async function standing(c, act, amount, hints, via2) {
   const area = c.area;
@@ -11381,8 +11442,13 @@ var Damgar = class {
    */
   async route(me, s, payee, amount, acc) {
     const { look } = await this.payee(payee, me, s);
-    const c = look.verifier.moneyChoose(MONEY, payee, amount, [...acc]);
-    const ptr = look.verifier.moneyPointer(MONEY, payee);
+    let c = look.verifier.moneyChoose(MONEY, payee, amount, [...acc]);
+    let ptr = look.verifier.moneyPointer(MONEY, payee);
+    const col = await collectivePointer(payee, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via, { amount, accepted: [...acc] }).catch(() => null);
+    if (col?.choice) {
+      c = col.choice;
+      ptr = { act: col.pointer };
+    }
     if (c.to === "nowhere") throw new Error(`It cannot be paid: ${c.why}. The payee could be told why, in a message.`);
     return {
       to: c.to,
