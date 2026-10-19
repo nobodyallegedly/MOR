@@ -924,6 +924,15 @@ app.addEventListener('click', async (ev) => {
     case 'contact-remove':
       if (await busy('Removing…', () => c.ask('real contact remove', { id: d.id }))) await refresh();
       break;
+    case 'real-money-record': {
+      const where = () => app.querySelector<HTMLElement>(`[data-here-proposal="${CSS.escape(d.act!)}"]`);
+      const r = await busy('Recording it on the collective’s line, and pointing its payee pointer at the service…', () => c.ask<Done>('real money record', { act: d.act }), where());
+      if (r) {
+        await refresh();
+        say('done', v.lines(r.lines), where());
+      }
+      break;
+    }
     case 'real-gather': {
       const where = () => app.querySelector<HTMLElement>(`[data-here-proposal="${CSS.escape(d.act!)}"]`);
       const r = await busy('Reading the answers in your inbox…', () => c.ask<{ problems: string[] }>('real gather', { act: d.act }), where());
@@ -1337,6 +1346,28 @@ app.addEventListener('submit', async (ev) => {
     if (r) {
       say('done', v.lines(r.lines), form);
       fill('e-anchors', v.anchors(await c.ask('money anchors', { collective: form.dataset.collective })));
+    }
+    return;
+  }
+  if (fid === 'real-money') {
+    const shares = Object.fromEntries([...form.querySelectorAll<HTMLInputElement>('input[name=share]')].map((x) => [x.dataset.member!, Number(x.value)]));
+    const keepers = words(d.get('keepers')).split(/\n+/).map((x) => x.trim()).filter(Boolean);
+    const r = await busy('Making it, and reading it back…', () =>
+      c.ask<Review>('real money prepare', {
+        collective: form.dataset.collective,
+        shares,
+        referral: Number(d.get('referral') ?? 0),
+        service: words(d.get('service')),
+        serviceKey: words(d.get('serviceKey')),
+        keepers,
+        keepersNeeded: Number(d.get('keepersNeeded') ?? 1),
+      }),
+    );
+    if (r) {
+      realReview = { plan: r.plan, digest: r.digest };
+      say('', '');
+      fill('e-real-review', `<div class="colroot">${reading(r.reading, r)}</div>`);
+      $('e-real-review')?.scrollIntoView({ block: 'start' });
     }
     return;
   }

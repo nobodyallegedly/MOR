@@ -1232,12 +1232,16 @@ export function proposalStatus(s: State, p: RealProposal): string {
         : '';
     return `<tr data-member="${e(m)}"><td>${person(s, m)}${m === p.founder ? ' <span class="small">(here)</span>' : ''}</td><td class="state ${st === 'signed' ? '' : 'no'}">${e(STANDS[st])}</td><td>${share}</td></tr>`;
   };
-  const what = p.kind === 'founding' ? 'Founding terms' : p.kind === 'clone' ? 'A member change' : 'A release';
+  const what = p.kind === 'founding' ? 'Founding terms' : p.kind === 'clone' ? 'A member change' : p.kind === 'money' ? 'Its money' : 'A release';
   const next =
     p.kind === 'founding'
       ? p.founded
         ? `<p class="small">Founded: ${fp(p.founded)}.</p>`
         : `<div class="card"><h4>Before you found: what this device will hold (F337)</h4>${lines(FOUNDING_SAY)}<label class="check"><input type="checkbox" id="real-found-read-${e(p.act.slice(0, 12))}"> I have read what this device will hold, and found on it knowingly</label></div><div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Found it: deal the shares</button></div>`
+      : p.kind === 'money'
+        ? p.rotated
+          ? note('done', `In force: recorded at the collective’s line ${fp(p.rotated)}; its payments go to its split service.`)
+          : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-money-record" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Record it</button></div>`
       : p.kind === 'clone'
         ? p.rotated
           ? note('done', `In force: Kišib’s rotation ${fp(p.rotated)} declares it, and Edubba follows it.`)
@@ -1307,6 +1311,36 @@ export const WEB_FOUNDING_SAY =
 export const RELEASE_ON_WEB =
   'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
 
+/** Said where a collective's money is set (round 3, part C): kept to Agreements rules 8, 16 to 23 and 67. */
+export const COLLECTIVE_MONEY_SAY = [
+  'Who owns its income: each member’s share, adding up to 100%. Every holder signs the stakes their share sets.',
+  'A referral share, off the top of each payment, goes to whoever reposted the work where the buyer found it (optional).',
+  'Its split service answers buyers for the collective, signs their receipts with a grant key of the collective, and pays each member their part. It is a separate identity, a judge: it signs to accept.',
+  'Keepers record its acts (optional); one may be an Edubba agent.',
+];
+
+/** The card setting a real collective's money: stakes per member, a referral share, its split service and its keepers, one clone every member signs. */
+function moneyCard(s: State, id: string, c: RealCollective): string {
+  const members = c.members.filter((m) => !(c.resigned ?? []).some((r) => r.member === m && r.registered));
+  const even = Math.floor((100 / members.length) * 10_000) / 10_000;
+  return foldCard(
+    'e-real-money',
+    'collective-money',
+    'Its money: who owns its income, who divides it',
+    `<ul class="say">${COLLECTIVE_MONEY_SAY.map((t) => `<li>${e(t)}</li>`).join('')}</ul>
+<form id="real-money" data-collective="${e(id)}">
+<span class="label">Each member’s share, in %</span>
+${members.map((m, i) => `<label class="share">${person(s, m)} <input name="share" data-member="${e(m)}" type="number" min="0" max="100" step="0.0001" value="${i === members.length - 1 ? +(100 - even * (members.length - 1)).toFixed(4) : even}" required></label>`).join('')}
+<label>A referral share, off the top, in % (0 for none)</label><input name="referral" type="number" min="0" max="99" step="0.0001" value="0" required>
+<label>Its split service: its ID</label><input name="service" type="text" autocomplete="off" spellcheck="false" required>
+<label>The key the service made for this collective (64 hexadecimal characters, as it gives it)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false" required>
+<label>Keepers (optional): their IDs, one per line</label><textarea name="keepers" spellcheck="false"></textarea>
+<label>How many keepers must record an act</label><input name="keepersNeeded" type="number" min="1" step="1" value="1">
+<div class="row"><button type="submit">Review it</button></div></form>`,
+    false,
+  );
+}
+
 /** A real collective founded here: who it is, its proposals, a member change, a release. */
 export function realDetails(s: State, id: string, c: RealCollective): string {
   const col = s.collectives.find((x) => x.id === id)!;
@@ -1330,6 +1364,7 @@ ${contactPicks(s, [], c.members)}
 <h3>Who decides what, after the change</h3>
 <div id="e-grid-real-change"><p class="small">Reading its agreement in force…</p></div>
 <div class="row"><button type="submit">Review the change</button></div></form>`, false)}
+${moneyCard(s, id, c)}
 ${foldCard('e-real-release', 'collective-release', 'A release: in Ummia', `<p class="small">${e(RELEASE_ON_WEB)}</p>`)}
 <div id="e-real-review"></div>
 ${WEB ? '' : realMoney(s, id, c.members)}
