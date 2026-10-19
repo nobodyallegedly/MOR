@@ -7,7 +7,9 @@
 // split plan with a referral share of 10% off the top, a split service
 // (whose grant key the service made), and every member signs it in Dub;
 // Edubba records it and points the collective's payee pointer at the
-// service. A publishes a sealed text as the collective. A reposter reposts
+// service: signed with A's own key in its Money area (A and iPa, two keys;
+// Money draft 10, rule 7, F358), iPa asked for theirs in Dub; until iPa
+// signs, a buyer's payment cannot reach the service. A publishes a sealed text as the collective. A reposter reposts
 // it; a buyer, reading only the reposter, buys it from Dub through the
 // repost: the invoice request goes to the split service (the money messages
 // cMIP, draft 4), which answers with its node's invoice; the buyer pays;
@@ -28,6 +30,10 @@ import { SPEC } from '../../damgar/src/specs.ts';
 import type { Account, PaymentShown, ToSign } from '../../damgar/src/shapes.ts';
 import { SplitService, type Node } from '../../split-service/src/service.ts';
 import { foundCollective } from './cast.ts';
+import { lookUp } from '../../genesis/src/lookup.ts';
+import { MIRS } from '../../genesis/src/core.ts';
+import { allBy } from '../../grants/src/grant.ts';
+import { collectivePointer } from '../../grants/src/member.ts';
 import type { Done } from '../src/page/api.ts';
 
 let homes: Relay[];
@@ -108,6 +114,7 @@ test('the split service: defined in Edubba, signed by every member in Dub; a buy
   const { collective } = await foundCollective(e, A.id, [iPa.dub, iPh.dub], [
     { name: 'Publishing', layer: 1, holders: [A.id, iPa.id, iPh.id], number: 1 },
     { name: 'Offers and deals', layer: 3, holders: [A.id, iPa.id], number: 1 },
+    { name: 'Money', layer: 2, holders: [A.id, iPa.id], number: 2 },
   ]);
 
   // The split service, its own identity and node; its grant key for this collective.
@@ -135,8 +142,23 @@ test('the split service: defined in Edubba, signed by every member in Dub; a buy
   }
   assert.equal((await e.c.ask<any>('real gather', { act: clone })).standing.enough, true);
   const rec = await e.c.ask<Done>('real money record', { act: clone });
-  assert.ok(rec.lines.some((l) => /payee pointer now leads to the split service/.test(l.text)), JSON.stringify(rec.lines));
+  assert.ok(rec.lines.some((l) => /payee pointer now leads to the split service .*signed with A .*own key in its area “Money”/.test(l.text)), JSON.stringify(rec.lines));
+  assert.ok(rec.lines.some((l) => /asks 2 keys: .* is asked for theirs/.test(l.text)), JSON.stringify(rec.lines));
+  const pointer = rec.acts[1];
   assert.ok((await svc.tick()).some((t) => /grant .* accepted/.test(t)), 'the service accepts the collective’s grant');
+  // F358: the pointer is scoped (a member's key), never the collective's own key's: a Money-only reader shows no pointer; Agreements count it only with the area's two keys.
+  const H_ = [...H, ...RL];
+  const reader = await lookUp(collective, H_);
+  for (const a of await allBy(collective, H_, {})) {
+    try {
+      reader.verifier.add(a);
+    } catch {
+      // held
+    }
+  }
+  assert.match(reader.verifier.status(pointer) as string, /^(scoped|unknown)$/, 'signed with a member key, never the collective’s own: not valid as its own act');
+  assert.equal((reader.verifier.moneyPointer(MIRS.money, collective) as { act?: string | null }).act ?? null, null, 'a Money-only reader reads no pointer of the collective');
+  assert.equal((await collectivePointer(collective, H_))!.pointer, null, 'one key of two: no pointer in force');
 
   // A publishes a sealed text as the collective.
   await e.c.ask('publishing act as', { id: collective });
@@ -157,6 +179,15 @@ test('the split service: defined in Edubba, signed by every member in Dub; a buy
   await buyer.dub.c.ask('follow', { id: reposter.id, name: 'Critic' });
   const seen = (await buyer.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === rp.id)!;
   assert.equal(seen.sealed.state, 'for sale');
+  await assert.rejects(buyer.dub.c.ask('buy', { publication, seller: collective, repost: rp.id, reposter: reposter.id }), /cannot be paid/);
+  // iPa signs the pointer in Dub's Signing tab, with iPa's own key: it is the collective's pointer.
+  const ask = (await iPa.dub.c.ask<any>('proposals')).proposals.find((x: any) => x.act === pointer);
+  assert.ok(ask, 'the pointer reached iPa’s Signing tab');
+  const read = JSON.stringify(ask.reading);
+  assert.match(read, /Sign a money act of the collective: pointer/);
+  assert.match(read, /Where payments to the collective go from now on/);
+  assert.match((await iPa.dub.c.ask<any>('accept', { thread: ask.thread })).lines[0].text, /Signed for the collective with your own key/);
+  assert.equal((await collectivePointer(collective, H_))!.pointer, pointer, 'with iPa’s key, the area’s two');
   const bought = await buyer.dub.c.ask<{ lines: { text: string }[] }>('buy', { publication, seller: collective, repost: rp.id, reposter: reposter.id });
   assert.ok(bought.lines.some((l) => /split service, .* which answers for it/.test(l.text)), JSON.stringify(bought.lines));
 

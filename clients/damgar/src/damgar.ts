@@ -75,7 +75,7 @@ import { AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
 import type { InvoiceLink, LinkConfig } from './link.ts';
 import { LINK_SAY } from './link-say.ts';
 import { promiseDigest, promisePayload, promiseSay, readCollective, signPromise, standing, type CollectiveHere } from './collective.ts';
-import { collectiveNow, collectivePlaces, splitServiceOf, type ConsentRead } from '../../grants/src/member.ts';
+import { collectiveNow, collectivePlaces, collectivePointer, splitServiceOf, type ConsentRead } from '../../grants/src/member.ts';
 import { TestIdentity, TEST_LABEL, sealFor, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -1221,8 +1221,14 @@ export class Damgar {
    */
   private async route(me: TestIdentity, s: Settings, payee: string, amount: Amount, acc: Set<string>): Promise<{ to: 'flow' | 'vault'; pointer: string | null; rail: number; declaredBy: string | null; entry: number; module: string; address: Uint8Array; why: string; tipPointer: string | null }> {
     const { look } = await this.payee(payee, me, s);
-    const c = look.verifier.moneyChoose(MONEY, payee, amount, [...acc]) as { to: string; pointer?: string; rail?: number; declaredBy?: string; entry?: number; module?: string; address?: Uint8Array; why: string };
-    const ptr = look.verifier.moneyPointer(MONEY, payee) as { act: string | null; forked: boolean };
+    let c = look.verifier.moneyChoose(MONEY, payee, amount, [...acc]) as { to: string; pointer?: string; rail?: number; declaredBy?: string; entry?: number; module?: string; address?: Uint8Array; why: string };
+    let ptr = look.verifier.moneyPointer(MONEY, payee) as { act: string | null };
+    // A collective's pointer, signed with its Money area's member keys, is scoped: Agreements read it (Money draft 10, rule 7, F358).
+    const col = await collectivePointer(payee, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via, { amount, accepted: [...acc] }).catch(() => null);
+    if (col?.choice) {
+      c = col.choice as typeof c;
+      ptr = { act: col.pointer };
+    }
     if (c.to === 'nowhere') throw new Error(`It cannot be paid: ${c.why}. The payee could be told why, in a message.`);
     return {
       to: c.to as 'flow' | 'vault',

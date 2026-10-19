@@ -9961,6 +9961,16 @@ impl<'a> AgreementsView<'a> {
 
     // ------------------------------------------------------------ the pointer
 
+    /// The payee pointer in force of an identity, as Agreements judge it
+    /// (Money draft 10, rule 7, F358): for a collective, a pointer signed
+    /// with its own key or with the member keys of the area reaching Money
+    /// type 0 (F353), counting where that area's holders and threshold are
+    /// met; the error says why none counts. A Money-only client shows a
+    /// pointer signed with a member key as unknown.
+    pub fn payee_pointer(&self, who: &Hash) -> R<Result<(Hash, crate::money::PayeePointer), String>> {
+        self.pointer_in_force(who)
+    }
+
     /// The latest valid payee pointer of an identity that counts: for a
     /// collective, one its Money lane's consent carries.
     fn pointer_in_force(&self, who: &Hash) -> R<Result<(Hash, crate::money::PayeePointer), String>> {
