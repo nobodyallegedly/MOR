@@ -28,6 +28,12 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F357. Round 3: a payment request to a split service, and confirming a vow sale from Edubba (19 October 2026)
+
+**1. Found by round 3:** a buyer's invoice request (money messages type 3) is sealed to the payee; for a collective with a split service, the service must answer (Agreements rule 16; field 14's grantee is the designated pointer and receipt signer), but it cannot open what is sealed to the collective without the collective's encryption key, kept in the founder's Edubba. The money messages cMIP (draft 3) is silent. **Decided ("Agreed"), (a):** money messages draft 4: where the payee's agreement in force names a split service (field 14), the payer sends the invoice request to the service, sealed to the service's own encryption key, the collective still the payee in the commitment; the service answers with an invoice from its node and later receipts under the collective's grant key. The payer's Damgar reads field 14 as its pointer check already reads Agreements. Built in round 3. Declined: (b) the service given the collective's encryption key (it could read everything sealed to the collective, key deliveries included); (c) a member's app forwarding requests (payments waiting for a member to be online). Transport, not core: no verdict changes.
+
+**2. Confirming a vow sale from Edubba. Decided ("Agreed"), (a):** Edubba prepares the confirmation, sealed to oneself, and Damgar signs it, as Dub's tips are prepared; contesting stays in Edubba and Dub. Replaces what was built, (c), where Edubba only pointed to Dub or Damgar for confirming. Why: the working rule that what one app prepares for another travels as acts sealed to oneself; confirming and contesting side by side where the vow is seen.
+
 ## F356. The cMIPs branded, "Dubsar" as the house (19 October 2026)
 
 **Asked by Nobody, allegedly:** "All our cMIPs have very generic names, they should be branded to avoid confusion." A generic name ("the payment cMIP") reads as the standard, against the competitive layer; a cMIP's identity is its specification hash, its name only a label.
