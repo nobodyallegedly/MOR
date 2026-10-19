@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F355. A transfer to one's vault, from Damgar (19 October 2026)
+
+**Asked (H46):** "Damgar should offer a 'transfer to vault' option." Round 3 found the payment cMIP (draft 3) already carries it: payee and payer both oneself, paid-to the vault (`[1, declared-by, entry]`), on-chain to the vault key adjusted by the commitment. Fulfils naming one's own payee pointer in force is a reading, not stated.
+
+**Decided by Nobody, allegedly ("Agreed"):** (a) as every Damgar payment, no new act: Damgar prepares the transfer, shows the vault, the amount and what it can say of the fee (the wallet shows the exact fee before the person confirms); the person pays in their wallet (on regtest, the test wallet) and pastes the proof back; Damgar checks it and keeps the record, commitment and salt included, sealed to them at their homes, saying plainly that this money is spent only with the chain key and that record. The pointer reading stands until (c): the payment cMIP's next draft lets fulfils name the vault declaration for a transfer to oneself, built after (a)'s screens. Declined: (b), Damgar sending by itself through a spending permission, which would reverse F338 (no wallet connect) and F351 (no permission reading the balance) for one rare action.
+
+**Why:** a transfer to oneself has no counterparty; nothing in it changes a verdict for anyone else, so it stays in the existing payment path. One paste suits a rare, deliberate act.
+
 ## F354. The web Edubba's four questions (18 October 2026)
 
 **From** `docs/edubba-web-report.md`, each decided by Nobody, allegedly, on the project lead's questions:
