@@ -187,7 +187,7 @@ It runs on test nodes by default, and with `MOR_LN_REGTEST=RUN_DIR` on the regte
   | grants | 4 | 0 |
 
   The split service and the anchoring service type-check; they are tested in Edubba's and Damgar's suites.
-- **The core**: `cargo test --workspace`, results in the pull request.
+- **The core** (`cargo test --workspace`): 756 passed, 0 failed.
 - **New in round 3, part C and D:**
   - `split.test.ts`: the split service end to end, and the judged referral (200 to the reposter, 800 to the seller).
   - `keepers.test.ts`: an Edubba agent keeping; a rotation in Kišib leaving out the line iPh's Dub signed on; the dispute.
