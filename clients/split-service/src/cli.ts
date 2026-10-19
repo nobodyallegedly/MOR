@@ -88,7 +88,8 @@ async function main() {
     if (n) port = n.rest;
   }
   mkdirSync(dir, { recursive: true });
-  const svc = new SplitService(dir, lnd({ url: `https://127.0.0.1:${port}`, lnddir: join(run, name) }), { homes: o.homes.split(','), relays: o.relays.split(',') });
+  const node = lnd({ url: `https://127.0.0.1:${port}`, lnddir: join(run, name) });
+  const svc = new SplitService(dir, { nodeKey: () => node.nodeKey(), addInvoice: (sat, h) => node.addInvoice(sat, h), settled: (h) => node.settled(h), pay: (i) => node.payInvoice!(i) }, { homes: o.homes.split(','), relays: o.relays.split(',') });
   await svc.start();
   console.log(`${LABEL}\nIts identity: ${svc.id}`);
   const every = Number(o.every ?? 5) * 1000;

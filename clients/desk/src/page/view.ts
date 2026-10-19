@@ -1131,6 +1131,9 @@ ${chooserHtml(p.actors, p.as)}
 <label>Or the picture: a JPEG file</label><input type="file" name="file" accept="image/jpeg">
 <label>Its title: the public words beside its offer</label><input name="title" type="text" maxlength="200" autocomplete="off">
 <div class="row"><label>Price, in ${e(p.unit)} <input name="price" inputmode="numeric" autocomplete="off"></label><label>Referral share, % (optional; yourself only) <input name="referral" inputmode="numeric" autocomplete="off"></label></div>
+<details class="judged"><summary>Judge the referral: paid by a split service (optional)</summary><p class="small">${e(JUDGED_SAY)}</p>
+<label>The split service: its ID</label><input name="service" type="text" autocomplete="off" spellcheck="false">
+<label>The key the service made for you (64 hexadecimal characters)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false"></details>
 <div class="row"><button type="submit">Read it back</button></div></form>
 <div id="e-pub-review"></div></div>
 <div class="card"><h2>A vow</h2>
@@ -1310,6 +1313,10 @@ export const WEB_FOUNDING_SAY =
 /** Said on the web where a collective's release would be made (`../ops.ts`, RELEASE_ON_WEB), word for word. */
 export const RELEASE_ON_WEB =
   'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
+
+/** Said where a lone seller's referral is judged (F215, F351): kept equal to the reading in `../publishing.ts`. */
+export const JUDGED_SAY =
+  'Without a service, the referral share is a promise in words, paid by your Damgar. With one, the work gets a deal of its own, you its one party holding its whole stake, its split plan carrying the referral share off the top: the service answers buyers, signs their receipts with a key you grant it, and pays you and the reposter, as Agreements judges.';
 
 /** Said where a collective's money is set (round 3, part C): kept to Agreements rules 8, 16 to 23 and 67. */
 export const COLLECTIVE_MONEY_SAY = [

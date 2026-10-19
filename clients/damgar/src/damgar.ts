@@ -1244,17 +1244,22 @@ export class Damgar {
    */
   private async bind(me: TestIdentity, s: Settings, book: Book, a: { payee: string; amount: Amount; fulfils: string | null; whatFor: string | null; answers: string | null; draft: string | null; ticket: { leaf: string; tier: number } | null; auto?: boolean; referral?: { identity: string; evidence: string } | null; refs?: [string, string][]; purchase?: [string, string] | null }): Promise<Payment> {
     const acc = this.acceptedSet(await this.accepted(me));
-    const r = await this.route(me, s, a.payee, a.amount, acc);
+    let r = await this.route(me, s, a.payee, a.amount, acc);
     const fulfils = a.fulfils ?? r.tipPointer;
     if (!fulfils) throw new Error('The payee has no payee pointer: a tip follows one (Money rule 17). Nothing was signed.');
+    // Draft 4 (F357): where the payee's agreement names a split service, the request goes to the service.
+    const service = await this.splitServiceFor(me, s, a.payee, fulfils);
+    // Its one grantee is the agreement's designated pointer (Agreements field 14, rule 15): where the payee's own pointer does not lead to the service (a lone seller's deal), the service's own pointer is paid (a reading, to confirm).
+    if (service) {
+      const sr = await this.route(me, s, service, a.amount, acc);
+      if (sr.module !== r.module || base64(sr.address) !== base64(r.address)) r = { ...sr, tipPointer: r.tipPointer };
+    }
     const paidTo = r.to === 'flow' ? { kind: 'flow', pointer: r.pointer!, rail: r.rail } : { kind: 'vault', declaredBy: r.declaredBy!, entry: r.entry };
     const salt = new Uint8Array(randomBytes(16));
     const c = { rail: r.module, payee: a.payee, amount: a.amount, fulfils, payer: me.id, paidTo, salt, ...(a.purchase ? { purchase: a.purchase } : {}) };
     const commitment = commitmentCbor(c) as Uint8Array;
     const key = paymentCommitment(c) as string;
     const irPayload = invoiceRequestPayload({ commitment, whatFor: a.whatFor, answers: a.answers, ticket: a.ticket });
-    // Draft 4 (F357): where the payee's agreement names a split service, the request goes to the service.
-    const service = await this.splitServiceFor(me, s, a.payee, fulfils);
     const how = await this.payerHow(me, s, MESSAGES_SPEC, TYPES.invoiceRequest, irPayload, !!a.auto);
     // The claim will be signed the same way: checked now, before anything leaves (a lane reaching invoice requests but not claims would leave a payment no claim can record).
     if (how.by === 'lane') {

@@ -407,7 +407,7 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'publishing collective add':
         return publishing.collectiveAdd(text(a.id));
       case 'publishing work read':
-        return publishing.prepareWork({ media: text(a.media), data: text(a.data), title: text(a.title), price: text(a.price), referral: text(a.referral) });
+        return publishing.prepareWork({ media: text(a.media), data: text(a.data), title: text(a.title), price: text(a.price), referral: text(a.referral), service: text(a.service ?? ''), serviceKey: text(a.serviceKey ?? '') });
       case 'publishing confirm':
         return publishing.confirm(text(a.plan), text(a.digest));
       case 'publishing deliver':

@@ -16,7 +16,7 @@ export interface Lnd {
   /** Send `sat` on-chain from the node's own wallet; the txid. */
   sendCoins(address: string, sat: number): Promise<string>;
   /** Pay an invoice from the node's channels; the preimage, hex (the test split service's payouts). */
-  pay(invoice: string): Promise<string>;
+  payInvoice?(invoice: string): Promise<string>;
 }
 
 export function lnd(o: { url: string; lnddir: string }): Lnd {
@@ -61,7 +61,7 @@ export function lnd(o: { url: string; lnddir: string }): Lnd {
     async sendCoins(address, sat) {
       return (await call('POST', '/v1/transactions', { addr: address, amount: String(sat), target_conf: 1 })).txid;
     },
-    async pay(invoice) {
+    async payInvoice(invoice) {
       const v = await call('POST', '/v1/channels/transactions', { payment_request: invoice });
       if (v.payment_error) throw new Error(`lnd: ${v.payment_error}`);
       return b64hex(v.payment_preimage);

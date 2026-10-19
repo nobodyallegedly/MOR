@@ -258,7 +258,7 @@ async function draw() {
       const p = await c.ask<v.PublishingShown>('publishing');
       body.innerHTML = v.publishingTab(p);
       // Keys of sales told of are delivered as the tab opens (as Dub does on its main screen).
-      if (p.works.some((w) => !w.collective)) {
+      if (p.works.length) {
         void c.ask<{ lines: Line[] }>('publishing deliver').then((r) => {
           if (r.lines.some((l) => /delivered/.test(l.text))) say('done', v.lines(r.lines));
         }).catch(() => undefined);
@@ -1169,7 +1169,7 @@ app.addEventListener('submit', async (ev) => {
     if (media === 'picture') {
       if (file instanceof File && file.size) data = toBase64(new Uint8Array(await file.arrayBuffer()));
     } else data = toBase64(new TextEncoder().encode(String(d.get('text') ?? '')));
-    const r = await busy('Reading it back…', () => c.ask<Review>('publishing work read', { media, data, title: words(d.get('title')), price: words(d.get('price')), referral: words(d.get('referral')) }));
+    const r = await busy('Reading it back…', () => c.ask<Review>('publishing work read', { media, data, title: words(d.get('title')), price: words(d.get('price')), referral: words(d.get('referral')), service: words(d.get('service')), serviceKey: words(d.get('serviceKey')) }));
     if (r) {
       pubReview = { plan: r.plan, digest: r.digest };
       say('', '');

@@ -253,6 +253,30 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
   return cborEncode(m);
 }
 
+/**
+ * A one-party deal (Agreements type 0, no key grammar; F215, F351's judged
+ * referral, round 3): a lone seller's agreement for one work, its stake held
+ * wholly by the seller, its split plan carrying a role share off the top (a
+ * referral), and the seller's own grant to the split service (field 14, a
+ * list of one; F129, H4). Signing rule and clone rule: every party, here the
+ * seller (rule 47). Checked by the core library.
+ */
+export function dealTermsPayload(d: { party: string; text: string; object: string; plan: SplitPlan; payeeGrant: string }): Uint8Array {
+  const m = new Map<number, unknown>([
+    [0, [unhex(d.party)]],
+    [1, d.text],
+    [2, new Map()],
+    [4, [0]],
+    [5, [0]],
+    [7, [[unhex(d.object), [[unhex(d.party), 1_000_000]]]]],
+    [8, planValue(d.plan)],
+    [14, [unhex(d.payeeGrant)]],
+  ]);
+  const payload = cborEncode(m);
+  checkTerms(payload, AGREEMENTS_SPECS);
+  return payload;
+}
+
 /** A kept tip: an act, its position, the running summary including it. */
 export interface Tip {
   act: string;
