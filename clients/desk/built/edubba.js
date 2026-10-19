@@ -20106,14 +20106,16 @@ async function keep(me, a) {
     }
     return (await allBy(id, places, via)).map((x) => describeAct(x)).filter((d) => d.signer === id);
   };
-  for (const who3 of [a.collective, ...a.parties.filter((p) => p !== a.collective)]) {
-    const acts = await outsides(who3);
-    for (const d of acts) if (d.spec === SPECS.identity && d.type === 1) await record4(d.id, who3, true);
+  const who3 = [...a.collective ? [a.collective] : [], ...a.parties.filter((p) => p !== a.collective)];
+  for (const id of [...new Set(who3)]) {
+    const acts = await outsides(id);
+    for (const d of acts) if (d.spec === SPECS.identity && d.type === 1) await record4(d.id, id, true);
     for (const d of acts) {
       if (d.spec === SPECS.identity && d.type === 1) continue;
       if (d.spec === REPO_SPECS.agreements && d.type === KEEPER_RECORD) continue;
-      const around = who3 === a.collective || (d.objects ?? []).some(([o]) => versions.has(o));
-      if (around) await record4(d.id, who3, false);
+      const own = id === a.collective || versions.has(d.id);
+      const naming = (d.objects ?? []).some(([o]) => versions.has(o));
+      if (own || naming) await record4(d.id, id, false);
     }
   }
   return made;
