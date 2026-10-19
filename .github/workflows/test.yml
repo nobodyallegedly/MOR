@@ -52,6 +52,9 @@ jobs:
       - name: clients/genesis
         if: success() || failure()
         run: cd clients/genesis && npm ci --no-audit --no-fund && npm test
+      - name: clients/grants
+        if: success() || failure()
+        run: cd clients/grants && npm ci --no-audit --no-fund && npm test
       - name: clients/longform
         if: success() || failure()
         run: cd clients/longform && npm ci --no-audit --no-fund && npm test

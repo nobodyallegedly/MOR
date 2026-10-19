@@ -1,5 +1,6 @@
 // Keepers (Agreements rules 36 to 44; round 3, part C, item 8): a keeper is
-// a notary an agreement names (terms field 3), recording the acts around it
+// a notary an agreement names (terms field 3), a collective's or a deal's,
+// recording the acts around it
 // as they arrive, in its operator's own sequence, and signing each record.
 //
 // The record's format is the one decided in text (OF21 a and d; Agreements
@@ -87,14 +88,20 @@ export async function keeperLogs(operators: string[], places: string[], via: Via
 }
 
 /**
- * One round of keeping, by the keeper's operator `me`, for a collective:
- * the acts around its agreement, as they are found now (the collective's
- * own public acts; each party's public acts naming one of the collective's
- * agreements in `objects`), each party's rotations recorded before its
- * acts (rule 40). Records what its log does not hold yet; the records made,
- * in order.
+ * One round of keeping, by the keeper's operator `me`, for any agreement
+ * that names it (rule 36: a collective's, or a deal's, between solo
+ * identities included; decided by Nobody, allegedly, 19 October 2026, the
+ * round 3 report's question 5). What it records, as found now:
+ * - the agreement's own acts: its versions (`agreements`) and, for a
+ *   collective, every public act of the collective itself;
+ * - every party's public act naming one of its versions (in `objects`):
+ *   signatures, resignations, offers under it;
+ * - every party's rotation, recorded before that party's other acts
+ *   (rule 40), so a thief's acts after it sit after it.
+ * A party's acts naming no version are not recorded. It records what its
+ * log does not hold yet; the records made, in order.
  */
-export async function keep(me: TestIdentity, a: { collective: string; agreements: string[]; parties: string[]; places: string[]; via?: Via }): Promise<{ act: string; signer: string; record: string; rotation: boolean }[]> {
+export async function keep(me: TestIdentity, a: { agreements: string[]; parties: string[]; collective?: string | null; places: string[]; via?: Via }): Promise<{ act: string; signer: string; record: string; rotation: boolean }[]> {
   const via = a.via ?? {};
   const logged = new Set((await keeperLog(me.id, a.places, via)).map((x) => x.act));
   const made: { act: string; signer: string; record: string; rotation: boolean }[] = [];
@@ -115,15 +122,17 @@ export async function keep(me: TestIdentity, a: { collective: string; agreements
     }
     return (await allBy(id, places, via)).map((x) => describeAct(x) as Outside).filter((d) => d.signer === id);
   };
-  for (const who of [a.collective, ...a.parties.filter((p) => p !== a.collective)]) {
-    const acts = await outsides(who);
+  const who = [...(a.collective ? [a.collective] : []), ...a.parties.filter((p) => p !== a.collective)];
+  for (const id of [...new Set(who)]) {
+    const acts = await outsides(id);
     // Rule 40: its identity chain first, every rotation seen recorded before its other acts.
-    for (const d of acts) if (d.spec === SPECS.identity && d.type === 1) await record(d.id, who, true);
+    for (const d of acts) if (d.spec === SPECS.identity && d.type === 1) await record(d.id, id, true);
     for (const d of acts) {
       if (d.spec === SPECS.identity && d.type === 1) continue;
       if (d.spec === REPO_SPECS.agreements && d.type === KEEPER_RECORD) continue;
-      const around = who === a.collective || (d.objects ?? []).some(([o]) => versions.has(o));
-      if (around) await record(d.id, who, false);
+      const own = id === a.collective || versions.has(d.id);
+      const naming = (d.objects ?? []).some(([o]) => versions.has(o));
+      if (own || naming) await record(d.id, id, false);
     }
   }
   return made;
