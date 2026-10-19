@@ -524,7 +524,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       }
       case 'buy': {
         if (!confirm('Buy it, under the lane? Dub signs the request to pay within the lane’s cap; you then pay the invoice in your wallet (Payments, in the Private tab).')) break;
-        const r = await busy('Asking the seller where to pay, under the lane…', () => b.ask<{ lines: v.Line[] }>('buy', { publication: d.publication, seller: d.seller, repost: d.repost, reposter: d.reposter }));
+        const r = await busy('Asking the seller where to pay, under the lane…', () => b.ask<{ lines: v.Line[] }>('buy', { publication: d.publication, seller: d.seller, post: d.post, repost: d.repost, reposter: d.reposter }));
         if (r) {
           say('done', v.lines(r.lines));
           await readFeed();

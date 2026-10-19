@@ -177,7 +177,7 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
     case 'sell':
       return dub.sell({ text: text(a.text), teaser: text(a.teaser), value: text(a.value), unit: text(a.unit), referral: text(a.referral) });
     case 'buy':
-      return dub.buy({ publication: text(a.publication), seller: text(a.seller), repost: text(a.repost) || undefined, reposter: text(a.reposter) || undefined });
+      return dub.buy({ publication: text(a.publication), seller: text(a.seller), post: text(a.post) || undefined, repost: text(a.repost) || undefined, reposter: text(a.reposter) || undefined });
     case 'repost':
       return dub.repost({ post: text(a.post), signer: text(a.signer) });
     case 'money look':

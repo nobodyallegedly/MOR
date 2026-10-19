@@ -111,6 +111,7 @@ label.check input{width:auto}
 .flag.bad{color:var(--bad)}
 .msg.out{margin-left:28px;background:none}
 .msg .sealed{color:var(--envelopes);font-size:12px}
+img.sealed-picture{display:block;max-width:100%;height:auto;margin:6px 0;border-radius:4px}
 .note{margin:10px 0;padding:10px 12px;border-left:2px solid var(--line);font-size:14px;color:var(--soft)}
 .note.error{border-left-color:var(--bad);color:var(--text)}
 .note.done{border-left-color:var(--faint);color:var(--text)}
@@ -547,11 +548,11 @@ function sealedBox(p: Item): string {
   const repostOf = p.repost ? `<div class="re">↻ ${who(p.repost.by)} reposted ${who(p.repost.of)}’s sealed post</div>` : '';
   const state =
     x.state === 'opened' || x.state === 'yours'
-      ? `<div class="text" dir="auto">${e(x.text ?? '')}</div><p class="small">${x.state === 'yours' ? 'Your sealed post: its key is here, delivered to each buyer once your Damgar signs the receipt.' : 'Opened: its key arrived from its seller, and its text matches the fingerprint it was published with.'}</p>`
+      ? `${x.picture ? `<img class="sealed-picture" src="${e(x.picture)}" alt="The picture, opened">` : `<div class="text" dir="auto">${e(x.text ?? '')}</div>`}<p class="small">${x.state === 'yours' ? 'Yours, sealed: its key is here, delivered to each buyer once your Damgar signs the receipt.' : `Opened: its key arrived from its seller, and its ${x.media === 'picture' ? 'picture' : 'text'} matches the fingerprint it was published with.`}</p>`
       : x.state === 'paying'
         ? '<p class="small">Bought: pay it in your wallet (Payments, in the Private tab). Its key arrives once the seller’s Damgar signs the receipt.</p>'
-        : `<p class="small">Sealed: its text opens once paid. ${e(x.price)}.</p><div class="row"><button class="primary" data-action="buy" data-publication="${e(x.publication)}" data-seller="${e(x.seller)}"${p.repost ? ` data-repost="${e(p.id)}" data-reposter="${e(p.repost.by.id)}"` : ''}>Buy it, under the lane</button></div>`;
-  return `${repostOf}<div class="sealed-post"><span class="label">A sealed post · ${e(x.price)}</span>${x.words ? `<p class="small">${e(x.words)}</p>` : ''}${state}${x.problem ? `<p class="small flag">${e(x.problem)}</p>` : ''}</div>`;
+        : `<p class="small">Sealed: its ${x.media === 'picture' ? 'picture' : 'text'} opens once paid. ${e(x.price)}.</p><div class="row"><button class="primary" data-action="buy" data-publication="${e(x.publication)}" data-seller="${e(x.seller)}"${p.repost ? ` data-repost="${e(p.id)}" data-reposter="${e(p.repost.by.id)}"` : ` data-post="${e(p.id)}"`}>Buy it, under the lane</button></div>`;
+  return `${repostOf}<div class="sealed-post"><span class="label">${x.media === 'picture' ? 'A sealed picture' : 'A sealed post'} · ${e(x.price)}</span>${x.words ? `<p class="small">${e(x.words)}</p>` : ''}${state}${x.problem ? `<p class="small flag">${e(x.problem)}</p>` : ''}</div>`;
 }
 
 /** Sealing a post with a price (pay-per-view, round 2). */

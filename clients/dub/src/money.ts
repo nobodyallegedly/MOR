@@ -15,20 +15,21 @@
 // the seller's Damgar tells it of the sale (a sale, sealed to oneself): an
 // Envelopes act, Dub's layer, signed with the identity's own key.
 
-import { SPECS, describeAct, hex, openSealed, unhex } from '../../genesis/src/core.ts';
-import { sealFor, type TestIdentity } from '../../genesis/src/identity.ts';
+import { SPECS, base64, describeAct, hex, openSealed, unhex } from '../../genesis/src/core.ts';
+import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { followRef, lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { makeGrantKey } from '../../grants/src/grant.ts';
 import { encodeLimits, limitsValue, type Limits } from '../../grants/src/limits.ts';
 import { grantsForKey, revocationsOf } from '../../grants/src/lanes.ts';
 import { Damgar, type Keep as DamgarKeep, type Keys } from '../../damgar/src/damgar.ts';
-import { TYPES, laneRequestPayload, readSale, sendToSelf, type LaneKind } from '../../damgar/src/messages.ts';
+import { TYPES, laneRequestPayload, sendToSelf, type LaneKind } from '../../damgar/src/messages.ts';
 import { MESSAGES_SPEC, MONEY } from '../../damgar/src/specs.ts';
 import { say } from '../../damgar/src/units.ts';
 import { servedChain } from './carryin.ts';
-import { KEY_DELIVERY, keyDeliveryPayload, offerWords, openSealedText, postSealed, readKeyDelivery, readOffer, readSealed, repost as repostAct } from '../../barebone/src/sealed.ts';
+import { KEY_DELIVERY, offerWords, openSealedBytes, postSealed, readKeyDelivery, readOffer, readSealed, repost as repostAct } from '../../barebone/src/sealed.ts';
 import type { Keep, Settings } from './dub.ts';
+import { deliverSold } from './delivery.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 
 /** What Dub's lane may sign: invoice requests (the money messages cMIP) and payment claims (Money). */
@@ -105,7 +106,11 @@ export interface SealedShown {
   price: string;
   words: string | null;
   state: 'for sale' | 'paying' | 'opened' | 'yours';
+  /** Text, or a JPEG picture (round 3: a protected file from Edubba's Publishing tab). */
+  media: 'text' | 'picture';
   text: string | null;
+  /** A picture, opened: a data link the page shows. */
+  picture: string | null;
   problem: string | null;
 }
 
@@ -236,85 +241,15 @@ export class DubMoney {
 
   /**
    * Deliver the keys of sales the seller's Damgar told of (type 6, sealed to
-   * oneself): each a key delivery (Envelopes type 1), a private act signed
-   * with the identity's own key, sealed to the buyer and left in its inbox.
+   * oneself): each a key delivery (Envelopes type 1), sealed to the buyer
+   * and left in its inbox (`delivery.ts`, shared with Edubba's Publishing tab).
    */
   async deliver(me: TestIdentity, s: Settings): Promise<string[]> {
     const sold = (await this.store.money<Sold>(me.id, 'sold')) ?? {};
     if (!Object.keys(sold).length) return [];
-    const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
-    const out: string[] = [];
-    for (const h of me.f.homes.map((x) => x.hint)) {
-      let after: number | undefined;
-      try {
-        for (;;) {
-          const page = await relayAt(h, s.via).feed({ to: me.id, after });
-          for (const it of page.items) {
-            if (it.kind !== 'sealed') continue;
-            for (const sec of secrets) {
-              let o: { described: { signer?: string; spec?: string; type?: number; payload?: Uint8Array } };
-              try {
-                o = openSealed(it.item, me.id, sec) as typeof o;
-              } catch {
-                continue;
-              }
-              const d = o.described;
-              if (d.signer !== me.id || d.spec !== MESSAGES_SPEC || d.type !== TYPES.sale || !d.payload) break;
-              const x = readSale(d.payload);
-              const mine = sold[x.publication];
-              if (mine && !mine.delivered[x.buyer]) {
-                try {
-                  mine.delivered[x.buyer] = await this.deliverKey(me, s, x.buyer, x.publication, mine.key);
-                  out.push(`The key of your sealed post was delivered to ${x.buyer.slice(0, 8)}…, sealed to them: a sale your Damgar signed the receipt for.`);
-                } catch (e) {
-                  out.push(`The key could not be delivered to ${x.buyer.slice(0, 8)}… yet: ${message(e)}`);
-                }
-              }
-              break;
-            }
-          }
-          if (!page.items.length || page.next === after) break;
-          after = page.next;
-        }
-      } catch {
-        // that home is away
-      }
-    }
+    const out = await deliverSold(me, sold, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me) });
     await this.store.saveMoney(me.id, 'sold', sold);
     return out;
-  }
-
-  private async deliverKey(me: TestIdentity, s: Settings, buyer: string, publication: string, key: string): Promise<string> {
-    const hints = list([...me.f.homes.map((h) => h.hint), ...s.relays]);
-    const l = await lookUp(buyer, hints, s.via);
-    if (!l.encryptionKey) throw new Error('the buyer publishes no encryption key');
-    const inbox = l.inbox(SPECS.envelopes) ?? [];
-    if (!inbox.length) throw new Error('the buyer declares no inbox');
-    let made: { act: Uint8Array; id: string; key: Uint8Array };
-    try {
-      made = me.sign(SPECS.envelopes, KEY_DELIVERY, keyDeliveryPayload(publication, key), { public: false, to: [buyer] });
-    } finally {
-      await this.store.saveIdentity(me);
-    }
-    const sealed = sealFor(made.act, made.key, [{ id: buyer, key: l.encryptionKey }]);
-    let left = 0;
-    for (const h of inbox) {
-      try {
-        await relayAt(h, s.via).putSealed(sealed);
-        left++;
-      } catch {
-        // away
-      }
-    }
-    for (const h of me.f.homes.map((x) => x.hint)) {
-      try {
-        await relayAt(h, s.via).putAct(made.act);
-      } catch {
-        // away
-      }
-    }
-    if (!left) throw new Error('its inbox took nothing');
-    return made.id;
   }
 
   // ------------------------------------------------------------ pay-per-view, the buyer's side
@@ -335,7 +270,7 @@ export class DubMoney {
     }
     if (!pub) return null;
     const p = pub.s;
-    const offer = acts.map((a) => readOffer(a, p.seller, p.publication)).find(Boolean) ?? null;
+    const offer = acts.map((a) => readOffer(a, p.seller, p.publication, true)).find(Boolean) ?? null;
     const sold = (await this.store.money<Sold>(me.id, 'sold')) ?? {};
     const bought = (await this.store.money<Bought>(me.id, 'bought')) ?? {};
     const price = offer?.price ?? p.price;
@@ -346,7 +281,9 @@ export class DubMoney {
       price: price ? say(price, new Set([price.unit])) : 'no price stated',
       words: offer?.words ?? null,
       state: 'for sale',
+      media: p.media,
       text: null,
+      picture: null,
       problem: offer ? null : 'no offer of its seller selling it was found: it cannot be bought here',
     };
     const key = p.seller === me.id ? sold[p.publication]?.key : bought[p.publication]?.key;
@@ -354,7 +291,9 @@ export class DubMoney {
     else if (bought[p.publication]?.payment && !key) out.state = 'paying';
     if (key) {
       try {
-        out.text = await openSealedText(p, key, hints, via);
+        const bytes = await openSealedBytes(p, key, hints, via);
+        if (p.media === 'picture') out.picture = `data:image/jpeg;base64,${base64(bytes)}`;
+        else out.text = new TextDecoder().decode(bytes);
         if (out.state !== 'yours') out.state = 'opened';
       } catch (e) {
         out.problem = `its key is here, but ${message(e)}`;
@@ -364,7 +303,7 @@ export class DubMoney {
   }
 
   /** Buy a sealed post under the lane: an invoice request following the seller's offer, naming the repost followed (Money claim field 6) where it was found through one. */
-  async buy(me: TestIdentity, hints: string[], via: Via, a: { publication: string; seller: string; repost: { id: string; by: string } | null }): Promise<string[]> {
+  async buy(me: TestIdentity, hints: string[], via: Via, a: { publication: string; seller: string; repost: { id: string; by: string } | null; post?: string | null }): Promise<string[]> {
     const pubAct = (await followRef([a.publication, a.seller], hints, via)).act;
     const p = readSealed(pubAct);
     if (!p) throw new Error('That is not a sealed post. Nothing was signed.');
@@ -380,8 +319,8 @@ export class DubMoney {
   }
 
   /** The offer selling a publication, named beside it in the post or repost that names it. */
-  private async offerFor(a: { publication: string; seller: string; repost: { id: string; by: string } | null }, hints: string[], via: Via): Promise<string | null> {
-    const from = a.repost ? [a.repost.id, a.repost.by] : null;
+  private async offerFor(a: { publication: string; seller: string; repost: { id: string; by: string } | null; post?: string | null }, hints: string[], via: Via): Promise<string | null> {
+    const from = a.repost ? [a.repost.id, a.repost.by] : a.post ? [a.post, a.seller] : null;
     const names: string[] = [];
     if (from) {
       const d = describeAct((await followRef(from as [string, string], hints, via)).act) as { refs?: string[] };

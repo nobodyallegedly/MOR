@@ -16,6 +16,7 @@ import type { Collectives } from './collectives.ts';
 import type { Corrections } from './corrections.ts';
 import type { Desk } from './desk.ts';
 import type { AfterKishib } from './kishib.ts';
+import type { Publishing } from './publishing.ts';
 import type { Member } from './member.ts';
 import type { EdubbaMoney } from './money.ts';
 import type { Real } from './real.ts';
@@ -32,6 +33,8 @@ export interface Parts {
   real: Real;
   after: AfterKishib;
   member: Member;
+  /** The Publishing tab (round 3, part B). */
+  publishing: Publishing;
   corrections: Corrections;
   collectives: Collectives;
   agents: Agents | null;
@@ -49,6 +52,12 @@ export interface Parts {
  */
 export const WEB_OPS: readonly string[] = [
   'state',
+  'publishing',
+  'publishing act as',
+  'publishing collective add',
+  'publishing work read',
+  'publishing confirm',
+  'publishing deliver',
   'keys check',
   'identity posts',
   'identity correct',
@@ -111,7 +120,7 @@ const text = (v: unknown): string => (typeof v === 'string' ? v : '');
 
 /** Edubba's operations: `web` answers only `WEB_OPS`. */
 export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Record<string, unknown>, key: string) => Promise<unknown> {
-  const { store, desk, setup, real, after, member, corrections, collectives, agents, access, money } = p;
+  const { store, desk, setup, real, after, member, publishing, corrections, collectives, agents, access, money } = p;
   const web = opts.web;
   /** A real collective founded here, read as anyone reads it (its relays and homes), with its founder as the member held here. */
   const realRead = (id: string) => {
@@ -362,6 +371,18 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         const c = real.collective(text(a.collective));
         return { id: c.identity, members: c.f.members, holder: c.f.signingHolder, agreement: c.f.agreement, relays: c.f.relays, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint, pending: !!c.f.pending, releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })), toShow: real.toShow(c.identity), resigned: await real.resignations(c.identity).catch(() => []) };
       }
+      case 'publishing':
+        return publishing.state();
+      case 'publishing act as':
+        return publishing.actAs(text(a.id));
+      case 'publishing collective add':
+        return publishing.collectiveAdd(text(a.id));
+      case 'publishing work read':
+        return publishing.prepareWork({ media: text(a.media), data: text(a.data), title: text(a.title), price: text(a.price), referral: text(a.referral) });
+      case 'publishing confirm':
+        return publishing.confirm(text(a.plan), text(a.digest));
+      case 'publishing deliver':
+        return publishing.deliver();
       case 'money units':
         return money!.units();
       case 'money pay':

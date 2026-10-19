@@ -25,9 +25,67 @@ import { referenceTo } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT } from './specs.ts';
 import { textPayload } from './post.ts';
+import { strip } from '../../../modules/jpeg/src/jpeg.ts';
 
 /** The media spec of a sealed text: the Text MIR itself (its bytes canonical text, UTF-8). Confirmed by Nobody, allegedly (F352). */
 export const SEALED_TEXT = POST_SPECS.text;
+
+/** The media spec of a sealed picture: the JPEG Module (round 3, Edubba's Publishing tab: the media modules the apps carry, decided by Nobody, allegedly, 19 October 2026: "Keep it to the modules supported by the app"). */
+export const SEALED_PICTURE = POST_SPECS.jpeg;
+
+/** What a sealed work may be: the media modules Edubba and Dub carry (text, and JPEG pictures). */
+export type SealedMedia = 'text' | 'picture';
+export const MEDIA_SPEC: Record<SealedMedia, string> = { text: SEALED_TEXT, picture: SEALED_PICTURE };
+export const mediaOf = (spec: string): SealedMedia | null => (spec === SEALED_TEXT ? 'text' : spec === SEALED_PICTURE ? 'picture' : null);
+
+/**
+ * A work locked for sale (Envelopes, "Media": the publication public, its
+ * media key absent, delivered to each buyer): the publication's payload,
+ * its price in field 7, and the locked bytes. A picture is first stripped to
+ * the picture alone (the JPEG Module, rule 6); what was stripped is said.
+ * `forId`: field 8, the identity the publication is made for (its payment
+ * goes to that one's payee pointer), where it is not the signer.
+ */
+export function lockWork(a: { media: SealedMedia; bytes: Uint8Array; price: Amount; relays: string[]; forId?: string }): { payload: Uint8Array; locked: Uint8Array; key: string; work: string; size: number; removed: string[] } {
+  let bytes = a.bytes;
+  let removed: string[] = [];
+  if (a.media === 'picture') {
+    const s = strip(a.bytes);
+    bytes = s.bytes;
+    removed = s.removed;
+  } else {
+    bytes = new TextEncoder().encode(new TextDecoder('utf-8', { fatal: true }).decode(a.bytes));
+  }
+  const l = lockMedia(bytes) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
+  const m = new Map<number, unknown>([
+    [0, unhex(MEDIA_SPEC[a.media])],
+    [1, unhex(l.workHash)],
+    [2, unhex(l.lockedHash)],
+    [3, bytes.length],
+    [4, l.nonce],
+    [6, a.relays],
+    [7, [unhex(a.price.unit), a.price.value]],
+  ]);
+  if (a.forId) m.set(8, unhex(a.forId));
+  return { payload: cborEncode(m), locked: l.locked, key: hex(l.key), work: l.workHash, size: bytes.length, removed };
+}
+
+/**
+ * A standing offer's payload (Agreements type 6, "Standing offer"): what it
+ * sells (a publication, or a vow by its name), its price, its words; for
+ * co-owners, the agreement it is made under (field 0) and who is paid
+ * (field 3: in a collective, the collective). A lone seller's offer names
+ * neither, and is itself the agreement with the buyer (F215).
+ */
+export function offerPayload(a: { sells: { publication: string } | { vow: string }; price: Amount; words: string; under?: string; payee?: string }): Uint8Array {
+  const m = new Map<number, unknown>();
+  if (a.under) m.set(0, unhex(a.under));
+  m.set(1, ['publication' in a.sells ? [0, unhex(a.sells.publication)] : [3, unhex(a.sells.vow)]]);
+  m.set(2, [unhex(a.price.unit), a.price.value]);
+  if (a.payee) m.set(3, unhex(a.payee));
+  m.set(4, a.words);
+  return cborEncode(m);
+}
 
 /** Agreements' standing offer (type 6) and Envelopes' key delivery (type 1). */
 export const OFFER = 6;
@@ -58,20 +116,8 @@ export interface Sealed {
  * the lone seller's offer naming it, and a post naming both. The locked
  * bytes go to the relays. Save the identity after: its sequence has grown.
  */
-export async function postSealed(by: TestIdentity, a: { text: string; teaser: string; price: Amount; words: string; relays: string[] }): Promise<Sealed> {
-  const bytes = new TextEncoder().encode(a.text);
-  const l = lockMedia(bytes) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
-  const pub = cborEncode(
-    new Map<number, unknown>([
-      [0, unhex(SEALED_TEXT)],
-      [1, unhex(l.workHash)],
-      [2, unhex(l.lockedHash)],
-      [3, bytes.length],
-      [4, l.nonce],
-      [6, a.relays],
-      [7, [unhex(a.price.unit), a.price.value]],
-    ]),
-  );
+export async function postSealed(by: TestIdentity, a: { text?: string; picture?: Uint8Array; teaser: string; price: Amount; words: string; relays: string[] }): Promise<Sealed & { removed: string[] }> {
+  const w = lockWork(a.picture ? { media: 'picture', bytes: a.picture, price: a.price, relays: a.relays } : { media: 'text', bytes: new TextEncoder().encode(a.text ?? ''), price: a.price, relays: a.relays });
   for (const hint of a.relays) {
     for (const x of by.chainActs()) {
       try {
@@ -81,22 +127,17 @@ export async function postSealed(by: TestIdentity, a: { text: string; teaser: st
       }
     }
   }
-  const publication = await by.publish(POST_SPECS.envelopes, PUBLICATION, pub, { public: true, relays: a.relays });
-  for (const hint of a.relays) await relayAt(hint, by.via).putMedia(l.locked);
-  const offerPayload = cborEncode(
-    new Map<number, unknown>([
-      [1, [[0, unhex(publication.id)]]],
-      [2, [unhex(a.price.unit), a.price.value]],
-      [4, a.words],
-    ]),
-  );
-  const offer = await by.publish(MIRS.agreements, OFFER, offerPayload, { public: true, relays: a.relays });
+  const publication = await by.publish(POST_SPECS.envelopes, PUBLICATION, w.payload, { public: true, relays: a.relays });
+  for (const hint of a.relays) await relayAt(hint, by.via).putMedia(w.locked);
+  const offer = await by.publish(MIRS.agreements, OFFER, offerPayload({ sells: { publication: publication.id }, price: a.price, words: a.words }), { public: true, relays: a.relays });
   const post = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.teaser), { public: true, relays: a.relays, refs: [referenceTo(publication.act), referenceTo(offer.act)] });
-  return { publication: publication.id, offer: offer.id, post: post.id, key: hex(l.key), acts: { publication: publication.act, offer: offer.act, post: post.act } };
+  return { publication: publication.id, offer: offer.id, post: post.id, key: w.key, acts: { publication: publication.act, offer: offer.act, post: post.act }, removed: w.removed };
 }
 
 export interface SealedRead {
   publication: string;
+  /** Text, or a JPEG picture: the media modules the apps carry. */
+  media: SealedMedia;
   seller: string;
   price: Amount | null;
   work: string;
@@ -113,10 +154,12 @@ export function readSealed(act: Uint8Array): SealedRead | null {
   if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION || !d.payload || !d.signer) return null;
   const m = cborDecode(d.payload) as Map<number, unknown>;
   const media = m.get(0);
-  if (!(media instanceof Uint8Array) || hex(media) !== SEALED_TEXT || m.has(5)) return null;
+  const kind = media instanceof Uint8Array ? mediaOf(hex(media)) : null;
+  if (!kind || m.has(5)) return null;
   const price = m.get(7) as [Uint8Array, number] | undefined;
   return {
     publication: d.id,
+    media: kind,
     seller: d.signer,
     price: Array.isArray(price) && price[0] instanceof Uint8Array ? { unit: hex(price[0]), value: Number(price[1]) } : null,
     work: hex(m.get(1) as Uint8Array),
@@ -127,17 +170,25 @@ export function readSealed(act: Uint8Array): SealedRead | null {
   };
 }
 
-/** A lone seller's offer read: what it sells, its price, its words. Null where it is no offer of `seller` selling `publication`. */
-export function readOffer(act: Uint8Array, seller: string, publication: string): { offer: string; price: Amount; words: string | null } | null {
+/** A lone seller's offer read: what it sells, its price, its words. Null where it is no offer of `seller` selling `publication`. With `coOwners`, an offer under an agreement (field 0) is read too, its agreement and payee given. */
+export function readOffer(act: Uint8Array, seller: string, publication: string, coOwners = false): { offer: string; price: Amount; words: string | null; under?: string; payee?: string } | null {
   const d = describeAct(act) as { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array };
   if (d.spec !== MIRS.agreements || d.type !== OFFER || d.signer !== seller || !d.payload) return null;
   try {
     const m = cborDecode(d.payload) as Map<number, unknown>;
-    if (m.has(0)) return null;
+    if (m.has(0) && !coOwners) return null;
     const sells = (m.get(1) as unknown[][]).some((x) => x[0] === 0 && x[1] instanceof Uint8Array && hex(x[1] as Uint8Array) === publication);
     const price = m.get(2) as [Uint8Array, number];
     if (!sells) return null;
-    return { offer: d.id, price: { unit: hex(price[0]), value: Number(price[1]) }, words: typeof m.get(4) === 'string' ? (m.get(4) as string) : null };
+    const under = m.get(0);
+    const payee = m.get(3);
+    return {
+      offer: d.id,
+      price: { unit: hex(price[0]), value: Number(price[1]) },
+      words: typeof m.get(4) === 'string' ? (m.get(4) as string) : null,
+      ...(under instanceof Uint8Array ? { under: hex(under) } : {}),
+      ...(payee instanceof Uint8Array ? { payee: hex(payee) } : {}),
+    };
   } catch {
     return null;
   }
@@ -166,8 +217,13 @@ export function readKeyDelivery(payload: Uint8Array): { publication: string; key
   }
 }
 
-/** The locked bytes, fetched at these places, opened with the key, checked against the work hash and size (Envelopes rules 21 and 22). */
+/** A sealed text's bytes, opened and checked, as text. */
 export async function openSealedText(s: SealedRead, key: string, hints: string[], via: Via = {}): Promise<string> {
+  return new TextDecoder().decode(await openSealedBytes(s, key, hints, via));
+}
+
+/** The locked bytes, fetched at these places, opened with the key, checked against the work hash and size (Envelopes rules 21 and 22). */
+export async function openSealedBytes(s: SealedRead, key: string, hints: string[], via: Via = {}): Promise<Uint8Array> {
   let locked: Uint8Array | null = null;
   for (const h of [...new Set([...hints, ...s.places])]) {
     try {
@@ -185,7 +241,7 @@ export async function openSealedText(s: SealedRead, key: string, hints: string[]
     throw new Error('the key delivered does not open its bytes');
   }
   if (workHash(plain) !== s.work || plain.length !== s.size) throw new Error('its bytes do not match the work hash and size it was published with');
-  return new TextDecoder().decode(plain);
+  return plain;
 }
 
 /**

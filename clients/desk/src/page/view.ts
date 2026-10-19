@@ -12,6 +12,7 @@
 // grey-violet for what is sealed); red only for a contest, a void act or a
 // stolen key; no glow; each item in its own clearly outlined card.
 
+import { chooserHtml, type Actor } from '../../../ummia/src/acting.ts';
 import { e } from '../../../manage/src/view.ts';
 import { STYLE as DUB, proposal as dubProposal, share as dubShare, SIGNING_LABEL } from '../../../dub/src/page/view.ts';
 import type { Proposal as MemberProposal, ShareShown } from '../../../dub/src/shapes.ts';
@@ -1062,10 +1063,44 @@ export function grantShown(t: { lines: string[]; digest: string }): string {
 
 // ---------------------------------------------------------------- the Publishing tab
 
-/** The Publishing tab, a placeholder until it is built (decided by Nobody, allegedly, 17 October 2026: after Damgar's round 2). */
-export function publishingTab(): string {
-  return `<div class="card"><h2>Publishing</h2><p>Coming after Damgar’s round 2: protected files (songs, films, any file) published under terms, their agreement and offer prepared here, acting as yourself or as a collective you belong to; paid in Damgar, shown in Dub. Vows too, each sale confirmed or contested.</p>
-<p class="small">Releases of code and specifications are made in Ummia.</p></div>`;
+/** What the Publishing tab shows (`../publishing.ts`). */
+export interface PublishingShown {
+  actors: Actor[];
+  acting: string | null;
+  as: string | null;
+  works: { publication: string; offer: string; as: string; member: string; collective: boolean; media: 'text' | 'picture'; title: string; price: number; words: string; at: number; delivered: Record<string, string>; toMembers: string | null }[];
+  say: string[];
+  unit: string;
+}
+
+/**
+ * The Publishing tab (round 3, part B; decided by Nobody, allegedly, 17
+ * October 2026): who acts (the chooser Ummia shares, yourself or a collective
+ * you belong to), a protected file (a text or a JPEG picture) sealed with a
+ * price and read back before it is signed, and what was published here.
+ */
+export function publishingTab(p: PublishingShown): string {
+  const works = p.works.length
+    ? p.works
+        .map(
+          (w) => `<div class="item" data-work="${e(w.publication)}"><h3>${e(w.title)}</h3><div class="meta">${w.media === 'picture' ? 'a picture' : 'a text'} · ${w.price.toLocaleString('en')} ${e(p.unit)} · ${w.collective ? `by the collective ${fp(w.as)}` : 'by yourself'} · ${new Date(w.at * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC</div>
+<p class="small">${e(w.words)}</p>
+<p class="small">${w.collective ? (w.toMembers ? 'Its key is sealed to every member: any member’s app can deliver it to a buyer.' : 'Its key was not yet sealed to the members.') : `Its key delivered to ${Object.keys(w.delivered).length} buyer${Object.keys(w.delivered).length === 1 ? '' : 's'}.`} Offer ${fp(w.offer)}.</p></div>`,
+        )
+        .join('')
+    : '<p class="empty">Nothing published here yet.</p>';
+  return `<div class="card"><h2>Publishing</h2>${p.say.map((t) => `<p class="small">${e(t)}</p>`).join('')}<p class="small">Releases of code and specifications are made in Ummia.</p></div>
+${chooserHtml(p.actors, p.as)}
+<div class="card"><h2>A protected file</h2>
+<form id="pub-work" class="stack">
+<div class="row"><label class="check"><input type="radio" name="media" value="text" checked> A text</label><label class="check"><input type="radio" name="media" value="picture"> A picture (JPEG)</label></div>
+<label>The text to seal (opened by each buyer once paid)</label><textarea name="text" rows="5"></textarea>
+<label>Or the picture: a JPEG file</label><input type="file" name="file" accept="image/jpeg">
+<label>Its title: the public words beside its offer</label><input name="title" type="text" maxlength="200" autocomplete="off">
+<div class="row"><label>Price, in ${e(p.unit)} <input name="price" inputmode="numeric" autocomplete="off"></label><label>Referral share, % (optional; yourself only) <input name="referral" inputmode="numeric" autocomplete="off"></label></div>
+<div class="row"><button type="submit">Read it back</button></div></form>
+<div id="e-pub-review"></div></div>
+<div class="card"><h2>Published here</h2><div class="row"><button data-action="pub-deliver">Deliver keys</button><span class="small grow">Delivers the key of each sale your Damgar signed the receipt for.</span></div>${works}</div>`;
 }
 
 /** Its latest constitutional agreement, as a pop-up in plain words: the deal-assessment tool's reading. */

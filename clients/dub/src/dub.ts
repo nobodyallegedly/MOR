@@ -1703,12 +1703,12 @@ export class Dub {
   }
 
   /** Buy a sealed post under the lane, naming the repost it was found through, if any. */
-  buy(a: { publication: string; seller: string; repost?: string; reposter?: string }): Promise<{ lines: Line[] }> {
+  buy(a: { publication: string; seller: string; post?: string; repost?: string; reposter?: string }): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
       await this.money.lanes(me, s, hints);
       const repost = a.repost && a.reposter ? { id: readId(a.repost), by: readId(a.reposter) } : null;
-      const lines = await this.money.buy(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readId(a.publication), seller: readId(a.seller), repost });
+      const lines = await this.money.buy(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readId(a.publication), seller: readId(a.seller), repost, post: a.post ? readId(a.post) : null });
       return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
     });
   }

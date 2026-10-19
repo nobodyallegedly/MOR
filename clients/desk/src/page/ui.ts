@@ -8,7 +8,7 @@
 // `../web/app.ts` (the web client, for testing only: the same operations run
 // in this browser, `../ops.ts`, without the Agents tab).
 
-import { Client, Refused, type ActRead, type IdentityRecord, type RealCollective, type ShareHere, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Permissions, type State } from './api.ts';
+import { Client, Refused, type ActRead, type IdentityRecord, type RealCollective, type ShareHere, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Line, type Permissions, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
@@ -52,6 +52,8 @@ let collectiveMount: Mounted | null = null;
 let postReview: Review | null = null;
 /** A real collective's review (H18): founding, a member change, a release. Nothing is signed until confirmed. */
 let realReview: { plan: string; digest: string } | null = null;
+/** A protected file read back on the Publishing tab, waiting for Sign (round 3, part B). */
+let pubReview: { plan: string; digest: string } | null = null;
 
 // ---------------------------------------------------------------- the founding grid (round 3)
 
@@ -251,9 +253,18 @@ async function draw() {
       }
       return;
     }
-    case 'publishing':
-      body.innerHTML = v.publishingTab();
+    case 'publishing': {
+      body.innerHTML = '<p class="small">Reading…</p>';
+      const p = await c.ask<v.PublishingShown>('publishing');
+      body.innerHTML = v.publishingTab(p);
+      // Keys of sales told of are delivered as the tab opens (as Dub does on its main screen).
+      if (p.works.some((w) => !w.collective)) {
+        void c.ask<{ lines: Line[] }>('publishing deliver').then((r) => {
+          if (r.lines.some((l) => /delivered/.test(l.text))) say('done', v.lines(r.lines));
+        }).catch(() => undefined);
+      }
       return;
+    }
     case 'identities': {
       // Agents have their own tab (decided by Nobody, allegedly): only the other identities here.
       const held = v.secondary(state);
@@ -444,6 +455,13 @@ async function drawIdentityPosts(identity: string) {
   } catch (err) {
     fill('e-ident-posts', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
   }
+}
+
+/** Bytes as base64, in the page (no Buffer here). */
+function toBase64(b: Uint8Array): string {
+  let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
+  return btoa(s);
 }
 
 async function refresh() {
@@ -836,10 +854,28 @@ app.addEventListener('click', async (ev) => {
       }
       break;
     }
+    case 'pub-deliver': {
+      const r = await busy('Looking for sales and delivering keys…', () => c.ask<{ lines: Line[] }>('publishing deliver'));
+      if (r) {
+        await draw();
+        say('done', v.lines(r.lines));
+      }
+      break;
+    }
     case 'dialog-close':
       $<HTMLDialogElement>('e-dialog')!.close();
       break;
     case 'confirm': {
+      if (pubReview && at.tab === 'publishing') {
+        const r = pubReview;
+        const done = await busy('Sealing, signing and publishing…', () => c.ask<Done>('publishing confirm', { plan: r.plan, digest: r.digest }));
+        if (done) {
+          pubReview = null;
+          await draw();
+          say('done', v.done(done));
+        }
+        return;
+      }
       if (realReview) {
         const r = realReview;
         const done = await busy('Signing and sending…', () => c.ask<Done>('real confirm', { plan: r.plan, digest: r.digest }));
@@ -1076,6 +1112,31 @@ app.addEventListener('submit', async (ev) => {
   const agent = at.agent ?? undefined;
   // Not `form.id`: a form's fields shadow its properties (the bring forms have a field named "id").
   const fid = form.getAttribute('id');
+  // The Publishing tab (round 3, part B).
+  if (fid === 'collective-add' && at.tab === 'publishing') {
+    const r = await busy('Reading the collective from its relays and homes, and your key for it…', () => c.ask<{ lines: Line[] }>('publishing collective add', { id: words(d.get('collective')) }));
+    if (r) {
+      await draw();
+      say('done', v.lines(r.lines));
+    }
+    return;
+  }
+  if (fid === 'pub-work') {
+    const media = String(d.get('media') ?? 'text');
+    const file = d.get('file');
+    let data = '';
+    if (media === 'picture') {
+      if (file instanceof File && file.size) data = toBase64(new Uint8Array(await file.arrayBuffer()));
+    } else data = toBase64(new TextEncoder().encode(String(d.get('text') ?? '')));
+    const r = await busy('Reading it back…', () => c.ask<Review>('publishing work read', { media, data, title: words(d.get('title')), price: words(d.get('price')), referral: words(d.get('referral')) }));
+    if (r) {
+      pubReview = { plan: r.plan, digest: r.digest };
+      say('', '');
+      fill('e-pub-review', `<div class="colroot">${reading(r.reading, r)}</div>`);
+      $('e-pub-review')?.scrollIntoView({ block: 'start' });
+    }
+    return;
+  }
   if (fid === 'pair') {
     try {
       await c.ask('pair', { code: $<HTMLInputElement>('pair-code')!.value, label: 'this browser' });
@@ -1437,6 +1498,15 @@ function opened() {
 // H18: a member's share shown here, hand to hand, rather than sealed to a one-time key.
 app.addEventListener('change', async (ev) => {
   const el = ev.target as HTMLInputElement;
+  if (el.name === 'actor' && el.closest('form#acting') && at.tab === 'publishing') {
+    const r = await busy('Choosing who acts…', () => c.ask<{ lines: Line[] }>('publishing act as', { id: el.value }));
+    if (r) {
+      pubReview = null;
+      await draw();
+      say('done', v.lines(r.lines));
+    }
+    return;
+  }
   if (el.id === 'acting-select') {
     const r = await busy('Acting as another identity…', () => c.ask('acting as', { id: el.value }));
     if (r) {
