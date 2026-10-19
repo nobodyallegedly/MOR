@@ -11,7 +11,7 @@ On first start it makes its own test identity and says where it is paid (its Lig
 | File | What |
 | --- | --- |
 | `src/service.ts` | `SplitService`: `start` (identity, payee pointer), `grantKey(grantor)`, `tick` (grants accepted by a signature act, F128; invoice requests checked by draft 4 and answered; receipts under the grant key, sealed to the payer and every party, rule 57; the referral read from the payer's claim, rule 22; the split, type 8, delivered to every holder it pays, rule 20, leftover units by rule 9 from its own tally; the sale told to each party, draft 4, 7.2.3; each payout asked, the holder's answer checked by its rail's rule, paid, claimed). |
-| `src/cli.ts` | `npm start -- --regtest RUN_DIR --homes URL --relays URL [--node carol] [--dir DIR] [--every SECONDS]`; `node --import tsx src/cli.ts key GRANTOR [--dir DIR]` while it runs. Its folder `~/mor-split-service`. |
+| `src/cli.ts` | `npm start -- --regtest RUN_DIR --homes URL --relays URL [--node carol] [--payer alice] [--dir DIR] [--every SECONDS]`; `node --import tsx src/cli.ts key GRANTOR [--dir DIR]` while it runs, printing the key to give in Edubba. Its folder `~/mor-split-service`. Its invoices are its node's (carol by default); its payouts are paid from the same node or from `--payer`'s: on the regtest network only alice holds spendable funds (carol's few thousand received sit below its channel's reserve, as human test 14 found). MOR checks the invoice each holder's node signed and the preimage, never which wallet paid. |
 
 Its Lightning connection is the anchoring service's (`../anchoring-service/src/lnd.ts`), which pays invoices too.
 
