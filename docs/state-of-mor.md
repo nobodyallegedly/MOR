@@ -60,6 +60,8 @@ Three homes (home1, home2 on servers; home3 on the author's Mac, onion only; hom
 
 **Also after the freeze (Nobody, allegedly, 19 October 2026: "If that was proven to work a cMIP would handle it"):** Lightning prisms (a node forwarding set shares of each payment, built on BOLT 12) as a competing split cMIP, the node forwarding and the split service signing what happened; waits for BOLT 12 in the node software used.
 
+**After the release (Nobody, allegedly, 19 October 2026):** a backup app: a whole identity's activity on MOR copied to a place the person chooses, each later backup taking only what is new (from each sequence's last act backed up), checkable anywhere since every act is signed and hash-linked, and able to republish to new homes and relays. Private acts are kept locked, as they are.
+
 **In the freeze-ready drafts session (F358):** keepers redefined as a signed ordering mechanism serving proofs: the record format (type 2, OF21) in the core and read by it; time only from anchors, a keeper free to anchor its sequence; rule 33, a deadline missed shown only by an anchor of the act or of a keeper's sequence. And Money draft 10's rule 7 extended to payee pointers signed by a money area's holders (built in round 3).
 
 **In the freeze-ready drafts session (F356):** every cMIP and Module of this repository renamed with the house prefix "Dubsar" (Dubsar Payments, Dubsar Grant Limits…), in its title and in the apps' wording.
