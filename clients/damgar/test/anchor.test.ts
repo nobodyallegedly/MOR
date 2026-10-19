@@ -96,5 +96,68 @@ test('an anchor of a collective’s act: asked in Edubba, paid from Damgar, anch
   chain.mine(6);
   const done = await e.c.ask<{ state: string; lines: { text: string }[] }[]>('money anchors', { collective: col });
   assert.equal(done[0].state, 'anchored', JSON.stringify(done));
-  assert.match(done[0].lines.at(-1)!.text, /Anchored at block \d+/);
+  assert.ok(done[0].lines.some((l) => /Anchored at block \d+/.test(l.text)), JSON.stringify(done[0].lines));
+  assert.match(done[0].lines.at(-1)!.text, /By its deadline \(block \d+\): delivered/);
+});
+
+// Round 3, part C, item 8: a missed deadline, shown only with an anchor (or
+// the chain past it), as the anchoring cMIP's item 12 judges: one anchor the
+// service makes late (anchored after its ticket's block), one it never
+// makes (the chain past its deadline at the clock's depth, no anchor shown).
+test('a missed deadline, shown only from the anchor or the chain: one anchored late, one defaulted; before that, only pending', async () => {
+  const H = homes.map((h) => h.base);
+  const R = [relay.base];
+  const chain = new FakeChain();
+  chain.mine(10);
+  const lnd = new StubLnd(chain, addressScript);
+  const svc = new Service(join(mkdtempSync(join(tmpdir(), 'damgar-svc-')), 'svc'), lnd, chain, { homes: H, relays: R });
+  await svc.start();
+  const e = await edubba(H, R, chain);
+  const { f, col } = await founded(H, R, e);
+  await e.c.ask('acting as', { id: f.id });
+  const g = await damgar(chain);
+  await g.c.ask('bring', { id: f.id, words: f.words, address: H[0] });
+  await g.c.ask('accept', { keys: ACCEPTABLE.map((a) => a.key) });
+  const acts = await e.c.ask<{ act: string; label: string }[]>('money anchorable', { collective: col });
+  const offers = await e.c.ask<{ act: string }[]>('money offers', { service: svc.id });
+
+  // Asked and paid, tier 0 (within 2 blocks); the service does not anchor in time.
+  const pay = async (act: string) => {
+    await e.c.ask('money anchor', { identity: f.id, collective: col, act, service: svc.id, offer: offers[0].act, tier: 0 });
+    await g.c.ask('look');
+    const d = (await g.c.ask<{ items: ToSign[] }>('to sign')).items.find((i) => i.kind === 'draft')!;
+    await g.c.ask('sign draft', { id: d.id });
+    await svc.tick();
+    await g.c.ask('look');
+    const p = (await g.c.ask<{ payments: PaymentShown[] }>('pay')).payments.find((x) => x.stage === 'to pay')!;
+    await g.c.ask('paid', { key: p.key, proof: lnd.pay(p.pay!.invoice!) });
+    return p.ticket!.deadline;
+  };
+  const late = acts[0].act;
+  const deadline = await pay(late);
+  let shown = await e.c.ask<{ act: string; state: string; deadline: number; lines: { text: string }[] }[]>('money anchors', { collective: col });
+  assert.equal(shown[0].deadline, deadline, 'its ticket read from the service’s own acts');
+  assert.ok(!shown.some((x) => /Missed/.test(JSON.stringify(x.lines))), 'nothing said missed before the chain shows it');
+  chain.mine(4);
+  // The service anchors now, past the ticket's block; once deep enough, Edubba shows it late, from the anchor itself.
+  assert.ok((await svc.tick()).some((l) => /anchored/.test(l)));
+  chain.mine(6);
+  shown = await e.c.ask('money anchors', { collective: col });
+  const l = shown.find((x) => x.act === late)!;
+  assert.equal(l.state, 'late', JSON.stringify(l));
+  assert.ok(l.lines.some((x) => /Missed its deadline: anchored at block \d+, after block \d+, as the anchor itself shows/.test(x.text)), JSON.stringify(l.lines));
+
+  // A second, paid, never anchored: pending while the deadline is not buried; a default once the chain stands past it at depth.
+  const never = acts.find((a) => a.act !== late)!.act;
+  const d2 = await pay(never);
+  shown = await e.c.ask('money anchors', { collective: col });
+  let n = shown.find((x) => x.act === never)!;
+  assert.notEqual(n.state, 'default');
+  assert.ok(n.lines.some((x) => /not passed at the clock’s depth yet/.test(x.text)), JSON.stringify(n.lines));
+  const tip = (await chain.headers()).headers.length - 1;
+  chain.mine(d2 + 6 - 1 - tip);
+  shown = await e.c.ask('money anchors', { collective: col });
+  n = shown.find((x) => x.act === never)!;
+  assert.equal(n.state, 'default', JSON.stringify(n));
+  assert.ok(n.lines.some((x) => /Missed its deadline: the chain followed stands at block/.test(x.text)));
 });

@@ -23,7 +23,7 @@
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { anchoringBatch, anchoringLeaf, anchoringReadOffer, anchoringReadPublication, batchAnchor, batchAnchorCheck, describeAct, hex, merkleBranch, randomBytes } from '../../genesis/src/core.ts';
+import { anchoringBatch, anchoringLeaf, anchoringReadOffer, anchoringReadPublication, anchoringReadTicket, batchAnchor, batchAnchorCheck, describeAct, hex, merkleBranch, randomBytes } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { readId } from '../../genesis/src/forms.ts';
@@ -70,9 +70,14 @@ export interface AnchorShown {
   label: string;
   service: string;
   tier: number;
-  state: 'asked' | 'published' | 'anchored' | 'pending' | 'invalid' | 'unknown';
+  state: 'asked' | 'published' | 'anchored' | 'pending' | 'invalid' | 'unknown' | 'late' | 'default' | 'omitted';
+  /** Its ticket's deadline, a block on the offer's clock (the anchoring cMIP, ticket field 5), where its ticket was found. */
+  deadline?: number | null;
   lines: Line[];
 }
+
+/** The Bitcoin clock Module's depth: a point counts once buried six blocks deep (its draft 3). */
+const CLOCK_DEPTH = 6;
 
 export class EdubbaMoney {
   constructor(
@@ -200,15 +205,33 @@ export class EdubbaMoney {
     });
   }
 
-  /** Where each anchor asked for this collective stands: published in a batch, then anchored, checked against the chain Edubba follows. */
+  /**
+   * Where each anchor asked for this collective stands: its ticket, its
+   * batch's publication, then its anchor checked against the chain Edubba
+   * follows, judged as the anchoring cMIP's item 12 says (omitted, anchored
+   * by its deadline, late, default, pending). A deadline is shown missed
+   * only from the service's own acts (an omission) or from the chain (an
+   * anchor past it, or the chain past it at the clock's depth with no
+   * anchor): never from a clock Edubba does not follow (Agreements rule 33).
+   */
   async anchors(collective: string): Promise<AnchorShown[]> {
     const out: AnchorShown[] = [];
     for (const x of this.asked().filter((y) => y.collective === collective)) {
-      const shown: AnchorShown = { act: x.act, label: x.label, service: x.service, tier: x.tier, state: 'asked', lines: [] };
+      const shown: AnchorShown = { act: x.act, label: x.label, service: x.service, tier: x.tier, state: 'asked', lines: [], deadline: null };
       try {
-        const pub = await this.publication(x);
-        if (!pub) {
+        const { ticket, publications } = await this.serviceActs(x);
+        const deadline = ticket?.deadline ?? null;
+        shown.deadline = deadline;
+        if (ticket) shown.lines.push({ text: `Its ticket: batch ${ticket.batch}, on the chain by block ${ticket.deadline} (the service’s promise under its offer).` });
+        const pub = publications.find((p) => p.leaves.includes(x.leaf)) ?? null;
+        const omitting = ticket ? publications.find((p) => p.batch === ticket.batch && !p.leaves.includes(x.leaf)) : undefined;
+        const tip = this.chain ? (await this.chain.headers()).headers.length - 1 : null;
+        if (omitting && (!pub || pub.batch !== ticket!.batch)) {
+          shown.state = 'omitted';
+          shown.lines.push({ text: `Missed: the service published its batch ${ticket!.batch} without this leaf, which its ticket promised it. Two acts the service signed show it, anyone can check; the price is owed back under its offer (the anchoring cMIP, items 12 and 13).`, tone: 'bad' });
+        } else if (!pub) {
           shown.lines.push({ text: 'Not in a published batch yet: paid in Damgar? The service publishes each batch it anchors.' });
+          this.defaulted(shown, deadline, tip);
         } else {
           shown.state = 'published';
           shown.lines.push({ text: `In the service’s batch ${pub.batch}, published, its transaction ${pub.tx.slice(0, 12)}… (output ${pub.output}).`, tone: 'ok' });
@@ -217,11 +240,20 @@ export class EdubbaMoney {
             shown.lines.push({ text: 'The publication does not name the key its output is tweaked from (the anchoring cMIP draft 5 has no such field): the anchor cannot be checked from the service’s acts alone.', tone: 'warn' });
           } else if (!this.chain) {
             shown.state = 'unknown';
-            shown.lines.push({ text: 'Edubba follows no chain here: the anchor cannot be checked against Bitcoin. Open Edubba with --regtest.', tone: 'warn' });
+            shown.lines.push({ text: 'Edubba follows no chain here: the anchor cannot be checked against Bitcoin, nor its deadline shown met or missed. Open Edubba with --regtest.', tone: 'warn' });
           } else {
             const v = await this.check(x, pub);
             shown.state = v.answer === 'valid' ? 'anchored' : (v.answer as AnchorShown['state']);
-            shown.lines.push(v.answer === 'valid' ? { text: `Anchored at block ${v.point}, on the chain followed (${this.chain.said}): checked by the Bitcoin clock Module’s rule.`, tone: 'ok' } : { text: `Not yet anchored: ${v.answer}, ${v.why}.`, tone: v.answer === 'invalid' ? 'bad' : 'warn' });
+            if (v.answer === 'valid') {
+              shown.lines.push({ text: `Anchored at block ${v.point}, on the chain followed (${this.chain.said}): checked by the Bitcoin clock Module’s rule.`, tone: 'ok' });
+              if (deadline !== null && v.point! > deadline) {
+                shown.state = 'late';
+                shown.lines.push({ text: `Missed its deadline: anchored at block ${v.point}, after block ${deadline}, as the anchor itself shows. It still counts as an anchor of the act, at block ${v.point}; the service defaulted, and the price is owed back under its offer (the anchoring cMIP, items 12 and 13).`, tone: 'bad' });
+              } else if (deadline !== null) shown.lines.push({ text: `By its deadline (block ${deadline}): delivered.`, tone: 'ok' });
+            } else {
+              shown.lines.push({ text: `Not yet anchored: ${v.answer}, ${v.why}.`, tone: v.answer === 'invalid' ? 'bad' : 'warn' });
+              if (v.answer === 'pending') this.defaulted(shown, deadline, tip);
+            }
           }
         }
       } catch (e) {
@@ -233,26 +265,49 @@ export class EdubbaMoney {
     return out;
   }
 
-  private async publication(x: Asked): Promise<{ batch: number; leaves: string[]; tx: string; output: number; key: string | null } | null> {
+  /** No anchor at or before the deadline shown: a default once the chain followed stands at the deadline plus the clock's depth less one (item 12.4); otherwise nothing is said missed. */
+  private defaulted(shown: AnchorShown, deadline: number | null, tip: number | null) {
+    if (deadline === null) return;
+    if (tip === null) {
+      shown.lines.push({ text: `Its deadline, block ${deadline}: whether it is met cannot be shown here, Edubba following no chain (a deadline missed is shown only with an anchor or a keeper, Agreements rule 33).`, tone: 'warn' });
+      return;
+    }
+    if (tip >= deadline + CLOCK_DEPTH - 1) {
+      shown.state = 'default';
+      shown.lines.push({ text: `Missed its deadline: the chain followed stands at block ${tip}, block ${deadline} buried ${CLOCK_DEPTH} deep, and no anchor of it at or before block ${deadline} is shown. A default: the price is owed back under its offer (the anchoring cMIP, items 12 and 13).`, tone: 'bad' });
+    } else shown.lines.push({ text: `Its deadline, block ${deadline}: not passed at the clock’s depth yet (the chain followed stands at block ${tip}).` });
+  }
+
+  /** The service's ticket naming this leaf, and its batches' publications, from its own public acts (the anchoring cMIP, item 21: its tickets and publications sit at its home). */
+  private async serviceActs(x: Asked): Promise<{ ticket: { batch: number; deadline: number; tier: number } | null; publications: { batch: number; leaves: string[]; tx: string; output: number; key: string | null }[] }> {
     const s = this.store.settings();
     const l = await lookUp(x.service, [...s.relays, ...s.homes.map((h) => h.hint)], this.via);
     const places = [...new Set([...l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints), ...l.resolution.homes.map((h) => h.hint), ...s.relays])];
+    let ticket: { batch: number; deadline: number; tier: number } | null = null;
+    const publications: { batch: number; leaves: string[]; tx: string; output: number; key: string | null }[] = [];
+    const seen = new Set<string>();
     for (const h of places) {
       try {
         for (const it of (await relayAt(h, this.via).feed({ signer: x.service })).items) {
           if (it.kind !== 'act') continue;
           const d = describeAct(it.item) as { id: string; spec?: string; type?: number; payload?: Uint8Array };
-          if (d.spec !== SPEC.anchoring || d.type !== 3 || !d.payload) continue;
+          if (seen.has(d.id) || d.spec !== SPEC.anchoring || (d.type !== 2 && d.type !== 3) || !d.payload) continue;
+          seen.add(d.id);
           l.verifier.add(it.item);
           if (l.verifier.status(d.id) !== 'valid') continue;
-          const p = anchoringReadPublication(d.payload) as { offer: string; batch: number; leaves: string[]; tx: string; output: number; key: string | null } | null;
-          if (p && p.offer === x.offer && p.leaves.includes(x.leaf)) return p;
+          if (d.type === 2) {
+            const t = anchoringReadTicket(d.payload) as { offer: string; leaf: string; batch: number; deadline: number; tier: number } | null;
+            if (t && t.offer === x.offer && t.leaf === x.leaf) ticket = { batch: t.batch, deadline: t.deadline, tier: t.tier };
+          } else {
+            const p = anchoringReadPublication(d.payload) as { offer: string; batch: number; leaves: string[]; tx: string; output: number; key: string | null } | null;
+            if (p && p.offer === x.offer) publications.push(p);
+          }
         }
       } catch {
         // that place is away
       }
     }
-    return null;
+    return { ticket, publications };
   }
 
   private async check(x: Asked, pub: { leaves: string[]; tx: string; output: number; key: string | null }) {
