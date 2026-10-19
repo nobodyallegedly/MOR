@@ -212,6 +212,8 @@ export interface CommitmentFields {
   paidTo: { kind: 'flow'; pointer: string; rail: number } | { kind: 'vault'; declaredBy: string; entry: number } | { kind: 'refund'; claim: string };
   salt: Uint8Array;
   hash: string;
+  /** A purchase (F126): the claim it pays under, `[agreement, line]`; null where it is none. */
+  purchase?: [string, string] | null;
 }
 
 export const readCommitmentFields = (bytes: Uint8Array): CommitmentFields => readCommitment(bytes) as CommitmentFields;

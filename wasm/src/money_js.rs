@@ -128,9 +128,9 @@ enum MoneyIn {
     Obligation { debtor: String, creditor: String, amount: AmountIn, pointer: String, agreement: Option<String> },
     /// `payer` an identity's hex hash; a bare key payer is not made here.
     #[serde(rename_all = "camelCase")]
-    Receipt { rail: String, proof: ByteBuf, payer: Option<String>, payee: String, amount: AmountIn, fulfils: String },
+    Receipt { rail: String, proof: ByteBuf, payer: Option<String>, payee: String, amount: AmountIn, fulfils: String, #[serde(default)] purchase: Option<(String, String)> },
     #[serde(rename_all = "camelCase")]
-    Claim { rail: String, proof: ByteBuf, payee: String, amount: AmountIn, fulfils: String, disagrees: Option<String>, refund: Option<RailIn>, #[serde(default)] referral: Option<ReferralIn> },
+    Claim { rail: String, proof: ByteBuf, payee: String, amount: AmountIn, fulfils: String, disagrees: Option<String>, refund: Option<RailIn>, #[serde(default)] referral: Option<ReferralIn>, #[serde(default)] purchase: Option<(String, String)> },
     #[serde(rename_all = "camelCase")]
     Release { obligation: String },
 }
@@ -155,7 +155,7 @@ impl MoneyIn {
                 pointer: unhex(pointer)?,
                 agreement: opt(agreement)?,
             }),
-            MoneyIn::Receipt { rail, proof, payer, payee, amount, fulfils } => Payload::Receipt(Receipt {
+            MoneyIn::Receipt { rail, proof, payer, payee, amount, fulfils, purchase } => Payload::Receipt(Receipt {
                 rail: unhex(rail)?,
                 proof: proof.to_vec(),
                 payer: opt(payer)?.map(Payer::Identity),
@@ -165,9 +165,9 @@ impl MoneyIn {
                 previous: None,
                 forward: None,
                 batch: None,
-                purchase: None,
+                purchase: purchase_of(purchase)?,
             }),
-            MoneyIn::Claim { rail, proof, payee, amount, fulfils, disagrees, refund, referral } => Payload::Claim(Claim {
+            MoneyIn::Claim { rail, proof, payee, amount, fulfils, disagrees, refund, referral, purchase } => Payload::Claim(Claim {
                 rail: unhex(rail)?,
                 proof: proof.to_vec(),
                 payee: unhex(payee)?,
@@ -177,7 +177,7 @@ impl MoneyIn {
                 referral: referral.as_ref().map(|r| -> R<Referral> { Ok(Referral { identity: unhex(&r.identity)?, evidence: unhex(&r.evidence)? }) }).transpose()?,
                 refund: refund.as_ref().map(RailIn::core).transpose()?,
                 anonymous: None,
-                purchase: None,
+                purchase: purchase_of(purchase)?,
                 previous: None,
             }),
             MoneyIn::Release { obligation } => Payload::Release(money::Release { obligation: unhex(obligation)?, against: vec![] }),
@@ -213,9 +213,6 @@ impl MoneyIn {
                 if r.batch.is_some() {
                     more.push("a batch");
                 }
-                if r.purchase.is_some() {
-                    more.push("a purchase (an Agreements claim)");
-                }
                 let payer = match &r.payer {
                     Some(Payer::Identity(h)) => Some(hx(h)),
                     Some(Payer::Key(_)) => {
@@ -231,14 +228,12 @@ impl MoneyIn {
                     payee: hx(&r.payee),
                     amount: AmountIn::of(&r.amount),
                     fulfils: hx(&r.fulfils),
+                    purchase: r.purchase.as_ref().map(|p| (hx(&p.agreement), hx(&p.line))),
                 }
             }
             Payload::Claim(c) => {
                 if c.anonymous.is_some() {
                     more.push("an anonymous payer's key");
-                }
-                if c.purchase.is_some() {
-                    more.push("a purchase (an Agreements claim)");
                 }
                 if c.previous.is_some() {
                     more.push("a previous hop");
@@ -252,6 +247,7 @@ impl MoneyIn {
                     disagrees: c.disagrees.as_ref().map(hx),
                     refund: c.refund.as_ref().map(RailIn::of),
                     referral: c.referral.as_ref().map(|r| ReferralIn { identity: hx(&r.identity), evidence: hx(&r.evidence) }),
+                    purchase: c.purchase.as_ref().map(|p| (hx(&p.agreement), hx(&p.line))),
                 }
             }
             Payload::Release(r) => {
@@ -423,6 +419,14 @@ struct CommitmentIn {
     payer: Option<String>,
     paid_to: PaidToIn,
     salt: ByteBuf,
+    /// A purchase only (F126; Money rule 18): the claim it pays under, `[agreement, line]`, the claiming agreement
+    /// and the line at which the payer's client read it current. Round 3: a collective's offer.
+    #[serde(default)]
+    purchase: Option<(String, String)>,
+}
+
+fn purchase_of(p: &Option<(String, String)>) -> R<Option<money::Purchase>> {
+    p.as_ref().map(|(a, l)| Ok(money::Purchase { agreement: unhex(a)?, line: unhex(l)? })).transpose()
 }
 
 /// The payment commitment's hash (payment cMIP, "The payment commitment"):
@@ -444,7 +448,7 @@ impl CommitmentIn {
             payer: opt(&self.payer)?.map(Payer::Identity),
             paid_to: self.paid_to.core()?,
             salt: arr::<16>(&self.salt, "the salt")?,
-            purchase: None,
+            purchase: purchase_of(&self.purchase)?,
         })
     }
 }
@@ -472,11 +476,12 @@ pub fn read_commitment(bytes: &[u8]) -> R<JsValue> {
         paid_to: PaidToIn,
         salt: ByteBuf,
         hash: String,
+        purchase: Option<(String, String)>,
     }
     let v = cbor::decode(bytes).map_err(err)?;
     let Value::Array(a) = &v else { return Err(err("a commitment is an array")) };
-    if a.len() != 7 {
-        return Err(err("a commitment of seven elements (no purchase) is read here"));
+    if a.len() != 7 && a.len() != 8 {
+        return Err(err("a commitment of seven elements, or eight with a purchase"));
     }
     let h = |x: &Value| match x {
         Value::Bytes(b) => <[u8; 32]>::try_from(b.as_slice()).map_err(|_| err("a hash is 32 bytes")),
@@ -499,12 +504,12 @@ pub fn read_commitment(bytes: &[u8]) -> R<JsValue> {
         payer: payer.map(Payer::Identity),
         paid_to: PaidTo::decode(&a[5]).ok_or_else(|| err("paid-to"))?,
         salt: salt.clone().try_into().unwrap(),
-        purchase: None,
+        purchase: if a.len() == 8 { Some(money::Purchase::decode(&a[7]).map_err(err)?) } else { None },
     };
     if cbor::encode(&c.to_value()) != bytes {
         return Err(err("the commitment is not in deterministic CBOR"));
     }
-    to_js(&Out { rail: hx(&c.rail), payee: hx(&c.payee), amount: AmountIn::of(&c.amount), fulfils: hx(&c.fulfils), payer: payer.as_ref().map(hx), paid_to: PaidToIn::of(&c.paid_to), salt: ByteBuf::from(salt), hash: hx(&c.hash()) })
+    to_js(&Out { rail: hx(&c.rail), payee: hx(&c.payee), amount: AmountIn::of(&c.amount), fulfils: hx(&c.fulfils), payer: payer.as_ref().map(hx), paid_to: PaidToIn::of(&c.paid_to), salt: ByteBuf::from(salt), hash: hx(&c.hash()), purchase: c.purchase.as_ref().map(|p| (hx(&p.agreement), hx(&p.line))) })
 }
 
 /// Run a rail Module's rule on a commitment before paying (payment cMIP,

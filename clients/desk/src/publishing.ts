@@ -31,7 +31,7 @@
 // TEST IDENTITIES ONLY.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { MIRS, SPECS, cborEncode, sha256, unhex } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, cborEncode, moneyRead, openSealed, sha256, unhex } from '../../genesis/src/core.ts';
 import { sealFor, type TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp, referenceTo } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -46,7 +46,8 @@ import { actors, chosen, type Actor } from '../../ummia/src/acting.ts';
 import { deliverSold, type SoldWorks } from '../../dub/src/delivery.ts';
 import { VOW, contestSale, publishVow, vowOfferWords, vowPayload, vowSales, type VowShown } from '../../dub/src/vows.ts';
 import { say } from '../../damgar/src/units.ts';
-import { sendDraft } from '../../damgar/src/messages.ts';
+import { TYPES, readSale, sendDraft } from '../../damgar/src/messages.ts';
+import { MESSAGES_SPECS } from '../../damgar/src/specs.ts';
 import { REGTEST_UNIT } from './grid.ts';
 import type { Line, Reading } from '../../collective/src/explain.ts';
 import type { Desk, Done } from './desk.ts';
@@ -625,6 +626,95 @@ export class Publishing {
     });
   }
 
+  /**
+   * The sales of a collective's works this member published here, as its
+   * split service told them (draft 4, 7.2.3): each checked against the
+   * receipt the collective signed (sealed to every member, rule 57), then the
+   * key delivered to the buyer as the collective, with this member's key,
+   * sealed to the buyer and every member.
+   */
+  private async deliverForCollective(me: TestIdentity, b: Book): Promise<Line[]> {
+    const s = this.settings();
+    const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
+    const inbox = list([...me.f.homes.map((h) => h.hint), ...s.relays]);
+    const seen = new Map<string, Opened>();
+    for (const h of inbox) {
+      let after: number | undefined;
+      try {
+        for (;;) {
+          const page = await relayAt(h, s.via).feed({ to: me.id, after });
+          for (const it of page.items) {
+            if (it.kind !== 'sealed') continue;
+            for (const sec of secrets) {
+              try {
+                const d = (openSealed(it.item, me.id, sec) as { described: Opened }).described;
+                seen.set(d.id, d);
+                break;
+              } catch {
+                // the next key
+              }
+            }
+          }
+          if (!page.items.length || page.next === after) break;
+          after = page.next;
+        }
+      } catch {
+        // away
+      }
+    }
+    const lines: Line[] = [];
+    for (const d of seen.values()) {
+      if (!d.spec || !MESSAGES_SPECS.includes(d.spec) || d.type !== TYPES.sale || !d.payload) continue;
+      const sale = readSale(d.payload);
+      const w = b.works.find((x) => x.collective && x.member === me.id && x.offer === sale.offer && x.publication === sale.publication);
+      if (!w || w.delivered[sale.buyer] || !w.key) continue;
+      const r = seen.get(sale.receipt);
+      const rc = r?.payload && r.spec === MIRS.money && r.type === 2 ? (moneyRead(2, r.payload) as { act: { payer?: string; payee: string; fulfils: string } }).act : null;
+      if (!r || r.signer !== w.as || !rc || rc.payer !== sale.buyer || rc.payee !== w.as || rc.fulfils !== w.offer) {
+        lines.push({ text: `A sale told by ${short(d.signer ?? '?')} was set aside: its receipt, signed by the collective, was not found sealed to you.`, tone: 'warn' });
+        continue;
+      }
+      try {
+        w.delivered[sale.buyer] = await this.collectiveKeyDelivery(me, w, sale.buyer);
+        lines.push({ text: `The key of the collective’s “${w.title}” was delivered to ${short(sale.buyer)}, as the collective, sealed to them and to every member: a sale its split service receipted.`, tone: 'ok' });
+      } catch (e) {
+        lines.push({ text: `The key of “${w.title}” could not be delivered to ${short(sale.buyer)} yet: ${err(e)}`, tone: 'warn' });
+      }
+    }
+    return lines;
+  }
+
+  /** A key delivery of the collective's (Envelopes type 1), with this member's key, sealed to the buyer and every member (rule 57). */
+  private async collectiveKeyDelivery(me: TestIdentity, w: WorkHere, buyer: string): Promise<string> {
+    const s = this.settings();
+    const c = await this.collectiveHere(me, w.as);
+    if (!c.key) throw new Error('no key of yours for the collective was found');
+    const { parties } = await collectiveNow(c.id, c.places, s.via);
+    const at = await chainFor(c.id, c.key, c.places, s.via);
+    const kd = signAsMember(c.id, c.key, at, { spec: SPECS.envelopes, type: KEY_DELIVERY, payload: keyDeliveryPayload(w.publication, w.key!), public: false, to: list([buyer, ...parties]) });
+    const to: { id: string; key: Uint8Array }[] = [];
+    const inboxes: string[] = [];
+    for (const m of list([buyer, ...parties])) {
+      const l = await lookUp(m, list([...c.places, ...s.relays]), s.via).catch(() => null);
+      if (!l?.encryptionKey) continue;
+      to.push({ id: m, key: l.encryptionKey });
+      inboxes.push(...(l.inbox(SPECS.envelopes) ?? []));
+    }
+    if (!to.some((x) => x.id === buyer)) throw new Error('the buyer publishes no encryption key');
+    const sealed = sealFor(kd.act, kd.key, to);
+    let left = 0;
+    for (const h of list([...inboxes, ...c.places])) {
+      try {
+        await relayAt(h, s.via).putSealed(sealed);
+        left++;
+      } catch {
+        // away
+      }
+    }
+    if (!left) throw new Error('no inbox took it');
+    return kd.id;
+  }
+
   /** Deliver the keys of what the sellers held here sold, as their Damgar told of each sale (type 6). */
   deliver(): Promise<{ lines: Line[] }> {
     return this.desk.serial(async () => {
@@ -643,11 +733,23 @@ export class Publishing {
         }
         for (const w of b.works) if (sold[w.publication]) w.delivered = sold[w.publication].delivered;
       }
+      // A collective's works (round 3, part C): its split service tells every member of a sale (the money messages cMIP, draft 4, 7.2.3).
+      for (const member of list(b.works.filter((w) => w.collective && w.key).map((w) => w.member))) {
+        if (!this.store.holds(member)) continue;
+        try {
+          lines.push(...(await this.deliverForCollective(this.me(member), b)));
+        } catch (e) {
+          lines.push({ text: `A collective’s sales could not be read: ${err(e)}`, tone: 'warn' });
+        }
+      }
       this.save(b);
       return { lines: lines.length ? lines : [{ text: 'No sale waits for its key.' }] };
     });
   }
 }
+
+/** A sealed act opened, as the inbox holds it. */
+type Opened = { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array; binding?: string };
 
 /** The offer's words: what it sells and its price, and a lone seller's referral share in the one sentence Damgar reads (F351). */
 export function offerWordsFor(media: SealedMedia, price: string, referral: number | null): string {

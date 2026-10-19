@@ -10,6 +10,7 @@
 // Nothing here imports the agents' code or the pairing's: they are given by
 // the program only, so the web client's bundle holds neither.
 
+import { readId } from '../../genesis/src/forms.ts';
 import type { Access } from '../../collective/src/access.ts';
 import type { Agents } from './agents.ts';
 import type { Collectives } from './collectives.ts';
@@ -109,6 +110,8 @@ export const WEB_OPS: readonly string[] = [
   'real release standing',
   'real collective',
   'real register resignation',
+  'real money prepare',
+  'real money record',
 ];
 
 /** Said where a collective's release would be made: the web client chooses no folder (`docs/edubba-web-report.md`, "Releases"). */
@@ -118,6 +121,15 @@ export const RELEASE_ON_WEB =
 /** Said for any other operation the web client does not answer. */
 export const ON_A_COMPUTER =
   'This needs Edubba on a computer: the web client has no agents, no API key, no drafts from Claude’s connector, no test collective and no money drafts, and makes no identity (bring one you have).';
+
+/** An ID as the page sent it, read where it can be (`mid1…` or hex). */
+const readIdOr = (k: string): string => {
+  try {
+    return readId(k);
+  } catch {
+    return k;
+  }
+};
 
 const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : []);
 const text = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -369,6 +381,19 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return real.confirmShare(text(a.collective), text(a.member), list(a.typed));
       case 'real release standing':
         return real.releaseStanding(text(a.act));
+      case 'real money prepare':
+        // Round 3, part C: the collective's stakes, split plan, split service and keepers, one clone.
+        return real.prepareMoney({
+          collective: text(a.collective),
+          shares: Object.fromEntries(Object.entries((a.shares ?? {}) as Record<string, unknown>).map(([k, v]) => [readIdOr(k), Number(v)])),
+          referral: Number(a.referral ?? 0),
+          service: text(a.service),
+          serviceKey: text(a.serviceKey),
+          keepers: list(a.keepers),
+          keepersNeeded: num(a.keepersNeeded ?? 1),
+        });
+      case 'real money record':
+        return real.recordMoney(text(a.act));
       case 'real register resignation':
         return real.registerResignation(text(a.collective), text(a.act));
       case 'real collective': {
