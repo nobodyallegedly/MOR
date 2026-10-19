@@ -8,7 +8,7 @@
 // `../web/app.ts` (the web client, for testing only: the same operations run
 // in this browser, `../ops.ts`, without the Agents tab).
 
-import { Client, Refused, type ActRead, type IdentityRecord, type RealCollective, type ShareHere, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Permissions, type State } from './api.ts';
+import { Client, Refused, type ActRead, type IdentityRecord, type RealCollective, type ShareHere, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Line, type Permissions, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
@@ -18,7 +18,7 @@ import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 import type { Proposal as MemberProposal, ShareShown } from '../../../dub/src/shapes.ts';
 import { leaveRead as dubLeaveRead, shareTypeBack } from '../../../dub/src/page/view.ts';
 import type { Listing } from '../folders.ts';
-import { defaultGrid, type Grid, type Lane } from '../grid.ts';
+import { defaultGrid, type Grid, type AreaRow } from '../grid.ts';
 import { gridTable } from './grid-view.ts';
 
 const app = document.getElementById('app')!;
@@ -52,6 +52,8 @@ let collectiveMount: Mounted | null = null;
 let postReview: Review | null = null;
 /** A real collective's review (H18): founding, a member change, a release. Nothing is signed until confirmed. */
 let realReview: { plan: string; digest: string } | null = null;
+/** A protected file read back on the Publishing tab, waiting for Sign (round 3, part B). */
+let pubReview: { plan: string; digest: string } | null = null;
 
 // ---------------------------------------------------------------- the founding grid (round 3)
 
@@ -97,7 +99,7 @@ async function syncGrid(fid: string): Promise<void> {
     ...g,
     members,
     constitution: { holders: [...keep(g.constitution.holders), ...(all ? added : [])], number: all && g.constitution.number >= g.members.length ? members.length : g.constitution.number },
-    lanes: g.lanes.map((l) => ({ ...l, holders: keep(l.holders) })),
+    areas: g.areas.map((l) => ({ ...l, holders: keep(l.holders) })),
   };
   grids.set(fid, g);
   drawGrid(fid);
@@ -112,46 +114,46 @@ function gridEvent(el: HTMLElement): boolean {
   if (!g) return false;
   touched.add(fid);
   const d = el.dataset;
-  const lane = (i: string | undefined): Lane | undefined => (i === undefined ? undefined : g.lanes[Number(i)]);
+  const row = (i: string | undefined): AreaRow | undefined => (i === undefined ? undefined : g.areas[Number(i)]);
   const toggle = (xs: string[], m: string) => (xs.includes(m) ? xs.filter((x) => x !== m) : [...xs, m]);
   if (d.gridCell !== undefined) {
     const m = d.m!;
     if (d.gridCell === 'const') g.constitution = { ...g.constitution, holders: toggle(g.constitution.holders, m) };
     else {
-      const l = lane(d.gridCell.split(':')[1])!;
+      const l = row(d.gridCell.split(':')[1])!;
       l.holders = toggle(l.holders, m);
       l.number = Math.max(1, Math.min(l.number, l.holders.length || 1));
     }
   } else if (d.gridAdd !== undefined) {
-    g.lanes.push({ name: '', layer: 2, holders: [], number: 1 });
+    g.areas.push({ name: '', layer: 2, holders: [], number: 1 });
   } else if (d.gridRemove !== undefined) {
-    g.lanes.splice(Number(d.gridRemove), 1);
+    g.areas.splice(Number(d.gridRemove), 1);
   } else if (d.gridNum !== undefined) {
     const n = Number((el as HTMLInputElement).value);
     if (d.gridNum === 'const') g.constitution = { ...g.constitution, number: n };
     else if (d.gridNum === 'chain') g.chainKey = n;
     else if (d.gridNum === 'absence') g.absence = n;
     else if (d.gridNum === 'clone') g.clone = n;
-    else lane(d.gridNum.split(':')[1])!.number = n;
+    else row(d.gridNum.split(':')[1])!.number = n;
   } else if (d.gridLayer !== undefined) {
-    const l = lane(d.gridLayer)!;
+    const l = row(d.gridLayer)!;
     l.layer = Number((el as HTMLSelectElement).value);
     if (l.kinds) l.kinds = [];
     if (l.layer !== 2) delete l.cap;
   } else if (d.gridSome !== undefined) {
-    const l = lane(d.gridSome)!;
+    const l = row(d.gridSome)!;
     if ((el as HTMLInputElement).checked) l.kinds = [];
     else delete l.kinds;
   } else if (d.gridKind !== undefined) {
-    const l = lane(d.gridKind)!;
+    const l = row(d.gridKind)!;
     l.kinds = toggle(l.kinds ?? [], (el as HTMLInputElement).value);
   } else if (d.gridCap !== undefined) {
     const x = (el as HTMLInputElement).value.trim();
-    const l = lane(d.gridCap)!;
+    const l = row(d.gridCap)!;
     if (x) l.cap = Number(x);
     else delete l.cap;
   } else if (d.gridName !== undefined) {
-    lane(d.gridName)!.name = (el as HTMLInputElement).value;
+    row(d.gridName)!.name = (el as HTMLInputElement).value;
     return true;
   } else return false;
   drawGrid(fid);
@@ -251,9 +253,18 @@ async function draw() {
       }
       return;
     }
-    case 'publishing':
-      body.innerHTML = v.publishingTab();
+    case 'publishing': {
+      body.innerHTML = '<p class="small">Reading…</p>';
+      const p = await c.ask<v.PublishingShown>('publishing');
+      body.innerHTML = v.publishingTab(p);
+      // Keys of sales told of are delivered as the tab opens (as Dub does on its main screen).
+      if (p.works.some((w) => !w.collective)) {
+        void c.ask<{ lines: Line[] }>('publishing deliver').then((r) => {
+          if (r.lines.some((l) => /delivered/.test(l.text))) say('done', v.lines(r.lines));
+        }).catch(() => undefined);
+      }
       return;
+    }
     case 'identities': {
       // Agents have their own tab (decided by Nobody, allegedly): only the other identities here.
       const held = v.secondary(state);
@@ -444,6 +455,13 @@ async function drawIdentityPosts(identity: string) {
   } catch (err) {
     fill('e-ident-posts', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
   }
+}
+
+/** Bytes as base64, in the page (no Buffer here). */
+function toBase64(b: Uint8Array): string {
+  let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
+  return btoa(s);
 }
 
 async function refresh() {
@@ -836,10 +854,28 @@ app.addEventListener('click', async (ev) => {
       }
       break;
     }
+    case 'pub-deliver': {
+      const r = await busy('Looking for sales and delivering keys…', () => c.ask<{ lines: Line[] }>('publishing deliver'));
+      if (r) {
+        await draw();
+        say('done', v.lines(r.lines));
+      }
+      break;
+    }
     case 'dialog-close':
       $<HTMLDialogElement>('e-dialog')!.close();
       break;
     case 'confirm': {
+      if (pubReview && at.tab === 'publishing') {
+        const r = pubReview;
+        const done = await busy('Sealing, signing and publishing…', () => c.ask<Done>('publishing confirm', { plan: r.plan, digest: r.digest }));
+        if (done) {
+          pubReview = null;
+          await draw();
+          say('done', v.done(done));
+        }
+        return;
+      }
       if (realReview) {
         const r = realReview;
         const done = await busy('Signing and sending…', () => c.ask<Done>('real confirm', { plan: r.plan, digest: r.digest }));
@@ -1076,6 +1112,55 @@ app.addEventListener('submit', async (ev) => {
   const agent = at.agent ?? undefined;
   // Not `form.id`: a form's fields shadow its properties (the bring forms have a field named "id").
   const fid = form.getAttribute('id');
+  // The Publishing tab (round 3, part B).
+  if (fid === 'collective-add' && at.tab === 'publishing') {
+    const r = await busy('Reading the collective from its relays and homes, and your key for it…', () => c.ask<{ lines: Line[] }>('publishing collective add', { id: words(d.get('collective')) }));
+    if (r) {
+      await draw();
+      say('done', v.lines(r.lines));
+    }
+    return;
+  }
+  if (fid === 'pub-vow') {
+    const r = await busy('Reading it back…', () => c.ask<Review>('publishing vow read', { words: words(d.get('words')), title: words(d.get('title')), price: words(d.get('price')) }));
+    if (r) {
+      pubReview = { plan: r.plan, digest: r.digest };
+      say('', '');
+      fill('e-vow-review', `<div class="colroot">${reading(r.reading, r)}</div>`);
+      $('e-vow-review')?.scrollIntoView({ block: 'start' });
+    }
+    return;
+  }
+  if (fid === 'pub-vow-sales') {
+    const relays = String(d.get('relays') ?? '').split(/\s+/).filter(Boolean);
+    const r = await busy('Asking the relays…', () => c.ask<v.VowSalesShown>('publishing vow sales', { identity: words(d.get('identity')), relays }));
+    if (r) fill('e-vow-sales', v.vowSalesShown(r, (id) => state.identities.find((i) => i.id === id)?.name ?? `${id.slice(0, 8)}…`));
+    return;
+  }
+  if (form.classList.contains('pub-contest')) {
+    const r = await busy('Signing the contest…', () => c.ask<Done>('publishing contest', { vow: form.dataset.vow, sale: form.dataset.sale, buyer: form.dataset.buyer, promise: words(d.get('promise')) }));
+    if (r) {
+      form.replaceWith(Object.assign(document.createElement('span'), { className: 'small', textContent: 'Contested.' }));
+      say('done', v.done(r));
+    }
+    return;
+  }
+  if (fid === 'pub-work') {
+    const media = String(d.get('media') ?? 'text');
+    const file = d.get('file');
+    let data = '';
+    if (media === 'picture') {
+      if (file instanceof File && file.size) data = toBase64(new Uint8Array(await file.arrayBuffer()));
+    } else data = toBase64(new TextEncoder().encode(String(d.get('text') ?? '')));
+    const r = await busy('Reading it back…', () => c.ask<Review>('publishing work read', { media, data, title: words(d.get('title')), price: words(d.get('price')), referral: words(d.get('referral')) }));
+    if (r) {
+      pubReview = { plan: r.plan, digest: r.digest };
+      say('', '');
+      fill('e-pub-review', `<div class="colroot">${reading(r.reading, r)}</div>`);
+      $('e-pub-review')?.scrollIntoView({ block: 'start' });
+    }
+    return;
+  }
   if (fid === 'pair') {
     try {
       await c.ask('pair', { code: $<HTMLInputElement>('pair-code')!.value, label: 'this browser' });
@@ -1437,6 +1522,15 @@ function opened() {
 // H18: a member's share shown here, hand to hand, rather than sealed to a one-time key.
 app.addEventListener('change', async (ev) => {
   const el = ev.target as HTMLInputElement;
+  if (el.name === 'actor' && el.closest('form#acting') && at.tab === 'publishing') {
+    const r = await busy('Choosing who acts…', () => c.ask<{ lines: Line[] }>('publishing act as', { id: el.value }));
+    if (r) {
+      pubReview = null;
+      await draw();
+      say('done', v.lines(r.lines));
+    }
+    return;
+  }
   if (el.id === 'acting-select') {
     const r = await busy('Acting as another identity…', () => c.ask('acting as', { id: el.value }));
     if (r) {

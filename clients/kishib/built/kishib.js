@@ -925,6 +925,27 @@ var Verifier = class {
     }
   }
   /**
+   * A vow, read (Agreements rule 13; F237, F240, F253): its signer, whether
+   * its genesis is void, its versions and latest words, the offers naming
+   * it, and each sale with its state, "pending", "confirmed" (with the
+   * acknowledging acts) or "contested" (with the contests), and the
+   * evidence beside it; and the payments with no buyer signed on.
+   * `specs.railValid` names the claims whose rail the client checked:
+   * a sale is read only from a buyer's own claim with the rail's answer.
+   * @param {any} specs
+   * @param {string} name
+   * @returns {any}
+   */
+  agreementsVow(specs, name) {
+    const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsVow(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * The standing of an act for everything binding (keeper records,
    * payments, discharge of debts, agreements, forks, closings): as
    * `status`, except "unknown" where the answer rests on this client's
@@ -8370,6 +8391,8 @@ label.check input{width:auto}
 .flag.bad{color:var(--bad)}
 .msg.out{margin-left:28px;background:none}
 .msg .sealed{color:var(--envelopes);font-size:12px}
+div.vow-post{border:1px solid var(--edge);border-radius:6px;padding:8px 10px;margin:6px 0}
+img.sealed-picture{display:block;max-width:100%;height:auto;margin:6px 0;border-radius:4px}
 .note{margin:10px 0;padding:10px 12px;border-left:2px solid var(--line);font-size:14px;color:var(--soft)}
 .note.error{border-left-color:var(--bad);color:var(--text)}
 .note.done{border-left-color:var(--faint);color:var(--text)}

@@ -325,14 +325,14 @@ test('the banner on every screen; no Agents tab and nothing of Claude’s; an id
   assert.ok(stored.includes(ada.f.signingSecret), 'the signing key is kept in this browser’s storage, as the banner says');
   assert.ok(!stored.includes(ada.f.safety.seeds), 'never its chain key');
 
-  // The Collectives tab: no test collective; the Publishing tab: its placeholder.
+  // The Collectives tab: no test collective; the Publishing tab, who acts and a protected file (round 3).
   await ed.click('[data-action=tab][data-tab=collectives]');
   assert.equal(await ed.locator('.entry.add[data-id=found]').count(), 0, 'no test collective on the web');
   await ed.locator('.entry.add[data-id=real]').waitFor();
   await ed.locator('.entry.add[data-id=bring]').waitFor();
   await ed.click('[data-action=tab][data-tab=publishing]');
   await banner(ed, 'the Publishing tab');
-  await ed.locator('#e-body', { hasText: 'Coming after Damgar’s round 2' }).waitFor();
+  await ed.locator('#e-body', { hasText: 'A protected file' }).waitFor({ timeout: 60_000 });
 
   // At an iPhone's width, nothing scrolls sideways, on every tab.
   await ed.setViewportSize({ width: 390, height: 844 });
@@ -404,21 +404,21 @@ test('a real collective founded in the web client, its members signing in Dub on
   const grid = ed.locator('#e-grid-real-found table.grid');
   await grid.waitFor({ timeout: 30_000 });
   assert.deepEqual((await grid.locator('thead th[scope=col]').allInnerTexts()).length, 3, 'one column per member');
-  assert.deepEqual((await grid.locator('tr.band th').allTextContents()).map((x) => x.trim()), ['The constitution', 'The judges', 'The lanes: operations']);
-  // A Money lane: Nobody and Ana's keys, one key, two above 10,000.
+  assert.deepEqual((await grid.locator('tr.band th').allTextContents()).map((x) => x.trim()), ['The constitution', 'The judges', 'The areas: operations']);
+  // A Money area: Nobody and Ana's keys, one key, two above 10,000.
   await ed.click('[data-grid-add=real-found]');
-  const money = grid.locator('tr[data-lane="1"]');
-  await money.locator('input.lanename').fill('Money');
+  const money = grid.locator('tr[data-area="1"]');
+  await money.locator('input.areaname').fill('Money');
   await money.locator('select[data-grid-layer]').selectOption('2');
-  for (const id of [nobody.id, anaId]) await grid.locator(`tr[data-lane="1"] button[data-grid-cell="lane:1"][data-m="${id}"]`).click();
-  await grid.locator('tr[data-lane="1"] input[data-grid-cap]').fill('10000');
-  await grid.locator('tr[data-lane="1"] input[data-grid-cap]').press('Tab');
-  await grid.locator('tr[data-lane="1"] td.say', { hasText: 'above 10,000, 2 keys' }).waitFor({ timeout: 10_000 });
+  for (const id of [nobody.id, anaId]) await grid.locator(`tr[data-area="1"] button[data-grid-cell="area:1"][data-m="${id}"]`).click();
+  await grid.locator('tr[data-area="1"] input[data-grid-cap]').fill('10000');
+  await grid.locator('tr[data-area="1"] input[data-grid-cap]').press('Tab');
+  await grid.locator('tr[data-area="1"] td.say', { hasText: 'above 10,000, 2 keys' }).waitFor({ timeout: 10_000 });
   assert.match(await grid.locator('tfoot').innerText(), /Money/);
-  // A second lane over all of Money is refused in plain words, then removed.
+  // A second area over all of Money is refused in plain words, then removed.
   await ed.click('[data-grid-add=real-found]');
-  await grid.locator('tr[data-lane="2"] input.lanename').fill('More money');
-  await grid.locator(`tr[data-lane="2"] button[data-grid-cell="lane:2"][data-m="${boId}"]`).click();
+  await grid.locator('tr[data-area="2"] input.areaname').fill('More money');
+  await grid.locator(`tr[data-area="2"] button[data-grid-cell="area:2"][data-m="${boId}"]`).click();
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review', { hasText: 'reach the same acts' }).waitFor({ timeout: 90_000 });
   await grid.locator('[data-grid-remove="2"]').click();
@@ -431,7 +431,7 @@ test('a real collective founded in the web client, its members signing in Dub on
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading h2', { hasText: 'Propose to found the collective “The tablet house”' }).waitFor({ timeout: 90_000 });
   const rv = await ed.locator('#e-real-review').innerText();
-  assert.match(rv, /The lanes[\s\S]*“Money”: all money \(the Money layer\)\. Any one of [\s\S]*above 10,000 regtest satoshis an act, 2 keys/);
+  assert.match(rv, /The areas[\s\S]*“Money”: all money \(the Money layer\)\. Any one of [\s\S]*above 10,000 regtest satoshis an act, 2 keys/);
   assert.match(rv, /Above 10,000 an act, one more holder's key/);
   await banner(ed, 'the founding review');
   await ed.click('#e-real-review [data-action=confirm]');
@@ -493,10 +493,10 @@ test('a real collective founded in the web client, its members signing in Dub on
 
   // A member change: Cy joins. Every member whose voice remains signs, and Cy, each in Dub on the web; then it waits for Kišib.
   await ed.click('#e-real-change > summary');
-  // The same grid, filled from the agreement in force: its lanes, the Money lane's cap.
+  // The same grid, filled from the agreement in force: its areas, the Money area's cap.
   const cg = ed.locator('#e-grid-real-change table.grid');
   await cg.waitFor({ timeout: 60_000 });
-  assert.equal(await cg.locator('input.lanename').nth(1).inputValue(), 'Money');
+  assert.equal(await cg.locator('input.areaname').nth(1).inputValue(), 'Money');
   assert.equal(await cg.locator('input[data-grid-cap]').first().inputValue(), '10000');
   await ed.check(`#real-change input[name=member][value="${cyId}"]`);
   await cg.locator('thead th[scope=col]', { hasText: 'Cy' }).waitFor({ timeout: 10_000 });
@@ -533,5 +533,73 @@ test('a real collective founded in the web client, its members signing in Dub on
   await other.locator('#e-may').waitFor({ timeout: 60_000 });
   await banner(other, 'a brought collective');
   await shot(other, 'brought');
+  assert.deepEqual(problems, []);
+});
+
+test('the Publishing tab in the web client by clicks: who acts; a protected text and picture read back and signed; a vow; the look-up; both seen sealed and for sale in Dub on the web', async () => {
+  const ed = await pageOf(edubbaBase);
+  await ed.locator('h1.mark', { hasText: 'Edubba' }).waitFor({ timeout: 60_000 });
+  await places(ed);
+  const seller = await elsewhere();
+  await bringIn(ed, 'The seller', seller);
+  await ed.click('[data-action=tab][data-tab=publishing]');
+  await ed.locator('form#acting').waitFor({ timeout: 60_000 });
+  await banner(ed, 'the Publishing tab');
+  assert.equal(await ed.locator('form#acting input[name=actor]:checked').getAttribute('value'), seller.id, 'acting as the identity held');
+  assert.match(await ed.locator('#e-body').innerText(), /A text, or a JPEG picture/);
+  await shot(ed, 'publishing');
+
+  // A text, read back, then signed.
+  await ed.fill('#pub-work textarea[name=text]', 'Three verses, sealed.');
+  await ed.fill('#pub-work input[name=title]', 'Verses, sealed');
+  await ed.fill('#pub-work input[name=price]', '1500');
+  await ed.click('#pub-work button[type=submit]');
+  await ed.locator('#e-pub-review #reading').waitFor({ timeout: 60_000 });
+  assert.match(await ed.locator('#e-pub-review').innerText(), /lone seller’s: itself the agreement between you and each buyer/);
+  await shot(ed, 'publishing-review');
+  await ed.click('#e-pub-review [data-action=confirm]');
+  await done(ed, '#e-status .note.done', 'Published, sealed');
+  await ed.locator('.item[data-work] h3', { hasText: 'Verses, sealed' }).waitFor({ timeout: 60_000 });
+
+  // A picture, chosen as a file: stripped to the picture alone, read back, signed.
+  const jpeg = readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url));
+  await ed.check('#pub-work input[name=media][value=picture]');
+  await ed.setInputFiles('#pub-work input[name=file]', { name: 'tablet.jpg', mimeType: 'image/jpeg', buffer: jpeg });
+  await ed.fill('#pub-work input[name=title]', 'A tablet, photographed');
+  await ed.fill('#pub-work input[name=price]', '2000');
+  await ed.click('#pub-work button[type=submit]');
+  await done(ed, '#e-pub-review #reading', /stripped to the picture alone/);
+  await ed.click('#e-pub-review [data-action=confirm]');
+  await done(ed, '#e-status .note.done', 'Published, sealed');
+
+  // A vow, read back, signed; the look-up of the seller's vow sales, asked of the relay: none yet.
+  await ed.fill('#pub-vow textarea[name=words]', 'A seat at the reading of the tablets.');
+  await ed.fill('#pub-vow input[name=title]', 'A seat, vowed');
+  await ed.fill('#pub-vow input[name=price]', '500');
+  await ed.click('#pub-vow button[type=submit]');
+  await done(ed, '#e-vow-review #reading', /confirms it \(kept\) or contests it \(not kept\)/);
+  await ed.click('#e-vow-review [data-action=confirm]');
+  await done(ed, '#e-status .note.done', 'A vow, published');
+  await ed.fill('#pub-vow-sales textarea[name=relays]', relay.base);
+  await ed.click('#pub-vow-sales button[type=submit]');
+  await done(ed, '#e-vow-sales', /No sale seen/);
+  assert.match(await ed.locator('#e-vow-sales').innerText(), /nothing is indexed/);
+  await shot(ed, 'publishing-vow-sales');
+  await ed.setViewportSize({ width: 390, height: 844 });
+  await narrow(ed, 'the Publishing tab');
+  await ed.setViewportSize({ width: 900, height: 1000 });
+
+  // In Dub on the web, a reader following the seller sees the picture sealed and the vow for sale.
+  const reader = await pageOf(dubBase);
+  await makeIn(reader);
+  await reader.locator('#people summary').click();
+  await reader.locator('form#follow input[name=id]').fill(shownId(seller.id));
+  await reader.locator('form#follow').getByRole('button', { name: 'Follow' }).click();
+  await done(reader, '#status .note.done', 'Followed');
+  await reader.locator('.sealed-post .label', { hasText: 'A sealed picture' }).waitFor({ timeout: 90_000 });
+  await reader.locator('.vow-post', { hasText: 'A seat at the reading of the tablets.' }).waitFor({ timeout: 90_000 });
+  assert.ok(await reader.locator('.vow-post [data-action=buy-vow]').isVisible(), 'the vow can be bought, under the lane');
+  assert.equal(await reader.locator('img.sealed-picture').count(), 0, 'nothing of the picture shown before it is bought');
+  await shot(reader, 'dub-sealed-and-vow');
   assert.deepEqual(problems, []);
 });

@@ -343,6 +343,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       // A share being shown, or its words being typed back, is never drawn over.
       if (app.querySelector('#share-shown') || [...app.querySelectorAll<HTMLInputElement>('#signing form.share-back input')].some((i) => i.value)) return;
       fill('signing-list', r.proposals.length ? r.proposals.map(v.proposal).join('') : '<p class="empty">No proposal to sign. When a collective’s founder asks you to sign, it comes here.</p>');
+      // Round 3: the vows bought here, each sale to confirm or contest.
+      void b.ask<{ vows: Parameters<typeof v.vowsBought>[0] }>('vows bought').then((x) => fill('vows-bought', v.vowsBought(x.vows))).catch((err) => fill('vows-bought', v.note('error', v.e(err instanceof Error ? err.message : String(err)))));
       fill('count-signing', r.waiting ? String(r.waiting) : '');
     } catch (err) {
       fill('signing-list', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
@@ -522,9 +524,27 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         }
         break;
       }
+      case 'buy-vow': {
+        if (!confirm('Buy this vow, under the lane? Dub signs the request to pay within the lane’s cap; you then pay the invoice in your wallet. Once paid, your claim is public: the sale anyone can read.')) break;
+        const r = await busy('Asking the seller where to pay, under the lane…', () => b.ask<{ lines: v.Line[] }>('vow buy', { vow: d.vow, seller: d.seller, post: d.post }));
+        if (r) {
+          say('done', v.lines(r.lines));
+          await readFeed();
+        }
+        break;
+      }
+      case 'vow-confirm': {
+        if (!confirm('Confirm that this vow was kept? Your claim of its payment, acknowledging the vow, is signed in public.')) break;
+        const r = await busy('Signing your confirmation…', () => b.ask<{ lines: v.Line[] }>('vow confirm', { vow: d.vow }));
+        if (r) {
+          say('done', v.lines(r.lines));
+          await readSigning();
+        }
+        break;
+      }
       case 'buy': {
         if (!confirm('Buy it, under the lane? Dub signs the request to pay within the lane’s cap; you then pay the invoice in your wallet (Payments, in the Private tab).')) break;
-        const r = await busy('Asking the seller where to pay, under the lane…', () => b.ask<{ lines: v.Line[] }>('buy', { publication: d.publication, seller: d.seller, repost: d.repost, reposter: d.reposter }));
+        const r = await busy('Asking the seller where to pay, under the lane…', () => b.ask<{ lines: v.Line[] }>('buy', { publication: d.publication, seller: d.seller, post: d.post, repost: d.repost, reposter: d.reposter }));
         if (r) {
           say('done', v.lines(r.lines));
           await readFeed();
@@ -684,6 +704,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
     if (name === 'pair') return; // the program's own start handles it (`app.ts`)
     ev.preventDefault();
     const d = new FormData(form);
+    if (form.classList.contains('vow-contest')) {
+      if (!confirm('Contest this sale? A contest naming it is signed in public. It voids nothing.')) return;
+      const r = await busy('Signing your contest…', () => b.ask<{ lines: v.Line[] }>('vow contest', { vow: form.dataset.vow, promise: String(d.get('promise') ?? '') }));
+      if (r) {
+        say('done', v.lines(r.lines));
+        await readSigning();
+      }
+      return;
+    }
     if (form.classList.contains('tip')) {
       const card = form.closest<HTMLElement>('article');
       const lane = (ev as SubmitEvent).submitter?.getAttribute('value') === 'lane';

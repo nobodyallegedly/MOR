@@ -37,7 +37,7 @@ test('a collective’s release from Ummia, signed with a member’s own key; a s
     constitution: { holders: [A.id, iPa.id, iPh.id], number: 3 },
     chainKey: 2,
     absence: 2,
-    lanes: [
+    areas: [
       { name: 'Publishing', layer: 1, holders: [A.id, iPa.id], number: 2 },
       { name: 'Development', layer: 4, holders: [iPh.id], number: 1 },
     ],
@@ -59,7 +59,7 @@ test('a collective’s release from Ummia, signed with a member’s own key; a s
   await u.c.ask('bring', { id: A.id, words: A.words, address: H[0] });
   await u.c.ask('settings', { relays: R, track: R });
   const added = await u.c.ask<{ lines: { text: string }[] }>('collective add', { id: col });
-  assert.match(added.lines[0].text, /its releases go through its lane “Publishing”, 2 keys of 2/);
+  assert.match(added.lines[0].text, /its releases go through its area “Publishing”, 2 keys of 2/);
   let st = await u.c.ask<State>('state');
   assert.ok(st.actors.some((a) => a.id === col && a.kind === 'collective' && a.available));
   await u.c.ask('acting', { id: col });
@@ -99,5 +99,5 @@ test('a collective’s release from Ummia, signed with a member’s own key; a s
   // iPh holds no box in Publishing: refused in Ummia.
   const u2 = await ummia();
   await u2.c.ask('bring', { id: iPh.id, words: iPh.words, address: H[0] });
-  await refused(u2.c.ask('collective add', { id: col }), /You hold no box in the lane reaching its releases/);
+  await refused(u2.c.ask('collective add', { id: col }), /You hold no box in the area reaching its releases/);
 });

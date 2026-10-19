@@ -294,7 +294,7 @@ const TYPE_NAMES: Record<string, Record<number, string>> = {
 export function kindWords(k: AreaRead['kinds'][number]): string {
   if (k.form === 'layer') {
     const layer = LAYERS[k.layer ?? -1] ?? `layer ${k.layer}`;
-    return `every act of the ${layer} layer: its lane, which also adopts the cMIPs for that layer's tasks`;
+    return `every act of the ${layer} layer: its area, which also adopts the cMIPs for that layer's tasks`;
   }
   return TYPE_NAMES[k.spec ?? '']?.[k.type ?? -1] ?? `every act of type ${k.type} of ${specName(k.spec ?? '')} made by the collective`;
 }

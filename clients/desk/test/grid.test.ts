@@ -1,7 +1,7 @@
 // The founding grid (round 3; `src/grid.ts`): its hashes are the core's; it
 // refuses in plain words what Agreements would refuse; the grid of the
-// author's cast becomes founding terms Agreements accept, with its lanes, its
-// numbers and the Money lane's cap (area key 6, F353); read back as a grid for
+// author's cast becomes founding terms Agreements accept, with its areas, its
+// numbers and the Money area's cap (area key 6, F353); read back as a grid for
 // a member change; said in sentences, band by band.
 
 import { test } from 'node:test';
@@ -22,7 +22,7 @@ const cast = (): Grid => ({
   constitution: { holders: [A, iPa, iPh], number: 3 },
   chainKey: 2,
   absence: 2,
-  lanes: [
+  areas: [
     { name: 'Publishing', layer: 1, holders: [A, iPa, iPh], number: 1 },
     { name: 'Money', layer: 2, holders: [A, iPa], number: 1, cap: 10_000 },
     { name: 'Development', layer: 4, holders: [iPh], number: 1 },
@@ -36,7 +36,7 @@ test('the hashes the page writes are the core’s', () => {
   assert.equal(REGTEST_UNIT, (moneySpecs() as { units: { regtest: string } }).units.regtest);
 });
 
-test('the cast’s grid becomes founding terms Agreements accept, its lanes and cap read back', () => {
+test('the cast’s grid becomes founding terms Agreements accept, its areas and cap read back', () => {
   const { governance, blocking } = governanceOf(cast(), 'The words.');
   assert.deepEqual(blocking, []);
   const payload = TestCollective.foundingTerms(governance, [A, iPa, iPh]);
@@ -54,14 +54,14 @@ test('the cast’s grid becomes founding terms Agreements accept, its lanes and 
   assert.match(all, /a key of their own/);
   // Read back for a member change: the same grid.
   const back = gridOf(governance, [A, iPa, iPh]);
-  assert.deepEqual(back.lanes.map((l) => [l.id, l.name, l.layer, l.holders.map(names), l.number, l.cap]), [
+  assert.deepEqual(back.areas.map((l) => [l.id, l.name, l.layer, l.holders.map(names), l.number, l.cap]), [
     [1, 'Publishing', 1, ['A', 'iPa', 'iPh'], 1, undefined],
     [2, 'Money', 2, ['A', 'iPa'], 1, 10_000],
     [3, 'Development', 4, ['iPh'], 1, undefined],
   ]);
-  // A lane kept keeps its id; a new one takes the next, never a used one (Q32).
-  const g = { ...back, lanes: [...back.lanes.filter((l) => l.name !== 'Development'), { name: 'Vows', layer: 1, kinds: [`${MIRS.envelopes}:5`], holders: [A], number: 1 }] };
-  g.lanes[0].kinds = [`${MIRS.envelopes}:0`, `${MIRS.text}:0`];
+  // An area kept keeps its id; a new one takes the next, never a used one (Q32).
+  const g = { ...back, areas: [...back.areas.filter((l) => l.name !== 'Development'), { name: 'Vows', layer: 1, kinds: [`${MIRS.envelopes}:5`], holders: [A], number: 1 }] };
+  g.areas[0].kinds = [`${MIRS.envelopes}:0`, `${MIRS.text}:0`];
   const again = governanceOf(g, 'x', [1, 2, 3]);
   assert.deepEqual(again.blocking, []);
   assert.deepEqual(again.governance.areas!.map((a) => [a.id, a.name]), [[1, 'Publishing'], [2, 'Money'], [4, 'Vows']]);
@@ -73,20 +73,20 @@ test('the grid refuses in plain words what Agreements would refuse', () => {
     f(g);
     return governanceOf(g, 'x').blocking.join(' | ');
   };
-  assert.match(said((g) => (g.lanes[2].holders = [])), /fill at least one member’s box/);
-  assert.match(said((g) => (g.lanes[1].number = 3)), /a number of keys from 1 to 2/);
+  assert.match(said((g) => (g.areas[2].holders = [])), /fill at least one member’s box/);
+  assert.match(said((g) => (g.areas[1].number = 3)), /a number of keys from 1 to 2/);
   assert.match(said((g) => (g.chainKey = 3)), /losing one member’s share/);
   assert.match(said((g) => (g.absence = 3)), /Judge absence: a number from 1 to 2/);
-  assert.match(said((g) => g.lanes.push({ name: 'More money', layer: 2, holders: [iPh], number: 1 })), /reach the same acts/);
-  assert.match(said((g) => (g.lanes[0].cap = 5)), /for a Money lane/);
-  assert.match(said((g) => (g.lanes[1].holders = [A])), /above the amount it asks 2 keys, and has 1 holder/);
-  assert.match(said((g) => (g.lanes[0].kinds = [])), /none is chosen/);
+  assert.match(said((g) => g.areas.push({ name: 'More money', layer: 2, holders: [iPh], number: 1 })), /reach the same acts/);
+  assert.match(said((g) => (g.areas[0].cap = 5)), /for a Money area/);
+  assert.match(said((g) => (g.areas[1].holders = [A])), /above the amount it asks 2 keys, and has 1 holder/);
+  assert.match(said((g) => (g.areas[0].kinds = [])), /none is chosen/);
   assert.match(said((g) => (g.constitution.holders = [])), /tick at least one member/);
-  assert.match(said((g) => (g.lanes = [])), /Add at least one lane/);
+  assert.match(said((g) => (g.areas = [])), /Add at least one area/);
   // Kinds that do not overlap stand side by side in one layer.
   assert.equal(said((g) => {
-    g.lanes[0].kinds = [`${MIRS.envelopes}:0`];
-    g.lanes.push({ name: 'Vows', layer: 1, kinds: [`${MIRS.envelopes}:5`], holders: [iPa], number: 1 });
+    g.areas[0].kinds = [`${MIRS.envelopes}:0`];
+    g.areas.push({ name: 'Vows', layer: 1, kinds: [`${MIRS.envelopes}:5`], holders: [iPa], number: 1 });
   }), '');
 });
 
@@ -100,12 +100,12 @@ test('some members ticked for the constitution: a rule naming them', () => {
   assert.equal(t.constitutional.form, 'named');
 });
 
-test('the grid in sentences: the constitution, the judges, the lanes, each member', () => {
+test('the grid in sentences: the constitution, the judges, the areas, each member', () => {
   const s = gridSay(cast(), names);
-  assert.deepEqual(s.map((x) => x.heading), ['The constitution', 'The judges', 'The lanes', 'Each member']);
-  const lanes = s[2].lines.join('\n');
-  assert.match(lanes, /“Money”: all money \(the Money layer\)\. Any one of A and iPa, each signing with a key of their own; above 10,000 regtest satoshis an act, 2 keys/);
-  assert.match(lanes, /“Development”: .*IPh alone|“Development”: .*iPh alone/);
+  assert.deepEqual(s.map((x) => x.heading), ['The constitution', 'The judges', 'The areas', 'Each member']);
+  const areas = s[2].lines.join('\n');
+  assert.match(areas, /“Money”: all money \(the Money layer\)\. Any one of A and iPa, each signing with a key of their own; above 10,000 regtest satoshis an act, 2 keys/);
+  assert.match(areas, /“Development”: .*IPh alone|“Development”: .*iPh alone/);
   assert.match(s[3].lines[2], /^iPh: holds “Publishing” and “Development”/);
-  assert.equal(defaultGrid([A, iPa]).lanes.length, 1);
+  assert.equal(defaultGrid([A, iPa]).areas.length, 1);
 });

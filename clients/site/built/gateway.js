@@ -943,6 +943,27 @@ var Verifier = class {
     }
   }
   /**
+   * A vow, read (Agreements rule 13; F237, F240, F253): its signer, whether
+   * its genesis is void, its versions and latest words, the offers naming
+   * it, and each sale with its state, "pending", "confirmed" (with the
+   * acknowledging acts) or "contested" (with the contests), and the
+   * evidence beside it; and the payments with no buyer signed on.
+   * `specs.railValid` names the claims whose rail the client checked:
+   * a sale is read only from a buyer's own claim with the rail's answer.
+   * @param {any} specs
+   * @param {string} name
+   * @returns {any}
+   */
+  agreementsVow(specs, name) {
+    const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsVow(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[2]) {
+      throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+  }
+  /**
    * The standing of an act for everything binding (keeper records,
    * payments, discharge of debts, agreements, forks, closings): as
    * `status`, except "unknown" where the answer rests on this client's

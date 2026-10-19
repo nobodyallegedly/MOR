@@ -1706,6 +1706,15 @@ struct SpecsIn {
     /// them (F131, IT3): wrong receipts, counting for nothing.
     #[serde(default)]
     rail_invalid: Vec<String>,
+    /// Receipts and claims whose rail proof the client checked under the
+    /// payment cMIP and found valid (Money rules 2 and 4), with where the
+    /// proof says the payment was paid: `[act, paid-to act, vault entry]`,
+    /// the payee-pointer act (entry null) or the genesis or rotation
+    /// declaring the vault entry it was paid to. The rail's answer, a fact
+    /// the client states: the core reads no rail. Round 3: a vow's sales
+    /// are read from the buyers' claims with it (rule 13).
+    #[serde(default)]
+    rail_valid: Vec<(String, String, Option<u64>)>,
     /// Absence proof (Agreements rule 51, F172): pairs `[declaration, act]`, an
     /// abandonment declaration and the record or clone using it, that the
     /// absence-proof cMIP its clause names (key 3) accepted, as the client
@@ -1784,6 +1793,13 @@ impl SpecsIn {
         for r in &self.rail_invalid {
             view.rail_invalid.insert(unhex(r)?);
         }
+        for (a, at, entry) in &self.rail_valid {
+            let at = unhex(at)?;
+            view.rail_valid.insert(unhex(a)?, match entry {
+                Some(i) => money::PaidAt::VaultEntry(at, *i),
+                None => money::PaidAt::Flow(at),
+            });
+        }
         for (d, by) in &self.absence_accepted {
             view.absence_accepted.insert((unhex(d)?, unhex(by)?));
         }
@@ -1818,6 +1834,31 @@ pub fn check_terms(payload: &[u8], specs: JsValue) -> R<()> {
     let s = specs_of(specs)?;
     let t = agreements::Terms::decode(&payload_of(payload)?).map_err(lerr)?;
     t.check(&s.mirs()?).map_err(lerr)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VowSaleOut {
+    act: String,
+    offer: String,
+    buyer: String,
+    state: String,
+    by: Vec<String>,
+    evidence: Vec<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VowOut {
+    name: String,
+    signer: String,
+    void: bool,
+    versions: Vec<String>,
+    latest: Vec<String>,
+    words: Vec<String>,
+    offers: Vec<String>,
+    sales: Vec<VowSaleOut>,
+    unsigned: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -3618,6 +3659,42 @@ impl Verifier {
             why,
             claim: e.purchase.as_ref().map(|p| (hx(&p.agreement), hx(&p.line))),
             refund_to,
+        })
+    }
+
+    /// A vow, read (Agreements rule 13; F237, F240, F253): its signer, whether
+    /// its genesis is void, its versions and latest words, the offers naming
+    /// it, and each sale with its state, "pending", "confirmed" (with the
+    /// acknowledging acts) or "contested" (with the contests), and the
+    /// evidence beside it; and the payments with no buyer signed on.
+    /// `specs.railValid` names the claims whose rail the client checked:
+    /// a sale is read only from a buyer's own claim with the rail's answer.
+    #[wasm_bindgen(js_name = agreementsVow)]
+    pub fn agreements_vow(&self, specs: JsValue, name: &str) -> R<JsValue> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        let e = view.vow(&unhex(name)?).map_err(lerr)?;
+        to_js(&VowOut {
+            name: hx(&e.name),
+            signer: hx(&e.signer),
+            void: e.void,
+            versions: e.versions.iter().map(hx).collect(),
+            latest: e.latest.iter().map(hx).collect(),
+            words: e.words.clone(),
+            offers: e.offers.iter().map(hx).collect(),
+            sales: e
+                .sales
+                .iter()
+                .map(|x| {
+                    let (state, by) = match &x.state {
+                        agreements::SaleState::Pending => ("pending", vec![]),
+                        agreements::SaleState::Confirmed { by } => ("confirmed", by.iter().map(hx).collect()),
+                        agreements::SaleState::Contested { by } => ("contested", by.iter().map(hx).collect()),
+                    };
+                    VowSaleOut { act: hx(&x.act), offer: hx(&x.offer), buyer: hx(&x.buyer), state: state.into(), by, evidence: x.evidence.iter().map(hx).collect() }
+                })
+                .collect(),
+            unsigned: e.unsigned.iter().map(hx).collect(),
         })
     }
 

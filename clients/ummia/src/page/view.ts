@@ -193,7 +193,7 @@ export function releases(s: State, r: { releases: { id: string; name: string; ve
     : '';
   const forCollective = s.actors.find((a) => a.id === s.acting)?.kind === 'collective';
   return `<h2>${forCollective ? 'A release of the collective' : 'A release under your own name'}</h2>
-<p class="small">${forCollective ? 'Signed with your own key for the collective (F353): it counts once the lane reaching its releases is met; where it asks more keys, its other holders are asked, and sign in their own app. A collective’s releases moved here from Edubba (F339).' : 'A collective’s releases are made here too: choose it under Who acts, or add it by its ID.'}</p>
+<p class="small">${forCollective ? 'Signed with your own key for the collective (F353): it counts once the area reaching its releases is met; where it asks more keys, its other holders are asked, and sign in their own app. A collective’s releases moved here from Edubba (F339).' : 'A collective’s releases are made here too: choose it under Who acts, or add it by its ID.'}</p>
 <form id="release"><label>The folder (a git folder gives what git tracks; a plain folder every file but hidden ones)</label>
 <div class="row"><input name="folder" class="grow" autocomplete="off" spellcheck="false" placeholder="~/code/my-module"><button type="button" data-action="folders">Choose a folder…</button></div>
 <div id="picker"></div><p class="small" id="folder-said"></p>

@@ -149,7 +149,7 @@ export async function readProposal(act: Uint8Array, names: Names, hints: string[
       collective: d.signer ?? null,
     };
   }
-  // Round 3 (F353): an act of a collective a lane reaches, made with one
+  // Round 3 (F353): an act of a collective an area reaches, made with one
   // member's key, waiting for another holder's key (rule 60): read in plain
   // words from its bytes, then signed as the collective with your own key.
   const act2 = actOfCollective(d, names);
@@ -164,7 +164,7 @@ function actOfCollective(d: Described, names: Names): Reading | null {
   const base = (title: string, lines: string[], plain: { heading: string; text: string }[] = []): Reading => ({
     kind: 'act',
     title,
-    summary: [`An act of the collective ${names(d.signer!)}, waiting for your signature: the lane that reaches it asks one more key than it has.${by} Signing adds yours, with your own key for this collective where your apps hold it (Agreements rule 60, F353).`],
+    summary: [`An act of the collective ${names(d.signer!)}, waiting for your signature: the area that reaches it asks one more key than it has.${by} Signing adds yours, with your own key for this collective where your apps hold it (Agreements rule 60, F353).`],
     sections: [{ heading: 'What it is', lines: lines.map((text) => ({ text })) }],
     plain,
     risks: [],

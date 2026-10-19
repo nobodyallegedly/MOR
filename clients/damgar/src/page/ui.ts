@@ -25,6 +25,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   let timer: ReturnType<typeof setInterval> | null = null;
   /** The pointer reviewed, until published or left. */
   let reviewed: Record<string, unknown> | null = null;
+  /** A transfer to the vault read back (H46), waiting for its binding. */
+  let vaultAsked: { entry: number; value: string } | null = null;
   /** A lane of Damgar's own read back, until signed or left. */
   let laneAsked: Record<string, unknown> | null = null;
 
@@ -169,9 +171,23 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         problem = err instanceof Error ? err.message : String(err);
       }
       const l = await b.ask<{ manual: boolean; link: boolean; linkSay: string[]; clock: string | null }>('lanes').catch(() => null);
-      $('settings-body')!.innerHTML = v.settings(state!, r, problem) + (l ? v.byHand(l, b.web) : '');
+      state = await b.ask<State>('state').catch(() => state);
+      $('settings-body')!.innerHTML = v.settings(state!, r, problem, l, opened);
     }
   }
+
+  // Settings' sections the person opened (H45), kept while the page is open, so a save does not fold them again.
+  const opened = new Set<string>();
+  app.addEventListener(
+    'toggle',
+    (ev) => {
+      const d = ev.target as HTMLElement;
+      if (!(d instanceof HTMLDetailsElement) || !d.classList.contains('setting')) return;
+      if (d.open) opened.add(d.dataset.fold!);
+      else opened.delete(d.dataset.fold!);
+    },
+    true,
+  );
 
   const form = (f: HTMLFormElement) => new FormData(f);
   const str = (fd: FormData, k: string) => String(fd.get(k) ?? '');
@@ -302,6 +318,16 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         }
         return;
       }
+      case 'vault transfer': {
+        if (!vaultAsked) return;
+        const r = await act(() => b.ask<{ lines: v.Line[] }>('vault transfer', { ...vaultAsked, digest: el.dataset.digest }));
+        if (r) {
+          vaultAsked = null;
+          await open('pay');
+          done(r);
+        }
+        return;
+      }
       case 'rails publish': {
         if (!reviewed) return;
         const r = await act(() => b.ask<{ lines: v.Line[] }>('rails publish', { ...reviewed, digest: el.dataset.digest }));
@@ -359,7 +385,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       }
     } else if (fid === 'accept') {
       const keys = [...f.querySelectorAll<HTMLInputElement>('input[name=accept]:checked')].map((x) => x.value);
-      const r = await act(() => b.ask<{ lines: v.Line[] }>('accept', { keys }));
+      const r = await act(() => b.ask<{ lines: v.Line[] }>('accept', { keys, where: state?.stage === 'accept' ? 'first' : 'settings' }));
       if (r) {
         const s = await b.ask<State>('state');
         if (state?.stage === 'accept') {
@@ -378,6 +404,19 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       }
     } else if (f.classList.contains('paid')) {
       const r = await act(() => b.ask<{ lines: v.Line[] }>('paid', { key: f.dataset.key, proof: str(fd, 'proof') }));
+      if (r) {
+        await open('pay');
+        done(r);
+      }
+    } else if (fid === 'vault-transfer') {
+      const a = { entry: Number(str(fd, 'entry') || 0), value: str(fd, 'value') };
+      const r = await act(() => b.ask<{ digest: string; lines: v.Line[]; costs: v.Line[]; blocking: string[] }>('vault transfer read', a));
+      if (r) {
+        vaultAsked = a;
+        $('vault-review')!.innerHTML = v.vaultReview(r);
+      }
+    } else if (f.classList.contains('vault-invoice')) {
+      const r = await act(() => b.ask<{ lines: v.Line[] }>('vault invoice', { key: f.dataset.key, invoice: str(fd, 'invoice') }));
       if (r) {
         await open('pay');
         done(r);

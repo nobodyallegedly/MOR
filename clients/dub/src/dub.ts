@@ -141,7 +141,7 @@ export interface Pending {
  * be signed twice at one position.
  */
 /** What Dub keeps for money, by name (round 2): Damgar's code's settings, book and keys (its lane), and the keys of posts sold and bought. */
-export const MONEY_KEPT = ['settings', 'book', 'keys', 'sold', 'bought'] as const;
+export const MONEY_KEPT = ['settings', 'book', 'keys', 'sold', 'bought', 'vows'] as const;
 export type MoneyKept = (typeof MONEY_KEPT)[number];
 
 export interface Keep {
@@ -818,6 +818,11 @@ export class Dub {
           if (sealed.seller !== fp.signer) it.repost = { by: this.whoFrom(fp.signer, me.id, p), of: this.whoFrom(sealed.seller, me.id, p) };
         }
       }
+      // A vow (round 3): the post names it and its offer.
+      if (!it.sealed && fp.post.refs.some((r) => r.kind !== 'picture')) {
+        const vow = await this.money.readVowRef(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.filter((r) => r.kind !== 'picture').map((r) => ({ id: (r as { id: string }).id, signer: (r as { signer?: string }).signer ?? (r as { actSigner?: string }).actSigner }))).catch(() => null);
+        if (vow) it.vow = vow;
+      }
       items.push(it);
     }
     // A post signed under a grant (an agent posting in its owner's name, F343): its standing is Agreements', said on whose authority.
@@ -1317,7 +1322,7 @@ export class Dub {
       if (key) {
         try {
           await this.signed(me, () => sealMemberKey(me, { terms: act, signature: made.id, public: key.public, secret: key.secret }, () => undefined));
-          lines.push({ text: `Your own key for this collective was made and named in your signature: once the collective is complete, it signs for you in the lanes you hold, from any of your apps. Its private half is sealed to you at your homes (it sits there encrypted, a stated cost; F353).`, tone: 'ok' });
+          lines.push({ text: `Your own key for this collective was made and named in your signature: once the collective is complete, it signs for you in the areas you hold, from any of your apps. Its private half is sealed to you at your homes (it sits there encrypted, a stated cost; F353).`, tone: 'ok' });
         } catch (e) {
           lines.push({ text: `Your own key was named in your signature, but could not be sealed to you: ${message(e)}`, tone: 'bad' });
         }
@@ -1703,13 +1708,48 @@ export class Dub {
   }
 
   /** Buy a sealed post under the lane, naming the repost it was found through, if any. */
-  buy(a: { publication: string; seller: string; repost?: string; reposter?: string }): Promise<{ lines: Line[] }> {
+  buy(a: { publication: string; seller: string; post?: string; repost?: string; reposter?: string }): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
       await this.money.lanes(me, s, hints);
       const repost = a.repost && a.reposter ? { id: readId(a.repost), by: readId(a.reposter) } : null;
-      const lines = await this.money.buy(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readId(a.publication), seller: readId(a.seller), repost });
+      const lines = await this.money.buy(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readId(a.publication), seller: readId(a.seller), repost, post: a.post ? readId(a.post) : null });
       return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Buy a vow under the lane (round 3): its claim, once paid, is published too, the sale anyone can read. */
+  buyVow(a: { vow: string; seller: string; post: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      await this.money.lanes(me, s, hints);
+      const lines = await this.money.buyVow(me, [...hints, ...this.inboxPlaces(p)], s.via, { vow: readId(a.vow), seller: readId(a.seller), post: readId(a.post) });
+      return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** The vows bought here, each sale as the relays read it (round 3; the Signing tab). */
+  vowsBought(): Promise<{ vows: Awaited<ReturnType<DubMoney['vowsBought']>> }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      return { vows: await this.money.vowsBought(me, [...hints, ...this.inboxPlaces(p), ...s.relays], s.via) };
+    });
+  }
+
+  /** Confirm a vow bought: its sale reads confirmed (rule 13). */
+  confirmVow(vow: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      await this.money.lanes(me, s, hints);
+      return { lines: (await this.money.confirmVow(me, readId(vow))).map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Contest a vow bought: its sale reads contested, the promise not kept in words if given (F253). */
+  contestVow(vow: string, promise: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      return { lines: (await this.money.contestVow(me, s, readId(vow), promise.trim() || null)).map((text) => ({ text, tone: 'ok' as const })) };
     });
   }
 

@@ -147,7 +147,7 @@ function normalGrid(g: Grid, members: string[]): Grid {
     }
   };
   const ids = (xs: string[]) => [...new Set(xs.map(id))].filter((x) => members.includes(x));
-  return { ...g, members, constitution: { ...g.constitution, holders: ids(g.constitution.holders) }, lanes: g.lanes.map((l) => ({ ...l, holders: ids(l.holders) })) };
+  return { ...g, members, constitution: { ...g.constitution, holders: ids(g.constitution.holders) }, areas: g.areas.map((l) => ({ ...l, holders: ids(l.holders) })) };
 }
 
 /** The words everyone signs, drawn from the grid when none are typed: the collective's name, then each band's sentences. */
@@ -381,7 +381,7 @@ export class Real {
     if (key) {
       try {
         await sealMemberKey(me, { terms: act, signature: own.id, public: key.public, secret: key.secret }, () => this.store.saveIdentity(me));
-        lines.push({ text: `${this.names()(me.id)}’s own key for this collective is named in the signature and sealed to them at their homes: once it is complete, it signs for them in the lanes they hold (F353).`, tone: 'ok' });
+        lines.push({ text: `${this.names()(me.id)}’s own key for this collective is named in the signature and sealed to them at their homes: once it is complete, it signs for them in the areas they hold (F353).`, tone: 'ok' });
       } catch (e) {
         lines.push({ text: `The signature names a key of ${this.names()(me.id)}’s own, but it could not be sealed to them: ${err(e)}`, tone: 'bad' });
       }
@@ -843,7 +843,7 @@ export class Real {
       return {
         title: `${names(r.member)}’s resignation is registered`,
         lines: [
-          { text: `The collective’s line ${shownAct(line.id)} registers it: from there, ${names(r.member)}’s voice counts in no rule and no lane (rule 70). They keep their stake, as a departed holder (rule 68).`, tone: 'ok' },
+          { text: `The collective’s line ${shownAct(line.id)} registers it: from there, ${names(r.member)}’s voice counts in no rule and no area (rule 70). They keep their stake, as a departed holder (rule 68).`, tone: 'ok' },
           { text: 'Now propose the change of members without them (“Change its members”): every member whose voice remains signs it, then it waits for Kišib.' },
         ],
         acts: [line.id],

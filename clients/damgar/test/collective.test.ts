@@ -1,10 +1,10 @@
 // Damgar for a collective (round 3; F353, Agreements draft 16, the grant
 // limits cMIP draft 2): a real collective founded in Edubba from the grid,
-// its Money lane held by A and iPa, one key, two above 10,000. A's Damgar
+// its Money area held by A and iPa, one key, two above 10,000. A's Damgar
 // acts for it with A's own key, found sealed to A at A's homes: a promise
 // within the cap counts alone; one above it counts only once iPa signs it
 // with iPa's own key, in Dub's Signing tab. A member holding no box in the
-// Money lane is refused, and so is a collective added by someone else's ID.
+// Money area is refused, and so is a collective added by someone else's ID.
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,7 +25,7 @@ after(async () => {
   for (const h of [...homes, relay]) await h.stop();
 });
 
-test('a member acts for the collective from Damgar with their own key: within the Money lane’s cap alone, above it with a second key', async () => {
+test('a member acts for the collective from Damgar with their own key: within the Money area’s cap alone, above it with a second key', async () => {
   const H = homes.map((h) => h.base);
   const R = [relay.base];
   void apps;
@@ -39,7 +39,7 @@ test('a member acts for the collective from Damgar with their own key: within th
     constitution: { holders: [A.id, iPa.id, iPh.id], number: 3 },
     chainKey: 2,
     absence: 2,
-    lanes: [
+    areas: [
       { name: 'Publishing', layer: 1, holders: [A.id, iPa.id, iPh.id], number: 1 },
       { name: 'Money', layer: 2, holders: [A.id, iPa.id], number: 1, cap: 10_000 },
       { name: 'Development', layer: 4, holders: [iPh.id], number: 1 },
@@ -61,7 +61,7 @@ test('a member acts for the collective from Damgar with their own key: within th
   await g.c.ask('bring', { id: A.id, words: A.words, address: H[0], relays: R.join(' ') });
   await g.c.ask('accept', { keys: ACCEPTABLE.map((a) => a.key) });
   const added = await g.c.ask<any>('collective add', { id: col });
-  assert.match(added.lines[1].text, /Its Money lane, “Money”: .*1 key; above 10,000 an act, one more/);
+  assert.match(added.lines[1].text, /Its Money area, “Money”: .*1 key; above 10,000 an act, one more/);
 
   // iPh publishes where it is paid: the promises are to iPh.
   const ph = await damgar();
@@ -71,12 +71,12 @@ test('a member acts for the collective from Damgar with their own key: within th
   const rr = await ph.c.ask<{ digest: string }>('rails review', { lightning: node.key, network: 3 });
   await ph.c.ask('rails publish', { lightning: node.key, network: 3, digest: rr.digest });
   // iPh holds no box in Money: refused there.
-  await refused(ph.c.ask('collective add', { id: col }), /You hold no box in its Money lane/);
+  await refused(ph.c.ask('collective add', { id: col }), /You hold no box in its Money area/);
 
   // Within the cap: A's key alone.
   const small = { collective: col, to: iPh.id, value: '2000', unit: '', whatFor: 'clay' };
   const s1 = await g.c.ask<any>('collective promise read', small);
-  assert.ok(s1.lines.some((l: any) => /Within the lane: your key alone makes it count/.test(l.text)), JSON.stringify(s1.lines));
+  assert.ok(s1.lines.some((l: any) => /Within the area: your key alone makes it count/.test(l.text)), JSON.stringify(s1.lines));
   await refused(g.c.ask('collective promise', { ...small, digest: '00'.repeat(32) }), /not the promise read back/);
   const p1 = await g.c.ask<any>('collective promise', { ...small, digest: s1.digest });
   assert.ok(p1.lines.some((l: any) => /It counts for the collective/.test(l.text)), JSON.stringify(p1.lines));

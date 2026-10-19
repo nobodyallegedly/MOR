@@ -7,6 +7,7 @@
 // plain words. Whether built/ is what these sources give is `npm run
 // test:build` (test/build/).
 
+import { Publishing } from '../src/publishing.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, execFileSync } from 'node:child_process';
@@ -130,6 +131,7 @@ test('the web client’s operations: the ones it answers; everything of the agen
       real,
       after: new AfterKishib(desk, store, real),
       member: new Member(store, desk),
+      publishing: new Publishing(desk, store, real),
       corrections: new Corrections(desk, store),
       collectives: new Collectives(join(store.dir, 'collective'), store),
       agents: null,

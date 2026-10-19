@@ -5,6 +5,7 @@
 // (step 11b), with the desk's own domain line, so a request or a pairing
 // code made for one program is never good for the other.
 
+import { Publishing } from './publishing.ts';
 import type { Server } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -78,11 +79,13 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
   const money = new EdubbaMoney(desk, store, real, opts.chain ?? null);
   // H33: Edubba signs as a member, with Dub's own code, for any identity it holds; the names it shows are Edubba's own.
   const member = new Member(store, desk, () => [...store.book().identities.map((i) => ({ id: i.id, name: i.name })), ...real.contacts().map((c) => ({ id: c.id, name: c.name }))]);
+  // The Publishing tab (round 3, part B): protected files and vows, as oneself or a collective.
+  const publishing = new Publishing(desk, store, real);
   const script = await pageScript(here('src/page/app.ts'));
   const index = readFileSync(here('static/index.html'), 'utf8');
   const built = await version();
 
-  const api = operations({ store, desk, setup, real, after, member, corrections, collectives, agents, access, money, folders: listFolders, refuse: (status, message) => new Refusal(status, message) }, { web: false });
+  const api = operations({ store, desk, setup, real, after, member, publishing, corrections, collectives, agents, access, money, folders: listFolders, refuse: (status, message) => new Refusal(status, message) }, { web: false });
 
   // Inter, bundled with Dub (F332), served from this page's own origin too.
   const fonts = Object.fromEntries(

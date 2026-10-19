@@ -8,6 +8,7 @@
 // connector, no test collective, no folder: those need Edubba on a computer.
 // Every page carries the banner (`static/web.html`).
 
+import { Publishing } from '../publishing.ts';
 import { folder } from './vfs.ts';
 import { Store } from '../store.ts';
 import { Desk } from '../desk.ts';
@@ -81,6 +82,7 @@ async function main() {
       real,
       after: new AfterKishib(desk, store, real),
       member: new Member(store, desk, () => [...store.book().identities.map((i) => ({ id: i.id, name: i.name })), ...real.contacts().map((c) => ({ id: c.id, name: c.name }))]),
+      publishing: new Publishing(desk, store, real),
       corrections: new Corrections(desk, store),
       collectives: new Collectives(`${DIR}/collective`, store),
       agents: null,

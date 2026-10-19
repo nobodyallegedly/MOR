@@ -411,3 +411,44 @@ export async function judgeCollective(collective: string, acts: string[], hints:
   }
   return out;
 }
+
+/** Where a collective is found: the places given, with its homes and its routes' relays as its record names them. */
+export async function collectivePlaces(collective: string, hints: string[], via: Via = {}): Promise<string[]> {
+  try {
+    const l = await lookUp(collective, hints, via);
+    return [...new Set([...hints, ...l.resolution.homes.map((h) => h.hint), ...l.routes.routes.flatMap((r) => r.hints)])];
+  } catch {
+    return [...new Set(hints)];
+  }
+}
+
+/** The layer of an act, as Agreements read it from its spec (Agreements, "Layer"): Envelopes and Text 1, Money 2, Agreements 3, Development 4. */
+const LAYER_OF: Record<string, number> = { [MIRS.text]: 1, [MIRS.envelopes]: 1, [MIRS.money]: 2, [MIRS.agreements]: 3, [MIRS.development]: 4 };
+
+/** An area of a collective's agreement in force, as an app shows it. */
+export interface AreaHere {
+  id: number;
+  name: string;
+  holders: string[];
+  number: number;
+}
+
+/**
+ * The area of a collective's agreement in force reaching an act of `spec`
+ * and `type` (rule 60: a whole layer, or that kind of act); null where none
+ * does, or the agreement is not read. With the agreement's id.
+ */
+export async function areaReaching(collective: string, places: string[], kind: { spec: string; type: number }, via: Via = {}): Promise<{ agreement: string | null; area: AreaHere | null }> {
+  const now = await collectiveNow(collective, places, via);
+  if (!now.agreement) return { agreement: null, area: null };
+  for (const h of places) {
+    const a = await relayAt(h, via).getAct(now.agreement).catch(() => null);
+    if (!a) continue;
+    const d = describeAct(a) as { payload?: Uint8Array };
+    if (!d.payload) break;
+    const t = readTerms(d.payload, AGREEMENTS_SPECS) as { areas: { id: number; name: string; holders: string[]; threshold: number; kinds: { form: string; layer?: number | null; spec?: string | null; type?: number | null }[] }[] };
+    const x = t.areas.find((r) => r.kinds.some((k) => (k.form === 'layer' && k.layer === LAYER_OF[kind.spec]) || (k.spec === kind.spec && k.type === kind.type)));
+    return { agreement: now.agreement, area: x ? { id: x.id, name: x.name, holders: x.holders, number: x.threshold } : null };
+  }
+  return { agreement: now.agreement, area: null };
+}

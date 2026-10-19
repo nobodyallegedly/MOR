@@ -46,6 +46,9 @@ export const OPS = [
   'clock',
   'link',
   'answer address',
+  'vault transfer read',
+  'vault transfer',
+  'vault invoice',
   'collectives',
   'collective add',
   'collective promise read',
@@ -61,7 +64,16 @@ const untilOf = (v: unknown): number | null => {
   return Math.floor(t / 1000);
 };
 
+/** What Settings saves (H45): once one of these succeeds from Settings, its sections start folded. */
+const SETTINGS_SAVES = new Set(['publish list', 'rails publish', 'relays', 'manual', 'clock', 'link']);
+
 export async function run(d: Damgar, op: string, a: Record<string, unknown>): Promise<unknown> {
+  const out = await runOp(d, op, a);
+  if (SETTINGS_SAVES.has(op) || (op === 'accept' && a.where === 'settings')) await d.settingsSaved();
+  return out;
+}
+
+async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise<unknown> {
   switch (op) {
     case 'state':
       return d.state();
@@ -143,6 +155,12 @@ export async function run(d: Damgar, op: string, a: Record<string, unknown>): Pr
       return d.setClock(text(a.clock));
     case 'link':
       return d.setLink(a.remove === true ? null : { rest: text(a.rest), macaroon: text(a.macaroon).replace(/\s+/g, '').toLowerCase(), cert: text(a.cert) });
+    case 'vault transfer read':
+      return d.vaultTransferRead({ entry: Number(a.entry ?? 0), value: text(a.value) });
+    case 'vault transfer':
+      return d.vaultTransfer({ entry: Number(a.entry ?? 0), value: text(a.value), digest: text(a.digest) });
+    case 'vault invoice':
+      return d.vaultInvoice(text(a.key), text(a.invoice));
     case 'answer address':
       return d.answerAddress(text(a.id));
     default:
