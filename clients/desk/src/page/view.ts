@@ -1069,8 +1069,41 @@ export interface PublishingShown {
   acting: string | null;
   as: string | null;
   works: { publication: string; offer: string; as: string; member: string; collective: boolean; media: 'text' | 'picture'; title: string; price: number; words: string; at: number; delivered: Record<string, string>; toMembers: string | null }[];
+  vows: { vow: string; offer: string; as: string; collective: boolean; words: string; title: string; price: number; at: number }[];
+  held: string[];
   say: string[];
   unit: string;
+}
+
+/** A look-up of one identity's vow sales (round 3): each vow, each sale's state; those bought by an identity held here may be contested here. */
+export interface VowSalesShown {
+  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; promise: string | null; amount: { value: number } | null }[]; unsigned: number; mine: string[] }[];
+  asked: string[];
+  problems: string[];
+}
+
+export function vowSalesShown(r: VowSalesShown, names: (id: string) => string): string {
+  const vows = r.vows.length
+    ? r.vows
+        .map((v) => {
+          const counts = { confirmed: 0, contested: 0, pending: 0 } as Record<string, number>;
+          for (const x of v.sales) counts[x.state] = (counts[x.state] ?? 0) + 1;
+          const sales = v.sales.length
+            ? `<ul>${v.sales
+                .map(
+                  (x) => `<li class="${x.state === 'confirmed' ? 'ok' : x.state === 'contested' ? 'bad' : ''}">${e(names(x.buyer))}: <strong>${e(x.state)}</strong>${x.promise ? ` (“${e(x.promise)}”)` : ''}${x.amount ? ` · ${x.amount.value.toLocaleString('en')}` : ''}${
+                    v.mine.includes(x.act) && x.state === 'pending'
+                      ? `<form class="pub-contest row" data-vow="${e(v.name)}" data-sale="${e(x.act)}" data-buyer="${e(x.buyer)}"><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><button type="submit">Contest it, as ${e(names(x.buyer))}</button></form><span class="small">To confirm it, sign in Dub or Damgar: a confirmation is a claim of the payment (Money).</span>`
+                      : ''
+                  }</li>`,
+                )
+                .join('')}</ul>`
+            : '<p class="small">No sale seen: nobody signed onto it at the relays asked, so it carries no state (rule 13).</p>';
+          return `<div class="item"><h3>${e(v.words[0] ?? '')}</h3><div class="meta">${v.void ? 'its first act void (its signer’s change of keys): the name stands · ' : ''}${counts.confirmed} confirmed · ${counts.contested} contested · ${counts.pending} pending${v.unsigned ? ` · ${v.unsigned} paid with no buyer signed on` : ''}</div>${sales}</div>`;
+        })
+        .join('')
+    : '<p class="empty">No vow of that identity at the relays asked.</p>';
+  return `<p class="small">Asked of ${e(r.asked.join(', '))}: only what they hold is seen; nothing is indexed.</p>${r.problems.length ? note('warn', lines(r.problems.map((t) => ({ text: t, tone: 'warn' as const })))) : ''}${vows}`;
 }
 
 /**
@@ -1100,6 +1133,21 @@ ${chooserHtml(p.actors, p.as)}
 <div class="row"><label>Price, in ${e(p.unit)} <input name="price" inputmode="numeric" autocomplete="off"></label><label>Referral share, % (optional; yourself only) <input name="referral" inputmode="numeric" autocomplete="off"></label></div>
 <div class="row"><button type="submit">Read it back</button></div></form>
 <div id="e-pub-review"></div></div>
+<div class="card"><h2>A vow</h2>
+<p class="small">Something MOR cannot hash, or not yet: a seat, a lesson, a thing to be made. Each purchase is a sale its buyer confirms (kept) or contests (not kept), in their own app.</p>
+<form id="pub-vow" class="stack">
+<label>What is vowed, in words: what the buyer gets</label><textarea name="words" rows="3"></textarea>
+<label>Its title: the public words of its post</label><input name="title" type="text" maxlength="200" autocomplete="off">
+<div class="row"><label>Price, in ${e(p.unit)} <input name="price" inputmode="numeric" autocomplete="off"></label></div>
+<div class="row"><button type="submit">Read it back</button></div></form>
+<div id="e-vow-review"></div>
+${p.vows.length ? `<h3>Vows published here</h3>${p.vows.map((v) => `<div class="item"><h3>${e(v.title)}</h3><div class="meta">${v.price.toLocaleString('en')} ${e(p.unit)} · ${v.collective ? `by the collective ${fp(v.as)}` : 'by yourself'}</div><p class="small">${e(v.words)}</p></div>`).join('')}` : ''}</div>
+<div class="card"><h2>Look up an identity’s vow sales</h2>
+<p class="small">Asked of the relays you name, with the filters they already have: no index is kept. A sale shows where its buyer made it public.</p>
+<form id="pub-vow-sales" class="stack"><label>The identity (mid1… or hex)</label><input name="identity" type="text" autocomplete="off" spellcheck="false" value="${e(p.as ?? '')}">
+<label>Relays to ask, one per line</label><textarea name="relays" rows="2" spellcheck="false"></textarea>
+<div class="row"><button type="submit">Look it up</button></div></form>
+<div id="e-vow-sales"></div></div>
 <div class="card"><h2>Published here</h2><div class="row"><button data-action="pub-deliver">Deliver keys</button><span class="small grow">Delivers the key of each sale your Damgar signed the receipt for.</span></div>${works}</div>`;
 }
 

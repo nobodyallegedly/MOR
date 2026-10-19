@@ -30,6 +30,7 @@ import { servedChain } from './carryin.ts';
 import { KEY_DELIVERY, offerWords, openSealedBytes, postSealed, readKeyDelivery, readOffer, readSealed, repost as repostAct } from '../../barebone/src/sealed.ts';
 import type { Keep, Settings } from './dub.ts';
 import { deliverSold } from './delivery.ts';
+import { contestSale, readVow, readVowOffer, vowSales } from './vows.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 
 /** What Dub's lane may sign: invoice requests (the money messages cMIP) and payment claims (Money). */
@@ -119,6 +120,34 @@ interface Sold {
 }
 interface Bought {
   [publication: string]: { key: string | null; payment: string | null; seller: string; offer: string | null };
+}
+
+/** Vows bought here (round 3), by the vow's name: its seller and offer, the payment, and where it was found. */
+interface VowsBought {
+  [vow: string]: { seller: string; offer: string; payment: string | null; post: string | null; words: string; contests?: string[] };
+}
+
+/** A vow as the feed shows it (round 3). */
+export interface VowCard {
+  vow: string;
+  offer: string | null;
+  seller: string;
+  words: string;
+  price: string;
+  state: 'for sale' | 'paying' | 'bought' | 'yours';
+  problem: string | null;
+}
+
+/** A vow bought here, with where its sale stands as the relays read it. */
+export interface VowBoughtShown {
+  vow: string;
+  seller: string;
+  words: string;
+  price: string | null;
+  /** Paid, and its claim published: a sale anyone can read. */
+  paid: boolean;
+  sale: 'pending' | 'confirmed' | 'contested' | null;
+  promise: string | null;
 }
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -410,5 +439,94 @@ export class DubMoney {
     }
     return { id: made.id, lines: [`Reposted at your relays (${s.relays.join(', ')}), with the sealed post and its offer held there too: a reader of those relays finds it through you. A buyer who names your repost earns you the share its offer promises, if any.`] };
   }
+
+  // ------------------------------------------------------------ vows (round 3)
+
+  /** A vow a feed item names, read with its offer: null where the item names none. */
+  async readVowRef(me: TestIdentity, hints: string[], via: Via, refs: { id: string; signer?: string }[]): Promise<VowCard | null> {
+    const acts: Uint8Array[] = [];
+    for (const r of refs) {
+      try {
+        acts.push((await followRef(r.signer ? [r.id, r.signer] : r.id, hints, via)).act);
+      } catch {
+        // not found
+      }
+    }
+    const v = acts.map(readVow).find((x) => x?.genesis);
+    if (!v) return null;
+    const offer = acts.map((a) => readVowOffer(a, v.signer, v.name)).find(Boolean) ?? null;
+    const bought = ((await this.store.money<VowsBought>(me.id, 'vows')) ?? {})[v.name];
+    return {
+      vow: v.name,
+      offer: offer?.offer ?? null,
+      seller: v.signer,
+      words: v.words,
+      price: offer ? say(offer.price, new Set([offer.price.unit])) : 'no price stated',
+      state: v.signer === me.id ? 'yours' : bought?.payment ? ((await this.engine.payment(bought.payment))?.proof ? 'bought' : 'paying') : 'for sale',
+      problem: offer ? (offer.under ? 'a collective’s offer: bought from its split service (round 3, part C), not from here yet' : null) : 'no offer of its signer selling it was found: it cannot be bought here',
+    };
+  }
+
+  /** Buy a vow under the lane: an invoice request following its offer; its claim, once paid, is also published, so its sale is seen (Agreements rule 13). */
+  async buyVow(me: TestIdentity, hints: string[], via: Via, a: { vow: string; seller: string; post: string }): Promise<string[]> {
+    const card = await this.readVowRef(me, hints, via, [{ id: a.post, signer: a.seller }, ...(((describeAct((await followRef([a.post, a.seller], hints, via)).act) as { refs?: string[] }).refs ?? []).map((id) => ({ id, signer: a.seller })))]);
+    if (!card || card.vow !== a.vow) throw new Error('That post names no vow. Nothing was signed.');
+    if (card.seller === me.id) throw new Error('That vow is your own. Nothing was signed.');
+    if (!card.offer || card.problem) throw new Error(`${card.problem ?? 'No offer was found'}. Nothing was signed.`);
+    const offer = readVowOffer((await followRef([card.offer, card.seller], hints, via)).act, card.seller, card.vow)!;
+    const r = await this.engine.payUnderLane({ payee: card.seller, amount: offer.price, whatFor: 'a vow', fulfils: offer.offer, refs: [[card.vow, card.seller]], visible: true });
+    const vows = (await this.store.money<VowsBought>(me.id, 'vows')) ?? {};
+    vows[card.vow] = { seller: card.seller, offer: offer.offer, payment: r.key, post: a.post, words: card.words };
+    await this.store.saveMoney(me.id, 'vows', vows);
+    return [...r.lines.map((l) => l.text), 'Once paid, your claim of the payment is published too: it is the sale, pending until you confirm or contest it (Signing tab).'];
+  }
+
+  /** The vows bought here, each with its sale's state as the relays asked read it (the look-up, `vows.ts`). */
+  async vowsBought(me: TestIdentity, hints: string[], via: Via): Promise<VowBoughtShown[]> {
+    const vows = (await this.store.money<VowsBought>(me.id, 'vows')) ?? {};
+    const out: VowBoughtShown[] = [];
+    const bySeller = new Map<string, Awaited<ReturnType<typeof vowSales>>>();
+    for (const [vow, b] of Object.entries(vows)) {
+      const p = b.payment ? await this.engine.payment(b.payment) : null;
+      const paid = !!p?.publicClaims?.length;
+      let sale: VowBoughtShown['sale'] = null;
+      let promise: string | null = null;
+      if (paid) {
+        if (!bySeller.has(b.seller)) bySeller.set(b.seller, await vowSales(b.seller, hints, via).catch(() => ({ vows: [], asked: hints, problems: [] })));
+        const x = bySeller.get(b.seller)!.vows.find((y) => y.name === vow)?.sales.find((y) => y.buyer === me.id);
+        sale = x?.state ?? null;
+        promise = x?.promise ?? null;
+      }
+      out.push({ vow, seller: b.seller, words: b.words, price: p ? say(p.amount, new Set([p.amount.unit])) : null, paid, sale, promise });
+    }
+    return out;
+  }
+
+  /** Confirm a vow bought: a public claim of its payment acknowledging the vow (rule 13), under the lane. */
+  async confirmVow(me: TestIdentity, vow: string): Promise<string[]> {
+    const b = ((await this.store.money<VowsBought>(me.id, 'vows')) ?? {})[vow];
+    if (!b?.payment) throw new Error('No vow bought here by that name. Nothing was signed.');
+    const r = await this.engine.confirmPurchase(b.payment, [vow]);
+    return r.lines.map((l) => l.text);
+  }
+
+  /** Contest a vow bought: a contest naming its sale (the public claim), the promise not kept in words if given (F253). */
+  async contestVow(me: TestIdentity, s: Settings, vow: string, promise: string | null): Promise<string[]> {
+    const vows = (await this.store.money<VowsBought>(me.id, 'vows')) ?? {};
+    const b = vows[vow];
+    const p = b?.payment ? await this.engine.payment(b.payment) : null;
+    const sale = p?.publicClaims?.[0];
+    if (!b || !sale) throw new Error('No sale of that vow is here to contest: it is contested once paid. Nothing was signed.');
+    let id: string;
+    try {
+      id = await contestSale(me, { vow, sale, promise, relays: list([...s.relays, ...me.f.homes.map((h) => h.hint)]) });
+    } finally {
+      await this.store.saveIdentity(me);
+    }
+    b.contests = [...(b.contests ?? []), id];
+    await this.store.saveMoney(me.id, 'vows', vows);
+    return ['Your contest of that sale is signed in public: it reads contested for anyone who looks. It voids nothing; the payment stays as it is.'];
+  }
+
 }
 

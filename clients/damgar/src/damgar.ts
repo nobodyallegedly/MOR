@@ -165,6 +165,12 @@ export interface Payment {
   fulfils: string;
   whatFor: string | null;
   rail: string;
+  /** A vow bought (round 3): its claim is also published, so a look-up sees the sale (Agreements rule 13). */
+  visible?: boolean;
+  /** The proof the claims carry (Money claim field 1), base64, once paid: a later claim of the same payment carries it again. */
+  proof?: string;
+  /** Public claims of this payment (round 3: the sale made visible; its confirmation, acknowledging the vow). */
+  publicClaims?: string[];
   /** The payee's rail address or vault source, as the payee signed it. */
   address: string;
   /** The commitment's CBOR, base64: its fields, salt and where it was paid. */
@@ -1565,13 +1571,14 @@ export class Damgar {
    * a lone seller names no claim, Money rule 18), or none (a tip, to the
    * payee's pointer). `referral`: the repost followed (Money claim field 6).
    */
-  payUnderLane(a: { payee: string; amount: Amount; whatFor: string | null; fulfils?: string | null; refs?: [string, string][]; referral?: { identity: string; evidence: string } | null }): Promise<{ key: string; lines: Line[] }> {
+  payUnderLane(a: { payee: string; amount: Amount; whatFor: string | null; fulfils?: string | null; refs?: [string, string][]; referral?: { identity: string; evidence: string } | null; visible?: boolean }): Promise<{ key: string; lines: Line[] }> {
     return this.serial(async () => {
       if (!this.opts.app) throw new Error('Damgar signs a payment from To sign.');
       const { me, s, book } = await this.ctx();
       const acc = this.acceptedSet(await this.accepted(me));
       for (const h of [SPEC.payment, MESSAGES_SPEC, a.amount.unit]) if (!acc.has(h)) throw new Error(`${labelOf(h) ?? 'Its unit'} is not accepted for this identity (set in Damgar’s Settings). Nothing was signed.`);
       const p = await this.bind(me, s, book, { payee: a.payee, amount: a.amount, fulfils: a.fulfils ?? null, whatFor: a.whatFor, answers: null, draft: null, ticket: null, referral: a.referral ?? null, refs: a.refs });
+      if (a.visible) book.payments[p.key].visible = true;
       await this.saveBook(me.id, book);
       return { key: p.key, lines: [{ text: `Asked of ${short(a.payee)}, under the lane: an invoice request for ${say(a.amount, acc)}, sealed. When they answer, pay it in your wallet.`, tone: 'ok' }] };
     });
@@ -1615,7 +1622,10 @@ export class Damgar {
       const made = moneyPayload({ type: 'claim', rail: p.rail, proof: proofBytes, payee: p.other, amount: p.amount, fulfils: p.fulfils, referral: p.referral ?? undefined }) as { type: number; payload: Uint8Array };
       const claim = await this.deliver(me, s, book, MONEY, made.type, made.payload, p.other, undefined, await this.claimHow(me, s, p, made));
       p.claims.push(claim);
+      p.proof = base64(proofBytes);
       p.stage = 'paid';
+      // A vow bought: the same claim, public, so a look-up sees the sale (round 3; Agreements rule 13).
+      if (p.visible) (p.publicClaims ??= []).push(await this.publicClaim(me, s, p, []));
       if (p.request && book.requestsIn[p.request]) book.requestsIn[p.request].stage = 'paid';
       await this.saveBook(me.id, book);
       const acc = this.acceptedSet(await this.accepted(me));
@@ -1625,6 +1635,80 @@ export class Damgar {
           { text: `Your payment claim (“I paid ${short(p.other)} ${say(p.amount, acc)}”, with the rail’s proof) is signed and sent to them, sealed. Their Damgar checks it and offers them the receipt.`, tone: 'ok' },
         ],
       };
+    });
+  }
+
+  /**
+   * A public claim of a payment already paid (round 3; Agreements rule 13):
+   * the same claim, signed again in public, acknowledging `acks` (a vow,
+   * to confirm its sale). Signed as the payment's claim was (under the same
+   * lane, or by hand), published at this identity's relays and homes and
+   * the payee's relays. Its id.
+   */
+  private async publicClaim(me: TestIdentity, s: Settings, p: Payment, acks: string[]): Promise<string> {
+    if (!p.proof) throw new Error('That payment carries no proof yet: it is not paid. Nothing was signed.');
+    const made = moneyPayload({ type: 'claim', rail: p.rail, proof: b64(p.proof), payee: p.other, amount: p.amount, fulfils: p.fulfils, referral: p.referral ?? undefined }) as { type: number; payload: Uint8Array };
+    const how = await this.claimHow(me, s, p, made);
+    await this.current(me);
+    let act: { act: Uint8Array; id: string };
+    if (how.by === 'lane') {
+      const keys = await this.keys(me.id);
+      const lane = keys.lanes?.find((x) => x.grant === how.grant);
+      if (!lane) throw new Error('That lane’s key is not held here. Nothing was signed.');
+      try {
+        act = signUnderGrant({ grant: lane.grant, grantor: me.id, secret: lane.secret, strand: lane.strand }, { spec: MONEY, type: made.type, payload: made.payload, public: true, acks });
+      } finally {
+        await this.store.write(me.id, 'keys', keys);
+      }
+    } else {
+      try {
+        act = me.sign(MONEY, made.type, made.payload, { public: true, acks });
+      } finally {
+        await this.store.saveIdentity(me);
+      }
+    }
+    let places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
+    try {
+      const l = await lookUp(p.other, places, s.via);
+      places = [...new Set([...places, ...l.routes.routes.flatMap((r) => r.hints)])];
+    } catch {
+      // the payee's relays are not known: ours hold it
+    }
+    let took = 0;
+    for (const h of places) {
+      try {
+        await relayAt(h, s.via).putAct(act.act);
+        took++;
+      } catch {
+        // away, or its policy
+      }
+    }
+    if (!took) throw new Error('No relay took the claim. It was signed; try again later.');
+    return act.id;
+  }
+
+  /**
+   * Confirm a purchase (round 3; Agreements rule 13): a public claim of the
+   * payment acknowledging `acks` (the vow bought), so its sale reads
+   * confirmed. Signed as the payment's claim was.
+   */
+  confirmPurchase(key: string, acks: string[]): Promise<{ claim: string; lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, book } = await this.ctx();
+      const p = book.payments[key];
+      if (!p || p.side !== 'out' || !p.proof) throw new Error('No paid purchase is there. Nothing was signed.');
+      const claim = await this.publicClaim(me, s, p, acks);
+      (p.publicClaims ??= []).push(claim);
+      await this.saveBook(me.id, book);
+      return { claim, lines: [{ text: 'Your claim of that payment, acknowledging what you bought, is signed in public: its sale reads confirmed for anyone who looks.', tone: 'ok' }] };
+    });
+  }
+
+  /** A payment of this identity's, as kept here (round 3: a vow's purchase, to confirm or contest). */
+  payment(key: string): Promise<Payment | null> {
+    return this.serial(async () => {
+      const { book } = await this.ctx();
+      return book.payments[key] ?? null;
     });
   }
 

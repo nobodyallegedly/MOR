@@ -44,6 +44,7 @@ import { NotJpeg } from '../../../modules/jpeg/src/jpeg.ts';
 import { areaReaching, chainFor, collectiveNow, collectivePlaces, memberKeyFor, publishAt, readMemberKeys, signAsMember, type AreaHere, type MemberKey } from '../../grants/src/member.ts';
 import { actors, chosen, type Actor } from '../../ummia/src/acting.ts';
 import { deliverSold, type SoldWorks } from '../../dub/src/delivery.ts';
+import { VOW, contestSale, publishVow, vowOfferWords, vowPayload, vowSales, type VowShown } from '../../dub/src/vows.ts';
 import { say } from '../../damgar/src/units.ts';
 import { REGTEST_UNIT } from './grid.ts';
 import type { Line, Reading } from '../../collective/src/explain.ts';
@@ -95,9 +96,24 @@ interface Book {
   /** Collectives added by ID, per identity held: those it acts for here. */
   collectives: Record<string, string[]>;
   works: WorkHere[];
+  vows: VowHere[];
 }
 
-const NO_BOOK = (): Book => ({ acting: null, as: null, collectives: {}, works: [] });
+/** A vow published here (round 3). */
+export interface VowHere {
+  vow: string;
+  offer: string;
+  post: string;
+  as: string;
+  member: string;
+  collective: boolean;
+  words: string;
+  title: string;
+  price: number;
+  at: number;
+}
+
+const NO_BOOK = (): Book => ({ acting: null, as: null, collectives: {}, works: [], vows: [] });
 
 /** A review waiting for its confirmation. */
 interface Plan {
@@ -117,6 +133,8 @@ interface CollectiveHere {
   /** The areas reaching a publication and an offer (rule 60). */
   publishing: AreaHere | null;
   offers: AreaHere | null;
+  /** The area reaching vows (Envelopes type 5). */
+  vows: AreaHere | null;
   why: string | null;
 }
 
@@ -174,9 +192,10 @@ export class Publishing {
   private async collectiveHere(me: TestIdentity, id: string): Promise<CollectiveHere> {
     const s = this.settings();
     const places = await collectivePlaces(id, list([...s.relays, ...s.homes]), s.via);
-    const [p, o] = await Promise.all([
+    const [p, o, w] = await Promise.all([
       areaReaching(id, places, { spec: SPECS.envelopes, type: PUBLICATION }, s.via).catch(() => ({ agreement: null, area: null })),
       areaReaching(id, places, { spec: MIRS.agreements, type: OFFER }, s.via).catch(() => ({ agreement: null, area: null })),
+      areaReaching(id, places, { spec: SPECS.envelopes, type: VOW }, s.via).catch(() => ({ agreement: null, area: null })),
     ]);
     const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
     const key = keys.length ? await memberKeyFor(keys, id, places, s.via).catch(() => null) : null;
@@ -187,13 +206,13 @@ export class Publishing {
     else if (!o.area) why = 'no area of its constitution reaches offers (the Agreements layer, or offers): an offer would count only on its own key';
     else if (!o.area.holders.includes(me.id)) why = `you hold no box in its area reaching offers (“${o.area.name}”)`;
     else if (!key) why = 'no key of yours for it was found sealed to you at your homes: it is made when you sign its founding or a member change';
-    return { id, places, agreement: p.agreement, key, publishing: p.area, offers: o.area, why };
+    return { id, places, agreement: p.agreement, key, publishing: p.area, offers: o.area, vows: w.area, why };
   }
 
   // ------------------------------------------------------------ who acts
 
   /** The tab's state: who acts (the identities held, and the collectives the one acting belongs to), and what was published here. */
-  state(): Promise<{ actors: Actor[]; acting: string | null; as: string | null; works: WorkHere[]; say: string[]; unit: string }> {
+  state(): Promise<{ actors: Actor[]; acting: string | null; as: string | null; works: WorkHere[]; vows: VowHere[]; held: string[]; say: string[]; unit: string }> {
     return this.desk.serial(async () => {
       const b = this.book();
       const held = this.held();
@@ -208,7 +227,7 @@ export class Publishing {
       }
       const all = actors(acting ? [acting] : [], cs);
       const as = chosen(all, b.as ?? acting)?.id ?? null;
-      return { actors: all, acting, as, works: b.works.filter((w) => w.member === acting || w.as === acting), say: PUBLISHING_SAY, unit: say({ unit: REGTEST_UNIT, value: 2 }, new Set([REGTEST_UNIT])).replace(/^2 /, '') };
+      return { actors: all, acting, as, works: b.works.filter((w) => w.member === acting || w.as === acting), vows: b.vows.filter((w) => w.member === acting || w.as === acting), held, say: PUBLISHING_SAY, unit: say({ unit: REGTEST_UNIT, value: 2 }, new Set([REGTEST_UNIT])).replace(/^2 /, '') };
     });
   }
 
@@ -441,6 +460,142 @@ export class Publishing {
       ],
       acts: [pub.id, off.id, post.id],
     };
+  }
+
+  // ------------------------------------------------------------ vows (Agreements rule 13)
+
+  /**
+   * A vow read back before anything is signed: its words, its price, who
+   * signs, and what a buyer may do with each sale (confirm or contest it).
+   */
+  prepareVow(a: { words: string; title: string; price: string }): Promise<{ plan: string; digest: string; reading: Reading }> {
+    return this.desk.serial(async () => {
+      const b = this.book();
+      const acting = b.acting && this.held().includes(b.acting) ? b.acting : this.held()[0];
+      if (!acting) throw new Error('No identity is held here: bring one on the Identities tab. Nothing was prepared.');
+      const as = b.as ?? acting;
+      const me = this.me(acting);
+      const s = this.settings();
+      const blocking: string[] = [];
+      const words = a.words.normalize('NFC').trim();
+      if (!words) blocking.push('Say what is vowed, in words: what the buyer gets.');
+      if (words.length > 2000) blocking.push('A vow’s words: at most 2,000 characters.');
+      const title = a.title.trim();
+      if (!title) blocking.push('Give it a title: the public words of its post.');
+      const price = Number(a.price);
+      if (!Number.isSafeInteger(price) || price <= 0) blocking.push('A price is a whole number of regtest satoshis, above zero.');
+      const collective = as !== acting;
+      let c: CollectiveHere | null = null;
+      if (collective) {
+        c = await this.collectiveHere(me, as);
+        if (c.why) blocking.push(`The collective ${short(as)}: ${c.why}.`);
+        else if (!c.vows) blocking.push(`The collective ${short(as)}: no area of its constitution reaches vows: one would count only on its own key.`);
+        else if (!c.vows.holders.includes(me.id)) blocking.push(`The collective ${short(as)}: you hold no box in its area reaching vows (“${c.vows.name}”).`);
+      }
+      const priceSaid = Number.isSafeInteger(price) && price > 0 ? say({ unit: REGTEST_UNIT, value: price }, new Set([REGTEST_UNIT])) : '?';
+      const offerWords = vowOfferWords(words, priceSaid);
+      const names = this.store.names();
+      const reading: Reading = {
+        title: `A vow: “${title || '…'}”`,
+        summary: [
+          `Published by ${collective ? `the collective ${short(as)}, signed with your own key for it (${names(acting)})` : names(acting)}: a vow, in words, and an offer selling it for ${priceSaid}.`,
+          'Each purchase is a sale, pending until its buyer confirms it (kept) or contests it (not kept), in their own app: Dub’s Signing tab, or Edubba. The core reads that state, never the promise itself (Agreements rule 13).',
+        ],
+        sections: [
+          {
+            heading: 'What is published',
+            lines: [
+              { text: `The vow, public, its first act its name for good: “${words || '…'}”` },
+              { text: `Its offer, public: ${priceSaid}. Its words: “${offerWords}”` },
+              { text: `A post naming both, its words the title: “${title || '…'}”.` },
+              ...(collective ? [{ text: `Made under the collective’s agreement in force, paying the collective: the vow in its area “${c?.vows?.name ?? '?'}”, the offer in “${c?.offers?.name ?? '?'}”.` }] : []),
+            ],
+          },
+          {
+            heading: 'Stated costs',
+            lines: [
+              { text: 'Every sale’s confirmation and contest is public: anyone who looks at relays holding them reads how your vows were kept.', tone: 'warn' },
+              { text: 'A vow names what is promised to the buyer, never the event itself; another vow for the same thing is another vow (F259).' },
+            ],
+          },
+        ],
+        plain: [{ heading: 'The vow’s words', text: words }],
+        blocking,
+      };
+      const digest = sha256(cborEncode(['MOR Edubba vow, version 1', acting, as, words, title, price, s.relays]));
+      const plan = this.plan(digest, async () => {
+        if (blocking.length) throw new Error('This cannot be published while a reason above stands. Nothing was signed.');
+        return collective ? this.vowAsCollective(me, c!, { words, title, price, offerWords }) : this.vowAsSelf(me, { words, title, price, offerWords });
+      });
+      return { plan, digest, reading };
+    });
+  }
+
+  private async vowAsSelf(me: TestIdentity, a: { words: string; title: string; price: number; offerWords: string }): Promise<Done> {
+    const s = this.settings();
+    try {
+      await carryChain(me, s.relays);
+      const made = await publishVow(me, { words: a.words, title: a.title, price: { unit: REGTEST_UNIT, value: a.price }, offerWords: a.offerWords, relays: s.relays });
+      const b = this.book();
+      b.vows.unshift({ ...made, as: me.id, member: me.id, collective: false, words: a.words, title: a.title, price: a.price, at: now() });
+      this.save(b);
+      return { title: 'A vow, published', lines: [{ text: `“${a.title}” is published with its offer at ${s.relays.join(', ')}. Each buyer confirms or contests their sale.`, tone: 'ok' }], acts: [made.vow, made.offer, made.post] };
+    } finally {
+      this.store.saveIdentity(me);
+    }
+  }
+
+  private async vowAsCollective(me: TestIdentity, c: CollectiveHere, a: { words: string; title: string; price: number; offerWords: string }): Promise<Done> {
+    const s = this.settings();
+    const at = await chainFor(c.id, c.key!, c.places, s.via);
+    const vow = signAsMember(c.id, c.key!, at, { spec: SPECS.envelopes, type: VOW, payload: vowPayload(a.words), public: true });
+    const off = signAsMember(c.id, c.key!, at, {
+      spec: MIRS.agreements,
+      type: OFFER,
+      payload: offerPayload({ sells: { vow: vow.id }, price: { unit: REGTEST_UNIT, value: a.price }, words: a.offerWords, under: c.agreement!, payee: c.id }),
+      public: true,
+      objects: [[c.agreement!, c.agreement!]],
+    });
+    const post = signAsMember(c.id, c.key!, at, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(a.title), public: true, refs: [referenceTo(vow.act), referenceTo(off.act)] });
+    const took = await publishAt([vow.act, off.act, post.act], list([...c.places, ...s.relays]), s.via);
+    if (!took.length) throw new Error('No relay took the vow: nothing counts. Try again.');
+    const b = this.book();
+    b.vows.unshift({ vow: vow.id, offer: off.id, post: post.id, as: c.id, member: me.id, collective: true, words: a.words, title: a.title, price: a.price, at: now() });
+    this.save(b);
+    return { title: 'A vow of the collective, published', lines: [{ text: `“${a.title}” is published by the collective ${short(c.id)}, signed with your own key for it, its offer under its agreement in force and paying the collective.`, tone: 'ok' }], acts: [vow.id, off.id, post.id] };
+  }
+
+  /**
+   * The look-up (decided by Nobody, allegedly, 17 October 2026: "no need to
+   * become an aggregator"): one identity's vows and their sales, confirmed,
+   * contested or pending, read from the relays chosen, the core judging each.
+   * Where a sale's buyer is an identity held here, it may be contested here.
+   */
+  vowSales(a: { identity: string; relays: string[] }): Promise<{ vows: (VowShown & { mine: string[] })[]; asked: string[]; problems: string[] }> {
+    return this.desk.serial(async () => {
+      const s = this.settings();
+      const relays = list(a.relays.map((r) => r.trim()).filter((r) => /^https?:\/\//.test(r)));
+      if (!relays.length) throw new Error('Name at least one relay to ask (an address starting with https://).');
+      const r = await vowSales(readId(a.identity), relays, s.via);
+      const held = new Set(this.held());
+      return { ...r, vows: r.vows.map((v) => ({ ...v, mine: v.sales.filter((x) => held.has(x.buyer)).map((x) => x.act) })) };
+    });
+  }
+
+  /** Contest a sale whose buyer is held here (Agreements type 14, F253): public, naming the sale and the vow, the promise not kept in words if given. */
+  contestSale(a: { vow: string; sale: string; buyer: string; promise: string }): Promise<Done> {
+    return this.desk.serial(async () => {
+      const me = this.me(readId(a.buyer));
+      const s = this.settings();
+      let id: string;
+      try {
+        await carryChain(me, s.relays);
+        id = await contestSale(me, { vow: readId(a.vow), sale: readId(a.sale), promise: a.promise, relays: list([...s.relays, ...me.f.homes.map((h) => h.hint)]) });
+      } finally {
+        this.store.saveIdentity(me);
+      }
+      return { title: 'Contested', lines: [{ text: 'Your contest of that sale is signed in public: it reads contested for anyone who looks. It voids nothing; the payment stays as it is.', tone: 'ok' }], acts: [id] };
+    });
   }
 
   /** Deliver the keys of what the sellers held here sold, as their Damgar told of each sale (type 6). */

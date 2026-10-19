@@ -1121,6 +1121,30 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
+  if (fid === 'pub-vow') {
+    const r = await busy('Reading it back…', () => c.ask<Review>('publishing vow read', { words: words(d.get('words')), title: words(d.get('title')), price: words(d.get('price')) }));
+    if (r) {
+      pubReview = { plan: r.plan, digest: r.digest };
+      say('', '');
+      fill('e-vow-review', `<div class="colroot">${reading(r.reading, r)}</div>`);
+      $('e-vow-review')?.scrollIntoView({ block: 'start' });
+    }
+    return;
+  }
+  if (fid === 'pub-vow-sales') {
+    const relays = String(d.get('relays') ?? '').split(/\s+/).filter(Boolean);
+    const r = await busy('Asking the relays…', () => c.ask<v.VowSalesShown>('publishing vow sales', { identity: words(d.get('identity')), relays }));
+    if (r) fill('e-vow-sales', v.vowSalesShown(r, (id) => state.identities.find((i) => i.id === id)?.name ?? `${id.slice(0, 8)}…`));
+    return;
+  }
+  if (form.classList.contains('pub-contest')) {
+    const r = await busy('Signing the contest…', () => c.ask<Done>('publishing contest', { vow: form.dataset.vow, sale: form.dataset.sale, buyer: form.dataset.buyer, promise: words(d.get('promise')) }));
+    if (r) {
+      form.replaceWith(Object.assign(document.createElement('span'), { className: 'small', textContent: 'Contested.' }));
+      say('done', v.done(r));
+    }
+    return;
+  }
   if (fid === 'pub-work') {
     const media = String(d.get('media') ?? 'text');
     const file = d.get('file');

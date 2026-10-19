@@ -184,3 +184,73 @@ test('a protected text published by a collective from Edubba, each act signed wi
     assert.equal(keys.find((k) => k?.publication === publication)?.publication, publication, `${m.id.slice(0, 8)} opens the work’s key`);
   }
 });
+
+test('a vow published from Edubba; three buyers pay in Dub; one confirms and one contests in Dub’s Signing tab; the look-up reads each sale; a buyer held in Edubba contests there', async () => {
+  const H = homes.map((h) => h.base);
+  const node = new TestNode();
+  const link = testLink(node);
+  const seller = await person(H, [relay.base], { link: link.factory });
+  const rv = await seller.damgar.c.ask<{ digest: string }>('rails review', { lightning: node.key, network: 3 });
+  await seller.damgar.c.ask('rails publish', { lightning: node.key, network: 3, digest: rv.digest });
+  await seller.damgar.c.ask('link', link.config);
+  const own = await seller.damgar.c.ask<{ digest: string }>('own lane review', { role: 'receipts', cap: '50000', unit: R });
+  await seller.damgar.c.ask('own lane', { role: 'receipts', cap: '50000', unit: R, digest: own.digest });
+  const e = await edubba(H, [relay.base]);
+  await e.c.ask('bring', { name: 'Seller', id: seller.id, words: seller.dub.words, address: H[0] });
+
+  // The vow, read back, then published.
+  const r = await e.c.ask<any>('publishing vow read', { words: 'A seat at the reading of the tablets, on the first evening.', title: 'A seat, vowed', price: '500' });
+  assert.deepEqual(r.reading.blocking, []);
+  assert.match(r.reading.summary.join(' '), /pending until its buyer confirms it \(kept\) or contests it \(not kept\)/);
+  const [vow, offer, post] = (await e.c.ask<Done>('publishing confirm', { plan: r.plan, digest: r.digest })).acts;
+  assert.deepEqual((await e.c.ask<any>('publishing')).vows.map((v: any) => v.title), ['A seat, vowed']);
+
+  // Three buyers, each in Dub with a lane, find it in their feed and buy it.
+  const buyers = [await person(H, [relay.base]), await person(H, [relay.base]), await person(H, [relay.base])];
+  for (const b of buyers) {
+    await b.dub.c.ask('lane ask', { label: 'Dub', cap: '5000', unit: R });
+    await b.damgar.c.ask('look');
+    const lane = (await b.damgar.c.ask<{ items: ToSign[] }>('to sign')).items.find((i) => i.kind === 'lane')!;
+    await b.damgar.c.ask('grant lane', { id: lane.id });
+    await b.dub.c.ask('signing', { on: true });
+    await b.dub.c.ask('follow', { id: seller.id, name: 'Seller' });
+    const seen = (await b.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === post)!;
+    assert.equal(seen.vow.state, 'for sale');
+    assert.equal(seen.vow.vow, vow);
+    assert.equal(seen.vow.offer, offer);
+    assert.match(seen.vow.words, /A seat at the reading/);
+    await b.dub.c.ask('vow buy', { vow, seller: seller.id, post });
+    await seller.damgar.c.ask('look');
+    const pays = (await b.dub.c.ask<{ payments: PaymentShown[] }>('payments')).payments;
+    await b.dub.c.ask('paid', { key: pays[0].key, proof: link.preimages.get(pays[0].pay!.invoice!)! });
+    assert.equal((await b.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items.find((i) => i.id === post)!.vow.state, 'bought');
+  }
+  await seller.damgar.c.ask('look');
+
+  // Each sale is pending until its buyer says; one confirms, one contests, in Dub's Signing tab.
+  const [b1, b2, b3] = buyers;
+  assert.deepEqual((await b1.dub.c.ask<any>('vows bought')).vows.map((x: any) => [x.vow, x.paid, x.sale]), [[vow, true, 'pending']]);
+  assert.match((await b1.dub.c.ask<any>('vow confirm', { vow })).lines[0].text, /reads confirmed/);
+  assert.match((await b2.dub.c.ask<any>('vow contest', { vow, promise: 'The seat was given to someone else.' })).lines[0].text, /reads contested/);
+  assert.equal((await b1.dub.c.ask<any>('vows bought')).vows[0].sale, 'confirmed');
+  const b2s = (await b2.dub.c.ask<any>('vows bought')).vows[0];
+  assert.deepEqual([b2s.sale, b2s.promise], ['contested', 'The seat was given to someone else.']);
+  await assert.rejects(b2.dub.c.ask('vow contest', { vow: '11'.repeat(32), promise: '' }), /No sale of that vow/);
+
+  // The look-up, from Edubba, asked of the relay: every sale with its state, as the core reads it.
+  const look = await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] });
+  assert.equal(look.vows.length, 1);
+  const states = Object.fromEntries(look.vows[0].sales.map((x: any) => [x.buyer, [x.state, x.promise]]));
+  assert.deepEqual(states, { [b1.id]: ['confirmed', null], [b2.id]: ['contested', 'The seat was given to someone else.'], [b3.id]: ['pending', null] });
+  assert.deepEqual(look.vows[0].mine, [], 'no buyer is held in this Edubba');
+  await assert.rejects(e.c.ask('publishing vow sales', { identity: seller.id, relays: [] }), /Name at least one relay/);
+
+  // The third buyer, brought into Edubba, contests there.
+  await e.c.ask('bring', { name: 'Third buyer', id: b3.id, words: b3.dub.words, address: H[0] });
+  const mine = await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] });
+  const sale = mine.vows[0].sales.find((x: any) => x.buyer === b3.id);
+  assert.deepEqual(mine.vows[0].mine, [sale.act]);
+  await e.c.ask<Done>('publishing contest', { vow, sale: sale.act, buyer: b3.id, promise: '' });
+  const after3 = await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] });
+  assert.equal(after3.vows[0].sales.find((x: any) => x.buyer === b3.id).state, 'contested');
+});
