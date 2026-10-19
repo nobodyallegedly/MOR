@@ -61,6 +61,7 @@ export const WEB_OPS: readonly string[] = [
   'publishing vow read',
   'publishing vow sales',
   'publishing contest',
+  'publishing confirm sale',
   'keys check',
   'identity posts',
   'identity correct',
@@ -390,6 +391,8 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return publishing.prepareVow({ words: text(a.words), title: text(a.title), price: text(a.price) });
       case 'publishing vow sales':
         return publishing.vowSales({ identity: text(a.identity), relays: list(a.relays) });
+      case 'publishing confirm sale':
+        return publishing.confirmSale({ vow: text(a.vow), sale: text(a.sale), buyer: text(a.buyer), seller: text(a.seller), unit: text(a.unit), value: num(a.value) });
       case 'publishing contest':
         return publishing.contestSale({ vow: text(a.vow), sale: text(a.sale), buyer: text(a.buyer), promise: text(a.promise) });
       case 'money units':

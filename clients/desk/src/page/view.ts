@@ -1077,7 +1077,7 @@ export interface PublishingShown {
 
 /** A look-up of one identity's vow sales (round 3): each vow, each sale's state; those bought by an identity held here may be contested here. */
 export interface VowSalesShown {
-  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; promise: string | null; amount: { value: number } | null }[]; unsigned: number; mine: string[] }[];
+  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; promise: string | null; amount: { unit: string; value: number } | null }[]; unsigned: number; mine: string[] }[];
   asked: string[];
   problems: string[];
 }
@@ -1093,7 +1093,7 @@ export function vowSalesShown(r: VowSalesShown, names: (id: string) => string): 
                 .map(
                   (x) => `<li class="${x.state === 'confirmed' ? 'ok' : x.state === 'contested' ? 'bad' : ''}">${e(names(x.buyer))}: <strong>${e(x.state)}</strong>${x.promise ? ` (“${e(x.promise)}”)` : ''}${x.amount ? ` · ${x.amount.value.toLocaleString('en')}` : ''}${
                     v.mine.includes(x.act) && x.state === 'pending'
-                      ? `<form class="pub-contest row" data-vow="${e(v.name)}" data-sale="${e(x.act)}" data-buyer="${e(x.buyer)}"><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><button type="submit">Contest it, as ${e(names(x.buyer))}</button></form><span class="small">To confirm it, sign in Dub or Damgar: a confirmation is a claim of the payment (Money).</span>`
+                      ? `<form class="pub-contest row" data-vow="${e(v.name)}" data-sale="${e(x.act)}" data-buyer="${e(x.buyer)}"><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><button type="submit">Contest it, as ${e(names(x.buyer))}</button></form>${x.amount ? `<button data-action="pub-confirm-sale" data-vow="${e(v.name)}" data-sale="${e(x.act)}" data-buyer="${e(x.buyer)}" data-seller="${e(v.signer)}" data-unit="${e(x.amount.unit)}" data-value="${x.amount.value}">Confirm: it was kept, as ${e(names(x.buyer))}</button>` : ''}<span class="small">Confirming prepares your claim of the payment, acknowledging the vow, for Damgar to sign (a Money act): it waits in Damgar’s To sign.</span>`
                       : ''
                   }</li>`,
                 )

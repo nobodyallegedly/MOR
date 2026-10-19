@@ -17,7 +17,7 @@ import type { Amount } from './units.ts';
 export const TYPES = { draft: 1, request: 2, invoiceRequest: 3, answer: 4, laneRequest: 5, sale: 6 } as const;
 
 /** A draft's "what" (2.1). */
-export const WHAT = { pay: 0, ask: 1, anchor: 2 } as const;
+export const WHAT = { pay: 0, ask: 1, anchor: 2, confirm: 3 } as const;
 
 const amountValue = (a: Amount) => [unhex(a.unit), a.value];
 const amountOf = (v: unknown): Amount => {
@@ -44,7 +44,7 @@ const asMap = (payload: Uint8Array, what: string): Map<number, unknown> => {
 // ------------------------------------------------------------ type 1: a draft
 
 export interface Draft {
-  what: 'pay' | 'ask' | 'anchor';
+  what: 'pay' | 'ask' | 'anchor' | 'confirm';
   /** The payee (pay, anchor), or the payer asked (ask). */
   other: string;
   amount: Amount;
@@ -52,6 +52,8 @@ export interface Draft {
   /** The app that prepared it, as it names itself. */
   app: string;
   anchor: { offer: string; tier: number; leaf: string } | null;
+  /** Confirm a purchase (draft 4, F357): the identity's own public claim of the payment, and the acts to acknowledge (a vow). */
+  confirm?: { claim: string; acks: string[] } | null;
 }
 
 export function draftPayload(d: Draft): Uint8Array {
@@ -66,14 +68,18 @@ export function draftPayload(d: Draft): Uint8Array {
     if (!d.anchor) throw new Error('A draft paying for an anchor names the offer, the tier and the leaf.');
     m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf)]);
   }
+  if (d.what === 'confirm') {
+    if (!d.confirm?.acks.length) throw new Error('A draft confirming a purchase names the claim and what it acknowledges.');
+    m.set(6, [unhex(d.confirm.claim), d.confirm.acks.map(unhex)]);
+  }
   return cborEncode(m);
 }
 
 export function readDraft(payload: Uint8Array): Draft {
   const m = asMap(payload, 'a draft');
-  closed(m, [0, 1, 2, 3, 4, 5], 'a draft');
+  closed(m, [0, 1, 2, 3, 4, 5, 6], 'a draft');
   const w = m.get(0);
-  const what = w === 0 ? 'pay' : w === 1 ? 'ask' : w === 2 ? 'anchor' : null;
+  const what = w === 0 ? 'pay' : w === 1 ? 'ask' : w === 2 ? 'anchor' : w === 3 ? 'confirm' : null;
   if (!what) throw new Error('a draft: an unknown what');
   let anchor: Draft['anchor'] = null;
   if (what === 'anchor') {
@@ -81,6 +87,12 @@ export function readDraft(payload: Uint8Array): Draft {
     if (!Array.isArray(a) || a.length !== 3 || typeof a[1] !== 'number') throw new Error('a draft for an anchor: its anchor');
     anchor = { offer: h32(a[0], 'the offer'), tier: a[1], leaf: h32(a[2], 'the leaf') };
   } else if (m.has(5)) throw new Error('a draft: an anchor on a draft that pays for none');
+  let confirm: Draft['confirm'] = null;
+  if (m.get(0) === 3) {
+    const c = m.get(6);
+    if (!Array.isArray(c) || c.length !== 2 || !Array.isArray(c[1]) || !c[1].length) throw new Error('a draft confirming a purchase: its claim and what it acknowledges');
+    confirm = { claim: h32(c[0], 'the claim'), acks: (c[1] as unknown[]).map((x) => h32(x, 'an act acknowledged')) };
+  } else if (m.has(6)) throw new Error('a draft: a confirmation on a draft that confirms nothing');
   return {
     what,
     other: h32(m.get(1), 'the other party'),
@@ -88,6 +100,7 @@ export function readDraft(payload: Uint8Array): Draft {
     whatFor: m.has(3) ? text(m.get(3), 'what for') : null,
     app: text(m.get(4), 'the app'),
     anchor,
+    confirm,
   };
 }
 

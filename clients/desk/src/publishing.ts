@@ -46,6 +46,7 @@ import { actors, chosen, type Actor } from '../../ummia/src/acting.ts';
 import { deliverSold, type SoldWorks } from '../../dub/src/delivery.ts';
 import { VOW, contestSale, publishVow, vowOfferWords, vowPayload, vowSales, type VowShown } from '../../dub/src/vows.ts';
 import { say } from '../../damgar/src/units.ts';
+import { sendDraft } from '../../damgar/src/messages.ts';
 import { REGTEST_UNIT } from './grid.ts';
 import type { Line, Reading } from '../../collective/src/explain.ts';
 import type { Desk, Done } from './desk.ts';
@@ -595,6 +596,32 @@ export class Publishing {
         this.store.saveIdentity(me);
       }
       return { title: 'Contested', lines: [{ text: 'Your contest of that sale is signed in public: it reads contested for anyone who looks. It voids nothing; the payment stays as it is.', tone: 'ok' }], acts: [id] };
+    });
+  }
+
+  /**
+   * Confirm a sale whose buyer is held here (decided by Nobody, allegedly,
+   * 19 October 2026, F357: "Edubba prepares the confirmation, sealed to
+   * oneself, and Damgar signs it, as Dub's tips are prepared"): a draft of
+   * the money messages cMIP, draft 4 (what 3, confirm a purchase), naming
+   * the buyer's own public claim of the payment and the vow; Damgar signs
+   * the claim again in public, acknowledging the vow (rule 13).
+   */
+  confirmSale(a: { vow: string; sale: string; buyer: string; seller: string; unit: string; value: number }): Promise<Done> {
+    return this.desk.serial(async () => {
+      const me = this.me(readId(a.buyer));
+      const s = this.settings();
+      if (!Number.isSafeInteger(a.value) || a.value <= 0 || !/^[0-9a-f]{64}$/.test(a.unit)) throw new Error('The sale’s amount was not read: look it up again. Nothing was prepared.');
+      const r = await sendDraft(
+        me,
+        { what: 'confirm', other: readId(a.seller), amount: { unit: a.unit, value: a.value }, whatFor: 'a vow kept', app: 'Edubba', anchor: null, confirm: { claim: readId(a.sale), acks: [readId(a.vow)] } },
+        { refs: [[readId(a.vow), readId(a.seller)]], via: s.via, save: async () => this.store.saveIdentity(me) },
+      );
+      return {
+        title: 'Prepared for Damgar',
+        lines: [{ text: `The confirmation is prepared, sealed to ${this.store.names()(me.id)} at its homes (${r.left.length} of them). Damgar, holding the same identity, shows it in To sign: signing there signs your claim of the payment again, in public, acknowledging the vow, and the sale reads confirmed.`, tone: 'ok' }],
+        acts: [r.id],
+      };
     });
   }
 

@@ -854,6 +854,14 @@ app.addEventListener('click', async (ev) => {
       }
       break;
     }
+    case 'pub-confirm-sale': {
+      const r = await busy('Preparing the confirmation for Damgar…', () => c.ask<Done>('publishing confirm sale', { vow: b.dataset.vow, sale: b.dataset.sale, buyer: b.dataset.buyer, seller: b.dataset.seller, unit: b.dataset.unit, value: Number(b.dataset.value) }));
+      if (r) {
+        b.replaceWith(Object.assign(document.createElement('span'), { className: 'small', textContent: 'Prepared for Damgar.' }));
+        say('done', v.done(r));
+      }
+      break;
+    }
     case 'pub-deliver': {
       const r = await busy('Looking for sales and delivering keys…', () => c.ask<{ lines: Line[] }>('publishing deliver'));
       if (r) {

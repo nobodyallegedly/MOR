@@ -80,7 +80,7 @@ In Settings, **The vault**: **Transfer to the vault**, one of its entries and an
 
 ## Round 3: a vow's claim in public (part B)
 
-A payment an app makes under its lane for a vow (Dub's **Buy it**) is marked visible: once paid, its claim is signed again in public, so anyone looking at the relays sees the sale (Agreements rule 13; a reading, the build's). `confirmPurchase` signs one more public claim of the same payment acknowledging what was bought (the vow): the sale reads confirmed. Each is signed as the payment's claim was, under the same lane or by hand, and its proof is the one the payment carried (kept as `proof`).
+A payment an app makes under its lane for a vow (Dub's **Buy it**) is marked visible: once paid, its claim is signed again in public, so anyone looking at the relays sees the sale (Agreements rule 13; a reading, the build's). `confirmPurchase` signs one more public claim of the same payment acknowledging what was bought (the vow): the sale reads confirmed. Each is signed as the payment's claim was, under the same lane or by hand, and its proof is the one the payment carried (kept as `proof`). **A purchase confirmed from Edubba** (F357; the money messages cMIP, draft 4, 2.3): a draft of a new kind, "confirm a purchase", naming your own public claim and the vow; To sign reads it (the claim fetched and checked: yours, of that payee and amount) and signing signs the claim again, in public, acknowledging the vow. Every message is now written under the money messages cMIP draft 4; drafts 1 to 3 are still read.
 
 ## Tests
 

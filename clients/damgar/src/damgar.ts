@@ -1465,6 +1465,16 @@ export class Damgar {
       lines.push({ text: `Under ${missing.map((h) => labelOf(h) ?? `${h.slice(0, 8)}…`).join(', ')}, not accepted here: unknown, and it cannot be signed (F338). Accept it in Settings to read it.`, tone: 'warn' });
     }
     const about = (d.refs ?? []).map((r, i) => `${r.slice(0, 8)}…${d.refSigners?.[i] ? ` by ${short(d.refSigners[i]!)}` : ''}`);
+    if (dr.what === 'confirm') {
+      // Draft 4 (F357): a purchase confirmed, prepared in Edubba.
+      lines.unshift({ text: `Prepared in ${dr.app}, not signed there: confirm your purchase from ${short(dr.other)}, ${say(dr.amount, acc)}: what was promised was kept.` });
+      const c = await this.ownClaim(me, s, dr).catch((e) => ({ why: message(e) }));
+      if ('why' in c) {
+        unknown = true;
+        lines.push({ text: `${c.why}: it cannot be signed.`, tone: 'warn' });
+      } else lines.push({ text: `Signing signs your claim of that payment (${short(dr.confirm!.claim)}) again, in public, acknowledging ${dr.confirm!.acks.map(short).join(', ')}: the sale then reads confirmed for anyone who looks (Agreements rule 13). Nothing moves; it is public.`, tone: 'ok' });
+      return { id, kind: 'draft', from: this.who(me.id, me.id), app: dr.app, title: 'A purchase to confirm', lines, amount: { ...dr.amount, said: say(dr.amount, acc) }, unknown, offers: unknown ? ['decline'] : ['sign', 'decline'], found: x.found };
+    }
     if (dr.what === 'ask') {
       lines.unshift({ text: `Prepared in ${dr.app}, not signed there: ask ${short(dr.other)} to pay you ${say(dr.amount, acc)}${dr.whatFor ? `, for “${dr.whatFor}”` : ''}.` });
       lines.push({ text: 'Signing sends them a request to be paid, sealed to them, naming your payee pointer in force. It binds nobody: they may pay it, accept it as a debt, or decline.' });
@@ -1494,6 +1504,14 @@ export class Damgar {
       const item = await this.readDraftItem(me, s, book, id, this.acceptedSet(await this.accepted(me)));
       if (item.unknown) throw new Error('It is unknown here: nothing was signed.');
       const dr = readDraft(this.opened(book, id).payload);
+      if (dr.what === 'confirm') {
+        const c = await this.ownClaim(me, s, dr);
+        const made = moneyPayload({ type: 'claim', rail: c.rail, proof: new Uint8Array(c.proof), payee: c.payee, amount: c.amount, fulfils: c.fulfils, referral: c.referral ?? undefined }) as { type: number; payload: Uint8Array };
+        const claim = await this.publishPublic(me, s, made, { by: 'hand' }, dr.confirm!.acks, c.payee);
+        x.stage = 'signed';
+        await this.saveBook(me.id, book);
+        return { lines: [{ text: `Your claim of that payment, acknowledging what you bought, is signed in public (${short(claim)}): its sale reads confirmed for anyone who looks.`, tone: 'ok' }] };
+      }
       if (dr.what === 'ask') {
         const { look, acts } = await this.payee(me.id, me, s);
         void acts;
@@ -1668,7 +1686,11 @@ export class Damgar {
   private async publicClaim(me: TestIdentity, s: Settings, p: Payment, acks: string[]): Promise<string> {
     if (!p.proof) throw new Error('That payment carries no proof yet: it is not paid. Nothing was signed.');
     const made = moneyPayload({ type: 'claim', rail: p.rail, proof: b64(p.proof), payee: p.other, amount: p.amount, fulfils: p.fulfils, referral: p.referral ?? undefined }) as { type: number; payload: Uint8Array };
-    const how = await this.claimHow(me, s, p, made);
+    return this.publishPublic(me, s, made, await this.claimHow(me, s, p, made), acks, p.other);
+  }
+
+  /** A Money act signed in public (by hand, or under a lane), acknowledging `acks`, at this identity's relays and homes and the payee's relays. Its id. */
+  private async publishPublic(me: TestIdentity, s: Settings, made: { type: number; payload: Uint8Array }, how: How, acks: string[], payee: string): Promise<string> {
     await this.current(me);
     let act: { act: Uint8Array; id: string };
     if (how.by === 'lane') {
@@ -1689,7 +1711,7 @@ export class Damgar {
     }
     let places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
     try {
-      const l = await lookUp(p.other, places, s.via);
+      const l = await lookUp(payee, places, s.via);
       places = [...new Set([...places, ...l.routes.routes.flatMap((r) => r.hints)])];
     } catch {
       // the payee's relays are not known: ours hold it
@@ -1705,6 +1727,21 @@ export class Damgar {
     }
     if (!took) throw new Error('No relay took the claim. It was signed; try again later.');
     return act.id;
+  }
+
+  /** The identity's own public claim a confirmation names (draft 4, 2.3), read and checked: this identity's, of that payee and amount. */
+  private async ownClaim(me: TestIdentity, s: Settings, dr: { other: string; amount: Amount; confirm?: { claim: string } | null }): Promise<{ rail: string; proof: Uint8Array; payee: string; amount: Amount; fulfils: string; referral?: { identity: string; evidence: string } | null }> {
+    let act: Uint8Array | null = null;
+    for (const h of [...s.relays, ...me.f.homes.map((x) => x.hint)]) {
+      act = await relayAt(h, s.via).getAct(dr.confirm!.claim).catch(() => null);
+      if (act) break;
+    }
+    if (!act) throw new Error('The claim it names was not found at your relays and homes');
+    const d = describeAct(act) as { signer?: string; spec?: string; type?: number; payload?: Uint8Array; public?: boolean };
+    if (d.signer !== me.id || d.spec !== MONEY || d.type !== 3 || !d.payload) throw new Error('The act it names is no claim of yours');
+    const c = (moneyRead(3, d.payload) as { act: { rail: string; proof: Uint8Array; payee: string; amount: Amount; fulfils: string; referral?: { identity: string; evidence: string } | null } }).act;
+    if (c.payee !== dr.other || c.amount.unit !== dr.amount.unit || c.amount.value !== dr.amount.value) throw new Error('The claim it names is of another payee or amount than the draft says');
+    return c;
   }
 
   /**
