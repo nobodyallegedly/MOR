@@ -28,6 +28,12 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F356. The cMIPs branded, "Dubsar" as the house (19 October 2026)
+
+**Asked by Nobody, allegedly:** "All our cMIPs have very generic names, they should be branded to avoid confusion." A generic name ("the payment cMIP") reads as the standard, against the competitive layer; a cMIP's identity is its specification hash, its name only a label.
+
+**Decided ("Yes, agreed"):** (a) one house prefix for every cMIP and Module written in this repository: "Dubsar" (Dubsar Payments, Dubsar Grant Limits, Dubsar Relay Transport, and so on), the name of the site and the homes, never the protocol's. Another author's would carry their own house. Done in the freeze-ready drafts session: each text's title and the apps' wording; the findings log keeps the old names as history. Declined: (b) a coined name per cMIP, as many names to invent and remember.
+
 ## F355. A transfer to one's vault, from Damgar (19 October 2026)
 
 **Asked (H46):** "Damgar should offer a 'transfer to vault' option." Round 3 found the payment cMIP (draft 3) already carries it: payee and payer both oneself, paid-to the vault (`[1, declared-by, entry]`), on-chain to the vault key adjusted by the commitment. Fulfils naming one's own payee pointer in force is a reading, not stated.
