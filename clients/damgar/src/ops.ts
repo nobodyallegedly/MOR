@@ -46,6 +46,9 @@ export const OPS = [
   'clock',
   'link',
   'answer address',
+  'vault transfer read',
+  'vault transfer',
+  'vault invoice',
   'collectives',
   'collective add',
   'collective promise read',
@@ -152,6 +155,12 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
       return d.setClock(text(a.clock));
     case 'link':
       return d.setLink(a.remove === true ? null : { rest: text(a.rest), macaroon: text(a.macaroon).replace(/\s+/g, '').toLowerCase(), cert: text(a.cert) });
+    case 'vault transfer read':
+      return d.vaultTransferRead({ entry: Number(a.entry ?? 0), value: text(a.value) });
+    case 'vault transfer':
+      return d.vaultTransfer({ entry: Number(a.entry ?? 0), value: text(a.value), digest: text(a.digest) });
+    case 'vault invoice':
+      return d.vaultInvoice(text(a.key), text(a.invoice));
     case 'answer address':
       return d.answerAddress(text(a.id));
     default:

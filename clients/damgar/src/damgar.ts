@@ -36,6 +36,8 @@ import {
   anchoringReadTicket,
   base64,
   cborDecode,
+  cborEncode,
+  sha256,
   commitmentCbor,
   describeAct,
   hex,
@@ -165,6 +167,8 @@ export interface Payment {
   fulfils: string;
   whatFor: string | null;
   rail: string;
+  /** A transfer to this identity's own vault (H46, F355): payer and payee the same identity. */
+  vault?: boolean;
   /** A vow bought (round 3): its claim is also published, so a look-up sees the sale (Agreements rule 13). */
   visible?: boolean;
   /** The proof the claims carry (Money claim field 1), base64, once paid: a later claim of the same payment carries it again. */
@@ -1626,6 +1630,7 @@ export class Damgar {
       p.stage = 'paid';
       // A vow bought: the same claim, public, so a look-up sees the sale (round 3; Agreements rule 13).
       if (p.visible) (p.publicClaims ??= []).push(await this.publicClaim(me, s, p, []));
+      if (p.vault) await this.keepAtHomes(me, s, book, claim);
       if (p.request && book.requestsIn[p.request]) book.requestsIn[p.request].stage = 'paid';
       await this.saveBook(me.id, book);
       const acc = this.acceptedSet(await this.accepted(me));
@@ -1636,6 +1641,21 @@ export class Damgar {
         ],
       };
     });
+  }
+
+  /** A transfer to the vault's record (F355): its claim, carrying the commitment and salt, sealed to oneself at one's homes. */
+  private async keepAtHomes(me: TestIdentity, s: Settings, book: Book, act: string): Promise<void> {
+    const kept = book.acts[act];
+    const enc = me.f.encryption[me.f.encryption.length - 1];
+    if (!kept?.key || !enc) return;
+    const sealed = sealFor(b64(kept.act), b64(kept.key), [{ id: me.id, key: xwingPublic(unhex(enc.secret)) as Uint8Array }]);
+    for (const h of me.f.homes.map((x) => x.hint)) {
+      try {
+        await relayAt(h, s.via).putSealed(sealed);
+      } catch {
+        // away: the inbox holds it too
+      }
+    }
   }
 
   /**
@@ -2035,6 +2055,10 @@ export class Damgar {
       declined: 'declined',
     };
     const lines: Line[] = [];
+    if (p.vault) {
+      said.asked = 'to your vault: waiting for the invoice your vault’s node makes';
+      said.paid = p.rail === SPEC.onchain.hash ? 'sent to your vault: check the chain again at six confirmations' : 'moved to your vault: its record sealed to you at your homes';
+    }
     if (p.bound?.kind === 'refused') lines.push({ text: `Refused: ${p.bound.why}`, tone: 'warn' });
     if (p.rail === SPEC.onchain.hash && !this.opts.chain) lines.push({ text: 'Paid, not yet checked against the chain: the web client follows none.', tone: 'warn' });
     if (p.rail === SPEC.onchain.hash && this.opts.chain) lines.push({ text: `Checked against ${this.opts.chain.said}.` });
@@ -2054,6 +2078,7 @@ export class Damgar {
       lines,
       at: p.at,
       ticket: p.ticket ? { batch: p.ticket.batch, deadline: p.ticket.deadline, tier: p.ticket.tier, checked: p.ticket.checked !== false } : null,
+      vaultInvoice: p.vault && p.stage === 'asked' && p.rail === SPEC.lightning.hash ? { node: (readLightningAddress(b64(p.address)) as { node: string } | null)?.node ?? '', descriptionHash: p.key } : null,
     };
   }
 
@@ -2300,6 +2325,140 @@ export class Damgar {
     if (spec && MESSAGES_SPECS.includes(spec) && type === TYPES.invoiceRequest) return 'an invoice request';
     if (spec && MESSAGES_SPECS.includes(spec) && type === TYPES.answer) return 'an answer to an invoice request';
     return a.public ? 'a public act' : 'a private act, sealed (its kind is read by its recipient only)';
+  }
+
+  // ------------------------------------------------------------ transfer to the vault (H46, F355)
+
+  /** The vault in force and the payee pointer this identity's chain declares, as its own look-up reads them. */
+  private async ownVault(me: TestIdentity, s: Settings): Promise<{ vault: { declaredBy: string; entries: { unit: string; railModule: string; source: Uint8Array; limit: number }[] } | null; pointer: string | null }> {
+    const { look } = await this.payee(me.id, me, s);
+    const vault = look.verifier.moneyVault(MONEY, me.id) as { declaredBy: string; entries: { unit: string; railModule: string; source: Uint8Array; limit: number }[] } | null;
+    const ptr = look.verifier.moneyPointer(MONEY, me.id) as { act: string | null };
+    return { vault, pointer: ptr.act };
+  }
+
+  /** What a transfer to the vault would be, in plain words, and what stops it. */
+  private async vaultPlan(me: TestIdentity, s: Settings, a: { entry: number; value: string }): Promise<{ lines: Line[]; costs: Line[]; blocking: string[]; digest: string; plan: { entry: number; amount: Amount; declaredBy: string; module: string; source: Uint8Array; pointer: string } | null }> {
+    const acc = this.acceptedSet(await this.accepted(me));
+    const { vault, pointer } = await this.ownVault(me, s);
+    const blocking: string[] = [];
+    const e = vault?.entries[a.entry];
+    if (!vault) blocking.push('Your identity’s chain declares no vault: declare one in Kišib, in a change of keys (Money rule 2).');
+    else if (!e) blocking.push('Choose one of your vault’s entries.');
+    if (!pointer) blocking.push('You have no payee pointer yet: a transfer to your vault follows it (a reading: the payment cMIP’s next draft will let it name the vault itself). Say where you are paid first.');
+    const value = Number(a.value);
+    if (!Number.isSafeInteger(value) || value <= 0) blocking.push('An amount is a whole number above zero.');
+    if (e && !acc.has(e.railModule)) blocking.push(`${railName(e.railModule)} is not accepted for this identity (Settings).`);
+    if (e && e.railModule === SPEC.onchain.hash && value > 0 && value < 330) blocking.push('Amounts below 330 satoshis cannot be paid on the on-chain rail.');
+    const amount = e && value > 0 ? { unit: e.unit, value } : null;
+    const lines: Line[] = [];
+    const costs: Line[] = [];
+    if (e && amount) {
+      const where = e.railModule === SPEC.lightning.hash ? `its node ${(readLightningAddress(e.source) as { node: string } | null)?.node.slice(0, 16) ?? '?'}…` : `its Bitcoin key ${(readOnchainAddress(e.source) as { key: string } | null)?.key.slice(0, 16) ?? '?'}…`;
+      lines.push(
+        { text: `To your vault: the entry on ${railName(e.railModule)}, ${where}, declared in your chain (act ${vault!.declaredBy.slice(0, 12)}…) with the chain key.` },
+        { text: `The amount: ${say(amount, acc)}, from your wallet (on regtest, the test wallet). It is a payment from you to you: Damgar binds it, you pay it in your wallet and paste the proof back, and Damgar checks it as any payment (F355).` },
+        e.railModule === SPEC.lightning.hash
+          ? { text: 'The fee: your wallet’s routing fee, which it shows before you pay. Damgar holds no wallet and cannot see it. Between two nodes with a direct channel it is usually none.' }
+          : { text: 'The fee: the miners’ fee your wallet sets when it sends, on top of the amount. Damgar holds no wallet and cannot see it; on regtest the test wallet chooses it.' },
+      );
+      if (e.railModule === SPEC.lightning.hash) lines.push({ text: 'Its invoice is made by your vault’s node, not by Damgar: you make it there (on regtest, in the test wallet, on the vault’s node) with the description hash Damgar shows, and paste it back.' });
+      costs.push(
+        { text: 'This money can then be spent only with the chain key and its record: the vault’s own key, declared with your chain key in Kišib, and the record Damgar keeps sealed to you at your homes (your claim of the payment, its commitment and salt included).', tone: 'warn' },
+        ...(e.railModule === SPEC.onchain.hash ? [{ text: 'On-chain, the money sits at an address made from your vault’s key and this payment’s commitment: without the record, the vault’s key alone does not find it.', tone: 'warn' as const }] : []),
+        { text: 'One way only: Damgar never takes money out of the vault. Withdrawing needs the chain key and stays in Kišib.', tone: 'warn' },
+      );
+    }
+    const digest = sha256(cborEncode(['MOR Damgar transfer to the vault, version 1', me.id, a.entry, vault?.declaredBy ?? '', e?.unit ?? '', value, pointer ?? '']));
+    return { lines, costs, blocking, digest, plan: e && amount && pointer && !blocking.length ? { entry: a.entry, amount, declaredBy: vault!.declaredBy, module: e.railModule, source: e.source, pointer } : null };
+  }
+
+  /** A transfer to the vault read back before anything is bound (H46, F355). */
+  vaultTransferRead(a: { entry: number; value: string }): Promise<{ digest: string; lines: Line[]; costs: Line[]; blocking: string[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const r = await this.vaultPlan(me, s, a);
+      return { digest: r.digest, lines: r.lines, costs: r.costs, blocking: r.blocking };
+    });
+  }
+
+  /**
+   * A transfer to the vault, bound (H46, F355): a payment from this identity
+   * to itself, its commitment naming the vault entry it goes to (`paid-to`
+   * `[1, declared-by, entry]`) and, as `fulfils`, its own payee pointer in
+   * force (a reading, the build's, until the payment cMIP's next draft lets
+   * it name the vault declaration). On-chain its address is made here, with
+   * the vault's request key where this Damgar holds it; on Lightning, the
+   * vault's node makes the invoice. Then it is paid as any payment, in Pay.
+   */
+  vaultTransfer(a: { entry: number; value: string; digest: string }): Promise<{ key: string; lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, book } = await this.ctx();
+      const r = await this.vaultPlan(me, s, a);
+      if (r.digest !== a.digest) throw new Error('What you confirmed is not what was read back: read it again. Nothing was bound.');
+      if (!r.plan) throw new Error(`${r.blocking.join(' ') || 'It cannot be bound.'} Nothing was bound.`);
+      const pl = r.plan;
+      const salt = new Uint8Array(randomBytes(16));
+      const paidTo = { kind: 'vault', declaredBy: pl.declaredBy, entry: pl.entry };
+      const c = { rail: pl.module, payee: me.id, amount: pl.amount, fulfils: pl.pointer, payer: me.id, paidTo, salt };
+      const commitment = commitmentCbor(c) as Uint8Array;
+      const key = paymentCommitment(c) as string;
+      const p: Payment = {
+        key,
+        side: 'out',
+        other: me.id,
+        amount: pl.amount,
+        fulfils: pl.pointer,
+        whatFor: 'to my vault',
+        rail: pl.module,
+        address: base64(pl.source),
+        commitment: base64(commitment),
+        invoiceRequest: '',
+        answer: null,
+        bound: null,
+        preimage: null,
+        onchain: null,
+        claims: [],
+        receipts: [],
+        draft: null,
+        request: null,
+        ticket: null,
+        stage: 'asked',
+        at: now(),
+        vault: true,
+      };
+      const lines: Line[] = [];
+      if (pl.module === SPEC.onchain.hash) {
+        const keys = (await this.store.read<Keys>(me.id, 'keys')) ?? { request: null, earlier: [] };
+        const addr = readOnchainAddress(pl.source) as { request: string } | null;
+        const secret = [keys.request, ...keys.earlier].find((k) => k && addr && onchainKey(unhex(k)) === addr.request);
+        if (!secret) throw new Error('The request key your vault’s on-chain entry names is not held by this Damgar: its address cannot be made here. Nothing was bound.');
+        p.bound = { kind: 'request', request: base64(onchainRequest(unhex(secret), key, undefined) as Uint8Array), confirmations: null };
+        p.stage = 'to pay';
+        lines.push({ text: 'Bound: the address for this transfer alone is in Pay. Send exactly the amount from your wallet, then paste the transaction’s id there.', tone: 'ok' });
+      } else {
+        lines.push({ text: `Bound: make an invoice on your vault’s node for ${say(pl.amount, this.acceptedSet(await this.accepted(me)))} with the description hash ${key} (on regtest, in the test wallet, on the vault’s node), and paste it in Pay.`, tone: 'ok' });
+      }
+      book.payments[key] = p;
+      await this.saveBook(me.id, book);
+      return { key, lines };
+    });
+  }
+
+  /** The invoice the vault's node made for a transfer to the vault (Lightning): checked (its node the vault's, the amount, the description hash), then it is paid in Pay. */
+  vaultInvoice(key: string, invoice: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, book } = await this.ctx();
+      const p = book.payments[key];
+      if (!p?.vault || p.stage !== 'asked' || p.rail !== SPEC.lightning.hash) throw new Error('No transfer to your vault is waiting for its invoice there.');
+      const t = invoice.trim().toLowerCase().replace(/^lightning:/, '');
+      const problems = this.invoiceProblems(p, t).map((x) => x.replace('the node your payee pointer names', 'your vault’s node'));
+      if (problems.length) throw new Error(`This invoice cannot bind the transfer: ${problems.join('; ')}. Nothing was kept.`);
+      p.bound = { kind: 'invoice', invoice: t };
+      p.stage = 'to pay';
+      await this.saveBook(me.id, book);
+      return { lines: [{ text: 'The invoice is your vault’s node’s, for this transfer alone: pay it from your wallet, then paste the preimage.', tone: 'ok' }] };
+    });
   }
 
   /** Follow every step by hand (round 2, 2b): off by default. */

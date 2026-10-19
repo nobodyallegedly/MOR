@@ -235,9 +235,14 @@ export function payment(p: PaymentShown, forPay = false): string {
         : `<label>Pay exactly ${e(p.pay.amount.said)} to this address, from your wallet</label><div class="copy">${e(p.pay.address ?? '')}</div><button class="quiet" data-action="copy" data-text="${e(p.pay.address ?? '')}">Copy the address</button>
 ${p.stage === 'paid' ? `<div class="row"><button data-action="recheck" data-key="${e(p.key)}" class="primary">Check the chain again</button></div>` : `<form class="paid" data-key="${e(p.key)}"><label>The proof, from your wallet once sent: the transaction’s id (64 hexadecimal characters)</label><input name="proof" required spellcheck="false" autocomplete="off"><div class="row"><button type="submit" class="primary">Check it and sign my claim</button></div></form>`}`
       : '';
+  const vaultInvoice =
+    forPay && p.vaultInvoice
+      ? `<p class="small">Make an invoice on your vault’s node (${e(p.vaultInvoice.node.slice(0, 16))}…) for exactly ${e(p.amount.said)}, with this description hash and no description (on regtest, in the test wallet, on the vault’s node):</p><div class="copy">${e(p.vaultInvoice.descriptionHash)}</div>
+<form class="vault-invoice" data-key="${e(p.key)}"><label>The invoice your vault’s node made</label><input name="invoice" required spellcheck="false" autocomplete="off"><div class="row"><button type="submit" class="primary">Check it</button></div></form>`
+      : '';
   const ticket = p.ticket ? `<p class="small">An anchor’s ticket: batch ${p.ticket.batch}, tier ${p.ticket.tier}, on the chain by block ${p.ticket.deadline}.${p.ticket.checked ? '' : ' Not checked here: this Damgar follows no chain, so whether that block is within the tier’s reach of today’s is unknown. Pay only if you trust the service on it, or check it in Damgar on a computer.'}</p>` : '';
   return `<div class="item" data-payment="${e(p.key)}"><h3>${p.side === 'out' ? 'To' : 'From'} ${who(p.other)} · ${e(p.railName)}${p.to === 'vault' ? ', to the vault' : ''}</h3>
-<div class="meta">${e(p.stageSaid)}</div>${amount(p.amount)}${p.whatFor ? `<p class="small">For “${e(p.whatFor)}”</p>` : ''}${ticket}${lines(p.lines)}${pay}${proofs}</div>`;
+<div class="meta">${e(p.stageSaid)}</div>${amount(p.amount)}${p.whatFor ? `<p class="small">For “${e(p.whatFor)}”</p>` : ''}${ticket}${lines(p.lines)}${vaultInvoice}${pay}${proofs}</div>`;
 }
 
 /** Paid and confirmed: settled, its receipt and a claim each valid by the rail's own evidence, and counting. */
@@ -298,11 +303,26 @@ ${s.list.merged.length ? note('warn', `Two apps changed it at once; merged: ${li
 <div class="row"><span class="grow small">${s.list.published ? 'Published: anyone can read which specifications you accept.' : 'Private: sealed to yourself (the default).'}</span><button data-action="publish list" data-on="${s.list.published ? 'false' : 'true'}">${s.list.published ? 'Make it private again' : 'Publish it'}</button></div>`;
   return [
     fold('paid', 'Where you are paid', paid, open('paid')),
-    fold('vault', 'The vault', vault, open('vault')),
+    fold('vault', 'The vault', `${vault}${r?.vault ? vaultTransferForm(r.vault.entries) : ''}`, open('vault')),
     fold('relays', 'Homes and relays', where, open('relays')),
     ...(l ? byHand(l, s.web).map(([name, title, body]) => fold(name, title, body, open(name))) : []),
     fold('accept', 'What you accept', accept, open('accept')),
   ].join('\n');
+}
+
+/** Transfer to the vault (H46, F355): one of its entries and an amount, read back before anything is bound. */
+function vaultTransferForm(entries: { unit: { said: string }; railName: string }[]): string {
+  return `<h3>Transfer to the vault</h3><p class="small">From your wallet to your vault, one way only: Damgar binds the payment, you pay it in your wallet (on regtest, the test wallet) and paste the proof back. Withdrawing needs the chain key and stays in Kišib.</p>
+<form id="vault-transfer"><label>To</label><select name="entry">${entries.map((x, i) => `<option value="${i}">${e(x.railName)}, ${e(x.unit.said)}</option>`).join('')}</select>
+<label>Amount (whole units)</label><input name="value" inputmode="numeric" autocomplete="off" required>
+<div class="row"><button type="submit">Read it back</button></div></form><div id="vault-review"></div>`;
+}
+
+/** A transfer to the vault, read back: the vault, the amount, the fee as far as Damgar can say, and what it costs. */
+export function vaultReview(r: { digest: string; lines: Line[]; costs: Line[]; blocking: string[] }): string {
+  return `<div class="item"><h3>Transfer to your vault, read back</h3>${lines(r.lines)}</div>
+${r.costs.length ? `<div class="costs"><h3>Before you send</h3>${lines(r.costs)}</div>` : ''}
+${r.blocking.length ? note('warn', lines(r.blocking.map((t) => ({ text: t, tone: 'warn' as const })))) : `<div class="row"><button class="primary" data-action="vault transfer" data-digest="${e(r.digest)}">Bind it, then pay it in Pay</button></div>`}`;
 }
 
 export function railsReview(r: { digest: string; lines: Line[]; costs: Line[] }): string {
