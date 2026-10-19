@@ -4,6 +4,8 @@
 
 *Why this version: make each identity once, write its words once, and reuse it everywhere.*
 
+*Updated 19 October 2026, after Damgar round 2 (pull request 78) and round 3 (pull request 80): human test 14 is folded in as Sitting 13, human test 15 as Sitting 16; the old Damgar sittings follow as 14 and 15; the key changes are last, as Sitting 17. Steps from those two tests are numbered (14.x) and (15.x): report them that way.*
+
 ---
 
 ## The rules
@@ -51,24 +53,45 @@ On the iPad and iPhone: no private browsing.
 - Founder: ______________ Members: ______________
 - Share papers kept at: ______________________
 
-**T, the throwaway** (the only extra identity in the whole run)
+**C, the critic** (new with Sitting 13; plays **R**, the reposter, in Sitting 16)
+- Made in Sitting 13. Device: the Mac (Dub, Damgar), linked to carol's node
+- Signing-key paper kept at: ______________________
+
+**B, the buyer** (new with Sitting 13; the buyer again in Sitting 16)
+- Made in Sitting 13. Device: the Mac (Dub, Damgar); its relay only the second relay
+- Signing-key paper kept at: ______________________
+
+**The second collective** (founded with the grid in Sitting 16): A, iPa, iPh. Share papers kept at: ______________________
+
+*If you named the cast differently in the apps (on 19 October: Max on the Mac, Pa on the iPad, Ph on the iPhone), read A as Max, iPa as Pa, iPh as Ph.*
+
+**T, the throwaway**
 - Made in Sitting 5. Device: the Mac (Dub, Edubba), the iPad (Dub's web client) for a moment
 - Home: `https://home1.dubsar.org` only
 - Chain-key paper kept at: ______________________
 - Signing-key paper kept at: ______________________ (one sheet: cross out the old words and write the new ones under them each time they change)
 
-**Throughout this sheet:** "the payer" and "the payee" mean whichever of iPa and iPh played that role this morning. Version 2 called them P and Q.
+**Throughout this sheet:** "the payer" and "the payee" mean whichever of iPa and iPh played that role on 18 October. Version 2 and human test 14 call them P and Q.
 
 ---
 
-## Already done (18 October): skip unless you want to repeat
+## Already done (18 and 19 October): skip unless you want to repeat
 
 - **Part 1.1, updating the Mac** (all eight steps). *Done 18 October, skip unless you want to repeat.* After Damgar round 2 lands, repeat its steps 2 to 5 once (see the Damgar block at the end).
 - **Part 1.2, the regtest network**, step 1 (the programs, checked) and step 4 (Damgar and Edubba follow the chain). *Done 18 October, skip unless you want to repeat.* Steps 2 and 3 (start the network, open the test wallet) come back in each Damgar sitting.
 - **Test 1 (was v1 test 1): dubsar.org and the reader on a phone.** Passed. *Done 18 October, skip unless you want to repeat.*
 - **Test 8 (was human test 11), steps 1 to 8**: iPa and iPh made, brought into Damgar, the payee's Settings, a tip, the invoice, the payment from the test wallet. *Done 18 October, skip unless you want to repeat.*
 
-**If today's network is still running**, you may finish step 8.9 now (the receipt, five minutes; it is the first step of Sitting 13). Then stop the network: from the MOR folder,
+**Done 19 October** (a Mac session): the Mac on main after round 3, every app rebuilt, the regtest network running and the test wallet answering. *Do not restart the network: a restart empties it and starts a new chain, and every payee's Lightning key in Damgar would need setting again.* Before the money sittings, start Damgar and Edubba once on regtest, from the MOR folder:
+```
+cd clients/damgar && node --import tsx src/cli.ts stop && npm start -- --regtest ~/mor-regtest
+```
+```
+cd clients/desk && node --import tsx src/cli.ts stop && npm start -- --regtest ~/mor-regtest
+```
+If a payment is refused because a node says "not synced", press **Mine** once in the test wallet. Also done on 19 October: the cast followed each other across homes, by the relay view and by the ID link (H56).
+
+**If the 18 October network is still running**, you may finish step 8.9 now (the receipt, five minutes; it is the first step of Sitting 13). Then stop the network: from the MOR folder,
 ```
 modules/lightning/regtest/down.sh ~/mor-regtest
 ```
@@ -84,6 +107,7 @@ Each web page carries a banner: **for testing only**. Keys live in the browser.
 - `https://kishib.dubsar.org` (Kišib's web client)
 - `https://damgar.dubsar.org` (Damgar's web client)
 - `https://ummia.dubsar.org` (Ummia's web client)
+- `https://edubba.dubsar.org` (Edubba's web client: no Agents tab, no money)
 - `https://dubsar.org` (the website) and `https://reader.dubsar.org` (the reader)
 
 Homes for test identities: `https://home1.dubsar.org` and `https://home2.dubsar.org`. Kišib and the web pages cannot reach an onion address, so never give a test identity an onion home here. If a home refuses a new identity (its daily limit), allow it on that home's management page, as before.
@@ -151,7 +175,7 @@ First, fill in the Cast card above. Then:
 7. **(4.7) Nudge it**: a number of actions (1) and a few words. Check: it does at most that many, each naming your nudge.
 8. **(4.8) Prompt it** (at the bottom): ask something short. Check: the conversation shows above the box; it is a private message, signed and kept.
 9. **(4.9)** It never answered a stranger without your pick or nudge. This is **checklist item 6**: one line.
-10. **(5.1) The look.** Edubba's tabs read **Agents, Collectives, Publishing, Identities**. Publishing shows its card ("Coming after Damgar's round 2"). Check: lines and outlines faintly emerald. Open Dub: its lines faintly warm pearl.
+10. **(5.1) The look.** Edubba's tabs read **Agents, Collectives, Publishing, Identities**. Publishing is a real tab now (round 3): protected files and vows; look only, it is tested in Sitting 16. Check: lines and outlines faintly emerald. Open Dub: its lines faintly warm pearl.
 11. **(5.2) Reading (H21).** Identities tab, A, **Its posts**: press **Copy act ID** on a post. Agents tab, Machine, allegedly, **Prompt it**: "Is act ‹paste the ID› genuine? Who signed it?" Check: it answers from the core library's verdict; **What it did** shows what it read.
 12. **(5.3)** Prompt it: "Look up your own identity on MOR: which homes does it have?" Check: it answers from what it read.
 
@@ -231,6 +255,8 @@ First, fill in the Cast card above. Then:
 2. **(5.8)** Open **Its notes**, press **Read Machine, allegedly's diary**. Check: it first tells you that you are about to read what it wrote for itself. Press **Yes, read**. Then **Close the diary**. Note how it felt to read it.
 
 ### The founding (from Test 7, part A, was human test 10 and v1 test 10)
+
+*Since round 3, **+ Found a real collective** opens a grid: members as columns, areas (by layer or act type) as rows, each with its holders and keys needed. Here keep its defaults and note how it reads; the full grid is tested in Sitting 16.*
 
 **If you reuse the collective from human test 10** (its paper shares kept): skip this part. **If its member change from 17 October waits for Kišib, keep those Safari tabs as they are and go to Sitting 8.** Its members were ColA and ColB: read iPa and iPh below as ColA and ColB.
 
@@ -427,34 +453,53 @@ home3 runs on your Mac, started at login by a login agent called `mor.home`. It 
 
 ---
 
-## The Damgar block: may change after round 2
+## The money sittings: how each starts and ends
 
-*Damgar round 2 is being built now. It will change Damgar and Dub (lanes, and how IDs are written for people). Every step below **may change after round 2**. Before Sitting 13: if round 2 has landed, repeat Part 1.1, steps 2 to 5, and check that the button labels below still match.*
+*The regtest network has been running since 18 October (see "Already done"). **Leave it running between sittings**; stop it only at the end of Sitting 17. If it was stopped anyway, restart it as below; each start is a new chain, so in the test wallet look at bob's (and carol's) key and redo the Lightning settings in Damgar for every payee before anything else.*
 
-**Each Damgar sitting starts the same way** (Part 1.2, steps 2 and 3):
-
-1. From the MOR folder, start the network:
+1. *(Only if stopped)* From the MOR folder:
    ```
    BTCD_DIR=~/mor-regtest-tools/btcd-darwin-arm64-v0.24.2 LND_DIR=~/mor-regtest-tools/lnd-darwin-arm64-v0.18.5-beta \
      modules/lightning/regtest/up.sh ~/mor-regtest
    ```
-   Check: after a minute or two, "regtest Lightning network ready in …/mor-regtest". Each start is a new chain.
-2. In a second Terminal window, from the MOR folder:
-   ```
-   cd clients/testwallet && npm start -- ~/mor-regtest
-   ```
-   Open `http://127.0.0.1:8478/`. Check: a red band says it is a test wallet; alice has coins in channels, bob and carol have none.
-3. Each start is a new chain. In the test wallet, look at bob's key, under its name. If it differs from the Lightning key in the payee's Damgar Settings, redo step 8.3 (where the payee is paid) before anything else (to check, added here).
-
-**And each ends the same way** (Part 1.2, step 5): from the MOR folder,
-```
-modules/lightning/regtest/down.sh ~/mor-regtest
-```
-then Ctrl-C in the other Terminal windows.
+2. The test wallet: in a second Terminal window, `cd clients/testwallet && npm start -- ~/mor-regtest`, and open `http://127.0.0.1:8478/` (if it is not already open). Check: a red band says it is a test wallet.
+3. Damgar and Edubba on regtest: the two commands in "Already done", once.
 
 ---
 
-## Sitting 13: Damgar, the rest of the money path (about 45 minutes). May change after round 2.
+## Sitting 13: lanes, pay-per-view and finding each other (about 75 minutes)
+
+*Human test 14, from Damgar round 2's report. Dub, Damgar, Kišib, the test wallet. P is the payer and Q the payee of 18 October (iPa and iPh, held in Damgar on the Mac); C and B are new (see the Cast card). Its steps 1, 2 and 20 (updating the Mac, starting and stopping the network) are already covered.*
+
+3. **(14.3)** **Three test identities.** Use P (the payer) and Q (the payee) from human test 11, or make them again in Dub. Make a third, **C** (the critic), display name "C". For each, write down its signing key's words. Bring all three into Damgar (**Bring an identity you have**), and **Accept these** with everything ticked. Check: the new entry "grant limits" is in the list.
+4. **(14.4)** **The forms (F349).** In Dub, Q's identity window: **Copy ID** gives `mid1…`, and **Copy ID with where it lives** gives `mid1…?r=…`. Paste each into a note. Change one letter of the first, then try to **Follow** it as P: refused, "checksum does not hold". Follow Q with the true one: Q's posts appear. In Damgar, Kišib and Edubba, check that IDs are shown as `mid1…`.
+5. **(14.5)** **Where Q is paid, and the receive-only link (as Q, in Damgar).** Settings: Lightning, bob's node key (from the test wallet), network regtest, **Read it back**, **Sign and publish it**, as in human test 11. Then "Making invoices by itself (receive-only)": `https://127.0.0.1:18081`, `~/mor-regtest/bob/receive.macaroon`, `~/mor-regtest/bob/tls.cert`, **Check it and keep it**. Read its cost. First try `~/mor-regtest/bob/data/chain/bitcoin/regtest/admin.macaroon`: refused, since it can read the balance.
+6. **(14.6)** **Q's own lane (as Q).** **Lanes**, "Receipts and invoices, by itself": at most 5000, unit regtest, Until empty, **Read it back**. Read every line, then **Sign this lane**. Check: it is listed as in force, its key held by this Damgar.
+7. **(14.7)** **Dub's lane (as P).** In Dub as P, identity window, "Paying from Dub: a lane from Damgar": keep "Dub on this computer", at most 2000, regtest, Until empty, **Ask Damgar for this lane**. In Damgar as P, **To sign**, **Look again**: the lane, in plain words (what it may sign, the cap, that it is public, how to end it). **Grant this lane**. Back in Dub, the fold shows it in force.
+8. **(14.8)** **A tip from Dub (as P).** On a post of Q's: **Tip**, 1500, **Pay now, under the lane**. In Damgar, **Use this one** for Q and leave **To sign** open: it looks every 20 seconds (or press **Look again**), and answers by itself with an invoice from bob's node. Check: nothing was asked of Q. Back in Dub as P, Private tab, "Payments, under the lane": the invoice. **Copy the invoice**, pay it from **alice** in the test wallet, paste the preimage, and **Check it and sign the claim, under the lane**.
+9. **(14.9)** **The receipt, by itself.** In Damgar as Q, **Look again**: "signed your receipt by itself". The account: came in 1 500, and the claim says "Signed under a lane of …" (P, a grant to itself), backed. As P: went out 1 500, the claim signed under "Dub on this computer". In **Lanes**, P's lane lists the acts signed under it.
+10. **(14.10)** **Past the cap.** In Dub as P, tip 3000, **Pay now, under the lane**: refused: "3000 is above the grant's cap of 2000 per act". **Prepare it for Damgar** still works, as in round 1. Try it with 6000: sign it in Damgar as P, then **Look again** as Q: Q's Damgar does not answer by itself and says why ("6000 is above the grant's cap of 5000 per act", judged on the answer, F352); the invoice to make waits in To sign. Decline it, or make it by hand.
+11. **(14.11)** **Every step by hand (as Q).** Settings, tick "Follow every step by hand". Tip Q 500 from Dub as P. Q's Damgar now waits: in **To sign**, an invoice to make, by hand as in human test 11, step 11. Untick it afterwards.
+12. **(14.12)** **A sealed post (as Q in Dub).** Public tab, "Seal a post with a price": the text "The recipe: two parts clay, one part reed.", what everyone sees "A recipe, sealed.", price 1000, referral 10, **Seal it and post it**. In Damgar as Q, Lanes, "Referral shares, by itself": at most 500, **Read it back**, **Sign this lane**.
+13. **(14.13)** **The repost (as C in Dub).** C's relays: in its identity window, "Change its relays", add a second relay (any test relay Q does not use), **Read it back**, read "A new routes act", **Sign and publish the new routes**. Follow Q, then **Repost** Q's sealed post. *(Optional: also try "Change its relays" on an identity brought into Dub: it says it publishes no routes for it.)*
+14. **(14.14)** **C's receipt lane and link (as C in Damgar).** Settings: Lightning, carol's node key, **Read it back**, **Sign and publish it**. The receive-only link with `https://127.0.0.1:18082`, `~/mor-regtest/carol/receive.macaroon` and `~/mor-regtest/carol/tls.cert`. Lanes: "Receipts and invoices, by itself", at most 5000, signed.
+15. **(14.15)** **The buyer reads only the other relay.** Make a fourth identity in Dub, **B**, its relay only the second one. Bring it into Damgar, and give it a lane as in step 7. In Dub as B, follow C by its ID (`mid1…`). The repost appears with its price; Q's original is not at B's relay. **Buy it, under the lane**: Dub says to name the repost you followed, and does. In Damgar, **Use this one** for Q, **Look again**: it answers with an invoice from bob's node. In Dub as B, Private tab, "Payments, under the lane": pay the invoice from **alice** in the test wallet, paste the preimage, **Check it and sign the claim, under the lane**.
+16. **(14.16)** **The key, delivered.** Damgar as Q: **Look again** ("signed your receipt by itself", "A sale of your offer", "your offer promises 10% to the reposter"). Then in Dub, switch to Q (opening Dub's main screen looks for sales and delivers the key), then switch to B. The post opens in B's feed with its text.
+17. **(14.17)** **The referral share.** Damgar as Q, **Look again**: "the referral share to C is asked for by itself". **Use this one** for C, **Look again** (it answers with an invoice from carol's node); back to Q, **Look again**, then **Pay**: 100 regtest satoshis. Pay it from **alice** in the test wallet (bob's channel cannot: its reserve), and paste the preimage. Damgar as C, **Look again**, then the account: came in 100, the claim "Signed under a lane of …" (Q), backed.
+18. **(14.18)** **Revoke a lane (as P).** Damgar, **Lanes**, "Dub on this computer", **Revoke it**: the revocation is read back first, with how many acts it cites and its cost (public, every act's id listed, a long lane a long revocation, an act not found void). **Sign the revocation**. In Dub, tip again: refused, "“Dub on this computer” was revoked. Nothing was signed". The earlier tips stay paid in both accounts.
+19. **(14.19)** **Kišib: Change the vault (H40).** Open Kišib: the first screen has the door **Change the vault**. Open it and read the first words (a change of keys, the chain key's paper needed). Stop there, or go on as in human test 11, step 18.
+
+**On the web pages**
+
+21. **(14.21)** **Dub on the web.** Make an identity, as above. Check: **Copy ID** gives `mid1…`, and **Copy ID with where it lives** carries `?r=`. Follow P by P's ID with where it lives (copied on the Mac in step 4's way): P's posts appear. Ask for a lane: its words say "Dub on the web".
+22. **(14.22)** **Damgar on the web.** Bring the web identity, grant its lane. Settings, "Making invoices by itself (receive-only)": it says the web client never makes a link. The **Lanes** tab lists the lane, and **Revoke it** works.
+23. **(14.23)** **Kišib on the web.** The door **Change the vault** is on the first screen. An identity's record shows `mid1…` and its acts as `mact1…`, with the hexadecimal beside.
+
+**Write down:** C's and B's signing words, on their papers. Copy their IDs into the note.
+
+---
+
+## Sitting 14: Damgar, the rest of the money path (about 45 minutes)
 
 *From Test 8 (was human test 11, and v1 test 11). Dub, Damgar, the test wallet. Version 2's P is the payer, Q the payee.*
 
@@ -468,11 +513,14 @@ then Ctrl-C in the other Terminal windows.
 
 **Checklist items 1, 14 and 15:** Damgar's **To sign** and Settings' **Read it back**; whether anything told the payer, before paying, that the payee's clock cannot protect the payment; whether an undeliverable payment was kept as an open obligation. One line each (14 and 15: **not in an app yet (to check)**, per version 2).
 
-**Write down:** nothing on paper. Stop the network.
+**Write down:** nothing on paper. Leave the network running.
 
 ---
 
-## Sitting 14: Damgar with Ummia and Edubba, and anchoring (about 45 minutes). May change after round 2.
+
+## Sitting 15: Damgar with Ummia and Edubba, and anchoring (about 45 minutes)
+
+*Since round 3, a collective's releases and their anchoring are made in Ummia (acting for the collective with a member's own key); Edubba's anchoring of a collective act stays.*
 
 *From Test 9 step 7 and step 12, and Test 8 steps 13 and 15.*
 
@@ -489,17 +537,125 @@ then Ctrl-C in the other Terminal windows.
    Close the tab, use the app. **Releases**, testrelease 1.0: **Anchor it on Bitcoin (optional)**, the service's ID, **Read its offer**, a tier, **Prepare the payment for Damgar**. Damgar as the payer: **Look again**: "Prepared in Ummia"; sign, pay from alice, paste the preimage. Ummia, **Releases**: asked, then pending; **Mine** 6; anchored at its block.
 4. **(8.15)** *(Optional)* **The web client.** Open `https://damgar.dubsar.org`. Check: the banner on every screen; an on-chain payment there says "Not checked here".
 
-**Write down:** nothing on paper. Stop the network, and Ctrl-C the anchoring service.
+**Write down:** nothing on paper. Ctrl-C the anchoring service; leave the network running.
 
 ---
 
-## Sitting 15: two key changes, last (about 45 minutes). May change after round 2.
+
+## Sitting 16: a collective and its money (about 2 hours, or two sittings: stop after step 17)
+
+*Human test 15, from round 3's report. A on the Mac (Edubba, Dub, Damgar, Ummia, the test wallet, the split service); iPa on the iPad and iPh on the iPhone, in Dub's web client. iPa's and iPh's money is received on the Mac: their Damgar runs there. Copying from the iPad or iPhone to the Mac is easiest by Universal Clipboard. C plays R, the reposter; B is the buyer of Sitting 13. Its steps 1, 2 and 33 (updating the Mac, starting and stopping the network) are already covered.*
+
+**Setting up**
+
+*In step (15.4), A, iPa and iPh already exist: use them, do not make them again; bring them into Damgar only if not there yet.*
+
+3. **(15.3)** **The split service.** In a third window:
+
+   ```
+   cd clients/split-service && npm start -- --regtest ~/mor-regtest --homes HOMES --relays RELAY --payer alice
+   ```
+
+   HOMES is the test homes, separated by commas, and RELAY the test relay. It prints its identity (`mid1…`): copy it into a note. Leave it running; it says what it does each round.
+
+4. **(15.4)** **The cast's identities.**
+   - A: in Dub on the Mac, A as in human test 14 (or make A again). Write down its signing key's words.
+   - iPa: on the iPad, in Dub's web client, make **iPa**. Write down its signing words; Dub shows them on request.
+   - iPh: on the iPhone, make **iPh** the same way.
+   - On the Mac, bring all three into Damgar (**Bring an identity you have**, by their signing words) and **Accept these**, everything ticked.
+5. **(15.5)** **Where each is paid.** In Damgar, for each of A, iPa and iPh in turn (switch identity):
+   - Settings: Lightning, bob's node key (from the test wallet), regtest, **Read it back**, **Sign and publish it**.
+   - The receive-only link: bob's REST port, `~/mor-regtest/bob/receive.macaroon`, `~/mor-regtest/bob/tls.cert`, **Check it and keep it**.
+   - **Lanes**, "Receipts and invoices, by itself": at most 10000, **Sign this lane**.
+6. **(15.6)** **Edubba.** Open Edubba and bring A by its words (Identities tab). In the Agents tab, use an agent you already have (Machine, allegedly) as the keeper: copy its ID.
+7. **(15.7)** **The grid (Edubba, Collectives tab, + Found a real collective).**
+   - Members: A (the founder), iPa and iPh by their IDs.
+   - Areas:
+     - **Publishing**: posts and publications, all three boxes, 1 key.
+     - **Offers and deals**: agreements (the whole layer), A and iPa, 1 key.
+     - **Money**: A and iPa, 1 key, **Above 10000 regtest sats, one more key**.
+   - Read every band and each member's column. **Review**, read it, then sign.
+8. **(15.8)** **Signing on the iPad and the iPhone.** In Dub's web client, turn the Signing tab on (its warning). Read the founding in plain words and sign it. Check: "your own key" is said, made as you sign. Write down the share when it is shown, then type back the three words asked.
+9. **(15.9)** **Found it** (Edubba): tick "I have read what this device will hold", then **Found it: deal the shares**. Write down A's share.
+10. **(15.10)** **A's key from Damgar.** On the Mac, Damgar as A, **For a collective**: give the collective's ID.
+    - Check: "Its Money area, “Money”: … 1 key; above 10,000 an act, one more".
+    - A promise to iPh, 2000, "clay": **Read it back**, then **Sign it for the collective, with my own key**. It counts.
+    - Then 50000, "a kiln": it says it needs 2 keys.
+11. **(15.11)** **iPa's second key, on the iPad.** In Dub's Signing tab, the money act: read it, sign it. Back in Damgar as A: both promises count, the second "2 of 2 keys, each a member's own".
+12. **(15.12)** **A's key from Ummia.** Ummia, A brought by its words. **Act for it**, the collective's ID, then choose it under Who acts. Release a small folder. Check: one key of Publishing counts, signed with A's own key.
+
+**The collective's money**
+
+13. **(15.13)** **The service's key for the collective.** In a fourth Terminal window:
+
+    ```
+    cd clients/split-service && node --import tsx src/cli.ts key COLLECTIVE_ID
+    ```
+
+    COLLECTIVE_ID is the collective's ID. It prints a key of 64 hexadecimal characters.
+14. **(15.14)** **Its money (Edubba, the collective's page, "Its money: who owns its income, who divides it").**
+    - Fill in: A 50, iPa 30, iPh 20; referral 10; the service's ID and the key from step 13; the keeper's ID (the agent), 1.
+    - **Review it**, and read each section: who owns its income, how each payment is divided, who divides it, who keeps its record, what it changes, the risks.
+    - Try 50 / 30 / 10 first: refused, "add up to 90%".
+    - Then sign it.
+15. **(15.15)** **iPa and iPh sign it in Dub on the web** (Signing tab).
+16. **(15.16)** **Record it.** Back in Edubba, on its card, **Look for answers**, then **Record it**. Check: "Its payee pointer now leads to the split service …, signed with A's own key in its area “Money”" (F358: the Money area signs it, never the collective's own key), and "One key of the area". In the service's window: "grant … accepted".
+17. **(15.17)** **The keeper.** The collective's page, **Its keepers**: the agent, **Record what arrived**. It lists each record. Press it again: nothing new to record.
+
+**A protected file, bought through a repost**
+
+18. **(15.18)** **Publishing (Edubba).** Who acts: the collective. A text, "Three verses, by three hands.", title "Verses, by the collective", price 3000. **Read it back**: it says it is the collective's, under its agreement in force. Sign it.
+19. **(15.19)** **The reposter.** In Dub on the Mac, make **R**, bring it into Damgar, and link it to carol's node as A was linked to bob's in step 5 (carol's REST port, `~/mor-regtest/carol/…`). As R, follow the collective, then **Repost** its post.
+20. **(15.20)** **The buyer.** In Dub on the Mac, make **B**; bring it into Damgar and give Dub a lane as in human test 14, step 7. As B, follow R only. The repost shows its price. **Buy it, under the lane**: Dub says the split service answers for the collective.
+21. **(15.21)** **Paying.**
+    - The service's window: "An invoice of its node sent".
+    - Damgar as B: **Look again**.
+    - In Dub as B, Private tab: copy the invoice, pay it from **alice** in the test wallet, paste the preimage, **Check it and sign the claim, under the lane**.
+22. **(15.22)** **The split.** The service's window, within a few rounds:
+    - "its receipt signed with … grant key";
+    - "naming the repost by …";
+    - "Split …: 300 … (referral), 1350 …, 810 …, 540 …";
+    - "The sale told to 3 parties".
+
+    In Damgar, switch to A, then iPa, iPh and R, pressing **Look again** each time: each answers its payout's invoice request by itself. The service pays each one ("Paid … to …").
+23. **(15.23)** **The accounts.** Damgar, each of A, iPa, iPh, R: came in 1 350, 810, 540 and 300, from the split service, receipted.
+24. **(15.24)** **The key.** Edubba, Publishing tab: open it, and it delivers the key "as the collective". In Dub as B, the post opens with its text.
+
+**A vow, and the referral judged as yourself (optional)**
+
+25. **(15.25)** **A vow of A's.** Publishing tab, Who acts: A. A vow, "A seat at the reading of the tablets, on the first evening.", title "A seat, vowed", price 500. Read it back, then sign.
+26. **(15.26)** **Two buyers on the iPad and the iPhone.**
+    - In Dub on the web as iPa and as iPh: each asks Dub for a lane (on the Mac, Damgar as iPa or iPh: **To sign**, **Grant this lane**). Each follows A and **Buy it, under the lane**.
+    - On the Mac, Damgar as A, **Look again**.
+    - Each invoice: copy it from the iPad or iPhone, pay it from alice on the Mac, paste the preimage back on the device.
+27. **(15.27)** **One kept, one not.**
+    - On the iPad (iPa): Signing tab, **Vows you bought**, **Confirm: it was kept**.
+    - On the iPhone (iPh): **Contest it**, "The seat was given to someone else."
+    - Edubba, **Look up an identity's vow sales**: A, the test relay. One confirmed, one contested.
+28. **(15.28)** *(Optional)* **A judged referral as yourself.** Run `key` with A's ID instead of the collective's. Publish a text as A with referral 20, then open **Judge the referral: paid by a split service**: the service and that key. Read the new section, "The deal, before the offer". Buy it as B through R's repost: 200 to R and 800 to A, paid by the service, and the key delivered by Edubba.
+
+**Keepers, a resignation, a dispute**
+
+29. **(15.29)** **The keeper again.** **Record what arrived**: the sale's acts of the collective.
+30. **(15.30)** **iPh resigns, on the iPhone.** Dub's Signing tab, the founding, **Leave this collective…**. Read it (you resign alone; it takes effect at the collective's line; you keep your stake). Then **Sign my resignation**.
+31. **(15.31)** **Registered.** Edubba, the collective's page: "Leaving alone", **Register it at the collective's line**. Then **Record what arrived**: the resignation and the line are recorded.
+32. **(15.32)** *(Optional; it changes iPa's keys)* **A dispute, not a void.**
+    - In Kišib on the Mac, change iPa's keys from iPa's chain key paper (the words written when iPa was made). Read which lines it keeps; leave out the one that holds iPa's signature on the money terms, and read the warning. A line Kišib cannot read (a private act made on the iPad) is left out by itself: the warning names it.
+    - In Edubba, **Record what arrived**, then the keepers' card: "Disputes, not voids". iPa's signature is void under Identity and shown as a dispute, recorded before the rotation, and the money terms are still in force.
+    - On the iPad, give Dub iPa's new signing words.
+
+**Write down:** the second collective's three share papers; its ID in the note. If you did step 32, iPa's new signing words (cross out the old ones).
+
+---
+
+## Sitting 17: two key changes, last (about 45 minutes)
 
 *These change the signing words of iPa and iPh, so they come last. Have the payer's and payee's chain-key papers and signing-key papers at hand. Each new set of words goes to every app that holds that identity, including its web client on the iPad or iPhone (it will say the key was changed elsewhere, as T's did).*
 
 1. **(9.13) Kišib keeps Ummia's line.** Ummia's identity window: copy its card. Kišib, **Change an identity's keys** for the payer with the payer's chain-key paper; paste the card where it asks for lines it cannot read. Check: the review says Ummia's line is kept. Sign, write the new words (cross out the old ones on the payer's paper). Give them to Dub, Damgar and Ummia (**Use the new words**), and to the payer's web client. Ummia, **Tracking**, **Look**. Check: the cMIP and MIP still verified, claimed by the payer.
-2. **(8.14)** *(Optional, needs the network: start it first)* **The vault.** Kišib, **Change an identity's keys** for the payee with the payee's chain-key paper. Where it asks for lines it cannot read, paste Damgar's line card (Damgar's identity window, as the payee). Open **The vault**, **Declare it anew**: unit regtest, Lightning carol's node key (from the test wallet), limit 10000. Read the review, sign, write the new words (cross out the old ones). Give them to Dub (**Use the new words**), Damgar as the payee (**Give the new words**), and the payee's web client. Check: Damgar's Settings show the vault, read only. A tip of 20000 from the payer then goes to the vault: the payee's invoice on **carol**; the payer pays from alice; claim and receipt verify.
-3. **(8.16) Stop** the network (Part 1.2, step 5).
+2. **(8.14)** *(Optional)* **The vault.** *(Since round 2, Kišib's first screen also has **Change the vault**, opening this same flow.)* Kišib, **Change an identity's keys** for the payee with the payee's chain-key paper. Where it asks for lines it cannot read, paste Damgar's line card (Damgar's identity window, as the payee). Open **The vault**, **Declare it anew**: unit regtest, Lightning carol's node key (from the test wallet), limit 10000. Read the review, sign, write the new words (cross out the old ones). Give them to Dub (**Use the new words**), Damgar as the payee (**Give the new words**), and the payee's web client. Check: Damgar's Settings show the vault, read only. A tip of 20000 from the payer then goes to the vault: the payee's invoice on **carol**; the payer pays from alice; claim and receipt verify.
+3. **(8.16) Stop** the network, now that every sitting is done: from the MOR folder, `modules/lightning/regtest/down.sh ~/mor-regtest`, and Ctrl-C in the other Terminal windows.
+
 
 ### Closing (five minutes)
 
