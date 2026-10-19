@@ -4001,6 +4001,7 @@ var FOUNDING_AGREEMENT = 0;
 
 // ../repo/src/agreements.ts
 var AGREEMENTS_SPECS = { ...MIRS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] } };
+var SPLIT_CMIP = sha2562("split cMIP, draft 2, test value until publication");
 
 // ../repo/src/proposals.ts
 var NEGOTIATION = 18;
@@ -6458,10 +6459,11 @@ function say(a, accepted2) {
 
 // ../damgar/src/specs.ts
 var MONEY = MIRS.money;
-var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 3, test value until publication");
+var MESSAGES_SPEC = sha2562("Money messages cMIP, draft 4, test value until publication");
+var MESSAGES_SPEC_3 = sha2562("Money messages cMIP, draft 3, test value until publication");
 var MESSAGES_SPEC_2 = sha2562("Money messages cMIP, draft 2, test value until publication");
 var MESSAGES_SPEC_1 = sha2562("Money messages cMIP, draft 1, test value until publication");
-var MESSAGES_SPECS = [MESSAGES_SPEC, MESSAGES_SPEC_2, MESSAGES_SPEC_1];
+var MESSAGES_SPECS = [MESSAGES_SPEC, MESSAGES_SPEC_3, MESSAGES_SPEC_2, MESSAGES_SPEC_1];
 MESSAGES.specs = MESSAGES_SPECS;
 var ACCEPTED_SPEC = sha2562("Accepted cMIP, draft 1, test value until publication");
 var SPEC = moneySpecs();
@@ -6567,10 +6569,10 @@ var ACCEPTABLE = [
     key: "messages",
     name: "Money messages",
     kind: "cMIP",
-    text: "cmips/cmip-money-messages-draft-3.md",
-    draft: 3,
-    hashes: [MESSAGES_SPEC, MESSAGES_SPEC_2, MESSAGES_SPEC_1],
-    does: "The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2); the amount in an answer, so a lane\u2019s cap is judged on it (draft 3). Written by Damgar\u2019s builds, awaiting approval.",
+    text: "cmips/cmip-money-messages-draft-4.md",
+    draft: 4,
+    hashes: [MESSAGES_SPEC, MESSAGES_SPEC_3, MESSAGES_SPEC_2, MESSAGES_SPEC_1],
+    does: "The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2); the amount in an answer, so a lane\u2019s cap is judged on it (draft 3); an invoice request sent to a collective\u2019s split service, and a purchase confirmed from Edubba (draft 4). Written by Damgar\u2019s builds, awaiting approval.",
     here: "Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.",
     built: true,
     needs: ["payment"]
@@ -6808,7 +6810,7 @@ function chooserHtml(all, now2, o = {}) {
 
 // ../damgar/src/messages.ts
 var TYPES = { draft: 1, request: 2, invoiceRequest: 3, answer: 4, laneRequest: 5, sale: 6 };
-var WHAT2 = { pay: 0, ask: 1, anchor: 2 };
+var WHAT2 = { pay: 0, ask: 1, anchor: 2, confirm: 3 };
 var amountValue = (a) => [unhex(a.unit), a.value];
 var text = (v, what) => {
   if (typeof v !== "string" || v.length > 280 || /[\u0000-\u0009\u000b-\u001f]/.test(v)) throw new Error(`${what}: not a short text`);
@@ -6825,6 +6827,10 @@ function draftPayload(d) {
   if (d.what === "anchor") {
     if (!d.anchor) throw new Error("A draft paying for an anchor names the offer, the tier and the leaf.");
     m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf)]);
+  }
+  if (d.what === "confirm") {
+    if (!d.confirm?.acks.length) throw new Error("A draft confirming a purchase names the claim and what it acknowledges.");
+    m.set(6, [unhex(d.confirm.claim), d.confirm.acks.map(unhex)]);
   }
   return cborEncode(m);
 }

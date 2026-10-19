@@ -9,8 +9,8 @@
 # installed on first use), Node 22 or later, and wasm-bindgen-cli 0.2.129:
 #   cargo install wasm-bindgen-cli --version 0.2.129 --locked
 # The site's browser test needs Chromium or Chrome; point MOR_CHROMIUM at it.
-# The tests on regtest (the Lightning rail Module's, Damgar's and the test
-# wallet's) are skipped unless MOR_LN_REGTEST is set (docs/core-pass-v21.md,
+# The tests on regtest (the Lightning rail Module's, Damgar's, the test
+# wallet's and round 3's end to end) are skipped unless MOR_LN_REGTEST is set (docs/core-pass-v21.md,
 # section 5; docs/damgar-regtest.md). Test identities only, never real money.
 set -e
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -28,6 +28,10 @@ for pkg in clients/* modules/jpeg modules/video modules/carry modules/timestamp;
   # Damgar's tests run Dub, Edubba, Kišib, the test wallet and the anchoring service beside it.
   if [ "$pkg" = clients/damgar ]; then
     for p in desk dub barebone repo collective assess kishib manage anchoring-service testwallet; do (cd "clients/$p" && npm ci --no-audit --no-fund); done
+  fi
+  # Edubba's run Dub, Damgar, Kišib, Ummia, the test wallet and the split and anchoring services beside it (round 3).
+  if [ "$pkg" = clients/desk ]; then
+    for p in dub barebone repo collective assess kishib manage anchoring-service testwallet damgar ummia split-service; do (cd "clients/$p" && npm ci --no-audit --no-fund); done
   fi
   # Ummia's run Dub, Edubba, Damgar, Kišib, the anchoring service, the site's listing and the reports mirror beside it.
   if [ "$pkg" = clients/ummia ]; then

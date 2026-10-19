@@ -15,16 +15,19 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readId } from '../../genesis/src/forms.ts';
+import { shownId } from '../../genesis/src/shown.ts';
 import { lnd } from '../../anchoring-service/src/lnd.ts';
 import { LABEL, SplitService } from './service.ts';
 
 const HELP = `mor-split-service: ${LABEL}
 
-  run --regtest RUN_DIR --homes URL[,URL] --relays URL[,URL] [--node carol] [--dir DIR] [--every SECONDS]
+  run --regtest RUN_DIR --homes URL[,URL] --relays URL[,URL] [--node carol] [--payer alice] [--dir DIR] [--every SECONDS]
   key GRANTOR [--dir DIR]
 
 Its Lightning node is one of the regtest network's (default carol, at its REST port from
-RUN_DIR/nodes.json, or 18082). The folder defaults to ~/mor-split-service. "run" prints its
+RUN_DIR/nodes.json, or 18082); its payouts are paid from the same node, or from --payer's (on the
+regtest network only alice holds spendable funds: carol's few thousand received sit below its channel's
+reserve, as human test 14 found). The folder defaults to ~/mor-split-service. "run" prints its
 identity: give it to Edubba ("Its money", in the collective's page). "key", while the service
 runs, prints a new key of the service for that collective (or a deal's payee): give it there too.`;
 
@@ -67,7 +70,7 @@ async function main() {
       if (existsSync(got)) {
         const key = readFileSync(got, 'utf8').trim();
         rmSync(got);
-        console.log(`The service’s key for ${grantor}:\n${key}`);
+        console.log(`The service’s key for ${shownId(grantor)}:\n${key}`);
         return;
       }
       await new Promise((r) => setTimeout(r, 1000));
@@ -80,18 +83,19 @@ async function main() {
     return;
   }
   const run = resolve(o.regtest);
+  const restOf = (name: string, fallback: number) => {
+    const nodes = join(run, 'nodes.json');
+    if (!existsSync(nodes)) return fallback;
+    return (JSON.parse(readFileSync(nodes, 'utf8')) as { nodes: { name: string; rest: number }[] }).nodes.find((x) => x.name === name)?.rest ?? fallback;
+  };
   const name = o.node ?? 'carol';
-  let port = 18082;
-  const nodes = join(run, 'nodes.json');
-  if (existsSync(nodes)) {
-    const n = (JSON.parse(readFileSync(nodes, 'utf8')) as { nodes: { name: string; rest: number }[] }).nodes.find((x) => x.name === name);
-    if (n) port = n.rest;
-  }
+  const port = restOf(name, 18082);
   mkdirSync(dir, { recursive: true });
   const node = lnd({ url: `https://127.0.0.1:${port}`, lnddir: join(run, name) });
-  const svc = new SplitService(dir, { nodeKey: () => node.nodeKey(), addInvoice: (sat, h) => node.addInvoice(sat, h), settled: (h) => node.settled(h), pay: (i) => node.payInvoice!(i) }, { homes: o.homes.split(','), relays: o.relays.split(',') });
+  const payer = o.payer ? lnd({ url: `https://127.0.0.1:${restOf(o.payer, 18080)}`, lnddir: join(run, o.payer) }) : node;
+  const svc = new SplitService(dir, { nodeKey: () => node.nodeKey(), addInvoice: (sat, h) => node.addInvoice(sat, h), settled: (h) => node.settled(h), pay: (i) => payer.payInvoice!(i) }, { homes: o.homes.split(','), relays: o.relays.split(',') });
   await svc.start();
-  console.log(`${LABEL}\nIts identity: ${svc.id}`);
+  console.log(`${LABEL}\nIts identity: ${shownId(svc.id)}\n(hexadecimal: ${svc.id})`);
   const every = Number(o.every ?? 5) * 1000;
   for (;;) {
     try {
