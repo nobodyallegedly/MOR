@@ -21,13 +21,13 @@ The six releases are rebuilt in this pull request (site, Dub, Edubba, Kišib, Da
 **Where it stopped:** at the end. The pull request is open and not merged, as asked.
 
 **What needs you:**
-- **One question**, below; four were answered on 19 October 2026 (F358), and the first is built in this round.
+- **The five questions are answered** (F358 and question 5's decision), below; 1 and 5 are built in this round.
 - **Readings to confirm**, each with its cost.
 - **Human test 15**, at the end of this report.
 
 ## Questions for Nobody, allegedly, and their answers (F358)
 
-Four of the five were answered on 19 October 2026 (F358, in the findings log). One is still open.
+All five were answered on 19 October 2026: 1 to 4 in F358, in the findings log; 5 below.
 
 1. **Who signs the collective's payee pointer to its split service. Decided, (b)**: "It is a money matter and money areas should be able to do it. A founder should not have a special position if the constitution does not say so."
    - **Built in this round:**
@@ -43,12 +43,12 @@ Four of the five were answered on 19 October 2026 (F358, in the findings log). O
    - Only anchors place anything on the clock. A keeper may anchor its own sequence.
    - Rule 33 becomes: a deadline is shown missed by an anchor, of the act itself or of a keeper's sequence. A keeper's word alone never says late.
    - **Where:** the freeze-ready drafts. Until then, round 3 leaves the keeper deadline path unbuilt, and its keeper logs stay client-stated, as built.
-5. **Still open: what a keeper records "around the deal".** Built:
-   - the collective's own public acts;
-   - every member's public act whose objects name one of the collective's agreement versions (signatures, resignations);
-   - every member's rotation, recorded before their other acts (rule 40).
+5. **What a keeper records. Decided**: the reach is right, but it was written for collectives only. Keepers serve any agreement, deals between solo identities included (rule 36). So a keeper records:
+   - the agreement's own acts (its versions; for a collective, every public act of the collective itself);
+   - every party's public act naming one of its versions (signatures, resignations, offers under it);
+   - every party's rotation, recorded before that party's other acts (rule 40).
 
-   Not recorded: members' acts naming no agreement. Is that the right reach?
+   Parties' acts naming no version are not recorded. **Built in this round:** `keep` (`clients/grants/src/keeper.ts`) now takes any agreement. Before, a deal's founding version was missed, since it names no version in its objects. A test with a deal between two solo identities covers it.
 
 ## What was built, precisely
 
@@ -159,7 +159,7 @@ It runs on test nodes by default, and with `MOR_LN_REGTEST=RUN_DIR` on the regte
 7. **A vault transfer's `fulfils` names the person's own payee pointer in force** (F355, as decided). The payment cMIP's next draft lets it name the vault declaration (F355 c).
 8. **H46's warning** says "this money can then be spent only with the chain key and its record". On screen, "its record" is spelled out: the vault's own key, declared with your chain key in Kišib, and the record Damgar keeps sealed to you.
 9. **The keeper's sequence is its operator's line** (records naming the one before). Records off that line follow in the order a place gave them, as one device keeps. *Cost:* a keeper on two devices would need its lines merged by cards, as any identity does. Until the freeze-ready drafts (F358), the logs are client-stated.
-10. **What a keeper records** (question 5, open): the collective's acts, its members' acts naming its agreements, and their rotations first. *Cost:* the records are public and list act IDs and signers, which those acts' outsides already show (OF21 d).
+10. **What a keeper records** (question 5, decided): for any agreement, its own acts, every party's public act naming one of its versions, every party's rotation first; nothing naming no version. *Cost:* the records are public and list act IDs and signers, which those acts' outsides already show (OF21 d).
 11. **A dispute is shown from three facts**: Identity's status, the core's agreement in force, and the keepers' order. The core decides whether the signature still counts; Edubba only shows it.
 12. **The clock's depth is six blocks** (the Bitcoin clock Module, draft 3), written as a constant in Edubba's anchors list.
 13. **The service's payouts on regtest are paid from alice** (found 4). Off regtest, a service pays from its own node.
@@ -183,7 +183,7 @@ It runs on test nodes by default, and with `MOR_LN_REGTEST=RUN_DIR` on the regte
   | Kišib | 18 | 0 |
   | the reader | 21 | 0 |
   | repo | 21 | 0 |
-  | grants | 4 | 0 |
+  | grants | 5 | 0 |
 
   The split service and the anchoring service type-check; they are tested in Edubba's and Damgar's suites.
 - **The core** (`cargo test --workspace`): 757 passed, 0 failed (with F358's test).
@@ -191,6 +191,7 @@ It runs on test nodes by default, and with `MOR_LN_REGTEST=RUN_DIR` on the regte
   - `split.test.ts`: the split service end to end, and the judged referral (200 to the reposter, 800 to the seller). Since F358: the Money area is A and iPa at two keys; the pointer, signed with A's own key, is scoped; a Money-only reader reads none; a buyer is refused until iPa signs it in Dub's Signing tab, which says where the pointer sends the money.
   - The core's `a_collectives_pointer_signed_by_its_money_area_f358`: one key of two puts no pointer in force; with the second it is the collective's; a key holding no box in Money never moves it.
   - `keepers.test.ts`: an Edubba agent keeping; a rotation in Kišib leaving out the line iPh's Dub signed on; the dispute.
+  - `clients/grants/test/keeper.test.ts`: keepers for a deal between two solo identities (question 5). CI now runs the grants tests, which it did not before.
   - `round-3.test.ts`: the end-to-end test.
   - Damgar's `anchor.test.ts`: one anchor late, one defaulted, nothing said missed before the chain shows it.
   - The web Edubba browser test reads a collective's money back by clicks and finds its keepers' card.
