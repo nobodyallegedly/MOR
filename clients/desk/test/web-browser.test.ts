@@ -325,14 +325,14 @@ test('the banner on every screen; no Agents tab and nothing of Claude’s; an id
   assert.ok(stored.includes(ada.f.signingSecret), 'the signing key is kept in this browser’s storage, as the banner says');
   assert.ok(!stored.includes(ada.f.safety.seeds), 'never its chain key');
 
-  // The Collectives tab: no test collective; the Publishing tab: its placeholder.
+  // The Collectives tab: no test collective; the Publishing tab, who acts and a protected file (round 3).
   await ed.click('[data-action=tab][data-tab=collectives]');
   assert.equal(await ed.locator('.entry.add[data-id=found]').count(), 0, 'no test collective on the web');
   await ed.locator('.entry.add[data-id=real]').waitFor();
   await ed.locator('.entry.add[data-id=bring]').waitFor();
   await ed.click('[data-action=tab][data-tab=publishing]');
   await banner(ed, 'the Publishing tab');
-  await ed.locator('#e-body', { hasText: 'Coming after Damgar’s round 2' }).waitFor();
+  await ed.locator('#e-body', { hasText: 'A protected file' }).waitFor({ timeout: 60_000 });
 
   // At an iPhone's width, nothing scrolls sideways, on every tab.
   await ed.setViewportSize({ width: 390, height: 844 });

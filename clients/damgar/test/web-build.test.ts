@@ -99,8 +99,9 @@ test('Damgar’s tint (H36): the gold of the Money layer, by Kišib’s rule, on
   const textUses = [...STYLE.matchAll(/([^{}]+)\{[^}]*(?<![-a-z])color:var\(--tint\)/g)].map((m) => m[1].trim());
   assert.deepEqual(textUses, ['details>summary::before']);
   assert.match(STYLE, /--bad:#b4615f/);
-  // The icon's tint, by the same rule: a thick edge at 70% over the dark; the dark moved 6%; the clay 12%.
+  // The icon's tint, by the same rule (H47: the duck alone, gold-tinted): the stone at 70% over the dark, the carving at 60%, the base at 30%, the layer's gold on its lit edges; no square behind it.
   const svg = readFileSync(join(here, 'static/icon/damgar.svg'), 'utf8');
-  for (const c of ['#a4802c', '#14120f', '#957359', '#6f5335']) assert.ok(svg.includes(c), c);
-  assert.match(svg, /stroke="#a4802c" stroke-width="16"/);
+  for (const c of ['#a4802c', TINT.accent, TINT.edge, TINT.layer]) assert.ok(svg.includes(c), c);
+  assert.equal(over(0.7), '#a4802c');
+  assert.ok(!/<rect /.test(svg), 'no tablet, no square: the duck alone');
 });

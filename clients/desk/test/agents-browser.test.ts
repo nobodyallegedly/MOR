@@ -1,5 +1,5 @@
 // The Edubba agents session in a real browser (headless Chromium, by clicks
-// and typing): the tabs in their new order with the Publishing placeholder;
+// and typing): the tabs in their new order with the Publishing tab;
 // Edubba's emerald tint; an agent's notes read and one retired; its diary
 // shown only after the deliberate "Read …'s diary" and its plain words; a
 // grant read back, signed, and accepted by the agent; a post corrected from
@@ -78,7 +78,7 @@ after(async () => {
 const unfold = (sel: string) => page.locator(sel).evaluate((d) => ((d as HTMLDetailsElement).open = true));
 const said = (words: string | RegExp) => page.locator('#e-status .note', { hasText: words }).waitFor({ timeout: 90_000 });
 
-test('the tabs: Agents, Collectives, Publishing (a placeholder), Identities last; Edubba’s emerald tint', async () => {
+test('the tabs: Agents, Collectives, Publishing, Identities last; Edubba’s emerald tint', async () => {
   await page.goto(`${app.base}/#pair=${app.access.newCode()}`);
   await page.locator('h1.mark', { hasText: 'Edubba' }).waitFor();
   assert.deepEqual(await page.locator('nav.tabs .tab').allInnerTexts(), ['Agents', 'Collectives', 'Publishing', 'Identities']);
@@ -87,7 +87,7 @@ test('the tabs: Agents, Collectives, Publishing (a placeholder), Identities last
     ['#153028', '#1a3f32', '#2e7659'],
   );
   await page.click('[data-action=tab][data-tab=publishing]');
-  await page.locator('.card', { hasText: 'Coming after Damgar’s round 2' }).waitFor();
+  await page.locator('form#pub-work').waitFor({ timeout: 60_000 });
   await shot(page, 'agents-01-publishing');
   await page.click('[data-action=tab][data-tab=agents]');
 });

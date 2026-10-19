@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Damgar (dam-gàr, the merchant; F338): the sleeping duck alone, in its own shape, as a Mesopotamian duck weight is (H47, Nobody, allegedly: Damgar's icon and Dub's looked too alike; no square tablet behind it, Dub keeps its tablet). A smooth stone egg of a body resting on a flat base, the neck rising from the breast and turned back, the head laid along the back, the bill toward the tail; no eye. Gold-tinted with the Money layer's gold (#e8b33a; H36, by Kišib's rule): the stone #b48a34, its lit upper rim #d2a646, the carved fold of the neck and the head #8c6824, the base's shadow #5e4618. On a transparent ground; no glow. -->
+  <!-- Damgar (dam-gàr, the merchant; F338): the sleeping duck alone, in its own shape, as a Mesopotamian duck weight is (H47, Nobody, allegedly: Damgar's icon and Dub's looked too alike; no square tablet behind it, Dub keeps its tablet). A smooth stone egg of a body resting on a flat base, the neck rising from the breast and turned back, the head laid along the back, the bill toward the tail; no eye. Gold-tinted with the Money layer's gold (#e8b33a; H36), in Kišib's rule's own steps over the dark #06080c: the stone #a4802c (70%), the carved neck and head #8e6f28 (60%), the base's shadow #4a3b1a (30%), its lit upper rim and the head's lit edge the layer's gold itself, faint. On a transparent ground; no glow. -->
   <!-- The base: the weight's flat underside, a thin shadow. -->
-  <path d="M190 742 C300 768 724 768 834 742 C838 760 820 774 790 778 L234 778 C204 774 186 760 190 742 Z" fill="#5e4618"/>
+  <path d="M190 742 C300 768 724 768 834 742 C838 760 820 774 790 778 L234 778 C204 774 186 760 190 742 Z" fill="#4a3b1a"/>
   <!-- The body: an egg lying on its side, taller at the breast. -->
-  <path d="M148 560 C148 384 318 280 524 280 C736 280 884 392 884 570 C884 694 790 760 640 760 L380 760 C228 760 148 692 148 560 Z" fill="#b48a34"/>
+  <path d="M148 560 C148 384 318 280 524 280 C736 280 884 392 884 570 C884 694 790 760 640 760 L380 760 C228 760 148 692 148 560 Z" fill="#a4802c"/>
   <!-- Its lit upper rim. -->
-  <path d="M176 500 C214 380 356 304 524 304 C694 304 826 376 862 494" fill="none" stroke="#d2a646" stroke-width="22" stroke-linecap="round" opacity=".7"/>
+  <path d="M176 500 C214 380 356 304 524 304 C694 304 826 376 862 494" fill="none" stroke="#e8b33a" stroke-width="22" stroke-linecap="round" opacity=".7"/>
   <!-- In relief: the neck rising from the breast and turned back over the body, the head laid along the back, the bill toward the tail. -->
-  <g fill="#8c6824">
-    <path d="M790 640 C880 580 880 420 800 378 C740 346 676 360 650 408" fill="none" stroke="#8c6824" stroke-width="78" stroke-linecap="round"/>
+  <g fill="#8e6f28">
+    <path d="M790 640 C880 580 880 420 800 378 C740 346 676 360 650 408" fill="none" stroke="#8e6f28" stroke-width="78" stroke-linecap="round"/>
     <ellipse cx="612" cy="410" rx="96" ry="58"/>
     <path d="M540 384 C480 380 412 390 352 408 C340 420 352 434 372 434 C430 430 490 432 548 442 Z"/>
   </g>
   <!-- The head's lit edge. -->
-  <path d="M540 372 C590 346 660 346 704 372" fill="none" stroke="#c49a3e" stroke-width="12" stroke-linecap="round" opacity=".8"/>
+  <path d="M540 372 C590 346 660 346 704 372" fill="none" stroke="#e8b33a" stroke-width="12" stroke-linecap="round" opacity=".8"/>
 </svg>
