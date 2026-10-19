@@ -10,18 +10,21 @@
 // Nothing here imports the agents' code or the pairing's: they are given by
 // the program only, so the web client's bundle holds neither.
 
+import { readId } from '../../genesis/src/forms.ts';
 import type { Access } from '../../collective/src/access.ts';
 import type { Agents } from './agents.ts';
 import type { Collectives } from './collectives.ts';
 import type { Corrections } from './corrections.ts';
 import type { Desk } from './desk.ts';
 import type { AfterKishib } from './kishib.ts';
+import type { Publishing } from './publishing.ts';
 import type { Member } from './member.ts';
 import type { EdubbaMoney } from './money.ts';
 import type { Real } from './real.ts';
 import type { Setup } from './setup.ts';
 import type { Store } from './store.ts';
 import type { Listing } from './folders.ts';
+import type { Grid } from './grid.ts';
 
 /** What the operations act on. The program gives every part; the web client neither the agents, the pairing, money nor the folder picker. */
 export interface Parts {
@@ -31,6 +34,8 @@ export interface Parts {
   real: Real;
   after: AfterKishib;
   member: Member;
+  /** The Publishing tab (round 3, part B). */
+  publishing: Publishing;
   corrections: Corrections;
   collectives: Collectives;
   agents: Agents | null;
@@ -48,6 +53,16 @@ export interface Parts {
  */
 export const WEB_OPS: readonly string[] = [
   'state',
+  'publishing',
+  'publishing act as',
+  'publishing collective add',
+  'publishing work read',
+  'publishing confirm',
+  'publishing deliver',
+  'publishing vow read',
+  'publishing vow sales',
+  'publishing contest',
+  'publishing confirm sale',
   'keys check',
   'identity posts',
   'identity correct',
@@ -70,6 +85,8 @@ export const WEB_OPS: readonly string[] = [
   'member proposals',
   'member accept',
   'member decline',
+  'member leave read',
+  'member leave',
   'member share',
   'member shareback',
   'member sharehand',
@@ -81,6 +98,7 @@ export const WEB_OPS: readonly string[] = [
   'real contact remove',
   'real found prepare',
   'real change prepare',
+  'real grid',
   'real confirm',
   'real cancel',
   'real gather',
@@ -91,22 +109,36 @@ export const WEB_OPS: readonly string[] = [
   'real share back',
   'real release standing',
   'real collective',
+  'real register resignation',
+  'real money prepare',
+  'real money record',
+  'real keepers',
+  'real keep',
 ];
 
 /** Said where a collective's release would be made: the web client chooses no folder (`docs/edubba-web-report.md`, "Releases"). */
 export const RELEASE_ON_WEB =
-  'A collective’s release is made in Edubba on a computer (the Mac, or Linux), where Edubba reads the folder itself: what git tracks in a git folder, every file but hidden ones in a plain folder, links never followed. A page in a browser cannot tell a link from a file in a folder you choose, nor what git tracks, so it would publish what Edubba on a computer leaves out. A release proposed there can be signed here, in “To sign”, and checked here as anyone would. A release under your own name is made in Ummia.';
+  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
 
 /** Said for any other operation the web client does not answer. */
 export const ON_A_COMPUTER =
   'This needs Edubba on a computer: the web client has no agents, no API key, no drafts from Claude’s connector, no test collective and no money drafts, and makes no identity (bring one you have).';
+
+/** An ID as the page sent it, read where it can be (`mid1…` or hex). */
+const readIdOr = (k: string): string => {
+  try {
+    return readId(k);
+  } catch {
+    return k;
+  }
+};
 
 const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : []);
 const text = (v: unknown): string => (typeof v === 'string' ? v : '');
 
 /** Edubba's operations: `web` answers only `WEB_OPS`. */
 export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Record<string, unknown>, key: string) => Promise<unknown> {
-  const { store, desk, setup, real, after, member, corrections, collectives, agents, access, money } = p;
+  const { store, desk, setup, real, after, member, publishing, corrections, collectives, agents, access, money } = p;
   const web = opts.web;
   /** A real collective founded here, read as anyone reads it (its relays and homes), with its founder as the member held here. */
   const realRead = (id: string) => {
@@ -291,6 +323,10 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return member.as((d) => d.signProposal(text(a.thread)));
       case 'member decline':
         return member.as((d) => d.declineProposal(text(a.thread), text(a.why)));
+      case 'member leave read':
+        return member.as((d) => d.leaveRead(text(a.thread)));
+      case 'member leave':
+        return member.as((d) => d.leaveCollective(text(a.thread), text(a.digest)));
       case 'member share':
         return member.as((d) => d.shareShow(text(a.thread)));
       case 'member shareback':
@@ -315,13 +351,17 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
           name: text(a.name),
           founder: text(a.founder),
           members: list(a.members),
-          rules: { safety: num(a.safety), release: num(a.release), clone: num(a.clone), others: num(a.others) },
+          ...(a.grid ? { grid: a.grid as Grid } : { rules: { safety: num(a.safety), release: num(a.release), clone: num(a.clone), others: num(a.others) } }),
           words: text(a.words),
         });
       case 'real change prepare':
-        return real.prepareChange({ collective: text(a.collective), members: list(a.members) });
+        return real.prepareChange({ collective: text(a.collective), members: list(a.members), ...(a.grid ? { grid: a.grid as Grid } : {}) });
+      case 'real grid':
+        // The grid a member change starts from: the agreement in force's, its columns these members (round 3).
+        return real.gridFor(text(a.collective), list(a.members));
       case 'real release prepare':
-        return real.prepareRelease({ collective: text(a.collective), folder: text(a.folder), name: text(a.name), version: text(a.version) });
+        // Round 3 (F339): a collective's releases moved to Ummia, signed there with the member's own key.
+        throw p.refuse(400, RELEASE_ON_WEB);
       case 'real confirm':
         return real.confirm(text(a.plan), text(a.digest));
       case 'real cancel':
@@ -343,10 +383,49 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return real.confirmShare(text(a.collective), text(a.member), list(a.typed));
       case 'real release standing':
         return real.releaseStanding(text(a.act));
+      case 'real money prepare':
+        // Round 3, part C: the collective's stakes, split plan, split service and keepers, one clone.
+        return real.prepareMoney({
+          collective: text(a.collective),
+          shares: Object.fromEntries(Object.entries((a.shares ?? {}) as Record<string, unknown>).map(([k, v]) => [readIdOr(k), Number(v)])),
+          referral: Number(a.referral ?? 0),
+          service: text(a.service),
+          serviceKey: text(a.serviceKey),
+          keepers: list(a.keepers),
+          keepersNeeded: num(a.keepersNeeded ?? 1),
+        });
+      case 'real money record':
+        return real.recordMoney(text(a.act));
+      case 'real keepers':
+        return real.keepers(text(a.collective));
+      case 'real keep':
+        return real.keep(text(a.collective), readIdOr(text(a.keeper)));
+      case 'real register resignation':
+        return real.registerResignation(text(a.collective), text(a.act));
       case 'real collective': {
         const c = real.collective(text(a.collective));
-        return { id: c.identity, members: c.f.members, holder: c.f.signingHolder, agreement: c.f.agreement, relays: c.f.relays, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint, pending: !!c.f.pending, releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })), toShow: real.toShow(c.identity) };
+        return { id: c.identity, members: c.f.members, holder: c.f.signingHolder, agreement: c.f.agreement, relays: c.f.relays, threshold: c.f.safety.threshold, fingerprint: c.f.safety.fingerprint, pending: !!c.f.pending, releases: c.f.releases.map((r) => ({ id: r.id, version: r.version })), toShow: real.toShow(c.identity), resigned: await real.resignations(c.identity).catch(() => []) };
       }
+      case 'publishing':
+        return publishing.state();
+      case 'publishing act as':
+        return publishing.actAs(text(a.id));
+      case 'publishing collective add':
+        return publishing.collectiveAdd(text(a.id));
+      case 'publishing work read':
+        return publishing.prepareWork({ media: text(a.media), data: text(a.data), title: text(a.title), price: text(a.price), referral: text(a.referral), service: text(a.service ?? ''), serviceKey: text(a.serviceKey ?? '') });
+      case 'publishing confirm':
+        return publishing.confirm(text(a.plan), text(a.digest));
+      case 'publishing deliver':
+        return publishing.deliver();
+      case 'publishing vow read':
+        return publishing.prepareVow({ words: text(a.words), title: text(a.title), price: text(a.price) });
+      case 'publishing vow sales':
+        return publishing.vowSales({ identity: text(a.identity), relays: list(a.relays) });
+      case 'publishing confirm sale':
+        return publishing.confirmSale({ vow: text(a.vow), sale: text(a.sale), buyer: text(a.buyer), seller: text(a.seller), unit: text(a.unit), value: num(a.value) });
+      case 'publishing contest':
+        return publishing.contestSale({ vow: text(a.vow), sale: text(a.sale), buyer: text(a.buyer), promise: text(a.promise) });
       case 'money units':
         return money!.units();
       case 'money pay':

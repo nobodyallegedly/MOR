@@ -40,6 +40,8 @@ export const ONE_TIME_LINE = 'One-time key for my share of the chain key: ';
 /** What the member's answer says, first line, word for word. */
 export const SIGNED = 'Signed.';
 export const DECLINED = 'Declined.';
+/** A member's word, in a founding's thread, that they resigned alone (rule 70), the resignation's act on the next line. */
+export const RESIGNED = 'Resigned.';
 
 /** A negotiation message's payload (Agreements, type 18): the message as canonical text. */
 export const negotiationPayload = (text: string): Uint8Array => cborEncode(new Map<number, unknown>([[0, text.normalize('NFC')]]));

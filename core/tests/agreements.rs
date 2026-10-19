@@ -89,6 +89,7 @@ fn label() -> Terms {
                 ]),
                 fields: None,
                 id: 1,
+                limits: None,
             },
             Area {
                 name: "Money".into(),
@@ -97,6 +98,7 @@ fn label() -> Terms {
                 kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]),
                 fields: None,
                 id: 2,
+                limits: None,
             },
         ]),
         area_words: Some(vec![
@@ -356,6 +358,7 @@ fn areas_are_checked() {
         kinds: Some(vec![Kind::Layer(agreements::layers::AGREEMENTS)]),
         fields: None,
         id: 3,
+        limits: None,
     });
     check(&t).unwrap();
 }
@@ -511,6 +514,7 @@ fn r4_a_specification_serving_two_layers_answers_to_both_lanes() {
         kinds: Some(vec![Kind::Layer(agreements::layers::AGREEMENTS)]),
         fields: None,
         id: 3,
+        limits: None,
     });
     check(&p).unwrap();
     // Naming that specification for another Money task needs both lanes.

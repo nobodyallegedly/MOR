@@ -47,10 +47,14 @@ jobs:
         run: cd clients/connector && npm ci --no-audit --no-fund && npm test
       - name: clients/desk
         if: success() || failure()
-        run: cd clients/dub && npm ci --no-audit --no-fund && cd ../desk && npm ci --no-audit --no-fund && npm test
+        # Edubba's tests run Dub, Damgar, Kišib, Ummia (with the site's listing and the reports mirror), the test wallet and the split and anchoring services beside it (round 3).
+        run: for p in dub barebone repo collective assess kishib manage anchoring-service testwallet damgar site longform connector reader reports ummia split-service; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/desk && npm ci --no-audit --no-fund && npm test
       - name: clients/genesis
         if: success() || failure()
         run: cd clients/genesis && npm ci --no-audit --no-fund && npm test
+      - name: clients/grants
+        if: success() || failure()
+        run: cd clients/grants && npm ci --no-audit --no-fund && npm test
       - name: clients/longform
         if: success() || failure()
         run: cd clients/longform && npm ci --no-audit --no-fund && npm test
@@ -137,7 +141,8 @@ jobs:
   # btcd and three lnd nodes from their release archives, each checked
   # against the SHA-256 in its project's signed manifest, started by
   # modules/lightning/regtest/up.sh. Damgar's tip, on-chain payment and
-  # anchor, the test wallet, and the Lightning rail Module's own test.
+  # anchor, the test wallet, the Lightning rail Module's own test, and
+  # round 3's end to end (a collective's money through its split service).
   regtest:
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -181,6 +186,9 @@ jobs:
       - name: clients/damgar on regtest
         if: success() || failure()
         run: for p in desk dub barebone repo collective assess kishib manage anchoring-service; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/damgar && npm ci --no-audit --no-fund && MOR_LN_REGTEST="$RUNNER_TEMP/regtest" node --import tsx --test test/regtest.test.ts
+      - name: clients/desk on regtest (round 3, end to end)
+        if: success() || failure()
+        run: for p in dub barebone repo collective assess kishib manage anchoring-service testwallet damgar site longform connector reader reports ummia split-service; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done; cd clients/desk && npm ci --no-audit --no-fund && MOR_LN_REGTEST="$RUNNER_TEMP/regtest" node --import tsx --test test/round-3.test.ts
       - name: Stop the network
         if: always()
         run: BTCD_DIR="$RUNNER_TEMP/$BTCD" LND_DIR="$RUNNER_TEMP/$LND" modules/lightning/regtest/down.sh "$RUNNER_TEMP/regtest" || true

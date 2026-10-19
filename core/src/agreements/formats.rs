@@ -758,6 +758,11 @@ pub struct Area {
     pub fields: Option<Vec<FieldRef>>,
     /// 5: its permanent id.
     pub id: u64,
+    /// 6: limits a cMIP judges on its holders' own keys (F353, draft 16):
+    /// the cMIP and its parameters; the grant limits cMIP's draft 2 makes
+    /// one member key's act counting alone conditional on lying within them, a
+    /// second holder's key needed above (it adds, never relaxes, rule 60).
+    pub limits: Option<(Hash, Value)>,
 }
 
 impl Area {
@@ -777,6 +782,9 @@ impl Area {
             ));
         }
         m.push((Value::Uint(5), Value::Uint(self.id)));
+        if let Some((c, l)) = &self.limits {
+            m.push((Value::Uint(6), Value::Array(vec![b(c), l.clone()])));
+        }
         Value::Map(m)
     }
 
@@ -2495,24 +2503,44 @@ fn check_mark_shape(m: &[MarkEntry]) -> R<()> {
 
 // ---------------------------------------------------------------- signatures
 
-/// Decode a signature act's payload, `{ 0 => hash }`, and check its inside:
-/// it names, in `objects`, the act it signs as both chain and predecessor.
+/// Decode a signature act's payload, `{ 0 => hash, ? 1 => signing-key }`,
+/// and check its inside: it names, in `objects`, the act it signs as both
+/// chain and predecessor.
 pub fn decode_signature(inside: &Inside) -> R<Hash> {
+    Ok(decode_signature_key(inside)?.0)
+}
+
+/// A signature act's act signed and, where it names one, the member key it
+/// carries (field 1; F353, Agreements draft 16): on a collective's founding
+/// or clone, the public half of a key its signer's app made as it signed,
+/// a grant key within the areas that founding or clone gives the signer,
+/// counting from the moment it is complete. A key on any other act is
+/// refused by [`super::AgreementsView`]'s judgement, never here.
+pub fn decode_signature_key(inside: &Inside) -> R<(Hash, Option<SigningKey>)> {
     let mut signed = None;
+    let mut key = None;
     for (k, v) in &inside.payload {
         match k {
             Value::Uint(0) => signed = Some(hash(v, "signature: the act signed")?),
+            Value::Uint(1) => {
+                key = Some(crate::identity::signing_key(v).map_err(|_| AgreementsError::Shape("signature: field 1, the member key, is a signing key [scheme, key] (F353)"))?)
+            }
             _ => return Err(AgreementsError::Shape("signature: unknown field")),
         }
     }
     let signed = signed.ok_or(AgreementsError::Shape("signature: the act signed"))?;
     check_objects_self(inside, &signed, "signature: objects must name the act signed")?;
-    Ok(signed)
+    Ok((signed, key))
 }
 
 /// The signature payload.
 pub fn signature_payload(signed: &Hash) -> Vec<(Value, Value)> {
     vec![(Value::Uint(0), b(signed))]
+}
+
+/// A holder's signature of a founding or clone naming its member key (F353).
+pub fn signature_payload_with_key(signed: &Hash, key: &SigningKey) -> Vec<(Value, Value)> {
+    vec![(Value::Uint(0), b(signed)), (Value::Uint(1), key.to_value())]
 }
 
 /// F127: an act in a collective's name cites, in `objects`, the
@@ -4350,7 +4378,7 @@ fn field_ref(v: &Value) -> R<FieldRef> {
 }
 
 fn area(v: &Value) -> R<Area> {
-    let f = map_fields(v, 6, "area")?;
+    let f = map_fields(v, 7, "area")?;
     let Some(Value::Text(name)) = field(&f, 0) else {
         return Err(AgreementsError::Shape("area name"));
     };
@@ -4369,6 +4397,12 @@ fn area(v: &Value) -> R<Area> {
             .map(|v| nonempty(v, "area fields")?.iter().map(field_ref).collect())
             .transpose()?,
         id: uint(field(&f, 5).ok_or(AgreementsError::Shape("area id"))?, "area id")?,
+        limits: field(&f, 6)
+            .map(|v| {
+                let a = tuple(v, 2, "area limits: [cmip, limits] (F353)")?;
+                Ok((hash(&a[0], "area limits: the cMIP")?, a[1].clone()))
+            })
+            .transpose()?,
     })
 }
 

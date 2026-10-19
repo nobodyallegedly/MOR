@@ -605,6 +605,7 @@ fn col_terms(ids: &[Hash], authority: Hash, shape: &Shape, work: Hash) -> Terms 
         kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]),
         fields: None,
         id: 2,
+        limits: None,
     });
     Terms {
         parties: ids.to_vec(),

@@ -19,6 +19,7 @@ import {
   recordPayload,
   resignationPayload,
   signaturePayload,
+  sha256,
   unhex,
 } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
@@ -55,6 +56,30 @@ export const RELEASE_AREA = 1;
  * cMIP declares none beyond Development). */
 export const AGREEMENTS_SPECS = { ...MIRS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] as number[] } };
 
+/** What an area reaches (Agreements rule 60, area key 3): a whole layer
+ * (0 Identity, 1 Envelopes and Text, 2 Money, 3 Agreements, 4 Development),
+ * or every act of one type in one specification. */
+export type AreaKind = { layer: number } | { spec: string; type: number };
+
+/**
+ * An area (terms field 19, Agreements rules 60 and 62): a lane held by some
+ * members, counted in their keys (F353, draft 16). `cap`: limits judged on
+ * its holders' keys by the grant limits cMIP's draft 2 (area key 6): within
+ * the cap, `threshold` keys; above it, one more.
+ */
+export interface AreaSpec {
+  id: number;
+  name: string;
+  holders: string[];
+  threshold: number;
+  kinds: AreaKind[];
+  cap?: { cmip: string; unit: string; value: number };
+  /** The area's own words (field 20), changed by its holders. */
+  words?: string;
+}
+
+export const kindValue = (k: AreaKind): unknown[] => ('layer' in k ? [0, k.layer] : [1, unhex(k.spec), k.type]);
+
 /** A founding agreement for a collective, or a clone of one (Agreements draft 7). */
 export interface CollectiveTerms {
   /** The members, in order: the parties. */
@@ -90,6 +115,38 @@ export interface CollectiveTerms {
   departed?: string[];
   /** Forked from (field 23): founding terms of a side of a fork, naming the original collective, a back-link (F124 N4). */
   forkedFrom?: string;
+  /** The areas, as the founding grid draws them (round 3, rules 60 and 62): where present, they replace the one Releases area. */
+  areas?: AreaSpec[];
+  /** The split plan (field 8; round 3, part C): how incoming payments are divided. */
+  plan?: SplitPlan;
+  /** Named keepers (field 3; round 3, part C): their operators, and what counts as recorded (any one, a number, or all). */
+  keepers?: { ids: string[]; rule: Rule };
+}
+
+/**
+ * A split plan (terms field 8; Agreements "Split plan and split"): the
+ * stakes by their index and part, then roles by name and part (a referral);
+ * the role shares taken off the top (rule 22, F280), the rest to the
+ * stakes; the split cMIP that computes the amounts.
+ */
+export interface SplitPlan {
+  stakes: [number, number][];
+  roles: [string, number][];
+  cmip: string;
+}
+
+/** The split cMIP's spec hash, draft 2's test value (`cmips/split`, `mor-split`): the one this client's plans name. */
+export const SPLIT_CMIP = sha256('split cMIP, draft 2, test value until publication');
+
+/** Field 8's value: share rules (stakes, then roles), the cMIP, the roles' indexes off the top. */
+export function planValue(p: SplitPlan): Map<number, unknown> {
+  const shares: unknown[] = [...p.stakes.map(([i, part]) => [0, i, part]), ...p.roles.map(([r, part]) => [1, r, part])];
+  const m = new Map<number, unknown>([
+    [0, shares],
+    [1, unhex(p.cmip)],
+  ]);
+  if (p.roles.length) m.set(4, p.roles.map((_, i) => p.stakes.length + i));
+  return m;
 }
 
 /** A stake (terms field 7): null names this collective (F124, S1). */
@@ -124,6 +181,18 @@ export function absenceNotice(a: CollectiveTerms['abandonment']): string {
     'No absence-proof cMIP stands between: their word alone is enough, nobody checks it against time or the member\'s activity. ' +
     'Signing accepts that (Agreements rules 49 and 51, a stated cost); a member declared absent wrongly can only contest it, in public (Agreements rule 52).'
   );
+}
+
+function areaValue(a: AreaSpec): Map<number, unknown> {
+  const m = new Map<number, unknown>([
+    [0, a.name],
+    [1, a.holders.map(unhex)],
+    [2, a.threshold],
+    [3, a.kinds.map(kindValue)],
+    [5, a.id],
+  ]);
+  if (a.cap) m.set(6, [unhex(a.cap.cmip), new Map<number, unknown>([[0, [unhex(a.cap.unit), a.cap.value]]])]);
+  return m;
 }
 
 /** The terms payload, as CBOR, checked by the core library. */
@@ -163,10 +232,13 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
     ])],
     [12, grammar],
     [15, t.extensions.map(unhex)],
-    [19, [area]],
+    [19, t.areas?.length ? [...t.areas].sort((a, b) => a.id - b.id).map(areaValue) : [area]],
   ]);
   if (t.constitutional) m.set(18, ruleValue(t.constitutional));
-  if (t.releases.words) m.set(20, new Map([[RELEASE_AREA, t.releases.words]]));
+  if (t.areas?.length) {
+    const words = [...t.areas].sort((a, b) => a.id - b.id).filter((a) => a.words);
+    if (words.length) m.set(20, new Map(words.map((a) => [a.id, a.words!])));
+  } else if (t.releases.words) m.set(20, new Map([[RELEASE_AREA, t.releases.words]]));
   if (t.parent) m.set(11, unhex(t.parent));
   if (t.stakes?.length) {
     // The collective's own stake (null) first, then works by hash.
@@ -174,9 +246,35 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
     m.set(7, [...t.stakes].sort((a, b) => (key(a.object) < key(b.object) ? -1 : 1)).map((x) => [who(x.object), x.holders.map(([h, n]) => [who(h), n])]));
   }
   if (t.splitGrant) m.set(14, unhex(t.splitGrant));
+  if (t.plan) m.set(8, planValue(t.plan));
+  if (t.keepers?.ids.length) m.set(3, [[...t.keepers.ids].sort().map(unhex), ruleValue(t.keepers.rule)]);
   if (t.departed?.length) m.set(22, t.departed.map(unhex));
   if (t.forkedFrom) m.set(23, unhex(t.forkedFrom));
   return cborEncode(m);
+}
+
+/**
+ * A one-party deal (Agreements type 0, no key grammar; F215, F351's judged
+ * referral, round 3): a lone seller's agreement for one work, its stake held
+ * wholly by the seller, its split plan carrying a role share off the top (a
+ * referral), and the seller's own grant to the split service (field 14, a
+ * list of one; F129, H4). Signing rule and clone rule: every party, here the
+ * seller (rule 47). Checked by the core library.
+ */
+export function dealTermsPayload(d: { party: string; text: string; object: string; plan: SplitPlan; payeeGrant: string }): Uint8Array {
+  const m = new Map<number, unknown>([
+    [0, [unhex(d.party)]],
+    [1, d.text],
+    [2, new Map()],
+    [4, [0]],
+    [5, [0]],
+    [7, [[unhex(d.object), [[unhex(d.party), 1_000_000]]]]],
+    [8, planValue(d.plan)],
+    [14, [unhex(d.payeeGrant)]],
+  ]);
+  const payload = cborEncode(m);
+  checkTerms(payload, AGREEMENTS_SPECS);
+  return payload;
 }
 
 /** A kept tip: an act, its position, the running summary including it. */
@@ -274,6 +372,9 @@ export interface PayoutIn {
   stake?: number;
   /** A fee: the module whose fee it pays. */
   feeModule?: string;
+  /** A role it fills (round 3: a referral), and the evidence for it: an act signed by someone other than the service and the payee (rule 22). */
+  role?: string;
+  evidence?: string;
 }
 
 /**
@@ -295,6 +396,8 @@ export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: st
           [1, p.amount],
         ]);
         if (p.stake !== undefined) x.set(2, p.stake);
+        if (p.role) x.set(3, p.role);
+        if (p.role && p.evidence) x.set(4, unhex(p.evidence));
         if (p.feeModule) x.set(5, unhex(p.feeModule));
         return x;
       }),
@@ -505,14 +608,21 @@ const MONEY_POINTER = 0;
  * pointer is a public act the client holds, so the reference names its
  * signer (Envelopes draft 9, rule 20, F272).
  */
-export async function sign(by: TestIdentity, act: string, relays: string[]) {
+/**
+ * A signature act. `key`: on a collective's founding or clone, the public
+ * half of the member's own key, made by their app as they sign (signature
+ * field 1; F353, Agreements draft 16): a grant key within the areas it gives
+ * them, counting from the moment it is complete.
+ */
+export async function sign(by: TestIdentity, act: string, relays: string[], key?: [number, Uint8Array]) {
   await carryChain(by, relays);
   let refs: Reference[] | undefined;
   if (await canPaySigner(act, relays, by.via)) {
     const p = await latestPointerAct(by, relays);
     if (p) refs = [referenceTo(p.act)];
   }
-  return by.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, signaturePayload(act), {
+  const payload = key ? cborEncode(new Map<number, unknown>([[0, unhex(act)], [1, [key[0], key[1]]]])) : signaturePayload(act);
+  return by.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.signature, payload, {
     public: true,
     relays,
     objects: [[act, act]],

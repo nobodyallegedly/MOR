@@ -28,6 +28,7 @@ import { serve, type Running } from '../src/server.ts';
 import { serve as serveDub, DOMAIN as DUB_DOMAIN, type Running as DubRunning } from '../../dub/src/server.ts';
 import { contentSecurityPolicy } from '../../dub/src/web/headers.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
+import { ummiaFor } from './ummia.ts';
 
 const dubDir = fileURLToPath(new URL('../../dub/', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -49,6 +50,8 @@ let mac: DubRunning;
 let eDir: string;
 let macDir: string;
 const contexts: BrowserContext[] = [];
+/** Other programs a test starts (Ummia, round 3). */
+const others: { close(): Promise<void> }[] = [];
 const problems: string[] = [];
 
 before(async () => {
@@ -84,6 +87,7 @@ after(async () => {
   await browser?.close();
   await edubba?.close();
   await mac?.close();
+  for (const o of others) await o.close();
   await new Promise((r) => site?.close(r));
   for (const r of [...(homes ?? []), relay]) await r?.stop();
 });
@@ -192,6 +196,13 @@ async function shareIn(page: Page, name: string): Promise<{ x: number; words: st
   return { x, words };
 }
 
+/** A number of the founding grid (round 3), typed and left, as a person would. */
+async function gridNumber(page: Page, field: string, value: string) {
+  const x = page.locator(`#e-grid-real-found input[data-grid-num="${field}"]`);
+  await x.fill(value);
+  await x.press('Tab');
+}
+
 test('three people, three apps, three browsers: a real collective founded, a release signed, nothing of a share kept anywhere', async () => {
   // The founder's Edubba: its places and its identity (set up by its own requests), then only clicks.
   const ec = await Client.open(await newKey(), edubba.base);
@@ -240,6 +251,9 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   }
   await ed.fill('#real-found input[name=name]', 'The tablet house');
   for (const id of [webId, macId]) await ed.check(`#real-found input[name=member][value="${id}"]`);
+  // The grid (round 3): its one area, Publishing, asks two members' keys, as the Releases area did.
+  await ed.locator('#e-grid-real-found table.grid thead th[scope=col]').nth(2).waitFor({ timeout: 30_000 });
+  await gridNumber(ed, 'area:0', '2');
   await shot(ed, 'edubba-found-form');
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading h2', { hasText: 'Propose to found the collective “The tablet house”' }).waitFor({ timeout: 90_000 });
@@ -328,19 +342,14 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   const webKey = (JSON.parse(places.web)['dub/keep'] as { identity: string; signingSecret: string }[]).find((x) => x?.identity === webId)?.signingSecret;
   assert.ok(webKey && !places.edubba.includes(webKey) && !places.mac.includes(webKey), 'the web member’s key in no other app');
 
-  // A release of the collective, from Edubba, signed by the web member in its Dub, then counting.
-  const folder = join(mkdtempSync(join(tmpdir(), 'real-browser-release-')), 'tablets');
-  mkdirSync(folder);
-  writeFileSync(join(folder, 'clay.txt'), 'a tablet\n');
-  await ed.locator('#real-release').waitFor({ timeout: 60_000 });
-  await ed.fill('#real-release input[name=folder]', folder);
-  await ed.fill('#real-release input[name=name]', 'tablets');
-  await ed.fill('#real-release input[name=version]', '1');
-  await ed.click('#real-release button[type=submit]');
-  await ed.locator('#e-real-review #reading').waitFor({ timeout: 60_000 });
-  await shot(ed, 'edubba-release-review');
-  await ed.click('#e-real-review [data-action=confirm]');
-  await done(ed, '#e-status .note.done', 'tablets 1 is published, and sent to sign');
+  // A release of the collective: made in Ummia (round 3, F339), signed by the web member in its Dub, then counting. Edubba's card says where releases are made.
+  await ed.locator('#e-real-release').waitFor({ timeout: 60_000 });
+  assert.match(await ed.locator('#e-real-release').innerText(), /made in Ummia/);
+  assert.equal(await ed.locator('#real-release').count(), 0);
+  const founderSecret = JSON.parse(readFileSync(join(eDir, 'identities', `${nobody}.json`), 'utf8')).signingSecret as string;
+  const realId = ((await ec.ask<any>('state')).collectives as { id: string; real?: boolean }[]).find((x) => x.real)!.id;
+  const um = await ummiaFor({ id: nobody, secret: founderSecret, home: homes[0].base, relays: [relay.base], collective: realId, apps: others });
+  const relId = await um.release('tablets', '1', 'a tablet\n');
   await web.reload();
   await web.locator('[data-tab=signing]').click();
   const rel = web.locator('.proposal', { hasText: 'Sign a release: tablets 1' });
@@ -349,8 +358,7 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await shot(web, 'web-release');
   await rel.getByRole('button', { name: 'Sign it' }).click();
   await done(web, '#status .note.done', 'Signed');
-  await ed.locator('[data-action=real-release-standing]').first().click();
-  await done(ed, '.proposal-status .note.done', /counts as the collective’s release, signed by 2 members/);
+  assert.ok((await um.standing(relId)).met, 'it counts as the collective’s release');
   await shot(ed, 'edubba-collective');
 
   // A member change, reviewed (its signing in members' apps and its rotation are in test/real.test.ts):
@@ -359,7 +367,8 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await ed.click('#e-real-change > summary');
   await ed.uncheck(`#real-change input[name=member][value="${macId}"]`);
   await ed.click('#real-change button[type=submit]');
-  await ed.locator('#e-real-review #reading', { hasText: 'cannot be proposed as it stands' }).waitFor({ timeout: 60_000 });
+  // The grid (round 3) says it first, in its own words: the numbers no longer fit two members.
+  await ed.locator('#e-real-review #reading', { hasText: 'Judge absence: a number from 1 to 1' }).waitFor({ timeout: 60_000 });
   assert.ok(await ed.locator('#e-real-review [data-action=confirm]').isDisabled());
   await ed.click('#e-real-review [data-action=cancel]');
   // With the same members and a contact more, it is: every voice and the joining member sign; then it waits for Kišib.
@@ -390,7 +399,9 @@ test('H33: Edubba acting as a member it holds: the proposal read in plain words,
   await ed.fill('#real-found input[name=name]', 'Two of us');
   await ed.selectOption('#real-found select[name=founder]', nobody);
   await ed.fill('#real-found textarea[name=typed]', dee);
-  for (const [n, v] of [['safety', '1'], ['release', '1'], ['clone', '2'], ['others', '1']]) await ed.fill(`#real-found input[name=${n}]`, v);
+  await ed.locator('#real-found textarea[name=typed]').press('Tab');
+  await ed.locator('#e-grid-real-found table.grid thead th[scope=col]').nth(1).waitFor({ timeout: 30_000 });
+  for (const [n, v] of [['chain', '1'], ['area:0', '1'], ['clone', '2'], ['absence', '1']]) await gridNumber(ed, n, v);
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 90_000 });
   await ed.click('#e-real-review [data-action=confirm]');

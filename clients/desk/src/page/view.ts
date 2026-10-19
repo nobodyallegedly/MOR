@@ -12,6 +12,7 @@
 // grey-violet for what is sealed); red only for a contest, a void act or a
 // stolen key; no glow; each item in its own clearly outlined card.
 
+import { chooserHtml, type Actor } from '../../../ummia/src/acting.ts';
 import { e } from '../../../manage/src/view.ts';
 import { STYLE as DUB, proposal as dubProposal, share as dubShare, SIGNING_LABEL } from '../../../dub/src/page/view.ts';
 import type { Proposal as MemberProposal, ShareShown } from '../../../dub/src/shapes.ts';
@@ -20,6 +21,7 @@ import type { Listing } from '../folders.ts';
 import type { ActRead, RealCollective, RealProposal, ShareHere, AgentDetails, AgentSummary, AgentView, Constitution, Done, DraftView, IdentityRecord, Item, Line, MachineState, Permissions, Sorted, State } from './api.ts';
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 import { shownAct, shownId } from '../../../genesis/src/shown.ts';
+import { GRID_STYLE } from './grid-view.ts';
 
 export { e };
 
@@ -93,7 +95,7 @@ export const KEY_SAY =
  */
 export const TINT = { layer: '#48c08c', line: '#153028', edge: '#1a3f32', accent: '#2e7659' } as const;
 
-export const STYLE = `${DUB}
+export const STYLE = `${DUB}${GRID_STYLE}
 ${TEXT}
 :root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
 button:hover,.door:hover{border-color:var(--tint)}
@@ -1061,10 +1063,95 @@ export function grantShown(t: { lines: string[]; digest: string }): string {
 
 // ---------------------------------------------------------------- the Publishing tab
 
-/** The Publishing tab, a placeholder until it is built (decided by Nobody, allegedly, 17 October 2026: after Damgar's round 2). */
-export function publishingTab(): string {
-  return `<div class="card"><h2>Publishing</h2><p>Coming after Damgar’s round 2: protected files (songs, films, any file) published under terms, their agreement and offer prepared here, acting as yourself or as a collective you belong to; paid in Damgar, shown in Dub. Vows too, each sale confirmed or contested.</p>
-<p class="small">Releases of code and specifications are made in Ummia.</p></div>`;
+/** What the Publishing tab shows (`../publishing.ts`). */
+export interface PublishingShown {
+  actors: Actor[];
+  acting: string | null;
+  as: string | null;
+  works: { publication: string; offer: string; as: string; member: string; collective: boolean; media: 'text' | 'picture'; title: string; price: number; words: string; at: number; delivered: Record<string, string>; toMembers: string | null }[];
+  vows: { vow: string; offer: string; as: string; collective: boolean; words: string; title: string; price: number; at: number }[];
+  held: string[];
+  say: string[];
+  unit: string;
+}
+
+/** A look-up of one identity's vow sales (round 3): each vow, each sale's state; those bought by an identity held here may be contested here. */
+export interface VowSalesShown {
+  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; promise: string | null; amount: { unit: string; value: number } | null }[]; unsigned: number; mine: string[] }[];
+  asked: string[];
+  problems: string[];
+}
+
+export function vowSalesShown(r: VowSalesShown, names: (id: string) => string): string {
+  const vows = r.vows.length
+    ? r.vows
+        .map((v) => {
+          const counts = { confirmed: 0, contested: 0, pending: 0 } as Record<string, number>;
+          for (const x of v.sales) counts[x.state] = (counts[x.state] ?? 0) + 1;
+          const sales = v.sales.length
+            ? `<ul>${v.sales
+                .map(
+                  (x) => `<li class="${x.state === 'confirmed' ? 'ok' : x.state === 'contested' ? 'bad' : ''}">${e(names(x.buyer))}: <strong>${e(x.state)}</strong>${x.promise ? ` (“${e(x.promise)}”)` : ''}${x.amount ? ` · ${x.amount.value.toLocaleString('en')}` : ''}${
+                    v.mine.includes(x.act) && x.state === 'pending'
+                      ? `<form class="pub-contest row" data-vow="${e(v.name)}" data-sale="${e(x.act)}" data-buyer="${e(x.buyer)}"><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><button type="submit">Contest it, as ${e(names(x.buyer))}</button></form>${x.amount ? `<button data-action="pub-confirm-sale" data-vow="${e(v.name)}" data-sale="${e(x.act)}" data-buyer="${e(x.buyer)}" data-seller="${e(v.signer)}" data-unit="${e(x.amount.unit)}" data-value="${x.amount.value}">Confirm: it was kept, as ${e(names(x.buyer))}</button>` : ''}<span class="small">Confirming prepares your claim of the payment, acknowledging the vow, for Damgar to sign (a Money act): it waits in Damgar’s To sign.</span>`
+                      : ''
+                  }</li>`,
+                )
+                .join('')}</ul>`
+            : '<p class="small">No sale seen: nobody signed onto it at the relays asked, so it carries no state (rule 13).</p>';
+          return `<div class="item"><h3>${e(v.words[0] ?? '')}</h3><div class="meta">${v.void ? 'its first act void (its signer’s change of keys): the name stands · ' : ''}${counts.confirmed} confirmed · ${counts.contested} contested · ${counts.pending} pending${v.unsigned ? ` · ${v.unsigned} paid with no buyer signed on` : ''}</div>${sales}</div>`;
+        })
+        .join('')
+    : '<p class="empty">No vow of that identity at the relays asked.</p>';
+  return `<p class="small">Asked of ${e(r.asked.join(', '))}: only what they hold is seen; nothing is indexed.</p>${r.problems.length ? note('warn', lines(r.problems.map((t) => ({ text: t, tone: 'warn' as const })))) : ''}${vows}`;
+}
+
+/**
+ * The Publishing tab (round 3, part B; decided by Nobody, allegedly, 17
+ * October 2026): who acts (the chooser Ummia shares, yourself or a collective
+ * you belong to), a protected file (a text or a JPEG picture) sealed with a
+ * price and read back before it is signed, and what was published here.
+ */
+export function publishingTab(p: PublishingShown): string {
+  const works = p.works.length
+    ? p.works
+        .map(
+          (w) => `<div class="item" data-work="${e(w.publication)}"><h3>${e(w.title)}</h3><div class="meta">${w.media === 'picture' ? 'a picture' : 'a text'} · ${w.price.toLocaleString('en')} ${e(p.unit)} · ${w.collective ? `by the collective ${fp(w.as)}` : 'by yourself'} · ${new Date(w.at * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC</div>
+<p class="small">${e(w.words)}</p>
+<p class="small">${w.collective ? (w.toMembers ? 'Its key is sealed to every member: any member’s app can deliver it to a buyer.' : 'Its key was not yet sealed to the members.') : `Its key delivered to ${Object.keys(w.delivered).length} buyer${Object.keys(w.delivered).length === 1 ? '' : 's'}.`} Offer ${fp(w.offer)}.</p></div>`,
+        )
+        .join('')
+    : '<p class="empty">Nothing published here yet.</p>';
+  return `<div class="card"><h2>Publishing</h2>${p.say.map((t) => `<p class="small">${e(t)}</p>`).join('')}<p class="small">Releases of code and specifications are made in Ummia.</p></div>
+${chooserHtml(p.actors, p.as)}
+<div class="card"><h2>A protected file</h2>
+<form id="pub-work" class="stack">
+<div class="row"><label class="check"><input type="radio" name="media" value="text" checked> A text</label><label class="check"><input type="radio" name="media" value="picture"> A picture (JPEG)</label></div>
+<label>The text to seal (opened by each buyer once paid)</label><textarea name="text" rows="5"></textarea>
+<label>Or the picture: a JPEG file</label><input type="file" name="file" accept="image/jpeg">
+<label>Its title: the public words beside its offer</label><input name="title" type="text" maxlength="200" autocomplete="off">
+<div class="row"><label>Price, in ${e(p.unit)} <input name="price" inputmode="numeric" autocomplete="off"></label><label>Referral share, % (optional; yourself only) <input name="referral" inputmode="numeric" autocomplete="off"></label></div>
+<details class="judged"><summary>Judge the referral: paid by a split service (optional)</summary><p class="small">${e(JUDGED_SAY)}</p>
+<label>The split service: its ID</label><input name="service" type="text" autocomplete="off" spellcheck="false">
+<label>The key the service made for you (64 hexadecimal characters)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false"></details>
+<div class="row"><button type="submit">Read it back</button></div></form>
+<div id="e-pub-review"></div></div>
+<div class="card"><h2>A vow</h2>
+<p class="small">Something MOR cannot hash, or not yet: a seat, a lesson, a thing to be made. Each purchase is a sale its buyer confirms (kept) or contests (not kept), in their own app.</p>
+<form id="pub-vow" class="stack">
+<label>What is vowed, in words: what the buyer gets</label><textarea name="words" rows="3"></textarea>
+<label>Its title: the public words of its post</label><input name="title" type="text" maxlength="200" autocomplete="off">
+<div class="row"><label>Price, in ${e(p.unit)} <input name="price" inputmode="numeric" autocomplete="off"></label></div>
+<div class="row"><button type="submit">Read it back</button></div></form>
+<div id="e-vow-review"></div>
+${p.vows.length ? `<h3>Vows published here</h3>${p.vows.map((v) => `<div class="item"><h3>${e(v.title)}</h3><div class="meta">${v.price.toLocaleString('en')} ${e(p.unit)} · ${v.collective ? `by the collective ${fp(v.as)}` : 'by yourself'}</div><p class="small">${e(v.words)}</p></div>`).join('')}` : ''}</div>
+<div class="card"><h2>Look up an identity’s vow sales</h2>
+<p class="small">Asked of the relays you name, with the filters they already have: no index is kept. A sale shows where its buyer made it public.</p>
+<form id="pub-vow-sales" class="stack"><label>The identity (mid1… or hex)</label><input name="identity" type="text" autocomplete="off" spellcheck="false" value="${e(p.as ?? '')}">
+<label>Relays to ask, one per line</label><textarea name="relays" rows="2" spellcheck="false"></textarea>
+<div class="row"><button type="submit">Look it up</button></div></form>
+<div id="e-vow-sales"></div></div>
+<div class="card"><h2>Published here</h2><div class="row"><button data-action="pub-deliver">Deliver keys</button><span class="small grow">Delivers the key of each sale your Damgar signed the receipt for.</span></div>${works}</div>`;
 }
 
 /** Its latest constitutional agreement, as a pop-up in plain words: the deal-assessment tool's reading. */
@@ -1128,13 +1215,10 @@ ${note('', 'How: each member reads the founding terms in plain words and signs o
 <label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}"${i.id === s.acting ? ' selected' : ''}>${e(i.name)}</option>`).join('')}</select>
 <label>Its other members, from your contacts</label>${contactPicks(s, [])}
 <label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
-<fieldset><legend>Its rules</legend><div class="row">
-<label>Shares that rebuild the chain key <input name="safety" type="number" min="1" value="2" class="narrow"></label>
-<label>Signatures a release needs <input name="release" type="number" min="1" value="2" class="narrow"></label>
-<label>Signatures an operational change needs <input name="clone" type="number" min="1" value="2" class="narrow"></label>
-<label>Members who judge absence <input name="others" type="number" min="1" value="2" class="narrow"></label></div>
-<p class="small">Changes of members or rules need every member whose voice remains (Agreements rule 64). A way to rotate must survive the loss of any one member’s share (F96): fewer shares than members.</p></fieldset>
-<label>The words everyone signs (empty: the standard words for these rules)</label><textarea name="words"></textarea>
+<h3>Who decides what</h3>
+<p class="small">Members are the columns; tap a box to give that member’s key power in that row. The constitution first, then the judges, then the areas (Agreements rules 60 and 62). Each member signs with a key of their own, made as they sign (F353).</p>
+<div id="e-grid-real-found"><p class="small">Choose the members above: the grid follows.</p></div>
+<label>The words everyone signs (empty: the grid’s sentences)</label><textarea name="words"></textarea>
 <div class="row"><button type="submit" class="primary">Review the founding</button></div></form></section>
 <div id="e-real-review"></div>
 ${contactsCard(s)}`;
@@ -1151,12 +1235,16 @@ export function proposalStatus(s: State, p: RealProposal): string {
         : '';
     return `<tr data-member="${e(m)}"><td>${person(s, m)}${m === p.founder ? ' <span class="small">(here)</span>' : ''}</td><td class="state ${st === 'signed' ? '' : 'no'}">${e(STANDS[st])}</td><td>${share}</td></tr>`;
   };
-  const what = p.kind === 'founding' ? 'Founding terms' : p.kind === 'clone' ? 'A member change' : 'A release';
+  const what = p.kind === 'founding' ? 'Founding terms' : p.kind === 'clone' ? 'A member change' : p.kind === 'money' ? 'Its money' : 'A release';
   const next =
     p.kind === 'founding'
       ? p.founded
         ? `<p class="small">Founded: ${fp(p.founded)}.</p>`
         : `<div class="card"><h4>Before you found: what this device will hold (F337)</h4>${lines(FOUNDING_SAY)}<label class="check"><input type="checkbox" id="real-found-read-${e(p.act.slice(0, 12))}"> I have read what this device will hold, and found on it knowingly</label></div><div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Found it: deal the shares</button></div>`
+      : p.kind === 'money'
+        ? p.rotated
+          ? note('done', `In force: recorded at the collective’s line ${fp(p.rotated)}; its payments go to its split service.`)
+          : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-money-record" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Record it</button></div>`
       : p.kind === 'clone'
         ? p.rotated
           ? note('done', `In force: Kišib’s rotation ${fp(p.rotated)} declares it, and Edubba follows it.`)
@@ -1224,7 +1312,79 @@ export const WEB_FOUNDING_SAY =
 
 /** Said on the web where a collective's release would be made (`../ops.ts`, RELEASE_ON_WEB), word for word. */
 export const RELEASE_ON_WEB =
-  'A collective’s release is made in Edubba on a computer (the Mac, or Linux), where Edubba reads the folder itself: what git tracks in a git folder, every file but hidden ones in a plain folder, links never followed. A page in a browser cannot tell a link from a file in a folder you choose, nor what git tracks, so it would publish what Edubba on a computer leaves out. A release proposed there can be signed here, in “To sign”, and checked here as anyone would. A release under your own name is made in Ummia.';
+  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
+
+/** Said where a lone seller's referral is judged (F215, F351): kept equal to the reading in `../publishing.ts`. */
+export const JUDGED_SAY =
+  'Without a service, the referral share is a promise in words, paid by your Damgar. With one, the work gets a deal of its own, you its one party holding its whole stake, its split plan carrying the referral share off the top: the service answers buyers, signs their receipts with a key you grant it, and pays you and the reposter, as Agreements judges.';
+
+/** Said where a collective's keepers are shown: kept to Agreements rules 36 to 44, C5 and F302. */
+export const KEEPERS_SAY = [
+  'A keeper is a notary the agreement names: it records each act around the collective as it arrives, in its own sequence, and signs each record. It sees act IDs and signers, never content.',
+  'Before recording a member’s act, it checks their identity chain and records any rotation first: an act recorded before a rotation stays a visible dispute if that rotation disowns it, never a void (rule 41).',
+];
+
+/** A collective's keepers and disputes, as Edubba reads them (`../real.ts`, KeepersShown). */
+export interface KeepersShown {
+  keepers: { id: string; name: string; here: boolean; agent: boolean; records: number; ofThis: number }[];
+  rule: 'all' | number | null;
+  disputes: { member: string; signature: string; version: string; what: string; status: string; rotation: string | null; keepers: string[]; counts: boolean }[];
+}
+
+/** Its keepers' card and the disputes shown (a disowned signature the line or a keeper placed). */
+export function keepersShown(s: State, id: string, k: KeepersShown): string {
+  const keepers = k.keepers.length
+    ? `<ul class="plain">${k.keepers
+        .map(
+          (x) =>
+            `<li>${person(s, x.id)}${x.agent ? ' <span class="tag">agent here</span>' : x.here ? ' <span class="tag">here</span>' : ''}: ${x.ofThis} record${x.ofThis === 1 ? '' : 's'} of this collective’s acts.${x.here ? ` <button data-action="real-keep" data-collective="${e(id)}" data-keeper="${e(x.id)}">Record what arrived</button>` : ''}</li>`,
+        )
+        .join('')}</ul><p class="small">An act counts as recorded once ${k.rule === 'all' ? 'every keeper' : k.rule === 1 ? 'any one keeper' : `${k.rule} keepers`} recorded it.</p>`
+    : '<p class="small">Its agreement in force names no keepers: set them with its money terms, above.</p>';
+  const disputes = k.disputes.length
+    ? `<h4>Disputes, not voids</h4><ul class="plain">${k.disputes
+        .map(
+          (d) =>
+            `<li class="${d.counts || d.keepers.length ? 'warn' : 'bad'}">${person(s, d.member)}’s signature on ${e(d.what)} (${fp(d.signature)}) was disowned by their own rotation${d.rotation ? ` (${fp(d.rotation)})` : ''}: under Identity it is ${e(d.status)}. ${
+              d.counts || d.keepers.length
+                ? `Shown as a dispute, not a void:${d.counts ? ' the collective’s line placed it before any line registering that rotation, so the version it signed stays in force for the collective (C5, F302);' : ''}${d.keepers.length ? ` ${d.keepers.map((x) => person(s, x)).join(', ')} recorded it before recording the rotation (rule 41).` : ''}`
+                : 'Nothing placed it before the rotation: it counts for nothing.'
+            }</li>`,
+        )
+        .join('')}</ul>`
+    : '';
+  return foldCard('e-real-keepers', 'collective-keepers', `Its keepers (${k.keepers.length})`, `<ul class="say">${KEEPERS_SAY.map((t) => `<li>${e(t)}</li>`).join('')}</ul>${keepers}${disputes}`, k.disputes.length > 0);
+}
+
+/** Said where a collective's money is set (round 3, part C): kept to Agreements rules 8, 16 to 23 and 67. */
+export const COLLECTIVE_MONEY_SAY = [
+  'Who owns its income: each member’s share, adding up to 100%. Every holder signs the stakes their share sets.',
+  'A referral share, off the top of each payment, goes to whoever reposted the work where the buyer found it (optional).',
+  'Its split service answers buyers for the collective, signs their receipts with a grant key of the collective, and pays each member their part. It is a separate identity, a judge: it signs to accept.',
+  'Keepers record its acts (optional); one may be an Edubba agent.',
+];
+
+/** The card setting a real collective's money: stakes per member, a referral share, its split service and its keepers, one clone every member signs. */
+function moneyCard(s: State, id: string, c: RealCollective): string {
+  const members = c.members.filter((m) => !(c.resigned ?? []).some((r) => r.member === m && r.registered));
+  const even = Math.floor((100 / members.length) * 10_000) / 10_000;
+  return foldCard(
+    'e-real-money',
+    'collective-money',
+    'Its money: who owns its income, who divides it',
+    `<ul class="say">${COLLECTIVE_MONEY_SAY.map((t) => `<li>${e(t)}</li>`).join('')}</ul>
+<form id="real-money" data-collective="${e(id)}">
+<span class="label">Each member’s share, in %</span>
+${members.map((m, i) => `<label class="share">${person(s, m)} <input name="share" data-member="${e(m)}" type="number" min="0" max="100" step="0.0001" value="${i === members.length - 1 ? +(100 - even * (members.length - 1)).toFixed(4) : even}" required></label>`).join('')}
+<label>A referral share, off the top, in % (0 for none)</label><input name="referral" type="number" min="0" max="99" step="0.0001" value="0" required>
+<label>Its split service: its ID</label><input name="service" type="text" autocomplete="off" spellcheck="false" required>
+<label>The key the service made for this collective (64 hexadecimal characters, as it gives it)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false" required>
+<label>Keepers (optional): their IDs, one per line</label><textarea name="keepers" spellcheck="false"></textarea>
+<label>How many keepers must record an act</label><input name="keepersNeeded" type="number" min="1" step="1" value="1">
+<div class="row"><button type="submit">Review it</button></div></form>`,
+    false,
+  );
+}
 
 /** A real collective founded here: who it is, its proposals, a member change, a release. */
 export function realDetails(s: State, id: string, c: RealCollective): string {
@@ -1235,20 +1395,23 @@ export function realDetails(s: State, id: string, c: RealCollective): string {
 ${foldCard('e-real-members', 'collective-members', `Its members (${c.members.length})`, `<ul class="plain">${c.members.map((m) => `<li>${person(s, m)}${m === c.holder ? ' <span class="small">holds its signing key, here</span>' : ''}</li>`).join('')}</ul>
 <p class="small">Its chain key: one share per member, kept on paper, any ${c.threshold} rebuilding it. ${c.fingerprint ? `Dealing fingerprint <code>${e(c.fingerprint.match(/.{1,4}/g)!.slice(0, 8).join(' '))}</code>.` : 'Dealt in Kišib: its fingerprint was shown there and in each member’s Dub.'} No app holds a share.</p>
 ${c.pending ? note('warn', 'A member change was rotated and waits for its homes to count it.') : ''}`)}
+${(c.resigned ?? []).length ? `<section class="card" id="e-resigned"><h3>Leaving alone (rule 70)</h3><ul class="plain">${(c.resigned ?? [])
+  .map((r) => `<li>${person(s, r.member)} resigned, act ${fp(r.act)}. ${r.registered ? `Registered at the collective’s line ${fp(r.registered)}: now propose the change of members without them, below.` : `<button data-action="real-register-resignation" data-collective="${e(id)}" data-act="${e(r.act)}">Register it at the collective’s line</button>`}</li>`)
+  .join('')}</ul><p class="small">A member can always leave alone: nobody else signs a resignation. It takes effect at the collective’s line registering it; the change of members without them then waits for Kišib, as any member change.</p></section>` : ''}
 ${sharesHere(s, id, c.toShow)}<div id="e-shares-here"></div>
 <div id="e-perms"><p class="small">Reading its agreement in force…</p></div>
 ${mine.map((p) => proposalStatus(s, p)).join('')}
 ${foldCard('e-real-change', 'collective-change', 'Change its members', `<form id="real-change" data-collective="${e(id)}">
-<p class="small">Tick who is a member after the change. Every member whose voice remains signs it, and each joining member, each in their own app; then it waits for Kišib.</p>
+<p class="small">Tick who is a member after the change. Every member whose voice remains signs it, and each joining member, each in their own app, each naming a new key of their own; then it waits for Kišib.</p>
 <div class="picks">${c.members.map((m) => `<label class="check"><input type="checkbox" name="member" value="${e(m)}" checked> ${person(s, m)}</label>`).join('')}</div>
 ${contactPicks(s, [], c.members)}
 <label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
+<h3>Who decides what, after the change</h3>
+<div id="e-grid-real-change"><p class="small">Reading its agreement in force…</p></div>
 <div class="row"><button type="submit">Review the change</button></div></form>`, false)}
-${WEB ? foldCard('e-real-release', 'collective-release', 'A release: on a computer', `<p class="small">${e(RELEASE_ON_WEB)}</p>`) : foldCard('e-real-release', 'collective-release', 'A release', `<form id="real-release" data-collective="${e(id)}">
-<p class="small">Published by the collective, from a folder chosen now (a git folder: what git tracks; a plain folder: every file but hidden ones). It counts once enough members sign it, each in their own app.</p>
-<label>The folder</label><div class="row"><input name="folder" type="text" class="grow" required spellcheck="false" autocomplete="off"><button type="button" data-action="pick-folder" data-target="real-release">Choose a folder…</button></div>
-<div class="row"><label>Its name <input name="name" type="text" class="pet"></label><label>Its version <input name="version" type="text" class="narrow" required></label></div>
-<div class="row"><button type="submit">Review the release</button></div></form>`)}
+${moneyCard(s, id, c)}
+<div id="e-keepers"><p class="small">Reading its keepers…</p></div>
+${foldCard('e-real-release', 'collective-release', 'A release: in Ummia', `<p class="small">${e(RELEASE_ON_WEB)}</p>`)}
 <div id="e-real-review"></div>
 ${WEB ? '' : realMoney(s, id, c.members)}
 <h3>Its posts</h3><div id="e-posts"><p class="small">Reading…</p></div>`;

@@ -2,8 +2,8 @@
 // a tablet), Edubba's (`../desk/static/icon/edubba.svg`, a house of
 // tablets), Kišib's (`../kishib/static/icon/kishib.svg`, a cylinder seal
 // beside the strip of clay it leaves) and Damgar's
-// (`../damgar/static/icon/damgar.svg`, a clay tablet with a resting duck
-// carved out of it) and Ummia's (`../ummia/static/icon/ummia.svg`, a round
+// (`../damgar/static/icon/damgar.svg`, the sleeping duck alone, in its own
+// shape as a duck weight is: H47) and Ummia's (`../ummia/static/icon/ummia.svg`, a round
 // school tablet, its name carved once between two ruled lines). Each is rendered by Chromium at the sizes the Mac and Linux ask
 // for, then:
 //   NAME.png    256 pixels, for the Linux desktop entry (`make-desktop.sh`);

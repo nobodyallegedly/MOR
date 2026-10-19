@@ -29,11 +29,15 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { base64, hex, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
+import { SPECS, base64, describeAct, hex, readTerms, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
 import { ownLine } from '../../genesis/src/lines.ts';
 import { TestIdentity, TEST_LABEL, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
-import type { Via } from '../../genesis/src/transport.ts';
+import { relayAt, type Via } from '../../genesis/src/transport.ts';
+import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
+import { REPO_SPECS } from '../../repo/src/specs.ts';
+import { negotiate } from '../../repo/src/proposals.ts';
+import { chainFor, collectiveNow, judgeCollective, memberKeyFor, publishAt, readMemberKeys, signAsMember, type MemberKey } from '../../grants/src/member.ts';
 import { Refused, fromWords, groupId, toWords } from '../../../modules/carry/src/carry.ts';
 import { readId } from '../../genesis/src/forms.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
@@ -80,8 +84,10 @@ export interface Settings {
   /** The reporting identity (F287), by its ID. */
   reports: string | null;
   via: Via;
-  /** Who acts (the chooser): the identity's own ID in round 1. */
+  /** Who acts (the chooser): the identity's own ID, or a collective it acts for (round 2). */
   acting?: string | null;
+  /** The collectives this identity acts for here, with its own key (round 2, F353). */
+  collectives?: { id: string; available: boolean; why: string | null }[];
 }
 
 /** A specification published from here. */
@@ -95,6 +101,8 @@ export interface Published {
 
 export interface Book {
   releases: OwnRelease[];
+  /** Releases made here for a collective, with this member's own key (round 2), by collective. */
+  collectiveReleases?: (OwnRelease & { collective: string; asked: string[] })[];
   specs: Published[];
   mips: MipDraft[];
   reports: Sent[];
@@ -133,6 +141,22 @@ interface Plan {
 
 const PLAN_FOR = 15 * 60 * 1000;
 
+/** The area of a collective reaching its releases (a publication, Envelopes type 0), as its agreement in force writes it. */
+export async function releaseArea(collective: string, places: string[], via: Via): Promise<{ name: string; holders: string[]; number: number } | null> {
+  const now = await collectiveNow(collective, places, via);
+  if (!now.agreement) return null;
+  for (const h of places) {
+    const a = await relayAt(h, via).getAct(now.agreement).catch(() => null);
+    if (!a) continue;
+    const d = describeAct(a) as { payload?: Uint8Array };
+    if (!d.payload) return null;
+    const t = readTerms(d.payload, AGREEMENTS_SPECS) as { areas: { name: string; holders: string[]; threshold: number; kinds: { form: string; layer?: number | null; spec?: string | null; type?: number | null }[] }[] };
+    const a2 = t.areas.find((x) => x.kinds.some((k) => (k.form === 'layer' && k.layer === 1) || (k.spec === SPECS.envelopes && k.type === 0)));
+    return a2 ? { name: a2.name, holders: a2.holders, number: a2.threshold } : null;
+  }
+  return null;
+}
+
 export class Ummia {
   private queue: Promise<unknown> = Promise.resolve();
   private plans = new Map<string, Plan>();
@@ -162,11 +186,52 @@ export class Ummia {
     return this.store.write(id, 'book', book);
   }
 
-  /** Who acts, from the chooser: the one chosen, if it may act. Round 1: oneself. */
-  private async acting(me: TestIdentity, s: Settings): Promise<TestIdentity> {
-    const who = chosen(actors(await this.store.held()), s.acting ?? me.id);
-    if (!who || who.id !== me.id) throw new Error('Choose who acts: yourself, in round 1.');
-    return me;
+  /** Who acts, from the chooser: oneself, or a collective this identity acts for, with its own key for it (round 2, F353). */
+  private async acting(me: TestIdentity, s: Settings): Promise<{ kind: 'self' } | { kind: 'collective'; id: string; key: MemberKey; places: string[] }> {
+    const who = chosen(actors(await this.store.held(), s.collectives ?? []), s.acting ?? me.id);
+    if (!who) throw new Error('Choose who acts.');
+    if (who.kind === 'self') {
+      if (who.id !== me.id) throw new Error('Choose who acts: yourself, or a collective you act for.');
+      return { kind: 'self' };
+    }
+    const places = await this.placesOf(who.id, [...me.f.homes.map((h) => h.hint), ...s.relays, ...s.track], s.via);
+    const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
+    const key = keys.length ? await memberKeyFor(keys, who.id, places, s.via).catch(() => null) : null;
+    if (!key) throw new Error('No key of yours for this collective was found sealed to you at your homes: it is made when you sign its founding or a member change. Nothing was signed.');
+    return { kind: 'collective', id: who.id, key, places };
+  }
+
+  private async placesOf(id: string, hints: string[], via: Via): Promise<string[]> {
+    try {
+      const l = await lookUp(id, hints, via);
+      return [...new Set([...hints, ...l.resolution.homes.map((h) => h.hint), ...l.routes.routes.flatMap((r) => r.hints)])];
+    } catch {
+      return hints;
+    }
+  }
+
+  /**
+   * Act for a collective here (round 2, F353), by its ID: kept where this
+   * identity holds a box in an area reaching its releases (a release is a
+   * publication, Envelopes type 0) and its own key for it is found.
+   */
+  collectiveAdd(typed: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      const id = readId(typed);
+      const places = await this.placesOf(id, [...hints, ...s.track], s.via);
+      const area = await releaseArea(id, places, s.via);
+      const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
+      const key = keys.length ? await memberKeyFor(keys, id, places, s.via).catch(() => null) : null;
+      let why: string | null = null;
+      if (!area) why = 'No area of its constitution reaches its releases (publications): they count on its own key, held by its founder’s Edubba.';
+      else if (!area.holders.includes(me.id)) why = `You hold no box in the area reaching its releases (“${area.name}”).`;
+      else if (!key) why = 'No key of yours for this collective was found sealed to you at your homes.';
+      if (why) throw new Error(`${why} Nothing was kept.`);
+      s.collectives = [...(s.collectives ?? []).filter((c) => c.id !== id), { id, available: true, why: null }];
+      await this.store.write(me.id, 'settings', s);
+      return { lines: [{ text: `Ummia acts for ${short(id)} with your own key for it: its releases go through its area “${area!.name}”, ${area!.number} key${area!.number === 1 ? '' : 's'} of ${area!.holders.length}.`, tone: 'ok' }] };
+    });
   }
 
   // ------------------------------------------------------------ the identity
@@ -320,8 +385,12 @@ export class Ummia {
   setActing(id: string): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
-      const who = actors(await this.store.held()).find((a) => a.id === id && a.available);
+      const who = actors(await this.store.held(), s.collectives ?? []).find((a) => a.id === id && a.available);
       if (!who) throw new Error('That one cannot act here.');
+      if (who.kind === 'collective') {
+        await this.store.write(me.id, 'settings', { ...s, acting: who.id });
+        return { lines: [{ text: `Acting for the collective ${who.short}, with your own key for it.`, tone: 'ok' }] };
+      }
       if (who.id !== me.id) await this.store.setActive(who.id);
       const target = who.id === me.id ? s : ({ relays: [], track: [], reports: null, via: {}, ...((await this.store.read<Settings>(who.id, 'settings')) ?? {}) } as Settings);
       await this.store.write(who.id, 'settings', { ...target, acting: who.id });
@@ -380,6 +449,7 @@ export class Ummia {
       encryption: me.f.encryption.length > 0,
       line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
     };
+    out.actors = actors(heldIds, s.collectives ?? []);
     out.acting = chosen(out.actors, s.acting ?? me.id)?.id ?? null;
     out.settings = { relays: s.relays, track: s.track, reports: s.reports };
     out.counts = { specs: book.specs.length, releases: book.releases.length, mips: book.mips.length, reports: book.reports.length };
@@ -430,7 +500,9 @@ export class Ummia {
   /** A specification made and read back, its hash shown; nothing signed until confirmed. */
   async prepareSpec(f: SpecForm): Promise<Review> {
     const { me, s } = await this.ctx();
-    const actor = await this.acting(me, s);
+    // A collective's specification is not offered in round 2: releases are its acts here.
+    if ((await this.acting(me, s)).kind === 'collective') throw new Error('A specification is published as yourself: choose yourself under Who acts. A collective acts here for its releases.');
+    const actor = me;
     const form: SpecForm = {
       ...f,
       implements: f.implements ? readHash(f.implements, 'What it implements') : null,
@@ -632,7 +704,7 @@ export class Ummia {
     return this.serial(async () => {
       const { me, s, book } = await this.ctx();
       await this.current(me);
-      await this.acting(me, s);
+      if ((await this.acting(me, s)).kind === 'collective') throw new Error('A MIP draft is published as yourself: choose yourself under Who acts.');
       const m = book.mips.find((x) => x.key === key);
       if (!m) throw new Error('No such draft here.');
       if (!s.relays.length) throw new Error('Name at least one relay its acts go to, under Settings. Nothing was signed.');
@@ -690,7 +762,7 @@ export class Ummia {
     return this.serial(async () => {
       const { me, s, book } = await this.ctx();
       await this.current(me);
-      await this.acting(me, s);
+      if ((await this.acting(me, s)).kind === 'collective') throw new Error('A report is sent as yourself: choose yourself under Who acts.');
       if (!s.reports) throw new Error('Give the reporting identity’s ID under Settings first. Nothing was signed.');
       if (!text.trim()) throw new Error('Write the report first. Nothing was signed.');
       if (!s.relays.length) throw new Error('Name at least one relay its acts go to, under Settings. Nothing was signed.');
@@ -715,10 +787,16 @@ export class Ummia {
     return [...found.filter((r) => !here.has(r.id)), ...book.releases];
   }
 
-  async releases(): Promise<{ releases: { id: string; name: string; version: string; folder: string }[]; anchors: AnchorShown[]; anchorSay: string[] }> {
+  async releases(): Promise<{ releases: { id: string; name: string; version: string; folder: string; collective?: string }[]; anchors: AnchorShown[]; anchorSay: string[] }> {
     const { me, book, hints, s } = await this.ctx();
     const anchors: AnchorShown[] = [];
     for (const x of book.anchors) anchors.push(await anchorStanding(x, [...hints, ...s.track], s.via, this.opts.chain ?? null));
+    const acting = s.collectives?.some((c) => c.id === s.acting) ? s.acting! : null;
+    if (acting) {
+      const places = await this.placesOf(acting, [...hints, ...s.track], s.via);
+      const own = await this.collectiveReleases(acting, book, places, s.via);
+      return { releases: [...own].reverse().map(({ id, name, version, folder }) => ({ id, name, version, folder, collective: acting })), anchors, anchorSay: ANCHOR_SAY };
+    }
     const own = this.opts.releases ? await this.ownReleases(me, book, hints, s.via) : book.releases;
     return { releases: [...own].reverse().map(({ id, name, version, folder }) => ({ id, name, version, folder })), anchors, anchorSay: ANCHOR_SAY };
   }
@@ -728,9 +806,21 @@ export class Ummia {
     return this.releasesHere().suggest(await this.ownReleases(me, book, hints, s.via), folder);
   }
 
+  /** A collective's releases: those made here for it, then those found on its places. */
+  private async collectiveReleases(c: string, book: Book, places: string[], via: Via): Promise<OwnRelease[]> {
+    const here = (book.collectiveReleases ?? []).filter((r) => r.collective === c);
+    const ids = new Set(here.map((r) => r.id));
+    const found = this.opts.releases ? await this.opts.releases.found(c, places, via) : [];
+    return [...found.filter((r) => !ids.has(r.id)), ...here];
+  }
+
   async prepareRelease(a: { folder: string; name: string; version: string; previous: string | null; implements: string[] }): Promise<Review> {
     const { me, s, book, hints } = await this.ctx();
-    await this.acting(me, s);
+    const who = await this.acting(me, s);
+    if (who.kind === 'collective') {
+      const area = await releaseArea(who.id, who.places, s.via);
+      return this.releasesHere().prepare(me, await this.collectiveReleases(who.id, book, who.places, s.via), { ...a, relays: [...new Set([...s.relays, ...who.places])], via: s.via, as: { collective: who.id, area } });
+    }
     return this.releasesHere().prepare(me, await this.ownReleases(me, book, hints, s.via), { ...a, relays: s.relays, via: s.via });
   }
 
@@ -738,6 +828,8 @@ export class Ummia {
     return this.serial(async () => {
       const { me, s, book } = await this.ctx();
       await this.current(me);
+      const who = await this.acting(me, s);
+      if (who.kind === 'collective') return this.confirmCollectiveRelease(me, s, book, who, plan, digest);
       let r;
       try {
         r = await this.releasesHere().confirm(me, await this.ownReleases(me, book, [...new Set([...me.f.homes.map((h) => h.hint), ...s.relays])], s.via), plan, digest, s.relays, s.via);
@@ -748,6 +840,62 @@ export class Ummia {
       await this.saveBook(me.id, book);
       return r.done;
     });
+  }
+
+  /**
+   * A collective's release, as reviewed (round 2, F339, F353): the
+   * publication signed as the collective with this member's own key; where
+   * the area reaching it asks more keys, its other holders are asked, each
+   * sent a negotiation message naming it, sealed to them, to sign in their
+   * own app; then how it stands, as anyone reads it.
+   */
+  private async confirmCollectiveRelease(me: TestIdentity, s: Settings, book: Book, who: { id: string; key: MemberKey; places: string[] }, plan: string, digest: string): Promise<Done> {
+    const relays = [...new Set([...s.relays, ...who.places])];
+    const at = await chainFor(who.id, who.key, who.places, s.via);
+    const sign = async (payload: Uint8Array) => {
+      const made = signAsMember(who.id, who.key, at, { spec: SPECS.envelopes, type: 0, payload, public: true });
+      if (!(await publishAt([made.act], relays, s.via)).length) throw new Error('No relay took the release. Nothing counts: try again.');
+      return { id: made.id };
+    };
+    const r = await this.releasesHere().confirm(me, await this.collectiveReleases(who.id, book, who.places, s.via), plan, digest, relays, s.via, sign);
+    const area = await releaseArea(who.id, who.places, s.via);
+    const asked: string[] = [];
+    const lines = [...r.done.lines];
+    if (area && area.number > 1) {
+      for (const h of area.holders.filter((x) => x !== me.id)) {
+        try {
+          const l = await lookUp(h, who.places, s.via);
+          const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((x) => x.hints);
+          if (!l.encryptionKey || !inbox?.length) throw new Error('no inbox');
+          await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: `A release of the collective ${short(who.id)}, ${r.release.name} ${r.release.version}: its area “${area.name}” asks ${area.number} keys. Read it in your Signing tab, check its files, then sign it with your own key for the collective.`, refs: [[r.release.id, who.id], [who.id, who.id]] });
+          asked.push(h);
+        } catch {
+          lines.push({ text: `${short(h)} could not be reached to sign it (no inbox or encryption key found).`, tone: 'warn' });
+        }
+      }
+      await this.store.saveIdentity(me);
+      if (asked.length) lines.push({ text: `Asked for their key: ${asked.map(short).join(', ')}.` });
+    }
+    const st = (await judgeCollective(who.id, [r.release.id], who.places, s.via)).get(r.release.id);
+    lines.push(st?.met ? { text: 'It counts as the collective’s release: its area is met.', tone: 'ok' } : { text: `It does not count yet: ${st?.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join('; ') ?? 'not read'}.`, tone: 'warn' });
+    book.collectiveReleases = [...(book.collectiveReleases ?? []), { ...r.release, collective: who.id, asked }];
+    await this.saveBook(me.id, book);
+    return { ...r.done, title: `${r.release.name} ${r.release.version} is published for the collective`, lines };
+  }
+
+  /** Where a collective's release stands, as anyone reads it: the keys its area asks, and who signed with their own. */
+  async collectiveReleaseStanding(id: string): Promise<{ met: boolean; lines: Line[] }> {
+    const { me, s, book } = await this.ctx();
+    const r = (book.collectiveReleases ?? []).find((x) => x.id === id);
+    if (!r) throw new Error('No release of a collective made here has that id.');
+    const places = await this.placesOf(r.collective, [...me.f.homes.map((h) => h.hint), ...s.relays, ...s.track], s.via);
+    const st = (await judgeCollective(r.collective, [id], places, s.via)).get(id);
+    return {
+      met: !!st?.met,
+      lines: st?.met
+        ? [{ text: `It counts as the collective’s release: ${st.areas.map((x) => `${x.signers.length} of ${x.needed} keys, ${x.byKey.length} with their own key`).join('; ')}.`, tone: 'ok' }]
+        : [{ text: `It does not count yet: ${st?.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join('; ') ?? st?.reason ?? 'not read'}.`, tone: 'warn' }],
+    };
   }
 
   /** Check it as anyone would: the release fetched by its id from the relays alone, every file checked. */
@@ -767,7 +915,7 @@ export class Ummia {
     return this.serial(async () => {
       const { me, s, book, hints } = await this.ctx();
       await this.current(me);
-      const rel = (await this.ownReleases(me, book, hints, s.via)).find((x) => x.id === a.release);
+      const rel = [...(await this.ownReleases(me, book, hints, s.via)), ...(book.collectiveReleases ?? [])].find((x) => x.id === a.release);
       if (!rel) throw new Error('That is not one of your releases published from here.');
       const service = readId(a.service);
       const offer = (await anchorOffers(service, [...hints, ...s.track], s.via)).find((o) => o.act === a.offer);

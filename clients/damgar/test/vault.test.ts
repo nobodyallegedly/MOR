@@ -81,4 +81,35 @@ test('a vault declared in Kišib, shown in Damgar; above its limit, a payment go
     assert.equal(x.rail.answer, 'valid', JSON.stringify(x));
     assert.equal(x.beside.answer, 'valid', `${p.to}: as the vault in force allows (${x.beside.why})`);
   }
+
+  // H46 (F355): Bob moves 3 000 from his wallet to his own vault. Read back first: the vault, the amount, the fee as far as Damgar can say, and that the money is spent only with the chain key and its record.
+  const tr = await bob.damgar.c.ask<{ digest: string; lines: { text: string }[]; costs: { text: string }[]; blocking: string[] }>('vault transfer read', { entry: 0, value: '3000' });
+  assert.deepEqual(tr.blocking, []);
+  const said = tr.lines.map((l) => l.text).join(' ');
+  assert.match(said, /To your vault: the entry on Lightning, its node/);
+  assert.match(said, /3 000 regtest satoshis, from your wallet/);
+  assert.match(said, /The fee: your wallet’s routing fee/);
+  assert.match(tr.costs.map((l) => l.text).join(' '), /spent only with the chain key and its record/);
+  assert.match(tr.costs.map((l) => l.text).join(' '), /One way only/);
+  assert.deepEqual((await bob.damgar.c.ask<any>('vault transfer read', { entry: 0, value: '0' })).blocking, ['An amount is a whole number above zero.']);
+  await assert.rejects(bob.damgar.c.ask('vault transfer', { entry: 0, value: '3000', digest: '00'.repeat(32) }), /not what was read back/);
+  const bound = await bob.damgar.c.ask<{ key: string; lines: { text: string }[] }>('vault transfer', { entry: 0, value: '3000', digest: tr.digest });
+  // The vault's node makes the invoice (on regtest, the test wallet on the vault's node); an invoice from the flow's node is refused.
+  let mine = (await bob.damgar.c.ask<{ payments: PaymentShown[] }>('pay')).payments.find((x) => x.key === bound.key)!;
+  assert.equal(mine.to, 'vault');
+  assert.equal(mine.vaultInvoice?.descriptionHash, bound.key);
+  await assert.rejects(bob.damgar.c.ask('vault invoice', { key: bound.key, invoice: flow.invoice(3000, bound.key).invoice }), /not your vault’s node/);
+  const vi = vault.invoice(3000, bound.key);
+  await bob.damgar.c.ask('vault invoice', { key: bound.key, invoice: vi.invoice });
+  mine = (await bob.damgar.c.ask<{ payments: PaymentShown[] }>('pay')).payments.find((x) => x.key === bound.key)!;
+  assert.equal(mine.pay?.invoice, vi.invoice);
+  // Paid in the wallet, the preimage pasted back: checked by the rail Module, the record (the claim) sealed to Bob at his homes.
+  await bob.damgar.c.ask('paid', { key: bound.key, proof: vi.preimage });
+  const acc = await bob.damgar.c.ask<Account>('account');
+  const rec = acc.payments.find((x) => x.key === bound.key)!;
+  assert.equal(rec.stageSaid, 'moved to your vault: its record sealed to you at your homes');
+  assert.equal(rec.proofs[0].rail.answer, 'valid', JSON.stringify(rec.proofs));
+  const sealedAtHome = (await (await import('../../genesis/src/transport.ts')).relayAt(H[0]).feed({ to: bob.id })).items.filter((i) => i.kind === 'sealed').length;
+  assert.ok(sealedAtHome > 0, 'the record sealed to Bob at his home');
 });
+

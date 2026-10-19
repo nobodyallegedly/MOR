@@ -15,8 +15,11 @@ import { GRANT_LIMITS_SPEC, MESSAGES } from '../../grants/src/limits.ts';
 
 export const MONEY = MIRS.money;
 
-/** The money messages cMIP, draft 3 (`cmips/cmip-money-messages-draft-3.md`, F352: the amount in an answer): a test value until publication. Every message is written under it. */
-export const MESSAGES_SPEC = sha256('Money messages cMIP, draft 3, test value until publication');
+/** The money messages cMIP, draft 4 (`cmips/cmip-money-messages-draft-4.md`, F357: invoice requests to a split service; a purchase confirmed from another app): a test value until publication. Every message is written under it. */
+export const MESSAGES_SPEC = sha256('Money messages cMIP, draft 4, test value until publication');
+
+/** Draft 3 (`cmips/cmip-money-messages-draft-3.md`, F352: the amount in an answer), still read: its types are draft 4's. */
+export const MESSAGES_SPEC_3 = sha256('Money messages cMIP, draft 3, test value until publication');
 
 /** Draft 2 (`cmips/cmip-money-messages-draft-2.md`: lane requests and sale notices), still read. */
 export const MESSAGES_SPEC_2 = sha256('Money messages cMIP, draft 2, test value until publication');
@@ -25,7 +28,7 @@ export const MESSAGES_SPEC_2 = sha256('Money messages cMIP, draft 2, test value 
 export const MESSAGES_SPEC_1 = sha256('Money messages cMIP, draft 1, test value until publication');
 
 /** Every draft of the money messages cMIP read here, newest first. */
-export const MESSAGES_SPECS = [MESSAGES_SPEC, MESSAGES_SPEC_2, MESSAGES_SPEC_1];
+export const MESSAGES_SPECS = [MESSAGES_SPEC, MESSAGES_SPEC_3, MESSAGES_SPEC_2, MESSAGES_SPEC_1];
 // A message moves the amount it carries: a draft's, a request's, an invoice request's commitment's, an answer's (draft 3) (the grant limits cMIP, 2.1).
 MESSAGES.specs = MESSAGES_SPECS;
 
@@ -171,10 +174,10 @@ export const ACCEPTABLE: Acceptable[] = [
     key: 'messages',
     name: 'Money messages',
     kind: 'cMIP',
-    text: 'cmips/cmip-money-messages-draft-3.md',
-    draft: 3,
-    hashes: [MESSAGES_SPEC, MESSAGES_SPEC_2, MESSAGES_SPEC_1],
-    does: 'The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2); the amount in an answer, so a lane’s cap is judged on it (draft 3). Written by Damgar’s builds, awaiting approval.',
+    text: 'cmips/cmip-money-messages-draft-4.md',
+    draft: 4,
+    hashes: [MESSAGES_SPEC, MESSAGES_SPEC_3, MESSAGES_SPEC_2, MESSAGES_SPEC_1],
+    does: 'The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2); the amount in an answer, so a lane’s cap is judged on it (draft 3); an invoice request sent to a collective’s split service, and a purchase confirmed from Edubba (draft 4). Written by Damgar’s builds, awaiting approval.',
     here: 'Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.',
     built: true,
     needs: ['payment'],

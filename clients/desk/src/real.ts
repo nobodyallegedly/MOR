@@ -32,14 +32,14 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { cborDecode, describeAct, hex, openSealed, sha256, shareOnPaper, unhex } from '../../genesis/src/core.ts';
+import { MIRS, cborDecode, describeAct, hex, moneyRead, openSealed, sha256, shareOnPaper, unhex } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { readId } from '../../genesis/src/forms.ts';
 import { shownAct, shownId } from '../../genesis/src/shown.ts';
 import { TestCollective, type Governance } from '../../repo/src/collective.ts';
-import { proposePayload, sign } from '../../repo/src/agreements.ts';
+import { SPLIT_CMIP, grantPayload, pointerPayload, proposePayload, record, sign } from '../../repo/src/agreements.ts';
 import { negotiate, oneTimeKeyOf, readMessage, sealShare, DECLINED, SIGNED, type Reach } from '../../repo/src/proposals.ts';
 import { allBy, prepareRelease, publishPrepared, verifyRelease, gitSource, type Prepared } from '../../repo/src/release.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
@@ -47,6 +47,10 @@ import { fromRules, standardWords, type Rules } from '../../collective/src/actio
 import { readAgreement, readChanges, readRelease, termsOf, withAgreements, rulesHints, type Line, type Reading, type Section } from '../../collective/src/explain.ts';
 import { beforeSigning } from '../../assess/src/assess.ts';
 import { filesOf, folderOf } from './setup.ts';
+import { governanceOf, gridOf, gridSay, type Grid } from './grid.ts';
+import { areaReaching, collectiveNow, collectivePlaces, collectivePointer, collectiveVerifier, makeMemberKey, memberKeyFor, readMemberKeys, sealMemberKey, signAndAsk, type MemberKey } from '../../grants/src/member.ts';
+import { keep, keeperLogs, recordedBefore } from '../../grants/src/keeper.ts';
+import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { readSealedList, type Followed } from '../../dub/src/people.ts';
 import type { Desk, Done } from './desk.ts';
 import type { Store } from './store.ts';
@@ -98,7 +102,7 @@ export interface Contact {
 export interface Proposal {
   /** The act proposed: founding terms, a clone, or a release. */
   act: string;
-  kind: 'founding' | 'clone' | 'release';
+  kind: 'founding' | 'clone' | 'release' | 'money';
   /** The collective's name, kept here. */
   name: string;
   collective: string | null;
@@ -124,6 +128,14 @@ export interface Proposal {
   at: number;
 }
 
+/** A collective's keepers and the disputes they and its line show (`Real.keepers`). */
+export interface KeepersShown {
+  keepers: { id: string; name: string; here: boolean; agent: boolean; records: number; ofThis: number }[];
+  /** What counts as recorded: every keeper ('all'), a number of them, or null (none named). */
+  rule: 'all' | number | null;
+  disputes: { member: string; signature: string; version: string; what: string; status: string; rotation: string | null; keepers: string[]; counts: boolean }[];
+}
+
 /** A review: what would be signed, in plain words, with its digest. Nothing is signed until confirmed. */
 interface Plan {
   digest: string;
@@ -133,6 +145,24 @@ interface Plan {
 }
 
 const PLAN_LIFE = 15 * 60 * 1000;
+
+/** A grid as the page sent it, every ID read as the core reads one (`mid1…` or hex), its columns `members`. */
+function normalGrid(g: Grid, members: string[]): Grid {
+  const id = (x: string) => {
+    try {
+      return readId(x);
+    } catch {
+      return x;
+    }
+  };
+  const ids = (xs: string[]) => [...new Set(xs.map(id))].filter((x) => members.includes(x));
+  return { ...g, members, constitution: { ...g.constitution, holders: ids(g.constitution.holders) }, areas: g.areas.map((l) => ({ ...l, holders: ids(l.holders) })) };
+}
+
+/** The words everyone signs, drawn from the grid when none are typed: the collective's name, then each band's sentences. */
+export function gridWords(name: string, said: { heading: string; lines: string[] }[]): string {
+  return [`“${name}”, a MOR test collective. Test acts only, wiped before the first real acts. A member may leave alone at any time, keeping what they own.`, ...said.filter((x) => x.heading !== 'Each member').map((x) => `${x.heading}: ${x.lines.join(' ')}`)].join('\n\n');
+}
 
 export class Real {
   private plans = new Map<string, Plan>();
@@ -343,6 +373,31 @@ export class Real {
     return { id, key: l.encryptionKey, inbox };
   }
 
+  /**
+   * The proposer's own signature of a founding or a member change (F353): a
+   * holder of an area names a key of their own in it, made now, its private
+   * half sealed to themself at their homes (the member keys cMIP).
+   */
+  private async signWithKey(me: TestIdentity, act: string, relays: string[], members: string[], g: Governance, lines: Line[]) {
+    const holds = members.includes(me.id) && (g.areas ? g.areas.some((a) => a.holders.includes(me.id)) : !(g.releaseOut ?? []).includes(me.id));
+    const key = holds ? makeMemberKey() : null;
+    let own;
+    try {
+      own = await sign(me, act, relays, key?.public);
+    } finally {
+      this.store.saveIdentity(me);
+    }
+    if (key) {
+      try {
+        await sealMemberKey(me, { terms: act, signature: own.id, public: key.public, secret: key.secret }, () => this.store.saveIdentity(me));
+        lines.push({ text: `${this.names()(me.id)}’s own key for this collective is named in the signature and sealed to them at their homes: once it is complete, it signs for them in the areas they hold (F353).`, tone: 'ok' });
+      } catch (e) {
+        lines.push({ text: `The signature names a key of ${this.names()(me.id)}’s own, but it could not be sealed to them: ${err(e)}`, tone: 'bad' });
+      }
+    }
+    return own;
+  }
+
   /** Send a proposal to each signer but the founder, one thread each; returns the threads. */
   private async invite(founder: string, act: string, signer: string, others: string[], text: string, collective: string | null, lines: Line[]): Promise<Record<string, string>> {
     const me = this.store.identity(founder);
@@ -369,7 +424,7 @@ export class Real {
    * deal-assessment tool's reading, nothing signed. Confirmed, the founder
    * proposes them, signs them, and sends them to each other member.
    */
-  prepareFounding(a: { name: string; founder: string; members: string[]; rules: Rules; words?: string }) {
+  prepareFounding(a: { name: string; founder: string; members: string[]; rules?: Rules; grid?: Grid; words?: string }) {
     const names = this.names();
     const s = this.store.settings();
     const name = a.name.trim();
@@ -388,19 +443,39 @@ export class Real {
     }
     const members = [a.founder, ...others];
     if (members.length < 2) blocking.push('A collective has at least two members.');
-    let rules;
-    try {
-      rules = fromRules(a.rules);
-    } catch (e) {
-      blocking.push(err(e));
-      rules = fromRules({ safety: 2, release: 2, clone: 2, others: Math.max(1, members.length - 1) });
+    let g: Governance;
+    let said: { heading: string; lines: string[] }[] = [];
+    if (a.grid) {
+      // Round 3: the founding grid (rules 60 and 62; `grid.ts`), its columns
+      // the members, the founder first.
+      const grid: Grid = normalGrid(a.grid, members);
+      said = gridSay(grid, names);
+      const words = a.words?.trim() || gridWords(name || 'unnamed', said);
+      const r = governanceOf(grid, words);
+      blocking.push(...r.blocking);
+      g = r.governance;
+    } else {
+      let rules;
+      try {
+        rules = fromRules(a.rules ?? { safety: 2, release: 2, clone: 2, others: Math.max(1, members.length - 1) });
+      } catch (e) {
+        blocking.push(err(e));
+        rules = fromRules({ safety: 2, release: 2, clone: 2, others: Math.max(1, members.length - 1) });
+      }
+      g = { ...rules, text: a.words?.trim() || standardWords(name || 'unnamed', rules) };
     }
-    const g: Governance = { ...rules, text: a.words?.trim() || standardWords(name || 'unnamed', rules) };
     const relays = s.relays.length ? s.relays : s.homes.map((h) => h.hint);
-    const payload = TestCollective.foundingTerms(g, members);
+    let payload: Uint8Array;
+    try {
+      payload = TestCollective.foundingTerms(g, members);
+    } catch (e) {
+      // Agreements refuse the terms the grid draws: said, nothing signed.
+      blocking.push(`Agreements refuse these terms: ${err(e)}`);
+      return this.plan({ digest: sha256(`refused founding ${Date.now()}`), reading: { title: `Found the collective “${name}”`, summary: [], sections: said.map((x) => ({ heading: x.heading, lines: x.lines.map((text) => ({ text })) })), plain: [], blocking }, run: async () => ({ title: '', lines: [], acts: [] }) });
+    }
     const t = termsOf(payload);
     const read = readAgreement(t, names);
-    blocking.push(...withAgreements(rulesHints({ safety: g.safetyThreshold, release: g.releaseThreshold, clone: g.cloneThreshold, others: g.abandonmentOthers }, members.length), read.blocking));
+    blocking.push(...withAgreements(a.grid ? [] : rulesHints({ safety: g.safetyThreshold, release: g.releaseThreshold, clone: g.cloneThreshold, others: g.abandonmentOthers }, members.length), read.blocking));
     const reading: Reading = {
       title: `Propose to found the collective “${name}”`,
       summary: [
@@ -408,6 +483,7 @@ export class Real {
         `Then this Edubba founds it: the collective’s chain key is dealt as ${members.length} shares, any ${g.safetyThreshold} rebuilding it. Each member’s share goes sealed to a one-time key their Dub makes when they sign (or is shown here, hand to hand), and is kept by no app; yours is shown here once. ${names(a.founder)} holds the collective’s signing key, here.`,
       ],
       sections: [
+        ...said.map((x) => ({ heading: x.heading, lines: x.lines.map((text) => ({ text })) })),
         ...read.sections,
         {
           heading: 'How it travels',
@@ -430,8 +506,7 @@ export class Real {
         const lines: Line[] = [];
         const terms = await proposePayload(me, payload, undefined, relays);
         this.store.saveIdentity(me);
-        const own = await sign(me, terms.id, relays);
-        this.store.saveIdentity(me);
+        const own = await this.signWithKey(me, terms.id, relays, members, g, lines);
         lines.push({ text: `The terms are act ${shownAct(terms.id)}; ${names(a.founder)} signed them (${shownAct(own.id)}).`, tone: 'ok' });
         const p: Proposal = {
           act: terms.id,
@@ -649,7 +724,7 @@ export class Real {
   // ------------------------------------------------------------ a member change
 
   /** A member change: the clone read back (what it changes, the tool's reading); confirmed, proposed, signed by the founder, sent to every other signer. */
-  prepareChange(a: { collective: string; members: string[] }) {
+  prepareChange(a: { collective: string; members: string[]; grid?: Grid }) {
     const c = this.collective(a.collective);
     const names = this.names();
     const blocking: string[] = [];
@@ -667,8 +742,18 @@ export class Real {
     if (!members.includes(founder) && !this.store.holds(founder)) blocking.push('The founder held here must stay a member, or another identity held here propose.');
     if (c.f.pending) blocking.push('A member change already waits for its rotation (Kišib).');
     let clone: ReturnType<TestCollective['cloneFor']>;
+    let said: { heading: string; lines: string[] }[] = [];
+    let governance: Governance | undefined;
+    if (a.grid) {
+      // Round 3: the same grid as the founding, filled from the agreement in force (`grid.ts`).
+      const grid: Grid = normalGrid(a.grid, members);
+      said = gridSay(grid, names);
+      const r = governanceOf(grid, c.f.governance.text, (c.f.governance.areas ?? []).map((x) => x.id));
+      blocking.push(...r.blocking);
+      governance = r.governance;
+    }
     try {
-      clone = c.cloneFor(members);
+      clone = c.cloneFor(members, governance);
     } catch (e) {
       // Agreements refuse the clone as it stands (its numbers no longer fit the members): said, nothing made.
       const reading: Reading = {
@@ -676,7 +761,7 @@ export class Real {
         summary: [`Agreements refuse it: ${err(e)}.`, 'With fewer members, the rules’ numbers (shares that rebuild the key, who judges absence) must change with them; changing them in the same proposal is not offered here yet.'],
         sections: [],
         plain: [],
-        blocking: [`Agreements refuse it: ${err(e)}.`],
+        blocking: [...blocking, `Agreements refuse it: ${err(e)}.`],
       };
       return this.plan({ digest: sha256(`refused ${a.collective} ${members.join(',')}`), reading, run: async () => ({ title: '', lines: [], acts: [] }) });
     }
@@ -687,7 +772,7 @@ export class Real {
         `A clone of its agreement, naming ${members.map(names).join(', ')} as its members, proposed by ${names(founder)}. Membership is constitutional: every member whose voice remains must sign it, and each joining member signs to be bound (Agreements rules 1, 64, 69). Each signs in their own app.`,
         'It comes into force only with the rotation that declares it, which needs enough members’ paper shares: Kišib’s work. It waits for Kišib.',
       ],
-      sections: [{ heading: 'What it changes', lines: readChanges(parent, clone.payload, names) }, { heading: 'Who signs', lines: [{ text: `${clone.signers.map(names).join(', ')}.` }] }, ...beforeSigning(clone.payload, names)],
+      sections: [...said.map((x) => ({ heading: x.heading, lines: x.lines.map((text) => ({ text })) })), { heading: 'What it changes', lines: readChanges(parent, clone.payload, names) }, { heading: 'Who signs', lines: [{ text: `${clone.signers.map(names).join(', ')}.` }] }, ...beforeSigning(clone.payload, names)],
       plain: [],
       blocking,
     };
@@ -699,8 +784,7 @@ export class Real {
         const lines: Line[] = [];
         const proposed = await proposePayload(me, clone.payload, c.f.agreement, c.f.relays);
         this.store.saveIdentity(me);
-        const own = await sign(me, proposed.id, this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)]));
-        this.store.saveIdentity(me);
+        const own = await this.signWithKey(me, proposed.id, this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)]), members, clone.governance, lines);
         const name = this.collectives().find((x) => x.id === a.collective)?.name ?? short(a.collective);
         const p: Proposal = {
           act: proposed.id,
@@ -725,6 +809,373 @@ export class Real {
         return { title: 'The member change is proposed', lines, acts: [proposed.id] };
       },
     });
+  }
+
+  // ------------------------------------------------------------ the collective's money (round 3, part C)
+
+  /**
+   * The collective's money, read back before anything is signed (round 3,
+   * part C; decided by Nobody, allegedly, 17 October 2026: "The splits are
+   * really something that the collectives tab needs to handle. That's where
+   * it gets defined"): who owns its income (its stake in itself, terms field
+   * 7, each member's share), how each payment is divided (the split plan,
+   * field 8: a referral share off the top, then the stake; Agreements rules
+   * 17 to 22), the split service that receives and divides it (field 14, a
+   * grant of the collective naming the key the service made), and its
+   * keepers (field 3). One clone, every member signing in their own app (the
+   * split service is a judicial clause, rule 67; the stakes need every
+   * holder, rule 8), recorded here at once once every signature is in (rule
+   * 72).
+   */
+  prepareMoney(a: { collective: string; shares: Record<string, number>; referral: number; service: string; serviceKey: string; keepers: string[]; keepersNeeded: number }) {
+    const c = this.collective(a.collective);
+    const names = this.names();
+    const blocking: string[] = [];
+    const members = c.f.members.filter((m) => !(c.f.governance.departed ?? []).includes(m));
+    const founder = this.proposals().find((p) => p.founded === a.collective)?.founder ?? c.f.signingHolder;
+    if (c.f.pending) blocking.push('A member change already waits for its rotation (Kišib).');
+    // Each member's share, in millionths (the percentages given, to four decimals).
+    const holders: [string, number][] = members.map((m) => [m, Math.round((a.shares[m] ?? 0) * 10_000)]);
+    const sum = holders.reduce((x, [, n]) => x + n, 0);
+    if (holders.some(([, n]) => !Number.isSafeInteger(n) || n < 0)) blocking.push('Each share is a percentage, 0 or more.');
+    if (sum !== 1_000_000) blocking.push(`The members’ shares add up to ${(sum / 10_000).toLocaleString('en')}%: they must add up to 100%.`);
+    const referral = Math.round(a.referral * 10_000);
+    if (!Number.isSafeInteger(referral) || referral < 0 || referral >= 1_000_000) blocking.push('The referral share is a percentage from 0 to less than 100.');
+    let service = '';
+    try {
+      service = readId(a.service);
+    } catch (e) {
+      blocking.push(`The split service: ${err(e)}`);
+    }
+    if (service && members.includes(service)) blocking.push('The split service is a separate identity, not a member.');
+    const key = a.serviceKey.trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(key)) blocking.push('The split service’s key for this collective: 64 hexadecimal characters, as the service gives it.');
+    const keepers: string[] = [];
+    for (const k of a.keepers) {
+      try {
+        const id = readId(k);
+        if (!keepers.includes(id)) keepers.push(id);
+      } catch (e) {
+        blocking.push(`A keeper: ${err(e)}`);
+      }
+    }
+    if (keepers.length && (!Number.isSafeInteger(a.keepersNeeded) || a.keepersNeeded < 1 || a.keepersNeeded > keepers.length)) blocking.push(`Keepers: how many must record an act, from 1 to ${keepers.length}.`);
+    const plan = { stakes: [[0, 1_000_000]] as [number, number][], roles: referral ? ([['referral', referral]] as [string, number][]) : [], cmip: SPLIT_CMIP };
+    const governance = (grant: string): Governance => ({
+      ...c.f.governance,
+      stakes: [{ object: null, holders: holders.filter(([, n]) => n > 0) }],
+      plan,
+      splitGrant: grant,
+      ...(keepers.length ? { keepers: { ids: keepers, rule: a.keepersNeeded === 1 ? { threshold: 1 } : a.keepersNeeded === keepers.length ? { all: true } : { threshold: a.keepersNeeded } } } : {}),
+    });
+    // The clone as it would be, its grant written as a placeholder until the collective signs it.
+    let preview: ReturnType<TestCollective['sameMembersClone']> | null = null;
+    if (!blocking.length) {
+      try {
+        preview = c.sameMembersClone(governance('00'.repeat(32)));
+      } catch (e) {
+        blocking.push(`Agreements refuse it: ${err(e)}.`);
+      }
+    }
+    const cname = this.collectives().find((x) => x.id === a.collective)?.name ?? short(a.collective);
+    const pct = (n: number) => `${(n / 10_000).toLocaleString('en', { maximumFractionDigits: 4 })}%`;
+    const reading: Reading = {
+      title: `The money of “${cname}”: who owns its income, how it is divided, who divides it`,
+      summary: [
+        'One clone of its agreement, every member signing it in their own app: the split service and the keepers are judges (rule 67), and every holder signs the stakes their share sets (rule 8). It is recorded here at once once every signature is in (rule 72).',
+        `From then on a buyer’s payment to the collective goes to its split service, ${service ? names(service) : '…'}: it answers the buyer, signs the receipt with the collective’s grant key, publishes a split delivered to every holder it pays, and pays each one (Agreements rules 16 to 23; the money messages cMIP, draft 4).`,
+      ],
+      sections: [
+        { heading: 'Who owns its income (its stake in itself, field 7)', lines: holders.map(([m, n]) => ({ text: `${names(m)}: ${pct(n)}.` })) },
+        {
+          heading: 'How each payment is divided (the split plan, field 8)',
+          lines: [
+            ...(referral ? [{ text: `Off the top: a referral share of ${pct(referral)}, paid to whoever reposted the work where the buyer found it, when the buyer’s own claim names that repost (a role share with evidence, rule 22). Nobody named: it goes to the stake.` }] : [{ text: 'No share off the top: everything goes to the stake.' }]),
+            { text: 'The rest: to the members, by their shares, each holder’s exact share rounded down, the leftover units one each to the largest remainders, ties taking turns (rule 9).' },
+            { text: 'Computed by the split cMIP, draft 2; no fee.' },
+          ],
+        },
+        { heading: 'Who divides it (the split service, field 14)', lines: [{ text: `${service ? names(service) : '…'}, by a grant of the collective naming the key it made for this collective (${key ? `${key.slice(0, 16)}…` : '…'}). The grant counts once the service signs to accept it. Its key signs only receipts for money coming in under the collective’s own offers (rule 16).` }, { text: 'Where the collective is paid: once it is recorded, its payee pointer leads to the service’s own rails (the pointer check, rule 16), signed with the keys of its area reaching Money, a holder’s own key here and the others’ asked where the area needs more (Money draft 10, rule 7, F358). The collective’s own key signs none of it.' }] },
+        { heading: 'Who keeps its record (keepers, field 3)', lines: keepers.length ? [{ text: `${keepers.map(names).join(', ')}; an act counts as recorded once ${a.keepersNeeded === keepers.length ? 'every one of them' : `${a.keepersNeeded} of them`} recorded it (rules 36 to 44). A keeper sees the acts it records; one may be an Edubba agent.` }] : [{ text: 'None named.' }] },
+        ...(preview ? [{ heading: 'What it changes', lines: readChanges(TestCollective.foundingTerms(c.f.governance, c.f.members), preview.payload, names) }, ...beforeSigning(preview.payload, names)] : []),
+      ],
+      plain: [],
+      blocking,
+    };
+    return this.plan({
+      digest: sha256(Buffer.concat([Buffer.from('MOR Edubba collective money, version 1\n'), Buffer.from(JSON.stringify([a.collective, holders, referral, service, key, keepers, a.keepersNeeded]))])),
+      reading,
+      run: async () => {
+        if (blocking.length) throw new Error('This cannot be proposed while a reason above stands. Nothing was signed.');
+        const lines: Line[] = [];
+        // The grant: a decision of the collective, signed with its key (held here), naming the key the service made (F128).
+        const grant = await c.id.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.grant, grantPayload(service, [1, unhex(key)]), { public: true, relays: c.f.relays });
+        this.saveCollective(c);
+        lines.push({ text: `The collective’s grant to ${names(service)} is signed and published (${short(grant.id)}): it counts once the service accepts it.`, tone: 'ok' });
+        const g = governance(grant.id);
+        const clone = c.sameMembersClone(g);
+        const me = this.store.identity(founder);
+        const proposed = await proposePayload(me, clone.payload, c.f.agreement, c.f.relays);
+        this.store.saveIdentity(me);
+        const own = await this.signWithKey(me, proposed.id, this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)]), members, g, lines);
+        const p: Proposal = {
+          act: proposed.id,
+          kind: 'money',
+          name: cname,
+          collective: a.collective,
+          founder,
+          members,
+          signers: members,
+          needed: members.length,
+          governance: g,
+          relays: c.f.relays,
+          threads: {},
+          answers: { [founder]: { verdict: 'signed', signature: own.id, text: '', message: '' } },
+          at: now(),
+        };
+        this.saveProposal(p);
+        p.threads = await this.invite(founder, proposed.id, founder, members.filter((m) => m !== founder), `${names(founder)} proposes the money of the collective “${cname}”: who owns its income, how each payment is divided, its split service ${names(service)}${keepers.length ? ' and its keepers' : ''}. The clone is act ${proposed.id}: read it in Dub’s Signing tab, then sign or decline.`, a.collective, lines);
+        this.saveProposal(p);
+        lines.push({ text: 'Once every member has signed, record it here: it is then in force.' });
+        return { title: 'The collective’s money is proposed', lines, acts: [proposed.id, grant.id] };
+      },
+    });
+  }
+
+  /**
+   * The collective's payee pointer, a new version naming its split service's
+   * own rails (rule 16), signed with a member's own key in the area reaching
+   * Money (Money draft 10, rule 7, F358, decided by Nobody, allegedly, 19
+   * October 2026: "A founder should not have a special position if the
+   * constitution does not say so"): `by`, or another identity held here
+   * holding a box there; the area's other holders asked for their key where
+   * it needs more than one. The collective's own key signs none of it.
+   */
+  private async pointToService(c: TestCollective, grant: string, by: string): Promise<{ act: string; signer: string; area: string; needed: number; asked: string[]; notAsked: string[] }> {
+    const hints = this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint), ...this.store.settings().homes.map((h) => h.hint)]);
+    let g: Uint8Array | null = null;
+    for (const h of hints) {
+      g = await relayAt(h, this.via).getAct(grant).catch(() => null);
+      if (g) break;
+    }
+    if (!g) throw new Error('the grant was not found');
+    const service = hex((cborDecode((describeAct(g) as { payload: Uint8Array }).payload) as Map<number, unknown>).get(0) as Uint8Array);
+    const l = await lookUp(service, hints, this.via);
+    const svcPlaces = this.hints([...hints, ...l.resolution.homes.map((x) => x.hint), ...l.routes.routes.flatMap((r) => r.hints)]);
+    for (const a of await allBy(service, svcPlaces, this.via)) {
+      try {
+        l.verifier.add(a);
+      } catch {
+        // held already
+      }
+    }
+    const sp = l.verifier.moneyPointer(MIRS.money, service) as { act: string | null };
+    if (!sp.act) throw new Error('the split service publishes no payee pointer');
+    let spAct: Uint8Array | null = null;
+    for (const h of svcPlaces) {
+      spAct = await relayAt(h, this.via).getAct(sp.act).catch(() => null);
+      if (spAct) break;
+    }
+    if (!spAct) throw new Error('the split service’s pointer was not found');
+    const rails = (moneyRead(0, (describeAct(spAct) as { payload: Uint8Array }).payload) as { act: { rails: { module: string; address: Uint8Array }[] } }).act.rails;
+    // Who signs: a holder of the area reaching payee pointers (Money type 0), with their own key for the collective.
+    const places = await collectivePlaces(c.identity, hints, this.via);
+    const { area } = await areaReaching(c.identity, places, { spec: MIRS.money, type: 0 }, this.via);
+    if (!area) throw new Error('no area of its constitution reaches Money: its payee pointer is signed by the holders of that area (F358), and there is none');
+    let signer: { me: TestIdentity; key: MemberKey } | null = null;
+    for (const id of [by, ...this.store.book().identities.map((i) => i.id)].filter((x, i, xs) => xs.indexOf(x) === i)) {
+      if (!area.holders.includes(id) || !this.store.holds(id)) continue;
+      const me = this.store.identity(id);
+      const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), this.via).catch(() => []);
+      const key = keys.length ? await memberKeyFor(keys, c.identity, places, this.via).catch(() => null) : null;
+      if (key) {
+        signer = { me, key };
+        break;
+      }
+    }
+    if (!signer) throw new Error(`no identity held here holds a box in its area “${area.name}” with its own key for the collective: one of ${area.holders.map(this.names()).join(', ')} signs it, in Damgar or here`);
+    const cur = await collectivePointer(c.identity, places, this.via).catch(() => null);
+    const payload = pointerPayload({ payee: c.identity, version: (cur?.version ?? 0) + 1, ...(cur?.pointer ? { previous: cur.pointer } : {}), rails: rails.map((x) => [x.module, new Uint8Array(x.address)] as [string, Uint8Array]) });
+    const others = area.number > 1 ? area.holders.filter((h) => h !== signer!.me.id) : [];
+    const names = this.names();
+    try {
+      const made = await signAndAsk(signer.me, c.identity, signer.key, { spec: MIRS.money, type: 0, payload }, others, `${names(signer.me.id)} signed the payee pointer of the collective, leading to its split service ${names(service)}, with their own key in its area “${area.name}”, which asks ${area.number} keys. Read it in your Signing tab, then sign it with yours.`, places, this.via);
+      return { act: made.act, signer: signer.me.id, area: area.name, needed: area.number, asked: made.asked, notAsked: made.notAsked };
+    } finally {
+      this.store.saveIdentity(signer.me);
+    }
+  }
+
+  /** Record a money clone every member signed (rule 72): from then on it is in force. */
+  recordMoney(act: string): Promise<Done> {
+    return this.desk.serial(async () => {
+      const p = this.proposal(act);
+      if (p.kind !== 'money' || !p.collective || !p.governance) throw new Error('Not a proposal of the collective’s money.');
+      if (p.rotated) throw new Error('It is recorded already.');
+      const st = this.standing(p);
+      if (!st.enough) throw new Error(`Every member signs it first: waiting for ${st.waiting.map(this.names()).join(', ')}.`);
+      const c = this.collective(p.collective);
+      const r = await c.recordSigned({ governance: p.governance, clone: p.act, signatures: p.signers.map((m) => p.answers[m].signature!) });
+      this.saveCollective(c);
+      p.rotated = r;
+      this.saveProposal(p);
+      const lines: Line[] = [{ text: `Recorded on the collective’s line (${short(r)}): its stakes, split plan, split service${p.governance.keepers ? ' and keepers' : ''} are in force.`, tone: 'ok' }];
+      // Where the collective is paid: its payee pointer names the split service's own rails (the pointer check, rule 16), signed with the keys of its area reaching Money (Money draft 10, rule 7, F358).
+      const acts = [r];
+      try {
+        const ptr = await this.pointToService(c, p.governance.splitGrant!, p.founder);
+        acts.push(ptr.act);
+        const names = this.names();
+        lines.push({ text: `Its payee pointer now leads to the split service (${short(ptr.act)}), signed with ${names(ptr.signer)}’s own key in its area “${ptr.area}”.`, tone: 'ok' });
+        lines.push(
+          ptr.needed > 1
+            ? { text: `The area asks ${ptr.needed} keys: ${ptr.asked.length ? `${ptr.asked.map(names).join(', ')} ${ptr.asked.length === 1 ? 'is' : 'are'} asked for theirs, in their own app` : 'nobody could be asked'}${ptr.notAsked.length ? `; not reached: ${ptr.notAsked.map(names).join(', ')}` : ''}. Until then a buyer’s payment cannot reach the service.`, tone: 'warn' }
+            : { text: 'One key of the area: a buyer’s payment goes there now, the service answering for the collective.', tone: 'ok' },
+        );
+      } catch (e) {
+        lines.push({ text: `Its payee pointer could not be pointed at the split service yet: ${err(e)}`, tone: 'warn' });
+      }
+      return { title: 'In force', lines, acts };
+    });
+  }
+
+  // ------------------------------------------------------------ keepers (rules 36 to 44)
+
+  /**
+   * Its keepers, as its agreement in force names them (terms field 3), each
+   * with what it recorded of this collective; and every signature a
+   * recorded version relies on that its signer's own rotation disowned,
+   * shown as a dispute where the collective's line placed it before any
+   * line registering that rotation (C5, F302), or a keeper named recorded
+   * it before recording the rotation (rule 41): never as a void.
+   */
+  async keepers(collective: string): Promise<KeepersShown> {
+    const c = this.collective(collective);
+    const names = this.names();
+    const places = await collectivePlaces(c.identity, [...c.f.relays, ...this.store.settings().homes.map((h) => h.hint)], this.via);
+    const k = c.f.governance.keepers;
+    const ids = k?.ids ?? [];
+    const logs = await keeperLogs(ids, places, this.via);
+    const mine = new Set([c.identity, ...c.f.agreements, ...c.f.members]);
+    const keepers = ids.map((id) => ({
+      id,
+      name: names(id),
+      here: this.store.holds(id),
+      agent: this.store.isAgent(id),
+      records: (logs[id] ?? []).length,
+      ofThis: (logs[id] ?? []).filter((a) => mine.has(a)).length,
+    }));
+    const disputes: KeepersShown['disputes'] = [];
+    const recorded = this.proposals().filter((p) => p.collective === collective && p.rotated && p.kind !== 'release');
+    const sigs = recorded.flatMap((p) => p.signers.filter((m) => p.answers[m]?.signature).map((m) => ({ p, m, sig: p.answers[m].signature! })));
+    if (sigs.length) {
+      const { v } = await collectiveVerifier(c.identity, places, this.via, sigs.map((x) => x.sig));
+      const inForce = (await collectiveNow(c.identity, places, this.via).catch(() => null))?.agreement ?? c.f.agreement;
+      for (const x of sigs) {
+        let status = 'unknown';
+        try {
+          status = v.status(x.sig) as string;
+        } catch {
+          // not held
+        }
+        if (status !== 'void' && status !== 'disputed') continue;
+        const rotations = (await allBy(x.m, places, this.via)).map((a) => describeAct(a) as { id: string; signer?: string; spec?: string; type?: number }).filter((d) => d.signer === x.m && d.spec === MIRS.identity && d.type === 1).map((d) => d.id);
+        const rotation = rotations.find((r) => ids.some((kp) => (logs[kp] ?? []).includes(r))) ?? rotations.at(-1) ?? null;
+        const before = rotation ? ids.filter((kp) => recordedBefore(logs[kp] ?? [], x.sig, rotation)) : [];
+        const still = c.f.agreements.indexOf(inForce) >= c.f.agreements.indexOf(x.p.act) && c.f.agreements.includes(x.p.act);
+        disputes.push({
+          member: x.m,
+          signature: x.sig,
+          version: x.p.act,
+          what: x.p.kind === 'money' ? 'its money terms' : x.p.kind === 'founding' ? 'its founding terms' : 'a member change',
+          status,
+          rotation,
+          keepers: before,
+          counts: still,
+        });
+      }
+    }
+    return { keepers, rule: k ? ('all' in k.rule ? 'all' : 'threshold' in k.rule ? k.rule.threshold : null) : null, disputes };
+  }
+
+  /** One round of keeping for this collective, by a keeper it names that is held here (an Edubba agent, say): what it recorded (rules 37, 40). */
+  keep(collective: string, keeper: string): Promise<Done> {
+    return this.desk.serial(async () => {
+      const c = this.collective(collective);
+      if (!(c.f.governance.keepers?.ids ?? []).includes(keeper)) throw new Error('That identity is no keeper its agreement in force names (rule 36).');
+      if (!this.store.holds(keeper)) throw new Error('That keeper is not held here: it keeps in its own app.');
+      const me = this.store.identity(keeper);
+      const places = await collectivePlaces(c.identity, [...c.f.relays, ...this.store.settings().homes.map((h) => h.hint)], this.via);
+      try {
+        const made = await keep(me, { collective: c.identity, agreements: c.f.agreements, parties: c.f.members, places, via: this.via });
+        const names = this.names();
+        return {
+          title: made.length ? `${names(keeper)} recorded ${made.length} act${made.length === 1 ? '' : 's'}` : 'Nothing new to record',
+          lines: made.length
+            ? made.map((m) => ({ text: `${m.rotation ? 'A rotation of ' : 'An act of '}${names(m.signer)} (${short(m.act)}): recorded, ${short(m.record)}.`, tone: 'ok' as const }))
+            : [{ text: 'Every act around the collective found now is recorded already.' }],
+          acts: made.map((m) => m.record),
+        };
+      } finally {
+        this.store.saveIdentity(me);
+      }
+    });
+  }
+
+  // ------------------------------------------------------------ leaving alone (rule 70)
+
+  /**
+   * The resignations of this collective's members, as its relays and homes
+   * hold them (rule 70, F354 question 2): each with whether this collective's
+   * line registered it here, a record drawn with its signing key.
+   */
+  async resignations(collective: string): Promise<{ member: string; act: string; registered: string | null }[]> {
+    const c = this.collective(collective);
+    const hints = this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint), ...this.store.settings().relays]);
+    const now = await collectiveNow(collective, hints, this.via).catch(() => null);
+    const out: { member: string; act: string; registered: string | null }[] = [];
+    for (const r of now?.resignations ?? []) {
+      if (r.kind !== 'resigned' || !c.f.members.includes(r.party)) continue;
+      const d = (c.f.departed ?? []).find((x) => x.resignation === r.act);
+      out.push({ member: r.party, act: r.act, registered: d?.record ?? null });
+    }
+    return out;
+  }
+
+  /**
+   * Register a member's resignation at the collective's line: a record of the
+   * collective, signed with its signing key held here, naming it (record
+   * field 3). From that line on, their signature counts in no rule and no
+   * area; the change of members without them is proposed next, and waits for
+   * Kišib as any member change.
+   */
+  async registerResignation(collective: string, act: string): Promise<Done> {
+    return this.desk.serial(async () => {
+      const c = this.collective(collective);
+      const r = (await this.resignations(collective)).find((x) => x.act === act);
+      if (!r) throw new Error('No such resignation of a member was found at the collective’s relays.');
+      if (r.registered) throw new Error('It is registered already.');
+      const line = await record(c.id, { registers: [act], inForce: c.f.agreement }, c.f.relays);
+      c.f.departed = [...(c.f.departed ?? []), { member: r.member, resignation: act, record: line.id }];
+      c.f.records = [...(c.f.records ?? []), line.id];
+      this.saveCollective(c);
+      const names = this.names();
+      return {
+        title: `${names(r.member)}’s resignation is registered`,
+        lines: [
+          { text: `The collective’s line ${shownAct(line.id)} registers it: from there, ${names(r.member)}’s voice counts in no rule and no area (rule 70). They keep their stake, as a departed holder (rule 68).`, tone: 'ok' },
+          { text: 'Now propose the change of members without them (“Change its members”): every member whose voice remains signs it, then it waits for Kišib.' },
+        ],
+        acts: [line.id],
+      };
+    });
+  }
+
+  /** The grid a member change of `collective` starts from (round 3): the agreement in force's rows, these members as its columns. */
+  gridFor(collective: string, members: string[]): { grid: Grid } {
+    const c = this.collective(collective);
+    const ids = members.length ? members.map((m) => readId(m)) : c.f.members;
+    return { grid: gridOf(c.f.governance, ids) };
   }
 
   // ------------------------------------------------------------ a release

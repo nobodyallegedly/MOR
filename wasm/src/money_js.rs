@@ -128,9 +128,9 @@ enum MoneyIn {
     Obligation { debtor: String, creditor: String, amount: AmountIn, pointer: String, agreement: Option<String> },
     /// `payer` an identity's hex hash; a bare key payer is not made here.
     #[serde(rename_all = "camelCase")]
-    Receipt { rail: String, proof: ByteBuf, payer: Option<String>, payee: String, amount: AmountIn, fulfils: String },
+    Receipt { rail: String, proof: ByteBuf, payer: Option<String>, payee: String, amount: AmountIn, fulfils: String, #[serde(default)] purchase: Option<(String, String)> },
     #[serde(rename_all = "camelCase")]
-    Claim { rail: String, proof: ByteBuf, payee: String, amount: AmountIn, fulfils: String, disagrees: Option<String>, refund: Option<RailIn>, #[serde(default)] referral: Option<ReferralIn> },
+    Claim { rail: String, proof: ByteBuf, payee: String, amount: AmountIn, fulfils: String, disagrees: Option<String>, refund: Option<RailIn>, #[serde(default)] referral: Option<ReferralIn>, #[serde(default)] purchase: Option<(String, String)> },
     #[serde(rename_all = "camelCase")]
     Release { obligation: String },
 }
@@ -155,7 +155,7 @@ impl MoneyIn {
                 pointer: unhex(pointer)?,
                 agreement: opt(agreement)?,
             }),
-            MoneyIn::Receipt { rail, proof, payer, payee, amount, fulfils } => Payload::Receipt(Receipt {
+            MoneyIn::Receipt { rail, proof, payer, payee, amount, fulfils, purchase } => Payload::Receipt(Receipt {
                 rail: unhex(rail)?,
                 proof: proof.to_vec(),
                 payer: opt(payer)?.map(Payer::Identity),
@@ -165,9 +165,9 @@ impl MoneyIn {
                 previous: None,
                 forward: None,
                 batch: None,
-                purchase: None,
+                purchase: purchase_of(purchase)?,
             }),
-            MoneyIn::Claim { rail, proof, payee, amount, fulfils, disagrees, refund, referral } => Payload::Claim(Claim {
+            MoneyIn::Claim { rail, proof, payee, amount, fulfils, disagrees, refund, referral, purchase } => Payload::Claim(Claim {
                 rail: unhex(rail)?,
                 proof: proof.to_vec(),
                 payee: unhex(payee)?,
@@ -177,7 +177,7 @@ impl MoneyIn {
                 referral: referral.as_ref().map(|r| -> R<Referral> { Ok(Referral { identity: unhex(&r.identity)?, evidence: unhex(&r.evidence)? }) }).transpose()?,
                 refund: refund.as_ref().map(RailIn::core).transpose()?,
                 anonymous: None,
-                purchase: None,
+                purchase: purchase_of(purchase)?,
                 previous: None,
             }),
             MoneyIn::Release { obligation } => Payload::Release(money::Release { obligation: unhex(obligation)?, against: vec![] }),
@@ -213,9 +213,6 @@ impl MoneyIn {
                 if r.batch.is_some() {
                     more.push("a batch");
                 }
-                if r.purchase.is_some() {
-                    more.push("a purchase (an Agreements claim)");
-                }
                 let payer = match &r.payer {
                     Some(Payer::Identity(h)) => Some(hx(h)),
                     Some(Payer::Key(_)) => {
@@ -231,14 +228,12 @@ impl MoneyIn {
                     payee: hx(&r.payee),
                     amount: AmountIn::of(&r.amount),
                     fulfils: hx(&r.fulfils),
+                    purchase: r.purchase.as_ref().map(|p| (hx(&p.agreement), hx(&p.line))),
                 }
             }
             Payload::Claim(c) => {
                 if c.anonymous.is_some() {
                     more.push("an anonymous payer's key");
-                }
-                if c.purchase.is_some() {
-                    more.push("a purchase (an Agreements claim)");
                 }
                 if c.previous.is_some() {
                     more.push("a previous hop");
@@ -252,6 +247,7 @@ impl MoneyIn {
                     disagrees: c.disagrees.as_ref().map(hx),
                     refund: c.refund.as_ref().map(RailIn::of),
                     referral: c.referral.as_ref().map(|r| ReferralIn { identity: hx(&r.identity), evidence: hx(&r.evidence) }),
+                    purchase: c.purchase.as_ref().map(|p| (hx(&p.agreement), hx(&p.line))),
                 }
             }
             Payload::Release(r) => {
@@ -423,6 +419,14 @@ struct CommitmentIn {
     payer: Option<String>,
     paid_to: PaidToIn,
     salt: ByteBuf,
+    /// A purchase only (F126; Money rule 18): the claim it pays under, `[agreement, line]`, the claiming agreement
+    /// and the line at which the payer's client read it current. Round 3: a collective's offer.
+    #[serde(default)]
+    purchase: Option<(String, String)>,
+}
+
+fn purchase_of(p: &Option<(String, String)>) -> R<Option<money::Purchase>> {
+    p.as_ref().map(|(a, l)| Ok(money::Purchase { agreement: unhex(a)?, line: unhex(l)? })).transpose()
 }
 
 /// The payment commitment's hash (payment cMIP, "The payment commitment"):
@@ -444,7 +448,7 @@ impl CommitmentIn {
             payer: opt(&self.payer)?.map(Payer::Identity),
             paid_to: self.paid_to.core()?,
             salt: arr::<16>(&self.salt, "the salt")?,
-            purchase: None,
+            purchase: purchase_of(&self.purchase)?,
         })
     }
 }
@@ -472,11 +476,12 @@ pub fn read_commitment(bytes: &[u8]) -> R<JsValue> {
         paid_to: PaidToIn,
         salt: ByteBuf,
         hash: String,
+        purchase: Option<(String, String)>,
     }
     let v = cbor::decode(bytes).map_err(err)?;
     let Value::Array(a) = &v else { return Err(err("a commitment is an array")) };
-    if a.len() != 7 {
-        return Err(err("a commitment of seven elements (no purchase) is read here"));
+    if a.len() != 7 && a.len() != 8 {
+        return Err(err("a commitment of seven elements, or eight with a purchase"));
     }
     let h = |x: &Value| match x {
         Value::Bytes(b) => <[u8; 32]>::try_from(b.as_slice()).map_err(|_| err("a hash is 32 bytes")),
@@ -499,12 +504,12 @@ pub fn read_commitment(bytes: &[u8]) -> R<JsValue> {
         payer: payer.map(Payer::Identity),
         paid_to: PaidTo::decode(&a[5]).ok_or_else(|| err("paid-to"))?,
         salt: salt.clone().try_into().unwrap(),
-        purchase: None,
+        purchase: if a.len() == 8 { Some(money::Purchase::decode(&a[7]).map_err(err)?) } else { None },
     };
     if cbor::encode(&c.to_value()) != bytes {
         return Err(err("the commitment is not in deterministic CBOR"));
     }
-    to_js(&Out { rail: hx(&c.rail), payee: hx(&c.payee), amount: AmountIn::of(&c.amount), fulfils: hx(&c.fulfils), payer: payer.as_ref().map(hx), paid_to: PaidToIn::of(&c.paid_to), salt: ByteBuf::from(salt), hash: hx(&c.hash()) })
+    to_js(&Out { rail: hx(&c.rail), payee: hx(&c.payee), amount: AmountIn::of(&c.amount), fulfils: hx(&c.fulfils), payer: payer.as_ref().map(hx), paid_to: PaidToIn::of(&c.paid_to), salt: ByteBuf::from(salt), hash: hx(&c.hash()), purchase: c.purchase.as_ref().map(|p| (hx(&p.agreement), hx(&p.line))) })
 }
 
 /// Run a rail Module's rule on a commitment before paying (payment cMIP,
@@ -1117,6 +1122,51 @@ impl Verifier {
     /// address }` or `{ to: "nowhere", why }`.
     #[wasm_bindgen(js_name = moneyChoose)]
     pub fn money_choose(&self, money_spec: &str, payee: &str, amount: JsValue, accepted: Vec<String>) -> R<JsValue> {
+        let money = unhex(money_spec)?;
+        let payee = unhex(payee)?;
+        let view = View { v: &self.inner, money };
+        let chain = view.pointers_of(&payee);
+        let latest = money::latest_pointer(&chain);
+        let flow = latest.act.and_then(|a| chain.iter().find(|(i, _)| *i == a)).map(|(i, p)| (*i, p.clone()));
+        self.choose_from(money, payee, amount, accepted, flow, latest.contested, None)
+    }
+
+    /// As `moneyChoose`, the pointer in force read by Agreements (Money
+    /// draft 10, rule 7, F358): for a collective, a pointer signed with the
+    /// member keys of its area reaching Money counts where that area's
+    /// holders and threshold are met. `specs` as for every Agreements call.
+    #[wasm_bindgen(js_name = agreementsChoose)]
+    pub fn agreements_choose(&self, specs: JsValue, payee: &str, amount: JsValue, accepted: Vec<String>) -> R<JsValue> {
+        let s = super::specs_of(specs)?;
+        let money = s.mirs()?.money;
+        let view = s.view(&self.inner)?;
+        let payee = unhex(payee)?;
+        match view.payee_pointer(&payee).map_err(super::lerr)? {
+            Ok(x) => self.choose_from(money, payee, amount, accepted, Some(x), false, None),
+            Err(why) => self.choose_from(money, payee, amount, accepted, None, false, Some(why)),
+        }
+    }
+
+    /// The payee pointer in force as Agreements judge it (F358): `{ act,
+    /// version, why }`, `act` null and `why` said where none counts.
+    #[wasm_bindgen(js_name = agreementsPointer)]
+    pub fn agreements_pointer(&self, specs: JsValue, payee: &str) -> R<JsValue> {
+        #[derive(Serialize)]
+        struct Out {
+            act: Option<String>,
+            version: u64,
+            why: Option<String>,
+        }
+        let s = super::specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        to_js(&match view.payee_pointer(&unhex(payee)?).map_err(super::lerr)? {
+            Ok((id, p)) => Out { act: Some(hx(&id)), version: p.version, why: None },
+            Err(why) => Out { act: None, version: 0, why: Some(why) },
+        })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn choose_from(&self, money: Hash, payee: Hash, amount: JsValue, accepted: Vec<String>, flow: Option<(Hash, PayeePointer)>, contested: bool, no_pointer: Option<String>) -> R<JsValue> {
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
         struct Out {
@@ -1130,14 +1180,8 @@ impl Verifier {
             address: Option<Vec<u8>>,
             why: String,
         }
-        let money = unhex(money_spec)?;
-        let payee = unhex(payee)?;
         let amount = from_js::<AmountIn>(amount)?.core()?;
         let accepted = accepted.iter().map(|s| unhex(s)).collect::<R<Vec<_>>>()?;
-        let view = View { v: &self.inner, money };
-        let chain = view.pointers_of(&payee);
-        let latest = money::latest_pointer(&chain);
-        let flow = latest.act.and_then(|a| chain.iter().find(|(i, _)| *i == a)).map(|(i, p)| (*i, p.clone()));
         let vault: Option<(Hash, Vec<VaultEntry>)> = {
             let res = self.inner.resolve(&payee);
             let mut out = None;
@@ -1168,13 +1212,19 @@ impl Verifier {
             money::Choice::Flow(i) => {
                 let (pid, p) = flow.as_ref().unwrap();
                 let r = &p.rails[i];
-                Out { to: "flow", pointer: Some(hx(pid)), rail: Some(i as u64), declared_by: None, entry: None, module: Some(hx(&r.module)), address: Some(r.address.clone()), why: if latest.contested { "the payee's pointer chain is forked: the last pointer before the fork is used (Money rule 1); the payee is warned".into() } else { String::new() } }
+                Out { to: "flow", pointer: Some(hx(pid)), rail: Some(i as u64), declared_by: None, entry: None, module: Some(hx(&r.module)), address: Some(r.address.clone()), why: if contested { "the payee's pointer chain is forked: the last pointer before the fork is used (Money rule 1); the payee is warned".into() } else { String::new() } }
             }
             money::Choice::Vault(i) => {
                 let (by, v) = vault.as_ref().unwrap();
                 Out { to: "vault", pointer: None, rail: None, declared_by: Some(hx(by)), entry: Some(i as u64), module: Some(hx(&v[i].rail_module)), address: Some(v[i].source.clone()), why: "above the vault's limit for its unit: it goes to the vault (Money rule 3)".into() }
             }
-            money::Choice::Undeliverable(u) => none(if ok_unit { u.to_string() } else { "the unit, or the payment cMIP, is not one accepted here".into() }),
+            money::Choice::Undeliverable(u) => none(if !ok_unit {
+                "the unit, or the payment cMIP, is not one accepted here".into()
+            } else if let (None, Some(w)) = (&flow, &no_pointer) {
+                format!("{u} ({w}, as Agreements judge its pointers)")
+            } else {
+                u.to_string()
+            }),
         };
         to_js(&out)
     }

@@ -111,6 +111,8 @@ label.check input{width:auto}
 .flag.bad{color:var(--bad)}
 .msg.out{margin-left:28px;background:none}
 .msg .sealed{color:var(--envelopes);font-size:12px}
+div.vow-post{border:1px solid var(--edge);border-radius:6px;padding:8px 10px;margin:6px 0}
+img.sealed-picture{display:block;max-width:100%;height:auto;margin:6px 0;border-radius:4px}
 .note{margin:10px 0;padding:10px 12px;border-left:2px solid var(--line);font-size:14px;color:var(--soft)}
 .note.error{border-left-color:var(--bad);color:var(--text)}
 .note.done{border-left-color:var(--faint);color:var(--text)}
@@ -374,6 +376,7 @@ ${
     ? `<section id="signing" hidden>
 <div class="experimental"><strong>Even more experimental</strong>${e(SIGNING_LABEL.slice('Even more experimental'.length))}</div>
 <div id="signing-list"><p class="empty">Reading the proposals…</p></div>
+<h2>Vows you bought</h2><div id="vows-bought"><p class="empty">Reading…</p></div>
 </section>`
     : ''
 }`;
@@ -414,7 +417,19 @@ ${r.blocking.length ? note('error', `<strong>It cannot be signed here:</strong>$
       : `<div class="row"><button class="primary" data-action="accept" data-thread="${e(p.thread)}">Sign it</button><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div><p class="small">Your signature is an act of yours, public: it binds you to exactly what is read above.</p>`;
   // H34: once answered, the reading folds away (open at a click, remembered); before, it is always shown in full.
   const read = p.answer ? `<details data-fold="proposal:${e(p.thread)}"><summary>What was proposed, in plain words</summary>${body}</details>` : body;
-  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${read}${actions}${share}</div>`;
+  // Rule 70 (F354): a member can always leave alone, from here, once the collective is founded.
+  const leave =
+    p.answer?.verdict === 'signed' && p.collective && (r.kind === 'founding' || r.kind === 'clone') && (p.share === 'received' || p.share === 'byHand')
+      ? p.left
+        ? `<p class="small">You resigned: act <span class="fp" title="${e(p.left)}">${e(p.left.slice(0, 8))}…</span>. It takes effect once the collective registers it.</p>`
+        : `<div class="row"><button class="quiet" data-action="leave-read" data-thread="${e(p.thread)}">Leave this collective…</button></div><div class="leave" data-leave="${e(p.thread)}"></div>`
+      : '';
+  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${read}${actions}${share}${leave}</div>`;
+}
+
+/** Leaving a collective alone, read back before anything is signed (rule 70). */
+export function leaveRead(thread: string, r: { lines: Line[]; digest: string }): string {
+  return `<div class="say-leave">${lines(r.lines)}<div class="row"><button class="primary" data-action="leave-collective" data-thread="${e(thread)}" data-digest="${e(r.digest)}">Sign my resignation</button></div><p class="small">Your resignation is an act of yours, public. Nobody else signs it.</p></div>`;
 }
 
 /** A share of a collective's chain key, shown once (H18), with nothing asked beside it. */
@@ -508,7 +523,7 @@ export function post(p: Item): string {
   ].join('');
   return `<article class="post" data-post="${e(p.id)}" data-signer="${e(p.who.id)}">
 <div class="row tight">${who(p.who)}${flag}</div>${authority}${correction}${answers}${correctedBy}
-${p.text && !p.repost ? `<div class="text" dir="auto">${e(p.text)}</div>` : ''}${p.sealed ? sealedBox(p) : ''}${pics}${doc}
+${p.text && !p.repost ? `<div class="text" dir="auto">${e(p.text)}</div>` : ''}${p.sealed ? sealedBox(p) : ''}${p.vow ? vowBox(p) : ''}${pics}${doc}
 <div class="acts">${acts}</div><div class="tipping"></div></article>`;
 }
 
@@ -535,11 +550,43 @@ function sealedBox(p: Item): string {
   const repostOf = p.repost ? `<div class="re">↻ ${who(p.repost.by)} reposted ${who(p.repost.of)}’s sealed post</div>` : '';
   const state =
     x.state === 'opened' || x.state === 'yours'
-      ? `<div class="text" dir="auto">${e(x.text ?? '')}</div><p class="small">${x.state === 'yours' ? 'Your sealed post: its key is here, delivered to each buyer once your Damgar signs the receipt.' : 'Opened: its key arrived from its seller, and its text matches the fingerprint it was published with.'}</p>`
+      ? `${x.picture ? `<img class="sealed-picture" src="${e(x.picture)}" alt="The picture, opened">` : `<div class="text" dir="auto">${e(x.text ?? '')}</div>`}<p class="small">${x.state === 'yours' ? 'Yours, sealed: its key is here, delivered to each buyer once your Damgar signs the receipt.' : `Opened: its key arrived from its seller, and its ${x.media === 'picture' ? 'picture' : 'text'} matches the fingerprint it was published with.`}</p>`
       : x.state === 'paying'
         ? '<p class="small">Bought: pay it in your wallet (Payments, in the Private tab). Its key arrives once the seller’s Damgar signs the receipt.</p>'
-        : `<p class="small">Sealed: its text opens once paid. ${e(x.price)}.</p><div class="row"><button class="primary" data-action="buy" data-publication="${e(x.publication)}" data-seller="${e(x.seller)}"${p.repost ? ` data-repost="${e(p.id)}" data-reposter="${e(p.repost.by.id)}"` : ''}>Buy it, under the lane</button></div>`;
-  return `${repostOf}<div class="sealed-post"><span class="label">A sealed post · ${e(x.price)}</span>${x.words ? `<p class="small">${e(x.words)}</p>` : ''}${state}${x.problem ? `<p class="small flag">${e(x.problem)}</p>` : ''}</div>`;
+        : `<p class="small">Sealed: its ${x.media === 'picture' ? 'picture' : 'text'} opens once paid. ${e(x.price)}.</p><div class="row"><button class="primary" data-action="buy" data-publication="${e(x.publication)}" data-seller="${e(x.seller)}"${p.repost ? ` data-repost="${e(p.id)}" data-reposter="${e(p.repost.by.id)}"` : ` data-post="${e(p.id)}"`}>Buy it, under the lane</button></div>`;
+  return `${repostOf}<div class="sealed-post"><span class="label">${x.media === 'picture' ? 'A sealed picture' : 'A sealed post'} · ${e(x.price)}</span>${x.words ? `<p class="small">${e(x.words)}</p>` : ''}${state}${x.problem ? `<p class="small flag">${e(x.problem)}</p>` : ''}</div>`;
+}
+
+/** A vow a post names (round 3): its words, its price, and Buy; once bought, its sale is confirmed or contested in the Signing tab. */
+function vowBox(p: Item): string {
+  const x = p.vow!;
+  const state =
+    x.state === 'yours'
+      ? '<p class="small">Your vow: each buyer confirms or contests their sale.</p>'
+      : x.state === 'bought'
+        ? '<p class="small">Bought: confirm or contest your sale in the Signing tab.</p>'
+        : x.state === 'paying'
+          ? '<p class="small">Bought: pay it in your wallet (Payments, in the Private tab). Then confirm or contest it in the Signing tab.</p>'
+          : x.problem
+            ? ''
+            : `<div class="row"><button class="primary" data-action="buy-vow" data-vow="${e(x.vow)}" data-seller="${e(x.seller)}" data-post="${e(p.id)}">Buy it, under the lane</button></div>`;
+  return `<div class="vow-post"><span class="label">A vow · ${e(x.price)}</span><p dir="auto">${e(x.words)}</p>${state}${x.problem ? `<p class="small flag">${e(x.problem)}</p>` : ''}</div>`;
+}
+
+/** The vows bought here (round 3, the Signing tab): each sale, and Confirm or Contest, the buyer's alone (rule 13). */
+export function vowsBought(vs: { vow: string; seller: string; words: string; price: string | null; paid: boolean; sale: string | null; promise: string | null }[]): string {
+  if (!vs.length) return '<p class="empty">No vow bought here. A vow you buy shows here, to confirm or contest once paid.</p>';
+  return vs
+    .map((x) => {
+      const state = !x.paid ? 'not paid yet' : x.sale === 'confirmed' ? 'confirmed' : x.sale === 'contested' ? `contested${x.promise ? `: “${x.promise}”` : ''}` : x.sale === 'pending' ? 'pending' : 'not seen at the relays yet';
+      const actions =
+        x.paid && x.sale !== 'confirmed' && x.sale !== 'contested'
+          ? `<div class="row"><button class="primary" data-action="vow-confirm" data-vow="${e(x.vow)}">Confirm: it was kept</button></div>
+<form class="vow-contest compose" data-vow="${e(x.vow)}"><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><div class="row"><button type="submit">Contest it</button></div></form>`
+          : '';
+      return `<div class="item" data-vow="${e(x.vow)}"><h3>A vow by ${e(x.seller.slice(0, 8))}…${x.price ? ` · ${e(x.price)}` : ''}</h3><p dir="auto">${e(x.words)}</p><p class="small">Its sale: <strong>${e(state)}</strong>. Confirming signs, in public, your claim of the payment acknowledging the vow; contesting signs a contest naming the sale. Either is public; neither moves any money (Agreements rule 13).</p>${actions}</div>`;
+    })
+    .join('');
 }
 
 /** Sealing a post with a price (pay-per-view, round 2). */

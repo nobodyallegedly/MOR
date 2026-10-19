@@ -84,6 +84,8 @@ export interface PaymentShown {
   /** Paying for an anchor: the ticket. */
   /** `checked`: its deadline read against the chain followed (never in the web client, which follows none). */
   ticket: { batch: number; deadline: number; tier: number; checked: boolean } | null;
+  /** A transfer to one's vault on Lightning (H46, F355): the invoice to make on the vault's node, with this description hash. */
+  vaultInvoice?: { node: string; descriptionHash: string } | null;
 }
 
 export interface Account {
@@ -110,6 +112,8 @@ export interface Rails {
 
 export interface State {
   web: boolean;
+  /** Something was saved from Settings (H45): its sections start folded; before that, on first use, all open. */
+  settingsSaved: boolean;
   stage: 'identity' | 'accept' | 'ready';
   held: { id: string; grouped: string; short: string; active: boolean }[];
   identity: null | {

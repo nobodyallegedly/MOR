@@ -22,7 +22,7 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { IDENTITY_TYPES, MIRS, SPECS, base64, cborDecode, cborEncode, describeAct, hex, openSealed, shareOnPaper, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
+import { IDENTITY_TYPES, MIRS, SPECS, resignationPayload, sha256, base64, cborDecode, cborEncode, describeAct, hex, openSealed, shareOnPaper, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
 import { ownLine } from '../../genesis/src/lines.ts';
 import { TestIdentity, TEST_LABEL, sealFor, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
@@ -35,9 +35,10 @@ import { compose } from '../../longform/src/text.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
 import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { idForm, idWhere, readId, readIdWhere } from '../../genesis/src/forms.ts';
+import { shownId } from '../../genesis/src/shown.ts';
 import { newChainKey } from './chainwords.ts';
-import { readMessage, acceptanceText, negotiate, openShare, DECLINED } from '../../repo/src/proposals.ts';
-import { sign as signAct } from '../../repo/src/agreements.ts';
+import { readMessage, acceptanceText, negotiate, openShare, DECLINED, RESIGNED } from '../../repo/src/proposals.ts';
+import { resign as resignAct, sign as signAct } from '../../repo/src/agreements.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { fetchAct, readProposal, SHARE_SAY, SIGNING_OFF_SAY, SIGNING_SAY } from './signing.ts';
 import { carriedKey, lookCurrent, servedChain } from './carryin.ts';
@@ -47,6 +48,8 @@ import type { Held, Item, Line, Message, Pic, Proposal, ShareShown, State, Who }
 import { sendDraft } from '../../damgar/src/messages.ts';
 import { UNITS_MODULES, readValue } from '../../damgar/src/units.ts';
 import { authorityOfId } from '../../grants/src/grant.ts';
+import { chainFor, collectiveNow, cosignAsMember, makeMemberKey, memberKeyFor, publishAt, readMemberKeys, resealMemberKeys, sealMemberKey, type MemberKey } from '../../grants/src/member.ts';
+import { holdsAnArea } from './signing.ts';
 import { DubMoney, LANE_SAY, type LaneShownHere, type SealedShown } from './money.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 import { isLongForm } from '../../barebone/src/corrections.ts';
@@ -112,6 +115,8 @@ export interface SigningState {
   waiting: Record<string, { secret: string; since: number; act: string; shown?: number[] }>;
   /** Shares received and written down (nothing of them kept but this): by thread. */
   received: Record<string, { x: number; fingerprint: string; collective: string | null; at: number; byHand?: boolean }>;
+  /** Collectives left alone (rule 70): the resignation signed, by the founding's thread. */
+  left?: Record<string, string>;
 }
 
 export const NO_SIGNING = (): SigningState => ({ answered: {}, waiting: {}, received: {} });
@@ -136,7 +141,7 @@ export interface Pending {
  * be signed twice at one position.
  */
 /** What Dub keeps for money, by name (round 2): Damgar's code's settings, book and keys (its lane), and the keys of posts sold and bought. */
-export const MONEY_KEPT = ['settings', 'book', 'keys', 'sold', 'bought'] as const;
+export const MONEY_KEPT = ['settings', 'book', 'keys', 'sold', 'bought', 'vows'] as const;
 export type MoneyKept = (typeof MONEY_KEPT)[number];
 
 export interface Keep {
@@ -544,6 +549,9 @@ export class Dub {
       await this.store.saveIdentity(me);
       // This app wrote the version that counts: it renews it from the new words (2a.4); the old secrets stay, to open older messages.
       await me.publishEncryptionKey(encryptionSecret(seed));
+      // F353: the member keys sealed to this identity, sealed again to its new encryption key (the member keys cMIP, 4.1).
+      const resealed = await resealMemberKeys(me.id, me.f.encryption.slice(0, -1).map((e) => unhex(e.secret)), xwingPublic(encryptionSecret(seed)), me.f.homes.map((h) => h.hint), me.via).catch(() => 0);
+      if (resealed) lines.push({ text: `Its ${resealed} member key${resealed === 1 ? '' : 's'} for collectives, sealed to it, sealed again to the new encryption key: unchanged, so its apps still act with them (F353).`, tone: 'ok' });
       await this.store.saveIdentity(me);
       lines.push({ text: 'Its encryption key was renewed from the new words: messages sealed from now on open only with them. Messages sealed before, to the old key, stay readable by whoever held the old words.', tone: 'ok' });
     } else {
@@ -809,6 +817,11 @@ export class Dub {
           it.pictures = it.pictures.filter((x) => x.publication !== sealed.publication);
           if (sealed.seller !== fp.signer) it.repost = { by: this.whoFrom(fp.signer, me.id, p), of: this.whoFrom(sealed.seller, me.id, p) };
         }
+      }
+      // A vow (round 3): the post names it and its offer.
+      if (!it.sealed && fp.post.refs.some((r) => r.kind !== 'picture')) {
+        const vow = await this.money.readVowRef(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.filter((r) => r.kind !== 'picture').map((r) => ({ id: (r as { id: string }).id, signer: (r as { signer?: string }).signer ?? (r as { actSigner?: string }).actSigner }))).catch(() => null);
+        if (vow) it.vow = vow;
       }
       items.push(it);
     }
@@ -1226,6 +1239,7 @@ export class Dub {
           share,
           positions: w?.shown ?? null,
           seen: p.seen.includes(k.key),
+          left: st.left?.[k.key] ?? null,
         });
       }
       return { on: true, waiting: firsts.filter((k) => !st.answered[k.key]).length, proposals: out, problems, say: SIGNING_SAY };
@@ -1281,8 +1295,38 @@ export class Dub {
       if (reading.blocking.length) throw new Error(`It cannot be signed here: ${reading.blocking.join(' ')} Nothing was signed.`);
       await this.current(me);
       const where = [...new Set([...s.relays, ...places, ...(collective ? await this.placesOf(collective, hints, s.via) : [])])];
-      const made = await this.signed(me, () => signAct(me, act, where));
-      const lines: Line[] = [{ text: `Signed: your signature act ${made.id} is published at ${where.join(', ')}.`, tone: 'ok' }];
+      // F353 (Agreements draft 16): a holder of an area in a founding or a
+      // member change names a key of their own in their signature, made now;
+      // its private half is sealed to themself at their homes (the member
+      // keys cMIP), so any of their apps can act with it.
+      const holds = reading.kind === 'founding' || reading.kind === 'clone' ? await holdsAnArea(act, places, me.id, s.via) : false;
+      const key = holds ? makeMemberKey() : null;
+      // A collective's act or release waiting for a second key: signed as
+      // the collective with your own member key where your apps hold one
+      // (F353: "it needs two keys that have grant active on that lane");
+      // otherwise with your own identity's key, which counts as before.
+      let own: MemberKey | null = null;
+      if ((reading.kind === 'act' || reading.kind === 'release') && collective) {
+        const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
+        own = keys.length ? await memberKeyFor(keys, collective, where, s.via).catch(() => null) : null;
+      }
+      let made: { id: string };
+      if (own) {
+        const at = await chainFor(collective!, own, where, s.via);
+        const x = cosignAsMember(collective!, own, at, act);
+        const took = await publishAt([x.act], where, s.via);
+        if (!took.length) throw new Error('No relay took your signature. Nothing counts yet: try again.');
+        made = { id: x.id };
+      } else made = await this.signed(me, () => signAct(me, act, where, key?.public));
+      const lines: Line[] = [{ text: own ? `Signed for the collective with your own key (F353): the signature act ${made.id} is published at ${where.join(', ')}.` : `Signed: your signature act ${made.id} is published at ${where.join(', ')}.`, tone: 'ok' }];
+      if (key) {
+        try {
+          await this.signed(me, () => sealMemberKey(me, { terms: act, signature: made.id, public: key.public, secret: key.secret }, () => undefined));
+          lines.push({ text: `Your own key for this collective was made and named in your signature: once the collective is complete, it signs for you in the areas you hold, from any of your apps. Its private half is sealed to you at your homes (it sits there encrypted, a stated cost; F353).`, tone: 'ok' });
+        } catch (e) {
+          lines.push({ text: `Your own key was named in your signature, but could not be sealed to you: ${message(e)}`, tone: 'bad' });
+        }
+      }
       let oneTime: Uint8Array | undefined;
       if (reading.kind === 'founding' || reading.kind === 'clone') {
         const k = TestIdentity.newBareKey();
@@ -1317,6 +1361,74 @@ export class Dub {
       st.answered[thread] = { act: k.refs[0]?.id ?? '', verdict: 'declined', reply: reply.id, at: now() };
       await this.store.saveSigning(me.id, st);
       return { lines: [{ text: 'Declined: nothing was signed, and the proposer was told.' }] };
+    });
+  }
+
+  /**
+   * Leaving a collective alone (Agreements rule 70, F354 question 2): read
+   * back first. The collective is the one a founding (or member change) this
+   * identity signed founded; its agreement in force read as anyone reads it;
+   * the warnings rule 70 asks of the client before signing (the last voice;
+   * the last constitutional voice, BQ5), counted with the resignations the
+   * other parties published that no line registered yet (F187, 3). Nothing
+   * is signed.
+   */
+  leaveRead(thread: string): Promise<{ collective: string; agreement: string; lines: Line[]; digest: string }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      if (!s.signing) throw new Error(SIGNING_OFF_SAY);
+      const st = await this.store.signing(me.id);
+      const ans = st.answered[thread];
+      const collective = this.collectiveOf(p, thread);
+      if (!ans || ans.verdict !== 'signed' || !collective) throw new Error('Only a collective this identity signed into, once founded, can be left from here.');
+      const places = [...new Set([...hints, ...s.relays, ...(await this.placesOf(collective, hints, s.via))])];
+      const now = await collectiveNow(collective, places, s.via);
+      if (!now.agreement) throw new Error('The collective’s agreement in force could not be read from its relays and homes: no resignation can name it. Nothing was signed.');
+      if (!now.parties.includes(me.id) || now.departed.includes(me.id)) throw new Error('This identity is no member of it now: there is nothing to leave.');
+      if (now.resignations.some((r) => r.party === me.id && r.kind === 'resigned')) throw new Error('This identity already published its resignation: it takes effect once the collective registers it.');
+      const leaving = new Set([me.id, ...now.departed, ...now.resignations.filter((r) => r.kind === 'resigned').map((r) => r.party)]);
+      const others = now.parties.filter((x) => !leaving.has(x));
+      const lines: Line[] = [
+        { text: `You resign from the collective ${shownId(collective)}, alone: nobody else’s signature is needed (Agreements rule 70).`, tone: 'warn' },
+        { text: 'It takes effect at the collective’s line registering it: its founder’s Edubba draws it, then proposes the change of members without you, which waits for Kišib.' },
+        { text: 'You keep your stake, and stay bound by what you signed: you become a departed holder, paid as every holder is, with no voice (rule 68).' },
+        { text: 'Your own key for this collective acts no more once the change without you is in force; a signature of yours placed before the line still counts for what it signed.' },
+      ];
+      if (!others.length) {
+        lines.push({ text: 'You are the last voice that remains: once you leave, the collective’s works are frozen as they stand, and nobody will be able to change, release or move them (rule 70, F185). Leaving stays yours alone.', tone: 'bad' });
+      }
+      const payload = resignationPayload(now.agreement);
+      return { collective, agreement: now.agreement, lines, digest: sha256(payload) };
+    });
+  }
+
+  /** Sign the resignation read back by [`leaveRead`], publish it at the collective's places, and tell the proposer in the founding's thread. */
+  leaveCollective(thread: string, digest: string): Promise<{ lines: Line[]; resignation: string }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      const st = await this.store.signing(me.id);
+      const collective = this.collectiveOf(p, thread);
+      if (!collective) throw new Error('No such collective here.');
+      const places = [...new Set([...hints, ...s.relays, ...(await this.placesOf(collective, hints, s.via))])];
+      const now = await collectiveNow(collective, places, s.via);
+      if (!now.agreement || sha256(resignationPayload(now.agreement)) !== digest) throw new Error('The collective’s agreement in force changed since it was read back: read it again. Nothing was signed.');
+      await this.current(me);
+      const made = await this.signed(me, () => resignAct(me, now.agreement!, places));
+      const k = p.inbox.items.find((x) => x.key === thread && x.from);
+      const lines: Line[] = [{ text: `Your resignation is act ${made.id}, public at ${places.join(', ')}. It takes effect once the collective registers it.`, tone: 'ok' }];
+      if (k?.from) {
+        try {
+          const reach = await this.reach(k.from, hints, s.via);
+          const last = this.lastFrom(p, thread, k.from);
+          await this.signed(me, () => negotiate(me, reach, { text: `${RESIGNED}\n${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] }));
+          lines.push({ text: 'The founder was told, in the founding’s thread: their Edubba registers it and proposes the change of members without you.' });
+        } catch (e) {
+          lines.push({ text: `The founder could not be told (${message(e)}): their Edubba still finds your resignation at the collective’s relays.`, tone: 'warn' });
+        }
+      }
+      st.left = { ...(st.left ?? {}), [thread]: made.id };
+      await this.store.saveSigning(me.id, st);
+      return { lines, resignation: made.id };
     });
   }
 
@@ -1596,13 +1708,48 @@ export class Dub {
   }
 
   /** Buy a sealed post under the lane, naming the repost it was found through, if any. */
-  buy(a: { publication: string; seller: string; repost?: string; reposter?: string }): Promise<{ lines: Line[] }> {
+  buy(a: { publication: string; seller: string; post?: string; repost?: string; reposter?: string }): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
       await this.money.lanes(me, s, hints);
       const repost = a.repost && a.reposter ? { id: readId(a.repost), by: readId(a.reposter) } : null;
-      const lines = await this.money.buy(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readId(a.publication), seller: readId(a.seller), repost });
+      const lines = await this.money.buy(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readId(a.publication), seller: readId(a.seller), repost, post: a.post ? readId(a.post) : null });
       return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Buy a vow under the lane (round 3): its claim, once paid, is published too, the sale anyone can read. */
+  buyVow(a: { vow: string; seller: string; post: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      await this.money.lanes(me, s, hints);
+      const lines = await this.money.buyVow(me, [...hints, ...this.inboxPlaces(p)], s.via, { vow: readId(a.vow), seller: readId(a.seller), post: readId(a.post) });
+      return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** The vows bought here, each sale as the relays read it (round 3; the Signing tab). */
+  vowsBought(): Promise<{ vows: Awaited<ReturnType<DubMoney['vowsBought']>> }> {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      return { vows: await this.money.vowsBought(me, [...hints, ...this.inboxPlaces(p), ...s.relays], s.via) };
+    });
+  }
+
+  /** Confirm a vow bought: its sale reads confirmed (rule 13). */
+  confirmVow(vow: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      await this.money.lanes(me, s, hints);
+      return { lines: (await this.money.confirmVow(me, readId(vow))).map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Contest a vow bought: its sale reads contested, the promise not kept in words if given (F253). */
+  contestVow(vow: string, promise: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      return { lines: (await this.money.contestVow(me, s, readId(vow), promise.trim() || null)).map((text) => ({ text, tone: 'ok' as const })) };
     });
   }
 

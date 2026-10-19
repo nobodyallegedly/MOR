@@ -279,7 +279,7 @@ export interface ActRead {
 /** A proposal sent from here for a real collective (H18). */
 export interface RealProposal {
   act: string;
-  kind: 'founding' | 'clone' | 'release';
+  kind: 'founding' | 'clone' | 'release' | 'money';
   name: string;
   collective: string | null;
   founder: string;
@@ -306,6 +306,8 @@ export interface RealCollective {
   pending: boolean;
   releases: { id: string; version: string }[];
   toShow: string[];
+  /** Members' resignations found at its relays (rule 70), and the line registering each, once drawn here. */
+  resigned?: { member: string; act: string; registered: string | null }[];
 }
 
 /** A share shown here once (hand to hand, or the founder's own). */

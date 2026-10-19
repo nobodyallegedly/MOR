@@ -44,6 +44,8 @@ import {
   type Stake,
   type Power,
   type Rule,
+  type AreaSpec,
+  type SplitPlan,
 } from './agreements.ts';
 import { FOUNDING_AGREEMENT, REPO_SPECS } from './specs.ts';
 
@@ -88,6 +90,8 @@ export interface Governance {
   releaseOut?: string[];
   /** A threshold of the other parties decides absence. */
   abandonmentOthers: number;
+  /** The areas the founding grid draws (round 3, rules 60 and 62); absent, the one Releases area above. */
+  areas?: AreaSpec[];
   text: string;
   /** Stakes (terms field 7): the collective's own (object null, F124 S1:
    * a share of all its income, F121 Q8), keyed by holder, and works it
@@ -95,6 +99,10 @@ export interface Governance {
   stakes?: Stake[];
   /** The split service's grant (field 14), a judicial clause. */
   splitGrant?: string;
+  /** The split plan (field 8; round 3, part C). */
+  plan?: SplitPlan;
+  /** Named keepers (field 3; round 3, part C). */
+  keepers?: { ids: string[]; rule: Rule };
   /** Departed holders (field 22): who left keeping a share of the collective's income, which is in `stakes` (F124 N5). */
   departed?: string[];
   /** Forked from (field 23): the original collective, for a successor of a fork (F124 N4). */
@@ -237,9 +245,12 @@ export function collectiveTerms(g: Governance, members: string[], holder: string
     mark,
     stakes: g.stakes,
     splitGrant: g.splitGrant,
+    plan: g.plan,
+    keepers: g.keepers,
     departed: g.departed,
     // Field 23 is for founding terms only: a clone never carries it.
     forkedFrom: parent ? undefined : g.forkedFrom,
+    areas: g.areas?.map((a) => ({ ...a, holders: a.holders.filter((h) => members.includes(h)) })),
   };
 }
 
@@ -732,6 +743,38 @@ export class TestCollective {
 
   /**
    * A change written on the collective's record at once (rule 37c): a  /**
+   * The clone a change of these rules would be (round 3: the money card,
+   * the split plan, the split service, the keepers): its terms, marked with
+   * every power its changes need, each met by every member whose voice
+   * remains (the judicial tier needs them all, rule 67), and its payload,
+   * checked by the core. Members then sign it in their own apps.
+   */
+  sameMembersClone(governance: Governance): { terms: CollectiveTerms; payload: Uint8Array; needs: { form: string; area?: number }[] } {
+    const parent = collectiveTerms(this.f.governance, this.f.members, this.f.signingHolder);
+    const draft = collectiveTerms(governance, this.f.members, this.f.signingHolder, this.f.agreement, [{ power: { clone: true }, signers: [this.f.members[0]] }]);
+    const needs = clonePlan(parent, draft).needs;
+    const power = (n: { form: string; area?: number }): Power => (n.form === 'area' ? { area: n.area! } : n.form === 'constitutional' ? { constitutional: true } : n.form === 'judicial' ? { judicial: true } : { clone: true });
+    const mark: MarkEntry[] = needs.map((n) => ({ power: power(n), signers: [...this.f.members] }));
+    const terms = collectiveTerms(governance, this.f.members, this.f.signingHolder, this.f.agreement, mark);
+    return { terms, payload: termsPayload(terms), needs };
+  }
+
+  /**
+   * Record a clone its members signed in their own apps (rule 72: every
+   * complete clone is written on the record at once), with their signature
+   * acts and the signing key held here; from then on it is in force.
+   */
+  async recordSigned(a: { governance: Governance; clone: string; signatures: string[] }): Promise<string> {
+    if (this.f.pending) throw new Error('a member change is pending: settle it first');
+    const r = await record(this.id, { clone: a.clone, signatures: a.signatures, inForce: this.f.agreement }, this.f.relays);
+    this.f.governance = a.governance;
+    this.f.agreement = a.clone;
+    this.f.agreements.push(a.clone);
+    this.remember();
+    return r.id;
+  }
+
+  /**
    * A change written on the collective's record at once (rule 37c): a
    * clone marked with the one power its changes need, signed by `signers`,
    * recorded with their signature acts (A2) and the signing key.

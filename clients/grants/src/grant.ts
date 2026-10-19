@@ -144,7 +144,7 @@ export interface GrantKey {
  * citing `[grantor, grant]` (F343), next on the grantee's strand. The
  * strand is pushed; the caller keeps it before anything leaves.
  */
-export function signUnderGrant(k: GrantKey, a: { spec: string; type: number; payload: Uint8Array; public: boolean; to?: string[]; refs?: Reference[] }): { act: Uint8Array; id: string; key: Uint8Array } {
+export function signUnderGrant(k: GrantKey, a: { spec: string; type: number; payload: Uint8Array; public: boolean; to?: string[]; refs?: Reference[]; acks?: string[] }): { act: Uint8Array; id: string; key: Uint8Array } {
   const made = makeEveryday({
     signingSecret: unhex(k.secret),
     signer: k.grantor,
@@ -157,6 +157,7 @@ export function signUnderGrant(k: GrantKey, a: { spec: string; type: number; pay
     to: a.to?.length ? a.to : undefined,
     objects: [[k.grantor, k.grant]],
     refs: a.refs?.length ? a.refs : undefined,
+    acks: a.acks?.length ? a.acks : undefined,
   }) as { act: Uint8Array; id: string; key: Uint8Array };
   k.strand.push(made.id);
   return made;

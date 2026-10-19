@@ -174,7 +174,7 @@ ${r.blocking.length ? `<div class="blocking"><b>It cannot be signed as it is</b>
 
 // ------------------------------------------------------------------ releases
 
-export function releases(s: State, r: { releases: { id: string; name: string; version: string; folder: string }[]; anchors: AnchorShown[]; anchorSay: string[] } | null): string {
+export function releases(s: State, r: { releases: { id: string; name: string; version: string; folder: string; collective?: string }[]; anchors: AnchorShown[]; anchorSay: string[] } | null): string {
   if (!s.releases) {
     return `<h2>Releases of code</h2>${note('warn', 'Releases are made from a folder on a computer: in Ummia on the Mac or Linux. This web client reads no folder, so it makes no release.')}`;
   }
@@ -184,15 +184,16 @@ export function releases(s: State, r: { releases: { id: string; name: string; ve
     ? list
         .map(
           (x) => `<div class="item" data-release="${e(x.id)}"><h3>${e(x.name)} ${e(x.version)}</h3><div class="meta">${fp(x.id)} · from ${e(x.folder)}</div>
-<div class="row"><button data-action="release check" data-id="${e(x.id)}">Check it as anyone would</button><button class="quiet" data-action="anchor open" data-id="${e(x.id)}">Anchor it on Bitcoin (optional)</button></div><div class="check-out" id="check-${e(x.id)}"></div><div id="anchor-${e(x.id)}"></div></div>`,
+<div class="row"><button data-action="release check" data-id="${e(x.id)}">Check it as anyone would</button>${x.collective ? `<button data-action="release standing" data-id="${e(x.id)}">Does it count for the collective?</button>` : ''}<button class="quiet" data-action="anchor open" data-id="${e(x.id)}">Anchor it on Bitcoin (optional)</button></div><div class="check-out" id="check-${e(x.id)}"></div><div id="anchor-${e(x.id)}"></div></div>`,
         )
         .join('')
     : '<p class="empty">No release from here yet.</p>';
   const anchors = r?.anchors.length
     ? `<h2>Anchors asked</h2>${r.anchors.map((a) => `<div class="item"><h3>${e(a.label)}</h3><div class="meta">${fp(a.act)} · tier ${a.tier} · by ${fp(a.service)} · <span class="v${a.state === 'anchored' ? ' valid' : a.state === 'invalid' ? ' bad' : ''}">${e(a.state)}</span></div>${lines(a.lines)}</div>`).join('')}`
     : '';
-  return `<h2>A release under your own name</h2>
-<p class="small">A collective’s releases are made in Edubba’s Collectives tab, until Ummia’s second round.</p>
+  const forCollective = s.actors.find((a) => a.id === s.acting)?.kind === 'collective';
+  return `<h2>${forCollective ? 'A release of the collective' : 'A release under your own name'}</h2>
+<p class="small">${forCollective ? 'Signed with your own key for the collective (F353): it counts once the area reaching its releases is met; where it asks more keys, its other holders are asked, and sign in their own app. A collective’s releases moved here from Edubba (F339).' : 'A collective’s releases are made here too: choose it under Who acts, or add it by its ID.'}</p>
 <form id="release"><label>The folder (a git folder gives what git tracks; a plain folder every file but hidden ones)</label>
 <div class="row"><input name="folder" class="grow" autocomplete="off" spellcheck="false" placeholder="~/code/my-module"><button type="button" data-action="folders">Choose a folder…</button></div>
 <div id="picker"></div><p class="small" id="folder-said"></p>

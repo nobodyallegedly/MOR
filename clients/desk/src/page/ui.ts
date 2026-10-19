@@ -8,7 +8,7 @@
 // `../web/app.ts` (the web client, for testing only: the same operations run
 // in this browser, `../ops.ts`, without the Agents tab).
 
-import { Client, Refused, type ActRead, type IdentityRecord, type RealCollective, type ShareHere, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Permissions, type State } from './api.ts';
+import { Client, Refused, type ActRead, type IdentityRecord, type RealCollective, type ShareHere, type AgentDetails, type AgentView, type Constitution, type Done, type DraftView, type Line, type Permissions, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
@@ -16,8 +16,10 @@ import { reading } from '../../../collective/src/page/view.ts';
 import type { Review } from '../../../collective/src/page/api.ts';
 import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 import type { Proposal as MemberProposal, ShareShown } from '../../../dub/src/shapes.ts';
-import { shareTypeBack } from '../../../dub/src/page/view.ts';
+import { leaveRead as dubLeaveRead, shareTypeBack } from '../../../dub/src/page/view.ts';
 import type { Listing } from '../folders.ts';
+import { defaultGrid, type Grid, type AreaRow } from '../grid.ts';
+import { gridTable } from './grid-view.ts';
 
 const app = document.getElementById('app')!;
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
@@ -50,6 +52,131 @@ let collectiveMount: Mounted | null = null;
 let postReview: Review | null = null;
 /** A real collective's review (H18): founding, a member change, a release. Nothing is signed until confirmed. */
 let realReview: { plan: string; digest: string } | null = null;
+/** A protected file read back on the Publishing tab, waiting for Sign (round 3, part B). */
+let pubReview: { plan: string; digest: string } | null = null;
+
+// ---------------------------------------------------------------- the founding grid (round 3)
+
+/** The grid of each form being filled: the founding's, a member change's. */
+const grids = new Map<string, Grid>();
+/** The grids the person changed: until then, a founding's grid is drawn afresh for the members chosen. */
+const touched = new Set<string>();
+
+const gridName = (id: string) => state.identities.find((i) => i.id === id)?.name ?? state.contacts.find((x) => x.id === id)?.name ?? `${id.slice(0, 8)}…`;
+
+/** The members a form names now: the founder first, then the boxes ticked, then the IDs typed. */
+function formMembers(fid: string): string[] {
+  const form = $<HTMLFormElement>(fid);
+  if (!form) return [];
+  const founder = (form.elements.namedItem('founder') as HTMLSelectElement | null)?.value;
+  const picked = [...form.querySelectorAll<HTMLInputElement>('input[name=member]:checked')].map((x) => x.value);
+  const typed = String((form.elements.namedItem('typed') as HTMLTextAreaElement | null)?.value ?? '').split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  return [...new Set([...(founder ? [founder] : []), ...picked, ...typed])];
+}
+
+function drawGrid(fid: string): void {
+  const g = grids.get(fid);
+  const box = $(`e-grid-${fid}`);
+  if (!g || !box) return;
+  box.innerHTML = gridTable(fid, g, gridName);
+}
+
+/** The grid follows the members chosen: new columns empty (the constitution's box filled where every member had one), removed ones gone. */
+async function syncGrid(fid: string): Promise<void> {
+  const members = formMembers(fid);
+  let g = fid === 'real-found' && !touched.has(fid) ? undefined : grids.get(fid);
+  if (!g) {
+    if (fid === 'real-change') {
+      const form = $<HTMLFormElement>(fid);
+      const r = await c.ask<{ grid: Grid }>('real grid', { collective: form?.dataset.collective, members }).catch(() => null);
+      g = r?.grid ?? defaultGrid(members);
+    } else g = defaultGrid(members);
+  }
+  const all = g.members.every((m) => g!.constitution.holders.includes(m));
+  const keep = (xs: string[]) => xs.filter((x) => members.includes(x));
+  const added = members.filter((m) => !g!.members.includes(m));
+  g = {
+    ...g,
+    members,
+    constitution: { holders: [...keep(g.constitution.holders), ...(all ? added : [])], number: all && g.constitution.number >= g.members.length ? members.length : g.constitution.number },
+    areas: g.areas.map((l) => ({ ...l, holders: keep(l.holders) })),
+  };
+  grids.set(fid, g);
+  drawGrid(fid);
+}
+
+/** A tap or a change in a grid (`grid-view.ts`): the grid's state changed, then drawn again. */
+function gridEvent(el: HTMLElement): boolean {
+  const box = el.closest<HTMLElement>('[data-grid-form]');
+  if (!box) return false;
+  const fid = box.dataset.gridForm!;
+  const g = grids.get(fid);
+  if (!g) return false;
+  touched.add(fid);
+  const d = el.dataset;
+  const row = (i: string | undefined): AreaRow | undefined => (i === undefined ? undefined : g.areas[Number(i)]);
+  const toggle = (xs: string[], m: string) => (xs.includes(m) ? xs.filter((x) => x !== m) : [...xs, m]);
+  if (d.gridCell !== undefined) {
+    const m = d.m!;
+    if (d.gridCell === 'const') g.constitution = { ...g.constitution, holders: toggle(g.constitution.holders, m) };
+    else {
+      const l = row(d.gridCell.split(':')[1])!;
+      l.holders = toggle(l.holders, m);
+      l.number = Math.max(1, Math.min(l.number, l.holders.length || 1));
+    }
+  } else if (d.gridAdd !== undefined) {
+    g.areas.push({ name: '', layer: 2, holders: [], number: 1 });
+  } else if (d.gridRemove !== undefined) {
+    g.areas.splice(Number(d.gridRemove), 1);
+  } else if (d.gridNum !== undefined) {
+    const n = Number((el as HTMLInputElement).value);
+    if (d.gridNum === 'const') g.constitution = { ...g.constitution, number: n };
+    else if (d.gridNum === 'chain') g.chainKey = n;
+    else if (d.gridNum === 'absence') g.absence = n;
+    else if (d.gridNum === 'clone') g.clone = n;
+    else row(d.gridNum.split(':')[1])!.number = n;
+  } else if (d.gridLayer !== undefined) {
+    const l = row(d.gridLayer)!;
+    l.layer = Number((el as HTMLSelectElement).value);
+    if (l.kinds) l.kinds = [];
+    if (l.layer !== 2) delete l.cap;
+  } else if (d.gridSome !== undefined) {
+    const l = row(d.gridSome)!;
+    if ((el as HTMLInputElement).checked) l.kinds = [];
+    else delete l.kinds;
+  } else if (d.gridKind !== undefined) {
+    const l = row(d.gridKind)!;
+    l.kinds = toggle(l.kinds ?? [], (el as HTMLInputElement).value);
+  } else if (d.gridCap !== undefined) {
+    const x = (el as HTMLInputElement).value.trim();
+    const l = row(d.gridCap)!;
+    if (x) l.cap = Number(x);
+    else delete l.cap;
+  } else if (d.gridName !== undefined) {
+    row(d.gridName)!.name = (el as HTMLInputElement).value;
+    return true;
+  } else return false;
+  drawGrid(fid);
+  return true;
+}
+
+app.addEventListener('click', (ev) => {
+  const el = (ev.target as HTMLElement).closest<HTMLElement>('[data-grid-cell],[data-grid-add],[data-grid-remove]');
+  if (el && gridEvent(el)) ev.preventDefault();
+});
+app.addEventListener('change', (ev) => {
+  const el = ev.target as HTMLElement;
+  if (el.closest('[data-grid-form]')) {
+    gridEvent(el);
+    return;
+  }
+  const form = el.closest('form');
+  if (form && (form.id === 'real-found' || form.id === 'real-change') && (el.getAttribute('name') === 'member' || el.getAttribute('name') === 'typed' || el.getAttribute('name') === 'founder')) void syncGrid(form.id);
+});
+app.addEventListener('input', (ev) => {
+  const el = ev.target as HTMLElement;
+  if (el.dataset.gridName !== undefined) gridEvent(el);
+});
 
 const unpaired = (err: unknown) => err instanceof Refused && err.status === 401 && /not paired/.test(err.message);
 
@@ -126,9 +253,18 @@ async function draw() {
       }
       return;
     }
-    case 'publishing':
-      body.innerHTML = v.publishingTab();
+    case 'publishing': {
+      body.innerHTML = '<p class="small">Reading…</p>';
+      const p = await c.ask<v.PublishingShown>('publishing');
+      body.innerHTML = v.publishingTab(p);
+      // Keys of sales told of are delivered as the tab opens (as Dub does on its main screen).
+      if (p.works.length) {
+        void c.ask<{ lines: Line[] }>('publishing deliver').then((r) => {
+          if (r.lines.some((l) => /delivered/.test(l.text))) say('done', v.lines(r.lines));
+        }).catch(() => undefined);
+      }
       return;
+    }
     case 'identities': {
       // Agents have their own tab (decided by Nobody, allegedly): only the other identities here.
       const held = v.secondary(state);
@@ -160,12 +296,17 @@ async function draw() {
       if (at.collective === 'real' || proposalOf(at.collective)) {
         const p = proposalOf(at.collective);
         body.innerHTML = `${v.actingAs(state)}${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${p ? v.realProposalDetails(state, p) : v.realFound(state)}</div>`;
+        if (!p) await syncGrid('real-found');
         return;
       }
       if (here?.real) {
         const rc = await c.ask<RealCollective>('real collective', { collective: here.id });
         body.innerHTML = `${v.actingAs(state)}${v.collectiveList(state, at.collective)}<div class="detail" id="e-detail">${v.realDetails(state, here.id, rc)}</div>`;
+        grids.delete('real-change');
+        touched.delete('real-change');
+        await syncGrid('real-change');
         await drawMoney(here.id);
+        await drawKeepers(here.id);
         await drawAct(here.id);
         return;
       }
@@ -273,6 +414,16 @@ async function drawMoney(collective?: string) {
   }
 }
 
+/** A real collective's keepers, and the disowned signatures shown as disputes (rules 36 to 44; C5, F302). */
+async function drawKeepers(id: string) {
+  try {
+    const k = await c.ask<v.KeepersShown>('real keepers', { collective: id });
+    if (at.collective === id) fill('e-keepers', v.keepersShown(state, id, k));
+  } catch (err) {
+    fill('e-keepers', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+  }
+}
+
 async function drawAct(id: string) {
   try {
     const p = await c.ask<Permissions>('collective permissions', { collective: id });
@@ -317,6 +468,13 @@ async function drawIdentityPosts(identity: string) {
   }
 }
 
+/** Bytes as base64, in the page (no Buffer here). */
+function toBase64(b: Uint8Array): string {
+  let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
 async function refresh() {
   state = await c.ask<State>('state');
   await draw();
@@ -350,6 +508,21 @@ async function memberAction(b: HTMLElement): Promise<void> {
       if (r) {
         await readMember();
         say('done', `<strong>Signed.</strong><ul>${r.lines.map((l) => `<li>${v.e(l.text)}</li>`).join('')}</ul>`);
+      }
+      return;
+    }
+    case 'leave-read': {
+      const r = await busy('Reading the collective’s agreement in force…', () => c.ask<{ lines: { text: string; tone?: string }[]; digest: string }>('member leave read', { thread: d.thread }));
+      const box = app.querySelector<HTMLElement>(`#e-signing [data-leave="${CSS.escape(d.thread!)}"]`);
+      if (r && box) box.innerHTML = dubLeaveRead(d.thread!, r as never);
+      return;
+    }
+    case 'leave-collective': {
+      if (!confirm('Resign from this collective? Your resignation is public, and needs nobody else.')) return;
+      const r = await busy('Signing the resignation, and telling the founder…', () => c.ask<{ lines: { text: string }[] }>('member leave', { thread: d.thread, digest: d.digest }));
+      if (r) {
+        await readMember();
+        say('done', `<strong>Resigned.</strong><ul>${r.lines.map((l) => `<li>${v.e(l.text)}</li>`).join('')}</ul>`);
       }
       return;
     }
@@ -543,6 +716,14 @@ app.addEventListener('click', async (ev) => {
     case 'pick-folder':
       await picker(d.target!);
       break;
+    case 'real-register-resignation': {
+      const r = await busy('Drawing the collective’s line, registering the resignation…', () => c.ask<Done>('real register resignation', { collective: d.collective, act: d.act }));
+      if (r) {
+        await draw().catch(fail);
+        say('done', v.lines(r.lines));
+      }
+      break;
+    }
     case 'folder-open':
       await picker(b.closest<HTMLElement>('.picker')!.dataset.target!, d.path);
       break;
@@ -684,10 +865,36 @@ app.addEventListener('click', async (ev) => {
       }
       break;
     }
+    case 'pub-confirm-sale': {
+      const r = await busy('Preparing the confirmation for Damgar…', () => c.ask<Done>('publishing confirm sale', { vow: b.dataset.vow, sale: b.dataset.sale, buyer: b.dataset.buyer, seller: b.dataset.seller, unit: b.dataset.unit, value: Number(b.dataset.value) }));
+      if (r) {
+        b.replaceWith(Object.assign(document.createElement('span'), { className: 'small', textContent: 'Prepared for Damgar.' }));
+        say('done', v.done(r));
+      }
+      break;
+    }
+    case 'pub-deliver': {
+      const r = await busy('Looking for sales and delivering keys…', () => c.ask<{ lines: Line[] }>('publishing deliver'));
+      if (r) {
+        await draw();
+        say('done', v.lines(r.lines));
+      }
+      break;
+    }
     case 'dialog-close':
       $<HTMLDialogElement>('e-dialog')!.close();
       break;
     case 'confirm': {
+      if (pubReview && at.tab === 'publishing') {
+        const r = pubReview;
+        const done = await busy('Sealing, signing and publishing…', () => c.ask<Done>('publishing confirm', { plan: r.plan, digest: r.digest }));
+        if (done) {
+          pubReview = null;
+          await draw();
+          say('done', v.done(done));
+        }
+        return;
+      }
       if (realReview) {
         const r = realReview;
         const done = await busy('Signing and sending…', () => c.ask<Done>('real confirm', { plan: r.plan, digest: r.digest }));
@@ -728,6 +935,23 @@ app.addEventListener('click', async (ev) => {
     case 'contact-remove':
       if (await busy('Removing…', () => c.ask('real contact remove', { id: d.id }))) await refresh();
       break;
+    case 'real-keep': {
+      const r = await busy('Recording what arrived, its signers’ chains checked first…', () => c.ask<Done>('real keep', { collective: d.collective, keeper: d.keeper }), $('e-keepers'));
+      if (r) {
+        say('done', v.lines(r.lines), $('e-keepers'));
+        await drawKeepers(d.collective!);
+      }
+      break;
+    }
+    case 'real-money-record': {
+      const where = () => app.querySelector<HTMLElement>(`[data-here-proposal="${CSS.escape(d.act!)}"]`);
+      const r = await busy('Recording it on the collective’s line, and pointing its payee pointer at the service…', () => c.ask<Done>('real money record', { act: d.act }), where());
+      if (r) {
+        await refresh();
+        say('done', v.lines(r.lines), where());
+      }
+      break;
+    }
     case 'real-gather': {
       const where = () => app.querySelector<HTMLElement>(`[data-here-proposal="${CSS.escape(d.act!)}"]`);
       const r = await busy('Reading the answers in your inbox…', () => c.ask<{ problems: string[] }>('real gather', { act: d.act }), where());
@@ -924,6 +1148,55 @@ app.addEventListener('submit', async (ev) => {
   const agent = at.agent ?? undefined;
   // Not `form.id`: a form's fields shadow its properties (the bring forms have a field named "id").
   const fid = form.getAttribute('id');
+  // The Publishing tab (round 3, part B).
+  if (fid === 'collective-add' && at.tab === 'publishing') {
+    const r = await busy('Reading the collective from its relays and homes, and your key for it…', () => c.ask<{ lines: Line[] }>('publishing collective add', { id: words(d.get('collective')) }));
+    if (r) {
+      await draw();
+      say('done', v.lines(r.lines));
+    }
+    return;
+  }
+  if (fid === 'pub-vow') {
+    const r = await busy('Reading it back…', () => c.ask<Review>('publishing vow read', { words: words(d.get('words')), title: words(d.get('title')), price: words(d.get('price')) }));
+    if (r) {
+      pubReview = { plan: r.plan, digest: r.digest };
+      say('', '');
+      fill('e-vow-review', `<div class="colroot">${reading(r.reading, r)}</div>`);
+      $('e-vow-review')?.scrollIntoView({ block: 'start' });
+    }
+    return;
+  }
+  if (fid === 'pub-vow-sales') {
+    const relays = String(d.get('relays') ?? '').split(/\s+/).filter(Boolean);
+    const r = await busy('Asking the relays…', () => c.ask<v.VowSalesShown>('publishing vow sales', { identity: words(d.get('identity')), relays }));
+    if (r) fill('e-vow-sales', v.vowSalesShown(r, (id) => state.identities.find((i) => i.id === id)?.name ?? `${id.slice(0, 8)}…`));
+    return;
+  }
+  if (form.classList.contains('pub-contest')) {
+    const r = await busy('Signing the contest…', () => c.ask<Done>('publishing contest', { vow: form.dataset.vow, sale: form.dataset.sale, buyer: form.dataset.buyer, promise: words(d.get('promise')) }));
+    if (r) {
+      form.replaceWith(Object.assign(document.createElement('span'), { className: 'small', textContent: 'Contested.' }));
+      say('done', v.done(r));
+    }
+    return;
+  }
+  if (fid === 'pub-work') {
+    const media = String(d.get('media') ?? 'text');
+    const file = d.get('file');
+    let data = '';
+    if (media === 'picture') {
+      if (file instanceof File && file.size) data = toBase64(new Uint8Array(await file.arrayBuffer()));
+    } else data = toBase64(new TextEncoder().encode(String(d.get('text') ?? '')));
+    const r = await busy('Reading it back…', () => c.ask<Review>('publishing work read', { media, data, title: words(d.get('title')), price: words(d.get('price')), referral: words(d.get('referral')), service: words(d.get('service')), serviceKey: words(d.get('serviceKey')) }));
+    if (r) {
+      pubReview = { plan: r.plan, digest: r.digest };
+      say('', '');
+      fill('e-pub-review', `<div class="colroot">${reading(r.reading, r)}</div>`);
+      $('e-pub-review')?.scrollIntoView({ block: 'start' });
+    }
+    return;
+  }
   if (fid === 'pair') {
     try {
       await c.ask('pair', { code: $<HTMLInputElement>('pair-code')!.value, label: 'this browser' });
@@ -1095,6 +1368,28 @@ app.addEventListener('submit', async (ev) => {
     }
     return;
   }
+  if (fid === 'real-money') {
+    const shares = Object.fromEntries([...form.querySelectorAll<HTMLInputElement>('input[name=share]')].map((x) => [x.dataset.member!, Number(x.value)]));
+    const keepers = words(d.get('keepers')).split(/\n+/).map((x) => x.trim()).filter(Boolean);
+    const r = await busy('Making it, and reading it back…', () =>
+      c.ask<Review>('real money prepare', {
+        collective: form.dataset.collective,
+        shares,
+        referral: Number(d.get('referral') ?? 0),
+        service: words(d.get('service')),
+        serviceKey: words(d.get('serviceKey')),
+        keepers,
+        keepersNeeded: Number(d.get('keepersNeeded') ?? 1),
+      }),
+    );
+    if (r) {
+      realReview = { plan: r.plan, digest: r.digest };
+      say('', '');
+      fill('e-real-review', `<div class="colroot">${reading(r.reading, r)}</div>`);
+      $('e-real-review')?.scrollIntoView({ block: 'start' });
+    }
+    return;
+  }
   if (fid === 'real-found' || fid === 'real-change' || fid === 'real-release') {
     const members = [...form.querySelectorAll<HTMLInputElement>('input[name=member]:checked')].map((x) => x.value);
     const typed = words(d.get('typed')).split(/\n+/).map((x) => x.trim()).filter(Boolean);
@@ -1104,14 +1399,11 @@ app.addEventListener('submit', async (ev) => {
             name: words(d.get('name')),
             founder: words(d.get('founder')),
             members: [...members, ...typed],
-            safety: Number(words(d.get('safety'))),
-            release: Number(words(d.get('release'))),
-            clone: Number(words(d.get('clone'))),
-            others: Number(words(d.get('others'))),
+            grid: grids.get('real-found'),
             words: words(d.get('words')),
           })
         : fid === 'real-change'
-          ? c.ask<Review>('real change prepare', { collective: form.dataset.collective, members: [...members, ...typed] })
+          ? c.ask<Review>('real change prepare', { collective: form.dataset.collective, members: [...members, ...typed], grid: grids.get('real-change') })
           : c.ask<Review>('real release prepare', { collective: form.dataset.collective, folder: String(d.get('folder') ?? ''), name: words(d.get('name')), version: words(d.get('version')) }),
     );
     if (r) {
@@ -1288,6 +1580,15 @@ function opened() {
 // H18: a member's share shown here, hand to hand, rather than sealed to a one-time key.
 app.addEventListener('change', async (ev) => {
   const el = ev.target as HTMLInputElement;
+  if (el.name === 'actor' && el.closest('form#acting') && at.tab === 'publishing') {
+    const r = await busy('Choosing who acts…', () => c.ask<{ lines: Line[] }>('publishing act as', { id: el.value }));
+    if (r) {
+      pubReview = null;
+      await draw();
+      say('done', v.lines(r.lines));
+    }
+    return;
+  }
   if (el.id === 'acting-select') {
     const r = await busy('Acting as another identity…', () => c.ask('acting as', { id: el.value }));
     if (r) {
