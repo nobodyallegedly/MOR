@@ -77,4 +77,5 @@ Done: the web Edubba merged (pull request 79, `docs/edubba-web-report.md`, F354)
 - No server addresses, onion addresses or keys in the repository.
 - Test identities only; regtest or signet only.
 - The test apps keep the layers apart and talk through MOR: what one app prepares for another travels as acts (sealed to oneself where private), never a shared file or a side channel (working rule, 17 October 2026).
+- Transport is just transport (Nobody, allegedly, 19 October 2026: "if it's transport, it's just transport"): where to find something (homes, relays, hints) only guides where to look; it never decides what is true, which comes from signatures and chains alone. The core fixes how a hint is written and that it can't mislead; everything else about finding is the relay transport cMIP's and each app's.
 - Work on a `claude/` branch, open a pull request, do not merge.
