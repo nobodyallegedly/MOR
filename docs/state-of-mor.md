@@ -2,7 +2,9 @@
 
 *A living file: what exists today, not how it came to be. Updated by the project lead at every merge. Every session reads it first. The history is in `docs/roadmap-v1.md`; the reasons are in `docs/findings/`. If this file and the code disagree, the code's own README wins, and this file is corrected.*
 
-*Last updated: 18 October 2026, after pull request 79 (the web Edubba); before that, pull request 78 (Damgar, round 2).*
+*Last updated: 19 October 2026, after pull request 80 (round 3) and the server session.*
+
+**Where we stopped (19 October 2026, 89% of the weekly budget):** the apps phase is complete and merged; the servers are on main. During the break, Nobody, allegedly, runs the human tests walkthrough (`docs/human-tests-walkthrough.md`, human test 15 in `docs/round-3-report.md`), after a Mac session brings the apps up to main; his notes become H findings. Building resumes Wednesday 21 October, 13:00 UTC, with the freeze-ready drafts session (its list under "Open, in order": F352 (D), one meaning per word, F295, keepers redefined F358, the cMIPs branded F356, the payment cMIP's vault transfer F355 (c), MICS and suite naming the current drafts, conformance vectors, the regtest quirks kit). Then the C verifier, Fable's review on a Thursday, fixes, the freeze.
 
 ## Where we are
 
