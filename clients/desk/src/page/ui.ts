@@ -258,7 +258,7 @@ async function draw() {
       const p = await c.ask<v.PublishingShown>('publishing');
       body.innerHTML = v.publishingTab(p);
       // Keys of sales told of are delivered as the tab opens (as Dub does on its main screen).
-      if (p.works.some((w) => !w.collective)) {
+      if (p.works.length) {
         void c.ask<{ lines: Line[] }>('publishing deliver').then((r) => {
           if (r.lines.some((l) => /delivered/.test(l.text))) say('done', v.lines(r.lines));
         }).catch(() => undefined);
@@ -306,6 +306,7 @@ async function draw() {
         touched.delete('real-change');
         await syncGrid('real-change');
         await drawMoney(here.id);
+        await drawKeepers(here.id);
         await drawAct(here.id);
         return;
       }
@@ -410,6 +411,16 @@ async function drawMoney(collective?: string) {
     fill('e-anchors', v.anchors(await c.ask('money anchors', { collective })));
   } catch (err) {
     fill('e-anchors', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
+  }
+}
+
+/** A real collective's keepers, and the disowned signatures shown as disputes (rules 36 to 44; C5, F302). */
+async function drawKeepers(id: string) {
+  try {
+    const k = await c.ask<v.KeepersShown>('real keepers', { collective: id });
+    if (at.collective === id) fill('e-keepers', v.keepersShown(state, id, k));
+  } catch (err) {
+    fill('e-keepers', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
   }
 }
 
@@ -854,6 +865,14 @@ app.addEventListener('click', async (ev) => {
       }
       break;
     }
+    case 'pub-confirm-sale': {
+      const r = await busy('Preparing the confirmation for Damgar…', () => c.ask<Done>('publishing confirm sale', { vow: b.dataset.vow, sale: b.dataset.sale, buyer: b.dataset.buyer, seller: b.dataset.seller, unit: b.dataset.unit, value: Number(b.dataset.value) }));
+      if (r) {
+        b.replaceWith(Object.assign(document.createElement('span'), { className: 'small', textContent: 'Prepared for Damgar.' }));
+        say('done', v.done(r));
+      }
+      break;
+    }
     case 'pub-deliver': {
       const r = await busy('Looking for sales and delivering keys…', () => c.ask<{ lines: Line[] }>('publishing deliver'));
       if (r) {
@@ -916,6 +935,23 @@ app.addEventListener('click', async (ev) => {
     case 'contact-remove':
       if (await busy('Removing…', () => c.ask('real contact remove', { id: d.id }))) await refresh();
       break;
+    case 'real-keep': {
+      const r = await busy('Recording what arrived, its signers’ chains checked first…', () => c.ask<Done>('real keep', { collective: d.collective, keeper: d.keeper }), $('e-keepers'));
+      if (r) {
+        say('done', v.lines(r.lines), $('e-keepers'));
+        await drawKeepers(d.collective!);
+      }
+      break;
+    }
+    case 'real-money-record': {
+      const where = () => app.querySelector<HTMLElement>(`[data-here-proposal="${CSS.escape(d.act!)}"]`);
+      const r = await busy('Recording it on the collective’s line, and pointing its payee pointer at the service…', () => c.ask<Done>('real money record', { act: d.act }), where());
+      if (r) {
+        await refresh();
+        say('done', v.lines(r.lines), where());
+      }
+      break;
+    }
     case 'real-gather': {
       const where = () => app.querySelector<HTMLElement>(`[data-here-proposal="${CSS.escape(d.act!)}"]`);
       const r = await busy('Reading the answers in your inbox…', () => c.ask<{ problems: string[] }>('real gather', { act: d.act }), where());
@@ -1152,7 +1188,7 @@ app.addEventListener('submit', async (ev) => {
     if (media === 'picture') {
       if (file instanceof File && file.size) data = toBase64(new Uint8Array(await file.arrayBuffer()));
     } else data = toBase64(new TextEncoder().encode(String(d.get('text') ?? '')));
-    const r = await busy('Reading it back…', () => c.ask<Review>('publishing work read', { media, data, title: words(d.get('title')), price: words(d.get('price')), referral: words(d.get('referral')) }));
+    const r = await busy('Reading it back…', () => c.ask<Review>('publishing work read', { media, data, title: words(d.get('title')), price: words(d.get('price')), referral: words(d.get('referral')), service: words(d.get('service')), serviceKey: words(d.get('serviceKey')) }));
     if (r) {
       pubReview = { plan: r.plan, digest: r.digest };
       say('', '');
@@ -1329,6 +1365,28 @@ app.addEventListener('submit', async (ev) => {
     if (r) {
       say('done', v.lines(r.lines), form);
       fill('e-anchors', v.anchors(await c.ask('money anchors', { collective: form.dataset.collective })));
+    }
+    return;
+  }
+  if (fid === 'real-money') {
+    const shares = Object.fromEntries([...form.querySelectorAll<HTMLInputElement>('input[name=share]')].map((x) => [x.dataset.member!, Number(x.value)]));
+    const keepers = words(d.get('keepers')).split(/\n+/).map((x) => x.trim()).filter(Boolean);
+    const r = await busy('Making it, and reading it back…', () =>
+      c.ask<Review>('real money prepare', {
+        collective: form.dataset.collective,
+        shares,
+        referral: Number(d.get('referral') ?? 0),
+        service: words(d.get('service')),
+        serviceKey: words(d.get('serviceKey')),
+        keepers,
+        keepersNeeded: Number(d.get('keepersNeeded') ?? 1),
+      }),
+    );
+    if (r) {
+      realReview = { plan: r.plan, digest: r.digest };
+      say('', '');
+      fill('e-real-review', `<div class="colroot">${reading(r.reading, r)}</div>`);
+      $('e-real-review')?.scrollIntoView({ block: 'start' });
     }
     return;
   }

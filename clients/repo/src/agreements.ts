@@ -19,6 +19,7 @@ import {
   recordPayload,
   resignationPayload,
   signaturePayload,
+  sha256,
   unhex,
 } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
@@ -116,6 +117,36 @@ export interface CollectiveTerms {
   forkedFrom?: string;
   /** The areas, as the founding grid draws them (round 3, rules 60 and 62): where present, they replace the one Releases area. */
   areas?: AreaSpec[];
+  /** The split plan (field 8; round 3, part C): how incoming payments are divided. */
+  plan?: SplitPlan;
+  /** Named keepers (field 3; round 3, part C): their operators, and what counts as recorded (any one, a number, or all). */
+  keepers?: { ids: string[]; rule: Rule };
+}
+
+/**
+ * A split plan (terms field 8; Agreements "Split plan and split"): the
+ * stakes by their index and part, then roles by name and part (a referral);
+ * the role shares taken off the top (rule 22, F280), the rest to the
+ * stakes; the split cMIP that computes the amounts.
+ */
+export interface SplitPlan {
+  stakes: [number, number][];
+  roles: [string, number][];
+  cmip: string;
+}
+
+/** The split cMIP's spec hash, draft 2's test value (`cmips/split`, `mor-split`): the one this client's plans name. */
+export const SPLIT_CMIP = sha256('split cMIP, draft 2, test value until publication');
+
+/** Field 8's value: share rules (stakes, then roles), the cMIP, the roles' indexes off the top. */
+export function planValue(p: SplitPlan): Map<number, unknown> {
+  const shares: unknown[] = [...p.stakes.map(([i, part]) => [0, i, part]), ...p.roles.map(([r, part]) => [1, r, part])];
+  const m = new Map<number, unknown>([
+    [0, shares],
+    [1, unhex(p.cmip)],
+  ]);
+  if (p.roles.length) m.set(4, p.roles.map((_, i) => p.stakes.length + i));
+  return m;
 }
 
 /** A stake (terms field 7): null names this collective (F124, S1). */
@@ -215,9 +246,35 @@ export function encodeTerms(t: CollectiveTerms): Uint8Array {
     m.set(7, [...t.stakes].sort((a, b) => (key(a.object) < key(b.object) ? -1 : 1)).map((x) => [who(x.object), x.holders.map(([h, n]) => [who(h), n])]));
   }
   if (t.splitGrant) m.set(14, unhex(t.splitGrant));
+  if (t.plan) m.set(8, planValue(t.plan));
+  if (t.keepers?.ids.length) m.set(3, [[...t.keepers.ids].sort().map(unhex), ruleValue(t.keepers.rule)]);
   if (t.departed?.length) m.set(22, t.departed.map(unhex));
   if (t.forkedFrom) m.set(23, unhex(t.forkedFrom));
   return cborEncode(m);
+}
+
+/**
+ * A one-party deal (Agreements type 0, no key grammar; F215, F351's judged
+ * referral, round 3): a lone seller's agreement for one work, its stake held
+ * wholly by the seller, its split plan carrying a role share off the top (a
+ * referral), and the seller's own grant to the split service (field 14, a
+ * list of one; F129, H4). Signing rule and clone rule: every party, here the
+ * seller (rule 47). Checked by the core library.
+ */
+export function dealTermsPayload(d: { party: string; text: string; object: string; plan: SplitPlan; payeeGrant: string }): Uint8Array {
+  const m = new Map<number, unknown>([
+    [0, [unhex(d.party)]],
+    [1, d.text],
+    [2, new Map()],
+    [4, [0]],
+    [5, [0]],
+    [7, [[unhex(d.object), [[unhex(d.party), 1_000_000]]]]],
+    [8, planValue(d.plan)],
+    [14, [unhex(d.payeeGrant)]],
+  ]);
+  const payload = cborEncode(m);
+  checkTerms(payload, AGREEMENTS_SPECS);
+  return payload;
 }
 
 /** A kept tip: an act, its position, the running summary including it. */
@@ -315,6 +372,9 @@ export interface PayoutIn {
   stake?: number;
   /** A fee: the module whose fee it pays. */
   feeModule?: string;
+  /** A role it fills (round 3: a referral), and the evidence for it: an act signed by someone other than the service and the payee (rule 22). */
+  role?: string;
+  evidence?: string;
 }
 
 /**
@@ -336,6 +396,8 @@ export function splitPayload(s: { receipt: string; payouts: PayoutIn[]; cmip: st
           [1, p.amount],
         ]);
         if (p.stake !== undefined) x.set(2, p.stake);
+        if (p.role) x.set(3, p.role);
+        if (p.role && p.evidence) x.set(4, unhex(p.evidence));
         if (p.feeModule) x.set(5, unhex(p.feeModule));
         return x;
       }),

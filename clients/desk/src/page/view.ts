@@ -1077,7 +1077,7 @@ export interface PublishingShown {
 
 /** A look-up of one identity's vow sales (round 3): each vow, each sale's state; those bought by an identity held here may be contested here. */
 export interface VowSalesShown {
-  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; promise: string | null; amount: { value: number } | null }[]; unsigned: number; mine: string[] }[];
+  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; promise: string | null; amount: { unit: string; value: number } | null }[]; unsigned: number; mine: string[] }[];
   asked: string[];
   problems: string[];
 }
@@ -1093,7 +1093,7 @@ export function vowSalesShown(r: VowSalesShown, names: (id: string) => string): 
                 .map(
                   (x) => `<li class="${x.state === 'confirmed' ? 'ok' : x.state === 'contested' ? 'bad' : ''}">${e(names(x.buyer))}: <strong>${e(x.state)}</strong>${x.promise ? ` (“${e(x.promise)}”)` : ''}${x.amount ? ` · ${x.amount.value.toLocaleString('en')}` : ''}${
                     v.mine.includes(x.act) && x.state === 'pending'
-                      ? `<form class="pub-contest row" data-vow="${e(v.name)}" data-sale="${e(x.act)}" data-buyer="${e(x.buyer)}"><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><button type="submit">Contest it, as ${e(names(x.buyer))}</button></form><span class="small">To confirm it, sign in Dub or Damgar: a confirmation is a claim of the payment (Money).</span>`
+                      ? `<form class="pub-contest row" data-vow="${e(v.name)}" data-sale="${e(x.act)}" data-buyer="${e(x.buyer)}"><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><button type="submit">Contest it, as ${e(names(x.buyer))}</button></form>${x.amount ? `<button data-action="pub-confirm-sale" data-vow="${e(v.name)}" data-sale="${e(x.act)}" data-buyer="${e(x.buyer)}" data-seller="${e(v.signer)}" data-unit="${e(x.amount.unit)}" data-value="${x.amount.value}">Confirm: it was kept, as ${e(names(x.buyer))}</button>` : ''}<span class="small">Confirming prepares your claim of the payment, acknowledging the vow, for Damgar to sign (a Money act): it waits in Damgar’s To sign.</span>`
                       : ''
                   }</li>`,
                 )
@@ -1131,6 +1131,9 @@ ${chooserHtml(p.actors, p.as)}
 <label>Or the picture: a JPEG file</label><input type="file" name="file" accept="image/jpeg">
 <label>Its title: the public words beside its offer</label><input name="title" type="text" maxlength="200" autocomplete="off">
 <div class="row"><label>Price, in ${e(p.unit)} <input name="price" inputmode="numeric" autocomplete="off"></label><label>Referral share, % (optional; yourself only) <input name="referral" inputmode="numeric" autocomplete="off"></label></div>
+<details class="judged"><summary>Judge the referral: paid by a split service (optional)</summary><p class="small">${e(JUDGED_SAY)}</p>
+<label>The split service: its ID</label><input name="service" type="text" autocomplete="off" spellcheck="false">
+<label>The key the service made for you (64 hexadecimal characters)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false"></details>
 <div class="row"><button type="submit">Read it back</button></div></form>
 <div id="e-pub-review"></div></div>
 <div class="card"><h2>A vow</h2>
@@ -1232,12 +1235,16 @@ export function proposalStatus(s: State, p: RealProposal): string {
         : '';
     return `<tr data-member="${e(m)}"><td>${person(s, m)}${m === p.founder ? ' <span class="small">(here)</span>' : ''}</td><td class="state ${st === 'signed' ? '' : 'no'}">${e(STANDS[st])}</td><td>${share}</td></tr>`;
   };
-  const what = p.kind === 'founding' ? 'Founding terms' : p.kind === 'clone' ? 'A member change' : 'A release';
+  const what = p.kind === 'founding' ? 'Founding terms' : p.kind === 'clone' ? 'A member change' : p.kind === 'money' ? 'Its money' : 'A release';
   const next =
     p.kind === 'founding'
       ? p.founded
         ? `<p class="small">Founded: ${fp(p.founded)}.</p>`
         : `<div class="card"><h4>Before you found: what this device will hold (F337)</h4>${lines(FOUNDING_SAY)}<label class="check"><input type="checkbox" id="real-found-read-${e(p.act.slice(0, 12))}"> I have read what this device will hold, and found on it knowingly</label></div><div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Found it: deal the shares</button></div>`
+      : p.kind === 'money'
+        ? p.rotated
+          ? note('done', `In force: recorded at the collective’s line ${fp(p.rotated)}; its payments go to its split service.`)
+          : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-money-record" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Record it</button></div>`
       : p.kind === 'clone'
         ? p.rotated
           ? note('done', `In force: Kišib’s rotation ${fp(p.rotated)} declares it, and Edubba follows it.`)
@@ -1307,6 +1314,78 @@ export const WEB_FOUNDING_SAY =
 export const RELEASE_ON_WEB =
   'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
 
+/** Said where a lone seller's referral is judged (F215, F351): kept equal to the reading in `../publishing.ts`. */
+export const JUDGED_SAY =
+  'Without a service, the referral share is a promise in words, paid by your Damgar. With one, the work gets a deal of its own, you its one party holding its whole stake, its split plan carrying the referral share off the top: the service answers buyers, signs their receipts with a key you grant it, and pays you and the reposter, as Agreements judges.';
+
+/** Said where a collective's keepers are shown: kept to Agreements rules 36 to 44, C5 and F302. */
+export const KEEPERS_SAY = [
+  'A keeper is a notary the agreement names: it records each act around the collective as it arrives, in its own sequence, and signs each record. It sees act IDs and signers, never content.',
+  'Before recording a member’s act, it checks their identity chain and records any rotation first: an act recorded before a rotation stays a visible dispute if that rotation disowns it, never a void (rule 41).',
+];
+
+/** A collective's keepers and disputes, as Edubba reads them (`../real.ts`, KeepersShown). */
+export interface KeepersShown {
+  keepers: { id: string; name: string; here: boolean; agent: boolean; records: number; ofThis: number }[];
+  rule: 'all' | number | null;
+  disputes: { member: string; signature: string; version: string; what: string; status: string; rotation: string | null; keepers: string[]; counts: boolean }[];
+}
+
+/** Its keepers' card and the disputes shown (a disowned signature the line or a keeper placed). */
+export function keepersShown(s: State, id: string, k: KeepersShown): string {
+  const keepers = k.keepers.length
+    ? `<ul class="plain">${k.keepers
+        .map(
+          (x) =>
+            `<li>${person(s, x.id)}${x.agent ? ' <span class="tag">agent here</span>' : x.here ? ' <span class="tag">here</span>' : ''}: ${x.ofThis} record${x.ofThis === 1 ? '' : 's'} of this collective’s acts.${x.here ? ` <button data-action="real-keep" data-collective="${e(id)}" data-keeper="${e(x.id)}">Record what arrived</button>` : ''}</li>`,
+        )
+        .join('')}</ul><p class="small">An act counts as recorded once ${k.rule === 'all' ? 'every keeper' : k.rule === 1 ? 'any one keeper' : `${k.rule} keepers`} recorded it.</p>`
+    : '<p class="small">Its agreement in force names no keepers: set them with its money terms, above.</p>';
+  const disputes = k.disputes.length
+    ? `<h4>Disputes, not voids</h4><ul class="plain">${k.disputes
+        .map(
+          (d) =>
+            `<li class="${d.counts || d.keepers.length ? 'warn' : 'bad'}">${person(s, d.member)}’s signature on ${e(d.what)} (${fp(d.signature)}) was disowned by their own rotation${d.rotation ? ` (${fp(d.rotation)})` : ''}: under Identity it is ${e(d.status)}. ${
+              d.counts || d.keepers.length
+                ? `Shown as a dispute, not a void:${d.counts ? ' the collective’s line placed it before any line registering that rotation, so the version it signed stays in force for the collective (C5, F302);' : ''}${d.keepers.length ? ` ${d.keepers.map((x) => person(s, x)).join(', ')} recorded it before recording the rotation (rule 41).` : ''}`
+                : 'Nothing placed it before the rotation: it counts for nothing.'
+            }</li>`,
+        )
+        .join('')}</ul>`
+    : '';
+  return foldCard('e-real-keepers', 'collective-keepers', `Its keepers (${k.keepers.length})`, `<ul class="say">${KEEPERS_SAY.map((t) => `<li>${e(t)}</li>`).join('')}</ul>${keepers}${disputes}`, k.disputes.length > 0);
+}
+
+/** Said where a collective's money is set (round 3, part C): kept to Agreements rules 8, 16 to 23 and 67. */
+export const COLLECTIVE_MONEY_SAY = [
+  'Who owns its income: each member’s share, adding up to 100%. Every holder signs the stakes their share sets.',
+  'A referral share, off the top of each payment, goes to whoever reposted the work where the buyer found it (optional).',
+  'Its split service answers buyers for the collective, signs their receipts with a grant key of the collective, and pays each member their part. It is a separate identity, a judge: it signs to accept.',
+  'Keepers record its acts (optional); one may be an Edubba agent.',
+];
+
+/** The card setting a real collective's money: stakes per member, a referral share, its split service and its keepers, one clone every member signs. */
+function moneyCard(s: State, id: string, c: RealCollective): string {
+  const members = c.members.filter((m) => !(c.resigned ?? []).some((r) => r.member === m && r.registered));
+  const even = Math.floor((100 / members.length) * 10_000) / 10_000;
+  return foldCard(
+    'e-real-money',
+    'collective-money',
+    'Its money: who owns its income, who divides it',
+    `<ul class="say">${COLLECTIVE_MONEY_SAY.map((t) => `<li>${e(t)}</li>`).join('')}</ul>
+<form id="real-money" data-collective="${e(id)}">
+<span class="label">Each member’s share, in %</span>
+${members.map((m, i) => `<label class="share">${person(s, m)} <input name="share" data-member="${e(m)}" type="number" min="0" max="100" step="0.0001" value="${i === members.length - 1 ? +(100 - even * (members.length - 1)).toFixed(4) : even}" required></label>`).join('')}
+<label>A referral share, off the top, in % (0 for none)</label><input name="referral" type="number" min="0" max="99" step="0.0001" value="0" required>
+<label>Its split service: its ID</label><input name="service" type="text" autocomplete="off" spellcheck="false" required>
+<label>The key the service made for this collective (64 hexadecimal characters, as it gives it)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false" required>
+<label>Keepers (optional): their IDs, one per line</label><textarea name="keepers" spellcheck="false"></textarea>
+<label>How many keepers must record an act</label><input name="keepersNeeded" type="number" min="1" step="1" value="1">
+<div class="row"><button type="submit">Review it</button></div></form>`,
+    false,
+  );
+}
+
 /** A real collective founded here: who it is, its proposals, a member change, a release. */
 export function realDetails(s: State, id: string, c: RealCollective): string {
   const col = s.collectives.find((x) => x.id === id)!;
@@ -1330,6 +1409,8 @@ ${contactPicks(s, [], c.members)}
 <h3>Who decides what, after the change</h3>
 <div id="e-grid-real-change"><p class="small">Reading its agreement in force…</p></div>
 <div class="row"><button type="submit">Review the change</button></div></form>`, false)}
+${moneyCard(s, id, c)}
+<div id="e-keepers"><p class="small">Reading its keepers…</p></div>
 ${foldCard('e-real-release', 'collective-release', 'A release: in Ummia', `<p class="small">${e(RELEASE_ON_WEB)}</p>`)}
 <div id="e-real-review"></div>
 ${WEB ? '' : realMoney(s, id, c.members)}

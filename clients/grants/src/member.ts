@@ -452,3 +452,45 @@ export async function areaReaching(collective: string, places: string[], kind: {
   }
   return { agreement: now.agreement, area: null };
 }
+
+/** An agreement's terms, fetched at these places and read by the core: null where none holds it. */
+export async function termsAt(agreement: string, places: string[], via: Via = {}): Promise<Record<string, unknown> | null> {
+  for (const h of places) {
+    const a = await relayAt(h, via).getAct(agreement).catch(() => null);
+    if (!a) continue;
+    const d = describeAct(a) as { payload?: Uint8Array; spec?: string; type?: number };
+    if (d.spec !== REPO_SPECS.agreements || d.type !== AGREEMENTS_TYPES.terms || !d.payload) return null;
+    try {
+      return readTerms(d.payload, AGREEMENTS_SPECS) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * The split service an agreement names (terms field 14; the money messages
+ * cMIP, draft 4, 4.4, F357): in a collective, the grantee of its one grant;
+ * in a deal, the grantee of the grant `payee` gave (one per payee). Null
+ * where it names none, or the grant is not found.
+ */
+export async function splitServiceOf(agreement: string, payee: string, places: string[], via: Via = {}): Promise<{ service: string; grant: string } | null> {
+  const t = (await termsAt(agreement, places, via)) as { splitGrant?: string | null; payeeGrants?: string[] | null } | null;
+  if (!t) return null;
+  const grants = t.splitGrant ? [t.splitGrant] : (t.payeeGrants ?? []);
+  for (const g of grants) {
+    for (const h of places) {
+      const a = await relayAt(h, via).getAct(g).catch(() => null);
+      if (!a) continue;
+      const d = describeAct(a) as { signer?: string; payload?: Uint8Array };
+      if (!d.payload) break;
+      // In a deal, each payee's own grant; in a collective, the collective's one.
+      if (!t.splitGrant && d.signer !== payee) break;
+      const grantee = (cborDecode(d.payload) as Map<number, unknown>).get(0);
+      if (grantee instanceof Uint8Array) return { service: hex(grantee), grant: g };
+      break;
+    }
+  }
+  return null;
+}

@@ -185,7 +185,7 @@ test('a protected text published by a collective from Edubba, each act signed wi
   }
 });
 
-test('a vow published from Edubba; three buyers pay in Dub; one confirms and one contests in Dub’s Signing tab; the look-up reads each sale; a buyer held in Edubba contests there', async () => {
+test('a vow published from Edubba; four buyers pay in Dub; one confirms and one contests in Dub’s Signing tab; the look-up reads each sale; a buyer held in Edubba confirms there (Damgar signing), another contests', async () => {
   const H = homes.map((h) => h.base);
   const node = new TestNode();
   const link = testLink(node);
@@ -206,7 +206,7 @@ test('a vow published from Edubba; three buyers pay in Dub; one confirms and one
   assert.deepEqual((await e.c.ask<any>('publishing')).vows.map((v: any) => v.title), ['A seat, vowed']);
 
   // Three buyers, each in Dub with a lane, find it in their feed and buy it.
-  const buyers = [await person(H, [relay.base]), await person(H, [relay.base]), await person(H, [relay.base])];
+  const buyers = [await person(H, [relay.base]), await person(H, [relay.base]), await person(H, [relay.base]), await person(H, [relay.base])];
   for (const b of buyers) {
     await b.dub.c.ask('lane ask', { label: 'Dub', cap: '5000', unit: R });
     await b.damgar.c.ask('look');
@@ -228,7 +228,7 @@ test('a vow published from Edubba; three buyers pay in Dub; one confirms and one
   await seller.damgar.c.ask('look');
 
   // Each sale is pending until its buyer says; one confirms, one contests, in Dub's Signing tab.
-  const [b1, b2, b3] = buyers;
+  const [b1, b2, b3, b4] = buyers;
   assert.deepEqual((await b1.dub.c.ask<any>('vows bought')).vows.map((x: any) => [x.vow, x.paid, x.sale]), [[vow, true, 'pending']]);
   assert.match((await b1.dub.c.ask<any>('vow confirm', { vow })).lines[0].text, /reads confirmed/);
   assert.match((await b2.dub.c.ask<any>('vow contest', { vow, promise: 'The seat was given to someone else.' })).lines[0].text, /reads contested/);
@@ -241,16 +241,28 @@ test('a vow published from Edubba; three buyers pay in Dub; one confirms and one
   const look = await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] });
   assert.equal(look.vows.length, 1);
   const states = Object.fromEntries(look.vows[0].sales.map((x: any) => [x.buyer, [x.state, x.promise]]));
-  assert.deepEqual(states, { [b1.id]: ['confirmed', null], [b2.id]: ['contested', 'The seat was given to someone else.'], [b3.id]: ['pending', null] });
+  assert.deepEqual(states, { [b1.id]: ['confirmed', null], [b2.id]: ['contested', 'The seat was given to someone else.'], [b3.id]: ['pending', null], [b4.id]: ['pending', null] });
   assert.deepEqual(look.vows[0].mine, [], 'no buyer is held in this Edubba');
   await assert.rejects(e.c.ask('publishing vow sales', { identity: seller.id, relays: [] }), /Name at least one relay/);
 
-  // The third buyer, brought into Edubba, contests there.
+  // The third buyer, brought into Edubba, confirms there: Edubba prepares it, sealed to oneself, and Damgar signs it (F357).
   await e.c.ask('bring', { name: 'Third buyer', id: b3.id, words: b3.dub.words, address: H[0] });
   const mine = await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] });
-  const sale = mine.vows[0].sales.find((x: any) => x.buyer === b3.id);
-  assert.deepEqual(mine.vows[0].mine, [sale.act]);
-  await e.c.ask<Done>('publishing contest', { vow, sale: sale.act, buyer: b3.id, promise: '' });
-  const after3 = await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] });
-  assert.equal(after3.vows[0].sales.find((x: any) => x.buyer === b3.id).state, 'contested');
+  const sale3 = mine.vows[0].sales.find((x: any) => x.buyer === b3.id);
+  assert.deepEqual(mine.vows[0].mine, [sale3.act]);
+  const prepared = await e.c.ask<Done>('publishing confirm sale', { vow, sale: sale3.act, buyer: b3.id, seller: seller.id, unit: sale3.amount.unit, value: sale3.amount.value });
+  assert.match(prepared.lines[0].text, /Damgar, holding the same identity, shows it in To sign/);
+  assert.equal((await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] })).vows[0].sales.find((x: any) => x.buyer === b3.id).state, 'pending', 'nothing counts until Damgar signs');
+  await b3.damgar.c.ask('look');
+  const draft = (await b3.damgar.c.ask<{ items: ToSign[] }>('to sign')).items.find((i) => i.kind === 'draft' && i.title === 'A purchase to confirm')!;
+  assert.ok(draft, 'the confirmation waits in Damgar’s To sign');
+  assert.ok(draft.lines.some((l) => /acknowledging/.test(l.text)), JSON.stringify(draft.lines));
+  await b3.damgar.c.ask('sign draft', { id: draft.id });
+  assert.equal((await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] })).vows[0].sales.find((x: any) => x.buyer === b3.id).state, 'confirmed');
+
+  // The fourth buyer, brought into Edubba, contests there.
+  await e.c.ask('bring', { name: 'Fourth buyer', id: b4.id, words: b4.dub.words, address: H[0] });
+  const sale4 = (await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] })).vows[0].sales.find((x: any) => x.buyer === b4.id);
+  await e.c.ask<Done>('publishing contest', { vow, sale: sale4.act, buyer: b4.id, promise: '' });
+  assert.equal((await e.c.ask<any>('publishing vow sales', { identity: seller.id, relays: [relay.base] })).vows[0].sales.find((x: any) => x.buyer === b4.id).state, 'contested');
 });

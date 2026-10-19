@@ -31,6 +31,7 @@ import { KEY_DELIVERY, offerWords, openSealedBytes, postSealed, readKeyDelivery,
 import type { Keep, Settings } from './dub.ts';
 import { deliverSold } from './delivery.ts';
 import { contestSale, readVow, readVowOffer, vowSales } from './vows.ts';
+import { collectiveNow, collectivePlaces } from '../../grants/src/member.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 
 /** What Dub's lane may sign: invoice requests (the money messages cMIP) and payment claims (Money). */
@@ -339,8 +340,14 @@ export class DubMoney {
     if (p.seller === me.id) throw new Error('That post is your own. Nothing was signed.');
     const offerId = await this.offerFor(a, hints, via);
     if (!offerId) throw new Error('No offer of its seller selling it was found. Nothing was signed.');
-    const offer = readOffer((await followRef([offerId, a.seller], hints, via)).act, a.seller, a.publication)!;
-    const r = await this.engine.payUnderLane({ payee: a.seller, amount: offer.price, whatFor: 'a sealed post', fulfils: offer.offer, refs: [[a.publication, a.seller]], referral: a.repost ? { identity: a.repost.by, evidence: a.repost.id } : null });
+    const offer = readOffer((await followRef([offerId, a.seller], hints, via)).act, a.seller, a.publication, true)!;
+    // An offer made under an agreement (a collective's, round 3): the purchase names that agreement, at the version in force read now (Agreements rule 12).
+    let purchase: [string, string] | null = null;
+    if (offer.under) {
+      const now = await collectiveNow(a.seller, await collectivePlaces(a.seller, hints, via), via).catch(() => null);
+      purchase = [offer.under, now?.agreement ?? offer.under];
+    }
+    const r = await this.engine.payUnderLane({ payee: a.seller, amount: offer.price, whatFor: 'a sealed post', fulfils: offer.offer, refs: [[a.publication, a.seller]], referral: a.repost ? { identity: a.repost.by, evidence: a.repost.id } : null, purchase });
     const bought = (await this.store.money<Bought>(me.id, 'bought')) ?? {};
     bought[a.publication] = { key: null, payment: r.key, seller: a.seller, offer: offer.offer };
     await this.store.saveMoney(me.id, 'bought', bought);
@@ -357,7 +364,7 @@ export class DubMoney {
     }
     for (const id of names) {
       try {
-        const o = readOffer((await followRef([id, a.seller], hints, via)).act, a.seller, a.publication);
+        const o = readOffer((await followRef([id, a.seller], hints, via)).act, a.seller, a.publication, true);
         if (o) return o.offer;
       } catch {
         // not that one
@@ -418,7 +425,7 @@ export class DubMoney {
     const pubAct = named.find((x) => readSealed(x));
     if (!pubAct) throw new Error('That post names no sealed post. Nothing was reposted.');
     const p = readSealed(pubAct)!;
-    const offerAct = named.find((x) => readOffer(x, p.seller, p.publication));
+    const offerAct = named.find((x) => readOffer(x, p.seller, p.publication, true));
     if (!offerAct) throw new Error('That post names no offer selling it. Nothing was reposted.');
     const seller = await lookUp(p.seller, hints, s.via);
     const chain = await servedChain(p.seller, seller.resolution.homes, s.via).catch(() => [] as Uint8Array[]);
@@ -463,7 +470,7 @@ export class DubMoney {
       words: v.words,
       price: offer ? say(offer.price, new Set([offer.price.unit])) : 'no price stated',
       state: v.signer === me.id ? 'yours' : bought?.payment ? ((await this.engine.payment(bought.payment))?.proof ? 'bought' : 'paying') : 'for sale',
-      problem: offer ? (offer.under ? 'a collective’s offer: bought from its split service (round 3, part C), not from here yet' : null) : 'no offer of its signer selling it was found: it cannot be bought here',
+      problem: offer ? null : 'no offer of its signer selling it was found: it cannot be bought here',
     };
   }
 
@@ -474,7 +481,12 @@ export class DubMoney {
     if (card.seller === me.id) throw new Error('That vow is your own. Nothing was signed.');
     if (!card.offer || card.problem) throw new Error(`${card.problem ?? 'No offer was found'}. Nothing was signed.`);
     const offer = readVowOffer((await followRef([card.offer, card.seller], hints, via)).act, card.seller, card.vow)!;
-    const r = await this.engine.payUnderLane({ payee: card.seller, amount: offer.price, whatFor: 'a vow', fulfils: offer.offer, refs: [[card.vow, card.seller]], visible: true });
+    let purchase: [string, string] | null = null;
+    if (offer.under) {
+      const now = await collectiveNow(card.seller, await collectivePlaces(card.seller, hints, via), via).catch(() => null);
+      purchase = [offer.under, now?.agreement ?? offer.under];
+    }
+    const r = await this.engine.payUnderLane({ payee: card.seller, amount: offer.price, whatFor: 'a vow', fulfils: offer.offer, refs: [[card.vow, card.seller]], visible: true, purchase });
     const vows = (await this.store.money<VowsBought>(me.id, 'vows')) ?? {};
     vows[card.vow] = { seller: card.seller, offer: offer.offer, payment: r.key, post: a.post, words: card.words };
     await this.store.saveMoney(me.id, 'vows', vows);

@@ -75,7 +75,7 @@ import { AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
 import type { InvoiceLink, LinkConfig } from './link.ts';
 import { LINK_SAY } from './link-say.ts';
 import { promiseDigest, promisePayload, promiseSay, readCollective, signPromise, standing, type CollectiveHere } from './collective.ts';
-import type { ConsentRead } from '../../grants/src/member.ts';
+import { collectiveNow, collectivePlaces, splitServiceOf, type ConsentRead } from '../../grants/src/member.ts';
 import { TestIdentity, TEST_LABEL, sealFor, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -85,7 +85,7 @@ import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { changeAccepted, publishAccepted, readAccepted, type Accepted } from './accepted.ts';
 import type { ChainSource } from './chain.ts';
 import { TYPES, answerPayload, draftPayload, invoiceRequestPayload, readAnswer, readCommitmentFields, readDraft, readInvoiceRequest, readLaneRequest, readRequest, readSale, requestPayload, salePayload, sendToSelf, type Bound, type CommitmentFields, type Draft, type LaneKind, type LaneRequest } from './messages.ts';
-import { ACCEPTABLE, MESSAGES_SPEC, MESSAGES_SPEC_1, MESSAGES_SPECS, MONEY, OURS, SPEC, isAccepted, labelOf } from './specs.ts';
+import { ACCEPTABLE, MESSAGES_SPEC, MESSAGES_SPEC_1, MESSAGES_SPEC_3, MESSAGES_SPECS, MONEY, OURS, SPEC, isAccepted, labelOf } from './specs.ts';
 import { readValue, say, totals, unitOf, type Amount } from './units.ts';
 import type { Account, Accept, LaneShown, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from './shapes.ts';
 
@@ -167,6 +167,10 @@ export interface Payment {
   fulfils: string;
   whatFor: string | null;
   rail: string;
+  /** The payee's split service (the money messages cMIP, draft 4, 4.4; F357): where the payee's agreement names one, it answers for the payee and receives the claim. */
+  service?: string | null;
+  /** A purchase (F126; Money rule 18): the claim it pays under, `[agreement, line]`. */
+  purchase?: [string, string] | null;
   /** A transfer to this identity's own vault (H46, F355): payer and payee the same identity. */
   vault?: boolean;
   /** A vow bought (round 3): its claim is also published, so a look-up sees the sale (Agreements rule 13). */
@@ -892,9 +896,9 @@ export class Damgar {
       } else if (d.type === TYPES.answer) {
         const a = readAnswer(d.payload!);
         const p = Object.values(book.payments).find((x) => x.side === 'out' && x.invoiceRequest === a.to);
-        if (!p || p.other !== signer || p.key !== a.commitment) throw new Error('an answer to no invoice request of this identity');
+        if (!p || (p.other !== signer && p.service !== signer) || p.key !== a.commitment) throw new Error('an answer to no invoice request of this identity');
         // Draft 3 (F352): the answer names the amount it binds, the commitment's; a draft 3 answer without it, or naming another, is refused.
-        if (a.amount ? a.amount.unit !== p.amount.unit || a.amount.value !== p.amount.value : d.spec === MESSAGES_SPEC) throw new Error('an answer naming no amount, or another than the payment’s (the money messages cMIP draft 3, 5.1)');
+        if (a.amount ? a.amount.unit !== p.amount.unit || a.amount.value !== p.amount.value : d.spec === MESSAGES_SPEC || d.spec === MESSAGES_SPEC_3) throw new Error('an answer naming no amount, or another than the payment’s (the money messages cMIP draft 3, 5.1)');
         await this.onAnswer(me, s, book, p, d.id, a.bound, a.ticket);
         lines.push({ text: p.stage === 'to pay' ? `${short(signer)} answered: a payment is ready, in Pay.` : `${short(signer)} refused to bind the payment: ${p.bound?.kind === 'refused' ? p.bound.why : ''}`, tone: p.stage === 'to pay' ? 'ok' : 'warn' });
       }
@@ -1238,14 +1242,21 @@ export class Damgar {
    * a fresh salt of 128 random bits, sent to the payee in an invoice request
    * (the money messages cMIP, 4).
    */
-  private async bind(me: TestIdentity, s: Settings, book: Book, a: { payee: string; amount: Amount; fulfils: string | null; whatFor: string | null; answers: string | null; draft: string | null; ticket: { leaf: string; tier: number } | null; auto?: boolean; referral?: { identity: string; evidence: string } | null; refs?: [string, string][] }): Promise<Payment> {
+  private async bind(me: TestIdentity, s: Settings, book: Book, a: { payee: string; amount: Amount; fulfils: string | null; whatFor: string | null; answers: string | null; draft: string | null; ticket: { leaf: string; tier: number } | null; auto?: boolean; referral?: { identity: string; evidence: string } | null; refs?: [string, string][]; purchase?: [string, string] | null }): Promise<Payment> {
     const acc = this.acceptedSet(await this.accepted(me));
-    const r = await this.route(me, s, a.payee, a.amount, acc);
+    let r = await this.route(me, s, a.payee, a.amount, acc);
     const fulfils = a.fulfils ?? r.tipPointer;
     if (!fulfils) throw new Error('The payee has no payee pointer: a tip follows one (Money rule 17). Nothing was signed.');
+    // Draft 4 (F357): where the payee's agreement names a split service, the request goes to the service.
+    const service = await this.splitServiceFor(me, s, a.payee, fulfils);
+    // Its one grantee is the agreement's designated pointer (Agreements field 14, rule 15): where the payee's own pointer does not lead to the service (a lone seller's deal), the service's own pointer is paid (a reading, to confirm).
+    if (service) {
+      const sr = await this.route(me, s, service, a.amount, acc);
+      if (sr.module !== r.module || base64(sr.address) !== base64(r.address)) r = { ...sr, tipPointer: r.tipPointer };
+    }
     const paidTo = r.to === 'flow' ? { kind: 'flow', pointer: r.pointer!, rail: r.rail } : { kind: 'vault', declaredBy: r.declaredBy!, entry: r.entry };
     const salt = new Uint8Array(randomBytes(16));
-    const c = { rail: r.module, payee: a.payee, amount: a.amount, fulfils, payer: me.id, paidTo, salt };
+    const c = { rail: r.module, payee: a.payee, amount: a.amount, fulfils, payer: me.id, paidTo, salt, ...(a.purchase ? { purchase: a.purchase } : {}) };
     const commitment = commitmentCbor(c) as Uint8Array;
     const key = paymentCommitment(c) as string;
     const irPayload = invoiceRequestPayload({ commitment, whatFor: a.whatFor, answers: a.answers, ticket: a.ticket });
@@ -1256,7 +1267,7 @@ export class Damgar {
       const f = await this.laneFor(me, s, MONEY, claimAs.type, claimAs.payload, this.opts.app ? 'app' : 'payouts');
       if ('why' in f || f.lane.grant !== how.grant) throw new Error(`The lane does not reach the payment’s claim${'why' in f ? ` (${f.why})` : ''}. Nothing was signed.`);
     }
-    const ir = await this.deliver(me, s, book, MESSAGES_SPEC, TYPES.invoiceRequest, irPayload, a.payee, a.refs, how);
+    const ir = await this.deliver(me, s, book, MESSAGES_SPEC, TYPES.invoiceRequest, irPayload, service ?? a.payee, a.refs, how);
     const p: Payment = {
       key,
       side: 'out',
@@ -1281,9 +1292,35 @@ export class Damgar {
       at: now(),
       how,
       referral: a.referral ?? null,
+      service,
+      purchase: a.purchase ?? null,
     };
     book.payments[key] = p;
     return p;
+  }
+
+  /**
+   * The payee's split service, where its agreement names one (the money
+   * messages cMIP, draft 4, 4.4; F357): the agreement an offer followed is
+   * made under (field 0), or a collective payee's agreement in force; its
+   * field 14 read, as the pointer check reads Agreements. Null where none.
+   */
+  private async splitServiceFor(me: TestIdentity, s: Settings, payee: string, fulfils: string): Promise<string | null> {
+    const places = await collectivePlaces(payee, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via);
+    let agreement: string | null = null;
+    for (const h of places) {
+      const act = await relayAt(h, s.via).getAct(fulfils).catch(() => null);
+      if (!act) continue;
+      const d = describeAct(act) as { spec?: string; type?: number; payload?: Uint8Array };
+      if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.offer && d.payload) {
+        const under = (cborDecode(d.payload) as Map<number, unknown>).get(0);
+        if (under instanceof Uint8Array) agreement = hex(under);
+      }
+      break;
+    }
+    if (!agreement) agreement = (await collectiveNow(payee, places, s.via).catch(() => null))?.agreement ?? null;
+    if (!agreement) return null;
+    return (await splitServiceOf(agreement, payee, places, s.via).catch(() => null))?.service ?? null;
   }
 
   /** An answer arrived: checked under the rail Module's rule before anything is shown to pay (the money messages cMIP, 5.2). */
@@ -1465,6 +1502,16 @@ export class Damgar {
       lines.push({ text: `Under ${missing.map((h) => labelOf(h) ?? `${h.slice(0, 8)}…`).join(', ')}, not accepted here: unknown, and it cannot be signed (F338). Accept it in Settings to read it.`, tone: 'warn' });
     }
     const about = (d.refs ?? []).map((r, i) => `${r.slice(0, 8)}…${d.refSigners?.[i] ? ` by ${short(d.refSigners[i]!)}` : ''}`);
+    if (dr.what === 'confirm') {
+      // Draft 4 (F357): a purchase confirmed, prepared in Edubba.
+      lines.unshift({ text: `Prepared in ${dr.app}, not signed there: confirm your purchase from ${short(dr.other)}, ${say(dr.amount, acc)}: what was promised was kept.` });
+      const c = await this.ownClaim(me, s, dr).catch((e) => ({ why: message(e) }));
+      if ('why' in c) {
+        unknown = true;
+        lines.push({ text: `${c.why}: it cannot be signed.`, tone: 'warn' });
+      } else lines.push({ text: `Signing signs your claim of that payment (${short(dr.confirm!.claim)}) again, in public, acknowledging ${dr.confirm!.acks.map(short).join(', ')}: the sale then reads confirmed for anyone who looks (Agreements rule 13). Nothing moves; it is public.`, tone: 'ok' });
+      return { id, kind: 'draft', from: this.who(me.id, me.id), app: dr.app, title: 'A purchase to confirm', lines, amount: { ...dr.amount, said: say(dr.amount, acc) }, unknown, offers: unknown ? ['decline'] : ['sign', 'decline'], found: x.found };
+    }
     if (dr.what === 'ask') {
       lines.unshift({ text: `Prepared in ${dr.app}, not signed there: ask ${short(dr.other)} to pay you ${say(dr.amount, acc)}${dr.whatFor ? `, for “${dr.whatFor}”` : ''}.` });
       lines.push({ text: 'Signing sends them a request to be paid, sealed to them, naming your payee pointer in force. It binds nobody: they may pay it, accept it as a debt, or decline.' });
@@ -1494,6 +1541,14 @@ export class Damgar {
       const item = await this.readDraftItem(me, s, book, id, this.acceptedSet(await this.accepted(me)));
       if (item.unknown) throw new Error('It is unknown here: nothing was signed.');
       const dr = readDraft(this.opened(book, id).payload);
+      if (dr.what === 'confirm') {
+        const c = await this.ownClaim(me, s, dr);
+        const made = moneyPayload({ type: 'claim', rail: c.rail, proof: new Uint8Array(c.proof), payee: c.payee, amount: c.amount, fulfils: c.fulfils, referral: c.referral ?? undefined }) as { type: number; payload: Uint8Array };
+        const claim = await this.publishPublic(me, s, made, { by: 'hand' }, dr.confirm!.acks, c.payee);
+        x.stage = 'signed';
+        await this.saveBook(me.id, book);
+        return { lines: [{ text: `Your claim of that payment, acknowledging what you bought, is signed in public (${short(claim)}): its sale reads confirmed for anyone who looks.`, tone: 'ok' }] };
+      }
       if (dr.what === 'ask') {
         const { look, acts } = await this.payee(me.id, me, s);
         void acts;
@@ -1575,16 +1630,16 @@ export class Damgar {
    * a lone seller names no claim, Money rule 18), or none (a tip, to the
    * payee's pointer). `referral`: the repost followed (Money claim field 6).
    */
-  payUnderLane(a: { payee: string; amount: Amount; whatFor: string | null; fulfils?: string | null; refs?: [string, string][]; referral?: { identity: string; evidence: string } | null; visible?: boolean }): Promise<{ key: string; lines: Line[] }> {
+  payUnderLane(a: { payee: string; amount: Amount; whatFor: string | null; fulfils?: string | null; refs?: [string, string][]; referral?: { identity: string; evidence: string } | null; visible?: boolean; purchase?: [string, string] | null }): Promise<{ key: string; lines: Line[] }> {
     return this.serial(async () => {
       if (!this.opts.app) throw new Error('Damgar signs a payment from To sign.');
       const { me, s, book } = await this.ctx();
       const acc = this.acceptedSet(await this.accepted(me));
       for (const h of [SPEC.payment, MESSAGES_SPEC, a.amount.unit]) if (!acc.has(h)) throw new Error(`${labelOf(h) ?? 'Its unit'} is not accepted for this identity (set in Damgar’s Settings). Nothing was signed.`);
-      const p = await this.bind(me, s, book, { payee: a.payee, amount: a.amount, fulfils: a.fulfils ?? null, whatFor: a.whatFor, answers: null, draft: null, ticket: null, referral: a.referral ?? null, refs: a.refs });
+      const p = await this.bind(me, s, book, { payee: a.payee, amount: a.amount, fulfils: a.fulfils ?? null, whatFor: a.whatFor, answers: null, draft: null, ticket: null, referral: a.referral ?? null, refs: a.refs, purchase: a.purchase ?? null });
       if (a.visible) book.payments[p.key].visible = true;
       await this.saveBook(me.id, book);
-      return { key: p.key, lines: [{ text: `Asked of ${short(a.payee)}, under the lane: an invoice request for ${say(a.amount, acc)}, sealed. When they answer, pay it in your wallet.`, tone: 'ok' }] };
+      return { key: p.key, lines: [{ text: `Asked of ${p.service ? `${short(a.payee)}’s split service, ${short(p.service)}, which answers for it (the money messages cMIP, draft 4)` : short(a.payee)}, under the lane: an invoice request for ${say(a.amount, acc)}, sealed. When they answer, pay it in your wallet.`, tone: 'ok' }] };
     });
   }
 
@@ -1623,8 +1678,9 @@ export class Damgar {
         p.onchain = { txid };
       }
       const proofBytes = paymentProof({ paidTo: f.paidTo, salt: f.salt, rail }) as Uint8Array;
-      const made = moneyPayload({ type: 'claim', rail: p.rail, proof: proofBytes, payee: p.other, amount: p.amount, fulfils: p.fulfils, referral: p.referral ?? undefined }) as { type: number; payload: Uint8Array };
-      const claim = await this.deliver(me, s, book, MONEY, made.type, made.payload, p.other, undefined, await this.claimHow(me, s, p, made));
+      const made = moneyPayload({ type: 'claim', rail: p.rail, proof: proofBytes, payee: p.other, amount: p.amount, fulfils: p.fulfils, referral: p.referral ?? undefined, ...(p.purchase ? { purchase: p.purchase } : {}) }) as { type: number; payload: Uint8Array };
+      // Draft 4 (F357): a payment its payee's split service answered for, its claim to the service too.
+      const claim = await this.deliver(me, s, book, MONEY, made.type, made.payload, p.service ?? p.other, undefined, await this.claimHow(me, s, p, made));
       p.claims.push(claim);
       p.proof = base64(proofBytes);
       p.stage = 'paid';
@@ -1667,8 +1723,12 @@ export class Damgar {
    */
   private async publicClaim(me: TestIdentity, s: Settings, p: Payment, acks: string[]): Promise<string> {
     if (!p.proof) throw new Error('That payment carries no proof yet: it is not paid. Nothing was signed.');
-    const made = moneyPayload({ type: 'claim', rail: p.rail, proof: b64(p.proof), payee: p.other, amount: p.amount, fulfils: p.fulfils, referral: p.referral ?? undefined }) as { type: number; payload: Uint8Array };
-    const how = await this.claimHow(me, s, p, made);
+    const made = moneyPayload({ type: 'claim', rail: p.rail, proof: b64(p.proof), payee: p.other, amount: p.amount, fulfils: p.fulfils, referral: p.referral ?? undefined, ...(p.purchase ? { purchase: p.purchase } : {}) }) as { type: number; payload: Uint8Array };
+    return this.publishPublic(me, s, made, await this.claimHow(me, s, p, made), acks, p.other);
+  }
+
+  /** A Money act signed in public (by hand, or under a lane), acknowledging `acks`, at this identity's relays and homes and the payee's relays. Its id. */
+  private async publishPublic(me: TestIdentity, s: Settings, made: { type: number; payload: Uint8Array }, how: How, acks: string[], payee: string): Promise<string> {
     await this.current(me);
     let act: { act: Uint8Array; id: string };
     if (how.by === 'lane') {
@@ -1689,7 +1749,7 @@ export class Damgar {
     }
     let places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
     try {
-      const l = await lookUp(p.other, places, s.via);
+      const l = await lookUp(payee, places, s.via);
       places = [...new Set([...places, ...l.routes.routes.flatMap((r) => r.hints)])];
     } catch {
       // the payee's relays are not known: ours hold it
@@ -1705,6 +1765,21 @@ export class Damgar {
     }
     if (!took) throw new Error('No relay took the claim. It was signed; try again later.');
     return act.id;
+  }
+
+  /** The identity's own public claim a confirmation names (draft 4, 2.3), read and checked: this identity's, of that payee and amount. */
+  private async ownClaim(me: TestIdentity, s: Settings, dr: { other: string; amount: Amount; confirm?: { claim: string } | null }): Promise<{ rail: string; proof: Uint8Array; payee: string; amount: Amount; fulfils: string; referral?: { identity: string; evidence: string } | null }> {
+    let act: Uint8Array | null = null;
+    for (const h of [...s.relays, ...me.f.homes.map((x) => x.hint)]) {
+      act = await relayAt(h, s.via).getAct(dr.confirm!.claim).catch(() => null);
+      if (act) break;
+    }
+    if (!act) throw new Error('The claim it names was not found at your relays and homes');
+    const d = describeAct(act) as { signer?: string; spec?: string; type?: number; payload?: Uint8Array; public?: boolean };
+    if (d.signer !== me.id || d.spec !== MONEY || d.type !== 3 || !d.payload) throw new Error('The act it names is no claim of yours');
+    const c = (moneyRead(3, d.payload) as { act: { rail: string; proof: Uint8Array; payee: string; amount: Amount; fulfils: string; referral?: { identity: string; evidence: string } | null } }).act;
+    if (c.payee !== dr.other || c.amount.unit !== dr.amount.unit || c.amount.value !== dr.amount.value) throw new Error('The claim it names is of another payee or amount than the draft says');
+    return c;
   }
 
   /**

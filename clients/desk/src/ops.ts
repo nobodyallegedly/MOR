@@ -10,6 +10,7 @@
 // Nothing here imports the agents' code or the pairing's: they are given by
 // the program only, so the web client's bundle holds neither.
 
+import { readId } from '../../genesis/src/forms.ts';
 import type { Access } from '../../collective/src/access.ts';
 import type { Agents } from './agents.ts';
 import type { Collectives } from './collectives.ts';
@@ -61,6 +62,7 @@ export const WEB_OPS: readonly string[] = [
   'publishing vow read',
   'publishing vow sales',
   'publishing contest',
+  'publishing confirm sale',
   'keys check',
   'identity posts',
   'identity correct',
@@ -108,6 +110,10 @@ export const WEB_OPS: readonly string[] = [
   'real release standing',
   'real collective',
   'real register resignation',
+  'real money prepare',
+  'real money record',
+  'real keepers',
+  'real keep',
 ];
 
 /** Said where a collective's release would be made: the web client chooses no folder (`docs/edubba-web-report.md`, "Releases"). */
@@ -117,6 +123,15 @@ export const RELEASE_ON_WEB =
 /** Said for any other operation the web client does not answer. */
 export const ON_A_COMPUTER =
   'This needs Edubba on a computer: the web client has no agents, no API key, no drafts from Claude’s connector, no test collective and no money drafts, and makes no identity (bring one you have).';
+
+/** An ID as the page sent it, read where it can be (`mid1…` or hex). */
+const readIdOr = (k: string): string => {
+  try {
+    return readId(k);
+  } catch {
+    return k;
+  }
+};
 
 const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : []);
 const text = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -368,6 +383,23 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return real.confirmShare(text(a.collective), text(a.member), list(a.typed));
       case 'real release standing':
         return real.releaseStanding(text(a.act));
+      case 'real money prepare':
+        // Round 3, part C: the collective's stakes, split plan, split service and keepers, one clone.
+        return real.prepareMoney({
+          collective: text(a.collective),
+          shares: Object.fromEntries(Object.entries((a.shares ?? {}) as Record<string, unknown>).map(([k, v]) => [readIdOr(k), Number(v)])),
+          referral: Number(a.referral ?? 0),
+          service: text(a.service),
+          serviceKey: text(a.serviceKey),
+          keepers: list(a.keepers),
+          keepersNeeded: num(a.keepersNeeded ?? 1),
+        });
+      case 'real money record':
+        return real.recordMoney(text(a.act));
+      case 'real keepers':
+        return real.keepers(text(a.collective));
+      case 'real keep':
+        return real.keep(text(a.collective), readIdOr(text(a.keeper)));
       case 'real register resignation':
         return real.registerResignation(text(a.collective), text(a.act));
       case 'real collective': {
@@ -381,7 +413,7 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'publishing collective add':
         return publishing.collectiveAdd(text(a.id));
       case 'publishing work read':
-        return publishing.prepareWork({ media: text(a.media), data: text(a.data), title: text(a.title), price: text(a.price), referral: text(a.referral) });
+        return publishing.prepareWork({ media: text(a.media), data: text(a.data), title: text(a.title), price: text(a.price), referral: text(a.referral), service: text(a.service ?? ''), serviceKey: text(a.serviceKey ?? '') });
       case 'publishing confirm':
         return publishing.confirm(text(a.plan), text(a.digest));
       case 'publishing deliver':
@@ -390,6 +422,8 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return publishing.prepareVow({ words: text(a.words), title: text(a.title), price: text(a.price) });
       case 'publishing vow sales':
         return publishing.vowSales({ identity: text(a.identity), relays: list(a.relays) });
+      case 'publishing confirm sale':
+        return publishing.confirmSale({ vow: text(a.vow), sale: text(a.sale), buyer: text(a.buyer), seller: text(a.seller), unit: text(a.unit), value: num(a.value) });
       case 'publishing contest':
         return publishing.contestSale({ vow: text(a.vow), sale: text(a.sale), buyer: text(a.buyer), promise: text(a.promise) });
       case 'money units':
