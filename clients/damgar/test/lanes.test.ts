@@ -126,7 +126,8 @@ test('a lane: asked in Dub, granted in Damgar, a tip within it paid from Dub; th
 
   // A second lane, with an expiry a moment away: once past it, refused.
   const clock = 'c1'.repeat(32);
-  await alice.dub.c.ask('lane ask', { label: 'Dub, for a minute', cap: '9000', unit: R, until: Math.floor(Date.now() / 1000) + 2, clock });
+  const until = Math.floor(Date.now() / 1000) + 2;
+  await alice.dub.c.ask('lane ask', { label: 'Dub, for a minute', cap: '9000', unit: R, until, clock });
   // The first lane revoked in Damgar: from then on Dub refuses under it.
   await alice.damgar.c.ask('look');
   const second = (await alice.damgar.c.ask<{ items: ToSign[] }>('to sign')).items.find((i) => i.kind === 'lane')!;
@@ -141,7 +142,8 @@ test('a lane: asked in Dub, granted in Damgar, a tip within it paid from Dub; th
   assert.match(rsaid, /a lane used long makes a long revocation/);
   assert.match(rsaid, /is not cited, and is void from then on/);
   await alice.damgar.c.ask('revoke lane', { grant: al[0].grant });
-  await new Promise((r) => setTimeout(r, 2500));
+  // Past the expiry on whole seconds, as the grant limits cMIP reads it (a fixed wait could end within the last second).
+  while (Math.floor(Date.now() / 1000) <= until) await new Promise((r) => setTimeout(r, 200));
   const e = alice.dub.c.ask('tip now', { post: post.post.id, signer: bob.id, value: '1000', unit: R });
   await refused(e, /expired|revoked/);
   await refused(alice.dub.c.ask('tip now', { post: post.post.id, signer: bob.id, value: '1000', unit: R }), /The grant expired on .*Nothing was signed/);
