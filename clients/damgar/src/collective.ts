@@ -16,12 +16,10 @@
 
 import { cborDecode, describeAct, hex, readTerms, sha256, unhex } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
-import { lookUp } from '../../genesis/src/lookup.ts';
 import type { Via } from '../../genesis/src/transport.ts';
 import { AGREEMENTS_SPECS, obligationPayload } from '../../repo/src/agreements.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
-import { negotiate } from '../../repo/src/proposals.ts';
-import { chainFor, collectiveNow, judgeCollective, memberKeyFor, publishAt, readMemberKeys, signAsMember, type ConsentRead, type MemberKey } from '../../grants/src/member.ts';
+import { collectiveNow, judgeCollective, memberKeyFor, readMemberKeys, signAndAsk, type ConsentRead, type MemberKey } from '../../grants/src/member.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 
 const MONEY_LAYER = 2;
@@ -121,24 +119,7 @@ export const promisePayload = (c: CollectiveHere, a: { to: string; amount: { uni
  * collective, sealed to them, as Edubba sends a release to sign.
  */
 export async function signPromise(me: TestIdentity, c: CollectiveHere, payload: Uint8Array, ask: string[], text: string, hints: string[], via: Via): Promise<{ act: string; places: string[]; asked: string[]; notAsked: string[] }> {
-  const at = await chainFor(c.id, c.key!, hints, via);
-  const made = signAsMember(c.id, c.key!, at, { spec: AGREEMENTS_SPECS.money, type: 1, payload, public: true });
-  const places = await publishAt([made.act], hints, via);
-  if (!places.length) throw new Error('No relay took the promise: nothing counts. Try again.');
-  const asked: string[] = [];
-  const notAsked: string[] = [];
-  for (const h of ask) {
-    try {
-      const l = await lookUp(h, hints, via);
-      const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((r) => r.hints);
-      if (!l.encryptionKey || !inbox?.length) throw new Error('no inbox or encryption key');
-      await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text, refs: [[made.id, c.id], [c.id, c.id]] });
-      asked.push(h);
-    } catch {
-      notAsked.push(h);
-    }
-  }
-  return { act: made.id, places, asked, notAsked };
+  return signAndAsk(me, c.id, c.key!, { spec: AGREEMENTS_SPECS.money, type: 1, payload }, ask, text, hints, via);
 }
 
 /** Agreements' answer for a promise of the collective, the cap judged here (the grant limits cMIP, draft 2: Damgar implements it). */

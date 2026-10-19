@@ -1122,6 +1122,51 @@ impl Verifier {
     /// address }` or `{ to: "nowhere", why }`.
     #[wasm_bindgen(js_name = moneyChoose)]
     pub fn money_choose(&self, money_spec: &str, payee: &str, amount: JsValue, accepted: Vec<String>) -> R<JsValue> {
+        let money = unhex(money_spec)?;
+        let payee = unhex(payee)?;
+        let view = View { v: &self.inner, money };
+        let chain = view.pointers_of(&payee);
+        let latest = money::latest_pointer(&chain);
+        let flow = latest.act.and_then(|a| chain.iter().find(|(i, _)| *i == a)).map(|(i, p)| (*i, p.clone()));
+        self.choose_from(money, payee, amount, accepted, flow, latest.contested, None)
+    }
+
+    /// As `moneyChoose`, the pointer in force read by Agreements (Money
+    /// draft 10, rule 7, F358): for a collective, a pointer signed with the
+    /// member keys of its area reaching Money counts where that area's
+    /// holders and threshold are met. `specs` as for every Agreements call.
+    #[wasm_bindgen(js_name = agreementsChoose)]
+    pub fn agreements_choose(&self, specs: JsValue, payee: &str, amount: JsValue, accepted: Vec<String>) -> R<JsValue> {
+        let s = super::specs_of(specs)?;
+        let money = s.mirs()?.money;
+        let view = s.view(&self.inner)?;
+        let payee = unhex(payee)?;
+        match view.payee_pointer(&payee).map_err(super::lerr)? {
+            Ok(x) => self.choose_from(money, payee, amount, accepted, Some(x), false, None),
+            Err(why) => self.choose_from(money, payee, amount, accepted, None, false, Some(why)),
+        }
+    }
+
+    /// The payee pointer in force as Agreements judge it (F358): `{ act,
+    /// version, why }`, `act` null and `why` said where none counts.
+    #[wasm_bindgen(js_name = agreementsPointer)]
+    pub fn agreements_pointer(&self, specs: JsValue, payee: &str) -> R<JsValue> {
+        #[derive(Serialize)]
+        struct Out {
+            act: Option<String>,
+            version: u64,
+            why: Option<String>,
+        }
+        let s = super::specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        to_js(&match view.payee_pointer(&unhex(payee)?).map_err(super::lerr)? {
+            Ok((id, p)) => Out { act: Some(hx(&id)), version: p.version, why: None },
+            Err(why) => Out { act: None, version: 0, why: Some(why) },
+        })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn choose_from(&self, money: Hash, payee: Hash, amount: JsValue, accepted: Vec<String>, flow: Option<(Hash, PayeePointer)>, contested: bool, no_pointer: Option<String>) -> R<JsValue> {
         #[derive(Serialize)]
         #[serde(rename_all = "camelCase")]
         struct Out {
@@ -1135,14 +1180,8 @@ impl Verifier {
             address: Option<Vec<u8>>,
             why: String,
         }
-        let money = unhex(money_spec)?;
-        let payee = unhex(payee)?;
         let amount = from_js::<AmountIn>(amount)?.core()?;
         let accepted = accepted.iter().map(|s| unhex(s)).collect::<R<Vec<_>>>()?;
-        let view = View { v: &self.inner, money };
-        let chain = view.pointers_of(&payee);
-        let latest = money::latest_pointer(&chain);
-        let flow = latest.act.and_then(|a| chain.iter().find(|(i, _)| *i == a)).map(|(i, p)| (*i, p.clone()));
         let vault: Option<(Hash, Vec<VaultEntry>)> = {
             let res = self.inner.resolve(&payee);
             let mut out = None;
@@ -1173,13 +1212,19 @@ impl Verifier {
             money::Choice::Flow(i) => {
                 let (pid, p) = flow.as_ref().unwrap();
                 let r = &p.rails[i];
-                Out { to: "flow", pointer: Some(hx(pid)), rail: Some(i as u64), declared_by: None, entry: None, module: Some(hx(&r.module)), address: Some(r.address.clone()), why: if latest.contested { "the payee's pointer chain is forked: the last pointer before the fork is used (Money rule 1); the payee is warned".into() } else { String::new() } }
+                Out { to: "flow", pointer: Some(hx(pid)), rail: Some(i as u64), declared_by: None, entry: None, module: Some(hx(&r.module)), address: Some(r.address.clone()), why: if contested { "the payee's pointer chain is forked: the last pointer before the fork is used (Money rule 1); the payee is warned".into() } else { String::new() } }
             }
             money::Choice::Vault(i) => {
                 let (by, v) = vault.as_ref().unwrap();
                 Out { to: "vault", pointer: None, rail: None, declared_by: Some(hx(by)), entry: Some(i as u64), module: Some(hx(&v[i].rail_module)), address: Some(v[i].source.clone()), why: "above the vault's limit for its unit: it goes to the vault (Money rule 3)".into() }
             }
-            money::Choice::Undeliverable(u) => none(if ok_unit { u.to_string() } else { "the unit, or the payment cMIP, is not one accepted here".into() }),
+            money::Choice::Undeliverable(u) => none(if !ok_unit {
+                "the unit, or the payment cMIP, is not one accepted here".into()
+            } else if let (None, Some(w)) = (&flow, &no_pointer) {
+                format!("{u} ({w}, as Agreements judge its pointers)")
+            } else {
+                u.to_string()
+            }),
         };
         to_js(&out)
     }

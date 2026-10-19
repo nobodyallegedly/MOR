@@ -23,6 +23,7 @@ import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { AGREEMENTS_TYPES, FOUNDING_AGREEMENT, REPO_SPECS } from '../../repo/src/specs.ts';
 import { allBy, makeGrantKey } from './grant.ts';
+import { negotiate } from '../../repo/src/proposals.ts';
 
 /** The member keys cMIP, draft 1 (`cmips/cmip-member-keys-draft-1.md`): a test value until publication. */
 export const MEMBER_KEYS_SPEC = sha256('Member keys cMIP, draft 1, test value until publication');
@@ -391,6 +392,86 @@ export async function collectiveNow(collective: string, hints: string[], via: Vi
     // none readable
   }
   return { agreement: cur?.agreement ?? null, departed: cur?.departed ?? [], resignations, parties };
+}
+
+/**
+ * Sign an act of the collective with this member's own key for it, publish
+ * it where the collective's acts are, and ask the other holders of the area
+ * reaching it for their key where it needs more than one: each sent a
+ * negotiation message naming the act and the collective, sealed to them, as
+ * Edubba sends a release to sign (F353). Their apps (Dub's Signing tab,
+ * Edubba's To sign) sign it with their own keys.
+ */
+export async function signAndAsk(
+  me: TestIdentity,
+  collective: string,
+  key: MemberKey,
+  act: { spec: string; type: number; payload: Uint8Array },
+  ask: string[],
+  text: string,
+  hints: string[],
+  via: Via = {},
+): Promise<{ act: string; places: string[]; asked: string[]; notAsked: string[] }> {
+  const at = await chainFor(collective, key, hints, via);
+  const made = signAsMember(collective, key, at, { ...act, public: true });
+  const places = await publishAt([made.act], hints, via);
+  if (!places.length) throw new Error('No relay took the act: nothing counts. Try again.');
+  const asked: string[] = [];
+  const notAsked: string[] = [];
+  for (const h of ask) {
+    try {
+      const l = await lookUp(h, hints, via);
+      const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((r) => r.hints);
+      if (!l.encryptionKey || !inbox?.length) throw new Error('no inbox or encryption key');
+      await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text, refs: [[made.id, collective], [collective, collective]] });
+      asked.push(h);
+    } catch {
+      notAsked.push(h);
+    }
+  }
+  return { act: made.id, places, asked, notAsked };
+}
+
+/** Where a payer pays a collective, as Agreements read its payee pointer (`collectivePointer`). */
+export interface CollectiveChoice {
+  to: 'flow' | 'vault' | 'nowhere';
+  pointer?: string;
+  rail?: number;
+  declaredBy?: string;
+  entry?: number;
+  module?: string;
+  address?: Uint8Array;
+  why: string;
+}
+
+/**
+ * A collective's payee pointer in force, as Agreements judge it (Money
+ * draft 10, rule 7, F358, decided by Nobody, allegedly, 19 October 2026):
+ * signed with the member keys of its area reaching Money type 0, it is
+ * scoped and counts where that area's holders and threshold are met. A
+ * pointer moves no amount, so the grant limits cMIP (draft 2, 2.2) finds
+ * each within an area's cap: stated so for every pointer the collective's
+ * places hold. With `pay`, where a payer pays this amount (`agreementsChoose`).
+ * Null where the identity is no collective.
+ */
+export async function collectivePointer(
+  collective: string,
+  hints: string[],
+  via: Via = {},
+  pay?: { amount: { unit: string; value: number }; accepted: string[] },
+): Promise<{ pointer: string | null; version: number; why: string | null; choice: CollectiveChoice | null } | null> {
+  const places = await collectivePlaces(collective, hints, via);
+  const { v, founding } = await collectiveVerifier(collective, places, via).catch(() => ({ v: null, founding: null }));
+  if (!v || !founding) return null;
+  const pointers: [string, boolean][] = [];
+  for (const a of await allBy(collective, places, via)) {
+    const d = describeAct(a) as { id: string; spec?: string; type?: number };
+    if (d.spec === MIRS.money && d.type === 0) pointers.push([d.id, true]);
+  }
+  const specs = withGrantLimits(AGREEMENTS_SPECS, pointers);
+  const p = v.agreementsPointer(specs, collective) as { act: string | null; version: number; why: string | null };
+  const choice = pay ? (v.agreementsChoose(specs, collective, pay.amount, pay.accepted) as CollectiveChoice) : null;
+  return { pointer: p.act ?? null, version: p.version ?? 0, why: p.why ?? null, choice };
 }
 
 /**

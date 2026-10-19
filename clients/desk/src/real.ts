@@ -48,7 +48,7 @@ import { readAgreement, readChanges, readRelease, termsOf, withAgreements, rules
 import { beforeSigning } from '../../assess/src/assess.ts';
 import { filesOf, folderOf } from './setup.ts';
 import { governanceOf, gridOf, gridSay, type Grid } from './grid.ts';
-import { collectiveNow, collectivePlaces, collectiveVerifier, makeMemberKey, sealMemberKey } from '../../grants/src/member.ts';
+import { areaReaching, collectiveNow, collectivePlaces, collectivePointer, collectiveVerifier, makeMemberKey, memberKeyFor, readMemberKeys, sealMemberKey, signAndAsk, type MemberKey } from '../../grants/src/member.ts';
 import { keep, keeperLogs, recordedBefore } from '../../grants/src/keeper.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { readSealedList, type Followed } from '../../dub/src/people.ts';
@@ -895,7 +895,7 @@ export class Real {
             { text: 'Computed by the split cMIP, draft 2; no fee.' },
           ],
         },
-        { heading: 'Who divides it (the split service, field 14)', lines: [{ text: `${service ? names(service) : '…'}, by a grant of the collective naming the key it made for this collective (${key ? `${key.slice(0, 16)}…` : '…'}). The grant counts once the service signs to accept it. Its key signs only receipts for money coming in under the collective’s own offers (rule 16).` }, { text: 'Where the collective is paid: once it is recorded, Edubba signs the collective’s payee pointer leading to the service’s own rails, with the collective’s signing key held here (the pointer check, rule 16), so every buyer’s Damgar reads it.' }] },
+        { heading: 'Who divides it (the split service, field 14)', lines: [{ text: `${service ? names(service) : '…'}, by a grant of the collective naming the key it made for this collective (${key ? `${key.slice(0, 16)}…` : '…'}). The grant counts once the service signs to accept it. Its key signs only receipts for money coming in under the collective’s own offers (rule 16).` }, { text: 'Where the collective is paid: once it is recorded, its payee pointer leads to the service’s own rails (the pointer check, rule 16), signed with the keys of its area reaching Money, a holder’s own key here and the others’ asked where the area needs more (Money draft 10, rule 7, F358). The collective’s own key signs none of it.' }] },
         { heading: 'Who keeps its record (keepers, field 3)', lines: keepers.length ? [{ text: `${keepers.map(names).join(', ')}; an act counts as recorded once ${a.keepersNeeded === keepers.length ? 'every one of them' : `${a.keepersNeeded} of them`} recorded it (rules 36 to 44). A keeper sees the acts it records; one may be an Edubba agent.` }] : [{ text: 'None named.' }] },
         ...(preview ? [{ heading: 'What it changes', lines: readChanges(TestCollective.foundingTerms(c.f.governance, c.f.members), preview.payload, names) }, ...beforeSigning(preview.payload, names)] : []),
       ],
@@ -942,9 +942,17 @@ export class Real {
     });
   }
 
-  /** The collective's payee pointer, a new version naming its split service's own rails (rule 16), signed with its own key; its id. */
-  private async pointToService(c: TestCollective, grant: string): Promise<string> {
-    const hints = this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint)]);
+  /**
+   * The collective's payee pointer, a new version naming its split service's
+   * own rails (rule 16), signed with a member's own key in the area reaching
+   * Money (Money draft 10, rule 7, F358, decided by Nobody, allegedly, 19
+   * October 2026: "A founder should not have a special position if the
+   * constitution does not say so"): `by`, or another identity held here
+   * holding a box there; the area's other holders asked for their key where
+   * it needs more than one. The collective's own key signs none of it.
+   */
+  private async pointToService(c: TestCollective, grant: string, by: string): Promise<{ act: string; signer: string; area: string; needed: number; asked: string[]; notAsked: string[] }> {
+    const hints = this.hints([...c.f.relays, ...c.f.identity.homes.map((h) => h.hint), ...this.store.settings().homes.map((h) => h.hint)]);
     let g: Uint8Array | null = null;
     for (const h of hints) {
       g = await relayAt(h, this.via).getAct(grant).catch(() => null);
@@ -970,19 +978,32 @@ export class Real {
     }
     if (!spAct) throw new Error('the split service’s pointer was not found');
     const rails = (moneyRead(0, (describeAct(spAct) as { payload: Uint8Array }).payload) as { act: { rails: { module: string; address: Uint8Array }[] } }).act.rails;
-    const own = await lookUp(c.identity, hints, this.via).catch(() => null);
-    if (own) for (const a of await allBy(c.identity, hints, this.via)) {
-      try {
-        own.verifier.add(a);
-      } catch {
-        // held already, or private
+    // Who signs: a holder of the area reaching payee pointers (Money type 0), with their own key for the collective.
+    const places = await collectivePlaces(c.identity, hints, this.via);
+    const { area } = await areaReaching(c.identity, places, { spec: MIRS.money, type: 0 }, this.via);
+    if (!area) throw new Error('no area of its constitution reaches Money: its payee pointer is signed by the holders of that area (F358), and there is none');
+    let signer: { me: TestIdentity; key: MemberKey } | null = null;
+    for (const id of [by, ...this.store.book().identities.map((i) => i.id)].filter((x, i, xs) => xs.indexOf(x) === i)) {
+      if (!area.holders.includes(id) || !this.store.holds(id)) continue;
+      const me = this.store.identity(id);
+      const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), this.via).catch(() => []);
+      const key = keys.length ? await memberKeyFor(keys, c.identity, places, this.via).catch(() => null) : null;
+      if (key) {
+        signer = { me, key };
+        break;
       }
     }
-    const cur = own ? (own.verifier.moneyPointer(MIRS.money, c.identity) as { act: string | null; version: number }) : { act: null, version: 0 };
-    const payload = pointerPayload({ payee: c.identity, version: cur.version + 1, ...(cur.act ? { previous: cur.act } : {}), rails: rails.map((x) => [x.module, new Uint8Array(x.address)] as [string, Uint8Array]) });
-    const made = await c.id.publish(MIRS.money, 0, payload, { public: true, relays: c.f.relays });
-    this.saveCollective(c);
-    return made.id;
+    if (!signer) throw new Error(`no identity held here holds a box in its area “${area.name}” with its own key for the collective: one of ${area.holders.map(this.names()).join(', ')} signs it, in Damgar or here`);
+    const cur = await collectivePointer(c.identity, places, this.via).catch(() => null);
+    const payload = pointerPayload({ payee: c.identity, version: (cur?.version ?? 0) + 1, ...(cur?.pointer ? { previous: cur.pointer } : {}), rails: rails.map((x) => [x.module, new Uint8Array(x.address)] as [string, Uint8Array]) });
+    const others = area.number > 1 ? area.holders.filter((h) => h !== signer!.me.id) : [];
+    const names = this.names();
+    try {
+      const made = await signAndAsk(signer.me, c.identity, signer.key, { spec: MIRS.money, type: 0, payload }, others, `${names(signer.me.id)} signed the payee pointer of the collective, leading to its split service ${names(service)}, with their own key in its area “${area.name}”, which asks ${area.number} keys. Read it in your Signing tab, then sign it with yours.`, places, this.via);
+      return { act: made.act, signer: signer.me.id, area: area.name, needed: area.number, asked: made.asked, notAsked: made.notAsked };
+    } finally {
+      this.store.saveIdentity(signer.me);
+    }
   }
 
   /** Record a money clone every member signed (rule 72): from then on it is in force. */
@@ -999,14 +1020,22 @@ export class Real {
       p.rotated = r;
       this.saveProposal(p);
       const lines: Line[] = [{ text: `Recorded on the collective’s line (${short(r)}): its stakes, split plan, split service${p.governance.keepers ? ' and keepers' : ''} are in force.`, tone: 'ok' }];
-      // Where the collective is paid: its payee pointer names the split service's own rails (the pointer check, rule 16), signed with the collective's own key, so every payer's app reads it (a reading, to confirm: a pointer signed with a member's key is scoped, and Money's pointer reads only a valid one).
+      // Where the collective is paid: its payee pointer names the split service's own rails (the pointer check, rule 16), signed with the keys of its area reaching Money (Money draft 10, rule 7, F358).
+      const acts = [r];
       try {
-        const ptr = await this.pointToService(c, p.governance.splitGrant!);
-        lines.push({ text: `Its payee pointer now leads to the split service (${short(ptr)}): a buyer’s payment goes there, the service answering for the collective.`, tone: 'ok' });
+        const ptr = await this.pointToService(c, p.governance.splitGrant!, p.founder);
+        acts.push(ptr.act);
+        const names = this.names();
+        lines.push({ text: `Its payee pointer now leads to the split service (${short(ptr.act)}), signed with ${names(ptr.signer)}’s own key in its area “${ptr.area}”.`, tone: 'ok' });
+        lines.push(
+          ptr.needed > 1
+            ? { text: `The area asks ${ptr.needed} keys: ${ptr.asked.length ? `${ptr.asked.map(names).join(', ')} ${ptr.asked.length === 1 ? 'is' : 'are'} asked for theirs, in their own app` : 'nobody could be asked'}${ptr.notAsked.length ? `; not reached: ${ptr.notAsked.map(names).join(', ')}` : ''}. Until then a buyer’s payment cannot reach the service.`, tone: 'warn' }
+            : { text: 'One key of the area: a buyer’s payment goes there now, the service answering for the collective.', tone: 'ok' },
+        );
       } catch (e) {
         lines.push({ text: `Its payee pointer could not be pointed at the split service yet: ${err(e)}`, tone: 'warn' });
       }
-      return { title: 'In force', lines, acts: [r] };
+      return { title: 'In force', lines, acts };
     });
   }
 

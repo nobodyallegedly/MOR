@@ -15849,6 +15849,56 @@ fn members_act_with_their_own_keys() {
     assert!(!lab.view().consent(&x).map(|c| c.counts()).unwrap_or(false));
 }
 
+/// F358, Money draft 10, rule 7 (decided by Nobody, allegedly, 19 October
+/// 2026: "money areas should be able to do it. A founder should not have a
+/// special position if the constitution does not say so"): a collective's
+/// payee pointer (Money type 0) signed with the member keys of the area
+/// reaching Money is scoped, judged by Agreements with that area's holders
+/// and threshold. Money held by Ana and Ben, two keys: Ana's key alone
+/// puts no pointer in force; with Ben's, it is the collective's pointer; a
+/// later one by Cy's key, who holds no box in Money, never counts, and the
+/// collective's own key is not needed.
+#[test]
+fn a_collectives_pointer_signed_by_its_money_area_f358() {
+    let mut lab = Lab::new(&|t| {
+        let a = t.areas.as_mut().unwrap().iter_mut().find(|a| a.id == 2).unwrap();
+        a.holders = vec![t.parties[ANA], t.parties[BEN]];
+        a.threshold = 2;
+    });
+    let f = lab.founding;
+    let (sa, ka) = lab.key_sign(ANA, &f, "ana");
+    let (sb, kb) = lab.key_sign(BEN, &f, "ben");
+    let (sc, kc) = lab.key_sign(CY, &f, "cy");
+    let label = lab.c[0].id;
+    let pointer = |lab: &mut Lab, st: &mut Person, version: u64, previous: Option<Hash>, address: &[u8]| -> Hash {
+        let p = mor_core::money::Payload::PayeePointer(mor_core::money::PayeePointer {
+            payee: label,
+            version,
+            previous,
+            rails: vec![mor_core::money::Rail { module: spec("a rail"), address: address.to_vec() }],
+        });
+        let x = lab.w.everyday_act(st, mirs().money, 0, p.to_map(), None, None);
+        lab.w.add(&x)
+    };
+    let mut a = lab.member_strand(sa, &ka);
+    let mut b = lab.member_strand(sb, &kb);
+    let mut c = lab.member_strand(sc, &kc);
+    let p1 = pointer(&mut lab, &mut a, 1, None, b"the split service's node");
+    assert_eq!(lab.w.v.status(&p1), Status::Scoped, "a member key's pointer is scoped under Identity");
+    assert!(lab.view().payee_pointer(&label).unwrap().is_err(), "one key of two: no pointer in force");
+    lab.key_cosign(&mut b, &p1);
+    let (id, got) = lab.view().payee_pointer(&label).unwrap().expect("with Ben's key, the area's two");
+    assert_eq!((id, got.version, got.rails[0].address.clone()), (p1, 1, b"the split service's node".to_vec()));
+    // Cy holds no box in Money: his key's later pointer counts for nothing, even cosigned by Ana.
+    let p2 = pointer(&mut lab, &mut c, 2, Some(p1), b"Cy's node");
+    lab.key_cosign(&mut a, &p2);
+    assert_eq!(lab.view().payee_pointer(&label).unwrap().map(|(i, _)| i), Ok(p1));
+    // The area's two keys move it on; the collective's own key never signed any of it.
+    let p3 = pointer(&mut lab, &mut b, 2, Some(p1), b"another node");
+    lab.key_cosign(&mut a, &p3);
+    assert_eq!(lab.view().payee_pointer(&label).unwrap().map(|(i, _)| i), Ok(p3));
+}
+
 /// F353, draft 16, and the grant limits cMIP's draft 2: an area's limits
 /// (key 6) are a cMIP's. Money held by Ana and Ben at one key, with a cap:
 /// within it, one key counts; above it, the cMIP asks a second; a verifier

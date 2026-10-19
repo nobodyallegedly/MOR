@@ -19,6 +19,7 @@ import { readChanges, readRelease, termsOf, type Line, type Names, type Section 
 import { decodeManifest } from '../../repo/src/manifest.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { escapeControls } from '../../connector/src/words.ts';
+import { labelOf } from '../../damgar/src/specs.ts';
 
 /** Said at the top of the Signing tab, and where it is turned on, word for word. */
 export const SIGNING_SAY =
@@ -178,6 +179,13 @@ function actOfCollective(d: Described, names: Names): Reading | null {
       const lines = [`A Money act: ${r.type}.`];
       if (amount) lines.push(`Amount: ${amount.value.toLocaleString('en')} in unit ${amount.unit.slice(0, 12)}… (the Bitcoin units Module names regtest satoshis so).`);
       for (const k of ['payer', 'payee', 'debtor', 'creditor'] as const) if (typeof r[k] === 'string') lines.push(`${k[0].toUpperCase()}${k.slice(1)}: ${names(r[k] as string)}.`);
+      // A payee pointer (Money draft 10, rule 7, F358): where the collective's money goes, read before signing it.
+      if (r.type === 'pointer') {
+        const rails = (r.rails ?? []) as { module: string; address: Uint8Array }[];
+        lines.push(`Where payments to the collective go from now on (its payee pointer, version ${r.version}${r.previous ? `, replacing ${String(r.previous).slice(0, 12)}…` : ''}):`);
+        for (const [i, x] of rails.entries()) lines.push(`Rail ${i + 1}: ${labelOf(x.module) ?? `a rail Module not known here (${x.module.slice(0, 12)}…)`}, address ${hex(new Uint8Array(x.address)).slice(0, 24)}…`);
+        lines.push('Signing it with your key counts as your consent in the area reaching Money: check that these rails are the ones the collective agreed (its split service’s, say).');
+      }
       return base(`Sign a money act of the collective: ${r.type}`, lines);
     }
     if (d.spec === SPECS.text && d.type === 0) {
