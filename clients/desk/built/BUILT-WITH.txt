@@ -8,7 +8,7 @@ esbuild: 0.25.12
 
 Work hash of each file (as the display client lists them):
 6ff73fdd6c0fb06cf03df3e3c07bc6bc37af7b68b019d56fee9732e683b7b810  index.html
-9fa4da3fd7fc942f6c275f8218b3431b65e7083ca3a00ab392bfac7c8d1e54d9  edubba.js
+3b8677d549879fee9e34807cc90bf80e4928a1b442d0ff8bcc67830e7bcdf6df  edubba.js
 e370ec2b961dab5f129774efa558dfe8a483bbef833223b809b659936bbc8e43  edubba.css
 beffa8074ef34e125ae7f6edcb4eb505366084fe28032da602b87674914e8bc6  mor_wasm_bg.wasm
 d72e0f61b65931f575516d8d39caa75d2ad09b04b0ea606aee6a157b2e5eb146  inter_light.woff2
@@ -19,7 +19,7 @@ a63d578c41abf416497080d59d2ecd9ecf4fce5458f7543556acc9a8a9d2cc5c  inter_license.
 
 SHA-256 of each file (as sha256sum prints it):
 f8f8e838d278f37aa6d704dac47a5ae71128c126d773f3b12bbb18ae7adfb790  index.html
-8178c097daca27ca8fddf53f3ad2f0e4d62c2d5eea89ce34add8d76b280edce2  edubba.js
+44741addc23d8b253f5c204e8039fb93c9841b344464c4395e2338beafe64d7b  edubba.js
 efdcf109e1b70da08a0d091b1db1e1c13e3f61fe9bd3649af1859cfc2de04329  edubba.css
 1ff48cf0d0ddd27c9432eb44e4226d458905e04836f6004e7ba009b09c15122d  mor_wasm_bg.wasm
 e111a1e2ad914ccda9179b95e83fb10234dd52a1932e0b93c480476227983fd9  inter_light.woff2
