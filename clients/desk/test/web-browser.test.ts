@@ -404,21 +404,21 @@ test('a real collective founded in the web client, its members signing in Dub on
   const grid = ed.locator('#e-grid-real-found table.grid');
   await grid.waitFor({ timeout: 30_000 });
   assert.deepEqual((await grid.locator('thead th[scope=col]').allInnerTexts()).length, 3, 'one column per member');
-  assert.deepEqual((await grid.locator('tr.band th').allTextContents()).map((x) => x.trim()), ['The constitution', 'The judges', 'The lanes: operations']);
-  // A Money lane: Nobody and Ana's keys, one key, two above 10,000.
+  assert.deepEqual((await grid.locator('tr.band th').allTextContents()).map((x) => x.trim()), ['The constitution', 'The judges', 'The areas: operations']);
+  // A Money area: Nobody and Ana's keys, one key, two above 10,000.
   await ed.click('[data-grid-add=real-found]');
-  const money = grid.locator('tr[data-lane="1"]');
-  await money.locator('input.lanename').fill('Money');
+  const money = grid.locator('tr[data-area="1"]');
+  await money.locator('input.areaname').fill('Money');
   await money.locator('select[data-grid-layer]').selectOption('2');
-  for (const id of [nobody.id, anaId]) await grid.locator(`tr[data-lane="1"] button[data-grid-cell="lane:1"][data-m="${id}"]`).click();
-  await grid.locator('tr[data-lane="1"] input[data-grid-cap]').fill('10000');
-  await grid.locator('tr[data-lane="1"] input[data-grid-cap]').press('Tab');
-  await grid.locator('tr[data-lane="1"] td.say', { hasText: 'above 10,000, 2 keys' }).waitFor({ timeout: 10_000 });
+  for (const id of [nobody.id, anaId]) await grid.locator(`tr[data-area="1"] button[data-grid-cell="area:1"][data-m="${id}"]`).click();
+  await grid.locator('tr[data-area="1"] input[data-grid-cap]').fill('10000');
+  await grid.locator('tr[data-area="1"] input[data-grid-cap]').press('Tab');
+  await grid.locator('tr[data-area="1"] td.say', { hasText: 'above 10,000, 2 keys' }).waitFor({ timeout: 10_000 });
   assert.match(await grid.locator('tfoot').innerText(), /Money/);
-  // A second lane over all of Money is refused in plain words, then removed.
+  // A second area over all of Money is refused in plain words, then removed.
   await ed.click('[data-grid-add=real-found]');
-  await grid.locator('tr[data-lane="2"] input.lanename').fill('More money');
-  await grid.locator(`tr[data-lane="2"] button[data-grid-cell="lane:2"][data-m="${boId}"]`).click();
+  await grid.locator('tr[data-area="2"] input.areaname').fill('More money');
+  await grid.locator(`tr[data-area="2"] button[data-grid-cell="area:2"][data-m="${boId}"]`).click();
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review', { hasText: 'reach the same acts' }).waitFor({ timeout: 90_000 });
   await grid.locator('[data-grid-remove="2"]').click();
@@ -431,7 +431,7 @@ test('a real collective founded in the web client, its members signing in Dub on
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading h2', { hasText: 'Propose to found the collective “The tablet house”' }).waitFor({ timeout: 90_000 });
   const rv = await ed.locator('#e-real-review').innerText();
-  assert.match(rv, /The lanes[\s\S]*“Money”: all money \(the Money layer\)\. Any one of [\s\S]*above 10,000 regtest satoshis an act, 2 keys/);
+  assert.match(rv, /The areas[\s\S]*“Money”: all money \(the Money layer\)\. Any one of [\s\S]*above 10,000 regtest satoshis an act, 2 keys/);
   assert.match(rv, /Above 10,000 an act, one more holder's key/);
   await banner(ed, 'the founding review');
   await ed.click('#e-real-review [data-action=confirm]');
@@ -493,10 +493,10 @@ test('a real collective founded in the web client, its members signing in Dub on
 
   // A member change: Cy joins. Every member whose voice remains signs, and Cy, each in Dub on the web; then it waits for Kišib.
   await ed.click('#e-real-change > summary');
-  // The same grid, filled from the agreement in force: its lanes, the Money lane's cap.
+  // The same grid, filled from the agreement in force: its areas, the Money area's cap.
   const cg = ed.locator('#e-grid-real-change table.grid');
   await cg.waitFor({ timeout: 60_000 });
-  assert.equal(await cg.locator('input.lanename').nth(1).inputValue(), 'Money');
+  assert.equal(await cg.locator('input.areaname').nth(1).inputValue(), 'Money');
   assert.equal(await cg.locator('input[data-grid-cap]').first().inputValue(), '10000');
   await ed.check(`#real-change input[name=member][value="${cyId}"]`);
   await cg.locator('thead th[scope=col]', { hasText: 'Cy' }).waitFor({ timeout: 10_000 });

@@ -110,6 +110,8 @@ export interface Rails {
 
 export interface State {
   web: boolean;
+  /** Something was saved from Settings (H45): its sections start folded; before that, on first use, all open. */
+  settingsSaved: boolean;
   stage: 'identity' | 'accept' | 'ready';
   held: { id: string; grouped: string; short: string; active: boolean }[];
   identity: null | {

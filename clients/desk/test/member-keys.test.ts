@@ -13,7 +13,7 @@
 // - A's key posts alone; the act shows which member signed.
 // - A's key moves 50,000: above the cap, one key is not enough; iPa signs it
 //   in Dub's Signing tab, with iPa's own key, and it counts.
-// - iPh's key cannot act in Money, a lane iPh does not hold.
+// - iPh's key cannot act in Money, an area iPh does not hold.
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -96,7 +96,7 @@ test('F353: members name their own keys as they sign the founding, and act for t
     constitution: { holders: [A, iPa.id, iPh.id], number: 3 },
     chainKey: 2,
     absence: 2,
-    lanes: [
+    areas: [
       { name: 'Publishing', layer: 1, holders: [A, iPa.id, iPh.id], number: 1 },
       { name: 'Money', layer: 2, holders: [A, iPa.id], number: 1, cap: 10_000 },
       { name: 'Development', layer: 4, holders: [iPh.id], number: 1 },
@@ -106,13 +106,13 @@ test('F353: members name their own keys as they sign the founding, and act for t
   const review = await e.c.ask<any>('real found prepare', { name: 'Three tablets', founder: A, members: [iPa.id, iPh.id], grid });
   assert.deepEqual(review.reading.blocking, []);
   const said = review.reading.sections.map((s: any) => s.heading);
-  assert.deepEqual(said.slice(0, 4), ['The constitution', 'The judges', 'The lanes', 'Each member']);
+  assert.deepEqual(said.slice(0, 4), ['The constitution', 'The judges', 'The areas', 'Each member']);
   assert.ok(review.reading.sections[2].lines.some((l: any) => /“Money”: all money .*above 10,000 regtest satoshis an act, 2 keys/.test(l.text)));
   const proposed = await e.c.ask<Done>('real confirm', { plan: review.plan, digest: review.digest });
   const terms = proposed.acts[0];
   assert.ok(proposed.lines.some((l) => /^A .*’s own key for this collective is named in the signature and sealed/.test(l.text)), JSON.stringify(proposed.lines));
 
-  // Each member reads it, the lanes in plain words, and signs: a key of their own, named and sealed.
+  // Each member reads it, the areas in plain words, and signs: a key of their own, named and sealed.
   for (const m of [iPa, iPh]) {
     const p = (await m.c.ask<any>('proposals')).proposals[0];
     assert.ok(p.reading.sections.some((s: any) => s.lines.some((l: any) => /Above 10,000 an act, one more holder's key/.test(l.text))), 'the cap read back in Dub');
@@ -164,7 +164,7 @@ test('F353: members name their own keys as they sign the founding, and act for t
   // A asks iPa for the second key, as a release is asked; iPa signs it in Dub with iPa's own key.
   const me = e.app.store.identity(A);
   const reach = { id: iPa.id, key: (await lookUp(iPa.id, hints)).encryptionKey!, inbox: [relay.base] };
-  await negotiate(me, reach, { text: 'A promise of 50,000 regtest satoshis: above the Money lane’s cap, it needs your key too.', refs: [[big.id, col], [col, col]] });
+  await negotiate(me, reach, { text: 'A promise of 50,000 regtest satoshis: above the Money area’s cap, it needs your key too.', refs: [[big.id, col], [col, col]] });
   e.app.store.saveIdentity(me);
   const p = (await iPa.c.ask<any>('proposals')).proposals.find((x: any) => x.act === big.id);
   assert.equal(p.reading.kind, 'act');
@@ -176,7 +176,7 @@ test('F353: members name their own keys as they sign the founding, and act for t
   assert.equal(j.get(big.id)!.met, true, JSON.stringify(j.get(big.id)));
   assert.deepEqual([...j.get(big.id)!.areas[0].byKey].sort(), [A, iPa.id].sort(), 'two keys, each a member’s own');
 
-  // iPh's key cannot act in Money, a lane iPh does not hold.
+  // iPh's key cannot act in Money, an area iPh does not hold.
   const atPh = await chainFor(col, keyPh, hints);
   const stray = signAsMember(col, keyPh, atPh, { spec: MIRS.money, type: 1, payload: obligationPayload({ debtor: col, creditor: iPa.id, unit: REGTEST_UNIT, value: 10, pointer: '11'.repeat(32) }), public: true });
   await publishAt([stray.act], hints);
@@ -198,15 +198,15 @@ test('F353: members name their own keys as they sign the founding, and act for t
   let rc = await e.c.ask<any>('real collective', { collective: col });
   assert.deepEqual(rc.resigned.map((r: any) => [r.member, r.act, r.registered]), [[iPh.id, left.resignation, null]]);
   const reg = await e.c.ask<Done>('real register resignation', { collective: col, act: left.resignation });
-  assert.match(reg.lines[0].text, /counts in no rule and no lane/);
+  assert.match(reg.lines[0].text, /counts in no rule and no area/);
   rc = await e.c.ask<any>('real collective', { collective: col });
   assert.equal(rc.resigned[0].registered, reg.acts[0]);
   const back = (await e.c.ask<{ grid: Grid }>('real grid', { collective: col, members: [A, iPa.id] })).grid;
-  assert.deepEqual(back.lanes.map((l) => [l.name, l.holders.length]), [['Publishing', 2], ['Money', 2], ['Development', 0]], 'iPh’s lane left with nobody');
+  assert.deepEqual(back.areas.map((l) => [l.name, l.holders.length]), [['Publishing', 2], ['Money', 2], ['Development', 0]], 'iPh’s area left with nobody');
   const refused = await e.c.ask<any>('real change prepare', { collective: col, members: [A, iPa.id], grid: back });
   assert.ok(refused.reading.blocking.some((b: string) => /“Development”: fill at least one member’s box/.test(b)), JSON.stringify(refused.reading.blocking));
   assert.ok(refused.reading.blocking.some((b: string) => /Rebuild the chain key: with 2 of 2/.test(b)));
-  back.lanes[2].holders = [iPa.id];
+  back.areas[2].holders = [iPa.id];
   back.chainKey = 1;
   back.absence = 1;
   const change = await e.c.ask<any>('real change prepare', { collective: col, members: [A, iPa.id], grid: back });

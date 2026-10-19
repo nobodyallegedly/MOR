@@ -61,7 +61,16 @@ const untilOf = (v: unknown): number | null => {
   return Math.floor(t / 1000);
 };
 
+/** What Settings saves (H45): once one of these succeeds from Settings, its sections start folded. */
+const SETTINGS_SAVES = new Set(['publish list', 'rails publish', 'relays', 'manual', 'clock', 'link']);
+
 export async function run(d: Damgar, op: string, a: Record<string, unknown>): Promise<unknown> {
+  const out = await runOp(d, op, a);
+  if (SETTINGS_SAVES.has(op) || (op === 'accept' && a.where === 'settings')) await d.settingsSaved();
+  return out;
+}
+
+async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise<unknown> {
   switch (op) {
     case 'state':
       return d.state();

@@ -1130,7 +1130,7 @@ ${note('', 'How: each member reads the founding terms in plain words and signs o
 <label>Its other members, from your contacts</label>${contactPicks(s, [])}
 <label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
 <h3>Who decides what</h3>
-<p class="small">Members are the columns; tap a box to give that member’s key power in that row. The constitution first, then the judges, then the lanes (Agreements rules 60 and 62). Each member signs with a key of their own, made as they sign (F353).</p>
+<p class="small">Members are the columns; tap a box to give that member’s key power in that row. The constitution first, then the judges, then the areas (Agreements rules 60 and 62). Each member signs with a key of their own, made as they sign (F353).</p>
 <div id="e-grid-real-found"><p class="small">Choose the members above: the grid follows.</p></div>
 <label>The words everyone signs (empty: the grid’s sentences)</label><textarea name="words"></textarea>
 <div class="row"><button type="submit" class="primary">Review the founding</button></div></form></section>
@@ -1222,7 +1222,7 @@ export const WEB_FOUNDING_SAY =
 
 /** Said on the web where a collective's release would be made (`../ops.ts`, RELEASE_ON_WEB), word for word. */
 export const RELEASE_ON_WEB =
-  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the lane that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
+  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
 
 /** A real collective founded here: who it is, its proposals, a member change, a release. */
 export function realDetails(s: State, id: string, c: RealCollective): string {

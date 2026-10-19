@@ -100,7 +100,7 @@ export const WEB_OPS: readonly string[] = [
 
 /** Said where a collective's release would be made: the web client chooses no folder (`docs/edubba-web-report.md`, "Releases"). */
 export const RELEASE_ON_WEB =
-  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the lane that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
+  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
 
 /** Said for any other operation the web client does not answer. */
 export const ON_A_COMPUTER =

@@ -124,7 +124,7 @@ export class Releases {
   }
 
   /** A release of a folder, made and read back, not signed. */
-  async prepare(me: TestIdentity, own: OwnRelease[], a: { folder: string; name: string; version: string; previous: string | null; implements: string[]; relays: string[]; via: Via; as?: { collective: string; lane: { name: string; holders: string[]; number: number } | null } }): Promise<Review> {
+  async prepare(me: TestIdentity, own: OwnRelease[], a: { folder: string; name: string; version: string; previous: string | null; implements: string[]; relays: string[]; via: Via; as?: { collective: string; area: { name: string; holders: string[]; number: number } | null } }): Promise<Review> {
     const folder = folderOf(a.folder);
     const name = a.name.trim();
     const version = a.version.trim();
@@ -135,7 +135,7 @@ export class Releases {
     const before = a.previous ? own.find((x) => x.id === a.previous) : undefined;
     if (a.previous && !before) throw new Error('That release before it is not one of this identity’s releases here.');
     if (own.some((x) => x.name === name && x.version === version)) blocking.push(`${name} ${version} was already released by ${a.as ? 'this collective' : 'this identity'}. Choose another version.`);
-    if (a.as && !a.as.lane) blocking.push('No lane of the collective’s constitution reaches its releases: they count on its own key, held by its founder’s Edubba.');
+    if (a.as && !a.as.area) blocking.push('No area of the collective’s constitution reaches its releases: they count on its own key, held by its founder’s Edubba.');
     const { how, files, skipped } = filesOf(folder);
     if (!files.length) blocking.push(how === 'git' ? 'Git tracks no file in this folder.' : 'This folder holds no file but hidden ones.');
     const bad = files.filter((f) => !validPath(f.path)).map((f) => f.path);
@@ -169,7 +169,7 @@ export class Releases {
           heading: 'Who signs',
           lines: [
             a.as
-              ? { text: `It is published by the collective, signed with your own key for it (F353): it counts as the collective’s release once its lane “${a.as.lane?.name ?? '?'}” is met, ${a.as.lane?.number ?? '?'} key${a.as.lane?.number === 1 ? '' : 's'} of ${a.as.lane?.holders.length ?? '?'}${(a.as.lane?.number ?? 1) > 1 ? '; its other holders are asked for theirs, in their own app' : ''} (Agreements rule 60).` }
+              ? { text: `It is published by the collective, signed with your own key for it (F353): it counts as the collective’s release once its area “${a.as.area?.name ?? '?'}” is met, ${a.as.area?.number ?? '?'} key${a.as.area?.number === 1 ? '' : 's'} of ${a.as.area?.holders.length ?? '?'}${(a.as.area?.number ?? 1) > 1 ? '; its other holders are asked for theirs, in their own app' : ''} (Agreements rule 60).` }
               : { text: 'It is published under your own name, signed by this identity alone: a release as soon as it is published (release manifest cMIP, “What counts as a release”).' },
             { text: `The manifest and every new file go to ${a.relays.join(', ')}. Anyone can then fetch the release by its id and check every file against the list.` },
           ],

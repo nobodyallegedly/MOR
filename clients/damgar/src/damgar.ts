@@ -149,6 +149,8 @@ export interface Settings {
   clock?: string;
   /** Collectives this identity acts for in money, by ID (round 3, F353). */
   collectives?: string[];
+  /** Something was saved from Settings (H45): from then on its sections start folded; before, all open. */
+  settingsSaved?: boolean;
 }
 
 /** How an act was signed, as the account shows it (round 2, 2b). */
@@ -555,7 +557,7 @@ export class Damgar {
     const held = [];
     for (const id of await this.store.held()) held.push({ id, grouped: groupId(id), short: short(id), active: id === active });
     const me = active ? await this.store.identity(active) : null;
-    const out: State = { web: !!this.opts.web, stage: 'identity', held, identity: null, accept: [], list: { version: 0, merged: [], published: false, problems: [] }, counts: { toSign: 0, toPay: 0 } };
+    const out: State = { web: !!this.opts.web, settingsSaved: false, stage: 'identity', held, identity: null, accept: [], list: { version: 0, merged: [], published: false, problems: [] }, counts: { toSign: 0, toPay: 0 } };
     if (!me) return out;
     const s = (await this.store.read<Settings>(me.id, 'settings')) ?? { relays: [], via: {} };
     const book = { ...NO_BOOK(), ...((await this.store.read<Book>(me.id, 'book')) ?? {}) };
@@ -580,6 +582,7 @@ export class Damgar {
     out.accept = ACCEPTABLE.map((a) => ({ key: a.key, name: a.name, kind: a.kind, draft: a.draft, text: a.text, does: a.does, here: a.here, built: a.built, needs: a.needs, accepted: isAccepted(a, set), hashes: a.hashes }) satisfies Accept);
     out.list = { version: l.version, merged: l.merged, published: !!book.published && !book.published.withdrawn, problems: l.problems };
     out.stage = l.version === 0 ? 'accept' : 'ready';
+    out.settingsSaved = !!s.settingsSaved;
     out.counts = {
       toSign:
         Object.values(book.drafts).filter((d) => d.stage === 'new').length +
@@ -590,6 +593,16 @@ export class Damgar {
       toPay: Object.values(book.payments).filter((p) => p.side === 'out' && p.stage === 'to pay').length,
     };
     return out;
+  }
+
+  /** Settings were saved (H45): from now on its sections start folded. */
+  settingsSaved(): Promise<void> {
+    return this.serial(async () => {
+      const active = await this.store.active();
+      if (!active) return;
+      const s = (await this.store.read<Settings>(active, 'settings')) ?? { relays: [], via: {} };
+      if (!s.settingsSaved) await this.store.write(active, 'settings', { ...s, settingsSaved: true } satisfies Settings);
+    });
   }
 
   // ------------------------------------------------------------ for a collective (round 3, F353)
@@ -605,11 +618,11 @@ export class Damgar {
         try {
           c = await readCollective(me, id, places, s.via);
         } catch (e) {
-          c = { id, agreement: null, lane: null, key: null, why: message(e) };
+          c = { id, agreement: null, area: null, key: null, why: message(e) };
         }
         const acts = [];
         for (const [act, x] of Object.entries(book.collectiveActs ?? {}).filter(([, x]) => x.collective === id)) {
-          acts.push({ act, to: x.to, amount: x.amount, whatFor: x.whatFor, standing: c.lane ? await standing(c, act, x.amount, places, s.via).catch(() => null) : null });
+          acts.push({ act, to: x.to, amount: x.amount, whatFor: x.whatFor, standing: c.area ? await standing(c, act, x.amount, places, s.via).catch(() => null) : null });
         }
         out.push({ ...c, key: c.key ? { ...c.key, secret: new Uint8Array() } : null, acts });
       }
@@ -626,7 +639,7 @@ export class Damgar {
     }
   }
 
-  /** Act for a collective, by its ID: kept only if this identity holds a box in its Money lane and its own key for it is found. */
+  /** Act for a collective, by its ID: kept only if this identity holds a box in its Money area and its own key for it is found. */
   collectiveAdd(typed: string): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s, hints } = await this.ctx();
@@ -635,17 +648,17 @@ export class Damgar {
       if (c.why) throw new Error(`${c.why} Nothing was kept.`);
       s.collectives = [...new Set([...(s.collectives ?? []), id])];
       await this.store.write(me.id, 'settings', s);
-      const lane = c.lane!;
+      const area = c.area!;
       return {
         lines: [
           { text: `Damgar acts for ${short(id)} in money, with your own key for it (F353).`, tone: 'ok' },
-          { text: `Its Money lane, “${lane.name}”: ${lane.holders.map(short).join(', ')}; ${lane.number} key${lane.number === 1 ? '' : 's'}${lane.cap ? `; above ${lane.cap.value.toLocaleString('en')} an act, one more` : ''}.` },
+          { text: `Its Money area, “${area.name}”: ${area.holders.map(short).join(', ')}; ${area.number} key${area.number === 1 ? '' : 's'}${area.cap ? `; above ${area.cap.value.toLocaleString('en')} an act, one more` : ''}.` },
         ],
       };
     });
   }
 
-  /** A promise to pay from the collective, read back: what it says, and how many keys it needs (the lane, its cap). Nothing is signed. */
+  /** A promise to pay from the collective, read back: what it says, and how many keys it needs (the area, its cap). Nothing is signed. */
   collectivePromiseRead(a: { collective: string; to: string; value: string; unit: string; whatFor: string }): Promise<{ lines: Line[]; digest: string }> {
     return this.serial(async () => {
       const { me, s, hints } = await this.ctx();

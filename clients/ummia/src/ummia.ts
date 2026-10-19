@@ -141,8 +141,8 @@ interface Plan {
 
 const PLAN_FOR = 15 * 60 * 1000;
 
-/** The lane of a collective reaching its releases (a publication, Envelopes type 0), as its agreement in force writes it. */
-export async function releaseLane(collective: string, places: string[], via: Via): Promise<{ name: string; holders: string[]; number: number } | null> {
+/** The area of a collective reaching its releases (a publication, Envelopes type 0), as its agreement in force writes it. */
+export async function releaseArea(collective: string, places: string[], via: Via): Promise<{ name: string; holders: string[]; number: number } | null> {
   const now = await collectiveNow(collective, places, via);
   if (!now.agreement) return null;
   for (const h of places) {
@@ -212,7 +212,7 @@ export class Ummia {
 
   /**
    * Act for a collective here (round 2, F353), by its ID: kept where this
-   * identity holds a box in a lane reaching its releases (a release is a
+   * identity holds a box in an area reaching its releases (a release is a
    * publication, Envelopes type 0) and its own key for it is found.
    */
   collectiveAdd(typed: string): Promise<{ lines: Line[] }> {
@@ -220,17 +220,17 @@ export class Ummia {
       const { me, s, hints } = await this.ctx();
       const id = readId(typed);
       const places = await this.placesOf(id, [...hints, ...s.track], s.via);
-      const lane = await releaseLane(id, places, s.via);
+      const area = await releaseArea(id, places, s.via);
       const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
       const key = keys.length ? await memberKeyFor(keys, id, places, s.via).catch(() => null) : null;
       let why: string | null = null;
-      if (!lane) why = 'No lane of its constitution reaches its releases (publications): they count on its own key, held by its founder’s Edubba.';
-      else if (!lane.holders.includes(me.id)) why = `You hold no box in the lane reaching its releases (“${lane.name}”).`;
+      if (!area) why = 'No area of its constitution reaches its releases (publications): they count on its own key, held by its founder’s Edubba.';
+      else if (!area.holders.includes(me.id)) why = `You hold no box in the area reaching its releases (“${area.name}”).`;
       else if (!key) why = 'No key of yours for this collective was found sealed to you at your homes.';
       if (why) throw new Error(`${why} Nothing was kept.`);
       s.collectives = [...(s.collectives ?? []).filter((c) => c.id !== id), { id, available: true, why: null }];
       await this.store.write(me.id, 'settings', s);
-      return { lines: [{ text: `Ummia acts for ${short(id)} with your own key for it: its releases go through its lane “${lane!.name}”, ${lane!.number} key${lane!.number === 1 ? '' : 's'} of ${lane!.holders.length}.`, tone: 'ok' }] };
+      return { lines: [{ text: `Ummia acts for ${short(id)} with your own key for it: its releases go through its area “${area!.name}”, ${area!.number} key${area!.number === 1 ? '' : 's'} of ${area!.holders.length}.`, tone: 'ok' }] };
     });
   }
 
@@ -818,8 +818,8 @@ export class Ummia {
     const { me, s, book, hints } = await this.ctx();
     const who = await this.acting(me, s);
     if (who.kind === 'collective') {
-      const lane = await releaseLane(who.id, who.places, s.via);
-      return this.releasesHere().prepare(me, await this.collectiveReleases(who.id, book, who.places, s.via), { ...a, relays: [...new Set([...s.relays, ...who.places])], via: s.via, as: { collective: who.id, lane } });
+      const area = await releaseArea(who.id, who.places, s.via);
+      return this.releasesHere().prepare(me, await this.collectiveReleases(who.id, book, who.places, s.via), { ...a, relays: [...new Set([...s.relays, ...who.places])], via: s.via, as: { collective: who.id, area } });
     }
     return this.releasesHere().prepare(me, await this.ownReleases(me, book, hints, s.via), { ...a, relays: s.relays, via: s.via });
   }
@@ -845,7 +845,7 @@ export class Ummia {
   /**
    * A collective's release, as reviewed (round 2, F339, F353): the
    * publication signed as the collective with this member's own key; where
-   * the lane reaching it asks more keys, its other holders are asked, each
+   * the area reaching it asks more keys, its other holders are asked, each
    * sent a negotiation message naming it, sealed to them, to sign in their
    * own app; then how it stands, as anyone reads it.
    */
@@ -858,16 +858,16 @@ export class Ummia {
       return { id: made.id };
     };
     const r = await this.releasesHere().confirm(me, await this.collectiveReleases(who.id, book, who.places, s.via), plan, digest, relays, s.via, sign);
-    const lane = await releaseLane(who.id, who.places, s.via);
+    const area = await releaseArea(who.id, who.places, s.via);
     const asked: string[] = [];
     const lines = [...r.done.lines];
-    if (lane && lane.number > 1) {
-      for (const h of lane.holders.filter((x) => x !== me.id)) {
+    if (area && area.number > 1) {
+      for (const h of area.holders.filter((x) => x !== me.id)) {
         try {
           const l = await lookUp(h, who.places, s.via);
           const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((x) => x.hints);
           if (!l.encryptionKey || !inbox?.length) throw new Error('no inbox');
-          await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: `A release of the collective ${short(who.id)}, ${r.release.name} ${r.release.version}: its lane “${lane.name}” asks ${lane.number} keys. Read it in your Signing tab, check its files, then sign it with your own key for the collective.`, refs: [[r.release.id, who.id], [who.id, who.id]] });
+          await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: `A release of the collective ${short(who.id)}, ${r.release.name} ${r.release.version}: its area “${area.name}” asks ${area.number} keys. Read it in your Signing tab, check its files, then sign it with your own key for the collective.`, refs: [[r.release.id, who.id], [who.id, who.id]] });
           asked.push(h);
         } catch {
           lines.push({ text: `${short(h)} could not be reached to sign it (no inbox or encryption key found).`, tone: 'warn' });
@@ -877,13 +877,13 @@ export class Ummia {
       if (asked.length) lines.push({ text: `Asked for their key: ${asked.map(short).join(', ')}.` });
     }
     const st = (await judgeCollective(who.id, [r.release.id], who.places, s.via)).get(r.release.id);
-    lines.push(st?.met ? { text: 'It counts as the collective’s release: its lane is met.', tone: 'ok' } : { text: `It does not count yet: ${st?.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join('; ') ?? 'not read'}.`, tone: 'warn' });
+    lines.push(st?.met ? { text: 'It counts as the collective’s release: its area is met.', tone: 'ok' } : { text: `It does not count yet: ${st?.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join('; ') ?? 'not read'}.`, tone: 'warn' });
     book.collectiveReleases = [...(book.collectiveReleases ?? []), { ...r.release, collective: who.id, asked }];
     await this.saveBook(me.id, book);
     return { ...r.done, title: `${r.release.name} ${r.release.version} is published for the collective`, lines };
   }
 
-  /** Where a collective's release stands, as anyone reads it: the keys its lane asks, and who signed with their own. */
+  /** Where a collective's release stands, as anyone reads it: the keys its area asks, and who signed with their own. */
   async collectiveReleaseStanding(id: string): Promise<{ met: boolean; lines: Line[] }> {
     const { me, s, book } = await this.ctx();
     const r = (book.collectiveReleases ?? []).find((x) => x.id === id);

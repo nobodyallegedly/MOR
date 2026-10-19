@@ -60,6 +60,10 @@ li.warn{color:var(--soft)}
 .proofs .p{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin:4px 0}
 details.settled{border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin:8px 0}
 details.settled>summary{font-size:14px;color:var(--text);cursor:pointer}
+details.setting{border-top:1px solid var(--line, rgba(127,127,127,.25));padding:2px 0}
+details.setting>summary{cursor:pointer;list-style-position:outside}
+details.setting>summary>h2{display:inline;margin:0}
+details.setting[open]>summary{margin-bottom:6px}
 details.settled[open]>summary{margin-bottom:4px}
 details.settled .item{border:0;padding:0;margin:4px 0 0;background:none}
 .totals{border:1px solid var(--edge);border-radius:12px;padding:10px 14px;margin:12px 0}
@@ -171,7 +175,7 @@ ${testNotice(web)}
 <section id="account" hidden><div id="account-body"><p class="empty">Reading the account…</p></div></section>
 <section id="pay" hidden><p class="small">Damgar holds no wallet. For each payment it shows what to pay; pay it in your own wallet, then paste the proof back here.</p><div id="pay-list"><p class="empty">Reading…</p></div></section>
 <section id="lanes" hidden><p class="small">A lane lets an app (Dub, or Damgar itself) sign some of your money acts by itself, within a cap per act and until a date: a grant of your identity to itself, its key held by that app (F338, F351). Every act signed under one is shown so, here and to every reader. One revocation ends it.</p><div id="lanes-body"><p class="empty">Reading…</p></div></section>
-<section id="collectives" hidden><p class="small">For a collective whose Money lane you hold: Damgar acts for it with your own key for it, made as you signed its founding and sealed to you at your homes (F353). Within the lane’s cap, your key alone; above it, another holder’s key too, as its constitution writes it.</p><div id="collectives-body"><p class="empty">Reading…</p></div></section>
+<section id="collectives" hidden><p class="small">For a collective whose Money area you hold: Damgar acts for it with your own key for it, made as you signed its founding and sealed to you at your homes (F353). Within the area’s cap, your key alone; above it, another holder’s key too, as its constitution writes it.</p><div id="collectives-body"><p class="empty">Reading…</p></div></section>
 <section id="settings" hidden><div id="settings-body"><p class="empty">Reading…</p></div></section>`;
 }
 
@@ -262,31 +266,43 @@ export function payList(ps: PaymentShown[]): string {
   return ps.length ? ps.map((p) => payment(p, true)).join('') : '<p class="empty">Nothing to pay.</p>';
 }
 
-export function settings(s: State, r: Rails | null, problem: string | null): string {
+/** One section of Settings, folding (H45): open on first use, before anything is saved there; after, folded unless the person opened it. */
+const fold = (name: string, title: string, body: string, open: boolean) => `<details class="fold setting" data-fold="${name}"${open ? ' open' : ''}><summary><h2>${title}</h2></summary>${body}</details>`;
+
+/**
+ * Settings (H45, Nobody, allegedly, from using Damgar): every section folds,
+ * the person opening the ones they need; on first use, before anything is
+ * saved here, all start open. What you accept comes last.
+ */
+export function settings(s: State, r: Rails | null, problem: string | null, l: { manual: boolean; link: boolean; linkSay: string[]; clock: string | null } | null, opened: Set<string> = new Set()): string {
   const i = s.identity!;
+  const open = (name: string) => !s.settingsSaved || opened.has(name);
   const pointer = r?.pointer
     ? `<p>Your payee pointer in force: version ${r.pointer.version}${r.pointer.forked ? ' (its chain is forked: the last pointer before the fork counts)' : ''}.</p>${lines(r.pointer.rails.map((x, n) => ({ text: `${n + 1}. ${x.name}: ${x.said}${x.accepted ? '' : ' (a rail Module you do not accept)'}` })))}`
     : '<p class="small">You have no payee pointer yet: nobody can pay you until you say where.</p>';
   const vault = r?.vault
     ? `${lines(r.vault.entries.map((x) => ({ text: `${x.unit.said}, on ${x.railName}: ${x.said}.` })))}<p class="small">Declared in your identity’s chain (act ${e(r.vault.declaredBy.slice(0, 12))}…), with the chain key: it is changed only in Kišib, in a change of keys, never here (Money rule 2).</p>`
     : '<p class="small">Your identity’s chain declares no vault: every payment goes to your flow, and you have chosen no protection (Money rule 3). A vault, and its limit per unit, is declared with the chain key, in Kišib.</p>';
-  return `<h2>What you accept</h2>
-<p class="small">Sealed to your identity at its homes${s.list.version ? ` (version ${s.list.version})` : ''}: every app holding it reads it, each for its part. Damgar changes only the Money layer’s part.</p>
-${s.list.merged.length ? note('warn', `Two apps changed it at once; merged: ${lines(s.list.merged.map((t) => ({ text: t })))}`) : ''}
-<form id="accept">${acceptList(s.accept)}<div class="row"><button type="submit" class="primary">Save what I accept</button></div></form>
-<div class="row"><span class="grow small">${s.list.published ? 'Published: anyone can read which specifications you accept.' : 'Private: sealed to yourself (the default).'}</span><button data-action="publish list" data-on="${s.list.published ? 'false' : 'true'}">${s.list.published ? 'Make it private again' : 'Publish it'}</button></div>
-<h2>Where you are paid</h2>
-${problem ? note('warn', e(problem)) : pointer}
+  const paid = `${problem ? note('warn', e(problem)) : pointer}
 <form id="rails"><label>Lightning: your wallet’s node key (66 hexadecimal characters; the test wallet shows it)</label><input name="lightning" autocomplete="off" spellcheck="false">
 <label>On-chain: a Bitcoin key of your wallet, x-only (64 hexadecimal characters)</label><input name="onchain" autocomplete="off" spellcheck="false">
 <label>Network</label><select name="network"><option value="3" selected>regtest</option><option value="2">signet</option></select>
 <label class="check"><input type="checkbox" name="newRequestKey"> Make a new on-chain request key (the old one then no longer counts for new payments)</label>
 <div class="row"><button type="submit">Read it back</button></div></form><div id="rails-review"></div>
-${r?.requestKey ? `<p class="small">The on-chain request key Damgar holds: <span class="fp">${e(r.requestKey.slice(0, 16))}…</span></p>` : ''}
-<h2>The vault</h2>${vault}
-<h2>Homes and relays</h2>
-<dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(', '))} (the identity’s chain names them; changed in Kišib)</dd><dt>The chain followed</dt><dd>${e(r?.chain ?? '')}</dd></dl>
+${r?.requestKey ? `<p class="small">The on-chain request key Damgar holds: <span class="fp">${e(r.requestKey.slice(0, 16))}…</span></p>` : ''}`;
+  const where = `<dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(', '))} (the identity’s chain names them; changed in Kišib)</dd><dt>The chain followed</dt><dd>${e(r?.chain ?? '')}</dd></dl>
 <form id="relays"><label>Relays its money acts go to, one per line</label><textarea name="relays">${e(i.relays.join('\n'))}</textarea><div class="row"><button type="submit">Save the relays</button></div></form>`;
+  const accept = `<p class="small">Sealed to your identity at its homes${s.list.version ? ` (version ${s.list.version})` : ''}: every app holding it reads it, each for its part. Damgar changes only the Money layer’s part.</p>
+${s.list.merged.length ? note('warn', `Two apps changed it at once; merged: ${lines(s.list.merged.map((t) => ({ text: t })))}`) : ''}
+<form id="accept">${acceptList(s.accept)}<div class="row"><button type="submit" class="primary">Save what I accept</button></div></form>
+<div class="row"><span class="grow small">${s.list.published ? 'Published: anyone can read which specifications you accept.' : 'Private: sealed to yourself (the default).'}</span><button data-action="publish list" data-on="${s.list.published ? 'false' : 'true'}">${s.list.published ? 'Make it private again' : 'Publish it'}</button></div>`;
+  return [
+    fold('paid', 'Where you are paid', paid, open('paid')),
+    fold('vault', 'The vault', vault, open('vault')),
+    fold('relays', 'Homes and relays', where, open('relays')),
+    ...(l ? byHand(l, s.web).map(([name, title, body]) => fold(name, title, body, open(name))) : []),
+    fold('accept', 'What you accept', accept, open('accept')),
+  ].join('\n');
 }
 
 export function railsReview(r: { digest: string; lines: Line[]; costs: Line[] }): string {
@@ -335,25 +351,25 @@ export function laneReview(r: { digest: string; lines: Line[] }): string {
   return `<div class="item"><h3>The lane, read back</h3>${lines(r.lines)}</div><div class="row"><button class="primary" data-action="own lane" data-digest="${e(r.digest)}">Sign this lane</button></div>`;
 }
 
-export function byHand(r: { manual: boolean; link: boolean; linkSay: string[]; clock: string | null }, web: boolean): string {
-  return `<h2>Every step by hand</h2>
-<p class="small">For those who want to follow the real process step by step: every signature waits for you, as in round 1. Off by default.</p>
-<label class="check"><input type="checkbox" id="manual"${r.manual ? ' checked' : ''}> Follow every step by hand (a clear demonstration of the real process)</label>
-<h2>The clock for lanes</h2>
-<p class="small">A lane’s expiry is judged on a timestamp clock you name (the grant limits cMIP, 3.1): until it stamps an act, whether it came before the expiry is unknown.</p>
-<form id="clock" class="row"><input name="clock" class="grow" placeholder="its ID" value="${e(r.clock ?? '')}" spellcheck="false"><button type="submit">Save the clock</button></form>
-<h2>Making invoices by itself (receive-only)</h2>
-${lines(r.linkSay.map((text) => ({ text })))}
+/** Settings' sections for how Damgar signs (round 2): by hand, the clock for lanes, the receive-only link. Each [fold name, title, body]. */
+export function byHand(r: { manual: boolean; link: boolean; linkSay: string[]; clock: string | null }, web: boolean): [string, string, string][] {
+  return [
+    ['manual', 'Every step by hand', `<p class="small">For those who want to follow the real process step by step: every signature waits for you, as in round 1. Off by default.</p>
+<label class="check"><input type="checkbox" id="manual"${r.manual ? ' checked' : ''}> Follow every step by hand (a clear demonstration of the real process)</label>`],
+    ['clock', 'The clock for lanes', `<p class="small">A lane’s expiry is judged on a timestamp clock you name (the grant limits cMIP, 3.1): until it stamps an act, whether it came before the expiry is unknown.</p>
+<form id="clock" class="row"><input name="clock" class="grow" placeholder="its ID" value="${e(r.clock ?? '')}" spellcheck="false"><button type="submit">Save the clock</button></form>`],
+    ['link', 'Making invoices by itself (receive-only)', `${lines(r.linkSay.map((text) => ({ text })))}
 ${web ? note('warn', 'The web client never makes a link to a node: use Damgar on your computer.') : r.link ? `<p>A receive-only link is kept.</p><div class="row"><button data-action="link remove">Remove it</button></div>` : `<form id="link"><label>Your node’s REST address</label><input name="rest" placeholder="https://127.0.0.1:8080" spellcheck="false" required>
 <label>The receive-only permission’s file (on lnd, the macaroon baked with invoices:write and invoices:read)</label><input name="macaroonFile" spellcheck="false" required>
 <label>The node’s certificate file (tls.cert)</label><input name="certFile" spellcheck="false" required>
-<div class="row"><button type="submit">Check it and keep it</button></div></form>`}`;
+<div class="row"><button type="submit">Check it and keep it</button></div></form>`}`],
+  ];
 }
 
-/** For a collective (round 3, F353): each collective acted for, its Money lane, a promise to pay, and the promises signed here with how they stand. */
-export function collectives(r: { collectives: { id: string; lane: { name: string; holders: string[]; number: number; cap: { value: number } | null } | null; why: string | null; acts: { act: string; to: string; amount: { value: number }; whatFor: string; standing: { met: boolean; areas: { signers: string[]; needed: number; byKey: string[]; limits?: string | null }[] } | null }[] }[] }): string {
+/** For a collective (round 3, F353): each collective acted for, its Money area, a promise to pay, and the promises signed here with how they stand. */
+export function collectives(r: { collectives: { id: string; area: { name: string; holders: string[]; number: number; cap: { value: number } | null } | null; why: string | null; acts: { act: string; to: string; amount: { value: number }; whatFor: string; standing: { met: boolean; areas: { signers: string[]; needed: number; byKey: string[]; limits?: string | null }[] } | null }[] }[] }): string {
   const one = (c: (typeof r.collectives)[number]) => {
-    const lane = c.lane;
+    const area = c.area;
     const acts = c.acts.length
       ? lines(
           c.acts.map((a) => {
@@ -364,7 +380,7 @@ export function collectives(r: { collectives: { id: string; lane: { name: string
         )
       : '<p class="small">No promise signed here yet.</p>';
     return `<div class="item" data-collective="${e(c.id)}"><h3>Collective <span class="fp" title="${e(c.id)}">${e(c.id.slice(0, 8))}…${e(c.id.slice(-4))}</span></h3>
-${lane ? `<p class="small">Its Money lane, “${e(lane.name)}”: ${lane.holders.length} holder${lane.holders.length === 1 ? '' : 's'}, ${lane.number} key${lane.number === 1 ? '' : 's'}${lane.cap ? `; above ${lane.cap.value.toLocaleString('en')} an act, one more` : ''}.</p>` : ''}
+${area ? `<p class="small">Its Money area, “${e(area.name)}”: ${area.holders.length} holder${area.holders.length === 1 ? '' : 's'}, ${area.number} key${area.number === 1 ? '' : 's'}${area.cap ? `; above ${area.cap.value.toLocaleString('en')} an act, one more` : ''}.</p>` : ''}
 ${c.why ? note('warn', e(c.why)) : `<form class="collective-promise" data-collective="${e(c.id)}"><h4>A promise to pay, from the collective</h4>
 <label>To whom (an ID)</label><input name="to" type="text" required autocomplete="off" spellcheck="false">
 <div class="row"><label>How much (regtest satoshis) <input name="value" type="text" inputmode="numeric" required class="narrow"></label></div>

@@ -169,9 +169,23 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         problem = err instanceof Error ? err.message : String(err);
       }
       const l = await b.ask<{ manual: boolean; link: boolean; linkSay: string[]; clock: string | null }>('lanes').catch(() => null);
-      $('settings-body')!.innerHTML = v.settings(state!, r, problem) + (l ? v.byHand(l, b.web) : '');
+      state = await b.ask<State>('state').catch(() => state);
+      $('settings-body')!.innerHTML = v.settings(state!, r, problem, l, opened);
     }
   }
+
+  // Settings' sections the person opened (H45), kept while the page is open, so a save does not fold them again.
+  const opened = new Set<string>();
+  app.addEventListener(
+    'toggle',
+    (ev) => {
+      const d = ev.target as HTMLElement;
+      if (!(d instanceof HTMLDetailsElement) || !d.classList.contains('setting')) return;
+      if (d.open) opened.add(d.dataset.fold!);
+      else opened.delete(d.dataset.fold!);
+    },
+    true,
+  );
 
   const form = (f: HTMLFormElement) => new FormData(f);
   const str = (fd: FormData, k: string) => String(fd.get(k) ?? '');
@@ -359,7 +373,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       }
     } else if (fid === 'accept') {
       const keys = [...f.querySelectorAll<HTMLInputElement>('input[name=accept]:checked')].map((x) => x.value);
-      const r = await act(() => b.ask<{ lines: v.Line[] }>('accept', { keys }));
+      const r = await act(() => b.ask<{ lines: v.Line[] }>('accept', { keys, where: state?.stage === 'accept' ? 'first' : 'settings' }));
       if (r) {
         const s = await b.ask<State>('state');
         if (state?.stage === 'accept') {

@@ -8,7 +8,9 @@
 //   the payee's Damgar (the program's page, by clicks) making the invoice
 //   from a wallet; Pay showing it; the preimage pasted back and the claim
 //   signed; the payee signing the receipt; the account, each proof valid;
-//   Settings: where one is paid, read back with each rail's stated costs,
+//   Settings (H45): every section open on first use, What you accept last;
+//   folded once something is saved, the one opened kept open;
+//   where one is paid, read back with each rail's stated costs,
 //   then published; nothing of a chain key in the browser's storage;
 // - Edubba's pieces, by clicks: a payment from an identity, and the
 //   anchoring of a collective's act, its service's offer read;
@@ -174,6 +176,9 @@ test('Damgar by clicks: the web client and the program’s page, a tip from Dub 
   // Settings: where Bob is paid, read back with the Lightning Module's stated costs, then published.
   await bp.locator('button.tab[data-tab=settings]').click();
   await sees(bp, 'form#rails', 'settings');
+  // H45: on first use, nothing saved here yet, every section is open; What you accept comes last.
+  const folds = () => bp.locator('#settings-body > details.setting').evaluateAll((ds) => ds.map((d) => [(d as HTMLElement).dataset.fold, (d as HTMLDetailsElement).open]));
+  assert.deepEqual(await folds(), [['paid', true], ['vault', true], ['relays', true], ['manual', true], ['clock', true], ['link', true], ['accept', true]]);
   await shot(bp, 'damgar-settings');
   await bp.locator('form#rails [name=lightning]').fill(node.key);
   await bp.locator('form#rails').getByRole('button', { name: 'Read it back' }).click();
@@ -181,6 +186,19 @@ test('Damgar by clicks: the web client and the program’s page, a tip from Dub 
   assert.match(await bp.locator('.costs').innerText(), /A public node exposes its owner/);
   await shot(bp, 'damgar-settings-review');
   assert.match(await done(bp, bp.getByRole('button', { name: 'Sign and publish it' }), 'published'), /payee pointer, version 1, is published/);
+  // H45: once something is saved here, Settings opens folded; the person opens the section they need.
+  await bp.reload();
+  await sees(bp, 'nav.tabs', 'app again');
+  await bp.locator('button.tab[data-tab=settings]').click();
+  await sees(bp, '#settings-body details.setting', 'settings folded');
+  assert.deepEqual(await folds(), [['paid', false], ['vault', false], ['relays', false], ['manual', false], ['clock', false], ['link', false], ['accept', false]]);
+  assert.equal(await bp.locator('form#relays').isVisible(), false);
+  await bp.locator('details.setting[data-fold=relays] > summary').click();
+  await sees(bp, 'form#relays', 'relays opened');
+  await shot(bp, 'damgar-settings-folded');
+  await bp.locator('form#relays').getByRole('button', { name: 'Save the relays' }).click();
+  await sees(bp, 'details.setting[data-fold=relays][open] form#relays', 'relays still open after saving');
+  assert.equal(await bp.locator('details.setting[data-fold=vault]').evaluate((d) => (d as HTMLDetailsElement).open), false);
 
   // Alice's Damgar: the web client, by clicks.
   const { context: ac, page: ap } = await open(`${damgarWeb}/`);

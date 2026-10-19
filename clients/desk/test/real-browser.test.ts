@@ -251,9 +251,9 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   }
   await ed.fill('#real-found input[name=name]', 'The tablet house');
   for (const id of [webId, macId]) await ed.check(`#real-found input[name=member][value="${id}"]`);
-  // The grid (round 3): its one lane, Publishing, asks two members' keys, as the Releases area did.
+  // The grid (round 3): its one area, Publishing, asks two members' keys, as the Releases area did.
   await ed.locator('#e-grid-real-found table.grid thead th[scope=col]').nth(2).waitFor({ timeout: 30_000 });
-  await gridNumber(ed, 'lane:0', '2');
+  await gridNumber(ed, 'area:0', '2');
   await shot(ed, 'edubba-found-form');
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading h2', { hasText: 'Propose to found the collective “The tablet house”' }).waitFor({ timeout: 90_000 });
@@ -401,7 +401,7 @@ test('H33: Edubba acting as a member it holds: the proposal read in plain words,
   await ed.fill('#real-found textarea[name=typed]', dee);
   await ed.locator('#real-found textarea[name=typed]').press('Tab');
   await ed.locator('#e-grid-real-found table.grid thead th[scope=col]').nth(1).waitFor({ timeout: 30_000 });
-  for (const [n, v] of [['chain', '1'], ['lane:0', '1'], ['clone', '2'], ['absence', '1']]) await gridNumber(ed, n, v);
+  for (const [n, v] of [['chain', '1'], ['area:0', '1'], ['clone', '2'], ['absence', '1']]) await gridNumber(ed, n, v);
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 90_000 });
   await ed.click('#e-real-review [data-action=confirm]');

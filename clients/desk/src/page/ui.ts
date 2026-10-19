@@ -18,7 +18,7 @@ import { WITNESS_EXPLANATION } from '../../../genesis/src/witness.ts';
 import type { Proposal as MemberProposal, ShareShown } from '../../../dub/src/shapes.ts';
 import { leaveRead as dubLeaveRead, shareTypeBack } from '../../../dub/src/page/view.ts';
 import type { Listing } from '../folders.ts';
-import { defaultGrid, type Grid, type Lane } from '../grid.ts';
+import { defaultGrid, type Grid, type AreaRow } from '../grid.ts';
 import { gridTable } from './grid-view.ts';
 
 const app = document.getElementById('app')!;
@@ -97,7 +97,7 @@ async function syncGrid(fid: string): Promise<void> {
     ...g,
     members,
     constitution: { holders: [...keep(g.constitution.holders), ...(all ? added : [])], number: all && g.constitution.number >= g.members.length ? members.length : g.constitution.number },
-    lanes: g.lanes.map((l) => ({ ...l, holders: keep(l.holders) })),
+    areas: g.areas.map((l) => ({ ...l, holders: keep(l.holders) })),
   };
   grids.set(fid, g);
   drawGrid(fid);
@@ -112,46 +112,46 @@ function gridEvent(el: HTMLElement): boolean {
   if (!g) return false;
   touched.add(fid);
   const d = el.dataset;
-  const lane = (i: string | undefined): Lane | undefined => (i === undefined ? undefined : g.lanes[Number(i)]);
+  const row = (i: string | undefined): AreaRow | undefined => (i === undefined ? undefined : g.areas[Number(i)]);
   const toggle = (xs: string[], m: string) => (xs.includes(m) ? xs.filter((x) => x !== m) : [...xs, m]);
   if (d.gridCell !== undefined) {
     const m = d.m!;
     if (d.gridCell === 'const') g.constitution = { ...g.constitution, holders: toggle(g.constitution.holders, m) };
     else {
-      const l = lane(d.gridCell.split(':')[1])!;
+      const l = row(d.gridCell.split(':')[1])!;
       l.holders = toggle(l.holders, m);
       l.number = Math.max(1, Math.min(l.number, l.holders.length || 1));
     }
   } else if (d.gridAdd !== undefined) {
-    g.lanes.push({ name: '', layer: 2, holders: [], number: 1 });
+    g.areas.push({ name: '', layer: 2, holders: [], number: 1 });
   } else if (d.gridRemove !== undefined) {
-    g.lanes.splice(Number(d.gridRemove), 1);
+    g.areas.splice(Number(d.gridRemove), 1);
   } else if (d.gridNum !== undefined) {
     const n = Number((el as HTMLInputElement).value);
     if (d.gridNum === 'const') g.constitution = { ...g.constitution, number: n };
     else if (d.gridNum === 'chain') g.chainKey = n;
     else if (d.gridNum === 'absence') g.absence = n;
     else if (d.gridNum === 'clone') g.clone = n;
-    else lane(d.gridNum.split(':')[1])!.number = n;
+    else row(d.gridNum.split(':')[1])!.number = n;
   } else if (d.gridLayer !== undefined) {
-    const l = lane(d.gridLayer)!;
+    const l = row(d.gridLayer)!;
     l.layer = Number((el as HTMLSelectElement).value);
     if (l.kinds) l.kinds = [];
     if (l.layer !== 2) delete l.cap;
   } else if (d.gridSome !== undefined) {
-    const l = lane(d.gridSome)!;
+    const l = row(d.gridSome)!;
     if ((el as HTMLInputElement).checked) l.kinds = [];
     else delete l.kinds;
   } else if (d.gridKind !== undefined) {
-    const l = lane(d.gridKind)!;
+    const l = row(d.gridKind)!;
     l.kinds = toggle(l.kinds ?? [], (el as HTMLInputElement).value);
   } else if (d.gridCap !== undefined) {
     const x = (el as HTMLInputElement).value.trim();
-    const l = lane(d.gridCap)!;
+    const l = row(d.gridCap)!;
     if (x) l.cap = Number(x);
     else delete l.cap;
   } else if (d.gridName !== undefined) {
-    lane(d.gridName)!.name = (el as HTMLInputElement).value;
+    row(d.gridName)!.name = (el as HTMLInputElement).value;
     return true;
   } else return false;
   drawGrid(fid);
