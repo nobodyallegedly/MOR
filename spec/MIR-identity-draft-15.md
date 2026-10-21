@@ -1002,7 +1002,7 @@ Fixed at the freeze: the hash of this MIR's frozen text, used as `IDENTITY` in e
 Components exercised (freeze test suite v30; scenario and step numbers are the suite's):
 
 - Genesis, homes and routes, including an inbox route: all scenarios.
-- Rotation by chain key, delivered at the home; pending until the home rule is met: 1, 5.
+- Rotation by chain key, delivered at the home: 1, 5; pending until the home rule is met: a component under "Identity".
 - Receipts naming real acts; a forged receipt changes nothing; conflicts only between genuine rotations; dishonesty bound to a position: 5.
 - Competing rotation: first held by the homes that count wins; home acceptance policies; the lost device with a backed-up signing seed: 5.
 - Home rules: authoritative, majority, majority by default; self-hosted default: 5.

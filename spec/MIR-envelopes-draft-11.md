@@ -501,7 +501,7 @@ Still open:
 - Delegated key release at scale, stopping on lapse: 6, 7.
 - A private message between two parties that a relay can route but not read, sender sealed; the two parties share no relay and meet through the inbox: 5.
 - A private act made public later by publishing its key (disclosure): 5.
-- A container with a recipient and its capsule stripped: the remaining recipients open it as before, the inner act's own `to` the only record of the sender's addressing; a recipient cannot be added: a component under "Envelopes and Text", and 5.
+- A container with a recipient and its capsule stripped: the remaining recipients open it as before, the inner act's own `to` the only record of the sender's addressing; a recipient cannot be added: a component under "Envelopes and Text".
 - A key delivery whose key does not open what it names: valid as an act, its key ignored and shown so: a component under "Envelopes and Text".
 - Two copies of one act id differing in their signature, delivered in both orders: the copy with the valid signature counts at every verifier, and a relay holding the other replaces it: a component under "Envelopes and Text".
 
@@ -519,7 +519,7 @@ Still open:
 - Work hash of plaintext; locked bytes fingerprinted per publication; segmentation by the named cMIP: 1, 2, 6.
 - Publication with `for`; a Money-only wallet and a full client pay the same identity; withdrawal by signer or `for`: 2, 3.
 - A publication whose size is not the unlocked media's, shown as inconsistent: 2.
-- Withdrawal, including a payment racing it: 2, 5.
+- Withdrawal, including a payment racing it: 2.
 - A withdrawal in its format, `{}` with the entry `[publication, publication]`: 2, 5.
 
 #### Relays and fail closed

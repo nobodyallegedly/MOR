@@ -424,7 +424,7 @@ Still open:
 - A split plan shown with its computed payouts before signing: 2.
 - A publication in the creator's name signed with a stolen key, disowned by the creator's rotation and relied on by another identity: shown as disputed, and the specification unclaimed by the creator: 8.
 - A cMIP declaring itself a proof-of-delivery checker (field 12), found by it, and named by a proven offer whose proof it checks; a proven offer naming a cMIP without field 12, its checker asked just the same: 8.
-- A Module working under a MIR with no cMIP (a seed Module, an air-gapped signer), naming the MIR in field 5: in the format: 8.
+- A Module working under a MIR with no cMIP (a seed Module, an air-gapped signer), naming the MIR in field 5: in the format: a component under "Development".
 - A specification's text published by two tools, one writing field 2 and one not: a listing shows two specifications of one text, as versions; a client adopting by text finds both; an act of a type the text defines is judged by the text, never by field 3: 8.
 - A publication carrying a specification with field 10 out of order: a listing shows it as no specification; an act naming it is unknown in every client, never invalid: 8.
 - A role share paid to the modules a payment ran through, evidenced by a party: the receipt or claim naming a rail Module, or a use record signed by the identity running a service and acknowledged by the payer the payment commits to; the use record alone pays nothing: 2.
