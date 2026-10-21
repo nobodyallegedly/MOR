@@ -41,7 +41,8 @@ None beneath it. Identity defines the envelope as far as it needs it; the Envelo
 
 - **Identity chain.** Genesis followed by the identity's rotations and chain signatures, each naming the one before. Only the chain key adds to it. Genesis is position 0.
 - **Sequence.** A line of everyday acts by one identity, each naming the previous act in the line. An identity may keep one sequence or several; the split is the owner's choice.
-- **Kept ancestry.** The acts a rotation names as the latest genuine act of each sequence, and every act they descend from. For each tip, the rotation carries its position and the running summary including it, so anyone can prove an act lies in the kept ancestry without opening any private act.
+- **Kept ancestry.** The acts a rotation names as the latest genuine act of each sequence, and every act they descend from. For each tip, the rotation carries its position and the running summary over the sequence up to and including the tip (the summary the act after it would carry: Envelopes, "The running summary"), so anyone can prove an act lies in the kept ancestry without opening any private act.
+- **Everyday act.** Every act other than an identity-chain act (genesis, a rotation, a chain signature): it is signed with a signing key or a scoped key, carries `signer`, `binding` and `prev`, and sits in a sequence.
 - **Chain signature.** An act on the identity chain, signed with the revealed chain key, that names another act and commits the next chain key, and changes nothing else. *The one line of an identity that never branches is its identity chain; a signature placed there is ordered against every other one of the same identity, whatever devices the identity uses. A higher MIR says which of its acts need one: Agreements' forks and closings.*
 
 ### Homes
@@ -90,7 +91,7 @@ With several homes, genesis MAY declare a home rule, in one of two forms: one na
 
 If it declares none, the default applies:
 
-- the majority rule, with a threshold greater than half the distinct operators, computed from the home list;
+- the majority rule, with a threshold of the smallest number greater than half the distinct operators (n divided by 2, rounded down, plus 1, for n operators), computed from the home list; with a single operator, that operator's home alone;
 - or, when one of the homes is self-hosted, that home is authoritative and the others are backups.
 
 *One option is forced when none is selected; the default is always one of the declared forms, never a third, weaker rule.*
@@ -168,7 +169,7 @@ These run on every act.
 #### The everyday checks (types 2 to 15)
 
 1. `signer` and `binding` are present, and `prev` is present.
-2. `binding` names an act of the signer's identity chain that counts, genesis or a rotation, never a chain signature, and the key in the signature equals the signing key that act set; or, for an act signed with a scoped key, `binding` names a held act of a higher MIR, never an Identity act nor the act itself, and the signature is valid for the key it names: the act's status is then **scoped**, and the MIR that defines the binding act says whether that act installs that key for the signer, and whether the act counts (rule 8). A scoped act whose binding the verifier has not held is unknown, never invalid.
+2. `binding` names an act of the signer's identity chain, genesis or a rotation, never a chain signature, that counts, and the key in the signature equals the signing key that act set; where that act is a rotation that does not count yet (rule 28), the act is pending, never valid and not invalid, until that rotation counts (rule 28); or, for an act signed with a scoped key, `binding` names a held act of a higher MIR, never an Identity act nor the act itself, and the signature is valid for the key it names: the act's status is then **scoped**, and the MIR that defines the binding act says whether that act installs that key for the signer, and whether the act counts (rule 8). A scoped act whose binding the verifier has not held is unknown, never invalid.
 3. If a later rotation of the signer counts, the act's status follows rules 33 to 35. A rotation judges only acts signed with the key it replaces, never an act signed with a scoped key.
 
 
@@ -241,7 +242,7 @@ A disputed act never counts when choosing the latest value of anything below. *I
 
 1. **Declarations:** for each spec and kind, the entry in the counting identity-chain act with the highest position counts. A null value means the kind is not declared.
 2. **Succession:** the successor field in the counting rotation with the highest position that carries one counts; null means no succession. A succession it declares is followed only once confirmed (section 8).
-3. **Routes:** follow the routes chain from version 1; each act must name the previous one and carry its version plus one. The latest act of an unbroken, unforked chain counts. If two valid routes acts name the same predecessor, the routes are contested from that point: clients use the last act before the fork and warn the owner, who settles it by rotating. A fork behind an act the owner's later rotation kept is settled by that rotation; clients need not rewind past it.
+3. **Routes:** follow the routes chain from version 1; each act must name the previous one and carry its version plus one. The latest act of an unbroken, unforked chain counts. If two valid routes acts name the same predecessor, or two are version 1, the routes are contested from that point (from the start, for two versions 1, so that no routes act counts): clients use the last act before the fork and warn the owner, who settles it by rotating. A fork behind an act the owner's later rotation kept is settled by that rotation; clients need not rewind past it.
 4. **Names:** a name counts while its name act is valid and no valid withdrawal by the same identity names it.
 5. **Links:** a link counts when a valid claim and a valid confirmation by the identity it names both exist, and no valid termination by either side names the claim.
 
@@ -368,7 +369,7 @@ Clients and key Modules SHOULD keep the signing key and the chain key separate, 
 1. `signer` is present; `binding` and `prev` are absent.
 2. The previous act named is the signer's identity-chain act at position (this position minus one).
 3. The signature's scheme and key hash to the chain-key commitment of that previous act: `tagged_hash("MOR/safety", scheme || key)` equals it.
-4. A new signing key and a next chain-key commitment are present.
+4. A new signing key and a next chain-key commitment are present; the position (field 1) is at least 1; a homeless rotation (field 11) declares a new set of homes (field 6).
 5. Any new home rule or audit requirement meets the conditions for genesis, counted against the new set of homes if one is given. A home rule the rotation leaves in place must meet them too, against the new set of homes; if it does not, the rotation is invalid. *The owner's client sends a rule that fits, or null for the default, whenever it changes the homes; it never quietly changes a protection the owner chose.*
 6. A closure flag is valid on any rotation; it has effect only for identities whose declared homes name the signer as operator.
 
@@ -401,7 +402,7 @@ If it lies outside the kept ancestry, or within it but listed as disowned, it is
 - another identity acknowledged it (Envelopes; by an act of a type the Identity, Money or Agreements MIR defines, such as a witness act);
 - or a named keeper recorded it before recording the rotation (Agreements: the keeper record, type 2, and Agreements rules 41 and 42);
 
-then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements), and only while its own signer's chain keeps it valid (below).
+then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements), and only while its own signer's chain keeps it valid (below), save the one exception stated there for keeper records.
 
 *Disowning an act does not cost the owner the genuine acts that followed it: later acts in the line stay valid, because their validity rests on being inside the kept ancestry, not on the disowned act's.*
 
@@ -409,11 +410,13 @@ then it is valid and shown as disputed. A keeper record or acknowledgement count
 
 An act of another identity that a MIR uses as evidence (a receipt, an objection, an absence statement, a cosignature, an acknowledgement) counts only while its signer's chain keeps it valid. One voided by its signer's rotation is shown, as a dispute, and decides nothing, acknowledged or not.
 
+**The one exception, a keeper's record.** A keeper's record that an Agreements rule reads to place an act, or that a relied-on version's completeness rests on, keeps the effect that rule gave it, whatever the keeper's later rotation disowned, shown as a dispute (Agreements rule 42). *A witness chosen in advance cannot un-witness.* Every other use of a keeper record, and every other kind of evidence, follows the rule above.
+
 A signer's own acts keep rule 34 unchanged: disowned but relied on, they stay visible as disputed.
 
 *Rule 34 protects those who relied on a signer's own acts; it was never meant to keep alive the evidence others rely on. Read that way, a thief holding a home operator's signing key signs an objection to the owner's homeless rotation, an accomplice witnesses it, the operator rotates and disowns it, and the owner who lost the signing key, the very owner the homeless path exists for, never leaves. The same would keep a forged log summary "audited", and a thief's post disputed for ever. Receipt check 6 says this of receipts; this rule says it of all five kinds. Honest evidence loses nothing: a rotation keeps everything its signer does not disown.*
 
-*Its pair is in Agreements (Agreements rule 6, and "Made before, made after", 4): an act of another identity that a collective's line placed keeps, for that collective, the effect the line gave it, whatever its signer's later rotation kept or disowned; its status here is unchanged, and clients show it as a dispute on the line. That rule is Agreements'.*
+*Its pair is in Agreements (Agreements rule 6, and "Made before, made after", 4): an act of another identity that a collective's line placed keeps, for that collective, the effect the line gave it, whatever its signer's later rotation kept or disowned; its status here is unchanged, and clients show it as a dispute on the line. That rule, and the keeper's exception above, are Agreements'.*
 
 #### Rule 35. Sequences a rotation does not name
 
@@ -512,7 +515,7 @@ A home left holding a losing rotation is outvoted. The owner may drop it in a la
 
 #### Rule 44. Two receipts from one home: a conflict
 
-Two receipts that count from the same home for different acts at the same position of the same identity chain are a conflict. While it stands, the identity is contested at that position, not frozen. Anyone may publish the pair, and clients SHOULD flag the home to the owner.
+Two receipts that pass receipt check 1, from the same home, for different acts at the same position of the same identity chain are a conflict. While it stands, the identity is contested at that position, not frozen. Anyone may publish the pair, and clients SHOULD flag the home to the owner.
 
 #### Rule 45. Dishonesty, proven at a position
 
@@ -524,7 +527,7 @@ Two receipts that pass receipt check 1 from the same operator, for the same iden
 
 1. While a conflict stands, neither receipt counts, and that home counts for nothing at that position. The identity is contested there, not frozen.
 2. The conflict ends when one of the two receipts becomes void: through the home's own rotation, or, for an identity that requires audit, because only one of them is included under a cosigned log summary.
-3. The home is proven dishonest for that identity **at that position** only if both receipts remain valid after the home's rotations, or both are included under cosigned log summaries. From then on, its receipts count for nothing for that identity at positions after that one. Its receipts at earlier positions keep counting. *A thief holding the chain key and a bad home may contest the future; they cannot erase the past.*
+3. The home is proven dishonest for that identity **at that position** only as rule 45 says: both receipts remain valid after the home's rotations, and, where the identity requires audit, both are included under cosigned log summaries. *For an identity that requires audit, step 2 already ends the conflict where only one of them is included.* From then on, its receipts count for nothing for that identity at positions after that one. Its receipts at earlier positions keep counting. *A thief holding the chain key and a bad home may contest the future; they cannot erase the past.*
 
 ### 10. Homeless rotations
 
@@ -610,7 +613,7 @@ It is also the way out of a position contested at a self-hosted home (rule 4): t
 
 An escape endorsement names a homeless rotation in `objects`. Its payload may list, under key 0, earlier rotations at the same position that the owner abandons (for example one a home refused); an abandoned rotation can never count afterwards.
 
-It is signed by the owner's current signing key: the one bound by the identity-chain act just before the homeless rotation. A homeless rotation with an endorsement carries both of the owner's keys: the chain key in the rotation, the signing key in the endorsement.
+It is signed by the owner's current signing key: the one bound by the identity-chain act just before the homeless rotation. Its `binding` names that act, or, where that act is a chain signature (which sets no key), the identity-chain act that set the key. A homeless rotation with an endorsement carries both of the owner's keys: the chain key in the rotation, the signing key in the endorsement.
 
 An escape endorsement is never judged by the rotation it endorses (rules 33 to 35): it cannot lie in that rotation's kept ancestry, since it names the rotation and so is made after it.
 
@@ -634,7 +637,7 @@ A rotation that counts under the old home rule always beats a homeless rotation 
 
 #### Re-homed without audit
 
-A homeless rotation that counts only through the verifier's own failed attempt (the last case of step 4) MUST be shown as "re-homed without audit", and keepers, vault payments and agreements MUST NOT rely on it; everyday acts may.
+A homeless rotation that counts only through the verifier's own failed attempt (the last case of step 4) MUST be shown as "re-homed without audit", and nothing binding may rely on it, as the list after rule 35 says ("Every verifier gives the same answer"): no keeper record, payment, discharge of a debt, agreement, fork or closing. Reading and following the identity, and its everyday acts, may.
 
 It is never made final by the next rotation: steps 2 and 3 keep applying, so a valid objection from a home of the old set voids it whenever it surfaces, and with it every rotation built on it. The latest act that counts is then the one at position n minus one.
 
@@ -680,10 +683,29 @@ How often homes publish summaries, and which homes audit which, is left to the h
 
 *The envelope itself is defined by the Envelopes MIR. This section repeats only what Identity needs.*
 
-**Encoding.** Every act is encoded in deterministic CBOR (RFC 8949, section 4.2.1, core deterministic encoding). A verifier MUST reject any act whose bytes are not in that encoding. Formats are written in CDDL (RFC 8610). Maps use small integer keys. Every `tstr` is canonical text (Text MIR), including address hints; a genesis with a trailing space in a hint is invalid. The core sets no length bound; homes set their own policy.
+**Encoding.** Every act, and every structure the MICS hashes or signs, is encoded in deterministic CBOR. A verifier MUST reject any act whose bytes are not in that encoding. Deterministic CBOR is RFC 8949's core deterministic encoding (section 4.2.1), written out here once for every MIR:
+
+1. Every integer, length and tag number is in the shortest form that holds it.
+2. Every string, array and map has a definite length.
+3. The keys of each map are distinct and ordered by the bytewise lexicographic order of their encodings.
+4. A floating-point value is in the shortest of the half, single and double forms that preserves its value exactly, NaN payloads included (RFC 8949, section 4.1, preferred serialization).
+5. A text string is valid UTF-8.
+6. No data item is nested more than 128 levels below the outermost one (Envelopes rule 2).
+7. The bytes hold exactly one data item, with nothing after it.
+
+Tags and simple values are allowed by the encoding and carried as they are; whether a field may hold one is its format's to say, and no format of the MICS allows a tag, a float or a simple value other than `true`, `false` and `null` where it does not write `any`.
+
+**Formats.** Formats are written in CDDL (RFC 8610), with these conventions, which every MIR follows:
+
+- Every map a format defines is closed. Its keys are the small unsigned integers it lists. A key it does not list, a key that is not an unsigned integer, a required key missing, or a value of another type than the one written makes the act invalid. (Duplicate keys never reach this point: the encoding refuses them.)
+- `? n => x` is optional: absent, the field is not given. It is never written as `null` unless the format writes `/ null`; a field the format gives a default for (a route's kind 0, for instance) is written as absent, never as its default.
+- `uint` is an unsigned integer (major type 0), from 0 to 2^64 − 1; a negative integer is never a `uint`. `bstr` is a byte string; `bstr .size n` one of exactly `n` bytes; `hash` is `bstr .size 32`. `tstr` is a text string, and every `tstr` is canonical text (Text MIR), including address hints: a genesis with a trailing space in a hint is invalid. `true` is the value true alone. `any` is any data item the encoding allows.
+- `[ a, b ]` is an array of exactly those items, in that order, a trailing `? c` being one item more or none; `[+ x]` is an array of one or more `x`; `[* x]` of zero or more.
+
+The core sets no length bound beyond these; homes and relays set their own policy.
 
 **Hashes.** Every hash is SHA-256, 32 bytes. A tagged hash is computed as in BIP-340:
-`tagged_hash(tag, x) = SHA-256(SHA-256(tag) || SHA-256(tag) || x)`.
+`tagged_hash(tag, x) = SHA-256(SHA-256(tag) || SHA-256(tag) || x)`, the tag hashed as its UTF-8 bytes. Every tag the core uses begins with `MOR/`: `MOR/act`, `MOR/inside`, `MOR/mmr-leaf`, `MOR/mmr-node`, `MOR/work`, `MOR/spec`, `MOR/safety`, `MOR/sealed/wrap`, `MOR/finance/anonymous-claim` (Money) and `MOR/law/leftover` (Agreements). A plain SHA-256, untagged, is used only where a text says so: the locked hash (Envelopes) and the Merkle tree of a home's log (RFC 9162, below).
 *Tags keep the hashes of different kinds of object apart, so one can never be passed off as another. A successor protocol MUST use a different tag prefix, so its acts can never replay here (Development).*
 
 **Act id.** The act id is `tagged_hash("MOR/act", outside)`, where `outside` is the encoded outside of the act, which commits to its locked inside (Envelopes MIR). The signature is not part of the act id, so a signature can never change which act is meant.
@@ -697,11 +719,11 @@ How often homes publish summaries, and which homes audit which, is left to the h
 | 3 | SLH-DSA-SHA2-128f (FIPS 205) | 32 bytes | 17,088 bytes | chain keys |
 | hash | as the specification defines | as defined | as defined | either, as the specification says |
 
-A signature always signs the 32-byte act id. SLH-DSA signatures use the context string `MOR`. Both SLH-DSA variants are allowed; the owner's client chooses. The small variant (2) is recommended. A client that meets a scheme it does not implement MUST treat the act as unknown, never as valid. *A rotation's own validity never depends on the kind of signing key it installs, so every client verifies the rotation; only acts signed under the new scheme are unknown to a client that lacks it. This is how signing keys migrate to a post-quantum scheme before a break: by adoption, with no change to the core.*
+In a signature, a key or a signing key, the scheme is written as the unsigned integer 1, 2 or 3, or as a 32-byte spec hash; any other value makes the act invalid. A key or a signature of a founding scheme whose length is not the one in the table makes the act invalid. A scheme named by hash is a signature-scheme specification (Development, kind 5): a client that has not adopted it answers unknown, whatever the lengths. A signature always signs the 32-byte act id. SLH-DSA signatures use the context string `MOR`. Both SLH-DSA variants are allowed; the owner's client chooses. The small variant (2) is recommended. A client that meets a scheme it does not implement MUST treat the act as unknown, never as valid. *A rotation's own validity never depends on the kind of signing key it installs, so every client verifies the rotation; only acts signed under the new scheme are unknown to a client that lacks it. This is how signing keys migrate to a post-quantum scheme before a break: by adoption, with no change to the core.*
 
 **Chain key commitment.** A chain key is committed as `tagged_hash("MOR/safety", scheme || key)`, where `scheme` is the one-byte number or the 32-byte specification hash, and `key` the public key.
 
-**Spec hash.** Every act names the specification that defines its type by that specification's hash. For the acts below it is the hash of the frozen text of this MIR, written `IDENTITY` here.
+**Spec hash.** Every act names the specification that defines its type by that specification's spec hash. For the acts below it is this MIR's spec hash, written `IDENTITY` here: `tagged_hash("MOR/spec", content)`, where `content` is the deterministic CBOR map `{ 0 => 4, 9 => text }` holding this MIR's frozen text, and nothing else (Development rule 26).
 
 ### Written for people
 
@@ -741,7 +763,20 @@ Every act defined by this MIR is public, except a private link, as section 3 say
 
 Every act has exactly one signer (section 2).
 
-`prev` holds one act id in the ordinary case, and none (an empty array) when the act starts a new sequence. Genesis and rotations carry neither `binding` nor `prev`: they belong to the identity chain, not to a sequence.
+`prev` holds one act id in the ordinary case, and none (an empty array) when the act starts a new sequence. Genesis, rotations and chain signatures carry neither `binding` nor `prev`: they belong to the identity chain, not to a sequence. Their position is the one in their payload (field 1; genesis is position 0); an inside position or running summary (inside keys 5 and 6) on an identity-chain act is not read, and nor are its `acks`, `refs` and `hint`. Genesis carries no `objects`; a rotation's or chain signature's `objects`, if any, are not read.
+
+**What an Identity act names in `objects`.** Where this MIR says an act names another in `objects`, the act carries the entry `[ chain, named ]`, `named` being the act named, and `chain` the identity whose chain or sequence it concerns:
+
+| Act | Its entry | What a verifier reads |
+| --- | --- | --- |
+| Name withdrawal (5) | `[ signer, name act ]` | an entry whose second item is the name act |
+| Link confirmation (7), of a claim | `[ claim's signer, claim ]` | an entry whose second item is the claim |
+| Link confirmation (7), of a succession | `[ rotation's signer, rotation ]` | an entry whose second item is the rotation |
+| Link termination (8) | `[ claim's signer, claim ]` | an entry whose second item is the claim |
+| Cosignature (10) | `[ home's operator, log summary ]` | an entry whose second item is the log summary |
+| Objection (12), absence statement (13), escape endorsement (14) | `[ identity, homeless rotation ]`, `identity` the one the rotation is for | exactly that entry: the chain MUST be that identity |
+
+*An entry's first item is where a reader looks; for the three acts of the homeless path it is also checked, since what they say is about one identity's chain.* One entry is enough; an act carrying more names each act an entry names.
 
 ```cddl
 hash   = bstr .size 32
@@ -761,7 +796,8 @@ home-rule = [ 0, index: uint ]                      ; one authoritative home
 audit = [ threshold: uint, auditors: [+ hash] ]     ; cosignatures required, and from whom
 
 declaration = [ spec: hash, kind: uint, value: any / null ]   ; null removes the kind
-successor   = [ protocol: tstr, identifier: bstr ]  ; protocol "mor" for a MOR identity
+successor   = [ protocol: tstr, identifier: bstr ]  ; protocol "mor" for a MOR identity, its identifier the 32-byte identity hash;
+                                                    ; a "mor" identifier of another length names no MOR identity, and no client follows it
 ```
 
 How an address hint and a null operator are read is in section 4 ("A home's address").
@@ -826,7 +862,7 @@ rotation-payload = {
 kept-tip = [ act: hash, position: uint, summary: hash ]   ; the tip's id, its position, and the running summary including it
 ```
 
-Outside: `signer`, no `binding`. Inside: `spec`, `type` 1 and `payload`, with no `prev`. The signature is by the chain key committed in the previous identity-chain act; its public key is revealed in the signature itself.
+Outside: `signer`, no `binding`. Inside: `spec`, `type` 1 and `payload`, with no `prev`. The signature is by the chain key committed in the previous identity-chain act; its public key is revealed in the signature itself. Field 1 is at least 1. A rotation carrying field 11 carries field 6; one that does not is invalid (rotation check 4). Fields 11 and 12 are written only as `true`, absent otherwise.
 
 ### Receipt (type 2)
 
@@ -839,7 +875,7 @@ receipt-payload = {
 }
 ```
 
-A receipt is an everyday act of the home's operator. Its log position is a counter kept by the home, increasing by one with every receipt it signs, for any identity. It is never a time.
+A receipt is an everyday act of the home's operator. Its log position is a counter kept by the home, starting at 0 for the first receipt it signs and increasing by one with every receipt, for any identity; it is the receipt's index in the home's Merkle tree (below). It is never a time.
 
 ### Routes (type 3)
 
@@ -851,9 +887,11 @@ routes-payload = {
 }
 route = [ scope: hash / null, hints: [+ tstr], ? kind: 0 / 1 ]
 ; scope: a spec hash, or null for everything else
-; kind 0 (default): outbox, where this identity's content of that scope is found
+; kind 0 (default): outbox, where this identity's content of that scope is found; written as absent, never as 0
 ; kind 1: inbox, where others deliver acts of that scope addressed to this identity
 ```
+
+Version 0 is no version: a routes act carrying it is invalid, as is version 1 carrying field 1, or a later version without it.
 
 Routes acts form their own chain: each names the one it replaces, and its version is exactly one more. *Nobody can jump ahead with a very high number, and two routes acts naming the same predecessor are a visible fork.* An identity MAY declare no inbox. *The reserved inbox kind is shared language, not a mandate: it exists so that any two identities can find each other without already sharing a relay, through identity, home and routes.*
 
@@ -891,7 +929,19 @@ log-summary-payload = {
 }
 ```
 
-The Merkle tree is built as in RFC 9162, section 2.1, with SHA-256. A receipt's log position is its index in that tree. An inclusion proof shows that a receipt sits at its position under a root; a consistency proof shows that a later summary extends an earlier one. Who serves and carries proofs is in section 13 ("Inclusion proofs travel").
+The Merkle tree is built as in RFC 9162, section 2.1, with plain SHA-256, over the receipts' act ids in log order: a leaf is `SHA-256(0x00 || act id)`, a node `SHA-256(0x01 || left || right)`, the empty tree's root `SHA-256()` of nothing. A receipt's log position is its index in that tree, from 0. An inclusion proof shows that a receipt sits at its position under a root; a consistency proof shows that a later summary extends an earlier one. Who serves and carries proofs is in section 13 ("Inclusion proofs travel").
+
+**Proofs, as a verifier is handed them.** Proofs are not acts. How a client asks a home for them is the relay transport cMIP's; what a verifier checks of a proof it is handed, in this encoding, is the core's:
+
+```cddl
+inclusion-proof   = [ summary: hash, receipt: hash, index: uint, path: [* hash] ]
+consistency-proof = [ old: hash, new: hash, path: [* hash] ]
+```
+
+- In an inclusion proof, `summary` is the act id of a log summary, `receipt` the act id of a receipt signed by the same operator, `index` its log position (equal to the receipt's field 3; otherwise the proof proves nothing), and `path` the audit path of RFC 9162, section 2.1.3.1, from the leaf upward. The verifier holds both acts and checks the path as RFC 9162, section 2.1.3.2, against the summary's size (field 0) and root (field 1); `index` lower than the size.
+- In a consistency proof, `old` and `new` are the act ids of two log summaries of one operator, `path` the proof of RFC 9162, section 2.1.4.1. The verifier holds both and checks it as section 2.1.4.2, against their sizes and roots; an old size of 0, or larger than the new, proves nothing.
+
+A proof that fails its check proves nothing, and makes no act invalid.
 
 A cosignature names the log summary in `objects` and has an empty payload. It is signed by the auditing identity.
 
@@ -912,7 +962,13 @@ An objection and an absence statement name the homeless rotation in `objects` (s
 
 ### Escape endorsement (type 14)
 
-An escape endorsement names a homeless rotation in `objects`. Its payload, what it abandons and who signs it are in section 11 ("The escape endorsement").
+```cddl
+escape-endorsement-payload = {
+  ? 0 => [+ hash]       ; earlier rotations at the same position the owner abandons
+}
+```
+
+An escape endorsement names a homeless rotation in `objects` (`[ identity, homeless rotation ]`). What it abandons and who signs it are in section 11 ("The escape endorsement").
 
 ### Chain signature (type 16)
 
@@ -989,13 +1045,11 @@ Key storage, backup and recovery are Modules built on this vocabulary; they need
 
 Settled in this MIR: hash function (SHA-256), encoding (deterministic CBOR), founding signature schemes and the specification-hash form, chain key commitment, receipt format, home address changes (through the home's own routes), routes with an inbox kind, closure by rotation.
 
-Still open:
-
-- How a home is queried: the request and response formats for an identity's chain, receipts, routes, names and public links.
+Left to the relay transport cMIP: how a home is queried (the requests and answers for an identity's chain, receipts, routes, names, public links, log summaries and proofs). The core fixes only what a verifier checks of what it is handed: the acts, and the proofs in the encoding Part three gives ("Proofs, as a verifier is handed them").
 
 Not in MOR 1: a shorter proof that an act lies within a kept ancestry than rebuilding the line (Envelopes: sequence position and running summary). A verifier that cannot rebuild a kept line answers unknown, never void; such a proof (the running summary's peaks and a path) can follow after MOR 1 without changing any act.
 
-Fixed at the freeze: the hash of this MIR's frozen text, used as `IDENTITY` in every act it defines.
+Fixed at the freeze: this MIR's spec hash, computed from its frozen text as Development rule 26 says, used as `IDENTITY` in every act it defines.
 
 ### Freeze scenarios
 
