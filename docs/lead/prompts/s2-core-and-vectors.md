@@ -26,6 +26,8 @@ Where a text cannot be built as written, or the code shows it wrong: stop on tha
 - **Checked twice:** by the Rust library (`core/tests/vectors.rs`) and by the independent Python implementation (`check.py`), extended to signatures and to every verdict vector it can judge; where Python cannot judge one, the README says which and why.
 - Spec hashes stay stand-ins until the freeze; the README says so.
 
+**Finding number.** If this session records a finding of its own, it is **F375**; do not take another number (both leads reserve numbers in one register; ask if you need a second).
+
 **When to stop.** Stop at a clean point (a committed, green part) if your context runs long, with a progress file (`docs/s2-progress.md`) the next session starts from. The order above is the order of value: Part 0 and Part 1 first, so the vectors come from code that matches the texts.
 
 **Report:** `docs/s2-report.md`: plain words first (what a C verifier can now check itself against; what is not covered by a vector and why), then precisely; the questions; the stranger's reading. Check the CI run yourself before saying it is green.

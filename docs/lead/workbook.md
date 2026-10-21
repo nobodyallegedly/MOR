@@ -40,7 +40,7 @@ The MOR lead keeps the core: the core texts (MICS, six MIRs, freeze test suite),
 
 ## How a decision is recorded (the same turn)
 
-1. A finding in `docs/findings/MOR-findings-log-round-2.md`, newest first, the next F number (check the top first: the Suite lead writes there too, its entries marked "(Dubsar Suite)").
+1. A finding in `docs/findings/MOR-findings-log-round-2.md`, newest first, its number **reserved first in the shared register** (`claude/MOR-F-numbers.md` in the project: re-read it, take the next free line, the same turn). A prompt carries its number; sessions never choose one.
 2. The state file, and the roadmap where a stage moves; this workbook where a session moves.
 3. Commit and push to main (the remote is `nobodyallegedly/MOR`).
 4. Sync the project copy: `project_write` of `claude/MOR-state-of-mor.md` from the local file; the same for a prompt or this workbook when they change.
