@@ -402,7 +402,7 @@ If it lies outside the kept ancestry, or within it but listed as disowned, it is
 - another identity acknowledged it (Envelopes; by an act of a type the Identity, Money or Agreements MIR defines, such as a witness act);
 - or a named keeper recorded it before recording the rotation (Agreements: the keeper record, type 2, and Agreements rules 41 and 42);
 
-then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements), and only while its own signer's chain keeps it valid (below), save the one exception stated there for keeper records.
+then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements), and only while its own signer's chain keeps it valid (below), save the exception stated there for keeper records.
 
 *Disowning an act does not cost the owner the genuine acts that followed it: later acts in the line stay valid, because their validity rests on being inside the kept ancestry, not on the disowned act's.*
 
@@ -410,7 +410,7 @@ then it is valid and shown as disputed. A keeper record or acknowledgement count
 
 An act of another identity that a MIR uses as evidence (a receipt, an objection, an absence statement, a cosignature, an acknowledgement) counts only while its signer's chain keeps it valid. One voided by its signer's rotation is shown, as a dispute, and decides nothing, acknowledged or not.
 
-**The one exception, a keeper's record.** A keeper's record that an Agreements rule reads to place an act, or that a relied-on version's completeness rests on, keeps the effect that rule gave it, whatever the keeper's later rotation disowned, shown as a dispute (Agreements rule 42). *A witness chosen in advance cannot un-witness.* Every other use of a keeper record, and every other kind of evidence, follows the rule above.
+**Agreements' exception for a keeper's record.** A keeper's record that an Agreements rule reads to place an act, or that a relied-on version's completeness rests on, keeps the effect that rule gave it, whatever the keeper's later rotation disowned, shown as a dispute (Agreements rule 42). *A witness chosen in advance cannot un-witness.* Every other use of a keeper record, and every other kind of evidence, follows the rule above.
 
 A signer's own acts keep rule 34 unchanged: disowned but relied on, they stay visible as disputed.
 
