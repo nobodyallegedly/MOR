@@ -23,7 +23,7 @@ const kbar = (on) => bar('kishib', { on, right: KME });
 const kopened = (on, col, pane, extra = '') => `${kbar(on)}<div class="body">${column(col)}<section class="pane">${pane}</section></div>${extra}`;
 page('kishib', 'home', 'Home: the four tiles',
   `${kbar(null)}<div class="home">${KTILES.map((x) => `<div class="tile d${x.d}">${ICON[x.icon]}${dm(x.d)}<h2>${x.name}</h2><p>${x.say}</p></div>`).join('')}</div>
-<div class="home-note">${TESTLINE} · top right: ${nd('Kišib’s identity, works differently')}</div>`,
+<div class="home-note">${TESTLINE}</div>`,
   { group: 'Home', before: ['kishib/kishib-01-start.png', 'kishib/kishib-30-mac-start.png'] });
 
 const KIDCOL = [{ t: 'An identity’s record', on: true }, { t: 'Confirm a succession' }, '-', { t: 'Held by the runner', k: 'off' }];
