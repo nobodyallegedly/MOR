@@ -144,3 +144,5 @@ One at a time; the next only once the one before is answered.
 - Records: `docs/h80-report.md` (question 2 answered), F371 in `docs/findings/MOR-findings-log-round-2.md`.
 
 No layout changed: in each window, only the words inside the existing line entry, and two labels in Kišib.
+
+**The web clients.** Edubba's web release is rebuilt on this branch (`clients/desk/built`, the same bytes GitHub's machine builds, as its pull-request check requires). Dub's, Damgar's, Ummia's and Kišib's web releases are rebuilt on main only by a commit carrying `[release dub web]`, `[release damgar web]`, `[release ummia web]` and `[release kishib web]`: the merge should carry them, or the web clients keep today's behaviour until a machine session releases them. On the Mac, the apps run from source and need nothing more.
