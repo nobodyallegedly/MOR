@@ -8,7 +8,7 @@
 
 ## Purpose
 
-A chain-key seed is the one secret from which a signing device derives a chain key of an identity: under the air-gapped chain-key signer Module's draft 6, a fresh seed is drawn at every change of keys, so each seed gives the one key that counts until the next change (rule 3.3), or, by the owner's exception there, every later key. This Module says how the seed is written down, so a person can back it up on paper, and how keys come from it, so that any device implementing this Module restores the same keys from the same backup.
+A chain-key seed is the one secret from which a signing device derives a chain key of an identity: under the air-gapped chain-key signer Module's draft 6, a fresh seed is drawn at every change of keys, so each seed gives the one key that counts until the next change (rule 3.3). This Module says how the seed is written down, so a person can back it up on paper, and how keys come from it, so that any device implementing this Module restores the same keys from the same backup.
 
 ## The seed
 
