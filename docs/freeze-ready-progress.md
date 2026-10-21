@@ -6,14 +6,15 @@
 
 | Text | New file | State |
 | --- | --- | --- |
-| Identity draft 15 | `spec/MIR-identity-draft-15.md` | Committed; stranger's reading done (`docs/freeze-ready-strangers/identity-15.md`), wording fixes committed |
+| Identity draft 15 | `spec/MIR-identity-draft-15.md` | Committed; stranger's reading done, wording fixes committed |
 | Text draft 11 | `spec/MIR-text-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
-| Envelopes draft 11 | `spec/MIR-envelopes-draft-11.md` | Committed; stranger's reading running |
-| Money draft 11 | `spec/MIR-money-draft-11.md` | Committed; stranger's reading running |
-| Agreements draft 17 | — | Next: the keeper redefinition, F359, F295's count, F351/F353 checks, "lane" |
-| Development draft 11 | — | |
-| MICS v30 | — | Every rule citation is to draft-21-era numbers: convert all |
-| Freeze test suite v30 | — | Add components for Text rule 14's two cases |
+| Envelopes draft 11 | `spec/MIR-envelopes-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
+| Money draft 11 | `spec/MIR-money-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
+| Agreements draft 17 | `spec/MIR-agreements-draft-17.md` | Committed; stranger's reading done, wording fixes committed |
+| Development draft 11 | `spec/MIR-development-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
+| MICS v30 | `spec/02-MOR-MICS-v30.md` | Committed |
+| Freeze test suite v30 | `spec/03-MOR-freeze-test-suite-v30.md` | In progress: five parts cleaned in parallel in the scratchpad, then assembled |
+| Final stranger's reading over all eight | `docs/freeze-ready-strangers/all-eight.md` | After the suite |
 | `spec/README.md` | — | At the end |
 | Report | `docs/freeze-ready-drafts-report.md` | At the end |
 
@@ -93,3 +94,15 @@ Questions:
 34. Development keeps three items "still open": the CDDL conventions for type definitions, the signature-scheme specification format, and how the MIRs are published so their hashes are fixed (the last partly answered by rule 26).
 35. "Fields 11 and 13 are a rail Module's (a reading, to confirm)": on any other kind they make the specification no specification.
 36. Task 4's bound in the tasks table now points to Text's task (wording; it read "hides only non-letters", against Text's "only its own declared markup" above a floor).
+
+## Development stranger (37 to 38) and Agreements stranger (39 to 45)
+
+37. **Development: normative text in italics** (several lines; rule 21 has no normal text at all; Part three called "for reference"), and "unknown, never invalid" for an act naming a malformed specification against Envelopes rule 30's "invalid beats unknown".
+38. **Development's content format**: unknown or duplicate keys, which kinds may carry fields 1, 2, 5, 7, 10 and 12, field 2 "required" yet undetectable from bytes, field 6's hash and binary (grouped with question 13).
+39. **Agreements rule 42's third condition**: a keeper record counts only from a keeper named by an agreement the recorded act's `objects` names; rotations, founding terms, receipts, work claims and posts name none.
+40. **Agreements rule 38 under several keepers**: the `keepers` format's codes against "any one, a threshold, or all", and how "recorded before the rotation" combines under a threshold.
+41. **Agreements rule 33: an anchor of the act itself.** An anchor shows an act existed by a point; how it shows a deadline missed is not stated (the keeper's anchored sequence does, by the act's absence from it).
+42. **A deal with no keeper**: a declaration's line, and every signature act "counting as made after it" (against rule 47's "relied on stays complete").
+43. **Member keys in detail** (with question 20): removal, which areas count, when the key counts against rule 72, the agreement in force for its acts, a forked line, the member's own rotation; a grant to oneself and type 1 acceptance.
+44. **"Only acts valid in their own format count"** against delivery, use and metric records, and transfer field 3 against a valid over-sale.
+45. **Agreements' internal contradictions** (one grouped question): abandonment outcomes against a holder with a named stake successor stated three ways; areas over Identity; judicial tasks with or without task 14; fork completeness and non-member holders' chain signatures; record field 3 and take-ups.
