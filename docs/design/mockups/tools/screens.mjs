@@ -382,7 +382,7 @@ page('edubba', 'diary', 'The diary: the public act to sign before it opens',
 
 const COLCOL = [{ t: 'Collective Y', on: true, k: '4' }, { t: 'Collective Z', k: '2 of 3 signed' }, { t: 'Three tablets', k: 'brought' }, '-', { t: '+ Found a collective', add: true }, { t: '+ Found a test collective', add: true }, { t: '+ Bring a collective', add: true }];
 const colHead = (tab) => `<div class="head"><span class="dot c">Y</span><h2>Collective Y</h2><span class="mono faint">${ID.Y}</span><span class="chip">real · 4 members</span><span class="grow"></span><span class="btn q small">Its constitution, in plain words</span></div>
-<div class="subtabs">${['Act', 'Members', 'Money', 'Keepers', 'To sign · 1'].map((t) => `<span class="${t.startsWith(tab) ? 'on' : ''}">${t}</span>`).join('')}<span class="grow"></span>${nd('tab names (the sketch)')}</div>`;
+<div class="subtabs">${['Act', 'Members', 'Money', 'Keepers', 'To sign · 1'].map((t) => `<span class="${t.startsWith(tab) ? 'on' : ''}">${t}</span>`).join('')}</div>`;
 page('edubba', 'collectives', 'Collectives: Collective Y, Act',
   opened('edubba', 'Collectives', COLCOL, `${colHead('Act')}
 <div class="row" style="margin-top:0"><span class="small soft">Acting as Max, for Collective Y. What you may do, from its agreement:</span><span class="chip on">post · rule 61</span><span class="chip on">release · area “Code”</span><span class="chip">money · one more key above 10 000</span></div>
