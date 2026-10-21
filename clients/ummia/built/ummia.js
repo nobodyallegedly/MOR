@@ -1482,12 +1482,12 @@ function describeAct(bytes) {
   }
   return takeFromExternrefTable0(ret[0]);
 }
-function encryptionKeyPayload(version, previous, _public) {
+function encryptionKeyPayload(version2, previous, _public) {
   var ptr0 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
   var len0 = WASM_VECTOR_LEN;
   const ptr1 = passArray8ToWasm0(_public, wasm.__wbindgen_malloc);
   const len1 = WASM_VECTOR_LEN;
-  const ret = wasm.encryptionKeyPayload(version, ptr0, len0, ptr1, len1);
+  const ret = wasm.encryptionKeyPayload(version2, ptr0, len0, ptr1, len1);
   if (ret[3]) {
     throw takeFromExternrefTable0(ret[2]);
   }
@@ -2067,13 +2067,13 @@ function __wbg_get_imports() {
       return ret;
     },
     __wbindgen_init_externref_table: function() {
-      const table = wasm.__wbindgen_externrefs;
-      const offset = table.grow(4);
-      table.set(0, void 0);
-      table.set(offset + 0, void 0);
-      table.set(offset + 1, null);
-      table.set(offset + 2, true);
-      table.set(offset + 3, false);
+      const table2 = wasm.__wbindgen_externrefs;
+      const offset = table2.grow(4);
+      table2.set(0, void 0);
+      table2.set(offset + 0, void 0);
+      table2.set(offset + 1, null);
+      table2.set(offset + 2, true);
+      table2.set(offset + 3, false);
     }
   };
   return {
@@ -2191,8 +2191,8 @@ function getUint8ArrayMemory0() {
 function handleError(f, args) {
   try {
     return f.apply(this, args);
-  } catch (e2) {
-    const idx = addToExternrefTable0(e2);
+  } catch (e3) {
+    const idx = addToExternrefTable0(e3);
     wasm.__wbindgen_exn_store(idx);
   }
 }
@@ -2296,12 +2296,12 @@ async function __wbg_load(module2, imports) {
     if (typeof WebAssembly.instantiateStreaming === "function") {
       try {
         return await WebAssembly.instantiateStreaming(module2, imports);
-      } catch (e2) {
+      } catch (e3) {
         const validResponse = expectedResponseType(module2.type);
         if (validResponse && module2.headers.get("Content-Type") !== "application/wasm") {
-          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e2);
+          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e3);
         } else {
-          throw e2;
+          throw e3;
         }
       }
     }
@@ -2844,10 +2844,10 @@ var Relay = class {
       let reason = `HTTP ${r.status}`;
       let acts2 = [];
       try {
-        const e2 = cborDecode(body);
-        code = e2.get(0);
-        reason = e2.get(1) ?? reason;
-        acts2 = bytesList(e2.get(2));
+        const e3 = cborDecode(body);
+        code = e3.get(0);
+        reason = e3.get(1) ?? reason;
+        acts2 = bytesList(e3.get(2));
       } catch {
       }
       throw new RelayError(code, reason, acts2, r.status);
@@ -2917,9 +2917,9 @@ var Relay = class {
     try {
       const a = await this.call(`/acts/${id}`);
       return actId(a) === id ? a : null;
-    } catch (e2) {
-      if (e2 instanceof RelayError && e2.code === CODE.notHeld) return null;
-      throw e2;
+    } catch (e3) {
+      if (e3 instanceof RelayError && e3.code === CODE.notHeld) return null;
+      throw e3;
     }
   }
   /** `POST /media`: the relay's answer is checked against the bytes sent. */
@@ -2937,9 +2937,9 @@ var Relay = class {
     try {
       const b = await this.call(`/media/${lockedHash}`);
       return sha2562(b) === lockedHash ? b : null;
-    } catch (e2) {
-      if (e2 instanceof RelayError && e2.code === CODE.notHeld) return null;
-      throw e2;
+    } catch (e3) {
+      if (e3 instanceof RelayError && e3.code === CODE.notHeld) return null;
+      throw e3;
     }
   }
   async feed(q) {
@@ -2978,8 +2978,8 @@ var relayAt = (hint, via = {}) => new Relay(hint, via[hint] ?? hint);
 
 // ../genesis/src/kex.ts
 var kexLog = { recording: false, entries: [] };
-function record(e2) {
-  if (kexLog.recording) kexLog.entries.push(e2);
+function record(e3) {
+  if (kexLog.recording) kexLog.entries.push(e3);
 }
 
 // ../genesis/src/lines.ts
@@ -3195,15 +3195,15 @@ function planLines(lines2, o = {}) {
   const covered = counts !== null && counts === o.unplaced.length && !unplacedSay.length;
   const unread = [];
   for (const l of lines2) {
-    const card = cards.find((c) => c.act === l.tip) ?? l.card;
+    const card2 = cards.find((c) => c.act === l.tip) ?? l.card;
     const given = cards.find((c) => c.act === l.tip);
     if (leaveOut.has(l.tip)) {
       left.push(l);
       shown.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
-    } else if (card) {
-      kept.push({ act: card.act, position: card.position, summary: card.summary });
+    } else if (card2) {
+      kept.push({ act: card2.act, position: card2.position, summary: card2.summary });
       shown.push({
-        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`,
+        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card2.position}, summary ${card2.summary}.`,
         tone: l.readable || given && !given.missing ? "ok" : "warn"
       });
     } else if (covered) {
@@ -3399,10 +3399,10 @@ async function lookUp(identity, hints, via = {}, into) {
       });
     }
   }
-  const e2 = v.latest(identity, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
+  const e3 = v.latest(identity, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
   let encryptionKey = null;
-  if (e2.payload) {
-    const p = cborDecode(e2.payload);
+  if (e3.payload) {
+    const p = cborDecode(e3.payload);
     const [scheme, key] = p.get(2);
     if (scheme === 4) encryptionKey = key;
   }
@@ -3421,7 +3421,7 @@ async function lookUp(identity, hints, via = {}, into) {
     unreachable,
     notTried,
     routes: { act: r.act ?? null, contested: r.contested, routes },
-    encryptionKeyAct: e2.act ?? null,
+    encryptionKeyAct: e3.act ?? null,
     encryptionKey,
     inbox(spec) {
       const inboxes = routes.filter((x) => x.kind === 1);
@@ -3546,8 +3546,8 @@ var TestIdentity = class _TestIdentity {
       const r = this.relay(h.hint);
       try {
         out.push({ home: h.hint, result: await r.putAct(act) });
-      } catch (e2) {
-        if (e2 instanceof RelayError && e2.code === CODE.missingPredecessor) {
+      } catch (e3) {
+        if (e3 instanceof RelayError && e3.code === CODE.missingPredecessor) {
           try {
             for (const earlier of this.chainActs()) {
               if (actId(earlier) !== actId(act)) await r.putAct(earlier);
@@ -3559,7 +3559,7 @@ var TestIdentity = class _TestIdentity {
             continue;
           }
         }
-        out.push(failure(h.hint, e2));
+        out.push(failure(h.hint, e3));
       }
     }
     return out;
@@ -3603,8 +3603,8 @@ var TestIdentity = class _TestIdentity {
     for (const h of this.f.homes) {
       try {
         out.push({ home: h.hint, result: await this.relay(h.hint).putAct(act) });
-      } catch (e2) {
-        out.push(failure(h.hint, e2));
+      } catch (e3) {
+        out.push(failure(h.hint, e3));
       }
     }
     return out;
@@ -3615,10 +3615,10 @@ var TestIdentity = class _TestIdentity {
    * (inbox). Save the file after, since the sequence moved.
    */
   async publishRoutes(routes) {
-    const version = (this.f.routes?.version ?? 0) + 1;
-    const payload = routesPayload({ version, previous: this.f.routes?.act, routes });
+    const version2 = (this.f.routes?.version ?? 0) + 1;
+    const payload = routesPayload({ version: version2, previous: this.f.routes?.act, routes });
     const made = this.everyday(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
-    this.f.routes = { version, act: made.id };
+    this.f.routes = { version: version2, act: made.id };
     return { id: made.id, sent: await this.toHomes(made.act) };
   }
   /**
@@ -3648,11 +3648,11 @@ var TestIdentity = class _TestIdentity {
    */
   async publishEncryptionKey(given) {
     const last = this.f.encryption.at(-1);
-    const version = (last?.version ?? 0) + 1;
+    const version2 = (last?.version ?? 0) + 1;
     const secret = given ?? newEncryptionSecret();
-    const payload = encryptionKeyPayload(version, last?.act, xwingPublic(secret));
+    const payload = encryptionKeyPayload(version2, last?.act, xwingPublic(secret));
     const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
-    this.f.encryption.push({ version, act: made.id, secret: hex(secret) });
+    this.f.encryption.push({ version: version2, act: made.id, secret: hex(secret) });
     return { id: made.id, sent: await this.toHomes(made.act) };
   }
   // ------------------------------------------------------------ rotation
@@ -3780,8 +3780,8 @@ var TestIdentity = class _TestIdentity {
       try {
         anchored = await this.anchorQuorum(lookup, p.id, before, anchoring);
         this.f.anchored = [...this.f.anchored ?? [], ...anchored.map((a) => ({ act: a.act, on: a.on, proof: b64(a.proof) }))];
-      } catch (e2) {
-        unanchored = e2.message;
+      } catch (e3) {
+        unanchored = e3.message;
       }
     }
     return { counts, lookup, anchored, unanchored };
@@ -3870,8 +3870,8 @@ var TestIdentity = class _TestIdentity {
           } catch {
           }
         }
-      } catch (e2) {
-        if (!(e2 instanceof TypeError) && !(e2 instanceof RelayError)) throw e2;
+      } catch (e3) {
+        if (!(e3 instanceof TypeError) && !(e3 instanceof RelayError)) throw e3;
       }
     }
   }
@@ -4016,7 +4016,7 @@ var TestIdentity = class _TestIdentity {
    */
   async readInbox(opts) {
     const out = [];
-    const secrets = [...this.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const secrets = [...this.f.encryption].reverse().map((e3) => unhex(e3.secret));
     for (const hint of opts.inbox) {
       const page = await relayAt(hint, this.via).feed({ to: this.f.identity });
       for (const it of page.items) {
@@ -4032,8 +4032,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
   let parts;
   try {
     parts = sealedParts(sealed);
-  } catch (e2) {
-    return { sealed: id, opened: false, error: String(e2) };
+  } catch (e3) {
+    return { sealed: id, opened: false, error: String(e3) };
   }
   const index = me === null ? 0 : parts.to.indexOf(me);
   if (index < 0) return { sealed: id, opened: false, error: "not addressed to this identity" };
@@ -4043,8 +4043,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
     let o;
     try {
       o = openSealed(sealed, me ?? void 0, secret);
-    } catch (e2) {
-      lastError = String(e2);
+    } catch (e3) {
+      lastError = String(e3);
       continue;
     }
     const d = o.described;
@@ -4062,8 +4062,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
         if (o.key) them.verifier.addWithKey(o.act, o.key);
         else them.verifier.add(o.act);
         r.status = them.verifier.status(d.id);
-      } catch (e2) {
-        r.status = `sender not found: ${e2}`;
+      } catch (e3) {
+        r.status = `sender not found: ${e3}`;
       }
     }
     return r;
@@ -4086,16 +4086,16 @@ function sealFor(act, key, recipients) {
   recipients.forEach((r, i) => record({ kind: "encapsulate", publicKey: r.key, eseed: eseeds[i], ct: parts.capsules[i] }));
   return sealed;
 }
-function failure(home, e2) {
-  if (e2 instanceof RelayError) return { home, error: e2.reason, code: e2.code };
-  return { home, error: String(e2) };
+function failure(home, e3) {
+  if (e3 instanceof RelayError) return { home, error: e3.reason, code: e3.code };
+  return { home, error: String(e3) };
 }
 
 // ../genesis/src/private.ts
 var unb642 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 function ownKey(me) {
-  const e2 = me.f.encryption[me.f.encryption.length - 1];
-  return e2 ? xwingPublic(unhex(e2.secret)) : null;
+  const e3 = me.f.encryption[me.f.encryption.length - 1];
+  return e3 ? xwingPublic(unhex(e3.secret)) : null;
 }
 async function leaveAtHomes(me, made, o = {}) {
   const via = o.via ?? me.via;
@@ -4144,8 +4144,8 @@ async function lineAtHomes(me, app3, via = me.via) {
   const u2 = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts: acts2 }));
   const hidden = me.f.sequence.filter((id) => u2.has(id)).length;
   const atHomes = held.has(own.card.act);
-  const card = { ...own.card, hidden, ...missing ? { missing } : {} };
-  return { ...blank, atHomes, missing, hidden, card: atHomes ? cardText(card, app3) : null };
+  const card2 = { ...own.card, hidden, ...missing ? { missing } : {} };
+  return { ...blank, atHomes, missing, hidden, card: atHomes ? cardText(card2, app3) : null };
 }
 async function ownActs(identity, secrets, places, via = {}) {
   const out = /* @__PURE__ */ new Map();
@@ -4269,8 +4269,8 @@ async function negotiate(by, to, o) {
       for (const c of by.chainActs()) await r.putAct(c).catch(() => void 0);
       await r.putSealed(sealed);
       left.push(hint);
-    } catch (e2) {
-      failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
+    } catch (e3) {
+      failed.push({ relay: hint, reason: e3 instanceof Error ? e3.message : String(e3) });
     }
   }
   if (o.home !== false) await leaveAtHomes(by, made);
@@ -4522,8 +4522,8 @@ async function judgeCollective(collective, acts2, hints, via = {}, limits = []) 
   for (const id of acts2) {
     try {
       out.set(id, v.agreementsConsent(withGrantLimits(AGREEMENTS_SPECS, limits), id));
-    } catch (e2) {
-      out.set(id, { kind: "unread", reason: e2 instanceof Error ? e2.message : String(e2), met: false, areas: [] });
+    } catch (e3) {
+      out.set(id, { kind: "unread", reason: e3 instanceof Error ? e3.message : String(e3), met: false, areas: [] });
     }
   }
   return out;
@@ -6633,15 +6633,15 @@ function readForm(typed, want) {
   try {
     const r = formRead(t, want);
     return { hex: r.data, hints: r.hints, bare: r.bare };
-  } catch (e2) {
-    throw new Refused(e2 instanceof Error ? e2.message : String(e2));
+  } catch (e3) {
+    throw new Refused(e3 instanceof Error ? e3.message : String(e3));
   }
 }
 var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
 var readId = (typed) => readForm(typed, "mid").hex;
 
 // ../dub/src/carryin.ts
-var message = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var NOT_CURRENT = "These words do not give this identity\u2019s current signing key: they are another identity\u2019s, an earlier key\u2019s, or written wrong. Nothing was kept. If these are your chain key\u2019s words, they must never be typed into an online app.";
 async function lookCurrent(id, seed, hints, via) {
   let pub;
@@ -6653,8 +6653,8 @@ async function lookCurrent(id, seed, hints, via) {
   let look;
   try {
     look = await lookUp(id, hints, via);
-  } catch (e2) {
-    throw new Error(`This identity was not found at ${hints.join(", ")}: ${message(e2)}`);
+  } catch (e3) {
+    throw new Error(`This identity was not found at ${hints.join(", ")}: ${message(e3)}`);
   }
   const r = look.resolution;
   if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing can be signed for it until they agree.");
@@ -6676,9 +6676,9 @@ async function servedChain(id, homes, via) {
 function carriedKey(look, seed) {
   const secret = encryptionSecret(seed);
   if (!look.encryptionKey || !look.encryptionKeyAct || hex(xwingPublic(secret)) !== hex(look.encryptionKey)) return null;
-  const e2 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
-  const version = e2.payload ? Number(cborDecode(e2.payload).get(0)) : 1;
-  return { version, act: look.encryptionKeyAct, secret: hex(secret) };
+  const e3 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
+  const version2 = e3.payload ? Number(cborDecode(e3.payload).get(0)) : 1;
+  return { version: version2, act: look.encryptionKeyAct, secret: hex(secret) };
 }
 
 // ../damgar/src/units.ts
@@ -6871,10 +6871,10 @@ function readList(id, payload) {
   try {
     const m = cborDecode(payload);
     for (const k of m.keys()) if (![0, 1, 2, 3].includes(k)) return null;
-    const version = m.get(0);
-    if (typeof version !== "number" || version < 1) return null;
+    const version2 = m.get(0);
+    if (typeof version2 !== "number" || version2 < 1) return null;
     const prev = m.get(1);
-    if (version === 1 !== (prev === void 0)) return null;
+    if (version2 === 1 !== (prev === void 0)) return null;
     const entries = /* @__PURE__ */ new Map();
     for (const x of m.get(2)) {
       if (!Array.isArray(x) || !(x[0] instanceof Uint8Array) || x[0].length !== 32) return null;
@@ -6884,7 +6884,7 @@ function readList(id, payload) {
       if (!(x instanceof Uint8Array) || x.length !== 32) throw new Error("merged");
       return hex(x);
     });
-    return { id, version, previous: prev instanceof Uint8Array ? hex(prev) : null, merged, entries };
+    return { id, version: version2, previous: prev instanceof Uint8Array ? hex(prev) : null, merged, entries };
   } catch {
     return null;
   }
@@ -6897,8 +6897,8 @@ async function readActs(identity, secrets, homes, via) {
   let l;
   try {
     l = await lookUp(identity, homes, via, v);
-  } catch (e2) {
-    return { acts: acts2, problems: [`its homes did not answer (${e2 instanceof Error ? e2.message : String(e2)})`] };
+  } catch (e3) {
+    return { acts: acts2, problems: [`its homes did not answer (${e3 instanceof Error ? e3.message : String(e3)})`] };
   }
   const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
   for (const h of at) {
@@ -6927,8 +6927,8 @@ async function readActs(identity, secrets, homes, via) {
         if (!page.items.length || page.next === after) break;
         after = page.next;
       }
-    } catch (e2) {
-      problems.push(`${h}: ${e2 instanceof Error ? e2.message : String(e2)}`);
+    } catch (e3) {
+      problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
     }
   }
   return { acts: acts2, problems };
@@ -6954,8 +6954,8 @@ async function readAccepted(identity, secrets, homes, via = {}) {
     for (const m of a.merged) followed.add(m);
   }
   const tips = [...acts2.values()].filter((a) => !followed.has(a.id)).sort((x, y) => x.id < y.id ? -1 : 1);
-  const version = Math.max(0, ...tips.map((t) => t.version));
-  if (tips.length <= 1) return { entries: new Map(tips[0]?.entries ?? []), tips, merged: [], version, problems };
+  const version2 = Math.max(0, ...tips.map((t) => t.version));
+  if (tips.length <= 1) return { entries: new Map(tips[0]?.entries ?? []), tips, merged: [], version: version2, problems };
   const anc = tips.map((t) => ancestors(acts2, t.id));
   const common = [...anc[0]].filter((x) => anc.every((s) => s.has(x)) && acts2.has(x));
   const base = common.map((x) => acts2.get(x)).sort((a, b) => b.version - a.version)[0];
@@ -6976,30 +6976,30 @@ async function readAccepted(identity, secrets, homes, via = {}) {
       }
     }
   }
-  return { entries, tips, merged: [...new Set(merged)], version, problems };
+  return { entries, tips, merged: [...new Set(merged)], version: version2, problems };
 }
 var sameTips = (a, b) => a.map((x) => x.id).join() === b.map((x) => x.id).join();
 async function changeAccepted(me, change, opts) {
   const via = opts.via ?? {};
   const homes = me.f.homes.map((h) => h.hint);
-  const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+  const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
   if (!secrets.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
   for (let round = 0; round < 5; round++) {
-    const read2 = await readAccepted(me.id, secrets, homes, via);
-    if (read2.problems.length >= homes.length && !read2.tips.length) throw new Error(`The identity\u2019s homes did not answer (${read2.problems.join("; ")}): the accepted list was not changed.`);
-    const next = new Map(read2.entries);
+    const read3 = await readAccepted(me.id, secrets, homes, via);
+    if (read3.problems.length >= homes.length && !read3.tips.length) throw new Error(`The identity\u2019s homes did not answer (${read3.problems.join("; ")}): the accepted list was not changed.`);
+    const next = new Map(read3.entries);
     change(next);
-    const same = read2.tips.length === 1 && JSON.stringify([...next].sort()) === JSON.stringify([...read2.entries].sort());
-    if (same || !read2.tips.length && !next.size) return { written: null, list: read2 };
+    const same = read3.tips.length === 1 && JSON.stringify([...next].sort()) === JSON.stringify([...read3.entries].sort());
+    if (same || !read3.tips.length && !next.size) return { written: null, list: read3 };
     const again = await readAccepted(me.id, secrets, homes, via);
-    if (!sameTips(again.tips, read2.tips)) continue;
+    if (!sameTips(again.tips, read3.tips)) continue;
     await opts.check();
     const look = await lookUp(me.id, homes, via);
-    if (!look.encryptionKey || !me.f.encryption.some((e2) => hex(xwingPublic(unhex(e2.secret))) === hex(look.encryptionKey))) {
+    if (!look.encryptionKey || !me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey))) {
       throw new Error("The encryption key this identity publishes is not one this app holds: the accepted list cannot be sealed. Nothing was changed.");
     }
-    const [first, ...others] = read2.tips;
-    const payload = listPayload({ version: read2.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
+    const [first, ...others] = read3.tips;
+    const payload = listPayload({ version: read3.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
     let made;
     try {
       made = me.sign(ACCEPTED_SPEC, SEALED_LIST, payload, { public: false, to: [me.id] });
@@ -7018,7 +7018,7 @@ async function changeAccepted(me, change, opts) {
     await leaveAtHomes(me, made, { via, sealed: left > 0 });
     await opts.save();
     if (!left) throw new Error("No home took the accepted list: nothing was changed. Try again.");
-    return { written: made.id, list: { entries: next, tips: [{ id: made.id, version: read2.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next }], merged: read2.merged, version: read2.version + 1, problems: [] } };
+    return { written: made.id, list: { entries: next, tips: [{ id: made.id, version: read3.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next }], merged: read3.merged, version: read3.version + 1, problems: [] } };
   }
   throw new Error("Another app kept changing the accepted list while this one wrote: nothing was changed. Try again.");
 }
@@ -7096,7 +7096,7 @@ async function sendToSelf(me, type, payload, opts) {
   const homes = me.f.homes.map((h) => h.hint);
   const look = await lookUp(me.id, homes, opts.via ?? {});
   if (!look.encryptionKey) throw new Error("This identity publishes no encryption key, so nothing can be sealed to it: the draft cannot travel to Damgar. Nothing was signed.");
-  if (!me.f.encryption.some((e2) => hex(xwingPublic(unhex(e2.secret))) === hex(look.encryptionKey))) {
+  if (!me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey))) {
     throw new Error("The encryption key this identity publishes is not one this app holds: Damgar, holding the same words, could not open the draft either. Nothing was signed.");
   }
   let made;
@@ -7122,7 +7122,7 @@ async function sendToSelf(me, type, payload, opts) {
 
 // src/anchor.ts
 var short2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
-var message2 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message2 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var ANCHOR_SAY = [
   "Optional. An anchor puts this release\u2019s fingerprint on the Bitcoin chain through a pooled anchoring service, so anyone can later see it existed by a given block.",
   "The service is sent a leaf: the release\u2019s id mixed with a random secret (the blind) Ummia keeps. It never learns the release. A lost blind loses the anchor\u2019s use.",
@@ -7216,9 +7216,9 @@ async function standing(x, hints, via, chain) {
     const v = batchAnchorCheck(x.act, proof, headers);
     shown.state = v.answer === "valid" ? "anchored" : v.answer;
     shown.lines.push(v.answer === "valid" ? { text: `Anchored at block ${v.point}, on the chain followed (${chain.said}): checked by the Bitcoin clock Module\u2019s rule.`, tone: "ok" } : { text: `Not yet anchored: ${v.answer}, ${v.why}.`, tone: v.answer === "invalid" ? "bad" : "warn" });
-  } catch (e2) {
+  } catch (e3) {
     shown.state = "unknown";
-    shown.lines.push({ text: message2(e2), tone: "warn" });
+    shown.lines.push({ text: message2(e3), tone: "warn" });
   }
   return shown;
 }
@@ -7339,8 +7339,8 @@ function decodeSpec2(content) {
   let d;
   try {
     d = decodeSpec(content, PAYMENT_CMIP);
-  } catch (e2) {
-    throw new Error(message3(e2));
+  } catch (e3) {
+    throw new Error(message3(e3));
   }
   return {
     kind: d.kind,
@@ -7403,13 +7403,13 @@ var Judge = class {
   async problem(act, id, signer) {
     try {
       await holdSequence(this.v, signer, await this.lookUp(signer), this.places, this.via);
-    } catch (e2) {
-      return `its signer's identity chain could not be looked up: ${message3(e2)}`;
+    } catch (e3) {
+      return `its signer's identity chain could not be looked up: ${message3(e3)}`;
     }
     try {
       this.v.add(act);
-    } catch (e2) {
-      return `the act is not valid: ${message3(e2)}`;
+    } catch (e3) {
+      return `the act is not valid: ${message3(e3)}`;
     }
     const s = this.v.status(id);
     return s === "valid" ? null : `its standing is \u201C${s}\u201D, not valid, for its signer's identity chain`;
@@ -7465,8 +7465,8 @@ async function readQuery(line, via, into, q) {
       if (!page.items.length || page.next === after) break;
       after = page.next;
     }
-  } catch (e2) {
-    line.problem = message3(e2);
+  } catch (e3) {
+    line.problem = message3(e3);
   }
 }
 async function readListing(relays, gatewayRelays, via = {}, filtered) {
@@ -7508,8 +7508,8 @@ async function readListing(relays, gatewayRelays, via = {}, filtered) {
       if (!content) return void (p.problem = "its content was not found, or does not match its work hash and size");
       try {
         p.spec = decodeSpec2(content);
-      } catch (e2) {
-        return void (p.problem = `no specification (Development draft 10, F323): ${message3(e2)}`);
+      } catch (e3) {
+        return void (p.problem = `no specification (Development draft 10, F323): ${message3(e3)}`);
       }
       p.hash = specHash(content);
       p.content = content;
@@ -7589,9 +7589,9 @@ function implementsOf(man) {
     return { publications: v.map((h) => hex(h)), problem: "its manifest names publications in \u201Cimplements\u201D (field 6), as release manifest cMIP draft 3 did; under draft 4 it names spec hashes, so it is not a valid manifest" };
   }
   const specs2 = [];
-  for (const e2 of v) {
-    if (!Array.isArray(e2) || e2.length < 1 || e2.length > 2 || !e2.every(bytes32)) return wrong;
-    const h = hex(e2[0]);
+  for (const e3 of v) {
+    if (!Array.isArray(e3) || e3.length < 1 || e3.length > 2 || !e3.every(bytes32)) return wrong;
+    const h = hex(e3[0]);
     if (specs2.length && specs2[specs2.length - 1] >= h) return wrong;
     specs2.push(h);
   }
@@ -7600,22 +7600,22 @@ function implementsOf(man) {
 function mipsOf(all) {
   const byHash = new Map(all.map((l) => [l.hash, l]));
   const mips2 = all.filter((l) => l.spec.kind === MIP);
-  const children = /* @__PURE__ */ new Map();
+  const children2 = /* @__PURE__ */ new Map();
   for (const l of mips2) {
     const p = l.spec.predecessor;
-    if (p !== l.hash) children.set(p, [...children.get(p) ?? [], l]);
+    if (p !== l.hash) children2.set(p, [...children2.get(p) ?? [], l]);
   }
   const order = (a, b) => b.total - a.total || b.direct - a.direct || (a.listed.name < b.listed.name ? -1 : a.listed.name > b.listed.name ? 1 : a.listed.hash < b.listed.hash ? -1 : 1);
   const placed = /* @__PURE__ */ new Set();
   const tree = (l) => {
     placed.add(l.hash);
-    const forks = (children.get(l.hash) ?? []).filter((c) => !placed.has(c.hash)).map(tree).sort(order);
+    const forks = (children2.get(l.hash) ?? []).filter((c) => !placed.has(c.hash)).map(tree).sort(order);
     return { listed: l, direct: forks.length, total: forks.reduce((n, f) => n + 1 + f.total, 0), forks };
   };
   const byName = (a, b) => a.listed.name < b.listed.name ? -1 : a.listed.name > b.listed.name ? 1 : a.listed.hash < b.listed.hash ? -1 : 1;
   const roots = all.filter((l) => l.spec.kind === MIR || l.spec.kind === MICS).map(tree).sort(byName);
   const unrooted = /* @__PURE__ */ new Map();
-  const top2 = (l) => {
+  const top3 = (l) => {
     const seen = /* @__PURE__ */ new Set();
     let x = l;
     for (; ; ) {
@@ -7627,7 +7627,7 @@ function mipsOf(all) {
   };
   for (const l of mips2.filter((x) => !placed.has(x.hash)).sort((a, b) => a.hash < b.hash ? -1 : 1)) {
     if (placed.has(l.hash)) continue;
-    const head = byHash.get(top2(l));
+    const head = byHash.get(top3(l));
     const leads = head.spec.predecessor;
     const u2 = unrooted.get(leads) ?? { hash: leads, kind: byHash.get(leads)?.spec.kind ?? null, forks: [] };
     u2.forks.push(tree(head));
@@ -7677,20 +7677,20 @@ async function countUse(found, byHash, judge2) {
 function linesOf2(all) {
   const byHash = new Map(all.map((l) => [l.hash, l]));
   const after = (l) => l.spec.predecessor && l.spec.predecessor !== l.hash ? byHash.get(l.spec.predecessor) ?? null : null;
-  const children = /* @__PURE__ */ new Map();
+  const children2 = /* @__PURE__ */ new Map();
   for (const l of all) {
     const p = after(l);
-    if (p) children.set(p.hash, [...children.get(p.hash) ?? [], l]);
+    if (p) children2.set(p.hash, [...children2.get(p.hash) ?? [], l]);
   }
   const order = (a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : a.hash < b.hash ? -1 : 1;
-  for (const c of children.values()) c.sort(order);
+  for (const c of children2.values()) c.sort(order);
   const placed = /* @__PURE__ */ new Set();
   const out = [];
   const walk = (l, n, drafts) => {
     if (placed.has(l.hash)) return;
     placed.add(l.hash);
     const p = after(l);
-    const siblings = p ? (children.get(p.hash) ?? []).filter((x) => x !== l).map((x) => x.hash) : [];
+    const siblings = p ? (children2.get(p.hash) ?? []).filter((x) => x !== l).map((x) => x.hash) : [];
     drafts.push({
       listed: l,
       number: n,
@@ -7699,7 +7699,7 @@ function linesOf2(all) {
       otherCreator: !!p && p.spec.creator !== l.spec.creator,
       siblings
     });
-    for (const c of children.get(l.hash) ?? []) walk(c, n + 1, drafts);
+    for (const c of children2.get(l.hash) ?? []) walk(c, n + 1, drafts);
   };
   const roots = all.filter((l) => !after(l)).sort(order);
   for (const r of roots) {
@@ -7754,7 +7754,7 @@ function roleWords(l, all) {
   return { kind, layer: [...layers].join(", ") || "not said", role };
 }
 async function readExtensions(found, byHash, judge2, privateActs) {
-  const read2 = { terms: 0, counted: 0, proposed: 0, notCounted: [], private: privateActs };
+  const read3 = { terms: 0, counted: 0, proposed: 0, notCounted: [], private: privateActs };
   const terms = /* @__PURE__ */ new Map();
   const signatures = [];
   for (const { d, act } of found.values()) {
@@ -7765,7 +7765,7 @@ async function readExtensions(found, byHash, judge2, privateActs) {
       const fields = cborDecode(d.payload);
       if (fields instanceof Map) terms.set(d.id, { act, signer: d.signer, fields });
     } catch {
-      read2.notCounted.push({ id: d.id, why: "its terms do not decode" });
+      read3.notCounted.push({ id: d.id, why: "its terms do not decode" });
     }
   }
   const parties = /* @__PURE__ */ new Set();
@@ -7778,7 +7778,7 @@ async function readExtensions(found, byHash, judge2, privateActs) {
   const valid = /* @__PURE__ */ new Set();
   for (const [id, t] of terms) {
     const bad = await judge2.problem(t.act, id, t.signer);
-    if (bad) read2.notCounted.push({ id, why: bad });
+    if (bad) read3.notCounted.push({ id, why: bad });
     else valid.add(id);
   }
   for (const s of signatures) {
@@ -7787,7 +7787,7 @@ async function readExtensions(found, byHash, judge2, privateActs) {
     } catch {
     }
   }
-  read2.terms = valid.size;
+  read3.terms = valid.size;
   const named = (t) => Array.isArray(t.get(15)) ? t.get(15).filter(bytes32).map((h) => hex(h)) : [];
   const extLayers = {};
   for (const id of valid) for (const h of named(terms.get(id).fields)) extLayers[h] = byHash.get(h)?.spec.layers ?? [];
@@ -7796,11 +7796,11 @@ async function readExtensions(found, byHash, judge2, privateActs) {
   for (const id of valid) {
     try {
       const a = judge2.v.agreementsAgreement(specs2, id);
-      if (a.invalid) read2.notCounted.push({ id, why: `the core library finds these terms invalid: ${a.invalid}` });
+      if (a.invalid) read3.notCounted.push({ id, why: `the core library finds these terms invalid: ${a.invalid}` });
       else if (a.exists === true || a.exists === null && a.ready) counts.add(id);
-      else read2.proposed++;
-    } catch (e2) {
-      read2.notCounted.push({ id, why: `the core library could not judge it: ${message3(e2)}` });
+      else read3.proposed++;
+    } catch (e3) {
+      read3.notCounted.push({ id, why: `the core library could not judge it: ${message3(e3)}` });
     }
   }
   const first = (id) => {
@@ -7825,8 +7825,8 @@ async function readExtensions(found, byHash, judge2, privateActs) {
       byExt.set(h, m);
     }
   }
-  read2.counted = agreementsCounted.size;
-  read2.notCounted.sort((a, b) => a.id < b.id ? -1 : 1);
+  read3.counted = agreementsCounted.size;
+  read3.notCounted.sort((a, b) => a.id < b.id ? -1 : 1);
   const extensions = [...byExt].map(([hash, m]) => {
     const listed = byHash.get(hash) ?? null;
     return {
@@ -7838,7 +7838,7 @@ async function readExtensions(found, byHash, judge2, privateActs) {
   });
   const name = (x) => x.listed?.name ?? `~${x.hash}`;
   extensions.sort((a, b) => b.agreements.length - a.agreements.length || (name(a) < name(b) ? -1 : name(a) > name(b) ? 1 : 0));
-  return { extensions, agreements: read2 };
+  return { extensions, agreements: read3 };
 }
 
 // src/mips.ts
@@ -7898,13 +7898,13 @@ async function replies(me, drafts, relays, via = {}) {
       if (key) v.addWithKey(act, key);
       else v.add(act);
       standing2 = v.status(d.id);
-    } catch (e2) {
-      standing2 = `not checked: ${e2 instanceof Error ? e2.message : String(e2)}`;
+    } catch (e3) {
+      standing2 = `not checked: ${e3 instanceof Error ? e3.message : String(e3)}`;
     }
     const t = cborDecode(d.payload).get(0);
     for (const r of named) out.set(r, [...out.get(r) ?? [], { id: d.id, signer: d.signer, text: typeof t === "string" ? t : "", standing: standing2, sealed }]);
   };
-  const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+  const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
   for (const h of [.../* @__PURE__ */ new Set([...inbox, ...relays])]) {
     let after;
     try {
@@ -7928,8 +7928,8 @@ async function replies(me, drafts, relays, via = {}) {
         if (!page.items.length || page.next === after) break;
         after = page.next;
       }
-    } catch (e2) {
-      lines2.push({ text: `${h}: ${e2 instanceof Error ? e2.message : String(e2)}`, tone: "warn" });
+    } catch (e3) {
+      lines2.push({ text: `${h}: ${e3 instanceof Error ? e3.message : String(e3)}`, tone: "warn" });
     }
   }
   return { replies: out, lines: lines2 };
@@ -8052,14 +8052,14 @@ function readExif(body) {
   if (!first) return none2;
   let orientation = null;
   let location = false;
-  for (const e2 of first.list) {
-    if (e2.tag === 274 && e2.type === 3 && e2.count === 1) orientation = r16(e2.at);
-    if (e2.tag === 34853) location = true;
+  for (const e3 of first.list) {
+    if (e3.tag === 274 && e3.type === 3 && e3.count === 1) orientation = r16(e3.at);
+    if (e3.tag === 34853) location = true;
   }
   let thumbnail = false;
   if (first.next > 0 && first.next < t.length) {
     const second = entries(first.next);
-    if (second) thumbnail = second.list.some((e2) => e2.tag === 513 || e2.tag === 273);
+    if (second) thumbnail = second.list.some((e3) => e3.tag === 513 || e3.tag === 273);
   }
   return { orientation, location, thumbnail };
 }
@@ -8096,11 +8096,11 @@ function read(b) {
       else carries.add("other-application-data");
     } else if (m === APP1) {
       if (ascii(s.body, 0, "Exif\0\0")) {
-        const e2 = readExif(s.body);
-        if (!exifSeen) orientation = e2.orientation;
+        const e3 = readExif(s.body);
+        if (!exifSeen) orientation = e3.orientation;
         exifSeen = true;
-        if (e2.location) carries.add("location");
-        if (e2.thumbnail) carries.add("exif-thumbnail");
+        if (e3.location) carries.add("location");
+        if (e3.thumbnail) carries.add("exif-thumbnail");
         if (!isOnlyOrientation(s.body)) carries.add("exif");
       } else if (ascii(s.body, 0, "http://ns.adobe.com/xap/1.0/") || ascii(s.body, 0, "http://ns.adobe.com/xmp/")) {
         carries.add("xmp");
@@ -8181,9 +8181,9 @@ function isJfif(body) {
   return ascii(body, 0, "JFIF\0") && body.length >= 14;
 }
 function isOnlyOrientation(body) {
-  const e2 = readExif(body);
-  if (e2.orientation === null || e2.orientation < 2 || e2.orientation > 8) return false;
-  const want = orientationExif(e2.orientation);
+  const e3 = readExif(body);
+  if (e3.orientation === null || e3.orientation < 2 || e3.orientation > 8) return false;
+  const want = orientationExif(e3.orientation);
   return body.length === want.length && body.every((x, i) => x === want[i]);
 }
 function strip(b) {
@@ -8237,6 +8237,645 @@ function concat2(parts) {
   return out;
 }
 
+// ../../modules/video/src/video.ts
+var NotFilm = class extends Error {
+  constructor(kind, message5) {
+    super(message5);
+    this.kind = kind;
+    this.name = "NotFilm";
+  }
+};
+var MAX_BYTES = 64 * 1024 * 1024 - 16;
+var MAX_SECONDS = 600;
+var MAX_LONG_SIDE = 1920;
+var MAX_SHORT_SIDE = 1080;
+var MAX_RATE = 60;
+var MAX_LEVEL = 42;
+var MAX_SAMPLE_RATE = 48e3;
+var CARRIED_WORDS = {
+  metadata: "metadata (titles, dates, the device, comments, cover pictures)",
+  location: "where it was filmed",
+  dates: "when it was made (the dates in its headers)",
+  names: "names written by the software that made it",
+  free: "free space that can hold anything",
+  unknown: "boxes of a kind no player reads (such as XMP)",
+  "unused-media": "media data no sample uses",
+  descriptor: "an MPEG-4 object descriptor (iods), not needed to play"
+};
+var ascii2 = (b, o, n) => String.fromCharCode(...b.subarray(o, o + n));
+var Reader = class {
+  constructor(b) {
+    this.b = b;
+    this.view = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  }
+  view;
+  need(o, n, end, what) {
+    if (o < 0 || n < 0 || o + n > end) throw new NotFilm("structure", `${what} runs past its box`);
+  }
+  u8 = (o) => this.b[o];
+  u16 = (o) => this.view.getUint16(o);
+  u32 = (o) => this.view.getUint32(o);
+  i32 = (o) => this.view.getInt32(o);
+  u64(o) {
+    const hi = this.u32(o);
+    if (hi > 2097151) throw new NotFilm("limits", "a 64-bit value beyond what a file of this size can hold");
+    return hi * 2 ** 32 + this.u32(o + 4);
+  }
+  /** The boxes between `o` and `end`, which they must fill exactly. A size of 0 (to the end) only where `toEnd` allows. */
+  boxes(o, end, toEnd = false) {
+    const out = [];
+    while (o < end) {
+      if (end - o < 8) throw new NotFilm("structure", "bytes left over that are not a box");
+      let size = this.u32(o);
+      const type = ascii2(this.b, o + 4, 4);
+      let body = o + 8;
+      if (size === 1) {
+        if (end - o < 16) throw new NotFilm("structure", `the box ${JSON.stringify(type)} runs past its parent`);
+        size = this.u64(o + 8);
+        body = o + 16;
+      } else if (size === 0) {
+        if (!toEnd) throw new NotFilm("structure", `the box ${JSON.stringify(type)} has no size`);
+        size = end - o;
+      }
+      if (type === "uuid") body += 16;
+      if (size < body - o || o + size > end) throw new NotFilm("structure", `the box ${JSON.stringify(type)} runs past its parent`);
+      out.push({ type, start: o, body, end: o + size });
+      o += size;
+    }
+    return out;
+  }
+};
+var ASIDE = { udta: "metadata", meta: "metadata", free: "free", skip: "free", uuid: "unknown" };
+function children(r, box2, allowed, carried, where, skip = 0) {
+  const out = [];
+  for (const c of r.boxes(box2.body + skip, box2.end)) {
+    if (allowed.includes(c.type)) out.push(c);
+    else if (c.type in ASIDE) {
+      carried.add(ASIDE[c.type]);
+      if (c.type === "udta" || c.type === "meta") inspectAside(r, c, carried);
+    } else throw new NotFilm("refused", `a box of kind ${JSON.stringify(c.type)} in ${where}, which this Module does not read`);
+  }
+  return out;
+}
+function inspectAside(r, box2, carried) {
+  let kids;
+  try {
+    kids = r.boxes(box2.body + (box2.type === "meta" ? 4 : 0), box2.end);
+  } catch {
+    try {
+      kids = box2.type === "meta" ? r.boxes(box2.body, box2.end) : [];
+    } catch {
+      kids = [];
+    }
+  }
+  for (const k of kids) {
+    if (k.type === "loci" || k.type === "\xA9xyz") carried.add("location");
+    if (k.type === "dinf") throw new NotFilm("refused", "a data reference inside the metadata, which could point outside the file");
+    if (k.type === "meta" || k.type === "udta" || k.type === "ilst" || k.type === "keys") inspectAside(r, k, carried);
+    if (k.type === "ilst" || k.type === "keys") {
+      if (/location|©xyz/i.test(ascii2(r.b, k.body, k.end - k.body))) carried.add("location");
+    }
+  }
+}
+var one = (list3, type, where) => {
+  const f = list3.filter((b) => b.type === type);
+  if (f.length !== 1) throw new NotFilm("structure", `${where} has ${f.length ? "more than one" : "no"} ${JSON.stringify(type)}`);
+  return f[0];
+};
+var maybe = (list3, type, where) => {
+  const f = list3.filter((b) => b.type === type);
+  if (f.length > 1) throw new NotFilm("structure", `${where} has more than one ${JSON.stringify(type)}`);
+  return f[0] ?? null;
+};
+var Bits = class {
+  constructor(b) {
+    this.b = b;
+  }
+  bit = 0;
+  u(n) {
+    let v = 0;
+    for (let i = 0; i < n; i++) {
+      const byte = this.bit >> 3;
+      if (byte >= this.b.length) throw new NotFilm("structure", "the parameter set ends early");
+      v = v * 2 + (this.b[byte] >> 7 - (this.bit & 7) & 1);
+      this.bit++;
+    }
+    return v;
+  }
+  ue() {
+    let zeros = 0;
+    while (this.u(1) === 0) if (++zeros > 31) throw new NotFilm("structure", "the parameter set holds a number too large");
+    return 2 ** zeros - 1 + this.u(zeros);
+  }
+  se() {
+    const k = this.ue();
+    return k & 1 ? (k + 1) / 2 : -k / 2;
+  }
+};
+function unescape(nal) {
+  const out = [];
+  for (let i = 0; i < nal.length; i++) {
+    if (i >= 2 && nal[i] === 3 && nal[i - 1] === 0 && nal[i - 2] === 0) continue;
+    out.push(nal[i]);
+  }
+  return new Uint8Array(out);
+}
+var PROFILES = { 66: "Baseline", 77: "Main", 100: "High" };
+function readSps(nal) {
+  if (!nal.length || (nal[0] & 31) !== 7) throw new NotFilm("structure", "the H.264 configuration does not hold a sequence parameter set");
+  const s = new Bits(unescape(nal.subarray(1)));
+  const profile = s.u(8);
+  s.u(8);
+  const level = s.u(8);
+  s.ue();
+  if ([100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135].includes(profile)) {
+    const chroma = s.ue();
+    if (chroma !== 1) throw new NotFilm("refused", "H.264 with colour sampled otherwise than 4:2:0, which phones do not all play");
+    if (s.ue() !== 0 || s.ue() !== 0) throw new NotFilm("refused", "H.264 with more than 8 bits a sample, which phones do not all play");
+    s.u(1);
+    if (s.u(1)) {
+      for (let i = 0; i < 8; i++) {
+        if (!s.u(1)) continue;
+        const n = i < 6 ? 16 : 64;
+        let last = 8;
+        let next = 8;
+        for (let j = 0; j < n && next !== 0; j++) {
+          next = (last + s.se() + 256) % 256;
+          last = next === 0 ? last : next;
+        }
+      }
+    }
+  }
+  s.ue();
+  const poc = s.ue();
+  if (poc === 0) s.ue();
+  else if (poc === 1) {
+    s.u(1);
+    s.se();
+    s.se();
+    const n = s.ue();
+    if (n > 255) throw new NotFilm("structure", "the parameter set is not valid");
+    for (let i = 0; i < n; i++) s.se();
+  }
+  s.ue();
+  s.u(1);
+  const wMbs = s.ue() + 1;
+  const hMaps = s.ue() + 1;
+  const frameOnly = s.u(1);
+  if (!frameOnly) throw new NotFilm("refused", "interlaced H.264, which this Module does not play");
+  s.u(1);
+  let crop = [0, 0, 0, 0];
+  if (s.u(1)) crop = [s.ue(), s.ue(), s.ue(), s.ue()];
+  const width = wMbs * 16 - 2 * (crop[0] + crop[1]);
+  const height = hMaps * 16 - 2 * (crop[2] + crop[3]);
+  if (width <= 0 || height <= 0) throw new NotFilm("structure", "the parameter set crops away the whole picture");
+  return { profile, level, width, height };
+}
+function readAvcC(r, box2) {
+  const b = r.b;
+  r.need(box2.body, 6, box2.end, "the H.264 configuration");
+  if (b[box2.body] !== 1) throw new NotFilm("structure", "the H.264 configuration is not version 1");
+  const profile = b[box2.body + 1];
+  const compat = b[box2.body + 2];
+  const level = b[box2.body + 3];
+  if (![0, 1, 3].includes(b[box2.body + 4] & 3)) throw new NotFilm("structure", "the H.264 configuration names an invalid length size");
+  let o = box2.body + 5;
+  const nSps = b[o++] & 31;
+  if (!nSps) throw new NotFilm("structure", "the H.264 configuration holds no sequence parameter set");
+  let first = null;
+  for (let i = 0; i < nSps; i++) {
+    r.need(o, 2, box2.end, "the H.264 configuration");
+    const n = r.u16(o);
+    r.need(o + 2, n, box2.end, "a sequence parameter set");
+    first ??= b.subarray(o + 2, o + 2 + n);
+    o += 2 + n;
+  }
+  r.need(o, 1, box2.end, "the H.264 configuration");
+  const nPps = b[o++];
+  if (!nPps) throw new NotFilm("structure", "the H.264 configuration holds no picture parameter set");
+  for (let i = 0; i < nPps; i++) {
+    r.need(o, 2, box2.end, "the H.264 configuration");
+    const n = r.u16(o);
+    r.need(o + 2, n, box2.end, "a picture parameter set");
+    o += 2 + n;
+  }
+  const sps = readSps(first);
+  if (sps.profile !== profile || sps.level !== level) throw new NotFilm("structure", "the H.264 configuration and its parameter set disagree");
+  return { profile, compat, level, width: sps.width, height: sps.height };
+}
+function descriptor(r, o, end) {
+  r.need(o, 2, end, "a descriptor");
+  const tag = r.b[o++];
+  let len = 0;
+  for (let i = 0; i < 4; i++) {
+    r.need(o, 1, end, "a descriptor");
+    const x = r.b[o++];
+    len = len * 128 + (x & 127);
+    if (!(x & 128)) break;
+    if (i === 3) throw new NotFilm("structure", "a descriptor length is too long");
+  }
+  r.need(o, len, end, "a descriptor");
+  return { tag, body: o, end: o + len };
+}
+function readEsds(r, box2) {
+  const b = r.b;
+  const es = descriptor(r, box2.body + 4, box2.end);
+  if (es.tag !== 3) throw new NotFilm("structure", "the sound configuration has no elementary stream descriptor");
+  r.need(es.body, 3, es.end, "the sound configuration");
+  const flags = b[es.body + 2];
+  let o = es.body + 3;
+  if (flags & 128) o += 2;
+  if (flags & 64) throw new NotFilm("refused", "the sound names a stream elsewhere (a URL), which a film may not");
+  if (flags & 32) o += 2;
+  const dc = descriptor(r, o, es.end);
+  if (dc.tag !== 4) throw new NotFilm("structure", "the sound configuration has no decoder configuration");
+  r.need(dc.body, 13, dc.end, "the decoder configuration");
+  if (b[dc.body] !== 64 || b[dc.body + 1] >> 2 !== 5) throw new NotFilm("refused", "sound that is not MPEG-4 audio (AAC): only AAC-LC is played");
+  const asc = descriptor(r, dc.body + 13, dc.end);
+  if (asc.tag !== 5) throw new NotFilm("structure", "the sound configuration has no AAC configuration");
+  const bits = new Bits(b.subarray(asc.body, asc.end));
+  const aot = bits.u(5);
+  if (aot !== 2) throw new NotFilm("refused", `AAC of another kind than AAC-LC (audio object type ${aot}), which this Module does not play`);
+  const fi = bits.u(4);
+  const RATES = [96e3, 88200, 64e3, 48e3, 44100, 32e3, 24e3, 22050, 16e3, 12e3, 11025, 8e3, 7350];
+  const sampleRate = fi === 15 ? bits.u(24) : RATES[fi];
+  if (!sampleRate) throw new NotFilm("structure", "the AAC configuration names no sampling rate");
+  const channels = bits.u(4);
+  if (channels !== 1 && channels !== 2) throw new NotFilm("refused", "sound with more than two channels, or channels set elsewhere: only mono and stereo are played");
+  if (sampleRate > MAX_SAMPLE_RATE) throw new NotFilm("limits", `sound sampled at ${sampleRate} Hz, above ${MAX_SAMPLE_RATE}`);
+  return { channels, sampleRate };
+}
+var MATRIX = {
+  "65536,0,0,65536": 0,
+  "0,65536,-65536,0": 90,
+  "-65536,0,0,-65536": 180,
+  "0,-65536,65536,0": 270
+};
+function rotationOf(r, o) {
+  const m = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => r.i32(o + 4 * i));
+  if (m[2] !== 0 || m[5] !== 0 || m[8] !== 1073741824) throw new NotFilm("refused", "a track matrix that is not a quarter turn");
+  const rot = MATRIX[[m[0], m[1], m[3], m[4]].join(",")];
+  if (rot === void 0) throw new NotFilm("refused", "a track matrix that is not a quarter turn (scaled, skewed or mirrored)");
+  return rot;
+}
+function dates(r, box2, v) {
+  const at = box2.body + 4;
+  const n = v ? 16 : 8;
+  return { at, n, set: r.b.subarray(at, at + n).some((x) => x !== 0) };
+}
+function version(r, box2, allowed) {
+  r.need(box2.body, 4, box2.end, `the box ${box2.type}`);
+  const v = r.b[box2.body];
+  if (!allowed.includes(v)) throw new NotFilm("structure", `the box ${box2.type} has version ${v}`);
+  return v;
+}
+function table(r, box2, entrySize, skip = 4) {
+  r.need(box2.body, skip + 4, box2.end, `the table ${box2.type}`);
+  const n = r.u32(box2.body + skip);
+  const o = box2.body + skip + 4;
+  if (n * entrySize > box2.end - o) throw new NotFilm("structure", `the table ${box2.type} runs past its box`);
+  return { n, o };
+}
+var STBL = ["stsd", "stts", "ctts", "stss", "stsc", "stsz", "stco", "co64", "sdtp", "sgpd", "sbgp", "cslg", "stps"];
+var VISUAL_EXTRAS = ["avcC", "btrt", "pasp", "colr", "clap", "fiel"];
+var AUDIO_EXTRAS = ["esds", "btrt"];
+function readTrack(r, trak, carried) {
+  const kids = children(r, trak, ["tkhd", "edts", "mdia"], carried, "a track");
+  const tkhd = one(kids, "tkhd", "a track");
+  const tv = version(r, tkhd, [0, 1]);
+  const matrixAt = tkhd.body + 4 + (tv ? 32 : 20) + 16;
+  r.need(matrixAt, 36 + 8, tkhd.end, "the track header");
+  const rotation = rotationOf(r, matrixAt);
+  if (dates(r, tkhd, tv).set) carried.add("dates");
+  const edts = maybe(kids, "edts", "a track");
+  if (edts) for (const e3 of children(r, edts, ["elst"], carried, "an edit list")) version(r, e3, [0, 1]);
+  const mdia = one(kids, "mdia", "a track");
+  const mk = children(r, mdia, ["mdhd", "hdlr", "minf"], carried, "a track");
+  const mdhd = one(mk, "mdhd", "a track");
+  const mv = version(r, mdhd, [0, 1]);
+  r.need(mdhd.body, mv ? 32 : 20, mdhd.end, "the media header");
+  const timescale = r.u32(mdhd.body + (mv ? 20 : 12));
+  if (!timescale) throw new NotFilm("structure", "a track with no timescale");
+  if (dates(r, mdhd, mv).set) carried.add("dates");
+  const hdlr = one(mk, "hdlr", "a track");
+  r.need(hdlr.body, 24, hdlr.end, "the handler");
+  const handler = ascii2(r.b, hdlr.body + 8, 4);
+  if (handler !== "vide" && handler !== "soun") {
+    throw new NotFilm("refused", `a track of kind ${JSON.stringify(handler)} (text, subtitles, timecode, metadata or hints): a film holds pictures and sound only`);
+  }
+  const named = hdlr.end - (hdlr.body + 24) > 1 || hdlr.end > hdlr.body + 24 && r.b[hdlr.body + 24] !== 0;
+  const minf = one(mk, "minf", "a track");
+  const nk = children(r, minf, ["vmhd", "smhd", "dinf", "stbl", "hdlr"], carried, "a track");
+  one(nk, handler === "vide" ? "vmhd" : "smhd", "a track");
+  const dinf = one(nk, "dinf", "a track");
+  const dref = one(children(r, dinf, ["dref"], carried, "a data reference"), "dref", "a data reference");
+  const refs = table(r, dref, 12);
+  const entries = r.boxes(refs.o, dref.end);
+  if (entries.length !== refs.n || refs.n !== 1) throw new NotFilm("refused", "a track whose data references are not exactly one");
+  const ref = entries[0];
+  if (ref.type !== "url " && ref.type !== "urn " || ref.end - ref.body < 4 || !(r.b[ref.body + 3] & 1)) {
+    throw new NotFilm("refused", "a track whose samples are stored outside this file (a data reference to elsewhere)");
+  }
+  const stbl = one(nk, "stbl", "a track");
+  const sk = children(r, stbl, STBL, carried, "a sample table");
+  const stsd = one(sk, "stsd", "a sample table");
+  const sd = table(r, stsd, 8);
+  const descs = r.boxes(sd.o, stsd.end);
+  if (sd.n !== 1 || descs.length !== 1) throw new NotFilm("refused", "a track with more than one sample description");
+  const entry = descs[0];
+  const t = { handler, timescale, mediaDuration: 0, samples: 0, chunks: [], rotation, names: named };
+  if (handler === "vide") {
+    if (entry.type !== "avc1") {
+      const what = entry.type === "encv" ? "encrypted pictures" : entry.type === "avc3" ? "H.264 with its parameter sets in the stream (avc3)" : `pictures coded as ${JSON.stringify(entry.type)}, not H.264`;
+      throw new NotFilm("refused", `${what}: only H.264 (avc1) is played`);
+    }
+    r.need(entry.body, 78, entry.end, "the picture description");
+    if (r.b.subarray(entry.body + 42, entry.body + 74).some((x) => x !== 0)) t.names = true;
+    const ex = children(r, { ...entry, body: entry.body + 78 }, VISUAL_EXTRAS, carried, "the picture description");
+    const v = readAvcC(r, one(ex, "avcC", "the picture description"));
+    if (!PROFILES[v.profile]) throw new NotFilm("refused", `H.264 profile ${v.profile}: only Baseline, Main and High are played`);
+    t.video = v;
+  } else {
+    if (entry.type !== "mp4a") {
+      throw new NotFilm("refused", `${entry.type === "enca" ? "encrypted sound" : `sound coded as ${JSON.stringify(entry.type)}`}: only AAC-LC (mp4a) is played`);
+    }
+    r.need(entry.body, 28, entry.end, "the sound description");
+    if (r.u16(entry.body + 8) !== 0) throw new NotFilm("refused", "a QuickTime sound description (version 1 or 2), not MP4");
+    const ex = children(r, { ...entry, body: entry.body + 28 }, AUDIO_EXTRAS, carried, "the sound description");
+    t.audio = readEsds(r, one(ex, "esds", "the sound description"));
+  }
+  const stts = table(r, one(sk, "stts", "a sample table"), 8);
+  let timed = 0;
+  for (let i = 0; i < stts.n; i++) {
+    const count2 = r.u32(stts.o + 8 * i);
+    timed += count2;
+    t.mediaDuration += count2 * r.u32(stts.o + 8 * i + 4);
+  }
+  const stsz = one(sk, "stsz", "a sample table");
+  r.need(stsz.body, 12, stsz.end, "the sample sizes");
+  const fixed = r.u32(stsz.body + 4);
+  const count = r.u32(stsz.body + 8);
+  if (!fixed && count * 4 > stsz.end - (stsz.body + 12)) throw new NotFilm("structure", "the sample sizes run past their box");
+  const sizeOf = (i) => fixed ? fixed : r.u32(stsz.body + 12 + 4 * i);
+  if (count !== timed) throw new NotFilm("structure", "a track whose sample count and timing disagree");
+  if (!count) throw new NotFilm("structure", "a track with no samples");
+  t.samples = count;
+  const ctts = maybe(sk, "ctts", "a sample table");
+  if (ctts) {
+    const c = table(r, ctts, 8);
+    let n = 0;
+    for (let i = 0; i < c.n; i++) n += r.u32(c.o + 8 * i);
+    if (n !== count) throw new NotFilm("structure", "a track whose composition offsets and samples disagree");
+  }
+  const stss = maybe(sk, "stss", "a sample table");
+  if (stss) {
+    const s = table(r, stss, 4);
+    for (let i = 0; i < s.n; i++) {
+      const k = r.u32(s.o + 4 * i);
+      if (k < 1 || k > count) throw new NotFilm("structure", "a key picture that is not a sample");
+    }
+  }
+  const stco = maybe(sk, "stco", "a sample table");
+  const co64 = maybe(sk, "co64", "a sample table");
+  if (!stco === !co64) throw new NotFilm("structure", "a track without exactly one chunk offset table");
+  const co = table(r, stco ?? co64, stco ? 4 : 8);
+  const offsets = Array.from({ length: co.n }, (_, i) => stco ? r.u32(co.o + 4 * i) : r.u64(co.o + 8 * i));
+  const stsc = table(r, one(sk, "stsc", "a sample table"), 12);
+  let sample = 0;
+  for (let i = 0; i < stsc.n; i++) {
+    const first = r.u32(stsc.o + 12 * i);
+    const per = r.u32(stsc.o + 12 * i + 4);
+    if (r.u32(stsc.o + 12 * i + 8) !== 1) throw new NotFilm("structure", "a chunk naming a sample description that is not there");
+    const next = i + 1 < stsc.n ? r.u32(stsc.o + 12 * (i + 1)) : co.n + 1;
+    if (first < 1 || next <= first || next > co.n + 1 || i === 0 && first !== 1) throw new NotFilm("structure", "the sample-to-chunk table is not in order");
+    for (let c = first; c < next; c++) {
+      let size = 0;
+      for (let k = 0; k < per; k++) {
+        if (sample >= count) throw new NotFilm("structure", "chunks hold more samples than the track has");
+        size += sizeOf(sample++);
+      }
+      t.chunks.push({ offset: offsets[c - 1], size });
+    }
+  }
+  if (sample !== count || t.chunks.length !== co.n) throw new NotFilm("structure", "chunks and samples disagree");
+  return t;
+}
+var BRANDS = ["isom", "iso2", "iso3", "iso4", "iso5", "iso6", "mp41", "mp42", "avc1"];
+function parse(bytes) {
+  if (bytes.length > MAX_BYTES) throw new NotFilm("limits", `${bytes.length} bytes, above ${MAX_BYTES} (one media object of 64 MiB, locked)`);
+  const r = new Reader(bytes);
+  if (bytes.length < 8 || ascii2(bytes, 4, 4) !== "ftyp") throw new NotFilm("structure", "it does not begin with a file type box (ftyp)");
+  const top3 = r.boxes(0, bytes.length, true);
+  const carried = /* @__PURE__ */ new Set();
+  const ftyp = top3[0];
+  r.need(ftyp.body, 8, ftyp.end, "the file type");
+  if ((ftyp.end - ftyp.body) % 4) throw new NotFilm("structure", "the file type box is not whole brands");
+  const major = ascii2(bytes, ftyp.body, 4);
+  const brands = [major];
+  for (let o = ftyp.body + 8; o < ftyp.end; o += 4) brands.push(ascii2(bytes, o, 4));
+  if (major === "qt  ") throw new NotFilm("refused", "a QuickTime file (.mov), not MP4: remux it as MP4 first");
+  if (!brands.some((b) => BRANDS.includes(b))) throw new NotFilm("refused", `brands ${brands.join(", ")}: none is an MP4 brand`);
+  const mdats = [];
+  let moov = null;
+  let indexFirst = false;
+  for (const b of top3.slice(1)) {
+    if (b.type === "moov") {
+      if (moov) throw new NotFilm("structure", "more than one movie box (moov)");
+      moov = b;
+      indexFirst = !mdats.length;
+    } else if (b.type === "mdat") mdats.push(b);
+    else if (b.type === "ftyp") throw new NotFilm("structure", "more than one file type box");
+    else if (["moof", "mfra", "sidx", "styp", "ssix", "emsg", "prft"].includes(b.type)) {
+      throw new NotFilm("refused", "a fragmented MP4 (as a live stream writes): only a whole film with one index is played");
+    } else if (b.type in ASIDE) {
+      carried.add(ASIDE[b.type]);
+      if (b.type === "udta" || b.type === "meta") inspectAside(r, b, carried);
+    } else throw new NotFilm("refused", `a box of kind ${JSON.stringify(b.type)} at the top of the file, which this Module does not read`);
+  }
+  if (!moov) throw new NotFilm("structure", "no movie box (moov): the film has no index");
+  const mk = children(r, moov, ["mvhd", "trak", "iods", "mvex"], carried, "the movie");
+  if (mk.some((b) => b.type === "mvex")) throw new NotFilm("refused", "a fragmented MP4 (mvex): only a whole film with one index is played");
+  if (mk.some((b) => b.type === "iods")) carried.add("descriptor");
+  const mvhd = one(mk, "mvhd", "the movie");
+  const mv = version(r, mvhd, [0, 1]);
+  r.need(mvhd.body, mv ? 112 : 100, mvhd.end, "the movie header");
+  const mScale = r.u32(mvhd.body + (mv ? 20 : 12));
+  const mDur = mv ? r.u64(mvhd.body + 24) : r.u32(mvhd.body + 16);
+  if (!mScale) throw new NotFilm("structure", "the movie has no timescale");
+  if (dates(r, mvhd, mv).set) carried.add("dates");
+  if (rotationOf(r, mvhd.body + (mv ? 48 : 36)) !== 0) throw new NotFilm("refused", "a movie matrix that is not the identity");
+  const traks = mk.filter((b) => b.type === "trak");
+  const tracks = traks.map((t) => readTrack(r, t, carried));
+  const video = tracks.filter((t) => t.handler === "vide");
+  const audio = tracks.filter((t) => t.handler === "soun");
+  if (video.length !== 1) throw new NotFilm("refused", `${video.length || "no"} picture tracks: a film has exactly one`);
+  if (audio.length > 1) throw new NotFilm("refused", `${audio.length} sound tracks: a film has one at most`);
+  if (tracks.some((t) => t.names)) carried.add("names");
+  const chunks = tracks.flatMap((t) => t.chunks).sort((a2, b) => a2.offset - b.offset);
+  let used = 0;
+  let prevEnd = 0;
+  for (const c of chunks) {
+    if (c.offset < prevEnd) throw new NotFilm("structure", "two chunks of samples overlap");
+    if (!mdats.some((m) => c.offset >= m.body && c.offset + c.size <= m.end)) throw new NotFilm("structure", "a chunk of samples lies outside the media data");
+    prevEnd = c.offset + c.size;
+    used += c.size;
+  }
+  if (used < mdats.reduce((n, m) => n + (m.end - m.body), 0)) carried.add("unused-media");
+  const v = video[0];
+  const turned = v.rotation === 90 || v.rotation === 270;
+  const vv = v.video;
+  const long = Math.max(vv.width, vv.height);
+  const short4 = Math.min(vv.width, vv.height);
+  if (long > MAX_LONG_SIDE || short4 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
+  if (vv.level > MAX_LEVEL) throw new NotFilm("limits", `H.264 level ${vv.level / 10}, above ${MAX_LEVEL / 10}`);
+  const seconds = Math.max(mDur / mScale, ...tracks.map((t) => t.mediaDuration / t.timescale));
+  if (seconds > MAX_SECONDS) throw new NotFilm("limits", `${Math.round(seconds)} seconds long, beyond ${MAX_SECONDS}`);
+  const vSeconds = v.mediaDuration / v.timescale;
+  const rate = vSeconds > 0 ? v.samples / vSeconds : Infinity;
+  if (rate > MAX_RATE * 1.01) throw new NotFilm("limits", `${Math.round(rate)} pictures a second, beyond ${MAX_RATE}`);
+  const hex22 = (n) => n.toString(16).padStart(2, "0");
+  const vcodec = `avc1.${hex22(vv.profile)}${hex22(vv.compat)}${hex22(vv.level)}`;
+  const a = audio[0];
+  const film = {
+    brand: major,
+    duration: Math.round(seconds * 1e3) / 1e3,
+    video: {
+      codec: vcodec,
+      profile: PROFILES[vv.profile],
+      level: vv.level,
+      width: vv.width,
+      height: vv.height,
+      rotation: v.rotation,
+      shown: turned ? { width: vv.height, height: vv.width } : { width: vv.width, height: vv.height },
+      samples: v.samples,
+      rate: Math.round(rate * 1e3) / 1e3
+    },
+    audio: a ? { codec: "mp4a.40.2", channels: a.audio.channels, sampleRate: a.audio.sampleRate, samples: a.samples } : null,
+    type: `video/mp4; codecs="${vcodec}${a ? ", mp4a.40.2" : ""}"`,
+    indexFirst,
+    carried: Object.keys(CARRIED_WORDS).filter((c) => carried.has(c))
+  };
+  return { film, ftyp, moov, tracks, traks };
+}
+function read2(bytes) {
+  try {
+    return parse(bytes).film;
+  } catch (e3) {
+    if (e3 instanceof NotFilm) throw e3;
+    if (e3 instanceof RangeError) throw new NotFilm("structure", "a box runs past the end of the file");
+    throw e3;
+  }
+}
+function box(type, ...parts) {
+  const n = 8 + parts.reduce((s, p) => s + p.length, 0);
+  const out = new Uint8Array(n);
+  new DataView(out.buffer).setUint32(0, n);
+  for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i);
+  let o = 8;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+function concat3(parts) {
+  const out = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
+  let o = 0;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+function strip2(bytes) {
+  const p = parse(bytes);
+  return { bytes: stripped(bytes, p), removed: p.film.carried };
+}
+function stripped(bytes, p) {
+  const r = new Reader(bytes);
+  const keep = (b) => bytes.subarray(b.start, b.end);
+  const undated = (b) => {
+    const out = bytes.slice(b.start, b.end);
+    const d = dates(r, b, bytes[b.body]);
+    out.fill(0, d.at - b.start, d.at - b.start + d.n);
+    return out;
+  };
+  const drop = (list3) => list3.filter((b) => !(b.type in ASIDE) && b.type !== "iods");
+  const kids = (b, skip = 0) => drop(r.boxes(b.body + skip, b.end));
+  const all = p.tracks.flatMap((t) => t.chunks).sort((a, b) => a.offset - b.offset);
+  const placed = /* @__PURE__ */ new Map();
+  let at = 0;
+  for (const c of all) {
+    placed.set(c, at);
+    at += c.size;
+  }
+  const rebuild = (mdatBody2) => {
+    const traks = p.traks.map((trak, ti) => {
+      const track2 = p.tracks[ti];
+      const parts = kids(trak).map((b) => {
+        if (b.type === "tkhd") return undated(b);
+        if (b.type !== "mdia") return b.type === "edts" ? box("edts", ...kids(b).map(keep)) : keep(b);
+        return box(
+          "mdia",
+          ...kids(b).map((m) => {
+            if (m.type === "hdlr") {
+              const fixed = bytes.slice(m.body, m.body + 24);
+              return box("hdlr", fixed, new Uint8Array(1));
+            }
+            if (m.type === "mdhd") return undated(m);
+            if (m.type !== "minf") return keep(m);
+            return box(
+              "minf",
+              ...kids(m).filter((n) => n.type !== "hdlr").map((n) => {
+                if (n.type === "dinf") return box("dinf", ...kids(n).map(keep));
+                if (n.type !== "stbl") return keep(n);
+                return box(
+                  "stbl",
+                  ...kids(n).map((s) => {
+                    if (s.type === "stsd") {
+                      const entry = r.boxes(s.body + 8, s.end)[0];
+                      const head = bytes.slice(entry.body, entry.body + (track2.handler === "vide" ? 78 : 28));
+                      if (track2.handler === "vide") head.fill(0, 42, 74);
+                      const extras = kids(entry, head.length).map(keep);
+                      return box("stsd", bytes.subarray(s.body, s.body + 8), box(entry.type, head, ...extras));
+                    }
+                    if (s.type === "stco" || s.type === "co64") {
+                      const w = s.type === "stco" ? 4 : 8;
+                      const out = new Uint8Array(8 + w * track2.chunks.length);
+                      const dv = new DataView(out.buffer);
+                      dv.setUint32(4, track2.chunks.length);
+                      track2.chunks.forEach((c, i) => {
+                        const o = mdatBody2 + placed.get(c);
+                        if (w === 4) dv.setUint32(8 + 4 * i, o);
+                        else {
+                          dv.setUint32(8 + 8 * i, Math.floor(o / 2 ** 32));
+                          dv.setUint32(12 + 8 * i, o % 2 ** 32);
+                        }
+                      });
+                      return box(s.type, out);
+                    }
+                    return keep(s);
+                  })
+                );
+              })
+            );
+          })
+        );
+      });
+      return box("trak", ...parts);
+    });
+    const mvhd = r.boxes(p.moov.body, p.moov.end).find((b) => b.type === "mvhd");
+    return box("moov", undated(mvhd), ...traks);
+  };
+  const ftyp = keep(p.ftyp);
+  const size = rebuild(0).length;
+  const mdatBody = ftyp.length + size + 8;
+  const moov = rebuild(mdatBody);
+  const media = new Uint8Array(at);
+  for (const c of all) media.set(bytes.subarray(c.offset, c.offset + c.size), placed.get(c));
+  return concat3([ftyp, moov, box("mdat", media)]);
+}
+
 // ../barebone/src/specs.ts
 var test4 = (s) => sha2562(s);
 var POST_SPECS = {
@@ -8247,7 +8886,9 @@ var POST_SPECS = {
   /** The long-form text format cMIP: a post naming it is rendered with it. */
   longform: LONGFORM_SPECS.longform,
   /** The JPEG Module (modules/module-jpeg-draft-1.md). */
-  jpeg: test4("JPEG Module, draft 1, test value until publication")
+  jpeg: test4("JPEG Module, draft 1, test value until publication"),
+  /** The video Module (modules/module-video-draft-1.md): a film, named by its test value until publication, as the JPEG Module is. */
+  video: test4("video Module, draft 1, test value until publication")
 };
 var TEXT_ACT2 = 0;
 var PUBLICATION2 = 0;
@@ -8302,10 +8943,39 @@ function textPayload2(text3, format = null) {
   if (format) m.set(1, unhex(format));
   return cborEncode(m);
 }
+async function publishVideo(by, mp4, relays) {
+  if (mp4.length > MAX_BYTES) throw new Error(`the film is ${mp4.length} bytes; the video Module takes at most ${MAX_BYTES}. Nothing was published.`);
+  let s;
+  let film;
+  try {
+    s = strip2(mp4);
+    film = read2(s.bytes);
+  } catch (e3) {
+    if (e3 instanceof NotFilm) throw new Error(`not a film the video Module plays: ${e3.message}. Nothing was published.`);
+    throw e3;
+  }
+  const l = lockMedia(s.bytes);
+  const payload = cborEncode(
+    /* @__PURE__ */ new Map([
+      [0, unhex(POST_SPECS.video)],
+      [1, unhex(l.workHash)],
+      [2, unhex(l.lockedHash)],
+      [3, s.bytes.length],
+      [4, l.nonce],
+      [5, l.key],
+      [6, relays]
+    ])
+  );
+  await carryChain(by, relays);
+  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION2, payload, { public: true, relays });
+  for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
+  return { id: made.id, act: made.act, removed: s.removed, film, work: l.workHash, size: s.bytes.length };
+}
 async function post(by, opts) {
   const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
+  const film = opts.mp4 ? await publishVideo(by, opts.mp4, opts.relays) : null;
   await carryChain(by, opts.relays);
-  const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...opts.refs ?? []];
+  const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...film ? [referenceTo(film.act)] : [], ...opts.refs ?? []];
   const corrected = opts.corrects && opts.format === void 0 ? await fetchAct(typeof opts.corrects === "string" ? opts.corrects : opts.corrects[0], opts.relays, {}) : null;
   const format = opts.format !== void 0 ? opts.format : opts.corrects ? correctionFormatFor(corrected ? formatOfPayload(describeAct(corrected).payload) : null) : null;
   const made = await by.publish(POST_SPECS.text, TEXT_ACT2, textPayload2(opts.text, format), {
@@ -8314,7 +8984,7 @@ async function post(by, opts) {
     refs: refs.length ? refs : void 0,
     to: opts.to?.length ? opts.to : void 0
   });
-  return { id: made.id, act: made.act, picture };
+  return { id: made.id, act: made.act, picture, film };
 }
 async function leaveInInbox(by, act, inbox) {
   const out = { left: [], failed: [] };
@@ -8324,8 +8994,8 @@ async function leaveInInbox(by, act, inbox) {
       for (const c of by.chainActs()) await r.putAct(c).catch(() => void 0);
       await r.putAct(act);
       out.left.push(hint);
-    } catch (e2) {
-      out.failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
+    } catch (e3) {
+      out.failed.push({ relay: hint, reason: e3 instanceof Error ? e3.message : String(e3) });
     }
   }
   return out;
@@ -8372,8 +9042,8 @@ async function answers(to, reports2, places, via = {}) {
     const outbox = l.routes.routes.filter((r) => (r.kind ?? 0) === 0);
     const route = outbox.find((r) => r.scope === POST_SPECS.text) ?? outbox.find((r) => r.scope === null);
     at = [.../* @__PURE__ */ new Set([...route?.hints ?? [], ...places])];
-  } catch (e2) {
-    return { answers: [], lines: [{ text: `The reporting identity could not be looked up: ${e2 instanceof Error ? e2.message : String(e2)}.`, tone: "warn" }] };
+  } catch (e3) {
+    return { answers: [], lines: [{ text: `The reporting identity could not be looked up: ${e3 instanceof Error ? e3.message : String(e3)}.`, tone: "warn" }] };
   }
   for (const h of at) {
     let after;
@@ -8393,8 +9063,8 @@ async function answers(to, reports2, places, via = {}) {
         if (!page.items.length || page.next === after) break;
         after = page.next;
       }
-    } catch (e2) {
-      lines2.push({ text: `${h}: ${e2 instanceof Error ? e2.message : String(e2)}`, tone: "warn" });
+    } catch (e3) {
+      lines2.push({ text: `${h}: ${e3 instanceof Error ? e3.message : String(e3)}`, tone: "warn" });
     }
   }
   return { answers: [...out.values()], lines: lines2 };
@@ -8408,8 +9078,8 @@ function readHash(s, what) {
   if (HEX64.test(h)) return h;
   try {
     return readForm(s, "mspec").hex;
-  } catch (e2) {
-    throw new Error(`${what}: ${e2 instanceof Error ? e2.message : String(e2)} (a spec hash is mspec1\u2026, or 64 hexadecimal characters).`);
+  } catch (e3) {
+    throw new Error(`${what}: ${e3 instanceof Error ? e3.message : String(e3)} (a spec hash is mspec1\u2026, or 64 hexadecimal characters).`);
   }
 }
 function specContent(f, creator) {
@@ -8450,21 +9120,21 @@ function prepareSpec(f, creator) {
   if (!f.text.trim()) blocking.push("Write the specification\u2019s text, or load it from a file.");
   try {
     checkText(f.text);
-  } catch (e2) {
-    blocking.push(`Its text is not canonical text (Text MIR), which field 9 must be: ${e2 instanceof Error ? e2.message : String(e2)}. A final line break or a space at the end of a line is the usual cause.`);
+  } catch (e3) {
+    blocking.push(`Its text is not canonical text (Text MIR), which field 9 must be: ${e3 instanceof Error ? e3.message : String(e3)}. A final line break or a space at the end of a line is the usual cause.`);
   }
   let content;
   try {
     content = specContent(f, creator);
-  } catch (e2) {
-    return { content: new Uint8Array(), hash: "", spec: null, name: nameOf(f.text), blocking: [...blocking, e2 instanceof Error ? e2.message : String(e2)] };
+  } catch (e3) {
+    return { content: new Uint8Array(), hash: "", spec: null, name: nameOf(f.text), blocking: [...blocking, e3 instanceof Error ? e3.message : String(e3)] };
   }
   let spec = null;
   if (!blocking.length) {
     try {
       spec = decodeSpec2(content);
-    } catch (e2) {
-      blocking.push(`The core library reads it as no specification (Development, F323): ${e2 instanceof Error ? e2.message : String(e2)}.`);
+    } catch (e3) {
+      blocking.push(`The core library reads it as no specification (Development, F323): ${e3 instanceof Error ? e3.message : String(e3)}.`);
     }
   }
   return { content, hash: specHash(content), spec, name: nameOf(f.text), blocking };
@@ -8488,8 +9158,8 @@ async function publishSpec(by, content, relays) {
   for (const r of relays) {
     try {
       await relayAt(r, by.via).putMedia(lm.locked);
-    } catch (e2) {
-      refused.push(`${r}: ${e2 instanceof Error ? e2.message : String(e2)}`);
+    } catch (e3) {
+      refused.push(`${r}: ${e3 instanceof Error ? e3.message : String(e3)}`);
     }
   }
   return { id: made.id, act: made.act, refused };
@@ -8552,13 +9222,13 @@ async function actsOf(relays, q) {
   const lines2 = [];
   for (const r of relays) {
     let after;
-    let read2 = 0;
+    let read3 = 0;
     try {
       for (; ; ) {
         const page = await relayAt(r, via).feed({ spec: q.spec, type: q.type, signer: q.signer || void 0, after });
         for (const it of page.items) {
-          if (it.kind !== "act" || read2 >= 2e3) continue;
-          read2++;
+          if (it.kind !== "act" || read3 >= 2e3) continue;
+          read3++;
           const d = describeAct(it.item);
           if (!d.signer || acts2.has(d.id)) continue;
           let standing2 = "unknown";
@@ -8568,17 +9238,17 @@ async function actsOf(relays, q) {
             await holdSequence(v, d.signer, await l, relays, via);
             v.add(it.item);
             standing2 = v.status(d.id);
-          } catch (e2) {
-            standing2 = `not checked: ${e2 instanceof Error ? e2.message : String(e2)}`;
+          } catch (e3) {
+            standing2 = `not checked: ${e3 instanceof Error ? e3.message : String(e3)}`;
           }
           acts2.set(d.id, { id: d.id, signer: d.signer, type: d.type ?? 0, standing: standing2, at: r });
         }
         if (!page.items.length || page.next === after) break;
         after = page.next;
       }
-      lines2.push({ text: `${r}: ${read2} act${read2 === 1 ? "" : "s"} read.` });
-    } catch (e2) {
-      lines2.push({ text: `${r}: ${e2 instanceof Error ? e2.message : String(e2)}`, tone: "warn" });
+      lines2.push({ text: `${r}: ${read3} act${read3 === 1 ? "" : "s"} read.` });
+    } catch (e3) {
+      lines2.push({ text: `${r}: ${e3 instanceof Error ? e3.message : String(e3)}`, tone: "warn" });
     }
   }
   return { acts: [...acts2.values()], lines: lines2 };
@@ -8595,7 +9265,7 @@ var ACCEPTED_SAY = [
 ];
 var NO_BOOK = () => ({ releases: [], specs: [], mips: [], reports: [], anchors: [], listPublished: null });
 var list = (xs) => [...new Set(xs.map((s) => s.trim().replace(/\/$/, "")).filter(Boolean))];
-var message4 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message4 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var short3 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var now = () => Math.floor(Date.now() / 1e3);
 var PLAN_FOR = 15 * 60 * 1e3;
@@ -8662,7 +9332,7 @@ var Ummia = class {
       return { kind: "self" };
     }
     const places = await this.placesOf(who.id, [...me.f.homes.map((h) => h.hint), ...s.relays, ...s.track], s.via);
-    const keys = await readMemberKeys(me.id, me.f.encryption.map((e2) => unhex(e2.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
+    const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
     const key = keys.length ? await memberKeyFor(keys, who.id, places, s.via).catch(() => null) : null;
     if (!key) throw new Error("No key of yours for this collective was found sealed to you at your homes: it is made when you sign its founding or a member change. Nothing was signed.");
     return { kind: "collective", id: who.id, key, places };
@@ -8686,7 +9356,7 @@ var Ummia = class {
       const id = readId(typed);
       const places = await this.placesOf(id, [...hints, ...s.track], s.via);
       const area = await releaseArea(id, places, s.via);
-      const keys = await readMemberKeys(me.id, me.f.encryption.map((e2) => unhex(e2.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
+      const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
       const key = keys.length ? await memberKeyFor(keys, id, places, s.via).catch(() => null) : null;
       let why = null;
       if (!area) why = "No area of its constitution reaches its releases (publications): they count on its own key, held by its founder\u2019s Edubba.";
@@ -8713,9 +9383,9 @@ var Ummia = class {
       try {
         id = readId(a.id);
         seed = fromWords(a.words);
-      } catch (e2) {
-        if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
-        throw e2;
+      } catch (e3) {
+        if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
+        throw e3;
       }
       if ((await this.store.held()).includes(id)) return this.renewHeld(id, seed);
       const address = a.address.trim();
@@ -8763,9 +9433,9 @@ var Ummia = class {
       let seed;
       try {
         seed = fromWords(words);
-      } catch (e2) {
-        if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
-        throw e2;
+      } catch (e3) {
+        if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
+        throw e3;
       }
       return this.renewHeld(active, seed);
     });
@@ -8787,7 +9457,7 @@ var Ummia = class {
     me.f.sequence = [];
     me.f.routes = null;
     const carried = carriedKey(look, seed);
-    if (carried && !me.f.encryption.some((e2) => e2.act === carried.act)) me.f.encryption.push(carried);
+    if (carried && !me.f.encryption.some((e3) => e3.act === carried.act)) me.f.encryption.push(carried);
     await this.store.saveIdentity(me);
     return {
       lines: [
@@ -8824,9 +9494,9 @@ var Ummia = class {
     try {
       await this.current(me);
       return { current: true, say: null };
-    } catch (e2) {
-      if (message4(e2) === SPENT_SAY) return { current: false, say: SPENT_SAY };
-      throw e2;
+    } catch (e3) {
+      if (message4(e3) === SPENT_SAY) return { current: false, say: SPENT_SAY };
+      throw e3;
     }
   }
   async current(me) {
@@ -9044,7 +9714,7 @@ ${s.relays.join("\n")}`));
   }
   // ------------------------------------------------------------ the accepted list (F340)
   secrets(me) {
-    return [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    return [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
   }
   /** The whole list, as every app reads it: each entry, its label, and whose part it is where known. */
   async accepted() {
@@ -9213,10 +9883,10 @@ ${s.relays.join("\n")}`));
     if (acting) {
       const places = await this.placesOf(acting, [...hints, ...s.track], s.via);
       const own2 = await this.collectiveReleases(acting, book, places, s.via);
-      return { releases: [...own2].reverse().map(({ id, name, version, folder }) => ({ id, name, version, folder, collective: acting })), anchors, anchorSay: ANCHOR_SAY };
+      return { releases: [...own2].reverse().map(({ id, name, version: version2, folder }) => ({ id, name, version: version2, folder, collective: acting })), anchors, anchorSay: ANCHOR_SAY };
     }
     const own = this.opts.releases ? await this.ownReleases(me, book, hints, s.via) : book.releases;
-    return { releases: [...own].reverse().map(({ id, name, version, folder }) => ({ id, name, version, folder })), anchors, anchorSay: ANCHOR_SAY };
+    return { releases: [...own].reverse().map(({ id, name, version: version2, folder }) => ({ id, name, version: version2, folder })), anchors, anchorSay: ANCHOR_SAY };
   }
   async suggestRelease(folder) {
     const { me, book, hints, s } = await this.ctx();
@@ -9448,13 +10118,13 @@ function e(s) {
 }
 
 // ../genesis/src/card-words.ts
-function cardWords(l, app3, e2) {
+function cardWords(l, app3, e3) {
   const n = `${l.acts} act${l.acts === 1 ? "" : "s"}`;
   if (!l.latest) return n;
   const missing = l.missing ? ` ${l.missing === 1 ? "One act" : `${l.missing} acts`} of this line ${l.missing === 1 ? "is" : "are"} not at your homes, and ${app3} no longer holds ${l.missing === 1 ? "it" : "them"}: no reader can follow this line past ${l.missing === 1 ? "it" : "them"}, so a change of keys may lose what lives on it (a member key, notes, a list). Ki\u0161ib says so in red.` : "";
-  if (l.card) return `${n}: its card, for Ki\u0161ib, <code class="card-line">${e2(l.card)}</code>${missing ? `<br>${e2(missing)}` : ""}`;
-  if (l.atHomes === false) return `${n}: its latest act (<code>${e2(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e2(app3)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e2(missing)}` : ""}`;
-  return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e2(l.latest)}</code>). Look again before changing your keys.`;
+  if (l.card) return `${n}: its card, for Ki\u0161ib, <code class="card-line">${e3(l.card)}</code>${missing ? `<br>${e3(missing)}` : ""}`;
+  if (l.atHomes === false) return `${n}: its latest act (<code>${e3(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e3(app3)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e3(missing)}` : ""}`;
+  return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e3(l.latest)}</code>). Look again before changing your keys.`;
 }
 
 // ../genesis/src/shown.ts
@@ -9492,7 +10162,279 @@ function shownForm(label, hex3) {
 }
 var shownSpec = (hex3) => shownForm("mspec", hex3);
 
-// ../dub/src/page/view.ts
+// ../kit/src/style.ts
+var APPS = {
+  kishib: { name: "Ki\u0161ib", colour: "#8ec5f0", pastel: "#cfe5f7", wash: "rgba(207,229,247,.075)", wash2: "rgba(207,229,247,.15)" },
+  dub: { name: "Dub", colour: "#e9dfcd", pastel: "#efe8dc", wash: "rgba(239,232,220,.06)", wash2: "rgba(239,232,220,.13)" },
+  damgar: { name: "Damgar", colour: "#e8b33a", pastel: "#f2d89c", wash: "rgba(242,216,156,.07)", wash2: "rgba(242,216,156,.15)" },
+  edubba: { name: "Edubba", colour: "#48c08c", pastel: "#a9e3c7", wash: "rgba(169,227,199,.07)", wash2: "rgba(169,227,199,.15)" },
+  ummia: { name: "Ummia", colour: "#ee8b74", pastel: "#f7c4b7", wash: "rgba(247,196,183,.07)", wash2: "rgba(247,196,183,.15)" }
+};
+var tints = Object.keys(APPS).map((a) => `.k-${a}{--k-c:${APPS[a].colour};--k-p:${APPS[a].pastel};--k-wash:${APPS[a].wash};--k-wash2:${APPS[a].wash2}}`).join("\n");
+var KIT_STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
+@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+:root{color-scheme:dark;--k-bg:#06080c;--k-raise:#0d1017;--k-raise2:#131720;--k-pop:#0f131a;--k-line:#232a35;--k-edge:#323a47;--k-text:#d6dae1;--k-soft:#8a919d;--k-faint:#4f5663;--k-ink:#0a0c10;--k-bad:#c4645f;--k-id:#9aa8b8;--k-c:#e9dfcd;--k-p:#efe8dc;--k-wash:rgba(239,232,220,.06);--k-wash2:rgba(239,232,220,.13)}
+${tints}
+.k-page,.k-page *{box-sizing:border-box}
+html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);color:var(--k-text);overflow:hidden}
+.k-page{font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
+:where(.k-page) button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:where(.k-page) button:disabled{opacity:.45;cursor:default}
+:where(.k-page) :is(h1,h2,h3,h4){font-weight:300;margin:0;letter-spacing:.005em}
+:where(.k-page) p{margin:6px 0}
+:where(.k-page) a{color:var(--k-text);text-decoration:underline;text-decoration-color:var(--k-faint);text-underline-offset:3px}
+:where(.k-page) :is(input,textarea,select){font:inherit;font-size:15px;color:var(--k-text);background:var(--k-raise);border:1px solid var(--k-edge);border-radius:10px;padding:8px 11px;width:100%}
+:where(.k-page) :is(input,textarea,select):focus{outline:none;border-color:var(--k-p)}
+:where(.k-page) input:is([type=checkbox],[type=radio]){width:auto;accent-color:var(--k-p)}
+:where(.k-page) label{display:block;margin:10px 0 4px;font-size:13px;color:var(--k-soft)}
+.k-page [hidden]{display:none!important}
+.k-mono,:where(.k-page) code{font:12.5px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+.k-soft{color:var(--k-soft)}.k-faint{color:var(--k-faint)}.k-small{font-size:13px}
+.k-grow{flex:1}
+.k-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.k-bad{color:var(--k-bad)}
+.k-offscreen{position:fixed;left:-9999px;top:0;opacity:0}
+
+/* the top of every window: the app (or Contacts) left, a switch or tabs in the middle, the identity right */
+.k-top{display:flex;align-items:center;gap:14px;height:56px;padding:0 20px;border-bottom:1px solid var(--k-line);flex:none;position:relative;z-index:5;background:var(--k-bg)}
+.k-app{display:flex;align-items:center;gap:10px;font-size:16px;letter-spacing:.04em}
+.k-app img{width:26px;height:26px;border-radius:6px}
+.k-menu-btn{display:flex;align-items:center;gap:8px;color:var(--k-soft);font-size:14px;padding:6px 10px;border:1px solid var(--k-line);border-radius:10px}
+.k-menu-btn:hover{color:var(--k-text)}
+.k-switch{display:flex;border:1px solid var(--k-edge);border-radius:999px;padding:3px;gap:2px}
+.k-switch button{padding:5px 18px;border-radius:999px;color:var(--k-soft);font-size:14px;display:flex;align-items:center;gap:6px}
+.k-switch button.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
+.k-count{display:inline-block;min-width:1.4em;padding:0 6px;border-radius:999px;background:var(--k-edge);color:var(--k-text);font-size:11px;line-height:1.6;text-align:center}
+.k-count:empty{display:none}
+.k-on .k-count{background:var(--k-ink);color:var(--k-p)}
+.k-me{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 12px;border:1px solid var(--k-line);border-radius:999px;max-width:42%}
+.k-me .k-n{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-me .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
+.k-dot{width:26px;height:26px;border-radius:50%;background:var(--k-p);color:var(--k-ink);display:grid;place-items:center;font-size:12px;font-weight:400;flex:none}
+.k-dot.k-c{border-radius:7px}
+.k-dot.k-alt{background:var(--k-raise2);color:var(--k-text);border:1px solid var(--k-edge)}
+.k-body{flex:1;min-height:0;display:flex;position:relative}
+.k-tabs{display:flex;gap:4px}
+.k-tab{padding:6px 14px;border-radius:999px;color:var(--k-soft);font-size:14px;display:flex;align-items:center;gap:8px}
+.k-tab.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
+
+/* tiles: big, an icon and words, danger marks; the edge thickens with the level; never red but for an alarm */
+.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:18px;padding:24px 28px 12px}
+.k-tile{position:relative;border-radius:22px;background:linear-gradient(160deg,var(--k-wash2),var(--k-wash) 55%,rgba(255,255,255,.015));border:1px solid var(--k-line);padding:26px 28px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;text-align:left}
+.k-tile:hover,.k-tile:focus-visible{outline:1px solid var(--k-p);outline-offset:-1px}
+.k-tile .k-ic{position:absolute;left:26px;top:24px;width:58px;height:58px;color:var(--k-p)}
+.k-tile h2{font-size:34px;letter-spacing:.01em;color:var(--k-p)}
+.k-tile p{color:var(--k-soft);font-size:14.5px;max-width:36em}
+.k-tile .k-dm{position:absolute;right:24px;top:26px}
+.k-tile.k-d2{border-color:rgba(255,255,255,.14);border-width:1.5px}
+.k-tile.k-d3{border-color:rgba(255,255,255,.24);border-width:2.5px}
+.k-tile.k-alarm{border-color:var(--k-bad)}
+.k-tile .k-alert{position:absolute;right:24px;bottom:24px;color:var(--k-bad);font-size:13px;border:1px solid var(--k-bad);border-radius:999px;padding:2px 10px}
+.k-dm{display:inline-flex;align-items:flex-end;gap:3px;height:20px}
+.k-dm i{display:block;width:5px;border-radius:2px;background:var(--k-edge)}
+.k-dm i:nth-child(1){height:8px}.k-dm i:nth-child(2){height:13px}.k-dm i:nth-child(3){height:19px}
+.k-dm.k-l1 i:nth-child(1),.k-dm.k-l2 i:nth-child(-n+2),.k-dm.k-l3 i{background:var(--k-p)}
+
+/* a tile opened: its column on the left, the part on the right; on a phone the column folds away once a part is chosen */
+.k-col{width:248px;flex:none;border-right:1px solid var(--k-line);padding:18px 12px;display:flex;flex-direction:column;gap:2px;overflow:auto}
+.k-col h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--k-faint);margin:14px 10px 6px}
+.k-col h3:first-child{margin-top:0}
+.k-col button{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;color:var(--k-soft);font-size:14.5px;text-align:left;width:100%}
+.k-col button.k-on{background:var(--k-wash2);color:var(--k-text)}
+.k-col button.k-on::before{content:"";width:3px;height:16px;border-radius:2px;background:var(--k-p);margin-left:-4px}
+.k-col button .k-k{margin-left:auto;font-size:12px;color:var(--k-faint)}
+.k-col .k-sep{height:1px;background:var(--k-line);margin:10px 8px}
+.k-pane{flex:1;min-width:0;padding:22px 30px;overflow:auto;display:flex;flex-direction:column}
+.k-pane>h2{font-size:24px;margin-bottom:4px}
+.k-back{display:none;align-items:center;gap:6px;color:var(--k-soft);font-size:14px;margin:0 0 8px}
+
+/* the feed box: fills its space and scrolls inside, never the page */
+.k-feedwrap{flex:1;min-height:0;display:flex;flex-direction:column}
+.k-controls{display:flex;align-items:center;gap:6px;margin:0 0 10px;flex-wrap:wrap}
+.k-lens{padding:5px 14px;border-radius:999px;font-size:14px;color:var(--k-soft);border:1px solid var(--k-line);white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.k-lens.k-on{background:var(--k-p);color:var(--k-ink);border-color:var(--k-p)}
+.k-point{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px;font-size:13px;color:var(--k-soft)}
+.k-point .k-lbl{color:var(--k-faint);min-width:5.5em}
+.k-feed{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;border:1px solid var(--k-line);border-radius:16px;padding:6px 14px;background:#080a0f;position:relative}
+.k-feed::-webkit-scrollbar{width:8px}.k-feed::-webkit-scrollbar-thumb{background:var(--k-edge);border-radius:4px}.k-feed::-webkit-scrollbar-track,.k-feed::-webkit-scrollbar-corner{background:transparent}.k-feed::-webkit-scrollbar-button{display:none;height:0}
+.k-empty{padding:28px 0;color:var(--k-faint);font-size:14px;text-align:center}
+.k-clock{font-size:12px;color:var(--k-faint);margin:6px 2px 0}
+
+/* the act card, the same in every app: the signer top left, the act bottom right, each its own menu */
+.k-act{position:relative;padding:12px 2px 10px;border-bottom:1px solid var(--k-line)}
+.k-act:last-child{border-bottom:0}
+.k-act .k-signer{display:inline-flex;align-items:baseline;gap:9px;padding:2px 8px 2px 0;border-radius:8px;max-width:100%;flex-wrap:wrap;text-align:left}
+.k-act .k-sid,.k-act .k-actid{font:12px ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
+.k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
+.k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
+.k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
+.k-act .k-when{float:right;font-size:12px;color:var(--k-faint)}
+.k-act .k-txt{margin:4px 0 6px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.k-act .k-label{font-size:12.5px;color:var(--k-soft);margin:2px 0}
+.k-act .k-label.k-warn{color:var(--k-c)}
+.k-act .k-kind{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--k-soft);border:1px solid var(--k-line);border-radius:5px;padding:1px 6px;margin-right:6px}
+.k-act .k-foot{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--k-faint);flex-wrap:wrap}
+.k-act .k-actid{margin-left:auto;padding:2px 0 2px 8px;border-radius:8px}
+.k-act .k-v{color:var(--k-p);font-size:12px}
+.k-act .k-alarmline{color:var(--k-bad);font-size:12.5px}
+.k-act .k-signer.k-open,.k-act .k-actid.k-open{background:var(--k-wash2);outline:1px solid var(--k-p)}
+.k-act.k-sel{background:var(--k-wash);border-radius:12px;padding-left:10px;padding-right:10px;border-bottom-color:transparent}
+.k-act figure{margin:8px 0 4px}
+.k-act img,.k-act video{display:block;max-width:100%;max-height:60vh;height:auto;border-radius:12px;image-orientation:from-image}
+.k-act .k-doc{display:block;border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px;text-decoration:none}
+.k-act .k-box{border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0}
+
+/* menus: what you take above a line, what changes something below */
+.k-pop{position:fixed;z-index:40;min-width:236px;max-width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;padding:6px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-pop .k-t{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
+.k-pop button{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;font-size:14px;color:var(--k-text);width:100%;text-align:left}
+.k-pop button:hover,.k-pop button:focus-visible{background:var(--k-wash);outline:none}
+.k-pop button:disabled{color:var(--k-faint);opacity:1}
+.k-pop button .k-k{margin-left:auto;font-size:11.5px;color:var(--k-faint)}
+.k-pop hr{border:0;border-top:1px solid var(--k-edge);margin:5px 4px}
+.k-pop .k-own{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--k-p);padding:4px 10px 2px;opacity:.75}
+
+/* the typing box: always in the same place, the bottom */
+.k-typing{flex:none;display:flex;flex-direction:column;gap:6px;border:1px solid var(--k-edge);border-radius:16px;padding:10px 12px;margin-top:12px;background:var(--k-raise);position:relative}
+.k-typing .k-line{display:flex;align-items:flex-end;gap:10px}
+.k-typing textarea{flex:1;border:0;background:none;padding:2px 0;min-height:24px;max-height:30vh;resize:none;font-size:15px}
+.k-typing .k-tools{display:flex;gap:8px;align-items:center;color:var(--k-soft);font-size:13px}
+.k-typing .k-tools button,.k-typing .k-tools label{color:var(--k-soft);font-size:13px;margin:0;cursor:pointer;display:inline-flex;align-items:center}
+.k-typing .k-tools button:hover,.k-typing .k-tools label:hover{color:var(--k-text)}
+.k-typing input[type=file]{display:none}
+.k-typing .k-opts{display:flex;gap:8px;flex-wrap:wrap}
+.k-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border:1px solid var(--k-edge);border-radius:999px;font-size:14px;color:var(--k-text)}
+.k-btn.k-p{background:var(--k-p);border-color:var(--k-p);color:var(--k-ink);font-weight:400}
+.k-btn.k-q{border-color:transparent;color:var(--k-soft)}
+.k-btn.k-alarm{border-color:var(--k-bad);color:var(--k-bad)}
+.k-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;border:1px solid var(--k-edge);font-size:13px;color:var(--k-soft)}
+.k-chip.k-on{background:var(--k-wash2);border-color:transparent;color:var(--k-text)}
+.k-chip .k-x{color:var(--k-faint)}
+
+/* overlays: the pop-up thread, panels, frames */
+.k-shade{position:fixed;inset:0;background:rgba(3,4,6,.66);z-index:30}
+.k-shade.k-light{background:rgba(3,4,6,.45)}
+.k-modal{position:fixed;z-index:31;left:50%;top:50%;transform:translate(-50%,-50%);width:min(600px,calc(100% - 28px));max-height:calc(100% - 60px);display:flex;flex-direction:column;background:#0b0e14;border:1px solid var(--k-edge);border-radius:18px;padding:16px 18px;box-shadow:0 24px 60px rgba(0,0,0,.7)}
+.k-modal .k-mh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.k-modal .k-mh h3{font-size:17px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.k-round{font-size:18px;color:var(--k-soft);width:30px;height:30px;border:1px solid var(--k-line);border-radius:50%;display:grid;place-items:center;flex:none}
+.k-modal .k-mbody{min-height:0;overflow:auto;display:flex;flex-direction:column}
+.k-modal .k-feed{max-height:60vh;flex:none}
+.k-panel{position:fixed;z-index:32;right:16px;top:62px;width:360px;max-height:calc(100% - 78px);overflow:auto;background:#0e1118;border:1px solid var(--k-edge);border-radius:16px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.7)}
+.k-panel.k-left{left:16px;right:auto}
+.k-panel h4{font-size:16px;font-weight:300}
+.k-idrow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;width:100%;text-align:left}
+.k-idrow.k-on{background:var(--k-wash2)}
+.k-idrow .k-n{font-size:14.5px}
+.k-idrow .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint)}
+.k-idrow .k-tagc{font-size:11px;color:var(--k-soft);border:1px solid var(--k-line);border-radius:999px;padding:0 7px;margin-left:4px}
+.k-idrow.k-sub{margin-left:26px;width:calc(100% - 26px)}
+.k-idline{display:flex;align-items:center;gap:4px}
+.k-idline>.k-idrow{flex:1;min-width:0}
+.k-more{color:var(--k-soft);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--k-line);flex:none}
+.k-sepline{height:1px;background:var(--k-line);margin:6px 4px}
+.k-foot-note{font-size:12.5px;color:var(--k-faint);padding:6px 8px}
+.k-panel .k-pane-in{padding:4px 6px}
+
+/* the slot: another app's panel, drawn by that app in a frame this app cannot read or change */
+.k-frame{position:fixed;z-index:50;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100% - 28px));border-radius:20px;padding:4px;background:repeating-linear-gradient(45deg,var(--k-fc) 0 10px,var(--k-fc2) 10px 20px)}
+.k-frame .k-by{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--k-ink);padding:4px 10px 6px;font-weight:400}
+.k-frame iframe{display:block;width:100%;height:min(420px,70vh);border:0;border-radius:16px;background:#090c11}
+.k-frame.k-kishib{--k-fc:#cfe5f7;--k-fc2:#9fc9ea}
+.k-frame.k-damgar{--k-fc:#f2d89c;--k-fc2:#d9b55e}
+.k-frame.k-edubba{--k-fc:#a9e3c7;--k-fc2:#76c9a0}
+.k-frame.k-ummia{--k-fc:#f7c4b7;--k-fc2:#e99a86}
+.k-frame.k-dub{--k-fc:#efe8dc;--k-fc2:#cfc4b0}
+
+/* a disclaimer in one line; the "?" opens the rest */
+.k-say{font-size:12.5px;color:var(--k-faint);margin:6px 0}
+.k-say>summary{list-style:none;cursor:pointer;display:inline}
+.k-say>summary::-webkit-details-marker{display:none}
+.k-help{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--k-edge);color:var(--k-soft);font-size:11px;margin-left:6px;vertical-align:1px}
+.k-say[open]>summary .k-help{background:var(--k-wash2);color:var(--k-text)}
+.k-say .k-more-text{margin:6px 0 2px;color:var(--k-soft);font-size:13px;max-width:48em}
+.k-say .k-more-text p{margin:4px 0}
+.k-alarmbox{border:1px solid var(--k-bad);border-radius:12px;padding:10px 12px;margin:8px 0;color:var(--k-text);font-size:14px}
+
+/* notes the app says: done, error */
+.k-note{margin:8px 0;padding:8px 12px;border-left:2px solid var(--k-line);font-size:14px;color:var(--k-soft)}
+.k-note.k-done{border-left-color:var(--k-p);color:var(--k-text)}
+.k-note.k-error{border-left-color:var(--k-bad);color:var(--k-text)}
+.k-note ul{margin:4px 0 0;padding-left:1.1em}
+.k-note li.k-bad,.k-note li.bad{color:var(--k-bad)}
+.k-status{position:fixed;z-index:45;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-status:empty{display:none}
+.k-status .k-note{margin:0;border-left:0;padding:10px 40px 10px 14px}
+.k-status .k-close{position:absolute;right:8px;top:8px}
+
+/* the profile page: light and friendly */
+.k-prof{max-width:760px;width:100%;margin:0 auto;flex:1;display:flex;flex-direction:column;min-height:0}
+.k-prof .k-hero{display:flex;gap:18px;align-items:center;padding:8px 0 12px;flex-wrap:wrap}
+.k-prof .k-hero .k-dot{width:64px;height:64px;font-size:26px;font-weight:300}
+.k-prof .k-hero h2{font-size:30px;overflow-wrap:anywhere}
+.k-prof .k-own-name{color:var(--k-soft);font-size:14px}
+
+/* lists, words */
+.k-list{border-top:1px solid var(--k-line)}
+.k-list>div,.k-list>li{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--k-line);font-size:14.5px;list-style:none}
+.k-list .k-r{margin-left:auto;color:var(--k-soft);font-size:13px}
+.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px ui-monospace,Menlo,monospace;margin:10px 0;background:var(--k-raise)}
+.k-words b{display:inline-block;min-width:2em;color:var(--k-faint);font-weight:400}
+.k-box{border:1px solid var(--k-line);border-radius:14px;padding:14px 16px;margin:10px 0}
+.k-box.k-fill{background:var(--k-wash);border-color:transparent}
+.k-facts{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;font-size:14px;margin:6px 0}
+.k-facts dt{color:var(--k-faint)}.k-facts dd{margin:0;color:var(--k-soft);overflow-wrap:anywhere}
+
+/* phone: one column; the column becomes the first screen and folds away once a part is chosen */
+@media (max-width:600px){
+  .k-top{height:52px;padding:0 10px;gap:8px}
+  .k-app .k-nm,.k-hide-phone{display:none!important}
+  .k-me{padding:3px;border:0}
+  .k-me .k-n,.k-me .k-s{display:none}
+  .k-menu-btn .k-l{display:none}
+  .k-switch button{padding:4px 11px}
+  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr);gap:10px;padding:12px}
+  .k-tile{padding:16px 18px;border-radius:18px}
+  .k-tile .k-ic{width:40px;height:40px;left:18px;top:16px}
+  .k-tile h2{font-size:24px}
+  .k-tile p{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .k-tile .k-dm{right:16px;top:18px}
+  .k-opened .k-col{width:100%;border-right:0;padding:12px}
+  .k-opened .k-pane{display:none;padding:12px}
+  .k-opened.k-chosen .k-col{display:none}
+  .k-opened.k-chosen .k-pane{display:flex}
+  .k-opened.k-chosen .k-back{display:inline-flex}
+  .k-pane{padding:12px}
+  .k-words{grid-template-columns:repeat(3,1fr);font-size:12.5px;padding:10px 12px;gap:4px 10px}
+  .k-panel{left:8px;right:8px;width:auto;top:56px}
+  .k-pop:not([data-k-suggest]){left:8px!important;right:8px!important;top:auto!important;bottom:8px!important;max-width:none;width:auto;min-width:0;border-radius:16px}
+  .k-modal{padding:12px;width:calc(100% - 16px);max-height:calc(100% - 24px)}
+  .k-act .k-when{display:none}
+  .k-feed{padding:4px 10px}
+}
+`;
+
+// ../kit/src/html.ts
+var SVG = (d) => `<svg class="k-ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+var ICONS = {
+  identities: SVG('<circle cx="24" cy="17" r="8"/><path d="M9 41c2-9 8-13 15-13s13 4 15 13"/>'),
+  runner: SVG('<rect x="7" y="13" width="20" height="22" rx="4"/><path d="M27 20h6a6 6 0 0 1 0 12h-6M33 26h8M14 22h6M14 27h6"/>'),
+  paper: SVG('<path d="M13 6h16l8 8v28H13z"/><path d="M29 6v8h8M18 22h14M18 28h14M18 34h9"/>'),
+  collectives: SVG('<circle cx="16" cy="18" r="5.5"/><circle cx="32" cy="18" r="5.5"/><circle cx="24" cy="12" r="5"/><path d="M6 38c1-7 5-10 10-10s7 2 8 5c1-3 3-5 8-5s9 3 10 10"/>'),
+  waiting: SVG('<path d="M14 6h20M14 42h20M16 6c0 10 16 12 16 18S16 32 16 42M32 6c0 10-16 12-16 18s16 8 16 18"/>'),
+  account: SVG('<rect x="8" y="9" width="32" height="30" rx="4"/><path d="M8 17h32M15 25h8M15 31h12M31 25h3M31 31h3"/>'),
+  lanes: SVG('<path d="M14 42 19 6M34 42 29 6M24 10v4M24 21v5M24 33v6"/>'),
+  settings: SVG('<path d="M10 14h28M10 24h28M10 34h28"/><circle cx="18" cy="14" r="3.5"/><circle cx="31" cy="24" r="3.5"/><circle cx="22" cy="34" r="3.5"/>'),
+  agents: SVG('<rect x="10" y="12" width="28" height="24" rx="7"/><circle cx="19" cy="24" r="2.4"/><circle cx="29" cy="24" r="2.4"/><path d="M24 6v6M6 22v6M42 22v6"/>'),
+  publishing: SVG('<path d="M8 30v8h32v-8M24 30V8M15 17l9-9 9 9"/>'),
+  vows: SVG('<circle cx="24" cy="22" r="12"/><path d="M18 22l4 4 8-8M17 33l-3 9 10-5 10 5-3-9"/>'),
+  look: SVG('<path d="M4 24s7-12 20-12 20 12 20 12-7 12-20 12S4 24 4 24z"/><circle cx="24" cy="24" r="6"/>'),
+  discuss: SVG('<path d="M6 10h24v16H16l-6 6v-6H6z"/><path d="M34 18h8v16h-4v6l-6-6H22v-4"/>'),
+  publish: SVG('<path d="M10 40h28M24 32V8M15 17l9-9 9 9"/>'),
+  choose: SVG('<path d="M8 12l3 3 6-6M8 24l3 3 6-6M8 36l3 3 6-6M22 12h18M22 24h18M22 36h18"/>')
+};
+
+// ../dub/src/page/family.ts
 var TEST_ONLY = "Test identities only, until MOR is frozen";
 var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY}. Two risks, in plain words:</p>
 <ol><li>Whoever serves this page's code at the moment an identity is made here could copy its keys.</li>
@@ -9627,17 +10569,75 @@ details>summary::before{color:var(--tint)}
 .bar{border-bottom-color:var(--edge)}
 .correction strong{font-weight:400;color:var(--text)}`;
 
+// ../dub/src/page/view.ts
+var TEST_ONLY2 = "Test identities only, until MOR is frozen";
+var TINT2 = { layer: APPS.dub.colour, pastel: APPS.dub.pastel };
+var WEB_BANNER2 = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY2}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>Two risks, in plain words:</p>
+<ol><li>Whoever serves this page\u2019s code at the moment an identity is made here could copy its keys.</li>
+<li>This browser\u2019s storage, where the identity\u2019s signing key is kept, can be lost, or read by what runs in this page.</li></ol>
+<p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div></details>`;
+var PAGE_STYLE2 = `${KIT_STYLE}
+body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
+#app.k-page{flex:1;min-height:0;height:auto}
+.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.dub-banner strong{font-weight:400;color:var(--k-text)}
+.dub-banner ol{margin:4px 0;padding-left:1.4em}
+.dub-center{max-width:820px;margin:0 auto;width:100%}
+.dub-first{max-width:640px;margin:0 auto;width:100%;overflow:auto;padding:24px 20px 40px}
+.dub-first h2{font-size:24px;margin:8px 0 4px}
+.dub-first form{margin:6px 0}
+.dub-picked{font-size:12.5px;color:var(--k-soft)}
+.dub-film{display:flex;align-items:center;gap:10px;border:1px solid var(--k-line);border-radius:12px;padding:10px 12px;margin:6px 0;font-size:14px;color:var(--k-soft)}
+.dub-sealed{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:6px 0}
+.dub-sealed img{margin:6px 0}
+.dub-convs{width:300px;flex:none;border-right:1px solid var(--k-line);display:flex;flex-direction:column;min-height:0}
+#private-notes{padding:0 14px 10px}
+.dub-convs .dub-find{margin:12px;width:calc(100% - 24px)}
+.dub-convs .dub-list{overflow:auto;flex:1;min-height:0}
+.dub-conv{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--k-line);width:100%;text-align:left}
+.dub-conv.k-on{background:var(--k-wash2)}
+.dub-conv .k-n{font-size:14.5px}
+.dub-conv .dub-l{font-size:13px;color:var(--k-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;display:block}
+.dub-conv .dub-w{margin-left:auto;font-size:11.5px;color:var(--k-faint);align-self:flex-start;white-space:nowrap}
+.dub-conv .k-count{background:var(--k-p);color:var(--k-ink);margin-left:6px}
+.dub-thread{flex:1;min-width:0;display:flex;flex-direction:column;padding:14px 22px 16px;min-height:0}
+.dub-thread .dub-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.dub-thread .dub-head h2{font-size:20px}
+.dub-cc{font-size:12.5px;color:var(--k-soft)}
+.dub-field{display:flex;gap:8px;align-items:center}
+.dub-field input{flex:1}
+.dub-modal-form textarea{min-height:5em}
+.dub-ways{border-top:1px solid var(--k-line);margin:8px 0}
+.dub-ways label{display:flex;gap:10px;align-items:flex-start;padding:10px 6px;border-bottom:1px solid var(--k-line);margin:0;color:var(--k-text);font-size:14.5px;cursor:pointer}
+.dub-ways label.dub-closed{color:var(--k-faint);cursor:default}
+.dub-ways input{margin-top:4px}
+.dub-ways .k-small{display:block}
+.dub-hand{width:100%;min-height:6em;font:12px ui-monospace,Menlo,monospace}
+.dub-note-line{font-size:13px;color:var(--k-soft);margin:0 0 8px}
+@media (max-width:600px){
+  .dub-banner{padding:5px 10px}
+  .dub-private .dub-convs{width:100%;border-right:0}
+  .dub-private .dub-thread{display:none;padding:10px 12px}
+  .dub-private.k-chosen .dub-convs{display:none}
+  .dub-private.k-chosen .dub-thread{display:flex}
+  .dub-private .k-back{display:inline-flex}
+  .dub-first{padding:16px 14px 30px}
+  .k-typing .dub-l{display:none}
+}
+.dub-film .k-btn{white-space:nowrap}
+@media (min-width:601px){.dub-private .k-back{display:none}}`;
+
 // src/page/view.ts
 var NAME = "Ummia";
-var TEST_ONLY2 = "Test identities only, until MOR is frozen";
-var WEB_BANNER2 = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY2}. The risks, in plain words:</p>
+var TEST_ONLY3 = "Test identities only, until MOR is frozen";
+var WEB_BANNER3 = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY3}. The risks, in plain words:</p>
 <ol><li>Whoever serves this page\u2019s code at the moment you bring an identity here could copy its signing key: with it, publish specifications, MIP drafts and reports as you, and read your accepted list.</li>
 <li>This browser\u2019s storage, where that key is kept, can be lost, or read by what runs in this page.</li>
 <li>What you publish here is public and for good: a specification is never updated, only succeeded. This page reads no folder, so it makes no release, and follows no chain, so it checks no anchor: use Ummia on a computer for those.</li></ol>
 <p>Never bring a real identity here.</p></div>`;
-var TINT2 = { layer: "#ee8b74", line: "#392523", edge: "#4c2f2b", accent: "#91574a" };
+var TINT3 = { layer: "#ee8b74", line: "#392523", edge: "#4c2f2b", accent: "#91574a" };
 var STYLE2 = `${STYLE}
-:root{--line:${TINT2.line};--edge:${TINT2.edge};--tint:${TINT2.accent}}
+:root{--line:${TINT3.line};--edge:${TINT3.edge};--tint:${TINT3.accent}}
 button:hover,.door:hover{border-color:var(--tint)}
 input:focus,textarea:focus,select:focus{border-color:var(--tint)}
 details>summary::before{color:var(--tint)}
@@ -9667,19 +10667,19 @@ textarea.spec{min-height:220px;font:13px/1.5 ui-monospace,"SF Mono",Menlo,monosp
 .picker{border:1px solid var(--edge);border-radius:12px;padding:8px 12px;margin:8px 0}
 .picker button{margin:2px 4px 2px 0}
 .blocking{border:1px solid var(--bad);border-radius:12px;padding:10px 14px;margin:12px 0}`;
-var note = (kind, html) => `<div class="note ${kind}">${html}</div>`;
+var note2 = (kind, html) => `<div class="note ${kind}">${html}</div>`;
 var lines = (ls) => ls.length ? `<ul>${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>` : "";
 var says = (xs) => xs.map((x) => `<p class="small">${e(x)}</p>`).join("");
 var fp = (id) => `<span class="fp" title="${e(id)}">${e(id.slice(0, 8))}\u2026${e(id.slice(-4))}</span>`;
 function testNotice(web) {
-  return web ? "" : `<div class="banner" id="test-only">${TEST_ONLY2}. The signing key is held in software in this program\u2019s folder: a prototype, never for a real identity.</div>`;
+  return web ? "" : `<div class="banner" id="test-only">${TEST_ONLY3}. The signing key is held in software in this program\u2019s folder: a prototype, never for a real identity.</div>`;
 }
-function top(web = false, back = false) {
+function top2(web = false, back = false) {
   return `<header class="bar"><h1 class="mark">${NAME}</h1><span class="grow"></span>${back ? '<button class="quiet" data-action="back">Back to Ummia</button>' : `<span class="small">${web ? "web client, for testing only" : "this machine only"}</span>`}</header>
 ${testNotice(web)}`;
 }
 function pairing() {
-  return `${top()}
+  return `${top2()}
 <h2>Pair this browser</h2>
 <p class="small">This page acts for the Ummia program running on this machine, which holds the keys. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
 <form id="pair" class="row"><input id="pair-code" class="grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
@@ -9692,10 +10692,10 @@ function identityWindow(s, web) {
   const mine = i ? `<section class="card"><h3>In use</h3><p class="id">${e(i.grouped)}</p>
 <dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(", "))}</dd><dt>Relays</dt><dd>${e(i.relays.join(", "))}</dd><dt>Ummia\u2019s line</dt><dd>${cardWords(i.line, "Ummia", e)}</dd></dl>
 <p class="small">Some of Ummia\u2019s acts are sealed (your accepted list, an anchor\u2019s payment for Damgar), so Ki\u0161ib cannot read its line from the homes: when the signing key is changed there, give Ki\u0161ib this card (latest act, position, summary), or every act signed here becomes void (Identity rule 35).</p>
-${i.encryption ? "" : note("warn", "Ummia holds no encryption key for this identity: its accepted list cannot be read or changed here.")}
+${i.encryption ? "" : note2("warn", "Ummia holds no encryption key for this identity: its accepted list cannot be read or changed here.")}
 <div class="row"><button data-action="carry">Show the signing key\u2019s words</button><button data-action="leave" class="quiet">Leave it</button><button data-action="back" class="primary">Back to Ummia</button></div>
 <details><summary>Its signing key was changed elsewhere (in Ki\u0161ib): take the new words</summary><form id="renew"><label>The new signing key\u2019s 24 words</label><textarea name="words" required></textarea><div class="row"><button type="submit">Use the new words</button></div></form></details></section>` : "";
-  return `${top(web, !!i)}
+  return `${top2(web, !!i)}
 <h2>${i ? "The identity" : "First, an identity"}</h2>
 <p class="small">Ummia never makes an identity and never holds a chain key. Bring one you have, by its ID and its signing key\u2019s words, as in Dub: Dub\u2019s identity window shows them (\u201CShow the signing key\u2019s words\u201D).</p>
 ${mine}
@@ -9709,7 +10709,7 @@ ${held}
 <div id="status"></div>`;
 }
 function carry(c, web) {
-  return `${top(web, true)}<h2>The signing key\u2019s words</h2>
+  return `${top2(web, true)}<h2>The signing key\u2019s words</h2>
 <p class="small">With the ID, they bring this identity into Ummia, Dub, Damgar or Edubba on another device. Whoever holds them can publish as this identity and open what is sealed to it. They are not the chain key\u2019s words.</p>
 <p class="id">${e(c.grouped)}</p><div class="words">${c.words.map((w, i) => `<span><b>${i + 1}</b>${e(w)}</span>`).join("")}</div>
 <div class="row"><button data-action="back" class="primary">Back to Ummia</button></div>`;
@@ -9748,7 +10748,7 @@ ${r.blocking.length ? `<div class="blocking"><b>It cannot be signed as it is</b>
 }
 function releases(s, r) {
   if (!s.releases) {
-    return `<h2>Releases of code</h2>${note("warn", "Releases are made from a folder on a computer: in Ummia on the Mac or Linux. This web client reads no folder, so it makes no release.")}`;
+    return `<h2>Releases of code</h2>${note2("warn", "Releases are made from a folder on a computer: in Ummia on the Mac or Linux. This web client reads no folder, so it makes no release.")}`;
   }
   const list3 = r?.releases ?? [];
   const opts = list3.map((x) => `<option value="${e(x.id)}">${e(x.name)} ${e(x.version)} (${e(x.id.slice(0, 8))}\u2026)</option>`).join("");
@@ -9774,15 +10774,15 @@ function releases(s, r) {
 function picker(l) {
   return `<div class="picker"><p class="small">${e(l.path)}</p>
 <div>${l.places.map((p) => `<button type="button" class="quiet" data-action="folders" data-path="${e(p.path)}">${e(p.name)}</button>`).join("")}${l.parent ? `<button type="button" class="quiet" data-action="folders" data-path="${e(l.parent)}">Up</button>` : ""}<button type="button" class="primary" data-action="folder use" data-path="${e(l.path)}">Use this folder</button></div>
-${l.problem ? note("warn", e(l.problem)) : ""}
+${l.problem ? note2("warn", e(l.problem)) : ""}
 <div>${l.folders.map((f) => `<button type="button" data-action="folders" data-path="${e(f.path)}">${e(f.name)}${f.git ? " \xB7 git" : ""}${f.spaced ? ` (${e(f.spaced)})` : ""}</button>`).join("")}</div>${l.hidden ? `<p class="small">${l.hidden} hidden folder${l.hidden === 1 ? "" : "s"} not shown.</p>` : ""}</div>`;
 }
 function checked(c) {
   return `<div class="${c.ok ? "" : "blocking"}">${lines(c.lines)}</div>`;
 }
-function anchorForm(release, offers2, say2) {
-  const choose = offers2 ? offers2.length ? `<label>Its standing offer, and a tier</label><select name="choice">${offers2.flatMap((o) => o.tiers.map((t, i) => `<option value="${e(o.act)} ${i}">offer ${e(o.act.slice(0, 8))}\u2026, tier ${i}: within ${t.blocks} blocks, ${t.price} (its unit)</option>`)).join("")}</select><div class="row"><button type="submit" class="primary">Prepare the payment for Damgar</button></div>` : note("warn", "No standing offer of that service was found under the anchoring cMIP.") : '<div class="row"><button type="submit">Read its offer</button></div>';
-  return `<form class="anchor" data-release="${e(release)}">${says(say2)}<label>The anchoring service\u2019s ID</label><input name="service" autocomplete="off" spellcheck="false" required>${choose}</form>`;
+function anchorForm(release, offers2, say3) {
+  const choose = offers2 ? offers2.length ? `<label>Its standing offer, and a tier</label><select name="choice">${offers2.flatMap((o) => o.tiers.map((t, i) => `<option value="${e(o.act)} ${i}">offer ${e(o.act.slice(0, 8))}\u2026, tier ${i}: within ${t.blocks} blocks, ${t.price} (its unit)</option>`)).join("")}</select><div class="row"><button type="submit" class="primary">Prepare the payment for Damgar</button></div>` : note2("warn", "No standing offer of that service was found under the anchoring cMIP.") : '<div class="row"><button type="submit">Read its offer</button></div>';
+  return `<form class="anchor" data-release="${e(release)}">${says(say3)}<label>The anchoring service\u2019s ID</label><input name="service" autocomplete="off" spellcheck="false" required>${choose}</form>`;
 }
 var TASK_TICKS = (tasks) => `<div class="ticks">${tasks.map((t) => `<label class="check"><input type="checkbox" name="tasks" value="${t.n}"> ${t.n}. ${e(t.name)} (${e(t.layer)})</label>`).join("")}</div>`;
 function specs(choices, published) {
@@ -9810,7 +10810,7 @@ function specCard(x, accepted2) {
   const use = x.use ? `<p class="small">Used: ${x.use.acts} public act${x.use.acts === 1 ? "" : "s"} of its types (${x.use.byType.map((t) => `${e(t.name)} ${t.acts}`).join(", ")})${x.use.notValid ? `; ${x.use.notValid} not valid, not counted` : ""}.</p>` : "";
   return `<div class="item spec-card" data-hash="${e(x.hash)}"><h3>${e(x.name)}</h3>
 <div class="meta">${e(x.kind)} \xB7 ${e(x.layer)}${x.draft > 1 ? ` \xB7 draft ${x.draft} in its line` : ""} \xB7 by ${x.creator ? fp(x.creator) : "no creator"}${x.creator ? x.claimed ? "" : " (unclaimed: its creator never published it)" : ""}</div>
-${lines(x.role.map((t) => ({ text: t })))}${x.otherCreator ? note("warn", "Its creator is not its predecessor\u2019s (Development rule 25).") : ""}${release}${use}
+${lines(x.role.map((t) => ({ text: t })))}${x.otherCreator ? note2("warn", "Its creator is not its predecessor\u2019s (Development rule 25).") : ""}${release}${use}
 <div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div>
 <div class="row">${accepted2.has(x.hash) ? '<span class="small">Accepted</span>' : `<button data-action="accept spec" data-hash="${e(x.hash)}" data-label="${e(`${x.name}`.slice(0, 120))}">Accept it</button>`}</div></div>`;
 }
@@ -9861,14 +10861,14 @@ function reports(r) {
     return `<div class="item"><h3>${e(s.title)}</h3><div class="meta">${fp(s.id)}</div>${as.length ? as.map((a) => `<p class="small">Answered (<span class="v${a.standing === "valid" ? " valid" : ""}">${e(a.standing)}</span>): ${e(a.text)}</p>`).join("") : '<p class="small">No answer yet.</p>'}</div>`;
   }).join("") : '<p class="empty">No report sent from here.</p>';
   return `<h2>Report a bug</h2>${says(r.say)}
-${r.to ? `<p class="small">To the reporting identity ${fp(r.to)}.</p><form id="report"><label>The report: its first line is its title</label><textarea name="text" required></textarea><div class="row"><button type="submit" class="primary">Sign and send it</button></div></form>` : note("warn", "Give the reporting identity\u2019s ID under Settings first.")}
+${r.to ? `<p class="small">To the reporting identity ${fp(r.to)}.</p><form id="report"><label>The report: its first line is its title</label><textarea name="text" required></textarea><div class="row"><button type="submit" class="primary">Sign and send it</button></div></form>` : note2("warn", "Give the reporting identity\u2019s ID under Settings first.")}
 ${lines(r.lines)}
 <h2>Sent from here</h2>${sent}`;
 }
 function accepted(a) {
   return `<h2>What you accept</h2>${says(a.say)}
-${a.problems.length ? note("warn", lines(a.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}
-${a.forked ? note("warn", `Two apps changed it at once. Shown merged, nothing dropped: ${lines(a.merged.map((t) => ({ text: t })))} Your next change writes the merge.`) : ""}
+${a.problems.length ? note2("warn", lines(a.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}
+${a.forked ? note2("warn", `Two apps changed it at once. Shown merged, nothing dropped: ${lines(a.merged.map((t) => ({ text: t })))} Your next change writes the merge.`) : ""}
 <p class="small">${a.version ? `Version ${a.version}.` : "Nothing accepted yet: the default, under which no app signs anything under any specification."}</p>
 ${a.entries.length ? a.entries.map((x) => `<div class="item"><h3>${e(x.label ?? "A specification with no label")}</h3><div class="meta">${e(x.part)}</div><div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div><div class="row"><button class="quiet" data-action="accepted remove" data-hash="${e(x.hash)}">Remove it</button></div></div>`).join("") : ""}
 <form id="accept-add"><label>Accept a specification by its spec hash (or press \u201CAccept it\u201D on one found under Tracking)</label><input name="hash" spellcheck="false" required><label>Its label (its name and draft)</label><input name="label" maxlength="120">
@@ -9883,8 +10883,8 @@ function settings(s) {
 <div class="row"><button type="submit" class="primary">Save</button></div></form>
 <dl class="facts"><dt>Homes</dt><dd>${e(s.identity.homes.join(", "))} (the identity\u2019s chain names them; changed in Ki\u0161ib)</dd></dl>`;
 }
-function spent(say2) {
-  return note("spent", `${e(say2)} <button data-action="window">Give the new words</button>`);
+function spent(say3) {
+  return note2("spent", `${e(say3)} <button data-action="window">Give the new words</button>`);
 }
 
 // src/page/ui.ts
@@ -9901,12 +10901,12 @@ function mount(app3, b) {
     if (t && TABS2.includes(t)) tab = t;
   } catch {
   }
-  const say2 = (kind, html) => {
+  const say3 = (kind, html) => {
     const s = $("status");
     if (s) {
-      s.innerHTML = note(kind, html);
+      s.innerHTML = note2(kind, html);
       s.scrollIntoView({ block: "nearest" });
-    } else app3.insertAdjacentHTML("beforeend", note(kind, html));
+    } else app3.insertAdjacentHTML("beforeend", note2(kind, html));
   };
   const fail = (err) => {
     if (b.unpaired?.(err)) {
@@ -9918,10 +10918,10 @@ function mount(app3, b) {
       const sp = $("spent");
       if (sp) sp.innerHTML = spent(m);
     }
-    say2("error", e(m));
+    say3("error", e(m));
   };
   const done = (r) => {
-    if (r?.lines?.length) say2("done", `${r.title ? `<b>${e(r.title)}</b>` : ""}${lines(r.lines)}`);
+    if (r?.lines?.length) say3("done", `${r.title ? `<b>${e(r.title)}</b>` : ""}${lines(r.lines)}`);
   };
   async function act(f) {
     app3.querySelectorAll("button").forEach((x) => x.disabled = true);
@@ -10348,19 +11348,19 @@ var ask2 = (op, a = {}) => run(ummia, op, a);
 var ui = mount(app2, { web: true, ask: ask2, start });
 async function start() {
   if (!window.isSecureContext || !crypto?.getRandomValues || !window.indexedDB) {
-    app2.innerHTML = `${top(true)}${note("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.")}`;
+    app2.innerHTML = `${top2(true)}${note2("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.")}`;
     return;
   }
   try {
     ummia ??= new Ummia(await WebKeep.open(), { web: true, releases: null, chain: null });
   } catch (err) {
-    app2.innerHTML = `${top(true)}${note("error", `This browser does not let the page keep anything (${e(err instanceof Error ? err.message : String(err))}).`)}`;
+    app2.innerHTML = `${top2(true)}${note2("error", `This browser does not let the page keep anything (${e(err instanceof Error ? err.message : String(err))}).`)}`;
     return;
   }
   try {
     await ui.show(await ummia.state());
   } catch (err) {
-    app2.innerHTML = `${top(true)}${note("error", e(err instanceof Error ? err.message : String(err)))}`;
+    app2.innerHTML = `${top2(true)}${note2("error", e(err instanceof Error ? err.message : String(err)))}`;
   }
 }
 void start();
