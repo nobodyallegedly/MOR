@@ -84,10 +84,11 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 15. Each column's parts, on every tile opened, are taken from today's functions (one quiet tag at the foot of each column).
 16. The tabs across a selected collective: Act · Members · Money · Keepers · To sign. The note's "sketch" is not in the repository.
 17. The bottom half of the act menu, per app. Rely and Anchor are in every app; Correct appears on one's own acts.
-    - **Dub:** Reply, Repost, Tip, Buy.
-    - **Damgar:** Tip, and "Show it in the account".
-    - **Ummia:** "Add to accepted list" (decided), and "Discuss it".
+    - **Dub:** Reply, Repost, Tip, Buy; on a vow bought, Confirm or Contest (question 5).
+    - **Damgar:** Tip.
+    - **Ummia:** "Add to accepted list" (decided).
     - **Edubba:** "Confirm: it was kept" and "Contest it" (on a vow).
+    *Decided by Nobody, allegedly, 21 October 2026 (question 7): "Agreed", to the lean: as drawn, with Damgar's "Show it in the account" and Ummia's "Discuss it" dropped (both only shortcuts to a tile). Removed from the menus.*
 18. The bottom half of the signer's menu: Follow: add to contacts, and Mute, in every app.
     - **Dub and Edubba:** Message.
     - **Damgar:** Tip.
@@ -222,7 +223,7 @@ No function of today was dropped from the pictures. The decided removals are Dub
 4. **Kišib's identity at top right: "Holds nothing" while the runner is off, the runner's identities when it is on?** The note puts an identity top right in every app, and also says Kišib works differently. *Lean: yes.* **Answered, 21 October 2026: "Kišib is different, the only place where an ID can be held is the new runner."** As drawn: nothing held while the runner is off; the runner's identities when it is on.
 5. **Contesting a vow bought from Dub: in the vow's act menu?** On 17 October you decided contests also run via Dub. Today they live in the Signing tab, which the redesign removes. *Lean: yes, as "Confirm: it was kept" and "Contest it" under the line.* **Answered, 21 October 2026: "In dub… it should only show as an option on vows the ID purchased."** Drawn in `dub-vow-menu`: on a vow Max bought, the menu ends with a line, then Confirm: it was kept and Contest it… (Buy is gone, since it is bought); a vow not bought has neither.
 6. **The three things proposed dropped: Claude's drafts, the received-items piles, Pay someone.** Drop them, or keep them where they are drawn (Edubba Agents › Queue; Dub's To you lens; Damgar's Waiting)? *Lean: drop Claude's drafts and the piles; keep Pay someone in Damgar, since Damgar is the money hub.* **Answered, 21 October 2026:** "Maybe dub needs a 'purchases' tab, a way to quickly see files bought and vows purchased. Drafts can be removed. The sorting pile makes sense only if then there are feeds to go find them. I'd remove them for now. It's a mailbox behavior type of things. Pay needs to be kept, I'd have it on the profile page of the ID we want to pay to." Drawn: drafts and piles removed; Pay on the profile (`dub-profile-pay`); Purchases drawn and tagged (section 2, item 26).
-7. **The act menu's bottom halves (section 2, item 17): right per app?** *Lean: yes, but Damgar's "Show it in the account" and Ummia's "Discuss it" are the weakest; drop them if they feel invented.*
+7. **The act menu's bottom halves (section 2, item 17): right per app?** *Lean: yes, but Damgar's "Show it in the account" and Ummia's "Discuss it" are the weakest; drop them if they feel invented.* **Answered, 21 October 2026, after each entry was explained: "Agreed."** Both dropped; the rest stands as drawn.
 8. **The tiles' fill: pastel enough?** The tiles are a pastel wash over black; full pastel is kept for the open tab, the main button and the selected part. *Lean: as drawn. Say "more" and the tiles take a stronger wash.*
 9. **Collective Y's tabs (Act, Members, Money, Keepers, To sign): do they match your sketch?** *Lean: they follow today's folds; your sketch wins.*
 10. **The runner and lines of acts.** When the runner signs for Dub, it signs on its own line per app; Kišib's change of keys already finds every line. *Lean: say so in the runner cMIP. The core already allows an identity several lines (Identity, "Sequence"), so it is not a question for the MOR lead.*
