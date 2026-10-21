@@ -28,6 +28,19 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F369. The formats S1 found unwritten: how the technical pass writes them (21 October 2026)
+
+**Taken by the project lead under delegation**, for the technical pass (S1b) on the freeze-ready texts:
+
+1. **How a home is queried, and the proofs' encoding (S1's question 1):** transport, so a cMIP's (Nobody, allegedly, 19 October 2026: "if it's transport, it's just transport"). The core states only what a verifier checks of what it is handed (an inclusion or consistency proof's content, as Identity's checks read it) in a fixed encoding the core gives; how a client asks a home, and how it finds deliveries, leave the core's open list for the relay transport cMIP.
+2. **The unit specification (3) and the signature-scheme specification (8, 34):** each written as a Development kind with its fields, since Money's and Identity's rules name them by hash and a verifier decodes them. The CDDL conventions stated once.
+3. **The field types the strangers found (13), deterministic CBOR said once (14), Development's content decoding (38):** written as the code builds them; where the code and a decided rule disagree, a question, never a silent choice.
+4. **The running summary (16):** written once, as the published vector computes it.
+5. **A MIR's spec hash (17):** one rule, stated once, matching what the code computes; Identity's "the hash of the frozen text" reworded to it.
+6. **The final line break (12):** a frozen text may end with exactly one; Development's root check allows it.
+7. **Unicode (2):** pinned to the version the core's tables pin today, as a number, with no "as of".
+8. **X-Wing's hash (54):** written into Envelopes at the freeze; a step of the freeze procedure.
+
 ## F368. S1's wording points and readings, taken as the session leaned (21 October 2026)
 
 **Taken by the project lead under delegation**, none changing a verdict as read: S1's questions 6, 11, 15, 18, 19, 21, 23, 26, 27, 28, 29, 30, 33, 35, 36, 37 (first half: rules moved out of italics), 46 (the suite keeps its scenario titles: it tests the core and is not the core), 47, 48, 52 (at the freeze each header becomes the text's name alone), 53 (named rails and clocks kept as italic examples; Money rule 29's normative sentence by role), and the words used two ways as S1's glossary resolves them; each as `docs/freeze-ready-drafts-report.md` leans. Question 50, the MICS's opening, waits for Nobody, allegedly's own reading.
