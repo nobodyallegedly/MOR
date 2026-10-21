@@ -21,7 +21,7 @@ import { join } from 'node:path';
 import { collectiveNow } from '../../grants/src/member.ts';
 import { keeperLog } from '../../grants/src/keeper.ts';
 import { closeAll, dub, edubba, start, type Relay } from '../../damgar/test/world.ts';
-import { kishib } from '../../kishib/test/world.ts';
+import { changeKeys, kishib } from '../../kishib/test/world.ts';
 import { closeAll as closeKishib } from '../../kishib/test/world.ts';
 import { SplitService } from '../../split-service/src/service.ts';
 import { foundCollective } from './cast.ts';
@@ -92,9 +92,8 @@ test('keepers: an Edubba agent records the collective’s acts; a member’s rot
   const r = await kk.c.ask<any>('rotate plan', { id: iPh.id, address: H[0], words: iPh.chainWords.join(' '), leaveOut: where && /Kept\.$/.test(where) ? [sig] : [] });
   assert.deepEqual(r.blocking, []);
   assert.ok(r.warning, 'Kišib warns that a line left out becomes void');
-  let s = await kk.c.ask<any>('confirm', { plan: r.plan, digest: r.digest, warned: r.warning });
-  for (let i = 0; s.sitting?.stage === 'sent' && i < 3; i++) s = await kk.c.ask<any>('resend');
-  assert.equal(s.sitting.stage, 'counts', JSON.stringify(s.sitting.lines));
+  // H79: the new paper written before the change is signed, the new signing key's words once it counts.
+  await changeKeys(kk.c, r);
 
   // The agent records the rotation, after the signature.
   const second = await e.c.ask<Done>('real keep', { collective, keeper });
