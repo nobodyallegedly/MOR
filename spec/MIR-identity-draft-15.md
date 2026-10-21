@@ -14,7 +14,7 @@ Some marks recur:
 - *Stated cost:* a weakness the rules accept knowingly, written down so nobody mistakes it for an oversight.
 - **Re-homed without audit:** an answer that rests on the verifier's own failed attempt to reach a home. It is said, and nothing binding rests on it ("Every verifier gives the same answer", after rule 35).
 
-The MIR has four parts. Part one is an identity as it runs most of the time: genesis, signing, everyday acts, homes and receipts, a rotation and what it keeps. Part two is the rare cases: chain signatures, succession, competing rotations, homeless rotations, escape with both keys, finality, and audit. Part three is the encoding and the act formats, for reference. Part four is the tasks, the reasoning, the parameters and the freeze scenarios.
+The MIR has four parts. Part one is an identity as it runs most of the time: genesis, signing, everyday acts, homes and receipts, a rotation and what it keeps. Part two is the rare cases: chain signatures, succession, competing rotations, homeless rotations, escape with both keys, finality, and audit. Part three is the encoding and the act formats. Part four is the tasks, the reasoning, the parameters and the freeze scenarios.
 
 ## Purpose
 
@@ -677,7 +677,7 @@ How often homes publish summaries, and which homes audit which, is left to the h
 
 ## Part three: encoding and act formats
 
-*For reference. The rules above say what these acts mean and when they count.*
+The encoding and the formats below bind as the rules do: an act outside them is invalid. *The rules above say what these acts mean and when they count.*
 
 ### Encoding and conventions
 

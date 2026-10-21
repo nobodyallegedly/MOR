@@ -13,7 +13,7 @@ Some marks recur:
 - *Client conformance:* a duty of clients (wallets, a payer's or an owner's client). The protocol cannot check it from acts alone, so it is stated for builders.
 - *Stated cost:* a weakness the rules accept knowingly, written down so nobody mistakes it for an oversight.
 
-The MIR has four parts. Part one is a payment as it runs most of the time: where it goes, how it is proven, who is seen, debts, buying and refunds, fees. Part two is the rare cases: routes across rails through conversion services, and theft of the signing key. Part three is the act formats, for reference. Part four is the tasks, the reasoning, the parameters and the freeze scenarios.
+The MIR has four parts. Part one is a payment as it runs most of the time: where it goes, how it is proven, who is seen, debts, buying and refunds, fees. Part two is the rare cases: routes across rails through conversion services, and theft of the signing key. Part three is the act formats. Part four is the tasks, the reasoning, the parameters and the freeze scenarios.
 
 ## Purpose
 

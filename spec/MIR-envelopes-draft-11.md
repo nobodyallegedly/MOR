@@ -10,7 +10,7 @@ The rules are numbered in reading order. The numbered steps of "How it fits toge
 
 A retired rule or type keeps its number, which is never reused.
 
-The MIR has four parts. Part one is an act as it runs most of the time: its shape, public and private acts, private delivery, sequences, chains, acknowledgements and references, how acts reach people, media, vows, withdrawal, relays, and what a client does with what it does not understand. Part two is the rare case: theft of the signing key. Part three is the act formats, for reference. Part four is the tasks, the reasoning, the parameters and the freeze scenarios.
+The MIR has four parts. Part one is an act as it runs most of the time: its shape, public and private acts, private delivery, sequences, chains, acknowledgements and references, how acts reach people, media, vows, withdrawal, relays, and what a client does with what it does not understand. Part two is the rare case: theft of the signing key. Part three is the act formats. Part four is the tasks, the reasoning, the parameters and the freeze scenarios.
 
 ## Purpose
 

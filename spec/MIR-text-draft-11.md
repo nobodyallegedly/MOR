@@ -12,7 +12,7 @@ This mark recurs:
 
 - *Client conformance:* a rule for the signer's own client, which no verifier can check.
 
-The MIR has four parts. Part one is text as it runs most of the time: one form for every text, the text act, and what a client shows. Part two is the exact rules of canonical text. Part three is the act format, for reference. Part four is the tasks (the bound on formats), the reasoning, the parameters and the freeze scenarios.
+The MIR has four parts. Part one is text as it runs most of the time: one form for every text, the text act, and what a client shows. Part two is the exact rules of canonical text. Part three is the act format. Part four is the tasks (the bound on formats), the reasoning, the parameters and the freeze scenarios.
 
 ## Purpose
 

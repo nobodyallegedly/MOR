@@ -15,7 +15,7 @@ Some marks recur:
 
 *Working rule:* where the core gives participants the means to choose, the choice is theirs; the core keeps only what no choice may break.
 
-The MIR has five parts. Part one is agreements as they run most of the time: making and signing, works and stakes, selling, splits, judges, keepers, changing a deal, defaults and the public domain. Part two is collectives: an agreement with its own identity, its tiers, members, grants, succession and abandonment. Part three is the rare cases: forks of records, how a collective ends, a broken collective, and how "before" and "after" are read in a collective. Part four is the act formats, for reference. Part five is the tasks, the reasoning and the freeze scenarios.
+The MIR has five parts. Part one is agreements as they run most of the time: making and signing, works and stakes, selling, splits, judges, keepers, changing a deal, defaults and the public domain. Part two is collectives: an agreement with its own identity, its tiers, members, grants, succession and abandonment. Part three is the rare cases: forks of records, how a collective ends, a broken collective, and how "before" and "after" are read in a collective. Part four is the act formats. Part five is the tasks, the reasoning and the freeze scenarios.
 
 ## Purpose
 
