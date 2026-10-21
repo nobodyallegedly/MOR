@@ -300,6 +300,41 @@
 | Forked deals | F186, F188, F189, F192, F196 |
 | Open in this draft | F252, F259, F260, F261, F262, F263, F264, F265, F270, F271, F282, F284, F285, F302, F303, F308, F309, F310, F311, F315, F318, F320, F327, F328 |
 
+### Development draft 11 (from draft 10)
+
+| Rule or section | Findings |
+| --- | --- |
+| (header: the drafts' notes) | F1, F41, F250, F251, F261, F266, F268, F278, F290, F291, F295, F301, F322, F323, F324, F325, F326, F328 |
+| How to read this draft | F278, F290, F301, F322, F328 |
+| Specifications | F54, F112, F116, F191, F286, F289, F291, F325, F326, F328 |
+| Tasks, extensions and xtypes | F215, F268, F278 |
+| Creators and users | F291, F325 |
+| rule 2 | F23, F322 |
+| rule 3 | F82, F297, F328 |
+| rule 9 | F112 |
+| The tasks the core defines | F126, F128, F172, F173, F178, F250, F261, F268, F301 |
+| rule 10 | F323 |
+| rule 14 | F42, F211 |
+| rule 15 | F116, F184, F193, F194, F210 |
+| 8. Xtypes and extensions | F278 |
+| rule 18 | F278 |
+| rule 20 | F82 |
+| rule 22 | F78, F204, F326, F328 |
+| rule 25 | F82 |
+| rule 26 | F82, F322, F324 |
+| Part three: the specification format | F211, F268, F290, F291, F301, F322, F325, F328 |
+| What each kind must carry | F41, F295, F301, F322, F325, F328 |
+| A rail Module's kind and binding (fields 11 and 13; new in draft 10, F301) | F128, F151, F193, F267, F301, F323, F328, F330 |
+| Not in the format: no specification | F295, F323 |
+| Layers an extension acts on (field 10) | F106, F323 |
+| A proof-of-delivery checker (field 12) | F261, F268 |
+| The spec hash covers the content | F41, F82 |
+| The MICS document, test suites and MIPs (kinds 6, 7 and 8; new in draft 10, F291, F325) | F269, F286, F289, F291, F325, F328 |
+| Reasoning | F322, F323, F324, F326 |
+| Open technical parameters | F54, F78, F324, F326 |
+| Part one | F116, F194, F268, F322, F323, F328 |
+| Part two | F291, F301, F323, F324, F325, F326, F328 |
+
 ### Added in the freeze-ready drafts
 
 | Text and rule or section | Findings |

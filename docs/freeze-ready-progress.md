@@ -87,3 +87,9 @@ Questions:
 31. The keeper record and its keeper's rotation (same as question 7).
 32. Money rule 7 and Agreements rules 60, 73, 74, 80 (same as question 20).
 33. Standing for a request to a judge, written "a party who signed the version" (as the text read "as built").
+
+## Development 11 (questions 34 to 36)
+
+34. Development keeps three items "still open": the CDDL conventions for type definitions, the signature-scheme specification format, and how the MIRs are published so their hashes are fixed (the last partly answered by rule 26).
+35. "Fields 11 and 13 are a rail Module's (a reading, to confirm)": on any other kind they make the specification no specification.
+36. Task 4's bound in the tasks table now points to Text's task (wording; it read "hides only non-letters", against Text's "only its own declared markup" above a floor).
