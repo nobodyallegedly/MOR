@@ -284,6 +284,13 @@ Each question is in plain words, followed by its options, a lean and a cost. "Ve
 49. **Step 3.8b: "a clone placing the successor elsewhere than in the dead member's place is refused as unsettled".** Agreements 17 does not say what such a clone is. *Options:* (a) invalid when marked with the plan alone, as a clone that reorders the other parties; (b) as written. *Lean:* (a).
 50. **The MICS's opening ("The test")**, for Nobody, allegedly's own reading of the freeze-ready wording, as "Open before freeze" asked.
 
+**From the final reading over all eight**
+
+51. **Money's independence from Development** (verdict for a Money-only client). Money says it never depends on Development, yet a receipt is valid or unknown by a rail Module's fields 5, 11 and 13 and by whether that specification is "no specification". *Options:* (a) say so: a Money client decodes Development's specification format, and nothing more of Development; (b) move the rail kind and binding into the receipt. *Lean:* (a), stated in Money's dependencies. *Cost:* the "never depends" sentence narrows.
+52. **The one-line headers enter the hashes.** Each text's header reads "freeze-ready, for Nobody, allegedly, to approve", and a frozen text is hashed as it stands. *Lean:* at the freeze, each header becomes the text's name alone ("Identity MIR"), as the freeze report records approval. *Cost:* none; one more step in the freeze procedure.
+53. **Named rails and clocks in the MIRs.** These are Lightning, Bitcoin, ecash, stablecoin, bank transfers and regtest; Money rule 29's Bitcoin clock and "within the hour"; FROST; "home.example.org"; Identity's "the journalist". These are not uses, places or jurisdictions, but they are particulars. *Options:* (a) keep them in italics as examples, and rewrite Money rule 29's normative sentence by role ("a clock Module and the rail whose proof it reads"); (b) remove every one. *Lean:* (a). *Cost:* rule 29's example moves to commentary.
+54. **External standards by version.** The X-Wing draft is said to be "fixed by hash at the freeze", but no hash is given. *Lean:* the hash written in Envelopes at the freeze, with the RFCs, FIPS and BIPs named by number as now.
+
 **Words used two ways (one question).** The strangers' lists include:
 
 - the verdict words in their display uses;
@@ -309,7 +316,7 @@ The glossary resolves those that are wording. *Lean:* the rest kept as each text
 - Money 11: `docs/freeze-ready-strangers/money-11.md`
 - Agreements 17: `docs/freeze-ready-strangers/agreements-17.md`
 - Development 11: `docs/freeze-ready-strangers/development-11.md`
-- All eight together: `docs/freeze-ready-strangers/all-eight.md`
+- All eight together: `docs/freeze-ready-strangers/all-eight.md`. It found contradictions that show only across texts: Money's independence from Development (question 51); three texts describing a stray payment, a late debt and step 2.5 differently, now fixed; and scenario numbers that did not resolve, now fixed. Every MICS rule citation resolves.
 
 Each file condenses the reading and marks what was done with each item: fixed, a question, a gap (listed for the technical pass), as designed, or fixed in another text.
 

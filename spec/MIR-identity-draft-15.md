@@ -486,7 +486,7 @@ A succession to a MOR identity is declared by the rotation and confirmed by the 
 
 A succession to another protocol is confirmed as that protocol's link cMIP says.
 
-*A link needs both sides, "otherwise anyone could claim to be anyone" (rule 14, and the reasoning on links); a succession declared by one side alone would let a stranger's rotation name a well-known identity as its successor, and pass a collective's seat, through Agreements' fallback (rule 84), to an identity that never agreed to take it. Agreements' fallback passes a seat only to a confirmed successor, as a nomination.* *The successor confirms after the rotation, since the confirmation names it: at any time before the succession is used, usually at once, the two arranging it together, or later, even after the owner is gone, since it needs nothing from the owner.* *Stated cost: confirmation does not stop a thief holding the chain key from naming, and confirming, an identity of the thief's own; that is the cost of a lost chain key.*
+*A link needs both sides, "otherwise anyone could claim to be anyone" (rule 14, and the reasoning on links); a succession declared by one side alone would let a stranger's rotation name a well-known identity as its successor, and pass a collective's seat, through Agreements' fallback (Agreements rule 84), to an identity that never agreed to take it. Agreements' fallback passes a seat only to a confirmed successor, as a nomination.* *The successor confirms after the rotation, since the confirmation names it: at any time before the succession is used, usually at once, the two arranging it together, or later, even after the owner is gone, since it needs nothing from the owner.* *Stated cost: confirmation does not stop a thief holding the chain key from naming, and confirming, an identity of the thief's own; that is the cost of a lost chain key.*
 
 *Presentation, for clients:* an owner's client tells the owner when the successor they named has not yet confirmed.
 
@@ -727,7 +727,7 @@ A signature always signs the 32-byte act id. SLH-DSA signatures use the context 
 
 **Where an identity lives.** The where-it-lives form is the short form followed by `?r=` and an address hint, percent-encoded where it must be (RFC 3986), repeated with `&r=` for each further hint: `mid1…?r=https://home.example.org`. The hints lie outside the checksum: **hints guide, never decide** (Envelopes rule 6). A reader may look there first; what it finds counts only as the signed acts it gets back.
 
-**Bare hexadecimal stays accepted** for a 32-byte hash: 64 characters, 0 to 9 and a to f, read as the kind the reader asked for. *Every identity, act and specification written before this section keeps working.*
+**Bare hexadecimal stays accepted** for a 32-byte hash: 64 characters, 0 to 9 and a to f, read as the kind the reader asked for. *Every identity, act and specification written in hexadecimal stays readable.*
 
 **A kind a cMIP defines** may write its own objects in the same form under a label of its own, written in its text, never one of the five above.
 

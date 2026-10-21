@@ -630,7 +630,7 @@ Still open:
 
 #### Debts
 
-- Obligation signed by the debtor, and discharge, unit-agnostic, possibly by several routes: 1, 4.
+- Obligation signed by the debtor, and discharge, unit-agnostic, possibly by several routes: 1.
 - A creditor's release, signed by the creditor alone, ends an obligation wholly after a partial payment; one signed by anyone else ends nothing; a collective creditor's counts only with the area reaching Money: 3.
 
 #### Buying, refunds and referrals

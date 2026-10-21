@@ -149,7 +149,7 @@ Agreements are always in core format, so activity on a fading cMIP moves by clon
 
 #### Rule 13. Signing what it computes
 
-*Client conformance.* Before signing anything that runs through a rule (a split plan, fee terms, a condition), a client MUST show what the rule actually computes on a concrete example, such as: "on a sale of 10, this split pays Lea 4, the co-writer 4, the publisher 1.80, the service 0.20."
+*Client conformance.* Before signing anything that runs through a rule (a split plan, fee terms, a condition), a client MUST show what the rule actually computes on a concrete example, such as: "on a sale of 10, this split pays the singer 4, the co-writer 4, the publisher 1.80, the service 0.20."
 
 *The signer approves the numbers the code produces, not the description. This extends the Text MIR's rule, what you sign is what you saw. No verifier can check that a client did this; it is conformance, not validity.*
 
