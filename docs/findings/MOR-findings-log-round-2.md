@@ -28,7 +28,7 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
-## F371. Three texts: a fresh chain-key seed as the rule, a transfer to oneself naming the vault, and an audio Module (21 October 2026; F361, F362, F355 (c); Dubsar Suite)
+## F372. Three texts: a fresh chain-key seed as the rule, a transfer to oneself naming the vault, and an audio Module (21 October 2026; F361, F362, F355 (c); Dubsar Suite)
 
 **Written by a Dubsar Suite session** (`docs/texts-r0-report.md`), on decisions already taken; each draft for Nobody, allegedly, to approve.
 
@@ -37,6 +37,23 @@ Before any question is put: "Is this core business? Or has core defined how the 
 3. **The audio Module, draft 1, with its code** (decided by Nobody, allegedly, 21 October 2026: "let's have an audio module", M4A). One M4A file: the MP4 container with exactly one AAC-LC sound track, mono or stereo, and no picture, text or chapter track; the video Module's checks, refusals and stripping, said in plain words; limits 64 MiB less 16 bytes, two hours, 48,000 Hz (two hours, the session's lean, "Agreed" by Nobody, allegedly, 21 October 2026). Code `modules/audio/`, which reads with the video Module's own code. The video Module accepts and refuses exactly what it did: its vectors are unchanged byte for byte, and the part of it the display client bundles is byte for byte as released. No app uses it yet.
 
 The three new texts carry the house prefix (F356): Dubsar Air-Gapped Chain-Key Signer, Dubsar Payments, Dubsar Audio; the seed Modules Dubsar Words and Dubsar Hex.
+
+## F371. The technical pass's eight questions, and how far the texts go before the C session (21 October 2026)
+
+**From** `docs/technical-pass-report.md` (S1b, pull request 83). **Taken by the project lead under delegation** ("you'll decide the rest"), each as the session leaned, read against the texts:
+
+1. **A missed deadline with several keepers:** rule 38 read the other way round: the act counts as recorded by the deadline when the keepers' rule is met by records before their anchored points; it is missed when enough anchored sequences lack it that the rule can no longer be met; an anchor of the act at or before the point shows it met, and wins over any keeper's silence (an anchor shows existence; silence rests on trust).
+2. **Which agreement's keepers count:** those of the version in force for the act: for a deal, the latest complete version its history holds; for a collective, the agreement in force at the act, every act in the collective's name (its grant keys' included) belonging to it. So F359's keeper path reaches a collective's grant-key acts, as decided.
+3. **A member key's act and the agreement in force:** the one rule 72 picks from the records its history holds, starting from the version that named the key. No new field.
+4. **"A Module under the payment cMIP":** a Module whose field 5 names a cMIP whose own field 2 lists Money's task 6 (payment) must carry fields 11 and 13; a verifier not holding that cMIP answers unknown. Decoded from bytes, the same verdict in every client.
+5. **Text fields:** every text string anywhere in an act, a cMIP's included, as Text rule 1 and the core already have it. **F368 corrected:** taking S1's lean on its question 11 would have changed a verdict no finding decided; the project lead took that lean in a batch without reading it against rule 1, the error the first lead's letter warns of. The session caught it.
+6. **A closing's completeness:** the same bullet as a fork's, holders who are no members signing by chain signatures where the constitutional change rule counts them.
+7. **A text act signed with a member key:** its one object is `[collective, the founding or clone the holder's signature names]`, the version that is its grant; Text rule 14 says so.
+8. **A grantee acknowledging its own grant key's acts:** does not count for rule 76's exception (pattern 1: what decides would be signed by the wrong party). F359's cost stays as stated, an accomplice needed.
+
+**How far the texts go before the C session.** The strangers' readings also listed smaller gaps older than this pass (`docs/freeze-ready-strangers/technical-pass.md`). They are not chased now. The C session is the test of the texts: it records each question and the reading it chose, and Fable's review judges each against the texts and the code. Chasing every gap first would spend the budget on what that test is built to find, and would teach the texts to the session that writes them rather than to a stranger. *The bar (workbook):* texts a stranger can build from, proven by the C verifier, not by one more reading of ours.
+
+**Where:** with F370, on the freeze-ready texts at the start of the next session (S2), before the code is aligned to them.
 
 ## F370. What a payment "fulfils" is named, not listed: a transfer to oneself fulfils nothing in Money's sense (21 October 2026)
 
