@@ -28,6 +28,22 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F366. Collectives' member keys across Money and Agreements (21 October 2026; S1's questions 20, 43, 10)
+
+**Taken by the project lead under delegation** (Nobody, allegedly, 21 October 2026: "you'll decide the rest"), on his principle of F358: "It is a money matter and money areas should be able to do it. A founder should not have a special position if the constitution does not say so."
+
+1. **Every Money act, not pointers alone (question 20).** Money rule 7 lists every Money act a member key may sign for its collective (payee pointer, receipt, claim, obligation, creditor's release), each judged by Agreements as scoped, under the area that reaches Money and that area's holders and threshold; a Money-only client shows them unknown, as it does today for pointers. A split service's grant is judged under the area that issued it (rule 74). *Cost:* a Money-only client shows more of a collective's acts unknown.
+2. **When a member key counts, and when it stops (question 43).** It counts within the areas in force for the act it signs, from the moment the founding or clone naming it is in force, until a later version names another key for that holder or the holder leaves. The member's own change of keys leaves it as it is (F353). A rotation of the member that disowns the very signature that named the key is judged as any member's signature the collective's line placed: it stays valid for the collective, as "Made before, made after" says. A grant to oneself is accepted by the grantor's own type 1 acceptance (F351).
+3. **Text rule 14's two cases (question 10).** Where the signing key is a grant key, a member key included, the grant-key case decides.
+
+**Where:** the next pass on the freeze-ready texts (Money 11 rule 7; Agreements 17 rules 60, 73, 74, 80; Text 11 rule 14).
+
+## F365. What an act under a revoked grant, shown disputed, confers (21 October 2026; S1's question 24)
+
+**Taken by the project lead under delegation**, following F359 (decided this morning: "visible to everyone, never erased"). As for an act a rotation disowned: an act under a revoked grant that F359 shows disputed **confers nothing on an agreement chain** (no stake, no obligation, no consent: Agreements rule 6's sentence for a rotation) and is **shown**; Money treats it as it treats a disputed act after a change of keys. **The grantor may still adopt it** (rule 76: acknowledging, citing or paying on it), and then it binds. Every passage that says "void" for an act a revocation does not hold (the tie rule, rule 79, the scenarios) says "void, or disputed under rule 76".
+
+**Why:** binding the grantor (the session's option b) would let a thief with a lane key and an accomplice who acknowledges sign the victim into a debt: what decides would be signed by the wrong party (pattern 1). Shown, not binding, keeps both sides visible; the honest grantor who meant it adopts it. *Cost:* a payee who relied on a revoked app's promise (a debt to come, not a payment made) holds a visible dispute, not a debt, unless the grantor adopts it. A payment already made stays made on its rail; its receipt is the payee's own act and stands.
+
 ## F364. Keepers, the remaining details (21 October 2026; S1's questions 7, 25, 40, 41, 42)
 
 **Delegated by Nobody, allegedly, 21 October 2026:** "Let's do this… I'll contribute where I can, you'll decide the rest." **Taken by the project lead**, each read in Agreements 17 and Identity 15 first; none widens what a keeper may do.

@@ -7,8 +7,8 @@
 *Nobody, allegedly, 21 October 2026: "I'll contribute where I can, you'll decide the rest." The lead decides, records each as taken under delegation, and brings him what touches a principle or his own earlier words.*
 
 1. **Keepers** (the redefinition's details): all decided: 39 (F363); 41, 40, 7, 42, 25 (F364, taken by the lead under delegation).
-2. **What a disputed act under a revoked grant confers** (F359's follow-through): 24.
-3. **Collectives' member keys in Money and Agreements** (F353, F358): 20 with 43 (32 is 20), 10.
+2. **What a disputed act under a revoked grant confers** (F359's follow-through): 24, decided (F365, under delegation).
+3. **Collectives' member keys in Money and Agreements** (F353, F358): 20 with 43 (32 is 20), 10, decided (F366, under delegation).
 4. **Identity's checks:** 4 (an act under a pending rotation), 5 (dishonesty: and or or).
 5. **Money's dependence on Development's specification format:** 51; and 22 (a collective's pointer left outside a fork).
 6. **Text at a Text-only verifier:** 9.
