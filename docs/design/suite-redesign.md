@@ -96,10 +96,28 @@ Each app makes or brings an identity the hard way (its ID and words).
 - Discuss and Publish columns: *accepted.* Choose: *accepted*, filtered by layer (decided).
 - cMIP hashes easy to copy everywhere, and "add to accepted list" in the act menu (decided).
 
+## Answered on the mockups (decided, 21 October, afternoon)
+*Answered in the design session; its report, `docs/design/mockups-report.md`, has every answer in full.*
+- **Dub's lenses**: Following · To you · Relay ("Yes, but relay should be the third option").
+- **Danger marks as drawn**, Edubba's included ("I think so, yes"): Kišib Identities 1, Runner 2, Paper 3, Collectives 3; Damgar Waiting 3, Account 1, Lanes 2, Settings 2; Edubba Agents 2, Collectives 3, Publishing 2, Vows 2; Ummia Look 1, Discuss 1, Publish 2, Choose 2. *This replaces the Damgar ranking of the night before (Account 1, Waiting 2, Lanes 3, Settings 2).*
+- **Damgar's fourth tile, Settings**: "It's a lot more than what settings offer elsewhere."
+- **Kišib top right**: "Kišib is different, the only place where an ID can be held is the new runner."
+- **Confirm or contest a vow bought**: in the vow's act menu in Dub, below the line.
+- **Claude's drafts removed**: "Drafts can be removed." **The received-items piles removed for now**: "It's a mailbox behavior type of things." **Pay someone** kept, as **Pay on the profile** of the identity to pay, waking Damgar's panel.
+- **The act menus' bottom halves** as drawn, without Damgar's "Show it in the account" and Ummia's "Discuss it" ("Agreed").
+- **The tiles' pastel wash**: "they're not aggressive, I like it."
+- **A collective's tabs** as drawn (Act, Members, Money, Keepers, To sign): "building is like working with clay… the more you move forward the more it gets defined."
+- **Edubba's agent tabs** Talk, Queue, Mind, Terms: "They work for me."
+- **Dub gains Purchases**: the switch reads **Public · Private · Purchases**; files bought and vows purchased, All · Files · Vows.
+- **Three ways to pay from Dub** (decided): "Dub has no money signing by default, everything has to be done in Damgar… That was the experiment, now we're looking at using more to do something closer to a prototype." (1) by hand: the act copied and signed in Damgar; (2) a money message Damgar queues, (2A) popping Damgar up on the Mac; (3) a lane "with a cap on total, and a cap per act". "Damgar remains the money hub. It grants other apps rights. The rights are requested by the apps, and approved in Damgar. When moving info from app to app simply use private messages. If a new format is needed we create a new cMIP." The cap in all ("Yes, add it") is kept by the apps, not judged by verifiers (the grant-limits cMIP leaves a total out on purpose: it would need private acts); a payment under the lane is finished in Dub, its record in Damgar's Account.
+- **Settled by the design session** on "Decide what you can yourself. If unsure, ask": disclaimers in one line with "?", one ✓ per card, a faint short ID only when names collide, Cc for anyone, Buy in Dub's act menu, the columns' parts, Tip in Damgar's signer menu, Ask to be paid in Dub's private box, the identity menu's items, Withdraw a picture beside Correct.
+
+## Mac only (decided, 21 October)
+"Agents and runner are Mac only." The agents need a program that keeps running and keeps the API key and their words out of the browser (the reasons of H18); the runner keeps signing keys on the Mac. The web clients carry neither.
+
 ## Still open
-- Dub's and Edubba's danger marks (apart from Vows).
-- The Agents tabs (not answered).
-- Everything marked *lead's, not discussed* above.
+- Question 2 of the H80 report: private lines Kišib cannot place (apps leaving each private act's locked act at the identity's homes).
+- The four items the MOR lead handed over (`claude/MOR-lead-for-the-suite.md`): the chain-key signer Module's next draft, "Dubsar" titles, the payment cMIP's vault transfer, the regtest quirks kit.
 
 ## Next
-H80 as its own short session. Then decide twice on this note. Then an inventory of today's screens (a helper window), then build rounds.
+H80: built (pull request 81). The mockups: drawn and answered (pull request 82). Next: the build rounds, from the approved pictures.
