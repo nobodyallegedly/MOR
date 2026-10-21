@@ -143,6 +143,6 @@ Envelopes (publication, media lock, work hash, withdrawal) and Development. The 
 
 Where the decision ("an audio module", M4A) was silent, this draft takes these readings, each for Nobody, allegedly, to confirm or change (`docs/texts-r0-report.md`, questions):
 
-1. **The limits:** 64 MiB less 16 bytes (as the video Module), two hours, 48,000 Hz.
+1. **The limits:** 64 MiB less 16 bytes (as the video Module), two hours, 48,000 Hz. *Two hours confirmed by Nobody, allegedly, 21 October 2026 ("Agreed").*
 2. **Both brands:** a file naming `M4A ` or a plain MP4 brand (`isom`, `mp42`…) is read alike.
 3. **No chapters:** a chapter track is refused, as subtitles are in a film.

@@ -92,7 +92,7 @@ The rules are numbered as the video Module's, so that the same subject sits unde
 | 5 | The track's and the movie's matrices the identity | The video Module allows quarter turns on a track; a sound track has no pictures to turn. |
 | 7 | The index holds together | Same (the shared code). |
 | 8 | Nothing from elsewhere, nothing that runs | Same (the shared code); the one refusal worded "which a film may not" is said here "which a recording may not". |
-| 9 | 64 MiB less 16 bytes; **two hours**; 48,000 Hz | Size and rate the same; the video Module's ten minutes would cut most talks short (question 2). |
+| 9 | 64 MiB less 16 bytes; **two hours**; 48,000 Hz | Size and rate the same; the video Module's ten minutes would cut most talks short (question 2, agreed). |
 | 10 | Stripping: the video Module's rule 10 on one sound track | The same code (`stripped`), byte for byte. |
 | 11–12 | On the listener's action; a cover only the publisher's own JPEG, never from the file; what a player cannot play, said | The poster's rule, for a cover. |
 | 13 | By reference in a post | Same; not built (no app uses it yet). |
@@ -126,8 +126,8 @@ Either way, no verdict changes for anyone else: a transfer to oneself has no cou
 
 *Question 1 (a change of keys from the same paper, as an exception) is answered (Nobody, allegedly, 21 October 2026): "No, it has been decided that the core operates this way, you cannot change the core. At each rotation, two set of keys are created, always." The exception is removed from draft 6 and the seed Modules' drafts.*
 
-*(Questions 2 and 3, one at a time.)*
+*(Question 3 follows.)*
 
-**Question 2. How long may a recording be?** Draft 1 says two hours (with 64 MiB and 48,000 Hz, as for films). Ten minutes, the films' limit, would cut most talks and long conversations; at ordinary quality, 64 MiB already stops a stereo recording at about seventy minutes. **My lean: two hours**, and the size limit decides before it does for music. Chapter tracks are refused, as subtitles are in films; and a file written as M4A or as plain MP4 is read alike.
+*Question 2 (how long a recording may be) is answered (Nobody, allegedly, 21 October 2026): "Agreed", two hours, the session's lean. Chapter tracks stay refused and both brands are read alike, as written.*
 
 **Question 3. A payment naming your vault declaration but paid by someone else: refused, or ordinary?** Draft 4 says a payment whose "for what" (`fulfils`) is the act that declared the payee's vault must be a transfer to oneself, payer and payee the same, or it is invalid. The other choice reads it as an ordinary payment into someone's vault that fulfils nothing. **My lean: invalid.** One meaning per form, checked from the act alone. Someone paying into your vault names what they pay (a debt, an offer, your pointer), as before.
