@@ -23,7 +23,7 @@ import { encryptionSecret, toWords } from '../../../modules/carry/src/carry.ts';
 import { deliverKey } from '../../dub/src/delivery.ts';
 import { Kishib } from '../../kishib/src/kishib.ts';
 import { chainKeyAt } from '../../kishib/src/words.ts';
-import { newWordsHere } from '../../kishib/test/world.ts';
+import { changeKeysHere } from '../../kishib/test/world.ts';
 import { serve, type Running } from '../src/server.ts';
 import { KEY_CHANGED_SAY } from '../src/desk.ts';
 import { Client, newKey } from '../src/page/api.ts';
@@ -102,10 +102,7 @@ test('H80: after a change of keys in Kišib, every path of Edubba that signs wit
   // Kišib changes its keys from the paper words; Edubba is not told.
   const k = new Kishib();
   const r = await k.rotatePlan({ id: g.id, address: H[0], words: toWords(seed).join(' ') });
-  let s = await k.confirm({ plan: r.plan, digest: r.digest, ...(r.warning ? { warned: r.warning } : {}) });
-  for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.resend();
-  assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
-  const fresh = newWordsHere(k);
+  const fresh = await changeKeysHere(k, r);
 
   // On opening, said, with the kind of key (the page offers the box for the new words beside it).
   const changed = await c.ask<{ id: string; say: string; kind: string }[]>('keys check');

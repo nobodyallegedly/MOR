@@ -20,7 +20,7 @@ import { relayAt } from '../../genesis/src/transport.ts';
 import { post as barebonePost } from '../../barebone/src/post.ts';
 import { fromWords, toWords } from '../../../modules/carry/src/carry.ts';
 import { chainKeyAt } from '../src/words.ts';
-import { closeAll, dub, kishib, newWords, reader, refused, standing, start, type Relay } from './world.ts';
+import { changeKeys, closeAll, dub, kishib, reader, refused, standing, start, type Relay } from './world.ts';
 import { LAST_OF_OLD_PAPER_SAY } from '../src/kishib.ts';
 import type { Review, State } from '../src/shapes.ts';
 
@@ -41,11 +41,8 @@ after(async () => {
 async function rotateThrough(c: Awaited<ReturnType<typeof kishib>>['c'], op: string, args: Record<string, unknown>): Promise<{ review: Review; state: State; words: string[] }> {
   const review = await c.ask<Review>(op, args);
   assert.deepEqual(review.blocking, [], JSON.stringify(review.blocking));
-  let state = await c.ask<State>('confirm', { plan: review.plan, digest: review.digest, ...(review.warning ? { warned: review.warning } : {}) });
-  for (let i = 0; (state.sitting!.stage as string) === 'sent' && i < 3; i++) state = await c.ask<State>('resend');
-  assert.equal(state.sitting!.stage, 'counts', JSON.stringify(state.sitting!.lines));
-  const shown = await newWords(c);
-  state = await c.ask<State>('state');
+  const shown = await changeKeys(c, review);
+  const state = await c.ask<State>('state');
   assert.equal(state.sitting!.stage, 'done');
   await c.ask('forget');
   return { review, state, words: shown.signing };
@@ -77,17 +74,15 @@ test('someone else changes the keys with stolen paper words; the owner escapes w
     assert.match(r.signs[1], /escape endorsement .* abandoned/);
     const kept = r.sections.find((s) => s.heading.startsWith('Your lines of acts'))!;
     assert.ok(kept.lines.some((l) => /Kept\.$/.test(l.text)), JSON.stringify(kept));
-    let s = await k.c.ask<State>('confirm', { plan: r.plan, digest: r.digest });
-    for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.c.ask<State>('resend');
-    assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
-    const escape = s.sitting!.act!;
+    // H79: the escape's new paper is written before the escape and its endorsement are signed.
+    const shown = await changeKeys(k.c, r);
+    const escape = shown.act;
     // As any reader sees it, from the new home and the relay: the escape counts, the thief's change is abandoned.
     const l = await lookUp(a.id, [fresh.base, relay.base, ...H]);
     assert.deepEqual(l.resolution.links.map((x) => x.act), [a.id, escape]);
     assert.match(l.resolution.links[1].how, /escape/);
     assert.equal(await standing(p.post.id, a.id, [relay.base, fresh.base, ...H]), 'valid', 'the earlier post, kept');
     // H79: the escape commits a key of a new paper; the stolen one makes no further change.
-    const shown = await newWords(k.c);
     assert.equal(l.resolution.signingKey && Buffer.from(l.resolution.signingKey).toString('hex'), Buffer.from(signingPublic(fromWords(shown.signing))).toString('hex'));
     assert.equal(l.resolution.chainKeyCommit, chainKeyAt(fromWords(shown.chain), l.resolution.chainKeyScheme!, l.resolution.links[1].position).commit, 'the escape commits key 1 of the new paper');
     const stolen = await kishib();
@@ -139,12 +134,11 @@ test('F299: two rotations served at one position of a self-hosted identity are c
     assert.equal(contest.lines.length, 2, JSON.stringify(contest));
     assert.ok(contest.lines.some((x) => x.text.includes(mine.state.sitting!.act!)));
     assert.ok(contest.lines.every((x) => /contested/.test(x.text)));
-    let s = await k.c.ask<State>('confirm', { plan: r.plan, digest: r.digest });
-    for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.c.ask<State>('resend');
-    assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
+    // H79: the escape's new paper first, then the escape signed and sent.
+    const escaped = await changeKeys(k.c, r);
     // As a reader of its homes and relays sees it (the gauntlet's 5.7f reader): the escape counts at the new home.
     const after = await reader(me.id, [base, relay.base, fresh.base]);
-    assert.deepEqual(after.links.map((x) => x.act), [me.id, s.sitting!.act], 'with both rotations abandoned, the escape is the one left at the position: it counts');
+    assert.deepEqual(after.links.map((x) => x.act), [me.id, escaped.act], 'with both rotations abandoned, the escape is the one left at the position: it counts');
     assert.equal(await standing(p.id, me.id, [base, fresh.base, relay.base]), 'valid');
   } finally {
     await own.stop();
@@ -196,10 +190,7 @@ test('H79: an identity whose last change of keys reused its paper (as Kišib did
   const k = await kishib();
   const r = await k.c.ask<Review>('rotate plan', { id: g.id, address: H[0], words: toWords(seed).join(' ') });
   assert.ok(r.sections.some((x) => x.lines.some((l) => l.text === LAST_OF_OLD_PAPER_SAY)), JSON.stringify(r.sections));
-  let s = await k.c.ask<State>('confirm', { plan: r.plan, digest: r.digest, ...(r.warning ? { warned: r.warning } : {}) });
-  for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.c.ask<State>('resend');
-  assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
-  const shown = await newWords(k.c);
+  const shown = await changeKeys(k.c, r);
   const res = (await lookUp(g.id, H)).resolution;
   assert.equal(res.chainKeyCommit, chainKeyAt(fromWords(shown.chain), 3, 2).commit, 'it commits key 2 of the new paper');
   assert.notEqual(res.chainKeyCommit, chainKeyAt(seed, 3, 2).commit, 'not key 2 of the old one');

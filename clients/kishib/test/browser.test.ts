@@ -33,7 +33,7 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import { post as barebonePost } from '../../barebone/src/post.ts';
 import { fromWords, toWords } from '../../../modules/carry/src/carry.ts';
 import { contentSecurityPolicy } from '../src/web/headers.ts';
-import { closeAll, dub, dubBringing, edubba, everything, forms, founded, kishib, receiveShare, standing, start, type Relay } from './world.ts';
+import { changeKeys, closeAll, dub, dubBringing, edubba, everything, forms, founded, kishib, receiveShare, standing, start, type Relay } from './world.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -183,7 +183,10 @@ async function typeBack(page: Page, words: string[]) {
 
 const CHAIN_BUTTON = 'Show the new chain key’s words (a new paper)';
 
-/** After a change of keys counts (H79), by clicks: the new chain key's words, written, three typed back; then the new signing key's. */
+/**
+ * A change of keys signed by clicks (H79): the new chain key's words first, written, three typed back, before
+ * anything is signed; then, once the homes' receipts are in, the new signing key's.
+ */
 async function bothWords(page: Page): Promise<{ chain: string[]; signing: string[] }> {
   await page.getByRole('button', { name: CHAIN_BUTTON }).waitFor({ timeout: 60_000 });
   await page.getByRole('button', { name: CHAIN_BUTTON }).click();
@@ -191,6 +194,7 @@ async function bothWords(page: Page): Promise<{ chain: string[]; signing: string
   const chain = await shownWords(page);
   await page.getByRole('button', { name: 'I have written them down' }).click();
   await typeBack(page, chain);
+  await page.getByRole('button', { name: 'Show the new signing key’s words' }).waitFor({ timeout: 60_000 });
   await page.getByRole('button', { name: 'Show the new signing key’s words' }).click();
   const signing = await shownWords(page);
   await page.getByRole('button', { name: 'I have written them down' }).click();
@@ -288,11 +292,26 @@ test('the web client: a personal rotation of an identity made in Dub’s web cli
   assert.match(await page.locator('.signs').innerText(), /one rotation .* \(key 0\)/);
   await shot(page, '06-rotate-review');
 
-  // Stalled: two of three homes away.
+  // H79: confirmed, nothing is signed yet: the new chain key's words first, a new paper, written and three typed back.
+  await page.getByRole('button', { name: 'Sign it' }).click();
+  await page.getByRole('heading', { name: /first, the new paper/ }).waitFor({ timeout: 60_000 });
+  assert.match(await page.locator('.review').innerText(), /Nothing is signed yet[\s\S]*until then the old paper still works, but only to send this same change again/);
+  assert.equal((await relayAt(homes[0].base).identity(id)).chain.length, 1, 'nothing signed before the new paper is written');
+  await page.getByRole('button', { name: CHAIN_BUTTON }).click();
+  await page.locator('#words').waitFor();
+  await banner(page, 'the new chain words');
+  assert.match(await page.locator('body').innerText(), /closed before the change is sent, nothing was signed/);
+  const newChain = await shownWords(page);
+  assert.equal(newChain.length, 24);
+  await shot(page, '06b-new-chain-words');
+  await page.getByRole('button', { name: 'I have written them down' }).click();
+  await page.locator('form#typed').waitFor();
+  assert.equal(await page.locator('#words').count(), 0, 'hidden before three are asked');
+  // Stalled: two of three homes away, as the change is signed and sent.
   await homes[1].stop();
   await homes[2].stop();
   try {
-    await page.getByRole('button', { name: 'Sign it' }).click();
+    await typeBack(page, newChain);
     await page.getByRole('heading', { name: /The rotation of/ }).waitFor({ timeout: 60_000 });
     await page.locator('.review', { hasText: 'does not count yet' }).waitFor({ timeout: 60_000 });
     await banner(page, 'waiting for the homes');
@@ -306,23 +325,10 @@ test('the web client: a personal rotation of an identity made in Dub’s web cli
   }
   await page.getByRole('button', { name: 'Send it again (the same bytes)' }).click();
   await settled(page);
-  await page.getByRole('button', { name: CHAIN_BUTTON }).waitFor({ timeout: 60_000 });
+  await page.getByRole('button', { name: 'Show the new signing key’s words' }).waitFor({ timeout: 60_000 });
   await shot(page, '08-counts');
   for (const h of homes) assert.equal((await relayAt(h.base).identity(id)).chain.length, 2, 'one rotation at every home');
-  // H79: the new chain key's words first, a new paper; the old one spent.
-  await page.getByRole('button', { name: CHAIN_BUTTON }).click();
-  await page.locator('#words').waitFor();
-  await banner(page, 'the new chain words');
-  assert.match(await page.locator('body').innerText(), /The old paper is spent/);
-  const newChain = await shownWords(page);
-  assert.equal(newChain.length, 24);
-  await shot(page, '09a-new-chain-words');
-  await page.getByRole('button', { name: 'I have written them down' }).click();
-  await page.locator('form#typed').waitFor();
-  assert.equal(await page.locator('#words').count(), 0, 'hidden before three are asked');
-  await typeBack(page, newChain);
-  await page.getByRole('button', { name: 'Show the new signing key’s words' }).waitFor({ timeout: 60_000 });
-  // Then the new signing key's.
+  // Then, once it counts, the new signing key's.
   await page.getByRole('button', { name: 'Show the new signing key’s words' }).click();
   await page.locator('#words').waitFor();
   await banner(page, 'the new words');
@@ -400,8 +406,8 @@ test('the escape and the succession, by clicks in the web client', async () => {
   // A thief rotates with the stolen words (in a Kišib of its own); the owner escapes, by clicks, to a new home.
   const thief = await kishib();
   const tr = await thief.c.ask<any>('rotate plan', { id: a.id, address: H[0], words: c1.join(' ') });
-  let ts = await thief.c.ask<any>('confirm', { plan: tr.plan, digest: tr.digest });
-  for (let i = 0; ts.sitting.stage === 'sent' && i < 3; i++) ts = await thief.c.ask<any>('resend');
+  // The thief's Kišib, as the owner's: a new paper written first (H79), then the change signed and sent.
+  await changeKeys(thief.c, tr);
   const fresh = spare;
   try {
     await door(page, 'Escape a contested position');
@@ -414,7 +420,8 @@ test('the escape and the succession, by clicks in the web client', async () => {
     assert.match(await page.locator('.review').innerText(), /it counts now/);
     await shot(page, '25-escape-review');
     await page.getByRole('button', { name: 'Sign it' }).click();
-    await page.getByRole('button', { name: CHAIN_BUTTON }).waitFor({ timeout: 60_000 });
+    // H79: the escape's new paper first; only then are the escape and its endorsement signed.
+    await bothWords(page);
     await shot(page, '26-escape-counts');
     const l = await lookUp(a.id, [fresh.base, relay.base, ...H]);
     assert.match(l.resolution.links.at(-1)!.how, /escape/);

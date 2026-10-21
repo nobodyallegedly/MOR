@@ -128,7 +128,7 @@ const vaultFields = `<details{open}><summary>The vault (optional): keep it, chan
 /** Said first under Change the vault (H40): changing the vault, or its limit, is a change of keys. */
 export const VAULT_SAY = [
   'Changing the vault or its limit is a change of keys. Only the chain key changes the vault (Money rules 2 and 3), so a thief holding only the signing key can never move it.',
-  'You need the chain key’s paper, your newest one (written when the identity was made, or shown at its last change of keys). Kišib signs a change of keys that keeps every line of acts and declares the vault anew (or removes it), then shows two new sets of 24 words, each once: the new chain key’s (a new paper, for the next change; the old paper is then spent) and the new signing key’s, to give to Dub and Damgar.',
+  'You need the chain key’s paper, your newest one (written when the identity was made, or shown at its last change of keys). Kišib first shows two new sets of 24 words, each once: the new chain key’s (a new paper, for the next change; the old paper is then spent), written down before anything is signed; then it signs a change of keys that keeps every line of acts and declares the vault anew (or removes it), and once the homes accept it shows the new signing key’s, to give to Dub and Damgar.',
   'The old signing key’s words stop counting once the homes receipt the change.',
 ];
 
@@ -243,7 +243,9 @@ export function sitting(s: Sitting, web: boolean): string {
     : '';
   const acts: string[] = [];
   if (s.stage === 'sent') acts.push(btn('refresh', 'Look again'), btn('resend', 'Send it again (the same bytes)', true));
-  if (s.stage === 'counts' && s.kind !== 'confirm') acts.push(btn('show words', s.kind === 'collective' ? 'Show the collective’s new signing key’s words' : s.words === 'chain' ? 'Show the new chain key’s words (a new paper)' : 'Show the new signing key’s words', true));
+  // H79: the new paper first, before anything is signed; the signing key's words once the receipts are in.
+  if (s.stage === 'paper') acts.push(btn('show words', 'Show the new chain key’s words (a new paper)', true));
+  if (s.stage === 'counts' && s.kind !== 'confirm') acts.push(btn('show words', s.kind === 'collective' ? 'Show the collective’s new signing key’s words' : 'Show the new signing key’s words', true));
   if (s.stage === 'shown') acts.push(btn('show words', 'Show them again'));
   if (s.stage === 'waiting' && q) {
     if (!q.room) acts.push(btn('gather', 'Look for the members’ shares', q.have < q.need));

@@ -8,7 +8,7 @@ import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SPEC } from '../../damgar/src/specs.ts';
 import { closeAll, developer, kishib, start, type Relay } from './world.ts';
-import { newWords } from '../../kishib/test/world.ts';
+import { changeKeys } from '../../kishib/test/world.ts';
 import type { Done, Review, State } from '../src/shapes.ts';
 import type { Tracked } from '../src/track.ts';
 
@@ -45,11 +45,8 @@ test('a change of keys in Kišib keeps Ummia’s line, given its card; Ummia tak
   const review = await k.c.ask<{ plan: string; digest: string; sections: { heading: string; lines: { text: string }[] }[] }>('rotate plan', { id: d.id, address: H[0], words: d.dub.chainWords.join(' '), cards });
   const said = JSON.stringify(review.sections);
   assert.ok(said.includes(line.latest!), 'the card’s line is among those kept');
-  let s = await k.c.ask<any>('confirm', { plan: review.plan, digest: review.digest });
-  if (s.sitting.stage === 'sent') s = await k.c.ask<any>('resend');
-  assert.equal(s.sitting.stage, 'counts', JSON.stringify(s.sitting.lines));
-  // H79: the new chain key's words first (a new paper), then the signing key's.
-  const words = (await newWords(k.c)).signing;
+  // H79: the new chain key's words first, before signing (a new paper), then the signing key's once it counts.
+  const words = (await changeKeys(k.c, review)).signing;
 
   // Ummia: its key was changed elsewhere, said; nothing signed; then the new words taken.
   assert.equal((await c.ask<{ current: boolean }>('check')).current, false);

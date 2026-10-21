@@ -66,33 +66,53 @@ export async function edubba(homes: string[], relays: string[]): Promise<{ app: 
   return { app, c, dir };
 }
 
+type Sat = { sitting: { positions?: number[]; stage: string; act: string | null; words?: string; lines: { text: string }[] } };
+
 /**
- * After a change of keys that counts (H79): the new chain key's words shown,
- * written, three typed back; then the new signing key's, the same. Both sets,
- * as a person writes them down.
+ * A change of keys (or an escape) confirmed in Kišib, to the end (H79,
+ * Nobody, allegedly, 21 October 2026: "confirming the new chain key comes
+ * before signing the rotation, confirming the new signing key can come
+ * after"): the new paper's words shown, written, three typed back, and only
+ * then the change signed and sent; sent again until it counts; then the new
+ * signing key's words, the same. Both sets, as a person writes them down.
  */
-export async function newWords(c: Client): Promise<{ chain: string[]; signing: string[] }> {
+export async function changeKeys(c: Client, review: { plan: string; digest: string; warning?: string | null }): Promise<{ chain: string[]; signing: string[]; act: string }> {
+  let s = await c.ask<Sat>('confirm', { plan: review.plan, digest: review.digest, ...(review.warning ? { warned: review.warning } : {}) });
+  assert.equal(s.sitting.stage, 'paper', 'the new paper first, before anything is signed');
+  assert.equal(s.sitting.act, null, 'nothing signed yet');
   const ch = await c.ask<{ words: string[]; which?: string }>('words show');
-  assert.equal(ch.which, 'chain', 'the new chain key’s words come first');
-  let s = await c.ask<{ sitting: { positions: number[]; stage: string } }>('words written');
-  s = await c.ask('words typed', { typed: s.sitting.positions.map((p) => ch.words[p - 1]) });
-  assert.equal(s.sitting.stage, 'counts', 'then the signing key’s words wait to be shown');
+  assert.equal(ch.which, 'chain');
+  s = await c.ask<Sat>('words written');
+  s = await c.ask<Sat>('words typed', { typed: s.sitting.positions!.map((p) => ch.words[p - 1]) });
+  for (let i = 0; s.sitting.stage === 'sent' && i < 3; i++) s = await c.ask<Sat>('resend');
+  assert.equal(s.sitting.stage, 'counts', JSON.stringify(s.sitting.lines));
+  const act = s.sitting.act!;
   const sg = await c.ask<{ words: string[]; which?: string }>('words show');
   assert.equal(sg.which, 'signing');
-  s = await c.ask('words written');
-  s = await c.ask('words typed', { typed: s.sitting.positions.map((p) => sg.words[p - 1]) });
+  s = await c.ask<Sat>('words written');
+  s = await c.ask<Sat>('words typed', { typed: s.sitting.positions!.map((p) => sg.words[p - 1]) });
   assert.equal(s.sitting.stage, 'done');
-  return { chain: ch.words, signing: sg.words };
+  return { chain: ch.words, signing: sg.words, act };
 }
 
 /** The same, for a Kišib held in this process. */
-export function newWordsHere(k: { showWords(): { words: string[]; which?: string }; written(): { sitting: { positions?: number[] } | null }; typed(a: { typed: string[] }): unknown }): { chain: string[]; signing: string[] } {
+export async function changeKeysHere(
+  k: { confirm(a: { plan: string; digest: string; warned?: string }): Promise<Sat | unknown>; showWords(): { words: string[]; which?: string }; written(): unknown; typed(a: { typed: string[] }): Promise<unknown>; resend(): Promise<unknown>; state(): unknown },
+  review: { plan: string; digest: string; warning?: string | null },
+): Promise<{ chain: string[]; signing: string[] }> {
+  const st = () => k.state() as Sat;
+  await k.confirm({ plan: review.plan, digest: review.digest, ...(review.warning ? { warned: review.warning } : {}) });
+  assert.equal(st().sitting.stage, 'paper');
   const ch = k.showWords();
   assert.equal(ch.which, 'chain');
-  k.typed({ typed: k.written().sitting!.positions!.map((p) => ch.words[p - 1]) });
+  k.written();
+  await k.typed({ typed: st().sitting.positions!.map((p) => ch.words[p - 1]) });
+  for (let i = 0; st().sitting.stage === 'sent' && i < 3; i++) await k.resend();
+  assert.equal(st().sitting.stage, 'counts', JSON.stringify(st().sitting.lines));
   const sg = k.showWords();
   assert.equal(sg.which, 'signing');
-  k.typed({ typed: k.written().sitting!.positions!.map((p) => sg.words[p - 1]) });
+  k.written();
+  await k.typed({ typed: st().sitting.positions!.map((p) => sg.words[p - 1]) });
   return { chain: ch.words, signing: sg.words };
 }
 

@@ -38,6 +38,7 @@ export interface Sitting {
   /** The act signed, if any: the rotation (or escape, or confirmation). */
   act: string | null;
   stage:
+    | 'paper' // the new chain key's words to write down and type back: nothing signed yet (H79)
     | 'sent' // signed and sent, waiting for the homes' receipts
     | 'counts' // the homes' receipts are in: the new words can be shown
     | 'shown' // the new words shown, hidden now, three asked back

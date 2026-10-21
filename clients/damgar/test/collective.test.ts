@@ -9,7 +9,7 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { apps, closeAll, damgar, dub, edubba, everything, kishib, refused, start, type Relay } from './world.ts';
-import { newWords } from '../../kishib/test/world.ts';
+import { changeKeys } from '../../kishib/test/world.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { ACCEPTABLE } from '../src/specs.ts';
 import { TestNode } from './node.ts';
@@ -113,10 +113,7 @@ test('a member acts for the collective from Damgar with their own key: within th
   const rv2 = await k.c.ask<any>('rotate plan', { id: A.id, address: H[0], words: A.chainWords.join(' '), cards });
   // Two private lines (Edubba's and Damgar's: each app's card names a latest act its homes never received, so Kišib cannot
   // tie the private act they hold to it) are left out, as the warning says; see docs/h80-report.md. What matters here is Damgar's refusal.
-  let ks = await k.c.ask<any>('confirm', { plan: rv2.plan, digest: rv2.digest, ...(rv2.warning ? { warned: rv2.warning } : {}) });
-  for (let i = 0; ks.sitting.stage === 'sent' && i < 3; i++) ks = await k.c.ask<any>('resend');
-  assert.equal(ks.sitting.stage, 'counts', JSON.stringify(ks.sitting.lines));
-  const fresh = await newWords(k.c);
+  const fresh = await changeKeys(k.c, rv2);
   const atHomes = async () => (await relayAt(H[0]).feed({ signer: A.id })).items.length;
   const before3 = await atHomes();
   await refused(g.c.ask('collective promise', { ...big, digest: s2.digest }), /changed elsewhere.*Nothing was signed/);

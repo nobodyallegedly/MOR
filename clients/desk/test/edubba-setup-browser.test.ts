@@ -29,7 +29,7 @@ import { verifyRelease } from '../../repo/src/release.ts';
 import { serve, type Running } from '../src/server.ts';
 import { Kishib } from '../../kishib/src/kishib.ts';
 import { chainKeyAt } from '../../kishib/src/words.ts';
-import { newWordsHere } from '../../kishib/test/world.ts';
+import { changeKeysHere } from '../../kishib/test/world.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -189,11 +189,8 @@ test('After Kišib: the record says the signing key was changed elsewhere, and t
   // Kišib changes its keys from the paper words.
   const k = new Kishib();
   const r = await k.rotatePlan({ id: g.id, address: homes[0].base, words: toWords(seed).join(' ') });
-  let s = await k.confirm({ plan: r.plan, digest: r.digest });
-  for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.resend();
-  assert.equal(s.sitting!.stage, 'counts');
-  // H79: the new chain key's words first (a new paper), then the signing key's.
-  const fresh = newWordsHere(k).signing;
+  // H79: the new chain key's words first, before signing (a new paper), then the signing key's once it counts.
+  const fresh = (await changeKeysHere(k, r)).signing;
   // Edubba's record: changed elsewhere, the box for the new words.
   await page.reload();
   await page.click('[data-action=tab][data-tab=identities]');

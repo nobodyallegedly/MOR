@@ -7,7 +7,7 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { closeAll, kishib, person, start, type Relay } from './world.ts';
-import { newWords } from '../../kishib/test/world.ts';
+import { changeKeys } from '../../kishib/test/world.ts';
 import { TestNode } from './node.ts';
 import type { Account, PaymentShown, Rails, ToSign } from '../src/shapes.ts';
 import { SPEC } from '../src/specs.ts';
@@ -49,11 +49,8 @@ test('a vault declared in Kišib, shown in Damgar; above its limit, a payment go
   const review = await k.c.ask<{ plan: string; digest: string; sections: { heading: string; lines: { text: string }[] }[] }>('rotate plan', { id: bob.id, address: H[0], words: bob.dub.chainWords.join(' '), cards, vault: 'set', vaultUnit: SPEC.units.regtest, vaultNetwork: '3', vaultNode: vault.key, vaultLightningLimit: '1000' });
   const v = review.sections.find((s) => s.heading.startsWith('The vault'))!;
   assert.ok(v.lines.some((l) => /a single payment above 1 000 regtest satoshis must go to the vault/.test(l.text)), JSON.stringify(v));
-  let s = await k.c.ask<any>('confirm', { plan: review.plan, digest: review.digest });
-  if (s.sitting.stage === 'sent') s = await k.c.ask<any>('resend');
-  assert.equal(s.sitting.stage, 'counts', JSON.stringify(s.sitting.lines));
-  // H79: the new chain key's words first (a new paper), then the signing key's.
-  const words = (await newWords(k.c)).signing;
+  // H79: the new chain key's words first, before signing (a new paper), then the signing key's once it counts.
+  const words = (await changeKeys(k.c, review)).signing;
   // Damgar takes the new words; its Settings show the vault, read, never changed there.
   await bob.damgar.c.ask('renew', { words: words.join(' ') });
   await bob.dub.c.ask('renew', { words: words.join(' ') });
