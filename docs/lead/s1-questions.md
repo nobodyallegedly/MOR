@@ -2,9 +2,11 @@
 
 *From `docs/freeze-ready-drafts-report.md` (branch `claude/freeze-ready-texts`, pull request 83), 21 October 2026. Numbers are the report's. The lead's sorting, for Nobody, allegedly, to accept or change; nothing here is decided until marked so.*
 
-## A. Verdicts: for Nobody, allegedly, by theme, one at a time
+## A. Verdicts: by theme, one at a time
 
-1. **Keepers** (the redefinition's details): ~~39~~ decided, F363 (rule 42 lets almost no keeper record count: receipts, rotations and posts name no agreement in `objects`), 41 (how an anchor "of the act itself" shows a deadline missed), 40 (several keepers under a threshold), 7 (a keeper's own rotation and its earlier records), 42 (a deal with no keeper), 25's open point (one sequence per keeper).
+*Nobody, allegedly, 21 October 2026: "I'll contribute where I can, you'll decide the rest." The lead decides, records each as taken under delegation, and brings him what touches a principle or his own earlier words.*
+
+1. **Keepers** (the redefinition's details): all decided: 39 (F363); 41, 40, 7, 42, 25 (F364, taken by the lead under delegation).
 2. **What a disputed act under a revoked grant confers** (F359's follow-through): 24.
 3. **Collectives' member keys in Money and Agreements** (F353, F358): 20 with 43 (32 is 20), 10.
 4. **Identity's checks:** 4 (an act under a pending rotation), 5 (dishonesty: and or or).

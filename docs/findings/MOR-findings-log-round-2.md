@@ -28,6 +28,18 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F364. Keepers, the remaining details (21 October 2026; S1's questions 7, 25, 40, 41, 42)
+
+**Delegated by Nobody, allegedly, 21 October 2026:** "Let's do this… I'll contribute where I can, you'll decide the rest." **Taken by the project lead**, each read in Agreements 17 and Identity 15 first; none widens what a keeper may do.
+
+1. **An anchor shows a deadline met, not missed (question 41).** F358's words: "a deadline is shown missed by an anchor, of the act itself or of a keeper's sequence". An anchor shows only that something existed by a point, never that it did not exist before. So: an anchor of the act itself shows the act made in time (a deadline met); a deadline missed is shown only by a keeper's anchored sequence that holds no record of the act up to a point past the deadline; a keeper's word alone never says late (F358 unchanged there). *Not chosen:* an act proving its own lateness by naming something that exists only after the deadline (a real proof, but a new mechanism). *Put to Nobody, allegedly, in the reply, since it reads his words of F358.*
+2. **A keeper's own later rotation (question 7).** As decided in round 2's Q2 (G2, "Agreed"), not as the session leaned: a keeper's record that a rule reads to place an act, or that a relied-on version's completeness rests on, keeps the effect the rule gave it whatever the keeper's later rotation disowned, shown as a dispute ("a witness chosen in advance cannot un-witness"). Agreements 17 states it; Identity's rule that evidence counts only while its signer's chain keeps it gains this as its stated exception, in both texts' words alike. The session's lean narrowed it to a collective's line; that would have undone a decided rule.
+3. **Several keepers (question 40).** Each keeper's record is judged alone, against that keeper's own record of the rotation; the agreement's rule (any one, a threshold, all) counts how many keepers' records stand before their own record of it.
+4. **One sequence per keeper (question 25).** A keeper keeps one sequence for its records (a MUST for keepers); records of two sequences are never ordered against each other, so a keeper's second sequence protects nothing against the first. The other details as S1 wrote them: one record per act, public, chained by `prev`, its named signer matching the act's.
+5. **A deal with no keeper (question 42).** A declaration's line decides only what no relied-on version holds: what others relied on stays complete (rule 47) before any declaration's line.
+
+**Where:** the next pass on the freeze-ready texts (Agreements 17's keepers section and rule 33, Identity 15's evidence rule).
+
 ## F363. A keeper counts for every act that belongs to its agreement, however the act links to it (21 October 2026; S1's question 39)
 
 **Found by the freeze-ready texts session** (S1, question 39): Agreements rule 42 counts a keeper record only where "the keeper is one named by an agreement the act's `objects` names". Many acts that belong to a deal link to it otherwise: a receipt names its claim (field 9), a claim names its agreement in its own field. Their records could never count, though the texts rely on them; and rule 7's "a keeper that recorded both" two work claims could never be met.
