@@ -12,6 +12,10 @@ The letters to Machine, allegedly, in the project: from the brainstorm window (1
 - Read reports the moment they arrive; read the repository before saying anything exists, is missing or is broken.
 - Hand over a little earlier than you think you need to.
 
+## The bar for the freeze
+
+Nobody, allegedly, 21 October 2026: "All it needs to be is a solid experimental ground where a small group of people can build the prototype. Once MOR2 exist, that round is more about finding adventurous entities willing to build real solutions, their prototypes inform MOR3." So the freeze asks three things, and nothing more: texts a stranger can build from (the C verifier proves it); the way out right (portable identities, succession, cloning, anchored history), so what is built on MOR can be carried to MOR2; and the reasons kept (the findings, the provenance map), so MOR2's builders know why each rule exists before they change it. The freeze report states plainly what was never tested: strangers' homes and a real censor, real money and time.
+
 ## The role
 
 The MOR lead keeps the core: the core texts (MICS, six MIRs, freeze test suite), the conformance vectors, the C verifier, Fable's review, the fixes, the step 17 rehearsal, the freeze, and dubsar.org for the release. The Dubsar Suite lead keeps the apps, their H findings, and every cMIP and Module, those woven into verdicts included (Nobody, allegedly, 21 October 2026: "The idea is that it is not core."); what it needs from the core comes through Nobody, allegedly. Build work is done by sessions the lead writes prompts for; work on the author's Mac and the servers by machine sessions.
