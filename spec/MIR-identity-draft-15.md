@@ -35,7 +35,7 @@ None beneath it. Identity defines the envelope as far as it needs it; the Envelo
 - **Identity hash.** The hash of an identity's genesis act. It is the identity.
 - **Signing key.** The key that signs everyday acts. It cannot change the identity chain.
 - **Chain key.** A key from a post-quantum family, committed in advance by its hash, revealed and used once, to sign a rotation or a chain signature.
-- **Scoped key.** A key of an identity that an act of a higher MIR installs, limited to a scope that MIR defines: a grant key, a collective's or a person's (a payee's grant to a deal's split service among them), installed by its grant and removed by its revocation (Agreements). It signs everyday acts in the identity's name, never an identity-chain act, and only that MIR says whether it counts. *It is added and removed by everyday acts of the identity's signing key (for a grant key, the grant and its revocation), never by a rotation: no chain key is spent on it. The act that installed it is judged by the next rotation like any act of the key it replaces (rules 33 to 35), so a scoped key installed by a thief who stole the signing key is void once the owner rotates without keeping it.*
+- **Scoped key.** A key of an identity that an act of a higher MIR installs, limited to a scope that MIR defines: a grant key, a collective's or a person's (a payee's grant to a deal's split service among them), installed by its grant and removed by its revocation (Agreements rules 73 to 80), or, for a collective holder's member key, named by the holder's signature of the collective's founding or a clone and replaced by a later version (Agreements rule 73). It signs everyday acts in the identity's name, never an identity-chain act, and only that MIR says whether it counts. *It is added and removed by everyday acts (for a grant key, the grant and its revocation; for a member key, the holder's signature and a later version), never by a rotation: no chain key is spent on it. The act that installed it is judged by the next rotation like any act of the key it replaces (rules 33 to 35), so a scoped key installed by a thief who stole the signing key is void once the owner rotates without keeping it.*
 
 ### Chains and sequences
 
@@ -399,7 +399,7 @@ If it lies within the rotation's kept ancestry and is not listed as disowned, it
 If it lies outside the kept ancestry, or within it but listed as disowned, it is void, unless:
 
 - another identity acknowledged it (Envelopes; by an act of a type the Identity, Money or Agreements MIR defines, such as a witness act);
-- or a named keeper recorded it before recording the rotation (Agreements: the keeper record, and rule 42);
+- or a named keeper recorded it before recording the rotation (Agreements: the keeper record, type 2, and Agreements rules 41 and 42);
 
 then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements), and only while its own signer's chain keeps it valid (below).
 
@@ -413,7 +413,7 @@ A signer's own acts keep rule 34 unchanged: disowned but relied on, they stay vi
 
 *Rule 34 protects those who relied on a signer's own acts; it was never meant to keep alive the evidence others rely on. Read that way, a thief holding a home operator's signing key signs an objection to the owner's homeless rotation, an accomplice witnesses it, the operator rotates and disowns it, and the owner who lost the signing key, the very owner the homeless path exists for, never leaves. The same would keep a forged log summary "audited", and a thief's post disputed for ever. Receipt check 6 says this of receipts; this rule says it of all five kinds. Honest evidence loses nothing: a rotation keeps everything its signer does not disown.*
 
-*Its pair is in Agreements: an act of another identity that a collective's line placed keeps, for that collective, the effect the line gave it, whatever its signer's later rotation kept or disowned; its status here is unchanged, and clients show it as a dispute on the line. That rule is Agreements'.*
+*Its pair is in Agreements (Agreements rule 6, and "Made before, made after", 4): an act of another identity that a collective's line placed keeps, for that collective, the effect the line gave it, whatever its signer's later rotation kept or disowned; its status here is unchanged, and clients show it as a dispute on the line. That rule is Agreements'.*
 
 #### Rule 35. Sequences a rotation does not name
 

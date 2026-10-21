@@ -166,3 +166,150 @@
 | Routes across rails | F267 |
 | Theft of the signing key | F169, F176, F181 |
 
+### Agreements draft 17 (from draft 16)
+
+| Rule or section | Findings |
+| --- | --- |
+| (header: the drafts' notes) | F1, F132, F241, F242, F249, F250, F251, F252, F255, F259, F260, F261, F262, F263, F264, F265, F268, F270, F271, F273, F274, F279, F280, F282, F284, F285, F302, F303, F304, F305, F307, F308, F309, F310, F311, F312, F313, F314, F315, F316, F317, F318, F319, F320, F327, F328, F351, F353 |
+| How to read this draft | F265, F353 |
+| Dependencies | F11 |
+| Agreements and signing | F107, F110, F118, F240, F261 |
+| Works, stakes and selling | F121, F124, F126, F127, F128, F237, F238, F239, F240, F241, F252, F253, F259, F261, F284, F307, F309, F310, F327 |
+| Money and splits | F64, F119, F121, F123, F124, F184, F193, F194, F213, F271, F280 |
+| Judges, keepers and time | F69, F109, F121, F249, F250 |
+| Collectives | F103, F104, F106, F107, F109, F121, F124, F250, F302, F310, F313 |
+| A collective's acts, in order | F106, F109, F126, F127, F128, F318 |
+| Grants | F128, F129, F131, F320 |
+| Ending | F121, F124, F125, F126, F262, F263, F265 |
+| rule 1 | F74, F107 |
+| rule 6 | F57, F186, F188, F190, F192, F297, F302, F314 |
+| rule 7 | F218, F254 |
+| rule 8 | F309, F316 |
+| rule 9 | F150, F162, F165, F168, F171, F178, F182, F190, F266 |
+| rule 10 | F73, F132, F214, F217, F223, F224, F242, F310, F316 |
+| rule 11 | F80, F113, F215, F219, F240, F255, F261, F264, F268 |
+| rule 12 | F126, F127, F128, F131, F132, F188, F242 |
+| rule 13 | F193, F237, F240, F252, F253, F259, F261 |
+| rule 14 | F72, F121, F237, F247, F252, F256, F258, F270, F280, F284, F285 |
+| rule 15 | F107, F129, F193, F194, F216, F235, F244, F248, F249, F250, F254, F256, F257, F262, F263, F265 |
+| rule 16 | F46, F68, F121, F123, F124, F125, F128, F129, F130, F235, F250 |
+| rule 17 | F248, F249, F250, F260, F304 |
+| rule 18 | F250, F260 |
+| rule 19 | F112, F116, F119, F184, F193, F194 |
+| rule 20 | F121 |
+| rule 21 | F150, F175 |
+| rule 22 | F75, F115, F116, F119, F184, F193, F194, F210, F218, F280, F298, F312, F318 |
+| rule 23 | F235, F244, F248, F249, F250 |
+| rule 24 | F50 |
+| rule 25 | F64, F242, F265, F271 |
+| rule 28 | F42, F140, F211, F213, F214, F270, F307 |
+| rule 29 | F116, F280 |
+| rule 30 | F194, F214, F217 |
+| rule 31 | F129, F249, F250 |
+| rule 35 | F121, F124, F189, F206, F245, F246, F249, F250 |
+| rule 36 | F121 |
+| rule 42 | F58 |
+| rule 45 | F124, F125, F186, F270, F307, F309, F310, F311, F315, F316 |
+| rule 46 | F104, F307, F308, F311 |
+| rule 47 | F107, F121, F124, F186, F188, F189, F190, F192, F196, F206, F221, F222, F245, F246, F248, F263, F297, F302, F314 |
+| rule 48 | F107, F270, F273, F274, F279, F280, F282, F307, F309, F312, F313, F314 |
+| rule 94 | F59, F104, F282, F298, F302, F304, F307, F308, F313, F314, F316, F328 |
+| rule 95 | F215, F270, F274, F280, F282, F302, F303, F309, F310, F312, F313, F318, F328, F329 |
+| rule 96 | F189, F309, F313, F314, F315, F328, F329 |
+| rule 97 | F311, F314, F327 |
+| rule 52 | F110, F118 |
+| rule 54 | F69 |
+| rule 55 | F121, F124, F308, F310 |
+| rule 57 | F126, F127, F128, F131, F318, F328, F329 |
+| rule 58 | F127, F128, F142, F156, F298, F304 |
+| rule 59 | F77, F96, F97 |
+| rule 60 | F100, F103, F106, F109, F115, F121, F122, F128, F156, F162, F353 |
+| rule 61 | F96, F105, F121, F308, F311, F313, F328 |
+| 11. Tiers and clones | F103 |
+| rule 62 | F106, F121, F124, F126, F128, F178, F213, F248, F249, F250, F307, F309, F316 |
+| rule 63 | F106, F124, F309, F316 |
+| rule 64 | F96, F104, F121, F122, F307, F319 |
+| rule 65 | F96, F105, F109, F121, F307, F308, F311, F313, F316, F328 |
+| rule 66 | F103, F105, F122, F270, F307 |
+| rule 67 | F107, F121, F122, F124, F125, F172, F178, F250 |
+| rule 68 | F121, F124, F140, F270, F307, F310, F311, F318 |
+| rule 69 | F121, F185, F308, F311, F317 |
+| rule 70 | F96, F105, F109, F121, F128, F185, F187, F302 |
+| rule 71 | F109, F128, F195, F207 |
+| rule 72 | F106, F127 |
+| rule 73 | F128, F129, F130, F320, F327, F338, F351, F353 |
+| rule 74 | F103 |
+| rule 75 | F128 |
+| rule 76 | F76, F128, F129, F131 |
+| rule 77 | F129, F295 |
+| rule 78 | F142 |
+| rule 79 | F128, F131 |
+| rule 80 | F128, F298, F320 |
+| rule 81 | F121, F308, F328 |
+| rule 83 | F96, F105, F121 |
+| rule 84 | F300, F305 |
+| rule 85 | F105, F178, F279, F311, F313, F328, F330 |
+| rule 86 | F172 |
+| rule 87 | F121, F172, F279, F302, F313 |
+| rule 88 | F172, F189 |
+| rule 89 | F105, F279, F313 |
+| rule 91 | F121, F124, F125, F126, F127, F128, F131, F132, F162, F189, F262, F265, F303, F308, F310, F311, F316, F330, F331 |
+| rule 92 | F125, F126, F303 |
+| rule 93 | F185, F187, F189, F190, F197, F242, F255, F311, F317 |
+| Made before, made after | F109, F127, F128, F131, F132, F156, F297, F298, F302, F304, F314, F316, F327, F329 |
+| Part four: act formats | F110, F118, F121, F124, F126, F128, F129, F132, F140, F188, F190, F197, F207, F208, F211, F215, F217, F237, F240, F303, F309, F315, F327, F331 |
+| Terms (type 0) | F59, F103, F104, F105, F106, F107, F109, F115, F121, F124, F125, F126, F127, F128, F129, F130, F140, F150, F172, F183, F186, F188, F189, F190, F213, F219, F246, F248, F249, F250, F284, F307, F308, F309, F311, F314, F316, F327, F328, F353 |
+| Signature (type 1) | F302, F309, F310, F314, F353 |
+| Standing offer (type 6) | F127, F207, F215, F216, F219, F225, F237, F261, F264 |
+| Work claim (type 3) | F218 |
+| Stake transfer (type 4) | F217, F224, F297, F302, F303, F310, F316 |
+| Issuance offer (type 26) | F189, F309, F314, F315, F316, F329 |
+| Proxy (type 27) and revocation of a proxy (type 28) | F327 |
+| Split plan and split (type 8) | F119, F121, F124, F125, F165, F175, F178, F213, F214, F217, F218, F235, F244, F248, F249, F250, F271, F280, F312 |
+| Grant (type 9) and revocation (type 10) | F124, F125, F128, F129, F130, F235, F250, F297, F302, F303, F320 |
+| Release (type 5) | F124, F125, F308, F310, F329 |
+| Negotiation message (type 18) | F110, F118 |
+| Contest (type 14) | F172, F237, F240, F253 |
+| Settlement request (type 22) and fork settlement (type 23) | F190, F192 |
+| Resignation (type 16) | F109, F187, F189, F195, F207 |
+| Record (type 17) | F100, F109, F127, F189, F302, F316, F327, F329 |
+| Abandonment declaration (type 13) | F121, F172, F189, F279, F302, F313 |
+| Collectives in the identity chain | F106, F127, F185, F187, F189, F302 |
+| Notice (type 24) | F197, F208 |
+| Fork (type 19) | F125, F126, F127, F128, F131, F132, F144, F181, F197, F198, F199, F297, F298, F303, F304, F310 |
+| Closing (type 20) | F124, F125, F126, F127, F128, F131, F132, F143, F161, F189, F191, F197, F219, F262, F265, F298, F302, F303, F304 |
+| Creditor's release (retired type 21) | F126 |
+| Decided in text only, not yet in code | F282, F295, F302, F304, F305, F307, F316, F318, F320, F327 |
+| Tasks | F63, F136, F166, F172, F173, F178, F182, F250, F320 |
+| Reasoning | F17, F71, F96, F100, F103, F104, F105, F106, F107, F109, F121, F122, F123, F124, F125, F126, F127, F128, F150, F165, F193, F194, F297, F302, F303, F304, F307, F310, F311, F318 |
+| Open technical parameters | F124, F128, F129, F254 |
+| Making an agreement | F118 |
+| Works and stakes | F284, F285 |
+| Selling | F113, F128, F131 |
+| Splits | F116, F119, F121, F123, F124, F129, F130, F184, F193, F194, F249, F250, F270, F271, F279, F280, F312 |
+| Time, conditions and judges | F121 |
+| Changing an agreement | F107, F121, F302, F307, F308, F309, F310, F314, F315, F316, F327, F328 |
+| Public domain | F121, F124, F308, F310 |
+| A collective | F96, F124, F126, F127, F128, F318, F328, F329 |
+| Tiers and clones | F103, F104, F106, F115, F121, F122, F124, F311, F317 |
+| Members joining and leaving | F100, F124, F195 |
+| Succession | F300, F305, F328 |
+| Abandonment | F105, F302, F313, F328 |
+| How a collective ends | F121, F124, F125, F126, F127, F128, F131, F132, F198, F199, F303, F304 |
+| A broken collective | F185, F187, F189, F197 |
+| Forked deals | F186, F188, F189, F192, F196 |
+| Open in this draft | F252, F259, F260, F261, F262, F263, F264, F265, F270, F271, F282, F284, F285, F302, F303, F308, F309, F310, F311, F315, F318, F320, F327, F328 |
+
+### Added in the freeze-ready drafts
+
+| Text and rule or section | Findings |
+| --- | --- |
+| Agreements 17, "6. Keepers" (its *In short*), rules 33, 37, 41, 42 | F358 (3 and 4), with F57, F58, F314 |
+| Agreements 17, "Keeper record (type 2)" | F358 (3 and 4), the formats proposal's OF21 (a, d) |
+| Agreements 17, rule 76 and "Revocation (type 10)" | F359, F352 (A′), F57 |
+| Agreements 17, rule 79 | F359 |
+| Agreements 17, "Dependencies", "Only acts valid in their own format count" | F295, F334 (its note on Agreements' count) |
+| Agreements 17, rule 73 (a grant to oneself) | F351 |
+| Agreements 17, every "area reaching …" where draft 16 said "lane" | the session's prompt ("area" only), F351 |
+| Identity 15, rule 34 (pointer to Agreements rules 41 and 42), "Scoped key" (a member key) | F358, F353 |
+| Money 11, rule 7 (the member key named by the holder's signature) | F358 (1), F353 |
