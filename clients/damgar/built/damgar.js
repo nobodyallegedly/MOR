@@ -2336,8 +2336,8 @@ function getUint8ArrayMemory0() {
 function handleError(f, args) {
   try {
     return f.apply(this, args);
-  } catch (e2) {
-    const idx = addToExternrefTable0(e2);
+  } catch (e3) {
+    const idx = addToExternrefTable0(e3);
     wasm.__wbindgen_exn_store(idx);
   }
 }
@@ -2441,12 +2441,12 @@ async function __wbg_load(module2, imports) {
     if (typeof WebAssembly.instantiateStreaming === "function") {
       try {
         return await WebAssembly.instantiateStreaming(module2, imports);
-      } catch (e2) {
+      } catch (e3) {
         const validResponse = expectedResponseType(module2.type);
         if (validResponse && module2.headers.get("Content-Type") !== "application/wasm") {
-          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e2);
+          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e3);
         } else {
-          throw e2;
+          throw e3;
         }
       }
     }
@@ -2989,10 +2989,10 @@ var Relay = class {
       let reason = `HTTP ${r.status}`;
       let acts = [];
       try {
-        const e2 = cborDecode(body);
-        code = e2.get(0);
-        reason = e2.get(1) ?? reason;
-        acts = bytesList(e2.get(2));
+        const e3 = cborDecode(body);
+        code = e3.get(0);
+        reason = e3.get(1) ?? reason;
+        acts = bytesList(e3.get(2));
       } catch {
       }
       throw new RelayError(code, reason, acts, r.status);
@@ -3062,9 +3062,9 @@ var Relay = class {
     try {
       const a = await this.call(`/acts/${id}`);
       return actId(a) === id ? a : null;
-    } catch (e2) {
-      if (e2 instanceof RelayError && e2.code === CODE.notHeld) return null;
-      throw e2;
+    } catch (e3) {
+      if (e3 instanceof RelayError && e3.code === CODE.notHeld) return null;
+      throw e3;
     }
   }
   /** `POST /media`: the relay's answer is checked against the bytes sent. */
@@ -3082,9 +3082,9 @@ var Relay = class {
     try {
       const b = await this.call(`/media/${lockedHash}`);
       return sha2562(b) === lockedHash ? b : null;
-    } catch (e2) {
-      if (e2 instanceof RelayError && e2.code === CODE.notHeld) return null;
-      throw e2;
+    } catch (e3) {
+      if (e3 instanceof RelayError && e3.code === CODE.notHeld) return null;
+      throw e3;
     }
   }
   async feed(q) {
@@ -3123,8 +3123,8 @@ var relayAt = (hint, via = {}) => new Relay(hint, via[hint] ?? hint);
 
 // ../genesis/src/kex.ts
 var kexLog = { recording: false, entries: [] };
-function record(e2) {
-  if (kexLog.recording) kexLog.entries.push(e2);
+function record(e3) {
+  if (kexLog.recording) kexLog.entries.push(e3);
 }
 
 // ../genesis/src/lines.ts
@@ -3340,15 +3340,15 @@ function planLines(lines2, o = {}) {
   const covered = counts !== null && counts === o.unplaced.length && !unplacedSay.length;
   const unread = [];
   for (const l of lines2) {
-    const card = cards.find((c) => c.act === l.tip) ?? l.card;
+    const card2 = cards.find((c) => c.act === l.tip) ?? l.card;
     const given = cards.find((c) => c.act === l.tip);
     if (leaveOut.has(l.tip)) {
       left.push(l);
       shown.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
-    } else if (card) {
-      kept.push({ act: card.act, position: card.position, summary: card.summary });
+    } else if (card2) {
+      kept.push({ act: card2.act, position: card2.position, summary: card2.summary });
       shown.push({
-        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`,
+        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card2.position}, summary ${card2.summary}.`,
         tone: l.readable || given && !given.missing ? "ok" : "warn"
       });
     } else if (covered) {
@@ -3544,10 +3544,10 @@ async function lookUp(identity, hints, via = {}, into) {
       });
     }
   }
-  const e2 = v.latest(identity, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
+  const e3 = v.latest(identity, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
   let encryptionKey = null;
-  if (e2.payload) {
-    const p = cborDecode(e2.payload);
+  if (e3.payload) {
+    const p = cborDecode(e3.payload);
     const [scheme, key] = p.get(2);
     if (scheme === 4) encryptionKey = key;
   }
@@ -3566,7 +3566,7 @@ async function lookUp(identity, hints, via = {}, into) {
     unreachable,
     notTried,
     routes: { act: r.act ?? null, contested: r.contested, routes },
-    encryptionKeyAct: e2.act ?? null,
+    encryptionKeyAct: e3.act ?? null,
     encryptionKey,
     inbox(spec) {
       const inboxes = routes.filter((x) => x.kind === 1);
@@ -3676,8 +3676,8 @@ var TestIdentity = class _TestIdentity {
       const r = this.relay(h.hint);
       try {
         out.push({ home: h.hint, result: await r.putAct(act) });
-      } catch (e2) {
-        if (e2 instanceof RelayError && e2.code === CODE.missingPredecessor) {
+      } catch (e3) {
+        if (e3 instanceof RelayError && e3.code === CODE.missingPredecessor) {
           try {
             for (const earlier of this.chainActs()) {
               if (actId(earlier) !== actId(act)) await r.putAct(earlier);
@@ -3689,7 +3689,7 @@ var TestIdentity = class _TestIdentity {
             continue;
           }
         }
-        out.push(failure(h.hint, e2));
+        out.push(failure(h.hint, e3));
       }
     }
     return out;
@@ -3733,8 +3733,8 @@ var TestIdentity = class _TestIdentity {
     for (const h of this.f.homes) {
       try {
         out.push({ home: h.hint, result: await this.relay(h.hint).putAct(act) });
-      } catch (e2) {
-        out.push(failure(h.hint, e2));
+      } catch (e3) {
+        out.push(failure(h.hint, e3));
       }
     }
     return out;
@@ -3910,8 +3910,8 @@ var TestIdentity = class _TestIdentity {
       try {
         anchored = await this.anchorQuorum(lookup, p.id, before, anchoring);
         this.f.anchored = [...this.f.anchored ?? [], ...anchored.map((a) => ({ act: a.act, on: a.on, proof: b64(a.proof) }))];
-      } catch (e2) {
-        unanchored = e2.message;
+      } catch (e3) {
+        unanchored = e3.message;
       }
     }
     return { counts, lookup, anchored, unanchored };
@@ -4000,8 +4000,8 @@ var TestIdentity = class _TestIdentity {
           } catch {
           }
         }
-      } catch (e2) {
-        if (!(e2 instanceof TypeError) && !(e2 instanceof RelayError)) throw e2;
+      } catch (e3) {
+        if (!(e3 instanceof TypeError) && !(e3 instanceof RelayError)) throw e3;
       }
     }
   }
@@ -4146,7 +4146,7 @@ var TestIdentity = class _TestIdentity {
    */
   async readInbox(opts) {
     const out = [];
-    const secrets = [...this.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const secrets = [...this.f.encryption].reverse().map((e3) => unhex(e3.secret));
     for (const hint of opts.inbox) {
       const page = await relayAt(hint, this.via).feed({ to: this.f.identity });
       for (const it of page.items) {
@@ -4162,8 +4162,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
   let parts;
   try {
     parts = sealedParts(sealed);
-  } catch (e2) {
-    return { sealed: id, opened: false, error: String(e2) };
+  } catch (e3) {
+    return { sealed: id, opened: false, error: String(e3) };
   }
   const index = me === null ? 0 : parts.to.indexOf(me);
   if (index < 0) return { sealed: id, opened: false, error: "not addressed to this identity" };
@@ -4173,8 +4173,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
     let o;
     try {
       o = openSealed(sealed, me ?? void 0, secret);
-    } catch (e2) {
-      lastError = String(e2);
+    } catch (e3) {
+      lastError = String(e3);
       continue;
     }
     const d = o.described;
@@ -4192,8 +4192,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
         if (o.key) them.verifier.addWithKey(o.act, o.key);
         else them.verifier.add(o.act);
         r.status = them.verifier.status(d.id);
-      } catch (e2) {
-        r.status = `sender not found: ${e2}`;
+      } catch (e3) {
+        r.status = `sender not found: ${e3}`;
       }
     }
     return r;
@@ -4216,16 +4216,16 @@ function sealFor(act, key, recipients) {
   recipients.forEach((r, i) => record({ kind: "encapsulate", publicKey: r.key, eseed: eseeds[i], ct: parts.capsules[i] }));
   return sealed;
 }
-function failure(home, e2) {
-  if (e2 instanceof RelayError) return { home, error: e2.reason, code: e2.code };
-  return { home, error: String(e2) };
+function failure(home, e3) {
+  if (e3 instanceof RelayError) return { home, error: e3.reason, code: e3.code };
+  return { home, error: String(e3) };
 }
 
 // ../genesis/src/private.ts
 var unb642 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 function ownKey(me) {
-  const e2 = me.f.encryption[me.f.encryption.length - 1];
-  return e2 ? xwingPublic(unhex(e2.secret)) : null;
+  const e3 = me.f.encryption[me.f.encryption.length - 1];
+  return e3 ? xwingPublic(unhex(e3.secret)) : null;
 }
 async function leaveAtHomes(me, made, o = {}) {
   const via = o.via ?? me.via;
@@ -4274,8 +4274,8 @@ async function lineAtHomes(me, app3, via = me.via) {
   const u2 = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts }));
   const hidden = me.f.sequence.filter((id) => u2.has(id)).length;
   const atHomes = held.has(own.card.act);
-  const card = { ...own.card, hidden, ...missing ? { missing } : {} };
-  return { ...blank, atHomes, missing, hidden, card: atHomes ? cardText(card, app3) : null };
+  const card2 = { ...own.card, hidden, ...missing ? { missing } : {} };
+  return { ...blank, atHomes, missing, hidden, card: atHomes ? cardText(card2, app3) : null };
 }
 async function ownActs(identity, secrets, places, via = {}) {
   const out = /* @__PURE__ */ new Map();
@@ -4399,8 +4399,8 @@ function decodeStamp(payload) {
   let m;
   try {
     m = cborDecode(payload);
-  } catch (e2) {
-    throw new NotAStamp(`not CBOR (${e2 instanceof Error ? e2.message : e2})`);
+  } catch (e3) {
+    throw new NotAStamp(`not CBOR (${e3 instanceof Error ? e3.message : e3})`);
   }
   if (!(m instanceof Map)) throw new NotAStamp("not a map");
   for (const k of m.keys()) if (k !== 0 && k !== 1) throw new NotAStamp(`${String(k)} is not one of its fields`);
@@ -4423,9 +4423,9 @@ function asStamp(d, clock) {
   try {
     const s = decodeStamp(d.payload);
     return { stamp: d.id, time: s.time, acts: s.acts };
-  } catch (e2) {
-    if (e2 instanceof NotAStamp) return null;
-    throw e2;
+  } catch (e3) {
+    if (e3 instanceof NotAStamp) return null;
+    throw e3;
   }
 }
 function earliest(stamps) {
@@ -4500,14 +4500,14 @@ function readLimits(v) {
     out.cap = { unit: hex(c[0]), value: c[1] };
   }
   if (m.has(1)) {
-    const e2 = m.get(1);
-    if (!Array.isArray(e2) || e2.length !== 3 || !h32(e2[0]) || typeof e2[2] !== "number") throw new Error("the expiry is not [clock, reference, point]");
-    if (hex(e2[0]) === CLOCKS.timestamp) {
-      if (!h32(e2[1])) throw new Error("a timestamp clock is named by its identity");
-      out.expiry = { clock: "timestamp", identity: hex(e2[1]), time: e2[2] };
+    const e3 = m.get(1);
+    if (!Array.isArray(e3) || e3.length !== 3 || !h32(e3[0]) || typeof e3[2] !== "number") throw new Error("the expiry is not [clock, reference, point]");
+    if (hex(e3[0]) === CLOCKS.timestamp) {
+      if (!h32(e3[1])) throw new Error("a timestamp clock is named by its identity");
+      out.expiry = { clock: "timestamp", identity: hex(e3[1]), time: e3[2] };
     } else {
-      if (typeof e2[1] !== "number") throw new Error("a Bitcoin clock is named by its network");
-      out.expiry = { clock: "height", spec: hex(e2[0]), network: e2[1], height: e2[2] };
+      if (typeof e3[1] !== "number") throw new Error("a Bitcoin clock is named by its network");
+      out.expiry = { clock: "height", spec: hex(e3[0]), network: e3[1], height: e3[2] };
     }
   }
   return out;
@@ -4604,8 +4604,8 @@ function readGrant(payload) {
     else {
       try {
         limits = readLimits(m.get(3));
-      } catch (e2) {
-        limitsProblem = `its limits cannot be read: ${e2 instanceof Error ? e2.message : String(e2)}`;
+      } catch (e3) {
+        limitsProblem = `its limits cannot be read: ${e3 instanceof Error ? e3.message : String(e3)}`;
       }
     }
   }
@@ -4795,8 +4795,8 @@ async function negotiate(by, to, o) {
       for (const c of by.chainActs()) await r.putAct(c).catch(() => void 0);
       await r.putSealed(sealed);
       left.push(hint);
-    } catch (e2) {
-      failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
+    } catch (e3) {
+      failed.push({ relay: hint, reason: e3 instanceof Error ? e3.message : String(e3) });
     }
   }
   if (o.home !== false) await leaveAtHomes(by, made);
@@ -5052,8 +5052,8 @@ async function judgeCollective(collective, acts, hints, via = {}, limits = []) {
   for (const id of acts) {
     try {
       out.set(id, v.agreementsConsent(withGrantLimits(AGREEMENTS_SPECS, limits), id));
-    } catch (e2) {
-      out.set(id, { kind: "unread", reason: e2 instanceof Error ? e2.message : String(e2), met: false, areas: [] });
+    } catch (e3) {
+      out.set(id, { kind: "unread", reason: e3 instanceof Error ? e3.message : String(e3), met: false, areas: [] });
     }
   }
   return out;
@@ -5128,7 +5128,7 @@ async function readCollective(me, id, hints, via) {
   const t = await termsOf(now2.agreement, hints, via);
   const a = t?.areas.find((x) => x.kinds.some((k) => k.form === "layer" && k.layer === MONEY_LAYER || k.spec === AGREEMENTS_SPECS.money));
   const area = a ? { id: a.id, name: a.name, holders: a.holders, number: a.threshold, cap: capOf(a.limits) } : null;
-  const keys = await readMemberKeys(me.id, me.f.encryption.map((e2) => unhex(e2.secret)), me.f.homes.map((h) => h.hint), via).catch(() => []);
+  const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), via).catch(() => []);
   const key = keys.length ? await memberKeyFor(keys, id, hints, via).catch(() => null) : null;
   let why = null;
   if (!area) why = "Its constitution draws no Money area: the collective\u2019s money acts count on its own key, held by its founder\u2019s Edubba.";
@@ -7269,15 +7269,15 @@ function readForm(typed, want) {
   try {
     const r = formRead(t, want);
     return { hex: r.data, hints: r.hints, bare: r.bare };
-  } catch (e2) {
-    throw new Refused(e2 instanceof Error ? e2.message : String(e2));
+  } catch (e3) {
+    throw new Refused(e3 instanceof Error ? e3.message : String(e3));
   }
 }
 var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
 var readId = (typed) => readForm(typed, "mid").hex;
 
 // ../dub/src/carryin.ts
-var message = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var NOT_CURRENT = "These words do not give this identity\u2019s current signing key: they are another identity\u2019s, an earlier key\u2019s, or written wrong. Nothing was kept. If these are your chain key\u2019s words, they must never be typed into an online app.";
 async function lookCurrent(id, seed, hints, via) {
   let pub;
@@ -7289,8 +7289,8 @@ async function lookCurrent(id, seed, hints, via) {
   let look;
   try {
     look = await lookUp(id, hints, via);
-  } catch (e2) {
-    throw new Error(`This identity was not found at ${hints.join(", ")}: ${message(e2)}`);
+  } catch (e3) {
+    throw new Error(`This identity was not found at ${hints.join(", ")}: ${message(e3)}`);
   }
   const r = look.resolution;
   if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing can be signed for it until they agree.");
@@ -7312,8 +7312,8 @@ async function servedChain(id, homes, via) {
 function carriedKey(look, seed) {
   const secret = encryptionSecret(seed);
   if (!look.encryptionKey || !look.encryptionKeyAct || hex(xwingPublic(secret)) !== hex(look.encryptionKey)) return null;
-  const e2 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
-  const version = e2.payload ? Number(cborDecode(e2.payload).get(0)) : 1;
+  const e3 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
+  const version = e3.payload ? Number(cborDecode(e3.payload).get(0)) : 1;
   return { version, act: look.encryptionKeyAct, secret: hex(secret) };
 }
 
@@ -7544,8 +7544,8 @@ async function readActs(identity, secrets, homes, via) {
   let l;
   try {
     l = await lookUp(identity, homes, via, v);
-  } catch (e2) {
-    return { acts, problems: [`its homes did not answer (${e2 instanceof Error ? e2.message : String(e2)})`] };
+  } catch (e3) {
+    return { acts, problems: [`its homes did not answer (${e3 instanceof Error ? e3.message : String(e3)})`] };
   }
   const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
   for (const h of at) {
@@ -7574,8 +7574,8 @@ async function readActs(identity, secrets, homes, via) {
         if (!page.items.length || page.next === after) break;
         after = page.next;
       }
-    } catch (e2) {
-      problems.push(`${h}: ${e2 instanceof Error ? e2.message : String(e2)}`);
+    } catch (e3) {
+      problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
     }
   }
   return { acts, problems };
@@ -7629,7 +7629,7 @@ var sameTips = (a, b) => a.map((x) => x.id).join() === b.map((x) => x.id).join()
 async function changeAccepted(me, change, opts) {
   const via = opts.via ?? {};
   const homes = me.f.homes.map((h) => h.hint);
-  const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+  const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
   if (!secrets.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
   for (let round = 0; round < 5; round++) {
     const read = await readAccepted(me.id, secrets, homes, via);
@@ -7642,7 +7642,7 @@ async function changeAccepted(me, change, opts) {
     if (!sameTips(again.tips, read.tips)) continue;
     await opts.check();
     const look = await lookUp(me.id, homes, via);
-    if (!look.encryptionKey || !me.f.encryption.some((e2) => hex(xwingPublic(unhex(e2.secret))) === hex(look.encryptionKey))) {
+    if (!look.encryptionKey || !me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey))) {
       throw new Error("The encryption key this identity publishes is not one this app holds: the accepted list cannot be sealed. Nothing was changed.");
     }
     const [first, ...others] = read.tips;
@@ -7763,7 +7763,7 @@ async function sendToSelf(me, type, payload, opts) {
   const homes = me.f.homes.map((h) => h.hint);
   const look = await lookUp(me.id, homes, opts.via ?? {});
   if (!look.encryptionKey) throw new Error("This identity publishes no encryption key, so nothing can be sealed to it: the draft cannot travel to Damgar. Nothing was signed.");
-  if (!me.f.encryption.some((e2) => hex(xwingPublic(unhex(e2.secret))) === hex(look.encryptionKey))) {
+  if (!me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey))) {
     throw new Error("The encryption key this identity publishes is not one this app holds: Damgar, holding the same words, could not open the draft either. Nothing was signed.");
   }
   let made;
@@ -7905,7 +7905,7 @@ var ACCOUNT_NOTES = [
 ];
 var NO_BOOK = () => ({ after: {}, acts: {}, drafts: {}, requestsIn: {}, requestsOut: {}, invoices: {}, payments: {}, pointers: [], published: null });
 var list = (xs) => [...new Set(xs.map((s) => s.trim()).filter(Boolean))];
-var message2 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message2 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var now = () => Math.floor(Date.now() / 1e3);
 var short = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var b642 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -7977,9 +7977,9 @@ var Damgar = class {
       try {
         id = readId(a.id);
         seed = fromWords(a.words);
-      } catch (e2) {
-        if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
-        throw e2;
+      } catch (e3) {
+        if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
+        throw e3;
       }
       if ((await this.store.held()).includes(id)) return this.renewHeld(id, seed);
       const address = a.address.trim();
@@ -8027,9 +8027,9 @@ var Damgar = class {
       let seed;
       try {
         seed = fromWords(words);
-      } catch (e2) {
-        if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
-        throw e2;
+      } catch (e3) {
+        if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
+        throw e3;
       }
       return this.renewHeld(active, seed);
     });
@@ -8051,7 +8051,7 @@ var Damgar = class {
     me.f.sequence = [];
     me.f.routes = null;
     const carried = carriedKey(look, seed);
-    if (carried && !me.f.encryption.some((e2) => e2.act === carried.act)) me.f.encryption.push(carried);
+    if (carried && !me.f.encryption.some((e3) => e3.act === carried.act)) me.f.encryption.push(carried);
     await this.store.saveIdentity(me);
     return {
       lines: [
@@ -8089,9 +8089,9 @@ var Damgar = class {
     try {
       await this.current(me);
       return { current: true, say: null };
-    } catch (e2) {
-      if (message2(e2) === SPENT_SAY) return { current: false, say: SPENT_SAY };
-      throw e2;
+    } catch (e3) {
+      if (message2(e3) === SPENT_SAY) return { current: false, say: SPENT_SAY };
+      throw e3;
     }
   }
   async current(me) {
@@ -8108,7 +8108,7 @@ var Damgar = class {
   async accepted(me, fresh = false) {
     const c = this.lists.get(me.id);
     if (c && !fresh && c.at + 60 > now()) return c.list;
-    const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
     const l = await readAccepted(me.id, secrets, me.f.homes.map((h) => h.hint), me.via);
     this.lists.set(me.id, { list: l, at: now() });
     return l;
@@ -8192,8 +8192,8 @@ var Damgar = class {
     let l;
     try {
       l = await this.accepted(me);
-    } catch (e2) {
-      l = { entries: /* @__PURE__ */ new Map(), tips: [], merged: [], version: 0, problems: [message2(e2)] };
+    } catch (e3) {
+      l = { entries: /* @__PURE__ */ new Map(), tips: [], merged: [], version: 0, problems: [message2(e3)] };
     }
     const set = this.acceptedSet(l);
     out.accept = ACCEPTABLE.map((a) => ({ key: a.key, name: a.name, kind: a.kind, draft: a.draft, text: a.text, does: a.does, here: a.here, built: a.built, needs: a.needs, accepted: isAccepted(a, set), hashes: a.hashes }));
@@ -8226,8 +8226,8 @@ var Damgar = class {
         let c;
         try {
           c = await readCollective(me, id, places, s.via);
-        } catch (e2) {
-          c = { id, agreement: null, area: null, key: null, why: message2(e2) };
+        } catch (e3) {
+          c = { id, agreement: null, area: null, key: null, why: message2(e3) };
         }
         const acts = [];
         for (const [act, x] of Object.entries(book.collectiveActs ?? {}).filter(([, x2]) => x2.collective === id)) {
@@ -8328,7 +8328,7 @@ var Damgar = class {
       const lines2 = [];
       try {
         const l = await lookUp(me.id, me.f.homes.map((h) => h.hint), s.via);
-        if (l.encryptionKey && !me.f.encryption.some((e2) => hex(xwingPublic(unhex(e2.secret))) === hex(l.encryptionKey))) {
+        if (l.encryptionKey && !me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(l.encryptionKey))) {
           const c = carriedKey(l, unhex(me.f.signingSecret));
           if (c) {
             me.f.encryption.push(c);
@@ -8338,14 +8338,14 @@ var Damgar = class {
         }
       } catch {
       }
-      const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+      const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
       if (!secrets.length) return { lines: [{ text: NO_KEY_SAY, tone: "warn" }], problems };
       let unopened = 0;
       let inbox = [];
       try {
         inbox = await this.inboxOf(me, s);
-      } catch (e2) {
-        problems.push(`Its inbox could not be looked up: ${message2(e2)}`);
+      } catch (e3) {
+        problems.push(`Its inbox could not be looked up: ${message2(e3)}`);
       }
       const places = list([...me.f.homes.map((h) => h.hint), ...inbox]);
       const fresh = [];
@@ -8373,8 +8373,8 @@ var Damgar = class {
             after = page.next;
           }
           book.after[hint] = after ?? 0;
-        } catch (e2) {
-          problems.push(`${hint}: ${message2(e2)}`);
+        } catch (e3) {
+          problems.push(`${hint}: ${message2(e3)}`);
         }
       }
       const looked = /* @__PURE__ */ new Map();
@@ -8387,8 +8387,8 @@ var Damgar = class {
           if (o.key) x.verifier.addWithKey(o.act, o.key);
           else x.verifier.add(o.act);
           return x.verifier.status(o.described.id);
-        } catch (e2) {
-          return `its signer was not found (${message2(e2)})`;
+        } catch (e3) {
+          return `its signer was not found (${message2(e3)})`;
         }
       };
       for (const o of fresh) {
@@ -8408,8 +8408,8 @@ var Damgar = class {
         book.acts[d.id] = { act: base64(o.act), key: o.key ? base64(o.key) : void 0, from: d.signer };
         try {
           await this.file(me, s, book, d, lines2);
-        } catch (e2) {
-          problems.push(`${short(d.signer)}: ${message2(e2)}`);
+        } catch (e3) {
+          problems.push(`${short(d.signer)}: ${message2(e3)}`);
         }
       }
       if (unopened) problems.push(`${unopened} sealed act${unopened === 1 ? "" : "s"} addressed to this identity did not open with the encryption keys Damgar holds: sealed to a key it does not hold.`);
@@ -8449,8 +8449,8 @@ var Damgar = class {
       if (!readers[d.type]) return unread(`a message of type ${d.type}, which the money messages cMIP draft 1 does not define`);
       try {
         readers[d.type](d.payload);
-      } catch (e2) {
-        return unread(message2(e2));
+      } catch (e3) {
+        return unread(message2(e3));
       }
       if (d.type === TYPES.laneRequest) {
         (book.laneRequests ??= {})[d.id] = { found: t, stage: "new", grant: null };
@@ -8550,8 +8550,8 @@ var Damgar = class {
     let look;
     try {
       look = await lookUp(id, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via);
-    } catch (e2) {
-      throw new Error(`${short(id)} was not found: ${message2(e2)}`);
+    } catch (e3) {
+      throw new Error(`${short(id)} was not found: ${message2(e3)}`);
     }
     const outbox = look.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
     const acts = await this.actsOf(id, [...outbox, ...look.resolution.homes.map((h) => h.hint), ...s.relays], s.via, look);
@@ -8645,8 +8645,8 @@ var Damgar = class {
           inv.stage = "answered";
           lines2.push({ text: `${short(inv.from)} wants to pay you ${say(f.amount, acc)} on Lightning: Damgar answered by itself, with an invoice your node made through its receive-only link, under your receipts lane.`, tone: "ok" });
           return;
-        } catch (e2) {
-          lines2.push({ text: `Damgar could not make the invoice by itself (${message2(e2)}): make it in your wallet, in To sign.`, tone: "warn" });
+        } catch (e3) {
+          lines2.push({ text: `Damgar could not make the invoice by itself (${message2(e3)}): make it in your wallet, in To sign.`, tone: "warn" });
           return;
         }
       }
@@ -8659,8 +8659,8 @@ var Damgar = class {
     let decoded;
     try {
       decoded = lightningInvoice(t);
-    } catch (e2) {
-      return [`${message2(e2)}. Copy the whole invoice from your wallet`];
+    } catch (e3) {
+      return [`${message2(e3)}. Copy the whole invoice from your wallet`];
     }
     const addr = readLightningAddress(b642(p.address));
     const problems = [];
@@ -8717,9 +8717,9 @@ var Damgar = class {
       address = new Uint8Array(rail.address);
     } else if (f.paidTo.kind === "vault") {
       const v = look.verifier.moneyVault(MONEY, me.id);
-      const e2 = v && v.declaredBy === f.paidTo.declaredBy ? v.entries[f.paidTo.entry] : void 0;
-      if (!e2 || e2.railModule !== f.rail || e2.unit !== f.amount.unit) return fail("it names no entry of the vault in force for this rail and unit");
-      address = new Uint8Array(e2.source);
+      const e3 = v && v.declaredBy === f.paidTo.declaredBy ? v.entries[f.paidTo.entry] : void 0;
+      if (!e3 || e3.railModule !== f.rail || e3.unit !== f.amount.unit) return fail("it names no entry of the vault in force for this rail and unit");
+      address = new Uint8Array(e3.source);
     } else return fail("a refund rail: not answered by Damgar in round 1");
     const network = f.rail === SPEC.lightning.hash ? readLightningAddress(address)?.network : readOnchainAddress(address)?.network;
     if (network === void 0 || unitOf(f.amount.unit)?.unit.network !== network) return fail("the rail does not carry the amount\u2019s unit");
@@ -8934,8 +8934,8 @@ var Damgar = class {
         if (x.stage !== "new") continue;
         try {
           items.push(await this.readDraftItem(me, s, book, id, acc));
-        } catch (e2) {
-          problems.push(`A draft ${short(id)}: ${message2(e2)}`);
+        } catch (e3) {
+          problems.push(`A draft ${short(id)}: ${message2(e3)}`);
         }
       }
       for (const [id, x] of Object.entries(book.unread ?? {})) {
@@ -8974,8 +8974,8 @@ var Damgar = class {
         if (x.stage !== "new") continue;
         try {
           items.push(this.laneItem(me, book, id, acc));
-        } catch (e2) {
-          problems.push(`A lane asked ${short(id)}: ${message2(e2)}`);
+        } catch (e3) {
+          problems.push(`A lane asked ${short(id)}: ${message2(e3)}`);
         }
       }
       for (const [id, x] of Object.entries(book.invoices)) {
@@ -9054,7 +9054,7 @@ var Damgar = class {
     const about = (d.refs ?? []).map((r, i) => `${r.slice(0, 8)}\u2026${d.refSigners?.[i] ? ` by ${short(d.refSigners[i])}` : ""}`);
     if (dr.what === "confirm") {
       lines2.unshift({ text: `Prepared in ${dr.app}, not signed there: confirm your purchase from ${short(dr.other)}, ${say(dr.amount, acc)}: what was promised was kept.` });
-      const c = await this.ownClaim(me, s, dr).catch((e2) => ({ why: message2(e2) }));
+      const c = await this.ownClaim(me, s, dr).catch((e3) => ({ why: message2(e3) }));
       if ("why" in c) {
         unknown = true;
         lines2.push({ text: `${c.why}: it cannot be signed.`, tone: "warn" });
@@ -9071,9 +9071,9 @@ var Damgar = class {
           const r = await this.route(me, s, dr.other, dr.amount, acc);
           lines2.push({ text: `On ${railName(r.module)}, to ${r.to === "flow" ? "their flow (their payee pointer in force)" : "their vault"}. ${r.why}`.trim(), tone: "ok" });
           lines2.push({ text: "Signing sends them an invoice request, sealed: the payment\u2019s fingerprint (the commitment: who pays whom, how much, for what, where), for their side to bind. Nothing is paid yet; you pay in your own wallet, from Pay." });
-        } catch (e2) {
+        } catch (e3) {
           unknown = true;
-          lines2.push({ text: message2(e2), tone: "warn" });
+          lines2.push({ text: message2(e3), tone: "warn" });
         }
       }
       if (dr.what === "anchor" && dr.anchor) lines2.push({ text: `For an anchor of one act on the Bitcoin clock, through the service\u2019s standing offer ${short(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements\u2019 to judge: unknown here.` });
@@ -9490,23 +9490,23 @@ var Damgar = class {
     const sale = await sendToSelf(me, TYPES.sale, salePayload({ offer: c.fulfils, buyer: p.other, receipt, publication: offer.publication }), { via: s.via, save });
     (book.sales ??= {})[receipt] = sale.id;
     lines2.push({ text: `A sale of your offer ${short(c.fulfils)}: told to your own Dub, sealed to yourself, which delivers the key to ${short(p.other)}.`, tone: "ok" });
-    const share = referralShare(offer.words);
-    if (!c.referral || share === null) return lines2;
+    const share2 = referralShare(offer.words);
+    if (!c.referral || share2 === null) return lines2;
     const why = await this.repostProblem(me, s, c.referral, offer.publication);
     if (why) {
       lines2.push({ text: `The buyer names a repost they followed, but ${why}: no referral share is prepared.`, tone: "warn" });
       return lines2;
     }
-    const amount2 = { unit: c.amount.unit, value: Math.floor(c.amount.value * share / 100) };
+    const amount2 = { unit: c.amount.unit, value: Math.floor(c.amount.value * share2 / 100) };
     if (amount2.value <= 0) return lines2;
     const draft = await sendToSelf(
       me,
       TYPES.draft,
-      draftPayload({ what: "pay", other: c.referral.identity, amount: amount2, whatFor: `referral share, ${share}% of a sale of your offer`, app: "Damgar (a referral share)", anchor: null }),
+      draftPayload({ what: "pay", other: c.referral.identity, amount: amount2, whatFor: `referral share, ${share2}% of a sale of your offer`, app: "Damgar (a referral share)", anchor: null }),
       { refs: [[c.referral.evidence, c.referral.identity]], via: s.via, save }
     );
     (book.referrals ??= {})[p.claims[p.claims.length - 1]] = { reposter: c.referral.identity, evidence: c.referral.evidence, amount: amount2, draft: draft.id };
-    lines2.push({ text: `The buyer followed a repost by ${short(c.referral.identity)}: your offer promises ${share}% to the reposter. Its payment is prepared (${say(amount2, /* @__PURE__ */ new Set([amount2.unit]))}): Damgar signs it by itself under your referral lane, or it waits in To sign. A promise in words, not judged by the core (F351).`, tone: "ok" });
+    lines2.push({ text: `The buyer followed a repost by ${short(c.referral.identity)}: your offer promises ${share2}% to the reposter. Its payment is prepared (${say(amount2, /* @__PURE__ */ new Set([amount2.unit]))}): Damgar signs it by itself under your referral lane, or it waits in To sign. A promise in words, not judged by the core (F351).`, tone: "ok" });
     return lines2;
   }
   /** Why a referral's evidence is no repost of this publication by its referrer, or null. */
@@ -9520,8 +9520,8 @@ var Damgar = class {
       if (d.signer !== r.identity || !(d.refs ?? []).includes(publication)) return "the act it names is no repost of this publication by its referrer";
       if (l.verifier.status(r.evidence) !== "valid") return "the repost does not count";
       return null;
-    } catch (e2) {
-      return `the reposter was not found (${message2(e2)})`;
+    } catch (e3) {
+      return `the reposter was not found (${message2(e3)})`;
     }
   }
   /**
@@ -9537,8 +9537,8 @@ var Damgar = class {
       if (p.side !== "in" || !p.claims.length || p.receipts.length) continue;
       try {
         lines2.push(...await this.receiptOf(me, s, book, p, null));
-      } catch (e2) {
-        problems.push(`A receipt Damgar could not sign by itself: ${message2(e2)}`);
+      } catch (e3) {
+        problems.push(`A receipt Damgar could not sign by itself: ${message2(e3)}`);
       }
     }
     for (const [id, x] of Object.entries(book.drafts)) {
@@ -9555,8 +9555,8 @@ var Damgar = class {
         x.stage = "signed";
         x.payment = p.key;
         lines2.push({ text: `The referral share to ${short(dr.other)} is asked for by itself, under your referral lane: when they answer, it is in Pay, to pay in your wallet.`, tone: "ok" });
-      } catch (e2) {
-        lines2.push({ text: `The referral share to ${short(dr.other)} waits in To sign (${message2(e2)}).` });
+      } catch (e3) {
+        lines2.push({ text: `The referral share to ${short(dr.other)} waits in To sign (${message2(e3)}).` });
       }
     }
   }
@@ -9572,8 +9572,8 @@ var Damgar = class {
       let l = null;
       try {
         l = await this.judge(me, s, book, others);
-      } catch (e2) {
-        problems.push(`This identity could not be looked up: ${message2(e2)}`);
+      } catch (e3) {
+        problems.push(`This identity could not be looked up: ${message2(e3)}`);
       }
       const opts = await this.judgeOpts(me);
       const payments = Object.values(book.payments).sort((a, b) => b.at - a.at).map((p) => {
@@ -9581,8 +9581,8 @@ var Damgar = class {
           let j = { rail: { answer: "unknown", why: "not judged" }, beside: { answer: "unknown", why: "" }, standing: "unknown" };
           try {
             if (l) j = l.verifier.moneyJudge(act, opts);
-          } catch (e2) {
-            j.rail.why = message2(e2);
+          } catch (e3) {
+            j.rail.why = message2(e3);
           }
           return { act, kind, by: this.who(kind === "claim" ? p.side === "out" ? me.id : p.other : p.side === "out" ? p.other : me.id, me.id), rail: j.rail, beside: j.beside, standing: j.standing, confirmations: j.confirmations ?? null, how: this.howSaid(book, act, j.standing) };
         });
@@ -9736,8 +9736,8 @@ var Damgar = class {
     const lines2 = [];
     try {
       limits = r.limits === null ? null : readLimits(r.limits);
-    } catch (e2) {
-      lines2.push({ text: `Its limits cannot be read (${message2(e2)}): it cannot be granted.`, tone: "warn" });
+    } catch (e3) {
+      lines2.push({ text: `Its limits cannot be read (${message2(e3)}): it cannot be granted.`, tone: "warn" });
     }
     const unknown = !acc.has(GRANT_LIMITS_SPEC) || !limits?.cap;
     if (!acc.has(GRANT_LIMITS_SPEC)) lines2.push({ text: "Lanes carry their limits under the grant limits cMIP, which you do not accept: accept it in Settings to grant a lane.", tone: "warn" });
@@ -9901,33 +9901,33 @@ var Damgar = class {
     const acc = this.acceptedSet(await this.accepted(me));
     const { vault, pointer } = await this.ownVault(me, s);
     const blocking = [];
-    const e2 = vault?.entries[a.entry];
+    const e3 = vault?.entries[a.entry];
     if (!vault) blocking.push("Your identity\u2019s chain declares no vault: declare one in Ki\u0161ib, in a change of keys (Money rule 2).");
-    else if (!e2) blocking.push("Choose one of your vault\u2019s entries.");
+    else if (!e3) blocking.push("Choose one of your vault\u2019s entries.");
     if (!pointer) blocking.push("You have no payee pointer yet: a transfer to your vault follows it (a reading: the payment cMIP\u2019s next draft will let it name the vault itself). Say where you are paid first.");
     const value = Number(a.value);
     if (!Number.isSafeInteger(value) || value <= 0) blocking.push("An amount is a whole number above zero.");
-    if (e2 && !acc.has(e2.railModule)) blocking.push(`${railName(e2.railModule)} is not accepted for this identity (Settings).`);
-    if (e2 && e2.railModule === SPEC.onchain.hash && value > 0 && value < 330) blocking.push("Amounts below 330 satoshis cannot be paid on the on-chain rail.");
-    const amount2 = e2 && value > 0 ? { unit: e2.unit, value } : null;
+    if (e3 && !acc.has(e3.railModule)) blocking.push(`${railName(e3.railModule)} is not accepted for this identity (Settings).`);
+    if (e3 && e3.railModule === SPEC.onchain.hash && value > 0 && value < 330) blocking.push("Amounts below 330 satoshis cannot be paid on the on-chain rail.");
+    const amount2 = e3 && value > 0 ? { unit: e3.unit, value } : null;
     const lines2 = [];
     const costs = [];
-    if (e2 && amount2) {
-      const where = e2.railModule === SPEC.lightning.hash ? `its node ${readLightningAddress(e2.source)?.node.slice(0, 16) ?? "?"}\u2026` : `its Bitcoin key ${readOnchainAddress(e2.source)?.key.slice(0, 16) ?? "?"}\u2026`;
+    if (e3 && amount2) {
+      const where = e3.railModule === SPEC.lightning.hash ? `its node ${readLightningAddress(e3.source)?.node.slice(0, 16) ?? "?"}\u2026` : `its Bitcoin key ${readOnchainAddress(e3.source)?.key.slice(0, 16) ?? "?"}\u2026`;
       lines2.push(
-        { text: `To your vault: the entry on ${railName(e2.railModule)}, ${where}, declared in your chain (act ${vault.declaredBy.slice(0, 12)}\u2026) with the chain key.` },
+        { text: `To your vault: the entry on ${railName(e3.railModule)}, ${where}, declared in your chain (act ${vault.declaredBy.slice(0, 12)}\u2026) with the chain key.` },
         { text: `The amount: ${say(amount2, acc)}, from your wallet (on regtest, the test wallet). It is a payment from you to you: Damgar binds it, you pay it in your wallet and paste the proof back, and Damgar checks it as any payment (F355).` },
-        e2.railModule === SPEC.lightning.hash ? { text: "The fee: your wallet\u2019s routing fee, which it shows before you pay. Damgar holds no wallet and cannot see it. Between two nodes with a direct channel it is usually none." } : { text: "The fee: the miners\u2019 fee your wallet sets when it sends, on top of the amount. Damgar holds no wallet and cannot see it; on regtest the test wallet chooses it." }
+        e3.railModule === SPEC.lightning.hash ? { text: "The fee: your wallet\u2019s routing fee, which it shows before you pay. Damgar holds no wallet and cannot see it. Between two nodes with a direct channel it is usually none." } : { text: "The fee: the miners\u2019 fee your wallet sets when it sends, on top of the amount. Damgar holds no wallet and cannot see it; on regtest the test wallet chooses it." }
       );
-      if (e2.railModule === SPEC.lightning.hash) lines2.push({ text: "Its invoice is made by your vault\u2019s node, not by Damgar: you make it there (on regtest, in the test wallet, on the vault\u2019s node) with the description hash Damgar shows, and paste it back." });
+      if (e3.railModule === SPEC.lightning.hash) lines2.push({ text: "Its invoice is made by your vault\u2019s node, not by Damgar: you make it there (on regtest, in the test wallet, on the vault\u2019s node) with the description hash Damgar shows, and paste it back." });
       costs.push(
         { text: "This money can then be spent only with the chain key and its record: the vault\u2019s own key, declared with your chain key in Ki\u0161ib, and the record Damgar keeps sealed to you at your homes (your claim of the payment, its commitment and salt included).", tone: "warn" },
-        ...e2.railModule === SPEC.onchain.hash ? [{ text: "On-chain, the money sits at an address made from your vault\u2019s key and this payment\u2019s commitment: without the record, the vault\u2019s key alone does not find it.", tone: "warn" }] : [],
+        ...e3.railModule === SPEC.onchain.hash ? [{ text: "On-chain, the money sits at an address made from your vault\u2019s key and this payment\u2019s commitment: without the record, the vault\u2019s key alone does not find it.", tone: "warn" }] : [],
         { text: "One way only: Damgar never takes money out of the vault. Withdrawing needs the chain key and stays in Ki\u0161ib.", tone: "warn" }
       );
     }
-    const digest = sha2562(cborEncode(["MOR Damgar transfer to the vault, version 1", me.id, a.entry, vault?.declaredBy ?? "", e2?.unit ?? "", value, pointer ?? ""]));
-    return { lines: lines2, costs, blocking, digest, plan: e2 && amount2 && pointer && !blocking.length ? { entry: a.entry, amount: amount2, declaredBy: vault.declaredBy, module: e2.railModule, source: e2.source, pointer } : null };
+    const digest = sha2562(cborEncode(["MOR Damgar transfer to the vault, version 1", me.id, a.entry, vault?.declaredBy ?? "", e3?.unit ?? "", value, pointer ?? ""]));
+    return { lines: lines2, costs, blocking, digest, plan: e3 && amount2 && pointer && !blocking.length ? { entry: a.entry, amount: amount2, declaredBy: vault.declaredBy, module: e3.railModule, source: e3.source, pointer } : null };
   }
   /** A transfer to the vault read back before anything is bound (H46, F355). */
   vaultTransferRead(a) {
@@ -10104,11 +10104,11 @@ var Damgar = class {
         pointer,
         vault: v ? {
           declaredBy: v.declaredBy,
-          entries: v.entries.map((e2) => ({
-            unit: { unit: e2.unit, value: 0, said: unitOf(e2.unit)?.unit.name ?? `unit ${e2.unit.slice(0, 8)}\u2026` },
-            railName: railName(e2.railModule),
-            limit: { unit: e2.unit, value: e2.limit, said: say({ unit: e2.unit, value: e2.limit }, acc) },
-            said: e2.limit === 0 ? "every payment in this unit goes to the vault (flow off)" : `a single payment above ${say({ unit: e2.unit, value: e2.limit }, acc)} goes to your vault, not your flow`
+          entries: v.entries.map((e3) => ({
+            unit: { unit: e3.unit, value: 0, said: unitOf(e3.unit)?.unit.name ?? `unit ${e3.unit.slice(0, 8)}\u2026` },
+            railName: railName(e3.railModule),
+            limit: { unit: e3.unit, value: e3.limit, said: say({ unit: e3.unit, value: e3.limit }, acc) },
+            said: e3.limit === 0 ? "every payment in this unit goes to the vault (flow off)" : `a single payment above ${say({ unit: e3.unit, value: e3.limit }, acc)} goes to your vault, not your flow`
           }))
         } : null,
         requestKey: keys.request ? onchainKey(unhex(keys.request)) : null,
@@ -10453,16 +10453,288 @@ function e(s) {
 }
 
 // ../genesis/src/card-words.ts
-function cardWords(l, app3, e2) {
+function cardWords(l, app3, e3) {
   const n = `${l.acts} act${l.acts === 1 ? "" : "s"}`;
   if (!l.latest) return n;
   const missing = l.missing ? ` ${l.missing === 1 ? "One act" : `${l.missing} acts`} of this line ${l.missing === 1 ? "is" : "are"} not at your homes, and ${app3} no longer holds ${l.missing === 1 ? "it" : "them"}: no reader can follow this line past ${l.missing === 1 ? "it" : "them"}, so a change of keys may lose what lives on it (a member key, notes, a list). Ki\u0161ib says so in red.` : "";
-  if (l.card) return `${n}: its card, for Ki\u0161ib, <code class="card-line">${e2(l.card)}</code>${missing ? `<br>${e2(missing)}` : ""}`;
-  if (l.atHomes === false) return `${n}: its latest act (<code>${e2(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e2(app3)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e2(missing)}` : ""}`;
-  return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e2(l.latest)}</code>). Look again before changing your keys.`;
+  if (l.card) return `${n}: its card, for Ki\u0161ib, <code class="card-line">${e3(l.card)}</code>${missing ? `<br>${e3(missing)}` : ""}`;
+  if (l.atHomes === false) return `${n}: its latest act (<code>${e3(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e3(app3)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e3(missing)}` : ""}`;
+  return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e3(l.latest)}</code>). Look again before changing your keys.`;
 }
 
-// ../dub/src/page/view.ts
+// ../kit/src/style.ts
+var APPS = {
+  kishib: { name: "Ki\u0161ib", colour: "#8ec5f0", pastel: "#cfe5f7", wash: "rgba(207,229,247,.075)", wash2: "rgba(207,229,247,.15)" },
+  dub: { name: "Dub", colour: "#e9dfcd", pastel: "#efe8dc", wash: "rgba(239,232,220,.06)", wash2: "rgba(239,232,220,.13)" },
+  damgar: { name: "Damgar", colour: "#e8b33a", pastel: "#f2d89c", wash: "rgba(242,216,156,.07)", wash2: "rgba(242,216,156,.15)" },
+  edubba: { name: "Edubba", colour: "#48c08c", pastel: "#a9e3c7", wash: "rgba(169,227,199,.07)", wash2: "rgba(169,227,199,.15)" },
+  ummia: { name: "Ummia", colour: "#ee8b74", pastel: "#f7c4b7", wash: "rgba(247,196,183,.07)", wash2: "rgba(247,196,183,.15)" }
+};
+var tints = Object.keys(APPS).map((a) => `.k-${a}{--k-c:${APPS[a].colour};--k-p:${APPS[a].pastel};--k-wash:${APPS[a].wash};--k-wash2:${APPS[a].wash2}}`).join("\n");
+var KIT_STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
+@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+:root{color-scheme:dark;--k-bg:#06080c;--k-raise:#0d1017;--k-raise2:#131720;--k-pop:#0f131a;--k-line:#232a35;--k-edge:#323a47;--k-text:#d6dae1;--k-soft:#8a919d;--k-faint:#4f5663;--k-ink:#0a0c10;--k-bad:#c4645f;--k-id:#9aa8b8;--k-c:#e9dfcd;--k-p:#efe8dc;--k-wash:rgba(239,232,220,.06);--k-wash2:rgba(239,232,220,.13)}
+${tints}
+.k-page,.k-page *{box-sizing:border-box}
+html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);color:var(--k-text);overflow:hidden}
+.k-page{font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
+:where(.k-page) button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:where(.k-page) button:disabled{opacity:.45;cursor:default}
+:where(.k-page) :is(h1,h2,h3,h4){font-weight:300;margin:0;letter-spacing:.005em}
+:where(.k-page) p{margin:6px 0}
+:where(.k-page) a{color:var(--k-text);text-decoration:underline;text-decoration-color:var(--k-faint);text-underline-offset:3px}
+:where(.k-page) :is(input,textarea,select){font:inherit;font-size:15px;color:var(--k-text);background:var(--k-raise);border:1px solid var(--k-edge);border-radius:10px;padding:8px 11px;width:100%}
+:where(.k-page) :is(input,textarea,select):focus{outline:none;border-color:var(--k-p)}
+:where(.k-page) input:is([type=checkbox],[type=radio]){width:auto;accent-color:var(--k-p)}
+:where(.k-page) label{display:block;margin:10px 0 4px;font-size:13px;color:var(--k-soft)}
+.k-page [hidden]{display:none!important}
+.k-mono,:where(.k-page) code{font:12.5px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+.k-soft{color:var(--k-soft)}.k-faint{color:var(--k-faint)}.k-small{font-size:13px}
+.k-grow{flex:1}
+.k-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.k-bad{color:var(--k-bad)}
+.k-offscreen{position:fixed;left:-9999px;top:0;opacity:0}
+
+/* the top of every window: the app (or Contacts) left, a switch or tabs in the middle, the identity right */
+.k-top{display:flex;align-items:center;gap:14px;height:56px;padding:0 20px;border-bottom:1px solid var(--k-line);flex:none;position:relative;z-index:5;background:var(--k-bg)}
+.k-app{display:flex;align-items:center;gap:10px;font-size:16px;letter-spacing:.04em}
+.k-app img{width:26px;height:26px;border-radius:6px}
+.k-menu-btn{display:flex;align-items:center;gap:8px;color:var(--k-soft);font-size:14px;padding:6px 10px;border:1px solid var(--k-line);border-radius:10px}
+.k-menu-btn:hover{color:var(--k-text)}
+.k-switch{display:flex;border:1px solid var(--k-edge);border-radius:999px;padding:3px;gap:2px}
+.k-switch button{padding:5px 18px;border-radius:999px;color:var(--k-soft);font-size:14px;display:flex;align-items:center;gap:6px}
+.k-switch button.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
+.k-count{display:inline-block;min-width:1.4em;padding:0 6px;border-radius:999px;background:var(--k-edge);color:var(--k-text);font-size:11px;line-height:1.6;text-align:center}
+.k-count:empty{display:none}
+.k-on .k-count{background:var(--k-ink);color:var(--k-p)}
+.k-me{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 12px;border:1px solid var(--k-line);border-radius:999px;max-width:42%}
+.k-me .k-n{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-me .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
+.k-dot{width:26px;height:26px;border-radius:50%;background:var(--k-p);color:var(--k-ink);display:grid;place-items:center;font-size:12px;font-weight:400;flex:none}
+.k-dot.k-c{border-radius:7px}
+.k-dot.k-alt{background:var(--k-raise2);color:var(--k-text);border:1px solid var(--k-edge)}
+.k-body{flex:1;min-height:0;display:flex;position:relative}
+.k-tabs{display:flex;gap:4px}
+.k-tab{padding:6px 14px;border-radius:999px;color:var(--k-soft);font-size:14px;display:flex;align-items:center;gap:8px}
+.k-tab.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
+
+/* tiles: big, an icon and words, danger marks; the edge thickens with the level; never red but for an alarm */
+.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:18px;padding:24px 28px 12px}
+.k-tile{position:relative;border-radius:22px;background:linear-gradient(160deg,var(--k-wash2),var(--k-wash) 55%,rgba(255,255,255,.015));border:1px solid var(--k-line);padding:26px 28px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;text-align:left}
+.k-tile:hover,.k-tile:focus-visible{outline:1px solid var(--k-p);outline-offset:-1px}
+.k-tile .k-ic{position:absolute;left:26px;top:24px;width:58px;height:58px;color:var(--k-p)}
+.k-tile h2{font-size:34px;letter-spacing:.01em;color:var(--k-p)}
+.k-tile p{color:var(--k-soft);font-size:14.5px;max-width:36em}
+.k-tile .k-dm{position:absolute;right:24px;top:26px}
+.k-tile.k-d2{border-color:rgba(255,255,255,.14);border-width:1.5px}
+.k-tile.k-d3{border-color:rgba(255,255,255,.24);border-width:2.5px}
+.k-tile.k-alarm{border-color:var(--k-bad)}
+.k-tile .k-alert{position:absolute;right:24px;bottom:24px;color:var(--k-bad);font-size:13px;border:1px solid var(--k-bad);border-radius:999px;padding:2px 10px}
+.k-dm{display:inline-flex;align-items:flex-end;gap:3px;height:20px}
+.k-dm i{display:block;width:5px;border-radius:2px;background:var(--k-edge)}
+.k-dm i:nth-child(1){height:8px}.k-dm i:nth-child(2){height:13px}.k-dm i:nth-child(3){height:19px}
+.k-dm.k-l1 i:nth-child(1),.k-dm.k-l2 i:nth-child(-n+2),.k-dm.k-l3 i{background:var(--k-p)}
+
+/* a tile opened: its column on the left, the part on the right; on a phone the column folds away once a part is chosen */
+.k-col{width:248px;flex:none;border-right:1px solid var(--k-line);padding:18px 12px;display:flex;flex-direction:column;gap:2px;overflow:auto}
+.k-col h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--k-faint);margin:14px 10px 6px}
+.k-col h3:first-child{margin-top:0}
+.k-col button{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;color:var(--k-soft);font-size:14.5px;text-align:left;width:100%}
+.k-col button.k-on{background:var(--k-wash2);color:var(--k-text)}
+.k-col button.k-on::before{content:"";width:3px;height:16px;border-radius:2px;background:var(--k-p);margin-left:-4px}
+.k-col button .k-k{margin-left:auto;font-size:12px;color:var(--k-faint)}
+.k-col .k-sep{height:1px;background:var(--k-line);margin:10px 8px}
+.k-pane{flex:1;min-width:0;padding:22px 30px;overflow:auto;display:flex;flex-direction:column}
+.k-pane>h2{font-size:24px;margin-bottom:4px}
+.k-back{display:none;align-items:center;gap:6px;color:var(--k-soft);font-size:14px;margin:0 0 8px}
+
+/* the feed box: fills its space and scrolls inside, never the page */
+.k-feedwrap{flex:1;min-height:0;display:flex;flex-direction:column}
+.k-controls{display:flex;align-items:center;gap:6px;margin:0 0 10px;flex-wrap:wrap}
+.k-lens{padding:5px 14px;border-radius:999px;font-size:14px;color:var(--k-soft);border:1px solid var(--k-line);white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.k-lens.k-on{background:var(--k-p);color:var(--k-ink);border-color:var(--k-p)}
+.k-point{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px;font-size:13px;color:var(--k-soft)}
+.k-point .k-lbl{color:var(--k-faint);min-width:5.5em}
+.k-feed{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;border:1px solid var(--k-line);border-radius:16px;padding:6px 14px;background:#080a0f;position:relative}
+.k-feed::-webkit-scrollbar{width:8px}.k-feed::-webkit-scrollbar-thumb{background:var(--k-edge);border-radius:4px}.k-feed::-webkit-scrollbar-track,.k-feed::-webkit-scrollbar-corner{background:transparent}.k-feed::-webkit-scrollbar-button{display:none;height:0}
+.k-empty{padding:28px 0;color:var(--k-faint);font-size:14px;text-align:center}
+.k-clock{font-size:12px;color:var(--k-faint);margin:6px 2px 0}
+
+/* the act card, the same in every app: the signer top left, the act bottom right, each its own menu */
+.k-act{position:relative;padding:12px 2px 10px;border-bottom:1px solid var(--k-line)}
+.k-act:last-child{border-bottom:0}
+.k-act .k-signer{display:inline-flex;align-items:baseline;gap:9px;padding:2px 8px 2px 0;border-radius:8px;max-width:100%;flex-wrap:wrap;text-align:left}
+.k-act .k-sid,.k-act .k-actid{font:12px ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
+.k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
+.k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
+.k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
+.k-act .k-when{float:right;font-size:12px;color:var(--k-faint)}
+.k-act .k-txt{margin:4px 0 6px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.k-act .k-label{font-size:12.5px;color:var(--k-soft);margin:2px 0}
+.k-act .k-label.k-warn{color:var(--k-c)}
+.k-act .k-kind{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--k-soft);border:1px solid var(--k-line);border-radius:5px;padding:1px 6px;margin-right:6px}
+.k-act .k-foot{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--k-faint);flex-wrap:wrap}
+.k-act .k-actid{margin-left:auto;padding:2px 0 2px 8px;border-radius:8px}
+.k-act .k-v{color:var(--k-p);font-size:12px}
+.k-act .k-alarmline{color:var(--k-bad);font-size:12.5px}
+.k-act .k-signer.k-open,.k-act .k-actid.k-open{background:var(--k-wash2);outline:1px solid var(--k-p)}
+.k-act.k-sel{background:var(--k-wash);border-radius:12px;padding-left:10px;padding-right:10px;border-bottom-color:transparent}
+.k-act figure{margin:8px 0 4px}
+.k-act img,.k-act video{display:block;max-width:100%;max-height:60vh;height:auto;border-radius:12px;image-orientation:from-image}
+.k-act .k-doc{display:block;border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px;text-decoration:none}
+.k-act .k-box{border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0}
+
+/* menus: what you take above a line, what changes something below */
+.k-pop{position:fixed;z-index:40;min-width:236px;max-width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;padding:6px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-pop .k-t{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
+.k-pop button{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;font-size:14px;color:var(--k-text);width:100%;text-align:left}
+.k-pop button:hover,.k-pop button:focus-visible{background:var(--k-wash);outline:none}
+.k-pop button:disabled{color:var(--k-faint);opacity:1}
+.k-pop button .k-k{margin-left:auto;font-size:11.5px;color:var(--k-faint)}
+.k-pop hr{border:0;border-top:1px solid var(--k-edge);margin:5px 4px}
+.k-pop .k-own{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--k-p);padding:4px 10px 2px;opacity:.75}
+
+/* the typing box: always in the same place, the bottom */
+.k-typing{flex:none;display:flex;flex-direction:column;gap:6px;border:1px solid var(--k-edge);border-radius:16px;padding:10px 12px;margin-top:12px;background:var(--k-raise);position:relative}
+.k-typing .k-line{display:flex;align-items:flex-end;gap:10px}
+.k-typing textarea{flex:1;border:0;background:none;padding:2px 0;min-height:24px;max-height:30vh;resize:none;font-size:15px}
+.k-typing .k-tools{display:flex;gap:8px;align-items:center;color:var(--k-soft);font-size:13px}
+.k-typing .k-tools button,.k-typing .k-tools label{color:var(--k-soft);font-size:13px;margin:0;cursor:pointer;display:inline-flex;align-items:center}
+.k-typing .k-tools button:hover,.k-typing .k-tools label:hover{color:var(--k-text)}
+.k-typing input[type=file]{display:none}
+.k-typing .k-opts{display:flex;gap:8px;flex-wrap:wrap}
+.k-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border:1px solid var(--k-edge);border-radius:999px;font-size:14px;color:var(--k-text)}
+.k-btn.k-p{background:var(--k-p);border-color:var(--k-p);color:var(--k-ink);font-weight:400}
+.k-btn.k-q{border-color:transparent;color:var(--k-soft)}
+.k-btn.k-alarm{border-color:var(--k-bad);color:var(--k-bad)}
+.k-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;border:1px solid var(--k-edge);font-size:13px;color:var(--k-soft)}
+.k-chip.k-on{background:var(--k-wash2);border-color:transparent;color:var(--k-text)}
+.k-chip .k-x{color:var(--k-faint)}
+
+/* overlays: the pop-up thread, panels, frames */
+.k-shade{position:fixed;inset:0;background:rgba(3,4,6,.66);z-index:30}
+.k-shade.k-light{background:rgba(3,4,6,.45)}
+.k-modal{position:fixed;z-index:31;left:50%;top:50%;transform:translate(-50%,-50%);width:min(600px,calc(100% - 28px));max-height:calc(100% - 60px);display:flex;flex-direction:column;background:#0b0e14;border:1px solid var(--k-edge);border-radius:18px;padding:16px 18px;box-shadow:0 24px 60px rgba(0,0,0,.7)}
+.k-modal .k-mh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.k-modal .k-mh h3{font-size:17px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.k-round{font-size:18px;color:var(--k-soft);width:30px;height:30px;border:1px solid var(--k-line);border-radius:50%;display:grid;place-items:center;flex:none}
+.k-modal .k-mbody{min-height:0;overflow:auto;display:flex;flex-direction:column}
+.k-modal .k-feed{max-height:60vh;flex:none}
+.k-panel{position:fixed;z-index:32;right:16px;top:62px;width:360px;max-height:calc(100% - 78px);overflow:auto;background:#0e1118;border:1px solid var(--k-edge);border-radius:16px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.7)}
+.k-panel.k-left{left:16px;right:auto}
+.k-panel h4{font-size:16px;font-weight:300}
+.k-idrow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;width:100%;text-align:left}
+.k-idrow.k-on{background:var(--k-wash2)}
+.k-idrow .k-n{font-size:14.5px}
+.k-idrow .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint)}
+.k-idrow .k-tagc{font-size:11px;color:var(--k-soft);border:1px solid var(--k-line);border-radius:999px;padding:0 7px;margin-left:4px}
+.k-idrow.k-sub{margin-left:26px;width:calc(100% - 26px)}
+.k-idline{display:flex;align-items:center;gap:4px}
+.k-idline>.k-idrow{flex:1;min-width:0}
+.k-more{color:var(--k-soft);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--k-line);flex:none}
+.k-sepline{height:1px;background:var(--k-line);margin:6px 4px}
+.k-foot-note{font-size:12.5px;color:var(--k-faint);padding:6px 8px}
+.k-panel .k-pane-in{padding:4px 6px}
+
+/* the slot: another app's panel, drawn by that app in a frame this app cannot read or change */
+.k-frame{position:fixed;z-index:50;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100% - 28px));border-radius:20px;padding:4px;background:repeating-linear-gradient(45deg,var(--k-fc) 0 10px,var(--k-fc2) 10px 20px)}
+.k-frame .k-by{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--k-ink);padding:4px 10px 6px;font-weight:400}
+.k-frame iframe{display:block;width:100%;height:min(420px,70vh);border:0;border-radius:16px;background:#090c11}
+.k-frame.k-kishib{--k-fc:#cfe5f7;--k-fc2:#9fc9ea}
+.k-frame.k-damgar{--k-fc:#f2d89c;--k-fc2:#d9b55e}
+.k-frame.k-edubba{--k-fc:#a9e3c7;--k-fc2:#76c9a0}
+.k-frame.k-ummia{--k-fc:#f7c4b7;--k-fc2:#e99a86}
+.k-frame.k-dub{--k-fc:#efe8dc;--k-fc2:#cfc4b0}
+
+/* a disclaimer in one line; the "?" opens the rest */
+.k-say{font-size:12.5px;color:var(--k-faint);margin:6px 0}
+.k-say>summary{list-style:none;cursor:pointer;display:inline}
+.k-say>summary::-webkit-details-marker{display:none}
+.k-help{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--k-edge);color:var(--k-soft);font-size:11px;margin-left:6px;vertical-align:1px}
+.k-say[open]>summary .k-help{background:var(--k-wash2);color:var(--k-text)}
+.k-say .k-more-text{margin:6px 0 2px;color:var(--k-soft);font-size:13px;max-width:48em}
+.k-say .k-more-text p{margin:4px 0}
+.k-alarmbox{border:1px solid var(--k-bad);border-radius:12px;padding:10px 12px;margin:8px 0;color:var(--k-text);font-size:14px}
+
+/* notes the app says: done, error */
+.k-note{margin:8px 0;padding:8px 12px;border-left:2px solid var(--k-line);font-size:14px;color:var(--k-soft)}
+.k-note.k-done{border-left-color:var(--k-p);color:var(--k-text)}
+.k-note.k-error{border-left-color:var(--k-bad);color:var(--k-text)}
+.k-note ul{margin:4px 0 0;padding-left:1.1em}
+.k-note li.k-bad,.k-note li.bad{color:var(--k-bad)}
+.k-status{position:fixed;z-index:45;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-status:empty{display:none}
+.k-status .k-note{margin:0;border-left:0;padding:10px 40px 10px 14px}
+.k-status .k-close{position:absolute;right:8px;top:8px}
+
+/* the profile page: light and friendly */
+.k-prof{max-width:760px;width:100%;margin:0 auto;flex:1;display:flex;flex-direction:column;min-height:0}
+.k-prof .k-hero{display:flex;gap:18px;align-items:center;padding:8px 0 12px;flex-wrap:wrap}
+.k-prof .k-hero .k-dot{width:64px;height:64px;font-size:26px;font-weight:300}
+.k-prof .k-hero h2{font-size:30px;overflow-wrap:anywhere}
+.k-prof .k-own-name{color:var(--k-soft);font-size:14px}
+
+/* lists, words */
+.k-list{border-top:1px solid var(--k-line)}
+.k-list>div,.k-list>li{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--k-line);font-size:14.5px;list-style:none}
+.k-list .k-r{margin-left:auto;color:var(--k-soft);font-size:13px}
+.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px ui-monospace,Menlo,monospace;margin:10px 0;background:var(--k-raise)}
+.k-words b{display:inline-block;min-width:2em;color:var(--k-faint);font-weight:400}
+.k-box{border:1px solid var(--k-line);border-radius:14px;padding:14px 16px;margin:10px 0}
+.k-box.k-fill{background:var(--k-wash);border-color:transparent}
+.k-facts{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;font-size:14px;margin:6px 0}
+.k-facts dt{color:var(--k-faint)}.k-facts dd{margin:0;color:var(--k-soft);overflow-wrap:anywhere}
+
+/* phone: one column; the column becomes the first screen and folds away once a part is chosen */
+@media (max-width:600px){
+  .k-top{height:52px;padding:0 10px;gap:8px}
+  .k-app .k-nm,.k-hide-phone{display:none!important}
+  .k-me{padding:3px;border:0}
+  .k-me .k-n,.k-me .k-s{display:none}
+  .k-menu-btn .k-l{display:none}
+  .k-switch button{padding:4px 11px}
+  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr);gap:10px;padding:12px}
+  .k-tile{padding:16px 18px;border-radius:18px}
+  .k-tile .k-ic{width:40px;height:40px;left:18px;top:16px}
+  .k-tile h2{font-size:24px}
+  .k-tile p{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .k-tile .k-dm{right:16px;top:18px}
+  .k-opened .k-col{width:100%;border-right:0;padding:12px}
+  .k-opened .k-pane{display:none;padding:12px}
+  .k-opened.k-chosen .k-col{display:none}
+  .k-opened.k-chosen .k-pane{display:flex}
+  .k-opened.k-chosen .k-back{display:inline-flex}
+  .k-pane{padding:12px}
+  .k-words{grid-template-columns:repeat(3,1fr);font-size:12.5px;padding:10px 12px;gap:4px 10px}
+  .k-panel{left:8px;right:8px;width:auto;top:56px}
+  .k-pop:not([data-k-suggest]){left:8px!important;right:8px!important;top:auto!important;bottom:8px!important;max-width:none;width:auto;min-width:0;border-radius:16px}
+  .k-modal{padding:12px;width:calc(100% - 16px);max-height:calc(100% - 24px)}
+  .k-act .k-when{display:none}
+  .k-feed{padding:4px 10px}
+}
+`;
+
+// ../kit/src/html.ts
+var SVG = (d) => `<svg class="k-ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+var ICONS = {
+  identities: SVG('<circle cx="24" cy="17" r="8"/><path d="M9 41c2-9 8-13 15-13s13 4 15 13"/>'),
+  runner: SVG('<rect x="7" y="13" width="20" height="22" rx="4"/><path d="M27 20h6a6 6 0 0 1 0 12h-6M33 26h8M14 22h6M14 27h6"/>'),
+  paper: SVG('<path d="M13 6h16l8 8v28H13z"/><path d="M29 6v8h8M18 22h14M18 28h14M18 34h9"/>'),
+  collectives: SVG('<circle cx="16" cy="18" r="5.5"/><circle cx="32" cy="18" r="5.5"/><circle cx="24" cy="12" r="5"/><path d="M6 38c1-7 5-10 10-10s7 2 8 5c1-3 3-5 8-5s9 3 10 10"/>'),
+  waiting: SVG('<path d="M14 6h20M14 42h20M16 6c0 10 16 12 16 18S16 32 16 42M32 6c0 10-16 12-16 18s16 8 16 18"/>'),
+  account: SVG('<rect x="8" y="9" width="32" height="30" rx="4"/><path d="M8 17h32M15 25h8M15 31h12M31 25h3M31 31h3"/>'),
+  lanes: SVG('<path d="M14 42 19 6M34 42 29 6M24 10v4M24 21v5M24 33v6"/>'),
+  settings: SVG('<path d="M10 14h28M10 24h28M10 34h28"/><circle cx="18" cy="14" r="3.5"/><circle cx="31" cy="24" r="3.5"/><circle cx="22" cy="34" r="3.5"/>'),
+  agents: SVG('<rect x="10" y="12" width="28" height="24" rx="7"/><circle cx="19" cy="24" r="2.4"/><circle cx="29" cy="24" r="2.4"/><path d="M24 6v6M6 22v6M42 22v6"/>'),
+  publishing: SVG('<path d="M8 30v8h32v-8M24 30V8M15 17l9-9 9 9"/>'),
+  vows: SVG('<circle cx="24" cy="22" r="12"/><path d="M18 22l4 4 8-8M17 33l-3 9 10-5 10 5-3-9"/>'),
+  look: SVG('<path d="M4 24s7-12 20-12 20 12 20 12-7 12-20 12S4 24 4 24z"/><circle cx="24" cy="24" r="6"/>'),
+  discuss: SVG('<path d="M6 10h24v16H16l-6 6v-6H6z"/><path d="M34 18h8v16h-4v6l-6-6H22v-4"/>'),
+  publish: SVG('<path d="M10 40h28M24 32V8M15 17l9-9 9 9"/>'),
+  choose: SVG('<path d="M8 12l3 3 6-6M8 24l3 3 6-6M8 36l3 3 6-6M22 12h18M22 24h18M22 36h18"/>')
+};
+
+// ../dub/src/page/family.ts
 var TEST_ONLY = "Test identities only, until MOR is frozen";
 var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY}. Two risks, in plain words:</p>
 <ol><li>Whoever serves this page's code at the moment an identity is made here could copy its keys.</li>
@@ -10597,17 +10869,75 @@ details>summary::before{color:var(--tint)}
 .bar{border-bottom-color:var(--edge)}
 .correction strong{font-weight:400;color:var(--text)}`;
 
+// ../dub/src/page/view.ts
+var TEST_ONLY2 = "Test identities only, until MOR is frozen";
+var TINT2 = { layer: APPS.dub.colour, pastel: APPS.dub.pastel };
+var WEB_BANNER2 = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY2}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>Two risks, in plain words:</p>
+<ol><li>Whoever serves this page\u2019s code at the moment an identity is made here could copy its keys.</li>
+<li>This browser\u2019s storage, where the identity\u2019s signing key is kept, can be lost, or read by what runs in this page.</li></ol>
+<p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div></details>`;
+var PAGE_STYLE2 = `${KIT_STYLE}
+body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
+#app.k-page{flex:1;min-height:0;height:auto}
+.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.dub-banner strong{font-weight:400;color:var(--k-text)}
+.dub-banner ol{margin:4px 0;padding-left:1.4em}
+.dub-center{max-width:820px;margin:0 auto;width:100%}
+.dub-first{max-width:640px;margin:0 auto;width:100%;overflow:auto;padding:24px 20px 40px}
+.dub-first h2{font-size:24px;margin:8px 0 4px}
+.dub-first form{margin:6px 0}
+.dub-picked{font-size:12.5px;color:var(--k-soft)}
+.dub-film{display:flex;align-items:center;gap:10px;border:1px solid var(--k-line);border-radius:12px;padding:10px 12px;margin:6px 0;font-size:14px;color:var(--k-soft)}
+.dub-sealed{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:6px 0}
+.dub-sealed img{margin:6px 0}
+.dub-convs{width:300px;flex:none;border-right:1px solid var(--k-line);display:flex;flex-direction:column;min-height:0}
+#private-notes{padding:0 14px 10px}
+.dub-convs .dub-find{margin:12px;width:calc(100% - 24px)}
+.dub-convs .dub-list{overflow:auto;flex:1;min-height:0}
+.dub-conv{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--k-line);width:100%;text-align:left}
+.dub-conv.k-on{background:var(--k-wash2)}
+.dub-conv .k-n{font-size:14.5px}
+.dub-conv .dub-l{font-size:13px;color:var(--k-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;display:block}
+.dub-conv .dub-w{margin-left:auto;font-size:11.5px;color:var(--k-faint);align-self:flex-start;white-space:nowrap}
+.dub-conv .k-count{background:var(--k-p);color:var(--k-ink);margin-left:6px}
+.dub-thread{flex:1;min-width:0;display:flex;flex-direction:column;padding:14px 22px 16px;min-height:0}
+.dub-thread .dub-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.dub-thread .dub-head h2{font-size:20px}
+.dub-cc{font-size:12.5px;color:var(--k-soft)}
+.dub-field{display:flex;gap:8px;align-items:center}
+.dub-field input{flex:1}
+.dub-modal-form textarea{min-height:5em}
+.dub-ways{border-top:1px solid var(--k-line);margin:8px 0}
+.dub-ways label{display:flex;gap:10px;align-items:flex-start;padding:10px 6px;border-bottom:1px solid var(--k-line);margin:0;color:var(--k-text);font-size:14.5px;cursor:pointer}
+.dub-ways label.dub-closed{color:var(--k-faint);cursor:default}
+.dub-ways input{margin-top:4px}
+.dub-ways .k-small{display:block}
+.dub-hand{width:100%;min-height:6em;font:12px ui-monospace,Menlo,monospace}
+.dub-note-line{font-size:13px;color:var(--k-soft);margin:0 0 8px}
+@media (max-width:600px){
+  .dub-banner{padding:5px 10px}
+  .dub-private .dub-convs{width:100%;border-right:0}
+  .dub-private .dub-thread{display:none;padding:10px 12px}
+  .dub-private.k-chosen .dub-convs{display:none}
+  .dub-private.k-chosen .dub-thread{display:flex}
+  .dub-private .k-back{display:inline-flex}
+  .dub-first{padding:16px 14px 30px}
+  .k-typing .dub-l{display:none}
+}
+.dub-film .k-btn{white-space:nowrap}
+@media (min-width:601px){.dub-private .k-back{display:none}}`;
+
 // src/page/view.ts
 var NAME = "Damgar";
-var TEST_ONLY2 = "Test identities and test networks only, until MOR is frozen. No real money";
-var WEB_BANNER2 = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY2}. The risks, in plain words:</p>
+var TEST_ONLY3 = "Test identities and test networks only, until MOR is frozen. No real money";
+var WEB_BANNER3 = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY3}. The risks, in plain words:</p>
 <ol><li>Whoever serves this page\u2019s code at the moment you bring an identity here could copy its signing key, and the on-chain request key Damgar makes: with them, sign claims and receipts as you, and commit your side to payments you did not intend.</li>
 <li>This browser\u2019s storage, where those keys are kept, can be lost, or read by what runs in this page.</li>
 <li>Damgar holds no wallet: money moves only in your own wallet, on a test network. This page follows no chain, so an on-chain payment is shown paid, not yet checked against the chain.</li></ol>
 <p>Never bring a real identity here, and never pay real money for anything it shows.</p></div>`;
-var TINT2 = { layer: "#e8b33a", line: "#382e16", edge: "#4a3b1a", accent: "#8e6f28" };
+var TINT3 = { layer: "#e8b33a", line: "#382e16", edge: "#4a3b1a", accent: "#8e6f28" };
 var STYLE2 = `${STYLE}
-:root{--line:${TINT2.line};--edge:${TINT2.edge};--tint:${TINT2.accent}}
+:root{--line:${TINT3.line};--edge:${TINT3.edge};--tint:${TINT3.accent}}
 button:hover,.door:hover{border-color:var(--tint)}
 input:focus,textarea:focus{border-color:var(--tint)}
 details>summary::before{color:var(--tint)}
@@ -10650,20 +10980,20 @@ details.settled .item{border:0;padding:0;margin:4px 0 0;background:none}
 .accept .round{color:var(--faint)}
 .costs{border:1px solid var(--bad);border-radius:12px;padding:10px 14px;margin:12px 0}
 .costs h3{font-weight:400;margin:0 0 4px}`;
-var note = (kind, html) => `<div class="note ${kind}">${html}</div>`;
+var note2 = (kind, html) => `<div class="note ${kind}">${html}</div>`;
 var lines = (ls) => ls.length ? `<ul>${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>` : "";
 function who(w) {
   return `<span class="who"><span class="fp" title="${e(w.id)}">${e(w.short)}</span>${w.me ? '<span class="you">you</span>' : ""}</span>`;
 }
 function testNotice(web) {
-  return web ? "" : `<div class="banner" id="test-only">${TEST_ONLY2}. Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program\u2019s folder: a prototype, never for a real identity.</div>`;
+  return web ? "" : `<div class="banner" id="test-only">${TEST_ONLY3}. Damgar holds no wallet and no node: money moves only in your own wallet. The signing key and the on-chain request key are held in software in this program\u2019s folder: a prototype, never for a real identity.</div>`;
 }
-function top(web = false, back = false) {
+function top2(web = false, back = false) {
   return `<header class="bar"><h1 class="mark">${NAME}</h1><span class="grow"></span>${back ? '<button class="quiet" data-action="back">Back to Damgar</button>' : `<span class="small">${web ? "web client, for testing only" : "this machine only"}</span>`}</header>
 ${testNotice(web)}`;
 }
 function pairing() {
-  return `${top()}
+  return `${top2()}
 <h2>Pair this browser</h2>
 <p class="small">This page acts for the Damgar program running on this machine, which holds the keys. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
 <form id="pair" class="row"><input id="pair-code" class="grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
@@ -10676,10 +11006,10 @@ function identityWindow(s, web) {
   const mine = i ? `<section class="card"><h3>In use</h3><p class="id">${e(i.form)}</p><p class="small">In hexadecimal, as before: <span class="fp">${e(i.grouped)}</span></p>
 <dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(", "))}</dd><dt>Relays</dt><dd>${e(i.relays.join(", "))}</dd><dt>Damgar\u2019s line</dt><dd>${cardWords(i.line, "Damgar", e)}</dd></dl>
 <p class="small">Most of Damgar\u2019s acts are sealed, so Ki\u0161ib cannot read its line from the homes: when the signing key is changed there, give Ki\u0161ib this card (latest act, position, summary), or every claim and receipt signed here becomes void (Identity rule 35).</p>
-${i.encryption ? "" : note("warn", "Damgar holds no encryption key for this identity: nothing sealed to it opens here.")}
+${i.encryption ? "" : note2("warn", "Damgar holds no encryption key for this identity: nothing sealed to it opens here.")}
 <div class="row"><button data-action="carry">Show the signing key\u2019s words</button><button data-action="leave" class="quiet">Leave it</button><button data-action="back" class="primary">Back to Damgar</button></div>
 <details><summary>Its signing key was changed elsewhere (in Ki\u0161ib): take the new words</summary><form id="renew"><label>The new signing key\u2019s 24 words</label><textarea name="words" required></textarea><div class="row"><button type="submit">Use the new words</button></div></form></details></section>` : "";
-  return `${top(web, !!i)}
+  return `${top2(web, !!i)}
 <h2>${i ? "The identity" : "First, an identity"}</h2>
 <p class="small">Damgar never makes an identity and never holds a chain key. Bring one you have, by its ID and its signing key\u2019s words, as in Dub: Dub\u2019s identity window shows them (\u201CShow the signing key\u2019s words\u201D).</p>
 ${mine}
@@ -10693,7 +11023,7 @@ ${held}
 <div id="status"></div>`;
 }
 function carry(c, web) {
-  return `${top(web, true)}<h2>The signing key\u2019s words</h2>
+  return `${top2(web, true)}<h2>The signing key\u2019s words</h2>
 <p class="small">With the ID, they bring this identity into Damgar, Dub or Edubba on another device. Whoever holds them can sign claims and receipts as this identity and open what is sealed to it. They are not the chain key\u2019s words, and not a Bitcoin wallet\u2019s.</p>
 <p class="id">${e(c.grouped)}</p><div class="words">${c.words.map((w, i) => `<span><b>${i + 1}</b>${e(w)}</span>`).join("")}</div>
 <div class="row"><button data-action="back" class="primary">Back to Damgar</button></div>`;
@@ -10705,10 +11035,10 @@ function acceptList(items) {
   ).join("")}</ul></div>`;
 }
 function acceptScreen(s, web) {
-  return `${top(web)}
+  return `${top2(web)}
 <h2>What you accept</h2>
 <p class="small">Every money act names the specifications it follows. Damgar reads, checks and signs only under those you accept here; an act under any other is shown unknown, and is never signed (as the core treats a specification it does not implement). Your choice is sealed to your identity and kept at its homes, so every app holding it reads the same list (F340); changeable in Settings.</p>
-${s.list.problems.length ? note("warn", lines(s.list.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}
+${s.list.problems.length ? note2("warn", lines(s.list.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}
 <form id="accept">${acceptList(s.accept)}<div class="row"><button type="submit" class="primary">Accept these</button></div></form>
 <div id="status"></div>`;
 }
@@ -10731,7 +11061,7 @@ ${testNotice(web)}
 var amount = (a) => a ? `<p class="amount">${e(a.said)}</p>` : "";
 var verdict = (v) => `<span class="v ${e(v.answer)}" title="${e(v.why)}">${e(v.answer)}</span>`;
 function toSign(items, problems) {
-  if (!items.length) return `<p class="empty">Nothing waits to be signed.</p>${problems.length ? note("warn", lines(problems.map((t) => ({ text: t, tone: "warn" })))) : ""}`;
+  if (!items.length) return `<p class="empty">Nothing waits to be signed.</p>${problems.length ? note2("warn", lines(problems.map((t) => ({ text: t, tone: "warn" })))) : ""}`;
   const btn = (o, id, label, primary = false) => `<button${primary ? ' class="primary"' : ""} data-action="${o}" data-id="${e(id)}">${label}</button>`;
   return items.map((t) => {
     const offers = t.offers.map((o) => {
@@ -10759,7 +11089,7 @@ function toSign(items, problems) {
     const invoice = t.offers.includes("invoice") ? `<label>The description hash to give your wallet</label><div class="copy" data-copy>${e(t.descriptionHash ?? "")}</div><button class="quiet" data-action="copy" data-text="${e(t.descriptionHash ?? "")}">Copy</button>
 <form class="invoice" data-id="${e(t.id)}"><label>The invoice your wallet made (BOLT 11)</label><textarea name="invoice" required spellcheck="false" placeholder="lnbcrt\u2026"></textarea><div class="row"><button type="submit" class="primary">Check it and send it</button></div></form>` : "";
     return `<div class="item${t.unknown ? " unknown" : ""}" data-item="${e(t.id)}"><h3>${e(t.title)}</h3><div class="meta">${t.app ? `Prepared in ${e(t.app)} \xB7 ` : ""}from ${who(t.from)}</div>${amount(t.amount)}${lines(t.lines)}${invoice}<div class="row">${offers}</div></div>`;
-  }).join("") + (problems.length ? note("warn", lines(problems.map((x) => ({ text: x, tone: "warn" })))) : "");
+  }).join("") + (problems.length ? note2("warn", lines(problems.map((x) => ({ text: x, tone: "warn" })))) : "");
 }
 function payment(p, forPay = false) {
   const proofs = p.proofs.length ? `<div class="proofs">${p.proofs.map((x) => `<div class="p"><span>${x.kind === "claim" ? "Claim" : "Receipt"} by ${who(x.by)}</span><span class="small how">${e(x.how)}</span>${verdict(x.rail)}<span class="small">rail: ${e(x.rail.why || "the rail\u2019s own evidence holds")}</span>${x.confirmations ? `<span class="small">${x.confirmations[0]} of ${x.confirmations[1]} confirmations</span>` : ""}</div><div class="p small">Beside it: ${verdict(x.beside)} ${e(x.beside.why)}${x.standing !== "valid" ? ` \xB7 the act itself: ${e(x.standing)}` : ""}</div>`).join("")}</div>` : "";
@@ -10784,7 +11114,7 @@ function account(a) {
 <h2>Payments</h2>${a.payments.length ? `${a.payments.some(confirmed) ? '<p class="small">Payments paid and confirmed are folded: open one to see its record.</p>' : ""}${a.payments.map(accountPayment).join("")}` : '<p class="empty">No payment yet.</p>'}
 ${asks}
 <details class="fold"><summary>What this account does not judge</summary>${lines(a.notes.map((t) => ({ text: t })))}</details>
-${a.problems.length ? note("warn", lines(a.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}`;
+${a.problems.length ? note2("warn", lines(a.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}`;
 }
 function payList(ps) {
   return ps.length ? ps.map((p) => payment(p, true)).join("") : '<p class="empty">Nothing to pay.</p>';
@@ -10795,7 +11125,7 @@ function settings(s, r, problem, l, opened = /* @__PURE__ */ new Set()) {
   const open = (name) => !s.settingsSaved || opened.has(name);
   const pointer = r?.pointer ? `<p>Your payee pointer in force: version ${r.pointer.version}${r.pointer.forked ? " (its chain is forked: the last pointer before the fork counts)" : ""}.</p>${lines(r.pointer.rails.map((x, n) => ({ text: `${n + 1}. ${x.name}: ${x.said}${x.accepted ? "" : " (a rail Module you do not accept)"}` })))}` : '<p class="small">You have no payee pointer yet: nobody can pay you until you say where.</p>';
   const vault = r?.vault ? `${lines(r.vault.entries.map((x) => ({ text: `${x.unit.said}, on ${x.railName}: ${x.said}.` })))}<p class="small">Declared in your identity\u2019s chain (act ${e(r.vault.declaredBy.slice(0, 12))}\u2026), with the chain key: it is changed only in Ki\u0161ib, in a change of keys, never here (Money rule 2).</p>` : '<p class="small">Your identity\u2019s chain declares no vault: every payment goes to your flow, and you have chosen no protection (Money rule 3). A vault, and its limit per unit, is declared with the chain key, in Ki\u0161ib.</p>';
-  const paid = `${problem ? note("warn", e(problem)) : pointer}
+  const paid = `${problem ? note2("warn", e(problem)) : pointer}
 <form id="rails"><label>Lightning: your wallet\u2019s node key (66 hexadecimal characters; the test wallet shows it)</label><input name="lightning" autocomplete="off" spellcheck="false">
 <label>On-chain: a Bitcoin key of your wallet, x-only (64 hexadecimal characters)</label><input name="onchain" autocomplete="off" spellcheck="false">
 <label>Network</label><select name="network"><option value="3" selected>regtest</option><option value="2">signet</option></select>
@@ -10805,7 +11135,7 @@ ${r?.requestKey ? `<p class="small">The on-chain request key Damgar holds: <span
   const where = `<dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(", "))} (the identity\u2019s chain names them; changed in Ki\u0161ib)</dd><dt>The chain followed</dt><dd>${e(r?.chain ?? "")}</dd></dl>
 <form id="relays"><label>Relays its money acts go to, one per line</label><textarea name="relays">${e(i.relays.join("\n"))}</textarea><div class="row"><button type="submit">Save the relays</button></div></form>`;
   const accept = `<p class="small">Sealed to your identity at its homes${s.list.version ? ` (version ${s.list.version})` : ""}: every app holding it reads it, each for its part. Damgar changes only the Money layer\u2019s part.</p>
-${s.list.merged.length ? note("warn", `Two apps changed it at once; merged: ${lines(s.list.merged.map((t) => ({ text: t })))}`) : ""}
+${s.list.merged.length ? note2("warn", `Two apps changed it at once; merged: ${lines(s.list.merged.map((t) => ({ text: t })))}`) : ""}
 <form id="accept">${acceptList(s.accept)}<div class="row"><button type="submit" class="primary">Save what I accept</button></div></form>
 <div class="row"><span class="grow small">${s.list.published ? "Published: anyone can read which specifications you accept." : "Private: sealed to yourself (the default)."}</span><button data-action="publish list" data-on="${s.list.published ? "false" : "true"}">${s.list.published ? "Make it private again" : "Publish it"}</button></div>`;
   return [
@@ -10825,15 +11155,15 @@ function vaultTransferForm(entries) {
 function vaultReview(r) {
   return `<div class="item"><h3>Transfer to your vault, read back</h3>${lines(r.lines)}</div>
 ${r.costs.length ? `<div class="costs"><h3>Before you send</h3>${lines(r.costs)}</div>` : ""}
-${r.blocking.length ? note("warn", lines(r.blocking.map((t) => ({ text: t, tone: "warn" })))) : `<div class="row"><button class="primary" data-action="vault transfer" data-digest="${e(r.digest)}">Bind it, then pay it in Pay</button></div>`}`;
+${r.blocking.length ? note2("warn", lines(r.blocking.map((t) => ({ text: t, tone: "warn" })))) : `<div class="row"><button class="primary" data-action="vault transfer" data-digest="${e(r.digest)}">Bind it, then pay it in Pay</button></div>`}`;
 }
 function railsReview(r) {
   return `<div class="item"><h3>Your new payee pointer</h3>${lines(r.lines)}</div>
 ${r.costs.length ? `<div class="costs"><h3>What each rail costs you, stated by its Module</h3>${lines(r.costs)}</div>` : ""}
 <div class="row"><button class="primary" data-action="rails publish" data-digest="${e(r.digest)}">Sign and publish it</button></div>`;
 }
-function spent(say2) {
-  return note("spent", `${e(say2)} <button data-action="window">Give the new words</button>`);
+function spent(say3) {
+  return note2("spent", `${e(say3)} <button data-action="window">Give the new words</button>`);
 }
 function lanes(r, units) {
   const list3 = r.lanes.length ? r.lanes.map(
@@ -10843,11 +11173,11 @@ ${lines(l.words.map((text3) => ({ text: text3 })))}
 ${l.state === "in force" ? `<div data-revoke="${e(l.grant)}"><div class="row"><button data-action="revoke lane review" data-grant="${e(l.grant)}">Revoke it</button></div></div>` : ""}</div>`
   ).join("") : '<p class="empty">No lane yet. An app asks for one (in Dub: its identity window, \u201CPaying from Dub: a lane from Damgar\u201D), and it waits in To sign.</p>';
   const unitOptions = units.map((u2) => `<option value="${e(u2.hash)}"${/regtest/.test(u2.label) ? " selected" : ""}>${e(u2.label)}</option>`).join("");
-  const own = (role, title, say2) => `<form class="own-lane" data-role="${role}"><h3>${title}</h3><p class="small">${say2}</p>
+  const own = (role, title, say3) => `<form class="own-lane" data-role="${role}"><h3>${title}</h3><p class="small">${say3}</p>
 <div class="row"><label>At most, per act <input name="cap" inputmode="numeric" required></label><label>Unit <select name="unit">${unitOptions}</select></label></div>
 <label>Until (optional; judged on the timestamp clock named in Settings)</label><input name="until" type="datetime-local">
 <div class="row"><button type="submit">Read it back</button></div></form>`;
-  return `${r.manual ? note("warn", "Every step is followed by hand (Settings): the lanes Damgar holds sign nothing until you turn it off. Lanes other apps hold still sign there.") : ""}
+  return `${r.manual ? note2("warn", "Every step is followed by hand (Settings): the lanes Damgar holds sign nothing until you turn it off. Lanes other apps hold still sign there.") : ""}
 <h2>Your lanes</h2>${list3}
 <h2>Damgar by itself</h2>
 <p class="small">With these, a payment to you needs nothing from you: Damgar answers and signs the receipt by itself, below the cap. Without them, everything waits in To sign, as in round 1.</p>
@@ -10868,7 +11198,7 @@ function byHand(r, web) {
     ["clock", "The clock for lanes", `<p class="small">A lane\u2019s expiry is judged on a timestamp clock you name (the grant limits cMIP, 3.1): until it stamps an act, whether it came before the expiry is unknown.</p>
 <form id="clock" class="row"><input name="clock" class="grow" placeholder="its ID" value="${e(r.clock ?? "")}" spellcheck="false"><button type="submit">Save the clock</button></form>`],
     ["link", "Making invoices by itself (receive-only)", `${lines(r.linkSay.map((text3) => ({ text: text3 })))}
-${web ? note("warn", "The web client never makes a link to a node: use Damgar on your computer.") : r.link ? `<p>A receive-only link is kept.</p><div class="row"><button data-action="link remove">Remove it</button></div>` : `<form id="link"><label>Your node\u2019s REST address</label><input name="rest" placeholder="https://127.0.0.1:8080" spellcheck="false" required>
+${web ? note2("warn", "The web client never makes a link to a node: use Damgar on your computer.") : r.link ? `<p>A receive-only link is kept.</p><div class="row"><button data-action="link remove">Remove it</button></div>` : `<form id="link"><label>Your node\u2019s REST address</label><input name="rest" placeholder="https://127.0.0.1:8080" spellcheck="false" required>
 <label>The receive-only permission\u2019s file (on lnd, the macaroon baked with invoices:write and invoices:read)</label><input name="macaroonFile" spellcheck="false" required>
 <label>The node\u2019s certificate file (tls.cert)</label><input name="certFile" spellcheck="false" required>
 <div class="row"><button type="submit">Check it and keep it</button></div></form>`}`]
@@ -10886,7 +11216,7 @@ function collectives(r) {
     ) : '<p class="small">No promise signed here yet.</p>';
     return `<div class="item" data-collective="${e(c.id)}"><h3>Collective <span class="fp" title="${e(c.id)}">${e(c.id.slice(0, 8))}\u2026${e(c.id.slice(-4))}</span></h3>
 ${area ? `<p class="small">Its Money area, \u201C${e(area.name)}\u201D: ${area.holders.length} holder${area.holders.length === 1 ? "" : "s"}, ${area.number} key${area.number === 1 ? "" : "s"}${area.cap ? `; above ${area.cap.value.toLocaleString("en")} an act, one more` : ""}.</p>` : ""}
-${c.why ? note("warn", e(c.why)) : `<form class="collective-promise" data-collective="${e(c.id)}"><h4>A promise to pay, from the collective</h4>
+${c.why ? note2("warn", e(c.why)) : `<form class="collective-promise" data-collective="${e(c.id)}"><h4>A promise to pay, from the collective</h4>
 <label>To whom (an ID)</label><input name="to" type="text" required autocomplete="off" spellcheck="false">
 <div class="row"><label>How much (regtest satoshis) <input name="value" type="text" inputmode="numeric" required class="narrow"></label></div>
 <label>What for</label><input name="whatFor" type="text">
@@ -10916,12 +11246,12 @@ function mount(app3, b) {
     if (t && TABS.includes(t)) tab = t;
   } catch {
   }
-  const say2 = (kind, html) => {
+  const say3 = (kind, html) => {
     const s = $("status");
     if (s) {
-      s.innerHTML = note(kind, html);
+      s.innerHTML = note2(kind, html);
       s.scrollIntoView({ block: "nearest" });
-    } else app3.insertAdjacentHTML("beforeend", note(kind, html));
+    } else app3.insertAdjacentHTML("beforeend", note2(kind, html));
   };
   const fail = (err) => {
     if (b.unpaired?.(err)) {
@@ -10933,10 +11263,10 @@ function mount(app3, b) {
       const sp = $("spent");
       if (sp) sp.innerHTML = spent(m);
     }
-    say2("error", e(m));
+    say3("error", e(m));
   };
   const done = (r) => {
-    if (r?.lines?.length) say2("done", lines(r.lines));
+    if (r?.lines?.length) say3("done", lines(r.lines));
   };
   async function act(f) {
     app3.querySelectorAll("button").forEach((x) => x.disabled = true);
@@ -10981,6 +11311,7 @@ function mount(app3, b) {
     c("count-sign", s.counts.toSign);
     c("count-pay", s.counts.toPay);
   }
+  const typedHere = /* @__PURE__ */ new Map();
   async function refreshSign(quiet = false) {
     const box = $("sign-list");
     if (!box) return;
@@ -10991,15 +11322,21 @@ function mount(app3, b) {
     const r = await b.ask("to sign");
     const target = $("sign-list");
     if (!target) return;
-    const typed = [...target.querySelectorAll("form[data-id] [name]")].filter((x) => x.value).map((x) => ({ form: x.form.dataset.id, name: x.name, value: x.value, focused: document.activeElement === x }));
-    target.innerHTML = toSign(r.items, [...r.problems, ...looked?.problems ?? []]);
-    for (const t of typed) {
-      const x = target.querySelector(`form[data-id="${CSS.escape(t.form ?? "")}"] [name="${CSS.escape(t.name)}"]`);
-      if (!x) continue;
-      x.value = t.value;
-      if (t.focused) x.focus();
+    let focused = null;
+    for (const x of target.querySelectorAll("form[data-id] [name]")) {
+      const k = `${x.form.dataset.id}\0${x.name}`;
+      if (x.value) typedHere.set(k, x.value);
+      else typedHere.delete(k);
+      if (document.activeElement === x) focused = k;
     }
-    if (looked?.lines.length && !quiet) say2("done", lines(looked.lines));
+    target.innerHTML = toSign(r.items, [...r.problems, ...looked?.problems ?? []]);
+    for (const x of target.querySelectorAll("form[data-id] [name]")) {
+      const k = `${x.form.dataset.id}\0${x.name}`;
+      const kept = typedHere.get(k);
+      if (kept && !x.value) x.value = kept;
+      if (k === focused) x.focus();
+    }
+    if (looked?.lines.length && !quiet) say3("done", lines(looked.lines));
     await counts();
   }
   async function open(t) {
@@ -11218,6 +11555,9 @@ function mount(app3, b) {
     if (fid === "pair") return;
     ev.preventDefault();
     const fd = form2(f);
+    if (f.dataset.id) {
+      for (const k of [...typedHere.keys()]) if (k.startsWith(`${f.dataset.id}\0`)) typedHere.delete(k);
+    }
     if (fid === "collective-add") {
       const r = await act(() => b.ask("collective add", { id: str(fd, "id") }));
       if (r) {
@@ -11398,19 +11738,19 @@ var ask = (op, a = {}) => run(damgar, op, a);
 var ui = mount(app2, { web: true, ask, start });
 async function start() {
   if (!window.isSecureContext || !crypto?.getRandomValues || !window.indexedDB) {
-    app2.innerHTML = `${top(true)}${note("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.")}`;
+    app2.innerHTML = `${top2(true)}${note2("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.")}`;
     return;
   }
   try {
     damgar ??= new Damgar(await WebKeep.open(), { web: true, chain: null });
   } catch (err) {
-    app2.innerHTML = `${top(true)}${note("error", `This browser does not let the page keep anything (${e(err instanceof Error ? err.message : String(err))}).`)}`;
+    app2.innerHTML = `${top2(true)}${note2("error", `This browser does not let the page keep anything (${e(err instanceof Error ? err.message : String(err))}).`)}`;
     return;
   }
   try {
     await ui.show(await damgar.state());
   } catch (err) {
-    app2.innerHTML = `${top(true)}${note("error", e(err instanceof Error ? err.message : String(err)))}`;
+    app2.innerHTML = `${top2(true)}${note2("error", e(err instanceof Error ? err.message : String(err)))}`;
   }
 }
 void start();
