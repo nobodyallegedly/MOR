@@ -2,6 +2,7 @@
 // the browser's key (Ed25519, WebCrypto), as the collective client's `src/access.ts` checks it. The
 // same scheme as the management page of step 11, with its own domain line.
 
+import type { LineShown } from '../../../genesis/src/card-words.ts';
 /** What the browser's key signs, before the request body (as access.ts's DOMAIN). */
 export const DOMAIN = 'MOR desk, version 1\n';
 
@@ -158,7 +159,7 @@ export interface State {
     /** Made here, or brought here by its signing key's words (H15). */
     kind: 'made' | 'brought';
     /** This desk's own line of acts for it (F152): how many, the latest, its running summary. */
-    line: { acts: number; latest: string | null; summary: string | null };
+    line: LineShown;
     received: Item[];
     /** Releases it published under its own name here (H16), newest first. */
     releases: { id: string; name: string; version: string; folder: string }[];

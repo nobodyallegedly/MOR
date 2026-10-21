@@ -28,6 +28,7 @@ import {
   type KitLabel,
   type KitWho,
 } from '../../../kit/src/index.ts';
+import { cardWords } from '../../../genesis/src/card-words.ts';
 import { PUBLISH_WARNING, type Item, type Line, type Message, type PayWays, type Purchase, type State, type Suggested, type Who } from '../shapes.ts';
 
 // What the other apps take from Dub's page today (Kišib, Damgar, Ummia, Edubba): kept as they were, in `family.ts`.
@@ -540,7 +541,7 @@ export function lineFacts(s: State): string {
 ${i.oldChainKey ? '<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app’s folder, unused and untouched.</dd>' : ''}
 <dt>Private messages</dt><dd>${i.encryption ? 'Its encryption key is here: its private messages open here.' : 'No encryption key here: its private messages cannot be opened here.'}</dd>
 <dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd><dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd>
-<dt>This app’s line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
+<dt>This app’s line</dt><dd>${cardWords(i.line, 'Dub', e)}</dd></dl>
 ${say('A change of keys must keep this line.', ['If the signing key is ever changed (in Kišib, with the chain key’s words), that change must keep this line, or the posts made here become void: take the line above to it.'])}`;
 }
 

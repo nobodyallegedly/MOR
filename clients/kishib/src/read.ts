@@ -11,7 +11,7 @@ import { actForm, idForm } from '../../genesis/src/forms.ts';
 import { IDENTITY_TYPES, cborDecode, describeAct, hex } from '../../genesis/src/core.ts';
 import { lookUp, type Home, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
-import { actsBy, linesOf, lineWords, type FoundLine } from '../../genesis/src/lines.ts';
+import { actsBy, linesOf, lineWords, unplaced, type FoundLine } from '../../genesis/src/lines.ts';
 import { fingerprint } from './shapes.ts';
 import type { Line } from './shapes.ts';
 
@@ -48,6 +48,8 @@ export interface Read {
   lines: FoundLine[];
   /** Every everyday act of the identity found, to read the lines under another binding (the escape). */
   acts: Uint8Array[];
+  /** The act that bound the signing key in force. */
+  binding: string;
 }
 
 interface Described {
@@ -136,8 +138,9 @@ export async function readIdentity(id: string, address: string[], via: Via, iden
     const s = served(id, b, identitySpec);
     if (s && s.position === latest.position + 1 && s.previous === latest.act) next.push(s);
   }
-  const lines = linesOf({ identity: id, binding: bindingOf(look, chainActs), own: [], acts });
-  return { id, look, chainActs, places, next, lines, acts };
+  const binding = bindingOf(look, chainActs);
+  const lines = linesOf({ identity: id, binding, own: [], acts });
+  return { id, look, chainActs, places, next, lines, acts, binding };
 }
 
 /**
@@ -153,6 +156,15 @@ export function bindingOf(look: Lookup, chainActs: Map<string, Uint8Array>): str
     if (t !== IDENTITY_TYPES.chainSignature) return links[i].act;
   }
   return links[0].act;
+}
+
+/**
+ * What a plan needs to place the lines of acts signed with the key `binding`
+ * bound (H80's question 2): every act found, by id, and those Kišib cannot
+ * place by reading, which the apps' cards count.
+ */
+export function placing(rd: Read, binding: string): { held: string[]; unplaced: string[] } {
+  return { held: rd.acts.map((a) => (describeAct(a) as Described).id), unplaced: unplaced({ identity: rd.id, binding, acts: rd.acts }) };
 }
 
 /** The lines of acts signed with the key `binding` bound (the escape keeps the lines of the key before a rival rotation). */

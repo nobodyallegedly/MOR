@@ -101,18 +101,26 @@ test('a member acts for the collective from Damgar with their own key: within th
   // The key's secret never leaves Damgar's program: the page is shown none of it.
   assert.equal(Object.keys(shown.collectives[0].key.secret).length, 0);
 
-  // H80: A's keys changed in Kišib (the lines kept by the cards Dub, Edubba and Damgar show). A's own key asks the
+  // H80: A's keys changed in Kišib, every line placed by the cards Dub, Edubba and Damgar show (H80's question 2: each
+  // private act left at A's homes, so each card names an act they hold, and the counts add up). A's own key asks the
   // other holders, so the promise is refused before anything is signed, in Damgar's words; the new words given, it signs again.
-  const card = (l: { acts: number; latest: string | null; summary: string | null }) => (l.latest ? `${l.latest} ${l.acts} ${l.summary}` : '');
   const cards = [
-    card((await A.c.ask<any>('state')).identity.line),
-    card((await g.c.ask<any>('state')).identity.line),
-    card((await e.c.ask<any>('state')).identities.find((i: any) => i.id === A.id).line),
-  ].filter(Boolean).join('\n');
+    (await A.c.ask<any>('state')).identity.line,
+    (await g.c.ask<any>('state')).identity.line,
+    (await e.c.ask<any>('state')).identities.find((i: any) => i.id === A.id).line,
+  ]
+    .map((l: any) => l.card)
+    .filter(Boolean)
+    .join('\n');
+  assert.match(cards, / Edubba$/m, 'Edubba’s card, naming its app');
+  assert.match(cards, / Damgar$/m, 'Damgar’s card, naming its app');
   const k = await kishib();
   const rv2 = await k.c.ask<any>('rotate plan', { id: A.id, address: H[0], words: A.chainWords.join(' '), cards });
-  // Two private lines (Edubba's and Damgar's: each app's card names a latest act its homes never received, so Kišib cannot
-  // tie the private act they hold to it) are left out, as the warning says; see docs/h80-report.md. What matters here is Damgar's refusal.
+  const said = JSON.stringify(rv2.sections);
+  assert.equal(rv2.warning, null, `every line placed, nothing left out: ${said}`);
+  assert.match(said, /Edubba’s line\. A line Kišib cannot read[^"]*Kept by the card given/);
+  assert.match(said, /Damgar’s line\. A line Kišib cannot read[^"]*Kept by the card given/);
+  assert.match(said, /more acts? Kišib cannot read[^"]*lie on the lines kept by the cards given/);
   const fresh = await changeKeys(k.c, rv2);
   const atHomes = async () => (await relayAt(H[0]).feed({ signer: A.id })).items.length;
   const before3 = await atHomes();
@@ -120,7 +128,8 @@ test('a member acts for the collective from Damgar with their own key: within th
   assert.equal(await atHomes(), before3, 'nothing signed reached A’s homes');
   await g.c.ask('renew', { words: fresh.signing.join(' ') });
   assert.equal((await g.c.ask<any>('check')).current, true, 'the new words taken: Damgar signs again');
-  // The member key lived on a line left out above: void with it, said plainly, nothing signed.
-  await refused(g.c.ask('collective promise', { ...big, digest: s2.digest }), /No key of yours for this collective/);
+  // The member key lived on Edubba's line, kept by its card: still A's, and Damgar signs for the collective with it.
+  const p3 = await g.c.ask<any>('collective promise', { ...big, digest: s2.digest });
+  assert.ok(p3.lines.some((l: any) => /Signed for the collective with your own key/.test(l.text)), JSON.stringify(p3.lines));
   void everything;
 });

@@ -17,6 +17,7 @@
 // mute. No likes, no zaps, no notification hub: a count on each tab.
 
 import { e } from '../../../manage/src/view.ts';
+import { cardWords } from '../../../genesis/src/card-words.ts';
 import { PUBLISH_WARNING, type Held, type Item, type Line, type Message, type Proposal, type ShareShown, type State, type Suggested, type Who } from '../shapes.ts';
 
 export { e, PUBLISH_WARNING };
@@ -302,7 +303,7 @@ ${i.oldChainKey ? '<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026:
 <dt>Private messages</dt><dd>${i.encryption ? 'Its encryption key is here: its private messages open here.' : 'No encryption key here: its private messages cannot be opened here.'}</dd>
 <dt>Homes</dt><dd>${e(i.homes.join(', '))} <span class="small">(changed only with the chain key: in Kišib, “Change an identity’s keys”)</span></dd>
 <dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd>
-<dt>This app's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
+<dt>This app's line</dt><dd>${cardWords(i.line, 'Dub', e)}</dd></dl>
 <p class="small">If the signing key is ever changed (in Kišib, with the chain key’s words), that change must keep this line, or the posts made here become void: take the line above to it.</p></details>
 <details data-fold="relays"><summary>Change its relays</summary>${i.kind === 'made'
     ? `<form id="relays" class="compose"><label>Its relays, one per line: where its acts are found and its inbox is</label><textarea name="relays">${e(i.relays.join('\n'))}</textarea><div class="row"><button type="submit">Read it back</button></div></form><div id="relays-review"></div>`
