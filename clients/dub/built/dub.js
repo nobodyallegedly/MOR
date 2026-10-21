@@ -15210,9 +15210,9 @@ var Dub = class _Dub {
         try {
           inbox = (await lookUp(id, [...where, ...hints], s.via)).inbox(SPECS.text);
         } catch (e3) {
-          throw new Error(`To: the identity ${fingerprint(id)} was not found: ${message6(e3)}. Nothing was posted.`);
+          throw new Error(`To: the identity ${shortId(id)} was not found: ${message6(e3)}. Nothing was posted.`);
         }
-        if (!inbox?.length) throw new Error(`To: the identity ${fingerprint(id)} declares no inbox, so nothing can be left for it. Nothing was posted.`);
+        if (!inbox?.length) throw new Error(`To: the identity ${shortId(id)} declares no inbox, so nothing can be left for it. Nothing was posted.`);
         to.push({ id, inbox });
       }
       let refs;
@@ -15240,11 +15240,11 @@ var Dub = class _Dub {
       const lines2 = changes.map((c) => ({ text: `Text: ${c}.` }));
       for (const t of to) {
         if (!t.inbox?.length) {
-          lines2.push({ text: `${fingerprint(t.id)} declares no inbox${t.why ? ` (${t.why})` : ""}: the reply is published, not left for it.`, tone: "warn" });
+          lines2.push({ text: `${shortId(t.id)} declares no inbox${t.why ? ` (${t.why})` : ""}: the reply is published, not left for it.`, tone: "warn" });
           continue;
         }
         const { left, failed } = await leaveInInbox(me, made.act, t.inbox);
-        if (left.length) lines2.push({ text: `Left in the inbox of ${fingerprint(t.id)} too, unsealed: anyone may read it.`, tone: "ok" });
+        if (left.length) lines2.push({ text: `Left in the inbox of ${shortId(t.id)} too, unsealed: anyone may read it.`, tone: "ok" });
         if (failed.length) lines2.push({ text: `Its inbox did not take it at ${failed.map((f) => `${f.relay} (${f.reason})`).join(", ")}.`, tone: left.length ? "warn" : "bad" });
       }
       if (made.picture) {
@@ -15357,13 +15357,13 @@ var Dub = class _Dub {
     }
     for (const it of items) {
       if (it.standing === "valid" || it.via !== "feed") continue;
-      const a = await authorityOfId(it.id, hints, s.via, { names: (id) => this.whoFrom(id, me.id, p).pet ?? this.whoFrom(id, me.id, p).names[0] ?? fingerprint(id) }).catch(() => null);
+      const a = await authorityOfId(it.id, hints, s.via, { names: (id) => this.whoFrom(id, me.id, p).pet ?? this.whoFrom(id, me.id, p).names[0] ?? shortId(id) }).catch(() => null);
       if (!a) continue;
       const backed = a.backing === "backed" || a.backing === "binds";
       it.authority = { words: a.words, backed };
       it.problem = backed ? null : it.problem;
     }
-    const problems = feed.authors.filter((a) => a.problem).map((a) => `${fingerprint(a.identity)}: ${a.problem}`);
+    const problems = feed.authors.filter((a) => a.problem).map((a) => `${shortId(a.identity)}: ${a.problem}`);
     if (feed.clock?.problem) problems.push(`${s.clock?.name ?? "The clock"}: ${feed.clock.problem}`);
     const clock = s.clock ? { name: s.clock.name, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null;
     return { items, more: feed.more, problems, notes, followsChanged, clock };
@@ -15698,11 +15698,11 @@ var Dub = class _Dub {
         try {
           l = await lookUp(x.id, [...x.hints, ...hints], s.via);
         } catch (e3) {
-          throw new Error(`The identity ${fingerprint(x.id)} was not found: ${message6(e3)}. Nothing was sent.`);
+          throw new Error(`The identity ${shortId(x.id)} was not found: ${message6(e3)}. Nothing was sent.`);
         }
-        if (!l.encryptionKey) throw new Error(`The identity ${fingerprint(x.id)} has published no encryption key, so nothing can be sealed to it. Nothing was sent.`);
+        if (!l.encryptionKey) throw new Error(`The identity ${shortId(x.id)} has published no encryption key, so nothing can be sealed to it. Nothing was sent.`);
         const inbox = l.inbox(SPECS.text);
-        if (!inbox?.length) throw new Error(`The identity ${fingerprint(x.id)} declares no inbox. Nothing was sent.`);
+        if (!inbox?.length) throw new Error(`The identity ${shortId(x.id)} declares no inbox. Nothing was sent.`);
         reach.push({ id: x.id, key: l.encryptionKey, inbox });
       }
       await this.current(me);
@@ -15724,7 +15724,7 @@ var Dub = class _Dub {
           }
         }
         if (here) left++;
-        else if (r.id !== to) lines2.push({ text: `No inbox of ${fingerprint(r.id)} (Cc) took it.`, tone: "bad" });
+        else if (r.id !== to) lines2.push({ text: `No inbox of ${shortId(r.id)} (Cc) took it.`, tone: "bad" });
       }
       if (!left) throw new Error(`No inbox took the message: ${lines2.map((x) => x.text).join("; ")}. It is signed, not delivered.`);
       for (const h of me.f.homes) {
@@ -15737,7 +15737,7 @@ var Dub = class _Dub {
       p.sent.push({ id: made.id, to, text: text3, at: now3(), ...cc.length ? { cc } : {}, ...of ? { of } : {} });
       await this.store.savePeople(me.id, p);
       lines2.unshift({ text: cc.length ? `Sealed to ${this.nameOf(to, me.id, p)} and, in Cc, ${cc.map((x) => this.nameOf(x, me.id, p)).join(", ")}, and left in each inbox: only they can open it, and each sees who else received it.` : `Sealed to ${this.nameOf(to, me.id, p)} and left in their inbox: only they can open it.`, tone: "ok" });
-      if (of) lines2.push({ text: `Written in your own name, with the collective ${fingerprint(of)} appended: it binds nothing, and the reader\u2019s app shows it only where your membership checks.` });
+      if (of) lines2.push({ text: `Written in your own name, with the collective ${this.nameOf(of, me.id, p)} appended: it binds nothing, and the reader\u2019s app shows it only where your membership checks.` });
       return { lines: lines2 };
     });
   }
@@ -16134,7 +16134,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
         return { lines: [{ text: "No clock named: feeds are in each signer\u2019s own order, which is not a time." }] };
       }
       const id = readId(a.id);
-      const name = a.name.trim().slice(0, 48) || `the clock ${fingerprint(id)}`;
+      const name = a.name.trim().slice(0, 48) || `the clock ${shortId(id)}`;
       await this.store.saveSettings(me.id, { ...s, clock: { id, name } });
       this.stamps.delete(id);
       return { lines: [{ text: `Feeds are ordered by ${name}\u2019s clock: its word on when it held each act, never a verdict. Acts it did not stamp keep their signer\u2019s own order.`, tone: "ok" }] };
@@ -16417,7 +16417,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       const rest = (s.collectives ?? []).filter((c) => c.id !== id);
       await this.store.saveSettings(me.id, { ...s, collectives: [...rest, { id, available: !r.why, why: r.why }] });
       await this.warm([id], [...where, ...hints], s.via);
-      return { lines: [r.why ? { text: `Added, not usable yet: ${r.why}`, tone: "warn" } : { text: `${this.names.get(id)?.names[0] ?? fingerprint(id)} is under this identity: choose it in the identity panel to act as it.`, tone: "ok" }] };
+      return { lines: [r.why ? { text: `Added, not usable yet: ${r.why}`, tone: "warn" } : { text: `${this.names.get(id)?.names[0] ?? shortId(id)} is under this identity: choose it in the identity panel to act as it.`, tone: "ok" }] };
     });
   }
   /** Forget a collective here (nothing is published); acting as it stops. */
@@ -18043,6 +18043,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-sealed{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:6px 0}
 .dub-sealed img{margin:6px 0}
 .dub-convs{width:300px;flex:none;border-right:1px solid var(--k-line);display:flex;flex-direction:column;min-height:0}
+#private-notes{padding:0 14px 10px}
 .dub-convs .dub-find{margin:12px;width:calc(100% - 24px)}
 .dub-convs .dub-list{overflow:auto;flex:1;min-height:0}
 .dub-conv{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--k-line);width:100%;text-align:left}

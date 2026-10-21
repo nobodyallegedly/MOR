@@ -258,6 +258,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-sealed{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:6px 0}
 .dub-sealed img{margin:6px 0}
 .dub-convs{width:300px;flex:none;border-right:1px solid var(--k-line);display:flex;flex-direction:column;min-height:0}
+#private-notes{padding:0 14px 10px}
 .dub-convs .dub-find{margin:12px;width:calc(100% - 24px)}
 .dub-convs .dub-list{overflow:auto;flex:1;min-height:0}
 .dub-conv{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--k-line);width:100%;text-align:left}
