@@ -579,6 +579,8 @@ export class CollectiveSitting {
             `Open Kišib, choose “Give my share to a collective’s rotation”, and give the collective and this fingerprint. Kišib shows the rotation in plain words before you type anything.`,
             `It expires at ${when(q.expires)}.`,
           ].join('\n'),
+          // Kišib makes no line an app continues: its acts stay off the starter's homes (README, cost of point 7).
+          home: false,
         });
         lines.push({ text: `${short(m)}: told, in its thread.`, tone: 'ok' });
       } catch (e) {

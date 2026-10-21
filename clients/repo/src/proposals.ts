@@ -25,6 +25,7 @@
 
 import { SPECS, base64, cborDecode, cborEncode, hex, lockMedia, openMedia, openSealed, pickupTag, unhex, workHash, xwingPublic } from '../../genesis/src/core.ts';
 import { TestIdentity, receive, sealFor } from '../../genesis/src/identity.ts';
+import { leaveAtHomes } from '../../genesis/src/private.ts';
 import { relayAt, sealedId, type Via } from '../../genesis/src/transport.ts';
 import { REPO_SPECS } from './specs.ts';
 
@@ -70,12 +71,15 @@ export interface Sent {
  * `previous`, the message it follows (both absent for a first message);
  * `acks`: the latest message of the other side received. `refs`: the act it
  * is about (terms, a clone, a release), with its signer. The caller saves
- * `by`'s file after.
+ * `by`'s file after. The act is also left at `by`'s own homes, locked and
+ * sealed to itself (H80's question 2: it is the latest act of its app's
+ * line, which Kišib must find there), unless `home` is false (Kišib's own
+ * acts, a line of their own that nothing else continues).
  */
 export async function negotiate(
   by: TestIdentity,
   to: Reach,
-  o: { text: string; thread?: string; previous?: string; acks?: string[]; refs?: [string, string][] },
+  o: { text: string; thread?: string; previous?: string; acks?: string[]; refs?: [string, string][]; home?: boolean },
 ): Promise<Sent> {
   const made = by.sign(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
     public: false,
@@ -97,6 +101,7 @@ export async function negotiate(
       failed.push({ relay: hint, reason: e instanceof Error ? e.message : String(e) });
     }
   }
+  if (o.home !== false) await leaveAtHomes(by, made);
   return { id: made.id, act: made.act, key: made.key, sealed: sealedId(sealed), left, failed };
 }
 
@@ -171,7 +176,10 @@ export function acceptanceText(signature: string, oneTime?: Uint8Array): string 
  * share message, locked; the publication sealed to the one-time key alone,
  * left at `relays` under its pickup tag; the locked media beside it. The
  * publication is not kept anywhere else: its content key lives only in that
- * sealed copy. `by`'s sequence moves: save its file after.
+ * sealed copy. It is signed on a line of its own (`signApart`), outside
+ * `by`'s sequence and never at its homes (H80's question 2): no app of `by`
+ * may open it, so it must not sit on a line they follow. *Cost:* it is void
+ * after `by`'s next change of keys; the member opens it once, before.
  */
 export async function sealShare(by: TestIdentity, share: Uint8Array, oneTime: Uint8Array, relays: string[]): Promise<{ sealed: string; publication: string; left: string[] }> {
   const l = lockMedia(share) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
@@ -186,7 +194,7 @@ export async function sealShare(by: TestIdentity, share: Uint8Array, oneTime: Ui
       [6, relays],
     ]),
   );
-  const made = by.sign(SPECS.envelopes, 0, payload, { public: false });
+  const made = by.signApart(SPECS.envelopes, 0, payload);
   const sealed = sealFor(made.act, made.key, [{ key: oneTime }]);
   const tag = pickupTag(oneTime);
   const left: string[] = [];

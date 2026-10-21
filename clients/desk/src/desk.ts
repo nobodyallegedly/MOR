@@ -16,6 +16,7 @@ import { carryChains, lookUp, refAct } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, RelayError, type Via } from '../../genesis/src/transport.ts';
 import { record as recordKex } from '../../genesis/src/kex.ts';
 import { ownLine } from '../../genesis/src/lines.ts';
+import { leaveAtHomes, lineReader, noLine, sendWaiting, type LineAtHomes } from '../../genesis/src/private.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { dealRoot, sellerAlarm, splitGaps } from '../../repo/src/deal.ts';
 import type { Line, Section } from '../../collective/src/explain.ts';
@@ -106,6 +107,8 @@ async function keyChangedAt(id: string, secret: string, hints: string[], via: Vi
 }
 
 export class Desk {
+  /** This desk's line of each identity as the homes hold it, for its card (H80's question 2). */
+  private readonly line = lineReader('Edubba');
   /** One signing operation at a time. */
   private busy: Promise<unknown> = Promise.resolve();
 
@@ -541,12 +544,14 @@ export class Desk {
       for (const h of homes) {
         try {
           await relayAt(h, this.via).putSealed(sealed);
-          await relayAt(h, this.via).putAct(made.act);
           left.push(h);
         } catch {
           // that home is away: the others hold it
         }
       }
+      // Its locked act beside it (H80's question 2): the latest act of this desk's line, which Kišib must find at the homes.
+      await leaveAtHomes(me, made, { via: this.via, sealed: left.length > 0 });
+      this.store.saveIdentity(me);
       if (!left.length) throw new Error(`No home took it (${homes.join(', ')}): it was signed but went nowhere.`);
       return { id: made.id, left };
     });
@@ -656,18 +661,12 @@ export class Desk {
         }
       }
       // The act itself, locked, goes to the sender's homes too (Identity rule
-      // 35; what the Dub report left for the desk): its line of acts stays
-      // readable there by whoever changes its keys. The homes see that a
-      // private act exists, never what it says or to whom it is sealed.
-      const homes: string[] = [];
-      for (const h of me.f.homes) {
-        try {
-          await relayAt(h.hint, via).putAct(act);
-          homes.push(h.hint);
-        } catch {
-          // a home may decline a private act: the line is then read by its card
-        }
-      }
+      // 35; what the Dub report left for the desk), its content key delivered
+      // to the sender itself (H80's question 2): Kišib places this desk's line
+      // by it, and the identity's other apps follow the line through it. The
+      // homes see that a private act exists, never what it says or to whom.
+      const homes = rec.key ? await leaveAtHomes(me, { act, id: rec.act, key: unb64(rec.key) }, { via }) : [];
+      this.store.saveIdentity(me);
       if (out.length) out.push({ to: 'its homes', accepted: homes.length > 0, answer: homes.length ? `its locked act kept at ${homes.join(', ')}, so its line stays readable (Identity rule 35)` : 'no home took its locked act: its line is read by its card (Identity rule 35)' });
       return out;
     }
@@ -985,6 +984,29 @@ export class Desk {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * This desk's line of each identity it holds, its card naming only an act
+   * the homes hold (H80's question 2): what waits sent first, in its turn.
+   */
+  async lines(): Promise<Record<string, LineAtHomes>> {
+    const out: Record<string, LineAtHomes> = {};
+    for (const i of this.store.book().identities) {
+      if (!this.store.holds(i.id)) continue;
+      if (Object.keys(this.store.identity(i.id).f.unsent ?? {}).length) {
+        await this.serial(async () => {
+          const me = this.store.identity(i.id);
+          // Sending signs a key delivery to oneself: only with a key still current (H80).
+          await this.keyCurrent(i.id);
+          await sendWaiting(me, this.via);
+          this.store.saveIdentity(me);
+        }).catch(() => undefined);
+      }
+      const me = this.store.identity(i.id);
+      out[i.id] = await this.line(me, this.via).catch(() => noLine(me.f.sequence));
+    }
+    return out;
   }
 
   state() {

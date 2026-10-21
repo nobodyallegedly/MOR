@@ -35,7 +35,7 @@ import { checkWarned, planLines, readCards, type LinePlan } from '../../genesis/
 import { threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { readId } from '../../genesis/src/forms.ts';
 import { lookCurrent, servedChain } from '../../dub/src/carryin.ts';
-import { bindingOf, homesWords, linesUnder, readIdentity, recordWords, served, type Read, type Served } from './read.ts';
+import { bindingOf, homesWords, linesUnder, placing, readIdentity, recordWords, served, type Read, type Served } from './read.ts';
 import { chainKeyAt, freshSeed, indexOf, seedOf, spentPaper, wipe, Refused } from './words.ts';
 import { fingerprint, grouped, type Line, type Review, type Section, type Sitting, type State } from './shapes.ts';
 import { CollectiveSitting, EXPIRY, type CollectiveDeps } from './collective.ts';
@@ -295,7 +295,7 @@ export class Kishib {
       if (a.endSuccession && succNow.state === 'none') throw new Error('No succession is declared: there is none to end.');
       let plan: LinePlan;
       try {
-        plan = planLines(rd.lines, { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : undefined });
+        plan = planLines(rd.lines, { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : undefined, ...placing(rd, rd.binding) });
       } catch (e) {
         throw new Error(message(e));
       }
@@ -305,7 +305,7 @@ export class Kishib {
       const vault = vaultPlan(a.vault, vaultNow?.entries ?? null);
       const sections: Section[] = [
         ...recordWords(rd).filter((s) => s.heading !== 'Its lines of acts (each app or device keeps one)'),
-        { heading: 'Its lines of acts: what this rotation keeps (Identity rule 35)', lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m: string, u?: string) => (u ? 'A line Kišib cannot read' : 'A line of acts')), tone: x.tone })) },
+        { heading: 'Its lines of acts: what this rotation keeps (Identity rule 35)', lines: plan.shown.map((x) => ({ text: x.text.replace(/A line made elsewhere( that this device cannot read)?/, (_m: string, u?: string) => (u ? 'A line Kišib cannot read' : 'A line of acts')), tone: x.tone })) },
         {
           heading: 'What changes',
           lines: [
@@ -622,7 +622,7 @@ export class Kishib {
       for (const h of newHomes) if (oldHomes.has(h.hint)) throw new Error(`${h.hint} is one of the old homes: it holds the other rotation, and refuses any other revealing the same chain key (Identity rule 30). Name new homes.`);
       let plan: LinePlan;
       try {
-        plan = planLines(linesUnder(rd, q.act), { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : undefined });
+        plan = planLines(linesUnder(rd, q.act), { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : undefined, ...placing(rd, q.act) });
       } catch (e) {
         throw new Error(message(e));
       }
@@ -636,7 +636,7 @@ export class Kishib {
             tone: 'bad' as const,
           })),
         },
-        { heading: 'Your lines of acts: what the escape keeps (Identity rule 35)', lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m: string, u?: string) => (u ? 'A line Kišib cannot read' : 'A line of acts')), tone: x.tone })) },
+        { heading: 'Your lines of acts: what the escape keeps (Identity rule 35)', lines: plan.shown.map((x) => ({ text: x.text.replace(/A line made elsewhere( that this device cannot read)?/, (_m: string, u?: string) => (u ? 'A line Kišib cannot read' : 'A line of acts')), tone: x.tone })) },
         {
           heading: 'What changes',
           lines: [

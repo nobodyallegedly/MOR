@@ -23,7 +23,7 @@
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
 import { IDENTITY_TYPES, MIRS, SPECS, resignationPayload, sha256, base64, cborDecode, cborEncode, describeAct, hex, openSealed, shareOnPaper, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
-import { ownLine } from '../../genesis/src/lines.ts';
+import { leaveAtHomes, lineReader, noLine, sendWaiting, type LineAtHomes } from '../../genesis/src/private.ts';
 import { TestIdentity, TEST_LABEL, sealFor, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, type Via } from '../../genesis/src/transport.ts';
@@ -203,6 +203,24 @@ interface Described {
 const NAMES_FOR = 600;
 
 export class Dub {
+  /** This app's line as the homes hold it, for its card (H80's question 2). */
+  private readonly line = lineReader('Dub');
+
+  /** This app's line: what waits sent first, in its own turn (the file read again there, the key checked first), then read back. Null where the homes could not be read. */
+  private async lineNow(me: TestIdentity, via: Via): Promise<LineAtHomes | null> {
+    if (Object.keys(me.f.unsent ?? {}).length) {
+      await this.serial(async () => {
+        const f = await this.store.identity(me.id);
+        if (!f) return;
+        // Sending signs a key delivery to oneself: only with a key still current (H80).
+        await this.current(f);
+        await sendWaiting(f, via);
+        await this.store.saveIdentity(f);
+        me.f.unsent = f.f.unsent;
+      }).catch(() => undefined);
+    }
+    return this.line(me, via).catch(() => null);
+  }
   private queue: Promise<unknown> = Promise.resolve();
   /** Display names found, by ID, and when (this app's memory only). */
   private names = new Map<string, { names: string[]; at: number }>();
@@ -275,7 +293,8 @@ export class Dub {
     if (me) {
       const s = await this.store.settings(me.id);
       const p = await this.store.people(me.id);
-      const own = ownLine(me.f.sequence);
+      // This app's line, its card naming only an act the homes hold (H80's question 2): what waited sent first.
+      const line = await this.lineNow(me, s.via);
       if (!pend) out.stage = 'ready';
       out.identity = {
         id: me.id,
@@ -288,7 +307,7 @@ export class Dub {
         relays: s.relays,
         encryption: me.f.encryption.length > 0,
         oldChainKey: !!me.f.safety.seeds,
-        line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
+        line: line ?? noLine(me.f.sequence),
         list: p.list,
         sealed: p.sealed ? { version: p.sealed.version, forked: !!p.sealed.forked } : null,
         signing: !!s.signing,
@@ -1152,13 +1171,8 @@ export class Dub {
         }
       }
       if (!left) throw new Error(`No inbox of ${fingerprint(to)} took the message: ${lines.map((x) => x.text).join('; ')}. It is signed, not delivered.`);
-      for (const h of me.f.homes) {
-        try {
-          await relayAt(h.hint, s.via).putAct(made.act);
-        } catch {
-          // a home may decline a private act: the line is then read by its card
-        }
-      }
+      // Left at this identity's homes too, locked, its key delivered to itself (H80's question 2): Kišib places this app's line by it.
+      await this.signed(me, () => leaveAtHomes(me, made, { via: s.via }));
       p.sent.push({ id: made.id, to, text, at: now() });
       await this.store.savePeople(me.id, p);
       lines.unshift({ text: `Sealed to ${fingerprint(to)} and left in its inbox: only it can open it.`, tone: 'ok' });
@@ -1836,11 +1850,12 @@ export class Dub {
       try {
         await relayAt(h, s.via).putSealed(sealed);
         left++;
-        await relayAt(h, s.via).putAct(made.act);
       } catch {
         // that home is away: the others hold it
       }
     }
+    // Its locked act beside it (H80's question 2): the latest act of this app's line, which Kišib must find at the homes.
+    await this.signed(me, () => leaveAtHomes(me, made, { via: s.via, sealed: left > 0 }));
     p.sealed = { version, act: made.id };
     p.carried = true;
     await save();

@@ -148,7 +148,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         if (!current) return;
         if (current.must && !$<HTMLInputElement>('read-it')?.checked) return fail(new Error('Read what this device will hold, and say so, before anything is done.'));
         const warned = current.review.warning ? ($<HTMLInputElement>('warned')?.checked ? current.review.warning : undefined) : undefined;
-        if (current.review.warning && !warned) return fail(new Error('A line of acts would be left out: read the warning and tick it, or go back and give its card.'));
+        if (current.review.warning && !warned) return fail(new Error('A line of acts would be left out, or cannot be placed: read the warning in red and tick it, or go back and give its card.'));
         const s = await act(() => b.ask<v.State>('confirm', { plan: current!.review.plan, digest: current!.review.digest, ...(warned ? { warned } : {}) }));
         if (s) await show(s);
         return;

@@ -41,7 +41,9 @@ test('a change of keys in Kišib keeps Ummia’s line, given its card; Ummia tak
   const blind = await k.c.ask<{ plan: string; sections: unknown[] }>('rotate plan', { id: d.id, address: H[0], words: d.dub.chainWords.join(' ') });
   assert.match(JSON.stringify(blind.sections), new RegExp(`A line Kišib cannot read, ending at ${line.latest}[^"]*No card was given, so it is left out: its acts become void`));
   await k.c.ask('cancel', { plan: blind.plan }).catch(() => undefined);
-  const cards = `${line.latest} ${line.acts} ${line.summary}`;
+  // The card, copied whole from Ummia's identity window: it names an act the homes hold, and Ummia (H80's question 2).
+  const cards = line.card!;
+  assert.ok(cards.startsWith(`${line.latest} ${line.acts} ${line.summary} `) && cards.endsWith(' Ummia'), cards);
   const review = await k.c.ask<{ plan: string; digest: string; sections: { heading: string; lines: { text: string }[] }[] }>('rotate plan', { id: d.id, address: H[0], words: d.dub.chainWords.join(' '), cards });
   const said = JSON.stringify(review.sections);
   assert.ok(said.includes(line.latest!), 'the card’s line is among those kept');

@@ -10,6 +10,7 @@
 // elsewhere).
 
 import { e } from '../../../manage/src/view.ts';
+import { cardWords } from '../../../genesis/src/card-words.ts';
 import { STYLE as DUB_STYLE } from '../../../dub/src/page/view.ts';
 import type { Account, Accept, LaneShown, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from '../shapes.ts';
 
@@ -113,7 +114,7 @@ export function identityWindow(s: State, web: boolean): string {
   const i = s.identity;
   const mine = i
     ? `<section class="card"><h3>In use</h3><p class="id">${e(i.form)}</p><p class="small">In hexadecimal, as before: <span class="fp">${e(i.grouped)}</span></p>
-<dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd><dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd><dt>Damgar’s line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `: its card, for Kišib, <code class="card-line">${e(i.line.latest)} ${i.line.acts} ${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
+<dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd><dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd><dt>Damgar’s line</dt><dd>${cardWords(i.line, 'Damgar', e)}</dd></dl>
 <p class="small">Most of Damgar’s acts are sealed, so Kišib cannot read its line from the homes: when the signing key is changed there, give Kišib this card (latest act, position, summary), or every claim and receipt signed here becomes void (Identity rule 35).</p>
 ${i.encryption ? '' : note('warn', 'Damgar holds no encryption key for this identity: nothing sealed to it opens here.')}
 <div class="row"><button data-action="carry">Show the signing key’s words</button><button data-action="leave" class="quiet">Leave it</button><button data-action="back" class="primary">Back to Damgar</button></div>

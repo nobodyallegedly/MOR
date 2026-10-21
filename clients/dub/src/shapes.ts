@@ -3,6 +3,7 @@
 // Mac (built without Node) and Dub's own code share it. Never a key, and
 // never a word, except the words a person asked to see.
 
+import type { LineShown } from '../../genesis/src/card-words.ts';
 /** Said before a follow list is first published (the people cMIP, 3.5), word for word. */
 export const PUBLISH_WARNING =
   'Anyone can read whom this identity follows, now and for good: a later change of mind stops new versions, it does not take this one back. The names you gave them stay in this app.';
@@ -116,7 +117,8 @@ export interface State {
     encryption: boolean;
     /** An identity made by Dub on the Mac before 16 October 2026 keeps its chain key in the app's folder, unused. */
     oldChainKey: boolean;
-    line: { acts: number; latest: string | null; summary: string | null };
+    /** This app's line; its card for Kišib names only an act the homes hold (H80's question 2). */
+    line: LineShown;
     list: 'private' | 'published';
     /** The follow list sealed to this identity at its homes (the people cMIP, draft 2): its version, and whether it was found forked; null until written. */
     sealed: { version: number; forked: boolean } | null;

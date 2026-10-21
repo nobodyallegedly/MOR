@@ -1,6 +1,7 @@
 // What Damgar's page is told: plain data, shared by the page and Damgar's
 // code, the program on the Mac and Linux and the web client alike.
 
+import type { LineShown } from '../../genesis/src/card-words.ts';
 /** One line said to the person, with its tone: red only for an alarm (a void act, a key changed elsewhere, a proof that does not hold). */
 export interface Line {
   text: string;
@@ -125,7 +126,8 @@ export interface State {
     homes: string[];
     relays: string[];
     encryption: boolean;
-    line: { acts: number; latest: string | null; summary: string | null };
+    /** This app's line; its card for Kišib names only an act the homes hold (H80's question 2). */
+    line: LineShown;
   };
   accept: Accept[];
   /** Where the accepted list stands: its version, whether it was forked and merged, published or private. */

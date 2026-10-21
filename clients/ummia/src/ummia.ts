@@ -30,7 +30,7 @@
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
 import { SPECS, base64, describeAct, hex, readTerms, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
-import { ownLine } from '../../genesis/src/lines.ts';
+import { lineReader, noLine, sendWaiting, type LineAtHomes } from '../../genesis/src/private.ts';
 import { TestIdentity, TEST_LABEL, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -158,6 +158,24 @@ export async function releaseArea(collective: string, places: string[], via: Via
 }
 
 export class Ummia {
+  /** This app's line as the homes hold it, for its card (H80's question 2). */
+  private readonly line = lineReader('Ummia');
+
+  /** This app's line: what waits sent first, in its own turn (the file read again there, the key checked first), then read back. Null where the homes could not be read. */
+  private async lineNow(me: TestIdentity, via: Via): Promise<LineAtHomes | null> {
+    if (Object.keys(me.f.unsent ?? {}).length) {
+      await this.serial(async () => {
+        const f = await this.store.identity(me.id);
+        if (!f) return;
+        // Sending signs a key delivery to oneself: only with a key still current (H80).
+        await this.current(f);
+        await sendWaiting(f, via);
+        await this.store.saveIdentity(f);
+        me.f.unsent = f.f.unsent;
+      }).catch(() => undefined);
+    }
+    return this.line(me, via).catch(() => null);
+  }
   private queue: Promise<unknown> = Promise.resolve();
   private plans = new Map<string, Plan>();
 
@@ -438,7 +456,8 @@ export class Ummia {
     if (!me) return out;
     const s: Settings = { relays: [], track: [], reports: null, via: {}, ...((await this.store.read<Settings>(me.id, 'settings')) ?? {}) };
     const book: Book = { ...NO_BOOK(), ...((await this.store.read<Book>(me.id, 'book')) ?? {}) };
-    const own = ownLine(me.f.sequence);
+    // Ummia's line, its card naming only an act the homes hold (H80's question 2): what waited sent first.
+    const line = await this.lineNow(me, s.via);
     out.stage = 'ready';
     out.identity = {
       id: me.id,
@@ -447,7 +466,7 @@ export class Ummia {
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
-      line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
+      line: line ?? noLine(me.f.sequence),
     };
     out.actors = actors(heldIds, s.collectives ?? []);
     out.acting = chosen(out.actors, s.acting ?? me.id)?.id ?? null;
