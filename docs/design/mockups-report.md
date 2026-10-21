@@ -79,7 +79,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
     - Edubba: Agents 2, Collectives 3, Publishing 2, Vows 2. The note leaves Edubba's marks open, Vows' level included.
     - Ummia: Look 1, Discuss 1, Publish 2, Choose 2.
 12. Damgar's four tiles: **Waiting, Account, Lanes, Settings**. The note names three columns, and Settings survives the move of the clock and the node link.
-13. Dub's three lenses are named **Following · Relay · To you**, today's three filters.
+13. Dub's three lenses: **Following · To you · Relay**, Relay third. *Decided by Nobody, allegedly, 21 October 2026 (question 1): "Yes, but relay should be the third option." Tag removed.*
 14. Kišib's identity at top right: "Holds nothing · runner off" while the runner is off. The runner's identities appear there when it is on.
 15. Each column's parts, on every tile opened, are taken from today's functions (one quiet tag at the foot of each column).
 16. The tabs across a selected collective: Act · Members · Money · Keepers · To sign. The note's "sketch" is not in the repository.
@@ -133,7 +133,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 | Dub | Follow, unfollow, rename followed, mute, unmute | Post row; Following fold | Signer's menu › Follow: add to contacts / Mute (decided); Contacts panel |
 | Dub | Follow by ID | Following fold | Contacts › + Add by ID |
 | Dub | Publish whom one follows | Following fold checkbox | Contacts › "Publish whom Max follows" |
-| Dub | Everyone / To you / Relay views; look again | Public filters | The three lenses (accepted) † names |
+| Dub | Everyone / To you / Relay views; look again | Public filters | The three lenses, Following · To you · Relay (decided, question 1) |
 | Dub | Long-form document link | Feed post | Act card, a link to the reader (`dub-home`, T's card) |
 | Dub | Tip: prepare for Damgar, or pay under the lane | Post › Tip | Act menu › Tip → Damgar's panel inside Dub (decided) |
 | Dub | Pay-per-view: seal a post with a price | Public fold | Removed (decided) |
@@ -214,7 +214,7 @@ No function of today was dropped from the pictures. The decided removals are Dub
 
 *One at a time, each with my lean. All of them are for the Suite lead; none touches the core.*
 
-1. **Dub's three lenses: are they Following, Relay and To you?** These are today's three filters, renamed only from "Everyone" to "Following". *Lean: yes.*
+1. **Dub's three lenses: are they Following, Relay and To you?** These are today's three filters, renamed only from "Everyone" to "Following". *Lean: yes.* **Answered, 21 October 2026: "Yes, but relay should be the third option."** Drawn as Following · To you · Relay.
 2. **The danger levels in section 2, item 11: right as drawn?** The note accepts danger marks but gives no levels. *Lean: yes. Edubba's levels stay open until you look at the picture.*
 3. **Damgar's fourth tile: Settings?** It would hold where you are paid, the vault and what you accept. *Lean: yes.*
 4. **Kišib's identity at top right: "Holds nothing" while the runner is off, the runner's identities when it is on?** The note puts an identity top right in every app, and also says Kišib works differently. *Lean: yes.*
