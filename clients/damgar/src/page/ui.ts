@@ -107,6 +107,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     c('count-pay', s.counts.toPay);
   }
 
+  /** What was typed in To sign's forms, by form and field, until that form is sent. */
+  const typedHere = new Map<string, string>();
+
   async function refreshSign(quiet = false) {
     const box = $('sign-list');
     if (!box) return;
@@ -117,14 +120,21 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     const r = await b.ask<{ items: ToSign[]; problems: string[] }>('to sign');
     const target = $('sign-list');
     if (!target) return;
-    // What is being typed survives the redraw (the look every 20 seconds may land mid-paste).
-    const typed = [...target.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('form[data-id] [name]')].filter((x) => x.value).map((x) => ({ form: (x.form as HTMLFormElement).dataset.id, name: x.name, value: x.value, focused: document.activeElement === x }));
+    // What is being typed survives the redraw (the look every 20 seconds may land mid-paste), and a redraw that
+    // came while its item was briefly missing: kept in the page by form and field until that form is sent.
+    let focused: string | null = null;
+    for (const x of target.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('form[data-id] [name]')) {
+      const k = `${(x.form as HTMLFormElement).dataset.id}\u0000${x.name}`;
+      if (x.value) typedHere.set(k, x.value);
+      else typedHere.delete(k);
+      if (document.activeElement === x) focused = k;
+    }
     target.innerHTML = v.toSign(r.items, [...r.problems, ...(looked?.problems ?? [])]);
-    for (const t of typed) {
-      const x = target.querySelector<HTMLInputElement | HTMLTextAreaElement>(`form[data-id="${CSS.escape(t.form ?? '')}"] [name="${CSS.escape(t.name)}"]`);
-      if (!x) continue;
-      x.value = t.value;
-      if (t.focused) x.focus();
+    for (const x of target.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('form[data-id] [name]')) {
+      const k = `${(x.form as HTMLFormElement).dataset.id}\u0000${x.name}`;
+      const kept = typedHere.get(k);
+      if (kept && !x.value) x.value = kept;
+      if (k === focused) x.focus();
     }
     if (looked?.lines.length && !quiet) say('done', v.lines(looked.lines));
     await counts();
@@ -354,6 +364,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     if (fid === 'pair') return;
     ev.preventDefault();
     const fd = form(f);
+    // Sent: what was kept for it is done with.
+    if (f.dataset.id) for (const k of [...typedHere.keys()]) if (k.startsWith(`${f.dataset.id}\u0000`)) typedHere.delete(k);
     if (fid === 'collective-add') {
       const r = await act(() => b.ask<{ lines: v.Line[] }>('collective add', { id: str(fd, 'id') }));
       if (r) {
