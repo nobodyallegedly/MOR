@@ -12,7 +12,7 @@ It can also strip a film to the film alone before it is published: titles, the p
 
 | File | What |
 | --- | --- |
-| `src/video.ts` | `read()` (the Module's rules 1 to 9), `strip()` (rule 10), `trackData()` (each track's samples, for tests), `NotFilm`, the limits. Runs in Node and in a browser. |
+| `src/video.ts` | `read()` (the Module's rules 1 to 9), `strip()` (rule 10), `trackData()` (each track's samples, for tests), `NotFilm`, the limits. Runs in Node and in a browser. Its box reader, track reader, AAC reading and stripping (`stripped`, `samplesOf`) are exported for the audio Module (`../audio`), which reads M4A files with them; what this Module accepts is unchanged. |
 | `src/cli.ts` | `mor-video read <film.mp4>` and `mor-video strip <in.mp4> <out.mp4>`. |
 | `scripts/fixtures.py` | Makes the test films with ffmpeg, all synthetic (the test pattern and a sine tone). Its output is committed. |
 | `test/fixtures/` | Films it plays: pictures only (Baseline); pictures and stereo sound (High); Main with mono sound, the index after the media; turned a quarter turn; tagged with a title, a place and a comment; with data hidden in free space, an unknown box and unused media data. Films it refuses: an external data reference, fragmented, HEVC, MPEG-4 part 2, H.264 4:4:4, MP3 sound, a subtitle track, two picture tracks, 2560 × 1440, 601 seconds, 120 pictures a second, truncated, not an MP4. |

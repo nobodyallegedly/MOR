@@ -71,7 +71,7 @@ export interface Film {
 
 // --- Boxes ------------------------------------------------------------------
 
-interface Box {
+export interface Box {
   type: string;
   /** Offset of the box in the file, of its body, and of its end. */
   start: number;
@@ -81,7 +81,7 @@ interface Box {
 
 const ascii = (b: Uint8Array, o: number, n: number) => String.fromCharCode(...b.subarray(o, o + n));
 
-class Reader {
+export class Reader {
   view: DataView;
   constructor(public b: Uint8Array) {
     this.view = new DataView(b.buffer, b.byteOffset, b.byteLength);
@@ -125,10 +125,10 @@ class Reader {
 }
 
 /** Boxes that only take room or carry what is not the film: never read, always stripped. */
-const ASIDE: Record<string, Carried> = { udta: 'metadata', meta: 'metadata', free: 'free', skip: 'free', uuid: 'unknown' };
+export const ASIDE: Record<string, Carried> = { udta: 'metadata', meta: 'metadata', free: 'free', skip: 'free', uuid: 'unknown' };
 
 /** The children of a box, each allowed by `allowed` or set aside (ASIDE); anything else refused, naming where. */
-function children(r: Reader, box: Box, allowed: string[], carried: Set<Carried>, where: string, skip = 0): Box[] {
+export function children(r: Reader, box: Box, allowed: string[], carried: Set<Carried>, where: string, skip = 0): Box[] {
   const out: Box[] = [];
   for (const c of r.boxes(box.body + skip, box.end)) {
     if (allowed.includes(c.type)) out.push(c);
@@ -147,7 +147,7 @@ function children(r: Reader, box: Box, allowed: string[], carried: Set<Carried>,
  * children are boxes; `udta`'s children are boxes too, with contents of
  * every kind, so only their names are read.
  */
-function inspectAside(r: Reader, box: Box, carried: Set<Carried>): void {
+export function inspectAside(r: Reader, box: Box, carried: Set<Carried>): void {
   let kids: Box[];
   try {
     kids = r.boxes(box.body + (box.type === 'meta' ? 4 : 0), box.end);
@@ -170,12 +170,12 @@ function inspectAside(r: Reader, box: Box, carried: Set<Carried>): void {
   }
 }
 
-const one = (list: Box[], type: string, where: string): Box => {
+export const one = (list: Box[], type: string, where: string): Box => {
   const f = list.filter((b) => b.type === type);
   if (f.length !== 1) throw new NotFilm('structure', `${where} has ${f.length ? 'more than one' : 'no'} ${JSON.stringify(type)}`);
   return f[0];
 };
-const maybe = (list: Box[], type: string, where: string): Box | null => {
+export const maybe = (list: Box[], type: string, where: string): Box | null => {
   const f = list.filter((b) => b.type === type);
   if (f.length > 1) throw new NotFilm('structure', `${where} has more than one ${JSON.stringify(type)}`);
   return f[0] ?? null;
@@ -323,7 +323,7 @@ function descriptor(r: Reader, o: number, end: number): { tag: number; body: num
 }
 
 /** `esds`: AAC-LC (object type 0x40, audio object type 2), mono or stereo; no stream elsewhere (the URL flag). */
-function readEsds(r: Reader, box: Box): { channels: number; sampleRate: number } {
+export function readEsds(r: Reader, box: Box): { channels: number; sampleRate: number } {
   const b = r.b;
   const es = descriptor(r, box.body + 4, box.end);
   if (es.tag !== 3) throw new NotFilm('structure', 'the sound configuration has no elementary stream descriptor');
@@ -354,12 +354,12 @@ function readEsds(r: Reader, box: Box): { channels: number; sampleRate: number }
 
 // --- Tracks -----------------------------------------------------------------
 
-interface Chunk {
+export interface Chunk {
   offset: number;
   size: number;
 }
 
-interface Track {
+export interface Track {
   handler: 'vide' | 'soun';
   timescale: number;
   /** In the track's own timescale, from the decoding times. */
@@ -381,7 +381,7 @@ const MATRIX: Record<string, 0 | 90 | 180 | 270> = {
 };
 
 /** Rule 6: only the four quarter turns; u, v and w as the identity's; any translation (players ignore it for a single track). */
-function rotationOf(r: Reader, o: number): 0 | 90 | 180 | 270 {
+export function rotationOf(r: Reader, o: number): 0 | 90 | 180 | 270 {
   const m = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => r.i32(o + 4 * i));
   if (m[2] !== 0 || m[5] !== 0 || m[8] !== 0x40000000) throw new NotFilm('refused', 'a track matrix that is not a quarter turn');
   const rot = MATRIX[[m[0], m[1], m[3], m[4]].join(',')];
@@ -390,14 +390,14 @@ function rotationOf(r: Reader, o: number): 0 | 90 | 180 | 270 {
 }
 
 /** The creation and modification dates of a header (mvhd, tkhd, mdhd): where they are, and whether any is set. */
-function dates(r: Reader, box: Box, v: number): { at: number; n: number; set: boolean } {
+export function dates(r: Reader, box: Box, v: number): { at: number; n: number; set: boolean } {
   const at = box.body + 4;
   const n = v ? 16 : 8;
   return { at, n, set: r.b.subarray(at, at + n).some((x) => x !== 0) };
 }
 
 /** A full box's version, checked against those allowed. */
-function version(r: Reader, box: Box, allowed: number[]): number {
+export function version(r: Reader, box: Box, allowed: number[]): number {
   r.need(box.body, 4, box.end, `the box ${box.type}`);
   const v = r.b[box.body];
   if (!allowed.includes(v)) throw new NotFilm('structure', `the box ${box.type} has version ${v}`);
@@ -405,7 +405,7 @@ function version(r: Reader, box: Box, allowed: number[]): number {
 }
 
 /** An entry-counted table: its count, checked to fit in its box, and where its entries start. */
-function table(r: Reader, box: Box, entrySize: number, skip = 4): { n: number; o: number } {
+export function table(r: Reader, box: Box, entrySize: number, skip = 4): { n: number; o: number } {
   r.need(box.body, skip + 4, box.end, `the table ${box.type}`);
   const n = r.u32(box.body + skip);
   const o = box.body + skip + 4;
@@ -417,7 +417,7 @@ const STBL = ['stsd', 'stts', 'ctts', 'stss', 'stsc', 'stsz', 'stco', 'co64', 's
 const VISUAL_EXTRAS = ['avcC', 'btrt', 'pasp', 'colr', 'clap', 'fiel'];
 const AUDIO_EXTRAS = ['esds', 'btrt'];
 
-function readTrack(r: Reader, trak: Box, carried: Set<Carried>): Track {
+export function readTrack(r: Reader, trak: Box, carried: Set<Carried>): Track {
   const kids = children(r, trak, ['tkhd', 'edts', 'mdia'], carried, 'a track');
   const tkhd = one(kids, 'tkhd', 'a track');
   const tv = version(r, tkhd, [0, 1]);
@@ -548,12 +548,16 @@ function readTrack(r: Reader, trak: Box, carried: Set<Carried>): Track {
 
 const BRANDS = ['isom', 'iso2', 'iso3', 'iso4', 'iso5', 'iso6', 'mp41', 'mp42', 'avc1'];
 
-interface Parsed {
-  film: Film;
+/** A file read down to its tracks: what stripping needs, whatever Module read it (the audio Module reads M4A files with this code). */
+export interface Container {
   ftyp: Box;
   moov: Box;
   tracks: Track[];
   traks: Box[];
+}
+
+interface Parsed extends Container {
+  film: Film;
 }
 
 function parse(bytes: Uint8Array): Parsed {
@@ -673,12 +677,17 @@ export function read(bytes: Uint8Array): Film {
 
 /** Each track's samples, in decoding order, as one run of bytes per track: what stripping must leave untouched. */
 export function trackData(bytes: Uint8Array): Uint8Array[] {
-  return parse(bytes).tracks.map((t) => concat(t.chunks.map((c) => bytes.subarray(c.offset, c.offset + c.size))));
+  return samplesOf(bytes, parse(bytes).tracks);
+}
+
+/** The samples of tracks already read, one run of bytes per track. */
+export function samplesOf(bytes: Uint8Array, tracks: Track[]): Uint8Array[] {
+  return tracks.map((t) => concat(t.chunks.map((c) => bytes.subarray(c.offset, c.offset + c.size))));
 }
 
 // --- Stripping ----------------------------------------------------------------
 
-function box(type: string, ...parts: Uint8Array[]): Uint8Array {
+export function box(type: string, ...parts: Uint8Array[]): Uint8Array {
   const n = 8 + parts.reduce((s, p) => s + p.length, 0);
   const out = new Uint8Array(n);
   new DataView(out.buffer).setUint32(0, n);
@@ -691,7 +700,7 @@ function box(type: string, ...parts: Uint8Array[]): Uint8Array {
   return out;
 }
 
-function concat(parts: Uint8Array[]): Uint8Array {
+export function concat(parts: Uint8Array[]): Uint8Array {
   const out = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
   let o = 0;
   for (const p of parts) {
@@ -712,6 +721,11 @@ function concat(parts: Uint8Array[]): Uint8Array {
  */
 export function strip(bytes: Uint8Array): { bytes: Uint8Array; removed: Carried[] } {
   const p = parse(bytes);
+  return { bytes: stripped(bytes, p), removed: p.film.carried };
+}
+
+/** Rule 10's new file, from a file already read and checked: shared with the audio Module, which strips the same way. */
+export function stripped(bytes: Uint8Array, p: Container): Uint8Array {
   const r = new Reader(bytes);
   const keep = (b: Box) => bytes.subarray(b.start, b.end);
   /** A header (mvhd, tkhd, mdhd) with its dates set to zero. */
@@ -801,6 +815,5 @@ export function strip(bytes: Uint8Array): { bytes: Uint8Array; removed: Carried[
   const moov = rebuild(mdatBody);
   const media = new Uint8Array(at);
   for (const c of all) media.set(bytes.subarray(c.offset, c.offset + c.size), placed.get(c)!);
-  const out = concat([ftyp, moov, box('mdat', media)]);
-  return { bytes: out, removed: p.film.carried };
+  return concat([ftyp, moov, box('mdat', media)]);
 }

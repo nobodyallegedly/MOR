@@ -22,7 +22,7 @@ cargo test --workspace --locked
 echo "== Core library for the clients (WebAssembly)"
 (cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm)
 
-for pkg in clients/* modules/jpeg modules/video modules/carry modules/timestamp; do
+for pkg in clients/* modules/jpeg modules/video modules/audio modules/carry modules/timestamp; do
   [ -f "$pkg/package.json" ] || continue
   echo "== $pkg"
   # Damgar's tests run Dub, Edubba, Kišib, the test wallet and the anchoring service beside it.

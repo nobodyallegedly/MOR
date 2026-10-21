@@ -1,0 +1,274 @@
+{
+  "module": "modules/module-audio-draft-1.md",
+  "fixtures": "../test/fixtures",
+  "vectors": [
+    {
+      "file": "aac-main.m4a",
+      "sha256": "d3c2d61ca69c42d0b518c141523fc5287512d6d7f2045a727042aa15468db1c1",
+      "refused": {
+        "kind": "refused",
+        "reason": "AAC of another kind than AAC-LC (audio object type 1), which this Module does not play"
+      }
+    },
+    {
+      "file": "alac.m4a",
+      "sha256": "f3212f4114263dcf66bf7b79bd9066794afebcb897e041fae3db3fae311bf8be",
+      "refused": {
+        "kind": "refused",
+        "reason": "sound coded as \"alac\": only AAC-LC (mp4a) is played"
+      }
+    },
+    {
+      "file": "chapters.m4a",
+      "sha256": "c172fc2723a5cf3af195fc283f9c5c120150f06b98975411205ba131978dd44c",
+      "refused": {
+        "kind": "refused",
+        "reason": "a track of kind \"text\" (text, chapters, timecode, metadata or hints): an M4A file holds one sound track only"
+      }
+    },
+    {
+      "file": "external.m4a",
+      "sha256": "b629880fdb66b8924b878275b65d0982a039b7b896db5bc99a44111f00294fd6",
+      "refused": {
+        "kind": "refused",
+        "reason": "a track whose samples are stored outside this file (a data reference to elsewhere)"
+      }
+    },
+    {
+      "file": "fragmented.m4a",
+      "sha256": "38366bf6e48f3a52cc0e110f169b17c32c047bc6bc4bac99e4a5f9eae941ad50",
+      "refused": {
+        "kind": "refused",
+        "reason": "a fragmented file (as a live stream writes): only a whole recording with one index is played"
+      }
+    },
+    {
+      "file": "hidden.m4a",
+      "sha256": "5f2b15d5fc33875ebb72be6638eae1231295110be4645b2d86b4a70cab146746",
+      "sound": {
+        "brand": "M4A ",
+        "duration": 1.021,
+        "audio": {
+          "codec": "mp4a.40.2",
+          "channels": 1,
+          "sampleRate": 48000,
+          "samples": 48
+        },
+        "type": "audio/mp4; codecs=\"mp4a.40.2\"",
+        "indexFirst": false,
+        "carried": [
+          "metadata",
+          "names",
+          "free",
+          "unknown",
+          "unused-media"
+        ]
+      },
+      "stripped": {
+        "file": "stripped/hidden.m4a",
+        "sha256": "920591d2bf21d99335e3785fa66c8696f30adab65ecc2561f1a32d6f8f390841",
+        "removed": [
+          "metadata",
+          "names",
+          "free",
+          "unknown",
+          "unused-media"
+        ]
+      }
+    },
+    {
+      "file": "index-last.m4a",
+      "sha256": "0141822ba0d90e4677b1a57ce3a3a6f0f56a81bba660e00fb9bd3857a73b34b9",
+      "sound": {
+        "brand": "M4A ",
+        "duration": 2.032,
+        "audio": {
+          "codec": "mp4a.40.2",
+          "channels": 1,
+          "sampleRate": 32000,
+          "samples": 64
+        },
+        "type": "audio/mp4; codecs=\"mp4a.40.2\"",
+        "indexFirst": false,
+        "carried": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      },
+      "stripped": {
+        "file": "stripped/index-last.m4a",
+        "sha256": "63e043060ad67005eaaaec0c85f5d5addaf406d38f1f410598ee62c1672d936a",
+        "removed": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      }
+    },
+    {
+      "file": "mono.m4a",
+      "sha256": "8ca31e1d532dfde1eb92be22aa9f34a42aa1b4fb9bac75be43804f2a84f4043d",
+      "sound": {
+        "brand": "M4A ",
+        "duration": 2.023,
+        "audio": {
+          "codec": "mp4a.40.2",
+          "channels": 1,
+          "sampleRate": 44100,
+          "samples": 88
+        },
+        "type": "audio/mp4; codecs=\"mp4a.40.2\"",
+        "indexFirst": true,
+        "carried": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      },
+      "stripped": {
+        "file": "stripped/mono.m4a",
+        "sha256": "6993ada1bbe116f6a85fd2b182444b1de9fe354331fe4d6f3d23fea1e35e58bf",
+        "removed": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      }
+    },
+    {
+      "file": "mp3.m4a",
+      "sha256": "9ac7b8a497dcf49c93660a32be45eed4b5f3fa5cbca5ffefcd62df09d0d79de3",
+      "refused": {
+        "kind": "refused",
+        "reason": "sound that is not MPEG-4 audio (AAC): only AAC-LC is played"
+      }
+    },
+    {
+      "file": "not-an-m4a.m4a",
+      "sha256": "7288f8ea133c4454d0ff26711dc32c19ecdebf9099b214cc23570992bf73e56f",
+      "refused": {
+        "kind": "structure",
+        "reason": "it does not begin with a file type box (ftyp)"
+      }
+    },
+    {
+      "file": "quicktime.m4a",
+      "sha256": "dff7bd767740c779cb32e1d134bf22ef45ccb9599aee6fd052deb19ba9605f23",
+      "refused": {
+        "kind": "refused",
+        "reason": "a QuickTime file (.mov), not M4A: remux it as M4A first"
+      }
+    },
+    {
+      "file": "stereo.m4a",
+      "sha256": "9d5e4e33d7f1d952b690260c5a8d9713973fc7b67cbb7b99b2fb789855d9b812",
+      "sound": {
+        "brand": "isom",
+        "duration": 2.021,
+        "audio": {
+          "codec": "mp4a.40.2",
+          "channels": 2,
+          "sampleRate": 48000,
+          "samples": 95
+        },
+        "type": "audio/mp4; codecs=\"mp4a.40.2\"",
+        "indexFirst": true,
+        "carried": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      },
+      "stripped": {
+        "file": "stripped/stereo.m4a",
+        "sha256": "30fb0608fb2d8edf4713d1294cede1667e5bfadff940e548b011635b0b3e629e",
+        "removed": [
+          "metadata",
+          "names",
+          "free"
+        ]
+      }
+    },
+    {
+      "file": "surround.m4a",
+      "sha256": "0c58ce21ad3d7b8b69a5fbfaad887960b20f51a6cf4bda069962d6e932e60f9f",
+      "refused": {
+        "kind": "refused",
+        "reason": "sound with more than two channels, or channels set elsewhere: only mono and stereo are played"
+      }
+    },
+    {
+      "file": "tagged.m4a",
+      "sha256": "f9eb510009cff8a21417596f20f0a677671975cee3160789475fc9e13291d9fb",
+      "sound": {
+        "brand": "M4A ",
+        "duration": 2.021,
+        "audio": {
+          "codec": "mp4a.40.2",
+          "channels": 1,
+          "sampleRate": 48000,
+          "samples": 95
+        },
+        "type": "audio/mp4; codecs=\"mp4a.40.2\"",
+        "indexFirst": true,
+        "carried": [
+          "metadata",
+          "location",
+          "names",
+          "free"
+        ]
+      },
+      "stripped": {
+        "file": "stripped/tagged.m4a",
+        "sha256": "9c27670ad4a42a7e33e0bff80b0f3dc65c17c9d78c2957c3c42a6b080558bc83",
+        "removed": [
+          "metadata",
+          "location",
+          "names",
+          "free"
+        ]
+      }
+    },
+    {
+      "file": "too-fine.m4a",
+      "sha256": "0d2d2cb29c883e1fd7c3c87c651b228f7e8a5645a46cac2b4329aa0a645b7444",
+      "refused": {
+        "kind": "limits",
+        "reason": "sound sampled at 96000 Hz, above 48000"
+      }
+    },
+    {
+      "file": "too-long.m4a",
+      "sha256": "4e3ed8528107e4233d3bf3a61d2af3dd6afd273d66d471d963b8b180da45b842",
+      "refused": {
+        "kind": "limits",
+        "reason": "7201 seconds long, beyond 7200"
+      }
+    },
+    {
+      "file": "truncated.m4a",
+      "sha256": "549531091d413414100cbe1602823a325907734ac860bdd3d3d7f2ca05f93cc3",
+      "refused": {
+        "kind": "structure",
+        "reason": "the box \"mdat\" runs past its parent"
+      }
+    },
+    {
+      "file": "two-sounds.m4a",
+      "sha256": "8059b41f723c049328541e2cebe402a8c8db7a8c9b778cefb4da4e614c860fe9",
+      "refused": {
+        "kind": "refused",
+        "reason": "2 sound tracks: an M4A file holds exactly one"
+      }
+    },
+    {
+      "file": "with-picture.m4a",
+      "sha256": "cd5f17f0bbd8133cd5fb0739aaee6cdfebc680fb8373ea18148f650db0cad7ad",
+      "refused": {
+        "kind": "refused",
+        "reason": "a picture track: an M4A file holds sound only (a film is the video Module's)"
+      }
+    }
+  ]
+}
