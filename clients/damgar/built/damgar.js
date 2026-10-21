@@ -2906,6 +2906,43 @@ var withGrantLimits = (specs, verdicts) => ({ ...specs, grantLimits: verdicts })
 // ../reader/src/web/core.ts
 await __wbg_init({ module_or_path: new URL("mor_wasm_bg.wasm", document.baseURI) });
 
+// src/web/node-fs.ts
+var none = (name) => () => {
+  throw new Error(`${name}: there are no files in a browser`);
+};
+var readFileSync = none("readFileSync");
+var writeFileSync = none("writeFileSync");
+var renameSync = none("renameSync");
+
+// src/web/node-crypto.ts
+function randomBytes2(n) {
+  return crypto.getRandomValues(new Uint8Array(n));
+}
+function createHash(algorithm) {
+  if (algorithm !== "sha256") throw new Error(`${algorithm}: only sha256 in the browser`);
+  const parts = [];
+  const h = {
+    update(data) {
+      parts.push(typeof data === "string" ? new TextEncoder().encode(data) : data);
+      return h;
+    },
+    /** The digest's bytes, or, as Node gives it with "hex", its hexadecimal text (the repo client's spec hashes). */
+    digest(encoding) {
+      const all = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+      let at = 0;
+      for (const p of parts) {
+        all.set(p, at);
+        at += p.length;
+      }
+      const d = sha256(all);
+      if (encoding === void 0) return d;
+      if (encoding !== "hex") throw new Error(`${encoding}: only hex in the browser`);
+      return [...d].map((b) => b.toString(16).padStart(2, "0")).join("");
+    }
+  };
+  return h;
+}
+
 // ../genesis/src/transport.ts
 var RelayError = class extends Error {
   constructor(code, reason, acts = [], status = 0) {
@@ -3084,6 +3121,12 @@ var Relay = class {
 };
 var relayAt = (hint, via = {}) => new Relay(hint, via[hint] ?? hint);
 
+// ../genesis/src/kex.ts
+var kexLog = { recording: false, entries: [] };
+function record(e2) {
+  if (kexLog.recording) kexLog.entries.push(e2);
+}
+
 // ../genesis/src/lines.ts
 var IDENTITY_WORDS = {
   [IDENTITY_TYPES.routes]: "routes: where its acts are found and where to reach it",
@@ -3215,10 +3258,43 @@ function linesOf(o) {
       readable: !why,
       card: why ? null : { act: tip, position: ids.length, summary: runningSummary(ids) },
       latest,
+      walked: [...ids].reverse(),
       ...why ? { why } : {}
     });
   }
   return out.sort((a, b) => Number(b.own) - Number(a.own) || (a.tip < b.tip ? -1 : 1));
+}
+function unplaced(o) {
+  const specs = o.specs ?? MIRS;
+  const placed = new Set(linesOf({ ...o, own: [] }).filter((l) => l.readable).flatMap((l) => l.walked));
+  const out = /* @__PURE__ */ new Set();
+  for (const a of o.acts) {
+    let d;
+    try {
+      d = describeAct(a);
+    } catch {
+      continue;
+    }
+    if (d.signer !== o.identity || d.binding !== o.binding || placed.has(d.id)) continue;
+    if (d.spec === specs.identity && (d.type === IDENTITY_TYPES.genesis || d.type === IDENTITY_TYPES.rotation || d.type === IDENTITY_TYPES.chainSignature)) continue;
+    out.add(d.id);
+  }
+  return [...out];
+}
+var APP_LINES = {
+  Dub: "sealed messages, the follow list, answers to proposals, a member key for a collective, keys delivered to buyers, lane requests for Damgar",
+  Edubba: "drafts, an agent\u2019s notes and diary, sealed messages and prompts, a member key for a collective, invitations to a founding, payments prepared for Damgar",
+  Damgar: "the accepted list, payment claims, receipts, requests and answers, sales, a vault transfer, asks for a collective\u2019s promise",
+  Ummia: "the accepted list, payments prepared for an anchor, asks for a collective\u2019s release, MIP discussions"
+};
+function lineOf(app3) {
+  return app3 ? `${app3}\u2019s line` : "a line";
+}
+function livesOn(app3) {
+  return (app3 && APP_LINES[app3]) ?? "whatever its app signed there: possibly a member key for a collective, notes, a list";
+}
+function cardText(c, app3) {
+  return `${c.act} ${c.position} ${c.summary}${c.hidden === void 0 ? "" : ` ${c.hidden}`} ${app3}${c.missing ? ` missing ${c.missing}` : ""}`;
 }
 function lineWords(l) {
   const whose = l.own ? "This device\u2019s line" : "A line made elsewhere";
@@ -3242,32 +3318,68 @@ function planLines(lines2, o = {}) {
     }
     if (leaveOut.has(c.act)) throw new Error(`${c.act} is both given a card and left out`);
   }
+  const held = o.held ? new Set(o.held) : null;
+  const found = (act) => held ? held.has(act) : lines2.some((l) => l.tip === act);
   const kept = [];
   const left = [];
   const shown = [];
+  const unplacedSay = [];
+  for (const c of cards) {
+    const whose = lineOf(c.app);
+    if (!found(c.act)) {
+      unplacedSay.push(
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: its latest act (${c.act}) is not at the identity's homes, so no reader can follow it. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it. ${c.app ? `Open ${c.app} first: it sends its acts to the homes; then give its card again.` : "Open the app that shows this card first: it sends its acts to the homes; then give its card again."}`
+      );
+    } else if (c.missing) {
+      unplacedSay.push(
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: ${c.missing === 1 ? "one of its acts is" : `${c.missing} of its acts are`} not at the identity's homes (${c.app ?? "its app"} says so), so no reader can follow it past ${c.missing === 1 ? "it" : "them"}. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it.`
+      );
+    }
+  }
+  const counts = o.unplaced && cards.length && cards.every((c) => c.hidden !== void 0) ? cards.reduce((n, c) => n + c.hidden, 0) : null;
+  const covered = counts !== null && counts === o.unplaced.length && !unplacedSay.length;
+  const unread = [];
   for (const l of lines2) {
     const card = cards.find((c) => c.act === l.tip) ?? l.card;
+    const given = cards.find((c) => c.act === l.tip);
     if (leaveOut.has(l.tip)) {
       left.push(l);
       shown.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
     } else if (card) {
-      kept.push(card);
-      shown.push({ text: l.readable ? `${lineWords(l)} Kept.` : `${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`, tone: l.readable ? "ok" : "warn" });
+      kept.push({ act: card.act, position: card.position, summary: card.summary });
+      shown.push({
+        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`,
+        tone: l.readable || given && !given.missing ? "ok" : "warn"
+      });
+    } else if (covered) {
+      unread.push(l);
     } else {
       left.push(l);
       shown.push({ text: `${lineWords(l)} No card was given, so it is left out: its acts become void.`, tone: "bad" });
     }
   }
+  if (unread.length) {
+    shown.push({
+      text: `${unread.length === 1 ? "One more act Ki\u0161ib cannot read lies" : `${unread.length} more acts Ki\u0161ib cannot read (private, or behind a private act) lie`} on the lines kept by the cards given: those apps count ${counts} such act${counts === 1 ? "" : "s"}, and the homes hold ${counts}. Kept with them: ${unread.map((l) => l.tip).join(", ")}.`,
+      tone: "ok"
+    });
+  }
+  if (counts !== null && !covered && !unplacedSay.length && counts < o.unplaced.length) {
+    const n = o.unplaced.length - counts;
+    shown.push({ text: `${n === 1 ? "One act" : `${n} acts`} at the homes, signed with this key, lie${n === 1 ? "s" : ""} on no line whose card was given (the cards count ${counts}, the homes hold ${o.unplaced.length}): an app whose card is missing, or someone else holding the signing key. Left out unless you give that app\u2019s card.`, tone: "bad" });
+  }
   for (const c of cards) {
     if (lines2.some((l) => l.tip === c.act)) continue;
-    kept.push(c);
-    shown.push({ text: `A line ending at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}).`, tone: "warn" });
+    kept.push({ act: c.act, position: c.position, summary: c.summary });
+    shown.push({ text: `${c.app ? `${c.app}\u2019s line, ending` : "A line ending"} at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}), but no reader can follow it.`, tone: found(c.act) ? "warn" : "bad" });
   }
-  return { kept, left, shown, warning: left.length ? voidWarning(left) : null };
+  for (const t of unplacedSay) shown.push({ text: t, tone: "bad" });
+  const warning = [left.length ? voidWarning(left) : "", ...unplacedSay].filter(Boolean).join(" ") || null;
+  return { kept, left, shown, warning };
 }
 function checkWarned(plan, warned) {
   if (plan.warning && warned !== plan.warning) {
-    throw new Error(`Nothing was signed. ${plan.warning} Show this to the owner and pass it back to leave ${plan.left.length === 1 ? "it" : "them"} out, or give a card for each line to keep.`);
+    throw new Error(`Nothing was signed. ${plan.warning} Show this to the owner and pass it back to go on as it says, or give a card for each line to keep, its acts at the homes.`);
   }
 }
 
@@ -3475,33 +3587,754 @@ async function chainOf(identity, hints, via = {}) {
   return chain;
 }
 
-// src/web/node-crypto.ts
-function randomBytes2(n) {
-  return crypto.getRandomValues(new Uint8Array(n));
+// ../genesis/src/identity.ts
+var TEST_LABEL = "MOR TEST IDENTITY. The safety key is held in software: a prototype, never for a real identity.";
+var CLOCK_KIND = 1;
+var NO_CLOCK_WARNING = "This identity declares no clock. If its signing key is ever stolen, what the thief does with it until you change your keys, and every payment made to what the thief published, will be your loss, whatever you anchor: payers are compared with your key change only on a clock you named in advance (Money rule 15).";
+var sameRef = (a, b) => a.cmip === b.cmip && a.params === b.params;
+function clockDeclaration(c) {
+  if (!c) return { spec: MIRS.money, kind: CLOCK_KIND };
+  const ref = (r) => [unhex(r.cmip), cborDecode(unhex(r.params))];
+  return { spec: MIRS.money, kind: CLOCK_KIND, cbor: cborEncode([ref(c.main), ...c.backup ? [ref(c.backup)] : []]) };
 }
-function createHash(algorithm) {
-  if (algorithm !== "sha256") throw new Error(`${algorithm}: only sha256 in the browser`);
-  const parts = [];
-  const h = {
-    update(data) {
-      parts.push(typeof data === "string" ? new TextEncoder().encode(data) : data);
-      return h;
-    },
-    /** The digest's bytes, or, as Node gives it with "hex", its hexadecimal text (the repo client's spec hashes). */
-    digest(encoding) {
-      const all = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
-      let at = 0;
-      for (const p of parts) {
-        all.set(p, at);
-        at += p.length;
+var AGREEMENTS_RECORD = 17;
+var b64 = (b) => base64(b);
+var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+var TestIdentity = class _TestIdentity {
+  constructor(f, via = {}) {
+    this.f = f;
+    this.via = via;
+  }
+  get id() {
+    return this.f.identity;
+  }
+  // ------------------------------------------------------------ files
+  static load(path, via = {}) {
+    const f = JSON.parse(readFileSync(path, "utf8"));
+    if (f.label !== TEST_LABEL) throw new Error(`${path} is not a MOR test identity file`);
+    return new _TestIdentity(f, via);
+  }
+  /** Written whole to a temporary file, then renamed, readable by its owner only. */
+  save(path) {
+    const tmp = `${path}.tmp`;
+    writeFileSync(tmp, JSON.stringify(this.f, null, 2) + "\n", { mode: 384 });
+    renameSync(tmp, path);
+  }
+  // ------------------------------------------------------------ genesis
+  /**
+   * A new test identity: an signing key, a chain key held in
+   * software and committed by hash, and a genesis naming its homes. Nothing
+   * is sent yet: save the file first, then `publishGenesis`.
+   */
+  static create(opts) {
+    if (!opts.homes.length) throw new Error("a genesis declares at least one home");
+    const signingSecret = newSigningSecret();
+    const chainKey = opts.chainKey ?? newTestChainKey(opts.scheme ?? 2);
+    const genesis = makeGenesis({
+      identitySpec: SPECS.identity,
+      signingSecret,
+      chainKeyScheme: chainKey.scheme,
+      chainKeyCommit: chainKey.commit,
+      homes: opts.homes,
+      rule: opts.rule,
+      declarations: opts.clock ? [clockDeclaration(opts.clock)] : void 0
+    });
+    const id = actId(genesis);
+    return new _TestIdentity(
+      {
+        label: TEST_LABEL,
+        identity: id,
+        position: 0,
+        binding: id,
+        signingSecret: hex(signingSecret),
+        safety: { scheme: chainKey.scheme, seeds: hex(chainKey.seeds) },
+        chain: [b64(genesis)],
+        homes: opts.homes,
+        rule: opts.rule ?? null,
+        clock: opts.clock ?? null,
+        sequence: [],
+        routes: null,
+        encryption: [],
+        pending: null
+      },
+      opts.via ?? {}
+    );
+  }
+  chainActs() {
+    return this.f.chain.map(unb64);
+  }
+  relay(hint) {
+    return relayAt(hint, this.via);
+  }
+  /**
+   * Send an identity-chain act to each home. A home that lacks the earlier
+   * chain acts (error 3: a home newly named) gets them first, oldest first.
+   */
+  async submitChainAct(act, homes) {
+    const out = [];
+    for (const h of homes) {
+      const r = this.relay(h.hint);
+      try {
+        out.push({ home: h.hint, result: await r.putAct(act) });
+      } catch (e2) {
+        if (e2 instanceof RelayError && e2.code === CODE.missingPredecessor) {
+          try {
+            for (const earlier of this.chainActs()) {
+              if (actId(earlier) !== actId(act)) await r.putAct(earlier);
+            }
+            out.push({ home: h.hint, result: await r.putAct(act) });
+            continue;
+          } catch (e22) {
+            out.push(failure(h.hint, e22));
+            continue;
+          }
+        }
+        out.push(failure(h.hint, e2));
       }
-      const d = sha256(all);
-      if (encoding === void 0) return d;
-      if (encoding !== "hex") throw new Error(`${encoding}: only hex in the browser`);
-      return [...d].map((b) => b.toString(16).padStart(2, "0")).join("");
     }
+    return out;
+  }
+  /** Send the genesis to every home it names; each signs a receipt. */
+  async publishGenesis() {
+    return this.submitChainAct(this.chainActs()[0], this.f.homes);
+  }
+  // ------------------------------------------------------------ everyday acts
+  everyday(spec, type, payload, opts) {
+    if (opts.acks?.length && !ACK_SPECS.includes(spec)) {
+      throw new Error("only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act");
+    }
+    const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
+    let objects = opts.objects;
+    if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
+      objects = [...objects ?? [], ...this.f.cites.map((d) => [this.f.identity, d])];
+    }
+    const made = makeEveryday({
+      signingSecret: unhex(this.f.signingSecret),
+      signer: this.f.identity,
+      binding: this.f.binding,
+      spec,
+      type,
+      payload,
+      sequence: this.f.sequence,
+      public: opts.public,
+      to: opts.to,
+      objects,
+      refs: opts.refs,
+      acks: opts.acks
+    });
+    this.f.sequence.push(made.id);
+    if (!opts.public && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
+    if (this.f.cites && isRecord) this.f.cites = [made.id];
+    return made;
+  }
+  /** Send an everyday identity act to every home: its standing depends on it (Envelopes, "How acts reach people"). */
+  async toHomes(act) {
+    const out = [];
+    for (const h of this.f.homes) {
+      try {
+        out.push({ home: h.hint, result: await this.relay(h.hint).putAct(act) });
+      } catch (e2) {
+        out.push(failure(h.hint, e2));
+      }
+    }
+    return out;
+  }
+  /**
+   * Publish a new version of the routes (Identity type 3): where this
+   * identity's content is found (outbox) and where others deliver to it
+   * (inbox). Save the file after, since the sequence moved.
+   */
+  async publishRoutes(routes) {
+    const version = (this.f.routes?.version ?? 0) + 1;
+    const payload = routesPayload({ version, previous: this.f.routes?.act, routes });
+    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
+    this.f.routes = { version, act: made.id };
+    return { id: made.id, sent: await this.toHomes(made.act) };
+  }
+  /**
+   * Sign a witness act (Identity type 15, F110): "I received this act and
+   * rely on it", for each act named. It keeps them visible as disputed if
+   * their author later disowns them. Client conformance (Identity rule 18c):
+   * never a side effect; the caller passes back the explanation it showed
+   * the owner, `WITNESS_EXPLANATION`, word for word, or nothing is signed.
+   * Sent to every home and to the relays given, as a public Identity act.
+   */
+  async witness(acts, opts) {
+    if (opts.shown !== WITNESS_EXPLANATION) {
+      throw new Error("a witness act is signed only after the owner was shown what it does (Identity rule 18c)");
+    }
+    if (!acts.length) throw new Error("a witness act names at least one act");
+    if (acts.some((a) => this.f.sequence.includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
+    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(/* @__PURE__ */ new Map()), { public: true, acks: acts });
+    const sent = await this.toHomes(made.act);
+    for (const hint of opts.relays ?? []) await relayAt(hint, this.via).putAct(made.act);
+    return { id: made.id, act: made.act, sent };
+  }
+  /**
+   * Publish a new encryption key (Envelopes type 4): a fresh X-Wing key
+   * pair, or the one `secret` gives (the identity carry Module, draft 2,
+   * derives it from the signing seed); the public half in the act, the
+   * private half kept in the file.
+   */
+  async publishEncryptionKey(given) {
+    const last = this.f.encryption.at(-1);
+    const version = (last?.version ?? 0) + 1;
+    const secret = given ?? newEncryptionSecret();
+    const payload = encryptionKeyPayload(version, last?.act, xwingPublic(secret));
+    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
+    this.f.encryption.push({ version, act: made.id, secret: hex(secret) });
+    return { id: made.id, sent: await this.toHomes(made.act) };
+  }
+  // ------------------------------------------------------------ rotation
+  /**
+   * Every line of this identity's everyday acts that a rotation would judge
+   * (Identity rule 35, was 17; `lines.ts`): read from its homes, the
+   * relays its routes name, and `hints`, each followed back by `prev` to
+   * its first act; this device's own line among them.
+   */
+  async lines(o = {}) {
+    const homes = this.f.homes.map((h) => h.hint);
+    let routed = [];
+    try {
+      routed = (await lookUp(this.f.identity, homes, this.via)).routes.routes.flatMap((r) => r.hints);
+    } catch {
+    }
+    const at = [.../* @__PURE__ */ new Set([...homes, ...routed, ...o.hints ?? []])];
+    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: this.f.sequence, acts: await actsBy(this.f.identity, at, this.via), specs: o.specs });
+  }
+  /**
+   * What a rotation would keep (Identity rule 35, client conformance): the
+   * lines read now, every one kept unless named in `leaveOut` (by its
+   * latest act); a line this device cannot read kept by its card in
+   * `cards`, or, given none, left out. Show `plan.shown` to the owner, and
+   * `plan.warning` where it is not null, before signing.
+   */
+  async planRotation(o = {}) {
+    const lines2 = await this.lines(o);
+    return { lines: lines2, plan: planLines(lines2, o) };
+  }
+  /**
+   * Prepare a rotation: a new signing key, a new committed chain key, and
+   * every line of this identity's acts kept (`planRotation`): its own, the
+   * other apps' and devices', read from its homes and relays, and those it
+   * cannot read by the cards given. A line left out, by name or for want of
+   * a card, is left out only where `warned` is, word for word, the warning
+   * shown (`plan.warning`): otherwise nothing is signed. Optionally new
+   * homes or rule (`rule: []` returns to the default). Signed with the
+   * chain key the current chain act committed. The rotation is stored as
+   * pending; save the file before submitting, so that a retry sends the
+   * same bytes.
+   */
+  async prepareRotation(opts = {}) {
+    if (this.f.pending) throw new Error("a rotation is already pending: submit it again, never sign a second one (Identity rule 8a)");
+    const { plan } = await this.planRotation(opts);
+    checkWarned(plan, opts.warned);
+    if (this.f.pending) throw new Error("a rotation is already pending: submit it again, never sign a second one (Identity rule 8a)");
+    const newSigning = newSigningSecret();
+    const next = newTestChainKey(opts.scheme ?? this.f.safety.scheme);
+    const kept = plan.kept;
+    const chain = this.chainActs();
+    const previous = actId(chain[chain.length - 1]);
+    const rotation = makeRotation({
+      identitySpec: SPECS.identity,
+      identity: this.f.identity,
+      previous,
+      position: chain.length,
+      chainKeyScheme: this.f.safety.scheme,
+      chainKeySeeds: unhex(this.f.safety.seeds),
+      newSigningPublic: signingPublic(newSigning),
+      nextChainKeyScheme: next.scheme,
+      nextChainKeyCommit: next.commit,
+      kept,
+      homes: opts.homes,
+      rule: opts.rule,
+      declarations: opts.clock !== void 0 ? [clockDeclaration(opts.clock)] : void 0
+    });
+    const id = actId(rotation);
+    this.f.pending = {
+      rotation: b64(rotation),
+      id,
+      signingSecret: hex(newSigning),
+      safety: { scheme: next.scheme, seeds: hex(next.seeds) },
+      homes: opts.homes ?? this.f.homes,
+      rule: opts.rule === void 0 ? this.f.rule : opts.rule.length ? opts.rule : null,
+      clock: opts.clock
+    };
+    return id;
+  }
+  /**
+   * What to say plainly before a genesis or a rotation, where it leaves the
+   * identity with no clock (Money rule 14b, F181): `NO_CLOCK_WARNING`, or
+   * null. `clock` is what the act would declare (undefined: unchanged).
+   */
+  clockWarning(clock) {
+    const after = clock === void 0 ? this.f.clock : clock;
+    return after ? null : NO_CLOCK_WARNING;
+  }
+  /**
+   * Submit the pending rotation, the exact same bytes, to the homes whose
+   * receipts count (the current set) and to any new homes it names.
+   */
+  async submitRotation() {
+    const p = this.f.pending;
+    if (!p) throw new Error("no rotation pending");
+    const homes = [...this.f.homes];
+    for (const h of p.homes) if (!homes.some((x) => x.hint === h.hint)) homes.push(h);
+    return this.submitChainAct(unb64(p.rotation), homes);
+  }
+  /**
+   * Look the identity up as any reader would, and if the pending rotation
+   * now counts, take on its keys. Returns whether it counts.
+   */
+  async settleRotation(anchoring = []) {
+    const p = this.f.pending;
+    if (!p) throw new Error("no rotation pending");
+    const lookup = await lookUp(this.f.identity, [...this.f.homes, ...p.homes].map((h) => h.hint), this.via);
+    const links = lookup.resolution.links;
+    const counts = links.some((l) => l.act === p.id);
+    const before = this.f.clock ?? null;
+    let anchored = [];
+    let unanchored;
+    if (counts) {
+      this.f.chain.push(p.rotation);
+      this.f.position = this.f.chain.length - 1;
+      this.f.binding = p.id;
+      this.f.signingSecret = p.signingSecret;
+      this.f.safety = p.safety;
+      this.f.homes = p.homes;
+      this.f.rule = p.rule;
+      if (p.clock !== void 0) this.f.clock = p.clock;
+      this.f.pending = null;
+      if (this.f.cites) this.f.cites = [p.id];
+      await this.spread(lookup);
+      try {
+        anchored = await this.anchorQuorum(lookup, p.id, before, anchoring);
+        this.f.anchored = [...this.f.anchored ?? [], ...anchored.map((a) => ({ act: a.act, on: a.on, proof: b64(a.proof) }))];
+      } catch (e2) {
+        unanchored = e2.message;
+      }
+    }
+    return { counts, lookup, anchored, unanchored };
+  }
+  /**
+   * Anchor a counting rotation's home quorum on `clock` (Money rule 15,
+   * F180, F181): every receipt the core library names as supporting it
+   * under the home rule before it (for a homeless rotation, the new homes'
+   * receipts under the new rule, F182; for a self-hosted identity, the
+   * rotation itself), on the main reference, or, where no anchoring for it is given
+   * or it fails, on the backup. Nothing where no clock was declared: there
+   * is nothing to compare on, and the owner bears (said by `clockWarning`).
+   */
+  async anchorQuorum(lookup, rotation, clock, anchoring) {
+    if (!clock) return [];
+    const q = lookup.verifier.quorum(this.f.identity, rotation);
+    if (!q) return [];
+    const acts = q.supports.flat();
+    const tryOn = async (ref, on) => {
+      const a = ref && anchoring.find((x) => sameRef(x.reference, ref));
+      if (!a) return null;
+      try {
+        const out = [];
+        for (const act of acts) out.push({ act, on, proof: await a.anchor(act) });
+        return out;
+      } catch {
+        return null;
+      }
+    };
+    const done = await tryOn(clock.main, "main") ?? await tryOn(clock.backup, "backup");
+    if (!done) throw new Error("the rotation counts, but its home quorum could not be anchored on the declared clock: anchor it before relying on it (Money rule 15)");
+    return done;
+  }
+  /**
+   * A chain signature (Identity type 16, F132): `signs` signed with the
+   * chain key the latest identity-chain act committed, on the identity
+   * chain, committing a new one; the signing key, homes and rules stay.
+   * Agreements take a member's signature on a fork or closing only in this form.
+   * The chain key is spent once signed, so the act is kept in the chain
+   * file at once and sent to every home, as a rotation is (the same bytes
+   * whenever resent, rule 8a); it counts once the homes hold it. Sent to
+   * `relays` too, beside the act it signs.
+   */
+  async chainSign(signs, relays = [], shared) {
+    if (this.f.pending) throw new Error("a rotation is pending: submit and settle it first; one chain key signs one identity-chain act (Identity rule 8a)");
+    const fresh = shared ? null : newTestChainKey(this.f.safety.scheme);
+    const next = shared ? shared.next : fresh;
+    const chain = this.chainActs();
+    const act = makeChainSignature({
+      identitySpec: SPECS.identity,
+      identity: this.f.identity,
+      previous: actId(chain[chain.length - 1]),
+      position: chain.length,
+      chainKeyScheme: shared ? shared.scheme : this.f.safety.scheme,
+      chainKeySeeds: shared ? shared.seeds : unhex(this.f.safety.seeds),
+      nextChainKeyScheme: next.scheme,
+      nextChainKeyCommit: next.commit,
+      signs
+    });
+    const id = actId(act);
+    this.f.chain.push(b64(act));
+    this.f.safety = { scheme: next.scheme, seeds: fresh ? hex(fresh.seeds) : "" };
+    const sent = await this.submitChainAct(act, this.f.homes);
+    for (const hint of relays) await relayAt(hint, this.via).putAct(act);
+    const lookup = await lookUp(this.f.identity, this.f.homes.map((h) => h.hint), this.via);
+    const counts = lookup.resolution.links.some((l) => l.act === id);
+    if (counts) await this.spread(lookup);
+    return { id, counts, sent };
+  }
+  /**
+   * Bring every home up to date, as the owner's client should: the chain
+   * acts a home missed while it was away (the exact same bytes), and the
+   * receipts the other homes signed (cMIP, identity record part 8), so a
+   * reader who reaches a single home can still count the majority.
+   */
+  async spread(lookup) {
+    const l = lookup ?? await lookUp(this.f.identity, this.f.homes.map((h) => h.hint), this.via);
+    const extra = [...l.operatorChains, ...l.receipts];
+    for (const h of this.f.homes) {
+      const r = this.relay(h.hint);
+      try {
+        for (const a of this.chainActs()) await r.putAct(a);
+        for (const rc of extra) {
+          try {
+            await r.putAct(rc);
+          } catch {
+          }
+        }
+      } catch (e2) {
+        if (!(e2 instanceof TypeError) && !(e2 instanceof RelayError)) throw e2;
+      }
+    }
+  }
+  /**
+   * Make a grant key (Agreements, F128): a fresh signing key, its secret kept in
+   * this identity's file under the grant once known; its public part, as
+   * Identity's `[scheme, key]`, goes into the grant (field 9).
+   */
+  makeGrantKey() {
+    const secret = newSigningSecret();
+    return { secret, public: [1, signingPublic(secret)] };
+  }
+  /** Keep a grant key's secret, under the grant that names it (F128). */
+  keepGrantKey(grant, collective, secret) {
+    this.f.grantKeys = [...(this.f.grantKeys ?? []).filter((k) => k.grant !== grant), { grant, collective, secret: hex(secret) }];
+  }
+  /** The public half of the chain key held for the next rotation. */
+  nextChainKey() {
+    const s = chainKeyFromSeeds(this.f.safety.scheme, unhex(this.f.safety.seeds));
+    return { scheme: s.scheme, commit: s.commit };
+  }
+  // ------------------------------------------------------------ keys
+  /**
+   * Deliver a content key to another identity (Envelopes, "Key delivery"):
+   * look up its current encryption key and inbox, make a private key
+   * delivery addressed to it, seal it with X-Wing, and put it in its inbox.
+   */
+  async deliverKey(opts) {
+    const them = await lookUp(opts.to, opts.hints, this.via);
+    const pk = them.encryptionKey;
+    if (!pk) throw new Error("that identity has published no encryption key that counts");
+    const inbox = them.inbox(SPECS.envelopes);
+    if (!inbox) throw new Error("that identity declares no inbox");
+    const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
+    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, {
+      public: false,
+      to: [opts.to]
+    });
+    const sealed = sealFor(made.act, made.key, [{ id: opts.to, key: pk }]);
+    const id = sealedId(sealed);
+    for (const hint of inbox) await relayAt(hint, this.via).putSealed(sealed);
+    return { delivery: made.id, sealed: id, inbox };
+  }
+  /** A fresh bare key for one expected delivery (cMIP: a fresh bare key per delivery). */
+  static newBareKey() {
+    const secret = newEncryptionSecret();
+    const pub = xwingPublic(secret);
+    return { secret, public: pub, pickup: pickupTag(pub) };
+  }
+  /** Deliver a content key to a bare key someone supplied, found by its pickup tag. */
+  async deliverKeyToBare(opts) {
+    const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
+    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, { public: false });
+    const sealed = sealFor(made.act, made.key, [{ key: opts.bareKey }]);
+    for (const hint of opts.relays) await relayAt(hint, this.via).putSealed(sealed, [pickupTag(opts.bareKey)]);
+    return { delivery: made.id, sealed: sealedId(sealed) };
+  }
+  /**
+   * Sign an everyday act, next in this identity's sequence, without sending
+   * it: for a signer that hands the act to someone else to submit. Save the
+   * file before handing the act out, so the next act follows it.
+   */
+  sign(spec, type, payload, opts) {
+    return this.everyday(spec, type, payload, opts);
+  }
+  /**
+   * Sign a private act on a line of its own (one act, first in its line),
+   * outside this identity's sequence, never left at its homes: for an act
+   * whose content no other app of this identity may read, a share of a
+   * collective's chain key (F337). *Cost:* its line is never kept by a
+   * change of keys, so the act is void after the next one; it is read once,
+   * soon after it is made.
+   */
+  signApart(spec, type, payload, opts = {}) {
+    return makeEveryday({
+      signingSecret: unhex(this.f.signingSecret),
+      signer: this.f.identity,
+      binding: this.f.binding,
+      spec,
+      type,
+      payload,
+      sequence: [],
+      public: false,
+      to: opts.to,
+      refs: opts.refs
+    });
+  }
+  /**
+   * Publish an act on this identity's own relays, for example a private
+   * post whose key it will deliver. Returns the act id and its content key.
+   */
+  async publish(spec, type, payload, opts) {
+    const made = this.everyday(spec, type, payload, {
+      public: opts.public,
+      to: opts.to,
+      objects: opts.objects,
+      refs: opts.refs,
+      acks: opts.acks
+    });
+    for (const hint of opts.relays) await relayAt(hint, this.via).putAct(made.act);
+    return made;
+  }
+  /**
+   * Acts its homes hold signed by this identity that this file did not make
+   * (F152): each a warning for the owner. A home takes an act of an
+   * identity it serves only signed with the key its binding set, and serves
+   * the identity's private acts too, sealed, as opaque acts by their signer;
+   * so a private link that a thief confirmed with a stolen signing key
+   * counts only once it is published there, where this shows it. The owner
+   * cannot read it, only see that it exists: if they did not make it
+   * elsewhere, the signing key may be stolen, and a rotation ends its use.
+   * Homes that do not answer are skipped: silence proves nothing.
+   */
+  async unrecognised() {
+    const known = /* @__PURE__ */ new Set([...this.f.sequence, ...this.chainActs().map((a) => actId(a))]);
+    const out = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const h of this.f.homes) {
+      try {
+        let after;
+        for (; ; ) {
+          const page = await this.relay(h.hint).feed({ signer: this.f.identity, after });
+          for (const it of page.items) {
+            if (it.kind !== "act") continue;
+            const d = describeAct(it.item);
+            if (d.signer !== this.f.identity || known.has(d.id) || seen.has(d.id)) continue;
+            seen.add(d.id);
+            out.push({ id: d.id, home: h.hint, private: !d.public });
+          }
+          if (!page.items.length || page.next === after) break;
+          after = page.next;
+        }
+      } catch {
+      }
+    }
+    return out;
+  }
+  /**
+   * Read this identity's inbox: every sealed container addressed to it, opened
+   * with its encryption keys (newest first), the sender looked up and its act
+   * judged by the core library.
+   */
+  async readInbox(opts) {
+    const out = [];
+    const secrets = [...this.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    for (const hint of opts.inbox) {
+      const page = await relayAt(hint, this.via).feed({ to: this.f.identity });
+      for (const it of page.items) {
+        if (it.kind !== "sealed") continue;
+        out.push(await receive(it.item, this.f.identity, secrets, opts.senderHints, this.via));
+      }
+    }
+    return out;
+  }
+};
+async function receive(sealed, me, secrets, senderHints, via = {}) {
+  const id = sealedId(sealed);
+  let parts;
+  try {
+    parts = sealedParts(sealed);
+  } catch (e2) {
+    return { sealed: id, opened: false, error: String(e2) };
+  }
+  const index = me === null ? 0 : parts.to.indexOf(me);
+  if (index < 0) return { sealed: id, opened: false, error: "not addressed to this identity" };
+  let lastError = "no key";
+  for (const secret of secrets) {
+    record({ kind: "decapsulate", secret, ct: parts.capsules[index] });
+    let o;
+    try {
+      o = openSealed(sealed, me ?? void 0, secret);
+    } catch (e2) {
+      lastError = String(e2);
+      continue;
+    }
+    const d = o.described;
+    const r = { sealed: id, opened: true, from: d.signer, act: d.id, type: d.type, spec: d.spec };
+    if (d.spec === SPECS.envelopes && d.type === ENVELOPES_TYPES.keyDelivery && d.payload) {
+      r.delivery = readKeyDelivery(d.payload);
+    }
+    if (d.spec === SPECS.text && d.type === 0 && d.payload) {
+      const t = cborDecode(d.payload).get(0);
+      if (typeof t === "string") r.text = t;
+    }
+    if (d.signer) {
+      try {
+        const them = await lookUp(d.signer, senderHints, via);
+        if (o.key) them.verifier.addWithKey(o.act, o.key);
+        else them.verifier.add(o.act);
+        r.status = them.verifier.status(d.id);
+      } catch (e2) {
+        r.status = `sender not found: ${e2}`;
+      }
+    }
+    return r;
+  }
+  return { sealed: id, opened: false, error: lastError };
+}
+function sealFor(act, key, recipients) {
+  const eseeds = recipients.map(() => new Uint8Array(randomBytes2(64)));
+  const sealed = seal({
+    act,
+    key,
+    recipients,
+    random: {
+      containerKey: new Uint8Array(randomBytes2(32)),
+      nonce: new Uint8Array(randomBytes2(24)),
+      eseeds
+    }
+  });
+  const parts = sealedParts(sealed);
+  recipients.forEach((r, i) => record({ kind: "encapsulate", publicKey: r.key, eseed: eseeds[i], ct: parts.capsules[i] }));
+  return sealed;
+}
+function failure(home, e2) {
+  if (e2 instanceof RelayError) return { home, error: e2.reason, code: e2.code };
+  return { home, error: String(e2) };
+}
+
+// ../genesis/src/private.ts
+var unb642 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+function ownKey(me) {
+  const e2 = me.f.encryption[me.f.encryption.length - 1];
+  return e2 ? xwingPublic(unhex(e2.secret)) : null;
+}
+async function leaveAtHomes(me, made, o = {}) {
+  const via = o.via ?? me.via;
+  const key = o.sealed || o.lockedOnly ? null : ownKey(me);
+  const to = describeAct(made.act).to ?? [];
+  let copy = null;
+  if (key && to.length === 1 && to[0] === me.f.identity) copy = { sealed: sealFor(made.act, made.key, [{ id: me.f.identity, key }]), tags: [] };
+  else if (key && !to.length) copy = { sealed: sealFor(made.act, made.key, [{ key }]), tags: [pickupTag(key)] };
+  else if (key) {
+    const kd = me.signApart(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.f.identity] });
+    copy = { sealed: sealFor(kd.act, kd.key, [{ id: me.f.identity, key }]), tags: [] };
+  }
+  const took = [];
+  for (const h of me.f.homes) {
+    try {
+      await relayAt(h.hint, via).putAct(made.act);
+      if (copy) await relayAt(h.hint, via).putSealed(copy.sealed, copy.tags);
+      took.push(h.hint);
+    } catch {
+    }
+  }
+  if (took.length && (o.sealed || o.lockedOnly || copy) && me.f.unsent?.[made.id]) delete me.f.unsent[made.id];
+  return took;
+}
+async function sendWaiting(me, via = me.via) {
+  for (const [id, x] of Object.entries(me.f.unsent ?? {})) {
+    await leaveAtHomes(me, { id, act: unb642(x.act), key: unb642(x.key) }, { via });
+  }
+  return Object.keys(me.f.unsent ?? {}).length;
+}
+async function lineAtHomes(me, app3, via = me.via) {
+  const own = ownLine(me.f.sequence);
+  const blank = { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null };
+  if (!own.card) return { ...blank, atHomes: null, missing: 0, hidden: 0, card: null };
+  const homes = me.f.homes.map((h) => h.hint);
+  let places = homes;
+  try {
+    const look = await lookUp(me.f.identity, homes, via);
+    places = [.../* @__PURE__ */ new Set([...homes, ...look.resolution.homes.map((h) => h.hint), ...look.routes.routes.flatMap((x) => x.hints)])];
+  } catch {
+  }
+  const acts = await actsBy(me.f.identity, places, via);
+  if (!acts.length) return { ...blank, atHomes: null, missing: 0, hidden: null, card: null };
+  const held = new Set(acts.map((a) => describeAct(a).id));
+  const missing = me.f.sequence.filter((id) => !held.has(id)).length;
+  const u2 = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts }));
+  const hidden = me.f.sequence.filter((id) => u2.has(id)).length;
+  const atHomes = held.has(own.card.act);
+  const card = { ...own.card, hidden, ...missing ? { missing } : {} };
+  return { ...blank, atHomes, missing, hidden, card: atHomes ? cardText(card, app3) : null };
+}
+async function ownActs(identity, secrets, places, via = {}) {
+  const out = /* @__PURE__ */ new Map();
+  const locked = /* @__PURE__ */ new Map();
+  for (const a of await actsBy(identity, places, via)) {
+    const d = describeAct(a);
+    if (d.public) out.set(d.id, { act: a });
+    else locked.set(d.id, a);
+  }
+  const delivered = /* @__PURE__ */ new Map();
+  if (!secrets.length) return [...out.values()];
+  const queries = [{ q: { to: identity }, me: identity }, ...secrets.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
+  for (const h of places) {
+    for (const { q, me } of queries) {
+      let after;
+      try {
+        for (; ; ) {
+          const page = await relayAt(h, via).feed({ ...q, after });
+          for (const it of page.items) {
+            if (it.kind !== "sealed") continue;
+            for (const s of secrets) {
+              try {
+                const o = openSealed(it.item, me, s);
+                const d = o.described;
+                if (d.signer !== identity) break;
+                if (d.spec === SPECS.envelopes && d.type === ENVELOPES_TYPES.keyDelivery && d.payload) {
+                  const k = readKeyDelivery(d.payload);
+                  delivered.set(k.target, k.key);
+                } else if (!out.has(d.id)) out.set(d.id, { act: o.act, key: o.key });
+                break;
+              } catch {
+              }
+            }
+          }
+          if (!page.items.length || page.next === after) break;
+          after = page.next;
+        }
+      } catch {
+      }
+    }
+  }
+  for (const [id, key] of delivered) if (!out.has(id) && locked.has(id)) out.set(id, { act: locked.get(id), key });
+  return [...out.values()];
+}
+function lineReader(app3) {
+  const seen = /* @__PURE__ */ new Map();
+  return async (me, via = me.via) => {
+    const latest = me.f.sequence[me.f.sequence.length - 1] ?? null;
+    const was = seen.get(me.f.identity);
+    const waiting = Object.keys(me.f.unsent ?? {}).length > 0;
+    if (was && was.latest === latest && !waiting && was.line.atHomes && Date.now() - was.at < 6e4) return was.line;
+    const line = await lineAtHomes(me, app3, via);
+    seen.set(me.f.identity, { latest, at: Date.now(), line });
+    return line;
   };
-  return h;
+}
+function noLine(sequence) {
+  const own = ownLine(sequence);
+  return { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null, atHomes: null, missing: 0, hidden: null, card: null };
 }
 
 // ../repo/src/specs.ts
@@ -3942,631 +4775,6 @@ var LINK_SAY = [
   "An invoice is made by itself only below the cap of your receipts lane, and only while \u201CFollow every step by hand\u201D is off."
 ];
 
-// src/web/node-fs.ts
-var none = (name) => () => {
-  throw new Error(`${name}: there are no files in a browser`);
-};
-var readFileSync = none("readFileSync");
-var writeFileSync = none("writeFileSync");
-var renameSync = none("renameSync");
-
-// ../genesis/src/kex.ts
-var kexLog = { recording: false, entries: [] };
-function record(e2) {
-  if (kexLog.recording) kexLog.entries.push(e2);
-}
-
-// ../genesis/src/identity.ts
-var TEST_LABEL = "MOR TEST IDENTITY. The safety key is held in software: a prototype, never for a real identity.";
-var CLOCK_KIND = 1;
-var NO_CLOCK_WARNING = "This identity declares no clock. If its signing key is ever stolen, what the thief does with it until you change your keys, and every payment made to what the thief published, will be your loss, whatever you anchor: payers are compared with your key change only on a clock you named in advance (Money rule 15).";
-var sameRef = (a, b) => a.cmip === b.cmip && a.params === b.params;
-function clockDeclaration(c) {
-  if (!c) return { spec: MIRS.money, kind: CLOCK_KIND };
-  const ref = (r) => [unhex(r.cmip), cborDecode(unhex(r.params))];
-  return { spec: MIRS.money, kind: CLOCK_KIND, cbor: cborEncode([ref(c.main), ...c.backup ? [ref(c.backup)] : []]) };
-}
-var AGREEMENTS_RECORD = 17;
-var b64 = (b) => base64(b);
-var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-var TestIdentity = class _TestIdentity {
-  constructor(f, via = {}) {
-    this.f = f;
-    this.via = via;
-  }
-  get id() {
-    return this.f.identity;
-  }
-  // ------------------------------------------------------------ files
-  static load(path, via = {}) {
-    const f = JSON.parse(readFileSync(path, "utf8"));
-    if (f.label !== TEST_LABEL) throw new Error(`${path} is not a MOR test identity file`);
-    return new _TestIdentity(f, via);
-  }
-  /** Written whole to a temporary file, then renamed, readable by its owner only. */
-  save(path) {
-    const tmp = `${path}.tmp`;
-    writeFileSync(tmp, JSON.stringify(this.f, null, 2) + "\n", { mode: 384 });
-    renameSync(tmp, path);
-  }
-  // ------------------------------------------------------------ genesis
-  /**
-   * A new test identity: an signing key, a chain key held in
-   * software and committed by hash, and a genesis naming its homes. Nothing
-   * is sent yet: save the file first, then `publishGenesis`.
-   */
-  static create(opts) {
-    if (!opts.homes.length) throw new Error("a genesis declares at least one home");
-    const signingSecret = newSigningSecret();
-    const chainKey = opts.chainKey ?? newTestChainKey(opts.scheme ?? 2);
-    const genesis = makeGenesis({
-      identitySpec: SPECS.identity,
-      signingSecret,
-      chainKeyScheme: chainKey.scheme,
-      chainKeyCommit: chainKey.commit,
-      homes: opts.homes,
-      rule: opts.rule,
-      declarations: opts.clock ? [clockDeclaration(opts.clock)] : void 0
-    });
-    const id = actId(genesis);
-    return new _TestIdentity(
-      {
-        label: TEST_LABEL,
-        identity: id,
-        position: 0,
-        binding: id,
-        signingSecret: hex(signingSecret),
-        safety: { scheme: chainKey.scheme, seeds: hex(chainKey.seeds) },
-        chain: [b64(genesis)],
-        homes: opts.homes,
-        rule: opts.rule ?? null,
-        clock: opts.clock ?? null,
-        sequence: [],
-        routes: null,
-        encryption: [],
-        pending: null
-      },
-      opts.via ?? {}
-    );
-  }
-  chainActs() {
-    return this.f.chain.map(unb64);
-  }
-  relay(hint) {
-    return relayAt(hint, this.via);
-  }
-  /**
-   * Send an identity-chain act to each home. A home that lacks the earlier
-   * chain acts (error 3: a home newly named) gets them first, oldest first.
-   */
-  async submitChainAct(act, homes) {
-    const out = [];
-    for (const h of homes) {
-      const r = this.relay(h.hint);
-      try {
-        out.push({ home: h.hint, result: await r.putAct(act) });
-      } catch (e2) {
-        if (e2 instanceof RelayError && e2.code === CODE.missingPredecessor) {
-          try {
-            for (const earlier of this.chainActs()) {
-              if (actId(earlier) !== actId(act)) await r.putAct(earlier);
-            }
-            out.push({ home: h.hint, result: await r.putAct(act) });
-            continue;
-          } catch (e22) {
-            out.push(failure(h.hint, e22));
-            continue;
-          }
-        }
-        out.push(failure(h.hint, e2));
-      }
-    }
-    return out;
-  }
-  /** Send the genesis to every home it names; each signs a receipt. */
-  async publishGenesis() {
-    return this.submitChainAct(this.chainActs()[0], this.f.homes);
-  }
-  // ------------------------------------------------------------ everyday acts
-  everyday(spec, type, payload, opts) {
-    if (opts.acks?.length && !ACK_SPECS.includes(spec)) {
-      throw new Error("only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act");
-    }
-    const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
-    let objects = opts.objects;
-    if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
-      objects = [...objects ?? [], ...this.f.cites.map((d) => [this.f.identity, d])];
-    }
-    const made = makeEveryday({
-      signingSecret: unhex(this.f.signingSecret),
-      signer: this.f.identity,
-      binding: this.f.binding,
-      spec,
-      type,
-      payload,
-      sequence: this.f.sequence,
-      public: opts.public,
-      to: opts.to,
-      objects,
-      refs: opts.refs,
-      acks: opts.acks
-    });
-    this.f.sequence.push(made.id);
-    if (this.f.cites && isRecord) this.f.cites = [made.id];
-    return made;
-  }
-  /** Send an everyday identity act to every home: its standing depends on it (Envelopes, "How acts reach people"). */
-  async toHomes(act) {
-    const out = [];
-    for (const h of this.f.homes) {
-      try {
-        out.push({ home: h.hint, result: await this.relay(h.hint).putAct(act) });
-      } catch (e2) {
-        out.push(failure(h.hint, e2));
-      }
-    }
-    return out;
-  }
-  /**
-   * Publish a new version of the routes (Identity type 3): where this
-   * identity's content is found (outbox) and where others deliver to it
-   * (inbox). Save the file after, since the sequence moved.
-   */
-  async publishRoutes(routes) {
-    const version = (this.f.routes?.version ?? 0) + 1;
-    const payload = routesPayload({ version, previous: this.f.routes?.act, routes });
-    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
-    this.f.routes = { version, act: made.id };
-    return { id: made.id, sent: await this.toHomes(made.act) };
-  }
-  /**
-   * Sign a witness act (Identity type 15, F110): "I received this act and
-   * rely on it", for each act named. It keeps them visible as disputed if
-   * their author later disowns them. Client conformance (Identity rule 18c):
-   * never a side effect; the caller passes back the explanation it showed
-   * the owner, `WITNESS_EXPLANATION`, word for word, or nothing is signed.
-   * Sent to every home and to the relays given, as a public Identity act.
-   */
-  async witness(acts, opts) {
-    if (opts.shown !== WITNESS_EXPLANATION) {
-      throw new Error("a witness act is signed only after the owner was shown what it does (Identity rule 18c)");
-    }
-    if (!acts.length) throw new Error("a witness act names at least one act");
-    if (acts.some((a) => this.f.sequence.includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
-    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(/* @__PURE__ */ new Map()), { public: true, acks: acts });
-    const sent = await this.toHomes(made.act);
-    for (const hint of opts.relays ?? []) await relayAt(hint, this.via).putAct(made.act);
-    return { id: made.id, act: made.act, sent };
-  }
-  /**
-   * Publish a new encryption key (Envelopes type 4): a fresh X-Wing key
-   * pair, or the one `secret` gives (the identity carry Module, draft 2,
-   * derives it from the signing seed); the public half in the act, the
-   * private half kept in the file.
-   */
-  async publishEncryptionKey(given) {
-    const last = this.f.encryption.at(-1);
-    const version = (last?.version ?? 0) + 1;
-    const secret = given ?? newEncryptionSecret();
-    const payload = encryptionKeyPayload(version, last?.act, xwingPublic(secret));
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
-    this.f.encryption.push({ version, act: made.id, secret: hex(secret) });
-    return { id: made.id, sent: await this.toHomes(made.act) };
-  }
-  // ------------------------------------------------------------ rotation
-  /**
-   * Every line of this identity's everyday acts that a rotation would judge
-   * (Identity rule 35, was 17; `lines.ts`): read from its homes, the
-   * relays its routes name, and `hints`, each followed back by `prev` to
-   * its first act; this device's own line among them.
-   */
-  async lines(o = {}) {
-    const homes = this.f.homes.map((h) => h.hint);
-    let routed = [];
-    try {
-      routed = (await lookUp(this.f.identity, homes, this.via)).routes.routes.flatMap((r) => r.hints);
-    } catch {
-    }
-    const at = [.../* @__PURE__ */ new Set([...homes, ...routed, ...o.hints ?? []])];
-    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: this.f.sequence, acts: await actsBy(this.f.identity, at, this.via), specs: o.specs });
-  }
-  /**
-   * What a rotation would keep (Identity rule 35, client conformance): the
-   * lines read now, every one kept unless named in `leaveOut` (by its
-   * latest act); a line this device cannot read kept by its card in
-   * `cards`, or, given none, left out. Show `plan.shown` to the owner, and
-   * `plan.warning` where it is not null, before signing.
-   */
-  async planRotation(o = {}) {
-    const lines2 = await this.lines(o);
-    return { lines: lines2, plan: planLines(lines2, o) };
-  }
-  /**
-   * Prepare a rotation: a new signing key, a new committed chain key, and
-   * every line of this identity's acts kept (`planRotation`): its own, the
-   * other apps' and devices', read from its homes and relays, and those it
-   * cannot read by the cards given. A line left out, by name or for want of
-   * a card, is left out only where `warned` is, word for word, the warning
-   * shown (`plan.warning`): otherwise nothing is signed. Optionally new
-   * homes or rule (`rule: []` returns to the default). Signed with the
-   * chain key the current chain act committed. The rotation is stored as
-   * pending; save the file before submitting, so that a retry sends the
-   * same bytes.
-   */
-  async prepareRotation(opts = {}) {
-    if (this.f.pending) throw new Error("a rotation is already pending: submit it again, never sign a second one (Identity rule 8a)");
-    const { plan } = await this.planRotation(opts);
-    checkWarned(plan, opts.warned);
-    if (this.f.pending) throw new Error("a rotation is already pending: submit it again, never sign a second one (Identity rule 8a)");
-    const newSigning = newSigningSecret();
-    const next = newTestChainKey(opts.scheme ?? this.f.safety.scheme);
-    const kept = plan.kept;
-    const chain = this.chainActs();
-    const previous = actId(chain[chain.length - 1]);
-    const rotation = makeRotation({
-      identitySpec: SPECS.identity,
-      identity: this.f.identity,
-      previous,
-      position: chain.length,
-      chainKeyScheme: this.f.safety.scheme,
-      chainKeySeeds: unhex(this.f.safety.seeds),
-      newSigningPublic: signingPublic(newSigning),
-      nextChainKeyScheme: next.scheme,
-      nextChainKeyCommit: next.commit,
-      kept,
-      homes: opts.homes,
-      rule: opts.rule,
-      declarations: opts.clock !== void 0 ? [clockDeclaration(opts.clock)] : void 0
-    });
-    const id = actId(rotation);
-    this.f.pending = {
-      rotation: b64(rotation),
-      id,
-      signingSecret: hex(newSigning),
-      safety: { scheme: next.scheme, seeds: hex(next.seeds) },
-      homes: opts.homes ?? this.f.homes,
-      rule: opts.rule === void 0 ? this.f.rule : opts.rule.length ? opts.rule : null,
-      clock: opts.clock
-    };
-    return id;
-  }
-  /**
-   * What to say plainly before a genesis or a rotation, where it leaves the
-   * identity with no clock (Money rule 14b, F181): `NO_CLOCK_WARNING`, or
-   * null. `clock` is what the act would declare (undefined: unchanged).
-   */
-  clockWarning(clock) {
-    const after = clock === void 0 ? this.f.clock : clock;
-    return after ? null : NO_CLOCK_WARNING;
-  }
-  /**
-   * Submit the pending rotation, the exact same bytes, to the homes whose
-   * receipts count (the current set) and to any new homes it names.
-   */
-  async submitRotation() {
-    const p = this.f.pending;
-    if (!p) throw new Error("no rotation pending");
-    const homes = [...this.f.homes];
-    for (const h of p.homes) if (!homes.some((x) => x.hint === h.hint)) homes.push(h);
-    return this.submitChainAct(unb64(p.rotation), homes);
-  }
-  /**
-   * Look the identity up as any reader would, and if the pending rotation
-   * now counts, take on its keys. Returns whether it counts.
-   */
-  async settleRotation(anchoring = []) {
-    const p = this.f.pending;
-    if (!p) throw new Error("no rotation pending");
-    const lookup = await lookUp(this.f.identity, [...this.f.homes, ...p.homes].map((h) => h.hint), this.via);
-    const links = lookup.resolution.links;
-    const counts = links.some((l) => l.act === p.id);
-    const before = this.f.clock ?? null;
-    let anchored = [];
-    let unanchored;
-    if (counts) {
-      this.f.chain.push(p.rotation);
-      this.f.position = this.f.chain.length - 1;
-      this.f.binding = p.id;
-      this.f.signingSecret = p.signingSecret;
-      this.f.safety = p.safety;
-      this.f.homes = p.homes;
-      this.f.rule = p.rule;
-      if (p.clock !== void 0) this.f.clock = p.clock;
-      this.f.pending = null;
-      if (this.f.cites) this.f.cites = [p.id];
-      await this.spread(lookup);
-      try {
-        anchored = await this.anchorQuorum(lookup, p.id, before, anchoring);
-        this.f.anchored = [...this.f.anchored ?? [], ...anchored.map((a) => ({ act: a.act, on: a.on, proof: b64(a.proof) }))];
-      } catch (e2) {
-        unanchored = e2.message;
-      }
-    }
-    return { counts, lookup, anchored, unanchored };
-  }
-  /**
-   * Anchor a counting rotation's home quorum on `clock` (Money rule 15,
-   * F180, F181): every receipt the core library names as supporting it
-   * under the home rule before it (for a homeless rotation, the new homes'
-   * receipts under the new rule, F182; for a self-hosted identity, the
-   * rotation itself), on the main reference, or, where no anchoring for it is given
-   * or it fails, on the backup. Nothing where no clock was declared: there
-   * is nothing to compare on, and the owner bears (said by `clockWarning`).
-   */
-  async anchorQuorum(lookup, rotation, clock, anchoring) {
-    if (!clock) return [];
-    const q = lookup.verifier.quorum(this.f.identity, rotation);
-    if (!q) return [];
-    const acts = q.supports.flat();
-    const tryOn = async (ref, on) => {
-      const a = ref && anchoring.find((x) => sameRef(x.reference, ref));
-      if (!a) return null;
-      try {
-        const out = [];
-        for (const act of acts) out.push({ act, on, proof: await a.anchor(act) });
-        return out;
-      } catch {
-        return null;
-      }
-    };
-    const done = await tryOn(clock.main, "main") ?? await tryOn(clock.backup, "backup");
-    if (!done) throw new Error("the rotation counts, but its home quorum could not be anchored on the declared clock: anchor it before relying on it (Money rule 15)");
-    return done;
-  }
-  /**
-   * A chain signature (Identity type 16, F132): `signs` signed with the
-   * chain key the latest identity-chain act committed, on the identity
-   * chain, committing a new one; the signing key, homes and rules stay.
-   * Agreements take a member's signature on a fork or closing only in this form.
-   * The chain key is spent once signed, so the act is kept in the chain
-   * file at once and sent to every home, as a rotation is (the same bytes
-   * whenever resent, rule 8a); it counts once the homes hold it. Sent to
-   * `relays` too, beside the act it signs.
-   */
-  async chainSign(signs, relays = [], shared) {
-    if (this.f.pending) throw new Error("a rotation is pending: submit and settle it first; one chain key signs one identity-chain act (Identity rule 8a)");
-    const fresh = shared ? null : newTestChainKey(this.f.safety.scheme);
-    const next = shared ? shared.next : fresh;
-    const chain = this.chainActs();
-    const act = makeChainSignature({
-      identitySpec: SPECS.identity,
-      identity: this.f.identity,
-      previous: actId(chain[chain.length - 1]),
-      position: chain.length,
-      chainKeyScheme: shared ? shared.scheme : this.f.safety.scheme,
-      chainKeySeeds: shared ? shared.seeds : unhex(this.f.safety.seeds),
-      nextChainKeyScheme: next.scheme,
-      nextChainKeyCommit: next.commit,
-      signs
-    });
-    const id = actId(act);
-    this.f.chain.push(b64(act));
-    this.f.safety = { scheme: next.scheme, seeds: fresh ? hex(fresh.seeds) : "" };
-    const sent = await this.submitChainAct(act, this.f.homes);
-    for (const hint of relays) await relayAt(hint, this.via).putAct(act);
-    const lookup = await lookUp(this.f.identity, this.f.homes.map((h) => h.hint), this.via);
-    const counts = lookup.resolution.links.some((l) => l.act === id);
-    if (counts) await this.spread(lookup);
-    return { id, counts, sent };
-  }
-  /**
-   * Bring every home up to date, as the owner's client should: the chain
-   * acts a home missed while it was away (the exact same bytes), and the
-   * receipts the other homes signed (cMIP, identity record part 8), so a
-   * reader who reaches a single home can still count the majority.
-   */
-  async spread(lookup) {
-    const l = lookup ?? await lookUp(this.f.identity, this.f.homes.map((h) => h.hint), this.via);
-    const extra = [...l.operatorChains, ...l.receipts];
-    for (const h of this.f.homes) {
-      const r = this.relay(h.hint);
-      try {
-        for (const a of this.chainActs()) await r.putAct(a);
-        for (const rc of extra) {
-          try {
-            await r.putAct(rc);
-          } catch {
-          }
-        }
-      } catch (e2) {
-        if (!(e2 instanceof TypeError) && !(e2 instanceof RelayError)) throw e2;
-      }
-    }
-  }
-  /**
-   * Make a grant key (Agreements, F128): a fresh signing key, its secret kept in
-   * this identity's file under the grant once known; its public part, as
-   * Identity's `[scheme, key]`, goes into the grant (field 9).
-   */
-  makeGrantKey() {
-    const secret = newSigningSecret();
-    return { secret, public: [1, signingPublic(secret)] };
-  }
-  /** Keep a grant key's secret, under the grant that names it (F128). */
-  keepGrantKey(grant, collective, secret) {
-    this.f.grantKeys = [...(this.f.grantKeys ?? []).filter((k) => k.grant !== grant), { grant, collective, secret: hex(secret) }];
-  }
-  /** The public half of the chain key held for the next rotation. */
-  nextChainKey() {
-    const s = chainKeyFromSeeds(this.f.safety.scheme, unhex(this.f.safety.seeds));
-    return { scheme: s.scheme, commit: s.commit };
-  }
-  // ------------------------------------------------------------ keys
-  /**
-   * Deliver a content key to another identity (Envelopes, "Key delivery"):
-   * look up its current encryption key and inbox, make a private key
-   * delivery addressed to it, seal it with X-Wing, and put it in its inbox.
-   */
-  async deliverKey(opts) {
-    const them = await lookUp(opts.to, opts.hints, this.via);
-    const pk = them.encryptionKey;
-    if (!pk) throw new Error("that identity has published no encryption key that counts");
-    const inbox = them.inbox(SPECS.envelopes);
-    if (!inbox) throw new Error("that identity declares no inbox");
-    const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, {
-      public: false,
-      to: [opts.to]
-    });
-    const sealed = sealFor(made.act, made.key, [{ id: opts.to, key: pk }]);
-    const id = sealedId(sealed);
-    for (const hint of inbox) await relayAt(hint, this.via).putSealed(sealed);
-    return { delivery: made.id, sealed: id, inbox };
-  }
-  /** A fresh bare key for one expected delivery (cMIP: a fresh bare key per delivery). */
-  static newBareKey() {
-    const secret = newEncryptionSecret();
-    const pub = xwingPublic(secret);
-    return { secret, public: pub, pickup: pickupTag(pub) };
-  }
-  /** Deliver a content key to a bare key someone supplied, found by its pickup tag. */
-  async deliverKeyToBare(opts) {
-    const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, { public: false });
-    const sealed = sealFor(made.act, made.key, [{ key: opts.bareKey }]);
-    for (const hint of opts.relays) await relayAt(hint, this.via).putSealed(sealed, [pickupTag(opts.bareKey)]);
-    return { delivery: made.id, sealed: sealedId(sealed) };
-  }
-  /**
-   * Sign an everyday act, next in this identity's sequence, without sending
-   * it: for a signer that hands the act to someone else to submit. Save the
-   * file before handing the act out, so the next act follows it.
-   */
-  sign(spec, type, payload, opts) {
-    return this.everyday(spec, type, payload, opts);
-  }
-  /**
-   * Publish an act on this identity's own relays, for example a private
-   * post whose key it will deliver. Returns the act id and its content key.
-   */
-  async publish(spec, type, payload, opts) {
-    const made = this.everyday(spec, type, payload, {
-      public: opts.public,
-      to: opts.to,
-      objects: opts.objects,
-      refs: opts.refs,
-      acks: opts.acks
-    });
-    for (const hint of opts.relays) await relayAt(hint, this.via).putAct(made.act);
-    return made;
-  }
-  /**
-   * Acts its homes hold signed by this identity that this file did not make
-   * (F152): each a warning for the owner. A home takes an act of an
-   * identity it serves only signed with the key its binding set, and serves
-   * the identity's private acts too, sealed, as opaque acts by their signer;
-   * so a private link that a thief confirmed with a stolen signing key
-   * counts only once it is published there, where this shows it. The owner
-   * cannot read it, only see that it exists: if they did not make it
-   * elsewhere, the signing key may be stolen, and a rotation ends its use.
-   * Homes that do not answer are skipped: silence proves nothing.
-   */
-  async unrecognised() {
-    const known = /* @__PURE__ */ new Set([...this.f.sequence, ...this.chainActs().map((a) => actId(a))]);
-    const out = [];
-    const seen = /* @__PURE__ */ new Set();
-    for (const h of this.f.homes) {
-      try {
-        let after;
-        for (; ; ) {
-          const page = await this.relay(h.hint).feed({ signer: this.f.identity, after });
-          for (const it of page.items) {
-            if (it.kind !== "act") continue;
-            const d = describeAct(it.item);
-            if (d.signer !== this.f.identity || known.has(d.id) || seen.has(d.id)) continue;
-            seen.add(d.id);
-            out.push({ id: d.id, home: h.hint, private: !d.public });
-          }
-          if (!page.items.length || page.next === after) break;
-          after = page.next;
-        }
-      } catch {
-      }
-    }
-    return out;
-  }
-  /**
-   * Read this identity's inbox: every sealed container addressed to it, opened
-   * with its encryption keys (newest first), the sender looked up and its act
-   * judged by the core library.
-   */
-  async readInbox(opts) {
-    const out = [];
-    const secrets = [...this.f.encryption].reverse().map((e2) => unhex(e2.secret));
-    for (const hint of opts.inbox) {
-      const page = await relayAt(hint, this.via).feed({ to: this.f.identity });
-      for (const it of page.items) {
-        if (it.kind !== "sealed") continue;
-        out.push(await receive(it.item, this.f.identity, secrets, opts.senderHints, this.via));
-      }
-    }
-    return out;
-  }
-};
-async function receive(sealed, me, secrets, senderHints, via = {}) {
-  const id = sealedId(sealed);
-  let parts;
-  try {
-    parts = sealedParts(sealed);
-  } catch (e2) {
-    return { sealed: id, opened: false, error: String(e2) };
-  }
-  const index = me === null ? 0 : parts.to.indexOf(me);
-  if (index < 0) return { sealed: id, opened: false, error: "not addressed to this identity" };
-  let lastError = "no key";
-  for (const secret of secrets) {
-    record({ kind: "decapsulate", secret, ct: parts.capsules[index] });
-    let o;
-    try {
-      o = openSealed(sealed, me ?? void 0, secret);
-    } catch (e2) {
-      lastError = String(e2);
-      continue;
-    }
-    const d = o.described;
-    const r = { sealed: id, opened: true, from: d.signer, act: d.id, type: d.type, spec: d.spec };
-    if (d.spec === SPECS.envelopes && d.type === ENVELOPES_TYPES.keyDelivery && d.payload) {
-      r.delivery = readKeyDelivery(d.payload);
-    }
-    if (d.spec === SPECS.text && d.type === 0 && d.payload) {
-      const t = cborDecode(d.payload).get(0);
-      if (typeof t === "string") r.text = t;
-    }
-    if (d.signer) {
-      try {
-        const them = await lookUp(d.signer, senderHints, via);
-        if (o.key) them.verifier.addWithKey(o.act, o.key);
-        else them.verifier.add(o.act);
-        r.status = them.verifier.status(d.id);
-      } catch (e2) {
-        r.status = `sender not found: ${e2}`;
-      }
-    }
-    return r;
-  }
-  return { sealed: id, opened: false, error: lastError };
-}
-function sealFor(act, key, recipients) {
-  const eseeds = recipients.map(() => new Uint8Array(randomBytes2(64)));
-  const sealed = seal({
-    act,
-    key,
-    recipients,
-    random: {
-      containerKey: new Uint8Array(randomBytes2(32)),
-      nonce: new Uint8Array(randomBytes2(24)),
-      eseeds
-    }
-  });
-  const parts = sealedParts(sealed);
-  recipients.forEach((r, i) => record({ kind: "encapsulate", publicKey: r.key, eseed: eseeds[i], ct: parts.capsules[i] }));
-  return sealed;
-}
-function failure(home, e2) {
-  if (e2 instanceof RelayError) return { home, error: e2.reason, code: e2.code };
-  return { home, error: String(e2) };
-}
-
 // ../repo/src/proposals.ts
 var NEGOTIATION = 18;
 var negotiationPayload = (text3) => cborEncode(/* @__PURE__ */ new Map([[0, text3.normalize("NFC")]]));
@@ -4591,6 +4799,7 @@ async function negotiate(by, to, o) {
       failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
     }
   }
+  if (o.home !== false) await leaveAtHomes(by, made);
   return { id: made.id, act: made.act, key: made.key, sealed: sealedId(sealed), left, failed };
 }
 
@@ -4620,6 +4829,13 @@ async function readMemberKeys(identity, secrets, homes, via = {}) {
     return [];
   }
   const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
+  for (const x of await ownActs(identity, secrets, [.../* @__PURE__ */ new Set([...at, ...l.routes.routes.flatMap((r) => r.hints)])], via)) {
+    try {
+      if (x.key) l.verifier.addWithKey(x.act, x.key);
+      else l.verifier.add(x.act);
+    } catch {
+    }
+  }
   for (const h of at) {
     let after;
     try {
@@ -7442,11 +7658,12 @@ async function changeAccepted(me, change, opts) {
     for (const h of homes) {
       try {
         await relayAt(h, via).putSealed(sealed);
-        await relayAt(h, via).putAct(made.act);
         left++;
       } catch {
       }
     }
+    await leaveAtHomes(me, made, { via, sealed: left > 0 });
+    await opts.save();
     if (!left) throw new Error("No home took the accepted list: nothing was changed. Try again.");
     return { written: made.id, list: { entries: next, tips: [{ id: made.id, version: read.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next }], merged: read.merged, version: read.version + 1, problems: [] } };
   }
@@ -7560,11 +7777,12 @@ async function sendToSelf(me, type, payload, opts) {
   for (const h of homes) {
     try {
       await relayAt(h, opts.via ?? {}).putSealed(sealed);
-      await relayAt(h, opts.via ?? {}).putAct(made.act);
       left.push(h);
     } catch {
     }
   }
+  await leaveAtHomes(me, made, { via: opts.via ?? {}, sealed: left.length > 0 });
+  await opts.save();
   if (!left.length) throw new Error(`No home took the draft (${homes.join(", ")}). It was signed but went nowhere: prepare it again later.`);
   return { id: made.id, left };
 }
@@ -7702,6 +7920,22 @@ var Damgar = class {
   constructor(store, opts = {}) {
     this.store = store;
     this.opts = opts;
+  }
+  /** This app's line as the homes hold it, for its card (H80's question 2). */
+  line = lineReader("Damgar");
+  /** This app's line: what waits sent first, in its own turn (the file read again there, the key checked first), then read back. Null where the homes could not be read. */
+  async lineNow(me, via) {
+    if (Object.keys(me.f.unsent ?? {}).length) {
+      await this.serial(async () => {
+        const f = await this.store.identity(me.id);
+        if (!f) return;
+        await this.current(f);
+        await sendWaiting(f, via);
+        await this.store.saveIdentity(f);
+        me.f.unsent = f.f.unsent;
+      }).catch(() => void 0);
+    }
+    return this.line(me, via).catch(() => null);
   }
   queue = Promise.resolve();
   /** The accepted list as last read, by identity (memory only). */
@@ -7944,7 +8178,7 @@ var Damgar = class {
     if (!me) return out;
     const s = await this.store.read(me.id, "settings") ?? { relays: [], via: {} };
     const book = { ...NO_BOOK(), ...await this.store.read(me.id, "book") ?? {} };
-    const own = ownLine(me.f.sequence);
+    const line = await this.lineNow(me, s.via);
     out.identity = {
       id: me.id,
       grouped: groupId(me.id),
@@ -7953,7 +8187,7 @@ var Damgar = class {
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
-      line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null }
+      line: line ?? noLine(me.f.sequence)
     };
     let l;
     try {
@@ -10002,12 +10236,8 @@ var Damgar = class {
       } catch {
       }
     }
-    for (const h of me.f.homes.map((x) => x.hint)) {
-      try {
-        await relayAt(h, s.via).putAct(made.act);
-      } catch {
-      }
-    }
+    await leaveAtHomes(me, made, { via: s.via, lockedOnly: how.by === "lane" });
+    await this.store.saveIdentity(me);
     if (!left) throw new Error(`${short(to)}\u2019s inbox (${inbox.join(", ")}) took nothing. It was signed and kept here; try again later.`);
     return made.id;
   }
@@ -10222,6 +10452,16 @@ function e(s) {
   return String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
+// ../genesis/src/card-words.ts
+function cardWords(l, app3, e2) {
+  const n = `${l.acts} act${l.acts === 1 ? "" : "s"}`;
+  if (!l.latest) return n;
+  const missing = l.missing ? ` ${l.missing === 1 ? "One act" : `${l.missing} acts`} of this line ${l.missing === 1 ? "is" : "are"} not at your homes, and ${app3} no longer holds ${l.missing === 1 ? "it" : "them"}: no reader can follow this line past ${l.missing === 1 ? "it" : "them"}, so a change of keys may lose what lives on it (a member key, notes, a list). Ki\u0161ib says so in red.` : "";
+  if (l.card) return `${n}: its card, for Ki\u0161ib, <code class="card-line">${e2(l.card)}</code>${missing ? `<br>${e2(missing)}` : ""}`;
+  if (l.atHomes === false) return `${n}: its latest act (<code>${e2(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e2(app3)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e2(missing)}` : ""}`;
+  return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e2(l.latest)}</code>). Look again before changing your keys.`;
+}
+
 // ../dub/src/page/view.ts
 var TEST_ONLY = "Test identities only, until MOR is frozen";
 var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY}. Two risks, in plain words:</p>
@@ -10434,7 +10674,7 @@ function identityWindow(s, web) {
   const held = s.held.length ? `<h2>Identities held here</h2><div class="held"><ul>${s.held.map((h) => `<li><span class="fp" title="${e(h.id)}">${e(h.short)}</span>${h.active ? '<span class="small">in use</span>' : `<button data-action="use" data-id="${e(h.id)}">Use this one</button>`}<button class="quiet" data-action="forget" data-id="${e(h.id)}">Forget it here</button></li>`).join("")}</ul></div>` : "";
   const i = s.identity;
   const mine = i ? `<section class="card"><h3>In use</h3><p class="id">${e(i.form)}</p><p class="small">In hexadecimal, as before: <span class="fp">${e(i.grouped)}</span></p>
-<dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(", "))}</dd><dt>Relays</dt><dd>${e(i.relays.join(", "))}</dd><dt>Damgar\u2019s line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? "" : "s"}${i.line.latest ? `: its card, for Ki\u0161ib, <code class="card-line">${e(i.line.latest)} ${i.line.acts} ${e(i.line.summary ?? "")}</code>` : ""}</dd></dl>
+<dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(", "))}</dd><dt>Relays</dt><dd>${e(i.relays.join(", "))}</dd><dt>Damgar\u2019s line</dt><dd>${cardWords(i.line, "Damgar", e)}</dd></dl>
 <p class="small">Most of Damgar\u2019s acts are sealed, so Ki\u0161ib cannot read its line from the homes: when the signing key is changed there, give Ki\u0161ib this card (latest act, position, summary), or every claim and receipt signed here becomes void (Identity rule 35).</p>
 ${i.encryption ? "" : note("warn", "Damgar holds no encryption key for this identity: nothing sealed to it opens here.")}
 <div class="row"><button data-action="carry">Show the signing key\u2019s words</button><button data-action="leave" class="quiet">Leave it</button><button data-action="back" class="primary">Back to Damgar</button></div>

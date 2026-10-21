@@ -8,7 +8,7 @@ esbuild: 0.25.12
 
 Work hash of each file (as the display client lists them):
 a7f6321ee36bdce41ae2098b2952f8dbd937bb819cf5ce80378041d40c56be69  index.html
-01f770bb8a6bb8e65ce79d24de98035ebcc9296fea7cf4fd54af143a63e55ab9  damgar.js
+2f6a72f57bbee2297cdf9b5c23e025ea8438b3d525baeec097004c0433e4b3e0  damgar.js
 30be5436f31768afcd456862d10938de8f8dc98c59001e56f6ef382dc2144e14  damgar.css
 beffa8074ef34e125ae7f6edcb4eb505366084fe28032da602b87674914e8bc6  mor_wasm_bg.wasm
 d72e0f61b65931f575516d8d39caa75d2ad09b04b0ea606aee6a157b2e5eb146  inter_light.woff2
@@ -19,7 +19,7 @@ a63d578c41abf416497080d59d2ecd9ecf4fce5458f7543556acc9a8a9d2cc5c  inter_license.
 
 SHA-256 of each file (as sha256sum prints it):
 6cfbfe84d83a22d0c0ba7bfcb8ded62e26f3d7b66f0508376c2d4f2012b99a63  index.html
-f9fb36fa4318d2376cdb47ac51ca47646cb1ce60dfc77e06af7d35bb54fbb3e7  damgar.js
+05e7e4cc6e030b15671aba31d9029a54f791f20f317ee2d836bb0c10aedf446d  damgar.js
 09429145f9b5d39ceba68bd743f880531f99f201a33b7f3813b093dac8924493  damgar.css
 1ff48cf0d0ddd27c9432eb44e4226d458905e04836f6004e7ba009b09c15122d  mor_wasm_bg.wasm
 e111a1e2ad914ccda9179b95e83fb10234dd52a1932e0b93c480476227983fd9  inter_light.woff2
