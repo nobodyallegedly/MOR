@@ -107,6 +107,9 @@ jobs:
       - name: modules/video
         if: success() || failure()
         run: cd modules/video && npm ci --no-audit --no-fund && npm test
+      - name: modules/audio
+        if: success() || failure()
+        run: cd modules/audio && npm ci --no-audit --no-fund && npm test
       - name: modules/carry
         if: success() || failure()
         run: cd modules/carry && npm ci --no-audit --no-fund && npm test
