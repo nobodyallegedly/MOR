@@ -76,7 +76,7 @@ Every act names, inside, the specification that defines its type by hash, and a 
 
 An act MUST decode as deterministic CBOR in the shape Part three gives ("The act"); an unknown key, outside or inside, makes it invalid.
 
-Deterministic CBOR is RFC 8949, section 4.2.1, with floating-point values in the shortest form that preserves them (section 4.1, preferred serialization), tags and simple values as they are. *Section 4.2.1 leaves floats to the protocol; without this clause a verifier could accept a float in a longer form that another refuses.*
+Deterministic CBOR, and the CDDL conventions every format of the MICS follows (closed maps, optional fields, `uint`, `hash`, `tstr`), are written once, in Identity's Part three ("Encoding", "Formats"). *Section 4.2.1 of RFC 8949 leaves floats to the protocol; Identity's encoding fixes them to their shortest form, so no verifier accepts a float in a longer form that another refuses.*
 
 #### Rule 2. No deeper than 128 levels
 
@@ -145,7 +145,7 @@ A sealed container MUST follow the format in Part three; a container whose capsu
 
 ### 4. Sequences
 
-Every everyday act carries, inside, its position in the signer's sequence and a running summary of that sequence.
+Every everyday act (Identity: every act other than genesis, a rotation and a chain signature) carries, inside, its position in the signer's sequence and a running summary of that sequence.
 
 - **Single lines.** Within a sequence, every act names at most one predecessor. Parallel devices keep separate sequences.
 - **Position.** The first act of a sequence (empty `prev`) has position 1; every later act has its predecessor's position plus one.
@@ -335,7 +335,7 @@ inside = {
   ? 3 => [+ object],    ; objects: the chain(s) this act belongs to, and the act it follows in each
   4 => { * any => any },; payload, defined by the type
   ? 5 => uint,          ; position in the signer's sequence
-  ? 6 => hash,          ; running summary of the signer's sequence up to this act
+  ? 6 => hash,          ; running summary of the signer's sequence before this act: over its acts up to and including the previous one
   ? 7 => [+ hash],      ; acks: acts by other identities this act acknowledges; only on act types the Identity, Money and Agreements MIRs define (rule 18)
   ? 8 => [+ ref],       ; refs: acts or web resources this act refers to
   ? 9 => tstr,          ; hint: a timestamp or other hint, never load-bearing
@@ -367,7 +367,7 @@ signature = [ scheme: 1 / 2 / 3 / hash, key: bstr, sig: bstr ]   ; scheme as Ide
 
 ### Encryption key (type 4) and key delivery (type 1)
 
-**The scheme: X-Wing.** An encryption key, and a bare key, is `[scheme, key]`, in the form Identity defines for keys, in the same number space: founding number 4 is X-Wing, the hybrid of ML-KEM-768 (FIPS 203) and X25519, as specified in draft-connolly-cfrg-xwing-kem-11 ("X-Wing Construction"): a 1216-byte public key, a 1120-byte ciphertext, a 32-byte shared secret. Numbers 1 to 3 are signature schemes and are never encryption keys. A scheme may also be named by the hash of a key-exchange specification (Development); a client that does not implement it cannot seal to that key. *What is locked today stays locked if either half holds. The draft may change before it is final; the version MOR names is fixed by hash at the freeze, like any specification.*
+**The scheme: X-Wing.** An encryption key, and a bare key, is `[scheme, key]`, in the form Identity defines for keys, in the same number space: founding number 4 is X-Wing, the hybrid of ML-KEM-768 (FIPS 203) and X25519, as specified in draft-connolly-cfrg-xwing-kem-11 ("X-Wing Construction"): a 1216-byte public key, a 1120-byte ciphertext, a 32-byte shared secret. Numbers 1 to 3 are signature schemes and are never encryption keys. A scheme may also be named by the hash of a key-exchange specification (Development); a client that does not implement it cannot seal to that key. The version MOR names is that draft's revision 11, fixed by the SHA-256 of its published text, `XWING`, which is written here at the freeze (a step of the freeze procedure). *What is locked today stays locked if either half holds. The draft may change before it is final; revision 11, fixed by hash, does not.*
 
 ```cddl
 enc-key = [ scheme: 4 / hash, key: bstr ]   ; 4: X-Wing, a 1216-byte public key
@@ -407,7 +407,16 @@ contents = [ act: bstr, ? key: bstr .size 32 ]   ; the inner act, encoded whole,
 
 ### The running summary
 
-**Running summary.** The root of a Merkle mountain range over the act ids of the sequence, in order, up to and including the previous act. The first act of a sequence carries the empty summary: 32 zero bytes. Leaves are `tagged_hash("MOR/mmr-leaf", act id)`; internal nodes `tagged_hash("MOR/mmr-node", left || right)`. The range is a list of perfect binary trees, its peaks, highest on the left, as the binary digits of the number of acts. The peaks are bagged right to left into one root: start from the rightmost peak, and hash each peak to its left as `node(peak, bagged so far)`, so left stays left. A single peak is its own root, with no further hashing. Its test vectors, a three-act sequence among them, are published with this MIR's conformance vectors (Parameters).
+**The summary of n acts.** `S(n)`, the summary of a sequence's first `n` acts, is the root of a Merkle mountain range over their act ids, in order:
+
+- a leaf is `tagged_hash("MOR/mmr-leaf", act id)`, and a node `node(left, right) = tagged_hash("MOR/mmr-node", left || right)`;
+- the range is a list of perfect binary trees, its peaks, highest on the left, one per binary digit 1 of `n`: adding an act adds its leaf as a peak of height 0, then, while the peak to its left has the same height, the two become one, `node(left peak, new peak)`;
+- the peaks are bagged right to left into one root: start from the rightmost peak, and hash each peak to its left as `node(peak, bagged so far)`, so left stays left; a single peak is its own root, with no further hashing;
+- `S(0)`, the empty summary, is 32 zero bytes.
+
+**Which summary an act carries.** The act at position `p` of a sequence carries `S(p − 1)`: the summary over every act before it, up to and including the previous one; the first act, at position 1, carries `S(0)`. A rotation's kept tip at position `p` carries `S(p)`, the summary including the tip itself: the one the act after it would carry (Identity, "Rotation"). *So `S(3)` over three acts is the summary a fourth act carries, and the one a rotation keeping the third carries for it.*
+
+Its test vectors, `S(0)` to `S(11)` and a three-act sequence among them, are published with this MIR's conformance vectors (Parameters); they are computed exactly as written here.
 
 ### Publication (type 0)
 
@@ -457,7 +466,7 @@ withdrawal = { }      ; empty
 ### Tasks
 
 - **Media interpretation, per type.** A cMIP accepts a media object (bytes, or a manifest of parts) and produces its interpretation for display or play. It defines segmentation, chunk fingerprints, streaming and live media for its type.
-- **Anchoring.** A cMIP accepts any act id and produces a proof that the act existed by a point on a named time reference. Two anchors are compared only on the same reference; anchors on references that cannot be compared order nothing. Anyone may anchor any act. **One anchoring cMIP; the clocks are Modules under it**: the cMIP says what an anchor is, how two anchors on one clock compare, and what a clock Module must accept and produce; each clock (Bitcoin, a timestamp service, any other) is a Module under it, as rails are under the payment cMIP, and a time reference is a clock Module and its parameters. An act may be anchored on any number of clocks. **On a clock that counts blocks, the point is the block**: two anchors in one block are at the same point. **An anchor may place a commitment naming its act**: a hash the act determines under the specification that defines it (a payment commitment, recomputed from a receipt or claim by the payment cMIP), so that a payment made on a clock's own chain anchors the receipt or claim of that payment at its block, for what the commitment binds. *The act itself is written later; what the anchor shows is that the payment it records was made by that point, which is what Money rule 29 compares.* **A clock's own data** (a chain's headers) is handed to its Module's rule by the client, as input (Development rule 22). *MOR has no clock, but anchoring to one is a task the core defines and accepts; it does not specify how. Every layer above may rely on it: Money for a lock change after a theft (Money rule 29), Agreements for agreements' deadlines and time references, absence-proof modules for presence. A client that relies on an anchor carries the anchoring cMIP it names, as it carries a rail or media Module.*
+- **Anchoring.** A cMIP accepts any act id and produces a proof that the act existed by a point on a named clock. Two anchors are compared only on the same clock; anchors on clocks that cannot be compared order nothing. Anyone may anchor any act. **One anchoring cMIP; the clocks are Modules under it**: the cMIP says what an anchor is, how two anchors on one clock compare, and what a clock Module must accept and produce; each clock (Bitcoin, a timestamp service, any other) is a Module under it, as rails are under the payment cMIP, and a clock is named by a clock Module and its parameters. An act may be anchored on any number of clocks. **On a clock that counts blocks, the point is the block**: two anchors in one block are at the same point. **An anchor may place a commitment naming its act**: a hash the act determines under the specification that defines it (a payment commitment, recomputed from a receipt or claim by the payment cMIP), so that a payment made on a clock's own chain anchors the receipt or claim of that payment at its block, for what the commitment binds. *The act itself is written later; what the anchor shows is that the payment it records was made by that point, which is what Money rule 29 compares.* **A clock's own data** (a chain's headers) is handed to its Module's rule by the client, as input (Development rule 22). *MOR has no clock, but anchoring to one is a task the core defines and accepts; it does not specify how. Every layer above may rely on it: Money for a lock change after a theft (Money rule 29), Agreements for agreements' deadlines and time references, absence-proof modules for presence. A client that relies on an anchor carries the anchoring cMIP it names, as it carries a rail or media Module.*
 
 ### Reasoning
 
@@ -486,9 +495,9 @@ withdrawal = { }      ; empty
 
 - The running-summary test vectors (a three-act sequence, and longer ones): published with this MIR's conformance vectors, final at the freeze, when the spec hashes they name are fixed.
 
-Still open:
+Left to the relay transport cMIP: how a client finds the key deliveries and sealed containers addressed to it (inbox routes and relay queries). The core fixes only what a client checks of what it finds: the act, the sealed container and the key delivery, in the formats of Part three.
 
-- How a client finds the key deliveries and sealed containers addressed to it (inbox route and relay queries).
+Fixed at the freeze: `XWING`, the SHA-256 of the X-Wing draft's revision 11 as published, written into "Encryption key (type 4) and key delivery (type 1)".
 
 ### Freeze scenarios
 
