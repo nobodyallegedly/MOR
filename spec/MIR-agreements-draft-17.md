@@ -100,7 +100,9 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
   - an obligation, through the agreement or offer it arises from (its field 4);
   - a standing offer, through the agreement it is made under (its field 0); a lone seller's offer is itself the agreement its payments belong to.
 
-  An act may belong to several agreements. An act that belongs to none (a post, a work claim alone, a rotation) has no keeper of its own: only an anchor places it. *Every party's acts on an agreement, the payer's and the payee's alike, fall under its keepers; a keeper chosen for one deal never speaks for acts outside it.*
+  An act may belong to several agreements. An act that belongs to none (a post, a work claim alone, a rotation) has no keeper of its own: only an anchor places it.
+
+  **Its keepers are those of the version in force for the act.** For a deal, the latest complete version, on the line of the version the act names, that the act's history holds (what its `prev` and `objects` name, followed back), or the version it names where its history holds none on that line; for a collective, the agreement in force at the act (rule 60). Every action and decision of a collective belongs to the collective's agreement, whatever it names: an act of the collective's own key, of a grant key the collective issued, or of a holder's member key (rule 73). Its genesis, its rotations and its Identity everyday acts belong to none, as every identity's. *A keeper a clone removed no longer speaks for acts under the clone; a keeper a clone added speaks from the version naming it.* *Every party's acts on an agreement, the payer's and the payee's alike, fall under its keepers; a keeper chosen for one deal never speaks for acts outside it.*
 - **Arbitrator or verifier.** A third party named by an agreement to judge content (escrow and milestones, arbitration, regulated checks). Unlike a keeper, it receives the keys of the acts it must judge, by ordinary key delivery.
 - **Judge.** Either a specification named for a judicial task (9 condition evaluation, 10 time reference, 11 anchoring, 14 absence proof), or an identity named to judge or testify: a keeper's operator, an arbitrator or verifier, the abandonment authority. *The split service is not a judge: its backups are attempts per payment (rule 17).*
 - **Chain of judgment.** For a judge the terms name: the ones that take over from it, in order, when it answers "unknown" or does not act within its period. The chain is named in the terms and signed by everyone, so that it passes with no new signature. Each link names its period, measured on the agreement's time reference (terms field 6; the chain itself is terms field 21; rule 35).
@@ -978,9 +980,15 @@ An agreement that needs deadlines names its time reference. "Past its terms" is 
 
 **An anchor shows a deadline met, never missed.** An anchor of the act itself (Envelopes, task "Anchoring"), at or before the deadline's point on the agreement's time reference, shows the act made in time. An anchor shows only that something existed by a point, never that it did not exist before.
 
-**A deadline is shown missed only by a keeper's anchored sequence**: the sequence of a keeper the agreement names, anchored at a point past the deadline, that holds no record of the act in its records up to and including the anchored one (rule 41). A keeper's word alone never says late: a keeper's sequence orders acts, it does not time them.
+**A keeper's anchored record shows a deadline met too.** An anchor of a keeper's record shows that record, and every record before it in the keeper's sequence, to have existed by the anchor's point (rule 41); so a record of the act lying, in the keeper's sequence, at or before a record anchored at or before the deadline's point shows the act made in time.
 
-Where neither shows it, the answer is undetermined.
+**A deadline is shown missed only by a keeper's anchored sequence**: the sequence of a keeper the agreement names, holding a record anchored at a point past the deadline's point, and no record of the act in its records up to and including that anchored one (rule 41). A keeper's word alone never says late: a keeper's sequence orders acts, it does not time them.
+
+**Where the agreement names several keepers**, the agreement's rule for what counts as recorded (terms field 3, rule 38) decides, counted the same way for a deadline as for a rotation: the deadline is shown met when the keepers showing it met, as above, meet that rule; it is shown missed when the keepers whose sequences show it missed, as above, are enough that the rule can no longer be met by the others.
+
+**An anchor of the act itself at or before the deadline's point shows the deadline met, whatever any keeper's sequence lacks**, with one keeper or several. *An anchor shows that the act existed; a keeper's silence rests on the trust rule 42 states.*
+
+Where nothing shows it met or missed, the answer is undetermined.
 
 *Only anchors place anything on the clock. What an anchored keeper's sequence shows about an act it did not record by that point rests on the keeper recording acts as they arrive: the trust rule 42 states. An act proving its own lateness, by naming something that exists only after the deadline, is not a mechanism of MOR 1.*
 
@@ -1093,7 +1101,7 @@ A keeper record counts, for any rule that reads it, only if:
 
 - the verifier holds the act it names;
 - that act is valid as an act, and its signer is the identity the record names beside it;
-- and the keeper is one named by an agreement the act belongs to ("Belongs to"), or, for an act of a collective placed against the collective's own line, one named by the collective's agreement, as "Made before, made after" says.
+- and the keeper is one named by the version, in force for the act, of an agreement the act belongs to ("Belongs to"), or, for an act of a collective placed against the collective's own line, one named by the collective's agreement, as "Made before, made after" says.
 
 A record of an act nobody can produce changes no verdict.
 
@@ -1577,7 +1585,7 @@ On neither chain are:
 
 **How an action cites.** An action names, in its inside's `objects`, the collective's identity as chain, once for each act it cites:
 
-- the decision it acts under: a record of the collective, or a link of its identity chain, under the action's own key or an earlier one; and
+- the decision it acts under: a record of the collective, or a link of its identity chain, under the action's own key or an earlier one; for an action signed with a holder's member key, the founding or clone that named the key, its grant (rule 73), stands as such a decision; and
 - each head of another device it knows, so that the next act joins the heads where several devices signed at once.
 
 Its own sequence's previous act counts as cited. These entries come after those the act's type defines, all on that one chain. Agreements' formats allow them there: signature, release, resignation, declaration, terms.
@@ -1658,7 +1666,7 @@ Genesis and rotations lie outside any area: the key grammar governs them (terms 
 
 **An area's limits are a cMIP's.** An area may name a cMIP judging limits on its holders' keys, with its parameters (area key 6). It adds to this rule, never relaxes it: the act counts at the area's number only where the cMIP judges it within them, and as that cMIP asks beyond them. A verifier that does not hold the cMIP, or holds no verdict of it for the act, answers unknown for the area, and the act does not count there. *Capping an area is left to cMIPs; what the core keeps is this rule. A limits cMIP may add a second signature and make the first conditional: within its cap, the area's number; above it, one more holder's key.*
 
-**The agreement in force for that act** is the one the collective's identity chain declared at the chain act its signing key is bound to (its binding). Where the act comes after a record made since that declaration, it is instead the clone such a record put in force, as rule 72 picks it.
+**The agreement in force for that act** is the one the collective's identity chain declared at the chain act its signing key is bound to (its binding). Where the act comes after a record made since that declaration, it is instead the clone such a record put in force, as rule 72 picks it. **For an act signed with a holder's member key**, whose binding is the holder's signature act (rule 73), it is the one rule 72 picks for the act, starting from the version that named the key, from the decisions its history holds: the clones the collective's identity chain declares there, and its records.
 
 An act of an area that stands frozen counts for nothing (rule 71).
 
@@ -2097,10 +2105,11 @@ A reinstated grant backs acts as a grant within the refitted area, and only with
 
 **Every complete clone is written on the collective's record at once.** A clone that changes the constitutional tier is declared by a rotation (rule 69). Every other complete clone of a collective's agreement is written, at once, by a record act (type 17) that the collective signs in its own sequence.
 
-For an act the collective's key signs, the agreement in force is the one the chain declares at the act's binding. Where a valid record made since that declaration counts for the act, the agreement in force is instead the clone named by the latest such record, the one furthest along the agreement chain. Such a record may be under the same binding, or under an earlier one that a rotation declaring nothing new carried forward. Which records count:
+For an act the collective's key signs, the agreement in force is the one the chain declares at the act's binding. For an act a holder's member key signs, it is the one the last bullet below picks. Where a valid record made since that declaration counts for the act, the agreement in force is instead the clone named by the latest such record, the one furthest along the agreement chain. Such a record may be under the same binding, or under an earlier one that a rotation declaring nothing new carried forward. Which records count:
 
 - for a record itself, only the records before it;
-- for an action, the records under an earlier binding carried forward, and, under its own, the records its history holds and those before them (rule 58). A record it never cites decides nothing for it, a concurrent one included, save by the tie rule ("Made before, made after", 7).
+- for an action, the records under an earlier binding carried forward, and, under its own, the records its history holds and those before them (rule 58). A record it never cites decides nothing for it, a concurrent one included, save by the tie rule ("Made before, made after", 7);
+- for an action signed with a holder's member key, whose binding is no link of the collective's chain: starting from the version that named the key, the clones declared by the links of the collective's identity chain its history holds, and the records its history holds and those before them, the latest furthest along the agreement chain.
 
 **Records on concurrent lines are a fork of the agreement chain, settled as rule 90 says.** Where two valid records of different clones of the same parent, neither before the other, both count for an act (a record after both, or an action whose history holds both), it is judged under the parent itself, the earlier version staying in force, until a clone of either branch, recorded after both lines, resolves it, as rule 90 says. *The concurrency rule (field 10) is withdrawn.*
 
@@ -2205,14 +2214,14 @@ Revoking a grant removes its key. The revocation names the grant, never a place 
 
 **An act signed with the grant key that the revocation's history holds was done within the grant's powers, and binds.** An act signed with the grant key that the revocation's history does not hold, racing it (neither citing the other) or after it, is void, the ending winning (the tie rule), unless:
 
-- another identity acknowledged it (Envelopes rule 17; by an act of a type the Identity, Money or Agreements MIR defines);
+- another identity acknowledged it (Envelopes rule 17; by an act of a type the Identity, Money or Agreements MIR defines), the grantee aside: an acknowledgement whose signer is the grantee does not count here;
 - or a keeper recorded it before recording the revocation, the record counting as rule 42 says (rule 41);
 
 then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names, and only while its own signer's chain keeps it valid (Identity, "Evidence counts only while its signer's chain keeps it"), save rule 42's exception for a keeper's record.
 
 **What such a disputed act confers: nothing, unless adopted.** As an act a rotation disowned (rule 6), an act a revocation's history does not hold, shown disputed, confers nothing on an agreement chain (no stake, no obligation, no consent) and is shown, to everyone; Money treats it as it treats a disputed act after a change of keys (Money rule 7). The grantor may still adopt it (below), and then it binds. *Binding the grantor by an accomplice's acknowledgement would let a thief holding a grant key sign the victim into a debt; shown, not binding, keeps both sides visible, and an honest grantor who meant it adopts it. Stated cost: a payee who relied on a revoked application's promise, a debt to come rather than a payment made, holds a visible dispute, not a debt, unless the grantor adopts it; a payment already made stays made on its rail, and the payee's own receipt stands.*
 
-*This is Identity rule 34's principle, for a revocation as for a rotation's disowning: nothing another identity relied on in a way the protocol can see is silently erased, and no grantor's omission, careless or chosen, erases what a counterparty holds a signature for. An act nobody else acknowledged and no keeper recorded stays void, so a revocation still cuts off a stolen or misused grant cleanly.* *Stated cost: a thief holding a grant key, with an accomplice who acknowledges its act, gets "disputed" rather than "void": visible to everyone, never erased, and bounded by the grant's own limits.*
+*This is Identity rule 34's principle, for a revocation as for a rotation's disowning: nothing another identity relied on in a way the protocol can see is silently erased, and no grantor's omission, careless or chosen, erases what a counterparty holds a signature for. An act nobody else acknowledged and no keeper recorded stays void, so a revocation still cuts off a stolen or misused grant cleanly.* *Stated cost: a thief holding a grant key, with an accomplice who acknowledges its act, gets "disputed" rather than "void": visible to everyone, never erased, and bounded by the grant's own limits. The grantee's own acknowledgement is no such rescue: what decides would be signed by the grantee whose powers the revocation ends.*
 
 **A revocation cites every act under the grant its signer holds.** *Client conformance:* the grantor's client cites, in the revocation's history, every act of the grant key it holds, so that each act's holder, holding only its own act, finds it there. *A grant key's acts are chained on its strand, each naming the one before (rule 75), so an honest grantor's client holding the latest reaches the earlier ones; what it can miss is the tail: an act not yet stored at the grantor's places, or one made at the moment of the revocation. Stated cost: a public revocation lists every act's id, so anyone can count the grant's acts, and a long-lived grant makes a long revocation.*
 
@@ -3967,7 +3976,8 @@ left-open = [ payment: hash, notice: hash / null, ? holder: hash ]
 - it is valid under Identity;
 - its line holds, and the agreement it names is the one in force there, as for a fork;
 - **it is done**: sealed to every member of that agreement, or public (client conformance: made public);
-- its signer and the members whose chain signatures on it count are members whose voice remains at the line, its signer among them, and **meet the constitutional change rule**, counted as rule 65 says;
+- its signer and the members whose chain signatures on it count are members whose voice remains at the line, its signer among them, and, with the holders below, **meet the constitutional change rule**, counted as rule 65 says;
+- where that rule counts among a stake's holders, a holder who is no member counts toward it only by a chain signature on the closing that counts in their identity chain and is not void, as members do;
 - **the collective holds nothing**: no stake of a latest version of an agreement a verifier holds names it as a holder, by its identity or as null in its own terms, other than in its own income, unless the work's release (rule 55) counted with the collective's consent placed before the line;
 - **the collective owes nothing**: every obligation that binds it and lies before its line, that is, in the history it cites (one outside it is void, the tie rule), and every obligation it owes as a fork's successor (rule 91), is fulfilled in full by receipts a verifier holds, or ended by its creditor's release (Money type 4, rule 92). An obligation it owes as a successor is placed by the original's line, not its own. **A receipt or a release of another identity counts toward this only where an act of the collective in the closing's history acknowledges it (Envelopes, `acks`), or the receipt is the collective's own**: it is then placed by the collective's line, and kept there whatever its signer's later rotation disowns, shown as a dispute. **A receipt or release nobody acknowledged is shown, and the closing waits** until an act of the collective acknowledges it. **An absentee's money share, left where the collective's own rules sent it, does not block the closing** (below);
 - **no money is owed back from a broken stretch**, whatever the closing's line (rule 93), save what field 4 leaves open as the rules allow (below);
@@ -4017,7 +4027,7 @@ Signed by the keeper's operator, with its own signing key, as an everyday act of
 **What a verifier checks of a keeper record:**
 
 - it is valid under Identity as an everyday act of its signer, and public, and its payload is in this format;
-- it counts, for any rule that reads it, only as rule 42 says: the verifier holds the act it names; that act is valid as an act; that act's signer is the identity the record names beside it; and the record's signer is the operator of a keeper named (terms field 3) by an agreement the act belongs to ("Belongs to"), or, for an act of a collective placed against the collective's own line, one the collective's agreement names ("Made before, made after", 5);
+- it counts, for any rule that reads it, only as rule 42 says: the verifier holds the act it names; that act is valid as an act; that act's signer is the identity the record names beside it; and the record's signer is the operator of a keeper named (terms field 3) by the version, in force for the act, of an agreement the act belongs to ("Belongs to"), or, for an act of a collective placed against the collective's own line, one the collective's agreement names ("Made before, made after", 5);
 - it counts only while its signer's chain keeps it valid (Identity, "Evidence counts only while its signer's chain keeps it"), save where a rule of this MIR read it to place an act or a relied-on version's completeness rests on it (rule 42), and where a collective's line placed it ("Made before, made after", 4): it then keeps the effect the rule gave it, whatever the keeper's later rotation disowned, shown as a dispute;
 - one record is before another only when it lies in the other's ancestry in the keeper's sequence; records of two operators, or of two sequences, are not ordered against each other by their keepers; a keeper keeps one sequence for its records (rule 37).
 

@@ -422,3 +422,17 @@
 | Agreements 17, rule 91 and "Fork (type 19)": the pointer outside a fork; the fork's tie key | F367 (4); F150, F162 (the core's `leftover_key`) |
 | Development 11, "How the content is decoded", "A unit (kind 2)", "A signature scheme (kind 5)", rule-ref bytes, type definitions, rules out of italics, "no specification" and invalid beats unknown | F369 (2, 3), F367 (5), F368 (question 37), F323, F328 |
 | MICS v30 and suite v30, aligned with the above; suite's freeze procedure step 1 (headers, X-Wing, hashes) | F363 to F369, F368 (question 52) |
+
+### Added in S2's last text edits (Part 0)
+
+| Text and rule or section | Findings |
+| --- | --- |
+| Money 11, "What a payment fulfils", receipt field 5, claim field 4, the payment task; Development 11's task table; MICS v30 glossary "Fulfils"; suite v30 component "What a payment fulfils" | F370, F355 (c) |
+| Agreements 17, rule 33 (several keepers, read as rule 38 the other way round); MICS v30 "Time"; suite v30 deadlines component | F371 (1), F364 (1, 3) |
+| Agreements 17, "Belongs to" (the keepers of the version in force; a collective's acts, grant and member keys included), rule 42, "Keeper record (type 2)"; MICS v30 keepers and glossary; suite v30 "Belongs to" | F371 (2), F363, F359 |
+| Agreements 17, rules 60 and 72 (a member key's act and the agreement in force); suite v30 member key | F371 (3), F366 (2) |
+| Development 11, "A rail Module's kind and binding" (a payment cMIP, decoded from field 2), "How the content is decoded", "What each kind must carry", freeze scenarios; Money 11 rule 18 and scenarios; MICS v30 rails and glossary; suite v30 component and step 8.9 | F371 (4), F367 (5) |
+| Text 11, "Text field" (kept as rule 1 has it) | F371 (5), F368 (corrected) |
+| Agreements 17, "Closing (type 20)" (non-member holders' chain signatures); suite v30 "How a collective ends" | F371 (6), F367 (7) |
+| Text 11, rule 14 (a member key's one object) and freeze scenarios; suite v30 rule 14's cases | F371 (7), F366 (3) |
+| Agreements 17, rule 76 (the grantee's own acknowledgement); MICS v30 revocation bullet; suite v30 revoked grant's acts | F371 (8), F359, F365 |
