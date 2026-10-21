@@ -68,9 +68,9 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 5. Buy in the act menu (`dub-act-menu`).
 6. Payments made under Dub's lane moved to Damgar: Account › "Under the lanes" (`damgar-account`).
 7. Edubba's Agents with four tabs, Talk · Queue · Mind · Terms (`edubba-agents`, `-agents-queue`, `-agents-terms`, `edubba-diary`).
-8. Claude's drafts to the agents, proposed dropped. Kept and tagged in Agents › Queue, count 0 (`edubba-agents-queue`).
-9. Edubba's received-items piles, proposed dropped. Kept as the sort filters (new, to answer, answered, ignored) on Dub's To you lens (`dub-to-you`).
-10. Edubba's Pay someone, proposed dropped. Kept as an entry in Damgar's Waiting column (`damgar-waiting`).
+8. Claude's drafts to the agents, proposed dropped. *Decided by Nobody, allegedly, 21 October 2026 (question 6): "Drafts can be removed." Removed from the pictures.*
+9. Edubba's received-items piles, proposed dropped. *Decided (question 6): removed for now: "The sorting pile makes sense only if then there are feeds to go find them. I'd remove them for now. It's a mailbox behavior type of things." Removed from `dub-to-you`.*
+10. Edubba's Pay someone, proposed dropped. *Decided (question 6): kept, "on the profile page of the ID we want to pay to." Drawn as a Pay button on the profile, which wakes Damgar's panel inside Dub (`dub-profile`, `dub-profile-pay`); removed from Damgar's Waiting column.*
 
 **Where the note is silent, my choice:**
 11. **Danger levels** (three bars, filled to the level; the edge thickens with it; never red). *Decided by Nobody, allegedly, 21 October 2026 (question 2), Edubba's included: "I think so, yes." Tags removed.*
@@ -101,6 +101,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 23. The tiles are a pastel wash over black, and the full pastel solid is kept for the open tab, the main button and the selected part. I read "still dominantly black" as winning over "big solids" for tiles this large.
 24. The change of keys as five steps: the words · read back · signed · new chain paper (1 of 2) · new signing words (2 of 2). Each set is shown once, then three words are asked back.
 25. The quiet door to Paper: a plain card with "Open Paper" / "Not now", and nothing else on the screen.
+26. **A Purchases tab in Dub**, from your answer to question 6 ("Maybe dub needs a 'purchases' tab, a way to quickly see files bought and vows purchased"). Drawn as a third part of the top switch, Public · Private · Purchases, holding one feed box of files bought and vows purchased, with All · Files · Vows above it (`dub-purchases`). Tagged: you said "maybe".
 
 ## 3. Every function of today, and where it lives in the new screens
 
@@ -137,6 +138,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 | Dub | Long-form document link | Feed post | Act card, a link to the reader (`dub-home`, T's card) |
 | Dub | Tip: prepare for Damgar, or pay under the lane | Post › Tip | Act menu › Tip → Damgar's panel inside Dub (decided) |
 | Dub | Pay-per-view: seal a post with a price | Public fold | Removed (decided) |
+| Dub | Files bought and vows purchased, seen at a glance | Signing › Vows you bought; the feed | Purchases, a third part of the switch † "maybe" (`dub-purchases`) |
 | Dub | Buy a sealed post or a vow | Feed box › Buy it, under the lane | Act menu › Buy † |
 | Dub | Confirm / contest a vow bought | Signing › Vows you bought | The vow's act menu, below a line: Confirm: it was kept / Contest it…, shown only on vows the identity bought (decided, question 5) (`dub-vow-menu`); Edubba › Vows |
 | Dub | Ask someone to pay you | Private fold | Private typing box › + Ask to be paid † |
@@ -175,9 +177,9 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 | Edubba | Notes, retire; diary | Agent fold | Agents › Mind; diary only after the public act (decided) |
 | Edubba | What it did; prompt it | Agent fold; card | Agents › Talk (feed box and typing box) |
 | Edubba | MOR as seen by the agent; follow for it | Separate view | Agents › Mind › "MOR as seen by it" |
-| Edubba | Claude's drafts for an agent / identity | Folds | Agents › Queue, count † proposed dropped |
-| Edubba | Received items, sorted into piles | Identities › What it received | Dub › To you lens, sort filters † proposed dropped |
-| Edubba | Pay someone (for Damgar) | Identities fold | Damgar › Waiting › Pay someone † proposed dropped |
+| Edubba | Claude's drafts for an agent / identity; "Claude may prepare drafts"; the drafts folder | Folds; Settings | Removed (decided, question 6) |
+| Edubba | Received items, sorted into piles | Identities › What it received | Removed for now (decided, question 6); what is received shows in Dub's To you lens and Private |
+| Edubba | Pay someone (for Damgar) | Identities fold | Dub › the profile of the ID to pay › Pay, which wakes Damgar's panel (decided, question 6) |
 | Edubba | Identities tab (record, lines) | Identities tab | Gone (decided); the record in Kišib |
 | Edubba | Found a real collective (grid, review) | Collectives › + Found | Collectives › + Found a collective (kept screens) |
 | Edubba | Found a test collective; its Constitution tab | Collectives (Mac) | Collectives › + Found a test collective (kept screens) |
@@ -193,7 +195,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 | Edubba | Protected file: text, picture, price, referral, split | Publishing | Publishing › A protected file; video and audio added (decided) |
 | Edubba | Vow; look up vow sales; confirm or contest | Publishing | Vows › A new vow; Track (decided) |
 | Edubba | Deliver keys to buyers | Publishing › Published here | Publishing › Published here |
-| Edubba | Homes, relays, drafts folder; collective client settings | Settings | Identity panel foot † |
+| Edubba | Homes, relays; collective client settings | Settings | Identity panel foot † |
 | Ummia | Who acts (self or a collective) | Every tab | Identity panel (decided) and "Who acts" chips in Publish |
 | Ummia | A release from a folder; checked; the previous one | Releases | Publish › A release |
 | Ummia | Does it count for the collective | Releases | Publish › A release (as Collective Y) |
@@ -219,7 +221,7 @@ No function of today was dropped from the pictures. The decided removals are Dub
 3. **Damgar's fourth tile: Settings?** It would hold where you are paid, the vault and what you accept. *Lean: yes.* **Answered, 21 October 2026: "Yes, Settings as the fourth tile. It's a lot more than what settings offer elsewhere."**
 4. **Kišib's identity at top right: "Holds nothing" while the runner is off, the runner's identities when it is on?** The note puts an identity top right in every app, and also says Kišib works differently. *Lean: yes.* **Answered, 21 October 2026: "Kišib is different, the only place where an ID can be held is the new runner."** As drawn: nothing held while the runner is off; the runner's identities when it is on.
 5. **Contesting a vow bought from Dub: in the vow's act menu?** On 17 October you decided contests also run via Dub. Today they live in the Signing tab, which the redesign removes. *Lean: yes, as "Confirm: it was kept" and "Contest it" under the line.* **Answered, 21 October 2026: "In dub… it should only show as an option on vows the ID purchased."** Drawn in `dub-vow-menu`: on a vow Max bought, the menu ends with a line, then Confirm: it was kept and Contest it… (Buy is gone, since it is bought); a vow not bought has neither.
-6. **The three things proposed dropped: Claude's drafts, the received-items piles, Pay someone.** Drop them, or keep them where they are drawn (Edubba Agents › Queue; Dub's To you lens; Damgar's Waiting)? *Lean: drop Claude's drafts and the piles; keep Pay someone in Damgar, since Damgar is the money hub.*
+6. **The three things proposed dropped: Claude's drafts, the received-items piles, Pay someone.** Drop them, or keep them where they are drawn (Edubba Agents › Queue; Dub's To you lens; Damgar's Waiting)? *Lean: drop Claude's drafts and the piles; keep Pay someone in Damgar, since Damgar is the money hub.* **Answered, 21 October 2026:** "Maybe dub needs a 'purchases' tab, a way to quickly see files bought and vows purchased. Drafts can be removed. The sorting pile makes sense only if then there are feeds to go find them. I'd remove them for now. It's a mailbox behavior type of things. Pay needs to be kept, I'd have it on the profile page of the ID we want to pay to." Drawn: drafts and piles removed; Pay on the profile (`dub-profile-pay`); Purchases drawn and tagged (section 2, item 26).
 7. **The act menu's bottom halves (section 2, item 17): right per app?** *Lean: yes, but Damgar's "Show it in the account" and Ummia's "Discuss it" are the weakest; drop them if they feel invented.*
 8. **The tiles' fill: pastel enough?** The tiles are a pastel wash over black; full pastel is kept for the open tab, the main button and the selected part. *Lean: as drawn. Say "more" and the tiles take a stronger wash.*
 9. **Collective Y's tabs (Act, Members, Money, Keepers, To sign): do they match your sketch?** *Lean: they follow today's folds; your sketch wins.*

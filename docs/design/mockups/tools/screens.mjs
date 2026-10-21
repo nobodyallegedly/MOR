@@ -142,11 +142,11 @@ page('dub', 'relay', 'Public: the Relay lens',
   ].map((x) => x), { lens: 'Relay', typed: `<div class="point" style="margin-top:10px"><span class="lbl">The relay</span><span class="chip on">relay-a.test</span><span class="chip">+ another</span></div>${dtyping()}` }),
   { group: 'Feeds', before: ['dub/mac-07b-relay.png'] });
 
-page('dub', 'to-you', 'Public: the To you lens (and the received-items piles)',
+page('dub', 'to-you', 'Public: the To you lens',
   dubPublic([
     act({ who: 'Pa', when: '09:12', text: 'Max, will you bring the second tablet?', flag: '<span class="small">to you</span>', aid: 'mact1u7t…3ya' }),
     act({ who: 'Machine', name: 'Machine, allegedly', when: 'Mon', text: 'Max: your note is answered in my feed.', flag: '<span class="small">to you</span>', aid: 'mact1u2m…8yb' }),
-  ], { lens: 'To you', typed: `<div class="point" style="margin-top:10px"><span class="lbl">Sort</span><span class="chip p">new</span><span class="chip">to answer</span><span class="chip">answered</span><span class="chip">ignored</span>${nd('Edubba’s piles, proposed dropped')}</div>${dtyping()}` }),
+  ], { lens: 'To you', }),
   { group: 'Feeds', before: ['dub/mac-07-to-you.png', 'edubba/4-sorted.png'] });
 
 page('dub', 'mention', 'Typing box: @ by names, not hashes',
@@ -189,10 +189,32 @@ ${feed([C.paPost(), C.maxReply({ sel: true })])}<p class="small faint" style="ma
 page('dub', 'profile', 'The profile page: light and friendly',
   `${dbar()}<div class="body"><section class="pane"><div class="prof">
 <div class="row" style="margin:0 0 4px"><span class="btn q">← Back</span></div>
-<div class="hero"><span class="dot">P</span><div><h2>Pa</h2><p class="soft" style="margin:2px 0">Lives on two homes, reached through one relay.</p><span class="mono soft">${ID.Pa}</span> <span class="btn q small">Copy ID link</span></div><span class="grow"></span><span class="btn p">Follow</span><span class="btn">Message</span></div>
+<div class="hero"><span class="dot">P</span><div><h2>Pa</h2><p class="soft" style="margin:2px 0">Lives on two homes, reached through one relay.</p><span class="mono soft">${ID.Pa}</span> <span class="btn q small">Copy ID link</span></div><span class="grow"></span><span class="btn p">Follow</span><span class="btn">Message</span><span class="btn">Pay</span></div>
 <div class="feedwrap">${feed([C.paPost(), act({ who: 'Pa', when: 'Tue', text: 'Three verses, sealed, are on sale in Edubba.', aid: 'mact1v8e…3ho' }), act({ who: 'Pa', when: 'Mon', re: 'Ph · mact1w2n…9xe', text: 'Lovely light.', aid: 'mact1l1o…5aa' })])}</div>
 <p class="small soft" style="margin:10px 0 0">Full record in Kišib → <span class="faint">· a warning shows here only on trouble</span></p></div></section></div>`,
   { group: 'Feeds', note: 'accepted: the profile’s list' });
+
+page('dub', 'profile-pay', 'Pay from a profile: Damgar’s panel inside Dub',
+  `${dbar()}<div class="body"><section class="pane"><div class="prof"><div class="hero"><span class="dot">P</span><div><h2>Pa</h2><span class="mono soft">${ID.Pa}</span></div><span class="grow"></span><span class="btn p">Follow</span><span class="btn">Message</span><span class="btn" style="outline:1px solid var(--p)">Pay</span></div>
+<div class="feedwrap">${feed([C.paPost()])}</div></div></section></div><div class="shade"></div>
+<div class="frame g"><div class="in"><div class="by"><img src="icons/damgar.png" alt="">Damgar · woken by Dub</div>
+<h3>Pay Pa</h3><p class="small soft" style="margin:0">From Pa’s profile. Dub put the draft on MOR, sealed to Max; Damgar signs it and you pay in your own wallet.</p>
+<div class="quote"><dl class="facts" style="margin:0"><dt>To</dt><dd>Pa · ${ID.Pa}</dd><dt>Amount</dt><dd><span class="input" style="display:inline-block;min-height:0;padding:2px 10px">1 200</span> regtest sats</dd><dt>What for</dt><dd><span class="input" style="display:inline-block;min-height:0;padding:2px 10px">the second tablet’s clay</span></dd><dt>Rail</dt><dd>Lightning, to Pa’s payee pointer</dd></dl></div>
+<div class="row"><span class="btn p" style="color:#0a0c10">Authorise and sign</span><span class="btn q">Cancel</span><span class="grow"></span><span class="small faint">money always asks</span></div></div></div>`,
+  { group: 'Panels', before: ['damgar/edubba-pay-someone.png'], note: 'decided: Pay on the profile of the ID to pay' });
+
+const DCENTER_BUY = `<div class="switch"><span>Public</span><span>Private</span><span class="on">Purchases</span></div>${nd('“maybe”: a Purchases tab')}`;
+page('dub', 'purchases', 'Purchases: files bought and vows purchased',
+  `${bar('dub', { left: DLEFT, center: DCENTER_BUY })}<div class="body"><section class="pane" style="max-width:820px;margin:0 auto;width:100%">
+<div class="lenses"><span class="lens on">All</span><span class="lens">Files</span><span class="lens">Vows</span></div>
+<div class="feedwrap">${feed([
+    act({ who: 'Y', name: 'Collective Y', when: 'today', kind: 'audio · bought', text: 'The reading, recorded. 3 min 12 s.', extra: '<div class="row" style="margin:4px 0"><span class="btn p">Play</span><span class="small soft">opened: the key came with the receipt</span></div>', aid: 'mact1p6a…4au' }),
+    act({ who: 'Pa', when: 'Sun', kind: 'vow · bought', text: 'A seat at the reading of the tablets. 500 regtest sats.', flag: '<span class="small">not yet confirmed: confirm or contest it in its menu</span>', aid: 'mact1v1s…0aa' }),
+    act({ who: 'Pa', when: 'Sat', kind: 'text · bought', text: 'Verses, sealed: “Three verses, sealed.”', extra: '<div class="row" style="margin:4px 0"><span class="btn">Read it</span></div>', aid: 'mact1p2t…7tx' }),
+    act({ who: 'Ph', when: 'Fri', kind: 'vow · bought', text: 'A guided walk to the clay pits.', flag: '<span class="small">confirmed: it was kept</span>', aid: 'mact1v5w…2gg' }),
+    act({ who: 'Ph', when: 'Thu', kind: 'picture · bought', text: 'A tablet, photographed.', pic: true, aid: 'mact1p9p…1pc' }),
+  ])}</div></section></div>`,
+  { group: 'Feeds', before: ['edubba/web-dub-sealed-and-vow.png'], note: 'his idea, a “maybe”' });
 
 const CONVS = (on) => `<aside class="convs"><div class="input search">Find a conversation…</div>
 ${[['Pa', 'Pa', 'Thursday then.', '09:40', 1], ['Ph', 'Ph', 'Sent you the photos.', '08:10', 1], ['Machine', 'Machine, allegedly', 'Done: posted under the grant.', 'Mon', 0], ['T', 'T', 'Thanks for the walkthrough.', 'Sun', 0]].map(([k, n, l, w, c]) => `<div class="conv${k === on ? ' on' : ''}"><span class="dot alt">${n[0]}</span><div><div class="n">${n}${c ? '<span class="cnt">1</span>' : ''}</div><div class="l">${l}</div></div><span class="w">${w}</span></div>`).join('')}
@@ -265,7 +287,7 @@ page('damgar', 'home', 'Home: the four tiles',
   ])}`.replace('<div class="home-note"></div>', `<div class="home-note">${TESTLINE}</div>`),
   { group: 'Home', before: ['damgar/damgar-web-to-sign.png'] });
 
-const WCOL = [{ t: 'To sign', k: 3, on: true }, { t: 'To pay', k: 1 }, { t: 'Requests and debts' }, '-', { t: 'For Collective Y', k: 0 }, '-', { t: `Pay someone ${nd('proposed dropped')}` }];
+const WCOL = [{ t: 'To sign', k: 3, on: true }, { t: 'To pay', k: 1 }, { t: 'Requests and debts' }, '-', { t: 'For Collective Y', k: 0 }];
 const MONEY = [
   act({ who: 'Max', when: '09:44', kind: 'tip · from Dub', text: '500 regtest sats to Pa, for “The reading of the tablets moves…”', aid: 'mact1d1t…7ip', extra: '<div class="row" style="margin:4px 0"><span class="btn p">Sign it</span><span class="btn q">Decline</span></div>' }),
   act({ who: 'Ph', when: '09:02', kind: 'request', text: 'Ph asks Max for 1 200 regtest sats: “the second tablet’s clay”.', aid: 'mact1q8r…2ow', extra: '<div class="row" style="margin:4px 0"><span class="btn">Pay it</span><span class="btn q">Accept as a debt</span><span class="btn q">Refuse</span></div>' }),
@@ -346,7 +368,7 @@ page('edubba', 'agents-queue', 'Agents: an agent, Queue (picks, nudge, drafts)',
     act({ who: 'Pa', when: '09:12', kind: 'public note', text: 'Machine, allegedly: what is a vow sold many times?', aid: 'mact1u3e…7yy', extra: '<div class="row" style="margin:4px 0"><span class="ticked"><i class="y"></i>Select</span><span class="btn p">Pick: it answers now</span></div>' }),
     act({ who: 'Ph', when: '08:30', kind: 'sealed note', text: 'A private word for the machine.', aid: 'mact1u9a…2zz', extra: '<div class="row" style="margin:4px 0"><span class="ticked"><i></i>Select</span><span class="btn">Pick: it answers now</span></div>' }),
   ])}</div>
-<div class="row"><span class="btn">Pick the selected: show them together first</span><span class="grow"></span><span class="small soft">Drafts from Claude for it (0) ${nd('proposed dropped')}</span></div>`),
+<div class="row"><span class="btn">Pick the selected: show them together first</span></div>`),
   { group: 'Tiles', before: ['edubba/06-agent-queue.png'] });
 
 page('edubba', 'diary', 'The diary: the public act to sign before it opens',

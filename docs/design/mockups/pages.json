@@ -132,7 +132,7 @@
  {
   "app": "dub",
   "slug": "to-you",
-  "title": "Public: the To you lens (and the received-items piles)",
+  "title": "Public: the To you lens",
   "before": [
    "dub/mac-07-to-you.png",
    "edubba/4-sorted.png"
@@ -207,6 +207,28 @@
   "group": "Feeds",
   "note": "accepted: the profile’s list",
   "file": "dub-profile.html"
+ },
+ {
+  "app": "dub",
+  "slug": "profile-pay",
+  "title": "Pay from a profile: Damgar’s panel inside Dub",
+  "before": [
+   "damgar/edubba-pay-someone.png"
+  ],
+  "group": "Panels",
+  "note": "decided: Pay on the profile of the ID to pay",
+  "file": "dub-profile-pay.html"
+ },
+ {
+  "app": "dub",
+  "slug": "purchases",
+  "title": "Purchases: files bought and vows purchased",
+  "before": [
+   "edubba/web-dub-sealed-and-vow.png"
+  ],
+  "group": "Feeds",
+  "note": "his idea, a “maybe”",
+  "file": "dub-purchases.html"
  },
  {
   "app": "dub",
