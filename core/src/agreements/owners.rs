@@ -229,13 +229,13 @@ pub fn proxy_revocation_payload(proxy: &Hash) -> Vec<(Value, Value)> {
 /// type's format, by that type's own decoder. `Shape` or `Check` for an
 /// act outside its format, or of a retired or undefined type: invalid for
 /// a verifier that knows the Agreements MIR's hash, as for Money (M1);
-/// `Unsupported` for a type whose format is still open (type 2, the keeper
-/// record): neither valid nor invalid on its format (Agreements Q5, taken).
+/// `Unsupported` for a type whose format is still open: none since the
+/// keeper record's (type 2) was written (Agreements 17).
 /// Only the format is read here: what a type's rules ask of other acts is
 /// the view's.
 pub fn in_format(inside: &Inside, signer: Option<&Hash>) -> R<()> {
     use super::formats::{
-        decode_signature, types, AbsenceDeclaration, Closing, Contest, Fork, ForkSettlement, Grant, NegotiationMessage, Notice,
+        decode_signature, types, AbsenceDeclaration, Closing, Contest, Fork, ForkSettlement, Grant, KeeperRecord, NegotiationMessage, Notice,
         Record, Release, Resignation, Revocation, SettlementRequest, Split, Terms,
     };
     use super::open_formats::{new_types, JudgeRequest, Liveness, Offer, StakeTransfer, WorkClaim, RETIRED_TYPES};
@@ -243,7 +243,7 @@ pub fn in_format(inside: &Inside, signer: Option<&Hash>) -> R<()> {
     match inside.type_ {
         types::TERMS => Terms::decode(p).map(|_| ()),
         types::SIGNATURE => decode_signature(inside).map(|_| ()),
-        types::KEEPER_RECORD => Err(AgreementsError::Unsupported("the keeper record (type 2): its format is open")),
+        types::KEEPER_RECORD => KeeperRecord::decode(inside).map(|_| ()),
         types::WORK_CLAIM => WorkClaim::decode(inside, signer).map(|_| ()),
         new_types::STAKE_TRANSFER => StakeTransfer::decode(inside).map(|_| ()),
         types::RELEASE => Release::decode(inside).map(|_| ()),

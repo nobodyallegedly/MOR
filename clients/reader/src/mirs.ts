@@ -4,7 +4,9 @@
 // carries the texts as files beside its page (its build copies them from
 // `spec/`, canonical text, no final line break), fetches them from its own
 // folder, and computes each hash with the core library, `tagged_hash(
-// "MOR/spec", {0: 4, 9: text})`. Two readers built by two people from the same
+// "MOR/spec", {0: 4, 9: text})`, the text read from the file as Development
+// rule 26 reads it: at most one final line break removed, the header
+// reduced to the text's name (`mirFileHash`). Two readers built by two people from the same
 // texts show the same six hashes; two that differ, differ about a text.
 //
 // Until the freeze the texts are the current drafts, and the hashes the
@@ -12,7 +14,7 @@
 // shares (`clients/genesis/src/core.ts`, MIRS): the six shown are what the
 // drafts would hash to, said as such, not yet the ones in use.
 
-import { mirHash } from '../../genesis/src/core.ts';
+import { mirFileHash } from '../../genesis/src/core.ts';
 
 /** The six, in the MICS's order, with the file each is shipped as. */
 export const MIR_TEXTS = [
@@ -38,7 +40,7 @@ export async function recompute(read: (file: string) => Promise<string>): Promis
   return Promise.all(
     MIR_TEXTS.map(async ({ layer, file }) => {
       try {
-        return { layer, file, hash: mirHash(await read(file)) as string, problem: null };
+        return { layer, file, hash: mirFileHash(await read(file)) as string, problem: null };
       } catch (err) {
         return { layer, file, hash: null, problem: err instanceof Error ? err.message : String(err) };
       }
