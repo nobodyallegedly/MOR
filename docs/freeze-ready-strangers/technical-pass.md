@@ -40,7 +40,9 @@
 - Rule 79 for a person's grant. [fixed]
 - Rule 33: met and missed both shown; records of acts the verifier does not hold; several keepers; which "past a point" verdicts rule 33 covers; its undetermined in the chain of judgment. [Q 1 for several keepers; the rest gap]
 - Which version's keepers count for "belongs to"; a collective's actions (citing its identity, not its agreement) belonging to no agreement; a work claim alone belonging to none, so rule 7's keeper never counts. [Q 2]
-- A member key against Identity's "void once the owner rotates without keeping it"; its reach (the naming version's areas or those in force); the agreement in force for its act; a member key adopting or placing nothing. [Q 3]
+- A member key against Identity's "void once the owner rotates without keeping it"; its reach (the naming version's areas or those in force). [fixed: both texts say the holder's rotation leaves it, F366.2; reach by the agreement in force]
+- The agreement in force for a member-key act, bound to a signature act. [Q 3]
+- A member key adopting or placing nothing, being a grant key. [gap: as rules 76 and 78 read; the collective adopts by its own key]
 - Standing for a contest by a vow's buyer and a declared holder who is no party; where a declaration against a holder who is no party takes effect; "shows nothing" as a status; the two-step naming of endings. [gap]
 
 ## Development 11
