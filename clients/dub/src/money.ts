@@ -490,7 +490,7 @@ export class DubMoney {
     const vows = (await this.store.money<VowsBought>(me.id, 'vows')) ?? {};
     vows[card.vow] = { seller: card.seller, offer: offer.offer, payment: r.key, post: a.post, words: card.words };
     await this.store.saveMoney(me.id, 'vows', vows);
-    return [...r.lines.map((l) => l.text), 'Once paid, your claim of the payment is published too: it is the sale, pending until you confirm or contest it (Signing tab).'];
+    return [...r.lines.map((l) => l.text), 'Once paid, your claim of the payment is published too: it is the sale, pending until you confirm or contest it, in its menu (Purchases).'];
   }
 
   /** The vows bought here, each with its sale's state as the relays asked read it (the look-up, `vows.ts`). */

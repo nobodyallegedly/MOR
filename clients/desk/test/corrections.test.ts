@@ -24,7 +24,11 @@ import { titleOf } from '../../reader/src/read.ts';
 import { feedHtml } from '../../site/src/shell/feed-view.ts';
 import { readFeed } from '../../site/src/feed.ts';
 import { readAct } from '../../connector/src/read.ts';
-import { post as postHtml } from '../../dub/src/page/view.ts';
+import { itemAct } from '../../dub/src/page/view.ts';
+import { card } from '../../kit/src/html.ts';
+import { actForm, idForm } from '../../genesis/src/forms.ts';
+import type { Item } from '../../dub/src/shapes.ts';
+const postHtml = (it: Item) => card(itemAct(it));
 import { serve, type Running } from '../src/server.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
 
@@ -73,9 +77,9 @@ test('labelled wherever it is shown: Edubba’s list, the feed Dub reads, Dub’
   const f = await readFeed([{ identity: NA, name: null }], [relay.base, homes[0].base]);
   const item = f.posts.find((x) => x.id === fix)!;
   assert.equal(item.corrects, wrong);
-  const shown = { id: fix, who: { id: NA, short: 'NA', names: ['Nobody, allegedly'], pet: null, me: true, followed: false, muted: false }, standing: 'valid', text: 'The meeting is on the 21st.', doc: null, pictures: [], answers: [], toMe: false, via: 'feed' as const, problem: null, seen: true, corrects: wrong, correctedBy: [] };
-  assert.match(postHtml(shown), /<strong>Correction<\/strong> of .*which stays as signed/);
-  assert.match(postHtml({ ...shown, id: wrong, corrects: null, correctedBy: [fix] }), /Corrected by .*: shown as it was signed/);
+  const shown = { id: fix, form: actForm(fix), who: { id: NA, short: 'NA', names: ['Nobody, allegedly'], pet: null, me: true, followed: false, muted: false, form: idForm(NA), link: idForm(NA) }, standing: 'valid', text: 'The meeting is on the 21st.', doc: null, pictures: [], answers: [], toMe: false, via: 'feed' as const, problem: null, seen: true, corrects: wrong, correctedBy: [] };
+  assert.match(postHtml(shown), /Correction of .*which stays as signed/);
+  assert.match(postHtml({ ...shown, id: wrong, form: actForm(wrong), corrects: null, correctedBy: [fix] }), /Corrected by .*: shown as it was signed/);
   const told = await readAct(fix, [relay.base, homes[0].base]);
   assert.equal(told.title, 'A text: a correction');
   assert.ok(told.sections.some((s) => s.lines.some((l) => /^Correction: it corrects act/.test(l.text))), JSON.stringify(told.sections));

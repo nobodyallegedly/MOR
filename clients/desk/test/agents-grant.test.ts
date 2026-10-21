@@ -28,7 +28,9 @@ import { answering, fakeApi, type Fake } from '../../assess/test/fake-api.ts';
 import { readAct } from '../../connector/src/read.ts';
 import { authorityOf, authorityOfId, signUnderGrant } from '../../grants/src/grant.ts';
 import { readFeed } from '../../site/src/feed.ts';
-import { post as dubPost } from '../../dub/src/page/view.ts';
+import { itemAct } from '../../dub/src/page/view.ts';
+import { card } from '../../kit/src/html.ts';
+import { actForm, idForm } from '../../genesis/src/forms.ts';
 import { STAMP_TYPE, TIMESTAMP_SPEC, encodeStamp } from '../../../modules/timestamp/src/stamp.ts';
 import { serve, type Running } from '../src/server.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
@@ -146,8 +148,9 @@ test('under a nudge, a post in its owner’s name: signed with the grant key, va
   const au = (await authorityOfId(act, hints()))!;
   assert.equal(au.backing, 'backed');
   // Dub shows it so, beside the post (its feed reads each such post's authority).
-  const html = dubPost({ id: act, who: { id: NA, short: 'NA', names: [], pet: null, me: false, followed: true, muted: false }, standing: 'unknown', text: 'x', doc: null, pictures: [], answers: [], toMe: false, via: 'feed', problem: null, seen: true, authority: { words: au.words, backed: true } });
-  assert.match(html, /class="re authority">Signed by .* in .*’s name, under .*’s grant .*: backed/);
+  const html = card(itemAct({ id: act, form: actForm(act), who: { id: NA, short: 'NA', names: [], pet: null, me: false, followed: true, muted: false, form: idForm(NA), link: idForm(NA) }, standing: 'unknown', text: 'x', doc: null, pictures: [], answers: [], toMe: false, via: 'feed', problem: null, seen: true, authority: { words: au.words, backed: true } }));
+  assert.match(html, /class="k-label">Signed by .* in .*’s name, under .*’s grant .*: backed/);
+  assert.match(html, /class="k-v"/, 'one ✓: backed by its grant');
   // The agent's details list the grant and the act under it.
   const list = await c.ask<any[]>('agent grants', { agent: MA });
   assert.equal(list[0].acts[0].act, act);

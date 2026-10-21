@@ -78,7 +78,25 @@ export const OPS = [
   'money look',
   'relays review',
   'relays publish',
+  'open',
+  'why',
+  'profile',
+  'rely read',
+  'rely',
+  'anchor offers',
+  'anchor',
+  'correct',
+  'film',
+  'clock',
+  'collective add',
+  'collective remove',
+  'act as',
+  'purchases',
+  'pay ways',
+  'pay',
 ] as const;
+
+const payKind = (v: unknown): 'tip' | 'buy' | 'vow' | 'pay' => (v === 'tip' || v === 'buy' || v === 'vow' || v === 'pay' ? v : 'pay');
 
 export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: Platform): Promise<unknown> {
   switch (op) {
@@ -102,7 +120,7 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       await dub.leave();
       return {};
     case 'relay':
-      return dub.relay();
+      return dub.relay(30, Array.isArray(a.layers) ? list(a.layers) : undefined);
     case 'forget':
       await dub.forget(text(a.id));
       return {};
@@ -117,7 +135,8 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.post({
         text: text(a.text),
         jpeg: text(a.jpeg) ? p.bytes(text(a.jpeg)) : undefined,
-        to: text(a.to),
+        mp4: text(a.mp4) ? p.bytes(text(a.mp4)) : undefined,
+        to: Array.isArray(a.to) ? list(a.to) : text(a.to),
         reply: reply ? { id: text(reply.id), signer: text(reply.signer) } : undefined,
       });
     }
@@ -126,7 +145,7 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
     case 'inbox':
       return dub.inbox();
     case 'message':
-      return dub.message({ to: text(a.to), text: text(a.text) });
+      return dub.message({ to: text(a.to), text: text(a.text), cc: list(a.cc), collective: text(a.collective) || null });
     case 'seen':
       await dub.seen(list(a.keys));
       return {};
@@ -196,6 +215,50 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.moneyLook();
     case 'ask paid':
       return dub.moneyDraft({ what: 'ask', other: text(a.to), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor) });
+    case 'open':
+      return dub.open({ id: text(a.id), signer: text(a.signer) || undefined });
+    case 'why':
+      return dub.why({ id: text(a.id), signer: text(a.signer) || undefined });
+    case 'profile':
+      return dub.profile({ id: text(a.id) });
+    case 'rely read':
+      return dub.relyRead({ id: text(a.id), signer: text(a.signer) || undefined });
+    case 'rely':
+      return dub.rely({ id: text(a.id), signer: text(a.signer) || undefined, typed: text(a.typed) });
+    case 'anchor offers':
+      return dub.anchorOffers({ service: text(a.service) });
+    case 'anchor':
+      return dub.anchor({ id: text(a.id), service: text(a.service), offer: text(a.offer), tier: Number(a.tier) });
+    case 'correct':
+      return dub.correct({ id: text(a.id), text: text(a.text) });
+    case 'film':
+      return dub.film({ publication: text(a.publication), signer: text(a.signer) || undefined });
+    case 'clock':
+      return dub.setClock({ id: text(a.id), name: text(a.name) });
+    case 'collective add':
+      return dub.collectiveAdd({ id: text(a.id) });
+    case 'collective remove':
+      return dub.collectiveRemove({ id: text(a.id) });
+    case 'act as':
+      return dub.actAs({ id: text(a.id) || null });
+    case 'purchases':
+      return dub.purchases();
+    case 'pay ways':
+      return dub.payWays({ kind: payKind(a.kind) });
+    case 'pay':
+      return dub.pay({
+        how: a.how === 'lane' || a.how === 'damgar' || a.how === 'hand' ? a.how : (() => { throw new Error('Choose a way to pay.'); })(),
+        kind: payKind(a.kind),
+        signer: text(a.signer),
+        post: text(a.post) || undefined,
+        publication: text(a.publication) || undefined,
+        vow: text(a.vow) || undefined,
+        repost: text(a.repost) || undefined,
+        reposter: text(a.reposter) || undefined,
+        value: text(a.value),
+        unit: text(a.unit),
+        whatFor: text(a.whatFor),
+      });
     default:
       throw new Error(`unknown operation ${op}`);
   }

@@ -1225,6 +1225,8 @@ app.addEventListener('submit', async (ev) => {
     const typed = [...form.querySelectorAll<HTMLInputElement>('input')].map((i) => i.value);
     const r = await busy('Checking the words, then destroying the one-time key…', () => c.ask<{ lines: { text: string }[] }>('member shareback', { thread: form.dataset.thread, typed }));
     if (r) {
+      // The words typed back are done with: left in place, they would keep To sign from ever being read again.
+      form.reset();
       await readMember();
       say('done', `<strong>The share is written down.</strong> ${r.lines.map((l) => v.e(l.text)).join(' ')}`);
     }

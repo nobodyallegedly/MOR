@@ -21,8 +21,8 @@ import { version } from './version.ts';
 /** What the browser's key signs, before the request body. */
 export const DOMAIN = 'MOR post, version 1\n';
 export const CODE_LABEL = 'MOR post pairing code';
-/** A picture travels from the page as base64 inside the request: up to 32 MiB of request. */
-export const LIMIT = 32 << 20;
+/** A picture or a film travels from the page as base64 inside the request: up to 96 MiB of request (a film is at most 64 MiB, the video Module's limit). */
+export const LIMIT = 96 << 20;
 
 const here = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));
 
@@ -76,7 +76,9 @@ export async function serve(opts: { dir: string; port: number; reader?: string }
   };
 
   // Inter and its licence, served beside the page from the program's own origin (F332, "Inter bundled").
-  const files = Object.fromEntries(Object.entries(FONT_FILES).map(([name, type]) => [`/${name}`, { type, body: readFileSync(here(`${FONTS_DIR}/${name}`)) }]));
-  const local = await serveLocal({ dir: opts.dir, port: opts.port, access, index, script, style: STYLE, version: built, api, limit: LIMIT, files });
+  const files: Record<string, { type: string; body: Buffer }> = Object.fromEntries(Object.entries(FONT_FILES).map(([name, type]) => [`/${name}`, { type, body: readFileSync(here(`${FONTS_DIR}/${name}`)) }]));
+  // Dub's icon, beside its name at the top (the kit's app mark), as the web client serves it.
+  files['/icon.png'] = { type: 'image/png', body: readFileSync(here('static/icon/dub.png')) };
+  const local = await serveLocal({ dir: opts.dir, port: opts.port, access, index, script, style: STYLE, version: built, api, limit: LIMIT, files, media: true });
   return { server: local.server, port: local.port, base: local.base, store, access, dub, close: local.close };
 }

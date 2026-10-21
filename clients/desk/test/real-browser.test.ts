@@ -4,13 +4,15 @@
 // headless Chromium page with its own profile, by clicks and typing alone.
 // Real homes and a relay on local ports; nothing simulated.
 //
-// The founding proposed in Edubba; a proposal waiting in a Dub whose
-// Signing tab is off; each member reading it in plain words and signing in
-// its own Dub; Edubba founding it once every party signed; each share shown
-// once in its member's Dub, three words typed back; the founder's own shown
-// in Edubba once; a release signed in a member's Dub and counting; no share
-// or one-time secret in any folder or in the web client's storage, read
-// whole. `MOR_SCREENSHOTS=DIR` keeps every new screen.
+// The founding proposed in Edubba; the proposal said waiting in a member's
+// Dub, which has no Signing tab (removed, decided 21 October 2026); each
+// member carried by clicks from its Dub into an Edubba of its own, reading
+// it in plain words in To sign and signing there; Edubba founding it once
+// every party signed; each share shown once in its member's Edubba, three
+// words typed back; the founder's own shown in Edubba once; a release signed
+// in a member's Edubba and counting; no share or one-time secret in any
+// folder or in the web client's storage, read whole. `MOR_SCREENSHOTS=DIR`
+// keeps every new screen.
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -158,25 +160,60 @@ async function makeIn(page: Page) {
   const positions = (await inputs.evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name))).map((n) => Number(n.slice(1)));
   for (const [i, p] of positions.entries()) await inputs.nth(i).fill(written[p - 1]);
   await page.getByRole('button', { name: 'Go on' }).click();
-  await done(page, '#status .note.done', 'The identity is born');
+  await done(page, '#status .k-note.k-done', 'The identity is born');
 }
 
-/** Turn Signing on in a Dub page's identity window, and come back to its Signing tab. */
-async function signingOn(page: Page, name: string) {
-  await page.locator('[data-action=window]').click();
-  await page.locator('#signing-on').waitFor();
-  await shot(page, `${name}-identity-window-signing`);
-  await page.locator('#signing-on').check();
-  await done(page, '#status .note', /Signing is on/);
-  await page.getByRole('button', { name: 'Back to Dub' }).click();
-  await page.locator('[data-tab=signing]').click();
+/** Each member's own Edubba (Dub's Signing tab removed, decided 21 October 2026: members sign in Edubba, Collectives › To sign): its page and its folder, by its Dub page. */
+const edubbaOf = new Map<Page, { page: Page; dir: string }>();
+
+/**
+ * Carry a member from its Dub into an Edubba of its own on the Mac, by
+ * clicks: its ID and signing key's words read in Dub's identity menu,
+ * brought into that Edubba, which then acts as it.
+ */
+async function signingOn(dub: Page, name: string) {
+  await dub.locator('[data-k-open="identity"]').click();
+  await dub.locator('[data-k-idmenu]').first().click();
+  await dub.getByRole('menuitem', { name: /^Words/ }).click();
+  await dub.locator('#carry-words').waitFor({ timeout: 60_000 });
+  const words = (await dub.locator('#carry-words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
+  const id = (await dub.locator('.k-mbody .k-mono').innerText()).replace(/\s+/g, '');
+  await shot(dub, `${name}-dub-words`);
+  await dub.locator('[data-k-popup="close"]').click();
+  const dir = join(mkdtempSync(join(tmpdir(), `real-browser-member-${name}-`)), 'edubba');
+  const e = await serve({ dir, port: 0, machineEvery: 0, drafts: join(dir, '..', 'drafts') });
+  others.push(e);
+  const c = await Client.open(await newKey(), e.base);
+  await c.ask('pair', { code: e.access.newCode(), label: 'setup' });
+  await c.ask('settings', { homes: homes.map((h) => h.base), relays: [relay.base], via: [], drafts: '' });
+  const page = await pageOf(`${e.base}/#pair=${e.access.newCode()}`);
+  await page.locator('h1.mark', { hasText: 'Edubba' }).waitFor();
+  await page.click('[data-action=tab][data-tab=identities]');
+  await page.click('.entry.add[data-id=new]');
+  await page.fill('#bring-identity input[name=name]', name);
+  await page.fill('#bring-identity input[name=id]', id);
+  await page.fill('#bring-identity textarea[name=words]', words.join(' '));
+  await page.click('#bring-identity button[type=submit]');
+  await done(page, '#e-status .note.done', `“${name}” is here`);
+  edubbaOf.set(dub, { page, dir });
 }
 
-/** In a Dub page: show its share once, read it, hide it, type three words back. */
-async function shareIn(page: Page, name: string): Promise<{ x: number; words: string[] }> {
-  await page.locator('[data-tab=signing]').click();
-  await page.locator('[data-action=share]').first().waitFor({ timeout: 90_000 });
-  await page.locator('[data-action=share]').first().click();
+/** Collectives › To sign, in a member's Edubba, read again. */
+async function toSign(ed: Page) {
+  // Edubba looks by itself while To sign is open, its buttons waiting meanwhile: a click waits for them.
+  if (!(await ed.locator('#e-signing').isVisible())) {
+    await ed.click('[data-action=tab][data-tab=collectives]', { timeout: 90_000 });
+    await ed.click('#e-to-sign', { timeout: 90_000 });
+  }
+  await ed.locator('[data-action=member-look]').click({ timeout: 90_000 });
+}
+
+/** In a member's Edubba: its share, shown once, read, hidden, three words typed back. */
+async function shareIn(dub: Page, name: string): Promise<{ x: number; words: string[] }> {
+  const page = edubbaOf.get(dub)!.page;
+  await toSign(page);
+  await page.locator('#e-signing [data-action=share]').first().waitFor({ timeout: 90_000 });
+  await page.locator('#e-signing [data-action=share]').first().click();
   await page.locator('#share-words').waitFor({ timeout: 60_000 });
   const words = (await page.locator('#share-words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
   const x = Number((await page.locator('.share-number strong').innerText()).trim());
@@ -184,7 +221,7 @@ async function shareIn(page: Page, name: string): Promise<{ x: number; words: st
   assert.equal(await page.locator('#share-shown input').count(), 0, 'nothing asked while the words show');
   await shot(page, `${name}-share-shown`);
   await page.getByRole('button', { name: /I have written share \d+ and its 24 words down/ }).click();
-  const form = page.locator('form.share-back');
+  const form = page.locator('#e-signing form.share-back');
   await form.waitFor();
   assert.equal(await page.locator('#share-words').count(), 0, 'the words are hidden before three are asked (H3)');
   const inputs = form.locator('input');
@@ -192,7 +229,7 @@ async function shareIn(page: Page, name: string): Promise<{ x: number; words: st
   await shot(page, `${name}-share-type-back`);
   for (const [i, p] of positions.entries()) await inputs.nth(i).fill(words[p - 1]);
   await form.getByRole('button', { name: 'Check them' }).click();
-  await done(page, '#status .note.done', 'Your share is written down');
+  await done(page, '#e-status .note.done', 'The share is written down');
   return { x, words };
 }
 
@@ -265,37 +302,33 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   assert.match(await ed.locator('.proposal-status').innerText(), /1 of 3 signed/);
   await shot(ed, 'edubba-founding-waiting');
 
-  // The Mac Dub has Signing off: the proposal waits, said on its Private tab.
+  // Dub has no Signing tab (removed, decided): the proposal waiting is said in Private, pointing to Edubba.
   await macPage.reload();
-  await macPage.locator('[data-tab=private]').click();
-  await done(macPage, '#signing-waiting', /A proposal to sign waits[\s\S]*Signing is off/);
-  assert.equal(await macPage.locator('[data-tab=signing]').count(), 0, 'no Signing tab while it is off');
+  await macPage.locator('[data-k-part="private"]').click();
+  await done(macPage, '#private-notes', /A proposal to sign waits[\s\S]*sign them in Edubba, Collectives › To sign/);
+  assert.equal(await macPage.locator('[data-tab=signing]').count(), 0, 'no Signing tab in Dub');
   await shot(macPage, 'mac-proposal-waits');
 
-  // The web member turns Signing on, reads the proposal in plain words, signs.
+  // The web member: carried into an Edubba of its own, reads the proposal in plain words there, signs.
   await signingOn(web, 'web');
-  const card = web.locator('.proposal').first();
+  const wed = edubbaOf.get(web)!.page;
+  await toSign(wed);
+  const card = wed.locator('#e-signing .proposal').first();
   await card.locator('h3', { hasText: 'Found a collective' }).waitFor({ timeout: 90_000 });
   const read = await card.innerText();
   for (const h of ['What each party is bound to', 'Who decides what', 'Shares and fees', 'How it ends', 'Risks']) assert.ok(read.includes(h), h);
-  assert.match(await web.locator('.experimental').innerText(), /Even more experimental/);
-  await shot(web, 'web-proposal');
+  assert.match(await wed.locator('#e-detail .experimental').innerText(), /Even more experimental/);
+  await shot(wed, 'web-proposal');
   await card.getByRole('button', { name: 'Sign it' }).click();
-  await done(web, '#status .note.done', 'Signed');
-  await web.locator('.proposal .state', { hasText: 'Signed by you' }).waitFor();
-  await web.locator('[data-action=sharehand]').waitFor();
-  // H30: a plain button where the share is awaited; a reload keeps the Signing tab.
-  await web.getByRole('button', { name: 'Look for my share' }).click();
-  await done(web, '#status', /Not arrived yet/);
-  await shot(web, 'web-signed-waiting-share');
-  await web.reload();
-  await web.locator('[data-tab=signing].on').waitFor({ timeout: 60_000 });
-  await web.locator('.proposal .state', { hasText: 'Signed by you' }).waitFor({ timeout: 60_000 });
+  await done(wed, '#e-status .note.done', 'Signed');
+  await wed.locator('#e-signing .proposal .state', { hasText: 'Signed by you' }).waitFor({ timeout: 60_000 });
 
   // The Mac member, the same.
   await signingOn(macPage, 'mac');
-  await macPage.locator('.proposal').first().getByRole('button', { name: 'Sign it' }).click();
-  await done(macPage, '#status .note.done', 'Signed');
+  const med = edubbaOf.get(macPage)!.page;
+  await toSign(med);
+  await med.locator('#e-signing .proposal').first().getByRole('button', { name: 'Sign it' }).click({ timeout: 90_000 });
+  await done(med, '#e-status .note.done', 'Signed');
 
   // Edubba: the answers, looked for by itself (H32: no click, the button kept), then founding; the founder's own share shown once, typed back.
   await ed.locator('[data-action=real-gather]').waitFor();
@@ -321,16 +354,14 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await back.getByRole('button', { name: 'Check them' }).click();
   await done(ed, '#e-status .note.done', /Share \d is written down/);
 
-  // H30: the web member, still on its Signing tab, finds its share by itself.
-  await web.locator('[data-action=share]').first().waitFor({ timeout: 90_000 });
-  // Each member opens its own share once, in its own Dub.
+  // Each member opens its own share once, in its own Edubba.
   const ws = await shareIn(web, 'web');
   const ms = await shareIn(macPage, 'mac');
   assert.deepEqual([...new Set([ws.x, ms.x])].length, 2);
 
   // Nothing of a share, nor a one-time secret, anywhere: the web client's storage and every folder read whole.
   const values = [mine, ws.words, ms.words].map((w) => fromWords(w));
-  const places = { web: await kept(web), edubba: everything(eDir), mac: everything(macDir) };
+  const places = { web: await kept(web), edubba: everything(eDir), mac: everything(macDir), webEdubba: everything(edubbaOf.get(web)!.dir), macEdubba: everything(edubbaOf.get(macPage)!.dir) };
   for (const v of values) for (const [where, text] of Object.entries(places)) for (const f of [hex(v), Buffer.from(v).toString('base64')]) assert.ok(!text.includes(f), `a share in ${where}`);
   for (const w of [mine, ws.words, ms.words]) for (const [where, text] of Object.entries(places)) assert.ok(!text.includes(w.slice(0, 6).join(' ')), `a share's words in ${where}`);
   assert.ok(!/"waiting":\{"[0-9a-f]{64}"/.test(places.web), 'no one-time secret in the web client’s storage');
@@ -350,14 +381,13 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   const realId = ((await ec.ask<any>('state')).collectives as { id: string; real?: boolean }[]).find((x) => x.real)!.id;
   const um = await ummiaFor({ id: nobody, secret: founderSecret, home: homes[0].base, relays: [relay.base], collective: realId, apps: others });
   const relId = await um.release('tablets', '1', 'a tablet\n');
-  await web.reload();
-  await web.locator('[data-tab=signing]').click();
-  const rel = web.locator('.proposal', { hasText: 'Sign a release: tablets 1' });
+  await toSign(wed);
+  const rel = wed.locator('#e-signing .proposal', { hasText: 'Sign a release: tablets 1' });
   await rel.waitFor({ timeout: 90_000 });
   assert.match(await rel.innerText(), /clay\.txt: 9 bytes/);
-  await shot(web, 'web-release');
+  await shot(wed, 'web-release');
   await rel.getByRole('button', { name: 'Sign it' }).click();
-  await done(web, '#status .note.done', 'Signed');
+  await done(wed, '#e-status .note.done', 'Signed');
   assert.ok((await um.standing(relId)).met, 'it counts as the collective’s release');
   await shot(ed, 'edubba-collective');
 
