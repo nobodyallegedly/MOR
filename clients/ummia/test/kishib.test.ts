@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { SPEC } from '../../damgar/src/specs.ts';
 import { closeAll, developer, kishib, start, type Relay } from './world.ts';
 import { changeKeys } from '../../kishib/test/world.ts';
+import { readCards } from '../../genesis/src/lines.ts';
 import type { Done, Review, State } from '../src/shapes.ts';
 import type { Tracked } from '../src/track.ts';
 
@@ -43,7 +44,8 @@ test('a change of keys in Kišib keeps Ummia’s line, given its card; Ummia tak
   await k.c.ask('cancel', { plan: blind.plan }).catch(() => undefined);
   // The card, copied whole from Ummia's identity window: it names an act the homes hold, and Ummia (H80's question 2).
   const cards = line.card!;
-  assert.ok(cards.startsWith(`${line.latest} ${line.acts} ${line.summary} `) && cards.endsWith(' Ummia'), cards);
+  // Since F376 a card per line, joined by “; ”: the private line's names the latest act, Ummia, and its line.
+  assert.ok(readCards(cards).some((c) => c.act === line.latest && c.summary === line.summary && c.app === 'Ummia' && c.line === 'private'), cards);
   const review = await k.c.ask<{ plan: string; digest: string; sections: { heading: string; lines: { text: string }[] }[] }>('rotate plan', { id: d.id, address: H[0], words: d.dub.chainWords.join(' '), cards });
   const said = JSON.stringify(review.sections);
   assert.ok(said.includes(line.latest!), 'the card’s line is among those kept');

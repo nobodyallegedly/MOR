@@ -36,6 +36,8 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Questions 2 and 3, accepted as leaned (21 October 2026), stated costs said in the READMEs:** a message one sends is readable again by whoever holds one's signing words (its key delivered to oneself, F373); Kišib takes the apps' counts on their word, which changes only what it says, never what a change of keys keeps.
 
+*For the MOR lead, information only:* an act left out of a change of keys reads unknown, not void, to a reader who cannot open a private line kept by its card that is longer than the act's position (F298, as written; since F373); nothing binding rests on it. `docs/two-lines-report.md`, section 3.
+
 ## F373. Every line of acts can be found by Kišib (21 October 2026; H80's question 2; Dubsar Suite)
 
 **Found while testing (H80):** after a member's change of keys, Kišib could not tie two private acts at the member's homes to Edubba's and Damgar's cards, and the member's key for a collective was lost with the lines left out. **The causes, three:** the negotiation messages (`negotiate`: a founding's invitations and word, a member's answers, a holder's ask for a second key) never reached the signer's own homes, and were the latest acts the cards named; a private act addressed to someone else opened for no other app of the signer, so no reader could follow the line to the member key after the change (unknown, F298); and Kišib, unable to open private acts, took every private act followed by another as a line of its own.

@@ -31,7 +31,9 @@ The choice is made in one place, as an act is signed (`lineFor`, `clients/genesi
 
 ## 3. For the MOR lead
 
-Nothing. Identity rule 35 and every verdict are unchanged; an identity may keep as many lines as it likes, and each app now keeps two. Nothing in `core/`, `relay/` or `spec/` was touched.
+Nothing that changes a rule. Identity rule 35 and every verdict are unchanged; an identity may keep as many lines as it likes, and each app now keeps two. Nothing in `core/`, `relay/` or `spec/` was touched.
+
+One point, for information, found while testing (Edubba's keepers test). An act left out of a change of keys reads **unknown**, not void, to a reader who cannot open a private line kept by its card, when that line is longer than the act's position. To say "void", a reader must show the act lies on none of the kept lines, and it cannot follow a private line it cannot open (F298, as written). This holds since F373 wherever a private line is kept by its card; nothing binding rests on unknown, and the owner's own apps, which open the private line, say void. The test now leaves the phone's line out without giving the other cards, as it always did, and still shows the dispute. If the MOR lead wants a reader to tell void without opening private lines, that is a protocol question (for one, kept tips that name each line's length by public position); my lean is that it is not needed.
 
 ## 4. Questions for Nobody, allegedly
 
@@ -57,6 +59,6 @@ None open. Questions 2 and 3 of `docs/private-lines-report.md` are accepted as l
 - `clients/genesis`: `src/identity.ts` (`lineFor`, `nextLine`, `ownLines`, `ownIds`, `freshLines`; the file's `private`, `earlier`, `split`), `src/lines.ts` (several own lines; a card names its line; cards joined by "; "; the lines named), `src/private.ts` (a card per line), `src/card-words.ts` (the words only); `test/cards.test.ts`.
 - `clients/dub`, `clients/desk`, `clients/damgar`, `clients/ummia`: new words start new lines (`freshLines`); an app's own acts read from all its lines; READMEs.
 - `clients/kishib`: README (two lines, the counts' stated cost).
-- Tests: `clients/ummia/test/private-lines.test.ts` (the founding after a private act, valid for every reader), `clients/damgar/test/collective.test.ts` (the lines named).
+- Tests: `clients/ummia/test/private-lines.test.ts` (the founding after a private act, valid for every reader), `clients/damgar/test/collective.test.ts` and `clients/ummia/test/kishib.test.ts` (the lines named), `clients/genesis/test/genesis.test.ts` (another app's private act on its own line, kept by its card), `clients/desk/test/keepers.test.ts` (the money terms signed on iPh's second Dub, whose line is the one left out: a phone lost), `clients/desk/test/agents-memory.test.ts` (acts counted across an agent's lines).
 - Records: F376; `docs/private-lines-report.md` (questions 1 to 3 answered).
 - `clients/desk/built`: Edubba's web release rebuilt (its pull-request check). Dub's, Damgar's, Ummia's and Kišib's are rebuilt on main by a commit carrying `[release dub web]`, `[release damgar web]`, `[release ummia web]` and `[release kishib web]`.
