@@ -28,6 +28,26 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F368. S1's wording points and readings, taken as the session leaned (21 October 2026)
+
+**Taken by the project lead under delegation**, none changing a verdict as read: S1's questions 6, 11, 15, 18, 19, 21, 23, 26, 27, 28, 29, 30, 33, 35, 36, 37 (first half: rules moved out of italics), 46 (the suite keeps its scenario titles: it tests the core and is not the core), 47, 48, 52 (at the freeze each header becomes the text's name alone), 53 (named rails and clocks kept as italic examples; Money rule 29's normative sentence by role), and the words used two ways as S1's glossary resolves them; each as `docs/freeze-ready-drafts-report.md` leans. Question 50, the MICS's opening, waits for Nobody, allegedly's own reading.
+
+## F367. S1's remaining verdict questions (21 October 2026; questions 4, 5, 9, 22, 37, 44, 45, 49, 51)
+
+**Taken by the project lead under delegation**, each read in the freeze-ready texts:
+
+1. **An act under a pending rotation (4):** pending, never valid, until the rotation counts (Identity rule 28 says so; everyday check 2 is worded to match: a binding to a pending rotation makes the act pending, not invalid).
+2. **A home's dishonesty (5):** as Identity rule 45 says, not as the session leaned: the conflict survives the home's own rotations, and, where the identity requires audit, both receipts sit under cosigned log summaries (for such an identity, step 2 already ends the conflict when only one is logged). "Conflicting receipts" step 3 is aligned to it; rule 44 says "pass receipt check 1", as step 1 does, since a receipt in conflict counts for nothing.
+3. **Text rule 14 at a Text-only verifier (9):** unknown for a text carrying one object of either allowed shape, invalid for any other `objects`.
+4. **A collective's pointer left outside a fork (22):** it counts for payments made before the fork's line, and not after.
+5. **A malformed specification against "invalid beats unknown" (37, second half):** an act naming one is unknown, unless a rule the verifier can apply shows it invalid.
+6. **"Only acts valid in their own format count" (44):** it reaches acts of the core's types; a cMIP's record counts where the verifier reads its format; transfer field 3's bound is a status rule, not a format rule.
+7. **Agreements' contradictions (45):** an abandonment outcome where a holder has a named stake successor: the stake passes by succession; genesis and rotations lie outside any area; task 14 is judicial, as Development's table says; a fork's completeness checks non-member holders' chain signatures; take-ups listed in record field 3; terms fields 26 and 27 placed in the tiers table.
+8. **A clone placing a successor elsewhere than the dead member's place (49):** invalid when marked with the plan alone, as a clone that reorders the other parties.
+9. **Money's dependence on Development (51):** stated, not removed: a Money client decodes Development's specification format (a rail Module's fields 5, 11 and 13, and whether a specification is one) and nothing more of Development. Money's "never depends" sentence narrows to say so.
+
+**Where:** the next pass on the freeze-ready texts.
+
 ## F366. Collectives' member keys across Money and Agreements (21 October 2026; S1's questions 20, 43, 10)
 
 **Taken by the project lead under delegation** (Nobody, allegedly, 21 October 2026: "you'll decide the rest"), on his principle of F358: "It is a money matter and money areas should be able to do it. A founder should not have a special position if the constitution does not say so."
