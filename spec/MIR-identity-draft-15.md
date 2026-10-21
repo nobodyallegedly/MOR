@@ -237,7 +237,7 @@ Copies of a private link MUST be encrypted separately, so that stored copies can
 
 #### Which value counts: declarations, succession, routes, names and links
 
-A disputed act never counts when choosing the latest value of anything below. *An act is disputed only by the rotation rules of this MIR (rules 33 to 35). No act of a higher layer changes that status; a contest (Agreements) is an objection shown alongside what it names and changes nothing here.*
+A disputed act never counts when choosing the latest value of anything below. *In this MIR an act is disputed only by its rotation rules (rules 33 to 35); the Agreements MIR gives the same status, in rule 34's words, to an act under a revoked grant (Agreements rule 76). No other act of a higher layer changes that status; a contest (Agreements) is an objection shown alongside what it names and changes nothing here.*
 
 1. **Declarations:** for each spec and kind, the entry in the counting identity-chain act with the highest position counts. A null value means the kind is not declared.
 2. **Succession:** the successor field in the counting rotation with the highest position that carries one counts; null means no succession. A succession it declares is followed only once confirmed (section 8).
