@@ -105,6 +105,6 @@ What the core's WebAssembly interface and behaviour changed, so the suite's sess
 
 ## Checks
 
-- `cargo test --workspace`: see the CI run of the pull request (checked before this report was final; result below).
+- CI on pull request 88, commit `cf4fab9`, read by S2 itself: **green** (the jobs all, regtest and browsers). The first run (`9227667`) was red on Edubba's member-key test, fixed in `cf4fab9` ("For the Dubsar Suite"). Locally, `cargo test --workspace`: 770 passed, 0 failed.
 - `python3 core/vectors/check.py`: all 186 vectors agree, 25 verdict vectors judged.
 - `clients/reader`: `test/mirs.test.ts` passes locally with the rebuilt WebAssembly; the browser tests are CI's.
