@@ -28,6 +28,33 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F371. The technical pass's eight questions, and how far the texts go before the C session (21 October 2026)
+
+**From** `docs/technical-pass-report.md` (S1b, pull request 83). **Taken by the project lead under delegation** ("you'll decide the rest"), each as the session leaned, read against the texts:
+
+1. **A missed deadline with several keepers:** rule 38 read the other way round: the act counts as recorded by the deadline when the keepers' rule is met by records before their anchored points; it is missed when enough anchored sequences lack it that the rule can no longer be met; an anchor of the act at or before the point shows it met, and wins over any keeper's silence (an anchor shows existence; silence rests on trust).
+2. **Which agreement's keepers count:** those of the version in force for the act: for a deal, the latest complete version its history holds; for a collective, the agreement in force at the act, every act in the collective's name (its grant keys' included) belonging to it. So F359's keeper path reaches a collective's grant-key acts, as decided.
+3. **A member key's act and the agreement in force:** the one rule 72 picks from the records its history holds, starting from the version that named the key. No new field.
+4. **"A Module under the payment cMIP":** a Module whose field 5 names a cMIP whose own field 2 lists Money's task 6 (payment) must carry fields 11 and 13; a verifier not holding that cMIP answers unknown. Decoded from bytes, the same verdict in every client.
+5. **Text fields:** every text string anywhere in an act, a cMIP's included, as Text rule 1 and the core already have it. **F368 corrected:** taking S1's lean on its question 11 would have changed a verdict no finding decided; the project lead took that lean in a batch without reading it against rule 1, the error the first lead's letter warns of. The session caught it.
+6. **A closing's completeness:** the same bullet as a fork's, holders who are no members signing by chain signatures where the constitutional change rule counts them.
+7. **A text act signed with a member key:** its one object is `[collective, the founding or clone the holder's signature names]`, the version that is its grant; Text rule 14 says so.
+8. **A grantee acknowledging its own grant key's acts:** does not count for rule 76's exception (pattern 1: what decides would be signed by the wrong party). F359's cost stays as stated, an accomplice needed.
+
+**How far the texts go before the C session.** The strangers' readings also listed smaller gaps older than this pass (`docs/freeze-ready-strangers/technical-pass.md`). They are not chased now. The C session is the test of the texts: it records each question and the reading it chose, and Fable's review judges each against the texts and the code. Chasing every gap first would spend the budget on what that test is built to find, and would teach the texts to the session that writes them rather than to a stranger. *The bar (workbook):* texts a stranger can build from, proven by the C verifier, not by one more reading of ours.
+
+**Where:** with F370, on the freeze-ready texts at the start of the next session (S2), before the code is aligned to them.
+
+## F370. What a payment "fulfils" is named, not listed: a transfer to oneself fulfils nothing in Money's sense (21 October 2026)
+
+**Asked by the Dubsar Suite** (`docs/texts-r0-report.md`, section 3, branch `claude/texts-r0-airgap-payment-audio`): the payment cMIP's draft 4 lets a transfer to oneself name the vault's declaring genesis or rotation in `fulfils` (F355 c); Money describes field 5 (receipt) and field 4 (claim) as "the obligation, agreement, offer or payee-pointer act this hop follows". Is that list closed?
+
+**Read in Money 11 first:** the field is typed `hash`; the list is a comment; no rule makes an act invalid for naming something else; and Money itself already names a fifth thing a payment fulfils, a stake transfer (Agreements rule 10). The list was never closed.
+
+**Taken by the project lead under delegation** ("you'll decide the rest"), (a), the session's lean, with one sentence so a stranger reading the texts alone cannot take the comment for a closed list: `fulfils` names the act a payment follows; Money judges it only where it names an act Money or Agreements reads (an obligation to discharge, an agreement or offer to follow, a payee pointer, a stake transfer); a payment naming anything else fulfils nothing in Money's sense, discharges nothing, and changes no verdict. The payment task's sentence reads "an act it follows" with the same examples. A transfer to oneself naming its vault's declaration is such a payment; the payment cMIP judges it, from the act alone. *Not chosen:* (b) a closed list extended with the vault's declaration, which would need extending again for every cMIP's own case.
+
+**Where:** Money 11, fields 5 and 4 and the payment task, on the freeze-ready branch after the technical pass. No verdict changes.
+
 ## F369. The formats S1 found unwritten: how the technical pass writes them (21 October 2026)
 
 **Taken by the project lead under delegation**, for the technical pass (S1b) on the freeze-ready texts:

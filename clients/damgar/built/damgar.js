@@ -8057,6 +8057,7 @@ var Damgar = class {
   collectivePromise(a) {
     return this.serial(async () => {
       const { me, s, book, hints } = await this.ctx();
+      await this.current(me);
       const r = await this.collectivePromiseMake(me, s, hints, a);
       if (r.digest !== a.digest) throw new Error("It is not the promise read back: read it again. Nothing was signed.");
       const text3 = `A promise of the collective ${short(r.c.id)} to pay ${short(r.to)} ${r.amount.value.toLocaleString("en")}${a.whatFor.trim() ? `, for ${a.whatFor.trim()}` : ""}: ${r.say.above ? "above its Money lane\u2019s cap, it" : "it"} needs your key too. Read it in your Signing tab, then sign it with your own key for the collective.`;
