@@ -97,9 +97,9 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 - **Keeper.** A relay, operated by an identity, that an agreement names to record the acts around a deal as they arrive, and to sign what it recorded: a notary stamping sealed envelopes. A keeper records act ids and signers, never content. A record counts only alongside the act it names.
 - **Arbitrator or verifier.** A third party named by an agreement to judge content (escrow and milestones, arbitration, regulated checks). Unlike a keeper, it receives the keys of the acts it must judge, by ordinary key delivery.
 - **Judge.** Either a specification named for a judicial task (9 condition evaluation, 10 time reference, 11 anchoring), or an identity named to judge or testify: a keeper's operator, an arbitrator or verifier, the abandonment authority. *The split service is not a judge: its backups are attempts per payment (rule 17).*
-- **Chain of judgment.** For a judge the terms name: the ones that take over from it, in order, when it answers "unknown" or does not act within its period. The chain is named in the terms and signed by everyone, so that it passes with no new signature. Each link names its period, measured on the agreement's time reference (terms field 21, rule 35).
+- **Chain of judgment.** For a judge the terms name: the ones that take over from it, in order, when it answers "unknown" or does not act within its period. The chain is named in the terms and signed by everyone, so that it passes with no new signature. Each link names its period, measured on the agreement's time reference (terms field 6; the chain itself is terms field 21; rule 35).
 - **Time reference.** A source of time an agreement names, such as a block height. For that agreement, only it decides whether an act is before or after a point on its reference, and whether something is past its terms. *Before and after among acts done in a collective's name are judged on the collective's own sequence ("Made before, made after"); the time reference judges deadlines and absence.*
-- **Concurrency rule.** Terms field 10 is withdrawn, never reused: a fork of records is settled by rule 90's default, the parent staying in force until a clone recorded after both lines resolves it.
+- **Concurrency rule.** Retired: terms field 10 is withdrawn, never reused. A fork of records is settled by rule 90's default, the parent staying in force until a clone recorded after both lines resolves it.
 - **Contest.** A signed objection to another act, by a party with standing. It changes nothing about any act's validity, status or selection; it makes disagreement visible. *"Dispute" is a different word: it is reserved for the status Identity gives an act after a rotation.*
 - **Standing.** Who may contest an act: a party to its agreement, a holder of a stake it affects, or a keeper, arbitrator or verifier the agreement names.
 
@@ -133,7 +133,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
   An area reaching a whole layer also decides which cMIPs the collective adopts for that layer's tasks, and an area reaching Development decides which extensions it adopts. Below, "the area reaching Money" (or another layer) is such an area.
 - **Layer.** One of MOR's layers (core, "Structure"): Identity; Envelopes and Text; Money; Agreements; Development. Which layer an act belongs to depends on its `spec`:
   - An act whose `spec` is a MIR belongs to that MIR's layer.
-  - An act whose `spec` is a cMIP belongs to the layer of each task that the collective's agreement in force (rule 72) names that cMIP for (terms field 2). A task's layer is that of the MIR defining it (Development, table of tasks).
+  - An act whose `spec` is a cMIP belongs to the layer of each task that the collective's agreement in force (rule 72) names that cMIP for (terms field 2). A task's layer is that of the MIR defining it (Development, "The tasks the core defines").
   - An act whose `spec` is an extension the agreement names (field 15) belongs to Development.
   - An act whose `spec` is a specification the agreement in force names neither for a task nor as an extension belongs to no layer. In a collective with areas it counts for nothing, unless an area reaches it by a kind naming its type (rule 60).
 
@@ -384,7 +384,7 @@ The new holder inherits the full position. The transfers name the current holder
 
 What the seller still held is its share in the version the transfer names, less each transfer of the same stake (by its object, across the lineage) placed before it on its line that fitted what was left; an over-sale before it consumes nothing. An earlier transfer counts from the seller's chain signature, whether its buyer has completed it yet or not, so a later buyer's client sees it before paying.
 
-The payment for a transfer is a Money receipt or claim fulfilling it (field 5), or one the transfer's field 4 names. The over-sale's payment is owed back by the seller. *A transfer cannot name by hash a payment made after it; such a payment names the transfer it fulfils (field 5).*
+The payment for a transfer is a Money receipt or claim fulfilling it (the receipt's field 5, the claim's field 4), or one the transfer's field 4 names. The over-sale's payment is owed back by the seller. *A transfer cannot name by hash a payment made after it; such a payment names the transfer it fulfils (field 5).*
 
 *Client conformance*: **a buyer's client pays only once the seller's transfer is receipted by the seller's homes** (its chain signature counted on the seller's resolved line) **and checked against what the seller still holds.** Nobody polices it: it is prevented where it can be and undeniable where it cannot, a refund debt any wallet sees, with signed proof of the double sale.
 
@@ -582,7 +582,7 @@ The core keeps only the grammar:
 
 *By keeping the grammar lean, the same tools serve every kind of event or service; the cMIPs a specialized fork uses decide the rest.*
 
-**Rule 7 is unchanged and speaks of works only:** a claim on a vow's name covers nothing it became.
+**Rule 7 speaks of works only:** a claim on a vow's name covers nothing it became.
 
 #### Rule 14. A sale is tied to the seller's agreement, not to the work's stakes
 
@@ -643,9 +643,9 @@ A publisher holds a stake in the publication's agreement, never in the work, by 
 
 **The work's agreement designates the one pointer at which it accepts payments, the same whoever pays**: a buyer directly, or a layer above. The publisher points there and divides nothing. Its obligation for the work's share is discharged once that share reaches the designated pointer (Money's receipt shows it). What follows is the work's agreement's alone. *The work's agreement states the pointer, the publishing agreement the cut; the publisher delivers the cut and its responsibility ends there.*
 
-*The rare mechanics, in detail.*
+*The rare cases, in detail.*
 
-**The designation is field 14's one grantee**, reusing what the terms already write,, read from the holding agreement's version in force:
+**The designation is field 14's one grantee**, reusing what the terms already write, read from the holding agreement's version in force:
 
 - in a deal, every grant field 14 lists names the same service, or the deal carries none of them ("A payee's grant in a deal");
 - in a collective, its one grant;
@@ -681,7 +681,7 @@ A deal that is a party of another deal signs it where every party of its version
 - **As a party it holds stakes**, paid at the one pointer it designates.
 - **It is named by its line**: its founding version, never a single later version. Every later version of the inner agreement carries what it signed outward, and cannot escape it by re-versioning. Money goes to the pointer the inner agreement's version in force designates. *What happens in that envelope is separate from the publishing deal.*
 - **No loops.** An agreement is never a party of itself, directly or through others: terms making one so are refused; a verifier that cannot follow every layer of it answers unknown.
-- **Nesting is bounded at 8 layers**, a freeze parameter ("Open technical parameters").
+- **Nesting is bounded at 8 layers**, a freeze parameter ("Parameters").
 - **When an inner agreement ends, its stakes move by ordinary acts, and what is still owed stays visible:**
   - **A collective is liquidated by ordinary sales and transfers before its closing**: each stake sold or moved by a stake transfer (rule 10), or released (rule 55). The closing (type 20) still counts only once the collective holds nothing (rule 91). **An absentee's money share follows the collective's own rules**: its split plan, its absence clause, its terms, written before anyone left. What those rules could not deliver stays visible as an open obligation wherever they sent it, until a valid claim appears: never lost, never taken ("Closing (type 20)"). The closing needs no entry for it; its field 4 stays for money owed back. No new field. *Batching those acts together is a client's or a cMIP's convenience, never a second way in the core.*
   - **A deal ends, or winds down, by a clone every party signs** (rule 47), **stating its new conditions**: where its stakes went, what is still owed, as open obligations, and to whom its outer agreement now pays (its designated pointer). What those conditions are depends on the deal. **A deal has no closing act.** A party who is absent is handled by the absence rules: in a deal, one identity judges absence (rules 85 to 89).
@@ -756,7 +756,7 @@ The split task is handed to the split cMIP the agreement names.
 
 A payer's obligation ends when the payment reaches the first service in order whose attempt succeeds, Money's receipt the proof.
 
-**Every payer tries the services in order.** A buyer paying the owners directly follows the same rule as a publisher or a layer above: it tries the services the agreement names, field 14's then field 29's, in order, attempt by attempt, each payment starting again from the first. **A backup paid directly receipts in the owners' name, with the grants it already holds** (field 29's, one per payee in a deal; "What a split service's grant key may sign"). Money's pointer format is unchanged: the owners' payee pointer leads to the first service, and a backup's address is the one its own signed pointer carries, which the pointer check accepts (rule 16).
+**Every payer tries the services in order.** A buyer paying the owners directly follows the same rule as a publisher or a layer above: it tries the services the agreement names, field 14's then field 29's, in order, attempt by attempt, each payment starting again from the first. **A backup paid directly receipts in the owners' name, with the grants it already holds** (field 29's, one per payee in a deal; "What a split service's grant key may sign"). In Money's pointer format, the owners' payee pointer leads to the first service, and a backup's address is the one its own signed pointer carries, which the pointer check accepts (rule 16).
 
 **The task:** the cMIP accepts the agreement and the attempts made for a payment, and produces the receiver for this payment.
 
@@ -828,7 +828,7 @@ The evidence:
 - **a referral**: the referral the payer signs in its claim (Money, the claim's referral field);
 - **any other act offered as a helper's evidence**, a relay's delivery record (relay transport cMIP, "Delivery records") or a service's use record (Development rule 15), whatever cMIP defines it, **counts only when the payer's claim acknowledges it** (Envelopes rule 18: a Money act may carry acknowledgements). So no verifier needs telling which specification defines it, and every verifier gives the same answer.
 
-For a relay's delivery record, **the object it names is the one the payment was for**, where the verifier reads the record's format ("Open in this draft").
+For a relay's delivery record, **the object it names is the one the payment was for**, where the verifier reads the record's format.
 
 One no claim acknowledges is evidence of nothing. A claim may acknowledge several, so several helpers can share one payment.
 
@@ -844,9 +844,9 @@ One no claim acknowledges is evidence of nothing. A claim may acknowledge severa
 
 A service that worked unnamed is paid by whoever chose it: the owners (by naming it in a new version), the payer (through a client that carries the choice into the payment), or the relay or service that used it (by its own agreement with it).
 
-*Whether a client carries a user's choices into the payment is good practice for client developers, the builders' choice, legible to those who look: "pay the pipe if you wish to".*
+*Whether a client carries a user's choices into the payment is good practice for client developers, the builders' choice, legible to those who look: a payer may pay the pipe if it wishes to.*
 
-*A helper's own signature alone would let it claim help it never gave ("paying for usage invites faking usage"); the confirming signature comes from the other side of the deal, as for a referral.* *Stated cost: a payer and a helper together can acknowledge help that never happened, which the owners bound by the size of the share they offer, as for a self-referral.*
+*A helper's own signature alone would let it claim help it never gave, and paying for usage invites faking usage; the confirming signature comes from the other side of the deal, as for a referral.* *Stated cost: a payer and a helper together can acknowledge help that never happened, which the owners bound by the size of the share they offer, as for a self-referral.*
 
 A referral the service names on its own earns nothing.
 
@@ -1146,7 +1146,7 @@ A deal changes only with everyone's signature.
 
 In a deal, the signing rule and the clone rule are every party (terms fields 4 and 5). A deal exists when all its parties have signed it. A clone of it completes only when all the parent's parties whose voice remains have signed it. Its mark names the clone rule, `[1]`, and those parties.
 
-Majorities, areas and tiers belong to collectives. Rules 62 to 66, 67, 68, 90 and 91 apply to collectives only. So do the holders' rule and proxies, for now (rules 94 and 97).
+Majorities, areas and tiers belong to collectives. Rules 62 to 66, 67, 68, 90 and 91 apply to collectives only. So do the holders' rule and proxies (rules 94 and 97).
 
 **What others relied on stands: a version relied on stays complete.** A deal has no line of its own, so nothing places its versions' signatures as a collective's line places them. Instead, once any party's or keeper's later act relies on a complete version, the version keeps its completeness for everyone, whatever a signer's later rotation disowns; the disowned signature is shown as a dispute, the relying act its place. An act relies on a version when it names it:
 
@@ -1232,7 +1232,7 @@ Within one link, the rules above apply; and a settlement holding another is afte
 
 A judge has contradicted itself where its first settlements of the fork, read by history as any two settlements are read ("What a settlement could see"), keep different versions; one that settles the same way twice has not; a judge that contradicted itself speaks for nothing on that fork afterwards.
 
-**A settling version naming a version this verifier does not hold** is read as a plain version until the verifier holds it. From then on it counts as a settlement. The deal stays readable meanwhile, forked or on its reference as before, and the parties may sign a correct settlement.
+**A settling version naming a version this verifier does not hold** is read as a plain version until the verifier holds it. From then on it counts as a settlement. The deal stays readable meanwhile, forked or on its reference, and the parties may sign a correct settlement.
 
 **A tangled fork stays on its reference.** A fork is tangled where, with no settlement that counts:
 - a branch splits again; or
@@ -1293,7 +1293,7 @@ A member, who holds the power or chose it by signing the constitution, is left t
 
 **In a collective, the stake's holders' rule may stand in for each signature** (rule 94): where the stake carries a holders' rule by share, and the change hits every holder of the stake alike, holders meeting that rule consent for every holder it binds. A holder it does not bind, one that never accepted it, still signs. What such holders consent to are the owners' matters (rule 95).
 
-**No advance permission reaches what one holder is paid unlike the others.** A holders' rule the holder accepted, by signing or by buying, reaches what every holder of the stake is paid alike (rule 94); nothing reaches what one holder is paid unlike the others of the stake, which that holder alone signs. Abandonment never lowers what a stake is paid while the stake stays with its holder. A departed holder who vanishes does not block the collective's fees, because its stake moves: declared absent, which a declaration may now do although the holder is no party (rule 85), to its stake successor, or, with none named, by outcome 1 or 2 (rule 89); whoever then holds it signs, or already holds the say. For a deal's holder who is no party, no advance permission reaches its pay: a deal carries no holders' rule (rule 47).
+**No advance permission reaches what one holder is paid unlike the others.** A holders' rule the holder accepted, by signing or by buying, reaches what every holder of the stake is paid alike (rule 94); nothing reaches what one holder is paid unlike the others of the stake, which that holder alone signs. Abandonment never lowers what a stake is paid while the stake stays with its holder. A departed holder who vanishes does not block the collective's fees, because its stake moves: declared absent, which a declaration may do although the holder is no party (rule 85), to its stake successor, or, with none named, by outcome 1 or 2 (rule 89); whoever then holds it signs, or already holds the say. For a deal's holder who is no party, no advance permission reaches its pay: a deal carries no holders' rule (rule 47).
 
 *Abandonment protects operational flow; it is not meant to change stakes or pay. What it can trigger in that regard is succession, the stake and its pay going to the successor.*
 
@@ -1357,7 +1357,7 @@ A member, who holds the power or chose it by signing the constitution, is left t
 
 *Stated cost:* *a members' collective with departed holders and no holders' rule waits for their signatures on its sales and releases of works, and on a fork whose successors' plans pay them less, as its fee changes already do. Shared ownership means shared fruits.*
 
-**Prices are no owners' matter.** The price of what a collective sells, and whether it publishes at all, are the collective's business, decided under its areas (rules 36, 60). Owners who have no say are protected by sight (rule 57) and by the exit (rule 10), never by a vote on prices. *Stated cost:* *the members can offer every work at a token price, or at none; offers are public, so the owners see it, and can leave. A vote on every price is not one owners could cast.*
+**Prices are no owners' matter.** The price of what a collective sells, and whether it publishes at all, are the collective's business, decided under its areas (rule 60). Owners who have no say are protected by sight (rule 57) and by the exit (rule 10), never by a vote on prices. *Stated cost:* *the members can offer every work at a token price, or at none; offers are public, so the owners see it, and can leave. A vote on every price is not one owners could cast.*
 
 #### Rule 96. Issuance, with pre-emption
 
@@ -1373,7 +1373,7 @@ A member, who holds the power or chose it by signing the constitution, is left t
 
 - **the offer reached each holder**: it is public, or sealed to that holder among its recipients (Envelopes, `to`), as a declaration must reach the member it names; where a holder is itself an agreement, it is public (rule 57). **An offer that did not reach a holder starts no period for that holder**;
 - **the offer names its period on the agreement's time reference** (terms field 6, or field 2's task 10); terms naming none carry no issuance offer, which counts for nothing under them;
-- **the period's lapse is the time reference's answer**, a fact the caller states, as for every time reference (rule 33, a notice's deadline): the core reads no clock.
+- **the period's lapse is the time reference's answer**, a fact the caller states, as for every time reference (rule 33): the core reads no clock.
 
 **The issuance is complete** (rule 45) only when, besides the powers its mark names and the stake's holders' rule:
 
@@ -1381,7 +1381,7 @@ A member, who holds the power or chose it by signing the constitution, is left t
 - for every holder of the stake the offer had to reach (the roster where the offer is placed on the collective's chain, rule 94), the offer reached it, and it either took up its proportion within its period, or its period lapsed;
 - each holder that took up receives exactly its proportion of the new shares, and the rest goes to the offer's new holders in the offer's shares.
 
-A holder the offer did not reach had no period: an issuance naming that offer stays a draft, and the collective makes a new offer, reaching every holder, and an issuance naming it. **A holder takes up** by a signature act naming the offer (type 1), within its period, with its payment where the offer names a price, a Money receipt or claim naming the take-up (Money field 5), as a transfer's payment fulfils it, together at least its exact proportion of the price. **A take-up the agreement's time reference places within the period counts, placed by the collective's line or not**: a holder's protection is to anchor it, as a buyer anchors a transfer (rule 10); without an anchor, the time reference judges it where the collective's line placed it (an act of the collective acknowledging it, or a record naming it in field 3). Whether it lies within the period is the time reference's answer, which the caller states (rule 33). *Without it, the members issuing would decide whether an owner's paid take-up was placed in time.*
+A holder the offer did not reach had no period: an issuance naming that offer stays a draft, and the collective makes a new offer, reaching every holder, and an issuance naming it. **A holder takes up** by a signature act naming the offer (type 1), within its period, with its payment where the offer names a price, a Money receipt or claim naming the take-up (the receipt's field 5, the claim's field 4), as a transfer's payment fulfils it, together at least its exact proportion of the price. **A take-up the agreement's time reference places within the period counts, placed by the collective's line or not**: a holder's protection is to anchor it, as a buyer anchors a transfer (rule 10); without an anchor, the time reference judges it where the collective's line placed it (an act of the collective acknowledging it, or a record naming it in field 3). Whether it lies within the period is the time reference's answer, which the caller states (rule 33). *Without it, the members issuing would decide whether an owner's paid take-up was placed in time.*
 
 **The same terms are the offer's own**: one offer, its price and its words (fields 5 and 6), for every holder and every new holder; the core compares nothing beyond the offer. A transfer placed after the offer passes the seller's place in it to the buyer, the new holder inheriting the full position (rule 10).
 
@@ -1389,7 +1389,7 @@ A holder the offer did not reach had no period: an issuance naming that offer st
 
 **Collectives only**: a deal carries no holders' rule (rule 94), so an issuance in a deal is signed by every holder, as rule 8 asks.
 
-*Stated cost, as in law:* *an owner that does not take up its proportion within the period, or has no money for it, is diluted. The core cannot judge a price, so a token price dilutes an owner who cannot or does not pay. An owner who vanished for good is reached by the declaration of absence (rule 85). "Issuance below the last price needs every holder" and "a right that stays open" were refused: the first no verifier can decide, and it restores the veto; the second restores the veto, or leaves a floating claim nothing can value or close.*
+*Stated cost, as in law:* *an owner that does not take up its proportion within the period, or has no money for it, is diluted. The core cannot judge a price, so a token price dilutes an owner who cannot or does not pay. An owner who vanished for good is reached by the declaration of absence (rule 85). "Issuance below the last price needs every holder" and "a right that stays open" are not rules: the first no verifier can decide, and it restores the veto; the second restores the veto, or leaves a floating claim nothing can value or close.*
 
 
 #### Rule 97. Proxies
@@ -1411,7 +1411,7 @@ A holder the offer did not reach had no period: an issuance naming that offer st
 
 - on anything that needs every holder: changing the holders' rule (field 30), waiving pre-emption (rule 96), or a change that needs the holder's own signature (rules 8, 48);
 - on the owner's money or property: taking up an issuance, selling or transferring the stake, signing a deal;
-- through another: **no sub-proxies**, as a grant key signs no grant (rule 74); a proxy act counts only signed by the holder.
+- through another: **no sub-proxies**, as a grant key signs no grant (rule 73); a proxy act counts only signed by the holder.
 
 **Owners' votes only**: a member's voice is not handed on; members vote in person. **No instructions**: an instructed proxy is the owner's own signed vote, which anyone may deliver. **Collectives only**, as holders' rules are.
 
@@ -2027,7 +2027,7 @@ The replacement signs the clone too (rule 45). Until one of them completes, the 
 
 *Mechanically the first two are one clone, signed by the leaving holder and meeting the constitutional change rule, started from either side; the third needs no signature of the holder, since an area's holders and rules change by a constitutional change.*
 
-**Stepping down at once.** A holder may instead give up an area at once, alone, by a resignation naming that area (type 16, field 1): *"I'm done, won't do anything anymore."*
+**Stepping down at once.** A holder may instead give up an area at once, alone, by a resignation naming that area (type 16, field 1). *It says: I am done, and will do nothing more in this area.*
 
 **The resignation names the drafts its signer had signed and leaves behind** (field 2). A version it names never gives the signer the area back, whichever line puts it in force. A draft it fails to name does: the signer's stated cost. *Client conformance:* the holder's client names them, as for a resignation.
 
@@ -2412,7 +2412,7 @@ A clone of a branch is a clone of that branch's latest clone, as records follow 
 
 Two clones recorded on concurrent lines are such a fork, settled the same way (rule 72).
 
-*A clone names one parent (field 11), so "a clone naming both branches" could not be written; recording a clone of one branch after both lines shows the collective saw the fork and chose, with no new format. "Its latest clone": read as a clone of the branch's first clone, a resolution would silently drop a clone already recorded on that branch. A clone of one branch recorded after only one of the lines resolves nothing, and two clones of the branches recorded on concurrent lines leave the fork as it was.*
+*A clone names one parent (field 11), so "a clone naming both branches" could not be written; recording a clone of one branch after both lines shows the collective saw the fork and chose. "Its latest clone": read as a clone of the branch's first clone, a resolution would silently drop a clone already recorded on that branch. A clone of one branch recorded after only one of the lines resolves nothing, and two clones of the branches recorded on concurrent lines leave the fork as it was.*
 
 ### 17. How a collective ends
 
@@ -2430,7 +2430,7 @@ Collectives only. *A fork forces a whole lot of decisions to be taken again.*
 
   Each side first founds its successor: a new collective (its own genesis and keys) whose founding terms have that side's members as parties and name the original in "forked from" (field 23), a back-link only, never a parent.
 
-  **A fork act (type 19) names the successors by their identities, and, signed by the members on its sides with their own identities under the constitutional change rule, closes the original in Agreements.** By default that is every member, a silent member being the abandonment clause's business. Where the founders set a lower rule, the fork may complete without a member, who is "forced to either fork or leave": a member who signs no side has no seat in any successor, and is a departed holder of each at their percentage. **Where the constitutional change rule counts by share, an ending is counted by share at its line** (operate by share, end by share): the holdings are those field 7 of the agreement in force at the line names, with the stake transfers placed in the ending's history (rule 94, read at the ending's line); each rule the constitution lists is counted as it would be alone (rule 65), the members by their chain signatures on the ending. **Owners who are no members consent as members do, by a chain signature (Identity type 16) with their own chain key naming the ending**, judged as every ending signature is: it counts at its position in their chain, and no later rotation voids it. *The ending names its history by its chain act and kept tips, so nothing in that history can acknowledge a signature on the ending itself: one way to sign an ending, whoever signs.*
+  **A fork act (type 19) names the successors by their identities, and, signed by the members on its sides with their own identities under the constitutional change rule, closes the original in Agreements.** By default that is every member, a silent member being the abandonment clause's business. Where the founders set a lower rule, the fork may complete without a member, who must then either join a side or leave: a member who signs no side has no seat in any successor, and is a departed holder of each at their percentage. **Where the constitutional change rule counts by share, an ending is counted by share at its line** (operate by share, end by share): the holdings are those field 7 of the agreement in force at the line names, with the stake transfers placed in the ending's history (rule 94, read at the ending's line); each rule the constitution lists is counted as it would be alone (rule 65), the members by their chain signatures on the ending. **Owners who are no members consent as members do, by a chain signature (Identity type 16) with their own chain key naming the ending**, judged as every ending signature is: it counts at its position in their chain, and no later rotation voids it. *The ending names its history by its chain act and kept tips, so nothing in that history can acknowledge a signature on the ending itself: one way to sign an ending, whoever signs.*
 
   From the fork's line, anything the original's keys sign counts for nothing in Agreements, whatever its key grammar's holders do. A rotation of the original is optional cleanup.
 
@@ -3092,7 +3092,7 @@ Terms breaking any of these are invalid.
 
 *Field 25 named a collective's relays, and made an act done only once it was on one of them. That made an act's validity depend on infrastructure: a vanished or hostile operator could freeze a collective, even its decision to change relays; it gave leverage over the collective; it allowed omission to readers checking one relay; and it failed offline verifiers. That crosses MOR's line that an act is valid by its signatures and content wherever held. The relays were a witness of time; the two chains and the tie rule answer "before" without them.*
 
-**An agreement has one time reference.** Where terms carry both field 6 and a cMIP for task 10 in field 2, the two name the same specification, field 6 adding its parameters. Terms where they differ are invalid, founding terms and clones alike. *One check, no change of format: terms that use either place alone stay valid.*
+**An agreement has one time reference.** Where terms carry both field 6 and a cMIP for task 10 in field 2, the two name the same specification, field 6 adding its parameters. Terms where they differ are invalid, founding terms and clones alike. *One check: terms that use either place alone stay valid.*
 
 **Areas** (field 19) appear only in terms that carry a key grammar (field 12) (scope). Area words (field 20) appear only for an area that exists.
 
@@ -3223,11 +3223,11 @@ transfer-payload = {
 
 Its `objects` name the agreement as `[agreement, agreement]`, never a fork.
 
-It takes effect once the seller's chain signature names it and the buyer's signature act completes it (rule 10), where it fits what the seller still held at that place. An over-sale confers nothing. **The buyer's signature act is read as a closing reads another identity's receipt** (rule 91): for a collective's owners' matters it counts where the collective's line placed the transfer (rule 94), and is kept there whatever the buyer's later rotation disowns, shown as a dispute; elsewhere it is judged as Identity judges a signer's own act (Identity rule 34).
+It takes effect once the seller's chain signature names it and the buyer's signature act completes it (rule 10), where it fits what the seller still held at that place. An over-sale confers nothing. **The buyer's signature act is read as a closing reads another identity's receipt** ("Closing (type 20)"): for a collective's owners' matters it counts where the collective's line placed the transfer (rule 94), and is kept there whatever the buyer's later rotation disowns, shown as a dispute; elsewhere it is judged as Identity judges a signer's own act (Identity rule 34).
 
 **A collective's transfer of a stake it holds in a work** takes effect only once, besides the above, the owners of the collective's stake in itself who have no say consented, by that stake's holders' rule or each such holder signing it by a signature act naming the transfer, placed by the collective's line (rule 95). **For a collective's owners' matters, a transfer counts only where the collective's line placed it** (rule 94): an act of the collective acknowledging it, or a record naming it in field 3.
 
-Across versions, a stake is followed by its object. A payment for it fulfils it (Money field 5) or is named in its field 4.
+Across versions, a stake is followed by its object. A payment for it fulfils it (the receipt's field 5, the claim's field 4) or is named in its field 4.
 
 ### Issuance offer (type 26)
 
@@ -3255,7 +3255,7 @@ Signed by the collective, with its own key: an act in its name, done once sealed
 
 **It reaches a holder** where it is public, or sealed to that holder among its recipients (Envelopes, `to`), as a declaration reaches the member it names; a holder that is itself an agreement, only where it is public (rule 57). Its period runs for a holder only where it reached that holder. Which holders it must reach, and their proportions, is the roster where the offer is placed on the collective's chain (rule 94).
 
-**A holder takes up its proportion** by a signature act naming the offer (type 1), before the point field 4 names, as the time reference judges it, placed by the collective's line or not (rule 96), with its payment where field 5 names a price: a Money receipt or claim fulfilling the take-up (Money field 5). A take-up takes the holder's whole proportion; a cMIP of field 7 may offer more.
+**A holder takes up its proportion** by a signature act naming the offer (type 1), before the point field 4 names, as the time reference judges it, placed by the collective's line or not (rule 96), with its payment where field 5 names a price: a Money receipt or claim fulfilling the take-up (the receipt's field 5, the claim's field 4). A take-up takes the holder's whole proportion; a cMIP of field 7 may offer more.
 
 **It counts** only under terms naming a time reference (field 6, or field 2's task 10), in a collective. Whether its point has passed is the time reference's answer, which a verifier states as it states every time reference's answer: the core reads no time reference (rule 33).
 
@@ -3725,7 +3725,7 @@ A declaration that fails any check, judged at the point where the record names i
 
 **A later rotation is such a later act.** The declaration, the signature acts completing it, and the party's signature acts its field 1 is checked against are judged as the line that registered them placed them ("Made before, made after", 4): an authority that rotates and disowns its declaration, or a declared party that comes back, rotates and disowns its signature on the version field 1 names, is shown as a dispute on the line, and the line stands, with what it put in force.
 
-*The core does not check the period of absence (clause key 2): it is judged on the time reference, outside the core, and a party wrongly declared absent contests it (rule 88). Field 1 names a version rather than repeating the clause, so a verifier checks it against the version the party signed, and a declaration can never pick a friendlier clause. That version carries the one clause in force for every member whose voice remains (rule 67); the field and its check stay as they are.*
+*The core does not check the period of absence: it is judged on the time reference, outside the core, and a party wrongly declared absent contests it (rule 88). Field 1 names a version rather than repeating the clause, so a verifier checks it against the version the party signed, and a declaration can never pick a friendlier clause. That version carries the one clause in force for every member whose voice remains (rule 67); the field and its check stay as they are.*
 
 *Where a party's voice was removed before a judicial change, the version it signed last may carry an older clause; the clause in force applies to it, as to every departed holder.*
 
@@ -3955,7 +3955,7 @@ Every such payment it leaves open, it names. *A holder that outlives the closing
 - the closing counts only when the collective holds nothing (above);
 - nothing owed vanishes silently: what the collective's rules could not deliver stays visible as an open obligation wherever those rules sent it (its split service, for instance, rule 24), until a valid claim appears: never lost, never taken.
 
-The closing needs no entry for it: field 4 stays for money owed back. No new field; the closing names no stake and moves none. *Batching the sales, transfers and closing together is a client's or a cMIP's convenience, never a second way in the core.*
+The closing needs no entry for it: field 4 stays for money owed back. The closing names no stake and moves none. *Batching the sales, transfers and closing together is a client's or a cMIP's convenience, never a second way in the core.*
 
 A refund past the terms the buyer accepted by paying is ended, and is not a debt that binds the collective: it never blocks a closing.
 
@@ -4271,7 +4271,7 @@ The scenario numbers after each colon are those of the freeze test suite.
 #### Made before, made after
 
 - A record naming the latest act of every other sequence of the collective; an act of the collective in a sequence it does not name counts as made after it: 3.
-- A signature from a device a member's resignation never mentions: placed by the act of the collective it signs, or the record naming it, it counts when that act is before the collective's line, whatever the device (Flaws E and F): 3.
+- A signature from a device a member's resignation never mentions: placed by the act of the collective it signs, or the record naming it, it counts when that act is before the collective's line, whatever the device: 3.
 - A signature placed after the collective's line that only a friend acknowledged counts toward nothing: an acknowledgement by another identity places nothing: 3.
 - A record counts only with the signature acts it names; a signature arriving after it completes nothing there, and a later record stays in force: 3.
 - A receipt on a branch the collective's line left out counts as made after it, unless the collective's keeper recorded it before the line; a keeper never places a member's signature: 3.
