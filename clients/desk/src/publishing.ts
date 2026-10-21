@@ -418,6 +418,7 @@ export class Publishing {
 
   private async publishAsSelf(me: TestIdentity, a: { media: SealedMedia; title: string; price: number; words: string; work: ReturnType<typeof lockWork>; judged: { service: string; key: string; referral: number } | null }): Promise<Done> {
     const s = this.settings();
+    await this.desk.keyCurrent(me.id);
     try {
       await carryChain(me, s.relays);
       const publication = await me.publish(POST_SPECS.envelopes, PUBLICATION, a.work.payload, { public: true, relays: s.relays });
@@ -589,6 +590,7 @@ export class Publishing {
 
   private async vowAsSelf(me: TestIdentity, a: { words: string; title: string; price: number; offerWords: string }): Promise<Done> {
     const s = this.settings();
+    await this.desk.keyCurrent(me.id);
     try {
       await carryChain(me, s.relays);
       const made = await publishVow(me, { words: a.words, title: a.title, price: { unit: REGTEST_UNIT, value: a.price }, offerWords: a.offerWords, relays: s.relays });
@@ -644,6 +646,7 @@ export class Publishing {
       const me = this.me(readId(a.buyer));
       const s = this.settings();
       let id: string;
+      await this.desk.keyCurrent(me.id);
       try {
         await carryChain(me, s.relays);
         id = await contestSale(me, { vow: readId(a.vow), sale: readId(a.sale), promise: a.promise, relays: list([...s.relays, ...me.f.homes.map((h) => h.hint)]) });
@@ -667,6 +670,7 @@ export class Publishing {
       const me = this.me(readId(a.buyer));
       const s = this.settings();
       if (!Number.isSafeInteger(a.value) || a.value <= 0 || !/^[0-9a-f]{64}$/.test(a.unit)) throw new Error('The sale’s amount was not read: look it up again. Nothing was prepared.');
+      await this.desk.keyCurrent(me.id);
       const r = await sendDraft(
         me,
         { what: 'confirm', other: readId(a.seller), amount: { unit: a.unit, value: a.value }, whatFor: 'a vow kept', app: 'Edubba', anchor: null, confirm: { claim: readId(a.sale), acks: [readId(a.vow)] } },
@@ -731,7 +735,7 @@ export class Publishing {
       }
       try {
         if (!w.collective) {
-          w.delivered[sale.buyer] = await deliverKey(me, sale.buyer, w.publication, w.key, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me) });
+          w.delivered[sale.buyer] = await deliverKey(me, sale.buyer, w.publication, w.key, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me), current: () => this.desk.keyCurrent(me.id) });
           lines.push({ text: `The key of “${w.title}” was delivered to ${short(sale.buyer)}, sealed to them: a sale your deal’s split service receipted.`, tone: 'ok' });
           continue;
         }
@@ -787,7 +791,7 @@ export class Publishing {
         const sold: SoldWorks = {};
         for (const w of b.works.filter((x) => x.as === id && !x.deal && x.key)) sold[w.publication] = { key: w.key!, offer: w.offer, post: w.post, media: w.media, delivered: w.delivered };
         try {
-          for (const t of await deliverSold(me, sold, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me) })) lines.push({ text: t, tone: /could not/.test(t) ? 'warn' : 'ok' });
+          for (const t of await deliverSold(me, sold, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me), current: () => this.desk.keyCurrent(me.id) })) lines.push({ text: t, tone: /could not/.test(t) ? 'warn' : 'ok' });
         } finally {
           this.store.saveIdentity(me);
         }

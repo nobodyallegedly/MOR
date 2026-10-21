@@ -364,6 +364,11 @@ export class Real {
     });
   }
 
+  /** Refuse, before anything is signed, where the collective's own key held here no longer counts (H80: Kišib changes it at a member change). */
+  private collectiveKeyCurrent(c: TestCollective): Promise<void> {
+    return this.desk.collectiveKeyCurrent({ id: c.identity, signingSecret: c.f.identity.signingSecret, homes: c.f.identity.homes, relays: c.f.relays });
+  }
+
   /** Where an identity is reached for a sealed message: its current encryption key and its inbox. */
   private async reach(id: string): Promise<Reach> {
     const l = await lookUp(id, this.hints(), this.via);
@@ -502,6 +507,7 @@ export class Real {
       digest: sha256(Buffer.concat([Buffer.from('MOR Edubba real founding, version 1\n'), payload, Buffer.from(JSON.stringify({ homes: s.homes, relays, name }))])),
       reading,
       run: async () => {
+        await this.desk.keyCurrent(a.founder);
         const me = this.store.identity(a.founder);
         const lines: Line[] = [];
         const terms = await proposePayload(me, payload, undefined, relays);
@@ -646,6 +652,8 @@ export class Real {
       const missing = p.members.filter((m) => m !== p.founder && !p.answers[m]?.oneTime && !(p.byHand ?? []).includes(m));
       if (missing.length) throw new Error(`No one-time key from ${missing.map(this.names()).join(', ')}: their share can only be shown here, hand to hand. Choose that for them first.`);
       if (!read) throw new Error('Read what this device will hold while founding (F337), and tick it, first. Nothing was dealt.');
+      // The founder seals the shares and tells each member with its own key: checked before anything is dealt (H80).
+      await this.desk.keyCurrent(p.founder);
       const s = this.store.settings();
       const { collective: c, shares } = await TestCollective.foundSigned({ agreement: p.act, members: p.members, homes: s.homes, relays: p.relays, governance: p.governance!, via: this.via });
       this.saveCollective(c);
@@ -780,6 +788,7 @@ export class Real {
       digest: sha256(Buffer.concat([Buffer.from('MOR Edubba real member change, version 1\n'), Buffer.from(a.collective), clone.payload])),
       reading,
       run: async () => {
+        await this.desk.keyCurrent(founder);
         const me = this.store.identity(founder);
         const lines: Line[] = [];
         const proposed = await proposePayload(me, clone.payload, c.f.agreement, c.f.relays);
@@ -907,6 +916,9 @@ export class Real {
       reading,
       run: async () => {
         if (blocking.length) throw new Error('This cannot be proposed while a reason above stands. Nothing was signed.');
+        // The collective's key signs the grant, the founder's own key the proposal: both must still count (H80).
+        await this.collectiveKeyCurrent(c);
+        await this.desk.keyCurrent(founder);
         const lines: Line[] = [];
         // The grant: a decision of the collective, signed with its key (held here), naming the key the service made (F128).
         const grant = await c.id.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.grant, grantPayload(service, [1, unhex(key)]), { public: true, relays: c.f.relays });
@@ -999,6 +1011,8 @@ export class Real {
     const others = area.number > 1 ? area.holders.filter((h) => h !== signer!.me.id) : [];
     const names = this.names();
     try {
+      // The member key signs the pointer; the other holders are asked by an act signed with the signer's own key (H80).
+      await this.desk.keyCurrent(signer.me.id);
       const made = await signAndAsk(signer.me, c.identity, signer.key, { spec: MIRS.money, type: 0, payload }, others, `${names(signer.me.id)} signed the payee pointer of the collective, leading to its split service ${names(service)}, with their own key in its area “${area.name}”, which asks ${area.number} keys. Read it in your Signing tab, then sign it with yours.`, places, this.via);
       return { act: made.act, signer: signer.me.id, area: area.name, needed: area.number, asked: made.asked, notAsked: made.notAsked };
     } finally {
@@ -1015,6 +1029,7 @@ export class Real {
       const st = this.standing(p);
       if (!st.enough) throw new Error(`Every member signs it first: waiting for ${st.waiting.map(this.names()).join(', ')}.`);
       const c = this.collective(p.collective);
+      await this.collectiveKeyCurrent(c);
       const r = await c.recordSigned({ governance: p.governance, clone: p.act, signatures: p.signers.map((m) => p.answers[m].signature!) });
       this.saveCollective(c);
       p.rotated = r;
@@ -1104,6 +1119,7 @@ export class Real {
       const c = this.collective(collective);
       if (!(c.f.governance.keepers?.ids ?? []).includes(keeper)) throw new Error('That identity is no keeper its agreement in force names (rule 36).');
       if (!this.store.holds(keeper)) throw new Error('That keeper is not held here: it keeps in its own app.');
+      await this.desk.keyCurrent(keeper);
       const me = this.store.identity(keeper);
       const places = await collectivePlaces(c.identity, [...c.f.relays, ...this.store.settings().homes.map((h) => h.hint)], this.via);
       try {
@@ -1155,6 +1171,7 @@ export class Real {
       const r = (await this.resignations(collective)).find((x) => x.act === act);
       if (!r) throw new Error('No such resignation of a member was found at the collective’s relays.');
       if (r.registered) throw new Error('It is registered already.');
+      await this.collectiveKeyCurrent(c);
       const line = await record(c.id, { registers: [act], inForce: c.f.agreement }, c.f.relays);
       c.f.departed = [...(c.f.departed ?? []), { member: r.member, resignation: act, record: line.id }];
       c.f.records = [...(c.f.records ?? []), line.id];
@@ -1204,6 +1221,8 @@ export class Real {
       digest: sha256(Buffer.concat([Buffer.from('MOR Edubba real release, version 1\n'), Buffer.from(a.collective), prepared.payload, prepared.encoded])),
       reading,
       run: async () => {
+        await this.collectiveKeyCurrent(c);
+        await this.desk.keyCurrent(founder);
         const out = await publishPrepared(pub, prepared, this.via);
         this.saveCollective(c);
         const me = this.store.identity(founder);

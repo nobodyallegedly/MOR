@@ -24,6 +24,19 @@ export const NEW_WORDS_SAY = [
   'They are shown once. When you say they are written, they are hidden, three are asked back, and Kišib forgets them.',
 ];
 
+/**
+ * Said where the new chain key's words are shown (H79, decided by Nobody,
+ * allegedly, 21 October 2026: "A rotation generates two new sets of keys,
+ * chain and signing"; the air-gapped Module, rule 3.3, a fresh seed).
+ */
+export const NEW_CHAIN_WORDS_SAY = [
+  'These are the new chain key’s words: a new paper, made for this identity now, before anything is signed (Nobody, allegedly, 21 October 2026: “confirming the new chain key comes before signing the rotation”). The next change of its keys is made from them, in Kišib, and from nothing else.',
+  'This paper becomes the one that counts once the homes accept the change. Until then the old paper still works, but only to send this same change again. Once they accept it, the old paper is spent: destroy it then.',
+  'If Kišib is closed before the change is sent, nothing was signed: the next change starts over with another new paper, and this one is worthless.',
+  'Write them on a new paper, in order, and keep it apart from the signing key’s words. Never type them into Dub, Edubba, Damgar or a wallet: only Kišib takes them.',
+  'They are shown once. When you say they are written, they are hidden, three are asked back, and Kišib forgets them; then it signs the change and sends it. The new signing key’s words come once the homes’ receipts are in.',
+];
+
 /** Addresses as typed: one per line, or separated by spaces or commas. */
 export function addresses(typed: string): string[] {
   const out = typed

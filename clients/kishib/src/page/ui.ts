@@ -163,8 +163,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
         return;
       }
       case 'show words': {
-        const w = await act(() => b.ask<{ words: string[]; say: string[]; holder?: string }>('words show'));
-        if (w) app.innerHTML = v.wordsShown(w.words, w.say, b.web, w.holder ? 'The collective’s new signing key’s words' : 'The new signing key’s words');
+        const w = await act(() => b.ask<{ words: string[]; say: string[]; holder?: string; which?: 'chain' | 'signing' }>('words show'));
+        if (w) app.innerHTML = v.wordsShown(w.words, w.say, b.web, w.holder ? 'The collective’s new signing key’s words' : w.which === 'chain' ? 'The new chain key’s words: a new paper' : 'The new signing key’s words');
         return;
       }
       case 'written': {
