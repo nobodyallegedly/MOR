@@ -28,6 +28,12 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F361. A change of keys makes fresh chain-key paper (21 October 2026; H79 reopened)
+
+**Found by the Dubsar Suite lead** (`claude/MOR-suite-for-the-mor-lead.md` in the project, item 1): Kišib reused the same paper for every change of keys, on a reading in its README marked "to be confirmed" and never confirmed; H79 was closed as designed on that reading. **Decided by Nobody, allegedly, 21 October 2026:** "No, it does not stay the same. Unsure why sessions believe so. A rotation generates two new sets of keys, chain and signing."
+
+**Judged by the MOR lead:** no MIR changes. Identity commits only the hash of the next chain key; where it comes from is a client's and a key Module's. The air-gapped chain-key signer Module (draft 5, rule 3.3) has it the other way round: the next key from the current seed, a fresh seed only "if the current one may be exposed". Its next draft makes a fresh seed the rule at every change of keys, with both new sets of words shown and backed up (rule 3.7), and the seed Modules' notes follow. *Where:* the Dubsar cMIPs session (S3), beside the renaming. Kišib's fresh seed is the suite's (the H80 session).
+
 ## F360. The frozen texts carry no finding numbers (21 October 2026)
 
 **Asked by the project lead** before the freeze-ready texts: the drafts cite findings throughout (Agreements draft 16 alone over 900 times), and the C verifier, built from the texts alone, has no findings log to open.
