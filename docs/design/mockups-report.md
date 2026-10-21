@@ -4,7 +4,7 @@
 
 ## 1. In plain words first
 
-**What was drawn.** Each app's screens as they would look after the redesign: 52 static pages, each photographed at two sizes (a Mac window, 1280×800, and a phone, 390×844). Beside them are 168 pictures of the apps as they are today, the "before".
+**What was drawn.** Each app's screens as they would look after the redesign: 56 static pages (52 at first, four added from the answers of 21 October), each photographed at two sizes (a Mac window, 1280×800, and a phone, 390×844). Beside them are 168 pictures of the apps as they are today, the "before".
 
 The new screens:
 - every app's home: four tiles, or for Dub the Public | Private switch;
@@ -48,9 +48,9 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 - **Edubba's Agents tab ran:** the Mac program's page was driven locally in Chromium with a fake API key, as its tests do. So its screens are included.
 - **No picture of today exists for some screens,** because no walkthrough visits them: Dub's Signing tab, lanes, sealed-post form and vows; Damgar's Lanes, For a collective and vault transfer; Ummia's anchoring; Kišib's "Change the vault" door. The function table below still places them.
 
-**Size.** 272 PNG files, 14.6 MB in all:
+**Size.** 280 PNG files, 14.5 MB in all:
 - before: 168 files, 11 MB. The long pages are kept whole, scaled to 560 pixels wide, 32 colours.
-- after: 104 files, 3.6 MB, 64 colours.
+- after: 112 files, 3.8 MB, 64 colours.
 - fonts and pages: 0.3 MB.
 
 **How it was made, to redraw it.**
