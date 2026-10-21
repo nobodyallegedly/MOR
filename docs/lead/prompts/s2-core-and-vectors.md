@@ -15,7 +15,7 @@ Update the provenance map and the glossary. Then a stranger's reading by a subag
 - an act a revocation does not hold: void, or disputed where another identity (never the grantee) acknowledged it or a keeper of its agreement recorded it before the revocation; conferring nothing unless the grantor adopts it;
 - member keys: every Money act, the agreement in force from rule 72, a member key's text naming its version;
 - Text rule 14's one object whose chain is the signer; the contest's format for every act; an act under a pending rotation pending; dishonesty as Identity rule 45; a Module's fields 11 and 13 required by its payment cMIP's field 2; Agreements' count reading only acts valid in their own format;
-- a MIR's spec hash with at most one final line break removed and the header reduced to the text's name.
+- a MIR's spec hash with at most one final line break removed and the header reduced to the text's name (the texts are committed without a final line break today, since the core still refuses one; keep it so once the core allows it). The reader ships the newest drafts (`clients/reader/src/mirs.ts`): keep its list current if a file name changes.
 Where a text cannot be built as written, or the code shows it wrong: stop on that point, write the question in plain words, then precisely, with options, your lean and the cost, and go on with the rest.
 
 **Part 2. The suite marks what runs.** Every step of the freeze test suite v30 already exercised by a test is marked run in `docs/freeze-ready-suite-notes.md` (not in the suite's own text), naming the test. Small tests for the cheap core steps still only reasoned: keepers, arbitration and deadlines, how deals and collectives end, an agreement as a party, a silent next payee, purchases, referrals, refunds.
@@ -26,10 +26,14 @@ Where a text cannot be built as written, or the code shows it wrong: stop on tha
 - **Checked twice:** by the Rust library (`core/tests/vectors.rs`) and by the independent Python implementation (`check.py`), extended to signatures and to every verdict vector it can judge; where Python cannot judge one, the README says which and why.
 - Spec hashes stay stand-ins until the freeze; the README says so.
 
+**Finding number.** If this session records a finding of its own, it is **F375**; do not take another number (both leads reserve numbers in one register; ask if you need a second).
+
 **When to stop.** Stop at a clean point (a committed, green part) if your context runs long, with a progress file (`docs/s2-progress.md`) the next session starts from. The order above is the order of value: Part 0 and Part 1 first, so the vectors come from code that matches the texts.
 
 **Report:** `docs/s2-report.md`: plain words first (what a C verifier can now check itself against; what is not covered by a vector and why), then precisely; the questions; the stranger's reading. Check the CI run yourself before saying it is green.
 
 **Do not:** change a rule beyond the findings named here; write any finding number, review label or history into the eight texts; rename cMIPs or Modules (the Dubsar Suite's).
 
-**Rules that never bend:** never write the author's personal name or nicknames in anything that enters the repository; write "Nobody, allegedly". No server addresses, onion addresses or keys (test keys from fixed seeds in the vectors are test data, labelled so). Test identities only; regtest or signet only. Work on the branch `claude/s2-core-and-vectors` from main once pull request 83 is merged; open a pull request; do not merge.
+**Rules that never bend:** never write the author's personal name or nicknames in anything that enters the repository; write "Nobody, allegedly". No server addresses, onion addresses or keys (test keys from fixed seeds in the vectors are test data, labelled so). Test identities only; regtest or signet only. Work on the branch `claude/s2-core-and-vectors` from main (the freeze-ready texts are merged, pull request 83); open a pull request; do not merge.
+
+**The apps share this core** (the Dubsar Suite's sessions are running on other branches): where you change what the core's WebAssembly interface offers the clients, keep the existing functions working beside the new ones, or list each change in the report under "For the Dubsar Suite", so the suite's sessions can follow at merge.

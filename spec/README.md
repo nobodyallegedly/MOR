@@ -2,6 +2,23 @@
 
 These are the current drafts of the core, the **MICS** (MOR Inscribed Core Spec): its own document, the map; the six **MIRs** (MOR Inscribed Rules), each a set of rules giving a layer by layer look at it; and the freeze test suite. They are drafts, not frozen: their spec hashes will change at freeze.
 
+## The freeze-ready drafts, for Nobody, allegedly, to approve
+
+These eight texts are the freeze-ready drafts (`docs/freeze-ready-drafts-report.md`): the six MIRs, the MICS document and the freeze test suite, each standing on its own for a reader holding only the eight. No history, no finding numbers, no review labels, no pointers outside the eight; every rule cited by its MIR's name and current number; "Open before freeze" empty, every point still open put as a question in the report. Why each rule exists: `docs/freeze-provenance.md`. One meaning per word: `docs/freeze-ready-glossary.md`. Until approved, the drafts below stand as recorded.
+
+| File | What it is |
+| --- | --- |
+| `MIR-identity-draft-15.md` | Identity draft 15, freeze-ready, its "Written for people" section included. |
+| `MIR-text-draft-11.md` | Text draft 11, freeze-ready: drafts 9 and 10's two cases of rule 14 included. |
+| `MIR-envelopes-draft-11.md` | Envelopes draft 11, freeze-ready. |
+| `MIR-money-draft-11.md` | Money draft 11, freeze-ready. |
+| `MIR-agreements-draft-17.md` | Agreements draft 17, freeze-ready: keepers redefined (they order; only anchors place anything on the clock), the keeper record's format (type 2), a revoked grant's relied-on acts shown disputed, areas without lanes. |
+| `MIR-development-draft-11.md` | Development draft 11, freeze-ready. |
+| `02-MOR-MICS-v30.md` | The MICS document, version 30, freeze-ready, naming the six above. |
+| `03-MOR-freeze-test-suite-v30.md` | The freeze test suite, version 30, freeze-ready, testing the six above. |
+
+## Earlier drafts, as recorded
+
 | File | What it is |
 | --- | --- |
 | `02-MOR-MICS-v29.md` | The MICS document, version 29, **for Nobody, allegedly, to approve** (`docs/damgar-round-2-report.md`): version 28 naming Identity draft 14 (F349), Money draft 9 (F350) and Agreements draft 15 (F351), with one line in the common conventions on the textual forms. Until approved, v28 is the working text. |

@@ -4,6 +4,8 @@
 
 *Last updated: 19 October 2026, after pull request 80 (round 3) and the server session.*
 
+**21 October 2026, evening:** the freeze-ready texts merged (pull request 83, S1 and its technical pass): Identity 15, Text 11, Envelopes 11, Money 11, Agreements 17, Development 11, MICS v30, freeze test suite v30, for Nobody, allegedly, to approve; their questions decided (F363 to F371). Next: S2, the core aligned and the vectors (`docs/lead/prompts/s2-core-and-vectors.md`). F numbers are reserved in one register for both leads, in the project (`claude/MOR-F-numbers.md`).
+
 **21 October 2026:** F352 (D) decided, disputed rather than void, a keeper's prior record counting too (F359); the frozen texts carry no finding numbers (F360). The freeze-ready texts session (S1, `docs/lead/prompts/s1-freeze-ready-texts.md`) launched; the lead's sessions to the freeze are in `docs/lead/workbook.md`. The Dubsar Suite lead starts today at 13:00 UTC; the freeze-ready drafts session waits for its list of fixes touching the core.
 
 **Handover (20 October 2026, evening):** the second MOR lead hands over to a third (decided by Nobody, allegedly: a fresh window for the freeze-ready drafts, the C verifier, Fable's review and the release), and the apps go to a Dubsar Suite lead (see the working rules). The walkthrough is in progress, its notes logged as H findings up to H81; H80 (Edubba signing a reliance with the old key after a change of keys) is the one serious item open; H79 is as designed.
