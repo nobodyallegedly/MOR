@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F374. A collective appended to a message: a text format, binding nothing, shown only where the membership checks (21 October 2026; Dubsar Suite)
+
+**Decided by Nobody, allegedly** (the redesign, 20–21 October 2026, `docs/design/suite-redesign.md`, "Private mail and collectives"): a member writing for a collective "signs in their own name, and append their collective". **Built** in the session that rebuilt Dub on the kit (`docs/kit-dub-report.md`): `cmips/cmip-appended-collective-draft-1.md`, a Dubsar cMIP (the Suite lead's, not core), and `clients/dub/src/appended.ts`.
+
+**What it says:** a text act whose format (Text field 1) is the cMIP's hash names the collective's identity first in `refs`; its signer is the member, never the collective. The reader's app shows "of" and the collective's name only where the signer is, when read, a party of the collective's agreement in force and not a departed holder; otherwise it shows no label, and MAY say that the label did not check. It counts toward nothing of the collective's (no area, threshold or decision); an app not knowing the cMIP shows an ordinary text naming an act (Envelopes rule 32). Dub uses it in Private: the member chooses the collective as the gesture of switching, the message is sealed to each recipient (and each Cc, whom every recipient sees) as before.
+
+**No core finding:** no MIR, the MICS, the freeze suite or a verdict changes; the label is a client's reading, as the cMIP says. *Stated costs:* look-ups to check the membership; "a member when read", not when written; the collective's ID visible to every recipient. *Mechanics the decision did not fix* (the collective first in `refs`; public texts allowed; one format per text) are marked as the draft's own, for the Suite lead to confirm.
+
 ## F371. The technical pass's eight questions, and how far the texts go before the C session (21 October 2026)
 
 **From** `docs/technical-pass-report.md` (S1b, pull request 83). **Taken by the project lead under delegation** ("you'll decide the rest"), each as the session leaned, read against the texts:
