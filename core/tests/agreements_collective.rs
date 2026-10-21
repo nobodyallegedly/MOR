@@ -16230,3 +16230,77 @@ fn a_member_key_signs_every_money_act_of_its_area_money_rule_7() {
         assert!(!lab.counts(&y), "{what} by a key of no Money area");
     }
 }
+
+/// Agreements 17, rules 38 and 41 (suite: "Several keepers"): each keeper's
+/// record is judged against its own record of the rotation; the agreement's
+/// rule, two of three, counts them.
+#[test]
+fn several_keepers_each_against_its_own_record_of_the_rotation_rule_38() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut k: Vec<Person> = ["k1", "k2", "k3"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+    let ops: Vec<Hash> = k.iter().map(|p| p.id).collect();
+    let deal = kept_deal(&mut w, &mut ana, &mut ben, ops.clone(), Rule::Threshold(2));
+    let live = |w: &mut World, p: &mut Person| agreements_act(w, p, agreements::new_types::LIVENESS, liveness(deal), obj(deal));
+    let x = live(&mut w, &mut ana);
+    let y = live(&mut w, &mut ana);
+    let (r, _) = w.rotate(&ana, Rot { disowned: Some(vec![x, y]), ..Default::default() });
+    // x: k1 and k2 recorded it before their own record of the rotation; k3 after.
+    keep(&mut w, &mut k[0], x, ana.id);
+    keep(&mut w, &mut k[0], r, ana.id);
+    keep(&mut w, &mut k[1], x, ana.id);
+    keep(&mut w, &mut k[1], r, ana.id);
+    keep(&mut w, &mut k[2], r, ana.id);
+    keep(&mut w, &mut k[2], x, ana.id);
+    // y: only k3 recorded it first.
+    keep(&mut w, &mut k[2], y, ana.id);
+    let v = view(&w);
+    assert!(v.keepers_recorded_before(&x, &r), "two of three, each before its own record of the rotation");
+    assert!(!v.keepers_recorded_before(&y, &r), "one of three: the rule is not met");
+}
+
+/// Agreements 17, rule 42 (suite: "A keeper keeps one sequence"): a keeper's
+/// own later rotation, disowning its record, never undoes what the record
+/// placed; the record shows as a dispute.
+#[test]
+fn a_keepers_later_rotation_never_undoes_what_its_records_placed_rule_42() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut keeper = w.genesis("the deal's keeper", vec![own_home()], None, None);
+    let deal = kept_deal(&mut w, &mut ana, &mut ben, vec![keeper.id], Rule::All);
+    let x = agreements_act(&mut w, &mut ana, agreements::new_types::LIVENESS, liveness(deal), obj(deal));
+    let (r, _) = w.rotate(&ana, Rot { disowned: Some(vec![x]), ..Default::default() });
+    let rx = keep(&mut w, &mut keeper, x, ana.id);
+    keep(&mut w, &mut keeper, r, ana.id);
+    // The keeper's own rotation disowns its record of x.
+    w.rotate(&keeper, Rot { disowned: Some(vec![rx]), ..Default::default() });
+    assert_eq!(w.v.status(&rx), Status::Void, "the record itself, under Identity");
+    assert_eq!(view(&w).keeper_disputed_acts(), vec![x], "its effect stands");
+}
+
+/// Agreements 17, "Belongs to": a receipt belongs to a deal through what it
+/// fulfils (an obligation arising from the deal) and through the claim it
+/// pays under; an act naming nothing of the deal belongs to none.
+#[test]
+fn a_receipt_belongs_to_a_deal_through_what_it_fulfils() {
+    use mor_core::money::{Amount, Obligation, Payload as Fin, Purchase, Receipt};
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let deal = kept_deal(&mut w, &mut ana, &mut ben, vec![spec("a keeper")], Rule::All);
+    let amount = Amount { unit: spec("a unit"), value: 10 };
+    let ob = Fin::Obligation(Obligation { debtor: ben.id, creditor: ana.id, amount: amount.clone(), pointer: spec("a pointer"), agreement: Some(deal) });
+    let o = { let a = w.everyday_act(&mut ben, mirs().money, 1, ob.to_map(), None, None); w.add(&a) };
+    let aid = ana.id;
+    let rec = |fulfils: Hash, purchase: Option<Purchase>| Fin::Receipt(Receipt { rail: spec("a rail"), proof: vec![], payer: None, payee: aid, amount: amount.clone(), fulfils, previous: None, forward: None, batch: None, purchase });
+    let r1 = { let a = w.everyday_act(&mut ana, mirs().money, 2, rec(o, None).to_map(), None, None); w.add(&a) };
+    let r2 = { let a = w.everyday_act(&mut ana, mirs().money, 2, rec(spec("something else"), Some(Purchase { agreement: deal, line: deal })).to_map(), None, None); w.add(&a) };
+    let r3 = { let a = w.everyday_act(&mut ana, mirs().money, 2, rec(spec("something else"), None).to_map(), None, None); w.add(&a) };
+    let v = view(&w);
+    assert_eq!(v.belongs_to(&o), vec![deal], "an obligation, through the agreement it arises from");
+    assert_eq!(v.belongs_to(&r1), vec![deal], "a receipt, through the obligation it fulfils");
+    assert_eq!(v.belongs_to(&r2), vec![deal], "a receipt, through the claim it pays under");
+    assert!(v.belongs_to(&r3).is_empty(), "naming nothing of the deal");
+}
