@@ -73,7 +73,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 10. Edubba's Pay someone, proposed dropped. Kept as an entry in Damgar's Waiting column (`damgar-waiting`).
 
 **Where the note is silent, my choice:**
-11. **Danger levels** (three bars, filled to the level; the edge thickens with it; never red):
+11. **Danger levels** (three bars, filled to the level; the edge thickens with it; never red). *Decided by Nobody, allegedly, 21 October 2026 (question 2), Edubba's included: "I think so, yes." Tags removed.*
     - Kišib: Identities 1, Runner 2, Paper 3, Collectives 3.
     - Damgar: Waiting 3, Account 1, Lanes 2, Settings 2.
     - Edubba: Agents 2, Collectives 3, Publishing 2, Vows 2. The note leaves Edubba's marks open, Vows' level included.
@@ -215,7 +215,7 @@ No function of today was dropped from the pictures. The decided removals are Dub
 *One at a time, each with my lean. All of them are for the Suite lead; none touches the core.*
 
 1. **Dub's three lenses: are they Following, Relay and To you?** These are today's three filters, renamed only from "Everyone" to "Following". *Lean: yes.* **Answered, 21 October 2026: "Yes, but relay should be the third option."** Drawn as Following · To you · Relay.
-2. **The danger levels in section 2, item 11: right as drawn?** The note accepts danger marks but gives no levels. *Lean: yes. Edubba's levels stay open until you look at the picture.*
+2. **The danger levels in section 2, item 11: right as drawn?** The note accepts danger marks but gives no levels. *Lean: yes. Edubba's levels stay open until you look at the picture.* **Answered, 21 October 2026, the question naming Edubba's levels too: "I think so, yes."** The levels stand as drawn, Edubba's included; this settles the note's open item "Dub's and Edubba's danger marks" for Edubba (Dub has no tiles).
 3. **Damgar's fourth tile: Settings?** It would hold where you are paid, the vault and what you accept. *Lean: yes.*
 4. **Kišib's identity at top right: "Holds nothing" while the runner is off, the runner's identities when it is on?** The note puts an identity top right in every app, and also says Kišib works differently. *Lean: yes.*
 5. **Contesting a vow bought from Dub: in the vow's act menu?** On 17 October you decided contests also run via Dub. Today they live in the Signing tab, which the redesign removes. *Lean: yes, as "Confirm: it was kept" and "Contest it" under the line.*

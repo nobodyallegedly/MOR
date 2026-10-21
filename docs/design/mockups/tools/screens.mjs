@@ -23,7 +23,7 @@ const kbar = (on) => bar('kishib', { on, right: KME });
 const kopened = (on, col, pane, extra = '') => `${kbar(on)}<div class="body">${column(col)}<section class="pane">${pane}</section></div>${extra}`;
 page('kishib', 'home', 'Home: the four tiles',
   `${kbar(null)}<div class="home">${KTILES.map((x) => `<div class="tile d${x.d}">${ICON[x.icon]}${dm(x.d)}<h2>${x.name}</h2><p>${x.say}</p></div>`).join('')}</div>
-<div class="home-note">${TESTLINE} · ${nd('danger levels')} · top right: ${nd('Kišib’s identity, works differently')}</div>`,
+<div class="home-note">${TESTLINE} · top right: ${nd('Kišib’s identity, works differently')}</div>`,
   { group: 'Home', before: ['kishib/kishib-01-start.png', 'kishib/kishib-30-mac-start.png'] });
 
 const KIDCOL = [{ t: 'An identity’s record', on: true }, { t: 'Confirm a succession' }, '-', { t: 'Held by the runner', k: 'off' }];
@@ -255,7 +255,7 @@ page('damgar', 'home', 'Home: the four tiles',
     { name: 'Account', icon: 'account', d: 1, say: 'In, out, pending, owed. Per unit, never summed across units.' },
     { name: 'Lanes', icon: 'lanes', d: 2, say: 'What each app may pay without asking: a cap per act, kinds, an expiry.' },
     { name: 'Settings', icon: 'settings', d: 2, say: 'Where you are paid, the vault (set in Kišib), what you accept.' },
-  ])}`.replace('<div class="home-note"></div>', `<div class="home-note">${TESTLINE} · ${nd('fourth tile and danger levels')}</div>`),
+  ])}`.replace('<div class="home-note"></div>', `<div class="home-note">${TESTLINE} · ${nd('the fourth tile')}</div>`),
   { group: 'Home', before: ['damgar/damgar-web-to-sign.png'] });
 
 const WCOL = [{ t: 'To sign', k: 3, on: true }, { t: 'To pay', k: 1 }, { t: 'Requests and debts' }, '-', { t: 'For Collective Y', k: 0 }, '-', { t: `Pay someone ${nd('proposed dropped')}` }];
@@ -310,7 +310,7 @@ page('edubba', 'home', 'Home: the four tiles',
     { name: 'Collectives', icon: 'collectives', d: 3, say: 'Collective Y, and one founding (2 of 3 signed). Agreements are born here.' },
     { name: 'Publishing', icon: 'publishing', d: 2, say: 'Protected files under terms: text, pictures, video, audio.' },
     { name: 'Vows', icon: 'vows', d: 2, say: 'Simple vows; track contests by pointing at people, collectives or relays.' },
-  ])}`.replace('<div class="home-note"></div>', `<div class="home-note">${TESTLINE} · ${nd('Edubba’s danger marks (still open), apart from Vows’ level')}</div>`),
+  ])}`.replace('<div class="home-note"></div>', `<div class="home-note">${TESTLINE}</div>`),
   { group: 'Home', before: ['edubba/03-agents.png', 'edubba/web-first.png'] });
 
 const AGCOL = [{ t: 'Machine, allegedly', on: true, k: 'on' }, { t: 'Second agent', k: 'off' }, { t: '+ Add an agent', add: true }, '-', { t: 'The API key', k: '…MNOP' }];
@@ -404,7 +404,7 @@ page('ummia', 'home', 'Home: the four tiles',
     { name: 'Discuss', icon: 'discuss', d: 1, say: 'MIP drafts, their discussion, bug reports and answers.' },
     { name: 'Publish', icon: 'publish', d: 2, say: 'Releases of code, cMIPs and Modules, the hash first; anchoring, paid in Damgar.' },
     { name: 'Choose', icon: 'choose', d: 2, say: 'The accepted list, by layer: what every app may use.' },
-  ])}`.replace('<div class="home-note"></div>', `<div class="home-note">${TESTLINE} · ${nd('danger levels')}</div>`),
+  ])}`.replace('<div class="home-note"></div>', `<div class="home-note">${TESTLINE}</div>`),
   { group: 'Home', before: ['ummia/ummia-releases.png'] });
 
 const LOOKCOL = [{ t: 'The feed', on: true }, '-', 'Saved', { t: 'mor-dub’s release line' }, { t: 'Pa’s releases' }, { t: 'relay-a.test' }];
