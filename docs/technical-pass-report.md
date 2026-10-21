@@ -20,7 +20,7 @@
 
   The "to confirm" marks are gone.
 
-**What is still missing.** Six questions, below. None is a flaw at the foundations. Two need a decision before a verifier can be sure of a verdict: question 1 (a missed deadline with several keepers) and question 4 (how a decoder knows a Module is under "the payment cMIP"). The strangers also listed smaller gaps that predate this pass (duplicates inside arrays, an operator running several relays, a few Money edges). They are kept in `docs/freeze-ready-strangers/technical-pass.md` for whoever decides how far the texts go before the C session.
+**What is still missing.** Eight questions, below. None is a flaw at the foundations. Three need a decision before a verifier can be sure of a verdict: question 1 (a missed deadline with several keepers), question 4 (how a decoder knows a Module is under "the payment cMIP") and question 7 (a text signed with a member key can never count as written). The strangers also listed smaller gaps that predate this pass (duplicates inside arrays, an operator running several relays, a few Money edges). They are kept in `docs/freeze-ready-strangers/technical-pass.md` for whoever decides how far the texts go before the C session.
 
 **What changes for the code (the next session).** The texts now say several things the core does not yet do:
 - the keeper record and "belongs to";
@@ -230,7 +230,25 @@ Each is put in plain words first, then precisely, with options, the lean and eac
 *Lean:* (a).
 *Cost:* none beyond one line; it may be a decision F367 did not name, hence asked.
 
+**7. A text act signed with a member key.**
+*Plain words:* Text rule 14 lets an act signed with a grant key, a member key included (F366.3), carry one object, the grant its binding names. A member key's binding names the holder's signature act. That act is not on the collective's chain, so under Agreements rules 58 and 80 the text can never count.
+*Options:*
+- (a) For a member key, the object is `[collective, the founding or clone the signature names]`, the version that is its grant (rule 73), and Text rule 14 says so.
+- (b) A member key's text names the decision it acts under, as the collective's own text does (the first case).
+
+*Lean:* (a). It keeps "the grant-key case decides".
+*Cost:* (a) a verifier follows the binding one step; (b) undoes F366.3's choice.
+
+**8. A grantee acknowledging its own grant key's acts.**
+*Plain words:* rule 76 makes an act a revocation missed disputed where "another identity" acknowledged it. The grant key's acts are the grantor's, so the grantee's own identity is "another identity". A grantee can then make its own racing acts disputed with no accomplice. The stated cost assumed an accomplice.
+*Options:*
+- (a) The grantee's acknowledgement does not count for rule 76.
+- (b) As written, the stated cost widened to say so.
+
+*Lean:* (a). It is pattern 1 (what decides is signed by the wrong party), and F359's cost speaks of an accomplice.
+*Cost:* (a) one exclusion to check; (b) a revoked agent alone keeps its last acts visible as disputed, conferring nothing (F365).
+
 ## The strangers' readings
 
 - **Over every part changed** (six readers, each limited to the eight texts and its own diff), condensed with what was done: `docs/freeze-ready-strangers/technical-pass.md`. They found one regression of this pass (Money rule 12's batch), fixed. About thirty wording points were fixed: encoding details, headings cited by name, the kept tip's summary, member keys paraphrased, void or disputed, contest cases, and the MICS and suite summaries. The rest became questions 1 to 4 or are listed as gaps that predate this pass.
-- **Over all eight together:** `docs/freeze-ready-strangers/technical-pass-all-eight.md`.
+- **Over all eight together:** `docs/freeze-ready-strangers/technical-pass-all-eight.md`. Every tag and all 306 rule citations check out. Its contradictions are fixed where wording (the MICS's key lines, the frozen header's form, signatures inside payloads, Money rule 7's sentence on acts no area reaches), or became questions 7 and 8; the rest are listed as gaps that predate this pass.

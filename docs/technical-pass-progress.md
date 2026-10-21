@@ -12,7 +12,7 @@
 
 ## Next
 
-The strangers' readings over the changed parts (six subagents, reports in the session's scratchpad, condensed into `docs/freeze-ready-strangers/technical-pass.md`), their wording fixes; one reading over all eight; the report; pull request 83's description.
+All done; see the report. Next: Nobody, allegedly's answers to the report's eight questions, then S2 (the core aligned, and the vectors).
 
 ## Notes for the report
 
