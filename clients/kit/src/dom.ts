@@ -378,7 +378,9 @@ export function attachNames(field: HTMLInputElement | HTMLTextAreaElement, conta
       at = (at + (ev.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length;
       items.forEach((x, i) => x.setAttribute('aria-selected', String(i === at)));
     } else if (ev.key === 'Enter' || ev.key === 'Tab') {
+      // The key takes the name, and nothing else: no form is sent by it.
       ev.preventDefault();
+      ev.stopPropagation();
       choose(shown[at]);
     }
   });

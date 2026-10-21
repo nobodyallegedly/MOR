@@ -105,7 +105,7 @@ after(async () => {
   for (const r of [...(homes ?? []), relay]) await r?.stop();
 });
 
-const done = (page: Page, words: string | RegExp) => page.locator('#status .note.done', { hasText: words }).waitFor({ timeout: 60_000 });
+const done = (page: Page, words: string | RegExp) => page.locator('#status .k-note.k-done', { hasText: words }).waitFor({ timeout: 60_000 });
 
 /** Everything this site keeps in the browser: IndexedDB (every database, every entry), local and session storage, caches, cookies. */
 async function kept(page: Page): Promise<{ text: string; identity: IdentityFile | undefined }> {
@@ -152,13 +152,17 @@ async function interLoaded(page: Page): Promise<string[]> {
   });
 }
 
+/** The banner, in one line with a "?" that opens both risks (H76's rule for disclaimers; F281's risks, word for word). */
 const banner = async (page: Page, where: string) => {
   const b = page.locator('#for-testing-only');
   assert.ok(await b.isVisible(), `the banner on ${where}`);
+  assert.match(await b.innerText(), /^For testing only\. Test identities only, until MOR is frozen\./, where);
+  const open = await b.evaluate((d) => (d as HTMLDetailsElement).open);
+  if (!open) await b.locator('summary .k-help').click();
   const t = await b.innerText();
-  assert.match(t, /^For testing only\./, where);
-  assert.match(t, /Whoever serves this page's code at the moment an identity is made here could copy its keys\./, where);
-  assert.match(t, /This browser's storage, where the identity's signing key is kept, can be lost, or read by what runs in this page\./, where);
+  assert.match(t, /Whoever serves this page’s code at the moment an identity is made here could copy its keys\./, where);
+  assert.match(t, /This browser’s storage, where the identity’s signing key is kept, can be lost, or read by what runs in this page\./, where);
+  await b.locator('summary .k-help').click();
 };
 
 test('the web client: a new identity, its chain key shown once and kept nowhere, the words hidden before three are asked (H3); posts across a reload; carried to Dub on the Mac and back, each keeping its own line, private messages opening on both', async () => {
@@ -181,7 +185,7 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   assert.equal(await page.locator('link[rel=apple-touch-icon]').getAttribute('href'), 'apple-touch-icon.png');
   assert.equal(await page.locator('form#begin textarea[name=homes]').inputValue(), 'https://home.example');
   assert.equal(await page.locator('textarea[name=via]').count(), 0, 'no other way to reach an address: a browser has none');
-  assert.match(await page.locator('form#bring').innerText(), /kept in this browser’s storage \(IndexedDB\), as they are, not locked/);
+  assert.match((await page.locator('form#bring').textContent())!, /kept in this browser’s storage \(IndexedDB\), as they are, not locked/);
   await shot(page, '01-identity-window');
 
   // The chain key's words, shown once, nothing asked beside them.
@@ -195,8 +199,8 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   await banner(page, 'the words');
   const words = (await page.locator('#words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
   assert.equal(words.length, 24);
-  assert.match(await page.locator('.say').innerText(), /These are the chain key’s words/);
-  assert.match(await page.locator('.say').innerText(), /Dub keeps nothing of the chain key/);
+  assert.match(await page.locator('.dub-first ul').innerText(), /These are the chain key’s words/);
+  assert.match(await page.locator('.dub-first ul').innerText(), /Dub keeps nothing of the chain key/);
   assert.equal(await page.locator('form#confirm').count(), 0, 'H3: nothing asked while the words show');
   await shot(page, '02-chain-words');
   const forms = chainForms(words);
@@ -211,7 +215,7 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   const positions = (await inputs.evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name))).map((n) => Number(n.slice(1)));
   for (const [i, p] of positions.entries()) await inputs.nth(i).fill(i === 1 ? 'wrong' : words[p - 1]);
   await page.getByRole('button', { name: 'Go on' }).click();
-  await page.locator('#status .note.error', { hasText: 'Nothing has been published' }).waitFor({ timeout: 60_000 });
+  await page.locator('#status .k-note.k-error', { hasText: 'Nothing has been published' }).waitFor({ timeout: 60_000 });
   await inputs.nth(1).fill(words[positions[1] - 1]);
   await page.getByRole('button', { name: 'Go on' }).click();
   await done(page, 'The identity is born');
@@ -234,7 +238,7 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   await page.locator('form#post textarea[name=text]').fill('First, from the web client.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, 'Posted');
-  const first = (await page.locator('#feed .post', { hasText: 'First, from the web client.' }).getAttribute('data-post', { timeout: 60_000 }))!;
+  const first = (await page.locator('#feed .k-act', { hasText: 'First, from the web client.' }).getAttribute('data-k-act', { timeout: 60_000 }))!;
   await page.reload();
   await page.locator('form#post').waitFor({ timeout: 60_000 });
   await banner(page, 'the page after a reload');
@@ -242,7 +246,7 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, 'Posted');
   // The feed is drawn again after the note, in signed order: each post is found by its text, not its place.
-  const second = (await page.locator('#feed .post', { hasText: 'Second, after a reload.' }).getAttribute('data-post', { timeout: 60_000 }))!;
+  const second = (await page.locator('#feed .k-act', { hasText: 'Second, after a reload.' }).getAttribute('data-k-act', { timeout: 60_000 }))!;
   const a1 = describeAct((await relayAt(relay.base).getAct(first))!) as { position: number; prev?: string };
   const a2 = describeAct((await relayAt(relay.base).getAct(second))!) as { position: number; prev?: string };
   assert.equal(a2.prev, first, 'the second post follows the first, in the same line');
@@ -254,14 +258,15 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
   await shot(page, '03-public');
 
   // The signing key's words, on request: the way out, labelled.
-  await page.locator('[data-action=window]').click();
-  await page.getByRole('button', { name: 'Show the signing key’s words' }).click();
+  await page.locator('[data-k-open="identity"]').click();
+  await page.locator(`[data-k-idmenu="${me.identity}"]`).click();
+  await page.getByRole('menuitem', { name: /^Words/ }).click();
   await page.locator('#carry-words').waitFor();
   const carry = (await page.locator('#carry-words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
-  const grouped = await page.locator('#carry .id').innerText();
+  const grouped = await page.locator('.k-mbody .k-mono').innerText();
   assert.equal(hex(fromWords(carry)), me.signingSecret, 'the signing key’s words');
   assert.notDeepEqual(carry, words, 'not the chain key');
-  assert.match(await page.locator('#carry .say').innerText(), /post as this identity and read its private messages/);
+  assert.match(await page.locator('.k-mbody ul').innerText(), /post as this identity and read its private messages/);
   await shot(page, '04-signing-words');
 
   // Into Dub on the Mac, by those words: its own line, and its private messages open there (the carry Module, draft 2).
@@ -282,33 +287,40 @@ test('the web client: a new identity, its chain key shown once and kept nowhere,
     await other.close();
   }
   assert.ok((await mac.dub.inbox()).messages.some((m) => m.text === 'For both of your apps.'));
-  await page.getByRole('button', { name: 'Back to Dub' }).click();
-  await page.locator('#count-private', { hasText: '1' }).waitFor({ timeout: 60_000 });
-  await page.locator('[data-tab=private]').click();
-  await page.locator('#inbox .msg', { hasText: 'For both of your apps.' }).waitFor({ timeout: 60_000 });
+  await page.locator('[data-k-popup="close"]').click();
+  await page.getByRole('button', { name: 'Look again' }).click();
+  await page.locator('[data-k-count="private"]', { hasText: '1' }).waitFor({ timeout: 60_000 });
+  await page.locator('[data-k-part="private"]').click();
+  await page.locator(`[data-conv="${otherId}"]`).click();
+  await page.locator('#thread .k-act', { hasText: 'For both of your apps.' }).waitFor({ timeout: 60_000 });
   await shot(page, '05-private');
   // The web client's line goes on from its own last act; every post valid.
-  await page.locator('[data-tab=public]').click();
+  await page.locator('[data-k-part="public"]').click();
   await page.locator('form#post textarea[name=text]').fill('Fourth, from the web client again.');
   await page.getByRole('button', { name: 'Post', exact: true }).click();
   await done(page, 'Posted');
-  const fourth = (await page.locator('#feed .post', { hasText: 'Fourth, from the web client again.' }).getAttribute('data-post', { timeout: 60_000 }))!;
+  const fourth = (await page.locator('#feed .k-act', { hasText: 'Fourth, from the web client again.' }).getAttribute('data-k-act', { timeout: 60_000 }))!;
   assert.equal((describeAct((await relayAt(relay.base).getAct(fourth))!) as { prev?: string }).prev, second);
   for (const id of [first, second, onMac.post.id, fourth]) assert.equal((await readPost(id, [relay.base])).standing, 'valid', id);
   assert.deepEqual(new Set(await listPosts(me.identity, relay.base)), new Set([first, second, onMac.post.id, fourth]));
-  await page.locator('#feed .post', { hasText: 'Third, from Dub on the Mac.' }).waitFor({ timeout: 60_000 });
+  await page.locator('#feed .k-act', { hasText: 'Third, from Dub on the Mac.' }).waitFor({ timeout: 60_000 });
   // The follow list sealed to the identity (people cMIP draft 2): followed on the Mac with a name, read here with it.
   await mac.dub.follow({ id: otherId, name: 'Met on the Mac' });
   await page.getByRole('button', { name: 'Look again' }).click();
-  if (!(await page.locator('#people[open]').count())) await page.locator('#people summary').click();
-  await page.locator('#people', { hasText: 'Met on the Mac' }).waitFor({ timeout: 60_000 });
-  assert.match(await page.locator('#people').innerText(), /sealed to this identity and kept at its homes \(version 1\)/);
+  await page.locator('[data-k-open="contacts"]').click();
+  const contacts = page.locator('[data-k-panel="contacts"]');
+  await contacts.locator('[data-k-contact]', { hasText: 'Met on the Mac' }).waitFor({ timeout: 60_000 });
+  await contacts.locator('details.k-say summary').last().click();
+  assert.match(await contacts.innerText(), /sealed to this identity and kept at its homes \(version 1\)/);
+  await page.keyboard.press('Escape');
   await shot(page, '05b-sealed-follow-list');
   for (const f of forms) assert.ok(!(await kept(page)).text.includes(f), 'still nothing of the chain key in storage');
 
   // Forgetting it in this browser leaves nothing of it in storage.
-  await page.locator('[data-action=window]').click();
-  await page.getByRole('button', { name: 'Forget it here' }).click();
+  await page.locator('[data-k-open="identity"]').click();
+  await page.locator(`[data-k-idmenu="${me.identity}"]`).click();
+  await page.getByRole('menuitem', { name: 'Remove from Dub…' }).click();
+  await page.locator('[data-k-remove-yes]').click();
   await page.getByRole('heading', { name: 'Make a new identity' }).waitFor({ timeout: 60_000 });
   assert.ok(!(await kept(page)).text.includes(me.signingSecret));
 
@@ -335,7 +347,7 @@ test('the web client brings an identity made by Dub on the Mac, and refuses wron
     await bring.locator('textarea[name=words]').fill(b.words.join(' '));
     await bring.locator('input[name=address]').fill(homes[0].base);
     await bring.getByRole('button', { name: 'Bring it' }).click();
-    await page.locator('#status .note.error', { hasText: /Nothing was kept.*chain key’s words/ }).waitFor({ timeout: 60_000 });
+    await page.locator('#status .k-note.k-error', { hasText: /Nothing was kept.*chain key’s words/ }).waitFor({ timeout: 60_000 });
     assert.equal((await kept(page)).identity, undefined);
     await bring.locator('textarea[name=words]').fill(words.join(' '));
     await bring.getByRole('button', { name: 'Bring it' }).click();
@@ -344,7 +356,7 @@ test('the web client brings an identity made by Dub on the Mac, and refuses wron
     await page.locator('form#post textarea[name=text]').fill('From the web, an identity made on the Mac.');
     await page.getByRole('button', { name: 'Post', exact: true }).click();
     await done(page, 'Posted');
-    const pid = (await page.locator('#feed .post', { hasText: 'From the web, an identity made on the Mac.' }).getAttribute('data-post', { timeout: 60_000 }))!;
+    const pid = (await page.locator('#feed .k-act', { hasText: 'From the web, an identity made on the Mac.' }).getAttribute('data-k-act', { timeout: 60_000 }))!;
     assert.equal((describeAct((await relayAt(relay.base).getAct(pid))!) as { position: number }).position, 1, 'its own line');
     assert.equal((await readPost(pid, [relay.base])).standing, 'valid');
     assert.deepEqual(problems, []);

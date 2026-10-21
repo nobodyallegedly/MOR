@@ -102,8 +102,11 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
   .dub-private .dub-thread{display:none;padding:10px 12px}
   .dub-private.k-chosen .dub-convs{display:none}
   .dub-private.k-chosen .dub-thread{display:flex}
+  .dub-private .k-back{display:inline-flex}
   .dub-first{padding:16px 14px 30px}
+  .k-typing .dub-l{display:none}
 }
+.dub-film .k-btn{white-space:nowrap}
 @media (min-width:601px){.dub-private .k-back{display:none}}`;
 
 // ---------------------------------------------------------------- who, as the kit draws it
@@ -373,7 +376,7 @@ export function publicPart(s: State, lens: Lens, layers: string[]): string {
     ],
     lens,
   )}${lens === 'relay' ? pointRow('Showing', LAYERS.map((l) => ({ key: l.key, label: l.label, on: layers.includes(l.key) })), 'layer') : ''}`;
-  const tools = `<label title="A picture (JPEG)">▣ Picture<input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"></label><label title="A film (MP4)">▶ Video<input name="video" type="file" accept=".mp4,video/mp4"></label><button type="button" data-action="at" title="Mention someone">@</button><button type="button" data-action="address">To…</button>`;
+  const tools = `<label title="A picture (JPEG)">▣<span class="dub-l"> Picture</span><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"></label><label title="A film (MP4)">▶<span class="dub-l"> Video</span><input name="video" type="file" accept=".mp4,video/mp4"></label><button type="button" data-action="at" title="Mention someone">@</button><button type="button" data-action="address">To…</button>`;
   return `<div class="k-body"><section class="k-pane dub-center" id="public">${feedBox({ id: 'feed', above, cards: '', empty: 'Reading the feed…', below: '<div id="feed-foot"></div>' })}
 ${typingBox({ id: 'post', placeholder: acting ? `Write something public, as ${acting.name ?? 'the collective'}…` : 'Write something public…', button: 'Post', tools, opts: '<span id="replying"></span><span id="addressed"></span><span class="dub-picked" id="picked"></span>', extra: '<div class="dub-field" id="to-field" hidden><input id="to" placeholder="To: a contact’s name, or an ID" aria-label="To" spellcheck="false"><button type="button" class="k-btn k-q" data-action="unaddress">Done</button></div>' })}</section></div>`;
 }

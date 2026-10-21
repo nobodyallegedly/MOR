@@ -510,7 +510,7 @@ test('a private message, sealed (F293): opened only by its recipient; the identi
   const b = await made(cb, homes[1]);
   await refused(ca.ask('message', { to: a.id, text: 'me' }), /this identity itself/);
   const r = await ca.ask<Lines>('message', { to: b.id, text: 'Only for B.' });
-  assert.match(r.lines[0].text, /only it can open it/);
+  assert.match(r.lines[0].text, /only they can open it/);
   // At the relay: sealed, never the text.
   const items = (await relayAt(relay.base).feed({ to: b.id })).items;
   assert.ok(items.some((i) => i.kind === 'sealed'));

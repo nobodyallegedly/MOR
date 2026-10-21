@@ -1302,7 +1302,7 @@ export class Dub {
       const cc = ids.filter((x) => x !== to);
       p.sent.push({ id: made.id, to, text, at: now(), ...(cc.length ? { cc } : {}), ...(of ? { of } : {}) });
       await this.store.savePeople(me.id, p);
-      lines.unshift({ text: cc.length ? `Sealed to ${fingerprint(to)} and, in Cc, ${cc.map(fingerprint).join(', ')}, and left in each inbox: only they can open it, and each sees who else received it.` : `Sealed to ${fingerprint(to)} and left in its inbox: only it can open it.`, tone: 'ok' });
+      lines.unshift({ text: cc.length ? `Sealed to ${this.nameOf(to, me.id, p)} and, in Cc, ${cc.map((x) => this.nameOf(x, me.id, p)).join(', ')}, and left in each inbox: only they can open it, and each sees who else received it.` : `Sealed to ${this.nameOf(to, me.id, p)} and left in their inbox: only they can open it.`, tone: 'ok' });
       if (of) lines.push({ text: `Written in your own name, with the collective ${fingerprint(of)} appended: it binds nothing, and the reader’s app shows it only where your membership checks.` });
       return { lines };
     });
@@ -1783,7 +1783,7 @@ export class Dub {
     try {
       act = (await followRef(signer ? [id, signer] : id, places, s.via)).act;
     } catch (e) {
-      throw new Error(`The act ${shownAct(id)} was not found: ${message(e)}. Silence proves nothing: another relay may hold it.`);
+      throw new Error(`The act ${shortAct(id)} was not found: ${message(e)}. Silence proves nothing: another relay may hold it.`);
     }
     const d = describeAct(act) as Described;
     const by = d.signer ?? d.id;
@@ -1830,7 +1830,7 @@ export class Dub {
       try {
         act = (await followRef(signer ? [id, signer] : id, places, s.via)).act;
       } catch (e) {
-        return { title: 'Not found', lines: [{ text: `The act ${shownAct(id)} was not found at ${places.join(', ')}: ${message(e)}. Silence proves nothing: another relay may hold it.`, tone: 'warn' as const }] };
+        return { title: 'Not found', lines: [{ text: `The act ${shortAct(id)} was not found at ${places.join(', ')}: ${message(e)}. Silence proves nothing: another relay may hold it.`, tone: 'warn' as const }] };
       }
       const d = describeAct(act) as Described;
       const by = d.signer ?? d.id;
@@ -1854,7 +1854,7 @@ export class Dub {
         const auth = await authorityOfId(d.id, places, s.via, { names: (x) => this.nameOf(x, me.id, p) }).catch(() => null);
         if (auth) lines.push({ text: auth.words, tone: auth.backing === 'backed' || auth.backing === 'binds' ? 'ok' : 'warn' });
       }
-      if (d.refs?.length) lines.push({ text: `It names ${d.refs.length} other act${d.refs.length === 1 ? '' : 's'}: ${d.refs.map((r) => shownAct(r)).join(', ')}.` });
+      if (d.refs?.length) lines.push({ text: `It names ${d.refs.length} other act${d.refs.length === 1 ? '' : 's'}: ${d.refs.map((r) => shortAct(r)).join(', ')}.` });
       if (d.to?.length) lines.push({ text: `It is addressed to ${d.to.map((x) => this.nameOf(x, me.id, p)).join(', ')}.` });
       lines.push({ text: 'A verdict rests on signatures and identity chains only: no clock, no relay and no app decides it.' });
       return { title: w.ok ? 'Why it’s valid' : 'Why it is not valid', lines };
@@ -1938,8 +1938,8 @@ export class Dub {
       if (me.f.sequence.includes(id)) throw new Error('It is this identity’s own act. Nothing was signed.');
       await this.current(me);
       const made = await this.signed(me, () => me.witness([id], { shown: WITNESS_EXPLANATION, relays: s.relays }));
-      if (!made.sent.some((x) => x.result?.receipt)) throw new Error('No home took the witness act: it is signed here, not published. Try again.');
-      return { lines: [{ text: `You rely on ${shownAct(id)}: witness act ${shownAct(made.id)}, public at this identity’s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: 'ok' }] };
+      if (!made.sent.some((x) => x.result)) throw new Error(`No home took the witness act: ${made.sent.map((x) => `${x.home}: ${x.error}`).join('; ')}. It is signed here, not published.`);
+      return { lines: [{ text: `You rely on ${shortAct(id)}: witness act ${shortAct(made.id)}, public at this identity’s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: 'ok' }] };
     });
   }
 
@@ -1971,13 +1971,13 @@ export class Dub {
       await this.current(me);
       const blind = new Uint8Array(randomBytes(32));
       const leaf = anchoringLeaf(id, blind) as string;
-      const r = await sendDraft(me, { what: 'anchor', other: service.id, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${shownAct(id)}`, app: 'Dub', anchor: { offer: offer.act, tier: a.tier, leaf } }, { via: s.via, save: () => this.store.saveIdentity(me) });
+      const r = await sendDraft(me, { what: 'anchor', other: service.id, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${shortAct(id)}`, app: 'Dub', anchor: { offer: offer.act, tier: a.tier, leaf } }, { via: s.via, save: () => this.store.saveIdentity(me) });
       const kept = (await this.store.money<Record<string, unknown>[]>(me.id, 'anchors')) ?? [];
       kept.push({ act: id, blind: hex(blind), leaf, service: service.id, offer: offer.act, tier: a.tier, draft: r.id, at: now() });
       await this.store.saveMoney(me.id, 'anchors', kept);
       return {
         lines: [
-          { text: `Asked: an anchor of ${shownAct(id)} on the Bitcoin chain, within ${tier.blocks} blocks, for ${say({ unit: offer.unit, value: tier.price }, new Set([offer.unit]))}.`, tone: 'ok' },
+          { text: `Asked: an anchor of ${shortAct(id)} on the Bitcoin chain, within ${tier.blocks} blocks, for ${say({ unit: offer.unit, value: tier.price }, new Set([offer.unit]))}.`, tone: 'ok' },
           { text: `The payment is prepared, not signed: sealed to you at your homes (${r.left.join(', ')}), it waits in Damgar, in Waiting. The blind that ties the anchor to this act is kept here.` },
         ],
       };
@@ -2004,7 +2004,7 @@ export class Dub {
       if ((describeAct(act) as Described).signer !== me.id) throw new Error('Only this identity’s own acts are corrected here (a reply is the way to answer another’s). Nothing was signed.');
       await this.current(me);
       const made = await this.signed(me, () => post(me, { text, relays: s.relays, corrects: [id, me.id] }));
-      return { lines: [{ text: `Correction ${shownAct(made.id)}, naming ${shownAct(id)}, which stays as it was signed: readers show it with “corrected by”.`, tone: 'ok' }] };
+      return { lines: [{ text: `Correction ${shortAct(made.id)}, naming ${shortAct(id)}, which stays as it was signed: readers show it with “corrected by”.`, tone: 'ok' }] };
     });
   }
 
@@ -2681,6 +2681,12 @@ function whatAct(d: Described): string {
   if (d.spec === MIRS.development) return 'A Development act';
   if (d.spec === PEOPLE_SPEC || d.spec === PEOPLE_SPEC_1) return d.type === FOLLOW_LIST ? 'A published follow list' : 'A people act';
   return 'An act of another specification';
+}
+
+/** An act's ID written for people, short (`mact1r8d…4kq`): said in lines; the whole form is on its card. */
+function shortAct(id: string): string {
+  const f = shownAct(id);
+  return f.length > 16 ? `${f.slice(0, 8)}…${f.slice(-3)}` : f;
 }
 
 /** An address's host, as said to a person. */

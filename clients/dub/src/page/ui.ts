@@ -107,7 +107,11 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       app.append(s);
     }
     s.innerHTML = html ? `${note(kind, html)}<button type="button" class="k-round k-close" data-action="unsay" aria-label="Close">×</button>` : '';
+    // What is done fades by itself; a refusal stays until closed.
+    clearTimeout(fading);
+    if (kind === 'done') fading = setTimeout(() => s?.isConnected && s.querySelector('.k-done') && (s.innerHTML = ''), 9000);
   }
+  let fading: ReturnType<typeof setTimeout> | undefined;
 
   async function fail(err: unknown) {
     if (b.unpaired?.(err)) {
@@ -197,7 +201,11 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     try {
       const r = await b.ask<{ items: Item[]; more: number; problems: string[]; notes?: string[]; followsChanged?: boolean; clock: { name: string; placed: number; shown: number } | null }>('feed', { fresh: again });
       feed = r.items;
-      if (r.followsChanged) state = await b.ask<State>('state');
+      // The follow list sealed to the identity was changed by another app holding it: Contacts drawn again where open.
+      if (r.followsChanged) {
+        state = await b.ask<State>('state');
+        if (panelOpen()?.dataset.kPanel === 'contacts') openContacts();
+      }
       feedFoot = v.feedFoot(r.clock, [...(r.notes ?? []), ...r.problems]);
       drawFeed();
     } catch (err) {
