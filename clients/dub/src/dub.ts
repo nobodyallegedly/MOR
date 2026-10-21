@@ -1764,7 +1764,7 @@ export class Dub {
   /** An identity's name as this app says it: the name given here, its display name, or its fingerprint. */
   private nameOf(id: string, me: string, p: People): string {
     const w = this.whoFrom(id, me, p);
-    return id === me ? 'you' : (w.pet ?? w.names[0] ?? w.short);
+    return id === me ? 'you' : (w.pet ?? w.names[0] ?? shortId(id));
   }
 
   /** One act, read and judged, as a card shows it: a post as the feed reads posts, any other act named by what it is. */
@@ -2684,6 +2684,12 @@ function whatAct(d: Described): string {
 }
 
 /** An act's ID written for people, short (`mact1r8d…4kq`): said in lines; the whole form is on its card. */
+/** An identity's short ID, in the form written for people (mid1…), as cards show it. */
+function shortId(id: string): string {
+  const f = shownId(id);
+  return f.length > 16 ? `${f.slice(0, 8)}…${f.slice(-3)}` : f;
+}
+
 function shortAct(id: string): string {
   const f = shownAct(id);
   return f.length > 16 ? `${f.slice(0, 8)}…${f.slice(-3)}` : f;

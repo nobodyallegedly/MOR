@@ -236,6 +236,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   async function readInbox() {
     try {
       inbox = await b.ask<Inbox>('inbox');
+      // Proposals to sign that arrived are counted from the inbox just read (signed in Edubba).
+      const st = await b.ask<State>('state');
+      if (state && st.identity?.id === state.identity?.id) state.proposalsWaiting = st.proposalsWaiting;
       if (lens === 'toyou') drawFeed();
       if (part === 'private') drawPrivate();
     } catch (err) {
@@ -249,7 +252,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       const r = await b.ask<{ items: Purchase[]; problems: string[] }>('purchases');
       bought = r.items;
       drawBought();
-      fill('bought-foot', r.problems.map((p) => `<p class="k-clock">${v.e(p)}</p>`).join(''));
+      fill('bought-foot', `${r.problems.map((p) => `<p class="k-clock">${v.e(p)}</p>`).join('')}<button type="button" class="k-btn k-q k-small" data-action="look">Look again</button>`);
     } catch (err) {
       fill('bought', note('error', v.e(errorOf(err))));
     }
@@ -273,11 +276,20 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   }
 
   /** Payments signed here under the lane, where a pop-up has a place for them: the invoice to pay, and the proof taken back. */
+  let paymentsAgain: ReturnType<typeof setTimeout> | undefined;
   async function showPayments() {
     if (!$('payments')) return;
     try {
       await readPayments();
-      fill('payments', v.paymentsHere(await b.ask<{ payments: v.PaymentShownHere[]; done: v.PaymentShownHere[]; problems: string[] }>('payments')));
+      const r = await b.ask<{ payments: v.PaymentShownHere[]; done: v.PaymentShownHere[]; problems: string[] }>('payments');
+      const box = $('payments');
+      if (!box) return;
+      // The proof box is left alone while it is being typed in.
+      if (box.querySelector('form#paid input[name=proof]:focus')) return;
+      box.innerHTML = v.paymentsHere(r, whoOf);
+      // A payment still waiting for the seller's invoice: looked for again while its place is open.
+      clearTimeout(paymentsAgain);
+      if (r.payments.some((p) => !p.pay?.invoice && !p.proofs.length)) paymentsAgain = setTimeout(() => void showPayments(), 4000);
     } catch (err) {
       fill('payments', note('error', v.e(errorOf(err))));
     }
@@ -806,7 +818,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       part = partB.dataset.kPart as v.Part;
       profileOf = null;
       draw();
-      if (part === 'purchases') void readBought();
+      // Keys that arrived for what was bought are looked for first: a file opens once its key is here.
+      if (part === 'purchases') void readPayments().then(readBought);
       if (part === 'private') void readInbox();
       return;
     }
@@ -1030,6 +1043,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'look':
         say('', '');
         await readPayments();
+        if (part === 'purchases') return readBought();
         if (lens === 'relay') void readRelay();
         await Promise.all([readFeed(true), readInbox()]);
         return;

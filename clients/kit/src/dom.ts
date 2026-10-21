@@ -233,6 +233,8 @@ export class Popup {
   /** Open with this content, or, when open, put it in place of what is shown (Back returns). */
   show(title: string, html: string): HTMLElement {
     if (!this.box) {
+      // A note of something done gives way to the pop-up; a refusal stays.
+      for (const st of this.page.querySelectorAll('.k-status')) if (st.querySelector('.k-done')) st.innerHTML = '';
       // Where you were, to return to it.
       this.scroll = [...this.page.querySelectorAll('.k-feed')].map((el) => ({ el, top: el.scrollTop }));
       this.shade = document.createElement('div');
