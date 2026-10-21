@@ -4,7 +4,7 @@
 
 *Last updated: 19 October 2026, after pull request 80 (round 3) and the server session.*
 
-**21 October 2026:** F352 (D) decided, disputed rather than void (F359). The Dubsar Suite lead starts today at 13:00 UTC; the freeze-ready drafts session waits for its list of fixes touching the core.
+**21 October 2026:** F352 (D) decided, disputed rather than void, a keeper's prior record counting too (F359); the frozen texts carry no finding numbers (F360). The freeze-ready texts session (S1, `docs/lead/prompts/s1-freeze-ready-texts.md`) launched; the lead's sessions to the freeze are in `docs/lead/workbook.md`. The Dubsar Suite lead starts today at 13:00 UTC; the freeze-ready drafts session waits for its list of fixes touching the core.
 
 **Handover (20 October 2026, evening):** the second MOR lead hands over to a third (decided by Nobody, allegedly: a fresh window for the freeze-ready drafts, the C verifier, Fable's review and the release), and the apps go to a Dubsar Suite lead (see the working rules). The walkthrough is in progress, its notes logged as H findings up to H81; H80 (Edubba signing a reliance with the old key after a change of keys) is the one serious item open; H79 is as designed.
 

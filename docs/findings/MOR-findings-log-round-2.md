@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F360. The frozen texts carry no finding numbers (21 October 2026)
+
+**Asked by the project lead** before the freeze-ready texts: the drafts cite findings throughout (Agreements draft 16 alone over 900 times), and the C verifier, built from the texts alone, has no findings log to open.
+
+**Decided by Nobody, allegedly, 21 October 2026: "Remove them, simple text, no reference to findings."** The six MIRs, the MICS document and the freeze test suite carry no finding number or review label. Where a reason helps a reader understand or check a rule, it stays as commentary in the text's own words. A provenance map (each rule with the findings that shaped it) is kept in the repository, outside what the C session receives. *The project lead's lean.*
+
+**Cost:** tracing why a rule exists takes one step more, through the map.
+
 ## F359. An act under a revoked grant that another acknowledged is disputed, not void (21 October 2026; F352 (D))
 
 **Pattern:** 1 and 3. Agreements rule 76 (the tie rule) voids every act under a grant that its revocation's history does not hold. Since F352 a revocation must cite each act under the lane, and an act it misses is void, even where the counterparty signed a receipt for it. The grantor's list, alone, decided what another identity had been given in good faith.
