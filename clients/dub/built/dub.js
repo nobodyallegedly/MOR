@@ -3031,6 +3031,43 @@ var withGrantLimits = (specs, verdicts) => ({ ...specs, grantLimits: verdicts })
 // ../reader/src/web/core.ts
 await __wbg_init({ module_or_path: new URL("mor_wasm_bg.wasm", document.baseURI) });
 
+// src/web/node-fs.ts
+var none = (name) => () => {
+  throw new Error(`${name}: there are no files in a browser`);
+};
+var readFileSync = none("readFileSync");
+var writeFileSync = none("writeFileSync");
+var renameSync = none("renameSync");
+
+// src/web/node-crypto.ts
+function randomBytes2(n) {
+  return crypto.getRandomValues(new Uint8Array(n));
+}
+function createHash(algorithm) {
+  if (algorithm !== "sha256") throw new Error(`${algorithm}: only sha256 in the browser`);
+  const parts = [];
+  const h = {
+    update(data) {
+      parts.push(typeof data === "string" ? new TextEncoder().encode(data) : data);
+      return h;
+    },
+    /** The digest's bytes, or, as Node gives it with "hex", its hexadecimal text (the repo client's spec hashes). */
+    digest(encoding) {
+      const all = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+      let at = 0;
+      for (const p of parts) {
+        all.set(p, at);
+        at += p.length;
+      }
+      const d = sha256(all);
+      if (encoding === void 0) return d;
+      if (encoding !== "hex") throw new Error(`${encoding}: only hex in the browser`);
+      return [...d].map((b) => b.toString(16).padStart(2, "0")).join("");
+    }
+  };
+  return h;
+}
+
 // ../genesis/src/transport.ts
 var RelayError = class extends Error {
   constructor(code, reason, acts = [], status = 0) {
@@ -3209,6 +3246,12 @@ var Relay = class {
 };
 var relayAt = (hint, via2 = {}) => new Relay(hint, via2[hint] ?? hint);
 
+// ../genesis/src/kex.ts
+var kexLog = { recording: false, entries: [] };
+function record(e2) {
+  if (kexLog.recording) kexLog.entries.push(e2);
+}
+
 // ../genesis/src/lines.ts
 var IDENTITY_WORDS = {
   [IDENTITY_TYPES.routes]: "routes: where its acts are found and where to reach it",
@@ -3340,10 +3383,43 @@ function linesOf(o) {
       readable: !why,
       card: why ? null : { act: tip, position: ids.length, summary: runningSummary(ids) },
       latest,
+      walked: [...ids].reverse(),
       ...why ? { why } : {}
     });
   }
   return out.sort((a, b) => Number(b.own) - Number(a.own) || (a.tip < b.tip ? -1 : 1));
+}
+function unplaced(o) {
+  const specs = o.specs ?? MIRS;
+  const placed = new Set(linesOf({ ...o, own: [] }).filter((l) => l.readable).flatMap((l) => l.walked));
+  const out = /* @__PURE__ */ new Set();
+  for (const a of o.acts) {
+    let d;
+    try {
+      d = describeAct(a);
+    } catch {
+      continue;
+    }
+    if (d.signer !== o.identity || d.binding !== o.binding || placed.has(d.id)) continue;
+    if (d.spec === specs.identity && (d.type === IDENTITY_TYPES.genesis || d.type === IDENTITY_TYPES.rotation || d.type === IDENTITY_TYPES.chainSignature)) continue;
+    out.add(d.id);
+  }
+  return [...out];
+}
+var APP_LINES = {
+  Dub: "sealed messages, the follow list, answers to proposals, a member key for a collective, keys delivered to buyers, lane requests for Damgar",
+  Edubba: "drafts, an agent\u2019s notes and diary, sealed messages and prompts, a member key for a collective, invitations to a founding, payments prepared for Damgar",
+  Damgar: "the accepted list, payment claims, receipts, requests and answers, sales, a vault transfer, asks for a collective\u2019s promise",
+  Ummia: "the accepted list, payments prepared for an anchor, asks for a collective\u2019s release, MIP discussions"
+};
+function lineOf(app3) {
+  return app3 ? `${app3}\u2019s line` : "a line";
+}
+function livesOn(app3) {
+  return (app3 && APP_LINES[app3]) ?? "whatever its app signed there: possibly a member key for a collective, notes, a list";
+}
+function cardText(c, app3) {
+  return `${c.act} ${c.position} ${c.summary}${c.hidden === void 0 ? "" : ` ${c.hidden}`} ${app3}${c.missing ? ` missing ${c.missing}` : ""}`;
 }
 function lineWords(l) {
   const whose = l.own ? "This device\u2019s line" : "A line made elsewhere";
@@ -3367,76 +3443,69 @@ function planLines(lines2, o = {}) {
     }
     if (leaveOut.has(c.act)) throw new Error(`${c.act} is both given a card and left out`);
   }
+  const held = o.held ? new Set(o.held) : null;
+  const found = (act) => held ? held.has(act) : lines2.some((l) => l.tip === act);
   const kept = [];
   const left = [];
   const shown = [];
+  const unplacedSay = [];
+  for (const c of cards) {
+    const whose = lineOf(c.app);
+    if (!found(c.act)) {
+      unplacedSay.push(
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: its latest act (${c.act}) is not at the identity's homes, so no reader can follow it. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it. ${c.app ? `Open ${c.app} first: it sends its acts to the homes; then give its card again.` : "Open the app that shows this card first: it sends its acts to the homes; then give its card again."}`
+      );
+    } else if (c.missing) {
+      unplacedSay.push(
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: ${c.missing === 1 ? "one of its acts is" : `${c.missing} of its acts are`} not at the identity's homes (${c.app ?? "its app"} says so), so no reader can follow it past ${c.missing === 1 ? "it" : "them"}. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it.`
+      );
+    }
+  }
+  const counts = o.unplaced && cards.length && cards.every((c) => c.hidden !== void 0) ? cards.reduce((n, c) => n + c.hidden, 0) : null;
+  const covered = counts !== null && counts === o.unplaced.length && !unplacedSay.length;
+  const unread = [];
   for (const l of lines2) {
     const card = cards.find((c) => c.act === l.tip) ?? l.card;
+    const given = cards.find((c) => c.act === l.tip);
     if (leaveOut.has(l.tip)) {
       left.push(l);
       shown.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
     } else if (card) {
-      kept.push(card);
-      shown.push({ text: l.readable ? `${lineWords(l)} Kept.` : `${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`, tone: l.readable ? "ok" : "warn" });
+      kept.push({ act: card.act, position: card.position, summary: card.summary });
+      shown.push({
+        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`,
+        tone: l.readable || given && !given.missing ? "ok" : "warn"
+      });
+    } else if (covered) {
+      unread.push(l);
     } else {
       left.push(l);
       shown.push({ text: `${lineWords(l)} No card was given, so it is left out: its acts become void.`, tone: "bad" });
     }
   }
+  if (unread.length) {
+    shown.push({
+      text: `${unread.length === 1 ? "One more act Ki\u0161ib cannot read lies" : `${unread.length} more acts Ki\u0161ib cannot read (private, or behind a private act) lie`} on the lines kept by the cards given: those apps count ${counts} such act${counts === 1 ? "" : "s"}, and the homes hold ${counts}. Kept with them: ${unread.map((l) => l.tip).join(", ")}.`,
+      tone: "ok"
+    });
+  }
+  if (counts !== null && !covered && !unplacedSay.length && counts < o.unplaced.length) {
+    const n = o.unplaced.length - counts;
+    shown.push({ text: `${n === 1 ? "One act" : `${n} acts`} at the homes, signed with this key, lie${n === 1 ? "s" : ""} on no line whose card was given (the cards count ${counts}, the homes hold ${o.unplaced.length}): an app whose card is missing, or someone else holding the signing key. Left out unless you give that app\u2019s card.`, tone: "bad" });
+  }
   for (const c of cards) {
     if (lines2.some((l) => l.tip === c.act)) continue;
-    kept.push(c);
-    shown.push({ text: `A line ending at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}).`, tone: "warn" });
+    kept.push({ act: c.act, position: c.position, summary: c.summary });
+    shown.push({ text: `${c.app ? `${c.app}\u2019s line, ending` : "A line ending"} at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}), but no reader can follow it.`, tone: found(c.act) ? "warn" : "bad" });
   }
-  return { kept, left, shown, warning: left.length ? voidWarning(left) : null };
+  for (const t of unplacedSay) shown.push({ text: t, tone: "bad" });
+  const warning = [left.length ? voidWarning(left) : "", ...unplacedSay].filter(Boolean).join(" ") || null;
+  return { kept, left, shown, warning };
 }
 function checkWarned(plan, warned) {
   if (plan.warning && warned !== plan.warning) {
-    throw new Error(`Nothing was signed. ${plan.warning} Show this to the owner and pass it back to leave ${plan.left.length === 1 ? "it" : "them"} out, or give a card for each line to keep.`);
+    throw new Error(`Nothing was signed. ${plan.warning} Show this to the owner and pass it back to go on as it says, or give a card for each line to keep, its acts at the homes.`);
   }
-}
-
-// src/web/node-fs.ts
-var none = (name) => () => {
-  throw new Error(`${name}: there are no files in a browser`);
-};
-var readFileSync = none("readFileSync");
-var writeFileSync = none("writeFileSync");
-var renameSync = none("renameSync");
-
-// src/web/node-crypto.ts
-function randomBytes2(n) {
-  return crypto.getRandomValues(new Uint8Array(n));
-}
-function createHash(algorithm) {
-  if (algorithm !== "sha256") throw new Error(`${algorithm}: only sha256 in the browser`);
-  const parts = [];
-  const h = {
-    update(data) {
-      parts.push(typeof data === "string" ? new TextEncoder().encode(data) : data);
-      return h;
-    },
-    /** The digest's bytes, or, as Node gives it with "hex", its hexadecimal text (the repo client's spec hashes). */
-    digest(encoding) {
-      const all = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
-      let at = 0;
-      for (const p of parts) {
-        all.set(p, at);
-        at += p.length;
-      }
-      const d = sha256(all);
-      if (encoding === void 0) return d;
-      if (encoding !== "hex") throw new Error(`${encoding}: only hex in the browser`);
-      return [...d].map((b) => b.toString(16).padStart(2, "0")).join("");
-    }
-  };
-  return h;
-}
-
-// ../genesis/src/kex.ts
-var kexLog = { recording: false, entries: [] };
-function record(e2) {
-  if (kexLog.recording) kexLog.entries.push(e2);
 }
 
 // ../genesis/src/lookup.ts
@@ -3837,6 +3906,7 @@ var TestIdentity = class _TestIdentity {
       acks: opts.acks
     });
     this.f.sequence.push(made.id);
+    if (!opts.public && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
     if (this.f.cites && isRecord) this.f.cites = [made.id];
     return made;
   }
@@ -4181,6 +4251,28 @@ var TestIdentity = class _TestIdentity {
     return this.everyday(spec, type, payload, opts);
   }
   /**
+   * Sign a private act on a line of its own (one act, first in its line),
+   * outside this identity's sequence, never left at its homes: for an act
+   * whose content no other app of this identity may read, a share of a
+   * collective's chain key (F337). *Cost:* its line is never kept by a
+   * change of keys, so the act is void after the next one; it is read once,
+   * soon after it is made.
+   */
+  signApart(spec, type, payload, opts = {}) {
+    return makeEveryday({
+      signingSecret: unhex(this.f.signingSecret),
+      signer: this.f.identity,
+      binding: this.f.binding,
+      spec,
+      type,
+      payload,
+      sequence: [],
+      public: false,
+      to: opts.to,
+      refs: opts.refs
+    });
+  }
+  /**
    * Publish an act on this identity's own relays, for example a private
    * post whose key it will deliver. Returns the act id and its content key.
    */
@@ -4310,6 +4402,122 @@ function sealFor(act, key, recipients) {
 function failure(home, e2) {
   if (e2 instanceof RelayError) return { home, error: e2.reason, code: e2.code };
   return { home, error: String(e2) };
+}
+
+// ../genesis/src/private.ts
+var unb642 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+function ownKey(me) {
+  const e2 = me.f.encryption[me.f.encryption.length - 1];
+  return e2 ? xwingPublic(unhex(e2.secret)) : null;
+}
+async function leaveAtHomes(me, made, o = {}) {
+  const via2 = o.via ?? me.via;
+  const key = o.sealed || o.lockedOnly ? null : ownKey(me);
+  const to = describeAct(made.act).to ?? [];
+  let copy = null;
+  if (key && to.length === 1 && to[0] === me.f.identity) copy = { sealed: sealFor(made.act, made.key, [{ id: me.f.identity, key }]), tags: [] };
+  else if (key && !to.length) copy = { sealed: sealFor(made.act, made.key, [{ key }]), tags: [pickupTag(key)] };
+  else if (key) {
+    const kd = me.signApart(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.f.identity] });
+    copy = { sealed: sealFor(kd.act, kd.key, [{ id: me.f.identity, key }]), tags: [] };
+  }
+  const took = [];
+  for (const h of me.f.homes) {
+    try {
+      await relayAt(h.hint, via2).putAct(made.act);
+      if (copy) await relayAt(h.hint, via2).putSealed(copy.sealed, copy.tags);
+      took.push(h.hint);
+    } catch {
+    }
+  }
+  if (took.length && (o.sealed || o.lockedOnly || copy) && me.f.unsent?.[made.id]) delete me.f.unsent[made.id];
+  return took;
+}
+async function sendWaiting(me, via2 = me.via) {
+  for (const [id, x] of Object.entries(me.f.unsent ?? {})) {
+    await leaveAtHomes(me, { id, act: unb642(x.act), key: unb642(x.key) }, { via: via2 });
+  }
+  return Object.keys(me.f.unsent ?? {}).length;
+}
+async function lineAtHomes(me, app3, via2 = me.via) {
+  const own = ownLine(me.f.sequence);
+  const blank = { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null };
+  if (!own.card) return { ...blank, atHomes: null, missing: 0, hidden: 0, card: null };
+  const homes = me.f.homes.map((h) => h.hint);
+  let places = homes;
+  try {
+    const look = await lookUp(me.f.identity, homes, via2);
+    places = [.../* @__PURE__ */ new Set([...homes, ...look.resolution.homes.map((h) => h.hint), ...look.routes.routes.flatMap((x) => x.hints)])];
+  } catch {
+  }
+  const acts = await actsBy(me.f.identity, places, via2);
+  if (!acts.length) return { ...blank, atHomes: null, missing: 0, hidden: null, card: null };
+  const held = new Set(acts.map((a) => describeAct(a).id));
+  const missing = me.f.sequence.filter((id) => !held.has(id)).length;
+  const u2 = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts }));
+  const hidden = me.f.sequence.filter((id) => u2.has(id)).length;
+  const atHomes = held.has(own.card.act);
+  const card = { ...own.card, hidden, ...missing ? { missing } : {} };
+  return { ...blank, atHomes, missing, hidden, card: atHomes ? cardText(card, app3) : null };
+}
+async function ownActs(identity, secrets, places, via2 = {}) {
+  const out = /* @__PURE__ */ new Map();
+  const locked = /* @__PURE__ */ new Map();
+  for (const a of await actsBy(identity, places, via2)) {
+    const d = describeAct(a);
+    if (d.public) out.set(d.id, { act: a });
+    else locked.set(d.id, a);
+  }
+  const delivered = /* @__PURE__ */ new Map();
+  if (!secrets.length) return [...out.values()];
+  const queries = [{ q: { to: identity }, me: identity }, ...secrets.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
+  for (const h of places) {
+    for (const { q, me } of queries) {
+      let after;
+      try {
+        for (; ; ) {
+          const page = await relayAt(h, via2).feed({ ...q, after });
+          for (const it of page.items) {
+            if (it.kind !== "sealed") continue;
+            for (const s of secrets) {
+              try {
+                const o = openSealed(it.item, me, s);
+                const d = o.described;
+                if (d.signer !== identity) break;
+                if (d.spec === SPECS.envelopes && d.type === ENVELOPES_TYPES.keyDelivery && d.payload) {
+                  const k = readKeyDelivery(d.payload);
+                  delivered.set(k.target, k.key);
+                } else if (!out.has(d.id)) out.set(d.id, { act: o.act, key: o.key });
+                break;
+              } catch {
+              }
+            }
+          }
+          if (!page.items.length || page.next === after) break;
+          after = page.next;
+        }
+      } catch {
+      }
+    }
+  }
+  for (const [id, key] of delivered) if (!out.has(id) && locked.has(id)) out.set(id, { act: locked.get(id), key });
+  return [...out.values()];
+}
+function lineReader(app3) {
+  const seen = /* @__PURE__ */ new Map();
+  return async (me, via2 = me.via) => {
+    const latest = me.f.sequence[me.f.sequence.length - 1] ?? null;
+    const was = seen.get(me.f.identity);
+    const waiting = Object.keys(me.f.unsent ?? {}).length > 0;
+    if (was && was.latest === latest && !waiting && was.line.atHomes && Date.now() - was.at < 6e4) return was.line;
+    const line = await lineAtHomes(me, app3, via2);
+    seen.set(me.f.identity, { latest, at: Date.now(), line });
+    return line;
+  };
+}
+function noLine(sequence) {
+  const own = ownLine(sequence);
+  return { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null, atHomes: null, missing: 0, hidden: null, card: null };
 }
 
 // ../../modules/jpeg/src/jpeg.ts
@@ -7627,6 +7835,7 @@ async function negotiate(by, to, o) {
       failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
     }
   }
+  if (o.home !== false) await leaveAtHomes(by, made);
   return { id: made.id, act: made.act, key: made.key, sealed: sealedId(sealed), left, failed };
 }
 function readMessage(d) {
@@ -9604,11 +9813,12 @@ async function sendToSelf(me, type, payload, opts) {
   for (const h of homes) {
     try {
       await relayAt(h, opts.via ?? {}).putSealed(sealed);
-      await relayAt(h, opts.via ?? {}).putAct(made.act);
       left.push(h);
     } catch {
     }
   }
+  await leaveAtHomes(me, made, { via: opts.via ?? {}, sealed: left.length > 0 });
+  await opts.save();
   if (!left.length) throw new Error(`No home took the draft (${homes.join(", ")}). It was signed but went nowhere: prepare it again later.`);
   return { id: made.id, left };
 }
@@ -9940,11 +10150,11 @@ async function sealMemberKey(me, k, save) {
   for (const h of homes) {
     try {
       await relayAt(h, me.via).putSealed(sealed);
-      await relayAt(h, me.via).putAct(made.act);
       left++;
     } catch {
     }
   }
+  await leaveAtHomes(me, made, { sealed: left > 0 });
   if (!left) throw new Error("No home took your member key. Your signature stands; the key stays in this app only until it is sent again.");
   return made.id;
 }
@@ -9959,6 +10169,13 @@ async function readMemberKeys(identity, secrets, homes, via2 = {}) {
     return [];
   }
   const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
+  for (const x of await ownActs(identity, secrets, [.../* @__PURE__ */ new Set([...at, ...l.routes.routes.flatMap((r) => r.hints)])], via2)) {
+    try {
+      if (x.key) l.verifier.addWithKey(x.act, x.key);
+      else l.verifier.add(x.act);
+    } catch {
+    }
+  }
   for (const h of at) {
     let after;
     try {
@@ -9993,28 +10210,32 @@ async function readMemberKeys(identity, secrets, homes, via2 = {}) {
 }
 async function resealMemberKeys(identity, oldSecrets, newKey, homes, via2 = {}) {
   let n = 0;
+  const queries = [{ q: { to: identity }, me: identity }, ...oldSecrets.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
   for (const h of homes) {
-    let after;
-    try {
-      for (; ; ) {
-        const page = await relayAt(h, via2).feed({ to: identity, after });
-        for (const it of page.items) {
-          if (it.kind !== "sealed") continue;
-          for (const s of oldSecrets) {
-            try {
-              const o = openSealed(it.item, identity, s);
-              if (o.described.spec !== MEMBER_KEYS_SPEC || o.described.type !== MEMBER_KEY || o.described.signer !== identity) break;
-              await relayAt(h, via2).putSealed(sealFor(o.act, o.key, [{ id: identity, key: newKey }]));
-              n++;
-              break;
-            } catch {
+    for (const { q, me } of queries) {
+      let after;
+      try {
+        for (; ; ) {
+          const page = await relayAt(h, via2).feed({ ...q, after });
+          for (const it of page.items) {
+            if (it.kind !== "sealed") continue;
+            for (const s of oldSecrets) {
+              try {
+                const o = openSealed(it.item, me, s);
+                if (o.described.signer !== identity) break;
+                if (me) await relayAt(h, via2).putSealed(sealFor(o.act, o.key, [{ id: identity, key: newKey }]));
+                else await relayAt(h, via2).putSealed(sealFor(o.act, o.key, [{ key: newKey }]), [pickupTag(newKey)]);
+                if (o.described.spec === MEMBER_KEYS_SPEC && o.described.type === MEMBER_KEY) n++;
+                break;
+              } catch {
+              }
             }
           }
+          if (!page.items.length || page.next === after) break;
+          after = page.next;
         }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
+      } catch {
       }
-    } catch {
     }
   }
   return n;
@@ -10527,11 +10748,12 @@ async function changeAccepted(me, change, opts) {
     for (const h of homes) {
       try {
         await relayAt(h, via2).putSealed(sealed);
-        await relayAt(h, via2).putAct(made.act);
         left++;
       } catch {
       }
     }
+    await leaveAtHomes(me, made, { via: via2, sealed: left > 0 });
+    await opts.save();
     if (!left) throw new Error("No home took the accepted list: nothing was changed. Try again.");
     return { written: made.id, list: { entries: next, tips: [{ id: made.id, version: read2.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next }], merged: read2.merged, version: read2.version + 1, problems: [] } };
   }
@@ -10602,6 +10824,22 @@ var Damgar = class {
   constructor(store, opts = {}) {
     this.store = store;
     this.opts = opts;
+  }
+  /** This app's line as the homes hold it, for its card (H80's question 2). */
+  line = lineReader("Damgar");
+  /** This app's line: what waits sent first, in its own turn (the file read again there, the key checked first), then read back. Null where the homes could not be read. */
+  async lineNow(me, via2) {
+    if (Object.keys(me.f.unsent ?? {}).length) {
+      await this.serial(async () => {
+        const f = await this.store.identity(me.id);
+        if (!f) return;
+        await this.current(f);
+        await sendWaiting(f, via2);
+        await this.store.saveIdentity(f);
+        me.f.unsent = f.f.unsent;
+      }).catch(() => void 0);
+    }
+    return this.line(me, via2).catch(() => null);
   }
   queue = Promise.resolve();
   /** The accepted list as last read, by identity (memory only). */
@@ -10844,7 +11082,7 @@ var Damgar = class {
     if (!me) return out;
     const s = await this.store.read(me.id, "settings") ?? { relays: [], via: {} };
     const book = { ...NO_BOOK(), ...await this.store.read(me.id, "book") ?? {} };
-    const own = ownLine(me.f.sequence);
+    const line = await this.lineNow(me, s.via);
     out.identity = {
       id: me.id,
       grouped: groupId(me.id),
@@ -10853,7 +11091,7 @@ var Damgar = class {
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
-      line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null }
+      line: line ?? noLine(me.f.sequence)
     };
     let l;
     try {
@@ -12902,12 +13140,8 @@ var Damgar = class {
       } catch {
       }
     }
-    for (const h of me.f.homes.map((x) => x.hint)) {
-      try {
-        await relayAt(h, s.via).putAct(made.act);
-      } catch {
-      }
-    }
+    await leaveAtHomes(me, made, { via: s.via, lockedOnly: how.by === "lane" });
+    await this.store.saveIdentity(me);
     if (!left) throw new Error(`${short2(to)}\u2019s inbox (${inbox.join(", ")}) took nothing. It was signed and kept here; try again later.`);
     return made.id;
   }
@@ -13240,12 +13474,8 @@ async function deliverKey(me, buyer, publication, key, a) {
     } catch {
     }
   }
-  for (const h of me.f.homes.map((x) => x.hint)) {
-    try {
-      await relayAt(h, a.via).putAct(made.act);
-    } catch {
-    }
-  }
+  await leaveAtHomes(me, made, { via: a.via });
+  await a.save();
   if (!left) throw new Error("its inbox took nothing");
   return made.id;
 }
@@ -13859,6 +14089,22 @@ var Dub = class _Dub {
     this.opts = opts;
     this.money = new DubMoney(store, { web: !!opts.web, app: opts.web ? "Dub on the web" : "Dub on this computer" });
   }
+  /** This app's line as the homes hold it, for its card (H80's question 2). */
+  line = lineReader("Dub");
+  /** This app's line: what waits sent first, in its own turn (the file read again there, the key checked first), then read back. Null where the homes could not be read. */
+  async lineNow(me, via2) {
+    if (Object.keys(me.f.unsent ?? {}).length) {
+      await this.serial(async () => {
+        const f = await this.store.identity(me.id);
+        if (!f) return;
+        await this.current(f);
+        await sendWaiting(f, via2);
+        await this.store.saveIdentity(f);
+        me.f.unsent = f.f.unsent;
+      }).catch(() => void 0);
+    }
+    return this.line(me, via2).catch(() => null);
+  }
   queue = Promise.resolve();
   /** Display names found, by ID, and when (this app's memory only). */
   names = /* @__PURE__ */ new Map();
@@ -13916,7 +14162,7 @@ var Dub = class _Dub {
     if (me) {
       const s = await this.store.settings(me.id);
       const p = await this.store.people(me.id);
-      const own = ownLine(me.f.sequence);
+      const line = await this.lineNow(me, s.via);
       if (!pend) out.stage = "ready";
       out.identity = {
         id: me.id,
@@ -13929,7 +14175,7 @@ var Dub = class _Dub {
         relays: s.relays,
         encryption: me.f.encryption.length > 0,
         oldChainKey: !!me.f.safety.seeds,
-        line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
+        line: line ?? noLine(me.f.sequence),
         list: p.list,
         sealed: p.sealed ? { version: p.sealed.version, forked: !!p.sealed.forked } : null,
         signing: !!s.signing,
@@ -14719,12 +14965,7 @@ var Dub = class _Dub {
         }
       }
       if (!left) throw new Error(`No inbox of ${fingerprint(to)} took the message: ${lines2.map((x) => x.text).join("; ")}. It is signed, not delivered.`);
-      for (const h of me.f.homes) {
-        try {
-          await relayAt(h.hint, s.via).putAct(made.act);
-        } catch {
-        }
-      }
+      await this.signed(me, () => leaveAtHomes(me, made, { via: s.via }));
       p.sent.push({ id: made.id, to, text: text3, at: now3() });
       await this.store.savePeople(me.id, p);
       lines2.unshift({ text: `Sealed to ${fingerprint(to)} and left in its inbox: only it can open it.`, tone: "ok" });
@@ -15350,10 +15591,10 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       try {
         await relayAt(h, s.via).putSealed(sealed);
         left++;
-        await relayAt(h, s.via).putAct(made.act);
       } catch {
       }
     }
+    await this.signed(me, () => leaveAtHomes(me, made, { via: s.via, sealed: left > 0 }));
     p.sealed = { version, act: made.id };
     p.carried = true;
     await save();
@@ -15648,6 +15889,16 @@ function e(s) {
   return String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
+// ../genesis/src/card-words.ts
+function cardWords(l, app3, e2) {
+  const n = `${l.acts} act${l.acts === 1 ? "" : "s"}`;
+  if (!l.latest) return n;
+  const missing = l.missing ? ` ${l.missing === 1 ? "One act" : `${l.missing} acts`} of this line ${l.missing === 1 ? "is" : "are"} not at your homes, and ${app3} no longer holds ${l.missing === 1 ? "it" : "them"}: no reader can follow this line past ${l.missing === 1 ? "it" : "them"}, so a change of keys may lose what lives on it (a member key, notes, a list). Ki\u0161ib says so in red.` : "";
+  if (l.card) return `${n}: its card, for Ki\u0161ib, <code class="card-line">${e2(l.card)}</code>${missing ? `<br>${e2(missing)}` : ""}`;
+  if (l.atHomes === false) return `${n}: its latest act (<code>${e2(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e2(app3)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e2(missing)}` : ""}`;
+  return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e2(l.latest)}</code>). Look again before changing your keys.`;
+}
+
 // src/page/view.ts
 var NAME2 = "Dub";
 var TEST_ONLY = "Test identities only, until MOR is frozen";
@@ -15864,7 +16115,7 @@ ${i.oldChainKey ? "<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026:
 <dt>Private messages</dt><dd>${i.encryption ? "Its encryption key is here: its private messages open here." : "No encryption key here: its private messages cannot be opened here."}</dd>
 <dt>Homes</dt><dd>${e(i.homes.join(", "))} <span class="small">(changed only with the chain key: in Ki\u0161ib, \u201CChange an identity\u2019s keys\u201D)</span></dd>
 <dt>Relays</dt><dd>${e(i.relays.join(", "))}</dd>
-<dt>This app's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? "" : "s"}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? "")}</code>` : ""}</dd></dl>
+<dt>This app's line</dt><dd>${cardWords(i.line, "Dub", e)}</dd></dl>
 <p class="small">If the signing key is ever changed (in Ki\u0161ib, with the chain key\u2019s words), that change must keep this line, or the posts made here become void: take the line above to it.</p></details>
 <details data-fold="relays"><summary>Change its relays</summary>${i.kind === "made" ? `<form id="relays" class="compose"><label>Its relays, one per line: where its acts are found and its inbox is</label><textarea name="relays">${e(i.relays.join("\n"))}</textarea><div class="row"><button type="submit">Read it back</button></div></form><div id="relays-review"></div>` : '<p class="small">This identity was brought here: Dub publishes no routes for it (a second writer would fork them). Change its relays in the app that made it.</p>'}
 <p class="small">Its homes are named in its identity chain and change only with the chain key: in Ki\u0161ib, \u201CChange an identity\u2019s keys\u201D, from the chain key\u2019s paper.</p></details>

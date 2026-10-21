@@ -8,7 +8,7 @@ esbuild: 0.25.12
 
 Work hash of each file (as the display client lists them):
 c60fb053d7ce4d362ff21698b0715da2fa4126af586b35aedce074daf3c4e05d  index.html
-e54268a9ff70e983eb82ddf7de96f05d7b7bf0c2990d731f81ab3d81b974ee0b  dub.js
+dec696db4a96801fff334950aa3996a654c7999df26948af79159cddf4fe3902  dub.js
 88a104db02041c4e07e445110610a86eceac8b50bff969b855490386caf34696  dub.css
 beffa8074ef34e125ae7f6edcb4eb505366084fe28032da602b87674914e8bc6  mor_wasm_bg.wasm
 d72e0f61b65931f575516d8d39caa75d2ad09b04b0ea606aee6a157b2e5eb146  inter_light.woff2
@@ -19,7 +19,7 @@ f6eae92c8f6cf5b0b1d604f2cdf2bce2badb7ef357873549df9790512f5cc5dd  apple-touch-ic
 
 SHA-256 of each file (as sha256sum prints it):
 90e41d85cbaa8cc0d01ce013b98fbeb9f397d4e20ac30106ad21d35d64fd758e  index.html
-bac1ad40efb34a0c4ab86f88a96bc01aba4d2f2abb7eef041b969add9e48aa95  dub.js
+fe4830064301b987581941258e3a1a6c5fa28f79cf0647625490c1409ccb286e  dub.js
 6b72e1bd8c1c9eb0f22ab85ce0469cdaec89a7f780887193ff09dd7c432e419e  dub.css
 1ff48cf0d0ddd27c9432eb44e4226d458905e04836f6004e7ba009b09c15122d  mor_wasm_bg.wasm
 e111a1e2ad914ccda9179b95e83fb10234dd52a1932e0b93c480476227983fd9  inter_light.woff2
