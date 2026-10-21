@@ -13,10 +13,10 @@
 | Agreements draft 17 | `spec/MIR-agreements-draft-17.md` | Committed; stranger's reading done, wording fixes committed |
 | Development draft 11 | `spec/MIR-development-draft-11.md` | Committed; stranger's reading done, wording fixes committed |
 | MICS v30 | `spec/02-MOR-MICS-v30.md` | Committed |
-| Freeze test suite v30 | `spec/03-MOR-freeze-test-suite-v30.md` | In progress: five parts cleaned in parallel in the scratchpad, then assembled |
-| Final stranger's reading over all eight | `docs/freeze-ready-strangers/all-eight.md` | After the suite |
-| `spec/README.md` | — | At the end |
-| Report | `docs/freeze-ready-drafts-report.md` | At the end |
+| Freeze test suite v30 | `spec/03-MOR-freeze-test-suite-v30.md` | Committed; notes in `docs/freeze-ready-suite-notes.md` |
+| Final stranger's reading over all eight | `docs/freeze-ready-strangers/all-eight.md` | Done; wording fixes committed |
+| `spec/README.md` | — | Done: the eight named freeze-ready, for approval |
+| Report | `docs/freeze-ready-drafts-report.md` | Done: questions 1 to 54, the term question |
 
 ## How each text is made
 
@@ -106,3 +106,7 @@ Questions:
 43. **Member keys in detail** (with question 20): removal, which areas count, when the key counts against rule 72, the agreement in force for its acts, a forked line, the member's own rotation; a grant to oneself and type 1 acceptance.
 44. **"Only acts valid in their own format count"** against delivery, use and metric records, and transfer field 3 against a valid over-sale.
 45. **Agreements' internal contradictions** (one grouped question): abandonment outcomes against a holder with a named stake successor stated three ways; areas over Identity; judicial tasks with or without task 14; fork completeness and non-member holders' chain signatures; record field 3 and take-ups.
+
+## Where this session stopped
+
+Every text committed, the readings done, the report written; the pull request opened, not merged. Next: Nobody, allegedly, answers the report's questions; a later session writes the answers in.
