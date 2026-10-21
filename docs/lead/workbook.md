@@ -14,16 +14,17 @@ The letters to Machine, allegedly, in the project: from the brainstorm window (1
 
 ## The role
 
-The MOR lead keeps the protocol: the core texts (MICS, six MIRs, freeze test suite), the cMIPs and Modules woven into verdicts, the conformance vectors, the C verifier, Fable's review, the fixes, the step 17 rehearsal, the freeze, and dubsar.org for the release. The Dubsar Suite lead keeps the apps and their H findings; what it needs from the core comes through Nobody, allegedly. Build work is done by sessions the lead writes prompts for; work on the author's Mac and the servers by machine sessions.
+The MOR lead keeps the core: the core texts (MICS, six MIRs, freeze test suite), the conformance vectors, the C verifier, Fable's review, the fixes, the step 17 rehearsal, the freeze, and dubsar.org for the release. The Dubsar Suite lead keeps the apps, their H findings, and every cMIP and Module, those woven into verdicts included (Nobody, allegedly, 21 October 2026: "The idea is that it is not core."); what it needs from the core comes through Nobody, allegedly. Build work is done by sessions the lead writes prompts for; work on the author's Mac and the servers by machine sessions.
 
 ## The sessions to the freeze
 
 | # | Session | Waits for | Status |
 | --- | --- | --- | --- |
-| S1 | **Freeze-ready texts** (the clean-up pass): six MIRs, MICS v30, suite v30, the provenance map. Texts only. | — | Prompt ready 21 October (`docs/lead/prompts/s1-freeze-ready-texts.md`), launched by Nobody, allegedly, 21 October afternoon |
+| S1 | **Freeze-ready texts** (the clean-up pass): six MIRs, MICS v30, suite v30, the provenance map. Texts only. | — | Done 21 October, pull request 83, not merged: checklist verified by the lead; about fifty questions, sorted in `docs/lead/s1-questions.md` |
+| S1b | **Technical pass:** F363 to F369 written into the freeze-ready drafts, and the formats S1 found unwritten, on S1's branch. | — | Prompt ready 21 October (`docs/lead/prompts/s1b-technical-pass.md`) |
 | S2 | **Core aligned, and the vectors:** the core library matching S1's texts (keeper records, rule 33 by anchors, F359, F295's count); suite steps already tested marked run, small tests for the cheap core steps; conformance vectors part 2 (signatures) and verdict vectors for every layer, checked by the Python implementation too. | S1 approved; the Suite lead's items touching the core | Not written |
-| S3 | **The Dubsar cMIPs:** every cMIP and Module retitled "Dubsar …" (F356, texts only; the apps' wording is the Suite lead's); payment cMIP draft 4 (F355 c); the regtest quirks kit. | Can run beside S1 if the budget allows | Not written |
-| S4 | **The C box** (the lead itself): a new repository holding the freeze-ready texts and vectors, fingerprinted; the C session's prompt. | S1, S2, S3 merged; the Suite lead's core items in | — |
+| S3 | *Handed to the Dubsar Suite lead (Nobody, allegedly, 21 October: "Modules and cMIPs are handled by the suite lead. The idea is that it is not core."):* the "Dubsar" titles (F356), payment cMIP draft 4 (F355 c), the chain-key signer Module's fresh seed (F361), the regtest quirks kit. | — | Not the MOR lead's |
+| S4 | **The C box** (the lead itself): a new repository holding the freeze-ready texts and vectors, fingerprinted; the C session's prompt. | S1 and S2 merged; the Suite lead's core items in | — |
 | S5 | **The C verifier**, insulated, outside the project. | S4 | — |
 | S6 | **Fable's review, a Thursday**: each divergence judged (text unclear, text wrong, Rust wrong, C wrong). About half of Fable's weekly allowance. | S5 | — |
 | S7 | Fixes; the step 17 rehearsal; the freeze ("if the fixes are not gigantic"); the first two acts of the frozen protocol, "Thank you for the shower…" with a photograph of the Earth, then the full text formatted (build brief). | S6 | — |

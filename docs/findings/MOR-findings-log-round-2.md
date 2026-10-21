@@ -28,6 +28,87 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F369. The formats S1 found unwritten: how the technical pass writes them (21 October 2026)
+
+**Taken by the project lead under delegation**, for the technical pass (S1b) on the freeze-ready texts:
+
+1. **How a home is queried, and the proofs' encoding (S1's question 1):** transport, so a cMIP's (Nobody, allegedly, 19 October 2026: "if it's transport, it's just transport"). The core states only what a verifier checks of what it is handed (an inclusion or consistency proof's content, as Identity's checks read it) in a fixed encoding the core gives; how a client asks a home, and how it finds deliveries, leave the core's open list for the relay transport cMIP.
+2. **The unit specification (3) and the signature-scheme specification (8, 34):** each written as a Development kind with its fields, since Money's and Identity's rules name them by hash and a verifier decodes them. The CDDL conventions stated once.
+3. **The field types the strangers found (13), deterministic CBOR said once (14), Development's content decoding (38):** written as the code builds them; where the code and a decided rule disagree, a question, never a silent choice.
+4. **The running summary (16):** written once, as the published vector computes it.
+5. **A MIR's spec hash (17):** one rule, stated once, matching what the code computes; Identity's "the hash of the frozen text" reworded to it.
+6. **The final line break (12):** a frozen text may end with exactly one; Development's root check allows it.
+7. **Unicode (2):** pinned to the version the core's tables pin today, as a number, with no "as of".
+8. **X-Wing's hash (54):** written into Envelopes at the freeze; a step of the freeze procedure.
+
+## F368. S1's wording points and readings, taken as the session leaned (21 October 2026)
+
+**Taken by the project lead under delegation**, none changing a verdict as read: S1's questions 6, 11, 15, 18, 19, 21, 23, 26, 27, 28, 29, 30, 33, 35, 36, 37 (first half: rules moved out of italics), 46 (the suite keeps its scenario titles: it tests the core and is not the core), 47, 48, 52 (at the freeze each header becomes the text's name alone), 53 (named rails and clocks kept as italic examples; Money rule 29's normative sentence by role), and the words used two ways as S1's glossary resolves them; each as `docs/freeze-ready-drafts-report.md` leans. Question 50, the MICS's opening, waits for Nobody, allegedly's own reading.
+
+## F367. S1's remaining verdict questions (21 October 2026; questions 4, 5, 9, 22, 37, 44, 45, 49, 51)
+
+**Taken by the project lead under delegation**, each read in the freeze-ready texts:
+
+1. **An act under a pending rotation (4):** pending, never valid, until the rotation counts (Identity rule 28 says so; everyday check 2 is worded to match: a binding to a pending rotation makes the act pending, not invalid).
+2. **A home's dishonesty (5):** as Identity rule 45 says, not as the session leaned: the conflict survives the home's own rotations, and, where the identity requires audit, both receipts sit under cosigned log summaries (for such an identity, step 2 already ends the conflict when only one is logged). "Conflicting receipts" step 3 is aligned to it; rule 44 says "pass receipt check 1", as step 1 does, since a receipt in conflict counts for nothing.
+3. **Text rule 14 at a Text-only verifier (9):** unknown for a text carrying one object of either allowed shape, invalid for any other `objects`.
+4. **A collective's pointer left outside a fork (22):** it counts for payments made before the fork's line, and not after.
+5. **A malformed specification against "invalid beats unknown" (37, second half):** an act naming one is unknown, unless a rule the verifier can apply shows it invalid.
+6. **"Only acts valid in their own format count" (44):** it reaches acts of the core's types; a cMIP's record counts where the verifier reads its format; transfer field 3's bound is a status rule, not a format rule.
+7. **Agreements' contradictions (45):** an abandonment outcome where a holder has a named stake successor: the stake passes by succession; genesis and rotations lie outside any area; task 14 is judicial, as Development's table says; a fork's completeness checks non-member holders' chain signatures; take-ups listed in record field 3; terms fields 26 and 27 placed in the tiers table.
+8. **A clone placing a successor elsewhere than the dead member's place (49):** invalid when marked with the plan alone, as a clone that reorders the other parties.
+9. **Money's dependence on Development (51):** stated, not removed: a Money client decodes Development's specification format (a rail Module's fields 5, 11 and 13, and whether a specification is one) and nothing more of Development. Money's "never depends" sentence narrows to say so.
+
+**Where:** the next pass on the freeze-ready texts.
+
+## F366. Collectives' member keys across Money and Agreements (21 October 2026; S1's questions 20, 43, 10)
+
+**Taken by the project lead under delegation** (Nobody, allegedly, 21 October 2026: "you'll decide the rest"), on his principle of F358: "It is a money matter and money areas should be able to do it. A founder should not have a special position if the constitution does not say so."
+
+1. **Every Money act, not pointers alone (question 20).** Money rule 7 lists every Money act a member key may sign for its collective (payee pointer, receipt, claim, obligation, creditor's release), each judged by Agreements as scoped, under the area that reaches Money and that area's holders and threshold; a Money-only client shows them unknown, as it does today for pointers. A split service's grant is judged under the area that issued it (rule 74). *Cost:* a Money-only client shows more of a collective's acts unknown.
+2. **When a member key counts, and when it stops (question 43).** It counts within the areas in force for the act it signs, from the moment the founding or clone naming it is in force, until a later version names another key for that holder or the holder leaves. The member's own change of keys leaves it as it is (F353). A rotation of the member that disowns the very signature that named the key is judged as any member's signature the collective's line placed: it stays valid for the collective, as "Made before, made after" says. A grant to oneself is accepted by the grantor's own type 1 acceptance (F351).
+3. **Text rule 14's two cases (question 10).** Where the signing key is a grant key, a member key included, the grant-key case decides.
+
+**Where:** the next pass on the freeze-ready texts (Money 11 rule 7; Agreements 17 rules 60, 73, 74, 80; Text 11 rule 14).
+
+## F365. What an act under a revoked grant, shown disputed, confers (21 October 2026; S1's question 24)
+
+**Taken by the project lead under delegation**, following F359 (decided this morning: "visible to everyone, never erased"). As for an act a rotation disowned: an act under a revoked grant that F359 shows disputed **confers nothing on an agreement chain** (no stake, no obligation, no consent: Agreements rule 6's sentence for a rotation) and is **shown**; Money treats it as it treats a disputed act after a change of keys. **The grantor may still adopt it** (rule 76: acknowledging, citing or paying on it), and then it binds. Every passage that says "void" for an act a revocation does not hold (the tie rule, rule 79, the scenarios) says "void, or disputed under rule 76".
+
+**Why:** binding the grantor (the session's option b) would let a thief with a lane key and an accomplice who acknowledges sign the victim into a debt: what decides would be signed by the wrong party (pattern 1). Shown, not binding, keeps both sides visible; the honest grantor who meant it adopts it. *Cost:* a payee who relied on a revoked app's promise (a debt to come, not a payment made) holds a visible dispute, not a debt, unless the grantor adopts it. A payment already made stays made on its rail; its receipt is the payee's own act and stands.
+
+## F364. Keepers, the remaining details (21 October 2026; S1's questions 7, 25, 40, 41, 42)
+
+**Delegated by Nobody, allegedly, 21 October 2026:** "Let's do this… I'll contribute where I can, you'll decide the rest." **Taken by the project lead**, each read in Agreements 17 and Identity 15 first; none widens what a keeper may do.
+
+1. **An anchor shows a deadline met, not missed (question 41).** F358's words: "a deadline is shown missed by an anchor, of the act itself or of a keeper's sequence". An anchor shows only that something existed by a point, never that it did not exist before. So: an anchor of the act itself shows the act made in time (a deadline met); a deadline missed is shown only by a keeper's anchored sequence that holds no record of the act up to a point past the deadline; a keeper's word alone never says late (F358 unchanged there). *Not chosen:* an act proving its own lateness by naming something that exists only after the deadline (a real proof, but a new mechanism). **Confirmed by Nobody, allegedly, the same afternoon: "Yes, it does."**
+2. **A keeper's own later rotation (question 7).** As decided in round 2's Q2 (G2, "Agreed"), not as the session leaned: a keeper's record that a rule reads to place an act, or that a relied-on version's completeness rests on, keeps the effect the rule gave it whatever the keeper's later rotation disowned, shown as a dispute ("a witness chosen in advance cannot un-witness"). Agreements 17 states it; Identity's rule that evidence counts only while its signer's chain keeps it gains this as its stated exception, in both texts' words alike. The session's lean narrowed it to a collective's line; that would have undone a decided rule.
+3. **Several keepers (question 40).** Each keeper's record is judged alone, against that keeper's own record of the rotation; the agreement's rule (any one, a threshold, all) counts how many keepers' records stand before their own record of it.
+4. **One sequence per keeper (question 25).** A keeper keeps one sequence for its records (a MUST for keepers); records of two sequences are never ordered against each other, so a keeper's second sequence protects nothing against the first. The other details as S1 wrote them: one record per act, public, chained by `prev`, its named signer matching the act's.
+5. **A deal with no keeper (question 42).** A declaration's line decides only what no relied-on version holds: what others relied on stays complete (rule 47) before any declaration's line.
+
+**Where:** the next pass on the freeze-ready texts (Agreements 17's keepers section and rule 33, Identity 15's evidence rule).
+
+## F363. A keeper counts for every act that belongs to its agreement, however the act links to it (21 October 2026; S1's question 39)
+
+**Found by the freeze-ready texts session** (S1, question 39): Agreements rule 42 counts a keeper record only where "the keeper is one named by an agreement the act's `objects` names". Many acts that belong to a deal link to it otherwise: a receipt names its claim (field 9), a claim names its agreement in its own field. Their records could never count, though the texts rely on them; and rule 7's "a keeper that recorded both" two work claims could never be met.
+
+**Walked back through the history first** (asked by Nobody, allegedly: "Deserves a big slow down… Let's do some archeology"): keepers were born as notaries the parties choose when they sign, recording "the deal and the acts around it", so a change of keys cannot erase what was relied on (the early core; F11's story); sealed (F37); guarded by F58 against a thief buying "disputed" from any keeper, by requiring the keeper to be named by the act's own agreement. F58 wrote "the act's own agreement" as "the agreement its `objects` names", true then of every act on a deal; receipts and claims came to link otherwise later. So the question was not how far keepers reach, but whether the wording still said what they always were.
+
+**Decided by Nobody, allegedly, 21 October 2026:** "Yes, it was always part of the agreement, just not directly stated into it. Makes sense to rework it to ensure all participants to the agreement can fall under the bracket." (a), the project lead's lean: a keeper record counts for an act that **belongs to** an agreement naming that keeper; an act belongs to an agreement when it names it in `objects`, or through the act it answers (a receipt through the claim it names, a claim or payment through its agreement field), so every participant's acts on the agreement, payer's and payee's alike, fall under its keepers. The keeper is still one the parties chose. An act belonging to no agreement (a post, a work claim alone, a rotation) has no keeper of its own: only an anchor places it. Rule 7: conflicting work claims are decided by anchoring, or by a keeper of an agreement both claims belong to.
+
+**Not chosen:** (b) any keeper named by any agreement the signer is party to (a keeper chosen for one deal speaking for acts outside it; the history gives no reason); (c) as written. **Shelved, not proposed:** that an anchored keeper sequence might count as clock evidence for anyone; it would change what keepers are, not for before the freeze.
+
+**Cost:** a verifier may follow two acts, not one, to see whether an act belongs to an agreement; a client judging deals implements Agreements already (F11).
+
+**Where:** Agreements draft 17, rules 42 and 7 (and the definition of "belongs to"), in the next pass on the freeze-ready texts; the core's check and a verdict vector (a receipt recorded by its deal's keeper before the payee's rotation: disputed; the same recorded by an unnamed keeper: void).
+
+## F361. A change of keys makes fresh chain-key paper (21 October 2026; H79 reopened)
+
+**Found by the Dubsar Suite lead** (`claude/MOR-suite-for-the-mor-lead.md` in the project, item 1): Kišib reused the same paper for every change of keys, on a reading in its README marked "to be confirmed" and never confirmed; H79 was closed as designed on that reading. **Decided by Nobody, allegedly, 21 October 2026:** "No, it does not stay the same. Unsure why sessions believe so. A rotation generates two new sets of keys, chain and signing."
+
+**Judged by the MOR lead:** no MIR changes. Identity commits only the hash of the next chain key; where it comes from is a client's and a key Module's. The air-gapped chain-key signer Module (draft 5, rule 3.3) has it the other way round: the next key from the current seed, a fresh seed only "if the current one may be exposed". Its next draft makes a fresh seed the rule at every change of keys, with both new sets of words shown and backed up (rule 3.7), and the seed Modules' notes follow. *Where:* the Dubsar Suite lead's (cMIPs and Modules are the suite's, Nobody, allegedly, 21 October 2026), with Kišib's fresh seed (the H80 session).
+
 ## F360. The frozen texts carry no finding numbers (21 October 2026)
 
 **Asked by the project lead** before the freeze-ready texts: the drafts cite findings throughout (Agreements draft 16 alone over 900 times), and the C verifier, built from the texts alone, has no findings log to open.
