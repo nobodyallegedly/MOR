@@ -149,10 +149,10 @@ A receipt is signed by the receiver of the hop:
 - with its own key, or with a grant key it granted whose grant reaches receipts (a person's or a collective's);
 - for a collective, with its own key or a grant key of its, its split service's among them;
 - for a payee of a deal naming a split service, with its own key or the grant key it granted the service, or a backup the split cMIP's fields name (Agreements field 29);
-- a split service's grant key, a collective's as a payee's, signs only receipts for money coming in under the grantor's own claims and offers, never one whose payer is the service nor a payout the grantor is owed;
+- a split service's grant key, a collective's as a payee's, signs only receipts for money coming in under the grantor's own claims and offers, never one whose payer is the service nor a payout the grantor is owed, save a layer's incoming share on the owner's behalf with the rail's proof behind it (Agreements rule 16);
 - each such receipt is judged by Agreements (Identity's scoped key, Agreements rule 80); a Money-only client shows such a receipt's standing as unknown.
 
-**A payee pointer (type 0) of a collective is signed with its own key, or with the member key of a holder of an area reaching Money, that act type among those the area reaches: the key the holder's signature of the collective's founding or of a clone names** (Agreements rule 60). Such a pointer is judged as scoped, by Agreements: it counts where the holders of that area meet its threshold, the other holders signing it with their own member keys as for every act of the area, its limits judged as for every act of the area (a pointer moves no amount). A Money-only client shows its standing unknown, and pays no collective through it.
+**A payee pointer (type 0) of a collective is signed with its own key, or with the member key of a holder of an area reaching Money, that act type among those the area reaches: the key the holder's signature of the collective's founding or of a clone names** (Agreements rules 60 and 73). Such a pointer is judged as scoped, by Agreements: it counts where the holders of that area meet its threshold, the other holders signing it with their own member keys as for every act of the area, its limits judged as for every act of the area (a pointer moves no amount). A Money-only client shows its standing unknown, and pays no collective through it.
 
 *Why: a pointer is a money matter, and the area the constitution gives money to chooses where the collective's money goes, and nobody holds a special position the constitution does not give. Stated cost: a Money-only wallet cannot pay a collective whose pointer only its Money area signed; it needs a client that reads Agreements.*
 
@@ -229,7 +229,7 @@ An obligation's states are:
 - closed by clone;
 - redirected.
 
-***Past its terms*: Agreements decide when an obligation's terms have passed and what follows** (Agreements rule 11); Money only shows the state. Past its terms, closed by clone and redirected depend on Agreements; a client that does not implement Agreements MUST show them as unknown.
+***Past its terms*: Agreements decide when an obligation's terms have passed and what follows** (Agreements rule 33); Money only shows the state. Past its terms, closed by clone and redirected depend on Agreements; a client that does not implement Agreements MUST show them as unknown.
 
 **An obligation's states are shown by clients that read Agreements; a Money-only client shows every state of an obligation as unknown, an obligation naming no agreement (an IOU) included.** *Open, discharged and released are Money's states, but judging them reads which payments count toward a debt and which pointer it is paid to (rules 17 and 29), which MOR 1's clients do where they read Agreements. A small Money view answering the IOU case without Agreements (an obligation naming no agreement, paid to the creditor's pointer or vault, acknowledged by the creditor) is noted for MOR 2.*
 
@@ -271,7 +271,7 @@ The version an obligation names is informative only: where it differs, the oblig
 
 An obligation with no such act, such as one naming no agreement act (field 4 absent), counts only if paid to the vault, unless the payee acknowledges it with an act of their own that holds a pointer; an Agreements client checks that.
 
-*There is no clock to say when an act was made; what it cites says what it saw. The pointer is judged by the act of the one it pays, never by the act of the one who pays or drafts: a debt re-signed to name a pointer the payee's own act never saw, such as a thief's newer one, names a version that does not count for it. A payment to an older flow of the payee's still counts, as it always has; without a clock nothing can tell whether it came after the payee left that wallet, so a payee who abandons a wallet keeps it able to receive or moves what arrives there, a stated cost.*
+*There is no clock to say when an act was made; what it cites says what it saw. The pointer is judged by the act of the one it pays, never by the act of the one who pays or drafts: a debt re-signed to name a pointer the payee's own act never saw, such as a thief's newer one, names a version that does not count for it. A payment to an older flow of the payee's still counts; without a clock nothing can tell whether it came after the payee left that wallet, so a payee who abandons a wallet keeps it able to receive or moves what arrives there, a stated cost.*
 
 **Money owed back follows this rule exactly** (Agreements rule 93). A refund owed to an identity on a payment is paid:
 
@@ -407,7 +407,7 @@ A **lock change** is a rotation after which a payment that followed the payee's 
 
 **Several lock changes.** Where several anchored lock changes affect a payment, it counts only if the claim is anchored before the first of them. A payment a lock change affects stays affected, even if a later rotation would let it follow the chain again.
 
-**The lock change's point is when its home quorum is met and anchored** (Identity, the receipt checks, and rule 28): the point at which the home receipts the home rule requires for the rotation to count are all anchored, each receipt passing Identity's checks; with a single home, that home's receipt.
+**The lock change's point is when its home quorum is met and anchored** (Identity's receipt checks and Identity rule 28): the point at which the home receipts the home rule requires for the rotation to count are all anchored, each receipt passing Identity's checks; with a single home, that home's receipt.
 
 - A lock change counts from when the homes the rule requires publicly hold it, not from when it was signed or one home took it in, so one signed and kept back, or held by one home only, has no point yet.
 - For a self-hosted identity, which counts on its rotation alone (Identity rule 4), the rotation's own anchor is its point, a stated cost of that trust model.
@@ -426,7 +426,7 @@ A payer's client MUST read the payee's clock before paying, as it reads the vaul
 - After a lock change, the owner's client MUST obtain the home receipts that make up its quorum and anchor them on the main reference, and on the backup only where it cannot use the main one.
 - **It SHOULD anchor them through two independent anchoring services, or by its own transaction, at an urgent tier**, the earliest anchor counting (a SHOULD: a service may hold a paid hash back, unseen, up to its tier's deadline, and one working with a thief would let payments to the thief mined meanwhile count against the owner; the earliest of two anchors closes one service's delay; cost: two small prices, or one on-chain fee, per lock change, a rare event).
 - A payer's client MUST write the payer's claim at the moment it pays and SHOULD anchor it promptly, and, on a rail whose proof is pending at payment, write a second claim once the rail answers valid; how is the anchoring cMIP's business.
-- **A payer's client that cannot anchor on any reference the payee's clock names MUST say so before paying: the payment will not be protected against a lock change.** *A payee may declare a clock Module no payer's client implements; the payer would then anchor on nothing the rule compares, and a lock change could put every such payment in doubt (F181's cost, with the payer's defence gone). The verdicts stay as written; the payer is told before it pays.*
+- **A payer's client that cannot anchor on any reference the payee's clock names MUST say so before paying: the payment will not be protected against a lock change.** *A payee may declare a clock Module no payer's client implements; the payer would then anchor on nothing the rule compares, and a lock change could put every such payment in doubt (the cost rule 29 states, with the payer's defence gone). The verdicts stay as written; the payer is told before it pays.*
 
 *There is no clock, so a payment made during the theft window and one made afterwards on an outdated copy of the payee's chain look the same; only an anchor obtained at payment proves which side of the lock change a payment fell on. The owner bears what the stolen key did until the lock change, and reports it by anchoring; after it, a payer whose client did not anchor bears the loss, by the choice of client: a client that moves other people's money, and takes a cut for it, is responsible for doing it properly. Stated costs: the owner, by a lock change after receiving payments, can put in doubt every payment it affects whose receipt the rotation did not keep (disowning its own receipt included) and whose claim is not anchored by the point; the lock change is visible on the owner's chain forever, counts only from a home's anchored receipt, and a client that anchors promptly defeats it. An old payment never anchored and never receipted can be put in doubt by a later lock change.*
 
@@ -651,7 +651,7 @@ Still open:
 - A payment to a pointer a lock change voids counts as made until the lock change's home quorum is anchored on the payee's declared clock, and after it only with the payee's kept receipt or a claim anchored by the point; a payment that ignored the vault is not protected: 1.
 - A payee declares a clock Module the payer's client does not implement: the client says so before paying, the payment unprotected against a lock change (client conformance): 1.
 
-#### Moved to Agreements
+#### Covered by Agreements
 
 - Conservation and remainder rule; module fees and omitted fees; splits by attention metrics.
 
