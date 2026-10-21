@@ -181,6 +181,17 @@ page('dub', 'vow-menu', 'A vow Max bought: confirm or contest it, in its menu (D
   ], { cls: 'menuopen' }),
   { group: 'The act card', before: ['edubba/web-dub-sealed-and-vow.png'], note: 'decided: only on vows the ID bought' });
 
+page('dub', 'pay-chooser', 'Buy, tip, unlock or pay: the ways open, chosen in Dub',
+  `${dubPublic([C.phPic(), act({ who: 'Pa', when: 'Sun', kind: 'vow', text: 'A seat at the reading of the tablets. 500 regtest sats.', aid: 'mact1v1s…0aa', sel: true })])}<div class="shade"></div>
+<div class="modal"><div class="mh"><h3>Buy Pa’s vow</h3><span class="grow"></span><span class="small soft money">500 regtest sats</span></div>
+<p class="small soft" style="margin:0 0 6px">A seat at the reading of the tablets · ${ID.Pa}</p>
+<div class="list">
+<div style="background:var(--wash2);border-radius:10px;padding-left:10px"><span class="ticked"><i class="y" style="border-radius:50%"></i></span><div><div>Under Dub’s lane</div><div class="small soft">Dub signs it now. Per payment: at most 500 ✓ · in all: 2 300 of 10 000 left · until 31 October</div></div></div>
+<div style="padding-left:10px"><span class="ticked"><i style="border-radius:50%"></i></span><div><div>Ask Damgar</div><div class="small soft">Dub sends it to Damgar as a private message; Damgar queues it, and on this Mac pops up to sign</div></div></div>
+<div style="padding-left:10px"><span class="ticked"><i style="border-radius:50%"></i></span><div><div>By hand</div><div class="small soft">Copy the act, then in Damgar: Waiting › Paste an act to sign</div></div></div></div>
+<div class="row"><span class="btn p">Buy it</span><span class="btn q">Cancel</span><span class="grow"></span><span class="small faint">the record goes to Damgar’s account</span></div></div>`,
+  { group: 'Panels', note: 'decided: three ways, a lane with a cap in all' });
+
 page('dub', 'thread', 'The pop-up thread: what an act answers',
   `${dubPublic(FEED)}<div class="shade"></div><div class="modal"><div class="mh"><button class="back">←</button><h3>What Max’s reply answers</h3><span class="grow"></span><span class="small faint">2 acts</span></div>
 ${feed([C.paPost(), C.maxReply({ sel: true })])}<p class="small faint" style="margin:8px 2px 0">The same card, the same two menus. Back returns to the feed where you were.</p></div>`,
@@ -287,7 +298,7 @@ page('damgar', 'home', 'Home: the four tiles',
   ])}`.replace('<div class="home-note"></div>', `<div class="home-note">${TESTLINE}</div>`),
   { group: 'Home', before: ['damgar/damgar-web-to-sign.png'] });
 
-const WCOL = [{ t: 'To sign', k: 3, on: true }, { t: 'To pay', k: 1 }, { t: 'Requests and debts' }, '-', { t: 'For Collective Y', k: 0 }];
+const WCOL = [{ t: 'To sign', k: 3, on: true }, { t: 'To pay', k: 1 }, { t: 'Requests and debts' }, '-', { t: 'For Collective Y', k: 0 }, '-', { t: '+ Paste an act to sign', add: true }];
 const MONEY = [
   act({ who: 'Max', when: '09:44', kind: 'tip · from Dub', text: '500 regtest sats to Pa, for “The reading of the tablets moves…”', aid: 'mact1d1t…7ip', extra: '<div class="row" style="margin:4px 0"><span class="btn p">Sign it</span><span class="btn q">Decline</span></div>' }),
   act({ who: 'Ph', when: '09:02', kind: 'request', text: 'Ph asks Max for 1 200 regtest sats: “the second tablet’s clay”.', aid: 'mact1q8r…2ow', extra: '<div class="row" style="margin:4px 0"><span class="btn">Pay it</span><span class="btn q">Accept as a debt</span><span class="btn q">Refuse</span></div>' }),
@@ -309,14 +320,15 @@ page('damgar', 'account', 'Account: totals and payments',
 <div class="cols2"><div class="box fill"><p class="small soft">regtest sats · Lightning</p><dl class="facts money"><dt>In</dt><dd>4 300</dd><dt>Out</dt><dd>2 800</dd><dt>Pending</dt><dd>500</dd><dt>Owed to you</dt><dd>0</dd><dt>You owe</dt><dd>1 200</dd></dl></div>
 <div class="box"><p class="small soft">regtest sats · on-chain</p><dl class="facts money"><dt>In</dt><dd>10 000</dd><dt>Out</dt><dd>0</dd><dt>Pending</dt><dd>0</dd></dl></div></div>
 <h4 style="margin-top:12px">Latest</h4><div class="list"><div>Tip to Pa<span class="r money">−500 · pending</span></div><div>Pa’s vow, “a seat”<span class="r money">−800 · paid and confirmed</span></div><div>From Ph, sealed post<span class="r money">+300 · paid and confirmed</span></div></div>
-<p class="small soft">“Under the lanes”: the payments Dub made under its lane, moved here from Dub ${nd('lead’s')}</p>`),
+<p class="small soft">“Under the lanes”: what Dub signed and paid under its lane. Dub finishes those payments itself; the record is kept here.</p>`),
   { group: 'Tiles', before: ['damgar/damgar-account.png', 'damgar/damgar-web-account.png'] });
 
 page('damgar', 'lanes', 'Lanes: the lanes granted',
   opened('damgar', 'Lanes', [{ t: 'Your lanes', k: 2, on: true }, { t: 'Damgar by itself' }, '-', { t: 'The clock for lanes' }, { t: 'The node link' }],
     `<h2>Your lanes</h2><p class="lede">What an app may sign and pay without asking you each time ${help}</p>
-<div class="box"><div class="head"><img src="icons/dub.png" width="26" style="border-radius:6px"><h4 style="margin:0">Dub on this Mac</h4><span class="chip on">in force</span></div><dl class="facts"><dt>At most</dt><dd class="money">500 regtest sats per payment</dd><dt>Kinds</dt><dd>tips, purchases</dd><dt>Until</dt><dd>31 October, on the timestamp clock mid1c1k…0ck</dd><dt>Signed under it</dt><dd>4 acts</dd></dl><div class="row"><span class="btn">Revoke it</span></div></div>
+<div class="box"><div class="head"><img src="icons/dub.png" width="26" style="border-radius:6px"><h4 style="margin:0">Dub on this Mac</h4><span class="chip on">in force</span></div><dl class="facts"><dt>At most</dt><dd class="money">500 regtest sats per payment</dd><dt>In all</dt><dd class="money">10 000 regtest sats · 7 700 spent, 2 300 left <span class="help">?</span></dd><dt>Kinds</dt><dd>tips, purchases</dd><dt>Until</dt><dd>31 October, on the timestamp clock mid1c1k…0ck</dd><dt>Signed under it</dt><dd>4 acts</dd></dl><div class="row"><span class="btn">Revoke it</span></div></div>
 <div class="box"><div class="head"><img src="icons/damgar.png" width="26" style="border-radius:6px"><h4 style="margin:0">Damgar by itself · receipts and invoices</h4><span class="chip on">in force</span></div></div>
+<p class="small soft">“In all” is kept by Dub and counted here; verifiers judge only the cap per payment and the expiry ${help}</p>
 <p class="small soft">The clock for lanes and the node link moved here from Settings (accepted).</p>`),
   { group: 'Tiles', note: 'no picture of today’s Lanes tab exists' });
 

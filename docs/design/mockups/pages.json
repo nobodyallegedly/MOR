@@ -192,6 +192,15 @@
  },
  {
   "app": "dub",
+  "slug": "pay-chooser",
+  "title": "Buy, tip, unlock or pay: the ways open, chosen in Dub",
+  "before": [],
+  "group": "Panels",
+  "note": "decided: three ways, a lane with a cap in all",
+  "file": "dub-pay-chooser.html"
+ },
+ {
+  "app": "dub",
   "slug": "thread",
   "title": "The pop-up thread: what an act answers",
   "before": [],
