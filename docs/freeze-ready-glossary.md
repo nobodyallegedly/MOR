@@ -33,7 +33,7 @@
 | keeper record | A keeper's signed statement naming one act and its signer (type 2, `{ 0 => [act, signer] }`), one per act, in the keeper's sequence; counts only alongside the act, and only from a keeper rule 42 allows. Not a collective's record (type 17). | Agreements, "Keeper record (type 2)" |
 | keeper's sequence | The keeper's records, each naming the one before: a signed order, checkable from any copy. Places nothing on a time reference. | Agreements rule 37 |
 | anchor | A proof, under the anchoring cMIP, that something existed by a point of a clock. The only thing that places anything on the clock. | Envelopes, task "Anchoring"; Agreements rules 33, 41 |
-| time reference | The source of time an agreement names (terms field 6, a cMIP filling task 10), on which its deadlines are judged. Second meaning found: Envelopes' anchoring task calls a clock Module and its parameters "a time reference" (question 15). | Agreements rule 33; Development task 10 |
+| time reference | The source of time an agreement names (terms field 6, a cMIP filling task 10), on which its deadlines are judged. The anchoring task now says "clock" (technical pass, question 15). | Agreements rule 33; Development task 10 |
 | area | Acts of a collective and operational matters its founding agreement gives to some members, who alone decide there; may reach a whole layer ("the area reaching Money"). | Agreements rule 60 |
 | member key | A key a holder's signature on a collective's founding or clone names: a grant key of the collective within the areas that version gives the holder. | Agreements rules 60, 73 |
 | grant to oneself | A grant whose grantee is its own grantor: a person's grant key for an application acting for it. | Agreements rule 73 |
