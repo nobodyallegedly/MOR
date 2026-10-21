@@ -395,3 +395,30 @@
 | MICS v30, "Open before freeze" emptied | F360 (the freeze-ready checklist) |
 | Suite v30, the new component lines (Text rule 14's two cases, keeper records, a revoked grant's acts, a grant to oneself, a member key) | F334, F343, F358, F359, F351, F353 |
 | Suite v30, step 3.7o aligned with step 3.7m and Agreements rule 71 | F302, F304 (the emptied area's verdicts) |
+
+### Added in the technical pass (S1b)
+
+| Text and rule or section | Findings |
+| --- | --- |
+| Identity 15, Part three "Encoding", "Formats" (deterministic CBOR and the CDDL conventions once), "Hashes" (every tag) | F369 (3, 14), F91, the core's `cbor.rs` and `core/vectors/cbor.json` |
+| Identity 15, "Spec hash"; Development 11 rule 26 ("How a MIR's spec hash is computed", the final line break) | F369 (5, 6), F324, F291 |
+| Identity 15, "Everyday act" (words), everyday check 2 (pending binding) | F367 (1), F368 (question 18) |
+| Identity 15, rule 44, "Conflicting receipts" step 3 | F367 (2) |
+| Identity 15, "Evidence counts only while its signer's chain keeps it" (the keeper exception) | F364 (2), F297 |
+| Identity 15, "Re-homed without audit" (one list) | F368 (question 6) |
+| Identity 15, "What an Identity act names in `objects`", inside fields of identity-chain acts, rotation checks 4, escape endorsement's CDDL and binding, log positions from 0, the RFC 9162 tree, "Proofs, as a verifier is handed them", scheme values and lengths, routes' versions and kind, the default majority, a `mor` successor | F369 (1, 3), F101 (proofs travel), the core's `identity.rs`, `chain.rs`, `merkle.rs`, `envelopes.rs`, `sig.rs` |
+| Text 11, "Text field", "Pinned Unicode version", rule 14 (the grant-key case decides; a Text-only verifier) | F369 (7), F368 (question 11 read as the text and the core have it), F366 (3), F367 (3) |
+| Envelopes 11, rule 1, "Sequences", "The running summary", the act's key 6 | F369 (14, 16), F89 |
+| Envelopes 11, X-Wing fixed by hash at the freeze, "Parameters" | F369 (8, 1) |
+| Envelopes 11, Development 11 (task 11), Money 11 ("The clock"), MICS v30: "clock" in the anchoring task | F368 (question 15) |
+| Money 11, rule 7 (a collective's Money acts, member keys; a revoked grant's disputed act) | F366 (1, 2), F365 |
+| Money 11, rule 4 (a pointer outside a fork; refund rails), rule 12, rule 29 (by role), "Dependencies", "Parameters" (the unit) | F367 (4, 9), F368 (questions 21, 23, 53), F369 (2) |
+| Agreements 17, "Belongs to", "Keeper", rules 7 and 42, "Keeper record (type 2)" | F363 |
+| Agreements 17, rules 33, 37, 38, 42, "Made before, made after" (the deal with no keeper), keepers' CDDL | F364 |
+| Agreements 17, rules 6, 76, 79, the tie rule, "Made before, made after" points 2 and 7, grants' freeze scenarios | F365 |
+| Agreements 17, rules 60, 73, 74, 80 (member keys, the split service's grant) | F366 (1, 2) |
+| Agreements 17, rules 60 (Identity area), 62 (fields 26, 27), 83 (a clone changing more than the plan), 85 (no outcome for a holder with a successor), "Dependencies" (format and status rules), the judicial tasks with task 14, fork completeness, "Record (type 17)" field 3 | F367 (6, 7, 8) |
+| Agreements 17, the readings once marked "to confirm", rule 70's split service, the contest's format for every act | F368 (questions 26, 28, 29) |
+| Agreements 17, rule 91 and "Fork (type 19)": the pointer outside a fork; the fork's tie key | F367 (4); F150, F162 (the core's `leftover_key`) |
+| Development 11, "How the content is decoded", "A unit (kind 2)", "A signature scheme (kind 5)", rule-ref bytes, type definitions, rules out of italics, "no specification" and invalid beats unknown | F369 (2, 3), F367 (5), F368 (question 37), F323, F328 |
+| MICS v30 and suite v30, aligned with the above; suite's freeze procedure step 1 (headers, X-Wing, hashes) | F363 to F369, F368 (question 52) |
