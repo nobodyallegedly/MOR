@@ -13,6 +13,11 @@ use mor_core::{lock, mmr, text};
 use serde_json::{json, Value as J};
 use std::path::Path;
 
+#[path = "../tests/common/mod.rs"]
+mod common;
+#[path = "support/verdicts.rs"]
+mod verdicts;
+
 fn hx(b: &[u8]) -> String {
     hex::encode(b)
 }
@@ -530,6 +535,36 @@ fn main() {
     write(&dir, "sealed.json", &sealed_container());
     write(&dir, "textual-forms.json", &textual_forms());
     write(&dir, "signatures.json", &signatures());
+    write(&dir, "verdicts.json", &verdict_vectors());
+}
+
+/// The verdict vectors (`support/verdicts.rs`): complete acts, in one pool
+/// by act id, and each case naming the acts it holds.
+fn verdict_vectors() -> J {
+    let mut out = verdicts::Out { pool: Default::default(), cases: vec![] };
+    let mut layers = serde_json::Map::new();
+    for (layer, f) in [
+        ("identity", verdicts::identity as fn(&mut verdicts::Out)),
+        ("text", verdicts::text),
+        ("envelopes", verdicts::envelopes),
+        ("money", verdicts::money),
+        ("agreements", verdicts::agreements),
+    ] {
+        out.cases.clear();
+        f(&mut out);
+        layers.insert(layer.into(), J::Array(out.cases.clone()));
+    }
+    let mut dev = vec![];
+    verdicts::development(&mut dev);
+    layers.insert("development".into(), J::Array(dev));
+    layers.insert("mir_hashes".into(), J::Array(verdicts::mir_hashes()));
+    let m = verdicts::mirs();
+    json!({
+        "about": "Verdict vectors: for each case, the acts a verifier holds (by id, from the pool: each act's complete bytes, outside, locked inside and signature, as Envelopes encodes an act; every act public, its content key on its outside), the facts it holds beside them that are not acts (inclusion proofs a home served, homes it failed to reach, anchors it checked, rail answers it was given), the question asked and the verdict the texts give, with the rule that decides it. Questions: status (Identity's standing of an act: valid, pending, void, disputed, invalid, unknown, scoped); chain (the acts counting at each position of an identity chain, what stops it, and homes proven dishonest from a position on); status after keepers (Identity's standing once Agreements has read the keeper records held and named the acts their keepers recorded before the rotation voiding them); backing (Agreements rule 80 for an act of a grant key); consent counts (whether an act of a collective has the consent its areas need); agreement exists; deal fork; deadline (rule 33, under the keepers and rule given, on the clock given, at the point given); paid toward (what counts toward an obligation); disagreements (how many open questions a receiver shows, Money rule 11). The MIR hashes are stand-ins, SHA-256 of a label, until the freeze: identity, envelopes, text, money, agreements, development below. Every key is test data derived from a name.",
+        "mirs": { "identity": hx(&m.identity), "envelopes": hx(&m.envelopes), "text": hx(&m.text), "money": hx(&m.money), "agreements": hx(&m.agreements), "development": hx(&m.development) },
+        "pool": out.pool,
+        "cases": layers,
+    })
 }
 
 /// A source of randomness that must never be drawn from: SLH-DSA signing

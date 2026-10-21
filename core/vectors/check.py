@@ -440,6 +440,170 @@ def textual_read(s, want):
     return bytes(out), hs
 
 
+# ------------------------------------------------------------ verdicts this implementation can judge
+
+def open_whole(b):
+    """An act's bytes, [outside, locked, [scheme, key, sig]]: the decoded
+    outside, inside (or None where it does not open) and signature."""
+    a = decode(b)
+    assert isinstance(a, list) and len(a) == 3
+    outside, locked, sig = a
+    check_outside_shape(outside)
+    inside = None
+    if open_act(outside, locked) == "ok":
+        inside = decode(unlock(locked, outside.get(5), outside.get(4)))
+    return outside, inside, sig
+
+
+def act_id(outside):
+    return tagged_hash("MOR/act", encode_map(outside))
+
+
+def encode_map(m):
+    """Re-encode a decoded map: its entries are already in deterministic order."""
+    return head(5, len(m)) + b"".join(ek + encode_any(v) for _, v, ek in m)
+
+
+def encode_any(v):
+    if isinstance(v, out_map):
+        return encode_map(v)
+    if isinstance(v, list):
+        return head(4, len(v)) + b"".join(encode_any(x) for x in v)
+    return encode(v)
+
+
+def sig_ok(outside, sig):
+    scheme, key, s = sig
+    return sigs.verify(scheme, key, s, act_id(outside)) is True
+
+
+def genesis_key(inside):
+    p = inside.get(4)
+    k = p.get(0) if isinstance(p, out_map) else None
+    return k if isinstance(k, list) and len(k) == 2 else None
+
+
+def py_verdict(case, pool, mirs):
+    """The verdict of this implementation for the cases tagged with what it
+    judges: Identity's genesis checks, a text act at a Text-only verifier,
+    a sequence's prev, position and summary, invalid beating unknown."""
+    acts = {}
+    for i in case["acts"]:
+        o, ins, sg = open_whole(bytes.fromhex(pool[i]))
+        assert act_id(o).hex() == i
+        acts[i] = (o, ins, sg)
+    o, ins, sg = acts[case["ask"]["act"]]
+    if ins is None:
+        return "invalid"  # it does not open: Envelopes rules 1 to 5
+    signer, binding = o.get(0), o.get(1)
+    tag = case["python"]
+    if tag == "genesis checks":
+        k = genesis_key(ins)
+        homes = ins.get(4).get(2) if isinstance(ins.get(4), out_map) else None
+        ok = (ins.get(0) == H(mirs["identity"]) and ins.get(1) == 0 and signer is None and binding is None
+              and k is not None and k == sg[:2] and isinstance(homes, list) and homes and sig_ok(o, sg))
+        return "valid" if ok else "invalid"
+    if not sig_ok(o, sg):
+        return "invalid"
+    if tag == "invalid beats unknown":
+        return "unknown" if ins.get(0) not in [H(x) for x in mirs.values()] else "valid"
+    # An everyday act bound to its signer's genesis, held in the case.
+    g = acts.get(binding.hex()) if binding else None
+    if g is None or g[1] is None or genesis_key(g[1]) != sg[:2] or act_id(g[0]) != signer:
+        return "unknown"
+    prev = ins.get(2)
+    if not isinstance(prev, list) or len(prev) > 1:
+        return "invalid"
+    if tag == "sequence":
+        line = []
+        cur = prev
+        while cur:
+            line.insert(0, cur[0])
+            cur = acts[cur[0].hex()][1].get(2)
+        if ins.get(5) != len(line) + 1 or ins.get(6) != mmr_root(line):
+            return "invalid"
+        return "valid"
+    # A text act, at a verifier implementing Text (Text rule 14, part three).
+    if ins.get(0) != H(mirs["text"]):
+        return "unknown"
+    p = ins.get(4)
+    keys = p.keys()
+    if ins.get(1) != 0 or ins.get(7) is not None or 0 not in keys or not set(keys) <= {0, 1} or not isinstance(p.get(0), str):
+        return "invalid"
+    objs = ins.get(3)
+    if objs is None:
+        return "valid"
+    if len(objs) == 1 and objs[0][0] == signer:
+        return "unknown"  # a collective or a grant key cannot be told without Agreements
+    return "invalid"
+
+
+def py_spec(content, money, held):
+    """Development, "How the content is decoded": 'a specification', 'no
+    specification', or unknown where a payment cMIP's field 2 is needed."""
+    try:
+        m = decode(content)
+    except Reject:
+        return "no specification"
+    if not isinstance(m, out_map) or not all_text_canonical(m):
+        return "no specification"
+    f = {}
+    for k, v, _ in m:
+        if not isinstance(k, int) or isinstance(k, bool) or not 0 <= k <= 13:
+            return "no specification"
+        f[k] = v
+    is_uint = lambda v: isinstance(v, int) and not isinstance(v, bool) and v >= 0
+    nonempty = lambda v: isinstance(v, list) and len(v) > 0
+    ascending = lambda v, allowed: isinstance(v, list) and all(is_uint(x) and x in allowed for x in v) and all(a < b for a, b in zip(v, v[1:]))
+    checks = {
+        1: is_hash, 5: is_hash, 8: is_hash, 9: lambda v: isinstance(v, str), 11: is_uint, 12: lambda v: v is True,
+        2: lambda v: nonempty(v) and all(isinstance(t, list) and len(t) == 2 and is_hash(t[0]) and is_uint(t[1]) for t in v),
+        3: lambda v: nonempty(v) and all(isinstance(t, list) and len(t) == 3 and is_uint(t[0]) and isinstance(t[1], str) and isinstance(t[2], str) for t in v),
+        4: lambda v: nonempty(v) and all(is_hash(x) for x in v),
+        6: lambda v: nonempty(v) and all(isinstance(t, list) and len(t) == 4 and is_hash(t[0]) and is_uint(t[1]) and is_uint(t[2]) and is_hash(t[3]) for t in v),
+        7: lambda v: isinstance(v, list) and len(v) in (1, 2) and isinstance(v[0], list) and len(v[0]) == 2 and v[0][0] in (0, 1) and (len(v) == 1 or is_hash(v[1])),
+        10: lambda v: nonempty(v) and ascending(v, {0, 1, 2, 3}),
+        13: lambda v: ascending(v, {0, 1, 2}),
+        0: lambda v: is_uint(v) and v <= 8,
+    }
+    for k, v in f.items():
+        if not checks[k](v):
+            return "no specification"
+    if 0 not in f or 9 not in f:
+        return "no specification"
+    kind = f[0]
+    if (1 in f) == (kind in (4, 6, 7)):
+        return "no specification"
+    if (5 in f) != (kind == 1) or (kind == 8 and 8 not in f) or (12 in f and kind != 0):
+        return "no specification"
+    if (11 in f) != (13 in f) or (11 in f and kind != 1) or (11 in f and f[11] not in (0, 1)):
+        return "no specification"
+    if f.get(11) == 0 and not {0, 1} <= set(f[13]):
+        return "no specification"
+    if kind == 1 and 11 not in f:
+        target = held.get(f[5].hex())
+        if target is None:
+            return "unknown: the cMIP %s is not held" % f[5].hex()
+        c = decode(bytes.fromhex(target))
+        tasks = c.get(2) or []
+        if c.get(0) == 0 and any(t[0] == money and t[1] == 6 for t in tasks):
+            return "no specification"
+    return "a specification"
+
+
+def frozen_text(file):
+    t = file[:-1] if file.endswith("\n") else file
+    lines = t.split("\n")
+    if (len(lines) > 3 and lines[0].startswith("# ") and lines[1] == "" and len(lines[2]) >= 2
+            and lines[2].startswith("*") and lines[2].endswith("*") and not lines[2].startswith("**") and lines[3] == ""):
+        return "\n".join([lines[0]] + lines[3:])
+    return t
+
+
+def H(x):
+    return bytes.fromhex(x)
+
+
 def main():
     H = bytes.fromhex
     assert unicodedata2.unidata_version == "17.0.0", unicodedata2.unidata_version
@@ -561,7 +725,33 @@ def main():
             assert not sigs.verify(x["scheme"], H(v["key"]), H(v["sig"]), H(v["msg"])), (x["name"], v["why"])
             n += 1
 
-    print(f"all {n} vectors agree")
+    # Verdict vectors: those this implementation judges (README, "verdicts.json").
+    f = load("verdicts.json")
+    mirs, pool = f["mirs"], f["pool"]
+    judged = 0
+    for layer in ("identity", "text", "envelopes", "money", "agreements"):
+        for c in f["cases"][layer]:
+            if "python" not in c:
+                continue
+            got = py_verdict(c, pool, mirs)
+            want = "unknown" if c["python"] == "at a Text-only verifier: unknown" else c["verdict"]
+            assert got == want, (c["name"], got, want)
+            n += 1
+            judged += 1
+    for c in f["cases"]["development"]:
+        held = c["held_specifications"]
+        assert tagged_hash("MOR/spec", H(c["content"])) == H(c["spec_hash"])
+        assert py_spec(H(c["content"]), H(c["money"]), held) == c["verdict"], c["name"]
+        n += 1
+        judged += 1
+    for c in f["cases"]["mir_hashes"]:
+        t = frozen_text(c["file"])
+        got = None if text_rule(t) is not None else tagged_hash("MOR/spec", encode({0: 4, 9: t})).hex()
+        assert got == c["spec_hash"], c["name"]
+        n += 1
+        judged += 1
+
+    print(f"all {n} vectors agree ({judged} verdict vectors judged here)")
 
 
 if __name__ == "__main__":
