@@ -30,7 +30,7 @@ A payment to a work or a person, such as a tip, needs only this MIR and the paye
 
 ## Dependencies
 
-Identity, Envelopes and Text. Money never depends on Agreements or Development: a Money-only client, such as a wallet that sends tips, is a complete client. Where a Money state depends on Agreements, a Money-only client shows it as unknown. *A purchase names an Agreements claim (rule 18): a Money-only client cannot make one, and shows the claim a receipt names as unknown; buying a work under an Agreements claim needs a client that reads Agreements.* **An obligation's states are shown by clients that read Agreements; a Money-only client shows them as unknown** (rule 15).
+Identity, Envelopes and Text; and, of Development, the specification format alone: a Money client decodes a rail Module's specification (whether it is one, and its fields 5, 11 and 13) and nothing more of Development. Money never depends on Agreements: a Money-only client, such as a wallet that sends tips, is a complete client. Where a Money state depends on Agreements, a Money-only client shows it as unknown. *A purchase names an Agreements claim (rule 18): a Money-only client cannot make one, and shows the claim a receipt names as unknown; buying a work under an Agreements claim needs a client that reads Agreements.* **An obligation's states are shown by clients that read Agreements; a Money-only client shows them as unknown** (rule 15).
 
 ## Words used in this MIR
 
@@ -116,10 +116,12 @@ A receipt or claim counts only if all of these hold:
 - the rail Module its field 0 names is the one named by the rail of the payee's pointer, or the entry of the payee's vault, that the payment was paid to;
 - that pointer is the payee's own and counts for that payment by rules 1 and 17;
 - that pointer and vault are the ones rule 29 selects for that payment, as the chain stood for it (rules 3 and 29);
-  - **except that a collective's pointer that a fork or closing of the collective left outside its history still counts for payments already made to it, as the chain stood for each, and for nothing after the ending** (Agreements rule 91);
+  - **except that a collective's pointer that a fork or closing of the collective left outside its history still counts for payments made before the ending's line, as the chain stood for each, and for none made after it** (Agreements rule 91);
 - where the payment falls under an agreement, that rail Module implements the payment cMIP the agreement names (Development, field 5).
 
 A receipt or claim naming any other rail Module counts for nothing, whatever its rail's proof shows.
+
+A refund paid to the refund rail the payer's own claim names (key 7) meets this rule as a payment to a rail of the payer's own naming, within the bound rule 17 sets.
 
 A payer whose rail the payee does not accept cannot pay on it, except through a conversion service that pays the payee on a rail it accepts.
 
@@ -152,13 +154,17 @@ A receipt is signed by the receiver of the hop:
 - a split service's grant key, a collective's as a payee's, signs only receipts for money coming in under the grantor's own claims and offers, never one whose payer is the service nor a payout the grantor is owed, save a layer's incoming share on the owner's behalf with the rail's proof behind it (Agreements rule 16);
 - each such receipt is judged by Agreements (Identity's scoped key, Agreements rule 80); a Money-only client shows such a receipt's standing as unknown.
 
-**A payee pointer (type 0) of a collective is signed with its own key, or with the member key of a holder of an area reaching Money, that act type among those the area reaches: the key the holder's signature of the collective's founding or of a clone names** (Agreements rules 60 and 73). Such a pointer is judged as scoped, by Agreements: it counts where the holders of that area meet its threshold, the other holders signing it with their own member keys as for every act of the area, its limits judged as for every act of the area (a pointer moves no amount). A Money-only client shows its standing unknown, and pays no collective through it.
+**A collective's Money acts and its holders' member keys.** Every Money act a collective signs, its payee pointer (type 0), an obligation it owes (type 1), a receipt it gives (type 2), a claim it makes (type 3) and a release it grants as creditor (type 4), is signed with the collective's own key, or with the member key of a holder of an area reaching Money whose reach includes that act type: the key the holder's signature of the collective's founding or of a clone names (Agreements rules 60 and 73). A member key counts from the moment the founding or clone naming it is in force until a later version names another key for that holder, or the holder leaves (Agreements rule 73).
 
-*Why: a pointer is a money matter, and the area the constitution gives money to chooses where the collective's money goes, and nobody holds a special position the constitution does not give. Stated cost: a Money-only wallet cannot pay a collective whose pointer only its Money area signed; it needs a client that reads Agreements.*
+Each such act is judged as scoped, by Agreements, under the area reaching Money and that area's holders and threshold, as every act of the area is (Agreements rule 60): it counts where the holders of that area meet its threshold, the other holders signing it as Agreements rule 60 says, its limits judged as for every act of the area (a pointer moves no amount). A split service's grant key signs for a collective under the grant the area reaching Money issued, and is judged under that area (Agreements rule 74). A Money-only client shows the standing of every such act unknown, and pays no collective through a pointer it cannot judge.
+
+*Why: money matters belong to the area the constitution gives money to, and nobody holds a special position the constitution does not give. Stated cost: a Money-only wallet shows a collective's Money acts unknown, and cannot pay a collective whose pointer its Money area signed; it needs a client that reads Agreements.*
 
 A claim is signed by the payer, or, for a payer that committed to a bare key, by any identity carrying that key's signature in key 8. **The payer may sign it with a grant key it granted whose grant reaches claims** (a person's or a collective's), judged as scoped, by Agreements, a Money-only client showing its standing unknown.
 
 *Why: a grant key's act is its grantor's own (Agreements rule 73), so an application holding a person's grant to itself signs that person's claims, and a payee's application its receipts, within the grant's reach and limits, and every reader sees on whose authority. A receipt or claim under a grant that does not reach its type, is revoked before it, or lies past its limits, counts for nothing (Agreements rule 80).*
+
+A receipt or claim under a revoked grant that Agreements shows disputed rather than void (Agreements rule 76) is treated as a disputed act after a change of keys (rule 29): it is shown, and for money it holds no pointer, signs no receipt and selects no version, unless its grantor adopts it (Agreements rule 76). *A payment already made stays made on its rail, and the payee's own receipt of it stands.*
 
 A specification never signs one.
 
@@ -197,7 +203,7 @@ Where a payer holds a valid rail proof and the payee has signed no receipt, the 
 
 What "the same payment" is, each rail Module says (for instance, on Lightning the payment hash; on-chain the output the transaction created). Money's rules that tell payments apart (this rule, rules 11 and 29) read it through the rail Module, never through the proof's bytes: two proofs of one payment (a payment mined again after a chain reorganisation) are one payment, counted once. *A rail Module SHOULD also make its valid proof unique for a payment in a given place (the on-chain rail Module accepts one index where Bitcoin's tree repeats a node); the identity of the payment does not rest on it.*
 
-Receipts or claims MAY share a payment only if they name the same batch, and their amounts together do not exceed what the payment shows. Otherwise a verifier holding both counts neither until the receiver signs a receipt that resolves them. **On a route, forwards too:** receipts or claims sharing one payment under a named batch may each name a different previous hop's receipt, one payment carrying several forwards in parts, for claims as for receipts; the money never counts twice (rule 24).
+A batch is needed only where one proof covers several payments: a hop's receipt and its payer's claim are one payment's two records (rule 11), and one push payment's receipts by its several holders are one payment (below). Otherwise, receipts or claims MAY share a payment only if they name the same batch, and their amounts together do not exceed what the payment shows. Otherwise a verifier holding both counts neither until the receiver signs a receipt that resolves them. **On a route, forwards too:** receipts or claims sharing one payment under a named batch may each name a different previous hop's receipt, one payment carrying several forwards in parts, for claims as for receipts; the money never counts twice (rule 24).
 
 **One push payment to several holders** (Agreements rule 12) is one payment: each holder's receipt carries its one rail proof, for the amount that holder received, without a batch. Where they name different claims, the payment's commitment decides (rule 18).
 
@@ -398,7 +404,7 @@ A **lock change** is a rotation after which a payment that followed the payee's 
 
 **Which claims, and which anchors**: the payer's claims of the same payment as the rail Module says.
 
-- **Where the clock's Module reads the rail's own proof as the payment's anchor** (the Bitcoin clock Module and the on-chain rail), the payment's proof is that payment's anchor, its point the block that holds it, provided it passes the clock Module's check. The comparison is "the payment's block before or at the lock change's block", read through the payer's valid claims, and a pending claim's anchor counts for nothing.
+- **Where the clock's Module reads the rail's own proof as the payment's anchor** (a clock Module whose clock is the chain the rail pays on, and that rail's Module; *for instance the Bitcoin clock Module and the on-chain rail*), the payment's proof is that payment's anchor, its point the block that holds it, provided it passes the clock Module's check. The comparison is "the payment's block before or at the lock change's block", read through the payer's valid claims, and a pending claim's anchor counts for nothing.
 - **On any other clock**, the earliest anchor among the payer's claims of the same payment counts, once one of them is valid: a claim written and anchored at payment, while the rail still answered pending, protects the payment once it is proven.
 
 *Stated cost: a thief and a payer together can anchor a pending claim in the window for a signed transaction they hold back, broadcast that very transaction after the lock change, and be protected; the owner bears, having accepted on-chain payments under a clock that cannot see them, and closes it by declaring Bitcoin as its clock. Another transaction for the same commitment is another payment, and is not protected. Not chosen: only a valid claim's anchor counting, which let the owner void any honest on-chain payment by a lock change within the hour of its confirmations.*
@@ -481,7 +487,7 @@ Several entries may share a unit, on different rails, so a dead rail does not ma
 Declared in the Identity MIR's declarations slot, in genesis or a rotation, so only the chain key can change it, as the vault is:
 
 ```cddl
-clock = [ MONEY, 1, [ main: [ hash, any ], ? backup: [ hash, any ] ] ]   ; the main anchoring reference and, optionally, a backup, each a clock Module under the anchoring cMIP and its parameters, naming one time reference (Envelopes, task "Anchoring"), in that order (rule 29)
+clock = [ MONEY, 1, [ main: [ hash, any ], ? backup: [ hash, any ] ] ]   ; the main anchoring reference and, optionally, a backup, each a clock Module under the anchoring cMIP and its parameters, naming one clock (Envelopes, task "Anchoring"), in that order (rule 29)
 ```
 
 *Name your services, name your clock. An anchor is compared with another party's anchor, so somebody must name the reference, and it must be the party a thief cannot be: the owner, with the chain key. A null value for kind 1 removes the clock.*
@@ -600,9 +606,7 @@ Left to the payment cMIP and its rail Modules (the payment task):
 - How a payment on a rail carries the id of the obligation, agreement or payee-pointer act it follows, and the rest of what the receipt and claim will say. *A payment commitment, one hash over the payee, the payer (an identity, an anonymous payer's bare key, or nobody), the amount, what it fulfils and where it was paid, which each rail Module carries on its rail (for Lightning, as the invoice's description hash, signed by the payee's node), is one such way.*
 - Rail proof formats, and vault source formats: defined by each rail Module.
 
-Still open:
-
-- The unit specification format.
+The unit specification: a specification of kind 2 (Development, Part three, "A unit"). Money reads only its spec hash: two amounts are in one unit only where they name the same hash.
 
 ### Freeze scenarios
 
