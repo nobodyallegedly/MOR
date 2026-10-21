@@ -255,7 +255,7 @@ page('damgar', 'home', 'Home: the four tiles',
     { name: 'Account', icon: 'account', d: 1, say: 'In, out, pending, owed. Per unit, never summed across units.' },
     { name: 'Lanes', icon: 'lanes', d: 2, say: 'What each app may pay without asking: a cap per act, kinds, an expiry.' },
     { name: 'Settings', icon: 'settings', d: 2, say: 'Where you are paid, the vault (set in Kišib), what you accept.' },
-  ])}`.replace('<div class="home-note"></div>', `<div class="home-note">${TESTLINE} · ${nd('the fourth tile')}</div>`),
+  ])}`.replace('<div class="home-note"></div>', `<div class="home-note">${TESTLINE}</div>`),
   { group: 'Home', before: ['damgar/damgar-web-to-sign.png'] });
 
 const WCOL = [{ t: 'To sign', k: 3, on: true }, { t: 'To pay', k: 1 }, { t: 'Requests and debts' }, '-', { t: 'For Collective Y', k: 0 }, '-', { t: `Pay someone ${nd('proposed dropped')}` }];
