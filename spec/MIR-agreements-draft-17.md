@@ -40,7 +40,7 @@ Agreements are optional per client, but all or nothing: a client implements it f
 
 No rule of a lower layer depends on Agreements. Where Agreements need a lower layer to carry something, it is a field there (the publication's `for`, Envelopes).
 
-**Only acts valid in their own format count.** Every act a rule of this MIR counts, its own or another specification's (a receipt, a claim, a publication, a rotation, a cMIP's act), counts only where it is valid under the specification that defines it. An act whose type its specification does not define, or whose payload is outside that specification's format, is invalid (Envelopes rule 30), and no rule of this MIR counts it; an act under a specification the verifier does not implement is unknown to it. *One rule for every layer, as the MICS's common conventions say: a verifier never counts here what the act's own MIR or cMIP refuses.*
+**Only acts valid in their own format count.** Every act a rule of this MIR counts, its own or another specification's (a receipt, a claim, a publication, a rotation, a cMIP's act), counts only where it is valid under the specification that defines it. An act whose type its specification does not define, or whose payload is outside that specification's format, is invalid (Envelopes rule 30), and no rule of this MIR counts it; an act under a specification the verifier does not implement is unknown to it. The rule reaches the acts of the core's own types; a cMIP's act (a delivery, use or metric record) counts where the verifier reads its format, as the cMIP defines it. A format rule is one decided from the act's own bytes; a bound that needs other acts (a transfer's field 3, at most what the seller still holds) is a status rule, judged where this MIR says, never a format rule: an over-sale is a valid act that confers nothing (rule 10). *One rule for every layer, as the MICS's common conventions say: a verifier never counts here what the act's own MIR or cMIP refuses.*
 
 ## Words used in this MIR
 
@@ -94,9 +94,15 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 
 ### Judges, keepers and time
 
-- **Keeper.** A relay, operated by an identity, that an agreement names to record the acts around a deal as they arrive, and to sign what it recorded: a notary stamping sealed envelopes. A keeper records act ids and signers, never content. A record counts only alongside the act it names.
+- **Keeper.** A relay, operated by an identity, that an agreement names to record the acts around a deal as they arrive, and to sign what it recorded: a notary stamping sealed envelopes. A keeper records act ids and signers, never content. A record counts only alongside the act it names, and only for an act that belongs to an agreement naming that keeper (rule 42).
+- **Belongs to.** An act belongs to an agreement when it names, in `objects`, that agreement or an act of its chain; or through the act it answers:
+  - a Money receipt or payment claim, through the claim it pays under (its field 9, the claiming agreement), and through what it fulfils or followed (the receipt's field 5, the claim's field 4): the agreement itself, or an obligation, offer or act that belongs to it;
+  - an obligation, through the agreement or offer it arises from (its field 4);
+  - a standing offer, through the agreement it is made under (its field 0); a lone seller's offer is itself the agreement its payments belong to.
+
+  An act may belong to several agreements. An act that belongs to none (a post, a work claim alone, a rotation) has no keeper of its own: only an anchor places it. *Every party's acts on an agreement, the payer's and the payee's alike, fall under its keepers; a keeper chosen for one deal never speaks for acts outside it.*
 - **Arbitrator or verifier.** A third party named by an agreement to judge content (escrow and milestones, arbitration, regulated checks). Unlike a keeper, it receives the keys of the acts it must judge, by ordinary key delivery.
-- **Judge.** Either a specification named for a judicial task (9 condition evaluation, 10 time reference, 11 anchoring), or an identity named to judge or testify: a keeper's operator, an arbitrator or verifier, the abandonment authority. *The split service is not a judge: its backups are attempts per payment (rule 17).*
+- **Judge.** Either a specification named for a judicial task (9 condition evaluation, 10 time reference, 11 anchoring, 14 absence proof), or an identity named to judge or testify: a keeper's operator, an arbitrator or verifier, the abandonment authority. *The split service is not a judge: its backups are attempts per payment (rule 17).*
 - **Chain of judgment.** For a judge the terms name: the ones that take over from it, in order, when it answers "unknown" or does not act within its period. The chain is named in the terms and signed by everyone, so that it passes with no new signature. Each link names its period, measured on the agreement's time reference (terms field 6; the chain itself is terms field 21; rule 35).
 - **Time reference.** A source of time an agreement names, such as a block height. For that agreement, only it decides whether an act is before or after a point on its reference, and whether something is past its terms. *Before and after among acts done in a collective's name are judged on the collective's own sequence ("Made before, made after"); the time reference judges deadlines and absence.*
 - **Concurrency rule.** Retired: terms field 10 is withdrawn, never reused. A fork of records is settled by rule 90's default, the parent staying in force until a clone recorded after both lines resolves it.
@@ -169,7 +175,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
   Records, rotations, forks and closings are the lines.
 - **Actions chain.** Every other act in a collective's name: debts, payments, publications, releases, sales, the acts signed with a grant key. Each cites, in `objects`, on the collective's chain (the collective's identity as chain), the decision it acts under and the heads it joins. Its own sequence's previous act counts as cited (rule 58). Identity's own everyday acts carry no objects and are on neither chain; nor are negotiation messages, which are talk.
 - **History.** What a decision or an action cites, transitively: the previous acts of its own sequence, the tips it names, what each act reached cites on the collective's chain, and the tips of each record reached. An act is before a line when the line's history holds it.
-- **Tie rule.** When a decision ending powers (a fork, a closing, a departure, a grant's revocation, a departure emptying an area) and an action using them cite neither each other, the ending wins: the action is void. *A counterparty protects itself by waiting until the actions chain visibly moves past its act before delivering.*
+- **Tie rule.** When a decision ending powers (a fork, a closing, a departure, a grant's revocation, a departure emptying an area) and an action using them cite neither each other, the ending wins: the action is void, or, against a grant's revocation, void or disputed under rule 76. *A counterparty protects itself by waiting until the actions chain visibly moves past its act before delivering.*
 - **Done.** An act in a collective's name (signed with its key, or with a grant key of its) is done once both hold (rule 57):
   - it is sealed to every member of the agreement in force for it (or public);
   - it is on the chain, citing the collective's head as its signer knew it.
@@ -264,7 +270,7 @@ The settlement is one of:
 - a version naming every tip it drops;
 - or the judge of forks the reference names, or the link of its chain of judgment that took over, on a party's request.
 
-*The rare case, in detail.* An act on an agreement chain that is void or disputed under Identity's rotation rules confers nothing: no stake, no obligation, no consent.
+*The rare case, in detail.* An act on an agreement chain that is void or disputed under Identity's rotation rules, or disputed under rule 76 as an act a grant's revocation does not hold, confers nothing: no stake, no obligation, no consent.
 
 The one exception: a member's signature act that a collective placed before its line registering that member's rotation stays valid for the collective, as "Made before, made after" says. Its status under Identity is unchanged.
 
@@ -285,7 +291,7 @@ A publication is a neutral carrier: carrying or quoting a work, or pointing to a
 
 The core records claims and their order, never legitimacy. Order is not evidence of authorship; a claim cMIP MAY carry a pre-publication commitment.
 
-Where claims from different identities conflict, priority can only be decided where they meet: by anchoring, or by a keeper that recorded both. Otherwise they remain openly contested.
+Where claims from different identities conflict, priority can only be decided where they meet: by anchoring, or by a keeper of an agreement both claims belong to that recorded both. Otherwise they remain openly contested.
 
 **A work claim counts only public or addressed to every creator it names.** It names no roles.
 
@@ -554,16 +560,16 @@ The core keeps only the grammar:
 **Promises, and bundles.** A vow holds one or more promises. A seller bundles them as it chooses, in public: a season, a series, a single match. What each promise is, and how promises are listed, is the vow's words or a cMIP's.
 
 - **A contest names the sale it contests**, never the whole vow ("Contest (type 14)"). **Naming the promise that failed is optional** (field 1): a buyer may know only that something went wrong. One failed match marks one buyer's sale contested, not the season's every sale.
-- **A confirmation likewise names the sale** it confirms. *Reading, to confirm:* a buyer's claim of a payment is that sale, so a confirmation made there names it; for a free sale, the buyer's act acknowledges both the act about the vow and its own signature act on the offer.
+- **A confirmation likewise names the sale** it confirms. A buyer's claim of a payment is that sale, so a confirmation made there names it; for a free sale, the buyer's act acknowledges both the act about the vow and its own signature act on the offer.
 - **What a buyer is owed back when part of a bundle fails is set by the bundle's terms**: the offer's words, its agreement's, or a cMIP's. The core fixes no partial refund.
 
 
-**A vow names what is promised to the buyer, never the event itself.** A place in the stand to watch a match is one vow; access to a stream of the match is another; neither is "the match". **Two vows on one event stay separate**: neither references the other. This is how they are made, not a check a verifier runs: a vow naming another stays valid (below). **Each may reference the event, where the event exists on MOR as an act of its own** (in its `refs`, Envelopes; this draft's, to confirm), never as a vow, since a vow names what is promised. A reference carries no claim, no stake and no marking under rule 14. Each vow sits under its own agreement; whether an agreement claims a vow, and how its rights are managed, is its signer's business.
+**A vow names what is promised to the buyer, never the event itself.** A place in the stand to watch a match is one vow; access to a stream of the match is another; neither is "the match". **Two vows on one event stay separate**: neither references the other. This is how they are made, not a check a verifier runs: a vow naming another stays valid (below). **Each may reference the event, where the event exists on MOR as an act of its own** (in its `refs`, Envelopes), never as a vow, since a vow names what is promised. A reference carries no claim, no stake and no marking under rule 14. Each vow sits under its own agreement; whether an agreement claims a vow, and how its rights are managed, is its signer's business.
 
 **A vow's reference to another vow is not an act about it.** Any vow may still name another in its `refs`; that reference moves none of the other vow's sales' states: acknowledging the referring vow confirms no sale of the vow it names.
 
 
-*Readings, each to confirm:*
+These hold too:
 
 - "an act about the vow" is one of its versions, or a valid act naming its name in `objects` or `refs`, except another vow naming it in `refs` (above);
 - a contest prevails over a confirmation and voids nothing;
@@ -606,7 +612,7 @@ A publication or standing offer for a work with an existing claim, not signed un
 
 *The deal is based on a vow, and somebody owns the vow.* *A worker's vow, a job booked through a platform: the job's agreement writes the stake in her vow, held by her; the platform's fee comes off the top; what is left is hers, and the platform raising its fee needs her signature.*
 
-- *Reading, to confirm:* the vow's signer holds the whole stake in the version that first writes it (the founding terms, or a clone whose parent writes no stake in that vow). From then on the stake moves as any stake moves: by its holder's transfer (rule 10), by succession (rule 89), or by a version its holder signs (rule 48), so the owner may sell or share what she owns.
+- The vow's signer holds the whole stake in the version that first writes it (the founding terms, or a clone whose parent writes no stake in that vow). From then on the stake moves as any stake moves: by its holder's transfer (rule 10), by succession (rule 89), or by a version its holder signs (rule 48), so the owner may sell or share what she owns.
 - **A deal selling a vow it writes no stake in.** An offer made under an agreement and naming a vow counts whether or not that version writes a stake in the vow: how a platform or a marketplace sells others' vows is a cMIP's. The core only shows such a sale where another agreement claims the vow (above); the owner's protection is her own signature on the deal, and what her client shows before she signs (her client flags terms dividing money with no stake: "No owner").
 - The vow's signer is read from the vow the verifier holds, by its name (its genesis). A verifier that does not hold the vow cannot tell its name from a work's hash, and judges nothing, as for an offer's `[ 3, vow ]` ("Standing offer (type 6)").
 
@@ -970,9 +976,13 @@ The old service still owes payouts on everything it received before.
 
 An agreement that needs deadlines names its time reference. "Past its terms" is judged against that reference only.
 
-**A deadline is shown missed only by an anchor** on a time reference (Envelopes, task "Anchoring"): an anchor of the act itself, or of a keeper's sequence (rule 41). A keeper's word alone never says late: a keeper's sequence orders acts, it does not time them. Without such an anchor, the answer is undetermined.
+**An anchor shows a deadline met, never missed.** An anchor of the act itself (Envelopes, task "Anchoring"), at or before the deadline's point on the agreement's time reference, shows the act made in time. An anchor shows only that something existed by a point, never that it did not exist before.
 
-*Only anchors place anything on the clock. What an anchored keeper's sequence shows about an act it recorded, or did not record, by that point rests on the keeper recording acts as they arrive: the trust rule 42 states.*
+**A deadline is shown missed only by a keeper's anchored sequence**: the sequence of a keeper the agreement names, anchored at a point past the deadline, that holds no record of the act in its records up to and including the anchored one (rule 41). A keeper's word alone never says late: a keeper's sequence orders acts, it does not time them.
+
+Where neither shows it, the answer is undetermined.
+
+*Only anchors place anything on the clock. What an anchored keeper's sequence shows about an act it did not record by that point rests on the keeper recording acts as they arrive: the trust rule 42 states. An act proving its own lateness, by naming something that exists only after the deadline, is not a mechanism of MOR 1.*
 
 #### Rule 34. Conditions
 
@@ -1051,11 +1061,15 @@ Keepers are chosen by the parties when they sign, so neither side can later subs
 
 A keeper records the deal and the acts around it as they arrive, one keeper record (type 2) per act, signed by its operator. Its records are everyday acts of its operator in one sequence, each naming the one before (Envelopes rule 13): the **keeper's sequence.** One act is recorded before another when its record lies before the other's record in the keeper's sequence.
 
+**A keeper MUST keep one sequence for its records.** Records in two sequences of one operator are never ordered against each other, so a keeper's second sequence protects nothing against its first: a record counts against a rotation only in the sequence that holds the keeper's record of that rotation (rule 41). Each record is public, names the act's signer, which must be the act's own, and names the operator's previous record in `prev` (type 2).
+
 A keeper's sequence is a signed order and nothing more: it places no act on a time reference.
 
 #### Rule 38. Several keepers
 
 An agreement may name several keepers and a rule for what counts as recorded: any one, a threshold, or all. Only the named keepers' records count as testimony.
+
+**Each keeper's record is judged alone**, against that keeper's own record of the rotation (rule 41). The agreement's rule then counts how many keepers' records stand before their own keeper's record of it: under `[0]`, every keeper named; under `[1, k]`, at least `k` of them (`[1, 1]` is any one); under `[2, operators]`, each of the keepers listed (terms field 3).
 
 #### Rule 39. Copies
 
@@ -1079,9 +1093,11 @@ A keeper record counts, for that purpose, only if:
 
 - the verifier holds the act it names;
 - that act is valid as an act;
-- and the keeper is one named by an agreement the act's `objects` names, or, for an act of a collective placed against the collective's own line, one named by the collective's agreement, as "Made before, made after" says.
+- and the keeper is one named by an agreement the act belongs to ("Belongs to"), or, for an act of a collective placed against the collective's own line, one named by the collective's agreement, as "Made before, made after" says.
 
 A record of an act nobody can produce changes no verdict.
+
+**A keeper's own later rotation never undoes what its records placed.** A keeper's record that a rule of this MIR reads to place an act (rules 7, 33 and 41, and "Made before, made after", 5), or that a relied-on version's completeness rests on (rule 47), keeps the effect that rule gave it, whatever the keeper's later rotation disowned, shown as a dispute. *A witness chosen in advance cannot un-witness.* This is Identity's stated exception to its rule that evidence counts only while its signer's chain keeps it (Identity, "Evidence counts only while its signer's chain keeps it").
 
 *What remains to trust is that a keeper records acts as they arrive. A keeper can delay recording a rotation while recording a thief's acts first, or record an act later than it arrived; nothing in the bytes shows it. That is trust in keepers, accepted and stated: choose keepers as carefully as homes.*
 
@@ -1630,7 +1646,7 @@ An area is drawn either:
 - by whole layer (Identity, Envelopes and Text, Money, Agreements, Development); or
 - by act type within a specification.
 
-An area over the Identity layer governs the collective's rotations and key events, Identity acts on its decisions chain. The collective's everyday Identity acts count for nothing in Agreements.
+Genesis and rotations lie outside any area: the key grammar governs them (terms field 19, "Areas"). An area over the Identity layer reaches the collective's other Identity acts. The collective's everyday Identity acts count for nothing in Agreements.
 
 **When an act counts.** An act of the collective that an area reaches counts only with valid signature acts naming it (rule 6), meeting the area's threshold as rule 65 counts it, by holders of that area who:
 
@@ -1638,7 +1654,7 @@ An area over the Identity layer governs the collective's rotations and key event
 - each signed it, or a version it descends from by complete clones; and
 - still have a voice there for that act ("Made before, made after", rules 70, 71).
 
-**Members' own keys count as their signatures.** An act of the collective signed with a holder's own key (rule 73), and a signature act of the collective naming an act, signed with a holder's own key, each count as that holder's signature there, in every area reaching the act that the agreement in force for it gives that holder. So an area of one takes one member's act; an area of two takes one member's act and another member's signature, each with their own key. *Where an area needs two signatures, it needs two keys within that area.* The holders' signature acts with their own identity keys count too.
+**Members' own keys count as their signatures.** An act of the collective signed with a holder's own key (rule 73), and a signature act of the collective naming an act, signed with a holder's own key, each count as that holder's signature there, in every area reaching the act that the agreement in force for it gives that holder. So an area of one takes one member's act; an area of two takes one member's act and another member's signature, each with their own key. The Money acts a member key may sign for the collective are those Money rule 7 lists. *Where an area needs two signatures, it needs two keys within that area.* The holders' signature acts with their own identity keys count too.
 
 **An area's limits are a cMIP's.** An area may name a cMIP judging limits on its holders' keys, with its parameters (area key 6). It adds to this rule, never relaxes it: the act counts at the area's number only where the cMIP judges it within them, and as that cMIP asks beyond them. A verifier that does not hold the cMIP, or holds no verdict of it for the act, answers unknown for the area, and the act does not count there. *Capping an area is left to cMIPs; what the core keeps is this rule. A limits cMIP may add a second signature and make the first conditional: within its cap, the area's number; above it, one more holder's key.*
 
@@ -1678,7 +1694,7 @@ An act of a MIR is never such an act.
 
 *Otherwise an unlisted specification would be a way around every area: whoever holds the collective's key could act under a specification nobody adopted, around the area's holders. A rail is not adopted this way: it is named by the collective's own pointer or vault (Money rule 4). With adoption in the area's own hands, waiting costs little.*
 
-**The judicial tasks.** The tasks of the judicial tier (9 condition evaluation, 10 time reference, 11 anchoring) stay judicial, outside the area reaching Agreements. Neither the holders of the area reaching Agreements nor any other area changes them. They change only with every member's signature (rule 67). That includes a version that also changes the constitution, which needs the constitutional change rule too (rule 64.1).
+**The judicial tasks.** The tasks of the judicial tier (9 condition evaluation, 10 time reference, 11 anchoring, 14 absence proof) stay judicial, outside the area reaching Agreements. Neither the holders of the area reaching Agreements nor any other area changes them. They change only with every member's signature (rule 67). That includes a version that also changes the constitution, which needs the constitutional change rule too (rule 64.1).
 
 The area reaching Agreements adopts the cMIPs for Agreements' other tasks (8 split, 12 grant limits, 13 work claims).
 
@@ -1754,6 +1770,8 @@ Every field belongs to one tier.
 | 23 | Forked from | None: founding terms only |
 | 24 | Release rule | Operational, in no area: the clone rule, and every owner's signature |
 | 25 | *Withdrawn*: once the relays; never reused | — |
+| 26 | Settles: the tips a deal's settling version drops | None: a deal's clone only; deals have no tiers |
+| 27 | The judge of forks | None: a deal only; deals have no tiers |
 | 28 | Fees | Operational: an area may reach it apart from field 8 (`field-ref` `[0, 28]`); otherwise the clone rule |
 | 29 | The split service's backups, and what counts as a failed attempt | Judicial, as field 14: able to move money |
 | 30 | Holders' rules, per stake | Operational, in no area, as field 24: the clone rule, and every holder of the stake whose entry changes; changed by nobody's majority (rules 45, 94) |
@@ -2013,7 +2031,7 @@ Its constitution freezes as it stands, and nobody can add or remove a member, re
 
 *Stated cost: when the last voice has left, the collective's works freeze as they stand.* Its works stay published and claimed, and every former member keeps its stake as a departed holder (rule 68). Nothing about them can be decided any more, a release to the public domain included, since a collective owner releases only by its own rules and no voice remains to meet them (rule 65). A broken collective can no longer be rolled back. No rule prevents it: *someone with stakes in works worth keeping does not resign.*
 
-*Whether money under offers already published keeps flowing through a split service the founding terms name by a grant tied to no area is still to be checked.*
+Money under offers already published keeps flowing through a split service the founding terms name by a grant tied to no area while that grant stands, as through any grant.
 
 #### Rule 71. Leaving an area
 
@@ -2111,14 +2129,15 @@ A grant is authority to act in the grantor's name without a stake, the employer-
 
 The grant is a decision naming the grantee's own identity, which signs to accept it.
 
-**A grant whose grantee is its own grantor is valid, its acceptance the grantor's.** *A grant to oneself: a person grants itself a key that an application makes and holds, so the application signs within the grant's reach and limits, and every reader sees the act signed under that grant, not with the person's own key. It ends with one revocation, as any grant.*
+**A grant whose grantee is its own grantor is valid, its acceptance the grantor's own signature act naming it (type 1).** *A grant to oneself: a person grants itself a key that an application makes and holds, so the application signs within the grant's reach and limits, and every reader sees the act signed under that grant, not with the person's own key. It ends with one revocation, as any grant.*
 
-**A holder's signature of a founding or clone may name a key; it is a grant key within the areas that founding or clone gives the holder; the founding or clone is its grant, the signature its naming and acceptance; it counts from the moment the founding or clone is complete.** *A member's own key: their app makes it as they sign, and keeps its private half sealed to the member themself, so any of their apps holding their identity can act with it.*
+**A holder's signature of a founding or clone may name a key; it is a grant key within the areas that founding or clone gives the holder; the founding or clone is its grant, the signature its naming and acceptance; it counts from the moment the founding or clone naming it is in force (rule 72), until a later version names another key for that holder or the holder leaves.** *A member's own key: their app makes it as they sign, and keeps its private half sealed to the member themself, so any of their apps holding their identity can act with it.*
 
 - An act signed with it names that signature act as its `binding` (a scoped key, judged here), its signer the collective. It is the collective's own act, on the key's strand of the collective's actions chain, citing the decisions it acts under as every action does (rule 58).
 - It counts as the holder's signature within the areas the agreement in force for the act gives that holder (rule 60); no area reaching it, it counts for nothing. It never signs a decision: no record, grant, revocation, nor any act of the collective's identity chain. *The collective's own key is needed only for those.*
 - It counts only under the version it was named on, once complete, and the versions descending from it, and only while it is its holder's latest: a later version of that line on which the holder's signature names a key replaces it. *So each member change, which every member signs, names fresh keys.*
 - Its key is the holder's alone: a key named by two signatures of different signers is no member's.
+- The holder's own change of keys leaves it as it is. A rotation of the holder that disowns the very signature that named it is judged as any member's signature the collective's line placed: it stays valid for the collective ("Made before, made after", 4).
 
 *Stated cost: where a member never signs, the keys others' apps made for that founding are left unused. The key sits encrypted at its holder's homes.*
 
@@ -2166,7 +2185,7 @@ The holders of an area may grant within it. The collective signs a grant naming 
 
 **So is a revocation of such a grant**: it counts only with valid signature acts naming it by the holders of the area the grant names, meeting its threshold as rule 65 counts it, whichever area reaches revocations as acts. So is a reinstatement (rule 71).
 
-A collective's grant naming no area is judged as any other act of the collective, and reaches only acts that no area of the agreement in force reaches.
+A collective's grant naming no area is judged as any other act of the collective, and reaches only acts that no area of the agreement in force reaches. **A collective's grant to its split service is judged under the area that issued it**: the area its field 5 names, or, where it names none and an area reaches Money, that area; the receipts its key signs are that area's acts (Money rule 7).
 
 A grant whose field 6 reaches beyond its area is invalid, a reinstatement aside (rule 71).
 
@@ -2189,7 +2208,9 @@ Revoking a grant removes its key. The revocation names the grant, never a place 
 - another identity acknowledged it (Envelopes rule 17; by an act of a type the Identity, Money or Agreements MIR defines);
 - or a keeper recorded it before recording the revocation, the record counting as rule 42 says (rule 41);
 
-then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names, and only while its own signer's chain keeps it valid (Identity, "Evidence counts only while its signer's chain keeps it").
+then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names, and only while its own signer's chain keeps it valid (Identity, "Evidence counts only while its signer's chain keeps it"), save rule 42's exception for a keeper's record.
+
+**What such a disputed act confers: nothing, unless adopted.** As an act a rotation disowned (rule 6), an act a revocation's history does not hold, shown disputed, confers nothing on an agreement chain (no stake, no obligation, no consent) and is shown, to everyone; Money treats it as it treats a disputed act after a change of keys (Money rule 7). The grantor may still adopt it (below), and then it binds. *Binding the grantor by an accomplice's acknowledgement would let a thief holding a grant key sign the victim into a debt; shown, not binding, keeps both sides visible, and an honest grantor who meant it adopts it. Stated cost: a payee who relied on a revoked application's promise, a debt to come rather than a payment made, holds a visible dispute, not a debt, unless the grantor adopts it; a payment already made stays made on its rail, and the payee's own receipt stands.*
 
 *This is Identity rule 34's principle, for a revocation as for a rotation's disowning: nothing another identity relied on in a way the protocol can see is silently erased, and no grantor's omission, careless or chosen, erases what a counterparty holds a signature for. An act nobody else acknowledged and no keeper recorded stays void, so a revocation still cuts off a stolen or misused grant cleanly.* *Stated cost: a thief holding a grant key, with an accomplice who acknowledges its act, gets "disputed" rather than "void": visible to everyone, never erased, and bounded by the grant's own limits.*
 
@@ -2197,7 +2218,7 @@ then it is valid and shown as disputed. A keeper record or acknowledgement count
 
 A revocation of a grant within an area is judged by that area alone (rule 74).
 
-**The grantor may adopt a void act of a grant key as its own.** An act of the grantor's own key that counts (for a collective, an act of the collective's own key that counts) makes it bind when it does any of these:
+**The grantor may adopt a void or disputed act of a grant key as its own.** An act of the grantor's own key that counts (for a collective, an act of the collective's own key that counts) makes it bind when it does any of these:
 
 - acknowledges it;
 - cites it (for a collective, its history holding the act);
@@ -2227,7 +2248,7 @@ An acknowledgement of a grant key's act counts as an adoption only when it is an
 
 #### Rule 79. Fate of acts
 
-An act of a grant key that a decision ending its grant does not hold does not bind the collective: it is void, unless the collective adopted it (rule 76); where the decision is a revocation, it may be shown disputed instead, as rule 76 says.
+An act of a grant key that a decision ending its grant does not hold does not bind the collective: it is void, or, where the decision is a revocation, void or disputed as rule 76 says; either way it binds only where the collective adopted it (rule 76).
 
 Decisions ending a grant are: a revocation, a departure emptying its area, a fork, a closing.
 
@@ -2246,6 +2267,8 @@ The act binds when all of these hold:
 - the grant counts (its area's holders met, or the founding terms carry it), and its grantee signed to accept it;
 - the act is signed with the grant's key, cites the grant on the collective's chain, is done (rule 57), and lies within the grant's reach (rule 74) and within the limits its limits cMIP sets (grant fields 3 and 4);
 - no decision ending the grant fails to hold it (rules 71, 76, 91), or, where one does, the collective adopted it (rule 76).
+
+**For a person's grant**, the person's own chain stands for the collective's in these conditions: the act cites the grant on the person's chain (the person's identity as chain). **For a holder's member key**, the founding or clone naming the key is the grant, counting once in force (rule 72), the holder's signature naming the key its acceptance, and the areas in force for the act that the agreement gives that holder its reach (rule 73).
 
 An act beyond the grant's reach is not backed by it, whatever its strand. **Nor is an act of the grant key outside its cMIP's limits, as one outside its kinds is not.** A verifier that does not hold the limits cMIP, or the time reference a limit is judged against, answers unknown.
 
@@ -2285,6 +2308,8 @@ The clone's mark then names the plan, `[3, party]`, with the seat successors ent
 - the executed plan dropped;
 - and, where the party held the chain key alone, a plan for the successor in its place, naming their own successor, signed by the successor in that clone (rule 59).
 
+**A clone marked with the plan alone that changes anything more is invalid** (a false mark, rule 46): one that places a seat successor elsewhere than in the party's own place, among the parties or in a holding of the key grammar, or that reorders the other parties, changes more than the plan gives.
+
 *Consent given in advance, by everyone still counted (rule 8); a plan that some members cloned without the others is not that version, so it cannot slip a stranger into the constitution through a judicial clause. A plan changes only with every member, so a plan some members clone without the others never comes into force at all.*
 
 Otherwise the seat successor is a nomination, approved under the constitutional change rule (rule 64). That approval is counted among the voices that remain once the absent party's voice is removed (rule 89), as in rule 71. The successor signs the clone too (rule 45).
@@ -2320,7 +2345,7 @@ An abandonment clause, signed into the agreement, names who decides absence and 
 
 Every collective carries one that covers each party with constitutional power (rule 61). A deal may carry one or not.
 
-**In a collective, a declaration may also name a holder of the collective's stake in itself who is no party**: a departed holder, a stake successor, a buyer. It is made under the clause in force; its authority and its absence-proof cMIP are the clause's, as for a party. Against such a holder its outcomes are the stake-moving ones only: succession, as rule 89 says, or outcome 1 or 2 where the holder's plan names no stake successor; never 3 or 4. **Against a holder who is no party and whose plan names a stake successor, the declaration states outcome 0 alone, which removes no voice, and the stake passes by succession**, the same declaration as against a member with a plan (rule 89); outcome 0 is stated against no other holder who is no party. Rule 61's coverage is unchanged: a holder has no constitutional voice to cover (but see rule 61 where the constitutional change rule counts among a stake's holders). *So a departed holder who vanishes does not block the collective's fees, because its stake moves; without this sentence a declaration could name only a party, and one holder who vanished blocked every change paying the stake less, for good.* *In a deal, a party's death leaves the agreement running as written, with succession plans to step in, and locks nobody out of an identity.*
+**In a collective, a declaration may also name a holder of the collective's stake in itself who is no party**: a departed holder, a stake successor, a buyer. It is made under the clause in force; its authority and its absence-proof cMIP are the clause's, as for a party. Against such a holder its outcomes are the stake-moving ones only: succession, as rule 89 says, or outcome 1 or 2 where the holder's plan names no stake successor; never 3 or 4. **Against a holder who is no party and whose plan names a stake successor, the declaration states no outcome (field 3 empty), and the stake passes by succession** (rule 89); outcome 0 is never stated against a holder who is no party, who has no voice to remove. Rule 61's coverage is unchanged: a holder has no constitutional voice to cover (but see rule 61 where the constitutional change rule counts among a stake's holders). *So a departed holder who vanishes does not block the collective's fees, because its stake moves; without this sentence a declaration could name only a party, and one holder who vanished blocked every change paying the stake less, for good.* *In a deal, a party's death leaves the agreement running as written, with succession plans to step in, and locks nobody out of an identity.*
 
 The authority MUST be an identity:
 - the keeper's operator;
@@ -2437,7 +2462,7 @@ Collectives only. *A fork forces a whole lot of decisions to be taken again.*
   *Two fork acts signed concurrently on the same agreement, neither naming the other, are concurrent acts on its chain (rule 6): the status quo stands, and neither closes it, until one names the other. **A complete fork or closing is final**: a later ending of the same collective, naming it, counts for nothing. A later fork of a successor is a new fork, of the successor, in sequence.*
 
   Once the fork is complete:
-   - **Ownership.** The fork act transfers the original's stake in each work, as a stake transfer, to the successors, in the shares it names (field 5). By default the shares are in proportion to the stakes of the members on each side in the original itself (field 7), divided in millionths, leftovers by largest remainder as rule 9, ties ordered by the hash of the fork act with each side. Where the original carries no stakes in itself, each member counts alike: no agreement means equal weight. Each successor then owns its share outright and runs it: pointer, rails, split service. The work's fingerprint never changes.
+   - **Ownership.** The fork act transfers the original's stake in each work, as a stake transfer, to the successors, in the shares it names (field 5). By default the shares are in proportion to the stakes of the members on each side in the original itself (field 7), divided in millionths, leftovers by largest remainder as rule 9, ties ordered by the hash of the fork act with each side: `tagged_hash("MOR/law/leftover", [ fork act, successor ])`, the array in deterministic CBOR, the side with the smallest hash first. Where the original carries no stakes in itself, each member counts alike: no agreement means equal weight. Each successor then owns its share outright and runs it: pointer, rails, split service. The work's fingerprint never changes.
    - **Departed holders keep their percentage in every successor,** and their stake follows into the successors' future works, a stake in each collective as a whole. Each successor's founding terms keep every departed holder of the original, and every member who signed no side, at the same share of all its income, in its stake in itself (field 7) and its departed members entry (field 22); the members divide the rest. **And no successor's founding terms pay a kept holder less than the original's did, unless the kept holders consent** (rule 95): a successor's plan taking more off the top, or a higher fee, is a change paying them less, as for a clone. *Example: four at 25%, one of them departed; sides taking two thirds and one third: the departed holds 25% of each, the others 37.5% in one or 75% in the other.* *If too many departed members still own shares, the incentive is to found an entirely new collective instead of forking.*
    - **Debts.** The fork cites the original's action head, and hands out every obligation in that history, each to one successor or to several jointly, or it does not take effect ("Fork (type 19)").
      - The successor collective signs for each debt assigned to it, by its own chain signature on the fork (Identity type 16), so members are never made personal debtors of what the collective owed, and no later rotation of the successor unmakes the fork.
@@ -2447,7 +2472,7 @@ Collectives only. *A fork forces a whole lot of decisions to be taken again.*
      - An obligation signed by a collective binds it once done, like any act (rule 57): sealed to every member, and on its chain. A debt sealed to the creditor alone binds no one, its signer included, so hiding gains nothing.
      - Publishing the debt is the creditor's choice and protection (client conformance), and no validity rests on where an act is stored.
    - **Grants.** Every grant of the original ends at the fork, the old split service's included. **Every grant key ends at the fork's line**, as when a departure empties an area (rule 71). Each successor grants, with a grant key of its own, what it wants. An act of a grant key in the history the fork cites, or that the original adopted before the fork, binds, as a debt. Any other is missing from the ending's history, and void (the tie rule): its counterparty deals again with a successor.
-   - **Money after it.** Payment follows the work's current claim: the work carries nothing and never changes; its claim names the successors as owners, so routing follows to their own pointers and split services.
+   - **Money after it.** Payment follows the work's current claim: the work carries nothing and never changes; its claim names the successors as owners, so routing follows to their own pointers and split services. A payee pointer of the original that the ending left outside its history still counts for payments made before the ending's line, as the chain stood for each, and for none made after it ("Fork (type 19)"; Money rule 4).
      - The fork act withdraws the original's open offers: a wallet reading Agreements sees them withdrawn, and pays a successor's offer instead.
      - **A payment that reaches the old split service after the fork** (a wallet not reading Agreements paying a withdrawn offer, a push rail that cannot refuse) **names no claim, or the original's superseded claim, and the original's actions chain never recorded it before the fork: it is no purchase, and is owed back to the payer as a refund** (rule 12; the old service's grant key ended at the fork's line).
      - A sale the original's chain recorded in the fork's history stays a purchase.
@@ -2540,7 +2565,7 @@ A payment is judged by the offer it names, not by when it was paid:
 
 A payment shown only by its payer's claim is judged the same way, by the offer it names. The rail's own time (a block, an invoice) is supporting evidence where it exists, never the rule.
 
-*An offer made during the stretch is a version of the collective's agreement descending from the one in force just before the broken act and not from the rollback's clone (reading, to confirm); a deal the collective signed during the stretch never came into force, its signature counting for nothing. The collective is read as having an internal problem that freezes changes to its external interactions: the collective's own acts of the stretch still count for nothing; what it keeps is only what others did within rules that already held.*
+*An offer made during the stretch is a version of the collective's agreement descending from the one in force just before the broken act and not from the rollback's clone; a deal the collective signed during the stretch never came into force, its signature counting for nothing. The collective is read as having an internal problem that freezes changes to its external interactions: the collective's own acts of the stretch still count for nothing; what it keeps is only what others did within rules that already held.*
 
 **Money owed back, and how it is repaid.**
 
@@ -2696,7 +2721,7 @@ Each takes effect for the collective's acts at a line. A line is a record (type 
 
    An Identity witness act of the collective (type 15), on neither chain, places nothing and counts for nothing in Agreements.
 
-   An act signed with a grant key is the collective's own, on the grantee's strand of its actions chain, citing its grant, as every action cites (rule 58). It has no place by its key. It is before a line when the line's history holds it: that is, when an act of the collective before the line joined it, or a later act of the same strand that such an act joined. Where a decision ending the grant's powers does not hold it, the tie rule voids it (point 7), save where the collective itself adopts it (rule 76).
+   An act signed with a grant key is the collective's own, on the grantee's strand of its actions chain, citing its grant, as every action cites (rule 58). It has no place by its key. It is before a line when the line's history holds it: that is, when an act of the collective before the line joined it, or a later act of the same strand that such an act joined. Where a decision ending the grant's powers does not hold it, the tie rule voids it, or, for a revocation, shows it disputed as rule 76 says (point 7), save where the collective itself adopts it (rule 76).
 
 3. **A departure takes effect at the collective's line.** A resignation, a stepping down, or a declaration removing a voice takes effect for the collective at the line registering it: a record naming it in field 3. A member's voice remains for an act of the collective made before that line, and through any signature of theirs placed before it. For everything after it, it is gone (rules 70, 71, 65).
 
@@ -2728,7 +2753,7 @@ Each takes effect for the collective's acts at a line. A line is a record (type 
    - a signature act a line names among those completing a clone, or places by acknowledging it (point 2), a holder's vote on an owners' matter and a proxy's among them (rules 94, 97);
    - a stake transfer, a proxy and its revocation that a line registers or acknowledges (rules 94, 97);
    - a take-up of an issuance offer that a line registers or acknowledges (rule 96);
-   - **a keeper's record that a rule reads to place an act (point 5), or that a version's completeness relies on (rule 47)**: it keeps the effect the rule gave it, whatever the keeper's later rotation disowned, shown as a dispute. *A witness chosen in advance cannot un-witness.*
+   - **a keeper's record that a rule reads to place an act (point 5), or that a version's completeness relies on (rule 47)**: it keeps the effect the rule gave it, whatever the keeper's later rotation disowned, shown as a dispute, as rule 42 says for every agreement, a collective's or a deal's. *A witness chosen in advance cannot un-witness.*
 
    Its status under Identity is unchanged, and every client shows it as a dispute on the line. The line is the collective's own act (Identity rule 34's "disowned but relied on"; "what others relied on stands"), so the record stays a line, the clone it wrote stays in force, the departure stays taken, and every later record finds its parent. An act a line never placed is judged by Identity alone: disowned by its signer's rotation, it is shown, and decides nothing.
 
@@ -2742,11 +2767,11 @@ Each takes effect for the collective's acts at a line. A line is a record (type 
 
 6. **Nothing else places.** An acknowledgement by any other identity (Envelopes), a member's friend or a counterparty, carries no place in the collective's sequence: it keeps the act visible and changes nothing here. A member's personal sequences, and which device signed what, are never read for the collective.
 
-7. **The tie rule.** Where a decision ending powers and an action using them cite neither each other, **the ending wins: the action is void.** A decision ending powers is a fork, a closing, a departure, a grant's revocation, or a departure emptying an area. So:
+7. **The tie rule.** Where a decision ending powers and an action using them cite neither each other, **the ending wins: the action is void**, or, where the ending is a grant's revocation, void or disputed as rule 76 says. A decision ending powers is a fork, a closing, a departure, a grant's revocation, or a departure emptying an area. So:
 
    - an act of the collective a fork's or closing's history does not hold counts for nothing (rule 91);
    - a member's voice a line removes is gone for every act the line's history does not hold, an act judged under a version earlier than the one the departure names included (rule 65);
-   - an act signed with a grant key that a revocation of its grant, or the line emptying its grant's area, does not hold is void (rules 71, 76).
+   - an act signed with a grant key that the line emptying its grant's area does not hold is void (rule 71); one that a revocation of its grant does not hold is void, or disputed under rule 76.
 
    "Does not hold" is read on a history held whole: while an act the history names is not held, the action is unknown for that verifier, never void (point 1).
 
@@ -2769,13 +2794,15 @@ Each takes effect for the collective's acts at a line. A line is a record (type 
 
 **In a deal, a declaration draws its own line.** A deal has no sequence of its own, and no collective's line reaches it. An abandonment declaration with outcome 0 (rule 89) removes the party's voice in a deal from then on. Every signature act of that party on the deal counts as made after it, except one that the keepers the deal names recorded before recording the declaration, as their rule counts it (rules 38, 41, 42). So a clone of the deal completed, and so recorded, before it is never undone. The other parties then change the deal without the declared party (rule 47).
 
+**What others relied on stays complete before any declaration's line.** A declaration's line decides only what no relied-on version holds: a version of the deal that a party's or keeper's later act relies on (rule 47) stays complete, the declared party's signature on it included, in a deal that names keepers and in one that names none.
+
 *A deal's authority is one identity: its signature alone makes the declaration, so the declaration is its own line, with nothing to complete after it.* *A signature on a deal's clone names the clone, an agreement, so the deal's keepers can place it; deals that need protection name a keeper.*
 
 ## Part four: act formats
 
 All acts are Envelopes MIR acts, private by default, visible to the agreement's parties and keepers unless they choose otherwise.
 
-Every act type below has its exact format, save the contest's for acts other than a declaration of absence or a vow's sale ("Parameters"). *A client that meets an act using a format this MIR leaves open shows it as unknown rather than accepting it unchecked, and does not sign it (Envelopes rule 30).*
+Every act type below has its exact format.
 
 Every Agreements act type may carry acknowledgements (`acks`, Envelopes rules 18 and 19).
 
@@ -2795,7 +2822,7 @@ Every Agreements act type may carry acknowledgements (`acks`, Envelopes rules 18
 | 11 | *Retired*: adoption is by acknowledging, citing or paying on (rule 76); never reused | — |
 | 12 | Liveness | a party; counts only public or addressed to the agreement's other parties |
 | 13 | Abandonment declaration | the authority the clause names, always an identity. For a threshold of the other parties (in a collective only): one of them, completed by the others' signature acts, which the recovery rotation names where the declaration takes effect there |
-| 14 | Contest | anyone with standing (rule 54). Its format is written for the party a declaration of absence names, answering it, and for someone who signed onto a vow, contesting it (rule 13); the others are still open |
+| 14 | Contest | anyone with standing (rule 54): the party a declaration of absence names, answering it; someone who signed onto a vow, contesting a sale (rule 13); anyone else with standing, contesting another act |
 | 15 | *Retired*: a Module states its fee in its own specification (Development field 7); never reused | — |
 | 16 | Resignation | the member giving up their voice, or stepping down from one area, naming the drafts they leave behind |
 | 17 | Record | the collective, with its signing key: its everyday line |
@@ -2934,8 +2961,11 @@ abandonment = {
 }
 
 keepers   = [ [+ hash], [ 0 ] / [ 1, uint ] / [ 2, [+ hash] ] ]
-                                                    ; keeper operators, and any one / threshold / all (no rule by share
-                                                    ; for keepers)
+                                                    ; keeper operators, and the rule for what counts as recorded:
+                                                    ; [0] every keeper named; [1, k] at least k of them (any one: [1, 1]),
+                                                    ; k from 1 to their number; [2, operators] each of these, none twice,
+                                                    ; every one among those named; operators none twice; terms whose
+                                                    ; keepers' rule does not fit them are invalid (no rule by share)
 rule      = [ 0 ] / [ 1, uint ] / [ 2, [+ hash] ]   ; all parties / threshold / named parties
           / [ 3, stake: uint, share: uint ]         ; those counted, holding together at least this share, in millionths,
                                                     ; of this stake, by its index in field 7
@@ -3019,7 +3049,7 @@ power = [ 0 ]                             ; the parent's constitutional change r
 
 A judge here is a specification that is either:
 
-- named in field 2 for a judicial task (9 condition evaluation, 10 time reference, 11 anchoring); or
+- named in field 2 for a judicial task (9 condition evaluation, 10 time reference, 11 anchoring), or in the abandonment clause's key 3 for task 14 (absence proof); or
 - named in field 6 as the time reference, which is a naming for task 10.
 
 A judge is named for no other task, judicial or not, and is not named as an extension (field 15). Terms that do either are invalid, founding terms and clones alike, whatever a clone's mark says.
@@ -3080,13 +3110,13 @@ Terms breaking any of these are invalid.
 
 *The mechanic is reused: the collective's identity is its genesis act, which declares the founding agreement, so the founding terms could not name it by its hash. In its own terms, founding or clone, the collective is written null, never by its hash, so that one meaning has one encoding; a clone writing the collective's own hash is invalid where a verifier holds its genesis.*
 
-**Forked from** (field 23) appears only in the founding terms of a collective (with field 12, without field 11). It holds the original collective's identity. It is a back-link for readers and decides nothing: the fork act names its successors (rule 91). It is no parent: the founding terms are signed by every founder, as any founding terms are. Terms breaking this are invalid. *A successor is founded before the fork act exists, so it cannot name the act; it names the collective it leaves.* *Reading, to confirm:* *the collective, rather than its agreement, which may still change before the fork.*
+**Forked from** (field 23) appears only in the founding terms of a collective (with field 12, without field 11). It holds the original collective's identity. It is a back-link for readers and decides nothing: the fork act names its successors (rule 91). It is no parent: the founding terms are signed by every founder, as any founding terms are. Terms breaking this are invalid. *A successor is founded before the fork act exists, so it cannot name the act; it names the collective it leaves, rather than its agreement, which may still change before the fork.*
 
 **The release rule** (field 24) says which of a stake's holders must sign its release to the public domain, a rule counted among them (rule 55). It is set in an agreement's founding terms; absent, every holder.
 
 **A clone every owner signs may change it.** A clone whose field 24 differs from its parent's is a draft until every holder of every stake the parent defines has signed it (rule 45). This is besides the power its mark names: **the ordinary clone rule**, field 24 lying in no area (rule 64).
 
-*Freedom of making mistakes and fixing them.* *Reading, to confirm:* *the owners are the holders the parent's field 7 names, a holder written null being the collective, whose consent the mark already carries.*
+*Freedom of making mistakes and fixing them.* The owners are the holders the parent's field 7 names, a holder written null being the collective, whose consent the mark already carries.
 
 **Field 25 is withdrawn.** Terms carrying field 25 are invalid, and the number is never reused. **Relays are transport**: where a collective's clients publish and look first is client conformance, or a cMIP's (the relay transport cMIP), never the core (rule 57).
 
@@ -3363,7 +3393,7 @@ A holder designating none cannot be paid, and any payout on its holding to anyon
 
 How much each share gets is the split cMIP's: a verifier without it shows the amounts as unknown, never as wrong.
 
-**A split is delivered to every holder it pays**: each receiver of a payout naming a stake is among its recipients (Envelopes, `to`), unless the split is public (*Reading, to confirm: a public split is delivered to everyone*). Every fee it takes is a payout naming its module and its receiver. *The core cannot know who owns a service, so it never hides a fee: every holder sees what was taken before their share, and by whom.*
+**A split is delivered to every holder it pays**: each receiver of a payout naming a stake is among its recipients (Envelopes, `to`), unless the split is public, a public split being delivered to everyone. Every fee it takes is a payout naming its module and its receiver. *The core cannot know who owns a service, so it never hides a fee: every holder sees what was taken before their share, and by whom.*
 
 ### Grant (type 9) and revocation (type 10)
 
@@ -3427,7 +3457,7 @@ The exception is a layer's incoming share with the rail's proof behind it. Where
 
 **A grantor may scope its grant more narrowly still**: the kinds it names (field 6), and for a collective the area's reach, still apply before this limit.
 
-*Readings, to confirm: "the service" is every service the grantor's agreement names for the split service, its backups included, since money from any of them to the grantor is a payout; a grant to the same identity that neither field 14 nor field 29 names is no split service's grant, and reaches what its kinds name, the grantor's choice, in plain view.*
+"The service" is every service the grantor's agreement names for the split service, its backups included, since money from any of them to the grantor is a payout; a grant to the same identity that neither field 14 nor field 29 names is no split service's grant, and reaches what its kinds name, the grantor's choice, in plain view.
 
 *Example: a label owns a quarter of a film; the film's service owes the label 40. The label's own split service, holding the label's grant key, cannot sign "the label received 40": that is a payout the label is owed, under another agreement's claim. The label signs its own receipt once the 40 arrives.* *Whoever uses a grant key still signs from under its own identity, by the grant key.*
 
@@ -3437,7 +3467,7 @@ So a payout without the payee's own receipt stays the service's open obligation 
 
 **Revocation (type 10).** A revocation is a decision of the grantor, signed with its own key and citing the collective's chain as an action does. It names the grant whose key it removes, never a place on the grantee's strand. For a grant within an area, it is completed by that area's holders' signature acts, judged by that area alone (rule 74).
 
-It is a decision ending powers: **an act signed with the grant key that the revocation's history holds was done within the grant's powers, and binds; any other, racing it or after it, is void** (the tie rule), unless another identity acknowledged it, or a keeper recorded it before recording the revocation: then it is valid and shown as disputed (rule 76).
+It is a decision ending powers: **an act signed with the grant key that the revocation's history holds was done within the grant's powers, and binds; any other, racing it or after it, is void** (the tie rule), unless another identity acknowledged it, or a keeper recorded it before recording the revocation: then it is valid and shown as disputed, and confers nothing unless the grantor adopts it (rule 76).
 
 ### Request to a judge (type 25)
 
@@ -3537,9 +3567,9 @@ A contest of a declaration is signed by the party the declaration names, with it
 
 *Client conformance:* the declared member's client lets them sign it, and publishes it.
 
-A contest of a vow: field 0 names **the sale it contests**: the buyer's payer's claim of the payment that is a purchase under an offer naming the vow, or, for an offer at no price, the signature act by which the buyer signed onto it (rule 13). Its inside names the vow by its name (its genesis id) as chain and predecessor, `[[vow, vow]]`. Field 1, optional, says which of the vow's promises was not kept (a buyer may know only that something went wrong). Signed by the buyer of that sale, it marks that sale contested, and voids nothing. Signed by anyone else, it shows nothing. *To confirm:* the field numbers and the vow in `objects`.
+A contest of a vow: field 0 names **the sale it contests**: the buyer's payer's claim of the payment that is a purchase under an offer naming the vow, or, for an offer at no price, the signature act by which the buyer signed onto it (rule 13). Its inside names the vow by its name (its genesis id) as chain and predecessor, `[[vow, vow]]`. Field 1, optional, says which of the vow's promises was not kept (a buyer may know only that something went wrong). Signed by the buyer of that sale, it marks that sale contested, and voids nothing. Signed by anyone else, it shows nothing.
 
-*The format is written for the two cases decided; a contest of another act, or by another with standing (rule 54), keeps its format open, to be defined as new needs are found.*
+**A contest of any other act**, by anyone with standing (rule 54), is in the same format: field 0 names the act it contests, field 1 is absent, and its inside names that act as both chain and predecessor, `[[act, act]]`. It is shown beside the act it contests, and changes nothing about any act's validity, status or selection. Signed by anyone without standing, it shows nothing.
 
 ### Settlement request (type 22) and fork settlement (type 23)
 
@@ -3603,7 +3633,7 @@ Once spent, it is still on the record and visible, but no line registers it, by 
 
 *A member who means to leave signs a new resignation after the last version they signed.*
 
-*Reading, to confirm: the version a line registering a departure puts in force, whose signature the departing member placed before that line, never brings them back: it is the version of their leaving, not of a return.*
+The version a line registering a departure puts in force, whose signature the departing member placed before that line, never brings them back: it is the version of their leaving, not of a return.
 
 ### Record (type 17)
 
@@ -3658,7 +3688,8 @@ No area reaches a record, as none reaches a rotation. It is judged by the clone 
 - an abandonment declaration removing such a party's voice (rule 89);
 - a rotation (Identity) of such a party's own identity;
 - a stake transfer (type 4) of a stake the agreement in force for the record defines, which the record places for the owners' matters (rule 94);
-- a proxy (type 27) or a revocation of one (type 28) by a holder of such a stake, which the record places (rule 97).
+- a proxy (type 27) or a revocation of one (type 28) by a holder of such a stake, which the record places (rule 97);
+- a take-up of an issuance offer (type 26) of such a stake, which the record places (rule 96).
 
 A record naming any other act there counts for nothing.
 
@@ -3861,6 +3892,7 @@ Field 4 names each successor once, never the original. Field 5's shares sum to 1
 - the agreement it names is the one in force at its line, the original's records before the line counted (rule 72);
 - every member it lists is a member whose voice remains at the line (rule 65's voices, the departures registered before it counted), is on one side, and signed it by a chain signature that counts in their identity chain and is not void (below);
 - **those members meet the constitutional change rule, counted as rule 65 says**;
+- where that rule counts among a stake's holders, each holder who is no member that the count relies on signed it by a chain signature that counts in their identity chain and is not void, as members do;
 - each side's successor is held, and its founding terms, as its genesis declares them, have exactly that side's members as parties, and keep, in its stake in itself (field 7) and its departed members entry (field 22), every departed holder of the original and every member whose voice remains on no side, each at exactly their share of all the original's income (how the members divide the rest is theirs);
 - **each successor's founding terms pay no kept holder less than the original's agreement in force at the line pays it, as rule 48 reads "paid less", or the kept holders consented as rule 95 says**: the original's stake in itself and the successor's compared, its part of the plan, what each plan takes off the top, the fees, and the split cMIP and its parameters;
 - each successor a debt is assigned to signed it by a chain signature that counts in the successor's identity chain and is not void, the successor's own key grammar producing it;
@@ -3876,7 +3908,7 @@ Field 4 names each successor once, never the original. Field 5's shares sum to 1
 
 **Otherwise the fork does not take effect.** A verifier that does not hold every act that history names cannot tell what it must hand out: for it, whether the fork is complete is **unknown**, never "not complete", so a client tells the two apart. It judges the fork once it holds them.
 
-**What lies outside that history is void** (the tie rule, "Made before, made after", point 7): an obligation of the original the fork's history does not hold binds no one, and no successor owes it. The one exception is a payee pointer left outside it, which still counts for payments already made to it, as the chain stood for each payment, and for nothing after the fork. *Why: otherwise members could erase, by a fork on an old line, sales they had visibly taken on (rule 76); failing the fork instead would let one payment block an ending, which closings avoid as well (rule 93).*
+**What lies outside that history is void** (the tie rule, "Made before, made after", point 7): an obligation of the original the fork's history does not hold binds no one, and no successor owes it. The one exception is a payee pointer left outside it, which still counts for payments made before the fork's line, as the chain stood for each payment, and for none made after it (Money rule 4). *Why: otherwise members could erase, by a fork on an old line, sales they had visibly taken on (rule 76); failing the fork instead would let one payment block an ending, which closings avoid as well (rule 93).*
 
 **Whether a fork took effect is judged only by what its own history holds.** The departures registered before its line count for its check of the obligations it must hand out; a departure registered after it never changes it. *A fork that left out a debt binding in its history stays incomplete, whatever is registered after it; the members sign a new one that hands the debt out.*
 
@@ -3902,7 +3934,7 @@ Of the complete endings, the one that counts is the one every other names or is 
 
 **A drafter names the endings they signed.** A fork or closing is no ending where its signer signed, earlier in their own identity chain than their chain signature on it, another fork or closing of the same collective that it does not name in its `objects` (directly, or through the endings it names there). It is never complete, and its signatures count for nothing, for naming and for the rule on old proposals alike. *Checkable on the drafter's own chain, unlike "every ending a client holds": without it, a drafter leaving out a proposal they had signed, then the proposal finished late, leaves two endings each naming the other through two signers' chains, which no reading of the chains can tell from a true race.*
 
-*Reading, to confirm: "names" is judged here in two steps, so that no signature both judges and is judged: first by `objects`; then, among the signatures left, through signers' chains too; what an ending names through signers' chains is read from the signatures left after both steps.*
+"Names" is judged here in two steps, so that no signature both judges and is judged: first by `objects`; then, among the signatures left, through signers' chains too; what an ending names through signers' chains is read from the signatures left after both steps.
 
 *Stated cost: where the drafter of the ending replacing an old proposal never signed that proposal and leaves it unnamed, the proposal can still be finished late, by members who signed no ending naming it, with others' earlier signatures: it then counts as the earlier ending, and the one replacing it for nothing, or the two name each other through two signers' chains, and neither counts until a third ending names both. This needs the drafter not to have held the proposal (a true race) or to bypass their client, which names every ending it holds; under a threshold it needs no more than members who signed neither. The late signatures lie on their signers' chains, visible.*
 
@@ -3985,9 +4017,9 @@ Signed by the keeper's operator, with its own signing key, as an everyday act of
 **What a verifier checks of a keeper record:**
 
 - it is valid under Identity as an everyday act of its signer, and public, and its payload is in this format;
-- it counts, for any rule that reads it, only as rule 42 says: the verifier holds the act it names; that act is valid as an act; that act's signer is the identity the record names beside it; and the record's signer is the operator of a keeper the agreement in question names (terms field 3), or, for an act of a collective placed against the collective's own line, one the collective's agreement names ("Made before, made after", 5);
-- it counts only while its signer's chain keeps it valid (Identity, "Evidence counts only while its signer's chain keeps it"), save where a collective's line placed it ("Made before, made after", 4);
-- one record is before another only when it lies in the other's ancestry in the keeper's sequence; records of two operators, or of two sequences, are not ordered against each other by their keepers.
+- it counts, for any rule that reads it, only as rule 42 says: the verifier holds the act it names; that act is valid as an act; that act's signer is the identity the record names beside it; and the record's signer is the operator of a keeper named (terms field 3) by an agreement the act belongs to ("Belongs to"), or, for an act of a collective placed against the collective's own line, one the collective's agreement names ("Made before, made after", 5);
+- it counts only while its signer's chain keeps it valid (Identity, "Evidence counts only while its signer's chain keeps it"), save where a rule of this MIR read it to place an act or a relied-on version's completeness rests on it (rule 42), and where a collective's line placed it ("Made before, made after", 4): it then keeps the effect the rule gave it, whatever the keeper's later rotation disowned, shown as a dispute;
+- one record is before another only when it lies in the other's ancestry in the keeper's sequence; records of two operators, or of two sequences, are not ordered against each other by their keepers; a keeper keeps one sequence for its records (rule 37).
 
 **An anchor of a keeper record** (Envelopes, task "Anchoring") shows that record, and every record before it in the keeper's sequence, to have existed by the anchor's point (rule 41). A keeper record places nothing on a time reference by itself (rule 33).
 
@@ -4072,9 +4104,6 @@ Signed by the keeper's operator, with its own signing key, as an everyday act of
 
 Left to cMIPs: the encoding of conditions (the condition-evaluation task) and of grant limits (the grant-limits task; grant fields 3 and 4).
 
-Still open:
-
-- The contest's format (type 14) for an act other than a declaration of absence or a vow's sale ("Contest (type 14)").
 
 ### Freeze scenarios
 
@@ -4129,6 +4158,9 @@ The scenario numbers after each colon are those of the freeze test suite.
 
 - Keepers named by the agreement; keepers check homes; recorded acts survive rotation as disputes; a record of an act nobody holds confers nothing: 1.
 - Several keepers with a threshold; a keeper lost, its records surviving in copies: 1.
+- A receipt belonging to a deal through the claim it pays under, recorded by the deal's keeper before the payee's rotation: disputed; the same recorded by a keeper no agreement it belongs to names: void; a post, belonging to no agreement, placed by no keeper: a component under "Agreements".
+- A deadline met, shown by an anchor of the act at or before the point; a deadline missed, shown only by a named keeper's sequence anchored past the point holding no record of the act; a keeper's word alone, or an anchor of the act after the point, never showing it missed: undetermined: a component under "Agreements".
+- A keeper's later rotation disowning a record a rule read to place an act: the placement stands, the record shown as a dispute; several keepers, each record judged against its own keeper's record of the rotation, the agreement's rule counting them; a keeper's second sequence ordering nothing against its first: a component under "Agreements".
 
 #### Changing an agreement
 
@@ -4199,12 +4231,12 @@ The scenario numbers after each colon are those of the freeze test suite.
 
 #### Grants
 
-- A grant hands its grantee a grant key, which the grantee accepts by signing; the grantee's acts, signed with it, are the collective's own, citing the grant; one not citing it, or beyond its reach, is not backed; a revocation, completed by the area's holder, removes the key: an act its history holds binds, one racing it or after it is void, one the collective adopts binds: 3.
-- A person grants an agent a key and revokes it by everyday acts, public, with no rotation; an act the revocation's history holds binds, one racing it is void; a grant a thief made with the stolen signing key dies at the owner's rotation; a private grant backs nothing (extended): 3.
+- A grant hands its grantee a grant key, which the grantee accepts by signing; the grantee's acts, signed with it, are the collective's own, citing the grant; one not citing it, or beyond its reach, is not backed; a revocation, completed by the area's holder, removes the key: an act its history holds binds, one racing it or after it is void, or disputed where another identity acknowledged it or a named keeper recorded it, conferring nothing, one the collective adopts binds: 3.
+- A person grants an agent a key and revokes it by everyday acts, public, with no rotation; an act the revocation's history holds binds, one racing it is void, or disputed under rule 76; a grant a thief made with the stolen signing key dies at the owner's rotation; a private grant backs nothing (extended): 3.
 - The label revokes Marco; deal 4, void, is adopted by the label's own acknowledgement, and Sofia manages it under her own grant and key; no handover: 3.
-- A grantee's act that one device of the collective cites, and a revocation from another device that never heard of it: the act binds, adopted; the grantee's later acts are void: 3.
+- A grantee's act that one device of the collective cites, and a revocation from another device that never heard of it: the act binds, adopted; the grantee's later acts are void, or disputed under rule 76: 3.
 - A departure empties an area: a grantee's act the line's history holds binds; acts racing it, or after it, are void; one the collective acknowledged binds; a reinstatement after the refit, a clone of the ended grant with its own key, backs new acts and takes nothing on: 3.
-- The collective acknowledges a void act of a revoked grant's key after the revocation: it binds, adopted: 3.
+- The collective acknowledges a void act of a revoked grant's key after the revocation: it binds, adopted; an act a counterparty acknowledged after the revocation is shown disputed, confers nothing, and binds once the collective adopts it: 3.
 - A frozen area's grants end; after the refit, only the grants the new holder reinstates, by cloning, back acts: 3.
 - In an area held by two deciding together, one holder alone does not reinstate a grant; both do: 3.
 - A signature act on an ended grant reinstates nothing; a reinstatement act, completed by the refitted area's holders after the refit, reinstates it; one made before the refit counts for nothing: 3.
