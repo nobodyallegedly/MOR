@@ -148,7 +148,7 @@ The payload is decoded strictly: a closed map, field 0 a text string, field 1, i
 - **No TAB.** *A tab displays at different widths in different places, and can hide alignment tricks in terms. Text that needs layout uses a format.*
 - **Warnings, not rules, for lookalikes.** *Banning mixed scripts would exclude real people writing real languages. Deciding what looks alike is judgement, so it belongs to clients.*
 - **Every client can open text.** *Every client implements the Envelopes MIR, so every client can unlock a public text and any private text addressed to it. Locking everything does not weaken text's universality.*
-- **A text act is closed**. *Its fields are listed as a rule, as every payload map is closed, so no reader takes a text act for part of another's chain, and no light act carries the weight of an acknowledgement. What is given up, a chain of plain text acts, is kept by a cMIP's companion act, every word still readable by every client.*
+- **A text act is closed.** *Its fields are listed as a rule, as every payload map is closed, so no reader takes a text act for part of another's chain, and no light act carries the weight of an acknowledgement. What is given up, a chain of plain text acts, is kept by a cMIP's companion act, every word still readable by every client.*
 - **Formats never lock text away.** *Text is the one media every client understands, so no cMIP may make a message unreadable. A format adds meaning; it never replaces the words, and it never hides them.*
 
 ### Parameters

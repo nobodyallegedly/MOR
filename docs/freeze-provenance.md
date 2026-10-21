@@ -76,3 +76,48 @@
 | Reasoning | F296 |
 | Freeze scenarios | F102, F295, F296, F334, F343 |
 
+### Envelopes draft 11 (from draft 10)
+
+| Rule or section | Findings |
+| --- | --- |
+| (header: the drafts' notes) | F1, F237, F241, F251, F252, F266, F272, F292, F293, F294, F295, F323, F328 |
+| Purpose | F294 |
+| Acts | F110, F272 |
+| Locking and delivery | F25, F293 |
+| Relays | F18, F294 |
+| rule 2 | F91 |
+| rule 8 | F29 |
+| 3. Private delivery | F99, F293 |
+| rule 11 | F99 |
+| rule 12 | F293 |
+| rule 13 | F292, F328 |
+| rule 14 | F127 |
+| rule 15 | F4 |
+| rule 18 | F110, F118 |
+| rule 19 | F110 |
+| rule 20 | F272 |
+| 7. How acts reach people | F70 |
+| 8. Media | F108 |
+| rule 22 | F108 |
+| rule 23 | F68, F126, F128, F237 |
+| 9. Vows | F237, F238, F239, F241, F252 |
+| rule 24 | F68, F294 |
+| rule 26 | F18 |
+| rule 28 | F294 |
+| rule 30 | F295, F323 |
+| The act | F24, F81, F90, F110, F126, F128, F272 |
+| Encryption key (type 4) and key delivery (type 1) | F98, F99 |
+| Sealed container | F90, F293 |
+| The running summary | F78, F89 |
+| Publication (type 0) | F108 |
+| Vow (type 5) | F252 |
+| Withdrawal (type 3) | F294 |
+| Types defined by this MIR | F294 |
+| Tasks | F173, F201, F202, F204 |
+| Reasoning | F98, F99, F108, F110, F272, F292, F293, F294, F295 |
+| Open technical parameters | F78, F294 |
+| Every act, public and private | F293 |
+| Sequences, chains, acknowledgements and references | F110, F272, F292, F328 |
+| Media and withdrawal | F108, F294 |
+| Relays and fail closed | F294, F295, F323 |
+
