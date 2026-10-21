@@ -266,7 +266,7 @@ Below the MICS there is one root: **the six frozen texts of its MIRs, published 
 
 **How a MIR's spec hash is computed.** A MIR's content is the map `{ 0 => 4, 9 => text }`, kind 4 and its frozen text, with no other field; its spec hash is `tagged_hash("MOR/spec", content)` over that map's deterministic CBOR encoding. The MICS document's and a test suite's are computed the same way, with kind 6 or 7. These are the hashes the MIRs write as `IDENTITY`, `TEXT`, `ENVELOPES`, `MONEY`, `AGREEMENTS` and `DEVELOPMENT`.
 
-The frozen specifications are committed to the genesis repository as files of canonical text (Text), save that a file may end with exactly one line break, which is not part of the text: the text is the file's content as UTF-8 with that one final line break removed, if present. A check of the repository refuses a file whose text so read is not canonical text (a trailing space on any line, two final line breaks, or any other break of the Text rules), so that the file, the publication and the hash are one.
+At the freeze, each frozen text's first line is its name alone ("# MIR: Identity" and the like), with no draft number or approval line, since every line of the file is part of the hashed text. The frozen specifications are committed to the genesis repository as files of canonical text (Text), save that a file may end with exactly one line break, which is not part of the text: the text is the file's content as UTF-8 with that one final line break removed, if present. A check of the repository refuses a file whose text so read is not canonical text (a trailing space on any line, two final line breaks, or any other break of the Text rules), so that the file, the publication and the hash are one.
 
 *A build and a list of hashes are signed by the same author, so checking one against the other checks nothing; a text anyone can read and hash is a root nobody has to take on trust.*
 
@@ -320,7 +320,7 @@ rule-ref = [ bytes-hash: hash, size: uint, budget: uint, profile: hash ]     ; t
 The content is decoded as an act's payload is, under the encoding and the CDDL conventions of Identity's Part three ("Encoding", "Formats"), save that a failure makes the content **no specification** (below), not an act invalid. In full:
 
 1. The content is deterministic CBOR, holding one map. Bytes that are not, or a map key twice, make it no specification.
-2. Every key is an unsigned integer from 0 to 13. Any other key, a key the format does not define, makes it no specification.
+2. Every key of the content map is an unsigned integer from 0 to 13 (arrays and maps inside it follow their own CDDL). Any other key, a key the format does not define, makes it no specification.
 3. Every text string in it, field 9 and every `type-def` included, is canonical text (Text MIR, the pinned Unicode version).
 4. Each field holds the type the CDDL gives it: `hash` exactly 32 bytes; `uint` an unsigned integer; `[+ x]` at least one item; `task-ref`, `type-def` and `rule-ref` arrays of exactly two, three and four items; `fee` an array of one or two items, its rate `[0, part]` or `[1, amount]`, `part` an unsigned integer counted in millionths, `amount` carried as given; field 12 the value `true` alone.
 5. Field 0 is a kind from 0 to 8, and field 9 is present.
@@ -382,7 +382,7 @@ A verifier reads only the unit's spec hash: two amounts are in one unit only whe
 
 *In short: a signature scheme is named by its hash, as Identity's founding schemes are by number; a client that adopts it implements it from its text.*
 
-A signature-scheme specification carries field 0 (5), field 1 (its creator) and field 9, and MAY carry field 6, its verification rule, once a machine profile is published (rule 22). Its text MUST state:
+A signature-scheme specification carries field 0 (5), field 1 (its creator) and field 9, and MAY carry field 6, its verification rule, which a verifier runs only once a machine profile is published (rule 22). Its text MUST state:
 
 - its public key's encoding and length, as the bytes Identity's `signing-key` and the signature's `key` carry;
 - its signature's encoding and length, as the bytes the signature's `sig` carries;
@@ -396,9 +396,9 @@ A client that has not adopted the scheme answers unknown for every act signed un
 
 *In short: a malformed specification is not a bad specification; it is none. No client can adopt it, so every act naming it is unknown, unless a rule the verifier can apply shows the act invalid.*
 
-A specification whose content is not in this format (a kind, a reference, a fee or a field given against its rule, fields 10 to 13 included, or a required field missing) is no specification. A verifier holding its content shows it so; an act naming it is unknown to every client, since no client can have adopted it (rule 10), unless a rule the verifier can apply shows the act invalid (invalid beats unknown, Envelopes rule 30); a verifier not holding the content answers unknown, as for any specification it has not adopted. The invalid of Envelopes rule 30 stays for acts outside a specification the verifier implements.
+A specification whose content is not in this format (a kind, a reference, a fee or a field given against its rule, fields 10 to 13 included, or a required field missing) is no specification. A verifier holding its content shows it so; an act naming it is unknown to every client, since no client can have adopted it (rule 10), unless a rule the verifier can apply shows the act invalid (invalid beats unknown, Envelopes rule 30); a verifier not holding the content answers unknown, as for any specification it has not adopted. The invalid of Envelopes rule 30 for an act outside its specification's format stays for specifications the verifier implements; its "invalid beats unknown" holds everywhere.
 
-**A specification malformed and implemented is no specification.** A client may implement a text, its own founding cMIP for instance, whose published content is not in the format: it has not adopted that specification, since adoption is of a published specification, and a client's implementation of a text is not an adoption of malformed bytes. An act naming that spec hash is unknown to it, as to every client; Envelopes rule 30's invalid does not apply. *A client decodes the format at adoption and in a listing, so it cannot implement around it.*
+**A specification malformed and implemented is no specification.** A client may implement a text, its own founding cMIP for instance, whose published content is not in the format: it has not adopted that specification, since adoption is of a published specification, and a client's implementation of a text is not an adoption of malformed bytes. An act naming that spec hash is unknown to it, as to every client: Envelopes rule 30's invalid for an act outside its format does not apply, while its "invalid beats unknown" does. *A client decodes the format at adoption and in a listing, so it cannot implement around it.*
 
 *Adoption is the verifier's own act, and a malformed specification is one it cannot have adopted; so "the specification is invalid" has one consequence a verifier can produce, the same in every client. A client decodes the whole format before adopting, and a listing before listing.*
 
