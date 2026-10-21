@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""An independent check of the published test vectors of the core library, part 1.
+"""An independent check of the published test vectors of the core library.
 
 A second implementation, written from the MIR texts rather than from the Rust
 code, so that the vectors are not only self-consistent: two implementations
@@ -25,6 +25,8 @@ import sys
 
 import unicodedata2
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+
+import sigs  # BIP-340 and SLH-DSA, this directory
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -534,6 +536,30 @@ def main():
             n += 1
             continue
         raise AssertionError("accepted " + v["form"])
+
+    # Part 2: signatures, verified by sigs.py (BIP-340 and FIPS 205 written
+    # from the standards); the keys recomputed from their secrets and seeds.
+    f = load("signatures.json")
+    m = H(f["msg"])
+    s = f["schnorr"]
+    assert sigs.schnorr_public(H(s["secret"])) == H(s["public_key"])
+    for k in ("sig", "sig_zero_aux"):
+        assert sigs.verify(1, H(s["public_key"]), H(s[k]), m), k
+        n += 1
+    assert tagged_hash("MOR/safety", bytes([1]) + H(s["public_key"])) == H(s["commitment_if_scheme_1"])
+    for v in s["invalid"]:
+        assert not sigs.verify(1, H(v["key"]), H(v["sig"]), H(v["msg"])), v["why"]
+        n += 1
+    for x in f["slh_dsa"]:
+        pk = H(x["public_key"])
+        assert pk[:16] == H(x["pk_seed"]) and sigs.slh_keygen_root(x["scheme"], H(x["sk_seed"]), H(x["pk_seed"])) == pk[16:], x["name"]
+        assert tagged_hash("MOR/safety", bytes([x["scheme"]]) + pk) == H(x["commitment"])
+        for k in ("deterministic", "hedged"):
+            assert sigs.verify(x["scheme"], pk, H(x[k]), m), (x["name"], k)
+            n += 1
+        for v in x["invalid"]:
+            assert not sigs.verify(x["scheme"], H(v["key"]), H(v["sig"]), H(v["msg"])), (x["name"], v["why"])
+            n += 1
 
     print(f"all {n} vectors agree")
 

@@ -529,6 +529,159 @@ fn main() {
     write(&dir, "open-act.json", &invalid_acts());
     write(&dir, "sealed.json", &sealed_container());
     write(&dir, "textual-forms.json", &textual_forms());
+    write(&dir, "signatures.json", &signatures());
+}
+
+/// A source of randomness that must never be drawn from: SLH-DSA signing
+/// with `hedged = false` draws nothing.
+struct NoRandom;
+impl rand_core::RngCore for NoRandom {
+    fn next_u32(&mut self) -> u32 {
+        unreachable!()
+    }
+    fn next_u64(&mut self) -> u64 {
+        unreachable!()
+    }
+    fn fill_bytes(&mut self, _: &mut [u8]) {
+        unreachable!()
+    }
+    fn try_fill_bytes(&mut self, _: &mut [u8]) -> Result<(), rand_core::Error> {
+        unreachable!()
+    }
+}
+impl rand_core::CryptoRng for NoRandom {}
+
+/// The verdict the library gives a signature over an act id.
+fn verdict(scheme: &act::Scheme, key: &[u8], sig: &[u8], msg: &Hash) -> &'static str {
+    match mor_core::sig::verify(&act::Signature { scheme: scheme.clone(), key: key.to_vec(), sig: sig.to_vec() }, msg) {
+        mor_core::sig::Verdict::Valid => "valid",
+        mor_core::sig::Verdict::Invalid => "invalid",
+        mor_core::sig::Verdict::Unknown => "unknown",
+    }
+}
+
+/// Part 2: signatures (Identity, "Signature schemes"). Schnorr over
+/// secp256k1 (BIP-340) for signing keys, scheme 1; SLH-DSA-SHA2-128s and
+/// -128f (FIPS 205, pure, context `MOR`) for chain keys, schemes 2 and 3.
+/// Keys from fixed seeds (test data), the bytes signed (a 32-byte act id),
+/// the signatures, and signatures that must fail, one reason each.
+fn signatures() -> J {
+    use act::Scheme;
+    use mor_core::sig::{self, SchnorrKey, SlhKey};
+    let msg = fixed("mor-core vector: the act id signed");
+    let other_msg = fixed("mor-core vector: another act id");
+    let flip = |b: &[u8], at: usize| {
+        let mut v = b.to_vec();
+        v[at] ^= 0x01;
+        v
+    };
+    // Schnorr.
+    let secret = fixed("mor-core vector: schnorr secret (test data)");
+    let aux = fixed("mor-core vector: schnorr aux (test data)");
+    let k = SchnorrKey::from_secret(&secret).unwrap();
+    let other = SchnorrKey::from_secret(&fixed("mor-core vector: another schnorr secret (test data)")).unwrap();
+    let s = k.sign(&msg, &aux);
+    let s0 = k.sign(&msg, &[0; 32]);
+    let pk = k.public().to_vec();
+    assert_eq!(verdict(&sig::SCHNORR, &pk, &s.sig, &msg), "valid");
+    assert_eq!(verdict(&sig::SCHNORR, &pk, &s0.sig, &msg), "valid");
+    // A 32-byte x with no point on the curve: x = 5 has none (5^3 + 7 is not a square mod p).
+    let mut not_on_curve = vec![0u8; 32];
+    not_on_curve[31] = 5;
+    // r = p, the field size, which no x-coordinate equals.
+    let p_bytes = hex::decode("fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f").unwrap();
+    let n_bytes = hex::decode("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141").unwrap();
+    let r_is_p = [p_bytes.clone(), s.sig[32..].to_vec()].concat();
+    let s_is_n = [s.sig[..32].to_vec(), n_bytes.clone()].concat();
+    let sch_fail: Vec<(&str, Vec<u8>, Vec<u8>, Hash)> = vec![
+        ("one bit of s changed", pk.clone(), flip(&s.sig, 63), msg),
+        ("one bit of r changed", pk.clone(), flip(&s.sig, 0), msg),
+        ("a valid signature over another act id", pk.clone(), k.sign(&other_msg, &aux).sig, msg),
+        ("signed by another key", pk.clone(), other.sign(&msg, &aux).sig, msg),
+        ("a public key that is no point of the curve", not_on_curve, s.sig.clone(), msg),
+        ("r is not below the field size p", pk.clone(), r_is_p, msg),
+        ("s is not below the group order n", pk.clone(), s_is_n, msg),
+        ("a signature of 63 bytes", pk.clone(), s.sig[..63].to_vec(), msg),
+        ("a public key of 33 bytes (compressed SEC1, not x-only)", [vec![0x02], pk.clone()].concat(), s.sig.clone(), msg),
+    ];
+    let sch_fail: Vec<J> = sch_fail
+        .into_iter()
+        .map(|(why, key, sg, m)| {
+            assert_eq!(verdict(&sig::SCHNORR, &key, &sg, &m), "invalid", "{why}");
+            json!({ "why": why, "key": hx(&key), "msg": hx(&m), "sig": hx(&sg), "verdict": "invalid" })
+        })
+        .collect();
+    // SLH-DSA.
+    let mut slh = vec![];
+    for (scheme, name) in [(2u8, "SLH-DSA-SHA2-128s"), (3u8, "SLH-DSA-SHA2-128f")] {
+        let seed = |w: &str| -> [u8; 16] { fixed_n(&format!("mor-core vector: {name} {w} (test data)")) };
+        let (sk_seed, sk_prf, pk_seed) = (seed("sk_seed"), seed("sk_prf"), seed("pk_seed"));
+        let key = SlhKey::from_seeds(scheme, &sk_seed, &sk_prf, &pk_seed);
+        let other = SlhKey::from_seeds(scheme, &seed("another sk_seed"), &sk_prf, &pk_seed);
+        let pk = key.public();
+        let sc = Scheme::Founding(scheme);
+        let det = key.sign(&msg, None);
+        let opt_rand = seed("opt_rand");
+        let hedged = key.sign(&msg, Some(&opt_rand));
+        assert_eq!(verdict(&sc, &pk, &det.sig, &msg), "valid");
+        assert_eq!(verdict(&sc, &pk, &hedged.sig, &msg), "valid");
+        let no_context = match &key {
+            SlhKey::S(k) => {
+                use fips205::traits::Signer;
+                k.try_sign_with_rng(&mut NoRandom, &msg, b"", false).unwrap().to_vec()
+            }
+            SlhKey::F(k) => {
+                use fips205::traits::Signer;
+                k.try_sign_with_rng(&mut NoRandom, &msg, b"", false).unwrap().to_vec()
+            }
+        };
+        let fails: Vec<(&str, Vec<u8>, Vec<u8>)> = vec![
+            ("one byte of R, the randomizer, changed", pk.clone(), flip(&det.sig, 0)),
+            ("one byte in the FORS part changed", pk.clone(), flip(&det.sig, 100)),
+            ("the last byte, in the hypertree part, changed", pk.clone(), flip(&det.sig, det.sig.len() - 1)),
+            ("a valid signature over another act id", pk.clone(), key.sign(&other_msg, None).sig),
+            ("signed by another key with the same public seed", pk.clone(), other.sign(&msg, None).sig),
+            ("signed with the empty context, not MOR", pk.clone(), no_context),
+            ("a signature one byte short", pk.clone(), det.sig[..det.sig.len() - 1].to_vec()),
+            ("a public key whose root is changed", flip(&pk, 31), det.sig.clone()),
+        ];
+        let fails: Vec<J> = fails
+            .into_iter()
+            .map(|(why, k2, sg)| {
+                assert_eq!(verdict(&sc, &k2, &sg, &msg), "invalid", "{name}: {why}");
+                json!({ "why": why, "key": hx(&k2), "msg": hx(&msg), "sig": hx(&sg), "verdict": "invalid" })
+            })
+            .collect();
+        slh.push(json!({
+            "scheme": scheme,
+            "name": name,
+            "sk_seed": hx(&sk_seed),
+            "sk_prf": hx(&sk_prf),
+            "pk_seed": hx(&pk_seed),
+            "public_key": hx(&pk),
+            "commitment": hx(&key.commitment()),
+            "msg": hx(&msg),
+            "deterministic": hx(&det.sig),
+            "opt_rand": hx(&opt_rand),
+            "hedged": hx(&hedged.sig),
+            "invalid": fails,
+        }));
+    }
+    let sch_commit = sig::chain_key_commitment(&sig::SCHNORR, &pk);
+    json!({
+        "about": "Identity, \"Signature schemes\": every signature signs the 32-byte act id. Scheme 1: Schnorr over secp256k1, BIP-340, public key 32 bytes (x-only), signature 64 bytes; signing with the given aux (BIP-340's auxiliary randomness). Schemes 2 and 3: SLH-DSA-SHA2-128s and SLH-DSA-SHA2-128f, FIPS 205, pure signing with the context string MOR (the message signed is 0x00 || 0x03 || \"MOR\" || act id), public key 32 bytes (PK.seed || PK.root), signatures 7856 and 17088 bytes; keys from the three 16-byte seeds (slh_keygen_internal); deterministic signing takes opt_rand = PK.seed, hedged signing the opt_rand given. A key or signature of the wrong length is invalid. A chain-key commitment is tagged_hash(\"MOR/safety\", scheme byte || public key). Every secret and seed here is test data, derived from a label, and must never be used for anything else.",
+        "msg": hx(&msg),
+        "schnorr": {
+            "secret": hx(&secret),
+            "public_key": hx(&pk),
+            "aux": hx(&aux),
+            "sig": hx(&s.sig),
+            "sig_zero_aux": hx(&s0.sig),
+            "commitment_if_scheme_1": hx(&sch_commit),
+            "invalid": sch_fail,
+        },
+        "slh_dsa": slh,
+    })
 }
 
 /// The textual forms (Identity draft 14, "Written for people"; F349): each

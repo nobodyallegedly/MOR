@@ -202,3 +202,35 @@ fn sealed_container_vector() {
     assert_eq!(opened.act, inner);
     assert_eq!(opened.key, Some(key));
 }
+
+/// Part 2: signatures (`signatures.json`): keys from their secrets and
+/// seeds, every valid signature valid, every failing one invalid.
+#[test]
+fn signature_vectors() {
+    use mor_core::act::{Scheme, Signature};
+    use mor_core::sig::{self, SchnorrKey, SlhKey, Verdict};
+    let f = load("signatures.json");
+    let msg = h(&f["msg"]);
+    let verdict = |scheme: u8, key: &J, s: &J, m: &Hash| sig::verify(&Signature { scheme: Scheme::Founding(scheme), key: b(key), sig: b(s) }, m);
+    let s = &f["schnorr"];
+    let k = SchnorrKey::from_secret(&h(&s["secret"])).unwrap();
+    assert_eq!(k.public().to_vec(), b(&s["public_key"]));
+    assert_eq!(k.sign(&msg, &h(&s["aux"])).sig, b(&s["sig"]), "BIP-340 signing is deterministic given aux");
+    assert_eq!(k.sign(&msg, &[0; 32]).sig, b(&s["sig_zero_aux"]));
+    assert_eq!(sig::chain_key_commitment(&sig::SCHNORR, &k.public()), h(&s["commitment_if_scheme_1"]));
+    for v in s["invalid"].as_array().unwrap() {
+        assert_eq!(verdict(1, &v["key"], &v["sig"], &h(&v["msg"])), Verdict::Invalid, "{}", v["why"]);
+    }
+    for x in f["slh_dsa"].as_array().unwrap() {
+        let scheme = x["scheme"].as_u64().unwrap() as u8;
+        let seed = |k: &str| -> [u8; 16] { b(&x[k]).try_into().unwrap() };
+        let key = SlhKey::from_seeds(scheme, &seed("sk_seed"), &seed("sk_prf"), &seed("pk_seed"));
+        assert_eq!(key.public(), b(&x["public_key"]));
+        assert_eq!(key.commitment(), h(&x["commitment"]));
+        assert_eq!(key.sign(&msg, None).sig, b(&x["deterministic"]), "{}", x["name"]);
+        assert_eq!(key.sign(&msg, Some(&seed("opt_rand"))).sig, b(&x["hedged"]));
+        for v in x["invalid"].as_array().unwrap() {
+            assert_eq!(verdict(scheme, &v["key"], &v["sig"], &h(&v["msg"])), Verdict::Invalid, "{}: {}", x["name"], v["why"]);
+        }
+    }
+}
