@@ -149,14 +149,14 @@ export function form(kind: string, web: boolean): string {
         'Change an identity’s keys',
         'Kišib reads the identity from its homes and every relay its routes name, finds every line of its acts (Dub’s, Edubba’s, the web client’s), and reads it all back in plain words before anything is signed.',
         `${idField('id', 'The identity’s ID')}${address}${words('words', 'Its chain key’s 24 words, in order (its newest paper: written when it was made, or shown at its last change of keys; never the signing key’s words)')}
-<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(false)}`,
+<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line, copied whole from each app’s identity window (Dub, Edubba, Damgar, Ummia): latest act, position, summary, then the app’s count and name</label><textarea name="cards"></textarea></details>${vaultHtml(false)}`,
         'Read it back',
       );
     case 'vault':
       return `${top(web, true)}<h2>Change the vault</h2>
 <div class="review" id="vault-say">${lines(VAULT_SAY.map((text) => ({ text })))}</div>
 <form id="form-rotate" data-kind="rotate">${idField('id', 'The identity’s ID')}${address}${words('words', 'Its chain key’s 24 words, in order (its newest paper: written when it was made, or shown at its last change of keys; never the signing key’s words)')}
-<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(true)}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
+<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line, copied whole from each app’s identity window (Dub, Edubba, Damgar, Ummia): latest act, position, summary, then the app’s count and name</label><textarea name="cards"></textarea></details>${vaultHtml(true)}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
     case 'succession':
       return `${top(web, true)}<h2>Name or confirm a successor</h2>
 <p class="small">A succession needs both sides (F300): the identity names its successor in a change of its keys, signed with its chain key; the successor confirms it with an act of its own. Until it confirms, clients show it as declared and follow nobody.</p>
@@ -206,7 +206,7 @@ export function sections(ss: Section[]): string {
   return ss.map((s) => `<h3>${e(s.heading)}</h3>${lines(s.lines)}`).join('');
 }
 
-/** A review: read in full before signing; the warning, where a line is left out, must be read too. */
+/** A review: read in full before signing; the warning, where a line is left out or cannot be placed (H80's question 2), must be read too. */
 export function review(r: Review, web: boolean, mustRead: boolean): string {
   const blocked = r.blocking.length > 0;
   const must = mustRead ? r.sections[0] : null;
@@ -216,7 +216,7 @@ ${r.summary.map((s) => `<p class="small">${e(s)}</p>`).join('')}
 ${must ? `<div class="mustread" id="mustread"><h3>${e(must.heading)}</h3>${lines(must.lines)}<label class="check"><input type="checkbox" id="read-it"> I have read this, and chosen this device knowingly</label></div>` : ''}
 <div class="review">${sections(rest)}</div>
 ${blocked ? note('error', `Nothing can be signed yet:${lines(r.blocking.map((t) => ({ text: t, tone: 'bad' })))}`) : ''}
-${r.warning ? note('error', `${e(r.warning)}<label class="check"><input type="checkbox" id="warned"> I understand: leave ${'them'} out</label>`) : ''}
+${r.warning ? note('error', `${e(r.warning)}<label class="check"><input type="checkbox" id="warned"> I have read this: go on as it says</label>`) : ''}
 <div class="signs"><span class="label">What is signed</span>${r.signs.map((s) => `<p>${e(s)}</p>`).join('')}</div>
 <div class="row"><button class="primary" data-action="sign" ${blocked ? 'disabled' : ''}>Sign it</button><button data-action="home">Cancel, and forget the words</button></div><div id="status"></div>`;
 }

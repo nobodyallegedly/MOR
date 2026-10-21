@@ -10,6 +10,7 @@
 import { cborDecode, cborEncode, hex, readCommitment, unhex, xwingPublic } from '../../genesis/src/core.ts';
 import { sealFor, type TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
+import { leaveAtHomes } from '../../genesis/src/private.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { MESSAGES_SPEC } from './specs.ts';
 import type { Amount } from './units.ts';
@@ -134,12 +135,14 @@ export async function sendToSelf(me: TestIdentity, type: number, payload: Uint8A
   for (const h of homes) {
     try {
       await relayAt(h, opts.via ?? {}).putSealed(sealed);
-      await relayAt(h, opts.via ?? {}).putAct(made.act);
       left.push(h);
     } catch {
       // that home is away: the others hold it
     }
   }
+  // Its locked act beside it (H80's question 2): the latest act of this app's line, which Kišib must find at the homes.
+  await leaveAtHomes(me, made, { via: opts.via ?? {}, sealed: left.length > 0 });
+  await opts.save();
   if (!left.length) throw new Error(`No home took the draft (${homes.join(', ')}). It was signed but went nowhere: prepare it again later.`);
   return { id: made.id, left };
 }

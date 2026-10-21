@@ -73,6 +73,16 @@ export class Running {
   allow(identity: string): void {
     execFileSync(bin, ['allow', '--dir', this.dir, identity]);
   }
+
+  /** Remove one item (an act, by id) from this relay's store, on purpose, for a test: stopped, removed, started again. */
+  async drop(id: string): Promise<void> {
+    await this.stop();
+    const { DatabaseSync } = await import('node:sqlite');
+    const db = new DatabaseSync(join(this.dir, 'relay.db'));
+    db.prepare('DELETE FROM items WHERE id = ?').run(Buffer.from(id, 'hex'));
+    db.close();
+    await this.start();
+  }
 }
 
 /** A home (under a new test operator) or a basic relay, set up and running. */

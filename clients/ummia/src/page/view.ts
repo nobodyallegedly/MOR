@@ -10,6 +10,7 @@
 // red only for an alarm (a check that fails, a key changed elsewhere).
 
 import { e } from '../../../manage/src/view.ts';
+import { cardWords } from '../../../genesis/src/card-words.ts';
 import { shownSpec } from '../../../genesis/src/shown.ts';
 import { STYLE as DUB_STYLE } from '../../../dub/src/page/view.ts';
 import { chooserHtml } from '../acting.ts';
@@ -103,7 +104,7 @@ export function identityWindow(s: State, web: boolean): string {
   const i = s.identity;
   const mine = i
     ? `<section class="card"><h3>In use</h3><p class="id">${e(i.grouped)}</p>
-<dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd><dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd><dt>Ummia’s line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `: its card, for Kišib, <code class="card-line">${e(i.line.latest)} ${i.line.acts} ${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
+<dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd><dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd><dt>Ummia’s line</dt><dd>${cardWords(i.line, 'Ummia', e)}</dd></dl>
 <p class="small">Some of Ummia’s acts are sealed (your accepted list, an anchor’s payment for Damgar), so Kišib cannot read its line from the homes: when the signing key is changed there, give Kišib this card (latest act, position, summary), or every act signed here becomes void (Identity rule 35).</p>
 ${i.encryption ? '' : note('warn', 'Ummia holds no encryption key for this identity: its accepted list cannot be read or changed here.')}
 <div class="row"><button data-action="carry">Show the signing key’s words</button><button data-action="leave" class="quiet">Leave it</button><button data-action="back" class="primary">Back to Ummia</button></div>

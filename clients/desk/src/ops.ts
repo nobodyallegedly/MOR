@@ -162,9 +162,12 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'pair':
         access!.pair(key, text(a.code), text(a.label));
         return {};
-      case 'state':
+      case 'state': {
+        const st = p.desk.state();
+        const lines = await p.desk.lines();
         return {
-          ...p.desk.state(),
+          ...st,
+          identities: st.identities.map((i) => ({ ...i, line: lines[i.id] ?? i.line })),
           machine: agents ? agents.for(null).state() : null,
           agents: agents ? agents.list() : [],
           sharedKey: agents ? agents.sharedKey() : { found: false, from: '' },
@@ -176,6 +179,7 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
           paired: access ? access.paired().map((x) => ({ ...x, you: x.key === key })) : [],
           web,
         };
+      }
       // An agent's answering: `agent` names it; without, the first agent (as MOR Identities had one).
       case 'machine terms': {
         const agent = text(a.agent);

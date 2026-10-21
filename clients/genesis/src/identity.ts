@@ -164,6 +164,13 @@ export interface IdentityFile {
    * signed with it are the granting collective's own, within the grant.
    */
   grantKeys?: { grant: string; collective: string; secret: string }[];
+  /**
+   * Private acts signed here that no home has yet taken both ways (H80's
+   * question 2): locked, and sealed to this identity itself (`private.ts`,
+   * `leaveAtHomes`). Each act's bytes and content key, base64, by id; sent
+   * again before this app shows its line's card. Absent for a collective.
+   */
+  unsent?: Record<string, { act: string; key: string }>;
 }
 
 /** Agreements' record (type 17): a decision, which cites by its kept tips (F127). */
@@ -334,6 +341,8 @@ export class TestIdentity {
       acks: opts.acks,
     }) as { act: Uint8Array; id: string; key: Uint8Array };
     this.f.sequence.push(made.id);
+    // A private act waits to be left at the homes, locked and sealed to this identity (`private.ts`): a member's line, not a collective's.
+    if (!opts.public && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
     // A record is the collective's latest decision: its next actions cite it.
     if (this.f.cites && isRecord) this.f.cites = [made.id];
     return made;
@@ -736,6 +745,29 @@ export class TestIdentity {
     opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[] },
   ): { act: Uint8Array; id: string; key: Uint8Array } {
     return this.everyday(spec, type, payload, opts);
+  }
+
+  /**
+   * Sign a private act on a line of its own (one act, first in its line),
+   * outside this identity's sequence, never left at its homes: for an act
+   * whose content no other app of this identity may read, a share of a
+   * collective's chain key (F337). *Cost:* its line is never kept by a
+   * change of keys, so the act is void after the next one; it is read once,
+   * soon after it is made.
+   */
+  signApart(spec: string, type: number, payload: Uint8Array, opts: { to?: string[]; refs?: Reference[] } = {}): { act: Uint8Array; id: string; key: Uint8Array } {
+    return makeEveryday({
+      signingSecret: unhex(this.f.signingSecret),
+      signer: this.f.identity,
+      binding: this.f.binding,
+      spec,
+      type,
+      payload,
+      sequence: [],
+      public: false,
+      to: opts.to,
+      refs: opts.refs,
+    }) as { act: Uint8Array; id: string; key: Uint8Array };
   }
 
   /**

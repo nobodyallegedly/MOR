@@ -1,6 +1,7 @@
 // What Ummia's code gives its page: plain values, the same from the program
 // and the web client.
 
+import type { LineShown } from '../../genesis/src/card-words.ts';
 export interface Line {
   text: string;
   tone?: 'ok' | 'warn' | 'bad';
@@ -32,8 +33,8 @@ export interface State {
     homes: string[];
     relays: string[];
     encryption: boolean;
-    /** Ummia's own line of acts, its card for Kišib (Identity rule 35). */
-    line: { acts: number; latest: string | null; summary: string | null };
+    /** Ummia's own line of acts, its card for Kišib (Identity rule 35), naming only an act the homes hold (H80's question 2). */
+    line: LineShown;
   };
   /** Who acts (the shared chooser, `acting.ts`). */
   actors: import('./acting.ts').Actor[];

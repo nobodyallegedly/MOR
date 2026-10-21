@@ -11,6 +11,7 @@
 import { MIRS, SPECS, Verifier, cborDecode, cborEncode, hex, openSealed, unhex, xwingPublic } from '../../genesis/src/core.ts';
 import { sealFor, type TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
+import { leaveAtHomes } from '../../genesis/src/private.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { ACCEPTED_SPEC, labelOf } from './specs.ts';
 
@@ -224,12 +225,14 @@ export async function changeAccepted(
     for (const h of homes) {
       try {
         await relayAt(h, via).putSealed(sealed);
-        await relayAt(h, via).putAct(made.act);
         left++;
       } catch {
         // that home is away
       }
     }
+    // Its locked act beside it (H80's question 2): the latest act of this app's line, which Kišib must find at the homes.
+    await leaveAtHomes(me, made, { via, sealed: left > 0 });
+    await opts.save();
     if (!left) throw new Error('No home took the accepted list: nothing was changed. Try again.');
     return { written: made.id, list: { entries: next, tips: [{ id: made.id, version: read.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next }], merged: read.merged, version: read.version + 1, problems: [] } };
   }
