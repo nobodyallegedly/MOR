@@ -1,6 +1,6 @@
 # Every line of acts can be found by Kišib: the report
 
-*21 October 2026, a Dubsar Suite session. Branch `claude/private-lines-at-homes`, from main after pull request 81 (H80). Finding F371. Answers H80's question 2 (`docs/h80-report.md`). Author: Nobody, allegedly.*
+*21 October 2026, a Dubsar Suite session. Branch `claude/private-lines-at-homes`, from main after pull request 81 (H80). Finding F373. Answers H80's question 2 (`docs/h80-report.md`). Author: Nobody, allegedly.*
 
 ## 1. In plain words
 
@@ -141,7 +141,7 @@ One at a time; the next only once the one before is answered.
 - `clients/damgar`: `src/damgar.ts`, `src/messages.ts`, `src/accepted.ts`, `src/shapes.ts`, `src/page/view.ts` (the line's words only); `test/collective.test.ts` (H80's case: every line placed, the member key kept); README.
 - `clients/ummia`: `src/ummia.ts`, `src/shapes.ts`, `src/page/view.ts` (the line's words only); tests `test/private-lines.test.ts` (new), `test/kishib.test.ts` (the card copied whole); README.
 - `clients/kishib`: `src/read.ts` (`placing`), `src/kishib.ts`, `src/collective.ts` (its own acts off the homes), `src/page/view.ts`, `src/page/ui.ts` (words only); README.
-- Records: `docs/h80-report.md` (question 2 answered), F371 in `docs/findings/MOR-findings-log-round-2.md`.
+- Records: `docs/h80-report.md` (question 2 answered), F373 in `docs/findings/MOR-findings-log-round-2.md`.
 
 No layout changed: in each window, only the words inside the existing line entry, and two labels in Kišib.
 

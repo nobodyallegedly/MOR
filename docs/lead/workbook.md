@@ -25,8 +25,8 @@ The MOR lead keeps the core: the core texts (MICS, six MIRs, freeze test suite),
 | # | Session | Waits for | Status |
 | --- | --- | --- | --- |
 | S1 | **Freeze-ready texts** (the clean-up pass): six MIRs, MICS v30, suite v30, the provenance map. Texts only. | — | Done 21 October, pull request 83, not merged: checklist verified by the lead; about fifty questions, sorted in `docs/lead/s1-questions.md` |
-| S1b | **Technical pass:** F363 to F369 written into the freeze-ready drafts, and the formats S1 found unwritten, on S1's branch. | — | Prompt ready 21 October (`docs/lead/prompts/s1b-technical-pass.md`) |
-| S2 | **Core aligned, and the vectors:** the core library matching S1's texts (keeper records, rule 33 by anchors, F359, F295's count); suite steps already tested marked run, small tests for the cheap core steps; conformance vectors part 2 (signatures) and verdict vectors for every layer, checked by the Python implementation too. | S1 approved; the Suite lead's items touching the core | Not written |
+| S1b | **Technical pass:** F363 to F369 written into the freeze-ready drafts, and the formats S1 found unwritten, on S1's branch. | — | Done 21 October (`docs/technical-pass-report.md`); its eight questions taken (F371) |
+| S2 | **Core aligned, and the vectors:** Part 0, the last text edits (F370, F371); the core library matching the texts; suite steps already tested marked run, small tests for the cheap core steps; signature vectors and verdict vectors for every layer, checked by Python too. | Pull request 83 merged | Prompt ready 21 October (`docs/lead/prompts/s2-core-and-vectors.md`) |
 | S3 | *Handed to the Dubsar Suite lead (Nobody, allegedly, 21 October: "Modules and cMIPs are handled by the suite lead. The idea is that it is not core."):* the "Dubsar" titles (F356), payment cMIP draft 4 (F355 c), the chain-key signer Module's fresh seed (F361), the regtest quirks kit. | — | Not the MOR lead's |
 | S4 | **The C box** (the lead itself): a new repository holding the freeze-ready texts and vectors, fingerprinted; the C session's prompt. | S1 and S2 merged; the Suite lead's core items in | — |
 | S5 | **The C verifier**, insulated, outside the project. | S4 | — |
@@ -64,7 +64,7 @@ Read its report and its questions; read the CI run yourself (a session's green i
 ## Text edits waiting for the freeze-ready branch
 
 Small decided changes that arrive while a session holds the branch; the lead makes them, or hands them to the next session, once the branch is free.
-- F370: Money 11, `fulfils` named, not listed (fields 5 and 4, the payment task).
+- None: F370 and F371 go to S2's Part 0.
 
 ## Questions waiting for Nobody, allegedly
 
