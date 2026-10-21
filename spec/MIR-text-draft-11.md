@@ -170,7 +170,7 @@ Components exercised (freeze test suite v30; scenario numbers are the suite's):
 - Terms containing a bidirectional override, shown with the control visible before signing: scenario 1.
 - A formatted text act whose rendering hides only markup, adds nothing, and shows the rest in the order of the bytes: scenario 5.
 - A text act with no field 0, with a field 0 that is not a text string, with a field 2, and one of a type Text does not define: invalid in every client: a component under "Envelopes and Text".
-- A text act carrying `objects`, invalid at every verifier and never a fork of another MIR's chain; one carrying `acks`, invalid: a component under "Envelopes and Text".
+- A text act carrying `objects` outside rule 14's two cases, invalid at every verifier, and never a fork of another MIR's chain; one carrying `acks`, invalid: a component under "Envelopes and Text".
 - A collective's text act carrying, as its one object, its own decision on its actions chain: valid, and counted under Agreements rule 58; with another collective's chain, a predecessor that is no decision of its own, two objects, any other object, or an individual signer naming its own chain save as the grant case allows: invalid, and counting for nothing in Agreements: a component under "Envelopes and Text".
 - A text act signed with a grant key, carrying as its one object `[grantor, grant]`, the grant its binding names: valid under Text, and judged by Agreements' backing (rules 73 to 80), backed, not backed or unknown; naming another act of the grantor, another chain, or two objects: invalid: a component under "Envelopes and Text".
 - A cMIP act a client does not implement, carrying a text that is not canonical: invalid, not unknown: a component under "Envelopes and Text".

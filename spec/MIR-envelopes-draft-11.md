@@ -76,7 +76,7 @@ Every act names, inside, the specification that defines its type by hash, and a 
 
 An act MUST decode as deterministic CBOR in the shape Part three gives ("The act"); an unknown key, outside or inside, makes it invalid.
 
-Deterministic CBOR, and the CDDL conventions every format of the MICS follows (closed maps, optional fields, `uint`, `hash`, `tstr`), are written once, in Identity's Part three ("Encoding", "Formats"). *Section 4.2.1 of RFC 8949 leaves floats to the protocol; Identity's encoding fixes them to their shortest form, so no verifier accepts a float in a longer form that another refuses.*
+Deterministic CBOR, and the CDDL conventions every format of the MICS follows (closed maps, optional fields, `uint`, `hash`, `tstr`), are written once, in Identity's Part three ("Encoding and conventions"). *Section 4.2.1 of RFC 8949 leaves floats to the protocol; Identity's encoding fixes them to their shortest form, so no verifier accepts a float in a longer form that another refuses.*
 
 #### Rule 2. No deeper than 128 levels
 
@@ -153,9 +153,9 @@ Every everyday act (Identity: every act other than genesis, a rotation and a cha
 
 #### Rule 13. Position and summary
 
-An everyday act MUST carry a position and a running summary consistent with its predecessor (the empty summary for the first act of a sequence), and `prev` (empty for the first act of a sequence), with at most one entry. An everyday act that carries no `prev` is invalid. An everyday act whose `prev` carries more than one entry is invalid too, act by act, a shape rule like a missing `prev`. *The number of entries needs nothing but the act, so every verifier gives the same answer, in any order; the field's two bad shapes, absent and two entries, get one verdict.*
+An everyday act MUST carry a position and a running summary consistent with the line before it (the empty summary for the first act of a sequence), and `prev` (empty for the first act of a sequence), with at most one entry. An everyday act that carries no `prev` is invalid. An everyday act whose `prev` carries more than one entry is invalid too, act by act, a shape rule like a missing `prev`. *The number of entries needs nothing but the act, so every verifier gives the same answer, in any order; the field's two bad shapes, absent and two entries, get one verdict.*
 
-Position and summary are not checked act by act. They are checked when a line is rebuilt (Identity, kept ancestry): an act whose position or summary does not fit the line leading to a kept tip cannot be proven kept. *A verdict given act by act would change with which predecessors a verifier happened to hold. A bad position or summary comes only from a buggy client or a careless thief, never from honest use (parallel devices, a restored backup), and it changes nothing that counts until a rotation judges the line; the rotation is the remedy. No client is asked to warn about it.*
+Position and summary are not checked act by act, and nor is their absence: an everyday act missing either is judged as one whose position or summary does not fit. They are checked when a line is rebuilt (Identity, kept ancestry): an act whose position or summary does not fit the line leading to a kept tip cannot be proven kept. *A verdict given act by act would change with which predecessors a verifier happened to hold. A bad position or summary comes only from a buggy client or a careless thief, never from honest use (parallel devices, a restored backup), and it changes nothing that counts until a rotation judges the line; the rotation is the remedy. No client is asked to warn about it.*
 
 *These make it cheap to prove that an act lies on the line leading to a later one, which is how a rotation's kept ancestry is checked (Identity).* Proving it for a private act needs that act's key, which its recipients and its signer hold.
 
@@ -377,6 +377,8 @@ encryption-key-payload = {     ; type 4
   ? 1 => hash,                 ; the encryption-key act it replaces (absent only for version 1)
   2 => enc-key
 }
+; versions as the routes act's (Identity, "Routes (type 3)"): version 0 invalid, version 1 without field 1, every later
+; version with it; an X-Wing key (scheme 4) of another length than 1216 bytes makes the act invalid
 
 key-delivery-payload = {       ; type 1
   0 => hash,                   ; the act whose content key this is; with 2, the publication whose media key it is
@@ -409,12 +411,12 @@ contents = [ act: bstr, ? key: bstr .size 32 ]   ; the inner act, encoded whole,
 
 **The summary of n acts.** `S(n)`, the summary of a sequence's first `n` acts, is the root of a Merkle mountain range over their act ids, in order:
 
-- a leaf is `tagged_hash("MOR/mmr-leaf", act id)`, and a node `node(left, right) = tagged_hash("MOR/mmr-node", left || right)`;
+- a leaf is `tagged_hash("MOR/mmr-leaf", act id)` (`tagged_hash` as Identity, "Encoding and conventions", defines it), and a node `node(left, right) = tagged_hash("MOR/mmr-node", left || right)`;
 - the range is a list of perfect binary trees, its peaks, highest on the left, one per binary digit 1 of `n`: adding an act adds its leaf as a peak of height 0, then, while the peak to its left has the same height, the two become one, `node(left peak, new peak)`;
 - the peaks are bagged right to left into one root: start from the rightmost peak, and hash each peak to its left as `node(peak, bagged so far)`, so left stays left; a single peak is its own root, with no further hashing;
 - `S(0)`, the empty summary, is 32 zero bytes.
 
-**Which summary an act carries.** The act at position `p` of a sequence carries `S(p − 1)`: the summary over every act before it, up to and including the previous one; the first act, at position 1, carries `S(0)`. A rotation's kept tip at position `p` carries `S(p)`, the summary including the tip itself: the one the act after it would carry (Identity, "Rotation"). *So `S(3)` over three acts is the summary a fourth act carries, and the one a rotation keeping the third carries for it.*
+**Which summary an act carries.** The act at position `p` of a sequence carries `S(p − 1)`: the summary over every act before it, up to and including the previous one; the first act, at position 1, carries `S(0)`. A rotation records, in its `kept-tip` entry for the act at position `p`, `S(p)`, the summary including that act: the one the act after it would carry (Identity, "Rotation (type 1)"). *So `S(3)` over three acts is the summary a fourth act carries, and the one a rotation keeping the third carries for it.*
 
 Its test vectors, `S(0)` to `S(11)` and a three-act sequence among them, are published with this MIR's conformance vectors (Parameters); they are computed exactly as written here.
 
@@ -493,7 +495,7 @@ withdrawal = { }      ; empty
 
 ### Parameters
 
-- The running-summary test vectors (a three-act sequence, and longer ones): published with this MIR's conformance vectors, final at the freeze, when the spec hashes they name are fixed.
+- The running-summary test vectors (`S(0)` to `S(11)`, and a three-act sequence): published with this MIR's conformance vectors, alongside the texts; the summaries over stand-in act ids are final now, and the three-act sequence's at the freeze, when the spec hashes its acts name are fixed.
 
 Left to the relay transport cMIP: how a client finds the key deliveries and sealed containers addressed to it (inbox routes and relay queries). The core fixes only what a client checks of what it finds: the act, the sealed container and the key delivery, in the formats of Part three.
 

@@ -24,7 +24,7 @@ The identity hash is the identity. It never changes. Keys are only the pens that
 
 ## Dependencies
 
-None beneath it. Identity defines the envelope as far as it needs it; the Envelopes MIR completes it. Its rules depend upward in two places only: acknowledgements (Envelopes) and keeper records (Agreements) can give an act standing after a rotation. Nothing in this MIR requires a client to hold data from a higher layer: every rule here is decided from identity chains, receipts, summaries and the acts a verifier already holds.
+None beneath it. Identity defines the envelope as far as it needs it; the Envelopes MIR completes it. Its rules depend upward in two places only: acknowledgements (Envelopes) and keeper records (Agreements, its exception for a keeper's record included) can give an act standing after a rotation. Nothing in this MIR requires a client to hold data from a higher layer: every rule here is decided from identity chains, receipts, summaries and the acts a verifier already holds.
 
 ## Words used in this MIR
 
@@ -91,7 +91,7 @@ With several homes, genesis MAY declare a home rule, in one of two forms: one na
 
 If it declares none, the default applies:
 
-- the majority rule, with a threshold of the smallest number greater than half the distinct operators (n divided by 2, rounded down, plus 1, for n operators), computed from the home list; with a single operator, that operator's home alone;
+- the majority rule, with a threshold of the smallest number greater than half the distinct operators (n divided by 2, rounded down, plus 1, for n operators), computed from the home list; with a single operator, that operator's homes, counted as one;
 - or, when one of the homes is self-hosted, that home is authoritative and the others are backups.
 
 *One option is forced when none is selected; the default is always one of the declared forms, never a third, weaker rule.*
@@ -169,7 +169,7 @@ These run on every act.
 #### The everyday checks (types 2 to 15)
 
 1. `signer` and `binding` are present, and `prev` is present.
-2. `binding` names an act of the signer's identity chain, genesis or a rotation, never a chain signature, that counts, and the key in the signature equals the signing key that act set; where that act is a rotation that does not count yet (rule 28), the act is pending, never valid and not invalid, until that rotation counts (rule 28); or, for an act signed with a scoped key, `binding` names a held act of a higher MIR, never an Identity act nor the act itself, and the signature is valid for the key it names: the act's status is then **scoped**, and the MIR that defines the binding act says whether that act installs that key for the signer, and whether the act counts (rule 8). A scoped act whose binding the verifier has not held is unknown, never invalid.
+2. `binding` names an act of the signer's identity chain, genesis or a rotation, never a chain signature, that counts, and the key in the signature equals the signing key that act set; where that act is a rotation that does not count yet (rule 28), the act is pending, never valid and not invalid, until that rotation counts (rule 28), and, once that rotation can no longer count, the binding names no act that counts; or, for an act signed with a scoped key, `binding` names a held act of a higher MIR, never an Identity act nor the act itself, and the signature is valid for the key it names: the act's status is then **scoped**, and the MIR that defines the binding act says whether that act installs that key for the signer, and whether the act counts (rule 8). A scoped act whose binding the verifier has not held is unknown, never invalid.
 3. If a later rotation of the signer counts, the act's status follows rules 33 to 35. A rotation judges only acts signed with the key it replaces, never an act signed with a scoped key.
 
 
@@ -424,7 +424,7 @@ An act signed with the old key in a sequence the rotation does not name is outsi
 
 #### Every verifier gives the same answer; nothing binding rests on one's own attempts
 
-These rules are part of validity and MUST give the same answer to every conforming verifier holding the same identity chain, the same acts of the signer's sequences up to the kept tips, acknowledgements, keeper records, inclusion proofs and content keys, having made the same attempts to reach homes, and having found the same acts at the signer's homes (rule 55).
+These rules are part of validity and MUST give the same answer to every conforming verifier holding the same identity chain, the same acts of the signer's sequences up to the kept tips, acknowledgements, keeper records, inclusion proofs and content keys, having made the same attempts to reach homes, and having found the same acts at the signer's homes (section 3, private links).
 
 An answer that rests on the verifier's own failed attempts is marked as such ("re-homed without audit"), and nothing binding may rely on it (MUST NOT): no keeper record, payment, discharge of a debt, agreement, fork or closing. For any of these, such an answer is shown as unknown, never as valid or invalid, until it no longer rests on the verifier's own attempts. Reading and following an identity MAY rest on it.
 
@@ -690,22 +690,24 @@ The encoding and the formats below bind as the rules do: an act outside them is 
 3. The keys of each map are distinct and ordered by the bytewise lexicographic order of their encodings.
 4. A floating-point value is in the shortest of the half, single and double forms that preserves its value exactly, NaN payloads included (RFC 8949, section 4.1, preferred serialization).
 5. A text string is valid UTF-8.
-6. No data item is nested more than 128 levels below the outermost one (Envelopes rule 2).
+6. No data item is nested more than 128 levels below the outermost one (Envelopes rule 2): an array's items, a map's keys and values, and a tag's content each sit one level below what holds them.
 7. The bytes hold exactly one data item, with nothing after it.
+8. A simple value is written in one byte where it can be (0 to 23, `false`, `true`, `null`, `undefined`); a two-byte simple value below 32 is not well-formed.
 
-Tags and simple values are allowed by the encoding and carried as they are; whether a field may hold one is its format's to say, and no format of the MICS allows a tag, a float or a simple value other than `true`, `false` and `null` where it does not write `any`.
+Tags and simple values are allowed by the encoding and carried as they are, a tag's content decoded and checked as any item (its text strings are text fields, Text) and its meaning never checked; whether a field may hold one is its format's to say, and no format of the MICS allows a tag, a float or a simple value other than `true`, `false` and `null` where it does not write `any`.
 
 **Formats.** Formats are written in CDDL (RFC 8610), with these conventions, which every MIR follows:
 
 - Every map a format defines is closed. Its keys are the small unsigned integers it lists. A key it does not list, a key that is not an unsigned integer, a required key missing, or a value of another type than the one written makes the act invalid. (Duplicate keys never reach this point: the encoding refuses them.)
-- `? n => x` is optional: absent, the field is not given. It is never written as `null` unless the format writes `/ null`; a field the format gives a default for (a route's kind 0, for instance) is written as absent, never as its default.
+- `? n => x` is optional: absent, the field is not given. It is never written as `null` unless the format writes `/ null`. Where a format says a value is written as absent (a route's kind 0), writing it makes the act invalid.
 - `uint` is an unsigned integer (major type 0), from 0 to 2^64 − 1; a negative integer is never a `uint`. `bstr` is a byte string; `bstr .size n` one of exactly `n` bytes; `hash` is `bstr .size 32`. `tstr` is a text string, and every `tstr` is canonical text (Text MIR), including address hints: a genesis with a trailing space in a hint is invalid. `true` is the value true alone. `any` is any data item the encoding allows.
+- A map written `{ * any => any }` (an act's payload in the envelope) takes any keys at the encoding's level; the format of the act's type closes it.
 - `[ a, b ]` is an array of exactly those items, in that order, a trailing `? c` being one item more or none; `[+ x]` is an array of one or more `x`; `[* x]` of zero or more.
 
 The core sets no length bound beyond these; homes and relays set their own policy.
 
 **Hashes.** Every hash is SHA-256, 32 bytes. A tagged hash is computed as in BIP-340:
-`tagged_hash(tag, x) = SHA-256(SHA-256(tag) || SHA-256(tag) || x)`, the tag hashed as its UTF-8 bytes. Every tag the core uses begins with `MOR/`: `MOR/act`, `MOR/inside`, `MOR/mmr-leaf`, `MOR/mmr-node`, `MOR/work`, `MOR/spec`, `MOR/safety`, `MOR/sealed/wrap`, `MOR/finance/anonymous-claim` (Money) and `MOR/law/leftover` (Agreements). A plain SHA-256, untagged, is used only where a text says so: the locked hash (Envelopes) and the Merkle tree of a home's log (RFC 9162, below).
+`tagged_hash(tag, x) = SHA-256(SHA-256(tag) || SHA-256(tag) || x)`, the tag hashed as its UTF-8 bytes. Every tag the core uses begins with `MOR/`: `MOR/act`, `MOR/inside`, `MOR/mmr-leaf`, `MOR/mmr-node`, `MOR/work`, `MOR/spec`, `MOR/safety`, `MOR/sealed/wrap`, `MOR/finance/anonymous-claim` (Money) and `MOR/law/leftover` (Agreements). A plain SHA-256, untagged, is used only where a text says so: the locked hash (Envelopes), the Merkle tree of a home's log (RFC 9162, below), and `XWING` (Envelopes).
 *Tags keep the hashes of different kinds of object apart, so one can never be passed off as another. A successor protocol MUST use a different tag prefix, so its acts can never replay here (Development).*
 
 **Act id.** The act id is `tagged_hash("MOR/act", outside)`, where `outside` is the encoded outside of the act, which commits to its locked inside (Envelopes MIR). The signature is not part of the act id, so a signature can never change which act is meant.
@@ -719,7 +721,7 @@ The core sets no length bound beyond these; homes and relays set their own polic
 | 3 | SLH-DSA-SHA2-128f (FIPS 205) | 32 bytes | 17,088 bytes | chain keys |
 | hash | as the specification defines | as defined | as defined | either, as the specification says |
 
-In a signature, a key or a signing key, the scheme is written as the unsigned integer 1, 2 or 3, or as a 32-byte spec hash; any other value makes the act invalid. A key or a signature of a founding scheme whose length is not the one in the table makes the act invalid. A scheme named by hash is a signature-scheme specification (Development, kind 5): a client that has not adopted it answers unknown, whatever the lengths. A signature always signs the 32-byte act id. SLH-DSA signatures use the context string `MOR`. Both SLH-DSA variants are allowed; the owner's client chooses. The small variant (2) is recommended. A client that meets a scheme it does not implement MUST treat the act as unknown, never as valid. *A rotation's own validity never depends on the kind of signing key it installs, so every client verifies the rotation; only acts signed under the new scheme are unknown to a client that lacks it. This is how signing keys migrate to a post-quantum scheme before a break: by adoption, with no change to the core.*
+In a signature, a signing key or a chain-key commitment, the scheme is written as the unsigned integer 1, 2 or 3, or as a 32-byte spec hash; any other value makes the act invalid. A key or a signature of a founding scheme whose length is not the one in the table makes the act invalid. A scheme named by hash is a signature-scheme specification (Development, kind 5): a client that has not adopted it answers unknown, whatever the lengths. A signature always signs the 32-byte act id. SLH-DSA signatures are pure FIPS 205 signatures (no pre-hash) with the context string `MOR`, its three ASCII bytes. Both SLH-DSA variants are allowed; the owner's client chooses. The small variant (2) is recommended. A client that meets a scheme it does not implement MUST treat the act as unknown, never as valid. *A rotation's own validity never depends on the kind of signing key it installs, so every client verifies the rotation; only acts signed under the new scheme are unknown to a client that lacks it. This is how signing keys migrate to a post-quantum scheme before a break: by adoption, with no change to the core.*
 
 **Chain key commitment.** A chain key is committed as `tagged_hash("MOR/safety", scheme || key)`, where `scheme` is the one-byte number or the 32-byte specification hash, and `key` the public key.
 
@@ -763,7 +765,7 @@ Every act defined by this MIR is public, except a private link, as section 3 say
 
 Every act has exactly one signer (section 2).
 
-`prev` holds one act id in the ordinary case, and none (an empty array) when the act starts a new sequence. Genesis, rotations and chain signatures carry neither `binding` nor `prev`: they belong to the identity chain, not to a sequence. Their position is the one in their payload (field 1; genesis is position 0); an inside position or running summary (inside keys 5 and 6) on an identity-chain act is not read, and nor are its `acks`, `refs` and `hint`. Genesis carries no `objects`; a rotation's or chain signature's `objects`, if any, are not read.
+`prev` holds one act id in the ordinary case, and none (an empty array) when the act starts a new sequence. Genesis, rotations and chain signatures carry neither `binding` nor `prev`: they belong to the identity chain, not to a sequence. Their position is the one in their payload (field 1; genesis is position 0); an inside position or running summary (inside keys 5 and 6) on an identity-chain act is not read, and nor are its `acks`, `refs`, `hint` and outside `to`. Genesis carries no `objects`; a rotation's or chain signature's `objects`, if any, are not read.
 
 **What an Identity act names in `objects`.** Where this MIR says an act names another in `objects`, the act carries the entry `[ chain, named ]`, `named` being the act named, and `chain` the identity whose chain or sequence it concerns:
 
@@ -776,7 +778,7 @@ Every act has exactly one signer (section 2).
 | Cosignature (10) | `[ home's operator, log summary ]` | an entry whose second item is the log summary |
 | Objection (12), absence statement (13), escape endorsement (14) | `[ identity, homeless rotation ]`, `identity` the one the rotation is for | exactly that entry: the chain MUST be that identity |
 
-*An entry's first item is where a reader looks; for the three acts of the homeless path it is also checked, since what they say is about one identity's chain.* One entry is enough; an act carrying more names each act an entry names.
+*An entry's first item is where a reader looks; for the three acts of the homeless path it is also checked, since what they say is about one identity's chain.* For the acts of the first five rows, one entry is enough, and an act carrying more names each act an entry names. Such an entry names an act; it is no fork of that act's chain (Envelopes rule 15).
 
 ```cddl
 hash   = bstr .size 32
@@ -797,7 +799,7 @@ audit = [ threshold: uint, auditors: [+ hash] ]     ; cosignatures required, and
 
 declaration = [ spec: hash, kind: uint, value: any / null ]   ; null removes the kind
 successor   = [ protocol: tstr, identifier: bstr ]  ; protocol "mor" for a MOR identity, its identifier the 32-byte identity hash;
-                                                    ; a "mor" identifier of another length names no MOR identity, and no client follows it
+                                                    ; a "mor" identifier (the three small letters exactly) of another length names no MOR identity, and no client follows it
 ```
 
 How an address hint and a null operator are read is in section 4 ("A home's address").

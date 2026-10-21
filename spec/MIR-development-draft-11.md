@@ -317,7 +317,7 @@ rule-ref = [ bytes-hash: hash, size: uint, budget: uint, profile: hash ]     ; t
 
 ### How the content is decoded
 
-The content is decoded as an act's payload is, under the encoding and the CDDL conventions of Identity's Part three ("Encoding", "Formats"), save that a failure makes the content **no specification** (below), not an act invalid. In full:
+The content is decoded as an act's payload is, under the encoding and the CDDL conventions of Identity's Part three ("Encoding and conventions"), save that a failure makes the content **no specification** (below), not an act invalid. In full:
 
 1. The content is deterministic CBOR, holding one map. Bytes that are not, or a map key twice, make it no specification.
 2. Every key of the content map is an unsigned integer from 0 to 13 (arrays and maps inside it follow their own CDDL). Any other key, a key the format does not define, makes it no specification.
@@ -337,7 +337,7 @@ A field the rules above do not forbid is never a reason to refuse the content. *
 
 **A rule's bytes** (field 6). A rule's binary is a media object of its own, locked as every media object is (Envelopes, "Media"), and `bytes-hash` is its work hash: `tagged_hash("MOR/work", binary)` over the binary's complete bytes, `size` their length in bytes. *Until a machine profile is published, no rule is published under rule 22, so no verifier yet reads field 6.*
 
-**Type definitions** (field 3). A `type-def`'s `payload-schema` is a CDDL rule (RFC 8610) for the type's payload map, written under the conventions of Identity's Part three ("Formats"), naming the shared parts of the MIRs (`hash`, `amount`, `signing-key`…) by the names they carry there. It is read by people and tools, for discovery; the specification's text decides.
+**Type definitions** (field 3). A `type-def`'s `payload-schema` is a CDDL rule (RFC 8610) for the type's payload map, written under the conventions of Identity's Part three ("Encoding and conventions"), naming the shared parts of the MIRs (`hash`, `amount`, `signing-key`…) by the names they carry there. It is read by people and tools, for discovery; the specification's text decides.
 
 ### What each kind must carry
 
