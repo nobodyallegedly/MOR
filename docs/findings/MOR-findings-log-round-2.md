@@ -28,6 +28,20 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F363. A keeper counts for every act that belongs to its agreement, however the act links to it (21 October 2026; S1's question 39)
+
+**Found by the freeze-ready texts session** (S1, question 39): Agreements rule 42 counts a keeper record only where "the keeper is one named by an agreement the act's `objects` names". Many acts that belong to a deal link to it otherwise: a receipt names its claim (field 9), a claim names its agreement in its own field. Their records could never count, though the texts rely on them; and rule 7's "a keeper that recorded both" two work claims could never be met.
+
+**Walked back through the history first** (asked by Nobody, allegedly: "Deserves a big slow down… Let's do some archeology"): keepers were born as notaries the parties choose when they sign, recording "the deal and the acts around it", so a change of keys cannot erase what was relied on (the early core; F11's story); sealed (F37); guarded by F58 against a thief buying "disputed" from any keeper, by requiring the keeper to be named by the act's own agreement. F58 wrote "the act's own agreement" as "the agreement its `objects` names", true then of every act on a deal; receipts and claims came to link otherwise later. So the question was not how far keepers reach, but whether the wording still said what they always were.
+
+**Decided by Nobody, allegedly, 21 October 2026:** "Yes, it was always part of the agreement, just not directly stated into it. Makes sense to rework it to ensure all participants to the agreement can fall under the bracket." (a), the project lead's lean: a keeper record counts for an act that **belongs to** an agreement naming that keeper; an act belongs to an agreement when it names it in `objects`, or through the act it answers (a receipt through the claim it names, a claim or payment through its agreement field), so every participant's acts on the agreement, payer's and payee's alike, fall under its keepers. The keeper is still one the parties chose. An act belonging to no agreement (a post, a work claim alone, a rotation) has no keeper of its own: only an anchor places it. Rule 7: conflicting work claims are decided by anchoring, or by a keeper of an agreement both claims belong to.
+
+**Not chosen:** (b) any keeper named by any agreement the signer is party to (a keeper chosen for one deal speaking for acts outside it; the history gives no reason); (c) as written. **Shelved, not proposed:** that an anchored keeper sequence might count as clock evidence for anyone; it would change what keepers are, not for before the freeze.
+
+**Cost:** a verifier may follow two acts, not one, to see whether an act belongs to an agreement; a client judging deals implements Agreements already (F11).
+
+**Where:** Agreements draft 17, rules 42 and 7 (and the definition of "belongs to"), in the next pass on the freeze-ready texts; the core's check and a verdict vector (a receipt recorded by its deal's keeper before the payee's rotation: disputed; the same recorded by an unnamed keeper: void).
+
 ## F361. A change of keys makes fresh chain-key paper (21 October 2026; H79 reopened)
 
 **Found by the Dubsar Suite lead** (`claude/MOR-suite-for-the-mor-lead.md` in the project, item 1): Kišib reused the same paper for every change of keys, on a reading in its README marked "to be confirmed" and never confirmed; H79 was closed as designed on that reading. **Decided by Nobody, allegedly, 21 October 2026:** "No, it does not stay the same. Unsure why sessions believe so. A rotation generates two new sets of keys, chain and signing."

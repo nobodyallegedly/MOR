@@ -4,7 +4,7 @@
 
 ## A. Verdicts: for Nobody, allegedly, by theme, one at a time
 
-1. **Keepers** (the redefinition's details): 39 (rule 42 lets almost no keeper record count: receipts, rotations and posts name no agreement in `objects`), 41 (how an anchor "of the act itself" shows a deadline missed), 40 (several keepers under a threshold), 7 (a keeper's own rotation and its earlier records), 42 (a deal with no keeper), 25's open point (one sequence per keeper).
+1. **Keepers** (the redefinition's details): ~~39~~ decided, F363 (rule 42 lets almost no keeper record count: receipts, rotations and posts name no agreement in `objects`), 41 (how an anchor "of the act itself" shows a deadline missed), 40 (several keepers under a threshold), 7 (a keeper's own rotation and its earlier records), 42 (a deal with no keeper), 25's open point (one sequence per keeper).
 2. **What a disputed act under a revoked grant confers** (F359's follow-through): 24.
 3. **Collectives' member keys in Money and Agreements** (F353, F358): 20 with 43 (32 is 20), 10.
 4. **Identity's checks:** 4 (an act under a pending rotation), 5 (dishonesty: and or or).
