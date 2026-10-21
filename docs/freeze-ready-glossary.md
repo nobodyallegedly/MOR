@@ -25,12 +25,32 @@
 | grant key | A scoped key handed by a grant; what it signs is the grantor's own act. A collective's member key (named by a holder's founding or clone signature) is a grant key. |
 | encryption key | The public key an identity publishes to receive private content (Envelopes). Not a signing key. |
 
-## Words checked so far
+## Agreements' structures
+
+| Word | One meaning | Defined in |
+| --- | --- | --- |
+| keeper | An identity's relay an agreement names to record the acts around it as they arrive: act ids and signers, never content. It orders, it never times. | Agreements rules 36 to 44 |
+| keeper record | A keeper's signed statement naming one act and its signer (type 2, `{ 0 => [act, signer] }`), one per act, in the keeper's sequence; counts only alongside the act, and only from a keeper rule 42 allows. Not a collective's record (type 17). | Agreements, "Keeper record (type 2)" |
+| keeper's sequence | The keeper's records, each naming the one before: a signed order, checkable from any copy. Places nothing on a time reference. | Agreements rule 37 |
+| anchor | A proof, under the anchoring cMIP, that something existed by a point of a clock. The only thing that places anything on the clock. | Envelopes, task "Anchoring"; Agreements rules 33, 41 |
+| time reference | The source of time an agreement names (terms field 6, a cMIP filling task 10), on which its deadlines are judged. Second meaning found: Envelopes' anchoring task calls a clock Module and its parameters "a time reference" (question 15). | Agreements rule 33; Development task 10 |
+| area | Acts of a collective and operational matters its founding agreement gives to some members, who alone decide there; may reach a whole layer ("the area reaching Money"). | Agreements rule 60 |
+| member key | A key a holder's signature on a collective's founding or clone names: a grant key of the collective within the areas that version gives the holder. | Agreements rules 60, 73 |
+| grant to oneself | A grant whose grantee is its own grantor: a person's grant key for an application acting for it. | Agreements rule 73 |
+| line | An act of a collective (a record or a rotation; forks and closings end its lines) at which an event changing who may act for it takes effect. Second meanings found (a purchase's line, a deal's line of versions, an identity's own line): question 45 and the term question. | Agreements, "Made before, made after" |
+| record | A collective's everyday line (type 17), writing a clone and registering departures. Distinct from a keeper record. | Agreements, "Record (type 17)" |
+| everyday act | Proposed one meaning: every act other than genesis, a rotation and a chain signature (question 18). | Envelopes rule 13; Identity |
+
+## Words checked
 
 | Word | Finding | Resolution |
 | --- | --- | --- |
-| lane | Agreements and the MICS called an area reaching a whole layer that layer's "lane"; the apps call a person's grant to an app a "lane". | Decided (prompt, from Nobody, allegedly): the MIRs and the MICS say "area" only. Every "lane" in the area sense becomes an area (for instance "the area reaching Money"); the grant-to-oneself sense is written "a grant to oneself". The word "lane" appears nowhere in the eight texts. |
-| contested | Identity's four senses and Agreements' contest act and contested sales. | Already separated by the texts (Identity's glossary names each; Agreements' contest act changes no status). Kept. |
-| record | Identity has none; Agreements' "record" is a collective's everyday line, and "keeper record" is a keeper's act (type 2). | See Agreements below (in progress). |
+| lane | Agreements and the MICS called an area reaching a whole layer that layer's "lane"; the apps call a person's grant to an app a "lane". | Decided (prompt, from Nobody, allegedly): the MIRs and the MICS say "area" only. Every "lane" in the area sense became an area ("the area reaching Money"); the grant-to-oneself sense is written "a grant to oneself". The word "lane" appears nowhere in the eight texts. |
+| unrecorded | Agreements used "unrecorded" for a sale its seller's side has not recorded; the MICS's word is "pending". | "Pending" in every text. |
+| contested | Identity's four senses and Agreements' contest act and contested sales. | Already separated by the texts (Identity names each; Agreements' contest act changes no status). Kept. |
+| disputed | Identity's status after a rotation; now also an act under a revoked grant (Agreements rule 76). | One meaning, written in Identity rule 34's words in both; what it confers on an agreement chain is question 24. |
+| record | Agreements' collective record (type 17) and keeper record (type 2); delivery, use and metric records of cMIPs. | Kept apart by their full names; listed in the term question. |
+| keeper | Also release field 4 (`keeper`, a key deliverer, no keeper) and "a keeper or custodian role, for a cMIP". | The wire name of release field 4 is unchanged; listed in the term question. |
+| specification, kind, cMIP, Module, task, extension, adoption, implement | Several senses each (the Development stranger's list). | Listed in the term question; no verdict found to turn on one word alone, except "implement" against "adopt" for unknown (question 37). |
 
-*In progress: Envelopes, Money, Agreements, Development, MICS and suite still to check.*
+*The strangers' full lists of words used two ways are in `docs/freeze-ready-strangers/`. Every one not resolved here is in the report's term question.*

@@ -335,6 +335,47 @@
 | Part one | F116, F194, F268, F322, F323, F328 |
 | Part two | F291, F301, F323, F324, F325, F326, F328 |
 
+### MICS v30 (from v29)
+
+| Rule or section | Findings |
+| --- | --- |
+| (header: the drafts' notes) | F269, F291, F292, F293, F294, F295, F296, F297, F298, F299, F300, F301, F302, F320, F321, F322, F323, F326, F327, F328, F349, F350, F351 |
+| Purpose | F109, F302, F316, F321 |
+| Structure | F268, F278, F307, F309, F310, F322, F325, F327 |
+| Common conventions | F110, F295, F297, F323, F349 |
+| MIR: Identity | F110, F128, F292, F297, F298, F299, F300, F302, F328 |
+| MIR: Text | F276, F295, F296 |
+| MIR: Envelopes | F108, F110, F173, F237, F239, F240, F241, F247, F252, F253, F258, F259, F261, F272, F293, F294, F295, F323, F328 |
+| MIR: Money | F111, F113, F114, F115, F126, F161, F169, F170, F176, F181, F267, F301, F323, F328 |
+| Agreements and deals | F178, F186, F188, F189, F192, F196, F244, F248, F254, F256, F257, F263, F270, F274, F279, F282, F307, F309, F314 |
+| Keepers, stakes and works | F150, F165, F266, F270, F280, F284, F285, F303, F308, F310, F312, F316 |
+| Splits, offers and time | F119, F123, F124, F126, F127, F128, F129, F130, F131, F184, F193, F194, F248, F249, F250, F260, F261, F264, F268, F271, F301 |
+| Collectives: an identity many people act for | F105, F115, F122, F126, F127, F128, F129, F131, F132, F173, F178, F185, F191, F195, F197, F198, F199, F255, F262, F265, F270, F279, F297, F298, F302, F303, F304, F307, F308, F309, F310, F311, F312, F313, F314, F315, F316, F317, F318, F327, F328 |
+| Succession, grants and abandonment | F128, F129, F131, F279, F300, F303, F305, F313, F320, F327 |
+| Disputes | F118, F173 |
+| MIR: Development | F116, F211, F268, F278, F290, F291, F301, F322, F323, F324, F325, F326, F328 |
+| MOR 2 | F325 |
+| Outside the core | F173, F176, F202, F294, F296, F309, F320, F326, F328 |
+| Open before freeze | F130, F131, F132, F188, F189, F190, F191, F192, F199, F206, F221, F222, F224, F235, F236, F246, F247, F248, F249, F250, F260, F267, F268, F270, F273, F274, F279, F282, F284, F285, F291, F293, F295, F296, F297, F298, F301, F302, F304, F316, F321, F322, F323, F324, F325, F326, F328 |
+| Glossary | F84, F127, F128, F129, F237, F252, F261, F268, F269, F278, F291, F297, F299, F300, F301, F307, F308, F309, F310, F315, F318, F320, F325, F326, F327, F328 |
+
+### Freeze test suite v30 (from v29)
+
+| Rule or section | Findings |
+| --- | --- |
+| (header: the drafts' notes) | F269, F291, F292, F293, F294, F295, F296, F297, F298, F299, F300, F301, F302, F303, F304, F305, F306, F307, F314, F318, F319, F320, F321, F322, F323, F324, F325, F326, F327, F328, F349, F350, F351 |
+| Purpose | F84 |
+| Core components | F101, F102, F103, F104, F105, F106, F107, F108, F109, F110, F111, F112, F113, F114, F115, F116, F118, F119, F121, F122, F123, F124, F128, F129, F130, F150, F165, F184, F194, F237, F239, F240, F247, F248, F249, F250, F252, F253, F254, F256, F257, F259, F260, F261, F262, F263, F264, F265, F266, F267, F268, F270, F271, F272, F274, F278, F279, F280, F282, F284, F285, F290, F291, F292, F293, F294, F295, F296, F297, F298, F299, F300, F301, F302, F303, F304, F305, F307, F308, F309, F310, F311, F312, F313, F314, F315, F316, F317, F318, F320, F322, F323, F324, F325, F326, F327, F328, F349, F350, F351 |
+| 1. Feature film, end to end | F107, F129, F145, F155, F157, F169, F170, F172, F186, F188, F189, F192, F196, F206, F221, F222, F236, F246, F270, F273, F274, F279, F280, F284, F285, F314, F316 |
+| 2. A song, two publishers | F108, F110, F113, F119, F126, F184, F193, F194, F200, F267, F295, F301, F326, F328 |
+| 3. A label | F96, F100, F103, F104, F105, F106, F107, F109, F115, F121, F122, F123, F124, F125, F126, F127, F128, F129, F130, F131, F132, F150, F162, F185, F187, F189, F195, F197, F198, F199, F207, F217, F223, F224, F249, F250, F255, F270, F274, F279, F282, F300, F302, F303, F304, F305, F306, F307, F308, F309, F310, F311, F312, F313, F314, F315, F316, F317, F318, F319, F320, F327, F328, F329, F330, F331 |
+| 4. A democracy round | F294 |
+| 5. A nym journalist | F101, F102, F110, F111, F113, F114, F118, F272, F296, F297, F298, F299, F300, F328 |
+| 6. A streaming service | F128 |
+| 7. A subscription service | F129, F235, F244, F248, F249, F250 |
+| 8. Specifications | F268, F290, F291, F298, F301, F322, F323, F324, F325, F326, F328 |
+| Freeze procedure | F84, F85, F324, F326 |
+
 ### Added in the freeze-ready drafts
 
 | Text and rule or section | Findings |
@@ -348,3 +389,9 @@
 | Agreements 17, every "area reaching …" where draft 16 said "lane" | the session's prompt ("area" only), F351 |
 | Identity 15, rule 34 (pointer to Agreements rules 41 and 42), "Scoped key" (a member key) | F358, F353 |
 | Money 11, rule 7 (the member key named by the holder's signature) | F358 (1), F353 |
+| MICS v30, "Keepers, stakes and works", "Time", glossary (Keeper, Keeper record) | F358 (3 and 4) |
+| MICS v30, revocation bullet, glossary (Disputed, Grant) | F359, F351, F352 (A′) |
+| MICS v30, "The text act is closed" (two exceptions), "Text is universal" (the format bound) | F295, F296, F334, F343 |
+| MICS v30, "Open before freeze" emptied | F360 (the freeze-ready checklist) |
+| Suite v30, the new component lines (Text rule 14's two cases, keeper records, a revoked grant's acts, a grant to oneself, a member key) | F334, F343, F358, F359, F351, F353 |
+| Suite v30, step 3.7o aligned with step 3.7m and Agreements rule 71 | F302, F304 (the emptied area's verdicts) |
