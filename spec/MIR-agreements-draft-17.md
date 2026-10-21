@@ -1083,21 +1083,21 @@ Before recording an act, a keeper checks the signer's identity chain at its home
 
 A record counts against a rotation only if it sits before the keeper's own record of that rotation, in the keeper's sequence.
 
-Such an act, even outside the kept ancestry or disowned, becomes a visible dispute rather than void (Identity rule 34).
+The act so recorded, even outside the kept ancestry or disowned, becomes a visible dispute rather than void (Identity rule 34). The keeper's record of the rotation, or of a revocation (rule 76), serves only as that point in the keeper's sequence; rule 42's conditions are those of the act recorded before it.
 
 **A keeper MAY anchor its own sequence** (Envelopes, task "Anchoring"). An anchor of one of its records shows that record, and every record before it in the keeper's sequence, to have existed by the anchor's point. *Anchoring is optional; serious keepers will, and an agreement that needs deadlines may require it of its keepers in its terms.*
 
 #### Rule 42. A record counts only alongside the act it names
 
-A keeper record counts, for that purpose, only if:
+A keeper record counts, for any rule that reads it, only if:
 
 - the verifier holds the act it names;
-- that act is valid as an act;
+- that act is valid as an act, and its signer is the identity the record names beside it;
 - and the keeper is one named by an agreement the act belongs to ("Belongs to"), or, for an act of a collective placed against the collective's own line, one named by the collective's agreement, as "Made before, made after" says.
 
 A record of an act nobody can produce changes no verdict.
 
-**A keeper's own later rotation never undoes what its records placed.** A keeper's record that a rule of this MIR reads to place an act (rules 7, 33 and 41, and "Made before, made after", 5), or that a relied-on version's completeness rests on (rule 47), keeps the effect that rule gave it, whatever the keeper's later rotation disowned, shown as a dispute. *A witness chosen in advance cannot un-witness.* This is Identity's stated exception to its rule that evidence counts only while its signer's chain keeps it (Identity, "Evidence counts only while its signer's chain keeps it").
+**A keeper's own later rotation never undoes what its records placed.** A keeper's record that a rule of this MIR reads to place an act (such as rules 7, 33, 41 and 76, a deal's declaration line, and "Made before, made after", 5), or that a relied-on version's completeness rests on (rule 47), keeps the effect that rule gave it, whatever the keeper's later rotation disowned, shown as a dispute. *A witness chosen in advance cannot un-witness.* This is Identity's stated exception to its rule that evidence counts only while its signer's chain keeps it (Identity, "Evidence counts only while its signer's chain keeps it").
 
 *What remains to trust is that a keeper records acts as they arrive. A keeper can delay recording a rotation while recording a thief's acts first, or record an act later than it arrived; nothing in the bytes shows it. That is trust in keepers, accepted and stated: choose keepers as carefully as homes.*
 
@@ -2248,7 +2248,7 @@ An acknowledgement of a grant key's act counts as an adoption only when it is an
 
 #### Rule 79. Fate of acts
 
-An act of a grant key that a decision ending its grant does not hold does not bind the collective: it is void, or, where the decision is a revocation, void or disputed as rule 76 says; either way it binds only where the collective adopted it (rule 76).
+An act of a grant key that a decision ending its grant does not hold does not bind the collective: it is void, or, where the decision is a revocation, void or disputed as rule 76 says; either way it binds only where the collective (for a person's grant, the grantor) adopted it (rule 76).
 
 Decisions ending a grant are: a revocation, a departure emptying its area, a fork, a closing.
 
@@ -2462,7 +2462,7 @@ Collectives only. *A fork forces a whole lot of decisions to be taken again.*
   *Two fork acts signed concurrently on the same agreement, neither naming the other, are concurrent acts on its chain (rule 6): the status quo stands, and neither closes it, until one names the other. **A complete fork or closing is final**: a later ending of the same collective, naming it, counts for nothing. A later fork of a successor is a new fork, of the successor, in sequence.*
 
   Once the fork is complete:
-   - **Ownership.** The fork act transfers the original's stake in each work, as a stake transfer, to the successors, in the shares it names (field 5). By default the shares are in proportion to the stakes of the members on each side in the original itself (field 7), divided in millionths, leftovers by largest remainder as rule 9, ties ordered by the hash of the fork act with each side: `tagged_hash("MOR/law/leftover", [ fork act, successor ])`, the array in deterministic CBOR, the side with the smallest hash first. Where the original carries no stakes in itself, each member counts alike: no agreement means equal weight. Each successor then owns its share outright and runs it: pointer, rails, split service. The work's fingerprint never changes.
+   - **Ownership.** The fork act transfers the original's stake in each work, as a stake transfer, to the successors, in the shares it names (field 5). By default the shares are in proportion to the stakes of the members on each side in the original itself (field 7), divided in millionths, leftovers by largest remainder as rule 9, ties ordered by the hash of the fork act with each side: `tagged_hash("MOR/law/leftover", [ fork act's id, successor's identity hash ])`, the array of two byte strings in deterministic CBOR, the side whose hash is smallest in bytewise order first. Where the original carries no stakes in itself, each member counts alike: no agreement means equal weight. Each successor then owns its share outright and runs it: pointer, rails, split service. The work's fingerprint never changes.
    - **Departed holders keep their percentage in every successor,** and their stake follows into the successors' future works, a stake in each collective as a whole. Each successor's founding terms keep every departed holder of the original, and every member who signed no side, at the same share of all its income, in its stake in itself (field 7) and its departed members entry (field 22); the members divide the rest. **And no successor's founding terms pay a kept holder less than the original's did, unless the kept holders consent** (rule 95): a successor's plan taking more off the top, or a higher fee, is a change paying them less, as for a clone. *Example: four at 25%, one of them departed; sides taking two thirds and one third: the departed holds 25% of each, the others 37.5% in one or 75% in the other.* *If too many departed members still own shares, the incentive is to found an entirely new collective instead of forking.*
    - **Debts.** The fork cites the original's action head, and hands out every obligation in that history, each to one successor or to several jointly, or it does not take effect ("Fork (type 19)").
      - The successor collective signs for each debt assigned to it, by its own chain signature on the fork (Identity type 16), so members are never made personal debtors of what the collective owed, and no later rotation of the successor unmakes the fork.
@@ -2721,7 +2721,7 @@ Each takes effect for the collective's acts at a line. A line is a record (type 
 
    An Identity witness act of the collective (type 15), on neither chain, places nothing and counts for nothing in Agreements.
 
-   An act signed with a grant key is the collective's own, on the grantee's strand of its actions chain, citing its grant, as every action cites (rule 58). It has no place by its key. It is before a line when the line's history holds it: that is, when an act of the collective before the line joined it, or a later act of the same strand that such an act joined. Where a decision ending the grant's powers does not hold it, the tie rule voids it, or, for a revocation, shows it disputed as rule 76 says (point 7), save where the collective itself adopts it (rule 76).
+   An act signed with a grant key is the collective's own, on the grantee's strand of its actions chain, citing its grant, as every action cites (rule 58). It has no place by its key. It is before a line when the line's history holds it: that is, when an act of the collective before the line joined it, or a later act of the same strand that such an act joined. Where a decision ending the grant's powers does not hold it, the tie rule voids it, or, for a revocation, voids it or shows it disputed as rule 76 says (point 7), save where the collective itself adopts it (rule 76).
 
 3. **A departure takes effect at the collective's line.** A resignation, a stepping down, or a declaration removing a voice takes effect for the collective at the line registering it: a record naming it in field 3. A member's voice remains for an act of the collective made before that line, and through any signature of theirs placed before it. For everything after it, it is gone (rules 70, 71, 65).
 
@@ -3569,7 +3569,7 @@ A contest of a declaration is signed by the party the declaration names, with it
 
 A contest of a vow: field 0 names **the sale it contests**: the buyer's payer's claim of the payment that is a purchase under an offer naming the vow, or, for an offer at no price, the signature act by which the buyer signed onto it (rule 13). Its inside names the vow by its name (its genesis id) as chain and predecessor, `[[vow, vow]]`. Field 1, optional, says which of the vow's promises was not kept (a buyer may know only that something went wrong). Signed by the buyer of that sale, it marks that sale contested, and voids nothing. Signed by anyone else, it shows nothing.
 
-**A contest of any other act**, by anyone with standing (rule 54), is in the same format: field 0 names the act it contests, field 1 is absent, and its inside names that act as both chain and predecessor, `[[act, act]]`. It is shown beside the act it contests, and changes nothing about any act's validity, status or selection. Signed by anyone without standing, it shows nothing.
+**A contest of any other act**, other than a declaration of absence or a vow's sale, by anyone with standing (rule 54), is in the same format: field 0 names the act it contests, field 1 is absent (a contest of such an act carrying it is invalid), and its inside names that act as both chain and predecessor, `[[act, act]]`. It is shown beside the act it contests, and changes nothing about any act's validity, status or selection. Signed by anyone without standing, it shows nothing.
 
 ### Settlement request (type 22) and fork settlement (type 23)
 
