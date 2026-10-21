@@ -1,0 +1,558 @@
+[
+ {
+  "app": "kishib",
+  "slug": "home",
+  "title": "Home: the four tiles",
+  "before": [
+   "kishib/kishib-01-start.png",
+   "kishib/kishib-30-mac-start.png"
+  ],
+  "group": "Home",
+  "note": "",
+  "file": "kishib-home.html"
+ },
+ {
+  "app": "kishib",
+  "slug": "identities",
+  "title": "Identities: an identity’s record",
+  "before": [
+   "kishib/kishib-04-record.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "kishib-identities.html"
+ },
+ {
+  "app": "kishib",
+  "slug": "runner",
+  "title": "Runner: off by default",
+  "before": [],
+  "group": "Tiles",
+  "note": "new (the runner cMIP)",
+  "file": "kishib-runner.html"
+ },
+ {
+  "app": "kishib",
+  "slug": "runner-yeses",
+  "title": "Runner: standing yeses per app and kind",
+  "before": [],
+  "group": "Tiles",
+  "note": "new (the runner cMIP)",
+  "file": "kishib-runner-yeses.html"
+ },
+ {
+  "app": "kishib",
+  "slug": "paper-door",
+  "title": "Paper: the quiet door",
+  "before": [],
+  "group": "Paper and words",
+  "note": "new",
+  "file": "kishib-paper-door.html"
+ },
+ {
+  "app": "kishib",
+  "slug": "paper",
+  "title": "Paper: change keys",
+  "before": [
+   "kishib/kishib-05-rotate-form.png"
+  ],
+  "group": "Paper and words",
+  "note": "",
+  "file": "kishib-paper.html"
+ },
+ {
+  "app": "kishib",
+  "slug": "paper-review",
+  "title": "Paper: read back before signing",
+  "before": [
+   "kishib/kishib-06-rotate-review.png"
+  ],
+  "group": "Paper and words",
+  "note": "",
+  "file": "kishib-paper-review.html"
+ },
+ {
+  "app": "kishib",
+  "slug": "paper-chain-words",
+  "title": "Change of keys: the new chain-key paper (1 of 2)",
+  "before": [
+   "kishib/kishib-09-new-words.png"
+  ],
+  "group": "Paper and words",
+  "note": "F361: a fresh chain-key paper",
+  "file": "kishib-paper-chain-words.html"
+ },
+ {
+  "app": "kishib",
+  "slug": "paper-signing-words",
+  "title": "Change of keys: the new signing words (2 of 2)",
+  "before": [
+   "kishib/kishib-10-three-back.png",
+   "kishib/kishib-11-done.png"
+  ],
+  "group": "Paper and words",
+  "note": "",
+  "file": "kishib-paper-signing-words.html"
+ },
+ {
+  "app": "kishib",
+  "slug": "collectives",
+  "title": "Collectives: give my share",
+  "before": [
+   "kishib/kishib-34-give-form.png",
+   "kishib/kishib-31-collective-form.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "kishib-collectives.html"
+ },
+ {
+  "app": "dub",
+  "slug": "home",
+  "title": "Home: Public, the Following lens",
+  "before": [
+   "dub/mac-04-public-feed.png",
+   "dub/web-03-public.png"
+  ],
+  "group": "Home",
+  "note": "",
+  "file": "dub-home.html"
+ },
+ {
+  "app": "dub",
+  "slug": "relay",
+  "title": "Public: the Relay lens",
+  "before": [
+   "dub/mac-07b-relay.png"
+  ],
+  "group": "Feeds",
+  "note": "",
+  "file": "dub-relay.html"
+ },
+ {
+  "app": "dub",
+  "slug": "to-you",
+  "title": "Public: the To you lens (and the received-items piles)",
+  "before": [
+   "dub/mac-07-to-you.png",
+   "edubba/4-sorted.png"
+  ],
+  "group": "Feeds",
+  "note": "",
+  "file": "dub-to-you.html"
+ },
+ {
+  "app": "dub",
+  "slug": "mention",
+  "title": "Typing box: @ by names, not hashes",
+  "before": [],
+  "group": "Feeds",
+  "note": "decided: @ autocompletes by names",
+  "file": "dub-mention.html"
+ },
+ {
+  "app": "dub",
+  "slug": "contacts",
+  "title": "Contacts: the menu top left",
+  "before": [
+   "dub/mac-09-muted.png"
+  ],
+  "group": "Panels",
+  "note": "",
+  "file": "dub-contacts.html"
+ },
+ {
+  "app": "dub",
+  "slug": "act-signer-menu",
+  "title": "The act card: the signer’s menu (Dub)",
+  "before": [],
+  "group": "The act card",
+  "note": "",
+  "file": "dub-act-signer-menu.html"
+ },
+ {
+  "app": "dub",
+  "slug": "act-menu",
+  "title": "The act card: the act’s menu (Dub)",
+  "before": [],
+  "group": "The act card",
+  "note": "",
+  "file": "dub-act-menu.html"
+ },
+ {
+  "app": "dub",
+  "slug": "thread",
+  "title": "The pop-up thread: what an act answers",
+  "before": [],
+  "group": "Feeds",
+  "note": "decided: a pop-up with a feed box and a back arrow",
+  "file": "dub-thread.html"
+ },
+ {
+  "app": "dub",
+  "slug": "profile",
+  "title": "The profile page: light and friendly",
+  "before": [],
+  "group": "Feeds",
+  "note": "accepted: the profile’s list",
+  "file": "dub-profile.html"
+ },
+ {
+  "app": "dub",
+  "slug": "private",
+  "title": "Private: a mailbox, a collective appended, a Cc",
+  "before": [
+   "dub/mac-08-private.png",
+   "dub/web-05-private.png"
+  ],
+  "group": "Private",
+  "note": "",
+  "file": "dub-private.html"
+ },
+ {
+  "app": "dub",
+  "slug": "private-new",
+  "title": "Private: someone new opens an empty feed",
+  "before": [],
+  "group": "Private",
+  "note": "decided",
+  "file": "dub-private-new.html"
+ },
+ {
+  "app": "dub",
+  "slug": "identity-panel",
+  "title": "The identity panel (top right)",
+  "before": [
+   "dub/mac-11-two-identities.png",
+   "dub/mac-10-identity-window.png"
+  ],
+  "group": "Panels",
+  "note": "",
+  "file": "dub-identity-panel.html"
+ },
+ {
+  "app": "dub",
+  "slug": "identity-menu",
+  "title": "The identity panel: an identity’s own menu",
+  "before": [],
+  "group": "Panels",
+  "note": "",
+  "file": "dub-identity-menu.html"
+ },
+ {
+  "app": "dub",
+  "slug": "identity-remove",
+  "title": "The identity panel: Remove, said plainly",
+  "before": [],
+  "group": "Panels",
+  "note": "accepted: Remove said plainly first",
+  "file": "dub-identity-remove.html"
+ },
+ {
+  "app": "dub",
+  "slug": "runner",
+  "title": "Kišib’s runner panel inside Dub, asking to sign a post",
+  "before": [],
+  "group": "Panels",
+  "note": "decided: shown inside the asking app",
+  "file": "dub-runner.html"
+ },
+ {
+  "app": "dub",
+  "slug": "damgar-tip",
+  "title": "Damgar’s panel inside Dub, authorising a tip",
+  "before": [
+   "damgar/dub-tip.png"
+  ],
+  "group": "Panels",
+  "note": "decided: Damgar pops up and authorises",
+  "file": "dub-damgar-tip.html"
+ },
+ {
+  "app": "damgar",
+  "slug": "home",
+  "title": "Home: the four tiles",
+  "before": [
+   "damgar/damgar-web-to-sign.png"
+  ],
+  "group": "Home",
+  "note": "",
+  "file": "damgar-home.html"
+ },
+ {
+  "app": "damgar",
+  "slug": "waiting",
+  "title": "Waiting: to sign",
+  "before": [
+   "damgar/damgar-web-to-sign.png",
+   "damgar/damgar-to-sign-invoice.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "damgar-waiting.html"
+ },
+ {
+  "app": "damgar",
+  "slug": "act-signer-menu",
+  "title": "The act card: the signer’s menu (Damgar)",
+  "before": [],
+  "group": "The act card",
+  "note": "",
+  "file": "damgar-act-signer-menu.html"
+ },
+ {
+  "app": "damgar",
+  "slug": "act-menu",
+  "title": "The act card: the act’s menu (Damgar)",
+  "before": [],
+  "group": "The act card",
+  "note": "",
+  "file": "damgar-act-menu.html"
+ },
+ {
+  "app": "damgar",
+  "slug": "account",
+  "title": "Account: totals and payments",
+  "before": [
+   "damgar/damgar-account.png",
+   "damgar/damgar-web-account.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "damgar-account.html"
+ },
+ {
+  "app": "damgar",
+  "slug": "lanes",
+  "title": "Lanes: the lanes granted",
+  "before": [],
+  "group": "Tiles",
+  "note": "no picture of today’s Lanes tab exists",
+  "file": "damgar-lanes.html"
+ },
+ {
+  "app": "damgar",
+  "slug": "settings",
+  "title": "Settings: where you are paid",
+  "before": [
+   "damgar/damgar-settings.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "damgar-settings.html"
+ },
+ {
+  "app": "damgar",
+  "slug": "identity-panel",
+  "title": "The identity panel: + Add (Damgar gains Make)",
+  "before": [
+   "damgar/damgar-identity-window.png",
+   "damgar/damgar-web-identity-in-use.png"
+  ],
+  "group": "Panels",
+  "note": "",
+  "file": "damgar-identity-panel.html"
+ },
+ {
+  "app": "edubba",
+  "slug": "home",
+  "title": "Home: the four tiles",
+  "before": [
+   "edubba/03-agents.png",
+   "edubba/web-first.png"
+  ],
+  "group": "Home",
+  "note": "",
+  "file": "edubba-home.html"
+ },
+ {
+  "app": "edubba",
+  "slug": "agents",
+  "title": "Agents: an agent, Talk",
+  "before": [
+   "edubba/04-agent-prompt.png",
+   "edubba/03-agents.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "edubba-agents.html"
+ },
+ {
+  "app": "edubba",
+  "slug": "agents-terms",
+  "title": "Agents: an agent, Terms (grants, cap, key)",
+  "before": [
+   "edubba/agents-05-grant-shown.png",
+   "edubba/agents-06-granted.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "edubba-agents-terms.html"
+ },
+ {
+  "app": "edubba",
+  "slug": "agents-queue",
+  "title": "Agents: an agent, Queue (picks, nudge, drafts)",
+  "before": [
+   "edubba/06-agent-queue.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "edubba-agents-queue.html"
+ },
+ {
+  "app": "edubba",
+  "slug": "diary",
+  "title": "The diary: the public act to sign before it opens",
+  "before": [
+   "edubba/agents-03-diary-ask.png",
+   "edubba/agents-04-diary.png"
+  ],
+  "group": "Tiles",
+  "note": "decided: sign before reading",
+  "file": "edubba-diary.html"
+ },
+ {
+  "app": "edubba",
+  "slug": "collectives",
+  "title": "Collectives: Collective Y, Act",
+  "before": [
+   "edubba/09-collective-act.png",
+   "edubba/web-collective.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "edubba-collectives.html"
+ },
+ {
+  "app": "edubba",
+  "slug": "collectives-to-sign",
+  "title": "Collectives: To sign (moved from Dub’s Signing tab)",
+  "before": [
+   "edubba/real-edubba-member-proposal.png",
+   "dub/mac-06-counts.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "edubba-collectives-to-sign.html"
+ },
+ {
+  "app": "edubba",
+  "slug": "publishing",
+  "title": "Publishing: a protected file",
+  "before": [
+   "edubba/web-publishing.png",
+   "edubba/web-publishing-review.png"
+  ],
+  "group": "Tiles",
+  "note": "decided: video and audio added",
+  "file": "edubba-publishing.html"
+ },
+ {
+  "app": "edubba",
+  "slug": "vows",
+  "title": "Vows: Track (point at people, collectives, relays)",
+  "before": [
+   "edubba/web-publishing-vow-sales.png"
+  ],
+  "group": "Feeds",
+  "note": "decided: Vows a tile of its own",
+  "file": "edubba-vows.html"
+ },
+ {
+  "app": "edubba",
+  "slug": "identity-panel",
+  "title": "The identity panel (Edubba): collectives under their identity",
+  "before": [
+   "edubba/08-identities.png",
+   "edubba/setup-02-record.png"
+  ],
+  "group": "Panels",
+  "note": "",
+  "file": "edubba-identity-panel.html"
+ },
+ {
+  "app": "ummia",
+  "slug": "home",
+  "title": "Home: the four tiles",
+  "before": [
+   "ummia/ummia-releases.png"
+  ],
+  "group": "Home",
+  "note": "",
+  "file": "ummia-home.html"
+ },
+ {
+  "app": "ummia",
+  "slug": "look",
+  "title": "Look: one feed, point at, filter by",
+  "before": [
+   "ummia/ummia-tracking.png"
+  ],
+  "group": "Feeds",
+  "note": "",
+  "file": "ummia-look.html"
+ },
+ {
+  "app": "ummia",
+  "slug": "act-signer-menu",
+  "title": "The act card: the signer’s menu (Ummia)",
+  "before": [],
+  "group": "The act card",
+  "note": "",
+  "file": "ummia-act-signer-menu.html"
+ },
+ {
+  "app": "ummia",
+  "slug": "act-menu",
+  "title": "The act card: the act’s menu, with “Add to accepted list” (Ummia)",
+  "before": [],
+  "group": "The act card",
+  "note": "decided: add to accepted list in the act menu",
+  "file": "ummia-act-menu.html"
+ },
+ {
+  "app": "ummia",
+  "slug": "discuss",
+  "title": "Discuss: a MIP draft and its discussion",
+  "before": [
+   "ummia/ummia-mip.png",
+   "ummia/ummia-reports.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "ummia-discuss.html"
+ },
+ {
+  "app": "ummia",
+  "slug": "publish",
+  "title": "Publish: a cMIP or Module, the hash first",
+  "before": [
+   "ummia/ummia-spec-review.png",
+   "ummia/ummia-release-review.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "ummia-publish.html"
+ },
+ {
+  "app": "ummia",
+  "slug": "choose",
+  "title": "Choose: the accepted list, by layer",
+  "before": [
+   "ummia/ummia-accepted.png"
+  ],
+  "group": "Tiles",
+  "note": "",
+  "file": "ummia-choose.html"
+ },
+ {
+  "app": "suite",
+  "slug": "act-card",
+  "title": "The act card, the same in every app",
+  "before": [],
+  "group": "The act card",
+  "note": "",
+  "file": "suite-act-card.html"
+ }
+]
