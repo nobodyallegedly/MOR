@@ -117,8 +117,8 @@ page('kishib', 'collectives', 'Collectives: give my share',
   { group: 'Tiles', before: ['kishib/kishib-34-give-form.png', 'kishib/kishib-31-collective-form.png'] });
 
 // ================================================================ DUB
-const DCENTER = `<div class="switch"><span class="on">Public</span><span>Private <span class="cnt" style="background:var(--edge);color:var(--text);border-radius:999px;padding:0 6px;font-size:11px">2</span></span></div>`;
-const DCENTER_PRIV = `<div class="switch"><span>Public</span><span class="on">Private</span></div>`;
+const DCENTER = `<div class="switch"><span class="on">Public</span><span>Private <span class="cnt" style="background:var(--edge);color:var(--text);border-radius:999px;padding:0 6px;font-size:11px">2</span></span><span>Purchases</span></div>`;
+const DCENTER_PRIV = `<div class="switch"><span>Public</span><span class="on">Private</span><span>Purchases</span></div>`;
 const CONTACTS = `<button class="menu-btn"><span>☰</span><span class="l">Contacts</span></button>`;
 const DLEFT = `<div style="display:flex;align-items:center;gap:12px">${CONTACTS}<div class="app hide-phone"><img src="icons/dub.png" alt=""><span class="nm">Dub</span></div></div>`;
 const dbar = (priv = false, right) => bar('dub', { left: DLEFT, center: priv ? DCENTER_PRIV : DCENTER, right });
@@ -203,7 +203,7 @@ page('dub', 'profile-pay', 'Pay from a profile: Damgar’s panel inside Dub',
 <div class="row"><span class="btn p" style="color:#0a0c10">Authorise and sign</span><span class="btn q">Cancel</span><span class="grow"></span><span class="small faint">money always asks</span></div></div></div>`,
   { group: 'Panels', before: ['damgar/edubba-pay-someone.png'], note: 'decided: Pay on the profile of the ID to pay' });
 
-const DCENTER_BUY = `<div class="switch"><span>Public</span><span>Private</span><span class="on">Purchases</span></div>${nd('“maybe”: a Purchases tab')}`;
+const DCENTER_BUY = `<div class="switch"><span>Public</span><span>Private</span><span class="on">Purchases</span></div>`;
 page('dub', 'purchases', 'Purchases: files bought and vows purchased',
   `${bar('dub', { left: DLEFT, center: DCENTER_BUY })}<div class="body"><section class="pane" style="max-width:820px;margin:0 auto;width:100%">
 <div class="lenses"><span class="lens on">All</span><span class="lens">Files</span><span class="lens">Vows</span></div>
@@ -214,7 +214,7 @@ page('dub', 'purchases', 'Purchases: files bought and vows purchased',
     act({ who: 'Ph', when: 'Fri', kind: 'vow · bought', text: 'A guided walk to the clay pits.', flag: '<span class="small">confirmed: it was kept</span>', aid: 'mact1v5w…2gg' }),
     act({ who: 'Ph', when: 'Thu', kind: 'picture · bought', text: 'A tablet, photographed.', pic: true, aid: 'mact1p9p…1pc' }),
   ])}</div></section></div>`,
-  { group: 'Feeds', before: ['edubba/web-dub-sealed-and-vow.png'], note: 'his idea, a “maybe”' });
+  { group: 'Feeds', before: ['edubba/web-dub-sealed-and-vow.png'], note: 'decided: a third part of the switch' });
 
 const CONVS = (on) => `<aside class="convs"><div class="input search">Find a conversation…</div>
 ${[['Pa', 'Pa', 'Thursday then.', '09:40', 1], ['Ph', 'Ph', 'Sent you the photos.', '08:10', 1], ['Machine', 'Machine, allegedly', 'Done: posted under the grant.', 'Mon', 0], ['T', 'T', 'Thanks for the walkthrough.', 'Sun', 0]].map(([k, n, l, w, c]) => `<div class="conv${k === on ? ' on' : ''}"><span class="dot alt">${n[0]}</span><div><div class="n">${n}${c ? '<span class="cnt">1</span>' : ''}</div><div class="l">${l}</div></div><span class="w">${w}</span></div>`).join('')}

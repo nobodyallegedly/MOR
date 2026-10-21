@@ -102,7 +102,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 23. The tiles are a pastel wash over black, and the full pastel solid is kept for the open tab, the main button and the selected part. I read "still dominantly black" as winning over "big solids" for tiles this large. *Decided by Nobody, allegedly, 21 October 2026 (question 8): "Yes, they're not agressive, I like it."*
 24. The change of keys as five steps: the words · read back · signed · new chain paper (1 of 2) · new signing words (2 of 2). Each set is shown once, then three words are asked back.
 25. The quiet door to Paper: a plain card with "Open Paper" / "Not now", and nothing else on the screen.
-26. **A Purchases tab in Dub**, from your answer to question 6 ("Maybe dub needs a 'purchases' tab, a way to quickly see files bought and vows purchased"). Drawn as a third part of the top switch, Public · Private · Purchases, holding one feed box of files bought and vows purchased, with All · Files · Vows above it (`dub-purchases`). Tagged: you said "maybe".
+26. **A Purchases tab in Dub**, from your answer to question 6 ("Maybe dub needs a 'purchases' tab, a way to quickly see files bought and vows purchased"). Drawn as a third part of the top switch, Public · Private · Purchases, holding one feed box of files bought and vows purchased, with All · Files · Vows above it (`dub-purchases`). *Decided by Nobody, allegedly, 21 October 2026 (question 11): "Yes, it fits." Tag removed; Dub's switch reads Public · Private · Purchases on every screen.*
 
 ## 3. Every function of today, and where it lives in the new screens
 
@@ -139,7 +139,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 | Dub | Long-form document link | Feed post | Act card, a link to the reader (`dub-home`, T's card) |
 | Dub | Tip: prepare for Damgar, or pay under the lane | Post › Tip | Act menu › Tip → Damgar's panel inside Dub (decided) |
 | Dub | Pay-per-view: seal a post with a price | Public fold | Removed (decided) |
-| Dub | Files bought and vows purchased, seen at a glance | Signing › Vows you bought; the feed | Purchases, a third part of the switch † "maybe" (`dub-purchases`) |
+| Dub | Files bought and vows purchased, seen at a glance | Signing › Vows you bought; the feed | Purchases, a third part of the switch (decided, question 11) (`dub-purchases`) |
 | Dub | Buy a sealed post or a vow | Feed box › Buy it, under the lane | Act menu › Buy † |
 | Dub | Confirm / contest a vow bought | Signing › Vows you bought | The vow's act menu, below a line: Confirm: it was kept / Contest it…, shown only on vows the identity bought (decided, question 5) (`dub-vow-menu`); Edubba › Vows |
 | Dub | Ask someone to pay you | Private fold | Private typing box › + Ask to be paid † |
@@ -227,7 +227,7 @@ No function of today was dropped from the pictures. The decided removals are Dub
 8. **The tiles' fill: pastel enough?** The tiles are a pastel wash over black; full pastel is kept for the open tab, the main button and the selected part. *Lean: as drawn. Say "more" and the tiles take a stronger wash.* **Answered, 21 October 2026: "Yes, they're not agressive, I like it."** As drawn.
 9. **Collective Y's tabs (Act, Members, Money, Keepers, To sign): do they match your sketch?** *Lean: they follow today's folds; your sketch wins.* **Answered, 21 October 2026: "No, it's fine, building is like working with clay… the more you move forward the more it gets defined."** Kept as drawn.
 10. **The runner and lines of acts.** When the runner signs for Dub, it signs on its own line per app; Kišib's change of keys already finds every line. *Lean: say so in the runner cMIP. The core already allows an identity several lines (Identity, "Sequence"), so it is not a question for the MOR lead.* **Answered, 21 October 2026: "Yes, good idea."** For the runner cMIP: the runner keeps its own line of acts for each app it signs for.
-11. **Purchases in Dub: a third part of the top switch (Public · Private · Purchases)?** Raised in your answer to question 6 ("Maybe dub needs a 'purchases' tab"). Drawn in `dub-purchases`. *Lean: yes, as drawn; the switch stays the one place to move between Dub's views.*
+11. **Purchases in Dub: a third part of the top switch (Public · Private · Purchases)?** Raised in your answer to question 6 ("Maybe dub needs a 'purchases' tab"). Drawn in `dub-purchases`. *Lean: yes, as drawn; the switch stays the one place to move between Dub's views.* **Answered, 21 October 2026: "Yes, it fits."** As drawn.
 
 ## For the MOR lead
 
