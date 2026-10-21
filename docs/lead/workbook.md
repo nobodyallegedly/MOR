@@ -30,6 +30,8 @@ The MOR lead keeps the core: the core texts (MICS, six MIRs, freeze test suite),
 | S7 | Fixes; the step 17 rehearsal; the freeze ("if the fixes are not gigantic"); the first two acts of the frozen protocol, "Thank you for the shower…" with a photograph of the Earth, then the full text formatted (build brief). | S6 | — |
 | S8 | dubsar.org for the release (H41 to H44, H62; short IDs with the full form on click; "a research and an art project"; the companion text); main's protection tightened when the repository goes public. | Can run beside S5 or S6 | — |
 
+**The target (Nobody, allegedly, 21 October 2026): "If we can be ready with the C verifier a week from now, it's perfect."** Working back: S1b running 21 October; S2 (code and vectors, the heaviest, may need two sessions) 22 to 24 October; S4, the C box, sealed by the lead 25 October; S5, the C verifier, building 25 to 28 October; Fable's review on a Thursday once the Dubsar team has finished its week's work (Nobody, allegedly: "It's ok, if fable comes a bit later, as long as Dubsar team has done burning tokens next week"): 29 October at the earliest. The risk is S2; no step is rushed to keep the date.
+
 **Why S1 starts before the Suite lead's fixes are known** (the lead's reading, 21 October): the handover asked the drafts to wait for them, so that the C session sees everything. What the C session sees is fixed at S4, the snapshot, not at S1. S1's texts can take a later core item as a small change before S4; waiting would leave the budget idle. If a Suite item turns out large, S1's work is not lost.
 
 ## How a decision is recorded (the same turn)
