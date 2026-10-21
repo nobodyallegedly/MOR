@@ -12,7 +12,7 @@ Some marks recur:
 
 - *Client conformance:* a duty or permission of clients (the owner's client, a reader's client, a key Module). The protocol cannot check it from acts alone, so it is stated for builders.
 - *Stated cost:* a weakness the rules accept knowingly, written down so nobody mistakes it for an oversight.
-- **Re-homed without audit:** an answer that rests on the verifier's own failed attempt to reach a home. It is said, and nothing binding rests on it (the paragraph after rule 35).
+- **Re-homed without audit:** an answer that rests on the verifier's own failed attempt to reach a home. It is said, and nothing binding rests on it ("Every verifier gives the same answer", after rule 35).
 
 The MIR has four parts. Part one is an identity as it runs most of the time: genesis, signing, everyday acts, homes and receipts, a rotation and what it keeps. Part two is the rare cases: chain signatures, succession, competing rotations, homeless rotations, escape with both keys, finality, and audit. Part three is the encoding and the act formats, for reference. Part four is the tasks, the reasoning, the parameters and the freeze scenarios.
 
@@ -24,7 +24,7 @@ The identity hash is the identity. It never changes. Keys are only the pens that
 
 ## Dependencies
 
-None beneath it. Identity defines the envelope as far as it needs it; the Envelopes MIR completes it. It refers upward in two places only: acknowledgements (Envelopes) and keeper records (Agreements) can give an act standing after a rotation. Nothing in this MIR requires a client to hold data from a higher layer: every rule here is decided from identity chains, receipts, summaries and the acts a verifier already holds.
+None beneath it. Identity defines the envelope as far as it needs it; the Envelopes MIR completes it. Its rules depend upward in two places only: acknowledgements (Envelopes) and keeper records (Agreements) can give an act standing after a rotation. Nothing in this MIR requires a client to hold data from a higher layer: every rule here is decided from identity chains, receipts, summaries and the acts a verifier already holds.
 
 ## Words used in this MIR
 
@@ -65,7 +65,7 @@ None beneath it. Identity defines the envelope as far as it needs it; the Envelo
 - **Homeless rotation.** A rotation signed with the current chain key that names new homes and counts without receipts from the old ones, when those homes are gone.
 - **Closure.** A declaration, carried in a rotation of a home's operator, that the home stops serving every identity.
 - **Contested.** The word names four things, each said with its own noun:
-  - **a contested position** of an identity chain: no rotation counts there while a conflict stands, because competing rotations each miss the home rule (rule 40), because one home's two receipts there conflict (rule 44), or because two rotations are served there for a self-hosted identity (rule 4); later positions are not evaluated meanwhile ("Which rotation counts", step 5). It is never frozen: the conflict ends as rules 40 and 44 say, except at a self-hosted identity, where nothing settles it and the owner leaves by the escape;
+  - **a contested position** of an identity chain: no rotation counts there while a conflict stands, because competing rotations each miss the home rule (rule 40), because one home's two receipts there conflict (rule 44), or because two rotations are served there for a self-hosted identity (rule 4); later positions are not evaluated meanwhile ("Which rotation counts", step 5). It is never frozen: the conflict ends as rule 40 and "Conflicting receipts", step 2, say, except at a self-hosted identity, where nothing settles it and the owner leaves by the escape;
   - **a contested rotation:** one of the rotations competing at a contested position; a rule it changes waits (rule 42);
   - **a contesting receipt:** a receipt voided by its operator's rotation that another identity acknowledged; it is shown as a dispute at its chain position and decides nothing (receipt check 6);
   - **contested routes:** two routes acts naming one predecessor; clients use the last act before the fork ("Which value counts", 3).
@@ -123,16 +123,16 @@ Every act has exactly one signer. An act that needs the agreement of two identit
 
 #### The verification procedures
 
-The verification procedures are: the checks on every act (this section), genesis (section 1), rotation (section 5), chain signature (section 7), everyday acts (this section), receipt (section 4), conflicting receipts (section 9), log summaries and audits (section 13), the homeless procedure (section 10), objection and absence statement (section 10), resolving an operator (section 4), which rotation counts (section 5), and which value counts: declarations, succession, routes, names and links (section 3). Each stands beside the rules it serves. A verifier runs the steps of each procedure in order. Any failure makes the act invalid. A check the verifier cannot run, because it does not hold an act the check needs, makes the act unknown, not invalid (the paragraph after rule 35).
+The verification procedures are: the checks on every act (this section), genesis (section 1), rotation (section 5), chain signature (section 7), everyday acts (this section), receipt (section 4), conflicting receipts (section 9), log summaries and audits (section 13), the homeless procedure (section 10), objection and absence statement (section 10), resolving an operator (section 4), which rotation counts (section 5), and which value counts: declarations, succession, routes, names and links (section 3). Each stands beside the rules it serves. A verifier runs the steps of each procedure in order. Where a procedure does not say what a failure means, the failure makes the act invalid. A check the verifier cannot run, because it does not hold an act the check needs, makes the act unknown, not invalid ("A verifier that cannot tell answers unknown", after rule 35).
 
 #### Rule 5. The verifier runs the checks
 
-A verifier MUST run the verification procedures of this MIR. In particular, it MUST check that the signature is valid for the key it names, and that the binding names an act in the signer's identity chain that bound that key.
+A verifier MUST run the verification procedures of this MIR. In particular, it MUST check that the signature is valid for the key it names, and that the binding names an act in the signer's identity chain that bound that key, or, for a scoped key, what everyday check 2 says.
 
 
 #### Rule 6. A signing key never adds to the identity chain
 
-A signing key MUST NOT sign acts that add to the identity chain.
+A signing key MUST NOT sign acts that add to the identity chain, save the genesis that declares it (rule 1).
 
 #### Rule 7. A chain key signs only rotations and chain signatures
 
@@ -160,7 +160,7 @@ A client MUST implement every MIR that defines an act it acts on. A client that 
 These run on every act.
 
 1. Decode the act; reject it unless it is deterministic CBOR in the Envelopes MIR's shape.
-2. Check that it is public: its content key is on the outside, and it opens the inside, which matches the inside commitment.
+2. Check that it is public, save a private link (section 3): its content key is on the outside, and it opens the inside, which matches the inside commitment.
 3. Compute the act id from the outside.
 4. Check that the scheme is one this client implements and the signature is valid for the act id under the key in the signature. A scheme this client does not implement makes the act unknown, not invalid.
 
@@ -188,7 +188,7 @@ A link's claim, confirmation and termination (types 6 to 8) may instead be priva
 - A link voided by a rotation is void whether or not it was fetched: the rotation is judged first.
 - A private link act signed by a scoped key is invalid (rule 8).
 
-Only key holders can tell a private act's type, so a verifier that opens a private Identity act of any other type refuses it.
+Only key holders can tell a private act's type, so a verifier that opens a private Identity act of any other type treats it as invalid.
 
 *A link carries no key event, so no home or auditor needs to open it to follow an identity's keys. Its content stays private, but its existence is public, so an owner whose stolen key confirmed a link sees an act they did not write and can rotate; a link shown only to one party would let a thief use the key and leave nothing to notice. Stated cost: anyone can see that a private link act exists, never with whom.*
 
@@ -486,7 +486,7 @@ A succession to a MOR identity is declared by the rotation and confirmed by the 
 
 A succession to another protocol is confirmed as that protocol's link cMIP says.
 
-*A link needs both sides, "otherwise anyone could claim to be anyone" (rule 14); a succession declared by one side alone would let a stranger's rotation name a well-known identity as its successor, and pass a collective's seat, through Agreements' fallback (rule 84), to an identity that never agreed to take it. Agreements' fallback passes a seat only to a confirmed successor, as a nomination.* *The successor confirms after the rotation, since the confirmation names it: at any time before the succession is used, usually at once, the two arranging it together, or later, even after the owner is gone, since it needs nothing from the owner.* *Stated cost: confirmation does not stop a thief holding the chain key from naming, and confirming, an identity of the thief's own; that is the cost of a lost chain key.*
+*A link needs both sides, "otherwise anyone could claim to be anyone" (rule 14, and the reasoning on links); a succession declared by one side alone would let a stranger's rotation name a well-known identity as its successor, and pass a collective's seat, through Agreements' fallback (rule 84), to an identity that never agreed to take it. Agreements' fallback passes a seat only to a confirmed successor, as a nomination.* *The successor confirms after the rotation, since the confirmation names it: at any time before the succession is used, usually at once, the two arranging it together, or later, even after the owner is gone, since it needs nothing from the owner.* *Stated cost: confirmation does not stop a thief holding the chain key from naming, and confirming, an identity of the thief's own; that is the cost of a lost chain key.*
 
 *Presentation, for clients:* an owner's client tells the owner when the successor they named has not yet confirmed.
 
@@ -715,13 +715,13 @@ A signature always signs the 32-byte act id. SLH-DSA signatures use the context 
 | --- | --- | --- |
 | `mid` | an identity: a person's, a collective's, an agent's | its 32-byte identity hash |
 | `mact` | an act (a vow, an offer, an agreement and a publication are acts) | its 32-byte act id |
-| `mkey` | a public key, signing or encryption | Identity's `[scheme, key]`, in deterministic CBOR |
+| `mkey` | a public key, signing or encryption | Identity's `[scheme, key]`, or for an encryption key the Envelopes MIR's `enc-key`, in deterministic CBOR |
 | `mspec` | a specification: a MIR, a cMIP, a Module or a MIP | its 32-byte spec hash |
 | `mwork` | a work: the hash of a file's bytes | its 32-byte work hash |
 
-*A label says what was hashed, not what the thing means: a label per meaning would grow with every type, and would claim what the encoding cannot check. What an object is beyond its kind, a reader learns by looking it up, and the app shows it.*
+*A label says what was hashed, not what the thing means: a label per meaning would grow with every type, and would claim what the encoding cannot check. What an object is beyond its kind, a reader learns by looking it up, and the client shows it.*
 
-**A reader refuses, saying why:** a checksum that does not hold (a character mistyped, swapped, added or missing: the string was cut or mistyped); mixed capitals and small letters; a label this section does not define; data of the wrong length or shape for its label; and **a string of another kind than the one asked**, naming both ("this is an act (mact), not an identity (mid)").
+**A reader refuses, saying why:** a checksum that does not hold (a character mistyped, swapped, added or missing: the string was cut or mistyped); mixed capitals and small letters; a label neither this section nor a specification the reader implements defines; data of the wrong length or shape for its label; and **a string of another kind than the one asked**, naming both ("this is an act (mact), not an identity (mid)").
 
 **No form for any secret.** No label writes a private key, a seed or a content key: signing words stay words, in the form the Module that carries an identity defines, and nothing secret can look like something safe to paste.
 
@@ -731,7 +731,7 @@ A signature always signs the 32-byte act id. SLH-DSA signatures use the context 
 
 **A kind a cMIP defines** may write its own objects in the same form under a label of its own, written in its text, never one of the five above.
 
-*Stated costs: the form is as long as hexadecimal for a hash (64 characters for an identity), not shorter; BIP-350's guarantee to catch any four errors holds for strings up to 90 characters, which every label but an encryption key's (`mkey` of an X-Wing key, about 1,950 characters) stays within; past it, an error is still caught but for one string in about a billion. A label is a short word in English letters, chosen to read plainly in code.*
+*Stated costs: the form is about as long as hexadecimal for a hash (62 characters for an identity, against 64), not shorter; BIP-350's guarantee to catch any four errors holds for strings up to 90 characters, which every label but an encryption key's (`mkey` of an X-Wing key, about 1,950 characters) stays within; past it, an error is still caught but for one string in about a billion. A label is a short word in English letters, chosen to read plainly in code.*
 
 ### The envelope
 
