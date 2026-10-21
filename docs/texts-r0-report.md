@@ -2,7 +2,7 @@
 
 *21 October 2026, a Dubsar Suite session. Branch `claude/texts-r0-airgap-payment-audio`. Finding F370 (Dubsar Suite). Author: Nobody, allegedly. Every cMIP and Module is the Dubsar Suite lead's ("Modules and cMIPs are handled by the suite lead. The idea is that it is not core."); nothing in `spec/` was changed.*
 
-*Read with:* F361 and F355 (on main), and F362 with `docs/h80-report.md`, which are on pull request 81 (H80 and H79), not yet merged when this was written. This branch cites F362 as that pull request writes it.
+*Read with:* F361 and F355 (on main), and F362 with `docs/h80-report.md` (pull request 81, H80 and H79), merged into this branch before the drafts were checked against Kišib's code, so its order of words (the new chain-key paper written and three words typed back before the change is signed, the signing key's words after the receipts) is the order draft 6 writes.
 
 ## 1. In plain words
 
@@ -109,7 +109,7 @@ CI: a `modules/audio` step beside `modules/video` (`.github/workflows/test.yml`,
 
 ### Records
 
-F370 in the shared log (F367 to F369 were taken on main during the session; F362 is pull request 81's). `cmips/README.md` and `modules/README.md` list the new drafts and `audio/`. No server addresses or keys.
+F370 in the shared log (F367 to F369 were taken on main during the session; F362, pull request 81's, is merged into this branch). `cmips/README.md` and `modules/README.md` list the new drafts and `audio/`. No server addresses or keys.
 
 ## 3. For the MOR lead
 
