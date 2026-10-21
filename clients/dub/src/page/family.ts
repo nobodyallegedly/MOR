@@ -1,0 +1,661 @@
+// The family's base page pieces, as Dub drew them before the redesign of
+// 21 October 2026: the untinted base style (`STYLE`) Kišib, Damgar, Ummia
+// and Edubba still lay their tint over, and the pieces of Dub's former
+// Signing tab Edubba still draws (a proposal read in plain words, a share
+// shown once, leaving a collective). Kept as they were until each app moves
+// onto the kit (`clients/kit`); Dub's own page is `view.ts`.
+//
+// Dub's page, as HTML strings, for the program on the Mac and for the web
+// client alike (`web` set). Everything from the program, from relays or
+// typed by the person is escaped.
+//
+// The look (F332): calm and sparse, one column, after Damus and Snort
+// (studied for layout and feel only; no code copied); the visual bible's
+// world: the background #06080c, Inter in light weights, colour only for a
+// layer and at low saturation, red only for a contest, a void act or a
+// stolen key, no glow. Compact posts and a quiet action row: reply, follow,
+// mute. No likes, no zaps, no notification hub: a count on each tab.
+
+import { e } from '../../../manage/src/view.ts';
+import { PUBLISH_WARNING, type Held, type Item, type Line, type Message, type Proposal, type ShareShown, type State, type Suggested, type Who } from '../shapes.ts';
+
+export { e, PUBLISH_WARNING };
+export type { Held, Item, Line, Message, Proposal, ShareShown, State, Suggested, Who };
+
+export const NAME = 'Dub';
+/** Asked by Nobody, allegedly, for the first screen. Kept equal to `TEST_ONLY` in `dub.ts` (a test checks). */
+export const TEST_ONLY = 'Test identities only, until MOR is frozen';
+
+/**
+ * The web client's banner, on every page it shows (F281: "With risks
+ * stated, for testing purpose only"): for testing only, and both risks in
+ * plain words. It is in the page's HTML itself (`static/web.html`, written
+ * there by the build), outside what the script draws, so it shows even when
+ * the script does not run.
+ */
+export const WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY}. Two risks, in plain words:</p>
+<ol><li>Whoever serves this page's code at the moment an identity is made here could copy its keys.</li>
+<li>This browser's storage, where the identity's signing key is kept, can be lost, or read by what runs in this page.</li></ol>
+<p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div>`;
+
+/** Said wherever the web client keeps the signing key. */
+export const KEPT_SAY =
+  'Its signing key and its encryption key are kept in this browser’s storage (IndexedDB), as they are, not locked: the only lock this page could put on them is one it could open by itself, and so could whatever else runs in this page. Its signing key’s words are the way out: write them down.';
+
+/**
+ * The page's style. Inter, light and regular, bundled and served beside the
+ * page (`../fonts.ts`; F332, "Inter bundled"). Colours: the background and its greys; the Identity
+ * layer's (fingerprints) a grey-blue, the Envelopes layer's (what is sealed)
+ * a grey-violet, both at low saturation; red only for a contest, a void act
+ * or a stolen key. No shadow, no glow.
+ */
+export const STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
+@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+:root{color-scheme:dark;--bg:#06080c;--raise:#0f131b;--line:#2a313d;--edge:#3a4250;--text:#d6dae1;--soft:#7f8794;--faint:#4c5360;--identity:#8394a8;--envelopes:#9a92ad;--bad:#b4615f;--ok:#7f8794}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font:300 15px/1.55 Inter,"Inter Variable",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:600px;margin:0 auto;padding:0 16px 64px}
+a{color:var(--text);text-decoration:underline;text-decoration-color:var(--faint);text-underline-offset:3px}
+h1,h2,h3{font-weight:400;letter-spacing:.01em;margin:0}
+h2{font-size:17px;margin:28px 0 10px}
+h3{font-size:15px;margin:0 0 6px}
+p{margin:8px 0}
+code,.mono{font:13px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+.small{font-size:13px;color:var(--soft)}
+button{font:inherit;font-size:14px;color:var(--text);background:none;border:1px solid var(--edge);border-radius:999px;padding:5px 14px;cursor:pointer}
+button:hover{border-color:var(--faint)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:400}
+button.quiet,.acts button{border:none;padding:4px 0;color:var(--soft);border-radius:0}
+button.quiet:hover,.acts button:hover{color:var(--text)}
+input,textarea{font:inherit;color:var(--text);background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px;width:100%}
+input:focus,textarea:focus{outline:none;border-color:var(--faint)}
+textarea{min-height:3.2em;resize:vertical}
+select{font:inherit;color:var(--text);background:var(--raise);border:1px solid var(--edge);border-radius:10px;padding:8px 10px}
+label{display:block;margin:12px 0 4px;font-size:13px;color:var(--soft)}
+.row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.grow{flex:1}
+.row.tight{margin:0}
+input.pet{max-width:14em}
+label.check{margin:0;display:flex;gap:8px;align-items:center}
+label.check input{width:auto}
+.bar{position:sticky;top:0;z-index:2;background:var(--bg);display:flex;align-items:center;gap:12px;padding:14px 0 10px;border-bottom:1px solid var(--line)}
+.mark{font-weight:400;letter-spacing:.06em;font-size:15px}
+.tabs{display:flex;gap:4px;margin:0 auto}
+.tab{border:none;border-radius:999px;color:var(--soft);padding:5px 14px}
+.tab.on{color:var(--text);background:var(--raise)}
+.count{display:inline-block;min-width:1.5em;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--line);color:var(--text);font-size:12px;line-height:1.6;text-align:center}
+.count:empty{display:none}
+.me{border:none;padding:4px 0;color:var(--soft);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fp{font:12px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity)}
+.who{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:14px}
+.who .name{color:var(--text);font-weight:400}
+.who .dn{color:var(--soft)}
+.who .you{color:var(--faint);font-size:12px}
+.compose{padding:12px 14px;margin:14px 0;border:1px solid var(--edge);border-radius:12px;background:var(--raise)}
+.compose textarea{border:none;background:none;padding:4px 0;font-size:16px;min-height:2.6em}
+.compose .row{margin:6px 0 0}
+.compose input[type=file]{display:none}
+.compose .to{display:none}
+.compose.addressed .to{display:block}
+.chip{display:inline-flex;gap:8px;align-items:baseline;font-size:13px;color:var(--soft);border:1px solid var(--edge);border-radius:999px;padding:2px 10px}
+.chip button{border:none;padding:0;color:var(--soft)}
+.filters{display:flex;gap:6px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.filters .tab{font-size:13px}
+.post,.msg{padding:12px 14px;margin:10px 0;border:1px solid var(--edge);border-radius:12px;background:var(--raise)}
+.post .text,.msg .text{margin:6px 0 2px;white-space:pre-wrap;overflow-wrap:anywhere}
+.post figure{margin:10px 0 4px}
+.post img{display:block;max-width:100%;height:auto;border-radius:10px;image-orientation:from-image}
+.post .acts{border-top:1px solid var(--line);padding-top:6px}
+.post figcaption,.re{font-size:12px;color:var(--faint)}
+.re{margin-top:2px}
+.doc{display:block;margin:8px 0 2px;padding:10px 12px;border:1px solid var(--edge);background:var(--bg);border-radius:10px;text-decoration:none}
+.doc .small{display:block}
+.acts{display:flex;gap:22px;margin-top:6px}
+.acts button{font-size:13px}
+.flag{font-size:12px;color:var(--soft)}
+.flag.bad{color:var(--bad)}
+.msg.out{margin-left:28px;background:none}
+.msg .sealed{color:var(--envelopes);font-size:12px}
+div.vow-post{border:1px solid var(--edge);border-radius:6px;padding:8px 10px;margin:6px 0}
+img.sealed-picture{display:block;max-width:100%;height:auto;margin:6px 0;border-radius:4px}
+.note{margin:10px 0;padding:10px 12px;border-left:2px solid var(--line);font-size:14px;color:var(--soft)}
+.note.error{border-left-color:var(--bad);color:var(--text)}
+.note.done{border-left-color:var(--faint);color:var(--text)}
+.note.spent{border-left-color:var(--bad);color:var(--text)}
+.note ul{margin:6px 0 0;padding-left:1.1em}
+.note li.bad{color:var(--bad)}
+.empty{padding:28px 0;color:var(--faint);font-size:14px;text-align:center}
+.card{border:1px solid var(--edge);border-radius:14px;padding:14px 16px;margin:12px 0}
+details{margin:10px 0}
+details>summary{cursor:pointer;color:var(--soft);font-size:14px;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"+ ";color:var(--faint)}
+details[open]>summary::before{content:"− "}
+.people{padding:6px 0 10px;border-bottom:1px solid var(--line)}
+.people li{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:6px 0;list-style:none}
+.people ul{margin:0;padding:0}
+.words{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5em,1fr));gap:6px 14px;margin:14px 0;padding:14px;border:1px solid var(--edge);border-radius:12px;font:15px ui-monospace,"SF Mono",Menlo,monospace}
+.words span{white-space:nowrap}
+.words b{display:inline-block;min-width:2em;color:var(--faint);font-weight:400}
+.say{padding-left:1.1em;color:var(--soft);font-size:14px}
+.say li{margin:4px 0}
+.label{display:inline-block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);margin:0 0 4px}
+.typed{display:flex;flex-wrap:wrap;gap:10px}
+.typed label{margin:0}
+.typed input{width:10em}
+.id{font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);overflow-wrap:anywhere}
+dl.facts{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13px;margin:8px 0}
+dl.facts dt{color:var(--faint)}
+dl.facts dd{margin:0;color:var(--soft);overflow-wrap:anywhere}
+.held li{list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.held ul{padding:0;margin:0}
+.banner{margin:12px 0;padding:10px 12px;border:1px solid var(--edge);border-radius:10px;color:var(--soft);font-size:13px}
+.banner p,.banner ol{margin:4px 0}
+.banner ol{padding-left:1.4em}
+#for-testing-only{max-width:568px;margin:12px auto 0}
+@media (max-width:600px){#for-testing-only{margin:12px 16px 0}}
+[hidden]{display:none!important}
+.experimental{margin:10px 0;padding:10px 12px;border:1px solid var(--bad);border-radius:10px;color:var(--soft);font-size:13px}
+.experimental strong{color:var(--text);font-weight:400}
+.proposal{border:1px solid var(--edge);border-radius:12px;background:var(--raise);padding:12px 14px;margin:12px 0}
+.proposal h3{margin:0 0 6px;font-weight:400;font-size:15px}
+.proposal h4{margin:12px 0 4px;font-weight:400;font-size:13px;color:var(--soft)}
+.proposal ul{margin:4px 0;padding-left:1.1em;font-size:14px}
+.proposal .plain{border:1px solid var(--edge);border-radius:10px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;max-height:18em;overflow:auto;background:var(--bg)}
+.proposal .state{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft)}
+.share-number{font-size:15px;margin:8px 0}
+.post.act{padding:8px 14px}
+.post.act .acts{border-top:none;padding-top:0;margin-top:2px}
+details.fold>summary{font-size:15px;color:var(--text);margin:14px 0 4px}`;
+
+/**
+ * Dub's tint (H36): the Text layer's warm pearl, #e9dfcd (chosen by the
+ * Edubba agents session, the visual bible's value not being in the
+ * repository), laid over #06080c at a share, channel by channel (Kišib's
+ * rule): separators 22% (#383736), outlines of cards, fields and buttons 30%
+ * (#4a4946), quiet accents (a hover or focus outline, a fold's mark, a tab's
+ * count) 60% (#8e8980). Red stays for a contest, a void act or a stolen key.
+ * `STYLE` stays the family's untinted base, which the other apps tint with
+ * their own layer; Dub's own page uses `PAGE_STYLE`.
+ */
+export const TINT = { layer: '#e9dfcd', line: '#383736', edge: '#4a4946', accent: '#8e8980' } as const;
+
+export const PAGE_STYLE = `${STYLE}
+:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
+button:hover,.door:hover{border-color:var(--tint)}
+input:focus,textarea:focus{border-color:var(--tint)}
+details>summary::before{color:var(--tint)}
+.bar{border-bottom-color:var(--edge)}
+.correction strong{font-weight:400;color:var(--text)}`;
+
+/** A fold (H34): open or closed by default, the person's choice remembered by the page (`ui.ts`, `applyFolds`). */
+export function fold(key: string, summary: string, body: string, open: boolean): string {
+  return `<details class="fold" data-fold="${e(key)}"${open ? ' open' : ''}><summary>${e(summary)}</summary>${body}</details>`;
+}
+
+export const note = (kind: 'error' | 'done' | 'warn' | 'spent' | '', html: string) => `<div class="note ${kind}">${html}</div>`;
+
+export const lines = (ls: Line[]) => `<ul>${ls.map((l) => `<li class="${e(l.tone ?? '')}">${e(l.text)}</li>`).join('')}</ul>`;
+
+/** An identity: the person's name for it and its display names beside its fingerprint, never instead of it (the naming cMIP, 4.1). */
+export function who(w: Who): string {
+  const dn = w.names.length ? w.names.map((n) => `“${e(n)}”`).join(' / ') : '';
+  const first = w.pet ? `<span class="name" dir="auto">${e(w.pet)}</span>${dn ? `<span class="dn" dir="auto" title="its display name">${dn}</span>` : ''}` : dn ? `<span class="name" dir="auto">${dn.replace(/“|”/g, '')}</span>` : '';
+  return `<span class="who">${first}<span class="fp" title="${e(w.id)}">${e(w.short)}</span>${w.me ? '<span class="you">you</span>' : ''}</span>`;
+}
+
+/** The test notice, under every screen on the Mac. The web client's banner is in its page already (`WEB_BANNER`). */
+function testNotice(web: boolean): string {
+  return web ? '' : `<div class="banner" id="test-only">${TEST_ONLY}. Every key is held in software in this program's folder: a prototype, never for a real identity.</div>`;
+}
+
+/** The top of a screen with no tabs: the identity window, the words, pairing. */
+export function top(web = false, back = false): string {
+  return `<header class="bar"><h1 class="mark">${NAME}</h1><span class="grow"></span>${back ? '<button class="quiet" data-action="back">Back to Dub</button>' : `<span class="small">${web ? 'web client, for testing only' : 'this machine only'}</span>`}</header>
+${testNotice(web)}`;
+}
+
+export function pairing(): string {
+  return `${top()}
+<h2>Pair this browser</h2>
+<p class="small">This page acts for the program running on this machine, which holds the keys. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
+<form id="pair" class="row"><input id="pair-code" class="grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
+<button type="submit">Pair</button></form>
+<div id="pair-status"></div>`;
+}
+
+const via = `<details><summary>Another way to reach an address (rarely needed)</summary>
+<label>One per line, as address=where (for example an onion home at its local port)</label><textarea name="via"></textarea></details>`;
+
+// ------------------------------------------------------------------ the identity window
+
+/**
+ * The identity window (F332): where an identity is made or brought, where
+ * one switches between those held, and where the signing key's words are
+ * shown. The app opens only once an identity is here.
+ */
+export function identityWindow(s: State, web = false, suggested: Suggested = {}): string {
+  const i = s.identity;
+  const held = s.held;
+  const lns = (xs?: string[]) => e((xs ?? []).join('\n'));
+  const make = `<section class="card"><h3>Make a new identity</h3>
+<p class="small">Dub makes it here and shows you 24 words, once: the chain key’s words, to write on paper. Dub keeps nothing of the chain key. Its signing key stays in ${web ? 'this browser' : 'this app'}.</p>
+<form id="begin">
+<label>Its home, where anyone can check it (one address per line)</label><textarea name="homes" required placeholder="https://">${lns(suggested.homes)}</textarea>
+<label>Relays for its posts and its inbox (one per line; empty: its home)</label><textarea name="relays">${lns(suggested.relays)}</textarea>
+<label>A display name, if you like: published right after it is made, shown beside its fingerprint, never instead of it. Anyone can take the same name.</label><input name="name" type="text" maxlength="48" autocomplete="off" placeholder="No name: its fingerprint alone">
+${web ? '' : via}
+<div class="row"><button type="submit" class="primary">Make it</button></div></form></section>`;
+  const bring = `<section class="card"><h3>Bring an identity you have</h3>
+<p class="small">Its ID and its signing key’s words. Dub reads it from its homes and checks the words give its current signing key.</p>
+<form id="bring">
+<label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" required>
+<label>Its signing key’s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
+<label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>
+<label>Relays for its posts (only if it names none; one per line)</label><textarea name="relays"></textarea>
+${web ? '' : via}
+<p class="small">Never type the chain key’s words here: they belong to Kišib, the app where a change of keys is done, and to paper.${web ? ` ${e(KEPT_SAY)}` : ''}</p>
+<div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
+  // H28: with an identity in use, one way out: leave it first; then this window lists those held, and the two doors.
+  const doors = i ? '' : held.length ? `${fold('make', 'Make a new identity', make.replace(/^<section class="card"><h3>Make a new identity<\/h3>/, '<section class="card">'), false)}${fold('bring', 'Bring an identity you have', bring.replace(/^<section class="card"><h3>Bring an identity you have<\/h3>/, '<section class="card">'), false)}` : `${make}${bring}`;
+  const browsers = web
+    ? ''
+    : `<details><summary>Browsers paired with this app</summary><div class="row"><button data-action="code">A code for another browser on this machine</button><button class="quiet" data-action="unpair">Unpair this browser</button></div><div id="code"></div></details>`;
+  return `${top(web, !!i)}
+<div id="status"></div>
+<h2>Identity</h2>
+${i ? current(s, web) : held.length ? '<p class="small">No identity in use. Choose one held here, or make or bring another.</p>' : '<p class="small">Dub opens once an identity is here.</p>'}
+${!i && held.length ? `<div class="held" id="held"><span class="label">Your identities here</span><ul>${held.map((h) => `<li>${who(h.who)}<button data-action="use" data-id="${e(h.id)}">Use this one</button></li>`).join('')}</ul></div>` : ''}
+${doors}
+${browsers}`;
+}
+
+/** The identity in use: its name, its words on request, its line. */
+function current(s: State, web = false): string {
+  const i = s.identity!;
+  const name = i.who.names.join(' / ');
+  return `<div class="card" id="identity">
+<span class="label">In use</span>
+<p>${who(i.who)}</p>
+<p class="id">${e(i.form)}</p>
+<p class="small">The same ID in hexadecimal, as before: <span class="fp">${e(i.grouped)}</span></p>
+<div class="row"><button class="quiet" data-action="copy" data-id="${e(i.form)}">Copy ID</button><button class="quiet" data-action="copy" data-id="${e(i.where)}" title="${e(i.where)}">Copy ID with where it lives</button></div>
+<p class="small">Someone on other homes and relays finds you by the second: it carries one of your homes and one relay, as hints (H38). Follow and To… take either, or an ID with a home address beside it.</p>
+<form id="name"><label>Your display name: shown beside your fingerprint, never instead of it. Anyone can take the same name.</label>
+<div class="row"><input class="grow" name="name" maxlength="48" autocomplete="off" value="${e(name)}" placeholder="No name: your fingerprint alone"><button type="submit">Save</button></div></form>
+<details data-fold="lane"><summary>Paying from Dub: a lane from Damgar</summary>
+<ul class="say">${LANE_SAY_SHOWN.map((t) => `<li>${e(t)}</li>`).join('')}</ul>
+<div id="lanes"><p class="small">Reading the lanes…</p></div>
+<form id="lane" class="compose"><input name="label" value="${web ? 'Dub on the web' : 'Dub on this computer'}" maxlength="80" autocomplete="off">
+<div class="row tight"><input name="cap" inputmode="numeric" class="pet" placeholder="At most, per payment" required><select name="unit">${unitOptions(s.units)}</select></div>
+<label class="small">Until (optional), judged on a timestamp clock: its ID</label><div class="row tight"><input name="until" type="datetime-local"><input name="clock" class="grow" placeholder="the clock’s ID" spellcheck="false"></div>
+<div class="row"><button type="submit">Ask Damgar for this lane</button></div></form></details>
+<div class="row"><label class="small check"><input type="checkbox" id="signing-on" ${i.signing ? 'checked' : ''}> Signing: sign agreements of real collectives here. Even more experimental than Dub itself; off unless you turn it on.</label></div>
+<div class="row"><button data-action="carry">Show the signing key’s words</button><button data-action="leave">Switch identity</button><button class="quiet" data-action="forget" data-id="${e(i.id)}">Forget it here</button></div>
+<p class="small">Switch identity: Dub leaves this one first (its keys stay here), then opens this window to choose another, or make or bring one.</p>
+<div id="carry"></div>
+<details data-fold="line"><summary>This app’s line, and where it lives</summary>
+<dl class="facts"><dt>Made</dt><dd>${i.kind === 'made' ? 'Here. Its chain key was shown once as words, and is kept nowhere here.' : 'Elsewhere, brought here by its signing key’s words. Its chain key is not here.'}</dd>
+${i.oldChainKey ? '<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app’s folder, unused and untouched. Kišib changes keys from paper words only, never from this folder.</dd>' : ''}
+<dt>Private messages</dt><dd>${i.encryption ? 'Its encryption key is here: its private messages open here.' : 'No encryption key here: its private messages cannot be opened here.'}</dd>
+<dt>Homes</dt><dd>${e(i.homes.join(', '))} <span class="small">(changed only with the chain key: in Kišib, “Change an identity’s keys”)</span></dd>
+<dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd>
+<dt>This app's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
+<p class="small">If the signing key is ever changed (in Kišib, with the chain key’s words), that change must keep this line, or the posts made here become void: take the line above to it.</p></details>
+<details data-fold="relays"><summary>Change its relays</summary>${i.kind === 'made'
+    ? `<form id="relays" class="compose"><label>Its relays, one per line: where its acts are found and its inbox is</label><textarea name="relays">${e(i.relays.join('\n'))}</textarea><div class="row"><button type="submit">Read it back</button></div></form><div id="relays-review"></div>`
+    : '<p class="small">This identity was brought here: Dub publishes no routes for it (a second writer would fork them). Change its relays in the app that made it.</p>'}
+<p class="small">Its homes are named in its identity chain and change only with the chain key: in Kišib, “Change an identity’s keys”, from the chain key’s paper.</p></details>
+</div>`;
+}
+
+/** The chain key's words, shown once (F332, amended), with no question beside them: three are asked only once they are hidden (H3). */
+export function words(ws: string[], say: string[], web = false): string {
+  return `${top(web)}
+<h2>The chain key’s words</h2>
+<ul class="say">${say.map((s) => `<li>${e(s)}</li>`).join('')}</ul>
+<div class="words" id="words">${ws.map((w, i) => `<span><b>${i + 1}.</b>${e(w)}</span>`).join('')}</div>
+<div class="row"><button class="primary" data-action="written">I have written them down</button><button class="quiet" data-action="abandon">Start again</button></div>
+<p class="small">Once you go on, the words are hidden, and three of them are asked back.</p>`;
+}
+
+/** Three words typed back, the words hidden (H3: "it is useless if the words are still displayed when asked"). */
+export function typeBack(positions: number[], web = false): string {
+  return `${top(web)}
+<div id="status"></div>
+<h2>Three of the chain key’s words</h2>
+<p class="small">From what you wrote down. Nothing is published until these three are right.</p>
+<form id="confirm"><div class="typed">${positions
+    .map((p) => `<label>Word ${p} <input name="w${p}" type="text" autocomplete="off" spellcheck="false" required></label>`)
+    .join('')}</div>
+<div class="row"><button type="submit" class="primary">Go on</button><button type="button" class="quiet" data-action="abandon">Start again with a new identity</button></div></form>`;
+}
+
+/** The signing key's words, on request (the carry Module, draft 2, 3.2 and 3.3). */
+export function carry(c: { grouped: string; words: string[]; say: string[] }): string {
+  return `<div class="card"><span class="label">The signing key’s words</span>
+<p class="id">${e(c.grouped)}</p>
+<ul class="say">${c.say.map((s) => `<li>${e(s)}</li>`).join('')}</ul>
+<div class="words" id="carry-words">${c.words.map((w, i) => `<span><b>${i + 1}.</b>${e(w)}</span>`).join('')}</div>
+<div class="row"><button data-action="hide-carry">Hide them</button></div></div>`;
+}
+
+// ------------------------------------------------------------------ the app: two tabs
+
+export function app(s: State, web = false): string {
+  const i = s.identity!;
+  return `<header class="bar"><h1 class="mark">${NAME}</h1>
+<nav class="tabs"><button class="tab on" data-tab="public">Public<span class="count" id="count-public"></span></button><button class="tab" data-tab="private">Private<span class="count" id="count-private"></span></button>${i.signing ? '<button class="tab" data-tab="signing">Signing<span class="count" id="count-signing"></span></button>' : ''}</nav>
+<button class="me" data-action="window" title="The identity window">${who(i.who)}</button></header>
+${testNotice(web)}
+<div id="spent"></div>
+<div id="status"></div>
+<section id="public">
+<form id="post" class="compose">
+<div id="replying"></div>
+<textarea name="text" required placeholder="Write something public"></textarea>
+<div class="to"><input name="to" list="followed" autocomplete="off" spellcheck="false" placeholder="To an identity: someone you follow, or its ID (a public message, left in its inbox too)"></div>
+<div class="row"><label class="quiet-file"><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"><span class="small" data-action="pick">Picture</span></label><button type="button" class="quiet" data-action="address">To…</button><span class="grow small" id="picked"></span><button type="submit" class="primary">Post</button></div>
+</form>
+${sellForm(s.units)}
+<div class="filters"><button class="tab on" data-filter="all">Everyone</button><button class="tab" data-filter="toyou">To you<span class="count" id="count-toyou"></span></button><button class="tab" data-filter="relay" title="Every public act at this identity’s relays, newest first">Relay</button><span class="grow"></span><button class="quiet" data-action="feed">Look again</button></div>
+${people(s)}
+<div id="feed"><p class="empty">Reading the feed…</p></div>
+</section>
+<section id="private" hidden>
+<form id="message" class="compose">
+<input name="to" list="followed" autocomplete="off" spellcheck="false" placeholder="To: someone you follow, or an identity’s ID" required>
+<textarea name="text" required placeholder="Write something private"></textarea>
+<div class="row"><span class="grow small">Sealed to them: only they can open it.</span><button type="submit" class="primary">Send</button></div>
+</form>
+<details class="fold" data-fold="askpaid"><summary>Ask someone to pay you</summary><form id="askpaid" class="compose"><input name="to" autocomplete="off" spellcheck="false" placeholder="Who: an identity’s ID" required>
+<div class="row tight"><input name="value" inputmode="numeric" class="pet" placeholder="Amount" required><select name="unit">${unitOptions(s.units)}</select></div><input name="whatFor" placeholder="What for (optional)">
+<p class="small">${e(MONEY_SAY)} A request is not a debt: they may pay it, accept it as a debt, or decline.</p><div class="row"><button type="submit" class="primary">Prepare it for Damgar</button></div></form></details>
+<details class="fold" data-fold="payments"><summary>Payments, under the lane</summary><div id="payments"><p class="empty">Reading…</p></div></details>
+${i.encryption ? '' : `<div class="note">No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.</div>`}
+<div id="signing-waiting"></div>
+<div id="inbox"><p class="empty">Reading the inbox…</p></div>
+</section>
+${
+  i.signing
+    ? `<section id="signing" hidden>
+<div class="experimental"><strong>Even more experimental</strong>${e(SIGNING_LABEL.slice('Even more experimental'.length))}</div>
+<div id="signing-list"><p class="empty">Reading the proposals…</p></div>
+<h2>Vows you bought</h2><div id="vows-bought"><p class="empty">Reading…</p></div>
+</section>`
+    : ''
+}`;
+}
+
+/** Said at the top of the Signing tab (`signing.ts`, SIGNING_SAY), word for word. */
+export const SIGNING_LABEL =
+  'Even more experimental than Dub itself. Here you sign agreements for real collectives: founding one, changing its members, its releases. A signature binds you, and it is public. Read every proposal in full before signing; when in doubt, decline.';
+
+const STATE_OF: Record<string, string> = { signed: 'Signed by you', declined: 'Declined' };
+
+/** One proposal, read in plain words from the exact bytes of the act it names, with what can be done. */
+export function proposal(p: Proposal): string {
+  const r = p.reading;
+  const head = `<h3>${e(r?.title ?? 'A proposal')}</h3><p class="small">From ${who(p.from)}${p.collective ? `, for the collective <span class="fp" title="${e(p.collective)}">${e(p.collective.slice(0, 8))}…${e(p.collective.slice(-4))}</span>` : ''}. Act <span class="fp" title="${e(p.act)}">${e(p.act.slice(0, 8))}…${e(p.act.slice(-4))}</span>.</p>
+<p class="small">Their words with it:</p><div class="plain">${e(p.text)}</div>${p.later.map((t) => `<div class="plain">${e(t)}</div>`).join('')}`;
+  if (!r) return `<div class="proposal" data-thread="${e(p.thread)}">${head}${note('error', e(p.problem ?? 'It could not be read.'))}</div>`;
+  const body = `${r.summary.map((x) => `<p>${e(x)}</p>`).join('')}
+${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines(x.lines)}`).join('')}
+${r.plain.map((x) => `<h4>${e(x.heading)}</h4><p class="small">As plain text, character for character; any invisible control is shown as &lt;U+…&gt;.</p><div class="plain">${e(x.text)}</div>`).join('')}
+${r.blocking.length ? note('error', `<strong>It cannot be signed here:</strong>${lines(r.blocking.map((text) => ({ text })))}`) : ''}`;
+  const share =
+    p.share === 'none'
+      ? ''
+      : p.share === 'waiting'
+        ? `<p class="small">Your share of the collective’s chain key will arrive once every member has signed and the founder’s Edubba deals the key. Its one-time key waits in this app until then. Dub looks for it by itself while this tab is open.</p><div class="row"><button class="primary" data-action="lookshare">Look for my share</button><button class="quiet" data-action="sharehand" data-thread="${e(p.thread)}">I received my share by hand</button></div>`
+        : p.share === 'ready'
+          ? `<div class="row"><button class="primary" data-action="share" data-thread="${e(p.thread)}">Show my share of the chain key, once</button></div>`
+          : p.share === 'shown'
+            ? shareTypeBack(p.thread, p.positions ?? [])
+            : p.share === 'byHand'
+              ? '<p class="small">Your share came by hand. The one-time key is destroyed.</p>'
+              : '<p class="small">Your share is written down. The one-time key is destroyed: nothing of it is here.</p>';
+  const actions = p.answer
+    ? `<p class="state">${e(STATE_OF[p.answer.verdict])}${p.answer.signature ? ` · signature act <span class="fp" title="${e(p.answer.signature)}">${e(p.answer.signature.slice(0, 8))}…</span>` : ''}</p>`
+    : r.blocking.length
+      ? `<div class="row"><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div>`
+      : `<div class="row"><button class="primary" data-action="accept" data-thread="${e(p.thread)}">Sign it</button><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div><p class="small">Your signature is an act of yours, public: it binds you to exactly what is read above.</p>`;
+  // H34: once answered, the reading folds away (open at a click, remembered); before, it is always shown in full.
+  const read = p.answer ? `<details data-fold="proposal:${e(p.thread)}"><summary>What was proposed, in plain words</summary>${body}</details>` : body;
+  // Rule 70 (F354): a member can always leave alone, from here, once the collective is founded.
+  const leave =
+    p.answer?.verdict === 'signed' && p.collective && (r.kind === 'founding' || r.kind === 'clone') && (p.share === 'received' || p.share === 'byHand')
+      ? p.left
+        ? `<p class="small">You resigned: act <span class="fp" title="${e(p.left)}">${e(p.left.slice(0, 8))}…</span>. It takes effect once the collective registers it.</p>`
+        : `<div class="row"><button class="quiet" data-action="leave-read" data-thread="${e(p.thread)}">Leave this collective…</button></div><div class="leave" data-leave="${e(p.thread)}"></div>`
+      : '';
+  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${read}${actions}${share}${leave}</div>`;
+}
+
+/** Leaving a collective alone, read back before anything is signed (rule 70). */
+export function leaveRead(thread: string, r: { lines: Line[]; digest: string }): string {
+  return `<div class="say-leave">${lines(r.lines)}<div class="row"><button class="primary" data-action="leave-collective" data-thread="${e(thread)}" data-digest="${e(r.digest)}">Sign my resignation</button></div><p class="small">Your resignation is an act of yours, public. Nobody else signs it.</p></div>`;
+}
+
+/** A share of a collective's chain key, shown once (H18), with nothing asked beside it. */
+export function share(s: ShareShown): string {
+  return `<div class="proposal" id="share-shown" data-thread="${e(s.thread)}"><span class="label">The collective’s chain key share</span>
+<p class="share-number">Share <strong>${s.x}</strong> of ${s.holders}; any ${s.threshold} rebuild the key.${s.collective ? ` Collective <span class="fp" title="${e(s.collective)}">${e(s.collective.slice(0, 8))}…${e(s.collective.slice(-4))}</span>.` : ''}</p>
+<ul class="say">${s.say.map((x) => `<li>${e(x)}</li>`).join('')}</ul>
+<div class="words" id="share-words">${s.words.map((w, i) => `<span><b>${i + 1}.</b>${e(w)}</span>`).join('')}</div>
+<p class="small">The dealing’s fingerprint, the same for every member: compare it with theirs. <code>${e(s.fingerprint)}</code></p>
+<div class="row"><button class="primary" data-action="share-written" data-thread="${e(s.thread)}" data-positions="${e(s.positions.join(','))}">I have written share ${s.x} and its 24 words down</button></div>
+<p class="small">Once you go on, the words are hidden, and three of them are asked back.</p></div>`;
+}
+
+/** Three words of a share typed back, the words hidden (as H3). */
+export function shareTypeBack(thread: string, positions: number[]): string {
+  return `<form class="share-back" data-thread="${e(thread)}"><span class="label">Three words of your share</span><p class="small">From what you wrote down. The one-time key is destroyed only once these are right.</p><div class="typed">${positions
+    .map((p) => `<label>Word ${p} <input name="w${p}" type="text" autocomplete="off" spellcheck="false" required></label>`)
+    .join('')}</div><div class="row"><button type="submit" class="primary">Check them</button></div></form>`;
+}
+
+/** Follow and mute (the people cMIP): quiet, folded away. */
+/**
+ * H37: the people this identity follows, offered where an identity is
+ * addressed (Public's To… and the Private message box): each by the name
+ * given here and its display names, the fingerprint always beside them.
+ * Typing or pasting an ID still works: the list only suggests.
+ */
+export function followedList(follows: Who[]): string {
+  return `<datalist id="followed">${follows
+    .map((f) => `<option value="${e(f.id)}" label="${e([f.pet, ...f.names.filter((n) => n !== f.pet)].filter(Boolean).join(' · ') || 'no name')} · ${e(f.short)}"></option>`)
+    .join('')}</datalist>`;
+}
+
+export function people(s: State): string {
+  const i = s.identity!;
+  const row = (w: Who, actions: string) => `<li>${who(w)}<span class="acts">${actions}</span></li>`;
+  return `<details class="people" id="people" data-fold="people"><summary>Following ${i.follows.length}${i.muted.length ? ` · muted ${i.muted.length}` : ''}</summary>
+<form id="follow" class="row"><input class="grow" name="id" autocomplete="off" spellcheck="false" placeholder="Follow an identity: its ID (mid1…), with where it lives if you have it" required><input class="pet" name="name" autocomplete="off" placeholder="Your name for it (sealed)"><button type="submit">Follow</button></form>
+${i.follows.length ? `<ul>${i.follows.map((f) => row(f, `<button data-action="call" data-id="${e(f.id)}">Name</button><button data-action="unfollow" data-id="${e(f.id)}">Unfollow</button>`)).join('')}</ul>` : '<p class="small">Nobody yet. Follow by ID, or from any post or message.</p>'}
+${i.muted.length ? `<span class="label">Muted</span><ul>${i.muted.map((m) => row(m, `<button data-action="unmute" data-id="${e(m.id)}">Unmute</button>`)).join('')}</ul>` : ''}
+<div class="row"><label class="small check"><input type="checkbox" id="publish-list" ${i.list === 'published' ? 'checked' : ''}> Publish whom this identity follows</label></div>
+<p class="small">${i.list === 'published' ? 'Published: anyone can read the IDs it follows. The names you gave them stay sealed.' : 'Private, the default.'} ${
+    i.encryption
+      ? `Whom it follows, with the names you gave, is a private act sealed to this identity and kept at its homes${i.sealed ? ` (version ${i.sealed.version})` : ''}: any app holding this identity reads it; nobody else can. Its homes and relays see only that a private act exists, and roughly how big it is; whoever holds the signing key’s words reads it.`
+      : 'This app holds no encryption key of this identity, so the list stays in this app only.'
+  } Muting stays in this app, always.</p>
+${i.sealed?.forked ? '<p class="small">The list was forked: two apps changed it at once. The longer branch is shown.</p>' : ''}
+</details>
+${followedList(i.follows)}`;
+}
+
+const bad = (standing: string) => /void|contest|invalid|stolen/.test(standing);
+
+/** A post: compact, its action row quiet. A long-form document is not shown: a link opens it in the reader. */
+export function post(p: Item): string {
+  // The relay view (H29): an act that is not a post, named by what it is.
+  if (p.what) {
+    return `<article class="post act" data-post="${e(p.id)}" data-signer="${e(p.who.id)}"><div class="row tight">${who(p.who)}${p.problem ? `<span class="flag">${e(p.problem)}</span>` : ''}</div><div class="small">${e(p.what)} · act <span class="fp" title="${e(p.id)}">${e(p.id.slice(0, 8))}…</span></div>${
+      p.who.me ? '' : `<div class="acts">${p.who.followed ? `<button data-action="unfollow" data-id="${e(p.who.id)}">Following</button>` : `<button data-action="follow" data-id="${e(p.who.id)}">Follow</button>`}<button data-action="mute" data-id="${e(p.who.id)}">Mute</button></div>`
+    }</article>`;
+  }
+  const flag = p.problem ? `<span class="flag ${bad(p.problem) ? 'bad' : ''}">${e(p.problem)}</span>` : '';
+  const answers = p.answers
+    .map((a) => `<div class="re">↳ answering ${a.who ? who(a.who) : '<span class="fp">an act not found</span>'}${a.snippet ? ` · <span dir="auto">${e(a.snippet)}</span>` : ''}</div>`)
+    .join('');
+  // The corrections cMIP (F344): a correction labelled, the original kept as signed and named "corrected by".
+  const correction = p.corrects
+    ? `<div class="re correction"><strong>Correction</strong> of <span class="fp" title="${e(p.corrects)}">${e(p.corrects.slice(0, 8))}…</span>, which stays as signed</div>`
+    : '';
+  const authority = p.authority ? `<div class="re authority${p.authority.backed ? '' : ' warn'}">${e(p.authority.words)}</div>` : '';
+  const correctedBy = p.correctedBy?.length
+    ? `<div class="re corrected">Corrected by ${p.correctedBy.map((c) => `<span class="fp" title="${e(c)}">${e(c.slice(0, 8))}…</span>`).join(', ')}: shown as it was signed</div>`
+    : '';
+  const pics = p.pictures
+    .map((x) =>
+      x.src
+        ? `<figure><img src="${e(x.src)}" width="${x.width}" height="${x.height}" alt=""></figure>`
+        : `<figure><figcaption>A picture not shown: ${e(x.problem ?? 'unknown')}.</figcaption></figure>`,
+    )
+    .join('');
+  const doc = p.doc
+    ? `<a class="doc" href="${e(p.doc.link)}" target="_blank" rel="noopener noreferrer"><span dir="auto">${e(p.doc.title)}</span><span class="small">A long-form document: open it in the reader</span></a>`
+    : '';
+  const acts = [
+    `<button data-action="reply">Reply</button>`,
+    p.who.me ? '' : `<button data-action="tip">Tip</button>`,
+    p.sealed && p.sealed.seller !== p.who.id ? '' : p.sealed && !p.who.me ? `<button data-action="repost">Repost</button>` : '',
+    p.who.me ? '' : p.who.followed ? `<button data-action="unfollow" data-id="${e(p.who.id)}">Following</button>` : `<button data-action="follow" data-id="${e(p.who.id)}">Follow</button>`,
+    p.who.me ? '' : `<button data-action="mute" data-id="${e(p.who.id)}">Mute</button>`,
+    ...p.pictures.filter((x) => x.withdrawable).map((x) => `<button data-action="withdraw" data-publication="${e(x.publication)}">Withdraw picture</button>`),
+  ].join('');
+  return `<article class="post" data-post="${e(p.id)}" data-signer="${e(p.who.id)}">
+<div class="row tight">${who(p.who)}${flag}</div>${authority}${correction}${answers}${correctedBy}
+${p.text && !p.repost ? `<div class="text" dir="auto">${e(p.text)}</div>` : ''}${p.sealed ? sealedBox(p) : ''}${p.vow ? vowBox(p) : ''}${pics}${doc}
+<div class="acts">${acts}</div><div class="tipping"></div></article>`;
+}
+
+/** The units a money draft may name (Damgar's units Modules: round 1, Bitcoin's four), regtest first, as the program lists them. */
+export function unitOptions(units: { hash: string; label: string }[] = []): string {
+  return units.map((u) => `<option value="${e(u.hash)}">${e(u.label)}</option>`).join('');
+}
+
+/** Said where Dub prepares money (F338): prepared here, signed in Damgar. */
+export const MONEY_SAY = 'Prepared here, not signed here: Dub seals a draft to this identity at its homes, and Damgar, holding the same identity, reads it to you and signs it or not. Dub signs no money act and holds no wallet.';
+
+/** A tip on a post: its amount, its unit, what for. */
+export function tipForm(units: { hash: string; label: string }[] = []): string {
+  return `<form class="tip compose"><label>Tip: an amount, in the unit's smallest part</label><div class="row tight"><input name="value" inputmode="numeric" class="pet" required><select name="unit">${unitOptions(units)}</select></div>
+<input name="whatFor" placeholder="What for (optional)"><p class="small">${e(LANE_PAY_SAY)}</p><div class="row"><button type="submit" class="primary" name="how" value="lane">Pay now, under the lane</button><button type="submit" name="how" value="draft">Prepare it for Damgar</button><button type="button" class="quiet" data-action="untip">Cancel</button></div></form>`;
+}
+
+/** Said where a payment is made from Dub (round 2): under its lane, or prepared for Damgar as in round 1. */
+export const LANE_PAY_SAY = 'Pay now: Dub signs it under its lane, within the cap Damgar granted, and shows you the invoice to pay in your wallet (Payments, in the Private tab). Or prepare it for Damgar, which reads it to you and signs it there.';
+
+/** A sealed post (pay-per-view): its price, its words, its state; its text once its key arrived. */
+function sealedBox(p: Item): string {
+  const x = p.sealed!;
+  const repostOf = p.repost ? `<div class="re">↻ ${who(p.repost.by)} reposted ${who(p.repost.of)}’s sealed post</div>` : '';
+  const state =
+    x.state === 'opened' || x.state === 'yours'
+      ? `${x.picture ? `<img class="sealed-picture" src="${e(x.picture)}" alt="The picture, opened">` : `<div class="text" dir="auto">${e(x.text ?? '')}</div>`}<p class="small">${x.state === 'yours' ? 'Yours, sealed: its key is here, delivered to each buyer once your Damgar signs the receipt.' : `Opened: its key arrived from its seller, and its ${x.media === 'picture' ? 'picture' : 'text'} matches the fingerprint it was published with.`}</p>`
+      : x.state === 'paying'
+        ? '<p class="small">Bought: pay it in your wallet (Payments, in the Private tab). Its key arrives once the seller’s Damgar signs the receipt.</p>'
+        : `<p class="small">Sealed: its ${x.media === 'picture' ? 'picture' : 'text'} opens once paid. ${e(x.price)}.</p><div class="row"><button class="primary" data-action="buy" data-publication="${e(x.publication)}" data-seller="${e(x.seller)}"${p.repost ? ` data-repost="${e(p.id)}" data-reposter="${e(p.repost.by.id)}"` : ` data-post="${e(p.id)}"`}>Buy it, under the lane</button></div>`;
+  return `${repostOf}<div class="sealed-post"><span class="label">${x.media === 'picture' ? 'A sealed picture' : 'A sealed post'} · ${e(x.price)}</span>${x.words ? `<p class="small">${e(x.words)}</p>` : ''}${state}${x.problem ? `<p class="small flag">${e(x.problem)}</p>` : ''}</div>`;
+}
+
+/** A vow a post names (round 3): its words, its price, and Buy; once bought, its sale is confirmed or contested in the Signing tab. */
+function vowBox(p: Item): string {
+  const x = p.vow!;
+  const state =
+    x.state === 'yours'
+      ? '<p class="small">Your vow: each buyer confirms or contests their sale.</p>'
+      : x.state === 'bought'
+        ? '<p class="small">Bought: confirm or contest your sale in the Signing tab.</p>'
+        : x.state === 'paying'
+          ? '<p class="small">Bought: pay it in your wallet (Payments, in the Private tab). Then confirm or contest it in the Signing tab.</p>'
+          : x.problem
+            ? ''
+            : `<div class="row"><button class="primary" data-action="buy-vow" data-vow="${e(x.vow)}" data-seller="${e(x.seller)}" data-post="${e(p.id)}">Buy it, under the lane</button></div>`;
+  return `<div class="vow-post"><span class="label">A vow · ${e(x.price)}</span><p dir="auto">${e(x.words)}</p>${state}${x.problem ? `<p class="small flag">${e(x.problem)}</p>` : ''}</div>`;
+}
+
+/** The vows bought here (round 3, the Signing tab): each sale, and Confirm or Contest, the buyer's alone (rule 13). */
+export function vowsBought(vs: { vow: string; seller: string; words: string; price: string | null; paid: boolean; sale: string | null; promise: string | null }[]): string {
+  if (!vs.length) return '<p class="empty">No vow bought here. A vow you buy shows here, to confirm or contest once paid.</p>';
+  return vs
+    .map((x) => {
+      const state = !x.paid ? 'not paid yet' : x.sale === 'confirmed' ? 'confirmed' : x.sale === 'contested' ? `contested${x.promise ? `: “${x.promise}”` : ''}` : x.sale === 'pending' ? 'pending' : 'not seen at the relays yet';
+      const actions =
+        x.paid && x.sale !== 'confirmed' && x.sale !== 'contested'
+          ? `<div class="row"><button class="primary" data-action="vow-confirm" data-vow="${e(x.vow)}">Confirm: it was kept</button></div>
+<form class="vow-contest compose" data-vow="${e(x.vow)}"><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><div class="row"><button type="submit">Contest it</button></div></form>`
+          : '';
+      return `<div class="item" data-vow="${e(x.vow)}"><h3>A vow by ${e(x.seller.slice(0, 8))}…${x.price ? ` · ${e(x.price)}` : ''}</h3><p dir="auto">${e(x.words)}</p><p class="small">Its sale: <strong>${e(state)}</strong>. Confirming signs, in public, your claim of the payment acknowledging the vow; contesting signs a contest naming the sale. Either is public; neither moves any money (Agreements rule 13).</p>${actions}</div>`;
+    })
+    .join('');
+}
+
+/** Sealing a post with a price (pay-per-view, round 2). */
+export function sellForm(units: { hash: string; label: string }[] = []): string {
+  return `<details class="fold" data-fold="sell"><summary>Seal a post with a price</summary><form id="sell" class="compose">
+<textarea name="text" required placeholder="The sealed text: opened by each buyer once paid"></textarea>
+<input name="teaser" placeholder="What everyone sees (optional): “A recipe, sealed.”">
+<div class="row tight"><input name="value" inputmode="numeric" class="pet" placeholder="Price" required><select name="unit">${unitOptions(units)}</select><input name="referral" inputmode="numeric" class="pet" placeholder="Referral %"></div>
+<p class="small">The post is public, its text sealed: an offer sells it at this price; once a buyer’s payment is receipted by your Damgar, Dub delivers its key to them, sealed. A referral share is promised in the offer’s words to the repost a buyer names, paid by your Damgar: a promise in words, not judged (F351).</p>
+<div class="row"><button type="submit" class="primary">Seal it and post it</button></div></form></details>`;
+}
+
+/** A private message, received or sent here. */
+export function msg(m: Message): string {
+  const flag = m.problem ? `<span class="flag ${bad(m.problem) ? 'bad' : ''}">${e(m.problem)}</span>` : '';
+  const acts =
+    m.dir === 'in' && m.who.id
+      ? [
+          `<button data-action="answer" data-id="${e(m.who.id)}">Reply</button>`,
+          m.who.followed ? '' : `<button data-action="follow" data-id="${e(m.who.id)}">Follow</button>`,
+          `<button data-action="mute" data-id="${e(m.who.id)}">Mute</button>`,
+        ].join('')
+      : '';
+  return `<article class="msg ${m.dir}" data-key="${e(m.key)}">
+<div class="row tight">${m.dir === 'out' ? '<span class="small">to</span>' : ''}${who(m.who)}<span class="sealed">sealed</span>${flag}</div>
+${m.text ? `<div class="text" dir="auto">${e(m.text)}</div>` : ''}
+${acts ? `<div class="acts">${acts}</div>` : ''}</article>`;
+}
+
+/** The spent key, said plainly, and the new signing key's words taken (F332, amended). */
+export function spent(say: string): string {
+  return note(
+    'spent',
+    `<p>${e(say)}</p><form id="renew"><label>The new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Use the new words</button></div></form>`,
+  );
+}
+
+/** Said in the identity window, beside the lane (round 2). */
+export const LANE_SAY_SHOWN = [
+  'A lane lets Dub pay by itself, without opening Damgar (a tip, a sealed post), up to a cap per payment, until a date if you give one.',
+  'Dub asks Damgar for it, sealed to yourself; Damgar reads it to you in plain words, and you grant it there. Revoke it in Damgar (Lanes).',
+];
+
+/** The lanes asked here, and where each stands. */
+export function lanesHere(ls: { label: string; state: string; cap: string; until: number | null }[]): string {
+  return ls.length ? `<ul>${ls.map((l) => `<li>${e(l.label)} · ${e(l.state)} · at most ${e(l.cap)} a payment${l.until ? ` · until ${e(new Date(l.until * 1000).toISOString().slice(0, 16).replace('T', ' '))} UTC` : ''}</li>`).join('')}</ul>` : '<p class="small">No lane yet: Dub pays nothing by itself.</p>';
+}
+
+/** Payments signed here under the lane: the invoice to pay in the wallet, and the proof taken back; those done. */
+export function paymentsHere(r: { payments: PaymentShownHere[]; done: PaymentShownHere[]; problems: string[] }): string {
+  const one = (p: PaymentShownHere) => `<article class="msg"><div class="row tight"><span class="small">to</span><span class="fp" title="${e(p.other.id)}">${e(p.other.short)}</span><span class="grow"></span><span class="small">${e(p.amount.said)}</span></div><p class="small">${e(p.stageSaid)}</p>
+${p.pay?.invoice ? `<div class="copy">${e(p.pay.invoice)}</div><button class="quiet" data-action="copy-text" data-text="${e(p.pay.invoice)}">Copy the invoice</button><form class="paid compose" data-key="${e(p.key)}"><input name="proof" required spellcheck="false" autocomplete="off" placeholder="The preimage, from your wallet once paid"><div class="row"><button type="submit" class="primary">Check it and sign the claim, under the lane</button></div></form>` : ''}
+${p.proofs.length ? `<ul class="say">${p.proofs.map((x) => `<li>${x.kind === 'claim' ? 'Claim' : 'Receipt'}: ${e(x.rail.answer)} · ${e(x.how)}</li>`).join('')}</ul>` : ''}</article>`;
+  return `${r.payments.map(one).join('')}${r.done.length ? `<span class="label">Done</span>${r.done.map(one).join('')}` : ''}${!r.payments.length && !r.done.length ? '<p class="empty">No payment made from Dub yet.</p>' : ''}${r.problems.map((x) => `<p class="small">${e(x)}</p>`).join('')}`;
+}
+
+/** A payment as Damgar's code shows it, the part Dub draws. */
+export interface PaymentShownHere {
+  key: string;
+  other: { id: string; short: string };
+  amount: { said: string };
+  stageSaid: string;
+  pay: { invoice?: string; address?: string } | null;
+  proofs: { kind: string; rail: { answer: string }; how: string }[];
+}

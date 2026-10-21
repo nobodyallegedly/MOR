@@ -429,8 +429,11 @@ test('the relay view (H29): every public act at the identity’s relays, newest 
   await cb.ask('post', { text: 'B, not followed by A, second.' });
   await cb.ask('name', { name: 'Bee' });
   type R = { items: Item[]; hidden: number; problems: string[] };
-  let r = await ca.ask<R>('relay');
+  // H55: text and envelope acts by default; the Identity layer (a display name) behind the filter, asked for here.
+  const every = { layers: ['text', 'envelopes', 'identity', 'agreements', 'money', 'development', 'other'] };
+  let r = await ca.ask<R>('relay', every);
   assert.deepEqual(r.problems, []);
+  assert.ok(!(await ca.ask<R>('relay')).items.some((x) => x.what === 'A display name'), 'by default, no display name: text and envelope acts only');
   const posts = r.items.filter((x) => !x.what);
   const i1 = posts.findIndex((x) => x.text === 'B, not followed by A, first.');
   const i2 = posts.findIndex((x) => x.text === 'B, not followed by A, second.');
@@ -442,11 +445,11 @@ test('the relay view (H29): every public act at the identity’s relays, newest 
   assert.ok(r.items.findIndex((x) => x.what === 'A display name' && x.who.id === b.id) < i2 + (r.items.length - posts.length), 'the name, signed last, before the posts');
   assert.ok(!(await feed(ca)).some((x) => x.who.id === b.id), 'the feed itself is unchanged: B is not followed');
   await ca.ask('mute', { id: b.id });
-  r = await ca.ask<R>('relay');
+  r = await ca.ask<R>('relay', every);
   assert.ok(!r.items.some((x) => x.who.id === b.id));
   assert.ok(r.hidden >= 3);
   await ca.ask('post', { text: 'A, after the mute.' });
-  r = await ca.ask<R>('relay');
+  r = await ca.ask<R>('relay', every);
   assert.equal(r.items[0].text, 'A, after the mute.');
   assert.equal(r.items[0].who.id, a.id);
 });
@@ -523,7 +526,7 @@ test('a private message, sealed (F293): opened only by its recipient; the identi
   assert.equal((await inbox(cb)).messages.find((x) => x.key === m.key)!.seen, true);
   // A keeps it as sent.
   const ia = await inbox(ca);
-  assert.ok(ia.messages.some((x) => x.dir === 'out' && x.text === 'Only for B.' && x.who.id === b.id));
+  assert.ok(ia.messages.some((x) => x.dir === 'out' && x.text === 'Only for B.' && x.with === b.id && x.who.id === a.id), 'a message sent: signed by A, in the conversation with B');
   // B's identity, brought into a third Dub by its signing key's words: its private messages open there too.
   const words = (await cb.ask<{ words: string[] }>('carry')).words.join(' ');
   const { c: c3 } = await dub();

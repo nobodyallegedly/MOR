@@ -24,6 +24,10 @@ export interface Who {
   me: boolean;
   followed: boolean;
   muted: boolean;
+  /** Its ID written for people (`mid1…`), what Copy ID copies. */
+  form: string;
+  /** Its ID link (`mid1…?r=…`, with where this app found it): what Copy ID link copies. */
+  link: string;
 }
 
 /** A picture of a post, checked as the JPEG Module and the barebone reader say. */
@@ -39,9 +43,32 @@ export interface Pic {
   withdrawable: boolean;
 }
 
+/** A film a post shows (the video Module, rule 13): played only when asked, its bytes checked first. */
+export interface FilmShown {
+  publication: string;
+  signer: string;
+  size: number;
+  problem: string | null;
+  withdrawable: boolean;
+}
+
+/** A quiet label on a card: answers…, correction of…, signed under a grant, a pick or a nudge and who gave it (H65). `bad`: an alarm. */
+export interface Label {
+  text: string;
+  tone?: 'warn' | 'bad';
+}
+
 /** A post, in the feed or "to you". */
 export interface Item {
   id: string;
+  /** Its ID written for people (`mact1…`): what Copy act ID copies (H49, H68). */
+  form: string;
+  /** When, by the clock this feed names (H54), in words; null where not stamped. */
+  when?: string | null;
+  /** Films it shows (H52). */
+  films?: FilmShown[];
+  /** Quiet labels (H65): a pick or a nudge and who gave it. */
+  labels?: Label[];
   who: Who;
   /** Its standing for its signer's chain, as the core library judges it ("valid" shown as nothing). */
   standing: string;
@@ -76,7 +103,15 @@ export interface Item {
 /** A private message, received or sent here. */
 export interface Message {
   key: string;
+  /** Its ID written for people (`mact1…`), where it opened; empty for a container that did not. */
+  form: string;
   who: Who;
+  /** The conversation it belongs to: the other party (the sender of one received, the first recipient of one sent). */
+  with: string;
+  /** Everyone else it was sealed to (Cc): every recipient sees who else received it. */
+  cc: Who[];
+  /** A collective appended (the appended collective cMIP): shown only where the membership checks; `why` where it did not. */
+  of: { id: string; name: string | null; checked: boolean; why: string | null } | null;
   dir: 'in' | 'out';
   text: string;
   standing: string;
@@ -124,13 +159,58 @@ export interface State {
     signing: boolean;
     follows: Who[];
     muted: Who[];
+    /** The collectives under this identity it can act as (with its own member key), added by ID. */
+    collectives: Collective[];
+    /** The collective it acts as now, or null: itself. */
+    acting: string | null;
+    /** The timestamp clock its feeds are ordered by (H54), or null: none named. */
+    clock: { id: string; form: string; name: string } | null;
   };
+  /** Proposals to sign waiting in this identity's inbox: signed in Edubba, Collectives › To sign (Dub's Signing tab removed, decided). */
+  proposalsWaiting?: number;
+}
+
+/** A collective an identity can act as from here: its member key found at its homes. */
+export interface Collective {
+  id: string;
+  form: string;
+  name: string | null;
+  /** Its member key is here and it holds an area reaching public posts. */
+  available: boolean;
+  why: string | null;
 }
 
 /** Addresses a web client's deployer suggests (`dub.json`), filled in. */
 export interface Suggested {
   homes?: string[];
   relays?: string[];
+}
+
+/** The ways to pay open from Dub, for one payment (decided: three ways). */
+export interface PayWays {
+  lane: { open: boolean; why: string | null; label: string | null; perPayment: string | null; until: number | null; spent: string | null };
+  damgar: { open: boolean; why: string | null };
+  hand: { open: boolean; why: string | null };
+}
+
+/** A file bought or a vow purchased, for Purchases. */
+export interface Purchase {
+  kind: 'file' | 'vow';
+  /** The publication (a file) or the vow's name (a vow): the act its card shows. */
+  id: string;
+  form: string;
+  seller: Who;
+  /** What it is, in a word: text, picture, vow. */
+  what: string;
+  price: string | null;
+  /** Where it stands, in words. */
+  state: string;
+  /** A file opened: its text, or its picture as a data link. */
+  text: string | null;
+  picture: string | null;
+  /** A vow: paid, and its sale as the relays read it; the buyer confirms or contests. */
+  sale?: 'pending' | 'confirmed' | 'contested' | null;
+  paid?: boolean;
 }
 
 /** A proposal to sign, in the Signing tab (H18): the act it names, read in plain words from its bytes. */
