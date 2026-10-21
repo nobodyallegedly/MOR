@@ -10957,6 +10957,7 @@ var Damgar = class {
   collectivePromise(a) {
     return this.serial(async () => {
       const { me, s, book, hints } = await this.ctx();
+      await this.current(me);
       const r = await this.collectivePromiseMake(me, s, hints, a);
       if (r.digest !== a.digest) throw new Error("It is not the promise read back: read it again. Nothing was signed.");
       const text3 = `A promise of the collective ${short2(r.c.id)} to pay ${short2(r.to)} ${r.amount.value.toLocaleString("en")}${a.whatFor.trim() ? `, for ${a.whatFor.trim()}` : ""}: ${r.say.above ? "above its Money lane\u2019s cap, it" : "it"} needs your key too. Read it in your Signing tab, then sign it with your own key for the collective.`;
@@ -13200,11 +13201,16 @@ async function salesTold(me, via2) {
 }
 async function deliverSold(me, sold, a) {
   const out = [];
+  let checked = false;
   for (const x of await salesTold(me, a.via)) {
     const mine = sold[x.publication];
     if (!mine || mine.delivered[x.buyer]) continue;
+    if (!checked) {
+      await a.current();
+      checked = true;
+    }
     try {
-      mine.delivered[x.buyer] = await deliverKey(me, x.buyer, x.publication, mine.key, a);
+      mine.delivered[x.buyer] = await deliverKey(me, x.buyer, x.publication, mine.key, { ...a, current: async () => void 0 });
       out.push(`The key of your sealed ${mine.media === "picture" ? "picture" : "post"} was delivered to ${x.buyer.slice(0, 8)}\u2026, sealed to them: a sale your Damgar signed the receipt for.`);
     } catch (e2) {
       out.push(`The key could not be delivered to ${x.buyer.slice(0, 8)}\u2026 yet: ${message4(e2)}`);
@@ -13213,6 +13219,7 @@ async function deliverSold(me, sold, a) {
   return out;
 }
 async function deliverKey(me, buyer, publication, key, a) {
+  await a.current();
   const hints = list3([...me.f.homes.map((h) => h.hint), ...a.relays]);
   const l = await lookUp(buyer, hints, a.via);
   if (!l.encryptionKey) throw new Error("the buyer publishes no encryption key");
@@ -13564,10 +13571,10 @@ var DubMoney = class {
    * oneself): each a key delivery (Envelopes type 1), sealed to the buyer
    * and left in its inbox (`delivery.ts`, shared with Edubba's Publishing tab).
    */
-  async deliver(me, s) {
+  async deliver(me, s, current2) {
     const sold = await this.store.money(me.id, "sold") ?? {};
     if (!Object.keys(sold).length) return [];
-    const out = await deliverSold(me, sold, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me) });
+    const out = await deliverSold(me, sold, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me), current: current2 });
     await this.store.saveMoney(me.id, "sold", sold);
     return out;
   }
@@ -15259,6 +15266,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
   contestVow(vow, promise) {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
+      await this.current(me);
       return { lines: (await this.money.contestVow(me, s, readId(vow), promise.trim() || null)).map((text3) => ({ text: text3, tone: "ok" })) };
     });
   }
@@ -15276,7 +15284,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
     return this.serial(async () => {
       const { me, s, p } = await this.ctx();
       const inbox = await this.inboxOf(me.id, [.../* @__PURE__ */ new Set([...s.relays, ...me.f.homes.map((h) => h.hint)])], s.via).catch(() => this.inboxPlaces(p));
-      const lines2 = [...await this.money.deliver(me, s), ...await this.money.keysArrived(me, s, inbox)];
+      const lines2 = [...await this.money.deliver(me, s, () => this.current(me)), ...await this.money.keysArrived(me, s, inbox)];
       return { lines: lines2.map((text3) => ({ text: text3, tone: "ok" })) };
     });
   }
@@ -16244,6 +16252,7 @@ function mount(app3, b) {
       const r = await b.ask("payments");
       fill("payments", paymentsHere(r));
     } catch (err) {
+      if ((err instanceof Error ? err.message : String(err)).startsWith(SPENT)) return void await fail(err);
       fill("payments", note("error", e(err instanceof Error ? err.message : String(err))));
     }
   }
