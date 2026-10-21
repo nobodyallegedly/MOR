@@ -20,7 +20,8 @@ The MOR lead keeps the core: the core texts (MICS, six MIRs, freeze test suite),
 
 | # | Session | Waits for | Status |
 | --- | --- | --- | --- |
-| S1 | **Freeze-ready texts** (the clean-up pass): six MIRs, MICS v30, suite v30, the provenance map. Texts only. | — | Prompt ready 21 October (`docs/lead/prompts/s1-freeze-ready-texts.md`), launched by Nobody, allegedly, 21 October afternoon |
+| S1 | **Freeze-ready texts** (the clean-up pass): six MIRs, MICS v30, suite v30, the provenance map. Texts only. | — | Done 21 October, pull request 83, not merged: checklist verified by the lead; about fifty questions, sorted in `docs/lead/s1-questions.md` |
+| S1b | **Technical pass:** the formats S1 found unwritten (`docs/lead/s1-questions.md`, B), written into the freeze-ready drafts. | S1's verdict questions answered where they touch a format | Not written |
 | S2 | **Core aligned, and the vectors:** the core library matching S1's texts (keeper records, rule 33 by anchors, F359, F295's count); suite steps already tested marked run, small tests for the cheap core steps; conformance vectors part 2 (signatures) and verdict vectors for every layer, checked by the Python implementation too. | S1 approved; the Suite lead's items touching the core | Not written |
 | S3 | *Handed to the Dubsar Suite lead (Nobody, allegedly, 21 October: "Modules and cMIPs are handled by the suite lead. The idea is that it is not core."):* the "Dubsar" titles (F356), payment cMIP draft 4 (F355 c), the chain-key signer Module's fresh seed (F361), the regtest quirks kit. | — | Not the MOR lead's |
 | S4 | **The C box** (the lead itself): a new repository holding the freeze-ready texts and vectors, fingerprinted; the C session's prompt. | S1 and S2 merged; the Suite lead's core items in | — |
