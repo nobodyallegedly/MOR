@@ -73,7 +73,7 @@ Draft 3 kept as it is. Each change is marked "new in draft 4 (F355)".
 | Title | "cMIP: Payment" | "cMIP: Dubsar Payments" | F356 (its own example). |
 | The commitment, `fulfils` | "the obligation, agreement, offer or payee-pointer act" | Adds: "for a transfer to oneself, the genesis or rotation declaring the vault paid to" | F355 (c). |
 | The commitment, new item 6 | — (a reading: one's own pointer) | **A transfer to oneself:** payer and payee one identity, `paid-to` `[1, declared-by, entry]`, `fulfils` the same act as `declared-by`, no purchase; any other commitment with that `fulfils` is not one, and the vault's side issues no address for it; draft 3's reading stays valid | F355 (c): needs no payee pointer, and names no flow for money going to the vault. |
-| Verifying, new step 4a | — | Where `fulfils` equals `paid-to`'s `declared-by`: the payer is the payee's identity, it signed, no purchase, **or invalid**; checked from the act alone | So the case is unambiguous for every verifier (question 3). |
+| Verifying, new step 4a | — | Where `fulfils` equals `paid-to`'s `declared-by`: the payer is the payee's identity, it signed, no purchase, **or invalid**; checked from the act alone | So the case is unambiguous for every verifier (question 3: invalid, decided). |
 | New paragraph, judged | — | Shown as "a transfer to your vault": discharges nothing, follows nothing, pays no one; its record kept sealed to its owner | F355 (a)'s screens, said in the text. |
 | Freeze scenarios | — | H46 (F355): to build | `cmips/payment` and Damgar. |
 
@@ -126,8 +126,6 @@ Either way, no verdict changes for anyone else: a transfer to oneself has no cou
 
 *Question 1 (a change of keys from the same paper, as an exception) is answered (Nobody, allegedly, 21 October 2026): "No, it has been decided that the core operates this way, you cannot change the core. At each rotation, two set of keys are created, always." The exception is removed from draft 6 and the seed Modules' drafts.*
 
-*(Question 3 follows.)*
-
 *Question 2 (how long a recording may be) is answered (Nobody, allegedly, 21 October 2026): "Agreed", two hours, the session's lean. Chapter tracks stay refused and both brands are read alike, as written.*
 
-**Question 3. A payment naming your vault declaration but paid by someone else: refused, or ordinary?** Draft 4 says a payment whose "for what" (`fulfils`) is the act that declared the payee's vault must be a transfer to oneself, payer and payee the same, or it is invalid. The other choice reads it as an ordinary payment into someone's vault that fulfils nothing. **My lean: invalid.** One meaning per form, checked from the act alone. Someone paying into your vault names what they pay (a debt, an offer, your pointer), as before.
+*Question 3 (a payment naming the payee's vault declaration but paid by someone else) is answered (Nobody, allegedly, 21 October 2026): (a), invalid, the session's lean. Step 4a stands as written.*
