@@ -3257,10 +3257,40 @@ function linesOf(o) {
       readable: !why,
       card: why ? null : { act: tip, position: ids.length, summary: runningSummary(ids) },
       latest,
+      walked: [...ids].reverse(),
       ...why ? { why } : {}
     });
   }
   return out.sort((a, b) => Number(b.own) - Number(a.own) || (a.tip < b.tip ? -1 : 1));
+}
+function unplaced(o) {
+  const specs = o.specs ?? MIRS;
+  const placed = new Set(linesOf({ ...o, own: [] }).filter((l) => l.readable).flatMap((l) => l.walked));
+  const out = /* @__PURE__ */ new Set();
+  for (const a of o.acts) {
+    let d;
+    try {
+      d = describeAct(a);
+    } catch {
+      continue;
+    }
+    if (d.signer !== o.identity || d.binding !== o.binding || placed.has(d.id)) continue;
+    if (d.spec === specs.identity && (d.type === IDENTITY_TYPES.genesis || d.type === IDENTITY_TYPES.rotation || d.type === IDENTITY_TYPES.chainSignature)) continue;
+    out.add(d.id);
+  }
+  return [...out];
+}
+var APP_LINES = {
+  Dub: "sealed messages, the follow list, answers to proposals, a member key for a collective, keys delivered to buyers, lane requests for Damgar",
+  Edubba: "drafts, an agent\u2019s notes and diary, sealed messages and prompts, a member key for a collective, invitations to a founding, payments prepared for Damgar",
+  Damgar: "the accepted list, payment claims, receipts, requests and answers, sales, a vault transfer, asks for a collective\u2019s promise",
+  Ummia: "the accepted list, payments prepared for an anchor, asks for a collective\u2019s release, MIP discussions"
+};
+function lineOf(app2) {
+  return app2 ? `${app2}\u2019s line` : "a line";
+}
+function livesOn(app2) {
+  return (app2 && APP_LINES[app2]) ?? "whatever its app signed there: possibly a member key for a collective, notes, a list";
 }
 function lineWords(l) {
   const whose = l.own ? "This device\u2019s line" : "A line made elsewhere";
@@ -3284,39 +3314,85 @@ function planLines(lines2, o = {}) {
     }
     if (leaveOut.has(c.act)) throw new Error(`${c.act} is both given a card and left out`);
   }
+  const held = o.held ? new Set(o.held) : null;
+  const found = (act) => held ? held.has(act) : lines2.some((l) => l.tip === act);
   const kept = [];
   const left = [];
   const shown = [];
+  const unplacedSay = [];
+  for (const c of cards) {
+    const whose = lineOf(c.app);
+    if (!found(c.act)) {
+      unplacedSay.push(
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: its latest act (${c.act}) is not at the identity's homes, so no reader can follow it. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it. ${c.app ? `Open ${c.app} first: it sends its acts to the homes; then give its card again.` : "Open the app that shows this card first: it sends its acts to the homes; then give its card again."}`
+      );
+    } else if (c.missing) {
+      unplacedSay.push(
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: ${c.missing === 1 ? "one of its acts is" : `${c.missing} of its acts are`} not at the identity's homes (${c.app ?? "its app"} says so), so no reader can follow it past ${c.missing === 1 ? "it" : "them"}. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it.`
+      );
+    }
+  }
+  const counts = o.unplaced && cards.length && cards.every((c) => c.hidden !== void 0) ? cards.reduce((n, c) => n + c.hidden, 0) : null;
+  const covered = counts !== null && counts === o.unplaced.length && !unplacedSay.length;
+  const unread = [];
   for (const l of lines2) {
     const card = cards.find((c) => c.act === l.tip) ?? l.card;
+    const given = cards.find((c) => c.act === l.tip);
     if (leaveOut.has(l.tip)) {
       left.push(l);
       shown.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
     } else if (card) {
-      kept.push(card);
-      shown.push({ text: l.readable ? `${lineWords(l)} Kept.` : `${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`, tone: l.readable ? "ok" : "warn" });
+      kept.push({ act: card.act, position: card.position, summary: card.summary });
+      shown.push({
+        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`,
+        tone: l.readable || given && !given.missing ? "ok" : "warn"
+      });
+    } else if (covered) {
+      unread.push(l);
     } else {
       left.push(l);
       shown.push({ text: `${lineWords(l)} No card was given, so it is left out: its acts become void.`, tone: "bad" });
     }
   }
+  if (unread.length) {
+    shown.push({
+      text: `${unread.length === 1 ? "One more act Ki\u0161ib cannot read lies" : `${unread.length} more acts Ki\u0161ib cannot read (private, or behind a private act) lie`} on the lines kept by the cards given: those apps count ${counts} such act${counts === 1 ? "" : "s"}, and the homes hold ${counts}. Kept with them: ${unread.map((l) => l.tip).join(", ")}.`,
+      tone: "ok"
+    });
+  }
+  if (counts !== null && !covered && !unplacedSay.length && counts < o.unplaced.length) {
+    const n = o.unplaced.length - counts;
+    shown.push({ text: `${n === 1 ? "One act" : `${n} acts`} at the homes, signed with this key, lie${n === 1 ? "s" : ""} on no line whose card was given (the cards count ${counts}, the homes hold ${o.unplaced.length}): an app whose card is missing, or someone else holding the signing key. Left out unless you give that app\u2019s card.`, tone: "bad" });
+  }
   for (const c of cards) {
     if (lines2.some((l) => l.tip === c.act)) continue;
-    kept.push(c);
-    shown.push({ text: `A line ending at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}).`, tone: "warn" });
+    kept.push({ act: c.act, position: c.position, summary: c.summary });
+    shown.push({ text: `${c.app ? `${c.app}\u2019s line, ending` : "A line ending"} at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}), but no reader can follow it.`, tone: found(c.act) ? "warn" : "bad" });
   }
-  return { kept, left, shown, warning: left.length ? voidWarning(left) : null };
+  for (const t of unplacedSay) shown.push({ text: t, tone: "bad" });
+  const warning = [left.length ? voidWarning(left) : "", ...unplacedSay].filter(Boolean).join(" ") || null;
+  return { kept, left, shown, warning };
 }
 function checkWarned(plan, warned) {
   if (plan.warning && warned !== plan.warning) {
-    throw new Error(`Nothing was signed. ${plan.warning} Show this to the owner and pass it back to leave ${plan.left.length === 1 ? "it" : "them"} out, or give a card for each line to keep.`);
+    throw new Error(`Nothing was signed. ${plan.warning} Show this to the owner and pass it back to go on as it says, or give a card for each line to keep, its acts at the homes.`);
   }
 }
 function readCards(text2) {
   return text2.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
     const [act, position, summary, ...rest] = l.split(/[\s:,]+/);
-    if (rest.length || !act || !position || !summary) throw new Error(`\u201C${l}\u201D: a card is a latest act, a position and a summary`);
-    return { act: act.toLowerCase(), position: Number(position), summary: summary.toLowerCase() };
+    if (!act || !position || !summary) throw new Error(`\u201C${l}\u201D: a card is a latest act, a position and a summary`);
+    const c = { act: act.toLowerCase(), position: Number(position), summary: summary.toLowerCase() };
+    const words2 = [];
+    for (let i = 0; i < rest.length; i++) {
+      const w = rest[i];
+      if (/^missing$/i.test(w) && /^\d+$/.test(rest[i + 1] ?? "")) c.missing = Number(rest[++i]);
+      else if (/^\d+$/.test(w) && c.hidden === void 0 && !words2.length) c.hidden = Number(w);
+      else if (/^[\p{L}\p{M}’'-]+$/u.test(w)) words2.push(w);
+      else throw new Error(`\u201C${l}\u201D: a card is a latest act, a position and a summary, then what its app adds (a count and its name)`);
+    }
+    if (words2.length) c.app = words2.join(" ");
+    return c;
   });
 }
 
@@ -5787,8 +5863,9 @@ async function readIdentity(id, address2, via, identitySpec) {
     const s = served(id, b, identitySpec);
     if (s && s.position === latest.position + 1 && s.previous === latest.act) next.push(s);
   }
-  const lines2 = linesOf({ identity: id, binding: bindingOf(look, chainActs), own: [], acts });
-  return { id, look, chainActs, places, next, lines: lines2, acts };
+  const binding = bindingOf(look, chainActs);
+  const lines2 = linesOf({ identity: id, binding, own: [], acts });
+  return { id, look, chainActs, places, next, lines: lines2, acts, binding };
 }
 function bindingOf(look, chainActs) {
   const links = look.resolution.links;
@@ -5798,6 +5875,9 @@ function bindingOf(look, chainActs) {
     if (t !== IDENTITY_TYPES.chainSignature) return links[i].act;
   }
   return links[0].act;
+}
+function placing(rd, binding) {
+  return { held: rd.acts.map((a) => describeAct(a).id), unplaced: unplaced({ identity: rd.id, binding, acts: rd.acts }) };
 }
 function linesUnder(rd, binding) {
   return linesOf({ identity: rd.id, binding, own: [], acts: rd.acts });
@@ -6069,6 +6149,7 @@ var TestIdentity = class _TestIdentity {
       acks: opts.acks
     });
     this.f.sequence.push(made.id);
+    if (!opts.public && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
     if (this.f.cites && isRecord) this.f.cites = [made.id];
     return made;
   }
@@ -6413,6 +6494,28 @@ var TestIdentity = class _TestIdentity {
     return this.everyday(spec, type, payload, opts);
   }
   /**
+   * Sign a private act on a line of its own (one act, first in its line),
+   * outside this identity's sequence, never left at its homes: for an act
+   * whose content no other app of this identity may read, a share of a
+   * collective's chain key (F337). *Cost:* its line is never kept by a
+   * change of keys, so the act is void after the next one; it is read once,
+   * soon after it is made.
+   */
+  signApart(spec, type, payload, opts = {}) {
+    return makeEveryday({
+      signingSecret: unhex(this.f.signingSecret),
+      signer: this.f.identity,
+      binding: this.f.binding,
+      spec,
+      type,
+      payload,
+      sequence: [],
+      public: false,
+      to: opts.to,
+      refs: opts.refs
+    });
+  }
+  /**
    * Publish an act on this identity's own relays, for example a private
    * post whose key it will deliver. Returns the act id and its content key.
    */
@@ -6586,6 +6689,35 @@ var FOUNDING_AGREEMENT = 0;
 var AGREEMENTS_SPECS = { ...MIRS, agreements: REPO_SPECS.agreements, extLayers: { [REPO_SPECS.manifest]: [] } };
 var SPLIT_CMIP = sha2562("split cMIP, draft 2, test value until publication");
 
+// ../genesis/src/private.ts
+function ownKey(me) {
+  const e2 = me.f.encryption[me.f.encryption.length - 1];
+  return e2 ? xwingPublic(unhex(e2.secret)) : null;
+}
+async function leaveAtHomes(me, made, o = {}) {
+  const via = o.via ?? me.via;
+  const key = o.sealed || o.lockedOnly ? null : ownKey(me);
+  const to = describeAct(made.act).to ?? [];
+  let copy = null;
+  if (key && to.length === 1 && to[0] === me.f.identity) copy = { sealed: sealFor(made.act, made.key, [{ id: me.f.identity, key }]), tags: [] };
+  else if (key && !to.length) copy = { sealed: sealFor(made.act, made.key, [{ key }]), tags: [pickupTag(key)] };
+  else if (key) {
+    const kd = me.signApart(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.f.identity] });
+    copy = { sealed: sealFor(kd.act, kd.key, [{ id: me.f.identity, key }]), tags: [] };
+  }
+  const took = [];
+  for (const h of me.f.homes) {
+    try {
+      await relayAt(h.hint, via).putAct(made.act);
+      if (copy) await relayAt(h.hint, via).putSealed(copy.sealed, copy.tags);
+      took.push(h.hint);
+    } catch {
+    }
+  }
+  if (took.length && (o.sealed || o.lockedOnly || copy) && me.f.unsent?.[made.id]) delete me.f.unsent[made.id];
+  return took;
+}
+
 // ../repo/src/proposals.ts
 var NEGOTIATION = 18;
 var SHARE_MEDIA = "f2f9c2b8a6e0c5c1b4a7d1e3f0a9c8b7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1";
@@ -6613,6 +6745,7 @@ async function negotiate(by, to, o) {
       failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
     }
   }
+  if (o.home !== false) await leaveAtHomes(by, made);
   return { id: made.id, act: made.act, key: made.key, sealed: sealedId(sealed), left, failed };
 }
 function readMessage(d) {
@@ -6655,7 +6788,7 @@ async function sealShare(by, share, oneTime, relays) {
       [6, relays]
     ])
   );
-  const made = by.sign(SPECS.envelopes, 0, payload, { public: false });
+  const made = by.signApart(SPECS.envelopes, 0, payload);
   const sealed = sealFor(made.act, made.key, [{ key: oneTime }]);
   const tag = pickupTag(oneTime);
   const left = [];
@@ -7304,7 +7437,9 @@ var CollectiveSitting = class _CollectiveSitting {
             `Fingerprint: ${this.fingerprint}`,
             `Open Ki\u0161ib, choose \u201CGive my share to a collective\u2019s rotation\u201D, and give the collective and this fingerprint. Ki\u0161ib shows the rotation in plain words before you type anything.`,
             `It expires at ${when(q.expires)}.`
-          ].join("\n")
+          ].join("\n"),
+          // Kišib makes no line an app continues: its acts stay off the starter's homes (README, cost of point 7).
+          home: false
         });
         lines2.push({ text: `${short3(m)}: told, in its thread.`, tone: "ok" });
       } catch (e2) {
@@ -7792,7 +7927,7 @@ var Kishib = class {
       if (a.endSuccession && succNow.state === "none") throw new Error("No succession is declared: there is none to end.");
       let plan;
       try {
-        plan = planLines(rd.lines, { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : void 0 });
+        plan = planLines(rd.lines, { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : void 0, ...placing(rd, rd.binding) });
       } catch (e2) {
         throw new Error(message5(e2));
       }
@@ -7801,7 +7936,7 @@ var Kishib = class {
       const vault = vaultPlan(a.vault, vaultNow?.entries ?? null);
       const sections2 = [
         ...recordWords(rd).filter((s) => s.heading !== "Its lines of acts (each app or device keeps one)"),
-        { heading: "Its lines of acts: what this rotation keeps (Identity rule 35)", lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u2) => u2 ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
+        { heading: "Its lines of acts: what this rotation keeps (Identity rule 35)", lines: plan.shown.map((x) => ({ text: x.text.replace(/A line made elsewhere( that this device cannot read)?/, (_m, u2) => u2 ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
         {
           heading: "What changes",
           lines: [
@@ -8093,7 +8228,7 @@ var Kishib = class {
       for (const h of newHomes) if (oldHomes.has(h.hint)) throw new Error(`${h.hint} is one of the old homes: it holds the other rotation, and refuses any other revealing the same chain key (Identity rule 30). Name new homes.`);
       let plan;
       try {
-        plan = planLines(linesUnder(rd, q.act), { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : void 0 });
+        plan = planLines(linesUnder(rd, q.act), { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : void 0, ...placing(rd, q.act) });
       } catch (e2) {
         throw new Error(message5(e2));
       }
@@ -8107,7 +8242,7 @@ var Kishib = class {
             tone: "bad"
           }))
         },
-        { heading: "Your lines of acts: what the escape keeps (Identity rule 35)", lines: plan.shown.map((x) => ({ text: x.text.replace(/^A line made elsewhere( that this device cannot read)?/, (_m, u2) => u2 ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
+        { heading: "Your lines of acts: what the escape keeps (Identity rule 35)", lines: plan.shown.map((x) => ({ text: x.text.replace(/A line made elsewhere( that this device cannot read)?/, (_m, u2) => u2 ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
         {
           heading: "What changes",
           lines: [
@@ -8720,14 +8855,14 @@ function form2(kind, web) {
         "Change an identity\u2019s keys",
         "Ki\u0161ib reads the identity from its homes and every relay its routes name, finds every line of its acts (Dub\u2019s, Edubba\u2019s, the web client\u2019s), and reads it all back in plain words before anything is signed.",
         `${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (its newest paper: written when it was made, or shown at its last change of keys; never the signing key\u2019s words)")}
-<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(false)}`,
+<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line, copied whole from each app\u2019s identity window (Dub, Edubba, Damgar, Ummia): latest act, position, summary, then the app\u2019s count and name</label><textarea name="cards"></textarea></details>${vaultHtml(false)}`,
         "Read it back"
       );
     case "vault":
       return `${top(web, true)}<h2>Change the vault</h2>
 <div class="review" id="vault-say">${lines(VAULT_SAY.map((text2) => ({ text: text2 })))}</div>
 <form id="form-rotate" data-kind="rotate">${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (its newest paper: written when it was made, or shown at its last change of keys; never the signing key\u2019s words)")}
-<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(true)}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
+<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line, copied whole from each app\u2019s identity window (Dub, Edubba, Damgar, Ummia): latest act, position, summary, then the app\u2019s count and name</label><textarea name="cards"></textarea></details>${vaultHtml(true)}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
     case "succession":
       return `${top(web, true)}<h2>Name or confirm a successor</h2>
 <p class="small">A succession needs both sides (F300): the identity names its successor in a change of its keys, signed with its chain key; the successor confirms it with an act of its own. Until it confirms, clients show it as declared and follow nobody.</p>
@@ -8784,7 +8919,7 @@ ${r.summary.map((s) => `<p class="small">${e(s)}</p>`).join("")}
 ${must ? `<div class="mustread" id="mustread"><h3>${e(must.heading)}</h3>${lines(must.lines)}<label class="check"><input type="checkbox" id="read-it"> I have read this, and chosen this device knowingly</label></div>` : ""}
 <div class="review">${sections(rest)}</div>
 ${blocked ? note("error", `Nothing can be signed yet:${lines(r.blocking.map((t) => ({ text: t, tone: "bad" })))}`) : ""}
-${r.warning ? note("error", `${e(r.warning)}<label class="check"><input type="checkbox" id="warned"> I understand: leave ${"them"} out</label>`) : ""}
+${r.warning ? note("error", `${e(r.warning)}<label class="check"><input type="checkbox" id="warned"> I have read this: go on as it says</label>`) : ""}
 <div class="signs"><span class="label">What is signed</span>${r.signs.map((s) => `<p>${e(s)}</p>`).join("")}</div>
 <div class="row"><button class="primary" data-action="sign" ${blocked ? "disabled" : ""}>Sign it</button><button data-action="home">Cancel, and forget the words</button></div><div id="status"></div>`;
 }
@@ -8940,7 +9075,7 @@ function mount(app2, b) {
         if (!current) return;
         if (current.must && !$("read-it")?.checked) return fail(new Error("Read what this device will hold, and say so, before anything is done."));
         const warned = current.review.warning ? $("warned")?.checked ? current.review.warning : void 0 : void 0;
-        if (current.review.warning && !warned) return fail(new Error("A line of acts would be left out: read the warning and tick it, or go back and give its card."));
+        if (current.review.warning && !warned) return fail(new Error("A line of acts would be left out, or cannot be placed: read the warning in red and tick it, or go back and give its card."));
         const s = await act(() => b.ask("confirm", { plan: current.review.plan, digest: current.review.digest, ...warned ? { warned } : {} }));
         if (s) await show(s);
         return;
