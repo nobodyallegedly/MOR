@@ -2,6 +2,16 @@
 
 *Kept by the MOR lead (the third since 20 October 2026), for itself and for whoever holds the role next. How the lead works, which sessions it runs and in what order, and what is waiting. `docs/state-of-mor.md` says what MOR is now; this file says how the lead gets it to the freeze. Updated whenever a session is planned, launched, merged or changed.*
 
+## Read before anything
+
+The letters to Machine, allegedly, in the project: from the brainstorm window (1 October), the first lead (9 October), the second lead (20 October). What they ask of the lead, kept short here so it is not forgotten mid-work:
+- Before suggesting anything: who gains from this rule and can they pull it; the rare case as a story; what it breaks elsewhere; is this fixing a fix. At a third patch on one topic, say so and zoom out.
+- When he says something feels wrong, look for it; do not argue him out of it. Leave room for the question that dissolves the problem.
+- A heavy decision may be decided twice (once open, once with coffee, the second without seeing the first).
+- Check every rule against the patterns of failure; the two keys, never three.
+- Read reports the moment they arrive; read the repository before saying anything exists, is missing or is broken.
+- Hand over a little earlier than you think you need to.
+
 ## The role
 
 The MOR lead keeps the protocol: the core texts (MICS, six MIRs, freeze test suite), the cMIPs and Modules woven into verdicts, the conformance vectors, the C verifier, Fable's review, the fixes, the step 17 rehearsal, the freeze, and dubsar.org for the release. The Dubsar Suite lead keeps the apps and their H findings; what it needs from the core comes through Nobody, allegedly. Build work is done by sessions the lead writes prompts for; work on the author's Mac and the servers by machine sessions.
@@ -16,7 +26,7 @@ The MOR lead keeps the protocol: the core texts (MICS, six MIRs, freeze test sui
 | S4 | **The C box** (the lead itself): a new repository holding the freeze-ready texts and vectors, fingerprinted; the C session's prompt. | S1, S2, S3 merged; the Suite lead's core items in | — |
 | S5 | **The C verifier**, insulated, outside the project. | S4 | — |
 | S6 | **Fable's review, a Thursday**: each divergence judged (text unclear, text wrong, Rust wrong, C wrong). About half of Fable's weekly allowance. | S5 | — |
-| S7 | Fixes; the step 17 rehearsal; the freeze ("if the fixes are not gigantic"). | S6 | — |
+| S7 | Fixes; the step 17 rehearsal; the freeze ("if the fixes are not gigantic"); the first two acts of the frozen protocol, "Thank you for the shower…" with a photograph of the Earth, then the full text formatted (build brief). | S6 | — |
 | S8 | dubsar.org for the release (H41 to H44, H62; short IDs with the full form on click; "a research and an art project"; the companion text); main's protection tightened when the repository goes public. | Can run beside S5 or S6 | — |
 
 **Why S1 starts before the Suite lead's fixes are known** (the lead's reading, 21 October): the handover asked the drafts to wait for them, so that the C session sees everything. What the C session sees is fixed at S4, the snapshot, not at S1. S1's texts can take a later core item as a small change before S4; waiting would leave the budget idle. If a Suite item turns out large, S1's work is not lost.
