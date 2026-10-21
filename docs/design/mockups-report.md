@@ -61,11 +61,11 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 ## 2. Every place I had to choose (each tagged on the screens)
 
 **From the note's *lead's, not discussed*, drawn as proposed:**
-1. Disclaimers reduced to one line with a "?" (every home: "Test identities only, until MOR is frozen ?"; one-line notes with "?" in panes).
-2. A verification shown as one mark: ✓ at the bottom left of every act card (`suite-act-card`).
-3. A faint short ID when two names collide, in the @ list (`dub-mention`: two people called Pa).
-4. Cc for anyone, not only members (`dub-private`: "+ Cc").
-5. Buy in the act menu (`dub-act-menu`).
+1. Disclaimers reduced to one line with a "?" (every home: "Test identities only, until MOR is frozen ?"; one-line notes with "?" in panes). *Settled by the design session (21 October 2026, "Decide what you can yourself. If unsure, ask"): kept as drawn, tag removed; reason in "Settled by the design session" below.*
+2. A verification shown as one mark: ✓ at the bottom left of every act card (`suite-act-card`). *Settled by the design session (21 October 2026, "Decide what you can yourself. If unsure, ask"): kept as drawn, tag removed; reason in "Settled by the design session" below.*
+3. A faint short ID when two names collide, in the @ list (`dub-mention`: two people called Pa). *Settled by the design session (21 October 2026, "Decide what you can yourself. If unsure, ask"): kept as drawn, tag removed; reason in "Settled by the design session" below.*
+4. Cc for anyone, not only members (`dub-private`: "+ Cc"). *Settled by the design session (21 October 2026, "Decide what you can yourself. If unsure, ask"): kept as drawn, tag removed; reason in "Settled by the design session" below.*
+5. Buy in the act menu (`dub-act-menu`). *Settled by the design session (21 October 2026, "Decide what you can yourself. If unsure, ask"): kept as drawn, tag removed; reason in "Settled by the design session" below.*
 6. Payments made under Dub's lane moved to Damgar: Account › "Under the lanes" (`damgar-account`).
 7. Edubba's Agents with four tabs, Talk · Queue · Mind · Terms (`edubba-agents`, `-agents-queue`, `-agents-terms`, `edubba-diary`).
 8. Claude's drafts to the agents, proposed dropped. *Decided by Nobody, allegedly, 21 October 2026 (question 6): "Drafts can be removed." Removed from the pictures.*
@@ -81,7 +81,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 12. Damgar's four tiles: **Waiting, Account, Lanes, Settings**. The note names three columns, and Settings survives the move of the clock and the node link. *Decided by Nobody, allegedly, 21 October 2026 (question 3): "Yes, Settings as the fourth tile. It's a lot more than what settings offer elsewhere." Tag removed.*
 13. Dub's three lenses: **Following · To you · Relay**, Relay third. *Decided by Nobody, allegedly, 21 October 2026 (question 1): "Yes, but relay should be the third option." Tag removed.*
 14. Kišib's identity at top right: "Holds nothing · runner off" while the runner is off. The runner's identities appear there when it is on. *Decided by Nobody, allegedly, 21 October 2026 (question 4): "Kišib is different, the only place where an ID can be held is the new runner." Tag removed.*
-15. Each column's parts, on every tile opened, are taken from today's functions (one quiet tag at the foot of each column).
+15. Each column's parts, on every tile opened, are taken from today's functions (one quiet tag at the foot of each column). *Settled by the design session (21 October 2026, "Decide what you can yourself. If unsure, ask"): kept as drawn, tag removed; reason in "Settled by the design session" below.*
 16. The tabs across a selected collective: Act · Members · Money · Keepers · To sign. The note's "sketch" is not in the repository. *Decided by Nobody, allegedly, 21 October 2026 (question 9): "No, it's fine, building is like working with clay… the more you move forward the more it gets defined." Kept as drawn; tag removed.*
 17. The bottom half of the act menu, per app. Rely and Anchor are in every app; Correct appears on one's own acts.
     - **Dub:** Reply, Repost, Tip, Buy; on a vow bought, Confirm or Contest (question 5).
@@ -89,12 +89,12 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
     - **Ummia:** "Add to accepted list" (decided).
     - **Edubba:** "Confirm: it was kept" and "Contest it" (on a vow).
     *Decided by Nobody, allegedly, 21 October 2026 (question 7): "Agreed", to the lean: as drawn, with Damgar's "Show it in the account" and Ummia's "Discuss it" dropped (both only shortcuts to a tile). Removed from the menus.*
-18. The bottom half of the signer's menu: Follow: add to contacts, and Mute, in every app.
+18. The bottom half of the signer's menu: Follow: add to contacts, and Mute, in every app. *Settled by the design session (21 October 2026, "Decide what you can yourself. If unsure, ask"): kept as drawn, tag removed; reason in "Settled by the design session" below.*
     - **Dub and Edubba:** Message.
     - **Damgar:** Tip.
     - **Ummia:** "Follow their releases".
-19. Dub's "Ask someone to pay you" placed as a chip in the private typing box.
-20. In the identity panel:
+19. Dub's "Ask someone to pay you" placed as a chip in the private typing box. *Settled by the design session (21 October 2026, "Decide what you can yourself. If unsure, ask"): kept as drawn, tag removed; reason in "Settled by the design session" below.*
+20. In the identity panel: *Settled by the design session (21 October 2026, "Decide what you can yourself. If unsure, ask"): kept as drawn, tag removed; reason in "Settled by the design session" below.*
     - each identity's menu holds Name, Relays, Words, "Line and homes", Dub's "A lane from Damgar", then a line, then Remove;
     - the panel's foot says where the app's paired browsers and its homes and relays live.
 21. Remove said plainly in its own confirmation: "Dub forgets Max's signing words on this device. Max itself is not touched…" (`dub-identity-remove`).
@@ -104,13 +104,27 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 25. The quiet door to Paper: a plain card with "Open Paper" / "Not now", and nothing else on the screen.
 26. **A Purchases tab in Dub**, from your answer to question 6 ("Maybe dub needs a 'purchases' tab, a way to quickly see files bought and vows purchased"). Drawn as a third part of the top switch, Public · Private · Purchases, holding one feed box of files bought and vows purchased, with All · Files · Vows above it (`dub-purchases`). *Decided by Nobody, allegedly, 21 October 2026 (question 11): "Yes, it fits." Tag removed; Dub's switch reads Public · Private · Purchases on every screen.*
 
+**Settled by the design session.** On 21 October 2026, Nobody, allegedly, said: "Decide what you can yourself. If unsure, ask." I settled the following, each kept as drawn and its tag removed:
+- **Disclaimers in one line with a "?"** (item 1): this answers his own complaint that disclaimers take the space, and nothing is lost behind the "?".
+- **A verification as one ✓** (item 2): the card stays light, and "Why it's valid" in the act menu gives the full reading. A void or contested act still shows its alarm line in red.
+- **A faint short ID when two names collide** (item 3): without it, two people called Pa can't be told apart in the @ list. It shows only on a collision.
+- **Cc for anyone** (item 4): limiting Cc to members would be a rule with no reason behind it, and the sealed container already takes any recipient.
+- **Buy in Dub's act menu** (item 5): Purchases is now decided, and buying is how something gets there.
+- **Each column's parts** (item 15): they are today's functions, regrouped. "The more you move forward the more it gets defined" (question 9).
+- **The signer's menu: Tip in Damgar** (item 18): the same Tip as in Dub, in the money app.
+- **"Ask to be paid" in Dub's private typing box** (item 19): a request goes to one person, in that person's conversation.
+- **The identity menu's "Line and homes" and "A lane from Damgar", and the panel's foot for paired browsers, homes and relays** (item 20): each belongs to one identity in one app, or to the app itself.
+- **Withdraw a picture** (function table): in the act menu of one's own picture, beside Correct it. Not drawn.
+
+**Still open, to ask:** the payments made under Dub's lane (item 6), and Edubba's four agent tabs (item 7). The note itself lists the agent tabs as still open.
+
 ## 3. Every function of today, and where it lives in the new screens
 
-"Kept" means the screen stays as it is today, reached from the new place. Rows marked † are tagged *not decided* on the screens.
+"Kept" means the screen stays as it is today, reached from the new place. Rows marked † are still tagged *not decided* on the screens; "(settled)" marks what the design session settled when asked to decide what it could.
 
 | App | Function | Today's place | New place |
 | --- | --- | --- | --- |
-| all | Pair a browser; a code for another; unpair | Pairing screen; identity window / Settings | Identity panel › foot "This app" † |
+| all | Pair a browser; a code for another; unpair | Pairing screen; identity window / Settings | Identity panel › foot "This app" (settled) |
 | all | Make an identity (chain words once, three back) | Dub identity window; Edubba Identities | Identity panel › + Add › Make one (kept screens). Damgar gains Make (accepted) |
 | all | Bring an identity (ID, signing words, address) | Each app's identity window | Identity panel › + Add › Bring one |
 | all | Use an identity held in Kišib (runner) | (new) | Identity panel › + Add › Use one from Kišib |
@@ -124,14 +138,14 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 | all | Anchor an act on Bitcoin (paid in Damgar) | Edubba collective; Ummia releases | Act menu › Anchor it, in every app (decided); Ummia › Publish › Anchoring |
 | Dub | Display name | Identity window › Save | Identity menu › Name |
 | Dub | Change its relays (routes act) | Identity window fold | Identity menu › Relays |
-| Dub | This app's line, homes, relays | Identity window fold | Identity menu › Line and homes † |
-| Dub | Ask Damgar for a lane | Identity window fold | Identity menu › A lane from Damgar † |
+| Dub | This app's line, homes, relays | Identity window fold | Identity menu › Line and homes (settled) |
+| Dub | Ask Damgar for a lane | Identity window fold | Identity menu › A lane from Damgar (settled) |
 | Dub | Signing on/off | Identity window checkbox | Removed with the Signing tab (decided) |
 | Dub | Post text, picture, addressed post | Public › compose | Typing box at the bottom (Picture, @, To…) (decided) |
 | Dub | @ mention | (none) | Typing box, by names (decided) (`dub-mention`) |
 | Dub | Reply | Post › Reply | Act menu › Reply |
 | Dub | Repost | Post › Repost | Act menu › Repost |
-| Dub | Withdraw own picture | Own post › Withdraw picture | Act menu on one's own picture (not drawn) † |
+| Dub | Withdraw own picture | Own post › Withdraw picture | Act menu on one's own picture, Withdraw the picture (settled; not drawn) |
 | Dub | Follow, unfollow, rename followed, mute, unmute | Post row; Following fold | Signer's menu › Follow: add to contacts / Mute (decided); Contacts panel |
 | Dub | Follow by ID | Following fold | Contacts › + Add by ID |
 | Dub | Publish whom one follows | Following fold checkbox | Contacts › "Publish whom Max follows" |
@@ -140,9 +154,9 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 | Dub | Tip: prepare for Damgar, or pay under the lane | Post › Tip | Act menu › Tip → Damgar's panel inside Dub (decided) |
 | Dub | Pay-per-view: seal a post with a price | Public fold | Removed (decided) |
 | Dub | Files bought and vows purchased, seen at a glance | Signing › Vows you bought; the feed | Purchases, a third part of the switch (decided, question 11) (`dub-purchases`) |
-| Dub | Buy a sealed post or a vow | Feed box › Buy it, under the lane | Act menu › Buy † |
+| Dub | Buy a sealed post or a vow | Feed box › Buy it, under the lane | Act menu › Buy (settled); what is bought shows in Purchases |
 | Dub | Confirm / contest a vow bought | Signing › Vows you bought | The vow's act menu, below a line: Confirm: it was kept / Contest it…, shown only on vows the identity bought (decided, question 5) (`dub-vow-menu`); Edubba › Vows |
-| Dub | Ask someone to pay you | Private fold | Private typing box › + Ask to be paid † |
+| Dub | Ask someone to pay you | Private fold | Private typing box › + Ask to be paid (settled) |
 | Dub | Payments under the lane (invoice, preimage, claim) | Private fold | Damgar › Account › Under the lanes † |
 | Dub | Private message, sealed; reply; inbox | Private tab | Mailbox: conversations left, thread, typing box at the bottom (decided) |
 | Dub | Private message to someone new | Private form | An empty feed (decided) (`dub-private-new`) |
@@ -166,7 +180,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 | Damgar | Account: totals, payments, proofs, debts, what it does not judge | The account | Account tile |
 | Damgar | Lanes: list, revoke, Damgar by itself | Lanes tab | Lanes › Your lanes / Damgar by itself |
 | Damgar | The clock for lanes; the node link | Settings | Lanes (accepted) |
-| Damgar | Collective money: promise to pay | For a collective tab | Waiting › For Collective Y, when acting as it in the identity panel † |
+| Damgar | Collective money: promise to pay | For a collective tab | Waiting › For Collective Y, when acting as it in the identity panel (settled) |
 | Damgar | Where you are paid (payee pointer) | Settings | Settings › Where you are paid |
 | Damgar | The vault (read only); transfer to the vault | Settings | Settings › The vault |
 | Damgar | Relays; every step by hand | Settings | Identity menu › Relays; Settings › Every step by hand |
@@ -187,16 +201,16 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 | Edubba | Bring a collective, read only | Collectives › + Bring | Collectives › + Bring a collective |
 | Edubba | Founding in progress: answers, hand to hand, deal shares | Collectives entry | Collectives › Collective Z (column entry) |
 | Edubba | Show a share once | Collectives | Collectives › To sign (kept screens) |
-| Edubba | Members; change members; leave; register a resignation | Real collective folds | Collectives › Members † tabs |
+| Edubba | Members; change members; leave; register a resignation | Real collective folds | Collectives › Members (decided, question 9) |
 | Edubba | Permissions; constitution in plain words | Real collective | Collectives › Act (permissions as chips); "Its constitution, in plain words" at top right |
-| Edubba | Money terms; record it; pay a member | Real collective folds | Collectives › Money † tabs |
-| Edubba | Keepers; record what arrived | Real collective fold | Collectives › Keepers † tabs; noted in Agents › Terms |
+| Edubba | Money terms; record it; pay a member | Real collective folds | Collectives › Money (decided, question 9) |
+| Edubba | Keepers; record what arrived | Real collective fold | Collectives › Keepers (decided, question 9); noted in Agents › Terms |
 | Edubba | Post for a collective | Test collective › Act | Collectives › Act (typing box) |
 | Edubba | Contacts (for founding) | Found form card | Dub's Contacts, the same list (decided "available from both") |
 | Edubba | Protected file: text, picture, price, referral, split | Publishing | Publishing › A protected file; video and audio added (decided) |
 | Edubba | Vow; look up vow sales; confirm or contest | Publishing | Vows › A new vow; Track (decided) |
 | Edubba | Deliver keys to buyers | Publishing › Published here | Publishing › Published here |
-| Edubba | Homes, relays; collective client settings | Settings | Identity panel foot † |
+| Edubba | Homes, relays; collective client settings | Settings | Identity panel foot (settled) |
 | Ummia | Who acts (self or a collective) | Every tab | Identity panel (decided) and "Who acts" chips in Publish |
 | Ummia | A release from a folder; checked; the previous one | Releases | Publish › A release |
 | Ummia | Does it count for the collective | Releases | Publish › A release (as Collective Y) |
@@ -209,7 +223,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 | Ummia | MIPs: start, write, discuss, publish | MIPs | Discuss › MIP drafts |
 | Ummia | Bug reports and answers | Reports | Discuss › Bug reports |
 | Ummia | Accepted list: add, remove, publish, by layer | Accepted | Choose (by layer, decided); act menu › Add to accepted list (decided) |
-| Ummia | Settings: relays, tracking relays, reporting ID | Settings | Identity menu › Relays; Look's point at; Discuss › Bug reports † |
+| Ummia | Settings: relays, tracking relays, reporting ID | Settings | Identity menu › Relays; Look's point at; Discuss › Bug reports (settled) |
 
 No function of today was dropped from the pictures. The decided removals are Dub's Signing tab (its contents move to Edubba), Pay-per-view sealing, and Edubba's Identities tab (its contents spread out as above).
 

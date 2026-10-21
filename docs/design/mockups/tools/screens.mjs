@@ -152,7 +152,7 @@ page('dub', 'to-you', 'Public: the To you lens',
 page('dub', 'mention', 'Typing box: @ by names, not hashes',
   dubPublic(FEED.slice(0, 4), {
     typed: `<div style="position:relative">${typing('Thursday then. @P', { typed: true, tools: '<span>▣ Picture</span><span>@</span><span>To…</span>' })}
-<div class="pop" style="bottom:62px;left:110px"><div class="t">Mention</div><a><span class="dot" style="width:22px;height:22px;font-size:11px">P</span>Pa<span class="k">${ID.Pa} ${nd('faint ID on a collision')}</span></a><a><span class="dot alt" style="width:22px;height:22px;font-size:11px">P</span>Pa<span class="k">${ID.Pa2}</span></a><a><span class="dot alt" style="width:22px;height:22px;font-size:11px">P</span>Ph</a></div></div>`,
+<div class="pop" style="bottom:62px;left:110px"><div class="t">Mention</div><a><span class="dot" style="width:22px;height:22px;font-size:11px">P</span>Pa<span class="k">${ID.Pa}</span></a><a><span class="dot alt" style="width:22px;height:22px;font-size:11px">P</span>Pa<span class="k">${ID.Pa2}</span></a><a><span class="dot alt" style="width:22px;height:22px;font-size:11px">P</span>Ph</a></div></div>`,
   }),
   { group: 'Feeds', note: 'decided: @ autocompletes by names' });
 
@@ -221,7 +221,7 @@ ${[['Pa', 'Pa', 'Thursday then.', '09:40', 1], ['Ph', 'Ph', 'Sent you the photos
 <div class="conv"><span class="small soft">+ A new conversation</span></div></aside>`;
 const PRIVTYPE = typing('Write to Pa… (sealed: only Pa, and Ph in Cc, can open it)', {
   stack: true, btn: 'Send',
-  opts: `<span class="chip">As Max</span><span class="chip on">+ of Collective Y ✓</span><span class="chip on">Cc: Ph <span class="x">×</span></span><span class="chip">+ Cc ${nd('Cc for anyone')}</span><span class="chip">+ Ask to be paid ${nd('placed here')}</span>`,
+  opts: `<span class="chip">As Max</span><span class="chip on">+ of Collective Y ✓</span><span class="chip on">Cc: Ph <span class="x">×</span></span><span class="chip">+ Cc</span><span class="chip">+ Ask to be paid</span>`,
   tools: '<span>▣</span><span>@</span>',
 });
 page('dub', 'private', 'Private: a mailbox, a collective appended, a Cc',
@@ -245,9 +245,9 @@ function idPanel(app, { menu = false, remove = false, add = false } = {}) {
 <div class="idrow sub"><span class="dot c alt">Y</span><div><div class="n">Collective Y <span class="tagc">collective</span></div><div class="s">${ID.Y}</div></div><span class="more">⋯</span></div>
 <div class="idrow"><span class="dot alt">T</span><div><div class="n">T</div><div class="s">${ID.T}</div></div><span class="more">⋯</span></div>`;
   const addRows = add ? `<div style="margin:4px 0 4px 8px"><div class="idrow"><b style="font-weight:400">Make one</b><span class="small soft">its chain key’s words shown once</span></div><div class="idrow"><b style="font-weight:400">Bring one</b><span class="small soft">its ID and signing words</span></div><div class="idrow"><b style="font-weight:400">Use one from Kišib</b><span class="small soft">runner on, Mac only</span></div></div>` : '';
-  const m = menu ? `<div class="pop" style="right:350px;top:0;min-width:250px"><div class="t">Max · ${ID.Max}</div><a>Name<span class="k">Max</span></a><a>Relays<span class="k">1</span></a><a>Words<span class="k">show the signing words</span></a><a>Line and homes ${nd('placed here')}</a>${app === 'dub' ? `<a>A lane from Damgar ${nd('placed here')}</a>` : ''}<hr><a style="color:var(--text)">Remove from ${app === 'dub' ? 'Dub' : app === 'damgar' ? 'Damgar' : 'Edubba'}…</a></div>` : '';
+  const m = menu ? `<div class="pop" style="right:350px;top:0;min-width:250px"><div class="t">Max · ${ID.Max}</div><a>Name<span class="k">Max</span></a><a>Relays<span class="k">1</span></a><a>Words<span class="k">show the signing words</span></a><a>Line and homes</a>${app === 'dub' ? `<a>A lane from Damgar</a>` : ''}<hr><a style="color:var(--text)">Remove from ${app === 'dub' ? 'Dub' : app === 'damgar' ? 'Damgar' : 'Edubba'}…</a></div>` : '';
   const r = remove ? `<div class="pop" style="right:350px;top:0;width:300px;padding:14px"><h4 style="font-size:16px;margin-bottom:6px">Remove Max from Dub?</h4><p class="small soft">Dub forgets Max’s signing words on this device. Max itself is not touched: its acts, its homes and the other apps keep it. To use it here again, bring it with its words.</p><div class="row"><span class="btn p">Remove it</span><span class="btn q">Keep it</span></div></div>` : '';
-  return `<div class="panel">${rows}<div class="idrow${add ? ' on' : ''}" style="color:var(--soft)">+ Add</div>${addRows}<div style="height:1px;background:var(--line);margin:6px 4px"></div><div class="idrow small faint">This app: paired browsers, homes and relays ${nd('placed here')}</div>${m}${r}</div>`;
+  return `<div class="panel">${rows}<div class="idrow${add ? ' on' : ''}" style="color:var(--soft)">+ Add</div>${addRows}<div style="height:1px;background:var(--line);margin:6px 4px"></div><div class="idrow small faint">This app: paired browsers, homes and relays</div>${m}${r}</div>`;
 }
 page('dub', 'identity-panel', 'The identity panel (top right)',
   `${dubPublic(FEED, { right: me('Max', { open: true }) })}<div class="shade" style="background:rgba(3,4,6,.45)"></div>${idPanel('dub')}`,
@@ -485,5 +485,5 @@ const sample = (app) => `<div class="${app}" style="flex:1;min-width:230px"><div
 page('suite', 'act-card', 'The act card, the same in every app',
   `<header class="top"><div class="app">The act card</div><span class="grow"></span><span class="small soft">signer’s short ID and name top left · the act’s short ID bottom right · click or tap, no hovering</span></header>
 <div class="body"><section class="pane"><div style="display:flex;flex-wrap:wrap;gap:18px">${['dub', 'damgar', 'edubba', 'ummia', 'kishib'].map(sample).join('')}</div>
-<p class="small soft" style="margin-top:16px">One mark for “verified” (✓) ${nd('a verification as one mark')}. The app’s colour shows only in the mark and the menus’ fills.</p></section></div>`,
+<p class="small soft" style="margin-top:16px">One mark for “verified” (✓). The app’s colour shows only in the mark and the menus’ fills.</p></section></div>`,
   { group: 'The act card' });

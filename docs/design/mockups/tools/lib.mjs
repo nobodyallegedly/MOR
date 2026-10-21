@@ -69,7 +69,7 @@ function bar(app, { on = null, center = '', left = '', right = null } = {}) {
   const phone = a.tiles && on ? `<nav class="phonetabs">${a.tiles.map((t) => `<span class="tab${t === on ? ' on' : ''}">${t}</span>`).join('')}</nav>` : '';
   return `<header class="top">${mark}${tabs}<span class="grow"></span>${center}<span class="grow"></span>${right ?? me()}</header>${phone}`;
 }
-const column = (groups) => `<aside class="col">${groups.map((g) => (g === '-' ? '<div class="sep"></div>' : typeof g === 'string' ? `<h3>${g}</h3>` : `<a class="${g.on ? 'on ' : ''}${g.add ? 'add' : ''}">${g.t}${g.k != null ? `<span class="k">${g.k}</span>` : ''}</a>`)).join('')}<div class="coltag">${nd('the column’s parts')}</div></aside>`;
+const column = (groups) => `<aside class="col">${groups.map((g) => (g === '-' ? '<div class="sep"></div>' : typeof g === 'string' ? `<h3>${g}</h3>` : `<a class="${g.on ? 'on ' : ''}${g.add ? 'add' : ''}">${g.t}${g.k != null ? `<span class="k">${g.k}</span>` : ''}</a>`)).join('')}</aside>`;
 const opened = (app, on, col, pane, extra = '') => `${bar(app, { on })}<div class="body">${column(col)}<section class="pane">${pane}</section></div>${extra}`;
 
 // ---------------------------------------------------------------- the act card, the same in every app
@@ -87,7 +87,7 @@ const feed = (cards, cls = '') => `<div class="feed ${cls}">${cards.join('')}</d
 function signerMenu(app, who = 'Pa', style = 'top:36px;left:0') {
   const below = {
     dub: ['Follow: add to contacts', 'Message', 'Mute'],
-    damgar: ['Follow: add to contacts', `Tip ${who} ${nd('in Damgar')}`, 'Mute'],
+    damgar: ['Follow: add to contacts', `Tip ${who}`, 'Mute'],
     ummia: ['Follow: add to contacts', `Follow ${who}’s releases`, 'Mute'],
     edubba: ['Follow: add to contacts', 'Message', 'Mute'],
   }[app];
@@ -98,7 +98,7 @@ function actMenu(app, { own = false, bought = false, style = 'bottom:30px;right:
   const common = ['Rely on it', 'Anchor it'];
   const below = {
     // A vow the identity bought: confirm or contest it, shown only there (decided, question 5); no Buy, it is bought.
-    dub: ['Reply', 'Repost', ...common, own ? 'Correct it' : null, 'Tip', bought ? null : `Buy ${nd('lead’s')}`, ...(bought ? ['<hr>', 'Confirm: it was kept', 'Contest it…'] : [])],
+    dub: ['Reply', 'Repost', ...common, own ? 'Correct it' : null, 'Tip', bought ? null : `Buy`, ...(bought ? ['<hr>', 'Confirm: it was kept', 'Contest it…'] : [])],
     damgar: [...common, own ? 'Correct it' : null, 'Tip'],
     ummia: [`Add to accepted list`, ...common, own ? 'Correct it' : null],
     edubba: [...common, own ? 'Correct it' : null, 'Confirm: it was kept', 'Contest it'],
@@ -116,7 +116,7 @@ function home(app, tiles, foot = '') {
   const t = tiles.map((x) => `<div class="tile d${x.d}${x.alarm ? ' alarm' : ''}">${ICON[x.icon]}${dm(x.d)}<h2>${x.name}</h2><p>${x.say}</p>${x.alert ? `<span class="alert">${x.alert}</span>` : ''}</div>`).join('');
   return `${bar(app)}<div class="home">${t}</div><div class="home-note">${foot}</div>`;
 }
-const TESTLINE = `Test identities only, until MOR is frozen ${help} ${nd('one line with “?”')}`;
+const TESTLINE = `Test identities only, until MOR is frozen ${help}`;
 
 export { ID, APPS, nd, dm, help, ICON, page, me, bar, column, opened, act, feed, signerMenu, actMenu, typing, home, TESTLINE };
 
