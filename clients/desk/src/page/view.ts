@@ -693,7 +693,7 @@ export function record(r: IdentityRecord): string {
       : '';
   return `<p class="small">As its homes and relays show it now. Nothing here is signed.</p>
 ${r.problems.map((p) => note('warn', e(p))).join('')}
-${r.spent ? `<form id="identity-renew" data-identity="${e(r.id)}" class="card">${note('error', e(RENEW_SAY))}<label>The new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Take the new words</button></div></form>` : ''}
+${r.spent ? renewIdentityForm(r.id) : ''}
 ${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines(x.lines)}`).join('')}
 <h4>Its lines of acts (${r.lines.length})</h4>
 <p class="small">A change of its signing key (in Kišib, with the chain key) must keep every line, or that line’s acts become void (Identity rule 35). Where Kišib cannot read a line, give it the latest act, position and summary shown here.</p>
@@ -1264,8 +1264,16 @@ export const COLLECTIVE_RENEW_SAY =
 export const RENEW_SAY =
   'Its signing key was changed elsewhere (in Kišib, with the chain key’s words). Edubba signs nothing more with the old one. Give the new signing key’s words, as Kišib showed them once, to go on here.';
 
+/** How the program's refusal begins where a key held here was changed elsewhere (`src/desk.ts`, KEY_CHANGED_SAY and COLLECTIVE_KEY_CHANGED_SAY). */
+export const KEY_CHANGED_START = ['This identity’s signing key was changed elsewhere', 'This collective’s signing key was changed elsewhere'];
+
+/** The box for an identity's new signing key's words, after Kišib: in its record, and wherever a refusal says its key changed (H80). */
+export function renewIdentityForm(id: string, name?: string): string {
+  return `<form id="identity-renew" data-identity="${e(id)}" class="card">${note('error', e(RENEW_SAY))}<label>${name ? `${e(name)}: the` : 'The'} new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Take the new words</button></div></form>`;
+}
+
 /** The box for a collective's new signing key's words, after Kišib. */
-function renewCollectiveForm(collective: string): string {
+export function renewCollectiveForm(collective: string): string {
   return `<form id="real-renew" data-collective="${e(collective)}"><p class="small">${e(COLLECTIVE_RENEW_SAY)}</p><label>The collective’s new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit">Take the new words</button></div></form>`;
 }
 

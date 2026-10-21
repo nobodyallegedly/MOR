@@ -66,6 +66,36 @@ export async function edubba(homes: string[], relays: string[]): Promise<{ app: 
   return { app, c, dir };
 }
 
+/**
+ * After a change of keys that counts (H79): the new chain key's words shown,
+ * written, three typed back; then the new signing key's, the same. Both sets,
+ * as a person writes them down.
+ */
+export async function newWords(c: Client): Promise<{ chain: string[]; signing: string[] }> {
+  const ch = await c.ask<{ words: string[]; which?: string }>('words show');
+  assert.equal(ch.which, 'chain', 'the new chain key’s words come first');
+  let s = await c.ask<{ sitting: { positions: number[]; stage: string } }>('words written');
+  s = await c.ask('words typed', { typed: s.sitting.positions.map((p) => ch.words[p - 1]) });
+  assert.equal(s.sitting.stage, 'counts', 'then the signing key’s words wait to be shown');
+  const sg = await c.ask<{ words: string[]; which?: string }>('words show');
+  assert.equal(sg.which, 'signing');
+  s = await c.ask('words written');
+  s = await c.ask('words typed', { typed: s.sitting.positions.map((p) => sg.words[p - 1]) });
+  assert.equal(s.sitting.stage, 'done');
+  return { chain: ch.words, signing: sg.words };
+}
+
+/** The same, for a Kišib held in this process. */
+export function newWordsHere(k: { showWords(): { words: string[]; which?: string }; written(): { sitting: { positions?: number[] } | null }; typed(a: { typed: string[] }): unknown }): { chain: string[]; signing: string[] } {
+  const ch = k.showWords();
+  assert.equal(ch.which, 'chain');
+  k.typed({ typed: k.written().sitting!.positions!.map((p) => ch.words[p - 1]) });
+  const sg = k.showWords();
+  assert.equal(sg.which, 'signing');
+  k.typed({ typed: k.written().sitting!.positions!.map((p) => sg.words[p - 1]) });
+  return { chain: ch.words, signing: sg.words };
+}
+
 export const refused = async (p: Promise<unknown>, words: RegExp) => {
   await assert.rejects(p, (e: Error) => {
     assert.match(e.message, words);

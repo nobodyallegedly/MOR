@@ -237,11 +237,20 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return agents!.grants.list(text(a.agent));
       case 'keys check': {
         // F335: on opening, every identity held here whose signing key was changed elsewhere, said; a change of keys is Kišib's.
-        const out: { id: string; name: string; say: string }[] = [];
+        // H80: also every real collective whose own key is held here, and asked again where a refusal says a key changed, so the page offers the new words right there.
+        const out: { id: string; name: string; say: string; kind: 'identity' | 'collective' }[] = [];
         for (const i of store.book().identities) {
           if (!store.holds(i.id)) continue;
           const w = await desk.keyChanged(i.id);
-          if (w) out.push({ id: i.id, name: i.name, say: w });
+          if (w) out.push({ id: i.id, name: i.name, say: w, kind: 'identity' });
+        }
+        for (const x of real.collectives()) {
+          const c = real.collective(x.id);
+          try {
+            await desk.collectiveKeyCurrent({ id: x.id, signingSecret: c.f.identity.signingSecret, homes: c.f.identity.homes, relays: c.f.relays });
+          } catch (e) {
+            out.push({ id: x.id, name: x.name, say: (e as Error).message.replace(/ Nothing was signed\.$/, ''), kind: 'collective' });
+          }
         }
         return out;
       }

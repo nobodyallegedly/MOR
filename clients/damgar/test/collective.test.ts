@@ -8,7 +8,9 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { apps, closeAll, damgar, dub, edubba, everything, refused, start, type Relay } from './world.ts';
+import { apps, closeAll, damgar, dub, edubba, everything, kishib, refused, start, type Relay } from './world.ts';
+import { newWords } from '../../kishib/test/world.ts';
+import { relayAt } from '../../genesis/src/transport.ts';
 import { ACCEPTABLE } from '../src/specs.ts';
 import { TestNode } from './node.ts';
 
@@ -98,5 +100,30 @@ test('a member acts for the collective from Damgar with their own key: within th
   assert.ok(acts.find((a: any) => a.amount.value === 50000).standing.areas[0].byKey.length === 2, 'two keys, each a member’s own');
   // The key's secret never leaves Damgar's program: the page is shown none of it.
   assert.equal(Object.keys(shown.collectives[0].key.secret).length, 0);
+
+  // H80: A's keys changed in Kišib (the lines kept by the cards Dub, Edubba and Damgar show). A's own key asks the
+  // other holders, so the promise is refused before anything is signed, in Damgar's words; the new words given, it signs again.
+  const card = (l: { acts: number; latest: string | null; summary: string | null }) => (l.latest ? `${l.latest} ${l.acts} ${l.summary}` : '');
+  const cards = [
+    card((await A.c.ask<any>('state')).identity.line),
+    card((await g.c.ask<any>('state')).identity.line),
+    card((await e.c.ask<any>('state')).identities.find((i: any) => i.id === A.id).line),
+  ].filter(Boolean).join('\n');
+  const k = await kishib();
+  const rv2 = await k.c.ask<any>('rotate plan', { id: A.id, address: H[0], words: A.chainWords.join(' '), cards });
+  // Two private lines (Edubba's and Damgar's: each app's card names a latest act its homes never received, so Kišib cannot
+  // tie the private act they hold to it) are left out, as the warning says; see docs/h80-report.md. What matters here is Damgar's refusal.
+  let ks = await k.c.ask<any>('confirm', { plan: rv2.plan, digest: rv2.digest, ...(rv2.warning ? { warned: rv2.warning } : {}) });
+  for (let i = 0; ks.sitting.stage === 'sent' && i < 3; i++) ks = await k.c.ask<any>('resend');
+  assert.equal(ks.sitting.stage, 'counts', JSON.stringify(ks.sitting.lines));
+  const fresh = await newWords(k.c);
+  const atHomes = async () => (await relayAt(H[0]).feed({ signer: A.id })).items.length;
+  const before3 = await atHomes();
+  await refused(g.c.ask('collective promise', { ...big, digest: s2.digest }), /changed elsewhere.*Nothing was signed/);
+  assert.equal(await atHomes(), before3, 'nothing signed reached A’s homes');
+  await g.c.ask('renew', { words: fresh.signing.join(' ') });
+  assert.equal((await g.c.ask<any>('check')).current, true, 'the new words taken: Damgar signs again');
+  // The member key lived on a line left out above: void with it, said plainly, nothing signed.
+  await refused(g.c.ask('collective promise', { ...big, digest: s2.digest }), /No key of yours for this collective/);
   void everything;
 });

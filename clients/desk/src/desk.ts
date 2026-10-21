@@ -81,6 +81,30 @@ export const SORTED: Sorted[] = ['new', 'to answer', 'answered', 'ignored'];
 export const KEY_CHANGED_SAY =
   'This identity’s signing key was changed elsewhere, with its chain key’s paper words: a change of keys is done in Kišib, never in Edubba. The key Edubba holds no longer counts, so Edubba signs nothing more with it. If you did not change it, someone holding the chain key’s words may have: open Kišib. To go on here, give the new signing key’s words in the identity’s record (Identities tab).';
 
+/** Said where a real collective's own signing key, held here, was changed in Kišib (H80): where the collective's new words go. */
+export const COLLECTIVE_KEY_CHANGED_SAY =
+  'This collective’s signing key was changed elsewhere, in Kišib, with its members’ paper shares. The key Edubba holds for it no longer counts, so Edubba signs nothing more for it with that key. To go on here, give the collective’s new signing key’s words under its member change (Collectives tab).';
+
+/** Said where an identity's homes hold two rotations at one position: nothing is signed until it is settled (as Dub says). */
+export const CONTESTED_SAY = 'Its homes disagree about its keys (contested): nothing is signed with them until it is settled, in Kišib (“Escape a contested position”).';
+
+/**
+ * Whether `secret` still gives the signing key the identity's homes serve:
+ * null where it does, or where nothing answered (the act's own check after
+ * signing still runs where there is one); `say` where another key counts; `CONTESTED_SAY`
+ * where its homes disagree.
+ */
+async function keyChangedAt(id: string, secret: string, hints: string[], via: Via, say: string): Promise<string | null> {
+  let r: { signingKey?: Uint8Array; stop?: string };
+  try {
+    r = (await lookUp(id, [...new Set(hints)], via)).resolution;
+  } catch {
+    return null;
+  }
+  if (r.stop === 'contested') return CONTESTED_SAY;
+  return r.signingKey && hex(r.signingKey) !== hex(signingPublic(unhex(secret))) ? say : null;
+}
+
 export class Desk {
   /** One signing operation at a time. */
   private busy: Promise<unknown> = Promise.resolve();
@@ -537,17 +561,22 @@ export class Desk {
    */
   async keyChanged(identity: string): Promise<string | null> {
     const me = this.store.identity(identity);
-    let key: Uint8Array | undefined;
-    try {
-      key = (await lookUp(me.id, this.hints(), this.via)).resolution.signingKey;
-    } catch {
-      return null;
-    }
-    return key && hex(key) !== hex(signingPublic(unhex(me.f.signingSecret))) ? KEY_CHANGED_SAY : null;
+    return keyChangedAt(me.id, me.f.signingSecret, [...me.f.homes.map((h) => h.hint), ...this.hints()], this.via, KEY_CHANGED_SAY);
   }
 
-  private async keyCurrent(identity: string): Promise<void> {
+  /**
+   * Refuse, before anything is signed, where the signing key held here for
+   * `identity` no longer counts (F335). Every path of Edubba that signs with
+   * an identity's own key calls it first (H80: the reliance once did not).
+   */
+  async keyCurrent(identity: string): Promise<void> {
     const w = await this.keyChanged(identity);
+    if (w) throw new Error(`${w} Nothing was signed.`);
+  }
+
+  /** The same for a real collective whose own signing key Edubba holds: Kišib changes it at a member change. */
+  async collectiveKeyCurrent(c: { id: string; signingSecret: string; homes: Home[]; relays?: string[] }): Promise<void> {
+    const w = await keyChangedAt(c.id, c.signingSecret, [...c.homes.map((h) => h.hint), ...(c.relays ?? []), ...this.hints()], this.via, COLLECTIVE_KEY_CHANGED_SAY);
     if (w) throw new Error(`${w} Nothing was signed.`);
   }
 
@@ -913,10 +942,15 @@ export class Desk {
    * 15, F110), signed by this identity, public, sent to its homes and
    * relays. Never a side effect: the page shows `WITNESS_EXPLANATION` and
    * passes it back word for word, or nothing is signed (Identity rule 18c).
+   * Refused, before anything is signed, where the signing key held here no
+   * longer counts (H80: this path once skipped the check every other one
+   * makes, and signed with a retired key).
    */
   async witness(identity: string, act: string, shown: string): Promise<{ id: string }> {
     return this.serial(async () => {
       const me = this.store.identity(identity);
+      if (me.f.pending) throw new Error('A rotation of this identity is waiting to count: nothing is signed with it until it does.');
+      await this.keyCurrent(me.id);
       const r = await me.witness([act], { shown, relays: this.store.settings().relays });
       this.store.saveIdentity(me);
       if (!r.sent.some((s) => s.result)) throw new Error(`No home took the witness act: ${r.sent.map((s) => `${s.home}: ${s.error}`).join('; ')}`);

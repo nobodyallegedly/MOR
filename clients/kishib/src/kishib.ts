@@ -13,7 +13,8 @@
 // What it does (F335): rotate an identity from its chain key's paper words,
 // keeping every line (Identity rule 35), waiting for the homes' receipts and
 // sending the same bytes again, never a second rotation (rule 29), then
-// showing the new signing key's words once; rotate a collective from its
+// showing the new chain key's words (a fresh paper at every change of keys,
+// H79) and the new signing key's words, each once; rotate a collective from its
 // members' paper shares (F337, `collective.ts`); escape a contested
 // position with both keys (F299, section 11); declare a succession, which
 // the successor confirms (F300). What it may do: check paper words without
@@ -32,12 +33,20 @@ import { threePositions, toWords, typedBack } from '../../../modules/carry/src/c
 import { readId } from '../../genesis/src/forms.ts';
 import { lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { bindingOf, homesWords, linesUnder, readIdentity, recordWords, served, type Read, type Served } from './read.ts';
-import { chainKeyAt, indexOf, seedOf, wipe, Refused } from './words.ts';
+import { chainKeyAt, freshSeed, indexOf, seedOf, spentPaper, wipe, Refused } from './words.ts';
 import { fingerprint, grouped, type Line, type Review, type Section, type Sitting, type State } from './shapes.ts';
 import { CollectiveSitting, EXPIRY, type CollectiveDeps } from './collective.ts';
-import { addresses, holding, put, FORGOTTEN_SAY, NEW_WORDS_SAY } from './common.ts';
+import { addresses, holding, put, FORGOTTEN_SAY, NEW_CHAIN_WORDS_SAY, NEW_WORDS_SAY } from './common.ts';
 
-export { addresses, holding, put, FORGOTTEN_SAY, NEW_WORDS_SAY };
+export { addresses, holding, put, FORGOTTEN_SAY, NEW_CHAIN_WORDS_SAY, NEW_WORDS_SAY };
+
+/** Said where words given are an earlier paper of the identity, spent by a later change of its keys (H79). */
+export const SPENT_PAPER_SAY = (position: number) =>
+  `These are an earlier chain-key paper of this identity: the change of its keys at position ${position + 1} used it and committed a key of a new paper, so it changes these keys no more. Use the newest paper, the chain key’s words Kišib showed at the last change. Nothing was signed, and the words are forgotten.`;
+
+/** Said in the review where the paper given already made an earlier change (Kišib reused one paper until 21 October 2026, H79): this change is its last. */
+export const LAST_OF_OLD_PAPER_SAY =
+  'This paper already made an earlier change of these keys: until 21 October 2026 Kišib reused one paper for every change. This change is its last. It commits a key of a new paper, whose words are shown once the homes’ receipts are in; this paper is spent after it.';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
@@ -75,6 +84,8 @@ interface Held {
   places: string[];
   /** The new signing key, until its words are shown and three typed back. */
   signing: Uint8Array | null;
+  /** The new chain key's seed, a new paper (H79), until its words are shown and three typed back: shown before the signing key's. */
+  chain: Uint8Array | null;
   stage: Sitting['stage'];
   positions?: number[];
   title: string;
@@ -114,14 +125,14 @@ export class Kishib {
     if (this.col) return this.col.view(this.now());
     const h = this.held;
     if (!h) return null;
-    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...(h.positions ? { positions: h.positions } : {}) };
+    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...(h.positions ? { positions: h.positions } : {}), ...(h.chain || h.signing ? { words: h.chain ? ('chain' as const) : ('signing' as const) } : {}) };
   }
 
   /** Drop everything this sitting holds: words, keys, bytes. */
   forget(): State {
     for (const p of this.plans.values()) p.wipe();
     this.plans.clear();
-    if (this.held) wipe(this.held.signing);
+    if (this.held) wipe(this.held.signing, this.held.chain);
     this.held = null;
     this.col?.wipe();
     this.col = null;
@@ -186,7 +197,17 @@ export class Kishib {
           title: 'These are the right words',
           lines: [
             { text: `They give the chain key this identity’s chain commits to now (key ${idx} of these words): the key the next change of its keys is signed with.`, tone: 'ok' },
-            { text: `After that change, the same words give the next key (key ${idx + 1}): keep this paper.` },
+            { text: 'That change makes a new paper and spends this one: keep this paper until then, and the new one after.' },
+            { text: 'Nothing was signed, and the words are forgotten.' },
+          ],
+        };
+      }
+      const spent = spentPaper(seed, commits(rd), latest.position);
+      if (spent !== null) {
+        return {
+          title: 'These words are spent',
+          lines: [
+            { text: SPENT_PAPER_SAY(spent).replace(/ Nothing was signed, and the words are forgotten\.$/, ''), tone: 'bad' },
             { text: 'Nothing was signed, and the words are forgotten.' },
           ],
         };
@@ -236,6 +257,9 @@ export class Kishib {
         blocking.push(`A rotation with this chain key already exists (act ${s.id}, installing the signing key ${s.signingFingerprint}), waiting for its homes. Kišib never signs a second rotation with the same key (Identity rule 29): send that one again instead (“Send it again”). If you did not make it, someone holds your chain key’s words: use “Escape a contested position”.`);
       }
       const idx = indexOf(seed, r.chainKeyScheme!, r.chainKeyCommit!, latest.position + 8);
+      // An earlier paper, spent by a later change (H79): said plainly, before anything else.
+      const earlier = spentPaper(seed, commits(rd), latest.position);
+      if (idx === null && earlier !== null) throw new Refused(SPENT_PAPER_SAY(earlier));
       if (idx === null) {
         throw new Refused('These words do not give the chain key this identity’s chain commits to now: they may be another identity’s, its signing key’s words, or copied wrong. Nothing was signed, and the words are forgotten. (“Check paper words” says more.)');
       }
@@ -264,7 +288,8 @@ export class Kishib {
           heading: 'What changes',
           lines: [
             { text: 'A new signing key, made now on this device. Its words are shown once, after the homes’ receipts are in. Dub, Edubba and every app holding the old signing key’s words stop signing until given the new ones.', tone: 'warn' },
-            { text: `The next chain key: key ${idx + 1} of the same paper words. Keep this paper: it serves the next change too.` },
+            { text: `A new chain key, from a new paper made now on this device (key ${latest.position + 1} of its words): its 24 words are shown once, after the homes’ receipts are in, before the signing key’s. This paper is then spent: it changes these keys no more, and can be destroyed.`, tone: 'warn' },
+            ...(earlier !== null ? [{ text: LAST_OF_OLD_PAPER_SAY, tone: 'warn' as const }] : []),
             { text: `${homesWords(r.homes, r.effective)} Unchanged.` },
             successor
               ? { text: `A succession declared: ${successor} is named as this identity’s successor. Nobody follows it until that identity confirms it, by an act of its own naming this rotation (F300; Kišib can make it, “Confirm a succession”). This identity goes on living.`, tone: 'warn' }
@@ -277,7 +302,7 @@ export class Kishib {
         { heading: 'The vault (Money: where payments above a limit must go)', lines: vault.lines },
       ];
       const signs = [
-        `Kišib signs one rotation of ${short(id)} at position ${latest.position + 1}, with the chain key these words give (key ${idx}), revealed once.`,
+        `Kišib signs one rotation of ${short(id)} at position ${latest.position + 1}, with the chain key these words give (key ${idx}), revealed once, committing the next chain key of a new paper made at that moment (a fresh seed, the air-gapped Module’s rule 3.3).`,
         'It sends the exact same bytes to every home, and again, unchanged, if they stall: never a second rotation.',
         successor ? `Your rotation names ${short(successor)} as successor; the successor signs nothing here.` : 'It signs nothing else.',
       ];
@@ -300,7 +325,9 @@ export class Kishib {
             if (blocking.length) throw new Error(`Nothing was signed: ${blocking[0]}`);
             checkWarned(plan, warned);
             const current = chainKeyAt(s0, r.chainKeyScheme!, idx);
-            const next = chainKeyAt(s0, r.chainKeyScheme!, idx + 1);
+            // H79: the next chain key comes from a new paper, never from the words just used (key n of the fresh seed, n this rotation's position).
+            const fresh = freshSeed();
+            const next = chainKeyAt(fresh, r.chainKeyScheme!, latest.position + 1);
             const signing = newSigningSecret();
             let bytes: Uint8Array;
             try {
@@ -332,6 +359,7 @@ export class Kishib {
               with: [],
               places: rd.places,
               signing,
+              chain: fresh,
               stage: 'sent',
               title: `The rotation of ${short(id)}`,
               lines: [],
@@ -362,7 +390,7 @@ export class Kishib {
         }
       }
     }
-    lines.push({ text: 'Keep Kišib open until the new words are shown. Closed now, the new signing key is lost: the identity stays yours, and the next change from the same paper installs a key you hold.', tone: 'warn' });
+    lines.push({ text: 'Keep Kišib open until both new papers are written: the new chain key’s words, then the new signing key’s. Closed before the chain key’s words are written, the new paper is lost with them, and once this change counts no paper can change these keys again.', tone: 'bad' });
     h.lines = lines;
     return this.refresh();
   }
@@ -406,15 +434,20 @@ export class Kishib {
     return this.sitting()!;
   }
 
-  /** The new signing key's words, once the rotation counts: shown, then hidden before three are asked back. */
-  showWords(): { words: string[]; say: string[]; holder?: string } {
+  /**
+   * The new words, once the rotation counts: the new chain key's first (a
+   * new paper, H79), then, once three of them are typed back, the new
+   * signing key's; each shown, then hidden before three are asked back.
+   */
+  showWords(): { words: string[]; say: string[]; holder?: string; which?: 'chain' | 'signing' } {
     if (this.col) return this.col.showWords();
     const h = this.held;
-    if (!h || !h.signing) throw new Error('No new signing key is held here.');
+    if (!h || (!h.signing && !h.chain)) throw new Error('No new signing key is held here.');
     if (h.stage === 'sent') throw new Error('Not yet: the new words are shown once the homes’ receipts are in, so they are never words of a key that does not count.');
     h.stage = 'counts';
     h.positions = undefined;
-    return { words: toWords(h.signing), say: NEW_WORDS_SAY };
+    if (h.chain) return { words: toWords(h.chain), say: NEW_CHAIN_WORDS_SAY, which: 'chain' };
+    return { words: toWords(h.signing!), say: NEW_WORDS_SAY, which: 'signing' };
   }
 
   /** Hide the words; three positions to type back. */
@@ -424,7 +457,7 @@ export class Kishib {
       return this.state();
     }
     const h = this.held;
-    if (!h || !h.signing || h.stage !== 'counts') throw new Error('No words are shown.');
+    if (!h || (!h.signing && !h.chain) || h.stage !== 'counts') throw new Error('No words are shown.');
     h.positions = threePositions((n) => randomBytes(1)[0] % n);
     h.stage = 'shown';
     return this.state();
@@ -437,14 +470,23 @@ export class Kishib {
       return this.state();
     }
     const h = this.held;
-    if (!h || !h.signing || h.stage !== 'shown' || !h.positions) throw new Error('No words are asked back.');
-    if (!typedBack(toWords(h.signing), h.positions, a.typed)) throw new Error('Not the words asked for. Check the paper: they are shown again with “Show them again”.');
+    if (!h || (!h.signing && !h.chain) || h.stage !== 'shown' || !h.positions) throw new Error('No words are asked back.');
+    if (!typedBack(toWords(h.chain ?? h.signing!), h.positions, a.typed)) throw new Error('Not the words asked for. Check the paper: they are shown again with “Show them again”.');
+    if (h.chain) {
+      // The new paper is written: forgotten here; the signing key's words come next.
+      wipe(h.chain);
+      h.chain = null;
+      h.positions = undefined;
+      h.stage = 'counts';
+      h.lines = [...h.lines, { text: 'The new chain key’s words are written and forgotten here. The old paper is spent: destroy it. Next, the new signing key’s words.', tone: 'ok' }];
+      return this.state();
+    }
     wipe(h.signing);
     h.signing = null;
     h.bytes = null;
     h.positions = undefined;
     h.stage = 'done';
-    h.lines = [...h.lines, { text: 'The new signing key is forgotten here. Kišib holds nothing of this identity now: only your paper does.', tone: 'ok' }];
+    h.lines = [...h.lines, { text: 'The new signing key is forgotten here. Kišib holds nothing of this identity now: only your two new papers do, the chain key’s and the signing key’s.', tone: 'ok' }];
     return this.state();
   }
 
@@ -513,7 +555,7 @@ export class Kishib {
             { text: `New homes: ${newHomes.map((h) => `${h.hint} (operator ${short(h.operator!)})`).join('; ')}. The old homes are left.`, tone: 'warn' },
             { text: 'Every rotation above is abandoned: it can never count afterwards (Identity section 11).', tone: 'warn' },
             { text: 'A new signing key, made now; its words are shown once the new homes’ receipts are in.' },
-            { text: `The next chain key: key ${idx + 1} of the same paper words. Whoever stole those words can derive it too: after the escape, consider a change of keys onto new paper (a new identity’s words) as soon as you can.`, tone: 'bad' },
+            { text: `A new chain key, from a new paper made now on this device (key ${p} of its words): its words are shown once the new homes’ receipts are in, before the signing key’s. The stolen paper is spent: whoever holds it can derive nothing that counts after this escape.`, tone: 'warn' },
           ],
         },
       ];
@@ -535,7 +577,9 @@ export class Kishib {
           run: async (warned) => {
             checkWarned(plan, warned);
             const current = chainKeyAt(s0, commit.scheme, idx);
-            const next = chainKeyAt(s0, commit.scheme, idx + 1);
+            // H79: a new paper; above all here, where the old one was stolen (the air-gapped Module, rule 3.3: "a fresh seed if the current one may be exposed").
+            const fresh = freshSeed();
+            const next = chainKeyAt(fresh, commit.scheme, p);
             const signing = newSigningSecret();
             let bytes: Uint8Array;
             let endorsement: Uint8Array;
@@ -574,6 +618,7 @@ export class Kishib {
               ],
               places: [...newHomes.map((h) => h.hint), ...rd.places],
               signing,
+              chain: fresh,
               stage: 'sent',
               title: `The escape of ${short(id)}`,
               lines: [],
@@ -633,7 +678,7 @@ export class Kishib {
             const to = [...new Set([...r.homes.map((h) => h.hint), ...rd.places])];
             const lines: Line[] = [];
             for (const hint of to) lines.push(await put(hint, made.act, chain));
-            this.held = { kind: 'confirm', id: successor, owner, bytes: null, act: made.id, homes: r.homes, before: [], with: [], places: to, signing: null, stage: 'done', title: `${short(successor)} confirmed the succession`, lines };
+            this.held = { kind: 'confirm', id: successor, owner, bytes: null, act: made.id, homes: r.homes, before: [], with: [], places: to, signing: null, chain: null, stage: 'done', title: `${short(successor)} confirmed the succession`, lines };
             const v = await lookUp(owner, to, via);
             await lookUp(successor, to, via, v.verifier);
             v.verifier.add(made.act);
@@ -721,7 +766,7 @@ export class Kishib {
       run: async () => {
         await g.run();
         const s = sent as { title: string; lines: Line[] } | null;
-        this.held = { kind: 'collective', id: readId(a.collective), bytes: null, act: null, homes: [], before: [], with: [], places: [], signing: null, stage: 'done', title: s!.title, lines: s!.lines };
+        this.held = { kind: 'collective', id: readId(a.collective), bytes: null, act: null, homes: [], before: [], with: [], places: [], signing: null, chain: null, stage: 'done', title: s!.title, lines: s!.lines };
         return this.sitting()!;
       },
     });
@@ -776,6 +821,11 @@ function commitOf(bytes: Uint8Array): { scheme: number; commit: string } {
   const m = cborDecode(d.payload!) as Map<number, unknown>;
   const c = (d.type === IDENTITY_TYPES.genesis ? m.get(1) : d.type === IDENTITY_TYPES.rotation ? m.get(3) : m.get(2)) as unknown[];
   return { scheme: Number(c[0]), commit: hex(c[1] as Uint8Array) };
+}
+
+/** Every counted chain act's chain-key commitment, with its position: what a paper's keys are compared with. */
+function commits(rd: Read): { position: number; scheme: number; commit: string }[] {
+  return orderedChain(rd).map((c) => ({ position: c.position, ...commitOf(c.bytes) }));
 }
 
 /** Whether the identity declares a clock (Money's declaration, kind 1), as its chain shows. */

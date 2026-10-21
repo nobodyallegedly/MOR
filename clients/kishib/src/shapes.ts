@@ -52,6 +52,8 @@ export interface Sitting {
   shares?: { holder: string; x: number; shown: boolean }[];
   /** Three positions to type back, once the words are hidden. */
   positions?: number[];
+  /** Which new words are next, while any are held (H79): the new chain key's, then the new signing key's. */
+  words?: 'chain' | 'signing';
 }
 
 export interface State {

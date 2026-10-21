@@ -14,7 +14,8 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { post as barebonePost } from '../../barebone/src/post.ts';
 import { fromWords } from '../../../modules/carry/src/carry.ts';
-import { apps, closeAll, dub, dubBringing, edubba, everything, forms, kishib, refused, standing, start, type Relay } from './world.ts';
+import { apps, closeAll, dub, dubBringing, edubba, everything, forms, kishib, newWords, refused, standing, start, type Relay } from './world.ts';
+import { chainKeyAt } from '../src/words.ts';
 import type { Review, State } from '../src/shapes.ts';
 
 let homes: Relay[];
@@ -104,15 +105,37 @@ test('a personal rotation from the chain key’s paper words keeps the lines of 
   // Every earlier act still valid: the three lines kept.
   for (const [id, by] of [[p1.post.id, a.id], [p2.post.id, a.id], [wit.id, a.id]] as const) assert.equal(await standing(id, by, hints), 'valid', id);
 
-  // The new signing key's words, once; hidden; three typed back; forgotten.
-  const shown = await k.c.ask<{ words: string[]; say: string[] }>('words show');
-  assert.equal(shown.words.length, 24);
-  assert.match(shown.say[0], /new signing key’s words/);
+  // H79 (decided by Nobody, allegedly, 21 October 2026: "A rotation generates two new sets of keys, chain and signing"):
+  // the new chain key's words first, a new paper, once; hidden; three typed back; forgotten.
+  const chainShown = await k.c.ask<{ words: string[]; say: string[]; which: string }>('words show');
+  assert.equal(chainShown.which, 'chain');
+  assert.equal(chainShown.words.length, 24);
+  assert.match(chainShown.say[0], /new chain key’s words/);
+  assert.match(chainShown.say[1], /old paper is spent/);
   s = await k.c.ask<State>('words written');
   assert.equal(s.sitting!.stage, 'shown');
   await refused(k.c.ask('words typed', { typed: ['wrong', 'wrong', 'wrong'] }), /Not the words/);
+  s = await k.c.ask<State>('words typed', { typed: s.sitting!.positions!.map((p) => chainShown.words[p - 1]) });
+  assert.equal(s.sitting!.stage, 'counts');
+  assert.equal(s.sitting!.words, 'signing');
+  assert.ok(s.sitting!.lines.some((l) => /old paper is spent: destroy it/.test(l.text)));
+  // The rotation committed a key of the new paper (key 1, its position), not of the old words.
+  const newChain = fromWords(chainShown.words);
+  const r1 = (await lookUp(a.id, H)).resolution;
+  assert.equal(r1.chainKeyCommit, chainKeyAt(newChain, r1.chainKeyScheme!, 1).commit, 'the next chain key is the new paper’s');
+  assert.notEqual(r1.chainKeyCommit, chainKeyAt(fromWords(a.chainWords), r1.chainKeyScheme!, 1).commit, 'never the old paper’s');
+
+  // Then the new signing key's words, once; hidden; three typed back; forgotten.
+  const shown = await k.c.ask<{ words: string[]; say: string[]; which: string }>('words show');
+  assert.equal(shown.which, 'signing');
+  assert.equal(shown.words.length, 24);
+  assert.match(shown.say[0], /new signing key’s words/);
+  assert.notDeepEqual(shown.words, chainShown.words);
+  s = await k.c.ask<State>('words written');
+  assert.equal(s.sitting!.stage, 'shown');
   s = await k.c.ask<State>('words typed', { typed: s.sitting!.positions!.map((p) => shown.words[p - 1]) });
   assert.equal(s.sitting!.stage, 'done');
+  assert.ok(s.sitting!.lines.some((l) => /two new papers/.test(l.text)));
   await refused(k.c.ask('words show'), /No new signing key/);
 
   // Dub takes them (its "renew"), and posts again in a new line.
@@ -120,13 +143,34 @@ test('a personal rotation from the chain key’s paper words keeps the lines of 
   assert.ok(renewed.lines.some((l) => /new line/.test(l.text)));
   const p3 = await a.c.ask<{ post: { id: string } }>('post', { text: 'From Dub, after.' });
   assert.equal(await standing(p3.post.id, a.id, hints), 'valid');
-  // The next rotation is signed with key 1 of the same paper.
-  const again = await k.c.ask<{ lines: { text: string }[] }>('check words', { id: a.id, address: H[0], words: a.chainWords.join(' ') });
-  assert.match(again.lines[0].text, /key 1 of these words/);
+
+  // The old paper is spent: checked, it says so; it makes no further change of keys.
+  const spent = await k.c.ask<{ title: string; lines: { text: string }[] }>('check words', { id: a.id, address: H[0], words: a.chainWords.join(' ') });
+  assert.equal(spent.title, 'These words are spent');
+  assert.match(spent.lines[0].text, /earlier chain-key paper .*position 1/);
+  await refused(k.c.ask('rotate plan', { id: a.id, address: H[0], words: a.chainWords.join(' ') }), /earlier chain-key paper of this identity: the change of its keys at position 1 used it/);
+  // The new paper makes the next change: key 1 of its words now, and that change commits key 2 of a third paper.
+  const nowRight = await k.c.ask<{ title: string; lines: { text: string }[] }>('check words', { id: a.id, address: H[0], words: chainShown.words.join(' ') });
+  assert.equal(nowRight.title, 'These are the right words');
+  assert.match(nowRight.lines[0].text, /key 1 of these words/);
+  // The lines this identity holds now (Dub's new one included) are read back; the old lines Edubba and the web client's code stopped are kept by the first rotation.
+  const r2 = await k.c.ask<Review>('rotate plan', { id: a.id, address: H[0], words: chainShown.words.join(' ') });
+  assert.deepEqual(r2.blocking, []);
+  assert.ok(!JSON.stringify(r2.sections).includes('already made an earlier change'), 'a paper made at a change is not an old paper reused');
+  s = await k.c.ask<State>('confirm', { plan: r2.plan, digest: r2.digest, ...(r2.warning ? { warned: r2.warning } : {}) });
+  for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.c.ask<State>('resend');
+  assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
+  const third = await newWords(k.c);
+  const r3 = (await lookUp(a.id, H)).resolution;
+  assert.equal(r3.links.length, 3);
+  assert.equal(r3.chainKeyCommit, chainKeyAt(fromWords(third.chain), r3.chainKeyScheme!, 2).commit, 'the second change commits key 2 of a third paper');
+  await refused(k.c.ask('rotate plan', { id: a.id, address: H[0], words: chainShown.words.join(' ') }), /earlier chain-key paper of this identity: the change of its keys at position 2 used it/);
+  await a.c.ask('renew', { words: third.signing.join(' ') });
+  assert.equal(await standing((await a.c.ask<{ post: { id: string } }>('post', { text: 'From Dub, after the second change.' })).post.id, a.id, hints), 'valid');
 
   // Nothing kept: Kišib's folder read whole holds none of the words, nor the seed, nor the new key.
   const folder = everything(k.dir);
-  for (const f of forms(a.chainWords, fromWords(a.chainWords), fromWords(shown.words))) assert.ok(!folder.includes(f), `“${f.slice(0, 20)}…” in Kišib’s folder`);
+  for (const ws of [a.chainWords, chainShown.words, shown.words, third.chain, third.signing]) for (const f of forms(ws, fromWords(ws))) assert.ok(!folder.includes(f), `“${f.slice(0, 20)}…” in Kišib’s folder`);
   assert.equal((await k.c.ask<State>('forget')).sitting, null);
   void apps;
   void hex;

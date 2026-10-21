@@ -7,6 +7,7 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { closeAll, kishib, person, start, type Relay } from './world.ts';
+import { newWords } from '../../kishib/test/world.ts';
 import { TestNode } from './node.ts';
 import type { Account, PaymentShown, Rails, ToSign } from '../src/shapes.ts';
 import { SPEC } from '../src/specs.ts';
@@ -51,9 +52,8 @@ test('a vault declared in Kišib, shown in Damgar; above its limit, a payment go
   let s = await k.c.ask<any>('confirm', { plan: review.plan, digest: review.digest });
   if (s.sitting.stage === 'sent') s = await k.c.ask<any>('resend');
   assert.equal(s.sitting.stage, 'counts', JSON.stringify(s.sitting.lines));
-  const words = (await k.c.ask<{ words: string[] }>('words show')).words;
-  s = await k.c.ask<any>('words written');
-  await k.c.ask('words typed', { typed: s.sitting.positions.map((p: number) => words[p - 1]) });
+  // H79: the new chain key's words first (a new paper), then the signing key's.
+  const words = (await newWords(k.c)).signing;
   // Damgar takes the new words; its Settings show the vault, read, never changed there.
   await bob.damgar.c.ask('renew', { words: words.join(' ') });
   await bob.dub.c.ask('renew', { words: words.join(' ') });

@@ -29,6 +29,7 @@ import { verifyRelease } from '../../repo/src/release.ts';
 import { serve, type Running } from '../src/server.ts';
 import { Kishib } from '../../kishib/src/kishib.ts';
 import { chainKeyAt } from '../../kishib/src/words.ts';
+import { newWordsHere } from '../../kishib/test/world.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -191,20 +192,43 @@ test('After Kišib: the record says the signing key was changed elsewhere, and t
   let s = await k.confirm({ plan: r.plan, digest: r.digest });
   for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.resend();
   assert.equal(s.sitting!.stage, 'counts');
-  const fresh = k.showWords().words;
+  // H79: the new chain key's words first (a new paper), then the signing key's.
+  const fresh = newWordsHere(k).signing;
   // Edubba's record: changed elsewhere, the box for the new words.
   await page.reload();
   await page.click('[data-action=tab][data-tab=identities]');
   await page.click(`.entry[data-id="${g.id}"]`);
-  const box = page.locator('form#identity-renew');
+  const box = page.locator('#e-record form#identity-renew');
   await box.waitFor({ timeout: 60_000 });
   assert.match(await box.innerText(), /changed elsewhere \(in Kišib/);
   await shot(page, '08-key-changed-in-kishib');
-  await box.locator('textarea[name=words]').fill(toWords(seed).join(' '));
-  await box.locator('button[type=submit]').click();
+  // H80: relying on an act now is refused, in the words the correction uses, and the box for the new words is right there, under the refusal.
+  const them = TestIdentity.create({ homes: [homes[0].home] });
+  await them.publishGenesis();
+  for (const a of them.chainActs()) await relayAt(relay.base).putAct(a);
+  const p = await postAs(them, { text: 'Relied on after the change of keys.', relays: [relay.base] });
+  const homeActs = async () => (await relayAt(homes[0].base).feed({ signer: g.id })).items.length;
+  const atHome = await homeActs();
+  if (!(await page.locator('#e-rely').evaluate((d) => (d as HTMLDetailsElement).open))) await page.click('#e-rely > summary');
+  await page.fill('#rely input[name=act]', p.id);
+  await page.click('#rely button[type=submit]');
+  await page.locator('#rely-sign input[name=typed]').waitFor({ timeout: 60_000 });
+  await page.fill('#rely-sign input[name=typed]', 'RELY');
+  await page.click('#rely-sign button[type=submit]');
+  await page.locator('#e-rely-shown .note.error', { hasText: 'This identity’s signing key was changed elsewhere' }).waitFor({ timeout: 60_000 });
+  assert.match(await page.locator('#e-rely-shown .note.error').first().innerText(), /Nothing was signed\.$/);
+  const here = page.locator('#e-rely-shown .renew-here form#identity-renew');
+  await here.waitFor({ timeout: 60_000 });
+  assert.equal(await homeActs(), atHome, 'nothing signed reached its home');
+  await shot(page, '08b-refused-new-words-here');
+  // Wrong words (the old chain paper's): refused, nothing kept, the box still there.
+  await here.locator('textarea[name=words]').fill(toWords(seed).join(' '));
+  await here.locator('button[type=submit]').click();
   await page.locator('#e-status .note.error', { hasText: 'do not give this identity’s current signing key' }).waitFor({ timeout: 60_000 });
-  await box.locator('textarea[name=words]').fill(fresh.join(' '));
-  await box.locator('button[type=submit]').click();
+  assert.equal(await here.count(), 1);
+  // The right words, in that box: one step.
+  await here.locator('textarea[name=words]').fill(fresh.join(' '));
+  await here.locator('button[type=submit]').click();
   await said('The new signing key is taken');
   await page.locator('#e-record', { hasText: 'Signing key: the one Edubba holds, current' }).waitFor({ timeout: 60_000 });
   assert.equal(await page.locator('form#identity-renew').count(), 0);

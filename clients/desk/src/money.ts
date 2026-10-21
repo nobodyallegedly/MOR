@@ -127,6 +127,7 @@ export class EdubbaMoney {
       if (to === me.id) throw new Error('That is this identity itself. Nothing was prepared.');
       if (!this.units().some((u) => u.hash === a.unit)) throw new Error('Choose a unit. Nothing was prepared.');
       const value = readValue(a.value);
+      await this.desk.keyCurrent(me.id);
       const r = await sendDraft(me, { what: 'pay', other: to, amount: { unit: a.unit, value }, whatFor: a.whatFor?.trim().slice(0, 280) || null, app: 'Edubba', anchor: null }, { via: this.via, save: async () => this.store.saveIdentity(me) });
       return {
         title: 'Prepared for Damgar',
@@ -192,6 +193,7 @@ export class EdubbaMoney {
       if (!tier) throw new Error('The offer has no such tier.');
       const blind = new Uint8Array(randomBytes(32));
       const leaf = anchoringLeaf(a.act, blind) as string;
+      await this.desk.keyCurrent(me.id);
       const r = await sendDraft(me, { what: 'anchor', other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${act.label.toLowerCase()}`, app: 'Edubba', anchor: { offer: offer.act, tier: a.tier, leaf } }, { via: this.via, save: async () => this.store.saveIdentity(me) });
       this.keep([...this.asked(), { collective: a.collective, act: a.act, label: act.label, blind: hex(blind), leaf, service, offer: offer.act, tier: a.tier, identity: me.id, draft: r.id, at: Math.floor(Date.now() / 1000) }]);
       return {

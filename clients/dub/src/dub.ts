@@ -1749,6 +1749,7 @@ export class Dub {
   contestVow(vow: string, promise: string): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
+      await this.current(me);
       return { lines: (await this.money.contestVow(me, s, readId(vow), promise.trim() || null)).map((text) => ({ text, tone: 'ok' as const })) };
     });
   }
@@ -1768,7 +1769,7 @@ export class Dub {
     return this.serial(async () => {
       const { me, s, p } = await this.ctx();
       const inbox = await this.inboxOf(me.id, [...new Set([...s.relays, ...me.f.homes.map((h) => h.hint)])], s.via).catch(() => this.inboxPlaces(p));
-      const lines = [...(await this.money.deliver(me, s)), ...(await this.money.keysArrived(me, s, inbox))];
+      const lines = [...(await this.money.deliver(me, s, () => this.current(me))), ...(await this.money.keysArrived(me, s, inbox))];
       return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
     });
   }

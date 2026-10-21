@@ -2,7 +2,8 @@
 // the escape with both keys after someone else changed an identity's keys
 // with its stolen paper words (Identity section 11); the escape out of a
 // position contested at a self-hosted home (F299); a succession declared by
-// a rotation and confirmed by the successor (F300).
+// a rotation and confirmed by the successor (F300); an identity whose last
+// change reused its paper, as Kišib did until H79, changing once more from it.
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,7 +12,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SPECS, cborEncode, describeAct, signingPublic, unhex } from '../../genesis/src/core.ts';
+import { SPECS, actId, cborEncode, describeAct, makeRotation, newSigningSecret, signingPublic, unhex } from '../../genesis/src/core.ts';
 import { Running } from '../../genesis/test/world.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
@@ -19,7 +20,8 @@ import { relayAt } from '../../genesis/src/transport.ts';
 import { post as barebonePost } from '../../barebone/src/post.ts';
 import { fromWords, toWords } from '../../../modules/carry/src/carry.ts';
 import { chainKeyAt } from '../src/words.ts';
-import { closeAll, dub, kishib, reader, refused, standing, start, type Relay } from './world.ts';
+import { closeAll, dub, kishib, newWords, reader, refused, standing, start, type Relay } from './world.ts';
+import { LAST_OF_OLD_PAPER_SAY } from '../src/kishib.ts';
 import type { Review, State } from '../src/shapes.ts';
 
 let homes: Relay[];
@@ -42,12 +44,11 @@ async function rotateThrough(c: Awaited<ReturnType<typeof kishib>>['c'], op: str
   let state = await c.ask<State>('confirm', { plan: review.plan, digest: review.digest, ...(review.warning ? { warned: review.warning } : {}) });
   for (let i = 0; (state.sitting!.stage as string) === 'sent' && i < 3; i++) state = await c.ask<State>('resend');
   assert.equal(state.sitting!.stage, 'counts', JSON.stringify(state.sitting!.lines));
-  const shown = await c.ask<{ words: string[] }>('words show');
-  state = await c.ask<State>('words written');
-  state = await c.ask<State>('words typed', { typed: state.sitting!.positions!.map((p) => shown.words[p - 1]) });
+  const shown = await newWords(c);
+  state = await c.ask<State>('state');
   assert.equal(state.sitting!.stage, 'done');
   await c.ask('forget');
-  return { review, state, words: shown.words };
+  return { review, state, words: shown.signing };
 }
 
 test('someone else changes the keys with stolen paper words; the owner escapes with both keys to a new home, abandoning that change; earlier posts stay valid', async () => {
@@ -85,10 +86,12 @@ test('someone else changes the keys with stolen paper words; the owner escapes w
     assert.deepEqual(l.resolution.links.map((x) => x.act), [a.id, escape]);
     assert.match(l.resolution.links[1].how, /escape/);
     assert.equal(await standing(p.post.id, a.id, [relay.base, fresh.base, ...H]), 'valid', 'the earlier post, kept');
-    const shown = await k.c.ask<{ words: string[] }>('words show');
-    assert.equal(l.resolution.signingKey && Buffer.from(l.resolution.signingKey).toString('hex'), Buffer.from(signingPublic(fromWords(shown.words))).toString('hex'));
-    s = await k.c.ask<State>('words written');
-    await k.c.ask('words typed', { typed: s.sitting!.positions!.map((x) => shown.words[x - 1]) });
+    // H79: the escape commits a key of a new paper; the stolen one makes no further change.
+    const shown = await newWords(k.c);
+    assert.equal(l.resolution.signingKey && Buffer.from(l.resolution.signingKey).toString('hex'), Buffer.from(signingPublic(fromWords(shown.signing))).toString('hex'));
+    assert.equal(l.resolution.chainKeyCommit, chainKeyAt(fromWords(shown.chain), l.resolution.chainKeyScheme!, l.resolution.links[1].position).commit, 'the escape commits key 1 of the new paper');
+    const stolen = await kishib();
+    await refused(stolen.c.ask('rotate plan', { id: a.id, address: fresh.base, words: a.chainWords.join(' ') }), /earlier chain-key paper of this identity/);
   } finally {
     await fresh.stop();
   }
@@ -176,4 +179,32 @@ test('F300: a succession declared by a rotation in Kišib, shown as declared; co
   assert.equal((v2.succession(a.id) as { state: string }).state, 'confirmed');
   void SPECS;
   void describeAct;
+});
+
+test('H79: an identity whose last change of keys reused its paper (as Kišib did until 21 October 2026) changes once more from that paper, said on the screen; that change commits a new paper’s key, and the old paper is spent', async () => {
+  const H = homes.map((h) => h.base);
+  const seed = crypto.getRandomValues(new Uint8Array(32));
+  const key0 = chainKeyAt(seed, 3, 0);
+  const g = TestIdentity.create({ homes: homes.map((h) => h.home), chainKey: { scheme: 3, seeds: key0.seeds, commit: key0.commit } });
+  await g.publishGenesis();
+  // The old way (the author's T, sitting 5): the rotation at position 1, signed with key 0 of the paper, committing key 1 of the same paper.
+  const old = makeRotation({ identitySpec: SPECS.identity, identity: g.id, previous: g.id, position: 1, chainKeyScheme: 3, chainKeySeeds: key0.seeds, newSigningPublic: signingPublic(newSigningSecret()), nextChainKeyScheme: 3, nextChainKeyCommit: chainKeyAt(seed, 3, 1).commit, kept: [] });
+  for (const h of H) await relayAt(h).putAct(old);
+  assert.equal((await lookUp(g.id, H)).resolution.links.at(-1)!.act, actId(old), 'the old-style change counts');
+
+  // Once more from the same paper: said, on the screen, as its last change.
+  const k = await kishib();
+  const r = await k.c.ask<Review>('rotate plan', { id: g.id, address: H[0], words: toWords(seed).join(' ') });
+  assert.ok(r.sections.some((x) => x.lines.some((l) => l.text === LAST_OF_OLD_PAPER_SAY)), JSON.stringify(r.sections));
+  let s = await k.c.ask<State>('confirm', { plan: r.plan, digest: r.digest, ...(r.warning ? { warned: r.warning } : {}) });
+  for (let i = 0; (s.sitting!.stage as string) === 'sent' && i < 3; i++) s = await k.c.ask<State>('resend');
+  assert.equal(s.sitting!.stage, 'counts', JSON.stringify(s.sitting!.lines));
+  const shown = await newWords(k.c);
+  const res = (await lookUp(g.id, H)).resolution;
+  assert.equal(res.chainKeyCommit, chainKeyAt(fromWords(shown.chain), 3, 2).commit, 'it commits key 2 of the new paper');
+  assert.notEqual(res.chainKeyCommit, chainKeyAt(seed, 3, 2).commit, 'not key 2 of the old one');
+  // The old paper makes no further change, said plainly; the new one makes the next.
+  await refused(k.c.ask('rotate plan', { id: g.id, address: H[0], words: toWords(seed).join(' ') }), /earlier chain-key paper of this identity: the change of its keys at position 2 used it/);
+  const right = await k.c.ask<{ title: string }>('check words', { id: g.id, address: H[0], words: shown.chain.join(' ') });
+  assert.equal(right.title, 'These are the right words');
 });

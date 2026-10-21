@@ -128,7 +128,7 @@ const vaultFields = `<details{open}><summary>The vault (optional): keep it, chan
 /** Said first under Change the vault (H40): changing the vault, or its limit, is a change of keys. */
 export const VAULT_SAY = [
   'Changing the vault or its limit is a change of keys. Only the chain key changes the vault (Money rules 2 and 3), so a thief holding only the signing key can never move it.',
-  'You need the chain key’s paper, the 24 words written when the identity was made. Kišib signs a change of keys that keeps every line of acts and declares the vault anew (or removes it), then shows a new signing key’s 24 words: write them on a new paper, and give them to Dub and Damgar.',
+  'You need the chain key’s paper, your newest one (written when the identity was made, or shown at its last change of keys). Kišib signs a change of keys that keeps every line of acts and declares the vault anew (or removes it), then shows two new sets of 24 words, each once: the new chain key’s (a new paper, for the next change; the old paper is then spent) and the new signing key’s, to give to Dub and Damgar.',
   'The old signing key’s words stop counting once the homes receipt the change.',
 ];
 
@@ -148,14 +148,14 @@ export function form(kind: string, web: boolean): string {
       return f(
         'Change an identity’s keys',
         'Kišib reads the identity from its homes and every relay its routes name, finds every line of its acts (Dub’s, Edubba’s, the web client’s), and reads it all back in plain words before anything is signed.',
-        `${idField('id', 'The identity’s ID')}${address}${words('words', 'Its chain key’s 24 words, in order (the paper written when it was made; never the signing key’s words)')}
+        `${idField('id', 'The identity’s ID')}${address}${words('words', 'Its chain key’s 24 words, in order (its newest paper: written when it was made, or shown at its last change of keys; never the signing key’s words)')}
 <details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(false)}`,
         'Read it back',
       );
     case 'vault':
       return `${top(web, true)}<h2>Change the vault</h2>
 <div class="review" id="vault-say">${lines(VAULT_SAY.map((text) => ({ text })))}</div>
-<form id="form-rotate" data-kind="rotate">${idField('id', 'The identity’s ID')}${address}${words('words', 'Its chain key’s 24 words, in order (the paper written when it was made; never the signing key’s words)')}
+<form id="form-rotate" data-kind="rotate">${idField('id', 'The identity’s ID')}${address}${words('words', 'Its chain key’s 24 words, in order (its newest paper: written when it was made, or shown at its last change of keys; never the signing key’s words)')}
 <details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(true)}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
     case 'succession':
       return `${top(web, true)}<h2>Name or confirm a successor</h2>
@@ -243,7 +243,7 @@ export function sitting(s: Sitting, web: boolean): string {
     : '';
   const acts: string[] = [];
   if (s.stage === 'sent') acts.push(btn('refresh', 'Look again'), btn('resend', 'Send it again (the same bytes)', true));
-  if (s.stage === 'counts' && s.kind !== 'confirm') acts.push(btn('show words', s.kind === 'collective' ? 'Show the collective’s new signing key’s words' : 'Show the new signing key’s words', true));
+  if (s.stage === 'counts' && s.kind !== 'confirm') acts.push(btn('show words', s.kind === 'collective' ? 'Show the collective’s new signing key’s words' : s.words === 'chain' ? 'Show the new chain key’s words (a new paper)' : 'Show the new signing key’s words', true));
   if (s.stage === 'shown') acts.push(btn('show words', 'Show them again'));
   if (s.stage === 'waiting' && q) {
     if (!q.room) acts.push(btn('gather', 'Look for the members’ shares', q.have < q.need));
