@@ -121,3 +121,48 @@
 | Media and withdrawal | F108, F294 |
 | Relays and fail closed | F294, F295, F323 |
 
+### Money draft 11 (from draft 10)
+
+| Rule or section | Findings |
+| --- | --- |
+| (header: the drafts' notes) | F1, F128, F251, F255, F266, F267, F271, F295, F297, F298, F301, F323, F328, F350, F353, F358 |
+| How to read this draft | F267, F301, F328 |
+| Dependencies | F32, F126 |
+| Rails and units | F112, F193, F301, F323, F330 |
+| Where payment goes | F115 |
+| Proving a payment | F295, F328 |
+| Debts and purchases | F126 |
+| Routes | F267 |
+| rule 1 | F31 |
+| rule 3 | F67, F79, F114, F164, F169, F255 |
+| rule 4 | F106, F115, F168, F181, F198 |
+| rule 6 | F111, F181 |
+| rule 7 | F112, F113, F128, F129, F130, F250, F350, F353, F358 |
+| rule 11 | F64, F131, F140, F151, F168, F200, F267, F301, F328 |
+| rule 12 | F65, F128, F131, F132, F200, F267 |
+| rule 15 | F126, F174, F219, F242 |
+| rule 16 | F126 |
+| rule 17 | F66, F133, F145, F155, F157, F161, F163, F168, F169, F170, F191, F255 |
+| rule 18 | F126, F127, F128, F131, F215, F224, F242, F301, F328 |
+| rule 19 | F80, F113, F168, F191, F242 |
+| rule 20 | F75, F116 |
+| rule 21 | F50, F64, F214, F242, F271 |
+| rule 24 | F267, F301 |
+| rule 26 | F267 |
+| rule 27 | F267 |
+| rule 29 | F138, F145, F155, F168, F169, F174, F175, F176, F177, F178, F179, F180, F181, F182, F200, F201, F202, F203, F226 |
+| Payee pointer (type 0) | F31, F46, F68, F358 |
+| The vault | F10, F79 |
+| The clock | F176, F179, F181, F202 |
+| Obligation (type 1) | F66, F155 |
+| Settlement receipt (type 2) | F75, F113, F126 |
+| Payment claim (type 3) | F80, F113, F126, F135, F147, F267 |
+| Creditor's release (type 4) | F125, F126 |
+| Tasks | F112, F301 |
+| Reasoning | F29, F111, F112, F113, F114, F115, F117, F145, F155, F157, F169, F170 |
+| Where a payment goes | F111, F114, F115, F126 |
+| Debts | F126 |
+| Buying, refunds and referrals | F113, F126, F127, F128, F301, F323, F328 |
+| Routes across rails | F267 |
+| Theft of the signing key | F169, F176, F181 |
+
