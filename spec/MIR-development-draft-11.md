@@ -12,7 +12,7 @@ This mark recurs:
 
 - *Client conformance:* a duty of clients. The protocol cannot check it from acts alone, so it is stated for builders.
 
-The MIR has four parts. Part one is cMIPs and Modules as they run most of the time: naming a specification, freezing it, the tasks, adopting and leaving, signing what a rule computes, earning, and discovery. Part two is the rare cases and the mechanics: xtypes and extensions, the machine verification rules run on, predecessors, and the trust root and successors. Part three is the specification format, for reference, with what each kind must carry. Part four is the reasoning, the parameters and the freeze scenarios.
+The MIR has four parts. Part one is cMIPs and Modules as they run most of the time: naming a specification, freezing it, the tasks, adopting and leaving, signing what a rule computes, earning, and discovery. Part two is the rare cases and the mechanics: xtypes and extensions, the machine verification rules run on, predecessors, and the trust root and successors. Part three is the specification format, with how it is decoded and what each kind must carry. Part four is the reasoning, the parameters and the freeze scenarios.
 
 ## Purpose
 
@@ -35,7 +35,7 @@ Identity, Envelopes, Text, Money and Agreements. Fees and usage rewards are defi
 ### Specifications
 
 - **Specification.** A document that defines acts, rules or behaviour, identified by its spec hash. The MIRs are specifications; so are cMIPs, Modules, unit specifications, media types and signature schemes, and the MICS document, test suites and MIPs.
-- **Spec hash.** `tagged_hash("MOR/spec", content)`, over a specification's canonical content. It is what acts name in their `spec` field and what agreements name per task. It is the same wherever the specification is published.
+- **Spec hash.** `tagged_hash("MOR/spec", content)`, where `content` is the deterministic CBOR encoding of the specification's content map (Part three). It is what acts name in their `spec` field and what agreements name per task. It is the same wherever the specification is published.
 - **cMIP.** A community specification for one task: what it accepts and produces in core terms, the act types it defines, and the rules a verifier runs. Many cMIPs may compete for the same task.
 - **Module.** An implementation or extension under a MIR or cMIP: code, a verification rule, the code that plays a media type, a split plan template, a rail. *A unit, a media type and a signature scheme are specifications of their own (kinds 2, 3 and 5; Money, "Unit"), not Modules; the code that plays a media type is a Module.* Identified by its spec hash. *A Module is a specification: it signs nothing, holds nothing and is paid nothing by itself; the identities acting under it do.*
 - **Verification rule.** An executable program, part of a cMIP or Module, that anyone can run to check its outputs, such as a rail Module's check of a rail proof. The rule decides validity; the text explains it.
@@ -68,7 +68,7 @@ A specification is identified by its spec hash, and labelled under its creator's
 
 Every act names its type within the specification that defines it (Envelopes). Two specifications can never define the same type.
 
-*Which types a specification defines: those its text defines, as a verifier implementing it knows them; field 3 only lists them, for discovery (Part three).*
+The types a specification defines are those its text defines, as a verifier implementing it knows them; field 3 only lists them, for discovery (Part three).
 
 #### Rule 3. Creator signature
 
@@ -120,7 +120,7 @@ Several Modules may operate at once under the one cMIP an agreement names for a 
 | 8 | Agreements | Split | an amount received and a split plan; and, for a payment, the agreement and the attempts made | payouts summing exactly, with third-party evidence; and the receiver for this payment, one of the services the signed terms name, in their order, the next only where the attempt before it failed as the cMIP defines failure (Agreements rule 17) |
 | 9 | Agreements | Condition evaluation | a condition and the acts it refers to | true, false, pending or unknown |
 | 10 | Agreements | Time reference | a point on the reference and an act | before, after or undetermined |
-| 11 | Envelopes | Anchoring | an act id | a proof it existed at a point on a named time reference |
+| 11 | Envelopes | Anchoring | an act id | a proof it existed at a point on a named clock |
 | 12 | Agreements | Grant limits | a grant and an act under it | within limits, or not |
 | 13 | Agreements | Work claims | a work hash and a claim | a claim, optionally with a pre-publication commitment |
 | 14 | Agreements | Absence proof | an abandonment declaration, the clause's parameters, and the acts the record's history holds | accepted, refused or unknown |
@@ -135,7 +135,7 @@ Several Modules may operate at once under the one cMIP an agreement names for a 
 
 A client that has not adopted a specification shows its acts as unknown and never signs, pays or accepts under it (Envelopes). An act signed under a signature scheme the client has not adopted is unknown in the same way (Identity).
 
-*A specification whose content is not in the format is no specification, and no client can have adopted it, so an act naming it is unknown to every client (Part three).*
+A specification whose content is not in the format is no specification, and no client can have adopted it, so an act naming it is unknown to every client, unless a rule the verifier can apply shows the act invalid (Part three).
 
 #### Rule 11. Adoption by opt-in
 
@@ -222,7 +222,7 @@ An extension may add rules, never relax the core's. Conservation, the stake rule
 
 #### Rule 21. The path to MOR 2
 
-*Extensions in wide use are the natural candidates for tasks in a successor protocol.*
+Extensions in wide use are the natural candidates for tasks in a successor protocol; a successor protocol, not MOR 1, makes them tasks (rule 6).
 
 ### 9. Verification rules
 
@@ -264,7 +264,9 @@ Anyone can publish a specification naming another as predecessor; nothing ties a
 
 Below the MICS there is one root: **the six frozen texts of its MIRs, published as canonical text; their spec hashes follow from them.** A client ships the texts, or their canonical bytes, and recomputes the hashes it accepts, so that two clients can differ only about a text, which anyone can read. Every act it accepts names one of them, or a specification whose text depends on them.
 
-The frozen specifications are committed to the genesis repository as canonical text (Text): no final line break and no trailing space on any line, a check of the repository refusing any that are not, so that the file, the publication and the hash are one.
+**How a MIR's spec hash is computed.** A MIR's content is the map `{ 0 => 4, 9 => text }`, kind 4 and its frozen text, with no other field; its spec hash is `tagged_hash("MOR/spec", content)` over that map's deterministic CBOR encoding. The MICS document's and a test suite's are computed the same way, with kind 6 or 7. These are the hashes the MIRs write as `IDENTITY`, `TEXT`, `ENVELOPES`, `MONEY`, `AGREEMENTS` and `DEVELOPMENT`.
+
+The frozen specifications are committed to the genesis repository as files of canonical text (Text), save that a file may end with exactly one line break, which is not part of the text: the text is the file's content as UTF-8 with that one final line break removed, if present. A check of the repository refuses a file whose text so read is not canonical text (a trailing space on any line, two final line breaks, or any other break of the Text rules), so that the file, the publication and the hash are one.
 
 *A build and a list of hashes are signed by the same author, so checking one against the other checks nothing; a text anyone can read and hash is a root nobody has to take on trust.*
 
@@ -313,6 +315,30 @@ type-def = [ type: uint, name: tstr, payload-schema: tstr ]   ; schema written i
 rule-ref = [ bytes-hash: hash, size: uint, budget: uint, profile: hash ]     ; the rule's binary, by the hash of its bytes, carried as a separate locked object named by this specification; its step budget; the spec hash of the machine profile it runs on
 ```
 
+### How the content is decoded
+
+The content is decoded as an act's payload is, under the encoding and the CDDL conventions of Identity's Part three ("Encoding", "Formats"), save that a failure makes the content **no specification** (below), not an act invalid. In full:
+
+1. The content is deterministic CBOR, holding one map. Bytes that are not, or a map key twice, make it no specification.
+2. Every key is an unsigned integer from 0 to 13. Any other key, a key the format does not define, makes it no specification.
+3. Every text string in it, field 9 and every `type-def` included, is canonical text (Text MIR, the pinned Unicode version).
+4. Each field holds the type the CDDL gives it: `hash` exactly 32 bytes; `uint` an unsigned integer; `[+ x]` at least one item; `task-ref`, `type-def` and `rule-ref` arrays of exactly two, three and four items; `fee` an array of one or two items, its rate `[0, part]` or `[1, amount]`, `part` an unsigned integer counted in millionths, `amount` carried as given; field 12 the value `true` alone.
+5. Field 0 is a kind from 0 to 8, and field 9 is present.
+6. **By kind**:
+   - field 1 is absent on kinds 4, 6 and 7 (a MIR, the MICS document, a test suite) and present on every other kind;
+   - field 5 is present on a Module (kind 1) and absent on every other kind;
+   - field 8 is present on a MIP (kind 8);
+   - fields 11 and 13 are present together or not at all, and only on a Module; field 11 is 0 or 1; field 13 is ascending, without repeats, from 0, 1 and 2, holding 0 and 1 where field 11 is 0; a Module whose field 5 names the payment cMIP carries both;
+   - field 12 is present only on a cMIP (kind 0);
+   - field 10 is ascending, without repeats, from 0, 1, 2 and 3, on any kind; it is read only where an agreement names the specification as an extension.
+7. Fields 2, 3, 4, 6, 7 and 8 may sit on any kind; fields 3 and 4 serve discovery only, and field 2 is read only where an agreement names the cMIP for a task.
+
+A field the rules above do not forbid is never a reason to refuse the content. *A cMIP filling a task writes field 2 (the publishing tool's rule, below); no decoder can tell that a text fills a task, so a missing field 2 is never no specification.*
+
+**A rule's bytes** (field 6). A rule's binary is a media object of its own, locked as every media object is (Envelopes, "Media"), and `bytes-hash` is its work hash: `tagged_hash("MOR/work", binary)` over the binary's complete bytes, `size` their length in bytes. *Until a machine profile is published, no rule is published under rule 22, so no verifier yet reads field 6.*
+
+**Type definitions** (field 3). A `type-def`'s `payload-schema` is a CDDL rule (RFC 8610) for the type's payload map, written under the conventions of Identity's Part three ("Formats"), naming the shared parts of the MIRs (`hash`, `amount`, `signing-key`…) by the names they carry there. It is read by people and tools, for discovery; the specification's text decides.
+
 ### What each kind must carry
 
 *In short: a few fields are required, by kind, so that every honest tool publishing one text makes one specification; the rest are written only where the text fills them. The types and dependencies a specification has are those its text gives; fields 3 and 4 only help people find them.*
@@ -333,18 +359,44 @@ Every specification carries field 0 (its kind) and field 9 (its text). Besides t
 
 *In short: a rail Module says, in its specification, whether it is a request rail or a push rail, and what its proof binds, so the payment cMIP reads them from the specification an act names, never from code.*
 
-A Module whose field 5 names the payment cMIP carries field 11, the rail's kind (0 a request rail, 1 a push rail), and field 13, the set of what its proof binds, ascending and without repeats, from 0 the payee, 1 the purpose, 2 the previous hop; an empty set binds none of them. Without either, or with any other value, or a field 13 out of order, the specification is not in the format, and so is no specification (below). Wherever field 11 is 0 (a request rail), field 13 holds 0 and 1, the payee and the purpose; otherwise the specification is not in the format, and so is no specification: a request rail always binds payee and purpose. Where field 13 holds part of the set, Money rule 11 applies element by element. **A proof binding the purpose binds the payer the payment commits to** (Agreements rule 22): where field 13 holds 1, the payer is bound. **Fields 11 and 13 are a rail Module's** (a reading, to confirm): on a specification of any other kind, or on a Module carrying one without the other, they are given against their rule, and the specification is not in the format.
+A Module whose field 5 names the payment cMIP carries field 11, the rail's kind (0 a request rail, 1 a push rail), and field 13, the set of what its proof binds, ascending and without repeats, from 0 the payee, 1 the purpose, 2 the previous hop; an empty set binds none of them. Without either, or with any other value, or a field 13 out of order, the specification is not in the format, and so is no specification (below). Wherever field 11 is 0 (a request rail), field 13 holds 0 and 1, the payee and the purpose; otherwise the specification is not in the format, and so is no specification: a request rail always binds payee and purpose. Where field 13 holds part of the set, Money rule 11 applies element by element. **A proof binding the purpose binds the payer the payment commits to** (Agreements rule 22): where field 13 holds 1, the payer is bound. **Fields 11 and 13 are a rail Module's**: on a specification of any other kind, or on a Module carrying one without the other, they are given against their rule, and the specification is not in the format.
 
 *The purpose is bound only through the payment cMIP's commitment, one fingerprint that also carries the payer; a rail binding the one binds the other.*
 
 The payment cMIP reads both from the specification the receipt or claim names (task 6): which rails are request rails decides whether a push-rail payment two holders received is a purchase or a refund (Money rule 18), and what the proof binds decides which act settles a disagreement in payee, purpose or previous hop (Money rule 11).
 
 
+### A unit (kind 2)
+
+*In short: a unit is named by its hash, and a verifier reads nothing else of it; its text says what one smallest part is, so that people and rail Modules agree on it.*
+
+A unit specification carries field 0 (2), field 1 (its creator) and field 9. Its text MUST say:
+
+- what one smallest, indivisible part of the unit is (one satoshi, one cent of a currency, one token of a named issuance), which every `amount` naming it counts (Money, "Act formats");
+- how many smallest parts make the unit as people write it, and the symbol or code a client shows, for display only;
+- what makes it distinct from any other unit (a test network's coin is a unit of its own).
+
+A verifier reads only the unit's spec hash: two amounts are in one unit only where they name the same hash, and no rule of the MICS converts between units (Money: conversion is a party's act). *A unit's text is for the people and the rail Modules that carry it; nothing in it is computed by a verifier, so no field beyond those every specification carries is needed.*
+
+### A signature scheme (kind 5)
+
+*In short: a signature scheme is named by its hash, as Identity's founding schemes are by number; a client that adopts it implements it from its text.*
+
+A signature-scheme specification carries field 0 (5), field 1 (its creator) and field 9, and MAY carry field 6, its verification rule, once a machine profile is published (rule 22). Its text MUST state:
+
+- its public key's encoding and length, as the bytes Identity's `signing-key` and the signature's `key` carry;
+- its signature's encoding and length, as the bytes the signature's `sig` carries;
+- how a signature is verified over the 32-byte act id, the message every MOR signature signs (Identity, "Signature schemes"), with any context string it uses;
+- which roles it may fill: a signing key, a chain key, or both; and, for a chain key, that its commitment is Identity's `tagged_hash("MOR/safety", scheme || key)`, `scheme` being this specification's 32-byte spec hash;
+- test vectors: keys, act ids and signatures, valid and invalid.
+
+A client that has not adopted the scheme answers unknown for every act signed under it, never valid or invalid, whatever the lengths (Identity); a client that has adopted it verifies as its text says. *The founding schemes 1 to 3 are named by number in Identity; a scheme named by hash is everything else, adopted by opt-in, as every specification is.*
+
 ### Not in the format: no specification
 
-*In short: a malformed specification is not a bad specification; it is none. No client can adopt it, so every act naming it is unknown, never invalid.*
+*In short: a malformed specification is not a bad specification; it is none. No client can adopt it, so every act naming it is unknown, unless a rule the verifier can apply shows the act invalid.*
 
-A specification whose content is not in this format (a kind, a reference, a fee or a field given against its rule, fields 10 to 13 included, or a required field missing) is no specification. A verifier holding its content shows it so; an act naming it is unknown to every client, since no client can have adopted it (rule 10); a verifier not holding the content answers unknown, as for any specification it has not adopted. The invalid of Envelopes rule 30 stays for acts outside a specification the verifier implements.
+A specification whose content is not in this format (a kind, a reference, a fee or a field given against its rule, fields 10 to 13 included, or a required field missing) is no specification. A verifier holding its content shows it so; an act naming it is unknown to every client, since no client can have adopted it (rule 10), unless a rule the verifier can apply shows the act invalid (invalid beats unknown, Envelopes rule 30); a verifier not holding the content answers unknown, as for any specification it has not adopted. The invalid of Envelopes rule 30 stays for acts outside a specification the verifier implements.
 
 **A specification malformed and implemented is no specification.** A client may implement a text, its own founding cMIP for instance, whose published content is not in the format: it has not adopted that specification, since adoption is of a published specification, and a client's implementation of a text is not an adoption of malformed bytes. An act naming that spec hash is unknown to it, as to every client; Envelopes rule 30's invalid does not apply. *A client decodes the format at adoption and in a listing, so it cannot implement around it.*
 
@@ -405,11 +457,9 @@ A MIP (kind 8) is a proposal toward a successor protocol. It names its creator, 
 
 - The RV32IM execution profile: memory size, input and output encoding, entry point, and the treatment of every instruction outside the base set; test vectors. Not a parameter of the freeze: a specification named by its hash, MOR 1's first technical specification after the freeze (rule 22).
 
-Still open:
-
-- The CDDL conventions for type definitions in specifications.
-- The signature-scheme specification format: how key and signature encodings and the verification procedure are stated.
-- How the MIRs themselves are published, so their spec hashes (`IDENTITY`, `TEXT`, `ENVELOPES`, `MONEY`, `AGREEMENTS`, `DEVELOPMENT`) are fixed at freeze. A MIR's frozen text contains only these placeholders, never its own or another MIR's hash, and MIRs do not list each other by hash as dependencies: their dependencies are circular, so they are stated by name. The six hashes are published together, alongside the texts. **The texts are published, and committed to the genesis repository, as canonical text, and the hashes follow from them** (rule 26).
+- How the MIRs are published, so their spec hashes (`IDENTITY`, `TEXT`, `ENVELOPES`, `MONEY`, `AGREEMENTS`, `DEVELOPMENT`) are fixed at the freeze: rule 26. A MIR's frozen text contains only these placeholders, never its own or another MIR's hash, and MIRs do not list each other by hash as dependencies: their dependencies are circular, so they are stated by name. The six hashes are published together, alongside the texts.
+- The CDDL conventions for type definitions: Part three ("How the content is decoded"), under Identity's.
+- The signature-scheme specification: Part three ("A signature scheme (kind 5)"); the unit specification: Part three ("A unit (kind 2)").
 
 ### Freeze scenarios
 
@@ -426,7 +476,7 @@ Still open:
 - A cMIP declaring itself a proof-of-delivery checker (field 12), found by it, and named by a proven offer whose proof it checks; a proven offer naming a cMIP without field 12, its checker asked just the same: 8.
 - A Module working under a MIR with no cMIP (a seed Module, an air-gapped signer), naming the MIR in field 5: in the format: a component under "Development".
 - A specification's text published by two tools, one writing field 2 and one not: a listing shows two specifications of one text, as versions; a client adopting by text finds both; an act of a type the text defines is judged by the text, never by field 3: 8.
-- A publication carrying a specification with field 10 out of order: a listing shows it as no specification; an act naming it is unknown in every client, never invalid: 8.
+- A publication carrying a specification with field 10 out of order: a listing shows it as no specification; an act naming it is unknown in every client, unless a rule the verifier can apply shows it invalid (a text that is not canonical, `acks` it may not carry): 8.
 - A role share paid to the modules a payment ran through, evidenced by a party: the receipt or claim naming a rail Module, or a use record signed by the identity running a service and acknowledged by the payer the payment commits to; the use record alone pays nothing: 2.
 
 #### Part two
