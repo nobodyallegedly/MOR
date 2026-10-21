@@ -30,7 +30,7 @@
 import { ENVELOPES_TYPES, SPECS, describeAct, keyDeliveryPayload, openSealed, pickupTag, readKeyDelivery, unhex, xwingPublic } from './core.ts';
 import { sealFor, type TestIdentity } from './identity.ts';
 import { lookUp } from './lookup.ts';
-import { actsBy, cardText, ownLine, unplaced, type Card } from './lines.ts';
+import { actsBy, cardText, ownLine, unplaced, type Card, type LineKind } from './lines.ts';
 import { relayAt, type Via } from './transport.ts';
 
 // No Buffer: Dub's web client runs this file in a browser.
@@ -99,18 +99,29 @@ export interface LineAtHomes {
   card: string | null;
 }
 
+/** An app's lines, each with its kind (F376); a file not yet split keeps its one line, kind unnamed. */
+function linesHeld(f: TestIdentity['f']): { kind?: LineKind; ids: string[] }[] {
+  if (!f.split) return f.sequence.length ? [{ ids: f.sequence }] : [];
+  return ([['public', f.sequence], ['private', f.private ?? []], ['earlier', f.earlier ?? []]] as [LineKind, string[]][]).filter(([, ids]) => ids.length).map(([kind, ids]) => ({ kind, ids }));
+}
+
 /**
- * This app's line of `me`, as the homes hold it (the Suite lead's point 3),
- * read back from the homes and the relays the identity's routes name, as
- * Kišib reads them. The card names only an act the homes hold; where they do
- * not, there is no card, and `missing` says how many acts are not there.
- * Read only: the app sends what waits first (`sendWaiting`), in its own
- * turn, so that no save overtakes an act being signed.
+ * This app's lines of `me`, as the homes hold them (the Suite lead's point
+ * 3; F376: its public line, its private line, and the line it kept before,
+ * each with its own card), read back from the homes and the relays the
+ * identity's routes name, as Kišib reads them. The cards name only acts the
+ * homes hold; where one does not, there is no card yet, and `missing` says
+ * how many acts are not there. Read only: the app sends what waits first
+ * (`sendWaiting`), in its own turn, so that no save overtakes an act being
+ * signed.
  */
 export async function lineAtHomes(me: TestIdentity, app: string, via: Via = me.via): Promise<LineAtHomes> {
-  const own = ownLine(me.f.sequence);
-  const blank = { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null };
-  if (!own.card) return { ...blank, atHomes: null, missing: 0, hidden: 0, card: null };
+  const lines = linesHeld(me.f).map((l) => ({ ...l, card: ownLine(l.ids).card! }));
+  const acts = lines.reduce((n, l) => n + l.ids.length, 0);
+  const shown = (l?: (typeof lines)[number]) => ({ acts, latest: l?.card.act ?? null, summary: l?.card.summary ?? null });
+  // The line named first: the private one, where the latest private act lives; else the public one.
+  const first = lines.find((l) => l.kind === 'private') ?? lines[0];
+  if (!lines.length) return { ...shown(), atHomes: null, missing: 0, hidden: 0, card: null };
   const homes = me.f.homes.map((h) => h.hint);
   let places = homes;
   try {
@@ -119,15 +130,23 @@ export async function lineAtHomes(me: TestIdentity, app: string, via: Via = me.v
   } catch {
     // its homes did not answer: read what can be read
   }
-  const acts = await actsBy(me.f.identity, places, via);
-  if (!acts.length) return { ...blank, atHomes: null, missing: 0, hidden: null, card: null };
-  const held = new Set(acts.map((a) => (describeAct(a) as { id: string }).id));
-  const missing = me.f.sequence.filter((id) => !held.has(id)).length;
-  const u = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts }));
-  const hidden = me.f.sequence.filter((id) => u.has(id)).length;
-  const atHomes = held.has(own.card.act);
-  const card: Card = { ...own.card, hidden, ...(missing ? { missing } : {}) };
-  return { ...blank, atHomes, missing, hidden, card: atHomes ? cardText(card, app) : null };
+  const found = await actsBy(me.f.identity, places, via);
+  if (!found.length) return { ...shown(first), atHomes: null, missing: 0, hidden: null, card: null };
+  const held = new Set(found.map((a) => (describeAct(a) as { id: string }).id));
+  const u = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts: found }));
+  const cards = lines.map((l) => {
+    const missing = l.ids.filter((id) => !held.has(id)).length;
+    const card: Card = { ...l.card, hidden: l.ids.filter((id) => u.has(id)).length, ...(l.kind ? { line: l.kind } : {}), ...(missing ? { missing } : {}) };
+    return { l, card, missing, atHomes: held.has(l.card.act) };
+  });
+  const away = cards.find((c) => !c.atHomes);
+  return {
+    ...shown(away?.l ?? first),
+    atHomes: !away,
+    missing: cards.reduce((n, c) => n + c.missing, 0),
+    hidden: cards.reduce((n, c) => n + c.card.hidden!, 0),
+    card: away ? null : cards.map((c) => cardText(c.card, app)).join('; '),
+  };
 }
 
 /**
@@ -192,7 +211,7 @@ export async function ownActs(identity: string, secrets: Uint8Array[], places: s
 export function lineReader(app: string): (me: TestIdentity, via?: Via) => Promise<LineAtHomes> {
   const seen = new Map<string, { latest: string | null; at: number; line: LineAtHomes }>();
   return async (me, via = me.via) => {
-    const latest = me.f.sequence[me.f.sequence.length - 1] ?? null;
+    const latest = linesHeld(me.f).map((l) => l.ids[l.ids.length - 1]).join(' ') || null;
     const was = seen.get(me.f.identity);
     const waiting = Object.keys(me.f.unsent ?? {}).length > 0;
     if (was && was.latest === latest && !waiting && was.line.atHomes && Date.now() - was.at < 60_000) return was.line;
@@ -202,8 +221,10 @@ export function lineReader(app: string): (me: TestIdentity, via?: Via) => Promis
   };
 }
 
-/** A line as this app holds it, where its homes could not be read: no card. */
-export function noLine(sequence: string[]): LineAtHomes {
-  const own = ownLine(sequence);
-  return { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null, atHomes: null, missing: 0, hidden: null, card: null };
+/** This app's lines as it holds them, where its homes could not be read: no card. */
+export function noLine(f: TestIdentity['f']): LineAtHomes {
+  const lines = linesHeld(f);
+  const l = (lines.find((x) => x.kind === 'private') ?? lines[0])?.ids ?? [];
+  const own = ownLine(l);
+  return { acts: lines.reduce((n, x) => n + x.ids.length, 0), latest: own.card?.act ?? null, summary: own.card?.summary ?? null, atHomes: null, missing: 0, hidden: null, card: null };
 }

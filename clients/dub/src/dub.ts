@@ -24,7 +24,7 @@
 
 import { IDENTITY_TYPES, MIRS, SPECS, resignationPayload, sha256, base64, cborDecode, cborEncode, describeAct, hex, openSealed, shareOnPaper, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
 import { leaveAtHomes, lineReader, noLine, sendWaiting, type LineAtHomes } from '../../genesis/src/private.ts';
-import { TestIdentity, TEST_LABEL, sealFor, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
+import { TestIdentity, TEST_LABEL, freshLines, ownIds, sealFor, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, type Via } from '../../genesis/src/transport.ts';
 import { Judge, leaveInInbox, post, readPost, textPayload, withdraw, type ShownPicture, type ShownPost } from '../../barebone/src/post.ts';
@@ -307,7 +307,7 @@ export class Dub {
         relays: s.relays,
         encryption: me.f.encryption.length > 0,
         oldChainKey: !!me.f.safety.seeds,
-        line: line ?? noLine(me.f.sequence),
+        line: line ?? noLine(me.f),
         list: p.list,
         sealed: p.sealed ? { version: p.sealed.version, forked: !!p.sealed.forked } : null,
         signing: !!s.signing,
@@ -553,8 +553,8 @@ export class Dub {
     me.f.homes = r.homes;
     me.f.rule = r.rule ?? null;
     me.f.pending = null;
-    // A new line under the new binding (the carry Module, 4.3): the old one ended with the old key.
-    me.f.sequence = [];
+    // New lines under the new binding (the carry Module, 4.3; F376: public and private): the old ones ended with the old key.
+    freshLines(me.f);
     // Routes are versioned: this app goes on with them only where it wrote the version that counts.
     me.f.routes = me.f.routes && look.routes.act === me.f.routes.act ? me.f.routes : null;
     const lines: Line[] = [{ text: 'The new signing key’s words give its current signing key. This app signs with them from now on, in a new line.', tone: 'ok' }];
@@ -1084,7 +1084,7 @@ export class Dub {
       const places = [...hints, ...this.inboxPlaces(p)];
       const toYou: Item[] = [];
       for (const k of shown.filter((x) => x.kind === 'public').sort((a, b) => b.found - a.found).slice(0, 30)) {
-        const answers = k.refs.filter((r) => r.signer === me.id || me.f.sequence.includes(r.id));
+        const answers = k.refs.filter((r) => r.signer === me.id || ownIds(me.f).includes(r.id));
         if (!answers.length && !k.to.includes(me.id)) continue;
         const ans = answers.map((r) => ({ id: r.id, who: this.whoFrom(me.id, me.id, p), snippet: null }));
         let item: Item;

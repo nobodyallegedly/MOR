@@ -12,7 +12,9 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { describeAct } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, describeAct } from '../../genesis/src/core.ts';
+import { actsBy, readCards } from '../../genesis/src/lines.ts';
+import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { ACCEPTABLE, SPEC } from '../../damgar/src/specs.ts';
 import { changeKeys } from '../../kishib/test/world.ts';
@@ -34,7 +36,7 @@ after(async () => {
 
 type Line = { acts: number; latest: string | null; summary: string | null; atHomes: boolean | null; missing: number; hidden: number | null; card: string | null };
 
-/** The line's latest act is at every home, locked; the card names it, and its app. */
+/** The private line's latest act is at every home, locked; the card names it, its app and its line (F376), and every card the app shows names the app. */
 async function placed(line: Line, app: string, what: string): Promise<string> {
   assert.ok(line.latest, `${app}, ${what}: a line`);
   for (const h of homes) {
@@ -44,8 +46,10 @@ async function placed(line: Line, app: string, what: string): Promise<string> {
   }
   assert.equal(line.atHomes, true, `${app}, ${what}: ${JSON.stringify(line)}`);
   assert.equal(line.missing, 0, `${app}, ${what}: nothing of the line missing from the homes`);
-  assert.ok(line.card?.startsWith(`${line.latest} ${line.acts} ${line.summary} `), `${app}, ${what}: the card names it: ${line.card}`);
-  assert.ok(line.card!.endsWith(` ${app}`), `${app}, ${what}: the card names its app: ${line.card}`);
+  const cards = readCards(line.card ?? '');
+  const own = cards.find((c) => c.act === line.latest);
+  assert.ok(own && own.summary === line.summary && own.line === 'private', `${app}, ${what}: a card names it, on the private line: ${line.card}`);
+  assert.ok(cards.every((c) => c.app === app), `${app}, ${what}: each card names its app: ${line.card}`);
   return line.card!;
 }
 
@@ -68,11 +72,14 @@ test('every app leaves each private act at the homes, its card names it, and a c
   assert.notEqual(f.latest, m.latest, 'the follow list is a new act of the line');
   await placed(f, 'Dub', 'the follow list, sealed');
 
-  // Edubba: a real collective founded with iPa and iPh: A's member key, sealed to A, and the invitations and the
-  // founding's word, sealed to them; then a payment prepared for Damgar (sealed to oneself). The founding comes first:
-  // a public act behind a private act on one line is unknown to every other reader after a change of keys
-  // (docs/private-lines-report.md, question 1), which would hide the collective's agreement from Damgar here.
+  // Edubba: first a payment prepared for Damgar (sealed to oneself), then a real collective founded with iPa and iPh:
+  // its terms and A's signature, public, and A's member key, sealed to A, and the invitations and the founding's word,
+  // sealed to them. The founding comes after a private act on purpose (F376): on one line, a public act behind a private
+  // act was unknown to every other reader after a change of keys; on Edubba's public line, it stays valid.
   const edubbaLine = async () => (await e.c.ask<{ identities: { id: string; line: Line }[] }>('state')).identities.find((i) => i.id === A.id)!.line;
+  const unit = (await e.c.ask<{ hash: string }[]>('money units'))[0].hash;
+  await e.c.ask('money pay', { identity: A.id, to: iPa.id, value: '5', unit, whatFor: 'clay' });
+  await placed(await edubbaLine(), 'Edubba', 'a payment prepared for Damgar');
   const grid = {
     members: [A.id, iPa.id, iPh.id],
     constitution: { holders: [A.id, iPa.id, iPh.id], number: 3 },
@@ -96,9 +103,6 @@ test('every app leaves each private act at the homes, its card names it, and a c
   await e.c.ask('real gather', { act: terms });
   const col = (await e.c.ask<any>('real found', { act: terms, read: true })).acts[0] as string;
   await placed(await edubbaLine(), 'Edubba', 'the founding’s word to iPa');
-  const unit = (await e.c.ask<{ hash: string }[]>('money units'))[0].hash;
-  await e.c.ask('money pay', { identity: A.id, to: iPa.id, value: '5', unit, whatFor: 'clay' });
-  await placed(await edubbaLine(), 'Edubba', 'a payment prepared for Damgar');
 
 
   // Damgar: the accepted list, sealed to oneself; then a promise for the collective above its cap, iPa asked.
@@ -136,10 +140,25 @@ test('every app leaves each private act at the homes, its card names it, and a c
   const review = await k.c.ask<any>('rotate plan', { id: A.id, address: H[0], words: A.chainWords.join(' '), cards });
   const said = JSON.stringify(review.sections);
   assert.equal(review.warning, null, `every line placed: ${said}`);
-  for (const app of ['Dub', 'Edubba', 'Damgar', 'Ummia']) assert.match(said, new RegExp(`${app}’s line\\. [^"]*Kept`), `${app}’s line kept`);
+  for (const app of ['Dub', 'Edubba', 'Damgar', 'Ummia']) assert.match(said, new RegExp(`${app}’s private line\\. [^"]*Kept`), `${app}’s private line kept`);
+  for (const app of ['Dub', 'Edubba']) assert.match(said, new RegExp(`${app}’s public line\\. A line of acts[^"]*Kept`), `${app}’s public line read by Kišib itself, and kept`);
   assert.doesNotMatch(said, /left out|not placed|lie on no line/, said);
   const fresh = await changeKeys(k.c, review);
 
+  // Every reader, holding no key of A's, follows A's public lines after the change: the founding's terms and A's signature,
+  // signed after a private act, are valid, not unknown (F376).
+  const reader = await lookUp(A.id, H, {}, new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text));
+  const seen = await actsBy(A.id, [...H, ...R]);
+  for (const x of seen) {
+    try {
+      reader.verifier.add(x);
+    } catch {
+      // private: a reader cannot open it
+    }
+  }
+  const publicActs = seen.map((x) => describeAct(x) as { id: string; public: boolean; signer?: string }).filter((d) => d.public && d.signer === A.id);
+  assert.ok(publicActs.some((d) => d.id === terms), 'the founding’s terms are among A’s public acts');
+  for (const d of publicActs) assert.equal(reader.verifier.status(d.id), 'valid', `${d.id}: valid for every reader after A’s change of keys`);
   // Damgar takes the new words; the member key lived on Edubba's line, kept: Damgar signs for the collective with it.
   await g.c.ask('renew', { words: fresh.signing.join(' ') });
   const p3 = await g.c.ask<any>('collective promise', { ...big, digest: s2.digest });
@@ -167,17 +186,17 @@ test('a locked act removed from the homes on purpose: Kišib’s review says so 
 
   const k = await kishib();
   const review = await k.c.ask<any>('rotate plan', { id: B.id, address: H[0], words: B.chainWords.join(' '), cards });
-  assert.match(review.warning ?? '', /Damgar’s line is not placed: its latest act \([0-9a-f]{64}\) is not at the identity's homes, so no reader can follow it\./);
+  assert.match(review.warning ?? '', /Damgar’s private line is not placed: its latest act \([0-9a-f]{64}\) is not at the identity's homes, so no reader can follow it\./);
   assert.match(review.warning, /the accepted list/, 'what lives on it, in plain words');
   assert.match(review.warning, /a member key for a collective would be lost with it/, 'what leaving it out would mean');
   assert.match(review.warning, /Open Damgar first/);
-  const red = (review.sections as { lines: { text: string; tone?: string }[] }[]).flatMap((s) => s.lines).filter((l) => /Damgar’s line is not placed/.test(l.text));
+  const red = (review.sections as { lines: { text: string; tone?: string }[] }[]).flatMap((s) => s.lines).filter((l) => /Damgar’s private line is not placed/.test(l.text));
   assert.ok(red.length && red.every((l) => l.tone === 'bad'), 'said in red');
 
   // Not read (not passed back): refused, nothing signed, the homes' chain as it was.
   const chainAt = async () => (await relayAt(H[0]).identity(B.id)).chain.length;
   const before2 = await chainAt();
-  await assert.rejects(k.c.ask('confirm', { plan: review.plan, digest: review.digest }), /Nothing was signed\. .*Damgar’s line is not placed/);
+  await assert.rejects(k.c.ask('confirm', { plan: review.plan, digest: review.digest }), /Nothing was signed\. .*Damgar’s private line is not placed/);
   assert.equal(await chainAt(), before2, 'nothing signed reached the homes');
   // Read (the review shown again, the refusal having ended it): the change goes on, its new paper shown first, still nothing signed.
   const again = await k.c.ask<any>('rotate plan', { id: B.id, address: H[0], words: B.chainWords.join(' '), cards });

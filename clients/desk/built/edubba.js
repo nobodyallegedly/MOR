@@ -3686,6 +3686,7 @@ function record(e2) {
 }
 
 // ../genesis/src/lines.ts
+var KINDS = ["public", "private", "earlier"];
 var IDENTITY_WORDS = {
   [IDENTITY_TYPES.routes]: "routes: where its acts are found and where to reach it",
   4: "a name",
@@ -3760,6 +3761,7 @@ async function actsBy(signer, hints, via = {}) {
 }
 function linesOf(o) {
   const specs = o.specs ?? MIRS;
+  const owns = (o.own.length && Array.isArray(o.own[0]) ? o.own : [o.own]).filter((l) => l.length);
   const held = /* @__PURE__ */ new Map();
   for (const a of o.acts) {
     let d;
@@ -3772,7 +3774,8 @@ function linesOf(o) {
     if (d.spec === specs.identity && (d.type === IDENTITY_TYPES.genesis || d.type === IDENTITY_TYPES.rotation || d.type === IDENTITY_TYPES.chainSignature)) continue;
     held.set(d.id, d);
   }
-  const ownPrev = new Map(o.own.map((id, i) => [id, i ? o.own[i - 1] : null]));
+  const ownPrev = new Map(owns.flatMap((line) => line.map((id, i) => [id, i ? line[i - 1] : null])));
+  const ownPosition = new Map(owns.flatMap((line) => line.map((id, i) => [id, i + 1])));
   const prevOf = (id) => {
     if (ownPrev.has(id)) return { known: true, prev: ownPrev.get(id) };
     const d = held.get(id);
@@ -3780,13 +3783,13 @@ function linesOf(o) {
     return { known: true, prev: d.prev ?? null };
   };
   const named = /* @__PURE__ */ new Set();
-  for (const id of [...held.keys(), ...o.own]) {
+  for (const id of [...held.keys(), ...ownPrev.keys()]) {
     const p = prevOf(id);
     if (p.prev) named.add(p.prev);
   }
-  const ownTip = o.own[o.own.length - 1];
+  const ownTips = new Set(owns.map((line) => line[line.length - 1]));
   const tips = [...held.values()].filter((d) => !named.has(d.id) && d.binding === o.binding).map((d) => d.id);
-  if (ownTip && !tips.includes(ownTip) && !named.has(ownTip)) tips.push(ownTip);
+  for (const t of ownTips) if (!tips.includes(t) && !named.has(t)) tips.push(t);
   const out = [];
   for (const tip of tips) {
     const d = held.get(tip);
@@ -3808,11 +3811,11 @@ function linesOf(o) {
       at2 = p.prev;
     }
     ids.reverse();
-    const position = d?.position ?? (ownPrev.has(tip) ? o.own.indexOf(tip) + 1 : void 0);
+    const position = d?.position ?? ownPosition.get(tip);
     if (!why && position !== void 0 && position !== ids.length) why = `its latest act says position ${position}, but ${ids.length} acts were found behind it`;
     out.push({
       tip,
-      own: tip === ownTip,
+      own: ownTips.has(tip),
       readable: !why,
       card: why ? null : { act: tip, position: ids.length, summary: runningSummary(ids) },
       latest,
@@ -3845,14 +3848,17 @@ var APP_LINES = {
   Damgar: "the accepted list, payment claims, receipts, requests and answers, sales, a vault transfer, asks for a collective\u2019s promise",
   Ummia: "the accepted list, payments prepared for an anchor, asks for a collective\u2019s release, MIP discussions"
 };
-function lineOf(app3) {
-  return app3 ? `${app3}\u2019s line` : "a line";
+function lineOf(app3, kind) {
+  const k = kind === "earlier" ? "line from before (public and private acts together)" : kind ? `${kind} line` : "line";
+  return app3 ? `${app3}\u2019s ${k}` : `a ${k}`;
 }
-function livesOn(app3) {
+var capital = (t) => t[0].toUpperCase() + t.slice(1);
+function livesOn(app3, kind) {
+  if (kind === "public") return `${app3 ? `${app3}\u2019s` : "its app\u2019s"} public acts: posts, names, routes, signatures on a collective\u2019s agreement, releases`;
   return (app3 && APP_LINES[app3]) ?? "whatever its app signed there: possibly a member key for a collective, notes, a list";
 }
 function cardText(c2, app3) {
-  return `${c2.act} ${c2.position} ${c2.summary}${c2.hidden === void 0 ? "" : ` ${c2.hidden}`} ${app3}${c2.missing ? ` missing ${c2.missing}` : ""}`;
+  return `${c2.act} ${c2.position} ${c2.summary}${c2.hidden === void 0 ? "" : ` ${c2.hidden}`} ${app3}${c2.line ? ` ${c2.line}` : ""}${c2.missing ? ` missing ${c2.missing}` : ""}`;
 }
 function lineWords(l) {
   const whose = l.own ? "This device\u2019s line" : "A line made elsewhere";
@@ -3883,14 +3889,14 @@ function planLines(lines4, o = {}) {
   const shown3 = [];
   const unplacedSay = [];
   for (const c2 of cards) {
-    const whose = lineOf(c2.app);
+    const whose = lineOf(c2.app, c2.line);
     if (!found2(c2.act)) {
       unplacedSay.push(
-        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: its latest act (${c2.act}) is not at the identity's homes, so no reader can follow it. What lives on it (${livesOn(c2.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it. ${c2.app ? `Open ${c2.app} first: it sends its acts to the homes; then give its card again.` : "Open the app that shows this card first: it sends its acts to the homes; then give its card again."}`
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: its latest act (${c2.act}) is not at the identity's homes, so no reader can follow it. What lives on it (${livesOn(c2.app, c2.line)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it. ${c2.app ? `Open ${c2.app} first: it sends its acts to the homes; then give its card again.` : "Open the app that shows this card first: it sends its acts to the homes; then give its card again."}`
       );
     } else if (c2.missing) {
       unplacedSay.push(
-        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: ${c2.missing === 1 ? "one of its acts is" : `${c2.missing} of its acts are`} not at the identity's homes (${c2.app ?? "its app"} says so), so no reader can follow it past ${c2.missing === 1 ? "it" : "them"}. What lives on it (${livesOn(c2.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it.`
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: ${c2.missing === 1 ? "one of its acts is" : `${c2.missing} of its acts are`} not at the identity's homes (${c2.app ?? "its app"} says so), so no reader can follow it past ${c2.missing === 1 ? "it" : "them"}. What lives on it (${livesOn(c2.app, c2.line)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it.`
       );
     }
   }
@@ -3906,7 +3912,7 @@ function planLines(lines4, o = {}) {
     } else if (card) {
       kept2.push({ act: card.act, position: card.position, summary: card.summary });
       shown3.push({
-        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`,
+        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${capital(lineOf(given.app, given.line))}. ` : ""}${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`,
         tone: l.readable || given && !given.missing ? "ok" : "warn"
       });
     } else if (covered) {
@@ -3929,7 +3935,7 @@ function planLines(lines4, o = {}) {
   for (const c2 of cards) {
     if (lines4.some((l) => l.tip === c2.act)) continue;
     kept2.push({ act: c2.act, position: c2.position, summary: c2.summary });
-    shown3.push({ text: `${c2.app ? `${c2.app}\u2019s line, ending` : "A line ending"} at ${c2.act}, not found at the identity's homes or relays: kept by the card given (position ${c2.position}, summary ${c2.summary}), but no reader can follow it.`, tone: found2(c2.act) ? "warn" : "bad" });
+    shown3.push({ text: `${capital(lineOf(c2.app, c2.line))}, ending at ${c2.act}, not found at the identity's homes or relays: kept by the card given (position ${c2.position}, summary ${c2.summary}), but no reader can follow it.`, tone: found2(c2.act) ? "warn" : "bad" });
   }
   for (const t of unplacedSay) shown3.push({ text: t, tone: "bad" });
   const warning = [left.length ? voidWarning(left) : "", ...unplacedSay].filter(Boolean).join(" ") || null;
@@ -3941,7 +3947,7 @@ function checkWarned(plan, warned) {
   }
 }
 function readCards(text4) {
-  return text4.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+  return text4.split(/[\n;]/).map((l) => l.trim()).filter(Boolean).map((l) => {
     const [act, position, summary, ...rest] = l.split(/[\s:,]+/);
     if (!act || !position || !summary) throw new Error(`\u201C${l}\u201D: a card is a latest act, a position and a summary`);
     const c2 = { act: act.toLowerCase(), position: Number(position), summary: summary.toLowerCase() };
@@ -3949,6 +3955,7 @@ function readCards(text4) {
     for (let i = 0; i < rest.length; i++) {
       const w = rest[i];
       if (/^missing$/i.test(w) && /^\d+$/.test(rest[i + 1] ?? "")) c2.missing = Number(rest[++i]);
+      else if (words2.length && !c2.line && KINDS.includes(w.toLowerCase())) c2.line = w.toLowerCase();
       else if (/^\d+$/.test(w) && c2.hidden === void 0 && !words2.length) c2.hidden = Number(w);
       else if (/^[\p{L}\p{M}’'-]+$/u.test(w)) words2.push(w);
       else throw new Error(`\u201C${l}\u201D: a card is a latest act, a position and a summary, then what its app adds (a count and its name)`);
@@ -4275,6 +4282,33 @@ function clockDeclaration(c2) {
   const ref = (r) => [unhex(r.cmip), cborDecode(unhex(r.params))];
   return { spec: MIRS.money, kind: CLOCK_KIND, cbor: cborEncode([ref(c2.main), ...c2.backup ? [ref(c2.backup)] : []]) };
 }
+function lineFor(f, isPublic) {
+  if (f.cites) return f.sequence;
+  if (!f.split) {
+    if (f.sequence.length) f.earlier = f.sequence;
+    f.sequence = [];
+    f.private = [];
+    f.split = true;
+  }
+  return isPublic ? f.sequence : f.private ??= [];
+}
+function nextLine(f, isPublic) {
+  if (f.cites) return f.sequence;
+  if (!f.split) return [];
+  return isPublic ? f.sequence : f.private ?? [];
+}
+function ownLines(f) {
+  return [f.sequence, f.private ?? [], f.earlier ?? []].filter((l) => l.length);
+}
+function ownIds(f) {
+  return ownLines(f).flat();
+}
+function freshLines(f) {
+  f.sequence = [];
+  f.private = [];
+  delete f.earlier;
+  f.split = true;
+}
 var AGREEMENTS_RECORD = 17;
 var b64 = (b) => base64(b);
 var unb64 = (s) => Uint8Array.from(atob(s), (c2) => c2.charCodeAt(0));
@@ -4386,6 +4420,7 @@ var TestIdentity = class _TestIdentity {
     if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
       objects = [...objects ?? [], ...this.f.cites.map((d) => [this.f.identity, d])];
     }
+    const line = lineFor(this.f, opts.public);
     const made = makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
       signer: this.f.identity,
@@ -4393,14 +4428,14 @@ var TestIdentity = class _TestIdentity {
       spec,
       type,
       payload,
-      sequence: this.f.sequence,
+      sequence: line,
       public: opts.public,
       to: opts.to,
       objects,
       refs: opts.refs,
       acks: opts.acks
     });
-    this.f.sequence.push(made.id);
+    line.push(made.id);
     if (!opts.public && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
     if (this.f.cites && isRecord) this.f.cites = [made.id];
     return made;
@@ -4442,7 +4477,7 @@ var TestIdentity = class _TestIdentity {
       throw new Error("a witness act is signed only after the owner was shown what it does (Identity rule 18c)");
     }
     if (!acts.length) throw new Error("a witness act names at least one act");
-    if (acts.some((a) => this.f.sequence.includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
+    if (acts.some((a) => ownIds(this.f).includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
     const made = this.everyday(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(/* @__PURE__ */ new Map()), { public: true, acks: acts });
     const sent = await this.toHomes(made.act);
     for (const hint of opts.relays ?? []) await relayAt(hint, this.via).putAct(made.act);
@@ -4478,7 +4513,7 @@ var TestIdentity = class _TestIdentity {
     } catch {
     }
     const at2 = [.../* @__PURE__ */ new Set([...homes, ...routed, ...o.hints ?? []])];
-    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: this.f.sequence, acts: await actsBy(this.f.identity, at2, this.via), specs: o.specs });
+    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: ownLines(this.f), acts: await actsBy(this.f.identity, at2, this.via), specs: o.specs });
   }
   /**
    * What a rotation would keep (Identity rule 35, client conformance): the
@@ -4794,7 +4829,7 @@ var TestIdentity = class _TestIdentity {
    * Homes that do not answer are skipped: silence proves nothing.
    */
   async unrecognised() {
-    const known = /* @__PURE__ */ new Set([...this.f.sequence, ...this.chainActs().map((a) => actId(a))]);
+    const known = /* @__PURE__ */ new Set([...ownIds(this.f), ...this.chainActs().map((a) => actId(a))]);
     const out = [];
     const seen = /* @__PURE__ */ new Set();
     for (const h of this.f.homes) {
@@ -8230,10 +8265,16 @@ async function sendWaiting(me, via = me.via) {
   }
   return Object.keys(me.f.unsent ?? {}).length;
 }
+function linesHeld(f) {
+  if (!f.split) return f.sequence.length ? [{ ids: f.sequence }] : [];
+  return [["public", f.sequence], ["private", f.private ?? []], ["earlier", f.earlier ?? []]].filter(([, ids]) => ids.length).map(([kind, ids]) => ({ kind, ids }));
+}
 async function lineAtHomes(me, app3, via = me.via) {
-  const own = ownLine(me.f.sequence);
-  const blank = { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null };
-  if (!own.card) return { ...blank, atHomes: null, missing: 0, hidden: 0, card: null };
+  const lines4 = linesHeld(me.f).map((l) => ({ ...l, card: ownLine(l.ids).card }));
+  const acts = lines4.reduce((n, l) => n + l.ids.length, 0);
+  const shown3 = (l) => ({ acts, latest: l?.card.act ?? null, summary: l?.card.summary ?? null });
+  const first = lines4.find((l) => l.kind === "private") ?? lines4[0];
+  if (!lines4.length) return { ...shown3(), atHomes: null, missing: 0, hidden: 0, card: null };
   const homes = me.f.homes.map((h) => h.hint);
   let places = homes;
   try {
@@ -8241,15 +8282,23 @@ async function lineAtHomes(me, app3, via = me.via) {
     places = [.../* @__PURE__ */ new Set([...homes, ...look.resolution.homes.map((h) => h.hint), ...look.routes.routes.flatMap((x) => x.hints)])];
   } catch {
   }
-  const acts = await actsBy(me.f.identity, places, via);
-  if (!acts.length) return { ...blank, atHomes: null, missing: 0, hidden: null, card: null };
-  const held = new Set(acts.map((a) => describeAct(a).id));
-  const missing = me.f.sequence.filter((id) => !held.has(id)).length;
-  const u2 = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts }));
-  const hidden = me.f.sequence.filter((id) => u2.has(id)).length;
-  const atHomes = held.has(own.card.act);
-  const card = { ...own.card, hidden, ...missing ? { missing } : {} };
-  return { ...blank, atHomes, missing, hidden, card: atHomes ? cardText(card, app3) : null };
+  const found2 = await actsBy(me.f.identity, places, via);
+  if (!found2.length) return { ...shown3(first), atHomes: null, missing: 0, hidden: null, card: null };
+  const held = new Set(found2.map((a) => describeAct(a).id));
+  const u2 = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts: found2 }));
+  const cards = lines4.map((l) => {
+    const missing = l.ids.filter((id) => !held.has(id)).length;
+    const card = { ...l.card, hidden: l.ids.filter((id) => u2.has(id)).length, ...l.kind ? { line: l.kind } : {}, ...missing ? { missing } : {} };
+    return { l, card, missing, atHomes: held.has(l.card.act) };
+  });
+  const away = cards.find((c2) => !c2.atHomes);
+  return {
+    ...shown3(away?.l ?? first),
+    atHomes: !away,
+    missing: cards.reduce((n, c2) => n + c2.missing, 0),
+    hidden: cards.reduce((n, c2) => n + c2.card.hidden, 0),
+    card: away ? null : cards.map((c2) => cardText(c2.card, app3)).join("; ")
+  };
 }
 async function ownActs(identity2, secrets, places, via = {}) {
   const out = /* @__PURE__ */ new Map();
@@ -8297,7 +8346,7 @@ async function ownActs(identity2, secrets, places, via = {}) {
 function lineReader(app3) {
   const seen = /* @__PURE__ */ new Map();
   return async (me, via = me.via) => {
-    const latest = me.f.sequence[me.f.sequence.length - 1] ?? null;
+    const latest = linesHeld(me.f).map((l) => l.ids[l.ids.length - 1]).join(" ") || null;
     const was = seen.get(me.f.identity);
     const waiting = Object.keys(me.f.unsent ?? {}).length > 0;
     if (was && was.latest === latest && !waiting && was.line.atHomes && Date.now() - was.at < 6e4) return was.line;
@@ -8306,9 +8355,11 @@ function lineReader(app3) {
     return line;
   };
 }
-function noLine(sequence) {
-  const own = ownLine(sequence);
-  return { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null, atHomes: null, missing: 0, hidden: null, card: null };
+function noLine(f) {
+  const lines4 = linesHeld(f);
+  const l = (lines4.find((x) => x.kind === "private") ?? lines4[0])?.ids ?? [];
+  const own = ownLine(l);
+  return { acts: lines4.reduce((n, x) => n + x.ids.length, 0), latest: own.card?.act ?? null, summary: own.card?.summary ?? null, atHomes: null, missing: 0, hidden: null, card: null };
 }
 
 // ../../modules/timestamp/src/stamp.ts
@@ -9894,7 +9945,7 @@ var LAYERS = [
   { layer: 3, name: "Agreements", say: "offers, deals and grants (the Agreements layer)" },
   { layer: 4, name: "Development", say: "specifications and releases (the Development layer)" }
 ];
-var KINDS = {
+var KINDS2 = {
   1: [
     { spec: MIRS2.text, type: 0, name: "posts (Text)" },
     { spec: MIRS2.envelopes, type: 0, name: "publications, releases among them" },
@@ -9943,7 +9994,7 @@ function overlap(a, b) {
 function reachSay(l) {
   const layer = LAYERS.find((x) => x.layer === l.layer);
   if (!l.kinds?.length) return `all ${layer?.say ?? `layer ${l.layer}`}`;
-  const names2 = l.kinds.map((k) => KINDS[l.layer]?.find((x) => `${x.spec}:${x.type}` === k)?.name ?? k);
+  const names2 = l.kinds.map((k) => KINDS2[l.layer]?.find((x) => `${x.spec}:${x.type}` === k)?.name ?? k);
   return `only ${list2(names2)}`;
 }
 function governanceOf(grid, text4, used = []) {
@@ -10011,7 +10062,7 @@ function gridOf(g, members) {
     const l = a.kinds.find((k) => "layer" in k);
     if (l) return l.layer;
     const t = a.kinds[0];
-    for (const [layer, ks] of Object.entries(KINDS)) if (ks.some((k) => k.spec === t?.spec)) return Number(layer);
+    for (const [layer, ks] of Object.entries(KINDS2)) if (ks.some((k) => k.spec === t?.spec)) return Number(layer);
     return 1;
   };
   const rows = (g.areas ?? []).map((a) => ({
@@ -15077,7 +15128,7 @@ var Desk = class {
     const r = new Reading(this.store.names());
     for (const k of this.store.keptActs()) r.add(k.act, k.key);
     for (const it of this.store.received(signer).items) if (it.raw) r.add(unb644(it.raw.act), it.raw.key ? unb644(it.raw.key) : void 0);
-    const seq = this.store.identity(signer).f.sequence;
+    const seq = nextLine(this.store.identity(signer).f, a.public);
     const may = r.maySign({ signer, public: a.public, to: a.to, refs: a.refs.map(refAct), prev: seq[seq.length - 1] });
     return may.ok ? null : `Its agency terms do not let it be signed (nudge cMIP draft 3, client conformance): ${may.why}`;
   }
@@ -15469,7 +15520,7 @@ var Desk = class {
       const l = await lookUp(identity2, hints, via);
       const inbox = [...new Set(l.routes.routes.filter((r) => r.kind === 1).flatMap((r) => r.hints))];
       const rec = this.store.received(identity2);
-      const mine = new Set(me.f.sequence);
+      const mine = new Set(ownIds(me.f));
       const secrets = [...me.f.encryption].reverse().map((e2) => Uint8Array.from(Buffer.from(e2.secret, "hex")));
       const problems = inbox.length ? [] : ["This identity declares no inbox: nothing can be delivered to it."];
       let added = 0;
@@ -15699,7 +15750,7 @@ var Desk = class {
         }).catch(() => void 0);
       }
       const me = this.store.identity(i.id);
-      out[i.id] = await this.line(me, this.via).catch(() => noLine(me.f.sequence));
+      out[i.id] = await this.line(me, this.via).catch(() => noLine(me.f));
     }
     return out;
   }
@@ -16161,7 +16212,7 @@ var Setup = class {
         lines4.push({ text: `Its signer was not found: its standing cannot be told (${err5(e2)}).`, tone: "warn" });
       }
     }
-    if (me.f.sequence.includes(id)) blocking.push("It is this identity\u2019s own act: a witness act names other identities\u2019 acts.");
+    if (ownIds(me.f).includes(id)) blocking.push("It is this identity\u2019s own act: a witness act names other identities\u2019 acts.");
     let text4 = null;
     if (d.public && d.spec === SPECS.text && d.type === 0 && d.payload) {
       try {
@@ -21630,7 +21681,7 @@ var AfterKishib = class {
       me.f.homes = r.homes;
       me.f.rule = r.rule ?? null;
       me.f.pending = null;
-      me.f.sequence = [];
+      freshLines(me.f);
       me.f.routes = me.f.routes && look.routes.act === me.f.routes.act ? me.f.routes : null;
       const lines4 = [{ text: "The new words give its current signing key. Edubba signs with them from now on, in a new line.", tone: "ok" }];
       const carried = carriedKey(look, seed);
@@ -22659,7 +22710,7 @@ var Damgar = class {
     me.f.homes = r.homes;
     me.f.rule = r.rule ?? null;
     me.f.pending = null;
-    me.f.sequence = [];
+    freshLines(me.f);
     me.f.routes = null;
     const carried = carriedKey(look, seed);
     if (carried && !me.f.encryption.some((e2) => e2.act === carried.act)) me.f.encryption.push(carried);
@@ -22798,7 +22849,7 @@ var Damgar = class {
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
-      line: line ?? noLine(me.f.sequence)
+      line: line ?? noLine(me.f)
     };
     let l;
     try {
@@ -25478,7 +25529,7 @@ var Dub = class _Dub {
         relays: s.relays,
         encryption: me.f.encryption.length > 0,
         oldChainKey: !!me.f.safety.seeds,
-        line: line ?? noLine(me.f.sequence),
+        line: line ?? noLine(me.f),
         list: p.list,
         sealed: p.sealed ? { version: p.sealed.version, forked: !!p.sealed.forked } : null,
         signing: !!s.signing,
@@ -25705,7 +25756,7 @@ var Dub = class _Dub {
     me.f.homes = r.homes;
     me.f.rule = r.rule ?? null;
     me.f.pending = null;
-    me.f.sequence = [];
+    freshLines(me.f);
     me.f.routes = me.f.routes && look.routes.act === me.f.routes.act ? me.f.routes : null;
     const lines4 = [{ text: "The new signing key\u2019s words give its current signing key. This app signs with them from now on, in a new line.", tone: "ok" }];
     const carried = this.carriedKey(look, seed);
@@ -26184,7 +26235,7 @@ var Dub = class _Dub {
       const places = [...hints, ...this.inboxPlaces(p)];
       const toYou = [];
       for (const k of shown3.filter((x) => x.kind === "public").sort((a, b) => b.found - a.found).slice(0, 30)) {
-        const answers = k.refs.filter((r) => r.signer === me.id || me.f.sequence.includes(r.id));
+        const answers = k.refs.filter((r) => r.signer === me.id || ownIds(me.f).includes(r.id));
         if (!answers.length && !k.to.includes(me.id)) continue;
         const ans = answers.map((r) => ({ id: r.id, who: this.whoFrom(me.id, me.id, p), snippet: null }));
         let item2;
@@ -28307,7 +28358,7 @@ function cardWords(l, app3, e2) {
   const n = `${l.acts} act${l.acts === 1 ? "" : "s"}`;
   if (!l.latest) return n;
   const missing = l.missing ? ` ${l.missing === 1 ? "One act" : `${l.missing} acts`} of this line ${l.missing === 1 ? "is" : "are"} not at your homes, and ${app3} no longer holds ${l.missing === 1 ? "it" : "them"}: no reader can follow this line past ${l.missing === 1 ? "it" : "them"}, so a change of keys may lose what lives on it (a member key, notes, a list). Ki\u0161ib says so in red.` : "";
-  if (l.card) return `${n}: its card, for Ki\u0161ib, <code class="card-line">${e2(l.card)}</code>${missing ? `<br>${e2(missing)}` : ""}`;
+  if (l.card) return `${n}: ${l.card.includes(";") ? "its cards" : "its card"}, for Ki\u0161ib, <code class="card-line">${e2(l.card)}</code>${missing ? `<br>${e2(missing)}` : ""}`;
   if (l.atHomes === false) return `${n}: its latest act (<code>${e2(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e2(app3)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e2(missing)}` : ""}`;
   return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e2(l.latest)}</code>). Look again before changing your keys.`;
 }
@@ -28552,7 +28603,7 @@ ${g.members.map((m) => box(l.holders.includes(m), `area:${i}`, m, `${name(m)}\u2
 <td>${num(`area:${i}`, l.number, 1, Math.max(1, holders2.length))} <span class="small">of ${holders2.length}</span></td>
 <td class="say">${e(reachSay(l))}: ${e(keysSay)}${e(capSay)}.</td></tr>`;
   if (!some) return row;
-  const kinds = KINDS[l.layer] ?? [];
+  const kinds = KINDS2[l.layer] ?? [];
   return `${row}<tr class="kinds"><td></td><td colspan="${g.members.length + 2}">${kinds.map((k) => {
     const v = `${k.spec}:${k.type}`;
     return `<label class="check"><input type="checkbox" data-grid-kind="${i}" value="${e(v)}"${l.kinds.includes(v) ? " checked" : ""}> ${e(k.name)}</label>`;

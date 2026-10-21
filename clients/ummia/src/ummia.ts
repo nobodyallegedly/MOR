@@ -31,7 +31,7 @@
 
 import { SPECS, base64, describeAct, hex, readTerms, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
 import { lineReader, noLine, sendWaiting, type LineAtHomes } from '../../genesis/src/private.ts';
-import { TestIdentity, TEST_LABEL, type IdentityFile } from '../../genesis/src/identity.ts';
+import { TestIdentity, TEST_LABEL, freshLines, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
@@ -341,7 +341,7 @@ export class Ummia {
     me.f.homes = r.homes;
     me.f.rule = r.rule ?? null;
     me.f.pending = null;
-    me.f.sequence = [];
+    freshLines(me.f);
     me.f.routes = null;
     const carried = carriedKey(look, seed);
     if (carried && !me.f.encryption.some((e) => e.act === carried.act)) me.f.encryption.push(carried);
@@ -466,7 +466,7 @@ export class Ummia {
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
-      line: line ?? noLine(me.f.sequence),
+      line: line ?? noLine(me.f),
     };
     out.actors = actors(heldIds, s.collectives ?? []);
     out.acting = chosen(out.actors, s.acting ?? me.id)?.id ?? null;
