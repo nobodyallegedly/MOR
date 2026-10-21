@@ -77,6 +77,8 @@ export async function serve(opts: { dir: string; port: number; reader?: string }
 
   // Inter and its licence, served beside the page from the program's own origin (F332, "Inter bundled").
   const files = Object.fromEntries(Object.entries(FONT_FILES).map(([name, type]) => [`/${name}`, { type, body: readFileSync(here(`${FONTS_DIR}/${name}`)) }]));
+  // Dub's icon, beside its name at the top (the kit's app mark), as the web client serves it.
+  files['/icon.png'] = { type: 'image/png', body: readFileSync(here('static/icon/dub.png')) };
   const local = await serveLocal({ dir: opts.dir, port: opts.port, access, index, script, style: STYLE, version: built, api, limit: LIMIT, files, media: true });
   return { server: local.server, port: local.port, base: local.base, store, access, dub, close: local.close };
 }

@@ -16,6 +16,7 @@ import {
   e,
   feedBox,
   lenses,
+  note,
   meButton,
   pointRow,
   say,
@@ -31,7 +32,7 @@ import { PUBLISH_WARNING, type Item, type Line, type Message, type PayWays, type
 
 // What the other apps take from Dub's page today (Kišib, Damgar, Ummia, Edubba): kept as they were, in `family.ts`.
 export { STYLE, proposal, share, SIGNING_LABEL, leaveRead, shareTypeBack, post } from './family.ts';
-export { e, PUBLISH_WARNING };
+export { e, note, PUBLISH_WARNING };
 export type { Item, Line, Message, State, Suggested, Who };
 
 export const NAME = 'Dub';
@@ -73,7 +74,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-sealed{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:6px 0}
 .dub-sealed img{margin:6px 0}
 .dub-convs{width:300px;flex:none;border-right:1px solid var(--k-line);display:flex;flex-direction:column;min-height:0}
-.dub-convs .dub-find{margin:12px}
+.dub-convs .dub-find{margin:12px;width:calc(100% - 24px)}
 .dub-convs .dub-list{overflow:auto;flex:1;min-height:0}
 .dub-conv{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--k-line);width:100%;text-align:left}
 .dub-conv.k-on{background:var(--k-wash2)}
@@ -378,8 +379,8 @@ ${typingBox({ id: 'post', placeholder: acting ? `Write something public, as ${ac
 }
 
 /** The foot of the feed box: whose clock orders it, and what was not shown. */
-export function feedFoot(clock: { name: string; placed: number; shown: number } | null, notes: string[]): string {
-  return `${clockLine(clock)}${notes.map((n) => `<p class="k-clock">${e(n)}</p>`).join('')}`;
+export function feedFoot(clock: { name: string; placed: number; shown: number } | null, notes: string[], again = true): string {
+  return `${clockLine(clock)}${notes.map((n) => `<p class="k-clock">${e(n)}</p>`).join('')}${again ? '<button type="button" class="k-btn k-q k-small" data-action="look">Look again</button>' : ''}`;
 }
 
 /** Cards, in a feed box. */
@@ -545,12 +546,31 @@ export function laneForm(s: State, web: boolean, said: string[]): string {
 <form id="lane" class="dub-modal-form"><input name="label" value="${web ? 'Dub on the web' : 'Dub on this computer'}" maxlength="80" autocomplete="off">
 <div class="k-row"><input name="cap" inputmode="numeric" placeholder="At most, per payment" required class="k-grow"><select name="unit">${unitOptions(s.units)}</select></div>
 <label>Until (optional), judged on a timestamp clock: its ID</label><div class="k-row"><input name="until" type="datetime-local"><input name="clock" class="k-grow" placeholder="the clock’s ID" spellcheck="false" value="${e(s.identity!.clock?.form ?? '')}"></div>
-<div class="k-row"><button type="submit" class="k-btn k-p">Ask Damgar for this lane</button></div></form>`;
+<div class="k-row"><button type="submit" class="k-btn k-p">Ask Damgar for this lane</button></div></form>
+<h4>Payments under the lane</h4><div id="payments"><p class="k-small k-soft">Reading…</p></div>`;
 }
 
 /** The lanes asked here, and where each stands. */
 export function lanesHere(ls: { label: string; state: string; cap: string; until: number | null }[]): string {
   return ls.length ? `<ul class="k-small">${ls.map((l) => `<li>${e(l.label)} · ${e(l.state)} · at most ${e(l.cap)} a payment${l.until ? ` · until ${e(new Date(l.until * 1000).toISOString().slice(0, 16).replace('T', ' '))} UTC` : ''}</li>`).join('')}</ul>` : '<p class="k-small k-soft">No lane yet: Dub pays nothing by itself.</p>';
+}
+
+/** A payment as Damgar's code shows it, the part Dub draws. */
+export interface PaymentShownHere {
+  key: string;
+  other: { id: string; short: string };
+  amount: { said: string };
+  stageSaid: string;
+  pay: { invoice?: string; address?: string } | null;
+  proofs: { kind: string; rail: { answer: string }; how: string }[];
+}
+
+/** Payments signed here under the lane (round 2): the invoice to pay in the wallet, and the proof taken back to sign the claim; those done. */
+export function paymentsHere(r: { payments: PaymentShownHere[]; done: PaymentShownHere[]; problems: string[] }): string {
+  const one = (p: PaymentShownHere) => `<div class="k-box" data-payment="${e(p.key)}"><div class="k-row"><span class="k-small">to</span><span class="k-mono k-soft">${e(p.other.short)}</span><span class="k-grow"></span><span class="k-small">${e(p.amount.said)}</span></div><p class="k-small k-soft">${e(p.stageSaid)}</p>
+${p.pay?.invoice ? `<textarea class="dub-hand" readonly>${e(p.pay.invoice)}</textarea><div class="k-row"><button type="button" class="k-btn" data-copy-text="${e(p.pay.invoice)}">Copy the invoice</button></div><form class="dub-modal-form" id="paid" data-key="${e(p.key)}"><input name="proof" required spellcheck="false" autocomplete="off" placeholder="The preimage, from your wallet once paid"><div class="k-row"><button type="submit" class="k-btn k-p">Check it and sign the claim, under the lane</button></div></form>` : ''}
+${p.proofs.length ? `<ul class="k-small">${p.proofs.map((x) => `<li>${x.kind === 'claim' ? 'Claim' : 'Receipt'}: ${e(x.rail.answer)} · ${e(x.how)}</li>`).join('')}</ul>` : ''}</div>`;
+  return `${r.payments.map(one).join('')}${r.done.length ? `<h4>Done</h4>${r.done.map(one).join('')}` : ''}${!r.payments.length && !r.done.length ? '<p class="k-small k-soft">No payment made from Dub yet.</p>' : ''}${r.problems.map((x) => `<p class="k-clock">${e(x)}</p>`).join('')}`;
 }
 
 /** Add a collective under this identity, by its ID. */
