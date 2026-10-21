@@ -17,7 +17,8 @@ test('H40: Change the vault, a door of its own, saying first that it is a change
   for (const t of VAULT_SAY) assert.ok(f.includes(t.replace(/’/g, '’')), t);
   assert.match(VAULT_SAY.join(' '), /change of keys/);
   assert.match(VAULT_SAY.join(' '), /chain key’s paper/);
-  assert.match(VAULT_SAY.join(' '), /new signing key’s 24 words/);
+  // H79: a change of keys writes two new papers, the chain key's and the signing key's.
+  assert.match(VAULT_SAY.join(' '), /two new sets of 24 words.*the new chain key’s.*old paper is then spent.*the new signing key’s/);
   // The same change of keys, opened at The vault: its fold open, "declare it anew" chosen.
   assert.match(f, /id="form-rotate" data-kind="rotate"/);
   assert.match(f, /<details open><summary>The vault/);

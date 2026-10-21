@@ -701,6 +701,8 @@ export class Damgar {
   collectivePromise(a: { collective: string; to: string; value: string; unit: string; whatFor: string; digest: string }): Promise<{ lines: Line[]; act: string }> {
     return this.serial(async () => {
       const { me, s, book, hints } = await this.ctx();
+      // H80: the other holders are asked by an act signed with this identity's own key, so it must still count, checked first (Ummia's collective release checks the same).
+      await this.current(me);
       const r = await this.collectivePromiseMake(me, s, hints, a);
       if (r.digest !== a.digest) throw new Error('It is not the promise read back: read it again. Nothing was signed.');
       const text = `A promise of the collective ${short(r.c.id)} to pay ${short(r.to)} ${r.amount.value.toLocaleString('en')}${a.whatFor.trim() ? `, for ${a.whatFor.trim()}` : ''}: ${r.say.above ? 'above its Money lane’s cap, it' : 'it'} needs your key too. Read it in your Signing tab, then sign it with your own key for the collective.`;
