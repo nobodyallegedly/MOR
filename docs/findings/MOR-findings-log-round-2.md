@@ -28,6 +28,18 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F359. An act under a revoked grant that another acknowledged is disputed, not void (21 October 2026; F352 (D))
+
+**Pattern:** 1 and 3. Agreements rule 76 (the tie rule) voids every act under a grant that its revocation's history does not hold. Since F352 a revocation must cite each act under the lane, and an act it misses is void, even where the counterparty signed a receipt for it. The grantor's list, alone, decided what another identity had been given in good faith.
+
+**Put by the project lead (F352's open (D)), decided by Nobody, allegedly, 21 October 2026 ("Agreed"):** as for a change of keys (F57), an act under a revoked grant that the revocation's history does not hold, but that another identity acknowledged, is shown **disputed** rather than void. An act nobody else acknowledged stays void, so a revocation still cuts off a stolen or misused grant cleanly. *The project lead's lean.*
+
+**Stated cost:** a thief holding a grant key, with an accomplice who acknowledges the act, gets "disputed" rather than "void": visible to everyone, never erased. The same cost F57 already accepts for a change of keys.
+
+**Why:** no grantor's omission, careless or chosen, erases what a counterparty holds a signature for. A dispute shows both sides; a void shows one.
+
+**Where:** the freeze-ready drafts (Agreements rule 76 and the grant section, worded beside F57's rule in Identity), the core's check, and a verdict vector (an acknowledged act missed by a revocation: disputed; an unacknowledged one: void). F352's tests stand: a payee holding only its own act finds it counted when cited. *For the drafts session to bring back, not decided here:* whether a keeper's record made before the revocation also turns void into disputed, as F57 allows for a rotation.
+
 ## F358. Round 3's questions: the collective's payee pointer, a lone seller's pointer, and keepers redefined (19 October 2026)
 
 **1. Who signs a collective's payee pointer.** Built: the collective's own key, in the founder's Edubba, since Money reads only pointers signed under Identity's binding and a member key is a grant key (scoped). **Decided by Nobody, allegedly, (b): "It is a money matter and money areas should be able to do it. A founder should not have a special position if the constitution does not say so."** Money draft 10 extends rule 7 (F350) to payee pointers (type 0): a pointer signed with a member key the founding or clone names for an area reaching Money counts, scoped, judged by Agreements with that area's holders and threshold. Edubba signs the collective's pointer with the money area's holders' keys, gathered as any act of that area. Built in round 3. *Cost:* a Money-only client shows such a pointer unknown and cannot pay through it. My lean was (a); withdrawn, the same principle as F353.
