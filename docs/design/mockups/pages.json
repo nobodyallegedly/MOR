@@ -181,6 +181,17 @@
  },
  {
   "app": "dub",
+  "slug": "vow-menu",
+  "title": "A vow Max bought: confirm or contest it, in its menu (Dub)",
+  "before": [
+   "edubba/web-dub-sealed-and-vow.png"
+  ],
+  "group": "The act card",
+  "note": "decided: only on vows the ID bought",
+  "file": "dub-vow-menu.html"
+ },
+ {
+  "app": "dub",
   "slug": "thread",
   "title": "The pop-up thread: what an act answers",
   "before": [],

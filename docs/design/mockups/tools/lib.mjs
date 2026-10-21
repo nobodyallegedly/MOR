@@ -91,18 +91,19 @@ function signerMenu(app, who = 'Pa', style = 'top:36px;left:0') {
     ummia: ['Follow: add to contacts', `Follow ${who}’s releases`, 'Mute'],
     edubba: ['Follow: add to contacts', 'Message', 'Mute'],
   }[app];
-  return `<div class="pop" style="${style}"><div class="t">${who} · ${ID[who]}</div><a>Copy ID</a><a>Copy ID link</a><a>Open profile</a><hr>${below.map((b) => `<a>${b}</a>`).join('')}</div>`;
+  return `<div class="pop" style="${style}"><div class="t">${who} · ${ID[who]}</div><a>Copy ID</a><a>Copy ID link</a><a>Open profile</a><hr>${below.map((b) => (b === '<hr>' ? b : `<a>${b}</a>`)).join('')}</div>`;
 }
-function actMenu(app, { own = false, style = 'bottom:30px;right:0', aid } = {}) {
+function actMenu(app, { own = false, bought = false, style = 'bottom:30px;right:0', aid } = {}) {
   const top = `<div class="t">${aid}</div><a>Copy act ID</a><a>Open what it answers</a><a>Why it’s valid</a><hr>`;
   const common = ['Rely on it', 'Anchor it'];
   const below = {
-    dub: ['Reply', 'Repost', ...common, own ? 'Correct it' : null, 'Tip', `Buy ${nd('lead’s')}`],
+    // A vow the identity bought: confirm or contest it, shown only there (decided, question 5); no Buy, it is bought.
+    dub: ['Reply', 'Repost', ...common, own ? 'Correct it' : null, 'Tip', bought ? null : `Buy ${nd('lead’s')}`, ...(bought ? ['<hr>', 'Confirm: it was kept', 'Contest it…'] : [])],
     damgar: [...common, own ? 'Correct it' : null, 'Tip', `Show it in the account ${nd('choice')}`],
     ummia: [`Add to accepted list`, `Discuss it ${nd('choice')}`, ...common, own ? 'Correct it' : null],
     edubba: [...common, own ? 'Correct it' : null, 'Confirm: it was kept', 'Contest it'],
   }[app].filter(Boolean);
-  return `<div class="pop" style="${style}">${top}<div class="own">${APPS[app].name}’s own</div>${below.map((b) => `<a>${b}</a>`).join('')}</div>`;
+  return `<div class="pop" style="${style}">${top}<div class="own">${APPS[app].name}’s own</div>${below.map((b) => (b === '<hr>' ? b : `<a>${b}</a>`)).join('')}</div>`;
 }
 
 const typing = (ph, { typed = false, tools = '', opts = '', btn = 'Post', stack = false } = {}) =>

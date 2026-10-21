@@ -122,7 +122,7 @@ const DCENTER_PRIV = `<div class="switch"><span>Public</span><span class="on">Pr
 const CONTACTS = `<button class="menu-btn"><span>☰</span><span class="l">Contacts</span></button>`;
 const DLEFT = `<div style="display:flex;align-items:center;gap:12px">${CONTACTS}<div class="app hide-phone"><img src="icons/dub.png" alt=""><span class="nm">Dub</span></div></div>`;
 const dbar = (priv = false, right) => bar('dub', { left: DLEFT, center: priv ? DCENTER_PRIV : DCENTER, right });
-const lenses = (on = 'Following') => `<div class="lenses">${['Following', 'Relay', 'To you'].map((l) => `<span class="lens${l === on ? ' on' : ''}">${l}${l === 'To you' ? ' · 1' : ''}</span>`).join('')}<span class="grow"></span>${nd('the lenses’ names')}</div>`;
+const lenses = (on = 'Following') => `<div class="lenses">${['Following', 'To you', 'Relay'].map((l) => `<span class="lens${l === on ? ' on' : ''}">${l}${l === 'To you' ? ' · 1' : ''}</span>`).join('')}</div>`;
 const dtyping = (ph = 'Write something public…', o = {}) => typing(ph, { tools: `<span title="picture">▣ Picture</span><span>@</span><span>To…</span>`, ...o });
 const dubPublic = (cards, { lens = 'Following', typed, extra = '', right, cls = '' } = {}) =>
   `${dbar(false, right)}<div class="body"><section class="pane" style="max-width:820px;margin:0 auto;width:100%">${lenses(lens)}<div class="feedwrap">${feed(cards, cls)}</div>${typed ?? dtyping()}</section></div>${extra}`;
@@ -173,6 +173,13 @@ page('dub', 'act-signer-menu', 'The act card: the signer’s menu (Dub)',
 page('dub', 'act-menu', 'The act card: the act’s menu (Dub)',
   dubPublic([C.phPic(), C.yPost(), C.paPost({ open: 'act', sel: true, menu: actMenu('dub', { aid: 'mact1r8d…4kq' }) })], { cls: 'menuopen' }),
   { group: 'The act card' });
+
+page('dub', 'vow-menu', 'A vow Max bought: confirm or contest it, in its menu (Dub)',
+  dubPublic([
+    act({ who: 'Ph', when: '08:10', kind: 'vow', text: 'A guided walk to the clay pits. 300 regtest sats.', aid: 'mact1v5w…2gg', flag: '<span class="small">not bought: no confirm or contest here</span>' }),
+    act({ who: 'Pa', when: 'Sun', kind: 'vow · you bought it', text: 'A seat at the reading of the tablets. 500 regtest sats.', aid: 'mact1v1s…0aa', flag: '<span class="small">bought by Max · not yet confirmed</span>', open: 'act', sel: true, menu: actMenu('dub', { bought: true, aid: 'mact1v1s…0aa', style: 'top:60px;right:0' }) }),
+  ], { cls: 'menuopen' }),
+  { group: 'The act card', before: ['edubba/web-dub-sealed-and-vow.png'], note: 'decided: only on vows the ID bought' });
 
 page('dub', 'thread', 'The pop-up thread: what an act answers',
   `${dubPublic(FEED)}<div class="shade"></div><div class="modal"><div class="mh"><button class="back">←</button><h3>What Max’s reply answers</h3><span class="grow"></span><span class="small faint">2 acts</span></div>
