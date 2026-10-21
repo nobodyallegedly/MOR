@@ -2211,8 +2211,8 @@ function getUint8ArrayMemory0() {
 function handleError(f, args) {
   try {
     return f.apply(this, args);
-  } catch (e2) {
-    const idx = addToExternrefTable0(e2);
+  } catch (e3) {
+    const idx = addToExternrefTable0(e3);
     wasm.__wbindgen_exn_store(idx);
   }
 }
@@ -2316,12 +2316,12 @@ async function __wbg_load(module2, imports) {
     if (typeof WebAssembly.instantiateStreaming === "function") {
       try {
         return await WebAssembly.instantiateStreaming(module2, imports);
-      } catch (e2) {
+      } catch (e3) {
         const validResponse = expectedResponseType(module2.type);
         if (validResponse && module2.headers.get("Content-Type") !== "application/wasm") {
-          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e2);
+          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e3);
         } else {
-          throw e2;
+          throw e3;
         }
       }
     }
@@ -2998,10 +2998,10 @@ var Relay = class {
       let reason = `HTTP ${r.status}`;
       let acts = [];
       try {
-        const e2 = cborDecode(body);
-        code = e2.get(0);
-        reason = e2.get(1) ?? reason;
-        acts = bytesList(e2.get(2));
+        const e3 = cborDecode(body);
+        code = e3.get(0);
+        reason = e3.get(1) ?? reason;
+        acts = bytesList(e3.get(2));
       } catch {
       }
       throw new RelayError(code, reason, acts, r.status);
@@ -3071,9 +3071,9 @@ var Relay = class {
     try {
       const a = await this.call(`/acts/${id}`);
       return actId(a) === id ? a : null;
-    } catch (e2) {
-      if (e2 instanceof RelayError && e2.code === CODE.notHeld) return null;
-      throw e2;
+    } catch (e3) {
+      if (e3 instanceof RelayError && e3.code === CODE.notHeld) return null;
+      throw e3;
     }
   }
   /** `POST /media`: the relay's answer is checked against the bytes sent. */
@@ -3091,9 +3091,9 @@ var Relay = class {
     try {
       const b = await this.call(`/media/${lockedHash}`);
       return sha2562(b) === lockedHash ? b : null;
-    } catch (e2) {
-      if (e2 instanceof RelayError && e2.code === CODE.notHeld) return null;
-      throw e2;
+    } catch (e3) {
+      if (e3 instanceof RelayError && e3.code === CODE.notHeld) return null;
+      throw e3;
     }
   }
   async feed(q) {
@@ -3336,15 +3336,15 @@ function planLines(lines2, o = {}) {
   const covered = counts !== null && counts === o.unplaced.length && !unplacedSay.length;
   const unread = [];
   for (const l of lines2) {
-    const card = cards.find((c) => c.act === l.tip) ?? l.card;
+    const card2 = cards.find((c) => c.act === l.tip) ?? l.card;
     const given = cards.find((c) => c.act === l.tip);
     if (leaveOut.has(l.tip)) {
       left.push(l);
       shown.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
-    } else if (card) {
-      kept.push({ act: card.act, position: card.position, summary: card.summary });
+    } else if (card2) {
+      kept.push({ act: card2.act, position: card2.position, summary: card2.summary });
       shown.push({
-        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`,
+        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card2.position}, summary ${card2.summary}.`,
         tone: l.readable || given && !given.missing ? "ok" : "warn"
       });
     } else if (covered) {
@@ -3557,10 +3557,10 @@ async function lookUp(identity, hints, via = {}, into) {
       });
     }
   }
-  const e2 = v.latest(identity, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
+  const e3 = v.latest(identity, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
   let encryptionKey = null;
-  if (e2.payload) {
-    const p = cborDecode(e2.payload);
+  if (e3.payload) {
+    const p = cborDecode(e3.payload);
     const [scheme, key] = p.get(2);
     if (scheme === 4) encryptionKey = key;
   }
@@ -3579,7 +3579,7 @@ async function lookUp(identity, hints, via = {}, into) {
     unreachable,
     notTried,
     routes: { act: r.act ?? null, contested: r.contested, routes },
-    encryptionKeyAct: e2.act ?? null,
+    encryptionKeyAct: e3.act ?? null,
     encryptionKey,
     inbox(spec) {
       const inboxes = routes.filter((x) => x.kind === 1);
@@ -5731,15 +5731,15 @@ function readForm(typed, want) {
   try {
     const r = formRead(t, want);
     return { hex: r.data, hints: r.hints, bare: r.bare };
-  } catch (e2) {
-    throw new Refused(e2 instanceof Error ? e2.message : String(e2));
+  } catch (e3) {
+    throw new Refused(e3 instanceof Error ? e3.message : String(e3));
   }
 }
 var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
 var readId = (typed) => readForm(typed, "mid").hex;
 
 // ../dub/src/carryin.ts
-var message = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var NOT_CURRENT = "These words do not give this identity\u2019s current signing key: they are another identity\u2019s, an earlier key\u2019s, or written wrong. Nothing was kept. If these are your chain key\u2019s words, they must never be typed into an online app.";
 async function lookCurrent(id, seed, hints, via) {
   let pub;
@@ -5751,8 +5751,8 @@ async function lookCurrent(id, seed, hints, via) {
   let look;
   try {
     look = await lookUp(id, hints, via);
-  } catch (e2) {
-    throw new Error(`This identity was not found at ${hints.join(", ")}: ${message(e2)}`);
+  } catch (e3) {
+    throw new Error(`This identity was not found at ${hints.join(", ")}: ${message(e3)}`);
   }
   const r = look.resolution;
   if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing can be signed for it until they agree.");
@@ -5774,8 +5774,8 @@ async function servedChain(id, homes, via) {
 function carriedKey(look, seed) {
   const secret = encryptionSecret(seed);
   if (!look.encryptionKey || !look.encryptionKeyAct || hex(xwingPublic(secret)) !== hex(look.encryptionKey)) return null;
-  const e2 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
-  const version = e2.payload ? Number(cborDecode(e2.payload).get(0)) : 1;
+  const e3 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
+  const version = e3.payload ? Number(cborDecode(e3.payload).get(0)) : 1;
   return { version, act: look.encryptionKeyAct, secret: hex(secret) };
 }
 
@@ -5797,7 +5797,7 @@ function fingerprint(scheme, key) {
 var grouped2 = (h) => h.match(/.{1,4}/g).join(" ");
 
 // src/read.ts
-var message2 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message2 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var short = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 function served(id, bytes, identitySpec) {
   let d;
@@ -5829,8 +5829,8 @@ async function readIdentity(id, address2, via, identitySpec) {
   let look;
   try {
     look = await lookUp(id, address2, via);
-  } catch (e2) {
-    throw new Error(`This identity was not found at ${address2.join(", ")}: ${message2(e2)}`);
+  } catch (e3) {
+    throw new Error(`This identity was not found at ${address2.join(", ")}: ${message2(e3)}`);
   }
   const r = look.resolution;
   if (!r.links.length) throw new Error(`Its chain could not be read at ${address2.join(", ")} (${r.stop}).`);
@@ -6009,8 +6009,8 @@ var renameSync = none("renameSync");
 
 // ../genesis/src/kex.ts
 var kexLog = { recording: false, entries: [] };
-function record(e2) {
-  if (kexLog.recording) kexLog.entries.push(e2);
+function record(e3) {
+  if (kexLog.recording) kexLog.entries.push(e3);
 }
 
 // ../genesis/src/identity.ts
@@ -6102,8 +6102,8 @@ var TestIdentity = class _TestIdentity {
       const r = this.relay(h.hint);
       try {
         out.push({ home: h.hint, result: await r.putAct(act) });
-      } catch (e2) {
-        if (e2 instanceof RelayError && e2.code === CODE.missingPredecessor) {
+      } catch (e3) {
+        if (e3 instanceof RelayError && e3.code === CODE.missingPredecessor) {
           try {
             for (const earlier of this.chainActs()) {
               if (actId(earlier) !== actId(act)) await r.putAct(earlier);
@@ -6115,7 +6115,7 @@ var TestIdentity = class _TestIdentity {
             continue;
           }
         }
-        out.push(failure(h.hint, e2));
+        out.push(failure(h.hint, e3));
       }
     }
     return out;
@@ -6159,8 +6159,8 @@ var TestIdentity = class _TestIdentity {
     for (const h of this.f.homes) {
       try {
         out.push({ home: h.hint, result: await this.relay(h.hint).putAct(act) });
-      } catch (e2) {
-        out.push(failure(h.hint, e2));
+      } catch (e3) {
+        out.push(failure(h.hint, e3));
       }
     }
     return out;
@@ -6336,8 +6336,8 @@ var TestIdentity = class _TestIdentity {
       try {
         anchored = await this.anchorQuorum(lookup, p.id, before, anchoring);
         this.f.anchored = [...this.f.anchored ?? [], ...anchored.map((a) => ({ act: a.act, on: a.on, proof: b64(a.proof) }))];
-      } catch (e2) {
-        unanchored = e2.message;
+      } catch (e3) {
+        unanchored = e3.message;
       }
     }
     return { counts, lookup, anchored, unanchored };
@@ -6426,8 +6426,8 @@ var TestIdentity = class _TestIdentity {
           } catch {
           }
         }
-      } catch (e2) {
-        if (!(e2 instanceof TypeError) && !(e2 instanceof RelayError)) throw e2;
+      } catch (e3) {
+        if (!(e3 instanceof TypeError) && !(e3 instanceof RelayError)) throw e3;
       }
     }
   }
@@ -6572,7 +6572,7 @@ var TestIdentity = class _TestIdentity {
    */
   async readInbox(opts) {
     const out = [];
-    const secrets = [...this.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const secrets = [...this.f.encryption].reverse().map((e3) => unhex(e3.secret));
     for (const hint of opts.inbox) {
       const page = await relayAt(hint, this.via).feed({ to: this.f.identity });
       for (const it of page.items) {
@@ -6588,8 +6588,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
   let parts;
   try {
     parts = sealedParts(sealed);
-  } catch (e2) {
-    return { sealed: id, opened: false, error: String(e2) };
+  } catch (e3) {
+    return { sealed: id, opened: false, error: String(e3) };
   }
   const index = me === null ? 0 : parts.to.indexOf(me);
   if (index < 0) return { sealed: id, opened: false, error: "not addressed to this identity" };
@@ -6599,8 +6599,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
     let o;
     try {
       o = openSealed(sealed, me ?? void 0, secret);
-    } catch (e2) {
-      lastError = String(e2);
+    } catch (e3) {
+      lastError = String(e3);
       continue;
     }
     const d = o.described;
@@ -6618,8 +6618,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
         if (o.key) them.verifier.addWithKey(o.act, o.key);
         else them.verifier.add(o.act);
         r.status = them.verifier.status(d.id);
-      } catch (e2) {
-        r.status = `sender not found: ${e2}`;
+      } catch (e3) {
+        r.status = `sender not found: ${e3}`;
       }
     }
     return r;
@@ -6642,9 +6642,9 @@ function sealFor(act, key, recipients) {
   recipients.forEach((r, i) => record({ kind: "encapsulate", publicKey: r.key, eseed: eseeds[i], ct: parts.capsules[i] }));
   return sealed;
 }
-function failure(home, e2) {
-  if (e2 instanceof RelayError) return { home, error: e2.reason, code: e2.code };
-  return { home, error: String(e2) };
+function failure(home, e3) {
+  if (e3 instanceof RelayError) return { home, error: e3.reason, code: e3.code };
+  return { home, error: String(e3) };
 }
 
 // ../repo/src/specs.ts
@@ -6691,8 +6691,8 @@ var SPLIT_CMIP = sha2562("split cMIP, draft 2, test value until publication");
 
 // ../genesis/src/private.ts
 function ownKey(me) {
-  const e2 = me.f.encryption[me.f.encryption.length - 1];
-  return e2 ? xwingPublic(unhex(e2.secret)) : null;
+  const e3 = me.f.encryption[me.f.encryption.length - 1];
+  return e3 ? xwingPublic(unhex(e3.secret)) : null;
 }
 async function leaveAtHomes(me, made, o = {}) {
   const via = o.via ?? me.via;
@@ -6741,8 +6741,8 @@ async function negotiate(by, to, o) {
       for (const c of by.chainActs()) await r.putAct(c).catch(() => void 0);
       await r.putSealed(sealed);
       left.push(hint);
-    } catch (e2) {
-      failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
+    } catch (e3) {
+      failed.push({ relay: hint, reason: e3 instanceof Error ? e3.message : String(e3) });
     }
   }
   if (o.home !== false) await leaveAtHomes(by, made);
@@ -6775,14 +6775,14 @@ function oneTimeKeyOf(text2) {
     return null;
   }
 }
-async function sealShare(by, share, oneTime, relays) {
-  const l = lockMedia(share);
+async function sealShare(by, share2, oneTime, relays) {
+  const l = lockMedia(share2);
   const payload = cborEncode(
     /* @__PURE__ */ new Map([
       [0, unhex(SHARE_MEDIA)],
       [1, unhex(l.workHash)],
       [2, unhex(l.lockedHash)],
-      [3, share.length],
+      [3, share2.length],
       [4, l.nonce],
       [5, l.key],
       [6, relays]
@@ -6951,8 +6951,8 @@ function readChanges(beforePayload, afterPayload, names) {
   let plan;
   try {
     plan = planOf(beforePayload, afterPayload);
-  } catch (e2) {
-    out.push({ text: `Agreements cannot say what this clone changes: ${e2 instanceof Error ? e2.message : e2}`, tone: "bad" });
+  } catch (e3) {
+    out.push({ text: `Agreements cannot say what this clone changes: ${e3 instanceof Error ? e3.message : e3}`, tone: "bad" });
     return out;
   }
   const areaName = (id) => before.areas.find((a) => a.id === id)?.name ?? after.areas.find((a) => a.id === id)?.name ?? `area ${id}`;
@@ -6964,12 +6964,12 @@ function readChanges(beforePayload, afterPayload, names) {
   if (!plan.changes.length) out.push({ text: "Agreements find nothing changed in the terms." });
   const areas = before.areas;
   out.push({ text: `So its mark must name ${list(plan.needs.map((p) => powerWords(p, areas, names)))} (Agreements rule 44c).` });
-  const claimed = (after.mark ?? []).map((e2) => powerKey(e2.power));
+  const claimed = (after.mark ?? []).map((e3) => powerKey(e3.power));
   if (JSON.stringify(claimed) === JSON.stringify(plan.needs.map(powerKey))) {
     out.push({ text: "Its mark names exactly that.", tone: "ok" });
   } else {
     out.push({
-      text: `Its mark names ${list((after.mark ?? []).map((e2) => powerWords(e2.power, areas, names))) || "nothing"}: a false mark sinks the clone (F104).`,
+      text: `Its mark names ${list((after.mark ?? []).map((e3) => powerWords(e3.power, areas, names))) || "nothing"}: a false mark sinks the clone (F104).`,
       tone: "bad"
     });
   }
@@ -6977,7 +6977,7 @@ function readChanges(beforePayload, afterPayload, names) {
 }
 
 // src/common.ts
-var message3 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message3 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var b642 = (b) => {
   let s = "";
   for (const x of b) s += String.fromCharCode(x);
@@ -7010,8 +7010,8 @@ async function put(hint, bytes, before) {
   };
   try {
     return await once();
-  } catch (e2) {
-    if (e2 instanceof RelayError && e2.code === CODE.missingPredecessor) {
+  } catch (e3) {
+    if (e3 instanceof RelayError && e3.code === CODE.missingPredecessor) {
       try {
         for (const b of before) await r.putAct(b).catch(() => void 0);
         return await once();
@@ -7019,7 +7019,7 @@ async function put(hint, bytes, before) {
         return { text: `${hint}: ${message3(e22)}`, tone: "warn" };
       }
     }
-    return { text: `${hint}: ${message3(e2)}`, tone: "warn" };
+    return { text: `${hint}: ${message3(e3)}`, tone: "warn" };
   }
 }
 function holding(id, binding, signingSeed, chain, homes) {
@@ -7053,7 +7053,7 @@ var DEALER_SAY = [
   { text: "Afterwards: every member writes their new share on new paper and destroys the old one (it opens nothing once the rotation counts); the new signing key\u2019s words go to whoever holds that key (Edubba); every member\u2019s Dub and Edubba show the rotation." }
 ];
 var short3 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
-var message4 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message4 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 function encodeRequest(q) {
   return cborEncode(
     /* @__PURE__ */ new Map([
@@ -7173,7 +7173,7 @@ async function changesOf(c, via) {
         continue;
       }
       if (t.parent !== c.agreement) continue;
-      const signers = [.../* @__PURE__ */ new Set([...(t.mark ?? []).flatMap((e2) => e2.signers), ...t.parties])];
+      const signers = [.../* @__PURE__ */ new Set([...(t.mark ?? []).flatMap((e3) => e3.signers), ...t.parties])];
       const signatures = {};
       for (const s of signers) {
         for (const a2 of await actsOf(s)) {
@@ -7395,9 +7395,9 @@ var CollectiveSitting = class _CollectiveSitting {
         warning: this.plan.warning,
         blocking
       };
-    } catch (e2) {
+    } catch (e3) {
       wipe(founderSeed, own.value, this.oneTime);
-      throw e2;
+      throw e3;
     }
   }
   /** On confirmation: the request left at the collective's relays, and a message in each member's thread (remote); or the papers awaited here (same room). */
@@ -7442,8 +7442,8 @@ var CollectiveSitting = class _CollectiveSitting {
           home: false
         });
         lines2.push({ text: `${short3(m)}: told, in its thread.`, tone: "ok" });
-      } catch (e2) {
-        lines2.push({ text: `${short3(m)}: could not be told (${message4(e2)}). Give it the fingerprint another way.`, tone: "warn" });
+      } catch (e3) {
+        lines2.push({ text: `${short3(m)}: could not be told (${message4(e3)}). Give it the fingerprint another way.`, tone: "warn" });
       }
     }
     this.lines = lines2;
@@ -7574,19 +7574,19 @@ var CollectiveSitting = class _CollectiveSitting {
     dealt.shares.forEach((s, i) => void i);
     for (let i = 0; i < ch.members.length; i++) {
       const m = ch.members[i];
-      const share = dealt.shares[i];
+      const share2 = dealt.shares[i];
       const k = this.answers[m]?.oneTime;
       if (!this.room && this.founder && m !== this.founder.id && k) {
         try {
-          const r = await sealShare(this.founder, share, k, relays);
+          const r = await sealShare(this.founder, share2, k, relays);
           lines2.push({ text: `${short3(m)}: its new share is sealed to its one-time key, at ${r.left.join(", ")}. Its Dub shows it once.`, tone: "ok" });
-          wipe(share);
+          wipe(share2);
           continue;
-        } catch (e2) {
-          lines2.push({ text: `${short3(m)}: its share could not be left (${message4(e2)}): shown here instead.`, tone: "warn" });
+        } catch (e3) {
+          lines2.push({ text: `${short3(m)}: its share could not be left (${message4(e3)}): shown here instead.`, tone: "warn" });
         }
       }
-      this.toShow.set(m, { share, x: i + 1, shown: false, fingerprint: dealt.fingerprint });
+      this.toShow.set(m, { share: share2, x: i + 1, shown: false, fingerprint: dealt.fingerprint });
     }
     if (this.founder) this.founder.f.signingSecret = "";
     this.founder = null;
@@ -7744,9 +7744,9 @@ var CollectiveSitting = class _CollectiveSitting {
           });
         }
       };
-    } catch (e2) {
+    } catch (e3) {
       wipe(seed, paper.value);
-      throw e2;
+      throw e3;
     }
   }
 };
@@ -7762,7 +7762,7 @@ var PAPER_LINES = [
   { text: PAPER_COUNTS_SAY }
 ];
 var LAST_OF_OLD_PAPER_SAY = "This paper already made an earlier change of these keys: until 21 October 2026 Ki\u0161ib reused one paper for every change. This change is its last. It commits a key of a new paper, whose words are shown once the homes\u2019 receipts are in; this paper is spent after it.";
-var message5 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message5 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var short4 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var PLAN_LIFE = 15 * 60 * 1e3;
 var Kishib = class {
@@ -7928,8 +7928,8 @@ var Kishib = class {
       let plan;
       try {
         plan = planLines(rd.lines, { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : void 0, ...placing(rd, rd.binding) });
-      } catch (e2) {
-        throw new Error(message5(e2));
+      } catch (e3) {
+        throw new Error(message5(e3));
       }
       const clock = declaresClock(rd);
       const vaultNow = rd.look.verifier.moneyVault(MIRS.money, id);
@@ -8024,9 +8024,9 @@ var Kishib = class {
           }
         }
       );
-    } catch (e2) {
+    } catch (e3) {
       wipe(seed);
-      throw e2;
+      throw e3;
     }
   }
   /**
@@ -8108,15 +8108,15 @@ var Kishib = class {
     if (h.kind === "confirm") return this.sitting();
     const places = [.../* @__PURE__ */ new Set([...h.homes.map((x) => x.hint), ...h.places])];
     let counts = false;
-    let say2;
+    let say3;
     try {
       const l = (await readIdentity(h.id, places, {}, SPECS.identity)).look;
       counts = l.resolution.links.some((x) => x.act === h.act);
-      say2 = counts ? { text: `It counts: the homes\u2019 receipts are in (${l.resolution.links.find((x) => x.act === h.act).how}).`, tone: "ok" } : { text: `It does not count yet: the receipts its home rule needs are not all in (${l.resolution.stop}). Send it again: the same bytes, never a new rotation.`, tone: "warn" };
-    } catch (e2) {
-      say2 = { text: `It could not be read back: ${message5(e2)}. Send it again: the same bytes.`, tone: "warn" };
+      say3 = counts ? { text: `It counts: the homes\u2019 receipts are in (${l.resolution.links.find((x) => x.act === h.act).how}).`, tone: "ok" } : { text: `It does not count yet: the receipts its home rule needs are not all in (${l.resolution.stop}). Send it again: the same bytes, never a new rotation.`, tone: "warn" };
+    } catch (e3) {
+      say3 = { text: `It could not be read back: ${message5(e3)}. Send it again: the same bytes.`, tone: "warn" };
     }
-    h.lines = [...h.lines.filter((x) => !/^It (counts|does not count|could not)/.test(x.text)), say2];
+    h.lines = [...h.lines.filter((x) => !/^It (counts|does not count|could not)/.test(x.text)), say3];
     if (counts && h.stage === "sent") {
       h.stage = h.signing ? "counts" : "done";
       if (!h.signing) h.lines = [...h.lines, { text: "The new paper written when this change was signed is now the one that counts; the old paper is spent: destroy it.", tone: "ok" }];
@@ -8229,8 +8229,8 @@ var Kishib = class {
       let plan;
       try {
         plan = planLines(linesUnder(rd, q.act), { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : void 0, ...placing(rd, q.act) });
-      } catch (e2) {
-        throw new Error(message5(e2));
+      } catch (e3) {
+        throw new Error(message5(e3));
       }
       const counted = (s) => r.links.some((l) => l.act === s.id);
       const sections2 = [
@@ -8332,9 +8332,9 @@ var Kishib = class {
           }
         }
       );
-    } catch (e2) {
+    } catch (e3) {
       wipe(seed, signingSeed);
-      throw e2;
+      throw e3;
     }
   }
   // ------------------------------------------------------------ must: a succession, confirmed by the successor (F300)
@@ -8390,9 +8390,9 @@ var Kishib = class {
           }
         }
       );
-    } catch (e2) {
+    } catch (e3) {
       wipe(seed);
-      throw e2;
+      throw e3;
     }
   }
   // ------------------------------------------------------------ must: rotate a collective (F337)
@@ -8471,8 +8471,8 @@ async function homesAt(hints, via) {
     let info;
     try {
       info = await relayAt(hint, via).info();
-    } catch (e2) {
-      throw new Error(`${hint} did not answer: ${message5(e2)}`);
+    } catch (e3) {
+      throw new Error(`${hint} did not answer: ${message5(e3)}`);
     }
     const op = info.get(0);
     if (!(op instanceof Uint8Array)) throw new Error(`${hint} is not a home: it declares no operator`);
@@ -8512,17 +8512,17 @@ function declaresClock(rd) {
   return false;
 }
 var NETWORK = ["Bitcoin", "testnet", "signet", "regtest"];
-function vaultEntryWords(e2) {
-  const units2 = /* @__PURE__ */ new Set([e2.unit]);
-  const rail = e2.railModule === SPEC.lightning.hash ? "on Lightning" : e2.railModule === SPEC.onchain.hash ? "on-chain" : `on rail Module ${e2.railModule.slice(0, 8)}\u2026`;
-  const where = e2.railModule === SPEC.lightning.hash ? readLightningAddress(e2.source)?.node.slice(0, 16) : readOnchainAddress(e2.source)?.key.slice(0, 16);
-  const unit = unitOf(e2.unit)?.unit.name ?? `unit ${e2.unit.slice(0, 8)}\u2026`;
-  return `${unit}, ${rail} (${where ?? "?"}\u2026): ${e2.limit === 0 ? "every payment in this unit goes to the vault (flow off)" : `a single payment above ${say({ unit: e2.unit, value: e2.limit }, units2)} must go to the vault, not the flow`}.`;
+function vaultEntryWords(e3) {
+  const units2 = /* @__PURE__ */ new Set([e3.unit]);
+  const rail = e3.railModule === SPEC.lightning.hash ? "on Lightning" : e3.railModule === SPEC.onchain.hash ? "on-chain" : `on rail Module ${e3.railModule.slice(0, 8)}\u2026`;
+  const where = e3.railModule === SPEC.lightning.hash ? readLightningAddress(e3.source)?.node.slice(0, 16) : readOnchainAddress(e3.source)?.key.slice(0, 16);
+  const unit = unitOf(e3.unit)?.unit.name ?? `unit ${e3.unit.slice(0, 8)}\u2026`;
+  return `${unit}, ${rail} (${where ?? "?"}\u2026): ${e3.limit === 0 ? "every payment in this unit goes to the vault (flow off)" : `a single payment above ${say({ unit: e3.unit, value: e3.limit }, units2)} must go to the vault, not the flow`}.`;
 }
 function vaultPlan(v, now) {
   const change = v ?? { change: "keep" };
   if (change.change === "keep") {
-    return { lines: now ? [{ text: "Kept as it is:" }, ...now.map((e2) => ({ text: vaultEntryWords(e2) }))] : [{ text: "None declared, and none is declared now: every payment goes to the flow; no protection chosen (Money rule 3)." }], declaration: null };
+    return { lines: now ? [{ text: "Kept as it is:" }, ...now.map((e3) => ({ text: vaultEntryWords(e3) }))] : [{ text: "None declared, and none is declared now: every payment goes to the flow; no protection chosen (Money rule 3)." }], declaration: null };
   }
   if (change.change === "remove") {
     if (!now) throw new Error("This identity declares no vault: there is none to remove.");
@@ -8544,14 +8544,14 @@ function vaultPlan(v, now) {
   return {
     lines: [
       { text: "Declared anew, with the chain key (Money rule 2): only another change of keys can change it.", tone: "warn" },
-      ...entries.map((e2) => ({ text: vaultEntryWords(e2) })),
+      ...entries.map((e3) => ({ text: vaultEntryWords(e3) })),
       ...entries.length > 1 ? [{ text: "Several entries for one unit: the smallest limit applies (F114)." }] : [],
       { text: "A payment in a unit the vault has no entry for cannot be paid to the flow at all (fail closed, Money rule 3)." },
       { text: "The vault\u2019s node or key should be another than the flow\u2019s: the vault is only as safe as the key it names.", tone: "warn" }
     ],
     declaration: vaultDeclaration(
       MIRS.money,
-      entries.map((e2) => ({ unit: e2.unit, railModule: e2.railModule, source: e2.source, limit: e2.limit }))
+      entries.map((e3) => ({ unit: e3.unit, railModule: e3.railModule, source: e3.source, limit: e3.limit }))
     )
   };
 }
@@ -8627,7 +8627,279 @@ function e(s) {
   return String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-// ../dub/src/page/view.ts
+// ../kit/src/style.ts
+var APPS = {
+  kishib: { name: "Ki\u0161ib", colour: "#8ec5f0", pastel: "#cfe5f7", wash: "rgba(207,229,247,.075)", wash2: "rgba(207,229,247,.15)" },
+  dub: { name: "Dub", colour: "#e9dfcd", pastel: "#efe8dc", wash: "rgba(239,232,220,.06)", wash2: "rgba(239,232,220,.13)" },
+  damgar: { name: "Damgar", colour: "#e8b33a", pastel: "#f2d89c", wash: "rgba(242,216,156,.07)", wash2: "rgba(242,216,156,.15)" },
+  edubba: { name: "Edubba", colour: "#48c08c", pastel: "#a9e3c7", wash: "rgba(169,227,199,.07)", wash2: "rgba(169,227,199,.15)" },
+  ummia: { name: "Ummia", colour: "#ee8b74", pastel: "#f7c4b7", wash: "rgba(247,196,183,.07)", wash2: "rgba(247,196,183,.15)" }
+};
+var tints = Object.keys(APPS).map((a) => `.k-${a}{--k-c:${APPS[a].colour};--k-p:${APPS[a].pastel};--k-wash:${APPS[a].wash};--k-wash2:${APPS[a].wash2}}`).join("\n");
+var KIT_STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
+@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+:root{color-scheme:dark;--k-bg:#06080c;--k-raise:#0d1017;--k-raise2:#131720;--k-pop:#0f131a;--k-line:#232a35;--k-edge:#323a47;--k-text:#d6dae1;--k-soft:#8a919d;--k-faint:#4f5663;--k-ink:#0a0c10;--k-bad:#c4645f;--k-id:#9aa8b8;--k-c:#e9dfcd;--k-p:#efe8dc;--k-wash:rgba(239,232,220,.06);--k-wash2:rgba(239,232,220,.13)}
+${tints}
+.k-page,.k-page *{box-sizing:border-box}
+html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);color:var(--k-text);overflow:hidden}
+.k-page{font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
+:where(.k-page) button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:where(.k-page) button:disabled{opacity:.45;cursor:default}
+:where(.k-page) :is(h1,h2,h3,h4){font-weight:300;margin:0;letter-spacing:.005em}
+:where(.k-page) p{margin:6px 0}
+:where(.k-page) a{color:var(--k-text);text-decoration:underline;text-decoration-color:var(--k-faint);text-underline-offset:3px}
+:where(.k-page) :is(input,textarea,select){font:inherit;font-size:15px;color:var(--k-text);background:var(--k-raise);border:1px solid var(--k-edge);border-radius:10px;padding:8px 11px;width:100%}
+:where(.k-page) :is(input,textarea,select):focus{outline:none;border-color:var(--k-p)}
+:where(.k-page) input:is([type=checkbox],[type=radio]){width:auto;accent-color:var(--k-p)}
+:where(.k-page) label{display:block;margin:10px 0 4px;font-size:13px;color:var(--k-soft)}
+.k-page [hidden]{display:none!important}
+.k-mono,:where(.k-page) code{font:12.5px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+.k-soft{color:var(--k-soft)}.k-faint{color:var(--k-faint)}.k-small{font-size:13px}
+.k-grow{flex:1}
+.k-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.k-bad{color:var(--k-bad)}
+.k-offscreen{position:fixed;left:-9999px;top:0;opacity:0}
+
+/* the top of every window: the app (or Contacts) left, a switch or tabs in the middle, the identity right */
+.k-top{display:flex;align-items:center;gap:14px;height:56px;padding:0 20px;border-bottom:1px solid var(--k-line);flex:none;position:relative;z-index:5;background:var(--k-bg)}
+.k-app{display:flex;align-items:center;gap:10px;font-size:16px;letter-spacing:.04em}
+.k-app img{width:26px;height:26px;border-radius:6px}
+.k-menu-btn{display:flex;align-items:center;gap:8px;color:var(--k-soft);font-size:14px;padding:6px 10px;border:1px solid var(--k-line);border-radius:10px}
+.k-menu-btn:hover{color:var(--k-text)}
+.k-switch{display:flex;border:1px solid var(--k-edge);border-radius:999px;padding:3px;gap:2px}
+.k-switch button{padding:5px 18px;border-radius:999px;color:var(--k-soft);font-size:14px;display:flex;align-items:center;gap:6px}
+.k-switch button.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
+.k-count{display:inline-block;min-width:1.4em;padding:0 6px;border-radius:999px;background:var(--k-edge);color:var(--k-text);font-size:11px;line-height:1.6;text-align:center}
+.k-count:empty{display:none}
+.k-on .k-count{background:var(--k-ink);color:var(--k-p)}
+.k-me{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 12px;border:1px solid var(--k-line);border-radius:999px;max-width:42%}
+.k-me .k-n{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-me .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
+.k-dot{width:26px;height:26px;border-radius:50%;background:var(--k-p);color:var(--k-ink);display:grid;place-items:center;font-size:12px;font-weight:400;flex:none}
+.k-dot.k-c{border-radius:7px}
+.k-dot.k-alt{background:var(--k-raise2);color:var(--k-text);border:1px solid var(--k-edge)}
+.k-body{flex:1;min-height:0;display:flex;position:relative}
+.k-tabs{display:flex;gap:4px}
+.k-tab{padding:6px 14px;border-radius:999px;color:var(--k-soft);font-size:14px;display:flex;align-items:center;gap:8px}
+.k-tab.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
+
+/* tiles: big, an icon and words, danger marks; the edge thickens with the level; never red but for an alarm */
+.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:18px;padding:24px 28px 12px}
+.k-tile{position:relative;border-radius:22px;background:linear-gradient(160deg,var(--k-wash2),var(--k-wash) 55%,rgba(255,255,255,.015));border:1px solid var(--k-line);padding:26px 28px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;text-align:left}
+.k-tile:hover,.k-tile:focus-visible{outline:1px solid var(--k-p);outline-offset:-1px}
+.k-tile .k-ic{position:absolute;left:26px;top:24px;width:58px;height:58px;color:var(--k-p)}
+.k-tile h2{font-size:34px;letter-spacing:.01em;color:var(--k-p)}
+.k-tile p{color:var(--k-soft);font-size:14.5px;max-width:36em}
+.k-tile .k-dm{position:absolute;right:24px;top:26px}
+.k-tile.k-d2{border-color:rgba(255,255,255,.14);border-width:1.5px}
+.k-tile.k-d3{border-color:rgba(255,255,255,.24);border-width:2.5px}
+.k-tile.k-alarm{border-color:var(--k-bad)}
+.k-tile .k-alert{position:absolute;right:24px;bottom:24px;color:var(--k-bad);font-size:13px;border:1px solid var(--k-bad);border-radius:999px;padding:2px 10px}
+.k-dm{display:inline-flex;align-items:flex-end;gap:3px;height:20px}
+.k-dm i{display:block;width:5px;border-radius:2px;background:var(--k-edge)}
+.k-dm i:nth-child(1){height:8px}.k-dm i:nth-child(2){height:13px}.k-dm i:nth-child(3){height:19px}
+.k-dm.k-l1 i:nth-child(1),.k-dm.k-l2 i:nth-child(-n+2),.k-dm.k-l3 i{background:var(--k-p)}
+
+/* a tile opened: its column on the left, the part on the right; on a phone the column folds away once a part is chosen */
+.k-col{width:248px;flex:none;border-right:1px solid var(--k-line);padding:18px 12px;display:flex;flex-direction:column;gap:2px;overflow:auto}
+.k-col h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--k-faint);margin:14px 10px 6px}
+.k-col h3:first-child{margin-top:0}
+.k-col button{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;color:var(--k-soft);font-size:14.5px;text-align:left;width:100%}
+.k-col button.k-on{background:var(--k-wash2);color:var(--k-text)}
+.k-col button.k-on::before{content:"";width:3px;height:16px;border-radius:2px;background:var(--k-p);margin-left:-4px}
+.k-col button .k-k{margin-left:auto;font-size:12px;color:var(--k-faint)}
+.k-col .k-sep{height:1px;background:var(--k-line);margin:10px 8px}
+.k-pane{flex:1;min-width:0;padding:22px 30px;overflow:auto;display:flex;flex-direction:column}
+.k-pane>h2{font-size:24px;margin-bottom:4px}
+.k-back{display:none;align-items:center;gap:6px;color:var(--k-soft);font-size:14px;margin:0 0 8px}
+
+/* the feed box: fills its space and scrolls inside, never the page */
+.k-feedwrap{flex:1;min-height:0;display:flex;flex-direction:column}
+.k-controls{display:flex;align-items:center;gap:6px;margin:0 0 10px;flex-wrap:wrap}
+.k-lens{padding:5px 14px;border-radius:999px;font-size:14px;color:var(--k-soft);border:1px solid var(--k-line);white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.k-lens.k-on{background:var(--k-p);color:var(--k-ink);border-color:var(--k-p)}
+.k-point{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px;font-size:13px;color:var(--k-soft)}
+.k-point .k-lbl{color:var(--k-faint);min-width:5.5em}
+.k-feed{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;border:1px solid var(--k-line);border-radius:16px;padding:6px 14px;background:#080a0f;position:relative}
+.k-feed::-webkit-scrollbar{width:8px}.k-feed::-webkit-scrollbar-thumb{background:var(--k-edge);border-radius:4px}.k-feed::-webkit-scrollbar-track,.k-feed::-webkit-scrollbar-corner{background:transparent}.k-feed::-webkit-scrollbar-button{display:none;height:0}
+.k-empty{padding:28px 0;color:var(--k-faint);font-size:14px;text-align:center}
+.k-clock{font-size:12px;color:var(--k-faint);margin:6px 2px 0}
+
+/* the act card, the same in every app: the signer top left, the act bottom right, each its own menu */
+.k-act{position:relative;padding:12px 2px 10px;border-bottom:1px solid var(--k-line)}
+.k-act:last-child{border-bottom:0}
+.k-act .k-signer{display:inline-flex;align-items:baseline;gap:9px;padding:2px 8px 2px 0;border-radius:8px;max-width:100%;flex-wrap:wrap;text-align:left}
+.k-act .k-sid,.k-act .k-actid{font:12px ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
+.k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
+.k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
+.k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
+.k-act .k-when{float:right;font-size:12px;color:var(--k-faint)}
+.k-act .k-txt{margin:4px 0 6px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.k-act .k-label{font-size:12.5px;color:var(--k-soft);margin:2px 0}
+.k-act .k-label.k-warn{color:var(--k-c)}
+.k-act .k-kind{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--k-soft);border:1px solid var(--k-line);border-radius:5px;padding:1px 6px;margin-right:6px}
+.k-act .k-foot{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--k-faint);flex-wrap:wrap}
+.k-act .k-actid{margin-left:auto;padding:2px 0 2px 8px;border-radius:8px}
+.k-act .k-v{color:var(--k-p);font-size:12px}
+.k-act .k-alarmline{color:var(--k-bad);font-size:12.5px}
+.k-act .k-signer.k-open,.k-act .k-actid.k-open{background:var(--k-wash2);outline:1px solid var(--k-p)}
+.k-act.k-sel{background:var(--k-wash);border-radius:12px;padding-left:10px;padding-right:10px;border-bottom-color:transparent}
+.k-act figure{margin:8px 0 4px}
+.k-act img,.k-act video{display:block;max-width:100%;max-height:60vh;height:auto;border-radius:12px;image-orientation:from-image}
+.k-act .k-doc{display:block;border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px;text-decoration:none}
+.k-act .k-box{border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0}
+
+/* menus: what you take above a line, what changes something below */
+.k-pop{position:fixed;z-index:40;min-width:236px;max-width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;padding:6px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-pop .k-t{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
+.k-pop button{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;font-size:14px;color:var(--k-text);width:100%;text-align:left}
+.k-pop button:hover,.k-pop button:focus-visible{background:var(--k-wash);outline:none}
+.k-pop button:disabled{color:var(--k-faint);opacity:1}
+.k-pop button .k-k{margin-left:auto;font-size:11.5px;color:var(--k-faint)}
+.k-pop hr{border:0;border-top:1px solid var(--k-edge);margin:5px 4px}
+.k-pop .k-own{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--k-p);padding:4px 10px 2px;opacity:.75}
+
+/* the typing box: always in the same place, the bottom */
+.k-typing{flex:none;display:flex;flex-direction:column;gap:6px;border:1px solid var(--k-edge);border-radius:16px;padding:10px 12px;margin-top:12px;background:var(--k-raise);position:relative}
+.k-typing .k-line{display:flex;align-items:flex-end;gap:10px}
+.k-typing textarea{flex:1;border:0;background:none;padding:2px 0;min-height:24px;max-height:30vh;resize:none;font-size:15px}
+.k-typing .k-tools{display:flex;gap:8px;align-items:center;color:var(--k-soft);font-size:13px}
+.k-typing .k-tools button,.k-typing .k-tools label{color:var(--k-soft);font-size:13px;margin:0;cursor:pointer;display:inline-flex;align-items:center}
+.k-typing .k-tools button:hover,.k-typing .k-tools label:hover{color:var(--k-text)}
+.k-typing input[type=file]{display:none}
+.k-typing .k-opts{display:flex;gap:8px;flex-wrap:wrap}
+.k-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border:1px solid var(--k-edge);border-radius:999px;font-size:14px;color:var(--k-text)}
+.k-btn.k-p{background:var(--k-p);border-color:var(--k-p);color:var(--k-ink);font-weight:400}
+.k-btn.k-q{border-color:transparent;color:var(--k-soft)}
+.k-btn.k-alarm{border-color:var(--k-bad);color:var(--k-bad)}
+.k-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;border:1px solid var(--k-edge);font-size:13px;color:var(--k-soft)}
+.k-chip.k-on{background:var(--k-wash2);border-color:transparent;color:var(--k-text)}
+.k-chip .k-x{color:var(--k-faint)}
+
+/* overlays: the pop-up thread, panels, frames */
+.k-shade{position:fixed;inset:0;background:rgba(3,4,6,.66);z-index:30}
+.k-shade.k-light{background:rgba(3,4,6,.45)}
+.k-modal{position:fixed;z-index:31;left:50%;top:50%;transform:translate(-50%,-50%);width:min(600px,calc(100% - 28px));max-height:calc(100% - 60px);display:flex;flex-direction:column;background:#0b0e14;border:1px solid var(--k-edge);border-radius:18px;padding:16px 18px;box-shadow:0 24px 60px rgba(0,0,0,.7)}
+.k-modal .k-mh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.k-modal .k-mh h3{font-size:17px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.k-round{font-size:18px;color:var(--k-soft);width:30px;height:30px;border:1px solid var(--k-line);border-radius:50%;display:grid;place-items:center;flex:none}
+.k-modal .k-mbody{min-height:0;overflow:auto;display:flex;flex-direction:column}
+.k-modal .k-feed{max-height:60vh;flex:none}
+.k-panel{position:fixed;z-index:32;right:16px;top:62px;width:360px;max-height:calc(100% - 78px);overflow:auto;background:#0e1118;border:1px solid var(--k-edge);border-radius:16px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.7)}
+.k-panel.k-left{left:16px;right:auto}
+.k-panel h4{font-size:16px;font-weight:300}
+.k-idrow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;width:100%;text-align:left}
+.k-idrow.k-on{background:var(--k-wash2)}
+.k-idrow .k-n{font-size:14.5px}
+.k-idrow .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint)}
+.k-idrow .k-tagc{font-size:11px;color:var(--k-soft);border:1px solid var(--k-line);border-radius:999px;padding:0 7px;margin-left:4px}
+.k-idrow.k-sub{margin-left:26px;width:calc(100% - 26px)}
+.k-idline{display:flex;align-items:center;gap:4px}
+.k-idline>.k-idrow{flex:1;min-width:0}
+.k-more{color:var(--k-soft);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--k-line);flex:none}
+.k-sepline{height:1px;background:var(--k-line);margin:6px 4px}
+.k-foot-note{font-size:12.5px;color:var(--k-faint);padding:6px 8px}
+.k-panel .k-pane-in{padding:4px 6px}
+
+/* the slot: another app's panel, drawn by that app in a frame this app cannot read or change */
+.k-frame{position:fixed;z-index:50;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100% - 28px));border-radius:20px;padding:4px;background:repeating-linear-gradient(45deg,var(--k-fc) 0 10px,var(--k-fc2) 10px 20px)}
+.k-frame .k-by{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--k-ink);padding:4px 10px 6px;font-weight:400}
+.k-frame iframe{display:block;width:100%;height:min(420px,70vh);border:0;border-radius:16px;background:#090c11}
+.k-frame.k-kishib{--k-fc:#cfe5f7;--k-fc2:#9fc9ea}
+.k-frame.k-damgar{--k-fc:#f2d89c;--k-fc2:#d9b55e}
+.k-frame.k-edubba{--k-fc:#a9e3c7;--k-fc2:#76c9a0}
+.k-frame.k-ummia{--k-fc:#f7c4b7;--k-fc2:#e99a86}
+.k-frame.k-dub{--k-fc:#efe8dc;--k-fc2:#cfc4b0}
+
+/* a disclaimer in one line; the "?" opens the rest */
+.k-say{font-size:12.5px;color:var(--k-faint);margin:6px 0}
+.k-say>summary{list-style:none;cursor:pointer;display:inline}
+.k-say>summary::-webkit-details-marker{display:none}
+.k-help{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--k-edge);color:var(--k-soft);font-size:11px;margin-left:6px;vertical-align:1px}
+.k-say[open]>summary .k-help{background:var(--k-wash2);color:var(--k-text)}
+.k-say .k-more-text{margin:6px 0 2px;color:var(--k-soft);font-size:13px;max-width:48em}
+.k-say .k-more-text p{margin:4px 0}
+.k-alarmbox{border:1px solid var(--k-bad);border-radius:12px;padding:10px 12px;margin:8px 0;color:var(--k-text);font-size:14px}
+
+/* notes the app says: done, error */
+.k-note{margin:8px 0;padding:8px 12px;border-left:2px solid var(--k-line);font-size:14px;color:var(--k-soft)}
+.k-note.k-done{border-left-color:var(--k-p);color:var(--k-text)}
+.k-note.k-error{border-left-color:var(--k-bad);color:var(--k-text)}
+.k-note ul{margin:4px 0 0;padding-left:1.1em}
+.k-note li.k-bad,.k-note li.bad{color:var(--k-bad)}
+.k-status{position:fixed;z-index:45;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-status:empty{display:none}
+.k-status .k-note{margin:0;border-left:0;padding:10px 40px 10px 14px}
+.k-status .k-close{position:absolute;right:8px;top:8px}
+
+/* the profile page: light and friendly */
+.k-prof{max-width:760px;width:100%;margin:0 auto;flex:1;display:flex;flex-direction:column;min-height:0}
+.k-prof .k-hero{display:flex;gap:18px;align-items:center;padding:8px 0 12px;flex-wrap:wrap}
+.k-prof .k-hero .k-dot{width:64px;height:64px;font-size:26px;font-weight:300}
+.k-prof .k-hero h2{font-size:30px;overflow-wrap:anywhere}
+.k-prof .k-own-name{color:var(--k-soft);font-size:14px}
+
+/* lists, words */
+.k-list{border-top:1px solid var(--k-line)}
+.k-list>div,.k-list>li{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--k-line);font-size:14.5px;list-style:none}
+.k-list .k-r{margin-left:auto;color:var(--k-soft);font-size:13px}
+.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px ui-monospace,Menlo,monospace;margin:10px 0;background:var(--k-raise)}
+.k-words b{display:inline-block;min-width:2em;color:var(--k-faint);font-weight:400}
+.k-box{border:1px solid var(--k-line);border-radius:14px;padding:14px 16px;margin:10px 0}
+.k-box.k-fill{background:var(--k-wash);border-color:transparent}
+.k-facts{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;font-size:14px;margin:6px 0}
+.k-facts dt{color:var(--k-faint)}.k-facts dd{margin:0;color:var(--k-soft);overflow-wrap:anywhere}
+
+/* phone: one column; the column becomes the first screen and folds away once a part is chosen */
+@media (max-width:600px){
+  .k-top{height:52px;padding:0 10px;gap:8px}
+  .k-app .k-nm,.k-hide-phone{display:none!important}
+  .k-me{padding:3px;border:0}
+  .k-me .k-n,.k-me .k-s{display:none}
+  .k-menu-btn .k-l{display:none}
+  .k-switch button{padding:4px 11px}
+  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr);gap:10px;padding:12px}
+  .k-tile{padding:16px 18px;border-radius:18px}
+  .k-tile .k-ic{width:40px;height:40px;left:18px;top:16px}
+  .k-tile h2{font-size:24px}
+  .k-tile p{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .k-tile .k-dm{right:16px;top:18px}
+  .k-opened .k-col{width:100%;border-right:0;padding:12px}
+  .k-opened .k-pane{display:none;padding:12px}
+  .k-opened.k-chosen .k-col{display:none}
+  .k-opened.k-chosen .k-pane{display:flex}
+  .k-opened.k-chosen .k-back{display:inline-flex}
+  .k-pane{padding:12px}
+  .k-words{grid-template-columns:repeat(3,1fr);font-size:12.5px;padding:10px 12px;gap:4px 10px}
+  .k-panel{left:8px;right:8px;width:auto;top:56px}
+  .k-pop:not([data-k-suggest]){left:8px!important;right:8px!important;top:auto!important;bottom:8px!important;max-width:none;width:auto;min-width:0;border-radius:16px}
+  .k-modal{padding:12px;width:calc(100% - 16px);max-height:calc(100% - 24px)}
+  .k-act .k-when{display:none}
+  .k-feed{padding:4px 10px}
+}
+`;
+
+// ../kit/src/html.ts
+var SVG = (d) => `<svg class="k-ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+var ICONS = {
+  identities: SVG('<circle cx="24" cy="17" r="8"/><path d="M9 41c2-9 8-13 15-13s13 4 15 13"/>'),
+  runner: SVG('<rect x="7" y="13" width="20" height="22" rx="4"/><path d="M27 20h6a6 6 0 0 1 0 12h-6M33 26h8M14 22h6M14 27h6"/>'),
+  paper: SVG('<path d="M13 6h16l8 8v28H13z"/><path d="M29 6v8h8M18 22h14M18 28h14M18 34h9"/>'),
+  collectives: SVG('<circle cx="16" cy="18" r="5.5"/><circle cx="32" cy="18" r="5.5"/><circle cx="24" cy="12" r="5"/><path d="M6 38c1-7 5-10 10-10s7 2 8 5c1-3 3-5 8-5s9 3 10 10"/>'),
+  waiting: SVG('<path d="M14 6h20M14 42h20M16 6c0 10 16 12 16 18S16 32 16 42M32 6c0 10-16 12-16 18s16 8 16 18"/>'),
+  account: SVG('<rect x="8" y="9" width="32" height="30" rx="4"/><path d="M8 17h32M15 25h8M15 31h12M31 25h3M31 31h3"/>'),
+  lanes: SVG('<path d="M14 42 19 6M34 42 29 6M24 10v4M24 21v5M24 33v6"/>'),
+  settings: SVG('<path d="M10 14h28M10 24h28M10 34h28"/><circle cx="18" cy="14" r="3.5"/><circle cx="31" cy="24" r="3.5"/><circle cx="22" cy="34" r="3.5"/>'),
+  agents: SVG('<rect x="10" y="12" width="28" height="24" rx="7"/><circle cx="19" cy="24" r="2.4"/><circle cx="29" cy="24" r="2.4"/><path d="M24 6v6M6 22v6M42 22v6"/>'),
+  publishing: SVG('<path d="M8 30v8h32v-8M24 30V8M15 17l9-9 9 9"/>'),
+  vows: SVG('<circle cx="24" cy="22" r="12"/><path d="M18 22l4 4 8-8M17 33l-3 9 10-5 10 5-3-9"/>'),
+  look: SVG('<path d="M4 24s7-12 20-12 20 12 20 12-7 12-20 12S4 24 4 24z"/><circle cx="24" cy="24" r="6"/>'),
+  discuss: SVG('<path d="M6 10h24v16H16l-6 6v-6H6z"/><path d="M34 18h8v16h-4v6l-6-6H22v-4"/>'),
+  publish: SVG('<path d="M10 40h28M24 32V8M15 17l9-9 9 9"/>'),
+  choose: SVG('<path d="M8 12l3 3 6-6M8 24l3 3 6-6M8 36l3 3 6-6M22 12h18M22 24h18M22 36h18"/>')
+};
+
+// ../dub/src/page/family.ts
 var TEST_ONLY = "Test identities only, until MOR is frozen";
 var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY}. Two risks, in plain words:</p>
 <ol><li>Whoever serves this page's code at the moment an identity is made here could copy its keys.</li>
@@ -8762,17 +9034,75 @@ details>summary::before{color:var(--tint)}
 .bar{border-bottom-color:var(--edge)}
 .correction strong{font-weight:400;color:var(--text)}`;
 
+// ../dub/src/page/view.ts
+var TEST_ONLY2 = "Test identities only, until MOR is frozen";
+var TINT2 = { layer: APPS.dub.colour, pastel: APPS.dub.pastel };
+var WEB_BANNER2 = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY2}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>Two risks, in plain words:</p>
+<ol><li>Whoever serves this page\u2019s code at the moment an identity is made here could copy its keys.</li>
+<li>This browser\u2019s storage, where the identity\u2019s signing key is kept, can be lost, or read by what runs in this page.</li></ol>
+<p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div></details>`;
+var PAGE_STYLE2 = `${KIT_STYLE}
+body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
+#app.k-page{flex:1;min-height:0;height:auto}
+.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.dub-banner strong{font-weight:400;color:var(--k-text)}
+.dub-banner ol{margin:4px 0;padding-left:1.4em}
+.dub-center{max-width:820px;margin:0 auto;width:100%}
+.dub-first{max-width:640px;margin:0 auto;width:100%;overflow:auto;padding:24px 20px 40px}
+.dub-first h2{font-size:24px;margin:8px 0 4px}
+.dub-first form{margin:6px 0}
+.dub-picked{font-size:12.5px;color:var(--k-soft)}
+.dub-film{display:flex;align-items:center;gap:10px;border:1px solid var(--k-line);border-radius:12px;padding:10px 12px;margin:6px 0;font-size:14px;color:var(--k-soft)}
+.dub-sealed{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:6px 0}
+.dub-sealed img{margin:6px 0}
+.dub-convs{width:300px;flex:none;border-right:1px solid var(--k-line);display:flex;flex-direction:column;min-height:0}
+#private-notes{padding:0 14px 10px}
+.dub-convs .dub-find{margin:12px;width:calc(100% - 24px)}
+.dub-convs .dub-list{overflow:auto;flex:1;min-height:0}
+.dub-conv{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--k-line);width:100%;text-align:left}
+.dub-conv.k-on{background:var(--k-wash2)}
+.dub-conv .k-n{font-size:14.5px}
+.dub-conv .dub-l{font-size:13px;color:var(--k-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;display:block}
+.dub-conv .dub-w{margin-left:auto;font-size:11.5px;color:var(--k-faint);align-self:flex-start;white-space:nowrap}
+.dub-conv .k-count{background:var(--k-p);color:var(--k-ink);margin-left:6px}
+.dub-thread{flex:1;min-width:0;display:flex;flex-direction:column;padding:14px 22px 16px;min-height:0}
+.dub-thread .dub-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.dub-thread .dub-head h2{font-size:20px}
+.dub-cc{font-size:12.5px;color:var(--k-soft)}
+.dub-field{display:flex;gap:8px;align-items:center}
+.dub-field input{flex:1}
+.dub-modal-form textarea{min-height:5em}
+.dub-ways{border-top:1px solid var(--k-line);margin:8px 0}
+.dub-ways label{display:flex;gap:10px;align-items:flex-start;padding:10px 6px;border-bottom:1px solid var(--k-line);margin:0;color:var(--k-text);font-size:14.5px;cursor:pointer}
+.dub-ways label.dub-closed{color:var(--k-faint);cursor:default}
+.dub-ways input{margin-top:4px}
+.dub-ways .k-small{display:block}
+.dub-hand{width:100%;min-height:6em;font:12px ui-monospace,Menlo,monospace}
+.dub-note-line{font-size:13px;color:var(--k-soft);margin:0 0 8px}
+@media (max-width:600px){
+  .dub-banner{padding:5px 10px}
+  .dub-private .dub-convs{width:100%;border-right:0}
+  .dub-private .dub-thread{display:none;padding:10px 12px}
+  .dub-private.k-chosen .dub-convs{display:none}
+  .dub-private.k-chosen .dub-thread{display:flex}
+  .dub-private .k-back{display:inline-flex}
+  .dub-first{padding:16px 14px 30px}
+  .k-typing .dub-l{display:none}
+}
+.dub-film .k-btn{white-space:nowrap}
+@media (min-width:601px){.dub-private .k-back{display:none}}`;
+
 // src/page/view.ts
 var NAME = "Ki\u0161ib";
-var TEST_ONLY2 = "Test identities only, until MOR is frozen";
-var WEB_BANNER2 = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY2}. The risks, in plain words:</p>
+var TEST_ONLY3 = "Test identities only, until MOR is frozen";
+var WEB_BANNER3 = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY3}. The risks, in plain words:</p>
 <ol><li>The words you type here are your chain key: whoever serves this page\u2019s code at that moment could copy them, and with them change your identity\u2019s keys, or keep a collective\u2019s whole key.</li>
 <li>This browser, its extensions and whatever else runs on this device see what you type. A collective\u2019s whole chain key is rebuilt in the device that rotates it.</li>
 <li>Ki\u0161ib keeps nothing in this browser\u2019s storage; but nothing can prove a device forgot what it held.</li></ol>
 <p>Use the app on a clean device for anything of value; ideally a device used for nothing else. Never here for a real identity.</p></div>`;
-var TINT2 = { layer: "#8ec5f0", line: "#24323e", edge: "#2f4150", accent: "#587995" };
+var TINT3 = { layer: "#8ec5f0", line: "#24323e", edge: "#2f4150", accent: "#587995" };
 var STYLE2 = `${STYLE}
-:root{--line:${TINT2.line};--edge:${TINT2.edge};--tint:${TINT2.accent}}
+:root{--line:${TINT3.line};--edge:${TINT3.edge};--tint:${TINT3.accent}}
 button:hover,.door:hover{border-color:var(--tint)}
 input:focus,textarea:focus{border-color:var(--tint)}
 details>summary::before{color:var(--tint)}
@@ -8794,17 +9124,17 @@ li.warn{color:var(--soft)}
 .mustread h3{margin:0 0 6px;font-weight:400}
 .fpr{font:15px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);letter-spacing:.04em}
 .full{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--soft);overflow-wrap:anywhere}`;
-var note = (kind, html) => `<div class="note ${kind}">${html}</div>`;
+var note2 = (kind, html) => `<div class="note ${kind}">${html}</div>`;
 var lines = (ls) => `<ul>${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>`;
 function testNotice(web) {
-  return web ? "" : `<div class="banner" id="test-only">${TEST_ONLY2}. Ki\u0161ib writes nothing of your words to this device; what it holds for an act lives in the program\u2019s memory, and is gone when it stops.</div>`;
+  return web ? "" : `<div class="banner" id="test-only">${TEST_ONLY3}. Ki\u0161ib writes nothing of your words to this device; what it holds for an act lives in the program\u2019s memory, and is gone when it stops.</div>`;
 }
-function top(web = false, back = false) {
+function top2(web = false, back = false) {
   return `<header class="bar"><h1 class="mark">${NAME}</h1><span class="grow"></span>${back ? '<button class="quiet" data-action="home">Back to the start</button>' : `<span class="small">${web ? "web client, for testing only" : "this machine only"}</span>`}</header>
 ${testNotice(web)}`;
 }
 function pairing() {
-  return `${top()}
+  return `${top2()}
 <h2>Pair this browser</h2>
 <p class="small">This page acts for the Ki\u0161ib program running on this machine. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
 <form id="pair" class="row"><input id="pair-code" class="grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
@@ -8812,8 +9142,8 @@ function pairing() {
 <div id="pair-status"></div>`;
 }
 function start(web) {
-  const door = (action, title, say2, rare = false) => `<button class="door${rare ? " rare" : ""}" data-action="open" data-form="${action}"><strong>${title}</strong><span>${say2}</span></button>`;
-  return `${top(web)}
+  const door = (action, title, say3, rare = false) => `<button class="door${rare ? " rare" : ""}" data-action="open" data-form="${action}"><strong>${title}</strong><span>${say3}</span></button>`;
+  return `${top2(web)}
 <p>Ki\u0161ib is the one place where a chain key is used, from paper, and then forgotten. Open it only for the act at hand.</p>
 <h2>What it does</h2>
 ${door("rotate", "Change an identity\u2019s keys", "From its chain key\u2019s 24 words on paper: a new signing key, every line of its acts kept. For a lost or stolen phone, or any time.")}
@@ -8848,7 +9178,7 @@ var VAULT_SAY = [
 ];
 var vaultHtml = (open) => vaultFields.replace("{open}", open ? " open" : "").replace("{keep}", open ? "" : " selected").replace("{set}", open ? " selected" : "").replace("{units}", units.map((u2) => `<option value="${e(u2.hash)}">${e(u2.label)}</option>`).join(""));
 function form2(kind, web) {
-  const f = (title, intro, body, button) => `${top(web, true)}<h2>${title}</h2><p class="small">${intro}</p><form id="form-${kind}" data-kind="${kind}">${body}${forgotten}<div class="row"><button type="submit" class="primary">${button}</button></div></form><div id="status"></div>`;
+  const f = (title, intro, body, button) => `${top2(web, true)}<h2>${title}</h2><p class="small">${intro}</p><form id="form-${kind}" data-kind="${kind}">${body}${forgotten}<div class="row"><button type="submit" class="primary">${button}</button></div></form><div id="status"></div>`;
   switch (kind) {
     case "rotate":
       return f(
@@ -8859,12 +9189,12 @@ function form2(kind, web) {
         "Read it back"
       );
     case "vault":
-      return `${top(web, true)}<h2>Change the vault</h2>
+      return `${top2(web, true)}<h2>Change the vault</h2>
 <div class="review" id="vault-say">${lines(VAULT_SAY.map((text2) => ({ text: text2 })))}</div>
 <form id="form-rotate" data-kind="rotate">${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (its newest paper: written when it was made, or shown at its last change of keys; never the signing key\u2019s words)")}
 <details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line, copied whole from each app\u2019s identity window (Dub, Edubba, Damgar, Ummia): latest act, position, summary, then the app\u2019s count and name</label><textarea name="cards"></textarea></details>${vaultHtml(true)}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
     case "succession":
-      return `${top(web, true)}<h2>Name or confirm a successor</h2>
+      return `${top2(web, true)}<h2>Name or confirm a successor</h2>
 <p class="small">A succession needs both sides (F300): the identity names its successor in a change of its keys, signed with its chain key; the successor confirms it with an act of its own. Until it confirms, clients show it as declared and follow nobody.</p>
 <h3>Name a successor, as the identity that will be succeeded</h3>
 <form id="form-rotate" data-kind="rotate">${idField("id", "Your identity\u2019s ID")}${address}${words("words", "Your chain key\u2019s 24 words")}${idField("successor", "The successor\u2019s ID")}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form>
@@ -8914,22 +9244,22 @@ function review(r, web, mustRead) {
   const blocked = r.blocking.length > 0;
   const must = mustRead ? r.sections[0] : null;
   const rest = mustRead ? r.sections.slice(1) : r.sections;
-  return `${top(web, true)}<h2>${e(r.title)}</h2>
+  return `${top2(web, true)}<h2>${e(r.title)}</h2>
 ${r.summary.map((s) => `<p class="small">${e(s)}</p>`).join("")}
 ${must ? `<div class="mustread" id="mustread"><h3>${e(must.heading)}</h3>${lines(must.lines)}<label class="check"><input type="checkbox" id="read-it"> I have read this, and chosen this device knowingly</label></div>` : ""}
 <div class="review">${sections(rest)}</div>
-${blocked ? note("error", `Nothing can be signed yet:${lines(r.blocking.map((t) => ({ text: t, tone: "bad" })))}`) : ""}
-${r.warning ? note("error", `${e(r.warning)}<label class="check"><input type="checkbox" id="warned"> I have read this: go on as it says</label>`) : ""}
+${blocked ? note2("error", `Nothing can be signed yet:${lines(r.blocking.map((t) => ({ text: t, tone: "bad" })))}`) : ""}
+${r.warning ? note2("error", `${e(r.warning)}<label class="check"><input type="checkbox" id="warned"> I have read this: go on as it says</label>`) : ""}
 <div class="signs"><span class="label">What is signed</span>${r.signs.map((s) => `<p>${e(s)}</p>`).join("")}</div>
 <div class="row"><button class="primary" data-action="sign" ${blocked ? "disabled" : ""}>Sign it</button><button data-action="home">Cancel, and forget the words</button></div><div id="status"></div>`;
 }
-function wordsShown(ws, say2, web, label = "The new signing key\u2019s words") {
-  return `${top(web)}<h2>${e(label)}</h2>${say2.map((s) => `<p class="small">${e(s)}</p>`).join("")}
+function wordsShown(ws, say3, web, label = "The new signing key\u2019s words") {
+  return `${top2(web)}<h2>${e(label)}</h2>${say3.map((s) => `<p class="small">${e(s)}</p>`).join("")}
 <div class="words" id="words">${ws.map((w, i) => `<span><b>${i + 1}</b>${e(w)}</span>`).join("")}</div>
 <div class="row"><button class="primary" data-action="written">I have written them down</button></div>`;
 }
 function askBack(positions, web) {
-  return `${top(web)}<h2>Three of the words, from your paper</h2><p class="small">The words are hidden. Type the ones asked, from what you wrote.</p>
+  return `${top2(web)}<h2>Three of the words, from your paper</h2><p class="small">The words are hidden. Type the ones asked, from what you wrote.</p>
 <form id="typed"><div class="typed">${positions.map((p) => `<label>Word ${p}<input name="w${p}" autocomplete="off" spellcheck="false" required></label>`).join("")}</div>
 <div class="row"><button type="submit" class="primary">Check</button><button type="button" data-action="show words">Show them again</button></div></form><div id="status"></div>`;
 }
@@ -8949,7 +9279,7 @@ function sitting(s, web) {
   const paper = s.stage === "waiting" && q?.room && q.have < q.need ? `<form id="paper"><label>The next share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>${words("words", "Its 24 words")}<div class="row"><button type="submit" class="primary">Add this paper</button></div></form>` : "";
   const shares = s.shares?.length ? `<h3>New shares to show here, once each</h3><ul class="say">${s.shares.map((x) => `<li>Share ${x.x}, for <span class="fp">${e(x.holder.slice(0, 8))}\u2026${e(x.holder.slice(-4))}</span>: ${x.shown ? "written down, forgotten here" : btn("show share", "Show it", false, ` data-holder="${e(x.holder)}"`)}</li>`).join("")}</ul>` : "";
   const done = s.stage === "done" || s.stage === "expired";
-  return `${top(web)}<h2>${e(s.title)}</h2>${req}<div class="review">${lines(s.lines)}</div>${paper}${shares}
+  return `${top2(web)}<h2>${e(s.title)}</h2>${req}<div class="review">${lines(s.lines)}</div>${paper}${shares}
 <div class="row">${acts.join("")}${done && !(s.shares ?? []).some((x) => !x.shown) ? btn("home", "Done: back to the start", true) : ""}</div><div id="status"></div>`;
 }
 
@@ -8963,7 +9293,7 @@ function mount(app2, b) {
       return;
     }
     const s = $("status");
-    const html = note("error", e(err instanceof Error ? err.message : String(err)));
+    const html = note2("error", e(err instanceof Error ? err.message : String(err)));
     if (s) {
       s.innerHTML = html;
       s.scrollIntoView({ block: "nearest" });
@@ -9125,7 +9455,7 @@ var ask = (op, a = {}) => run(kishib, op, a);
 var ui = mount(app, { web: true, ask, start: start2 });
 async function start2() {
   if (!crypto?.getRandomValues) {
-    app.innerHTML = `${top(true)}${note("error", "This browser has no secure source of randomness: Ki\u0161ib cannot run here.")}`;
+    app.innerHTML = `${top2(true)}${note2("error", "This browser has no secure source of randomness: Ki\u0161ib cannot run here.")}`;
     return;
   }
   await ui.show(kishib.state());
