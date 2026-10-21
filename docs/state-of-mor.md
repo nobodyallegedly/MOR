@@ -93,7 +93,7 @@ Done: **round 3 merged** (pull request 80, `docs/round-3-report.md`, human test 
 
 ## Working rules for sessions
 
-- **Two leads (decided by Nobody, allegedly, 20 October 2026).** The MOR lead keeps the core texts, the freeze-ready drafts, the C verifier, Fable's review, the freeze and dubsar.org for the release. The Dubsar Suite lead keeps the apps, the H findings and their fixes, with free rein on the apps' own cMIPs and Modules. Changes to cMIPs and Modules woven into verdicts (payment, money messages, relay transport, grant limits, anchoring and the clocks, the accepted list, split, the rail Modules) and anything touching a MIR, MICS or the suite go to the MOR lead. One findings log, one F sequence, the suite's entries marked "(Dubsar Suite)".
+- **Two leads (decided by Nobody, allegedly, 20 October 2026; corrected 21 October).** The MOR lead keeps the core: the core texts (MICS, six MIRs, freeze test suite), the conformance vectors, the C verifier, Fable's review, the freeze and dubsar.org for the release. The Dubsar Suite lead keeps the apps, the H findings and their fixes, and every cMIP and Module ("Modules and cMIPs are handled by the suite lead. The idea is that it is not core."). Anything touching a MIR, MICS or the suite goes to the MOR lead. One findings log, one F sequence, the suite's entries marked "(Dubsar Suite)".
 
 - Read this file, then `CLAUDE.md`, then the README of every client you touch. Ask Nobody, allegedly, before guessing a rule.
 - Never write the author's personal name; write "Nobody, allegedly".
