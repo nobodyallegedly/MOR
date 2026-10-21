@@ -355,7 +355,7 @@ page('edubba', 'home', 'Home: the four tiles',
   { group: 'Home', before: ['edubba/03-agents.png', 'edubba/web-first.png'] });
 
 const AGCOL = [{ t: 'Machine, allegedly', on: true, k: 'on' }, { t: 'Second agent', k: 'off' }, { t: '+ Add an agent', add: true }, '-', { t: 'The API key', k: '…MNOP' }];
-const agentHead = (tab) => `<div class="head"><span class="dot">M</span><h2>Machine, allegedly</h2><span class="mono faint">${ID.Machine}</span><span class="chip on">answering</span><span class="grow"></span>${nd('the four tabs')}</div>
+const agentHead = (tab) => `<div class="head"><span class="dot">M</span><h2>Machine, allegedly</h2><span class="mono faint">${ID.Machine}</span><span class="chip on">answering</span></div>
 <div class="subtabs">${['Talk', 'Queue · 2', 'Mind', 'Terms'].map((t) => `<span class="${t.startsWith(tab) ? 'on' : ''}">${t}</span>`).join('')}</div>`;
 page('edubba', 'agents', 'Agents: an agent, Talk',
   opened('edubba', 'Agents', AGCOL, `${agentHead('Talk')}<div class="feedwrap">${feed([

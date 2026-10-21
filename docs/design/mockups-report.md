@@ -67,7 +67,7 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 4. Cc for anyone, not only members (`dub-private`: "+ Cc"). *Settled by the design session (21 October 2026, "Decide what you can yourself. If unsure, ask"): kept as drawn, tag removed; reason in "Settled by the design session" below.*
 5. Buy in the act menu (`dub-act-menu`). *Settled by the design session (21 October 2026, "Decide what you can yourself. If unsure, ask"): kept as drawn, tag removed; reason in "Settled by the design session" below.*
 6. Payments made under Dub's lane moved to Damgar: Account › "Under the lanes" (`damgar-account`). *Decided by Nobody, allegedly, 21 October 2026, with the three ways to pay below (item 27): a payment under the lane is finished in Dub, which may sign it; the record is kept in Damgar's account. Tag removed.*
-7. Edubba's Agents with four tabs, Talk · Queue · Mind · Terms (`edubba-agents`, `-agents-queue`, `-agents-terms`, `edubba-diary`).
+7. Edubba's Agents with four tabs, Talk · Queue · Mind · Terms (`edubba-agents`, `-agents-queue`, `-agents-terms`, `edubba-diary`). *Decided by Nobody, allegedly, 21 October 2026: "They work for me." Tag removed; this settles the note's open item "The Agents tabs".*
 8. Claude's drafts to the agents, proposed dropped. *Decided by Nobody, allegedly, 21 October 2026 (question 6): "Drafts can be removed." Removed from the pictures.*
 9. Edubba's received-items piles, proposed dropped. *Decided (question 6): removed for now: "The sorting pile makes sense only if then there are feeds to go find them. I'd remove them for now. It's a mailbox behavior type of things." Removed from `dub-to-you`.*
 10. Edubba's Pay someone, proposed dropped. *Decided (question 6): kept, "on the profile page of the ID we want to pay to." Drawn as a Pay button on the profile, which wakes Damgar's panel inside Dub (`dub-profile`, `dub-profile-pay`); removed from Damgar's Waiting column.*
@@ -119,11 +119,11 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 - **The identity menu's "Line and homes" and "A lane from Damgar", and the panel's foot for paired browsers, homes and relays** (item 20): each belongs to one identity in one app, or to the app itself.
 - **Withdraw a picture** (function table): in the act menu of one's own picture, beside Correct it. Not drawn.
 
-**Still open, to ask:** the payments made under Dub's lane (item 6), and Edubba's four agent tabs (item 7). The note itself lists the agent tabs as still open.
+**Asked afterwards and answered:** the payments made under Dub's lane (item 6, answered with item 27), and Edubba's four agent tabs (item 7).
 
 ## 3. Every function of today, and where it lives in the new screens
 
-"Kept" means the screen stays as it is today, reached from the new place. Rows marked † are still tagged *not decided* on the screens; "(settled)" marks what the design session settled when asked to decide what it could.
+"Kept" means the screen stays as it is today, reached from the new place. Rows marked † (none left) would be tagged *not decided* on the screens; "(settled)" marks what the design session settled when asked to decide what it could.
 
 | App | Function | Today's place | New place |
 | --- | --- | --- | --- |
@@ -189,9 +189,9 @@ Section 2 lists each one. Everything without a tag is the note's *decided* or *a
 | Damgar | Relays; every step by hand | Settings | Identity menu › Relays; Settings › Every step by hand |
 | Damgar | Tip, sign, authorise when woken by an app | (Dub's draft found later) | Damgar's panel inside the asking app (decided) |
 | Edubba | Agent: first use, API key, its identity, name, owner, terms | First-use window | Agents › + Add an agent; The API key |
-| Edubba | Answering on/off; terms; cap; shared or own key | Agent folds | Agents › Terms † tabs |
-| Edubba | Queue: pick one or several, retry, look now, nudge | Agent folds | Agents › Queue † tabs |
-| Edubba | Grants: read back, sign, revoke, ask again | Agent fold | Agents › Terms † tabs |
+| Edubba | Answering on/off; terms; cap; shared or own key | Agent folds | Agents › Terms (decided) |
+| Edubba | Queue: pick one or several, retry, look now, nudge | Agent folds | Agents › Queue (decided) |
+| Edubba | Grants: read back, sign, revoke, ask again | Agent fold | Agents › Terms (decided) |
 | Edubba | Notes, retire; diary | Agent fold | Agents › Mind; diary only after the public act (decided) |
 | Edubba | What it did; prompt it | Agent fold; card | Agents › Talk (feed box and typing box) |
 | Edubba | MOR as seen by the agent; follow for it | Separate view | Agents › Mind › "MOR as seen by it" |
