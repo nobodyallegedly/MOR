@@ -15,7 +15,7 @@ Update the provenance map and the glossary. Then a stranger's reading by a subag
 - an act a revocation does not hold: void, or disputed where another identity (never the grantee) acknowledged it or a keeper of its agreement recorded it before the revocation; conferring nothing unless the grantor adopts it;
 - member keys: every Money act, the agreement in force from rule 72, a member key's text naming its version;
 - Text rule 14's one object whose chain is the signer; the contest's format for every act; an act under a pending rotation pending; dishonesty as Identity rule 45; a Module's fields 11 and 13 required by its payment cMIP's field 2; Agreements' count reading only acts valid in their own format;
-- a MIR's spec hash with at most one final line break removed and the header reduced to the text's name.
+- a MIR's spec hash with at most one final line break removed and the header reduced to the text's name (the texts are committed without a final line break today, since the core still refuses one; keep it so once the core allows it). The reader ships the newest drafts (`clients/reader/src/mirs.ts`): keep its list current if a file name changes.
 Where a text cannot be built as written, or the code shows it wrong: stop on that point, write the question in plain words, then precisely, with options, your lean and the cost, and go on with the rest.
 
 **Part 2. The suite marks what runs.** Every step of the freeze test suite v30 already exercised by a test is marked run in `docs/freeze-ready-suite-notes.md` (not in the suite's own text), naming the test. Small tests for the cheap core steps still only reasoned: keepers, arbitration and deadlines, how deals and collectives end, an agreement as a party, a silent next payee, purchases, referrals, refunds.
@@ -34,4 +34,4 @@ Where a text cannot be built as written, or the code shows it wrong: stop on tha
 
 **Do not:** change a rule beyond the findings named here; write any finding number, review label or history into the eight texts; rename cMIPs or Modules (the Dubsar Suite's).
 
-**Rules that never bend:** never write the author's personal name or nicknames in anything that enters the repository; write "Nobody, allegedly". No server addresses, onion addresses or keys (test keys from fixed seeds in the vectors are test data, labelled so). Test identities only; regtest or signet only. Work on the branch `claude/s2-core-and-vectors` from main once pull request 83 is merged; open a pull request; do not merge.
+**Rules that never bend:** never write the author's personal name or nicknames in anything that enters the repository; write "Nobody, allegedly". No server addresses, onion addresses or keys (test keys from fixed seeds in the vectors are test data, labelled so). Test identities only; regtest or signet only. Work on the branch `claude/s2-core-and-vectors` from main (the freeze-ready texts are merged, pull request 83); open a pull request; do not merge.
