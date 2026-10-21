@@ -12,6 +12,10 @@ The letters to Machine, allegedly, in the project: from the brainstorm window (1
 - Read reports the moment they arrive; read the repository before saying anything exists, is missing or is broken.
 - Hand over a little earlier than you think you need to.
 
+## The bar for the freeze
+
+Nobody, allegedly, 21 October 2026: "All it needs to be is a solid experimental ground where a small group of people can build the prototype. Once MOR2 exist, that round is more about finding adventurous entities willing to build real solutions, their prototypes inform MOR3." So the freeze asks three things, and nothing more: texts a stranger can build from (the C verifier proves it); the way out right (portable identities, succession, cloning, anchored history), so what is built on MOR can be carried to MOR2; and the reasons kept (the findings, the provenance map), so MOR2's builders know why each rule exists before they change it. The freeze report states plainly what was never tested: strangers' homes and a real censor, real money and time.
+
 ## The role
 
 The MOR lead keeps the core: the core texts (MICS, six MIRs, freeze test suite), the conformance vectors, the C verifier, Fable's review, the fixes, the step 17 rehearsal, the freeze, and dubsar.org for the release. The Dubsar Suite lead keeps the apps, their H findings, and every cMIP and Module, those woven into verdicts included (Nobody, allegedly, 21 October 2026: "The idea is that it is not core."); what it needs from the core comes through Nobody, allegedly. Build work is done by sessions the lead writes prompts for; work on the author's Mac and the servers by machine sessions.
@@ -28,7 +32,7 @@ The MOR lead keeps the core: the core texts (MICS, six MIRs, freeze test suite),
 | S5 | **The C verifier**, insulated, outside the project. | S4 | — |
 | S6 | **Fable's review, a Thursday**: each divergence judged (text unclear, text wrong, Rust wrong, C wrong). About half of Fable's weekly allowance. | S5 | — |
 | S7 | Fixes; the step 17 rehearsal; the freeze ("if the fixes are not gigantic"); the first two acts of the frozen protocol, "Thank you for the shower…" with a photograph of the Earth, then the full text formatted (build brief). | S6 | — |
-| S8 | dubsar.org for the release (H41 to H44, H62; short IDs with the full form on click; "a research and an art project"; the companion text); main's protection tightened when the repository goes public. | Can run beside S5 or S6 | — |
+| S8 | dubsar.org for the release (H41 to H44, H62; short IDs with the full form on click; "a research and an art project"; the companion text); main's protection tightened when the repository goes public. | Discussed with Nobody, allegedly, once Fable's review begins ("The Dubsar website will need a refresh but we'll have all the work on the Dubsar apps to inform it"); then the fourteen doors pointing to the frozen MIRs, their opening lines his to write | — |
 
 **The target (Nobody, allegedly, 21 October 2026): "If we can be ready with the C verifier a week from now, it's perfect."** Working back: S1b running 21 October; S2 (code and vectors, the heaviest, may need two sessions) 22 to 24 October; S4, the C box, sealed by the lead 25 October; S5, the C verifier, building 25 to 28 October; Fable's review on a Thursday once the Dubsar team has finished its week's work (Nobody, allegedly: "It's ok, if fable comes a bit later, as long as Dubsar team has done burning tokens next week"): 29 October at the earliest. The risk is S2; no step is rushed to keep the date.
 
