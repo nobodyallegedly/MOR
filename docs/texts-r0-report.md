@@ -1,6 +1,6 @@
 # Three texts, and one with its code: the report
 
-*21 October 2026, a Dubsar Suite session. Branch `claude/texts-r0-airgap-payment-audio`. Finding F370 (Dubsar Suite). Author: Nobody, allegedly. Every cMIP and Module is the Dubsar Suite lead's ("Modules and cMIPs are handled by the suite lead. The idea is that it is not core."); nothing in `spec/` was changed.*
+*21 October 2026, a Dubsar Suite session. Branch `claude/texts-r0-airgap-payment-audio`. Finding F371 (Dubsar Suite). Author: Nobody, allegedly. Every cMIP and Module is the Dubsar Suite lead's ("Modules and cMIPs are handled by the suite lead. The idea is that it is not core."); nothing in `spec/` was changed.*
 
 *Read with:* F361 and F355 (on main), and F362 with `docs/h80-report.md` (pull request 81, H80 and H79), merged into this branch before the drafts were checked against Kišib's code, so its order of words (the new chain-key paper written and three words typed back before the change is signed, the signing key's words after the receipts) is the order draft 6 writes.
 
@@ -109,11 +109,11 @@ CI: a `modules/audio` step beside `modules/video` (`.github/workflows/test.yml`,
 
 ### Records
 
-F370 in the shared log (F367 to F369 were taken on main during the session; F362, pull request 81's, is merged into this branch). `cmips/README.md` and `modules/README.md` list the new drafts and `audio/`. No server addresses or keys.
+F371 in the shared log (F367 to F370 were taken on main during the session, F370 by the MOR lead's answer to section 3; F362, pull request 81's, is merged into this branch). `cmips/README.md` and `modules/README.md` list the new drafts and `audio/`. No server addresses or keys.
 
 ## 3. For the MOR lead
 
-**One question, about the Money MIR; nothing changed in the core.**
+**One question, about the Money MIR; nothing changed in the core. Answered by the MOR lead (F370): (a).** *"The list in Money's field 5 and 4 comments was never closed: the field is typed hash, no rule invalidates anything else, and Money already names a stake transfer as something a payment fulfils. A payment naming something Money does not read fulfils nothing in Money's sense and changes no verdict; the payment cMIP judges a transfer to oneself naming its vault's declaration, from the act alone, as your draft 4 does. Nothing changes for you."* The MOR lead adds one sentence to Money 11 on the freeze-ready branch, after the technical pass, so that a reader of the texts alone cannot take the comment for a closed list. The question as it was put:
 
 **What a payment "fulfils", for a transfer to oneself.** Money draft 10 (and draft 11 on pull request 83) describes a receipt's field 5 and a claim's field 4 as "the obligation, agreement, offer or payee-pointer act this hop follows", and the payment task as accepting "an obligation, offer or payee pointer". The payment cMIP's draft 4 lets a transfer to oneself name **the genesis or rotation declaring the vault** there (F355 (c), decided by Nobody, allegedly). The payment cMIP checks it from the act alone (payer and payee the same identity, `fulfils` equal to `paid-to`'s vault declaration). The question for Money:
 
