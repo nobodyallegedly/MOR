@@ -2826,19 +2826,19 @@ terms-payload = {
   ? 16 => [+ succession-plan] ; succession plans of parties, part of the signed terms
   ? 3 => keepers,           ; named keepers, and the rule for what counts as recorded
   4 => rule / mark,         ; founding terms: the signing rule, which signatures make the agreement exist: every party,
-                            ; in a deal and in a collective 
-                            ; a clone: its mark, which change rules of the parent brought it into force, and by whom 
+                            ; in a deal and in a collective
+                            ; a clone: its mark, which change rules of the parent brought it into force, and by whom
   5 => rule,                ; clone rule: in a collective, for operational matters outside every area (the judicial tier
-                            ; needs every party whose voice remains, rule 67); every party in a deal 
+                            ; needs every party whose voice remains, rule 67); every party in a deal
   ? 18 => rule,             ; constitutional change rule; absent: every party (only with field 12)
   ? 19 => [+ area],         ; operational areas, powers of members (only with field 12)
   ? 20 => { + uint => tstr }, ; each area's own words, as canonical text, by area id (only with field 19)
   ? 6 => [ hash, any ],     ; time reference: the task cMIP and its parameters; a naming for task 10, the same
-                            ; specification as field 2's task 10 where both are present 
-  ? 7 => stakes,            ; stakes defined, in works, publications, or the collective itself, written null 
+                            ; specification as field 2's task 10 where both are present
+  ? 7 => stakes,            ; stakes defined, in works, publications, or the collective itself, written null
   ? 8 => split-plan,        ; how incoming payments are divided
   ? 28 => fees,             ; fees, each entry borne by every stake, off the top: their own field (rule 28);
-                            ; the form is under "Split plan and split" 
+                            ; the form is under "Split plan and split"
   ? 9 => abandonment,       ; the abandonment clause
   ; 10, the concurrency rule, is withdrawn: rule 90's default stands; never reused
   ? 11 => hash,             ; parent: the agreement this one clones (with its latest act in objects)
@@ -2848,9 +2848,9 @@ terms-payload = {
                             ; in a deal, one grant per payee, each naming this agreement by null. Its one
                             ; grantee is the agreement's designated pointer for payments, the same whoever pays
                             ; (rule 15): the first of the split cMIP's addresses, its backups following in
-                            ; field 29 
+                            ; field 29
   ? 17 => refund-terms,     ; until when a refund owed on a payment under these terms is claimable: a point on the
-                            ; time reference 
+                            ; time reference
   ? 21 => [+ chain],        ; the chain of judgment: who takes over from a judge (rule 35)
   ? 22 => [+ hash],         ; the departed members entry: who left the collective (rule 68; only
                             ; with field 12)
@@ -2859,7 +2859,7 @@ terms-payload = {
   ? 24 => holders-rule / [ 2, [+ hash] ],
                             ; the release rule: which of a stake's holders sign its release (rule 55); founding
                             ; terms set it, and a clone every owner signs changes it ; a threshold counted by
-                            ; share, never by head 
+                            ; share, never by head
   ? 26 => [+ hash],         ; settles: in a deal's clone only, every tip of the deal's fork this version discards, that
                             ; is, the latest version of each other branch, beside its one parent (field 11) on its own
                             ; branch; ascending, none twice; each also cited in objects (rule 47)
@@ -2884,7 +2884,7 @@ terms-payload = {
 chain    = [ judge, next: [+ [ hash, period: uint ]] ]
                                       ; a judge the terms name, and in order those that take over from it, each with
                                       ; the period, on the time reference, that the one before it has to act once
-                                      ; asked 
+                                      ; asked
 judge    = [ 0, task: uint ]          ; the specification named for judicial task 9, 10, 11 or 14 (field 2, field 6 for
                                       ; 10, or the abandonment clause's key 3 for 14): next are specifications
          / [ 1, identity: hash ]      ; a keeper's operator, an arbitrator or verifier, or the abandonment authority the
@@ -2892,7 +2892,7 @@ judge    = [ 0, task: uint ]          ; the specification named for judicial tas
                                       ; [ 2 ], the split service, is withdrawn and never
                                       ; reused: terms carrying it are invalid; its backups are field 29
 
-backups  = {                          ; terms field 29 
+backups  = {                          ; terms field 29
   0 => [+ hash / [+ hash]],           ; each backup split service after field 14's, in order: in a collective, its
                                       ; grant; in a deal, its grants, one per payee, each naming this agreement by
                                       ; null, as many as field 14 lists
@@ -2924,13 +2924,13 @@ succession-plan = {
 
 abandonment = {
   0 => [ 0, hash ]          ; the authority: a named identity (a keeper's operator, a party, a collective, or a third party)
-     / [ 1, uint ],         ; or a threshold of the other parties: in a collective only 
+     / [ 1, uint ],         ; or a threshold of the other parties: in a collective only
   1 => [+ uint],            ; outcomes allowed (rule 89), ascending: 0 voice removed, 1 stake redistributed,
                             ; 2 stake transferred to parties named or defined by role, 3 obligations redirected or
                             ; held, 4 agreement closed
                             ; key 2 (the period of absence) is retired and never reused: terms carrying
                             ; it are invalid
-  ? 3 => [ hash, any ]     ; an absence-proof cMIP and its parameters (a period, a time reference), task "Absence proof" 
+  ? 3 => [ hash, any ]     ; an absence-proof cMIP and its parameters (a period, a time reference), task "Absence proof"
 }
 
 keepers   = [ [+ hash], [ 0 ] / [ 1, uint ] / [ 2, [+ hash] ] ]
@@ -2938,13 +2938,13 @@ keepers   = [ [+ hash], [ 0 ] / [ 1, uint ] / [ 2, [+ hash] ] ]
                                                     ; for keepers)
 rule      = [ 0 ] / [ 1, uint ] / [ 2, [+ hash] ]   ; all parties / threshold / named parties
           / [ 3, stake: uint, share: uint ]         ; those counted, holding together at least this share, in millionths,
-                                                    ; of this stake, by its index in field 7 
-          / [ 4, [2* rule] ]                        ; all of these rules, each counted as it would be alone 
+                                                    ; of this stake, by its index in field 7
+          / [ 4, [2* rule] ]                        ; all of these rules, each counted as it would be alone
           / [ 5, stake: uint, share: uint ]         ; the holders of this stake, members or not, holding together at
                                                     ; least this share of it ; field 18 only
 holders-rule = [ 0 ]                                ; every holder of the stake (the default)
              / [ 3, share: uint ]                   ; holders together holding at least this share of the stake, in
-                                                    ; millionths 
+                                                    ; millionths
 stakes    = [+ [ object: who, [+ [ holder: who, share: uint ]] ] ]
                                                     ; shares in millionths, summing to 1,000,000; leftovers by
                                                     ; largest remainder, the order of holders deciding nothing
@@ -2954,17 +2954,17 @@ stakes    = [+ [ object: who, [+ [ holder: who, share: uint ]] ] ]
                                                     ; income ; the object a vow's name: held by the
                                                     ; vow's signer (null for the collective's own vow) in
                                                     ; the version first writing it (rule 14)
-who       = hash / null                             ; an identity, or null: this collective, only in a collective's terms 
+who       = hash / null                             ; an identity, or null: this collective, only in a collective's terms
 
 area = {
   0 => tstr,                ; its name, as canonical text, shown before signing
-  1 => [* hash],            ; holders: parties; empty only in a clone, the area then standing frozen 
+  1 => [* hash],            ; holders: parties; empty only in a clone, the area then standing frozen
   2 => uint,                ; how many of the holders decide together: at least 1, and at most the number of holders,
                             ; except in a clone that keeps the number the parent's entry for that area has, which
-                            ; may then exceed the holders, counted as rule 65 says 
+                            ; may then exceed the holders, counted as rule 65 says
   ? 3 => [+ kind],          ; the acts of the collective it reaches
   ? 4 => [+ field-ref],     ; the operational fields of the terms it reaches
-  5 => uint,                ; its id: permanent, unique among the agreement's areas, never reused 
+  5 => uint,                ; its id: permanent, unique among the agreement's areas, never reused
   ? 6 => [ cmip: hash, any ] ; a cMIP judging limits on its holders' own keys, and its parameters
                             ; (rule 60)
 }                           ; an area reaches at least one act kind or one field; it is identified by its id, never
@@ -2977,7 +2977,7 @@ field-ref = [ 0, field: uint ]            ; a whole operational field: 7 stakes,
 
 mark  = [+ [ power, signers: [+ hash] ] ] ; each change rule claimed, and the parties whose signatures meet it;
                                           ; ascending by the power's deterministic encoding, no power twice;
-                                          ; each power's signers ascending by hash, none twice 
+                                          ; each power's signers ascending by hash, none twice
 power = [ 0 ]                             ; the parent's constitutional change rule (its field 18, else every party)
       / [ 1 ]                             ; the parent's clone rule (its field 5)
       / [ 2, area: uint ]                 ; the power over the parent's area of this id
@@ -3128,7 +3128,7 @@ signature-payload = {
   0 => hash,                ; the act signed: terms, a clone, an act of a collective an area reaches, a grant within an area,
                             ; or an abandonment declaration whose authority is a threshold of the other parties;
                             ; an issuance offer, taking up its proportion (type 26); a collective's
-                            ; stake transfer or release of a work, consenting as an owner 
+                            ; stake transfer or release of a work, consenting as an owner
   ? 1 => signing-key        ; on a collective's founding or clone, the signer's own key, in
                             ; Identity's form [ scheme, key ], made by its app as it signed (rule 73)
 }
@@ -3152,19 +3152,19 @@ offer-payload = {
   ? 0 => hash,          ; under: the co-owners' agreement (a version) it is made under; present only where co-owners stand
                         ; behind it ; absent: a lone seller's offer, itself the agreement with the buyer
   1 => [* sold],        ; what it sells, ascending by deterministic encoding, none twice; empty only in a later version,
-                        ; which withdraws the offer 
-  2 => amount,          ; the price, one amount 
+                        ; which withdraws the offer
+  2 => amount,          ; the price, one amount
   ? 3 => hash / 0,      ; who is paid: a payee, or 0, the stakes, each holder's own pointer (rule 16); required
                         ; with field 0 ; absent with no field 0: the signer
-  ? 4 => tstr,          ; the offer's words, canonical text; required where it names a vow 
+  ? 4 => tstr,          ; the offer's words, canonical text; required where it names a vow
   ? 5 => any,           ; until: a point on the time reference after which it takes no payment
-  ? 6 => [hash, any],   ; a lone seller's own time reference 
-  ? 7 => refund-terms   ; a lone seller's own refund terms 
+  ? 6 => [hash, any],   ; a lone seller's own time reference
+  ? 7 => refund-terms   ; a lone seller's own refund terms
 }
 sold = [ 0, publication: hash ]       ; a publication (Envelopes type 0), by its act id
      / [ 2, [ cmip: hash, any ] ]     ; a proven offer: a delivery whose proof any verifier checks from data alone, under a
                                       ; cMIP and its parameters (widened from access to bytes; a stream's key alone)
-     / [ 3, vow: hash ]               ; a vow (Envelopes type 5), by its name, its genesis id 
+     / [ 3, vow: hash ]               ; a vow (Envelopes type 5), by its name, its genesis id
 ```
 
 `[ 1, work ]` (any publication carrying a work) is not defined.
@@ -3216,8 +3216,8 @@ transfer-payload = {
   0 => hash,            ; the version of the agreement defining the stake
   1 => uint,            ; the stake, by its index there
   2 => hash,            ; to: the new holder
-  3 => uint,            ; how much, in millionths of the stake: above zero, at most what the seller still holds at its place on its own line 
-  ? 4 => [+ hash]       ; what the seller took for it: a payment made before it; read only to find what an over-sale owes back 
+  3 => uint,            ; how much, in millionths of the stake: above zero, at most what the seller still holds at its place on its own line
+  ? 4 => [+ hash]       ; what the seller took for it: a payment made before it; read only to find what an over-sale owes back
 }
 ```
 
@@ -3291,12 +3291,12 @@ A later proxy of the same holder on the same stake, placed by the collective's l
 ```cddl
 split-plan = {                ; terms field 8
   0 => [+ share-rule],      ; stakes, then roles, then named receivers, then metric shares; every share but a
-                            ; stake's is named in key 4, off the top 
-  1 => hash,                ; split cMIP, which declares the remainder rule and computes the amounts 
-  ; 2 is not used: fees are terms field 28, their own field 
-  ? 3 => unfilled,          ; what happens to a role share nobody fills; absent: [ 0 ], to the stakes 
+                            ; stake's is named in key 4, off the top
+  1 => hash,                ; split cMIP, which declares the remainder rule and computes the amounts
+  ; 2 is not used: fees are terms field 28, their own field
+  ? 3 => unfilled,          ; what happens to a role share nobody fills; absent: [ 0 ], to the stakes
   ? 4 => [+ uint],          ; indexes of shares taken off the top, before the rest is divided; the rest goes to
-                            ; the stakes alone, by their parts 
+                            ; the stakes alone, by their parts
   ? 5 => uint,              ; who bears payout rail fees: 0 each receiver (default), 1 the split service
   ? 6 => amount / uint,     ; maximum fee per payout the service may deduct: absolute, or in millionths of the payout;
                             ; absent: no cap, flagged before signing (rule 25)
@@ -3311,21 +3311,21 @@ share-rule = [ 0, stake: uint, part: uint ]         ; a stake, by its index in f
            / [ 3, metric: uint, part: uint ]        ; a metric share, by its index in field 8
 metric     = [ module: hash, measurer: hash, ? params: any ]   ; the measurer named in advance (rule 29)
 unfilled   = [ 0 ] / [ 1 ] / [ 2, party: hash ]     ; to the stakes pro rata / held open / to a named party
-fees       = [+ fee]                                ; terms field 28 
+fees       = [+ fee]                                ; terms field 28
 fee        = [ module: hash, part: uint, ? scope ]  ; borne by every stake, off the top (rule 28)
-scope      = [ 0, publication: hash ]               ; payments for this publication; absent: every payment 
+scope      = [ 0, publication: hash ]               ; payments for this publication; absent: every payment
            / [ 1, rail: hash ]                      ; payments by this rail Module
 
 split-payload = {
   0 => hash,                ; the receipt or payer's claim that brought the money to the owners' payee pointer
   1 => [+ payout],          ; each payout, summing exactly to the amount received
   2 => hash,                ; the split cMIP used
-  3 => hash,                ; the owners' agreement whose stakes it pays 
+  3 => hash,                ; the owners' agreement whose stakes it pays
   ? 4 => [+ [ stake: uint, [+ [ holder: hash, count: uint ]] ]],  ; the running count of leftover units (rule 9)
-  ? 5 => uint,              ; its number: one numbering across every split the service makes under a deal, any branch, from 1 
-  ? 6 => [+ hash],          ; the Modules and cMIPs it ran under (rule 28): the service's statement, never what decides 
+  ? 5 => uint,              ; its number: one numbering across every split the service makes under a deal, any branch, from 1
+  ? 6 => [+ hash],          ; the Modules and cMIPs it ran under (rule 28): the service's statement, never what decides
   ? 7 => [+ hash],          ; the metric records it divides by (rule 29)
-  ? 8 => [+ [ stake: uint, transfer: hash ]]   ; per stake, the latest transfer it follows: the service's statement 
+  ? 8 => [+ [ stake: uint, transfer: hash ]]   ; per stake, the latest transfer it follows: the service's statement
 }
 payout = {
   0 => hash,                ; the receiver
@@ -3377,7 +3377,7 @@ grant-payload = {
                             ; in field 14 ; null only with scope 1, never with field 5, 7 or 8
   ? 3 => any,               ; limits: per-deal cap, total, spending, as the grant's cMIP defines
   ? 4 => hash,              ; the cMIP defining the limits
-  ? 5 => uint,              ; for a collective: the area whose power issues it, by its id in the agreement in force at the grant's binding 
+  ? 5 => uint,              ; for a collective: the area whose power issues it, by its id in the agreement in force at the grant's binding
   ? 6 => [+ kind],          ; the acts it reaches; required with field 5, and within that area's reach
   ? 7 => hash,              ; a reinstatement: the ended grant it reinstates, fields 0 to 6 repeating that grant's (rule 71); only with field 5
   ? 8 => null,              ; the grantor is this collective, the one whose founding terms name the grant ; never with field 5 or 7
@@ -3385,7 +3385,7 @@ grant-payload = {
 }
 
 revocation-payload = {
-  0 => hash                 ; the grant whose key it removes 
+  0 => hash                 ; the grant whose key it removes
 }
 ```
 
@@ -3526,8 +3526,8 @@ Its text is shown as a text act's is, plain text always available (Text rules 3 
 
 ```cddl
 contest-payload = {
-  0 => hash,                ; the act it answers: a declaration of absence (type 13); or, for a vow, the sale it contests 
-  ? 1 => tstr / [hash, any] ; for a vow only: the promise not kept, in words (canonical text) or in a cMIP's terms 
+  0 => hash,                ; the act it answers: a declaration of absence (type 13); or, for a vow, the sale it contests
+  ? 1 => tstr / [hash, any] ; for a vow only: the promise not kept, in words (canonical text) or in a cMIP's terms
 }
 ```
 
@@ -3552,7 +3552,7 @@ request-payload = {
 settlement-payload = {
   0 => hash,                ; the settlement request (type 22) that activated the judge
   1 => hash,                ; the version of the fork it keeps: its line, and what grows on it, in force from then on
-  2 => [+ hash]             ; every tip it drops, ascending, none twice, none the version kept 
+  2 => [+ hash]             ; every tip it drops, ascending, none twice, none the version kept
 }
 ```
 
@@ -3574,7 +3574,7 @@ How they settle a deal's fork is rule 47.
 resignation-payload = {
   0 => hash,                ; the agreement of the collective in which the member gives up their voice
   ? 1 => uint,              ; stepping down: the area given up, by its id in that agreement ; absent: the whole voice
-  ? 2 => [+ hash]           ; the drafts its signer had signed and leaves behind, ascending, none twice 
+  ? 2 => [+ hash]           ; the drafts its signer had signed and leaves behind, ascending, none twice
 }
 ```
 
@@ -3617,7 +3617,7 @@ record-payload = {
   ? 3 => [+ hash]           ; what it registers: resignations and steppings down by parties, abandonment
                             ; declarations removing a party's voice, and parties' own rotations, each by its act's id;
                             ; also stake transfers, proxies and their revocations, and take-ups of an
-                            ; issuance offer 
+                            ; issuance offer
 }                           ; at least one of fields 0 and 3
 
 kept-tip = [ act: hash, position: uint, summary: hash ]   ; as in Identity: the act's id, its position, and the running summary including it
@@ -3693,7 +3693,7 @@ declaration-payload = {
                             ; the last one, back from field 0 through its parents, that the party signed (rule 87); as the judicial
                             ; tier changes only with every member whose voice remains (rule 67), it carries the clause in force for every such party
   2 => hash,                ; the party declared absent: a party to the agreement of field 0, or, in a collective, a
-                            ; holder of the collective's stake in itself who is no party 
+                            ; holder of the collective's stake in itself who is no party
   3 => [* uint]             ; the outcomes (rule 89), ascending, none twice, each one the clause allows; at least one
                             ; against a party; against a holder who is no party, 1 or 2 where its plan names no stake
                             ; successor, and none where it names one, succession alone moving the stake
@@ -3839,10 +3839,10 @@ fork-payload = {
   1 => hash,                ; the original collective
   2 => hash,                ; the original's identity-chain act (genesis or a rotation) its latest acts are bound to
   3 => [* kept-tip],        ; the latest act of every sequence the original keeps under that chain act: the fork's line,
-                            ; the action head it cites 
+                            ; the action head it cites
   4 => [2* side],           ; the sides
   ? 5 => [+ fork-share],    ; the original's stakes, where not divided by default
-  ? 6 => [+ [ obligation: hash, sides: [+ uint] ]]  ; every obligation in the history it cites: the side, or the sides jointly, owing it 
+  ? 6 => [+ [ obligation: hash, sides: [+ uint] ]]  ; every obligation in the history it cites: the side, or the sides jointly, owing it
 }
 side       = [ successor: hash, members: [+ hash] ]   ; the collective the side founded first, by its identity, and its members
 fork-share = [ agreement: hash, index: uint, [+ share: uint] ]   ; a stake the original holds, and each side's share, in millionths
@@ -4287,4 +4287,3 @@ The scenario numbers after each colon are those of the freeze test suite.
 
 - Two complete versions of one deal: the version before the split is the reference while the deal has two branches; an act following either branch counts, judged under that branch's latest version, a purchase included (the buyer is protected); a branch that grows settles nothing; only a complete version naming both branches (field 26) settles the fork, finally, the other branch never coming back; a tangled fork stays on its reference, a buyer under a version every party signed protected; a settling version signed by the parties of both branches, naming the discarded tip and citing it; only complete versions of the deal read as settling, a draft or a stranger's act changing nothing; the arbitrator settling on a party's request only; one numbering across a deal's splits, a gap the holder's alarm; a seller's client raises the alarm on a payment naming a version that does not descend from the one it holds, or one it does not hold, and a notice on an older version; a buyer's client checks the offer is current; a version beyond the named tip, citing the settlement or not, changing nothing; a tangled deal settled by a version naming every tip it discards, signed by the parties of every branch; only the judge of forks the reference names settling, none where it names none; a deal's split with no number, or a repeated one, breaking the plan: 1.
 - A settled deal, then a version on the dropped branch the settlement did not hold, a version grown there by a party left alone, a second settlement by the judge holding the first, and a plain version on either branch: nothing reopens, the line in force stays; a settlement holding a newer version of a branch whose older version it names settles nothing; a settling version naming a version not held is a plain version until held; the judge of forks silent past its period, the next link settles: 1.
-

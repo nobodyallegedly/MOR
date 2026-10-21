@@ -528,4 +528,3 @@ Still open:
 - Unknown act carried, shown, then adopted by opt-in: 2.
 - An act of a type its specification does not define, or with a payload outside that specification's format, invalid where the specification is implemented and unknown where it is not; an act naming a specification whose content is not in Development's format, unknown to every client: 2, 8.
 - An act of a specification a client does not implement, carrying a text that is not canonical: invalid, not unknown: a component under "Envelopes and Text".
-

@@ -171,4 +171,3 @@ Components exercised (freeze test suite v30; scenario numbers are the suite's):
 - A collective's text act carrying, as its one object, its own decision on its actions chain: valid, and counted under Agreements rule 58; with another collective's chain, a predecessor that is no decision of its own, two objects, any other object, or an individual signer naming its own chain save as the grant case allows: invalid, and counting for nothing in Agreements: a component under "Envelopes and Text".
 - A text act signed with a grant key, carrying as its one object `[grantor, grant]`, the grant its binding names: valid under Text, and judged by Agreements' backing (rules 73 to 80), backed, not backed or unknown; naming another act of the grantor, another chain, or two objects: invalid: a component under "Envelopes and Text".
 - A cMIP act a client does not implement, carrying a text that is not canonical: invalid, not unknown: a component under "Envelopes and Text".
-

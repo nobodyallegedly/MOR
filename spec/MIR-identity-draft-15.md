@@ -1028,4 +1028,3 @@ Components exercised (freeze test suite v30; scenario and step numbers are the s
 - A reader holding the rotation and the kept tip but not the whole line: the first post unknown, never void, until the line arrives; a scoped act whose binding is not held, unknown, never invalid: 5.5c.
 - An identity born under a signing scheme a client lacks: its rotation the client can verify, and every act under it, unknown, never invalid: 8.4.
 - A succession declared to the journalist by a stranger's rotation: shown as declared, never followed, until the journalist confirms by a link confirmation or a witness act naming the rotation: 5.8b.
-

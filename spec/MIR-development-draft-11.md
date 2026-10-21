@@ -149,7 +149,7 @@ Agreements are always in core format, so activity on a fading cMIP moves by clon
 
 #### Rule 13. Signing what it computes
 
-*Client conformance.* Before signing anything that runs through a rule (a split plan, fee terms, a condition), a client MUST show what the rule actually computes on a concrete example, such as: "on a sale of 10, this split pays Lea 4, the co-writer 4, the publisher 1, the service 0.20."
+*Client conformance.* Before signing anything that runs through a rule (a split plan, fee terms, a condition), a client MUST show what the rule actually computes on a concrete example, such as: "on a sale of 10, this split pays Lea 4, the co-writer 4, the publisher 1.80, the service 0.20."
 
 *The signer approves the numbers the code produces, not the description. This extends the Text MIR's rule, what you sign is what you saw. No verifier can check that a client did this; it is conformance, not validity.*
 
@@ -295,22 +295,22 @@ spec = {
   ? 8 => hash,                ; predecessor: an earlier specification this one replaces for its users;
                               ; for a MIP, required: the MIR or MIP it forks, or for a new layer the MICS document
   9 => tstr,                  ; the specification itself, as canonical text
-  ? 10 => [+ uint],           ; layers: for an extension, the layers it acts on beyond Development 
+  ? 10 => [+ uint],           ; layers: for an extension, the layers it acts on beyond Development
   ? 11 => uint,               ; a rail Module's kind: 0 a request rail, 1 a push rail (Money rules 11, 18)
   ? 12 => true,               ; a proof-of-delivery checker: this cMIP checks the proofs of delivery of proven offers
                               ; that name it (Agreements rule 11)
   ? 13 => [* uint]            ; what a rail Module's proof binds: ascending, without repeats, from 0 payee, 1 purpose,
                               ; 2 previous hop; empty, it binds none;
-                              ; holding 0 and 1 wherever field 11 is 0 
+                              ; holding 0 and 1 wherever field 11 is 0
 }
 
-fee = [ rate, ? paid: hash ]   ; who is paid: absent, the creator 
+fee = [ rate, ? paid: hash ]   ; who is paid: absent, the creator
 rate = [ 0, part: uint ]        ; millionths of each payment the Module runs on
      / [ 1, amount ]            ; a fixed amount per payment
 
 task-ref = [ mir: hash, task: uint ]
 type-def = [ type: uint, name: tstr, payload-schema: tstr ]   ; schema written in CDDL
-rule-ref = [ bytes-hash: hash, size: uint, budget: uint, profile: hash ]     ; the rule's binary, by the hash of its bytes, carried as a separate locked object named by this specification; its step budget; the spec hash of the machine profile it runs on 
+rule-ref = [ bytes-hash: hash, size: uint, budget: uint, profile: hash ]     ; the rule's binary, by the hash of its bytes, carried as a separate locked object named by this specification; its step budget; the spec hash of the machine profile it runs on
 ```
 
 ### What each kind must carry
@@ -358,7 +358,7 @@ An extension's own acts belong to Development. Field 10 lists, ascending and wit
 
 The field is read only where an agreement names the specification as an extension (Agreements, terms field 15); a specification without it declares nothing beyond Development.
 
-*The declaration tells a collective's client whose approval adopting or dropping the extension needs (Agreements, rule 63). It is not trusted for enforcement: in a collective, an extension's rules bind only the layers whose holders approved it, so an extension that under-declares binds nothing beyond them (Agreements, rule 60).*
+*The declaration tells a collective's client whose approval adopting or dropping the extension needs (Agreements, rule 60). It is not trusted for enforcement: in a collective, an extension's rules bind only the layers whose holders approved it, so an extension that under-declares binds nothing beyond them (Agreements, rule 60).*
 
 ### A proof-of-delivery checker (field 12)
 
@@ -439,4 +439,3 @@ Still open:
 - A successor specification by a different creator shown with the creator mismatch: 8.
 - The six MIR hashes stable wherever published; a read-only client recomputes them from the texts it ships, and shows them; two clients built by two people recompute the same six; a frozen file with a final line break or a trailing space fails the repository's check: 8.
 - The MICS document and a test suite published under kinds 6 and 7 with no creator; a MIP under kind 8, with its creator and the MIR it forks in field 8, shown by a listing in a part of its own, by the MIR it forks; a MIP proposing a new layer, naming the MICS document in field 8, shown under it: 8.
-

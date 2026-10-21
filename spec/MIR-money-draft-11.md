@@ -654,4 +654,3 @@ Still open:
 #### Covered by Agreements
 
 - Conservation and remainder rule; module fees and omitted fees; splits by attention metrics.
-

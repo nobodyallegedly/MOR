@@ -437,7 +437,7 @@ Nothing. *Every point the texts left open is a question put to Nobody, allegedly
 | Machine profile | The memory layout, encoding and entry point of the RV32IM machine that verification rules run on: a specification of its own, a Module whose field 5 names the Development MIR, named by hash, published after the freeze, and named by every rule's reference. |
 | MIR | MOR Inscribed Rules: one of the six core specifications, a set of rules giving a layer by layer look at the MICS (the Identity MIR, the Money MIR). Frozen forever. Has no creator. |
 | MICS | MOR Inscribed Core Spec: the core, the six MIRs together, mapped by this document. Frozen whole. This document is published as a specification kind of its own, with no creator. |
-| MIP | Reserved for proposals toward MOR 2. MOR 1 has none: its core texts are MIRs, and the community's specifications are cMIPs, which keep their name. A MIP is a specification kind of its own, with a creator, naming the MIR or MIP it forks, or, proposing a new layer, the MICS document. |
+| MIP | Reserved for proposals toward MOR 2. MOR 1's core has none: its core texts are MIRs, and the community's specifications are cMIPs, which keep their name. A MIP is a specification kind of its own, with a creator, naming the MIR or MIP it forks, or, proposing a new layer, the MICS document. |
 | Module | An implementation or extension under a MIR or cMIP, named by hash, frozen at publication. A specification: it signs nothing. |
 | Operator | The identity that runs a relay and signs what it states. |
 | Owners' matters | What a stake's holders consent to together: what the stake is paid, an issuance in it, a collective's sale or release of a work it holds, and a fork's successors paying a kept holder less. |
@@ -470,4 +470,3 @@ Nothing. *Every point the texts left open is a question put to Nobody, allegedly
 | Witness act | An Identity act saying "I received this act and rely on it", carrying the acknowledgement; never a side effect, explained before signing; it counts only while its signer's chain keeps it. |
 | Work hash | The fingerprint of a work's complete plaintext. |
 | Xtype | "Extra type": a cMIP defining new act types from core pieces, for anything the MICS did not foresee, filling no task; shown as unknown until adopted. |
-
