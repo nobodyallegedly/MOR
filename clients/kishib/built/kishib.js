@@ -5886,6 +5886,19 @@ function chainKeyAt(seed, scheme, index) {
   const k = chainKeyFromSeeds(scheme, keySeeds(seed, scheme, BigInt(index)));
   return { ...k, index };
 }
+function freshSeed() {
+  return crypto.getRandomValues(new Uint8Array(32));
+}
+function spentPaper(seed, acts, latest) {
+  let found = null;
+  for (const a of acts) {
+    if (a.position >= latest) continue;
+    const k = chainKeyAt(seed, a.scheme, a.position);
+    k.seeds.fill(0);
+    if (k.commit === a.commit) found = a.position;
+  }
+  return found;
+}
 function seedOf(words2) {
   return fromWords(words2);
 }
@@ -6843,6 +6856,13 @@ var NEW_WORDS_SAY = [
   "Write them on paper, in order. Carry them to Dub or Edubba, which take them (in Dub: the identity window, \u201Ctake the new words\u201D; in Edubba: the identity\u2019s record).",
   "They are shown once. When you say they are written, they are hidden, three are asked back, and Ki\u0161ib forgets them."
 ];
+var NEW_CHAIN_WORDS_SAY = [
+  "These are the new chain key\u2019s words: a new paper, made for this identity now, before anything is signed (Nobody, allegedly, 21 October 2026: \u201Cconfirming the new chain key comes before signing the rotation\u201D). The next change of its keys is made from them, in Ki\u0161ib, and from nothing else.",
+  "This paper becomes the one that counts once the homes accept the change. Until then the old paper still works, but only to send this same change again. Once they accept it, the old paper is spent: destroy it then.",
+  "If Ki\u0161ib is closed before the change is sent, nothing was signed: the next change starts over with another new paper, and this one is worthless.",
+  "Write them on a new paper, in order, and keep it apart from the signing key\u2019s words. Never type them into Dub, Edubba, Damgar or a wallet: only Ki\u0161ib takes them.",
+  "They are shown once. When you say they are written, they are hidden, three are asked back, and Ki\u0161ib forgets them; then it signs the change and sends it. The new signing key\u2019s words come once the homes\u2019 receipts are in."
+];
 function addresses(typed) {
   const out = typed.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
   for (const a of out) if (!/^https?:\/\/[^\s]+$/.test(a)) throw new Error(`\u201C${a}\u201D: an address starts with https:// (or http://)`);
@@ -7600,6 +7620,13 @@ function orderedChain(rd) {
 }
 
 // src/kishib.ts
+var SPENT_PAPER_SAY = (position) => `These are an earlier chain-key paper of this identity: the change of its keys at position ${position + 1} used it and committed a key of a new paper, so it changes these keys no more. Use the newest paper, the chain key\u2019s words Ki\u0161ib showed at the last change. Nothing was signed, and the words are forgotten.`;
+var PAPER_COUNTS_SAY = "This new paper becomes the one that counts once the homes accept the change; until then the old paper still works, but only to send this same change again. If Ki\u0161ib is closed before the change is sent, nothing was signed: the next change starts over with another new paper, and the unused one is worthless.";
+var PAPER_LINES = [
+  { text: "Nothing is signed yet. First, the new chain key\u2019s words: write them down, then type three back. Only then does Ki\u0161ib sign this change and send it.", tone: "warn" },
+  { text: PAPER_COUNTS_SAY }
+];
+var LAST_OF_OLD_PAPER_SAY = "This paper already made an earlier change of these keys: until 21 October 2026 Ki\u0161ib reused one paper for every change. This change is its last. It commits a key of a new paper, whose words are shown once the homes\u2019 receipts are in; this paper is spent after it.";
 var message5 = (e2) => e2 instanceof Error ? e2.message : String(e2);
 var short4 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var PLAN_LIFE = 15 * 60 * 1e3;
@@ -7624,13 +7651,16 @@ var Kishib = class {
     if (this.col) return this.col.view(this.now());
     const h = this.held;
     if (!h) return null;
-    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...h.positions ? { positions: h.positions } : {} };
+    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...h.positions ? { positions: h.positions } : {}, ...h.chain || h.signing ? { words: h.chain ? "chain" : "signing" } : {} };
   }
   /** Drop everything this sitting holds: words, keys, bytes. */
   forget() {
     for (const p of this.plans.values()) p.wipe();
     this.plans.clear();
-    if (this.held) wipe(this.held.signing);
+    if (this.held) {
+      wipe(this.held.signing, this.held.chain);
+      this.held.drop?.();
+    }
     this.held = null;
     this.col?.wipe();
     this.col = null;
@@ -7689,7 +7719,17 @@ var Kishib = class {
           title: "These are the right words",
           lines: [
             { text: `They give the chain key this identity\u2019s chain commits to now (key ${idx} of these words): the key the next change of its keys is signed with.`, tone: "ok" },
-            { text: `After that change, the same words give the next key (key ${idx + 1}): keep this paper.` },
+            { text: "That change makes a new paper and spends this one: keep this paper until then, and the new one after." },
+            { text: "Nothing was signed, and the words are forgotten." }
+          ]
+        };
+      }
+      const spent = spentPaper(seed, commits(rd), latest.position);
+      if (spent !== null) {
+        return {
+          title: "These words are spent",
+          lines: [
+            { text: SPENT_PAPER_SAY(spent).replace(/ Nothing was signed, and the words are forgotten\.$/, ""), tone: "bad" },
             { text: "Nothing was signed, and the words are forgotten." }
           ]
         };
@@ -7699,7 +7739,7 @@ var Kishib = class {
         title: "These are not the words this identity needs now",
         lines: [
           { text: `They do not give the chain key its chain commits to now (checked against keys 0 to ${latest.position + 8} of these words).`, tone: "bad" },
-          { text: `They may be another identity\u2019s chain key words, its signing key\u2019s words (which never change the keys), or a word copied wrong that still passes the checksum. Its chain has ${earlier} act${earlier === 1 ? "" : "s"}.` },
+          { text: `They may be another identity\u2019s chain key words, its signing key\u2019s words (which never change the keys), a new paper whose change was never sent (worthless: Ki\u0161ib was closed before signing, and the next change makes another), or a word copied wrong that still passes the checksum. Its chain has ${earlier} act${earlier === 1 ? "" : "s"}.` },
           { text: "Nothing was signed, and the words are forgotten." }
         ]
       };
@@ -7732,13 +7772,16 @@ var Kishib = class {
       const blocking = [];
       if (r.stop === "contested") blocking.push("Its homes hold two rotations at one position (contested). A normal rotation cannot settle it: use \u201CEscape a contested position\u201D.");
       const waiting = rd.next.filter((s) => !r.links.some((l) => l.act === s.id));
-      for (const s of waiting) {
-        blocking.push(`A rotation with this chain key already exists (act ${s.id}, installing the signing key ${s.signingFingerprint}), waiting for its homes. Ki\u0161ib never signs a second rotation with the same key (Identity rule 29): send that one again instead (\u201CSend it again\u201D). If you did not make it, someone holds your chain key\u2019s words: use \u201CEscape a contested position\u201D.`);
+      if (waiting.length > 1) {
+        blocking.push(`${waiting.length} rotations with this chain key exist, waiting for their homes. Ki\u0161ib never signs another (Identity rule 29). If you made only one, someone holds your chain key\u2019s words: use \u201CEscape a contested position\u201D.`);
       }
       const idx = indexOf(seed, r.chainKeyScheme, r.chainKeyCommit, latest.position + 8);
+      const earlier = spentPaper(seed, commits(rd), latest.position);
+      if (idx === null && earlier !== null) throw new Refused(SPENT_PAPER_SAY(earlier));
       if (idx === null) {
         throw new Refused("These words do not give the chain key this identity\u2019s chain commits to now: they may be another identity\u2019s, its signing key\u2019s words, or copied wrong. Nothing was signed, and the words are forgotten. (\u201CCheck paper words\u201D says more.)");
       }
+      if (waiting.length === 1 && rd.chainActs.get(waiting[0].id)) return this.resendPlan(id, rd, waiting[0], idx, seed);
       let successor = null;
       if (a.successor?.trim()) {
         successor = readId(a.successor);
@@ -7763,7 +7806,8 @@ var Kishib = class {
           heading: "What changes",
           lines: [
             { text: "A new signing key, made now on this device. Its words are shown once, after the homes\u2019 receipts are in. Dub, Edubba and every app holding the old signing key\u2019s words stop signing until given the new ones.", tone: "warn" },
-            { text: `The next chain key: key ${idx + 1} of the same paper words. Keep this paper: it serves the next change too.` },
+            { text: `A new chain key, from a new paper made now on this device (key ${latest.position + 1} of its words). Its 24 words are shown first: you write them down and type three back, and only then does Ki\u0161ib sign this change and send it. ${PAPER_COUNTS_SAY}`, tone: "warn" },
+            ...earlier !== null ? [{ text: LAST_OF_OLD_PAPER_SAY, tone: "warn" }] : [],
             { text: `${homesWords(r.homes, r.effective)} Unchanged.` },
             successor ? { text: `A succession declared: ${successor} is named as this identity\u2019s successor. Nobody follows it until that identity confirms it, by an act of its own naming this rotation (F300; Ki\u0161ib can make it, \u201CConfirm a succession\u201D). This identity goes on living.`, tone: "warn" } : a.endSuccession ? { text: `The succession to ${succNow.successor ?? "its successor"} is ended.`, tone: "warn" } : { text: succNow.state === "none" ? "No succession." : `The succession stays as it is (${succNow.state}).` },
             ...clock ? [{ text: "This identity declares a clock (Money rule 15): its client anchors each change of its keys on that clock. Ki\u0161ib does not anchor: anchor it with the genesis client before relying on it.", tone: "warn" }] : []
@@ -7772,7 +7816,7 @@ var Kishib = class {
         { heading: "The vault (Money: where payments above a limit must go)", lines: vault.lines }
       ];
       const signs2 = [
-        `Ki\u0161ib signs one rotation of ${short4(id)} at position ${latest.position + 1}, with the chain key these words give (key ${idx}), revealed once.`,
+        `Ki\u0161ib first shows the new paper\u2019s words (a fresh seed, the air-gapped Module\u2019s rule 3.3). Once three are typed back, it signs one rotation of ${short4(id)} at position ${latest.position + 1}, with the chain key these words give (key ${idx}), revealed once, committing the new paper\u2019s key.`,
         "It sends the exact same bytes to every home, and again, unchanged, if they stall: never a second rotation.",
         successor ? `Your rotation names ${short4(successor)} as successor; the successor signs nothing here.` : "It signs nothing else."
       ];
@@ -7794,44 +7838,54 @@ var Kishib = class {
           run: async (warned) => {
             if (blocking.length) throw new Error(`Nothing was signed: ${blocking[0]}`);
             checkWarned(plan, warned);
-            const current = chainKeyAt(s0, r.chainKeyScheme, idx);
-            const next = chainKeyAt(s0, r.chainKeyScheme, idx + 1);
+            const fresh = freshSeed();
+            const next = chainKeyAt(fresh, r.chainKeyScheme, latest.position + 1);
+            const nextCommit = next.commit;
+            wipe(next.seeds);
+            const old = s0.slice();
             const signing = newSigningSecret();
-            let bytes;
-            try {
-              bytes = makeRotation({
-                identitySpec: SPECS.identity,
-                identity: id,
-                previous: latest.act,
-                position: latest.position + 1,
-                chainKeyScheme: r.chainKeyScheme,
-                chainKeySeeds: current.seeds,
-                newSigningPublic: signingPublic(signing),
-                nextChainKeyScheme: r.chainKeyScheme,
-                nextChainKeyCommit: next.commit,
-                kept: plan.kept,
-                ...successor ? { successor } : {},
-                ...a.endSuccession ? { endSuccession: true } : {},
-                ...vault.declaration ? { declarations: [vault.declaration] } : {}
-              });
-            } finally {
-              wipe(current.seeds, next.seeds, s0);
-            }
-            this.held = {
+            const h = {
               kind: "identity",
               id,
-              bytes,
-              act: actId(bytes),
+              bytes: null,
+              act: null,
               homes: r.homes,
               before: chainBefore(rd),
               with: [],
               places: rd.places,
               signing,
-              stage: "sent",
-              title: `The rotation of ${short4(id)}`,
-              lines: []
+              chain: fresh,
+              stage: "paper",
+              title: `The rotation of ${short4(id)}: first, the new paper`,
+              lines: PAPER_LINES,
+              drop: () => wipe(old),
+              sign: async () => {
+                const current = chainKeyAt(old, r.chainKeyScheme, idx);
+                try {
+                  h.bytes = makeRotation({
+                    identitySpec: SPECS.identity,
+                    identity: id,
+                    previous: latest.act,
+                    position: latest.position + 1,
+                    chainKeyScheme: r.chainKeyScheme,
+                    chainKeySeeds: current.seeds,
+                    newSigningPublic: signingPublic(signing),
+                    nextChainKeyScheme: r.chainKeyScheme,
+                    nextChainKeyCommit: nextCommit,
+                    kept: plan.kept,
+                    ...successor ? { successor } : {},
+                    ...a.endSuccession ? { endSuccession: true } : {},
+                    ...vault.declaration ? { declarations: [vault.declaration] } : {}
+                  });
+                } finally {
+                  wipe(current.seeds, old);
+                }
+                h.act = actId(h.bytes);
+                h.title = `The rotation of ${short4(id)}`;
+              }
             };
-            return this.send();
+            this.held = h;
+            return this.sitting();
           }
         }
       );
@@ -7839,6 +7893,42 @@ var Kishib = class {
       wipe(seed);
       throw e2;
     }
+  }
+  /**
+   * A change already signed with this paper's key waits for its homes (Kišib
+   * was closed before it counted): the paper now only sends that same change
+   * again, its exact bytes as the homes and relays serve them (Identity rule
+   * 29). Nothing is signed; no new words are shown here (the new paper was
+   * written before it was signed; its signing key, if lost, is replaced by
+   * the next change, from that new paper).
+   */
+  resendPlan(id, rd, s, idx, seed) {
+    wipe(seed);
+    const bytes = rd.chainActs.get(s.id);
+    const r = rd.look.resolution;
+    const sections2 = [
+      ...recordWords(rd).filter((x) => !x.heading.startsWith("Its lines")),
+      {
+        heading: "A change of keys already signed with this paper, waiting for its homes",
+        lines: [
+          { text: `Rotation ${s.id} at position ${s.position}, signed with the chain key these words give (key ${idx}), installing the signing key ${s.signingFingerprint}${s.homeless ? " (homeless)" : ""}.`, tone: "warn" },
+          { text: "This paper still works, but only to send this same change again: Ki\u0161ib never signs a second change with the same key (Identity rule 29)." },
+          { text: "Once the homes accept it, the new paper written when it was signed is the one that counts, and this one is spent. If its signing key\u2019s words were never shown, change the keys again from that new paper: it installs a key you hold." },
+          { text: "If you did not make this change, someone holds your chain key\u2019s words: do not send it; use \u201CEscape a contested position\u201D.", tone: "bad" }
+        ]
+      }
+    ];
+    const digest = sha2562(cborEncode(["MOR Ki\u0161ib resend, version 1", id, s.id]));
+    return this.plan(
+      { digest, title: `Send the same change of ${short4(id)}\u2019s keys again`, summary: [`Identity ${id}. Its chain was read from ${rd.places.join(", ")}, and judged by the core library.`, FORGOTTEN_SAY], sections: sections2, signs: ["Ki\u0161ib signs nothing: it sends the exact same bytes again, to every home."], warning: null, blocking: [] },
+      {
+        wipe: () => void 0,
+        run: async () => {
+          this.held = { kind: "identity", id, bytes, act: s.id, homes: r.homes, before: chainBefore(rd), with: [{ bytes, to: rd.places }], places: rd.places, signing: null, chain: null, stage: "sent", title: `The rotation of ${short4(id)}, sent again`, lines: [] };
+          return this.send();
+        }
+      }
+    );
   }
   /** Send the act held, the same bytes, to every home (a home lacking the acts before it gets them first), then see whether it counts. */
   async send() {
@@ -7855,7 +7945,9 @@ var Kishib = class {
         }
       }
     }
-    lines2.push({ text: "Keep Ki\u0161ib open until the new words are shown. Closed now, the new signing key is lost: the identity stays yours, and the next change from the same paper installs a key you hold.", tone: "warn" });
+    lines2.push(
+      h.signing ? { text: "Keep Ki\u0161ib open until the new signing key\u2019s words are shown. Closed now, the new signing key is lost: the identity stays yours, and the next change, from the new paper you wrote, installs a key you hold.", tone: "warn" } : { text: "The signing key this change installs was shown, if at all, in the sitting that signed it: if it was lost, once this change counts, change the keys again from the new paper written then.", tone: "warn" }
+    );
     h.lines = lines2;
     return this.refresh();
   }
@@ -7890,18 +7982,29 @@ var Kishib = class {
       say2 = { text: `It could not be read back: ${message5(e2)}. Send it again: the same bytes.`, tone: "warn" };
     }
     h.lines = [...h.lines.filter((x) => !/^It (counts|does not count|could not)/.test(x.text)), say2];
-    if (counts && h.stage === "sent") h.stage = "counts";
+    if (counts && h.stage === "sent") {
+      h.stage = h.signing ? "counts" : "done";
+      if (!h.signing) h.lines = [...h.lines, { text: "The new paper written when this change was signed is now the one that counts; the old paper is spent: destroy it.", tone: "ok" }];
+    }
     return this.sitting();
   }
-  /** The new signing key's words, once the rotation counts: shown, then hidden before three are asked back. */
+  /**
+   * The new words, once the rotation counts: the new chain key's first (a
+   * new paper, H79), then, once three of them are typed back, the new
+   * signing key's; each shown, then hidden before three are asked back.
+   */
   showWords() {
     if (this.col) return this.col.showWords();
     const h = this.held;
-    if (!h || !h.signing) throw new Error("No new signing key is held here.");
-    if (h.stage === "sent") throw new Error("Not yet: the new words are shown once the homes\u2019 receipts are in, so they are never words of a key that does not count.");
-    h.stage = "counts";
+    if (!h || !h.signing && !h.chain) throw new Error("No new signing key is held here.");
     h.positions = void 0;
-    return { words: toWords(h.signing), say: NEW_WORDS_SAY };
+    if (h.chain) {
+      h.stage = "paper";
+      return { words: toWords(h.chain), say: NEW_CHAIN_WORDS_SAY, which: "chain" };
+    }
+    if (h.stage === "sent") throw new Error("Not yet: the new signing key\u2019s words are shown once the homes\u2019 receipts are in, so they are never words of a key that does not count.");
+    h.stage = "counts";
+    return { words: toWords(h.signing), say: NEW_WORDS_SAY, which: "signing" };
   }
   /** Hide the words; three positions to type back. */
   written() {
@@ -7910,26 +8013,43 @@ var Kishib = class {
       return this.state();
     }
     const h = this.held;
-    if (!h || !h.signing || h.stage !== "counts") throw new Error("No words are shown.");
+    if (!h || !h.signing && !h.chain || h.stage !== "counts" && h.stage !== "paper") throw new Error("No words are shown.");
     h.positions = threePositions((n) => randomBytes(1)[0] % n);
     h.stage = "shown";
     return this.state();
   }
-  /** The three words typed back: right, and Kišib forgets the key. */
-  typed(a) {
+  /**
+   * The three words typed back: right, and Kišib forgets them. For the new
+   * paper, it then signs the change and sends it; for the new signing key,
+   * the sitting is done.
+   */
+  async typed(a) {
     if (this.col) {
       this.col.typed(a.typed);
       return this.state();
     }
     const h = this.held;
-    if (!h || !h.signing || h.stage !== "shown" || !h.positions) throw new Error("No words are asked back.");
-    if (!typedBack(toWords(h.signing), h.positions, a.typed)) throw new Error("Not the words asked for. Check the paper: they are shown again with \u201CShow them again\u201D.");
+    if (!h || !h.signing && !h.chain || h.stage !== "shown" || !h.positions) throw new Error("No words are asked back.");
+    if (!typedBack(toWords(h.chain ?? h.signing), h.positions, a.typed)) throw new Error("Not the words asked for. Check the paper: they are shown again with \u201CShow them again\u201D.");
+    if (h.chain) {
+      wipe(h.chain);
+      h.chain = null;
+      h.positions = void 0;
+      const sign = h.sign;
+      h.sign = null;
+      h.drop = void 0;
+      await sign();
+      h.stage = "sent";
+      await this.send();
+      h.lines = [{ text: "The new chain key\u2019s words are written and forgotten here; then the change was signed and sent. Once the homes accept it, the new paper is the one that counts and the old one is spent: destroy it then.", tone: "ok" }, ...h.lines];
+      return this.state();
+    }
     wipe(h.signing);
     h.signing = null;
     h.bytes = null;
     h.positions = void 0;
     h.stage = "done";
-    h.lines = [...h.lines, { text: "The new signing key is forgotten here. Ki\u0161ib holds nothing of this identity now: only your paper does.", tone: "ok" }];
+    h.lines = [...h.lines, { text: "The new signing key is forgotten here. Ki\u0161ib holds nothing of this identity now: only your two new papers do, the chain key\u2019s and the signing key\u2019s.", tone: "ok" }];
     return this.state();
   }
   // ------------------------------------------------------------ must: escape a contested position (F299)
@@ -7994,7 +8114,7 @@ var Kishib = class {
             { text: `New homes: ${newHomes.map((h) => `${h.hint} (operator ${short4(h.operator)})`).join("; ")}. The old homes are left.`, tone: "warn" },
             { text: "Every rotation above is abandoned: it can never count afterwards (Identity section 11).", tone: "warn" },
             { text: "A new signing key, made now; its words are shown once the new homes\u2019 receipts are in." },
-            { text: `The next chain key: key ${idx + 1} of the same paper words. Whoever stole those words can derive it too: after the escape, consider a change of keys onto new paper (a new identity\u2019s words) as soon as you can.`, tone: "bad" }
+            { text: `A new chain key, from a new paper made now on this device (key ${p} of its words): its words are shown first, and only once three are typed back are the escape and its endorsement signed. The stolen paper is then spent: whoever holds it can derive nothing that counts after this escape. ${PAPER_COUNTS_SAY}`, tone: "warn" }
           ]
         }
       ];
@@ -8015,52 +8135,65 @@ var Kishib = class {
           wipe: () => wipe(s0, g0),
           run: async (warned) => {
             checkWarned(plan, warned);
-            const current = chainKeyAt(s0, commit.scheme, idx);
-            const next = chainKeyAt(s0, commit.scheme, idx + 1);
+            const fresh = freshSeed();
+            const next = chainKeyAt(fresh, commit.scheme, p);
+            const nextCommit = next.commit;
+            wipe(next.seeds);
+            const oldChain = s0.slice();
+            const oldSigning = g0.slice();
             const signing = newSigningSecret();
-            let bytes;
-            let endorsement;
-            try {
-              bytes = makeRotation({
-                identitySpec: SPECS.identity,
-                identity: id,
-                previous: qq.act,
-                position: p,
-                chainKeyScheme: commit.scheme,
-                chainKeySeeds: current.seeds,
-                newSigningPublic: signingPublic(signing),
-                nextChainKeyScheme: commit.scheme,
-                nextChainKeyCommit: next.commit,
-                kept: plan.kept,
-                homes: newHomes,
-                homeless: true
-              });
-              const owner = holding(id, qq.act, g0, chain.filter((c) => c.position <= qq.position).map((c) => c.bytes), newHomes);
-              endorsement = owner.sign(SPECS.identity, ESCAPE_ENDORSEMENT, cborEncode(/* @__PURE__ */ new Map([[0, rivals.map((s) => unhex(s.id))]])), { public: true, objects: [[id, actId(bytes)]] }).act;
-            } finally {
-              wipe(current.seeds, next.seeds, s0, g0);
-            }
-            const everywhere = [.../* @__PURE__ */ new Set([...newHomes.map((h) => h.hint), ...rd.places])];
-            this.held = {
+            const everywhere = [.../* @__PURE__ */ new Set([...newHomes.map((h2) => h2.hint), ...rd.places])];
+            const h = {
               kind: "escape",
               id,
-              bytes,
-              act: actId(bytes),
+              bytes: null,
+              act: null,
               homes: newHomes,
               before: chain.filter((c) => c.position <= qq.position).map((c) => c.bytes),
-              // The escape goes to the old homes and relays too: a reader meets it there (an old home keeps it as evidence, Identity rule 48) and asks the new homes it names for its receipts.
-              with: [
-                { bytes: endorsement, to: everywhere },
-                { bytes, to: rd.places }
-              ],
-              places: [...newHomes.map((h) => h.hint), ...rd.places],
+              with: [],
+              places: [...newHomes.map((h2) => h2.hint), ...rd.places],
               signing,
-              stage: "sent",
-              title: `The escape of ${short4(id)}`,
-              lines: []
+              chain: fresh,
+              stage: "paper",
+              title: `The escape of ${short4(id)}: first, the new paper`,
+              lines: PAPER_LINES,
+              drop: () => wipe(oldChain, oldSigning),
+              sign: async () => {
+                const current = chainKeyAt(oldChain, commit.scheme, idx);
+                let bytes;
+                let endorsement;
+                try {
+                  bytes = makeRotation({
+                    identitySpec: SPECS.identity,
+                    identity: id,
+                    previous: qq.act,
+                    position: p,
+                    chainKeyScheme: commit.scheme,
+                    chainKeySeeds: current.seeds,
+                    newSigningPublic: signingPublic(signing),
+                    nextChainKeyScheme: commit.scheme,
+                    nextChainKeyCommit: nextCommit,
+                    kept: plan.kept,
+                    homes: newHomes,
+                    homeless: true
+                  });
+                  const owner = holding(id, qq.act, oldSigning, chain.filter((c) => c.position <= qq.position).map((c) => c.bytes), newHomes);
+                  endorsement = owner.sign(SPECS.identity, ESCAPE_ENDORSEMENT, cborEncode(/* @__PURE__ */ new Map([[0, rivals.map((s) => unhex(s.id))]])), { public: true, objects: [[id, actId(bytes)]] }).act;
+                } finally {
+                  wipe(current.seeds, oldChain, oldSigning);
+                }
+                h.bytes = bytes;
+                h.act = actId(bytes);
+                h.title = `The escape of ${short4(id)}`;
+                h.with = [
+                  { bytes: endorsement, to: everywhere },
+                  { bytes, to: rd.places }
+                ];
+                for (const hint of everywhere) await relayAt(hint, via).putAct(endorsement).catch(() => void 0);
+              }
             };
-            for (const hint of everywhere) await relayAt(hint, via).putAct(endorsement).catch(() => void 0);
-            return this.send();
+            this.held = h;
+            return this.sitting();
           }
         }
       );
@@ -8111,7 +8244,7 @@ var Kishib = class {
             const to = [.../* @__PURE__ */ new Set([...r.homes.map((h) => h.hint), ...rd.places])];
             const lines2 = [];
             for (const hint of to) lines2.push(await put(hint, made.act, chain));
-            this.held = { kind: "confirm", id: successor, owner, bytes: null, act: made.id, homes: r.homes, before: [], with: [], places: to, signing: null, stage: "done", title: `${short4(successor)} confirmed the succession`, lines: lines2 };
+            this.held = { kind: "confirm", id: successor, owner, bytes: null, act: made.id, homes: r.homes, before: [], with: [], places: to, signing: null, chain: null, stage: "done", title: `${short4(successor)} confirmed the succession`, lines: lines2 };
             const v = await lookUp(owner, to, via);
             await lookUp(successor, to, via, v.verifier);
             v.verifier.add(made.act);
@@ -8189,7 +8322,7 @@ var Kishib = class {
       run: async () => {
         await g.run();
         const s = sent;
-        this.held = { kind: "collective", id: readId(a.collective), bytes: null, act: null, homes: [], before: [], with: [], places: [], signing: null, stage: "done", title: s.title, lines: s.lines };
+        this.held = { kind: "collective", id: readId(a.collective), bytes: null, act: null, homes: [], before: [], with: [], places: [], signing: null, chain: null, stage: "done", title: s.title, lines: s.lines };
         return this.sitting();
       }
     });
@@ -8230,6 +8363,9 @@ function commitOf(bytes) {
   const m = cborDecode(d.payload);
   const c = d.type === IDENTITY_TYPES.genesis ? m.get(1) : d.type === IDENTITY_TYPES.rotation ? m.get(3) : m.get(2);
   return { scheme: Number(c[0]), commit: hex(c[1]) };
+}
+function commits(rd) {
+  return orderedChain2(rd).map((c) => ({ position: c.position, ...commitOf(c.bytes) }));
 }
 function declaresClock(rd) {
   for (const c of orderedChain2(rd)) {
@@ -8572,7 +8708,7 @@ var vaultFields = `<details{open}><summary>The vault (optional): keep it, change
 <label>Its limit</label><input name="vaultOnchainLimit" inputmode="numeric" value="0"></details>`;
 var VAULT_SAY = [
   "Changing the vault or its limit is a change of keys. Only the chain key changes the vault (Money rules 2 and 3), so a thief holding only the signing key can never move it.",
-  "You need the chain key\u2019s paper, the 24 words written when the identity was made. Ki\u0161ib signs a change of keys that keeps every line of acts and declares the vault anew (or removes it), then shows a new signing key\u2019s 24 words: write them on a new paper, and give them to Dub and Damgar.",
+  "You need the chain key\u2019s paper, your newest one (written when the identity was made, or shown at its last change of keys). Ki\u0161ib first shows two new sets of 24 words, each once: the new chain key\u2019s (a new paper, for the next change; the old paper is then spent), written down before anything is signed; then it signs a change of keys that keeps every line of acts and declares the vault anew (or removes it), and once the homes accept it shows the new signing key\u2019s, to give to Dub and Damgar.",
   "The old signing key\u2019s words stop counting once the homes receipt the change."
 ];
 var vaultHtml = (open) => vaultFields.replace("{open}", open ? " open" : "").replace("{keep}", open ? "" : " selected").replace("{set}", open ? " selected" : "").replace("{units}", units.map((u2) => `<option value="${e(u2.hash)}">${e(u2.label)}</option>`).join(""));
@@ -8583,14 +8719,14 @@ function form2(kind, web) {
       return f(
         "Change an identity\u2019s keys",
         "Ki\u0161ib reads the identity from its homes and every relay its routes name, finds every line of its acts (Dub\u2019s, Edubba\u2019s, the web client\u2019s), and reads it all back in plain words before anything is signed.",
-        `${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (the paper written when it was made; never the signing key\u2019s words)")}
+        `${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (its newest paper: written when it was made, or shown at its last change of keys; never the signing key\u2019s words)")}
 <details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(false)}`,
         "Read it back"
       );
     case "vault":
       return `${top(web, true)}<h2>Change the vault</h2>
 <div class="review" id="vault-say">${lines(VAULT_SAY.map((text2) => ({ text: text2 })))}</div>
-<form id="form-rotate" data-kind="rotate">${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (the paper written when it was made; never the signing key\u2019s words)")}
+<form id="form-rotate" data-kind="rotate">${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (its newest paper: written when it was made, or shown at its last change of keys; never the signing key\u2019s words)")}
 <details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line: latest act, position, summary (as that app shows them)</label><textarea name="cards"></textarea></details>${vaultHtml(true)}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
     case "succession":
       return `${top(web, true)}<h2>Name or confirm a successor</h2>
@@ -8668,6 +8804,7 @@ function sitting(s, web) {
   const req = q ? `<div class="review" id="request-state">${q.room ? `<p>${q.have} of ${q.need} paper shares are in, typed here.</p>` : `<p>Fingerprint of this rotation</p><p class="fpr">${e(q.fingerprint)}</p><p class="full">${e(q.full)}</p><p>${q.have} of ${q.need} shares are in. The one-time key expires at ${e(new Date(q.expires * 1e3).toISOString().replace("T", " ").slice(0, 16))} UTC (this device\u2019s clock).</p>`}</div>` : "";
   const acts = [];
   if (s.stage === "sent") acts.push(btn("refresh", "Look again"), btn("resend", "Send it again (the same bytes)", true));
+  if (s.stage === "paper") acts.push(btn("show words", "Show the new chain key\u2019s words (a new paper)", true));
   if (s.stage === "counts" && s.kind !== "confirm") acts.push(btn("show words", s.kind === "collective" ? "Show the collective\u2019s new signing key\u2019s words" : "Show the new signing key\u2019s words", true));
   if (s.stage === "shown") acts.push(btn("show words", "Show them again"));
   if (s.stage === "waiting" && q) {
@@ -8819,7 +8956,7 @@ function mount(app2, b) {
       }
       case "show words": {
         const w = await act(() => b.ask("words show"));
-        if (w) app2.innerHTML = wordsShown(w.words, w.say, b.web, w.holder ? "The collective\u2019s new signing key\u2019s words" : "The new signing key\u2019s words");
+        if (w) app2.innerHTML = wordsShown(w.words, w.say, b.web, w.holder ? "The collective\u2019s new signing key\u2019s words" : w.which === "chain" ? "The new chain key\u2019s words: a new paper" : "The new signing key\u2019s words");
         return;
       }
       case "written": {
