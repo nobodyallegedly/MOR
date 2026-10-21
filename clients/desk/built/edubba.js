@@ -9427,11 +9427,16 @@ async function salesTold(me, via) {
 }
 async function deliverSold(me, sold, a) {
   const out = [];
+  let checked = false;
   for (const x of await salesTold(me, a.via)) {
     const mine = sold[x.publication];
     if (!mine || mine.delivered[x.buyer]) continue;
+    if (!checked) {
+      await a.current();
+      checked = true;
+    }
     try {
-      mine.delivered[x.buyer] = await deliverKey(me, x.buyer, x.publication, mine.key, a);
+      mine.delivered[x.buyer] = await deliverKey(me, x.buyer, x.publication, mine.key, { ...a, current: async () => void 0 });
       out.push(`The key of your sealed ${mine.media === "picture" ? "picture" : "post"} was delivered to ${x.buyer.slice(0, 8)}\u2026, sealed to them: a sale your Damgar signed the receipt for.`);
     } catch (e2) {
       out.push(`The key could not be delivered to ${x.buyer.slice(0, 8)}\u2026 yet: ${message(e2)}`);
@@ -9440,6 +9445,7 @@ async function deliverSold(me, sold, a) {
   return out;
 }
 async function deliverKey(me, buyer, publication2, key, a) {
+  await a.current();
   const hints = list([...me.f.homes.map((h) => h.hint), ...a.relays]);
   const l = await lookUp(buyer, hints, a.via);
   if (!l.encryptionKey) throw new Error("the buyer publishes no encryption key");
@@ -10091,6 +10097,7 @@ var Publishing = class {
   }
   async publishAsSelf(me, a) {
     const s = this.settings();
+    await this.desk.keyCurrent(me.id);
     try {
       await carryChain(me, s.relays);
       const publication2 = await me.publish(POST_SPECS.envelopes, PUBLICATION, a.work.payload, { public: true, relays: s.relays });
@@ -10255,6 +10262,7 @@ var Publishing = class {
   }
   async vowAsSelf(me, a) {
     const s = this.settings();
+    await this.desk.keyCurrent(me.id);
     try {
       await carryChain(me, s.relays);
       const made = await publishVow(me, { words: a.words, title: a.title, price: { unit: REGTEST_UNIT, value: a.price }, offerWords: a.offerWords, relays: s.relays });
@@ -10307,6 +10315,7 @@ var Publishing = class {
       const me = this.me(readId(a.buyer));
       const s = this.settings();
       let id;
+      await this.desk.keyCurrent(me.id);
       try {
         await carryChain(me, s.relays);
         id = await contestSale(me, { vow: readId(a.vow), sale: readId(a.sale), promise: a.promise, relays: list3([...s.relays, ...me.f.homes.map((h) => h.hint)]) });
@@ -10329,6 +10338,7 @@ var Publishing = class {
       const me = this.me(readId(a.buyer));
       const s = this.settings();
       if (!Number.isSafeInteger(a.value) || a.value <= 0 || !/^[0-9a-f]{64}$/.test(a.unit)) throw new Error("The sale\u2019s amount was not read: look it up again. Nothing was prepared.");
+      await this.desk.keyCurrent(me.id);
       const r = await sendDraft(
         me,
         { what: "confirm", other: readId(a.seller), amount: { unit: a.unit, value: a.value }, whatFor: "a vow kept", app: "Edubba", anchor: null, confirm: { claim: readId(a.sale), acks: [readId(a.vow)] } },
@@ -10389,7 +10399,7 @@ var Publishing = class {
       }
       try {
         if (!w.collective) {
-          w.delivered[sale.buyer] = await deliverKey(me, sale.buyer, w.publication, w.key, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me) });
+          w.delivered[sale.buyer] = await deliverKey(me, sale.buyer, w.publication, w.key, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me), current: () => this.desk.keyCurrent(me.id) });
           lines4.push({ text: `The key of \u201C${w.title}\u201D was delivered to ${short2(sale.buyer)}, sealed to them: a sale your deal\u2019s split service receipted.`, tone: "ok" });
           continue;
         }
@@ -10442,7 +10452,7 @@ var Publishing = class {
         const sold = {};
         for (const w of b.works.filter((x) => x.as === id && !x.deal && x.key)) sold[w.publication] = { key: w.key, offer: w.offer, post: w.post, media: w.media, delivered: w.delivered };
         try {
-          for (const t of await deliverSold(me, sold, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me) })) lines4.push({ text: t, tone: /could not/.test(t) ? "warn" : "ok" });
+          for (const t of await deliverSold(me, sold, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me), current: () => this.desk.keyCurrent(me.id) })) lines4.push({ text: t, tone: /could not/.test(t) ? "warn" : "ok" });
         } finally {
           this.store.saveIdentity(me);
         }
@@ -14670,6 +14680,18 @@ var now2 = () => Math.floor(Date.now() / 1e3);
 var MAX_NOTE2 = 4e3;
 var SORTED = ["new", "to answer", "answered", "ignored"];
 var KEY_CHANGED_SAY = "This identity\u2019s signing key was changed elsewhere, with its chain key\u2019s paper words: a change of keys is done in Ki\u0161ib, never in Edubba. The key Edubba holds no longer counts, so Edubba signs nothing more with it. If you did not change it, someone holding the chain key\u2019s words may have: open Ki\u0161ib. To go on here, give the new signing key\u2019s words in the identity\u2019s record (Identities tab).";
+var COLLECTIVE_KEY_CHANGED_SAY = "This collective\u2019s signing key was changed elsewhere, in Ki\u0161ib, with its members\u2019 paper shares. The key Edubba holds for it no longer counts, so Edubba signs nothing more for it with that key. To go on here, give the collective\u2019s new signing key\u2019s words under its member change (Collectives tab).";
+var CONTESTED_SAY = "Its homes disagree about its keys (contested): nothing is signed with them until it is settled, in Ki\u0161ib (\u201CEscape a contested position\u201D).";
+async function keyChangedAt(id, secret, hints, via, say3) {
+  let r;
+  try {
+    r = (await lookUp(id, [...new Set(hints)], via)).resolution;
+  } catch {
+    return null;
+  }
+  if (r.stop === "contested") return CONTESTED_SAY;
+  return r.signingKey && hex(r.signingKey) !== hex(signingPublic(unhex(secret))) ? say3 : null;
+}
 var Desk = class {
   constructor(store) {
     this.store = store;
@@ -15075,16 +15097,20 @@ var Desk = class {
    */
   async keyChanged(identity2) {
     const me = this.store.identity(identity2);
-    let key;
-    try {
-      key = (await lookUp(me.id, this.hints(), this.via)).resolution.signingKey;
-    } catch {
-      return null;
-    }
-    return key && hex(key) !== hex(signingPublic(unhex(me.f.signingSecret))) ? KEY_CHANGED_SAY : null;
+    return keyChangedAt(me.id, me.f.signingSecret, [...me.f.homes.map((h) => h.hint), ...this.hints()], this.via, KEY_CHANGED_SAY);
   }
+  /**
+   * Refuse, before anything is signed, where the signing key held here for
+   * `identity` no longer counts (F335). Every path of Edubba that signs with
+   * an identity's own key calls it first (H80: the reliance once did not).
+   */
   async keyCurrent(identity2) {
     const w = await this.keyChanged(identity2);
+    if (w) throw new Error(`${w} Nothing was signed.`);
+  }
+  /** The same for a real collective whose own signing key Edubba holds: Kišib changes it at a member change. */
+  async collectiveKeyCurrent(c2) {
+    const w = await keyChangedAt(c2.id, c2.signingSecret, [...c2.homes.map((h) => h.hint), ...c2.relays ?? [], ...this.hints()], this.via, COLLECTIVE_KEY_CHANGED_SAY);
     if (w) throw new Error(`${w} Nothing was signed.`);
   }
   /** Where acts are looked for: the relays, then the homes. */
@@ -15392,10 +15418,15 @@ var Desk = class {
    * 15, F110), signed by this identity, public, sent to its homes and
    * relays. Never a side effect: the page shows `WITNESS_EXPLANATION` and
    * passes it back word for word, or nothing is signed (Identity rule 18c).
+   * Refused, before anything is signed, where the signing key held here no
+   * longer counts (H80: this path once skipped the check every other one
+   * makes, and signed with a retired key).
    */
   async witness(identity2, act, shown3) {
     return this.serial(async () => {
       const me = this.store.identity(identity2);
+      if (me.f.pending) throw new Error("A rotation of this identity is waiting to count: nothing is signed with it until it does.");
+      await this.keyCurrent(me.id);
       const r = await me.witness([act], { shown: shown3, relays: this.store.settings().relays });
       this.store.saveIdentity(me);
       if (!r.sent.some((s) => s.result)) throw new Error(`No home took the witness act: ${r.sent.map((s) => `${s.home}: ${s.error}`).join("; ")}`);
@@ -20469,6 +20500,10 @@ var Real = class {
       return p.run();
     });
   }
+  /** Refuse, before anything is signed, where the collective's own key held here no longer counts (H80: Kišib changes it at a member change). */
+  collectiveKeyCurrent(c2) {
+    return this.desk.collectiveKeyCurrent({ id: c2.identity, signingSecret: c2.f.identity.signingSecret, homes: c2.f.identity.homes, relays: c2.f.relays });
+  }
   /** Where an identity is reached for a sealed message: its current encryption key and its inbox. */
   async reach(id) {
     const l = await lookUp(id, this.hints(), this.via);
@@ -20600,6 +20635,7 @@ var Real = class {
       digest: sha2562(Buffer.concat([Buffer.from("MOR Edubba real founding, version 1\n"), payload, Buffer.from(JSON.stringify({ homes: s.homes, relays, name }))])),
       reading: reading2,
       run: async () => {
+        await this.desk.keyCurrent(a.founder);
         const me = this.store.identity(a.founder);
         const lines4 = [];
         const terms = await proposePayload(me, payload, void 0, relays);
@@ -20736,6 +20772,7 @@ var Real = class {
       const missing = p.members.filter((m) => m !== p.founder && !p.answers[m]?.oneTime && !(p.byHand ?? []).includes(m));
       if (missing.length) throw new Error(`No one-time key from ${missing.map(this.names()).join(", ")}: their share can only be shown here, hand to hand. Choose that for them first.`);
       if (!read2) throw new Error("Read what this device will hold while founding (F337), and tick it, first. Nothing was dealt.");
+      await this.desk.keyCurrent(p.founder);
       const s = this.store.settings();
       const { collective: c2, shares } = await TestCollective.foundSigned({ agreement: p.act, members: p.members, homes: s.homes, relays: p.relays, governance: p.governance, via: this.via });
       this.saveCollective(c2);
@@ -20863,6 +20900,7 @@ var Real = class {
       digest: sha2562(Buffer.concat([Buffer.from("MOR Edubba real member change, version 1\n"), Buffer.from(a.collective), clone.payload])),
       reading: reading2,
       run: async () => {
+        await this.desk.keyCurrent(founder);
         const me = this.store.identity(founder);
         const lines4 = [];
         const proposed = await proposePayload(me, clone.payload, c2.f.agreement, c2.f.relays);
@@ -20986,6 +21024,8 @@ var Real = class {
       reading: reading2,
       run: async () => {
         if (blocking.length) throw new Error("This cannot be proposed while a reason above stands. Nothing was signed.");
+        await this.collectiveKeyCurrent(c2);
+        await this.desk.keyCurrent(founder);
         const lines4 = [];
         const grant2 = await c2.id.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.grant, grantPayload(service, [1, unhex(key)]), { public: true, relays: c2.f.relays });
         this.saveCollective(c2);
@@ -21074,6 +21114,7 @@ var Real = class {
     const others = area.number > 1 ? area.holders.filter((h) => h !== signer.me.id) : [];
     const names2 = this.names();
     try {
+      await this.desk.keyCurrent(signer.me.id);
       const made = await signAndAsk(signer.me, c2.identity, signer.key, { spec: MIRS.money, type: 0, payload }, others, `${names2(signer.me.id)} signed the payee pointer of the collective, leading to its split service ${names2(service)}, with their own key in its area \u201C${area.name}\u201D, which asks ${area.number} keys. Read it in your Signing tab, then sign it with yours.`, places, this.via);
       return { act: made.act, signer: signer.me.id, area: area.name, needed: area.number, asked: made.asked, notAsked: made.notAsked };
     } finally {
@@ -21089,6 +21130,7 @@ var Real = class {
       const st = this.standing(p);
       if (!st.enough) throw new Error(`Every member signs it first: waiting for ${st.waiting.map(this.names()).join(", ")}.`);
       const c2 = this.collective(p.collective);
+      await this.collectiveKeyCurrent(c2);
       const r = await c2.recordSigned({ governance: p.governance, clone: p.act, signatures: p.signers.map((m) => p.answers[m].signature) });
       this.saveCollective(c2);
       p.rotated = r;
@@ -21171,6 +21213,7 @@ var Real = class {
       const c2 = this.collective(collective);
       if (!(c2.f.governance.keepers?.ids ?? []).includes(keeper)) throw new Error("That identity is no keeper its agreement in force names (rule 36).");
       if (!this.store.holds(keeper)) throw new Error("That keeper is not held here: it keeps in its own app.");
+      await this.desk.keyCurrent(keeper);
       const me = this.store.identity(keeper);
       const places = await collectivePlaces(c2.identity, [...c2.f.relays, ...this.store.settings().homes.map((h) => h.hint)], this.via);
       try {
@@ -21217,6 +21260,7 @@ var Real = class {
       const r = (await this.resignations(collective)).find((x) => x.act === act);
       if (!r) throw new Error("No such resignation of a member was found at the collective\u2019s relays.");
       if (r.registered) throw new Error("It is registered already.");
+      await this.collectiveKeyCurrent(c2);
       const line = await record2(c2.id, { registers: [act], inForce: c2.f.agreement }, c2.f.relays);
       c2.f.departed = [...c2.f.departed ?? [], { member: r.member, resignation: act, record: line.id }];
       c2.f.records = [...c2.f.records ?? [], line.id];
@@ -21263,6 +21307,8 @@ var Real = class {
       digest: sha2562(Buffer.concat([Buffer.from("MOR Edubba real release, version 1\n"), Buffer.from(a.collective), prepared.payload, prepared.encoded])),
       reading: reading2,
       run: async () => {
+        await this.collectiveKeyCurrent(c2);
+        await this.desk.keyCurrent(founder);
         const out = await publishPrepared(pub, prepared, this.via);
         this.saveCollective(c2);
         const me = this.store.identity(founder);
@@ -22594,6 +22640,7 @@ var Damgar = class {
   collectivePromise(a) {
     return this.serial(async () => {
       const { me, s, book, hints } = await this.ctx();
+      await this.current(me);
       const r = await this.collectivePromiseMake(me, s, hints, a);
       if (r.digest !== a.digest) throw new Error("It is not the promise read back: read it again. Nothing was signed.");
       const text4 = `A promise of the collective ${short9(r.c.id)} to pay ${short9(r.to)} ${r.amount.value.toLocaleString("en")}${a.whatFor.trim() ? `, for ${a.whatFor.trim()}` : ""}: ${r.say.above ? "above its Money lane\u2019s cap, it" : "it"} needs your key too. Read it in your Signing tab, then sign it with your own key for the collective.`;
@@ -24800,10 +24847,10 @@ var DubMoney = class {
    * oneself): each a key delivery (Envelopes type 1), sealed to the buyer
    * and left in its inbox (`delivery.ts`, shared with Edubba's Publishing tab).
    */
-  async deliver(me, s) {
+  async deliver(me, s, current) {
     const sold = await this.store.money(me.id, "sold") ?? {};
     if (!Object.keys(sold).length) return [];
-    const out = await deliverSold(me, sold, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me) });
+    const out = await deliverSold(me, sold, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me), current });
     await this.store.saveMoney(me.id, "sold", sold);
     return out;
   }
@@ -26494,6 +26541,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
   contestVow(vow, promise) {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
+      await this.current(me);
       return { lines: (await this.money.contestVow(me, s, readId(vow), promise.trim() || null)).map((text4) => ({ text: text4, tone: "ok" })) };
     });
   }
@@ -26511,7 +26559,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
     return this.serial(async () => {
       const { me, s, p } = await this.ctx();
       const inbox = await this.inboxOf(me.id, [.../* @__PURE__ */ new Set([...s.relays, ...me.f.homes.map((h) => h.hint)])], s.via).catch(() => this.inboxPlaces(p));
-      const lines4 = [...await this.money.deliver(me, s), ...await this.money.keysArrived(me, s, inbox)];
+      const lines4 = [...await this.money.deliver(me, s, () => this.current(me)), ...await this.money.keysArrived(me, s, inbox)];
       return { lines: lines4.map((text4) => ({ text: text4, tone: "ok" })) };
     });
   }
@@ -27202,7 +27250,15 @@ function operations(p, opts) {
         for (const i of store.book().identities) {
           if (!store.holds(i.id)) continue;
           const w = await desk.keyChanged(i.id);
-          if (w) out.push({ id: i.id, name: i.name, say: w });
+          if (w) out.push({ id: i.id, name: i.name, say: w, kind: "identity" });
+        }
+        for (const x of real.collectives()) {
+          const c2 = real.collective(x.id);
+          try {
+            await desk.collectiveKeyCurrent({ id: x.id, signingSecret: c2.f.identity.signingSecret, homes: c2.f.identity.homes, relays: c2.f.relays });
+          } catch (e2) {
+            out.push({ id: x.id, name: x.name, say: e2.message.replace(/ Nothing was signed\.$/, ""), kind: "collective" });
+          }
         }
         return out;
       }
@@ -28698,7 +28754,7 @@ function record3(r) {
   const card = (l) => l.card ? `<dl class="facts card-of"><dt>Latest act</dt><dd><code title="${e(l.card.act)}">${e(shownAct(l.card.act))}</code></dd><dt>Position</dt><dd>${l.card.position}</dd><dt>Summary</dt><dd><code>${e(l.card.summary)}</code></dd></dl>` : "";
   return `<p class="small">As its homes and relays show it now. Nothing here is signed.</p>
 ${r.problems.map((p) => note2("warn", e(p))).join("")}
-${r.spent ? `<form id="identity-renew" data-identity="${e(r.id)}" class="card">${note2("error", e(RENEW_SAY))}<label>The new signing key\u2019s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Take the new words</button></div></form>` : ""}
+${r.spent ? renewIdentityForm(r.id) : ""}
 ${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines2(x.lines)}`).join("")}
 <h4>Its lines of acts (${r.lines.length})</h4>
 <p class="small">A change of its signing key (in Ki\u0161ib, with the chain key) must keep every line, or that line\u2019s acts become void (Identity rule 35). Where Ki\u0161ib cannot read a line, give it the latest act, position and summary shown here.</p>
@@ -29045,6 +29101,10 @@ ${next}<div class="here" data-here-proposal="${e(p.act)}" role="status" aria-liv
 }
 var COLLECTIVE_RENEW_SAY = "When Ki\u0161ib\u2019s rotation counts, it shows the collective\u2019s new signing key\u2019s words once, for the member who holds that key (here). Give them below: Edubba then follows the change, and signs for the collective with the new key.";
 var RENEW_SAY = "Its signing key was changed elsewhere (in Ki\u0161ib, with the chain key\u2019s words). Edubba signs nothing more with the old one. Give the new signing key\u2019s words, as Ki\u0161ib showed them once, to go on here.";
+var KEY_CHANGED_START = ["This identity\u2019s signing key was changed elsewhere", "This collective\u2019s signing key was changed elsewhere"];
+function renewIdentityForm(id, name) {
+  return `<form id="identity-renew" data-identity="${e(id)}" class="card">${note2("error", e(RENEW_SAY))}<label>${name ? `${e(name)}: the` : "The"} new signing key\u2019s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Take the new words</button></div></form>`;
+}
 function renewCollectiveForm(collective) {
   return `<form id="real-renew" data-collective="${e(collective)}"><p class="small">${e(COLLECTIVE_RENEW_SAY)}</p><label>The collective\u2019s new signing key\u2019s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit">Take the new words</button></div></form>`;
 }
@@ -29685,7 +29745,15 @@ function fail2(err8, where) {
     void start();
     return;
   }
-  say2("error", e(err8 instanceof Error ? err8.message : String(err8)), where);
+  const m = err8 instanceof Error ? err8.message : String(err8);
+  say2("error", e(m), where);
+  if (KEY_CHANGED_START.some((x) => m.startsWith(x))) void offerRenew(where);
+}
+async function offerRenew(where, changed) {
+  const xs = changed ?? await c.ask("keys check").catch(() => []);
+  const s = where ?? $("e-status");
+  if (!s || !xs.length) return;
+  s.insertAdjacentHTML("beforeend", `<div class="renew-here">${xs.map((x) => x.kind === "collective" ? `<p class="small"><strong>${e(x.name)}</strong></p>${renewCollectiveForm(x.id)}` : renewIdentityForm(x.id, x.name)).join("")}</div>`);
 }
 var fill = (id, html) => {
   const el = $(id);
@@ -30816,16 +30884,18 @@ app.addEventListener("submit", async (ev) => {
   }
   if (fid === "identity-renew" || fid === "real-renew") {
     const id = fid === "identity-renew" ? form2.dataset.identity : form2.dataset.collective;
+    const inline = !!form2.closest(".renew-here");
     const r = await busy(
       "Reading it from its homes, and checking the words\u2026",
       () => fid === "identity-renew" ? c.ask("identity renew", { identity: id, words: words(d.get("words")) }) : c.ask("real collective renew", { collective: id, words: words(d.get("words")) })
     );
     form2.reset();
     if (r) {
+      app.querySelectorAll(".renew-here").forEach((x) => x.remove());
       await refresh();
       if (fid === "identity-renew") await drawRecord(id);
       say2("done", done(r));
-    }
+    } else if (inline && !form2.isConnected) await offerRenew();
     return;
   }
   if (fid === "real-share-back") {
@@ -30948,8 +31018,10 @@ async function startWeb(w) {
   opened();
 }
 function opened() {
-  void c.ask("keys check").then((xs) => {
-    if (xs.length && !working) say2("warn", xs.map((x) => `<strong>${e(x.name)}</strong>: ${e(x.say)}`).join("<br>"));
+  void c.ask("keys check").then(async (xs) => {
+    if (!xs.length || working) return;
+    say2("warn", xs.map((x) => `<strong>${e(x.name)}</strong>: ${e(x.say)}`).join("<br>"));
+    await offerRenew(null, xs.filter((x) => KEY_CHANGED_START.some((k) => x.say.startsWith(k))));
   }).catch(() => void 0);
   void gatherAll();
   void c.ask("real lists").then(async (r) => {

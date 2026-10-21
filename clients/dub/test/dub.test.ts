@@ -584,6 +584,9 @@ test('an identity made by the genesis client, brought by its words: refused sets
   for (const id of [gp.id, gp2.id, bp.post.id]) assert.equal((await reader(id)).standing, 'valid', `kept: ${id}`);
   await refused(c.ask('post', { text: 'After the rotation.' }), /changed elsewhere.*Nothing was signed.*Kišib/);
   assert.deepEqual(await c.ask('check'), { current: false, say: SPENT_SAY });
+  // H80: the paths that once skipped the check refuse too: a vow's sale contested (public), and, with a sale to deliver, the key delivery (`delivery.ts`, run by itself on every refresh; its refusal is tested in Edubba's test/h80.test.ts).
+  await refused(c.ask('vow contest', { vow: '7'.repeat(64), promise: '' }), /changed elsewhere.*Nothing was signed/);
+  assert.deepEqual((await c.ask<Lines>('money look')).lines, [], 'nothing to deliver: nothing signed, nothing refused');
   // The old words again: refused. The new signing key's words: taken; a new line; posts again.
   await refused(c.ask('renew', { words: words.join(' ') }), /do not give this identity’s current signing key/);
   const renewed = await c.ask<Lines>('renew', { words: toWords(unhex(g.f.signingSecret)).join(' ') });

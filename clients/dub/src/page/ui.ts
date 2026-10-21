@@ -239,6 +239,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: v.State): Pro
       const r = await b.ask<{ payments: v.PaymentShownHere[]; done: v.PaymentShownHere[]; problems: string[] }>('payments');
       fill('payments', v.paymentsHere(r));
     } catch (err) {
+      // H80: a key delivery refused because the key changed elsewhere is said where the new words are taken.
+      if ((err instanceof Error ? err.message : String(err)).startsWith(SPENT)) return void (await fail(err));
       fill('payments', v.note('error', v.e(err instanceof Error ? err.message : String(err))));
     }
   }

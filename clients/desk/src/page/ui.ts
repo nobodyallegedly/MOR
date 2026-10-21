@@ -191,7 +191,21 @@ function fail(err: unknown, where?: HTMLElement | null) {
     void start();
     return;
   }
-  say('error', v.e(err instanceof Error ? err.message : String(err)), where);
+  const m = err instanceof Error ? err.message : String(err);
+  say('error', v.e(m), where);
+  if (v.KEY_CHANGED_START.some((x) => m.startsWith(x))) void offerRenew(where);
+}
+
+/**
+ * H80: where a refusal (or the check on opening) says a key held here was
+ * changed elsewhere, the box for the new words, right below it: one step,
+ * not a hunt through the Identities tab.
+ */
+async function offerRenew(where?: HTMLElement | null, changed?: { id: string; name: string; kind: 'identity' | 'collective' }[]) {
+  const xs = changed ?? (await c.ask<{ id: string; name: string; kind: 'identity' | 'collective' }[]>('keys check').catch(() => []));
+  const s = where ?? $('e-status');
+  if (!s || !xs.length) return;
+  s.insertAdjacentHTML('beforeend', `<div class="renew-here">${xs.map((x) => (x.kind === 'collective' ? `<p class="small"><strong>${v.e(x.name)}</strong></p>${v.renewCollectiveForm(x.id)}` : v.renewIdentityForm(x.id, x.name))).join('')}</div>`);
 }
 
 const fill = (id: string, html: string) => {
@@ -1417,15 +1431,17 @@ app.addEventListener('submit', async (ev) => {
   // After Kišib: the new signing key's words, for an identity held here or a real collective (`src/kishib.ts`).
   if (fid === 'identity-renew' || fid === 'real-renew') {
     const id = fid === 'identity-renew' ? form.dataset.identity! : form.dataset.collective!;
+    const inline = !!form.closest('.renew-here');
     const r = await busy('Reading it from its homes, and checking the words…', () =>
       fid === 'identity-renew' ? c.ask<Done>('identity renew', { identity: id, words: words(d.get('words')) }) : c.ask<Done>('real collective renew', { collective: id, words: words(d.get('words')) }),
     );
     form.reset();
     if (r) {
+      app.querySelectorAll('.renew-here').forEach((x) => x.remove());
       await refresh();
       if (fid === 'identity-renew') await drawRecord(id);
       say('done', v.done(r));
-    }
+    } else if (inline && !form.isConnected) await offerRenew(); // H80: refused words leave the box where it was, to try again
     return;
   }
   if (fid === 'real-share-back') {
@@ -1560,9 +1576,11 @@ async function startWeb(w: Asker) {
 function opened() {
   // On opening: an identity whose signing key was changed elsewhere (F335: a change of keys is done in Kišib), said.
   void c
-    .ask<{ id: string; name: string; say: string }[]>('keys check')
-    .then((xs) => {
-      if (xs.length && !working) say('warn', xs.map((x) => `<strong>${v.e(x.name)}</strong>: ${v.e(x.say)}`).join('<br>'));
+    .ask<{ id: string; name: string; say: string; kind: 'identity' | 'collective' }[]>('keys check')
+    .then(async (xs) => {
+      if (!xs.length || working) return;
+      say('warn', xs.map((x) => `<strong>${v.e(x.name)}</strong>: ${v.e(x.say)}`).join('<br>'));
+      await offerRenew(null, xs.filter((x) => v.KEY_CHANGED_START.some((k) => x.say.startsWith(k))));
     })
     .catch(() => undefined);
   // On opening: answers waiting for proposals sent from here (H32), and the follow lists sealed to the identities held here (people cMIP draft 2).

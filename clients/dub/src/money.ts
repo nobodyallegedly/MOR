@@ -274,10 +274,10 @@ export class DubMoney {
    * oneself): each a key delivery (Envelopes type 1), sealed to the buyer
    * and left in its inbox (`delivery.ts`, shared with Edubba's Publishing tab).
    */
-  async deliver(me: TestIdentity, s: Settings): Promise<string[]> {
+  async deliver(me: TestIdentity, s: Settings, current: () => Promise<void>): Promise<string[]> {
     const sold = (await this.store.money<Sold>(me.id, 'sold')) ?? {};
     if (!Object.keys(sold).length) return [];
-    const out = await deliverSold(me, sold, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me) });
+    const out = await deliverSold(me, sold, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me), current });
     await this.store.saveMoney(me.id, 'sold', sold);
     return out;
   }
