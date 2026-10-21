@@ -61,6 +61,11 @@ What Nobody, allegedly, decided is written as his ("Agreed"), with the lead's le
 
 Read its report and its questions; read the CI run yourself (a session's green is not CI's); take the questions to Nobody, allegedly, one at a time, with a lean; record the answers; merge; update the state file.
 
+## Text edits waiting for the freeze-ready branch
+
+Small decided changes that arrive while a session holds the branch; the lead makes them, or hands them to the next session, once the branch is free.
+- F370: Money 11, `fulfils` named, not listed (fields 5 and 4, the payment task).
+
 ## Questions waiting for Nobody, allegedly
 
 None. (Finding numbers in the frozen texts: removed, F360, 21 October.)

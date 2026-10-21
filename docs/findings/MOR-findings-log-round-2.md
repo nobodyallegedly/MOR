@@ -28,6 +28,16 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F370. What a payment "fulfils" is named, not listed: a transfer to oneself fulfils nothing in Money's sense (21 October 2026)
+
+**Asked by the Dubsar Suite** (`docs/texts-r0-report.md`, section 3, branch `claude/texts-r0-airgap-payment-audio`): the payment cMIP's draft 4 lets a transfer to oneself name the vault's declaring genesis or rotation in `fulfils` (F355 c); Money describes field 5 (receipt) and field 4 (claim) as "the obligation, agreement, offer or payee-pointer act this hop follows". Is that list closed?
+
+**Read in Money 11 first:** the field is typed `hash`; the list is a comment; no rule makes an act invalid for naming something else; and Money itself already names a fifth thing a payment fulfils, a stake transfer (Agreements rule 10). The list was never closed.
+
+**Taken by the project lead under delegation** ("you'll decide the rest"), (a), the session's lean, with one sentence so a stranger reading the texts alone cannot take the comment for a closed list: `fulfils` names the act a payment follows; Money judges it only where it names an act Money or Agreements reads (an obligation to discharge, an agreement or offer to follow, a payee pointer, a stake transfer); a payment naming anything else fulfils nothing in Money's sense, discharges nothing, and changes no verdict. The payment task's sentence reads "an act it follows" with the same examples. A transfer to oneself naming its vault's declaration is such a payment; the payment cMIP judges it, from the act alone. *Not chosen:* (b) a closed list extended with the vault's declaration, which would need extending again for every cMIP's own case.
+
+**Where:** Money 11, fields 5 and 4 and the payment task, on the freeze-ready branch after the technical pass. No verdict changes.
+
 ## F369. The formats S1 found unwritten: how the technical pass writes them (21 October 2026)
 
 **Taken by the project lead under delegation**, for the technical pass (S1b) on the freeze-ready texts:
