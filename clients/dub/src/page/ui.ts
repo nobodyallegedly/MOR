@@ -183,6 +183,21 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     app.querySelectorAll<HTMLElement>('[data-k-count="private"]').forEach((x) => (x.textContent = n((inbox?.messages ?? []).filter((m) => !m.seen && m.dir === 'in').length)));
   }
 
+  /** Films checked in this page, by publication: shown in whichever card holds them now, a redraw included. */
+  const films = new Map<string, string>();
+  function showFilms() {
+    for (const box of app.querySelectorAll<HTMLElement>('[data-film]')) {
+      const url = films.get(box.dataset.film ?? '');
+      if (!url) continue;
+      const video = document.createElement('video');
+      video.controls = true;
+      video.playsInline = true;
+      video.src = url;
+      video.dataset.checked = 'yes';
+      box.replaceWith(video);
+    }
+  }
+
   function drawFeed() {
     if (part !== 'public' || profileOf) return;
     const box = $('feed');
@@ -190,11 +205,13 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     if (lens === 'relay') {
       box.innerHTML = relayItems ? (relayItems.length ? itemCards(relayItems) : '<p class="k-empty">Nothing of these layers at this identity’s relays yet.</p>') : '<p class="k-empty">Reading every public act at this identity’s relays…</p>';
       fill('feed-foot', relayFoot);
+      showFilms();
       return;
     }
     const items = lens === 'toyou' ? toYou() : feed;
     box.innerHTML = items.length ? itemCards(items) : `<p class="k-empty">${lens === 'toyou' ? 'Nothing addressed to you yet: replies to your posts, and public messages to you, come here.' : 'Nothing yet. Write something, or follow someone.'}</p>`;
     fill('feed-foot', feedFoot);
+    showFilms();
   }
 
   async function readFeed(again = false) {
@@ -1029,12 +1046,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         try {
           const r = await b.ask<{ b64: string; type: string }>('film', { publication: box.dataset.film, signer: box.dataset.filmSigner });
           const bytes = Uint8Array.from(atob(r.b64), (c) => c.charCodeAt(0));
-          const video = document.createElement('video');
-          video.controls = true;
-          video.playsInline = true;
-          video.src = URL.createObjectURL(new Blob([bytes], { type: 'video/mp4' }));
-          video.dataset.checked = 'yes';
-          box.replaceWith(video);
+          // The card may have been drawn again meanwhile: the film goes to wherever it is now.
+          films.set(box.dataset.film!, URL.createObjectURL(new Blob([bytes], { type: 'video/mp4' })));
+          showFilms();
         } catch (err) {
           box.innerHTML = `<span class="k-label k-warn">The film is not played: ${v.e(errorOf(err))}</span>`;
         }

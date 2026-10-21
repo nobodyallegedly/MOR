@@ -18769,6 +18769,19 @@ function mount(app2, b) {
     app2.querySelectorAll('[data-k-count="public"]').forEach((x) => x.textContent = n(unseen));
     app2.querySelectorAll('[data-k-count="private"]').forEach((x) => x.textContent = n((inbox?.messages ?? []).filter((m) => !m.seen && m.dir === "in").length));
   }
+  const films = /* @__PURE__ */ new Map();
+  function showFilms() {
+    for (const box2 of app2.querySelectorAll("[data-film]")) {
+      const url = films.get(box2.dataset.film ?? "");
+      if (!url) continue;
+      const video = document.createElement("video");
+      video.controls = true;
+      video.playsInline = true;
+      video.src = url;
+      video.dataset.checked = "yes";
+      box2.replaceWith(video);
+    }
+  }
   function drawFeed() {
     if (part !== "public" || profileOf) return;
     const box2 = $("feed");
@@ -18776,11 +18789,13 @@ function mount(app2, b) {
     if (lens === "relay") {
       box2.innerHTML = relayItems ? relayItems.length ? itemCards(relayItems) : '<p class="k-empty">Nothing of these layers at this identity\u2019s relays yet.</p>' : '<p class="k-empty">Reading every public act at this identity\u2019s relays\u2026</p>';
       fill("feed-foot", relayFoot);
+      showFilms();
       return;
     }
     const items = lens === "toyou" ? toYou() : feed;
     box2.innerHTML = items.length ? itemCards(items) : `<p class="k-empty">${lens === "toyou" ? "Nothing addressed to you yet: replies to your posts, and public messages to you, come here." : "Nothing yet. Write something, or follow someone."}</p>`;
     fill("feed-foot", feedFoot2);
+    showFilms();
   }
   async function readFeed2(again = false) {
     try {
@@ -19543,12 +19558,8 @@ function mount(app2, b) {
         try {
           const r = await b.ask("film", { publication: box2.dataset.film, signer: box2.dataset.filmSigner });
           const bytes = Uint8Array.from(atob(r.b64), (c) => c.charCodeAt(0));
-          const video = document.createElement("video");
-          video.controls = true;
-          video.playsInline = true;
-          video.src = URL.createObjectURL(new Blob([bytes], { type: "video/mp4" }));
-          video.dataset.checked = "yes";
-          box2.replaceWith(video);
+          films.set(box2.dataset.film, URL.createObjectURL(new Blob([bytes], { type: "video/mp4" })));
+          showFilms();
         } catch (err) {
           box2.innerHTML = `<span class="k-label k-warn">The film is not played: ${e(errorOf(err))}</span>`;
         }
