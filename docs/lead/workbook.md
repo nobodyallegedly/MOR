@@ -29,7 +29,7 @@ The MOR lead keeps the core: the core texts (MICS, six MIRs, freeze test suite),
 | S2 | **Core aligned, and the vectors:** the last text edits; the core matching the texts; every suite step traced (223 run, 57 partly, 15 none); signature vectors and 63 verdict vectors, 25 judged by Python too. | — | Done overnight 21 to 22 October, pull request 88, merged 22 October with main; its questions taken (F375, pull request 90) |
 | S3 | *Handed to the Dubsar Suite lead (Nobody, allegedly, 21 October: "Modules and cMIPs are handled by the suite lead. The idea is that it is not core."):* the "Dubsar" titles (F356), payment cMIP draft 4 (F355 c), the chain-key signer Module's fresh seed (F361), the regtest quirks kit. | — | Not the MOR lead's |
 | S4 | **The C box:** vector descriptions cleaned (pull request 91); `scripts/c-box/` (its READMEs, and `make-c-box.sh`, which refuses any finding number or pointer to code); the box pushed to `nobodyallegedly/MOR-CBOX`. | — | Sealed 22 October from MOR commit `564ca17`; `MANIFEST.sha256` fingerprint `c790d768…` |
-| S5 | **The C verifier**, insulated, in `MOR-CBOX`, from a session outside the MOR project. | S4 | Prompt ready 22 October (`docs/lead/prompts/s5-c-verifier.md`) |
+| S5 | **The C verifier**, insulated, in `MOR-CBOX`, from a session outside the MOR project. | S4 | Launched 22 October, morning, from `MOR-CBOX` alone (`docs/lead/prompts/s5-c-verifier.md`) |
 | S6 | **Fable's review, a Thursday**: each divergence judged (text unclear, text wrong, Rust wrong, C wrong). About half of Fable's weekly allowance. | S5 | — |
 | S7 | Fixes; the step 17 rehearsal; the freeze ("if the fixes are not gigantic"); the first two acts of the frozen protocol, "Thank you for the shower…" with a photograph of the Earth, then the full text formatted (build brief). | S6 | — |
 | S8 | dubsar.org for the release (H41 to H44, H62; short IDs with the full form on click; "a research and an art project"; the companion text); main's protection tightened when the repository goes public. | Discussed with Nobody, allegedly, once Fable's review begins ("The Dubsar website will need a refresh but we'll have all the work on the Dubsar apps to inform it"); then the fourteen doors pointing to the frozen MIRs, their opening lines his to write | — |
@@ -60,6 +60,11 @@ What Nobody, allegedly, decided is written as his ("Agreed"), with the lead's le
 ## Before merging a session's work
 
 Read its report and its questions; read the CI run yourself (a session's green is not CI's); take the questions to Nobody, allegedly, one at a time, with a lean; record the answers; merge; update the state file.
+
+## After the box
+
+Any change to the eight texts after the box was sealed (MOR commit `564ca17`) is listed here, so Fable's review can tell a known difference from a divergence the C session found.
+- None yet.
 
 ## Text edits waiting for the freeze-ready branch
 

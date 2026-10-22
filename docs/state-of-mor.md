@@ -4,6 +4,8 @@
 
 *Last updated: 19 October 2026, after pull request 80 (round 3) and the server session.*
 
+**22 October 2026, morning (later):** the C box sealed in `nobodyallegedly/MOR-CBOX` (the eight freeze-ready texts and the vectors, from MOR commit `564ca17`, fingerprinted), and the C verifier's session launched from it alone. Any later change to the texts is listed in the lead's workbook, "After the box".
+
 **22 October 2026, morning:** S2 merged (pull request 88): the core matches the freeze-ready texts, and `core/vectors/` holds signatures and 63 verdict vectors across every layer, checked by the library and in part by an independent Python program; every suite step traced to its tests. Its questions taken (F375). Next: the C box (S4).
 
 **21 October 2026, evening:** the freeze-ready texts merged (pull request 83, S1 and its technical pass): Identity 15, Text 11, Envelopes 11, Money 11, Agreements 17, Development 11, MICS v30, freeze test suite v30, for Nobody, allegedly, to approve; their questions decided (F363 to F371). Next: S2, the core aligned and the vectors (`docs/lead/prompts/s2-core-and-vectors.md`). F numbers are reserved in one register for both leads, in the project (`claude/MOR-F-numbers.md`).
