@@ -123,7 +123,7 @@ A subagent read only the eight texts and the diff. It found no finding number, r
 
 All six were rebuilt in this branch, as their READMEs say: `cd clients/genesis && npm run wasm`, then `npm run release` in each of `clients/site` (the display client), `clients/dub`, `clients/kishib`, `clients/damgar`, `clients/ummia` and `clients/desk` (Edubba). Then each one's `npm run test:build`, which builds it again and checks it gives the same bytes, passed for all six. The tools match `BUILT-WITH.txt`: rustc 1.97.0, wasm-bindgen 0.2.129 (installed here at that version), and each client's pinned esbuild.
 
-The WebAssembly every release carries now has the work hash beginning `89c45a5a1bb40abe`. GitHub's reproducible build of the display client is the check that Linux x86-64 on GitHub gives the same bytes (below).
+The WebAssembly every release carries has the work hash `89c45a5a1bb40abe…` (as `BUILT-WITH.txt` records it), SHA-256 `ed6825783977961b…`, 5,051,909 bytes. GitHub's machines built the same bytes (below).
 
 ## The box
 
@@ -135,4 +135,6 @@ The WebAssembly every release carries now has the work hash beginning `89c45a5a1
 - `gen_vectors`: the same bytes again.
 - `python3 core/vectors/check.py`: all 192 agree.
 - The genesis client's new test passes.
-- CI on GitHub: *(below).*
+- CI on GitHub, read by me on the head `ee39d9d`: all five checks green: all, browsers, regtest, Edubba's release and Kišib's seal.
+  - In "all", the reproducible display client's step passed in its own right. That step may not fail a pull request, so I read its log: "built twice is the same, and is the one published in the release". GitHub's `mor_wasm_bg.wasm` and `gateway.js` have the same SHA-256 as `clients/site/built/`.
+  - Edubba's release check printed the same `mor_wasm_bg.wasm` and found `clients/desk/built` unchanged.
