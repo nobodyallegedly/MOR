@@ -19,6 +19,8 @@ export interface CardHost {
   actItems(a: KitAct): { before: MenuItem[]; after: MenuItem[] };
   /** Every choice the kit does not take itself: profile, open, why, follow, mute, rely, anchor, correct, the app's own. */
   choose(key: string, a: KitAct, card: HTMLElement): void;
+  /** Whether the app signs everyday acts: false leaves Rely on it, Anchor it and Correct it out (Kišib). */
+  signs?: boolean;
 }
 
 /** Copy words to the clipboard; false where the browser refuses. */
@@ -127,7 +129,7 @@ export function attachCards(root: HTMLElement, host: CardHost): void {
     if (!a) return;
     const which = b.dataset.kMenu as 'signer' | 'act';
     card.classList.add('k-sel');
-    const html = which === 'signer' ? signerMenu(host.app, a.signer, host.signerItems(a)) : actMenu(host.app, a, host.actItems(a));
+    const html = which === 'signer' ? signerMenu(host.app, a.signer, host.signerItems(a)) : actMenu(host.app, a, host.actItems(a), host.signs !== false);
     popAt(
       b,
       html,
@@ -432,7 +434,7 @@ export interface Slot {
 }
 
 /** Open the slot: another app's panel in a frame, under the rules above. Throws, drawing nothing, for an origin not allowed. */
-export function openSlot(page: HTMLElement, o: { app: App; by: string; host: string; src: string; allowed: string[]; message?: (data: unknown) => void }): Slot {
+export function openSlot(page: HTMLElement, o: { app: App; by: string; host: string; src: string; allowed: string[]; message?: (data: unknown) => void; /** The person closed it (the ×), not the host. */ closed?: () => void }): Slot {
   let url: URL;
   try {
     url = new URL(o.src);
@@ -477,6 +479,9 @@ export function openSlot(page: HTMLElement, o: { app: App; by: string; host: str
       shade.remove();
     },
   };
-  close.addEventListener('click', () => slot.close());
+  close.addEventListener('click', () => {
+    slot.close();
+    o.closed?.();
+  });
   return slot;
 }

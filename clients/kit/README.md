@@ -16,7 +16,7 @@ Every app used to draw its own cards, menus and boxes, round after round, and th
 - **The profile page**, light and friendly: the name, its own display name beneath where it differs, where it lives, the ID link, a red line only when there is trouble, Follow, Message, Pay, its feed, and quietly "Full record in Kišib".
 - **The identity panel**, from the identity top right: the identities held, the one in use marked, **the collectives under each** (acting as a collective is the same gesture as switching), + Add (make, bring, and an empty place for "use one from Kišib", round 2), each identity's menu, **Remove said plainly first**, and a foot for the app itself.
 - **Contacts and names**: one list, names first; **@ and To… offer names, never hashes**, a faint short ID only where two names collide; the app's own list, never the browser's autofill.
-- **The slot**: an empty place where another app's panel will appear (Kišib's runner, Damgar's authorisation: round 2), drawn by that app in a frame this app cannot read or change.
+- **The slot**: the place where another app's panel appears, drawn by that app in a frame this app cannot read or change. Filled since 22 October 2026 by Kišib's runner inside Dub (`cmips/cmip-runner-draft-1.md`); Damgar's authorisation comes with Damgar's round.
 - **Disclaimers in one line** with a "?" that opens the rest. No finding number on any screen.
 
 The kit holds no app's logic: it is given plain words and IDs written for people, draws them, and hands every choice back to the app.
@@ -38,7 +38,7 @@ The kit holds no app's logic: it is given plain words and IDs written for people
 4. Its edge is striped in the other app's colour and says who drew it ("Drawn by Kišib · Dub cannot read or change this frame"); the host draws only the edge and a way to close.
 5. What passes between them is a message the other app posts to the host's window, taken only from that frame. *The gap, accepted (decided): a malicious host could cover the frame or trick a click.*
 
-A host's content security policy must allow the other app's origin in `frame-src`; Dub's does not yet, since nothing fills the slot before round 2.
+A host's content security policy must allow the other app's origin in `frame-src`, and nothing else: Dub's program allows Kišib's (`clients/desk/src/local.ts`, its `frames` option). `openSlot` takes `closed`, called when the person closes the frame (the ×), so the host can say what still waits. An app that signs nothing everyday (Kišib, listing what its runner signed) sets `signs: false` on its `CardHost`: the act's menu then leaves out Rely on it, Anchor it and Correct it.
 
 ## Tests
 

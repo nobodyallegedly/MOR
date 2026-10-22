@@ -62,6 +62,7 @@ import { holdsAnArea } from './signing.ts';
 import { DubMoney, LANE_SAY, type LaneShownHere, type SealedShown } from './money.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 import { isLongForm } from '../../barebone/src/corrections.ts';
+import type { RunnerLink } from './runner.ts';
 
 export type { Line, State } from './shapes.ts';
 
@@ -93,6 +94,16 @@ export const LINE_SAY =
 export const SPENT_SAY =
   'This identity’s signing key was changed elsewhere, with its chain key, so the signing key’s words this app holds no longer count. Nothing was signed. Changing keys is Kišib’s work, not Dub’s. To go on here, give this app the new signing key’s words.';
 
+/** Said where Kišib's runner holds an identity's key and its keys were changed since (the Dubsar runner cMIP, 3.5 and 7.4). */
+export const RUNNER_OLD_KEY_SAY =
+  'This identity’s keys were changed with its chain key, and Kišib’s runner still holds the old signing key: nothing was signed. Give the runner the new signing key’s words, in Kišib (Runner, Identities held here). Dub then goes on, in new lines.';
+
+/** Said where an identity used through Kišib would need its words here (the Dubsar runner cMIP, 6.4). */
+export const RUNNER_HOLDS_SAY = 'Kišib’s runner holds this identity’s signing key, on this Mac; Dub holds none of its keys. Its words are given and changed in Kišib, never here.';
+
+/** Said where an identity used through Kišib would open private messages (the Dubsar runner cMIP, section 8: draft 1 signs, it opens nothing). */
+export const RUNNER_NO_OPEN_SAY = 'Kišib’s runner holds this identity’s keys, and Dub none: its private messages are sent from here, but not opened here (the runner signs; it opens nothing yet).';
+
 /** Said where the identity's encryption key is not one this app holds (the carry Module, draft 2, 2a.3). */
 export const NO_KEY_SAY =
   'This app holds no encryption key for this identity, so its private messages cannot be opened here: its encryption key was not made from its signing key’s words. Messages can still be sent from here.';
@@ -102,8 +113,8 @@ export const READER = 'https://reader.dubsar.org/';
 
 /** What Dub keeps for each identity it holds. */
 export interface Settings {
-  /** Made here (its chain key shown once as words, kept nowhere) or brought here by its signing key's words. */
-  kind: 'made' | 'brought';
+  /** Made here (its chain key shown once as words, kept nowhere), brought here by its signing key's words, or used through Kišib's runner (Dub holding no key). */
+  kind: 'made' | 'brought' | 'runner';
   relays: string[];
   via: Via;
   /** The Signing tab (H18): off by default (F59), turned on in the identity window. Its page is removed (decided, 21 October 2026); its operations stay, run by Edubba's To sign. */
@@ -225,7 +236,7 @@ export class Dub {
   private async lineNow(me: TestIdentity, via: Via): Promise<LineAtHomes | null> {
     if (Object.keys(me.f.unsent ?? {}).length) {
       await this.serial(async () => {
-        const f = await this.store.identity(me.id);
+        const f = await this.load(me.id);
         if (!f) return;
         // Sending signs a key delivery to oneself: only with a key still current (H80).
         await this.current(f);
@@ -246,9 +257,21 @@ export class Dub {
 
   constructor(
     readonly store: Keep,
-    readonly opts: { web?: boolean; reader?: string } = {},
+    readonly opts: { web?: boolean; reader?: string; runner?: RunnerLink } = {},
   ) {
     this.money = new DubMoney(store, { web: !!opts.web, app: opts.web ? 'Dub on the web' : 'Dub on this computer' });
+  }
+
+  /** An identity held here; one used through Kišib's runner signs by it (the Dubsar runner cMIP). */
+  private async load(id: string): Promise<TestIdentity | null> {
+    const me = await this.store.identity(id);
+    if (me && !me.f.signingSecret && this.opts.runner) me.signer = this.opts.runner.signer();
+    return me;
+  }
+
+  /** The encryption keys this app holds of an identity, newest first: none for one used through Kišib. */
+  private secrets(me: TestIdentity): Uint8Array[] {
+    return [...me.f.encryption].reverse().filter((e) => e.secret).map((e) => unhex(e.secret));
   }
 
   /** One thing at a time: a sequence must never be signed twice at once. */
@@ -310,7 +333,7 @@ export class Dub {
       out.stage = 'confirm';
       out.confirm = { positions: pend.positions, id: pend.identity.identity };
     }
-    const me = active ? await this.store.identity(active) : null;
+    const me = active ? await this.load(active) : null;
     if (me) {
       const s = await this.store.settings(me.id);
       const p = await this.store.people(me.id);
@@ -326,7 +349,7 @@ export class Dub {
         kind: s.kind,
         homes: me.f.homes.map((h) => h.hint),
         relays: s.relays,
-        encryption: me.f.encryption.length > 0,
+        encryption: this.secrets(me).length > 0,
         oldChainKey: !!me.f.safety.seeds,
         line: line ?? noLine(me.f),
         list: p.list,
@@ -346,7 +369,7 @@ export class Dub {
 
   private async ctx(): Promise<{ me: TestIdentity; s: Settings; p: People; hints: string[] }> {
     const active = await this.store.active();
-    const me = active ? await this.store.identity(active) : null;
+    const me = active ? await this.load(active) : null;
     if (!me) throw new Error('No identity in use: make one, or bring one, in the identity window.');
     const s = await this.store.settings(me.id);
     const p = await this.store.people(me.id);
@@ -567,7 +590,7 @@ export class Dub {
   }
 
   private async renewHeld(id: string, seed: Uint8Array): Promise<{ lines: Line[] }> {
-    const me = (await this.store.identity(id))!;
+    const me = (await this.load(id))!;
     const s = await this.store.settings(id);
     const look = await this.lookCurrent(id, seed, [...new Set([...me.f.homes.map((h) => h.hint), ...s.relays])], s.via);
     if (hex(seed) === me.f.signingSecret) throw new Error('These are the signing key’s words this app already holds, and they still count: nothing to change.');
@@ -633,9 +656,107 @@ export class Dub {
     });
   }
 
+  // ------------------------------------------------------------ an identity used through Kišib (the Dubsar runner cMIP)
+
+  /** Whether this Dub can use Kišib's runner: on the Mac only (decided), never the web client. */
+  private runner(): RunnerLink {
+    if (!this.opts.runner) throw new Error('Kišib’s runner is on the Mac only: this Dub cannot use it. Bring the identity with its signing key’s words instead.');
+    return this.opts.runner;
+  }
+
+  /** Where Dub's pairing with Kišib stands (2.4), for + Add, Use one from Kišib. */
+  async runnerState(): Promise<{ available: boolean; origin: string | null; state: string | null; code: string | null; identities: { id: string; form: string; name: string | null; held: boolean }[]; problem: string | null }> {
+    if (!this.opts.runner) return { available: false, origin: null, state: null, code: null, identities: [], problem: null };
+    const held = await this.store.held();
+    try {
+      const p = await this.opts.runner.paired();
+      return { available: true, origin: this.opts.runner.origin(), state: p?.state ?? null, code: p?.code ?? null, identities: (p?.identities ?? []).map((x) => ({ id: x.id, form: idForm(x.id), name: x.name, held: held.includes(x.id) })), problem: null };
+    } catch (e) {
+      return { available: true, origin: this.opts.runner.origin(), state: null, code: this.opts.runner.code(), identities: [], problem: message(e) };
+    }
+  }
+
+  /** Ask Kišib to pair (2.1): the code to compare in Kišib, where it is approved. */
+  async runnerPair(): Promise<{ code: string }> {
+    return this.runner().pair();
+  }
+
+  /**
+   * Use an identity Kišib's runner holds (approved for Dub in Kišib): its
+   * chain and homes read as any reader would, its encryption key's public
+   * half only; no key of it kept here. Dub keeps its lines (F376), and the
+   * runner signs on them.
+   */
+  runnerTake(a: { id: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const p = await this.runner().paired();
+      if (!p || p.state !== 'approved') throw new Error(p?.state === 'waiting' ? 'Kišib has not approved Dub yet: approve it in Kišib (Runner, Apps), comparing the code.' : 'Dub is not paired with Kišib’s runner: pair it first.');
+      const k = p.identities.find((x) => x.id === a.id);
+      if (!k) throw new Error('Kišib does not let Dub use this identity: choose it for Dub in Kišib (Runner, Apps).');
+      if ((await this.store.held()).includes(k.id)) {
+        await this.store.setActive(k.id);
+        return { lines: [{ text: 'Dub already uses this identity: it is the one in use now.', tone: 'ok' }] };
+      }
+      const homes = k.homes;
+      const look = await lookUp(k.id, homes, {});
+      const r = look.resolution;
+      if (r.stop === 'contested') throw new Error('Its homes disagree about its keys (contested): Dub cannot use it until they agree.');
+      const binding = r.links[r.links.length - 1];
+      if (!r.signingKey || hex(r.signingKey) !== k.key) throw new Error(RUNNER_OLD_KEY_SAY);
+      const chain = await this.servedChain(k.id, r.homes, {});
+      const named = list(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
+      const relays = named.length ? named : r.homes.map((h) => h.hint);
+      const f: IdentityFile = {
+        label: TEST_LABEL,
+        identity: k.id,
+        position: binding.position,
+        binding: binding.act,
+        // No key of it is held here: Kišib's runner signs (the Dubsar runner cMIP, 3.2).
+        signingSecret: '',
+        safety: { scheme: 0, seeds: '' },
+        chain: chain.map(base64),
+        homes: r.homes,
+        rule: r.rule ?? null,
+        sequence: [],
+        private: [],
+        split: true,
+        routes: null,
+        encryption: look.encryptionKey && look.encryptionKeyAct ? [{ version: 1, act: look.encryptionKeyAct, secret: '', public: hex(look.encryptionKey) }] : [],
+        pending: null,
+      };
+      await this.store.saveSettings(k.id, { kind: 'runner', relays, via: {} });
+      await this.store.saveIdentity(new TestIdentity(f, {}));
+      await this.store.setActive(k.id);
+      return {
+        lines: [
+          { text: `Dub uses ${k.name ?? fingerprint(k.id)} through Kišib’s runner: Kišib holds its signing key, Dub none. Each act is shown by Kišib, in its panel here, before it is signed, unless you gave Dub a standing yes for that kind in Kišib.`, tone: 'ok' },
+          { text: RUNNER_NO_OPEN_SAY, tone: 'warn' },
+          { text: LINE_SAY, tone: 'warn' },
+        ],
+      };
+    });
+  }
+
+  /** The request waiting for the person now, for the page to draw its panel (4.1). Not serial: it is asked while an act waits. */
+  async runnerAsking(): Promise<{ asking: { request: string; panel: string; title: string } | null; origin: string | null }> {
+    const r = this.opts.runner;
+    return { asking: r?.asking ?? null, origin: r?.origin() ?? null };
+  }
+
+  /** Withdraw the request waiting (the person chose not to sign it). */
+  async runnerDrop(a: { request: string }): Promise<void> {
+    this.opts.runner?.drop(a.request);
+  }
+
+  /** Forget the pairing with Kišib here, and tell it (2.5). The identities used through it stay listed, and sign no more. */
+  async runnerUnpair(): Promise<void> {
+    await this.runner().unpair();
+  }
+
   /** The identity's ID and its signing key's words (the carry Module), on request: the way to another app. */
   async carry(): Promise<{ id: string; grouped: string; words: string[]; say: string[] }> {
     const { me } = await this.ctx();
+    if (!me.f.signingSecret) throw new Error(RUNNER_HOLDS_SAY);
     return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)), say: CARRY_SAY };
   }
 
@@ -658,10 +779,40 @@ export class Dub {
 
   /** Refuse to sign once a rotation counts that this app did not see: the key it holds is spent. */
   private async current(me: TestIdentity): Promise<void> {
+    if (!me.f.signingSecret) return this.runnerCurrent(me);
     const look = await lookUp(me.id, me.f.homes.map((h) => h.hint), me.via);
     const r = look.resolution;
     if (r.stop === 'contested') throw new Error('Its homes disagree about its keys (contested): nothing was signed.');
     if (!r.signingKey || hex(r.signingKey) !== hex(signingPublic(unhex(me.f.signingSecret)))) throw new Error(SPENT_SAY);
+  }
+
+  /**
+   * The key check for an identity used through Kišib's runner (H80; the
+   * Dubsar runner cMIP, 3.5 and 7.4): the runner checks its own key before
+   * signing; here, Dub follows a change of keys made since. Where the homes
+   * now bind another key and the runner holds it (the new words given in
+   * Kišib), Dub takes the new binding and starts new lines; where it does
+   * not, nothing is signed.
+   */
+  private async runnerCurrent(me: TestIdentity): Promise<void> {
+    const look = await lookUp(me.id, me.f.homes.map((h) => h.hint), me.via);
+    const r = look.resolution;
+    if (r.stop === 'contested') throw new Error('Its homes disagree about its keys (contested): nothing was signed.');
+    const binding = r.links[r.links.length - 1];
+    if (!binding || binding.act === me.f.binding) return;
+    const p = await this.opts.runner?.paired().catch(() => null);
+    const k = p?.identities.find((x) => x.id === me.id);
+    if (!k || k.binding !== binding.act || !r.signingKey || hex(r.signingKey) !== k.key) throw new Error(RUNNER_OLD_KEY_SAY);
+    me.f.chain = (await this.servedChain(me.id, r.homes, me.via)).map(base64);
+    me.f.position = binding.position;
+    me.f.binding = binding.act;
+    me.f.homes = r.homes;
+    me.f.rule = r.rule ?? null;
+    // New lines under the new binding (the carry Module, 4.3; F376), as after new words.
+    freshLines(me.f);
+    me.f.routes = me.f.routes && look.routes.act === me.f.routes.act ? me.f.routes : null;
+    if (look.encryptionKey && look.encryptionKeyAct && !me.f.encryption.some((e) => e.act === look.encryptionKeyAct)) me.f.encryption.push({ version: me.f.encryption.length + 1, act: look.encryptionKeyAct, secret: '', public: hex(look.encryptionKey) });
+    await this.store.saveIdentity(me);
   }
 
   /** An act signed and kept: the sequence is saved before anything leaves. */
@@ -704,12 +855,12 @@ export class Dub {
       }
     };
     if (name && !before.some((n) => n.name === name)) {
-      const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME, namePayload(name), { public: true }));
+      const made = await this.signed(me, () => me.signNow(SPECS.identity, NAME, namePayload(name), { public: true }));
       await send(made.act);
       lines.push({ text: `Your display name is “${name}”, shown beside your fingerprint, never instead of it. Anyone may take the same name.`, tone: 'ok' });
     }
     for (const old of before.filter((n) => n.name !== name)) {
-      const made = await this.signed(me, async () => me.sign(SPECS.identity, NAME_WITHDRAWAL, cborEncode(new Map()), { public: true, objects: [[old.act, old.act]] }));
+      const made = await this.signed(me, () => me.signNow(SPECS.identity, NAME_WITHDRAWAL, cborEncode(new Map()), { public: true, objects: [[old.act, old.act]] }));
       await send(made.act);
       lines.push({ text: `“${old.name}” withdrawn: it stays readable as an act, no longer as your name.` });
     }
@@ -1045,7 +1196,7 @@ export class Dub {
       problems.push('This identity declares no inbox: nothing addressed to it can be found here.');
       return problems;
     }
-    const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
+    const secrets = this.secrets(me);
     const looked = new Map<string, Promise<Lookup>>();
     const judge = async (signer: string, act: Uint8Array, id: string, key?: Uint8Array) => {
       let l = looked.get(signer);
@@ -1240,7 +1391,7 @@ export class Dub {
           })),
         )),
       ].sort((a, b) => b.at - a.at);
-      return { toYou, messages, encryption: me.f.encryption.length > 0, hidden, problems };
+      return { toYou, messages, encryption: this.secrets(me).length > 0, hidden, problems };
     });
   }
 
@@ -1291,8 +1442,8 @@ export class Dub {
       }
       await this.current(me);
       // Every recipient is named in the inner act's `to`, and the container holds one capsule each (Envelopes, the sealed container): each sees who else received it.
-      const made = await this.signed(me, async () =>
-        me.sign(SPECS.text, TEXT_ACT, textPayload(text, of ? APPENDED_FORMAT : null), { public: false, to: ids, ...(of ? { refs: [appendedRef(of)] } : {}) }),
+      const made = await this.signed(me, () =>
+        me.signNow(SPECS.text, TEXT_ACT, textPayload(text, of ? APPENDED_FORMAT : null), { public: false, to: ids, ...(of ? { refs: [appendedRef(of)] } : {}) }),
       );
       const sealed = sealFor(made.act, made.key, reach.map((r) => ({ id: r.id, key: r.key })));
       const lines: Line[] = [];
@@ -1463,7 +1614,7 @@ export class Dub {
       // otherwise with your own identity's key, which counts as before.
       let own: MemberKey | null = null;
       if ((reading.kind === 'act' || reading.kind === 'release') && collective) {
-        const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
+        const keys = await readMemberKeys(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
         own = keys.length ? await memberKeyFor(keys, collective, where, s.via).catch(() => null) : null;
       }
       let made: { id: string };
@@ -2079,7 +2230,7 @@ export class Dub {
   /** The member key this identity holds for a collective, and the area reaching public posts; `why` where it cannot act. */
   private async memberKeyHere(me: TestIdentity, s: Settings, collective: string, hints: string[]): Promise<{ key: MemberKey | null; places: string[]; why: string | null; number: number }> {
     const places = [...new Set([...(await collectivePlaces(collective, hints, s.via).catch(() => [] as string[])), ...hints])];
-    const keys = await readMemberKeys(me.id, me.f.encryption.map((e) => unhex(e.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => [] as MemberKey[]);
+    const keys = await readMemberKeys(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), s.via).catch(() => [] as MemberKey[]);
     const key = keys.length ? await memberKeyFor(keys, collective, places, s.via).catch(() => null) : null;
     if (!key) return { key: null, places, why: 'no member key of this identity for it was found at its homes (one is made when you sign its founding, in Edubba).', number: 0 };
     const reach = await areaReaching(collective, places, { spec: POST_SPECS.text, type: TEXT_ACT }, s.via).catch(() => ({ agreement: null, area: null }));
@@ -2463,7 +2614,7 @@ export class Dub {
    */
   private async syncFollows(me: TestIdentity, s: Settings, p: People, change?: (p: People) => void): Promise<Line[]> {
     const homes = me.f.homes.map((h) => h.hint);
-    const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
+    const secrets = this.secrets(me);
     const save = async () => {
       this.synced.set(me.id, now());
       await this.store.savePeople(me.id, p);
@@ -2504,7 +2655,7 @@ export class Dub {
     }
     const version = Math.max(found.version, ours) + 1;
     const previous = found.act && found.version >= ours ? found.act : (p.sealed?.act ?? null);
-    const made = await this.signed(me, async () => me.sign(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version, previous, follows: p.follows }), { public: false, to: [me.id] }));
+    const made = await this.signed(me, () => me.signNow(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version, previous, follows: p.follows }), { public: false, to: [me.id] }));
     const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
     let left = 0;
     for (const h of homes) {

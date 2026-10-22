@@ -913,3 +913,43 @@ function orderedChain(rd: Read): Uint8Array[] {
 }
 
 export { TestIdentity };
+
+/**
+ * Check a paper share (accepted, new; nothing signed): its 24 words read
+ * (their checksum), its number among the collective's holders by its
+ * agreement in force, and, given as many papers as rebuild the key, whether
+ * they rebuild the chain key the collective's chain commits to now. One
+ * paper alone cannot be checked against the key (its blinding is not on
+ * paper): said.
+ */
+export async function checkShare(a: { collective: string; address: string; papers: { number: string; words: string }[]; via: Via }): Promise<{ title: string; lines: Line[] }> {
+  const papers = a.papers.filter((p) => p.number.trim() || p.words.trim()).map((p) => paperOf(p.number, p.words));
+  if (!papers.length) throw new Error('Give a share: its number and its 24 words.');
+  try {
+    const c = await readCollective(readId(a.collective), addresses(a.address), a.via);
+    const lines: Line[] = [{ text: `The words of ${papers.length === 1 ? 'this share are' : 'these shares are'} written right: their checksum holds.`, tone: 'ok' }];
+    for (const p of papers) {
+      if (p.x > c.holders.length) {
+        lines.push({ text: `Share ${p.x}: this collective deals ${c.holders.length} shares, so there is no share ${p.x}. Copied wrong, or another collective’s.`, tone: 'bad' });
+        continue;
+      }
+      lines.push({ text: `Share ${p.x} of ${c.holders.length}, held by ${short(c.holders[p.x - 1])} by the agreement in force; any ${c.threshold} shares rebuild its chain key.` });
+    }
+    const xs = new Set(papers.map((p) => p.x));
+    if (xs.size !== papers.length) throw new Error('Two of these papers carry the same number: each share once.');
+    if (papers.length >= c.threshold) {
+      try {
+        const rebuilt = rebuildChainKeyFromPaper({ seedModule: 'words', scheme: c.scheme, index: c.index, commit: c.commit, papers: papers.slice(0, c.threshold).map((p) => ({ x: p.x, value: p.value })) }) as { seeds: Uint8Array };
+        wipe(rebuilt.seeds);
+        lines.push({ text: `These ${c.threshold} papers rebuild the chain key the collective’s chain commits to now (key ${c.index}): right, and current. The key was overwritten at once; nothing was signed.`, tone: 'ok' });
+      } catch {
+        lines.push({ text: `These ${c.threshold} papers do not rebuild the chain key the collective’s chain commits to now: one is copied wrong, or of an earlier dealing (a rotation since dealt new shares). Which one cannot be told. Nothing was signed.`, tone: 'bad' });
+      }
+    } else {
+      lines.push({ text: `One paper alone cannot be checked against the key: its blinding is not on paper, so only ${c.threshold} papers together say whether they rebuild it. Give ${c.threshold - papers.length} more here, in the same room, to check them (nothing is signed).`, tone: 'warn' });
+    }
+    return { title: 'A paper share, checked', lines };
+  } finally {
+    wipe(...papers.map((p) => p.value));
+  }
+}

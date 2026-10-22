@@ -20,7 +20,7 @@ const ui = mount(app, { web: true, ask, start });
 
 async function start() {
   if (!crypto?.getRandomValues) {
-    app.innerHTML = `${v.top(true)}${v.note('error', 'This browser has no secure source of randomness: Kišib cannot run here.')}`;
+    app.innerHTML = v.alone(v.note('error', 'This browser has no secure source of randomness: Kišib cannot run here.'));
     return;
   }
   await ui.show(kishib.state());

@@ -1,6 +1,6 @@
 # mor-airgap
 
-The air-gapped chain key Module (`modules/module-airgap-chain-key-signer-draft-5.md`) and its two seed Modules (`modules/module-chain-key-seed-words-draft-1.md`, `modules/module-chain-key-seed-hex-draft-1.md`), in Rust. Roadmap step 6.
+The air-gapped chain key Module (`modules/module-airgap-chain-key-signer-draft-6.md`, the Dubsar Air-Gapped Chain-Key Signer) and its two seed Modules (`modules/module-chain-key-seed-words-draft-1.md`, `modules/module-chain-key-seed-hex-draft-1.md`), in Rust. Roadmap step 6.
 
 **A prototype, for test identities.** The real identity is created with it only at step 17, after review.
 
@@ -9,7 +9,7 @@ The air-gapped chain key Module (`modules/module-airgap-chain-key-signer-draft-5
 Every MOR identity has two keys. The signing key lives on your phone and signs your posts. The chain key lives on a second device that never goes online, and is used only to replace the signing key (a rotation) if it is lost or stolen. This is the software for that second device, and for the phone's side of the conversation with it.
 
 - **The device checks, then signs.** Your phone prepares a rotation and hands it over, by USB stick or as a stream of QR codes on screen. The offline device never believes the phone: it reads what it is about to sign, builds its own summary, and puts the dangerous parts (new homes, a new vault, a successor, closing a home, giving up old acts) at the top, in capitals. It signs only if you type SIGN.
-- **It chooses its own next key.** The next chain key is committed by the offline device, never by the phone. A phone that tries to slip one in is ignored, and you are told.
+- **It chooses its own next key, from a new paper every time.** The next chain key is committed by the offline device, never by the phone. A phone that tries to slip one in is ignored, and you are told. Since draft 6 (22 October 2026), every rotation draws a fresh seed: its backup (24 words, or 72 characters) is shown, hidden, and three words (or three groups of four characters) are typed back **before** the rotation is signed. Walk away before that, and nothing is signed. The old paper is never used for the next key, whoever asks.
 - **It remembers.** It signs one rotation per chain key. Asked again for the same one, it gives the same answer; asked for a different one, it refuses, except in the two cases the Identity MIR allows once each, which you must confirm.
 - **Your backup.** The chain-key seed is written on paper, either as 24 words or as 72 characters: two competing seed Modules, both supported, so V1 shows several Modules living side by side. A device restored from paper finds its place in your chain by itself.
 - **Collectives.** A collective's chain key can be split among its members, any three of four, say. The device rebuilds it from shares, signs, and deals the next key as new shares that every member can check alone. What no check can do is prove a device forgot a key it held: that is said plainly (finding F97).
@@ -34,7 +34,7 @@ The Identity and Money MIRs' spec hashes are fixed at the freeze; until then the
 ## Tests
 
 ```
-cargo test -p mor-airgap                          # 40 tests
+cargo test -p mor-airgap                          # 49 tests
 python3 modules/airgap/vectors/check.py           # an independent check of the seed vectors
 cargo run -p mor-airgap --example seed_vectors    # regenerates vectors/seeds.json (identical output)
 ```
@@ -57,10 +57,16 @@ QR frames are drawn as images and read back by an independent decoder (`rqrr`), 
 | Poor light, older cameras | Simulated (low contrast, uneven light, small frames); **not run on a real camera** |
 | Retried rotation re-exported identically | Run |
 | Clean-device mode | Run |
+| Draft 6: a fresh seed at every rotation, its first key at the rotation's index; its backup shown, part asked back, a wrong answer refused, nothing signed until it matches; a review abandoned signs nothing; the next rotation from the new backup; the earlier backup restoring no key, said | Run (`tests/functional.rs`, `tests/cli.rs`) |
+| Draft 6: a request for the current seed refused | Run (`Choices::current_seed`, `mor-signer sign --current-seed`) |
 | Collective rotation from k shares, next shares verifiably dealt | Run |
 | All eight attack tests | Run; "a device keeps a copy" is not testable (F97) |
 
 Not in this step: a phone app with a camera (with the genesis client, step 5, per Nobody, allegedly, 28 September 2026); how the key grammar names holders (Agreements formats, step 5a): the share message's holder is a role and an identity hash for now.
+
+## Draft 6 (22 October 2026)
+
+`Choices::fresh_seed` is gone: `Choices::seed_module` and `next_scheme` say only which Module and variant the fresh seed takes (by default those of the seed that signs). `Signer::review` always draws the fresh seed at the rotation's index and picks three places of its backup (`Review::asked`); `Review::confirm_backup` takes them typed back; `Signer::sign` refuses with `Refusal::BackupNotConfirmed` until they match (`BackupMismatch` for a wrong answer). `Choices::current_seed`, draft 5's choice, is refused (`Refusal::CurrentSeed`). A repeat (rule 3.4) draws nothing and asks nothing. `mor-signer new` and `sign` show the backup, hide it, and ask three parts back. The refusal for a seed that gives no matching key now says it may be an earlier, spent backup (rule 3.8).
 
 ## Decided while building
 

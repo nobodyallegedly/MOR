@@ -3,7 +3,7 @@
 mod common;
 
 use common::*;
-use mor_airgap::device::{Choices, Signer, Standing};
+use mor_airgap::device::{Choices, Refusal, Signer, Standing};
 use mor_airgap::msg::{kind, Message};
 use mor_airgap::online;
 use mor_airgap::seed::{Seed, SeedModule};
@@ -256,7 +256,7 @@ fn a_retried_rotation_is_re_exported_identically() {
         .unwrap();
     assert_eq!(review.standing, Standing::Repeat);
     assert!(review.summary.says("ALREADY SIGNED"));
-    let again = Message::SignedRotation(o.device.sign(review, false, &mut o.rng).unwrap().message);
+    let again = Message::SignedRotation(o.device.sign(common::confirmed(review), false, &mut o.rng).unwrap().message);
     assert_eq!(again, first);
     o.publish(&pending, &again);
 }
@@ -278,7 +278,7 @@ fn clean_device_mode_loads_an_offline_signing_key_onto_a_fresh_device() {
         )
         .unwrap();
     assert!(review.summary.warns("CLEAN-DEVICE MODE"));
-    let s = o.device.sign(review, false, &mut o.rng).unwrap();
+    let s = o.device.sign(common::confirmed(review), false, &mut o.rng).unwrap();
     let secret = s
         .message
         .signing_secret
@@ -303,19 +303,20 @@ fn clean_device_mode_loads_an_offline_signing_key_onto_a_fresh_device() {
 }
 
 #[test]
-fn several_rotations_then_a_fresh_seed() {
+fn several_rotations_then_a_fresh_seed_under_another_module() {
     let mut o = Owner::new("fresh seed", SeedModule::Words, 2);
     o.rotate();
     o.rotate();
-    // The current seed may be exposed: the next key comes from a new seed,
-    // under the other seed Module and the other variant.
+    // Every rotation draws a fresh seed; this one under the other seed
+    // Module and the other variant.
     let pending = o.pending(&o.plan());
-    let review = o
+    let mut review = o
         .device
         .review(
             &pending.encode(),
             &Choices {
-                fresh_seed: Some((SeedModule::Hex, 3)),
+                seed_module: Some(SeedModule::Hex),
+                next_scheme: Some(3),
                 ..Default::default()
             },
             &mut o.rng,
@@ -324,6 +325,9 @@ fn several_rotations_then_a_fresh_seed() {
     assert!(review.summary.warns("FRESH SEED (hex Module)"));
     assert!(review.summary.warns("Back up this chain-key seed now"));
     let new_seed = review.new_seed.clone().unwrap();
+    // Hex: three groups of four characters of eighteen are asked back.
+    assert!(review.asked().unwrap().iter().all(|&i| (1..=18).contains(&i)));
+    common::confirm(&mut review);
     let s = o.device.sign(review, false, &mut o.rng).unwrap();
     let signed = Message::SignedRotation(s.message);
     let a = o.publish(&pending, &signed);
@@ -337,12 +341,114 @@ fn several_rotations_then_a_fresh_seed() {
     assert_eq!(o.post("still me"), Status::Valid);
 }
 
+/// Draft 6, rule 3.3 and section 7: a fresh seed by default, its first key at
+/// the rotation's index; its backup shown, part of it asked back, a wrong
+/// answer refused, and nothing signed until it matches.
+#[test]
+fn every_rotation_draws_a_fresh_seed_confirmed_before_signing() {
+    for module in SeedModule::ALL {
+        let mut o = Owner::new(&format!("draft 6 {}", module.name()), module, 2);
+        let pending = o.pending(&o.plan());
+        let seeds_before = o.device.seeds.len();
+        let review = o.device.review(&pending.encode(), &Choices::default(), &mut o.rng).unwrap();
+        let fresh = review.new_seed.clone().expect("a fresh seed, by default");
+        assert_eq!(fresh.module, module, "the Module of the seed that signs, unless chosen");
+        assert_ne!(fresh, o.device.seeds[0].seed, "never the current seed");
+        assert!(review.summary.warns("its backup is confirmed before signing"));
+        let asked = review.asked().expect("three parts asked back");
+        assert!(asked[0] < asked[1] && asked[1] < asked[2]);
+        // Not confirmed: nothing signed.
+        assert!(matches!(o.device.sign(review, false, &mut o.rng), Err(Refusal::BackupNotConfirmed)));
+        assert_eq!(o.device.seeds.len(), seeds_before, "the fresh seed is not kept");
+        assert!(o.device.memory.is_empty(), "nothing signed");
+        // Again: a wrong answer refused, then the right one.
+        let mut review = o.device.review(&pending.encode(), &Choices::default(), &mut o.rng).unwrap();
+        let fresh = review.new_seed.clone().unwrap();
+        let written = fresh.backup();
+        let parts: Vec<&str> = written.split_whitespace().collect();
+        let at = review.asked().unwrap();
+        assert!(matches!(review.confirm_backup(&["wrong", parts[at[1] - 1], parts[at[2] - 1]]), Err(Refusal::BackupMismatch)));
+        assert!(!review.backed_up());
+        let typed: Vec<String> = at.iter().map(|&i| parts[i - 1].to_ascii_uppercase()).collect();
+        review.confirm_backup(&typed.iter().map(String::as_str).collect::<Vec<_>>()).unwrap();
+        let s = o.device.sign(review, false, &mut o.rng).unwrap();
+        let signed = Message::SignedRotation(s.message);
+        let a = o.publish(&pending, &signed);
+        // Its key at the rotation's index (position 1), never its key 0.
+        assert_eq!(rotation_of(&a).chain_key.commit, fresh.key(2, 1).commitment());
+        assert_ne!(rotation_of(&a).chain_key.commit, fresh.key(2, 0).commitment());
+        assert_eq!(o.counting(), a.id());
+    }
+}
+
+/// Draft 6: a review abandoned before its backup is confirmed signs nothing;
+/// its seed is dropped (overwritten), and the next review draws another.
+#[test]
+fn an_abandoned_review_signs_nothing_and_the_next_draws_another_seed() {
+    let mut o = Owner::new("abandoned", SeedModule::Words, 2);
+    let pending = o.pending(&o.plan());
+    let first = o.device.review(&pending.encode(), &Choices::default(), &mut o.rng).unwrap();
+    let abandoned = first.new_seed.clone().unwrap();
+    drop(first);
+    assert_eq!(o.device.seeds.len(), 1);
+    assert!(o.device.memory.is_empty());
+    let second = o.device.review(&pending.encode(), &Choices::default(), &mut o.rng).unwrap();
+    assert_ne!(second.new_seed.clone().unwrap(), abandoned, "a backup written for a rotation never signed is worthless");
+    drop(second);
+    // The same rotation then signs, from a third seed.
+    let a = o.rotate();
+    assert_eq!(o.counting(), a.id());
+    assert_ne!(rotation_of(&a).chain_key.commit, abandoned.key(2, 1).commitment());
+}
+
+/// Draft 6: a request to derive the next key from the current seed (draft 5's
+/// choice) refused, whoever asks.
+#[test]
+fn a_request_for_the_current_seed_is_refused() {
+    let mut o = Owner::new("current seed", SeedModule::Hex, 3);
+    let pending = o.pending(&o.plan());
+    let r = o.device.review(&pending.encode(), &Choices { current_seed: true, ..Default::default() }, &mut o.rng);
+    assert!(matches!(r, Err(Refusal::CurrentSeed)));
+    assert!(o.device.memory.is_empty());
+    assert!(Refusal::CurrentSeed.to_string().contains("never derived from the current seed"));
+}
+
+/// Draft 6, rules 3.3 and 3.8: the next rotation from the new backup; the
+/// earlier backup restores no key that matches, said in plain words.
+#[test]
+fn the_next_rotation_from_the_new_backup_and_the_earlier_one_spent() {
+    for module in SeedModule::ALL {
+        let mut o = Owner::new(&format!("spent {}", module.name()), module, 2);
+        let old = o.device.seeds[0].seed.backup();
+        o.rotate();
+        let new = o.device.seeds.last().unwrap().seed.backup();
+        assert_ne!(old, new);
+        // The earlier backup, restored on a new device: no key matches.
+        let mut spent = Signer::new(config());
+        spent.add_seed(Seed::restore(module, &old).unwrap(), 2, 0);
+        let pending = o.pending(&o.plan());
+        let refused = spent.review(&pending.encode(), &Choices::default(), &mut o.rng);
+        match refused {
+            Err(e @ Refusal::NoMatchingKey) => assert!(e.to_string().contains("it may be an earlier, spent one"), "{e}"),
+            Err(e) => panic!("{e}"),
+            Ok(_) => panic!("signed from a spent backup"),
+        }
+        // The new backup, restored: it makes the next rotation.
+        let mut restored = Signer::new(config());
+        restored.add_seed(Seed::restore(module, &new).unwrap(), 2, 1);
+        o.device = restored;
+        let a = o.rotate();
+        assert_eq!(o.counting(), a.id());
+    }
+}
+
 #[test]
 fn a_device_restored_from_its_backup_finds_its_key_and_rotates() {
     for module in SeedModule::ALL {
         let mut o = Owner::new(&format!("restore {}", module.name()), module, 2);
         o.rotate();
-        let backup = o.device.seeds[0].seed.backup();
+        // The seed the last rotation drew (a fresh one, rule 3.3).
+        let backup = o.device.seeds.last().unwrap().seed.backup();
         // The device is lost; a new one is restored from the written backup.
         let mut restored = Signer::new(config());
         restored.add_seed(Seed::restore(module, &backup).unwrap(), 2, 0);

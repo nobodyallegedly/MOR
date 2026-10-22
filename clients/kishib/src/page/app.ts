@@ -35,14 +35,14 @@ app.addEventListener('submit', async (ev) => {
 
 async function start() {
   if (!window.isSecureContext || !crypto?.subtle) {
-    app.innerHTML = `${v.top()}${v.note('error', 'This page keeps a pairing key in the browser, which browsers allow only on the machine itself (http://127.0.0.1) or over https.')}`;
+    app.innerHTML = v.alone(v.note('error', 'This page keeps a pairing key in the browser, which browsers allow only on the machine itself (http://127.0.0.1) or over https.'));
     return;
   }
   let keys: CryptoKeyPair;
   try {
     keys = await loadKey();
   } catch (err) {
-    app.innerHTML = `${v.top()}${v.note('error', `This browser cannot make or keep an Ed25519 key (${v.e(err instanceof Error ? err.message : String(err))}).`)}`;
+    app.innerHTML = v.alone(v.note('error', `This browser cannot make or keep an Ed25519 key (${v.e(err instanceof Error ? err.message : String(err))}).`));
     return;
   }
   c = await Client.open(keys, '', DOMAIN);
@@ -63,7 +63,7 @@ async function start() {
       app.innerHTML = v.pairing();
       return;
     }
-    app.innerHTML = `${v.top()}${v.note('error', v.e(err instanceof Error ? err.message : String(err)))}`;
+    app.innerHTML = v.alone(v.note('error', v.e(err instanceof Error ? err.message : String(err))));
     return;
   }
   await ui.show(state);

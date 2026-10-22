@@ -8,9 +8,10 @@ use common::*;
 use mor_airgap::msg::{kind, Message};
 use mor_airgap::online::{self, GenesisPlan};
 use mor_airgap::transport;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex};
 
 fn run(dir: &Path, args: &[&str], input: &str) -> (bool, String) {
     let mut c = Command::new(env!("CARGO_BIN_EXE_mor-signer"))
@@ -34,6 +35,79 @@ fn run(dir: &Path, args: &[&str], input: &str) -> (bool, String) {
     (out.status.success(), text)
 }
 
+/// The signer driven as a person would at its prompts (on its error
+/// output): WRITTEN once the backup is shown, the parts asked typed back from
+/// what it showed (`wrong` types a wrong one first), and `last` at the final
+/// prompt (SIGN, or anything else).
+fn talk(dir: &Path, args: &[&str], last: &str, wrong: bool) -> (bool, String) {
+    let mut c = Command::new(env!("CARGO_BIN_EXE_mor-signer"))
+        .arg("--dir")
+        .arg(dir)
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let out = Arc::new(Mutex::new(String::new()));
+    let mut so = c.stdout.take().unwrap();
+    let o2 = out.clone();
+    let reader = std::thread::spawn(move || {
+        let mut b = [0u8; 1024];
+        while let Ok(n) = so.read(&mut b) {
+            if n == 0 {
+                break;
+            }
+            o2.lock().unwrap().push_str(&String::from_utf8_lossy(&b[..n]));
+        }
+    });
+    let mut err = c.stderr.take().unwrap();
+    let mut input = c.stdin.take().unwrap();
+    let mut said = String::new();
+    let mut wrong = wrong;
+    let mut byte = [0u8; 1];
+    while err.read(&mut byte).unwrap_or(0) == 1 {
+        said.push(byte[0] as char);
+        if !said.ends_with(": ") {
+            continue;
+        }
+        let prompt = said.rsplit('\n').next().unwrap().to_string();
+        let answer = if prompt.contains("WRITTEN") {
+            "WRITTEN".to_string()
+        } else if let Some(n) = prompt.strip_prefix("Word ").and_then(|r| r.split(' ').next()).and_then(|n| n.parse::<usize>().ok()) {
+            // The words shown, as "  N. word" lines, read from what the signer printed.
+            let mut word = None;
+            for _ in 0..200 {
+                let shown = out.lock().unwrap().clone();
+                let from = shown.rfind("CHAIN-KEY SEED BACKUP").unwrap_or(0);
+                word = shown[from..].lines().find_map(|l| l.trim().strip_prefix(&format!("{n}. ")).map(str::to_string));
+                if word.is_some() {
+                    break;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            if wrong {
+                wrong = false;
+                "zebra".into()
+            } else {
+                word.expect("the word asked was shown")
+            }
+        } else {
+            last.to_string()
+        };
+        said.push_str(&answer);
+        said.push('\n');
+        if input.write_all(format!("{answer}\n").as_bytes()).is_err() {
+            break;
+        }
+    }
+    drop(input);
+    let status = c.wait().unwrap();
+    reader.join().unwrap();
+    let text = out.lock().unwrap().clone() + &said;
+    (status.success(), text)
+}
+
 #[test]
 fn the_command_line_signer_end_to_end() {
     let dir = std::env::temp_dir().join(format!("mor-signer-cli-{}", std::process::id()));
@@ -44,8 +118,11 @@ fn the_command_line_signer_end_to_end() {
     // A seed whose backup is not confirmed is not kept.
     let (ok, _) = run(&dir, &["new", "words"], "no\n");
     assert!(!ok);
-    let (ok, out) = run(&dir, &["new", "words"], "WRITTEN\n");
+    // Written, hidden, and three words typed back (rule 3.7, draft 6), a wrong one refused first.
+    let (ok, out) = talk(&dir, &["new", "words"], "", true);
     assert!(ok, "{out}");
+    assert!(out.contains("The backup is hidden now."), "{out}");
+    assert!(out.contains("That is not what was shown"), "{out}");
     assert!(out.contains("24. "), "the 24 words are shown");
     assert!(out.contains("signing seed"), "rule 3.7: both seeds");
 
@@ -73,22 +150,22 @@ fn the_command_line_signer_end_to_end() {
     let pending = online::pending(&identity_spec(), &g, &r, None, false);
     transport::write_file(Path::new(&f("pending.mor")), &pending).unwrap();
 
+    // Draft 5's choice of the current seed: refused, nothing signed.
+    let (ok, out) = run(&dir, &["sign", &f("pending.mor"), &f("signed.mor"), "--current-seed"], "SIGN\n");
+    assert!(!ok && out.contains("never derived from the current seed"), "{out}");
+    // Its fresh seed's backup not written: nothing signed.
+    let (ok, out) = run(&dir, &["sign", &f("pending.mor"), &f("signed.mor")], "no\nSIGN\n");
+    assert!(!ok && out.contains("FRESH SEED"), "{out}");
+    assert!(!dir.join("signed.mor").exists());
     // Refused unless the user types SIGN.
-    let (ok, out) = run(
-        &dir,
-        &["sign", &f("pending.mor"), &f("signed.mor")],
-        "sure\n",
-    );
+    let (ok, out) = talk(&dir, &["sign", &f("pending.mor"), &f("signed.mor")], "sure", false);
     assert!(!ok);
     assert!(
         out.contains("New signing key: fingerprint"),
         "the summary is shown first"
     );
-    let (ok, out) = run(
-        &dir,
-        &["sign", &f("pending.mor"), &f("signed.mor")],
-        "SIGN\n",
-    );
+    // Written, three words typed back, then SIGN.
+    let (ok, out) = talk(&dir, &["sign", &f("pending.mor"), &f("signed.mor")], "SIGN", false);
     assert!(ok, "{out}");
     let signed = transport::read_file(Path::new(&f("signed.mor")), kind::SIGNED_ROTATION).unwrap();
     online::accept(&identity_spec(), &pending.encode(), &signed.encode()).unwrap();

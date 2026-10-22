@@ -84,9 +84,9 @@ fn the_escape_from_a_contested_self_hosted_position_needs_the_rivals_bytes_5_7f(
     let rv = o.device.review(&shown.encode(), &Choices::default(), &mut o.rng).unwrap();
     assert_eq!(rv.standing, Standing::Exception(Exception::EscapeContested { own: own_id, competing: rival.id() }));
     assert!(rv.summary.warns("EXCEPTION to single use"));
-    assert!(matches!(o.device.sign(rv, false, &mut o.rng), Err(Refusal::NeedsConfirmation(_))));
+    assert!(matches!(o.device.sign(common::confirmed(rv), false, &mut o.rng), Err(Refusal::NeedsConfirmation(_))));
     let rv = o.device.review(&shown.encode(), &Choices::default(), &mut o.rng).unwrap();
-    let signed = o.device.sign(rv, true, &mut o.rng).unwrap();
+    let signed = o.device.sign(common::confirmed(rv), true, &mut o.rng).unwrap();
     let escape = rotation_act(&Message::SignedRotation(signed.message));
     assert!(rotation_of(&escape).homeless);
     // Once only.
@@ -120,7 +120,7 @@ fn signing_again_after_an_invalid_rotation_needs_the_chains_bytes_5_7g() {
     let pb = o.pending(&bad);
     let rv = o.device.review(&pb.encode(), &Choices::default(), &mut o.rng).unwrap();
     assert!(rv.summary.not_checked.iter().any(|n| n.contains("home rule in effect")));
-    let sb = o.device.sign(rv, false, &mut o.rng).unwrap();
+    let sb = o.device.sign(common::confirmed(rv), false, &mut o.rng).unwrap();
     let bad_act = rotation_act(&Message::SignedRotation(sb.message));
     // The rotation checks, run where the whole chain is held: invalid.
     let st = ChainState::genesis(genesis.id(), match &Payload::decode(0, &genesis.open(None).unwrap().payload).unwrap() {
@@ -145,7 +145,7 @@ fn signing_again_after_an_invalid_rotation_needs_the_chains_bytes_5_7g() {
     let rv = o.device.review(&shown.encode(), &Choices::default(), &mut o.rng).unwrap();
     assert_eq!(rv.standing, Standing::Exception(Exception::AfterInvalid { invalid: bad_act.id() }));
     assert!(!rv.summary.not_checked.iter().any(|n| n.contains("home rule in effect")), "the whole state is known from the chain's bytes");
-    let signed = o.device.sign(rv, true, &mut o.rng).unwrap();
+    let signed = o.device.sign(common::confirmed(rv), true, &mut o.rng).unwrap();
     let again = rotation_act(&Message::SignedRotation(signed.message));
     assert!(st.apply(&rotation_of(&again)).is_ok(), "the second signature passes the rotation checks");
     // Shown the chain while its last rotation was valid, it refuses.

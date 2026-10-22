@@ -23,12 +23,17 @@ function vaultOf(a: Record<string, unknown>): import('./kishib.ts').VaultChange 
   };
 }
 
+/** The runner's operations (the Dubsar runner cMIP): the program's only (`server.ts`), never the web client's, which has no runner (Mac only, decided). */
+export const RUNNER_OPS = ['runner state', 'runner on', 'runner off', 'runner give', 'runner remove', 'runner approve', 'runner revoke', 'runner yes', 'runner answer', 'runner cards', 'runner standing'] as const;
+
 /** The names of every operation, so a page and a test can be checked against them. */
 export const OPS = [
   'state',
   'forget',
   'check words',
   'record',
+  'make plan',
+  'check share',
   'rotate plan',
   'escape plan',
   'confirm plan',
@@ -58,6 +63,13 @@ export async function run(k: Kishib, op: string, a: Record<string, unknown>): Pr
       return k.checkWords({ id: text(a.id), address: text(a.address), words: text(a.words) });
     case 'record':
       return k.record({ id: text(a.id), address: text(a.address) });
+    case 'make plan':
+      return k.makePlan({ homes: text(a.homes), relays: text(a.relays) });
+    case 'check share': {
+      const numbers = Array.isArray(a.numbers) ? a.numbers.map(String) : [text(a.number)];
+      const words = Array.isArray(a.shares) ? a.shares.map(String) : [text(a.shareWords)];
+      return k.checkShare({ collective: text(a.collective), address: text(a.address), papers: numbers.map((n, i) => ({ number: n, words: words[i] ?? '' })) });
+    }
     case 'rotate plan':
       return k.rotatePlan({ id: text(a.id), address: text(a.address), words: text(a.words), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list(a.leaveOut), cards: text(a.cards), vault: vaultOf(a) });
     case 'escape plan':

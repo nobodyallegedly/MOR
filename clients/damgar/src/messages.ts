@@ -121,12 +121,13 @@ export async function sendToSelf(me: TestIdentity, type: number, payload: Uint8A
   const look = await lookUp(me.id, homes, opts.via ?? {});
   if (!look.encryptionKey) throw new Error('This identity publishes no encryption key, so nothing can be sealed to it: the draft cannot travel to Damgar. Nothing was signed.');
   // A draft sealed to a key the money app cannot open would never arrive: refused before anything is signed.
-  if (!me.f.encryption.some((e) => hex(xwingPublic(unhex(e.secret))) === hex(look.encryptionKey!))) {
+  // An identity used through Kišib's runner holds its encryption key's public half only (the Dubsar runner cMIP): the money app holding its words opens it.
+  if (!me.f.encryption.some((e) => (e.secret ? hex(xwingPublic(unhex(e.secret))) : (e.public ?? '')) === hex(look.encryptionKey!))) {
     throw new Error('The encryption key this identity publishes is not one this app holds: Damgar, holding the same words, could not open the draft either. Nothing was signed.');
   }
   let made: { act: Uint8Array; id: string; key: Uint8Array };
   try {
-    made = me.sign(MESSAGES_SPEC, type, payload, { public: false, to: [me.id], refs: opts.refs });
+    made = await me.signNow(MESSAGES_SPEC, type, payload, { public: false, to: [me.id], refs: opts.refs });
   } finally {
     await opts.save();
   }
