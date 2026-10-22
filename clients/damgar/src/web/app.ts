@@ -19,19 +19,19 @@ const ui = mount(app, { web: true, ask, start });
 
 async function start() {
   if (!window.isSecureContext || !crypto?.getRandomValues || !window.indexedDB) {
-    app.innerHTML = `${v.top(true)}${v.note('error', 'This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.')}`;
+    app.innerHTML = v.alone(`${v.note('error', 'This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.')}`);
     return;
   }
   try {
     damgar ??= new Damgar(await WebKeep.open(), { web: true, chain: null });
   } catch (err) {
-    app.innerHTML = `${v.top(true)}${v.note('error', `This browser does not let the page keep anything (${v.e(err instanceof Error ? err.message : String(err))}).`)}`;
+    app.innerHTML = v.alone(`${v.note('error', `This browser does not let the page keep anything (${v.e(err instanceof Error ? err.message : String(err))}).`)}`);
     return;
   }
   try {
     await ui.show(await damgar.state());
   } catch (err) {
-    app.innerHTML = `${v.top(true)}${v.note('error', v.e(err instanceof Error ? err.message : String(err)))}`;
+    app.innerHTML = v.alone(`${v.note('error', v.e(err instanceof Error ? err.message : String(err)))}`);
   }
 }
 

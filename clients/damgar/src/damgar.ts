@@ -5,8 +5,10 @@
 // and checks what MOR says about it.
 //
 // - An identity is brought by its signing key's words, as Dub does (the
-//   identity carry Module, draft 2). Damgar never makes one, and never holds
-//   a chain key.
+//   identity carry Module, draft 2); since round 3 of the redesign it may
+//   also be made here (its chain key's words shown once, kept nowhere, F379)
+//   or used through Kišib's runner on the Mac (Damgar holding no key).
+//   Damgar never holds a chain key.
 // - What the person accepts (the payment cMIP, the rail Modules, the units
 //   Modules) is the accepted list (the accepted cMIP, F340), sealed to the
 //   identity at its homes; Damgar changes its own part. A money act under
@@ -29,8 +31,11 @@
 // TEST IDENTITIES ONLY, and test networks only, until MOR is frozen.
 
 import {
+  ENVELOPES_TYPES,
   MIRS,
   SPECS,
+  readKeyDelivery,
+  readCommitment,
   Verifier,
   anchoringCheckTicket,
   anchoringReadTicket,
@@ -68,8 +73,9 @@ import {
   readOnchainProof,
 } from '../../genesis/src/core.ts';
 import { leaveAtHomes, lineReader, noLine, sendWaiting, type LineAtHomes } from '../../genesis/src/private.ts';
-import { REVOCATION, acceptance, authorityOf, grantInWords, makeGrantKey, personGrantPayload, revocationPayload, signUnderGrant, type Authority, type GrantRead, type Kind } from '../../grants/src/grant.ts';
-import { GRANT_LIMITS_SPEC, encodeLimits, readLimits, refuseBeforeSigning, type Limits } from '../../grants/src/limits.ts';
+import { REVOCATION, allBy, acceptance, authorityOf, grantInWords, makeGrantKey, personGrantPayload, revocationPayload, signUnderGrant, type Authority, type GrantRead, type Kind } from '../../grants/src/grant.ts';
+import { GRANT_LIMITS_SPEC, amountOf, encodeLimits, refuseBeforeSigning, type Cap, type Limits } from '../../grants/src/limits.ts';
+import { TOTAL_SAY, readAsked, spent as spentOf } from './total.ts';
 import { actsUnder, reaches, revocationsOf, type HeldLane } from '../../grants/src/lanes.ts';
 import { AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
 import type { InvoiceLink, LinkConfig } from './link.ts';
@@ -79,7 +85,11 @@ import { collectiveNow, collectivePlaces, collectivePointer, splitServiceOf, typ
 import { TestIdentity, TEST_LABEL, freshLines, sealFor, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
-import { Refused, fromWords, groupId, toWords } from '../../../modules/carry/src/carry.ts';
+import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { newChainKey } from '../../dub/src/chainwords.ts';
+import { openerOf, type Opener } from '../../dub/src/people.ts';
+import type { RunnerLink } from '../../dub/src/runner.ts';
+import { namesOf } from '../../dub/src/names.ts';
 import { idForm, readId } from '../../genesis/src/forms.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { changeAccepted, publishAccepted, readAccepted, type Accepted } from './accepted.ts';
@@ -102,6 +112,12 @@ export const SPENT_SAY =
   'This identity’s signing key was changed elsewhere, with its chain key, so the signing key’s words Damgar holds no longer count. Nothing was signed. To go on here, give Damgar the new signing key’s words.';
 
 /** Said where an encryption key is not held (the carry Module, 2a.3). */
+/** Said where Kišib's runner holds an identity's key and its keys were changed since (the Dubsar runner cMIP, 3.5 and 7.4). */
+export const RUNNER_OLD_KEY_SAY = 'This identity’s keys were changed with its chain key, and Kišib’s runner still holds the old signing key: nothing was signed. Give the runner the new signing key’s words, in Kišib (Runner, Identities held here). Damgar then goes on, in new lines.';
+/** Said where an identity used through Kišib would need its words here. */
+export const RUNNER_HOLDS_SAY = 'Kišib’s runner holds this identity’s signing key, on this Mac; Damgar holds none of its keys. Its words are given and changed in Kišib, never here.';
+/** Said where Kišib does not let Damgar open what is sealed to an identity. */
+export const RUNNER_NO_OPEN_SAY = 'Kišib does not let Damgar open what is sealed to this identity: drafts, requests and payments sealed to it are not read here. To allow it, in Kišib: Runner, Apps, Damgar, “may open what is sealed to this identity”.';
 export const NO_KEY_SAY =
   'Damgar holds no encryption key for this identity, so nothing sealed to it opens here: no draft, no request, no payment. Its encryption key was not made from its signing key’s words.';
 
@@ -225,7 +241,15 @@ export interface Book {
   /** Lanes asked by apps (the money messages cMIP draft 2, type 5), by request act. Absent in books written before. */
   laneRequests?: Record<string, { found: number; stage: 'new' | 'granted' | 'declined'; grant: string | null }>;
   /** Every lane this identity granted from here, by grant act: its words and what it reaches, as asked; whether its key is held here. */
-  lanes?: Record<string, { label: string; app: string; key: string; kinds: LaneKind[]; limits: Limits | null; at: number; revoked: string | null; here: boolean; role: LaneRole | null }>;
+  lanes?: Record<string, { label: string; app: string; key: string; kinds: LaneKind[]; limits: Limits | null; at: number; revoked: string | null; here: boolean; role: LaneRole | null; total?: Cap | null }>;
+  /** Drafts pasted by hand (the first way to pay: copied from another app, "+ Paste an act to sign"), by the hash of their payload: the payload, base64. Read and signed as a draft found on MOR. */
+  pasted?: Record<string, string>;
+  /** The identity this book is of (for a pasted draft, one's own). */
+  me?: string;
+  /** The content keys of this identity's own private acts, delivered to itself by its other apps (an app's payments under its lane: their record kept here), by act. */
+  delivered?: Record<string, string>;
+  /** Answers to invoice requests another app of this identity sent (under its lane): whether the payee refused, by the request answered. */
+  laneAnswers?: Record<string, { refused: boolean }>;
   /** How each act this Damgar signed was signed: by hand, by Damgar itself as round 1 did (an on-chain address), or under a lane. */
   how?: Record<string, How>;
   /** On whose authority each act that arrived under someone's grant stands, in words, by act. */
@@ -248,7 +272,7 @@ export interface Keys {
   /** Earlier request keys, kept so payments bound to them can still be shown. */
   earlier: string[];
   /** The lanes whose keys this app holds (F351): Damgar's own (receipts, referral payouts), or, in another app running Damgar's code (Dub), that app's. */
-  lanes?: (HeldLane & { kinds: LaneKind[]; limits: Limits | null; role: LaneRole | 'app' })[];
+  lanes?: (HeldLane & { kinds: LaneKind[]; limits: Limits | null; role: LaneRole | 'app'; total?: Cap | null })[];
   /** The receive-only link to the person's node (F351): makes invoices only. Program only. */
   link?: LinkConfig | null;
 }
@@ -305,7 +329,7 @@ export class Damgar {
   private async lineNow(me: TestIdentity, via: Via): Promise<LineAtHomes | null> {
     if (Object.keys(me.f.unsent ?? {}).length) {
       await this.serial(async () => {
-        const f = await this.store.identity(me.id);
+        const f = await this.load(me.id);
         if (!f) return;
         // Sending signs a key delivery to oneself: only with a key still current (H80).
         await this.current(f);
@@ -317,6 +341,16 @@ export class Damgar {
     return this.line(me, via).catch(() => null);
   }
   private queue: Promise<unknown> = Promise.resolve();
+  /** Display names read (the naming cMIP), by identity, for a few minutes (memory only): the panel shows names, not hashes. */
+  private names = new Map<string, { name: string | null; at: number }>();
+
+  private async nameOf(id: string, places: string[], via: Via): Promise<string | null> {
+    const c = this.names.get(id);
+    if (c && c.at + 300 > now()) return c.name;
+    const name = (await namesOf(id, places, via).catch(() => [])).map((x) => x.name).pop() ?? null;
+    this.names.set(id, { name, at: now() });
+    return name;
+  }
   /** The accepted list as last read, by identity (memory only). */
   private lists = new Map<string, { list: Accepted; at: number }>();
 
@@ -328,8 +362,125 @@ export class Damgar {
    */
   constructor(
     readonly store: Keep,
-    readonly opts: { web?: boolean; chain?: ChainSource | null; link?: (c: LinkConfig) => Promise<InvoiceLink>; app?: string } = {},
+    readonly opts: { web?: boolean; chain?: ChainSource | null; link?: (c: LinkConfig) => Promise<InvoiceLink>; app?: string; runner?: RunnerLink } = {},
   ) {}
+
+  /** An identity held here; one used through Kišib's runner signs by it, Damgar holding no key (the Dubsar runner cMIP). */
+  private async load(id: string): Promise<TestIdentity | null> {
+    const me = await this.store.identity(id);
+    if (me && !me.f.signingSecret && this.opts.runner) me.signer = this.opts.runner.signer();
+    return me;
+  }
+
+  /**
+   * How Damgar opens what is sealed to an identity: with the encryption keys
+   * it holds; for one used through Kišib, through its runner where Kišib
+   * lets Damgar (the Dubsar runner cMIP, draft 2, section 8). Null, with why,
+   * where it cannot.
+   */
+  private async opener(me: TestIdentity): Promise<{ open: Opener | null; problem: string | null }> {
+    const secrets = [...me.f.encryption].reverse().filter((e) => e.secret).map((e) => unhex(e.secret));
+    if (secrets.length) return { open: openerOf(me.id, secrets), problem: null };
+    const r = this.opts.runner;
+    if (me.f.signingSecret || !r) return { open: null, problem: NO_KEY_SAY };
+    let p;
+    try {
+      p = await r.paired();
+    } catch (e) {
+      return { open: null, problem: message(e).replace(/ Nothing was signed\.$/, '') };
+    }
+    if (!p || p.state !== 'approved' || !p.identities.some((x) => x.id === me.id)) return { open: null, problem: 'Damgar is not paired with Kišib for this identity any more: nothing sealed to it opens here.' };
+    if (!p.open) return { open: null, problem: RUNNER_NO_OPEN_SAY };
+    const open: Opener = async (sealed) =>
+      (await r.open(me.id, sealed)).map((o) => (o ? ({ ...o, described: (o.key ? openWithKey(o.act, o.key) : describeAct(o.act)) as Described } as Opened) : null));
+    return { open, problem: null };
+  }
+
+  // ------------------------------------------------------------ an identity used through Kišib (the Dubsar runner cMIP)
+
+  private runner(): RunnerLink {
+    if (!this.opts.runner) throw new Error('Kišib’s runner is in the computer’s program only, never the web client: bring the identity with its signing key’s words instead.');
+    return this.opts.runner;
+  }
+
+  /** Where the pairing with Kišib stands, and the identities it lets Damgar use. */
+  async runnerState(): Promise<{ available: boolean; origin: string | null; state: string | null; code: string | null; identities: { id: string; form: string; name: string | null; held: boolean }[]; problem: string | null }> {
+    if (!this.opts.runner) return { available: false, origin: null, state: null, code: null, identities: [], problem: null };
+    const held = await this.store.held();
+    try {
+      const p = await this.opts.runner.paired();
+      return { available: true, origin: this.opts.runner.origin(), state: p?.state ?? null, code: p?.code ?? null, identities: (p?.identities ?? []).map((x) => ({ id: x.id, form: idForm(x.id), name: x.name, held: held.includes(x.id) })), problem: null };
+    } catch (e) {
+      return { available: true, origin: this.opts.runner.origin(), state: null, code: this.opts.runner.code(), identities: [], problem: message(e) };
+    }
+  }
+
+  async runnerPair(): Promise<{ code: string }> {
+    return this.runner().pair();
+  }
+
+  /** Use an identity Kišib's runner holds and lets Damgar use: no key of it kept here; money acts always ask, in Kišib's panel inside Damgar's window. */
+  runnerTake(a: { id: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const p = await this.runner().paired();
+      if (!p || p.state !== 'approved') throw new Error(p?.state === 'waiting' ? 'Kišib has not approved Damgar yet: approve it in Kišib (Runner, Apps), comparing the code.' : 'Damgar is not paired with Kišib’s runner: pair it first.');
+      const k = p.identities.find((x) => x.id === a.id);
+      if (!k) throw new Error('Kišib does not let Damgar use this identity: choose it for Damgar in Kišib (Runner, Apps).');
+      if ((await this.store.held()).includes(k.id)) {
+        await this.store.setActive(k.id);
+        return { lines: [{ text: 'Damgar already uses this identity: it is the one in use now.', tone: 'ok' }] };
+      }
+      const look = await lookUp(k.id, k.homes, {});
+      const r = look.resolution;
+      if (r.stop === 'contested') throw new Error('Its homes disagree about its keys (contested): Damgar cannot use it until they agree.');
+      const binding = r.links[r.links.length - 1];
+      if (!r.signingKey || hex(r.signingKey) !== k.key) throw new Error(RUNNER_OLD_KEY_SAY);
+      const chain = await servedChain(k.id, r.homes, {});
+      const named = list(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
+      const f: IdentityFile = {
+        label: TEST_LABEL,
+        identity: k.id,
+        position: binding.position,
+        binding: binding.act,
+        // No key of it is held here: Kišib's runner signs (the Dubsar runner cMIP, 3.2).
+        signingSecret: '',
+        safety: { scheme: 0, seeds: '' },
+        chain: chain.map(base64),
+        homes: r.homes,
+        rule: r.rule ?? null,
+        sequence: [],
+        private: [],
+        split: true,
+        routes: null,
+        encryption: look.encryptionKey && look.encryptionKeyAct ? [{ version: 1, act: look.encryptionKeyAct, secret: '', public: hex(look.encryptionKey) }] : [],
+        pending: null,
+      };
+      await this.store.write(k.id, 'settings', { relays: named.length ? named : r.homes.map((h) => h.hint), via: {} } satisfies Settings);
+      await this.store.saveIdentity(new TestIdentity(f, {}));
+      await this.store.setActive(k.id);
+      return {
+        lines: [
+          { text: `Damgar uses ${k.name ?? short(k.id)} through Kišib’s runner: Kišib holds its signing key, Damgar none. Every money act is shown by Kišib, in its panel here, before it is signed: money always asks.`, tone: 'ok' },
+          p.open ? { text: 'Kišib opens for Damgar what is sealed to this identity: drafts, requests and payments are read here, Damgar holding no key.', tone: 'ok' } : { text: RUNNER_NO_OPEN_SAY, tone: 'warn' },
+          { text: LINE_SAY, tone: 'warn' },
+        ],
+      };
+    });
+  }
+
+  /** The request waiting for the person now, for the page to draw Kišib's panel. Not serial: it is asked while an act waits. */
+  async runnerAsking(): Promise<{ asking: { request: string; panel: string; title: string } | null; origin: string | null }> {
+    const r = this.opts.runner;
+    return { asking: r?.asking ?? null, origin: r?.origin() ?? null };
+  }
+
+  async runnerDrop(a: { request: string }): Promise<void> {
+    this.opts.runner?.drop(a.request);
+  }
+
+  async runnerUnpair(): Promise<void> {
+    await this.runner().unpair();
+  }
 
   private async keys(id: string): Promise<Keys> {
     return (await this.store.read<Keys>(id, 'keys')) ?? { request: null, earlier: [] };
@@ -347,7 +498,7 @@ export class Damgar {
 
   private async ctx(): Promise<{ me: TestIdentity; s: Settings; book: Book; hints: string[] }> {
     const active = await this.store.active();
-    const me = active ? await this.store.identity(active) : null;
+    const me = active ? await this.load(active) : null;
     if (!me) throw new Error('No identity in use: bring one by its signing key’s words.');
     const s = (await this.store.read<Settings>(me.id, 'settings')) ?? { relays: [], via: {} };
     const book = { ...NO_BOOK(), ...((await this.store.read<Book>(me.id, 'book')) ?? {}) };
@@ -461,6 +612,86 @@ export class Damgar {
     };
   }
 
+  /** A new identity made here, waiting for three of its chain key's words typed back (memory only: nothing of it is written before). */
+  private pending: { file: IdentityFile; seed: Uint8Array; positions: number[]; relays: string[]; via: Via } | null = null;
+
+  /**
+   * Make a new identity (decided: every app stands alone; Damgar gains Make):
+   * its chain key from a seed shown as words, once, and kept nowhere, as Dub
+   * and Kišib make one. Nothing is published until three of the words are
+   * typed back (`makeConfirm`). Starting again forgets the last one.
+   */
+  async make(a: { homes: string[]; relays: string[]; via?: Via }): Promise<{ words: string[]; positions: number[] }> {
+    const via = a.via ?? {};
+    const hints = list(a.homes);
+    if (!hints.length) throw new Error('Give at least one home address: where the identity lives, and anyone can check it.');
+    const relays = list(a.relays);
+    for (const r of [...hints, ...relays]) if (!/^https?:\/\//.test(r)) throw new Error(`“${r}”: an address starts with https:// (or http://)`);
+    const homes: { operator: string; hint: string }[] = [];
+    for (const hint of hints) {
+      let info: Map<number, unknown>;
+      try {
+        info = (await relayAt(hint, via).info()) as Map<number, unknown>;
+      } catch (e) {
+        throw new Error(`${hint} did not answer: ${message(e)}`);
+      }
+      const op = info.get(0);
+      if (!(op instanceof Uint8Array)) throw new Error(`${hint} is not a home: it declares no operator`);
+      homes.push({ operator: hex(op), hint });
+    }
+    const positions = threePositions((n: number) => {
+      const b = new Uint32Array(1);
+      const lim = Math.floor(0x100000000 / n) * n;
+      do crypto.getRandomValues(b);
+      while (b[0] >= lim);
+      return b[0] % n;
+    });
+    const seed = crypto.getRandomValues(new Uint8Array(32));
+    const chain = newChainKey(seed);
+    const id = TestIdentity.create({ homes, via, chainKey: chain.key });
+    // The chain key is not kept with the identity: only the seed, in memory, to check the words typed back.
+    id.f.safety = { scheme: 0, seeds: '' };
+    chain.key.seeds.fill(0);
+    this.pending?.seed.fill(0);
+    this.pending = { file: id.f, seed, positions, relays: relays.length ? relays : hints, via };
+    return { words: chain.words, positions };
+  }
+
+  /** The three words typed back: then the genesis goes to its homes, its routes and encryption key are published, and it is the identity in use. */
+  makeConfirm(typed: string[]): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const p = this.pending;
+      if (!p) throw new Error('No new identity is waiting: make one first.');
+      if (!typedBack(toWords(p.seed), p.positions, typed)) throw new Error(`Those are not words ${p.positions.join(', ')} as shown. Look at what you wrote down. Nothing has been published.`);
+      const id = new TestIdentity(p.file, p.via);
+      const sent = await id.publishGenesis();
+      if (!sent.some((x) => x.result?.receipt)) throw new Error(`No home took the identity, so it was not kept: ${sent.map((x) => `${x.home} ${x.error ?? x.code ?? ''}`).join('; ')}`);
+      p.seed.fill(0);
+      this.pending = null;
+      await this.store.write(id.id, 'settings', { relays: p.relays, via: p.via } satisfies Settings);
+      await this.store.saveIdentity(id);
+      await this.store.setActive(id.id);
+      await id.publishRoutes([
+        { scope: null, hints: p.relays, kind: 0 },
+        { scope: null, hints: p.relays, kind: 1 },
+      ]);
+      await this.store.saveIdentity(id);
+      await id.publishEncryptionKey(encryptionSecret(unhex(id.f.signingSecret)));
+      await this.store.saveIdentity(id);
+      for (const r of p.relays)
+        for (const act of id.chainActs())
+          await relayAt(r, p.via)
+            .putAct(act)
+            .catch(() => undefined);
+      return {
+        lines: [
+          { text: `Made: its homes took it (${sent.filter((x) => x.result?.receipt).map((x) => x.home).join(', ')}). Its acts and its inbox are at ${p.relays.join(', ')}; its encryption key is published.`, tone: 'ok' },
+          { text: 'Its chain key is on your paper only: Damgar kept none of it. Its signing key’s words are in the identity’s menu (Words).' },
+        ],
+      };
+    });
+  }
+
   async use(id: string): Promise<void> {
     if (!(await this.store.held()).includes(id)) throw new Error('Damgar does not hold that identity.');
     await this.store.setActive(id);
@@ -484,6 +715,7 @@ export class Damgar {
   /** The signing key's words, on request: the way back if this app's storage is lost. */
   async carry(): Promise<{ id: string; grouped: string; words: string[] }> {
     const { me } = await this.ctx();
+    if (!me.f.signingSecret) throw new Error(RUNNER_HOLDS_SAY);
     return { id: me.id, grouped: groupId(me.id), words: toWords(unhex(me.f.signingSecret)) };
   }
 
@@ -503,12 +735,31 @@ export class Damgar {
     const look = await lookUp(me.id, me.f.homes.map((h) => h.hint), me.via);
     const r = look.resolution;
     if (r.stop === 'contested') throw new Error('Its homes disagree about its keys (contested): nothing was signed.');
+    if (!me.f.signingSecret) {
+      // Through Kišib's runner (3.5, 7.4): a change of keys made since is followed once the runner holds the new key; otherwise nothing is signed.
+      const binding = r.links[r.links.length - 1];
+      if (!binding || binding.act === me.f.binding) return;
+      const p = await this.opts.runner?.paired().catch(() => null);
+      const k = p?.identities.find((x) => x.id === me.id);
+      if (!k || k.binding !== binding.act || !r.signingKey || hex(r.signingKey) !== k.key) throw new Error(RUNNER_OLD_KEY_SAY);
+      me.f.chain = (await servedChain(me.id, r.homes, me.via)).map(base64);
+      me.f.position = binding.position;
+      me.f.binding = binding.act;
+      me.f.homes = r.homes;
+      me.f.rule = r.rule ?? null;
+      freshLines(me.f);
+      me.f.routes = null;
+      if (look.encryptionKey && look.encryptionKeyAct && !me.f.encryption.some((e) => e.act === look.encryptionKeyAct)) me.f.encryption.push({ version: me.f.encryption.length + 1, act: look.encryptionKeyAct, secret: '', public: hex(look.encryptionKey) });
+      await this.store.saveIdentity(me);
+      return;
+    }
     if (!r.signingKey || hex(r.signingKey) !== hex(signingPublic(unhex(me.f.signingSecret)))) throw new Error(SPENT_SAY);
   }
 
   /** Sign, then save the sequence before anything leaves. */
+  /** Sign with the identity's own key, held here, or through Kišib's runner where Damgar holds none (the Dubsar runner cMIP). */
   private signAct(me: TestIdentity, spec: string, type: number, payload: Uint8Array, o: { public: boolean; to?: string[]; refs?: [string, string][] }) {
-    return me.sign(spec, type, payload, o);
+    return me.signNow(spec, type, payload, o);
   }
 
   // ------------------------------------------------------------ what is accepted (the accepted cMIP, F340)
@@ -516,8 +767,8 @@ export class Damgar {
   private async accepted(me: TestIdentity, fresh = false): Promise<Accepted> {
     const c = this.lists.get(me.id);
     if (c && !fresh && c.at + 60 > now()) return c.list;
-    const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
-    const l = await readAccepted(me.id, secrets, me.f.homes.map((h) => h.hint), me.via);
+    const { open } = await this.opener(me);
+    const l = await readAccepted(me.id, open ?? [], me.f.homes.map((h) => h.hint), me.via);
     this.lists.set(me.id, { list: l, at: now() });
     return l;
   }
@@ -547,7 +798,7 @@ export class Damgar {
             else entries.delete(h);
           }
         },
-        { via: s.via, save: () => this.store.saveIdentity(me), check: () => this.current(me) },
+        { via: s.via, save: () => this.store.saveIdentity(me), check: () => this.current(me), open: (await this.opener(me)).open },
       );
       this.lists.set(me.id, { list: r.list, at: now() });
       const lines: Line[] = [];
@@ -587,8 +838,11 @@ export class Damgar {
   async state(): Promise<State> {
     const active = await this.store.active();
     const held = [];
-    for (const id of await this.store.held()) held.push({ id, grouped: groupId(id), short: short(id), active: id === active });
-    const me = active ? await this.store.identity(active) : null;
+    for (const id of await this.store.held()) {
+      const f = await this.store.identity(id);
+      held.push({ id, grouped: groupId(id), short: short(id), active: id === active, runner: !f?.f.signingSecret, name: f ? await this.nameOf(id, f.f.homes.map((h) => h.hint), f.via) : null });
+    }
+    const me = active ? await this.load(active) : null;
     const out: State = { web: !!this.opts.web, settingsSaved: false, stage: 'identity', held, identity: null, accept: [], list: { version: 0, merged: [], published: false, problems: [] }, counts: { toSign: 0, toPay: 0 } };
     if (!me) return out;
     const s = (await this.store.read<Settings>(me.id, 'settings')) ?? { relays: [], via: {} };
@@ -604,6 +858,10 @@ export class Damgar {
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
       line: line ?? noLine(me.f),
+      // The collectives under it (decided: acting as a collective is the identity panel's gesture): those Damgar acts for, added here.
+      collectives: await Promise.all((s.collectives ?? []).map(async (c) => ({ id: c, form: idForm(c), short: short(c), name: await this.nameOf(c, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via) }))),
+      name: held.find((h) => h.id === me.id)?.name ?? null,
+      runner: !me.f.signingSecret,
     };
     let l: Accepted;
     try {
@@ -691,6 +949,16 @@ export class Damgar {
     });
   }
 
+  /** Stop acting for a collective here (it stays what it is; nothing is signed). */
+  collectiveRemove(id: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      s.collectives = (s.collectives ?? []).filter((c) => c !== id);
+      await this.store.write(me.id, 'settings', s);
+      return { lines: [{ text: `Damgar no longer acts for ${short(id)} here. Nothing was signed; add it again by its ID.`, tone: 'ok' }] };
+    });
+  }
+
   /** A promise to pay from the collective, read back: what it says, and how many keys it needs (the area, its cap). Nothing is signed. */
   collectivePromiseRead(a: { collective: string; to: string; value: string; unit: string; whatFor: string }): Promise<{ lines: Line[]; digest: string }> {
     return this.serial(async () => {
@@ -762,7 +1030,7 @@ export class Damgar {
       // The encryption key the identity publishes now: taken where the words held here carry it (another app may have renewed it from them, the carry Module 2a.4).
       try {
         const l = await lookUp(me.id, me.f.homes.map((h) => h.hint), s.via);
-        if (l.encryptionKey && !me.f.encryption.some((e) => hex(xwingPublic(unhex(e.secret))) === hex(l.encryptionKey!))) {
+        if (me.f.signingSecret && l.encryptionKey && !me.f.encryption.some((e) => hex(xwingPublic(unhex(e.secret))) === hex(l.encryptionKey!))) {
           const c = carriedKey(l, unhex(me.f.signingSecret));
           if (c) {
             me.f.encryption.push(c);
@@ -773,8 +1041,8 @@ export class Damgar {
       } catch {
         // its homes did not answer: the keys held are used
       }
-      const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
-      if (!secrets.length) return { lines: [{ text: NO_KEY_SAY, tone: 'warn' }], problems };
+      const { open, problem } = await this.opener(me);
+      if (!open) return { lines: [{ text: problem ?? NO_KEY_SAY, tone: 'warn' }], problems };
       let unopened = 0;
       let inbox: string[] = [];
       try {
@@ -789,21 +1057,24 @@ export class Damgar {
         try {
           for (;;) {
             const page = await relayAt(hint, s.via).feed({ to: me.id, after });
-            for (const it of page.items) {
-              if (it.kind !== 'sealed') continue;
-              let opened = false;
-              for (const sec of secrets) {
+            const sealed = page.items.filter((it) => it.kind === 'sealed').map((it) => it.item);
+            const openedAll = sealed.length ? await open(sealed) : [];
+            for (const o of openedAll) {
+              if (!o) {
+                unopened++;
+                continue;
+              }
+              const d = o.described;
+              if (((d.spec && MESSAGES_SPECS.includes(d.spec)) || d.spec === MONEY) && !book.acts[d.id] && !fresh.some((f) => f.described.id === d.id)) fresh.push(o);
+              // A key this identity delivered to itself (another of its apps, for an act it signed under its lane): kept, so the record of that payment lives here.
+              else if (d.spec === SPECS.envelopes && d.type === ENVELOPES_TYPES.keyDelivery && d.signer === me.id && d.payload) {
                 try {
-                  const o = openSealed(it.item, me.id, sec) as Opened;
-                  const d = o.described;
-                  if (((d.spec && MESSAGES_SPECS.includes(d.spec)) || d.spec === MONEY) && !book.acts[d.id] && !fresh.some((f) => f.described.id === d.id)) fresh.push(o);
-                  opened = true;
-                  break;
+                  const k = readKeyDelivery(d.payload) as { target: string; key: Uint8Array | number[]; media: boolean };
+                  if (!k.media) (book.delivered ??= {})[k.target] = base64(Uint8Array.from(k.key));
                 } catch {
-                  // the next key
+                  // not a key delivery the core reads
                 }
               }
-              if (!opened) unopened++;
             }
             if (!page.items.length || page.next === after) break;
             after = page.next;
@@ -882,7 +1153,7 @@ export class Damgar {
       // A message it cannot read is kept as such and shown unknown: nothing is guessed from it, nothing signed for it.
       const unread = (why: string) => {
         (book.unread ??= {})[d.id] = { from: signer, found: t, type: d.type ?? -1, why, stage: 'new' };
-        lines.push({ text: `A money message from ${short(signer)} that Damgar cannot read: shown unknown, in To sign.`, tone: 'warn' });
+        lines.push({ text: `A money message from ${short(signer)} that Damgar cannot read: shown unknown, in Waiting.`, tone: 'warn' });
       };
       // A draft is only ever one's own (1.1): one signed by anyone else is not for this identity.
       if ((d.type === TYPES.draft || d.type === TYPES.laneRequest || d.type === TYPES.sale) && signer !== me.id) return;
@@ -899,29 +1170,34 @@ export class Damgar {
       }
       if (d.type === TYPES.laneRequest) {
         (book.laneRequests ??= {})[d.id] = { found: t, stage: 'new', grant: null };
-        lines.push({ text: `${readLaneRequest(d.payload!).app} asks for a lane: in To sign, to be read and granted or declined.`, tone: 'ok' });
+        lines.push({ text: `${readLaneRequest(d.payload!).app} asks for a lane: in Waiting, to be read and granted or declined.`, tone: 'ok' });
         return;
       }
       if (d.type === TYPES.draft) {
         if (signer !== me.id) return;
         readDraft(d.payload!);
         book.drafts[d.id] = { found: t, stage: 'new', payment: null };
-        lines.push({ text: 'A draft arrived, prepared in another app: in To sign.', tone: 'ok' });
+        lines.push({ text: 'A draft arrived, prepared in another app: in Waiting.', tone: 'ok' });
       } else if (d.type === TYPES.request) {
         readRequest(d.payload!);
         book.requestsIn[d.id] = { from: signer, found: t, stage: 'new', obligation: null, payment: null };
-        lines.push({ text: `A request to be paid, from ${short(signer)}: in To sign.`, tone: 'ok' });
+        lines.push({ text: `A request to be paid, from ${short(signer)}: in Waiting.`, tone: 'ok' });
       } else if (d.type === TYPES.invoiceRequest) {
         book.invoices[d.id] = { from: signer, found: t, stage: 'new', payment: null, why: null };
         await this.onInvoiceRequest(me, s, book, d.id, lines);
       } else if (d.type === TYPES.answer) {
         const a = readAnswer(d.payload!);
         const p = Object.values(book.payments).find((x) => x.side === 'out' && x.invoiceRequest === a.to);
-        if (!p || (p.other !== signer && p.service !== signer) || p.key !== a.commitment) throw new Error('an answer to no invoice request of this identity');
+        // An answer to a request another app of this identity sent under its lane (Dub): kept with that payment's record, nothing to do here.
+        if (!p) {
+          (book.laneAnswers ??= {})[a.to] = { refused: a.bound.kind === 'refused' };
+          return;
+        }
+        if ((p.other !== signer && p.service !== signer) || p.key !== a.commitment) throw new Error('an answer to no invoice request of this identity');
         // Draft 3 (F352): the answer names the amount it binds, the commitment's; a draft 3 answer without it, or naming another, is refused.
         if (a.amount ? a.amount.unit !== p.amount.unit || a.amount.value !== p.amount.value : d.spec === MESSAGES_SPEC || d.spec === MESSAGES_SPEC_3) throw new Error('an answer naming no amount, or another than the payment’s (the money messages cMIP draft 3, 5.1)');
         await this.onAnswer(me, s, book, p, d.id, a.bound, a.ticket);
-        lines.push({ text: p.stage === 'to pay' ? `${short(signer)} answered: a payment is ready, in Pay.` : `${short(signer)} refused to bind the payment: ${p.bound?.kind === 'refused' ? p.bound.why : ''}`, tone: p.stage === 'to pay' ? 'ok' : 'warn' });
+        lines.push({ text: p.stage === 'to pay' ? `${short(signer)} answered: a payment is ready, in Waiting, To pay.` : `${short(signer)} refused to bind the payment: ${p.bound?.kind === 'refused' ? p.bound.why : ''}`, tone: p.stage === 'to pay' ? 'ok' : 'warn' });
       }
       return;
     }
@@ -938,7 +1214,7 @@ export class Damgar {
       }
       if (!p.claims.includes(d.id)) p.claims.push(d.id);
       if (p.stage === 'to pay' || p.stage === 'asked') p.stage = 'paid';
-      lines.push({ text: `${short(signer)} says they paid you ${say(a.amount, new Set(unitOf(a.amount.unit) ? [a.amount.unit] : []))}: check it, and sign the receipt, in To sign.`, tone: 'ok' });
+      lines.push({ text: `${short(signer)} says they paid you ${say(a.amount, new Set(unitOf(a.amount.unit) ? [a.amount.unit] : []))}: check it, and sign the receipt, in Waiting.`, tone: 'ok' });
     } else if (a.type === 'receipt' && a.payer === me.id) {
       const pr = readPaymentProof(new Uint8Array(a.proof)) as { paidTo: CommitmentFields['paidTo']; salt: Uint8Array };
       const key = paymentCommitment({ rail: a.rail, payee: a.payee, amount: a.amount, fulfils: a.fulfils, payer: me.id, paidTo: pr.paidTo, salt: pr.salt });
@@ -962,8 +1238,10 @@ export class Damgar {
     }
   }
 
-  /** A kept act's description and payload, opened with its content key where private. */
+  /** A kept act's description and payload, opened with its content key where private; a pasted draft's payload, as one's own. */
   private opened(book: Book, id: string): { d: Described; payload: Uint8Array } {
+    const pasted = book.pasted?.[id];
+    if (pasted) return { d: { id, signer: book.me ?? null, public: false } as unknown as Described, payload: b64(pasted) };
     const k = book.acts[id];
     if (!k) throw new Error('that act is not kept here');
     const d = (k.key ? openWithKey(b64(k.act), b64(k.key)) : describeAct(b64(k.act))) as Described;
@@ -1073,7 +1351,7 @@ export class Damgar {
         return;
       }
       if (s.manual) {
-        lines.push({ text: `${short(inv.from)} asks where to pay you ${say(f.amount, acc)} on-chain: an address to give, in To sign (every step by hand).`, tone: 'ok' });
+        lines.push({ text: `${short(inv.from)} asks where to pay you ${say(f.amount, acc)} on-chain: an address to give, in Waiting (every step by hand).`, tone: 'ok' });
         return;
       }
       const sig = onchainRequest(unhex(secret), f.hash, undefined) as Uint8Array;
@@ -1103,11 +1381,11 @@ export class Damgar {
           lines.push({ text: `${short(inv.from)} wants to pay you ${say(f.amount, acc)} on Lightning: Damgar answered by itself, with an invoice your node made through its receive-only link, under your receipts lane.`, tone: 'ok' });
           return;
         } catch (e) {
-          lines.push({ text: `Damgar could not make the invoice by itself (${message(e)}): make it in your wallet, in To sign.`, tone: 'warn' });
+          lines.push({ text: `Damgar could not make the invoice by itself (${message(e)}): make it in your wallet, in Waiting.`, tone: 'warn' });
           return;
         }
       }
-      lines.push({ text: `${short(inv.from)} wants to pay you ${say(f.amount, acc)} on Lightning: make an invoice in your wallet, in To sign.${lane && 'why' in lane && !s.manual ? ` Not answered by itself: ${lane.why.replace(/\.? ?Nothing was signed\.?$/, '')}.` : ''}`, tone: 'ok' });
+      lines.push({ text: `${short(inv.from)} wants to pay you ${say(f.amount, acc)} on Lightning: make an invoice in your wallet, in Waiting.${lane && 'why' in lane && !s.manual ? ` Not answered by itself: ${lane.why.replace(/\.? ?Nothing was signed\.?$/, '')}.` : ''}`, tone: 'ok' });
     }
   }
 
@@ -1409,7 +1687,7 @@ export class Damgar {
       for (const [id, x] of Object.entries(book.drafts)) {
         if (x.stage !== 'new') continue;
         try {
-          items.push(await this.readDraftItem(me, s, book, id, acc));
+          items.push({ ...(await this.readDraftItem(me, s, book, id, acc)), ...(book.pasted?.[id] ? { byHand: true } : {}) });
         } catch (e) {
           problems.push(`A draft ${short(id)}: ${message(e)}`);
         }
@@ -1548,7 +1826,7 @@ export class Damgar {
         try {
           const r = await this.route(me, s, dr.other, dr.amount, acc);
           lines.push({ text: `On ${railName(r.module)}, to ${r.to === 'flow' ? 'their flow (their payee pointer in force)' : 'their vault'}. ${r.why}`.trim(), tone: 'ok' });
-          lines.push({ text: 'Signing sends them an invoice request, sealed: the payment’s fingerprint (the commitment: who pays whom, how much, for what, where), for their side to bind. Nothing is paid yet; you pay in your own wallet, from Pay.' });
+          lines.push({ text: 'Signing sends them an invoice request, sealed: the payment’s fingerprint (the commitment: who pays whom, how much, for what, where), for their side to bind. Nothing is paid yet; you pay in your own wallet, from Waiting, To pay.' });
         } catch (e) {
           unknown = true;
           lines.push({ text: message(e), tone: 'warn' });
@@ -1557,6 +1835,64 @@ export class Damgar {
       if (dr.what === 'anchor' && dr.anchor) lines.push({ text: `For an anchor of one act on the Bitcoin clock, through the service’s standing offer ${short(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements’ to judge: unknown here.` });
     }
     return { id, kind: 'draft', from: this.who(me.id, me.id), app: dr.app, title: dr.what === 'ask' ? 'A request to send' : dr.what === 'anchor' ? 'A payment for an anchor' : 'A payment to make', lines, amount: { ...dr.amount, said: say(dr.amount, acc) }, unknown, offers: unknown ? ['decline'] : ['sign', 'decline'], found: x.found };
+  }
+
+  /**
+   * The first way to pay, by hand (decided by Nobody, allegedly, 21 October
+   * 2026): a payment another app showed to copy (a money messages draft,
+   * section 2.1, in base64), pasted here. It joins Waiting as a draft found
+   * on MOR does, read in plain words, and is signed or declined there.
+   * Nothing is signed by pasting it.
+   */
+  paste(text: string): Promise<{ id: string; lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, book } = await this.ctx();
+      const t = text.replace(/\s+/g, '');
+      let payload: Uint8Array;
+      try {
+        if (!/^[A-Za-z0-9+/=_-]+$/.test(t)) throw new Error('not base64');
+        payload = b64(t.replace(/-/g, '+').replace(/_/g, '/'));
+        readDraft(payload);
+      } catch (e) {
+        throw new Error(`This is not a payment Damgar can read: paste the whole text the other app showed (a money message’s draft, in base64)${e instanceof Error && e.message !== 'not base64' ? `; ${e.message}` : ''}. Nothing was kept.`);
+      }
+      const id = sha256(payload);
+      if (book.drafts[id]) throw new Error(book.drafts[id].stage === 'new' ? 'This payment is already waiting, in Waiting › To pay.' : 'This payment was already signed or declined here.');
+      (book.pasted ??= {})[id] = base64(payload);
+      book.drafts[id] = { found: now(), stage: 'new', payment: null };
+      book.me = me.id;
+      const item = await this.readDraftItem(me, s, book, id, this.acceptedSet(await this.accepted(me)));
+      await this.saveBook(me.id, book);
+      return { id, lines: [{ text: 'Pasted, not signed: it waits in To pay, read in plain words below. Sign it or decline it there.', tone: 'ok' }, ...item.lines] };
+    });
+  }
+
+  /**
+   * Woken by another app on this computer (the second way, 2A: "Damgar
+   * should act as Kišib for money acts, it should pop up and authorise"):
+   * Damgar looks on MOR, as always, and finds the draft the app left there,
+   * sealed to the identity. The wake-up carries no payment: only which
+   * identity, and the draft's id to show. Null where it is not found yet.
+   */
+  async woken(a: { identity: string; draft: string }): Promise<ToSign | null> {
+    const active = await this.store.active();
+    if (!(await this.store.held()).includes(a.identity)) throw new Error('Damgar does not hold this identity: bring it into Damgar (+ Add), or pay by hand. The payment waits on MOR.');
+    if (active !== a.identity) throw new Error('Damgar is using another identity now: switch to this one in Damgar (the identity, top right), and it shows the payment there, in Waiting.');
+    await this.look();
+    return this.serial(async () => {
+      const { me, s, book } = await this.ctx();
+      const x = book.drafts[a.draft];
+      if (!x || x.stage !== 'new') return null;
+      return this.readDraftItem(me, s, book, a.draft, this.acceptedSet(await this.accepted(me)));
+    });
+  }
+
+  /** A tip prepared here (the signer's menu, Tip): a draft as another app would leave one, waiting in To pay to be read and signed. Nothing is signed by it. */
+  tip(a: { to: string; value: string; unit: string; whatFor: string }): Promise<{ id: string; lines: Line[] }> {
+    const other = readId(a.to);
+    if (!unitOf(a.unit)) return Promise.reject(new Error('Choose a unit. Nothing was prepared.'));
+    const d: Draft = { what: 'pay', other, amount: { unit: a.unit, value: readValue(a.value) }, whatFor: a.whatFor.trim() ? a.whatFor.trim().slice(0, 280) : null, app: 'Damgar', anchor: null };
+    return this.paste(base64(draftPayload(d)));
   }
 
   /** Sign a draft (the money messages cMIP, 2.2): an invoice request, or a request to be paid. */
@@ -1599,7 +1935,7 @@ export class Damgar {
       x.stage = 'signed';
       x.payment = p.key;
       await this.saveBook(me.id, book);
-      return { lines: [{ text: `The invoice request was sent to ${short(dr.other)}, sealed. When they answer, the payment shows in Pay.`, tone: 'ok' }] };
+      return { lines: [{ text: `The invoice request was sent to ${short(dr.other)}, sealed. When they answer, the payment shows in Waiting, To pay.`, tone: 'ok' }] };
     });
   }
 
@@ -1646,7 +1982,7 @@ export class Damgar {
       x.stage = 'asked';
       x.payment = p.key;
       await this.saveBook(me.id, book);
-      return { lines: [{ text: `The invoice request was sent to ${short(x.from)}, sealed. When they answer, the payment shows in Pay.`, tone: 'ok' }] };
+      return { lines: [{ text: `The invoice request was sent to ${short(x.from)}, sealed. When they answer, the payment shows in Waiting, To pay.`, tone: 'ok' }] };
     });
   }
 
@@ -1769,7 +2105,7 @@ export class Damgar {
       }
     } else {
       try {
-        act = me.sign(MONEY, made.type, made.payload, { public: true, acks });
+        act = await me.signNow(MONEY, made.type, made.payload, { public: true, acks });
       } finally {
         await this.store.saveIdentity(me);
       }
@@ -2013,7 +2349,7 @@ export class Damgar {
       { refs: [[c.referral.evidence, c.referral.identity]], via: s.via, save },
     );
     (book.referrals ??= {})[p.claims[p.claims.length - 1]] = { reposter: c.referral.identity, evidence: c.referral.evidence, amount, draft: draft.id };
-    lines.push({ text: `The buyer followed a repost by ${short(c.referral.identity)}: your offer promises ${share}% to the reposter. Its payment is prepared (${say(amount, new Set([amount.unit]))}): Damgar signs it by itself under your referral lane, or it waits in To sign. A promise in words, not judged by the core (F351).`, tone: 'ok' });
+    lines.push({ text: `The buyer followed a repost by ${short(c.referral.identity)}: your offer promises ${share}% to the reposter. Its payment is prepared (${say(amount, new Set([amount.unit]))}): Damgar signs it by itself under your referral lane, or it waits in Waiting. A promise in words, not judged by the core (F351).`, tone: 'ok' });
     return lines;
   }
 
@@ -2038,7 +2374,7 @@ export class Damgar {
    * is followed by hand: a receipt for each payment to this identity whose
    * claim verifies, under its receipts lane and within its cap; and each
    * referral share it prepared, bound under its payouts lane. Anything it
-   * may not do waits in To sign.
+   * may not do waits in Waiting.
    */
   private async byItself(me: TestIdentity, s: Settings, book: Book, lines: Line[], problems: string[]): Promise<void> {
     if (s.manual || this.opts.app) return;
@@ -2063,9 +2399,9 @@ export class Damgar {
         const p = await this.bind(me, s, book, { payee: dr.other, amount: dr.amount, fulfils: null, whatFor: dr.whatFor, answers: null, draft: id, ticket: null, auto: true });
         x.stage = 'signed';
         x.payment = p.key;
-        lines.push({ text: `The referral share to ${short(dr.other)} is asked for by itself, under your referral lane: when they answer, it is in Pay, to pay in your wallet.`, tone: 'ok' });
+        lines.push({ text: `The referral share to ${short(dr.other)} is asked for by itself, under your referral lane: when they answer, it is in Waiting, To pay, to pay in your wallet.`, tone: 'ok' });
       } catch (e) {
-        lines.push({ text: `The referral share to ${short(dr.other)} waits in To sign (${message(e)}).` });
+        lines.push({ text: `The referral share to ${short(dr.other)} waits in Waiting (${message(e)}).` });
       }
     }
   }
@@ -2201,7 +2537,7 @@ export class Damgar {
   // ------------------------------------------------------------ lanes (F338 round 2, F351)
 
   /** A lane's grant in plain words, read back before it is signed: what it reaches, how much one act may move, until when, who holds its key. */
-  private laneWords(me: TestIdentity, g: { label: string; app: string; kinds: LaneKind[]; limits: Limits | null }, acc: Set<string>): string[] {
+  private laneWords(me: TestIdentity, g: { label: string; app: string; kinds: LaneKind[]; limits: Limits | null; total?: Cap | null }, acc: Set<string>): string[] {
     const read: GrantRead = { grantee: me.id, scope: 2, kinds: g.kinds, limits: g.limits, limitsProblem: null, key: '' };
     const kindSaid = (k: LaneKind) =>
       k.spec === MONEY && k.type === 2 ? 'receipts (“I received this”)' : k.spec === MONEY && k.type === 3 ? 'payment claims (“I paid this”)' : MESSAGES_SPECS.includes(k.spec) && k.type === 3 ? 'invoice requests (asking a payee where to pay)' : MESSAGES_SPECS.includes(k.spec) && k.type === 4 ? 'answers to invoice requests (an invoice, or an address)' : `acts of type ${k.type} of ${k.spec.slice(0, 8)}…`;
@@ -2209,6 +2545,7 @@ export class Damgar {
       `A lane named “${g.label}”, asked by ${g.app}: a grant of this identity to itself (Agreements draft 15, rule 73, F351), naming a key that ${g.app} made and holds. With it, ${g.app} signs in your name, by itself, without opening Damgar, within these limits only.`,
       `What it may sign: ${g.kinds.map(kindSaid).join('; ')}. Nothing else: never a grant, a revocation, a pointer, a debt or a post.`,
       g.limits?.cap ? `How much one act may move: at most ${say({ unit: g.limits.cap.unit, value: g.limits.cap.value }, acc)} (the grant limits cMIP, 2). An act above it is refused before it is signed, and one signed anyway counts for nothing.` : 'How much one act may move: no cap. A lane without a cap is refused here.',
+      g.total ? `In all: at most ${say({ unit: g.total.unit, value: g.total.value }, acc)} for the whole lane (the grant limits cMIP, draft 3, 8). ${TOTAL_SAY}` : '',
       g.limits?.expiry?.clock === 'timestamp' ? grantInWords(read, me.id, short).find((l) => l.startsWith('Until')) ?? '' : 'Until: no expiry; it ends only when you revoke it.',
       'Every act signed under it is shown, here and to every reader, as signed under this lane, not with your own key. One revocation ends it, here in Lanes.',
       'Public: the grant is published at your relays and homes (rule 73: a private grant backs nothing), so anyone can see that you hold such a lane, and its limits. Its name stays here.',
@@ -2223,9 +2560,9 @@ export class Damgar {
     let grant: { act: Uint8Array; id: string };
     let acc: { act: Uint8Array; id: string };
     try {
-      grant = me.sign(MIRS.agreements, AGREEMENTS_TYPES.grant, payload, { public: true });
+      grant = await me.signNow(MIRS.agreements, AGREEMENTS_TYPES.grant, payload, { public: true });
       const a = acceptance(grant.id);
-      acc = me.sign(a.spec, a.type, a.payload, { public: true, objects: a.objects });
+      acc = await me.signNow(a.spec, a.type, a.payload, { public: true, objects: a.objects });
     } finally {
       await this.store.saveIdentity(me);
     }
@@ -2259,15 +2596,16 @@ export class Damgar {
     const r = readLaneRequest(this.opened(book, id).payload);
     const x = book.laneRequests![id];
     let limits: Limits | null = null;
+    let total: Cap | null = null;
     const lines: Line[] = [];
     try {
-      limits = r.limits === null ? null : readLimits(r.limits);
+      if (r.limits !== null) ({ limits, total } = readAsked(r.limits));
     } catch (e) {
       lines.push({ text: `Its limits cannot be read (${message(e)}): it cannot be granted.`, tone: 'warn' });
     }
     const unknown = !acc.has(GRANT_LIMITS_SPEC) || !limits?.cap;
     if (!acc.has(GRANT_LIMITS_SPEC)) lines.push({ text: 'Lanes carry their limits under the grant limits cMIP, which you do not accept: accept it in Settings to grant a lane.', tone: 'warn' });
-    lines.unshift(...this.laneWords(me, { label: r.label, app: r.app, kinds: r.kinds, limits }, acc).map((text) => ({ text })));
+    lines.unshift(...this.laneWords(me, { label: r.label, app: r.app, kinds: r.kinds, limits, total }, acc).map((text) => ({ text })));
     return { id, kind: 'lane', from: this.who(me.id, me.id), app: r.app, title: `A lane asked by ${r.app}: “${r.label}”`, lines, amount: limits?.cap ? { unit: limits.cap.unit, value: limits.cap.value, said: say({ unit: limits.cap.unit, value: limits.cap.value }, acc) } : null, unknown, offers: unknown ? ['decline'] : ['grant', 'decline'], found: x.found };
   }
 
@@ -2281,9 +2619,10 @@ export class Damgar {
       const item = this.laneItem(me, book, id, acc);
       if (item.unknown) throw new Error('It cannot be granted here: nothing was signed.');
       const r = readLaneRequest(this.opened(book, id).payload);
-      const limits = readLimits(r.limits);
+      // The grant carries the limits a verifier judges; the cap in all stays in the request and in this record (draft 3, 8.1).
+      const { limits, total } = readAsked(r.limits);
       const grant = await this.grantLaneActs(me, s, { key: r.key, kinds: r.kinds, limits });
-      (book.lanes ??= {})[grant] = { label: r.label, app: r.app, key: r.key, kinds: r.kinds, limits, at: now(), revoked: null, here: false, role: null };
+      (book.lanes ??= {})[grant] = { label: r.label, app: r.app, key: r.key, kinds: r.kinds, limits, at: now(), revoked: null, here: false, role: null, total };
       x.stage = 'granted';
       x.grant = grant;
       await this.saveBook(me.id, book);
@@ -2360,7 +2699,7 @@ export class Damgar {
       const under = await actsUnder(me.id, grant, hints, s.via).catch(() => []);
       let r: { act: Uint8Array; id: string };
       try {
-        r = me.sign(MIRS.agreements, REVOCATION, revocationPayload(grant), { public: true, objects: under.length ? under.map((a): [string, string] => [me.id, a.id]) : undefined });
+        r = await me.signNow(MIRS.agreements, REVOCATION, revocationPayload(grant), { public: true, objects: under.length ? under.map((a): [string, string] => [me.id, a.id]) : undefined });
       } finally {
         await this.store.saveIdentity(me);
       }
@@ -2402,11 +2741,83 @@ export class Damgar {
           // the places did not answer
         }
         const expired = l.limits?.expiry?.clock === 'timestamp' && now() > l.limits.expiry.time;
-        out.push({ grant, label: l.label, app: l.app, here: l.here, state: revoked ? 'revoked' : expired ? 'past its expiry (this device’s clock)' : 'in force', words: this.laneWords(me, l, acc), acts });
+        // An app's lane (Dub's): its payments read from the acts under it whose keys the app delivered to this identity, and the cap in all counted here (draft 3, 8.4).
+        const under = l.here ? null : await this.underLane(me, s, book, grant, hints).catch(() => null);
+        const unitOfLane = l.total?.unit ?? l.limits?.cap?.unit ?? null;
+        const used = under && unitOfLane ? spentOf(under.payments.map((p) => ({ amount: p.amount, refused: p.stage === 'refused' })), unitOfLane) : null;
+        const shown = (value: number) => ({ unit: unitOfLane!, value, said: say({ unit: unitOfLane!, value }, acc) });
+        out.push({
+          grant,
+          label: l.label,
+          app: l.app,
+          here: l.here,
+          state: revoked ? 'revoked' : expired ? 'past its expiry (this device’s clock)' : 'in force',
+          words: this.laneWords(me, l, acc),
+          acts,
+          cap: l.limits?.cap ? shown(l.limits.cap.value) : null,
+          until: l.limits?.expiry?.clock === 'timestamp' ? l.limits.expiry.time : null,
+          total: l.total ? shown(l.total.value) : null,
+          spent: used !== null ? shown(used) : null,
+          left: l.total && used !== null ? shown(Math.max(0, l.total.value - used)) : null,
+          over: l.total && used !== null && used > l.total.value ? shown(used - l.total.value) : null,
+          payments: under?.payments.map((p) => ({ key: p.key, to: this.who(p.payee, me.id), amount: { ...p.amount, said: say(p.amount, acc) }, whatFor: p.whatFor, stage: p.stage, request: p.request, claims: p.claims })) ?? [],
+          sealed: under?.sealed ?? 0,
+        });
       }
       void keys;
       return { lanes: out, manual: !!s.manual, link: !!keys.link, linkSay: LINK_SAY, clock: s.clock ?? null };
     });
+  }
+
+  /**
+   * The payments an app made under its lane, read from the acts under it at
+   * the identity's places whose content keys the app delivered to the
+   * identity itself (`delivered`): each invoice request a payment, its
+   * claims marking it paid, an answer refusing it giving it back. Acts whose
+   * key was not delivered are counted as sealed.
+   */
+  private async underLane(me: TestIdentity, s: Settings, book: Book, grant: string, hints: string[]): Promise<{ payments: { key: string; payee: string; amount: Amount; whatFor: string | null; stage: 'asked' | 'refused' | 'paid'; request: string | null; claims: string[] }[]; sealed: number }> {
+    const by = new Map<string, { key: string; payee: string; amount: Amount; whatFor: string | null; stage: 'asked' | 'refused' | 'paid'; request: string | null; claims: string[] }>();
+    const seen = new Set<string>();
+    let sealed = 0;
+    for (const act of await allBy(me.id, hints, s.via)) {
+      const d0 = describeAct(act) as Described & { binding?: string };
+      if (d0.binding !== grant || seen.has(d0.id)) continue;
+      seen.add(d0.id);
+      const key = book.delivered?.[d0.id];
+      let d: Described;
+      try {
+        d = (key ? openWithKey(act, b64(key)) : d0) as Described;
+      } catch {
+        sealed++;
+        continue;
+      }
+      if (!d.payload) {
+        sealed++;
+        continue;
+      }
+      try {
+        if (d.spec && MESSAGES_SPECS.includes(d.spec) && d.type === TYPES.invoiceRequest) {
+          const r = readInvoiceRequest(d.payload);
+          const x = by.get(r.fields.hash) ?? { key: r.fields.hash, payee: r.fields.payee, amount: r.fields.amount, whatFor: r.whatFor, stage: 'asked' as const, request: null, claims: [] };
+          x.request = d.id;
+          x.whatFor = r.whatFor;
+          if (x.stage === 'asked' && book.laneAnswers?.[d.id]?.refused) x.stage = 'refused';
+          by.set(x.key, x);
+        } else if (d.spec === MONEY && d.type === 3) {
+          const c = (moneyRead(3, d.payload) as { act: { rail: string; proof: Uint8Array; payee: string; amount: Amount; fulfils: string } }).act;
+          const pr = readPaymentProof(new Uint8Array(c.proof)) as { paidTo: CommitmentFields['paidTo']; salt: Uint8Array };
+          const k = paymentCommitment({ rail: c.rail, payee: c.payee, amount: c.amount, fulfils: c.fulfils, payer: me.id, paidTo: pr.paidTo, salt: pr.salt }) as string;
+          const x = by.get(k) ?? { key: k, payee: c.payee, amount: c.amount, whatFor: null, stage: 'paid' as const, request: null, claims: [] };
+          x.stage = 'paid';
+          if (!x.claims.includes(d.id)) x.claims.push(d.id);
+          by.set(k, x);
+        }
+      } catch {
+        // an act under the lane this does not read: not counted
+      }
+    }
+    return { payments: [...by.values()], sealed };
   }
 
   private actSaid(book: Book, a: { id: string; public: boolean; spec?: string; type?: number }): string {
@@ -2440,14 +2851,13 @@ export class Damgar {
   }
 
   /** What a transfer to the vault would be, in plain words, and what stops it. */
-  private async vaultPlan(me: TestIdentity, s: Settings, a: { entry: number; value: string }): Promise<{ lines: Line[]; costs: Line[]; blocking: string[]; digest: string; plan: { entry: number; amount: Amount; declaredBy: string; module: string; source: Uint8Array; pointer: string } | null }> {
+  private async vaultPlan(me: TestIdentity, s: Settings, a: { entry: number; value: string }): Promise<{ lines: Line[]; costs: Line[]; blocking: string[]; digest: string; plan: { entry: number; amount: Amount; declaredBy: string; module: string; source: Uint8Array } | null }> {
     const acc = this.acceptedSet(await this.accepted(me));
-    const { vault, pointer } = await this.ownVault(me, s);
+    const { vault } = await this.ownVault(me, s);
     const blocking: string[] = [];
     const e = vault?.entries[a.entry];
     if (!vault) blocking.push('Your identity’s chain declares no vault: declare one in Kišib, in a change of keys (Money rule 2).');
     else if (!e) blocking.push('Choose one of your vault’s entries.');
-    if (!pointer) blocking.push('You have no payee pointer yet: a transfer to your vault follows it (a reading: the payment cMIP’s next draft will let it name the vault itself). Say where you are paid first.');
     const value = Number(a.value);
     if (!Number.isSafeInteger(value) || value <= 0) blocking.push('An amount is a whole number above zero.');
     if (e && !acc.has(e.railModule)) blocking.push(`${railName(e.railModule)} is not accepted for this identity (Settings).`);
@@ -2460,6 +2870,7 @@ export class Damgar {
       lines.push(
         { text: `To your vault: the entry on ${railName(e.railModule)}, ${where}, declared in your chain (act ${vault!.declaredBy.slice(0, 12)}…) with the chain key.` },
         { text: `The amount: ${say(amount, acc)}, from your wallet (on regtest, the test wallet). It is a payment from you to you: Damgar binds it, you pay it in your wallet and paste the proof back, and Damgar checks it as any payment (F355).` },
+        { text: 'It names the act that declared your vault as what it follows: a transfer to yourself, which buys nothing and pays no one else (the payment cMIP, draft 4). Paid by anyone but you, such a payment is invalid.' },
         e.railModule === SPEC.lightning.hash
           ? { text: 'The fee: your wallet’s routing fee, which it shows before you pay. Damgar holds no wallet and cannot see it. Between two nodes with a direct channel it is usually none.' }
           : { text: 'The fee: the miners’ fee your wallet sets when it sends, on top of the amount. Damgar holds no wallet and cannot see it; on regtest the test wallet chooses it.' },
@@ -2471,8 +2882,8 @@ export class Damgar {
         { text: 'One way only: Damgar never takes money out of the vault. Withdrawing needs the chain key and stays in Kišib.', tone: 'warn' },
       );
     }
-    const digest = sha256(cborEncode(['MOR Damgar transfer to the vault, version 1', me.id, a.entry, vault?.declaredBy ?? '', e?.unit ?? '', value, pointer ?? '']));
-    return { lines, costs, blocking, digest, plan: e && amount && pointer && !blocking.length ? { entry: a.entry, amount, declaredBy: vault!.declaredBy, module: e.railModule, source: e.source, pointer } : null };
+    const digest = sha256(cborEncode(['MOR Damgar transfer to the vault, version 2', me.id, a.entry, vault?.declaredBy ?? '', e?.unit ?? '', value]));
+    return { lines, costs, blocking, digest, plan: e && amount && !blocking.length ? { entry: a.entry, amount, declaredBy: vault!.declaredBy, module: e.railModule, source: e.source } : null };
   }
 
   /** A transfer to the vault read back before anything is bound (H46, F355). */
@@ -2487,9 +2898,10 @@ export class Damgar {
   /**
    * A transfer to the vault, bound (H46, F355): a payment from this identity
    * to itself, its commitment naming the vault entry it goes to (`paid-to`
-   * `[1, declared-by, entry]`) and, as `fulfils`, its own payee pointer in
-   * force (a reading, the build's, until the payment cMIP's next draft lets
-   * it name the vault declaration). On-chain its address is made here, with
+   * `[1, declared-by, entry]`) and, as `fulfils`, the very act declaring
+   * that vault (the payment cMIP, draft 4, item 6 and step 4a): a transfer
+   * to oneself, which needs no payee pointer. Draft 3's form (`fulfils` one's
+   * own payee pointer) is still read and verified as before. On-chain its address is made here, with
    * the vault's request key where this Damgar holds it; on Lightning, the
    * vault's node makes the invoice. Then it is paid as any payment, in Pay.
    */
@@ -2502,7 +2914,7 @@ export class Damgar {
       const pl = r.plan;
       const salt = new Uint8Array(randomBytes(16));
       const paidTo = { kind: 'vault', declaredBy: pl.declaredBy, entry: pl.entry };
-      const c = { rail: pl.module, payee: me.id, amount: pl.amount, fulfils: pl.pointer, payer: me.id, paidTo, salt };
+      const c = { rail: pl.module, payee: me.id, amount: pl.amount, fulfils: pl.declaredBy, payer: me.id, paidTo, salt };
       const commitment = commitmentCbor(c) as Uint8Array;
       const key = paymentCommitment(c) as string;
       const p: Payment = {
@@ -2510,7 +2922,7 @@ export class Damgar {
         side: 'out',
         other: me.id,
         amount: pl.amount,
-        fulfils: pl.pointer,
+        fulfils: pl.declaredBy,
         whatFor: 'to my vault',
         rail: pl.module,
         address: base64(pl.source),
@@ -2537,9 +2949,9 @@ export class Damgar {
         if (!secret) throw new Error('The request key your vault’s on-chain entry names is not held by this Damgar: its address cannot be made here. Nothing was bound.');
         p.bound = { kind: 'request', request: base64(onchainRequest(unhex(secret), key, undefined) as Uint8Array), confirmations: null };
         p.stage = 'to pay';
-        lines.push({ text: 'Bound: the address for this transfer alone is in Pay. Send exactly the amount from your wallet, then paste the transaction’s id there.', tone: 'ok' });
+        lines.push({ text: 'Bound: the address for this transfer alone is in Waiting, To the vault. Send exactly the amount from your wallet, then paste the transaction’s id there.', tone: 'ok' });
       } else {
-        lines.push({ text: `Bound: make an invoice on your vault’s node for ${say(pl.amount, this.acceptedSet(await this.accepted(me)))} with the description hash ${key} (on regtest, in the test wallet, on the vault’s node), and paste it in Pay.`, tone: 'ok' });
+        lines.push({ text: `Bound: make an invoice on your vault’s node for ${say(pl.amount, this.acceptedSet(await this.accepted(me)))} with the description hash ${key} (on regtest, in the test wallet, on the vault’s node), and paste it in Waiting, To the vault.`, tone: 'ok' });
       }
       book.payments[key] = p;
       await this.saveBook(me.id, book);
@@ -2628,6 +3040,12 @@ export class Damgar {
         why = `“${l.label}”: ${refused}`;
         continue;
       }
+      // The cap in all (the grant limits cMIP, draft 3, 8.3; client conformance): a new payment, its invoice request, refused before signing where it would take the lane past it.
+      const over = l.total && MESSAGES_SPECS.includes(spec) && type === TYPES.invoiceRequest ? await this.pastTotal(me.id, l.grant, l.total, amountOf({ spec, type, payload }, MONEY)) : null;
+      if (over) {
+        why = `“${l.label}”: ${over}`;
+        continue;
+      }
       try {
         if ((await revocationsOf(me.id, l.grant, hints, s.via)).length) {
           why = `“${l.label}” was revoked. Nothing was signed`;
@@ -2639,6 +3057,24 @@ export class Damgar {
       return { lane: l };
     }
     return { why };
+  }
+
+  /** What a lane held here has spent in all (draft 3, 8.2): its payments, each once, those the payee refused giving back. */
+  async laneSpent(id: string, grant: string, unit: string): Promise<number> {
+    const book = (await this.store.read<Book>(id, 'book')) ?? null;
+    const ps = Object.values(book?.payments ?? {}).filter((p) => p.side === 'out' && p.how?.by === 'lane' && p.how.grant === grant && p.stage !== 'declined');
+    return spentOf(ps.map((p) => ({ amount: p.amount, refused: p.stage === 'refused' })), unit);
+  }
+
+  /** Why this payment would take the lane past its cap in all, or null. */
+  private async pastTotal(id: string, grant: string, total: Cap, amount: Cap | null): Promise<string | null> {
+    if (!amount) return null;
+    const acc = new Set([total.unit]);
+    if (amount.unit !== total.unit) return `the cap in all is in ${say({ unit: total.unit, value: 0 }, acc).replace(/^0 /, '')}, and this payment is in another unit`;
+    const used = await this.laneSpent(id, grant, total.unit);
+    if (used + amount.value <= total.value) return null;
+    const left = Math.max(0, total.value - used);
+    return `${amount.value} would go past the lane’s cap in all of ${total.value}: ${left ? `${left} left` : 'nothing left'} (the grant limits cMIP, draft 3; kept by the apps)`;
   }
 
   // ------------------------------------------------------------ Settings: where you are paid
@@ -2728,7 +3164,7 @@ export class Damgar {
       }
       let act: { act: Uint8Array; id: string };
       try {
-        act = me.sign(MONEY, made.type, made.payload, { public: true });
+        act = await me.signNow(MONEY, made.type, made.payload, { public: true });
       } finally {
         await this.store.saveIdentity(me);
       }
@@ -2787,7 +3223,7 @@ export class Damgar {
       }
     } else {
       try {
-        made = this.signAct(me, spec, type, payload, { public: false, to: [to], refs });
+        made = await this.signAct(me, spec, type, payload, { public: false, to: [to], refs });
       } finally {
         await this.store.saveIdentity(me);
       }
@@ -2805,8 +3241,11 @@ export class Damgar {
       }
     }
     // At this identity's homes too, locked, its key delivered to itself (H80's question 2): Kišib places Damgar's line by it.
-    // Under a lane, the act is the grant's strand, not this line: its locked act left there, as before, and nothing more signed.
-    await leaveAtHomes(me, made, { via: s.via, lockedOnly: how.by === 'lane' });
+    // Under a lane, the act is the grant's strand, not this line: its locked act left there, as before. Signed in another app (Dub) holding the
+    // identity's own key, its content key is delivered to the identity itself too, so Damgar opens it and keeps the payment's record (decided:
+    // a payment under the lane is finished in the app, its record in Damgar's account; the grant limits cMIP, draft 3, 8.4). Through Kišib's
+    // runner it is not: each delivery would ask in Kišib's panel; Damgar then shows those acts sealed, and the app's own count stands.
+    await leaveAtHomes(me, made, { via: s.via, lockedOnly: how.by === 'lane' && !(this.opts.app && me.f.signingSecret) });
     await this.store.saveIdentity(me);
     if (!left) throw new Error(`${short(to)}’s inbox (${inbox.join(', ')}) took nothing. It was signed and kept here; try again later.`);
     return made.id;

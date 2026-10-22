@@ -58,6 +58,8 @@ export interface ToSign {
   unknown: boolean;
   /** The buttons offered. */
   offers: ('sign' | 'decline' | 'debt' | 'pay' | 'invoice' | 'address' | 'refuse' | 'receipt' | 'grant')[];
+  /** Pasted by hand (the first way to pay), not found on MOR. */
+  byHand?: boolean;
   /** For an invoice request on Lightning: the description hash to give the wallet. */
   descriptionHash?: string;
   found: number;
@@ -116,7 +118,7 @@ export interface State {
   /** Something was saved from Settings (H45): its sections start folded; before that, on first use, all open. */
   settingsSaved: boolean;
   stage: 'identity' | 'accept' | 'ready';
-  held: { id: string; grouped: string; short: string; active: boolean }[];
+  held: { id: string; grouped: string; short: string; active: boolean; /** Used through Kišib's runner: Damgar holds none of its keys. */ runner?: boolean; /** Its display name (the naming cMIP), where it has one. */ name?: string | null }[];
   identity: null | {
     id: string;
     grouped: string;
@@ -128,6 +130,12 @@ export interface State {
     encryption: boolean;
     /** This app's line; its card for Kišib names only an act the homes hold (H80's question 2). */
     line: LineShown;
+    /** The collectives Damgar acts for in money, under this identity (the identity panel). */
+    collectives: { id: string; form: string; short: string; name: string | null }[];
+    /** Its display name (the naming cMIP), where it has one. */
+    name: string | null;
+    /** Used through Kišib's runner. */
+    runner: boolean;
   };
   accept: Accept[];
   /** Where the accepted list stands: its version, whether it was forked and merged, published or private. */
@@ -146,4 +154,16 @@ export interface LaneShown {
   words: string[];
   /** Every act its places hold signed under it. */
   acts: { id: string; said: string }[];
+  /** Its cap per act and its expiry (a timestamp clock's time), as the grant says them. */
+  cap?: Shown | null;
+  until?: number | null;
+  /** The cap in all (the grant limits cMIP, draft 3), kept by the apps and counted here; what its payments spent, what is left, and any overspend. Null where none was asked, or (spent) where nothing could be read. */
+  total?: Shown | null;
+  spent?: Shown | null;
+  left?: Shown | null;
+  over?: Shown | null;
+  /** An app's payments under it, read from the acts whose keys it delivered to this identity: the record kept here (Account › Under the lanes). */
+  payments?: { key: string; to: Who; amount: Shown; whatFor: string | null; stage: 'asked' | 'refused' | 'paid'; request: string | null; claims: string[] }[];
+  /** Acts under it whose keys were not delivered here: sealed, not counted. */
+  sealed?: number;
 }

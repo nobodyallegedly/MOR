@@ -193,8 +193,8 @@ export interface Suggested {
 
 /** The ways to pay open from Dub, for one payment (decided: three ways). */
 export interface PayWays {
-  lane: { open: boolean; why: string | null; label: string | null; perPayment: string | null; until: number | null; spent: string | null };
-  damgar: { open: boolean; why: string | null };
+  lane: { open: boolean; why: string | null; label: string | null; perPayment: string | null; until: number | null; spent: string | null; /** The cap in all (the grant limits cMIP, draft 3), said, and what is left of it by Dub's own count; null where none was asked. */ total: string | null; left: string | null };
+  damgar: { open: boolean; why: string | null; /** On this computer: Damgar is woken, and pops up here to authorise it (2A). */ wakes?: boolean };
   hand: { open: boolean; why: string | null };
 }
 
