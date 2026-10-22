@@ -11,6 +11,7 @@ The letters to Machine, allegedly, in the project: from the brainstorm window (1
 - Check every rule against the patterns of failure; the two keys, never three.
 - Read reports the moment they arrive; read the repository before saying anything exists, is missing or is broken.
 - Hand over a little earlier than you think you need to.
+- When a question is hard or a rule seems odd, do the archaeology first (Nobody, allegedly, 22 October 2026: "Remember, when needed do some archeology"): read how the rule was born and shaped in the findings and the old drafts before judging it. The keepers' question shrank to its true size that way.
 - Anything on a verdict's path is held to the texts' words; a convenience lives in a tool with its own name (Fable, after Q46: a sentence of the lead's meant for the frozen file's header became a step in the MIR hash; the fourth review pattern turned inward).
 
 ## The bar for the freeze
