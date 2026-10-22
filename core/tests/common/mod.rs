@@ -183,11 +183,11 @@ impl Default for World {
     }
 }
 
-/// A content key and nonce for one act, derived from its inside (test data,
-/// labelled so): a new key for every object (Envelopes rule 9), the same
-/// act always locked alike.
-pub fn content_key_for(inside: &Inside) -> ([u8; 32], [u8; 24]) {
-    let enc = inside.encode();
+/// A content key and nonce for one act, derived from its inside and who
+/// signs it (test data, labelled so): a new key for every object (Envelopes
+/// rule 9), the same act always locked alike.
+pub fn content_key_for(inside: &Inside, signer: Option<Hash>, binding: Option<Hash>) -> ([u8; 32], [u8; 24]) {
+    let enc = [inside.encode(), signer.map(|x| x.to_vec()).unwrap_or_default(), binding.map(|x| x.to_vec()).unwrap_or_default()].concat();
     let key = sha256(&[&b"mor test data: content key of the act whose inside is "[..], &enc].concat());
     let nonce = sha256(&[&b"mor test data: nonce of the act whose inside is "[..], &enc].concat());
     (key, nonce[..24].try_into().unwrap())
@@ -247,7 +247,7 @@ impl World {
         binding: Option<Hash>,
         sign: impl FnOnce(&Hash) -> Signature,
     ) -> Act {
-        let (key, nonce) = content_key_for(inside);
+        let (key, nonce) = content_key_for(inside, signer, binding);
         act::make(
             inside,
             &key,
@@ -499,7 +499,7 @@ impl World {
             hint: None,
             salt,
         };
-        let (key, nonce) = content_key_for(&inside);
+        let (key, nonce) = content_key_for(&inside, Some(p.id), Some(p.binding));
         let sign = p.sign.clone();
         let a = act::make(
             &inside,

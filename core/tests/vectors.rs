@@ -273,14 +273,19 @@ fn verdict_vectors() {
             let what = c["name"].as_str().unwrap();
             let mut v = Verifier::with_mirs(mirs.identity, mirs.money, mirs.agreements).knowing_envelopes_and_text(mirs.envelopes, mirs.text);
             let mut refused = vec![];
+            let facts = &c["facts"];
             for id in c["acts"].as_array().unwrap() {
                 let act = Act::decode(&b(&f["pool"][id.as_str().unwrap()])).unwrap();
                 assert_eq!(hex::encode(act.id()), id.as_str().unwrap(), "{what}: the act's id");
-                if v.add(act).is_err() {
+                // A private act's content key, held as a recipient holds it.
+                let key: Option<[u8; 32]> = facts["content_keys"].get(id.as_str().unwrap()).map(|k| b(k).try_into().unwrap());
+                if v.add_with_key(act, key.as_ref()).is_err() {
                     refused.push(h(id));
                 }
             }
-            let facts = &c["facts"];
+            for x in facts["found_at_home"].as_array().into_iter().flatten() {
+                v.found_at_home(h(&x["act"]), h(&x["operator"]));
+            }
             for p in facts["inclusion_proofs"].as_array().into_iter().flatten() {
                 // The proof names the receipt it proves (Identity, "Audit"):
                 // the receipt is held, and is the one the verifier proves.
@@ -396,7 +401,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 69);
+    assert_eq!(n, 85);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.

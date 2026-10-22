@@ -18,7 +18,7 @@ use mor_core::chain::{Status, Stop};
 use mor_core::development::{kinds, Judged, Spec};
 use mor_core::envelopes::anchoring::{Anchor, Reference};
 use mor_core::hash::{sha256, Hash};
-use mor_core::identity::{Audit, Home, Successor};
+use mor_core::identity::{Audit, Home, KeptTip, Successor};
 use mor_core::money::{self, Amount, Claim, Payload as Fin, Payer, Receipt};
 use serde_json::{json, Value as J};
 use std::collections::BTreeMap;
@@ -235,6 +235,9 @@ pub struct Facts {
     pub rail_valid: Vec<(Hash, Hash)>,
     /// The rail Module's answer of which payment a proof is (Money rule 12).
     pub rail_payments: Vec<(Vec<u8>, Vec<u8>)>,
+    /// Private acts this verifier found in their sealed form at a home, with
+    /// the home's operator (Identity, "Private links").
+    pub found_at_home: Vec<(Hash, Hash)>,
 }
 
 impl Facts {
@@ -258,6 +261,9 @@ impl Facts {
         if !self.rail_valid.is_empty() {
             m.insert("rail_valid".into(), self.rail_valid.iter().map(|(a, to)| json!({ "act": hx(a), "paid_to_flow": hx(to) })).collect());
         }
+        if !self.found_at_home.is_empty() {
+            m.insert("found_at_home".into(), self.found_at_home.iter().map(|(a, o)| json!({ "act": hx(a), "operator": hx(o) })).collect());
+        }
         if !self.rail_payments.is_empty() {
             m.insert("rail_payments".into(), self.rail_payments.iter().map(|(p, x)| json!({ "proof": hx(p), "payment": hx(x) })).collect());
         }
@@ -270,6 +276,9 @@ impl Facts {
         }
         for o in &self.failed_to_reach {
             w.v.failed_to_reach(*o);
+        }
+        for (a, o) in &self.found_at_home {
+            w.v.found_at_home(*a, *o);
         }
     }
 
@@ -399,15 +408,23 @@ impl Out {
     #[allow(clippy::too_many_arguments)]
     fn case(&mut self, w: &mut World, name: &str, rule: &str, why: &str, facts: Facts, ask: J, expect: J, python: Option<&str>) {
         let mut acts = vec![];
+        let mut keys = serde_json::Map::new();
         for (a, key) in &w.log {
-            assert!(key.is_none(), "{name}: the vectors hold public acts only");
             let id = hx(&a.id());
             self.pool.insert(id.clone(), hx(&a.encode()));
+            if let Some(k) = key {
+                // A private act: the verifier holds its content key, as a recipient does.
+                keys.insert(id.clone(), json!(hx(k)));
+            }
             acts.push(id);
         }
         let got = answer(w, &facts, &ask);
         assert_eq!(got, expect, "{name}");
-        let mut c = json!({ "name": name, "rule": rule, "why": why, "acts": acts, "facts": facts.to_json(), "ask": ask, "verdict": got });
+        let mut fj = facts.to_json();
+        if !keys.is_empty() {
+            fj["content_keys"] = J::Object(keys);
+        }
+        let mut c = json!({ "name": name, "rule": rule, "why": why, "acts": acts, "facts": fj, "ask": ask, "verdict": got });
         if let Some(p) = python {
             c["python"] = json!(p);
         }
@@ -581,6 +598,112 @@ pub fn identity(out: &mut Out) {
     out.case(&mut w2, "a home receipting two genuine rotations at one position, both under cosigned summaries: proven dishonest there", "Identity rule 45; \"Conflicting receipts\" 3",
         "The identity requires audit; both receipts sit under cosigned log summaries, and a cosigned receipt survives the home's rotation. Position 2 counts on homes 2 and 3; home 1 counts for nothing for this identity after position 2.",
         facts, json!({ "question": "chain", "identity": hx(&j.id) }), json!({ "counting": [hx(&j.id), hx(&r1), hx(&r2)], "next": "end", "dishonest": [{ "operator": hx(&h1.id), "from_position": 2 }] }), None);
+
+    // A rotation that passes the checks and loses at its position: not counting.
+    let mut w = World::new();
+    let mut h1 = w.operator("home-1");
+    let mut h2 = w.operator("home-2");
+    let mut h3 = w.operator("home-3");
+    let j = w.genesis("hal", vec![home_of(&h1), home_of(&h2), home_of(&h3)], None, None);
+    let (r, _) = w.rotate(&j, Rot::default());
+    let (rival, mut jr) = w.rotate(&j, Rot { signing_key: Some(schnorr("a thief", 3)), ..Default::default() });
+    w.receipt(&mut h1, &j.id, &r, 1);
+    w.receipt(&mut h2, &j.id, &r, 1);
+    w.receipt(&mut h3, &j.id, &rival, 1);
+    let bound = w.post(&mut jr, "bound to the rotation that does not count");
+    let log = w.log.clone();
+    out.case(&mut w, "two rotations at one position, both passing the checks, the home rule deciding for the other: not counting", "Identity, \"Which rotation counts\", a rotation that does not count; rules 40 and 41",
+        "Two of three homes receipted the other; this one passes the rotation checks and loses: neither invalid nor void.", Facts::default(), ask_status(&rival), json!("not counting"), None);
+    let mut w2 = World::new();
+    for (a, _) in &log {
+        w2.add(a);
+    }
+    out.case(&mut w2, "an act bound to the rotation that does not count: invalid", "Identity, \"Which rotation counts\", a rotation that does not count; everyday check 2",
+        "Its binding names no act that counts.", Facts::default(), ask_status(&bound), json!("invalid"), None);
+
+    // An act bound to a contested rotation: pending.
+    let mut w = World::new();
+    let mut home = w.operator("a home");
+    let j = w.genesis("ivy", vec![home_of(&home)], None, None);
+    let (r, mut j1) = w.rotate(&j, Rot::default());
+    let (rival, _) = w.rotate(&j, Rot { signing_key: Some(schnorr("a thief", 4)), ..Default::default() });
+    w.receipt(&mut home, &j.id, &r, 1);
+    w.receipt(&mut home, &j.id, &rival, 1);
+    let post = w.post(&mut j1, "bound to a contested rotation");
+    out.case(&mut w, "an act bound to a contested rotation: pending", "Identity rule 42; rule 44; everyday check 2",
+        "One home receipted two rotations at position 1: the position is contested, and an act bound to either waits until the contest ends.", Facts::default(), ask_status(&post), json!("pending"), None);
+
+    // A kept tip whose summary does not fit its line (rotation check 7).
+    let tips = |w: &mut World, j: &Person| {
+        let mut jj = j.clone();
+        let p1 = w.post(&mut jj, "one");
+        let p2 = w.post(&mut jj, "two");
+        let mut other = jj.clone();
+        other.seq = vec![];
+        let o1 = w.post(&mut other, "from another device");
+        let wrong = KeptTip { act: p2, position: 2, summary: sha256(b"a summary that does not fit the line") };
+        let fits = KeptTip { act: o1, position: 1, summary: mor_core::mmr::summary(&[o1]) };
+        (jj, p1, p2, o1, wrong, fits)
+    };
+    let mut w = World::new();
+    let mut home = w.operator("a home");
+    let j = w.genesis("kai", vec![home_of(&home)], None, None);
+    let (jj, p1, p2, o1, wrong, fits) = tips(&mut w, &j);
+    let (r, _) = w.rotate(&jj, Rot { kept: Some(vec![wrong, fits]), ..Default::default() });
+    w.receipt(&mut home, &j.id, &r, 1);
+    let log = w.log.clone();
+    for (name, act, v) in [
+        ("a kept tip whose summary does not fit its line, the line held: the tip keeps nothing, itself void", p2, "void"),
+        ("an act below that tip: void", p1, "void"),
+        ("an act on the rotation's other tip, which fits: valid", o1, "valid"),
+    ] {
+        let mut w2 = World::new();
+        for (a, _) in &log {
+            w2.add(a);
+        }
+        out.case(&mut w2, name, "Identity, rotation check 7; rules 33 and 34", "The rotation names two tips; one's summary is not the summary of its line up to it, which the verifier holds.", Facts::default(), ask_status(&act), json!(v), None);
+    }
+    let mut w = World::new();
+    let mut home = w.operator("a home");
+    let j = w.genesis("kai", vec![home_of(&home)], None, None);
+    let (jj, _, _, _, wrong, _) = tips(&mut w, &j);
+    let (r, _) = w.rotate(&jj, Rot { kept: Some(vec![wrong]), ..Default::default() });
+    w.receipt(&mut home, &j.id, &r, 1);
+    out.case(&mut w, "a rotation whose one kept tip does not fit its line, the line held: invalid", "Identity, rotation check 7", "Every tip's line is held and none fits.", Facts::default(), ask_status(&r), json!("invalid"), None);
+
+    // An acknowledgement under a scoped key rescues nothing.
+    let mut w = World::new();
+    let mut home = w.operator("a home");
+    let mut friend = w.genesis("a friend", vec![own_home()], None, None);
+    let mut app = w.genesis("the friend's app", vec![own_home()], None, None);
+    let (_, mut lane) = grant_key_person(&mut w, &mut friend, &mut app, vec![Kind::Type { spec: mirs().agreements, type_: agreements::types::NEGOTIATION }]);
+    let mut j = w.genesis("lea", vec![home_of(&home)], None, None);
+    let relied = w.post(&mut j, "a post the friend's app relied on");
+    let ack = {
+        let a = w.everyday_act(&mut lane, mirs().agreements, agreements::types::NEGOTIATION, vec![(Value::Uint(0), Value::Text("Noted.".into()))], None, Some(vec![relied]));
+        w.add(&a)
+    };
+    assert_eq!(w.v.status(&ack), Status::Scoped);
+    let (r, _) = w.rotate(&j, Rot { disowned: Some(vec![relied]), ..Default::default() });
+    w.receipt(&mut home, &j.id, &r, 1);
+    out.case(&mut w, "a disowned act acknowledged only by an act signed with another identity's scoped key: void", "Identity rule 34",
+        "An acknowledgement counts only under the acknowledging identity's signing key, never a scoped key: reliance is the identity's, not a grantee's.", Facts::default(), ask_status(&relied), json!("void"), None);
+
+    // A private link: unknown until found at its signer's home.
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let bea = w.genesis("bea", vec![own_home()], None, None);
+    let claim = w.private_act(&mut ana, mirs().identity, mor_core::identity::types::LINK_CLAIM, vec![(Value::Uint(0), Value::Array(vec![Value::Text("mor".into()), Value::Bytes(bea.id.to_vec())]))], None, vec![bea.id]);
+    let log = w.log.clone();
+    out.case(&mut w, "a private link claim, its key held, found at no home of its signer: unknown", "Identity, \"Private links\" (rule 17)",
+        "A private link counts only once found at a home its signer's chain names; found nowhere, unknown, never invalid.", Facts::default(), ask_status(&claim), json!("unknown"), None);
+    let mut w2 = World::new();
+    for (a, k) in &log {
+        w2.log.push((a.clone(), k.clone()));
+        w2.v.add_with_key(a.clone(), k.as_ref()).unwrap();
+    }
+    out.case(&mut w2, "the same found at its signer's own home: valid", "Identity, \"Private links\" (rule 17)", "Ana's genesis names herself as her home; the claim was found there.",
+        Facts { found_at_home: vec![(claim, ana.id)], ..Default::default() }, ask_status(&claim), json!("valid"), None);
 }
 
 pub fn text(out: &mut Out) {
@@ -682,7 +805,7 @@ pub fn envelopes(out: &mut Out) {
 /// The same inside, sealed again and signed by `p`'s signing key.
 fn reseal(w: &mut World, p: &Person, inside: &mor_core::act::Inside) -> mor_core::act::Act {
     let _ = w;
-    let (key, nonce) = content_key_for(inside);
+    let (key, nonce) = content_key_for(inside, Some(p.id), Some(p.binding));
     mor_core::act::make(inside, &key, &nonce, &mor_core::act::Addressing { signer: Some(p.id), binding: Some(p.binding), public: true, to: None }, |id| p.sign.sign(id, &[0; 32]))
 }
 
@@ -925,6 +1048,103 @@ pub fn agreements(out: &mut Out) {
         }
         out.case(&mut w, name, "Agreements rule 41; Identity rule 34", "Only a record before the keeper's own record of the rotation, in its sequence, counts against it.", Facts::default(), ask("status after keepers", &x), json!(v), None);
     }
+    // "Belongs to" at depth two: a receipt, through the obligation it fulfils, to the deal the obligation arises from.
+    let mut w = World::new();
+    let mut home = w.operator("a home");
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut keeper = w.genesis("the deal's keeper", vec![own_home()], None, None);
+    let mut ana = w.genesis("ana", vec![home_of(&home)], None, None);
+    let t0 = deal(&[ana.id, ben.id], Some(Keepers { operators: vec![keeper.id], rule: Rule::All }));
+    let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t0.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let unit = spec("a test unit (regtest satoshi)");
+    let ob = Fin::Obligation(money::Obligation { debtor: ben.id, creditor: ana.id, amount: Amount { unit, value: 10 }, pointer: spec("a pointer"), agreement: Some(d) });
+    let oid = { let a = w.everyday_act(&mut ben, mirs().money, 1, ob.to_map(), None, None); w.add(&a) };
+    let rc = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: b"a payment of the debt".to_vec(), payer: Some(Payer::Identity(ben.id)), payee: ana.id, amount: Amount { unit, value: 10 }, fulfils: oid, previous: None, forward: None, batch: None, purchase: None });
+    let rid = { let a = w.everyday_act(&mut ana, mirs().money, 2, rc.to_map(), None, None); w.add(&a) };
+    keep(&mut w, &mut keeper, rid, ana.id);
+    let (r, _) = w.rotate(&ana, Rot { disowned: Some(vec![rid]), ..Default::default() });
+    w.receipt(&mut home, &ana.id, &r, 1);
+    keep(&mut w, &mut keeper, r, ana.id);
+    let log = w.log.clone();
+    out.case(&mut w, "a keeper's record of an act belonging to its deal at depth two, before the rotation: disputed", "Agreements, \"Belongs to\" (no fixed depth); rules 41 and 42; Identity rule 34",
+        "The receipt fulfils an obligation, and the obligation arises from the deal (its field 4): the receipt belongs to the deal, whose keeper recorded it before recording the rotation.", Facts::default(), ask("status after keepers", &rid), json!("disputed"), None);
+    let mut w2 = World::new();
+    for (x, _) in &log {
+        if x.id() != oid {
+            w2.add(x);
+        }
+    }
+    out.case(&mut w2, "the same at a verifier not holding the obligation: unknown", "Agreements, \"Belongs to\": unknown beyond an act not held; Identity, \"A verifier that cannot tell answers unknown\"",
+        "Whether the receipt belongs to an agreement whose keepers recorded it lies beyond the obligation, which is not held: void cannot be told.", Facts::default(), ask("status after keepers", &rid), json!("unknown"), None);
+
+    // The keepers of the version in force for an act.
+    for (by_clone, name, v) in [
+        (true, "an act naming the founding, its history holding a clone in force: the clone's keeper recorded it before the rotation: disputed", "disputed"),
+        (false, "the same recorded only by the founding's keeper, whom the clone replaced: void", "void"),
+    ] {
+        let mut w = World::new();
+        let mut home = w.operator("a home");
+        let mut ben = w.genesis("ben", vec![own_home()], None, None);
+        let mut k1 = w.genesis("the founding's keeper", vec![own_home()], None, None);
+        let mut k2 = w.genesis("the clone's keeper", vec![own_home()], None, None);
+        let mut ana = w.genesis("ana", vec![home_of(&home)], None, None);
+        let t0 = deal(&[ana.id, ben.id], Some(Keepers { operators: vec![k1.id], rule: Rule::All }));
+        let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t0.to_map(), None);
+        sign(&mut w, &mut ana, &d);
+        sign(&mut w, &mut ben, &d);
+        let mut t1 = t0.clone();
+        t1.parent = Some(d);
+        t1.keepers = Some(Keepers { operators: vec![k2.id], rule: Rule::All });
+        let mut signers = vec![ana.id, ben.id];
+        signers.sort();
+        t1.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Clone, signers }]);
+        let c = ag_act(&mut w, &mut ana, agreements::types::TERMS, t1.to_map(), obj(d));
+        sign(&mut w, &mut ben, &c);
+        sign(&mut w, &mut ana, &c);
+        let x = ag_act(&mut w, &mut ana, agreements::new_types::LIVENESS, agreements::Liveness { agreement: d }.to_map(), obj(d));
+        let (r, _) = w.rotate(&ana, Rot { disowned: Some(vec![x]), ..Default::default() });
+        w.receipt(&mut home, &ana.id, &r, 1);
+        let k = if by_clone { &mut k2 } else { &mut k1 };
+        keep(&mut w, k, x, ana.id);
+        keep(&mut w, k, r, ana.id);
+        out.case(&mut w, name, "Agreements, \"Belongs to\": its keepers are those of the version in force for the act; rules 41 and 42",
+            "The act names the founding; its history (its prev, Ana's signature of the clone) holds the clone, complete: the version in force for it is the clone, whose keepers alone speak for it.", Facts::default(), ask("status after keepers", &x), json!(v), None);
+    }
+
+    // A record putting an operational clone in force at once.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let f = col.founding;
+    let second = spec("a second payment cMIP");
+    let mut t1 = view(&w).terms(&f).unwrap();
+    t1.parent = Some(f);
+    t1.cmips = vec![(6, second)];
+    t1.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Area(2), signers: vec![col.m[1].id] }]);
+    let clone = ag_act(&mut w, &mut col.m[1], agreements::types::TERMS, t1.to_map(), obj(f));
+    let s1 = sign(&mut w, &mut col.m[1], &clone);
+    let before = { let a = w.everyday_act(&mut col.c, second, 0, vec![(Value::Uint(0), Value::Uint(0))], None, None); w.add(&a) };
+    sign(&mut w, &mut col.m[1], &before);
+    let rec = {
+        let saved = col.c.cite.take();
+        let a = w.everyday_act(&mut col.c, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: Some(clone), signatures: Some(vec![s1]), kept: vec![], registers: None }.to_map(), obj(clone), None);
+        col.c.cite = saved;
+        w.add(&a)
+    };
+    { let e = view(&w).record(&col.c.id, &rec).unwrap(); assert_eq!(e.puts, Some(clone), "the record puts the clone in force: {:?}", e); }
+    let x = { let a = w.everyday_act(&mut col.c, second, 0, vec![(Value::Uint(0), Value::Uint(1))], None, None); w.add(&a) };
+    sign(&mut w, &mut col.m[1], &x);
+    out.case(&mut w, "a collective's act of the payment cMIP an operational clone names, after the record putting that clone in force: counts", "Agreements, record (type 17): an operational clone recorded is in force at once; rules 60 and 65",
+        "The founding names one payment cMIP for task 6; the clone, marked by the Money area's power, names another; the collective records it, and its next act, of that cMIP, falls in the Money area and has its holder's signature.", Facts::default(), ask("consent counts", &x), json!(true), None);
+    let log = w.log.clone();
+    let mut w2 = World::new();
+    for (a, _) in &log {
+        w2.add(a);
+    }
+    out.case(&mut w2, "the same kind of act signed before the record: does not count", "Agreements, record (type 17); rule 60",
+        "Before the record the founding is in force, which names that cMIP for no task: the act falls in no area, and the collective has areas.", Facts::default(), ask("consent counts", &before), json!(false), None);
+
     // Deadlines.
     let clock = Reference { cmip: spec("a test clock cMIP"), params: Value::Uint(0) };
     let clock_hex = hx(&cbor::encode(&clock.to_value()));

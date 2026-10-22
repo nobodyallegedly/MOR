@@ -10,6 +10,8 @@ The rules are numbered in reading order. The numbered steps of "How it fits toge
 
 A retired rule or type keeps its number, which is never reused.
 
+*Client conformance* marks a rule for the client that locks or signs, which no verifier checks and no verdict reads.
+
 The MIR has four parts. Part one is an act as it runs most of the time: its shape, public and private acts, private delivery, sequences, chains, acknowledgements and references, how acts reach people, media, vows, withdrawal, relays, and what a client does with what it does not understand. Part two is the rare case: theft of the signing key. Part three is the act formats. Part four is the tasks, the reasoning, the parameters and the freeze scenarios.
 
 ## Purpose
@@ -72,7 +74,7 @@ Every act names, inside, the specification that defines its type by hash, and a 
 
 *The act's format, and how its lock and commitments fit together, are in Part three ("The act").*
 
-The rules below are numbered for reading. A verifier checks them in the order the bytes allow: the outside, then the locked bytes against the locked hash, then the inside once unlocked, against the inside commitment, then the inside's shape and its text. An act that breaks any of them is invalid, whichever it finds first.
+The rules below are numbered for reading. A verifier checks them in the order the bytes allow: the outside, then the locked bytes against the locked hash, then the inside once unlocked, against the inside commitment, then the inside's shape and its text. An act that breaks rule 1, 2, 3, 5 or 7 is invalid, whichever it finds first; a scheme it does not implement (rule 4) makes the act unknown only where no other rule it can apply fails (rule 30).
 
 #### Rule 1. One shape, in deterministic CBOR
 
