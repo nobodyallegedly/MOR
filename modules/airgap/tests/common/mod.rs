@@ -218,10 +218,11 @@ impl Owner {
 
     /// Review and sign on the offline device, with no exception.
     pub fn sign(&mut self, pending: &Message, choices: &Choices) -> Message {
-        let review = self
+        let mut review = self
             .device
             .review(&pending.encode(), choices, &mut self.rng)
             .unwrap();
+        confirm(&mut review);
         let s = self.device.sign(review, false, &mut self.rng).unwrap();
         Message::SignedRotation(s.message)
     }
@@ -312,4 +313,21 @@ pub fn decode(bytes: &[u8], k: u64) -> Message {
 
 pub fn pending_kind() -> u64 {
     kind::PENDING_ROTATION
+}
+
+/// Rule 3.3, draft 6: the fresh seed's backup, "written down", and the parts
+/// the device asks typed back from it.
+pub fn confirm(review: &mut mor_airgap::device::Review) {
+    if let (Some(seed), Some(asked)) = (review.new_seed.clone(), review.asked()) {
+        let written = seed.backup();
+        let parts: Vec<&str> = written.split_whitespace().collect();
+        let typed: Vec<&str> = asked.iter().map(|&i| parts[i - 1]).collect();
+        review.confirm_backup(&typed).unwrap();
+    }
+}
+
+/// The review with its backup confirmed, as a person would before signing.
+pub fn confirmed(mut review: mor_airgap::device::Review) -> mor_airgap::device::Review {
+    confirm(&mut review);
+    review
 }

@@ -140,7 +140,7 @@ fn every_consequential_field_changed_online_is_shown_prominently() {
     let alarms: Vec<_> = rv.summary.lines.iter().filter(|l| l.prominent).collect();
     assert!(alarms
         .iter()
-        .all(|l| l.text.starts_with("New signing key") || l.text.starts_with("KEEPS NO SEQUENCE")));
+        .all(|l| l.text.starts_with("New signing key") || l.text.starts_with("KEEPS NO SEQUENCE") || l.text.starts_with("FRESH SEED")));
     assert!(
         !rv.summary.not_checked.is_empty(),
         "the summary says what was not checked (rule 3.2)"
@@ -242,14 +242,14 @@ fn an_online_supplied_next_commitment_is_ignored_and_replaced() {
     let p = Message::PendingRotation(p);
     let rv = review(&mut o, &p).unwrap();
     assert!(rv.summary.warns("IGNORED and replaced"));
-    let s = Message::SignedRotation(o.device.sign(rv, false, &mut o.rng).unwrap().message);
+    let s = Message::SignedRotation(o.device.sign(common::confirmed(rv), false, &mut o.rng).unwrap().message);
     let a = rotation_act(&s);
     let got = rotation_of(&a).chain_key.commit;
     assert_ne!(got, attacker);
     assert_eq!(
         got,
-        o.device.seeds[0].seed.key(2, 1).commitment(),
-        "the device's own next key"
+        o.device.seeds.last().unwrap().seed.key(2, 1).commitment(),
+        "the device's own next key, from its fresh seed"
     );
 }
 
@@ -300,11 +300,11 @@ fn the_two_exceptions_are_allowed_once_each_and_only_when_confirmed() {
     assert!(rv.summary.warns("EXCEPTION to single use"));
     assert!(rv.summary.warns("ESCAPE announced"));
     assert!(matches!(
-        o.device.sign(rv, false, &mut o.rng),
+        o.device.sign(common::confirmed(rv), false, &mut o.rng),
         Err(Refusal::NeedsConfirmation(_))
     ));
     let rv = review(&mut o, &pe).unwrap();
-    let escape = o.device.sign(rv, true, &mut o.rng).unwrap();
+    let escape = o.device.sign(common::confirmed(rv), true, &mut o.rng).unwrap();
     rotation_act(&Message::SignedRotation(escape.message.clone()));
     // The same escape again is re-exported; another escape is refused.
     let rv = review(&mut o, &pe).unwrap();
@@ -333,7 +333,7 @@ fn the_two_exceptions_are_allowed_once_each_and_only_when_confirmed() {
             voided: rotation_act(&voided).id()
         })
     );
-    let normal = o.device.sign(rv, true, &mut o.rng).unwrap();
+    let normal = o.device.sign(common::confirmed(rv), true, &mut o.rng).unwrap();
     let normal_id = rotation_act(&Message::SignedRotation(normal.message)).id();
     // Both exceptions each once: an escape after that normal rotation is
     // still allowed once, then nothing more.
@@ -353,7 +353,7 @@ fn the_two_exceptions_are_allowed_once_each_and_only_when_confirmed() {
         })
     );
     rotation_act(&Message::SignedRotation(
-        o.device.sign(rv, true, &mut o.rng).unwrap().message,
+        o.device.sign(common::confirmed(rv), true, &mut o.rng).unwrap().message,
     ));
     let mut other = o.plan();
     other.homes = Some(vec![home("yet another")]);

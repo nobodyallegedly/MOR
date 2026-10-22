@@ -4,7 +4,7 @@
 //! drawn in the terminal. Everything is refused unless it is exactly the
 //! message expected. Run `mor-signer help`.
 
-use mor_airgap::device::{self, Choices, Config, DealPlan, Signer, Standing, BACKUP_NOTICE};
+use mor_airgap::device::{self, ask_places, Choices, Config, DealPlan, Refusal, Review, Signer, Standing, BACKUP_NOTICE};
 use mor_airgap::msg::{kind, Holder, Message, Role, Share};
 use mor_airgap::seed::{Seed, SeedModule};
 use mor_airgap::shares;
@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 const HELP: &str =
-    "mor-signer — the offline chain-key signer (air-gapped chain key Module, draft 4)
+    "mor-signer — the offline chain-key signer (Dubsar Air-Gapped Chain-Key Signer Module, draft 6)
 
 PROTOTYPE, FOR TEST IDENTITIES. Keep this machine offline, always.
 
@@ -26,7 +26,10 @@ PROTOTYPE, FOR TEST IDENTITIES. Keep this machine offline, always.
   mor-signer [--dir DIR] export OUT [--seed N]        the commitment for a genesis (key 0)
   mor-signer [--dir DIR] sign PENDING OUT [options]   review and sign a pending rotation
       --clean-device                 generate the new signing key here (section 4)
-      --fresh-seed words|hex [128s|128f]   take the next key from a new seed (rule 3.3)
+      --seed words|hex [128s|128f]   the Module and variant of the fresh seed every rotation
+                                     draws (rule 3.3); default: those of the seed that signs.
+                                     Its backup is shown, hidden, and three parts typed back
+                                     before anything is signed. The current seed is never used.
   mor-signer qr FILE [--frames N]                     show a message as animated QR codes
   mor-signer scan commitment|pending|signed|share OUT read QR frames, one per line, from input
   mor-signer check-share SHARE                        a member checks their own share
@@ -95,7 +98,7 @@ fn scheme(s: Option<&String>) -> u8 {
 
 fn show_backup(seed: &Seed) {
     println!(
-        "\nSAFETY SEED BACKUP ({} Module). Write it down, in order:\n",
+        "\nCHAIN-KEY SEED BACKUP ({} Module). Write it down, in order:\n",
         seed.module.name()
     );
     match seed.module {
@@ -105,15 +108,54 @@ fn show_backup(seed: &Seed) {
             }
         }
         SeedModule::Hex => {
-            for line in seed.backup().split(' ').collect::<Vec<_>>().chunks(6) {
-                println!("  {}", line.join(" "));
+            for (n, line) in seed.backup().split(' ').collect::<Vec<_>>().chunks(6).enumerate() {
+                println!("  {:>2}. {}", n * 6 + 1, line.join(" "));
             }
         }
     }
     println!("\n{BACKUP_NOTICE}\n");
     if ask("Type WRITTEN once the backup is on paper: ") != "WRITTEN" {
-        fail("the backup was not confirmed; nothing was saved");
+        fail("the backup was not confirmed; nothing was saved or signed");
     }
+    // Rule 3.7 and 3.3 (draft 6): hidden, then part of it asked back.
+    print!("\x1b[2J\x1b[H");
+    println!("The backup is hidden now.");
+}
+
+/// What each asked part is called, by its Module.
+fn part_name(m: SeedModule) -> &'static str {
+    match m {
+        SeedModule::Words => "Word",
+        SeedModule::Hex => "Group of four characters",
+    }
+}
+
+/// Three parts typed back, from what was written: a new seed's (`new`).
+fn typed_back(seed: &Seed) {
+    let written = seed.backup();
+    let parts: Vec<&str> = written.split_whitespace().collect();
+    for _ in 0..3 {
+        let at = ask_places(parts.len(), &mut OsRng);
+        if at.iter().all(|&i| ask(&format!("{} {i} of the backup: ", part_name(seed.module))).to_ascii_lowercase() == parts[i - 1].to_ascii_lowercase()) {
+            return;
+        }
+        eprintln!("That is not what was shown. Look at what you wrote down.");
+    }
+    fail("the backup was not typed back; nothing was saved");
+}
+
+/// Three parts typed back for a rotation's fresh seed, at the places the device chose (rule 3.3, draft 6).
+fn typed_back_for(review: &mut Review) {
+    let (Some(seed), Some(at)) = (review.new_seed.clone(), review.asked()) else { return };
+    for _ in 0..3 {
+        let typed: Vec<String> = at.iter().map(|i| ask(&format!("{} {i} of the backup: ", part_name(seed.module)))).collect();
+        match review.confirm_backup(&typed.iter().map(String::as_str).collect::<Vec<_>>()) {
+            Ok(()) => return,
+            Err(Refusal::BackupMismatch) => eprintln!("That is not what was shown. Look at what you wrote down."),
+            Err(e) => fail(e),
+        }
+    }
+    fail("the backup was not typed back; nothing was signed, and the fresh seed is forgotten");
 }
 
 fn holder(s: &str) -> Holder {
@@ -227,6 +269,7 @@ fn main() -> ExitCode {
             let seed = if cmd == "new" {
                 let seed = s.new_seed(m, sc, &mut rng);
                 show_backup(&seed);
+                typed_back(&seed);
                 seed
             } else {
                 let mut written = String::new();
@@ -283,7 +326,14 @@ fn main() -> ExitCode {
         "sign" => {
             let clean = flag(&mut args, "--clean-device");
             let qr = flag(&mut args, "--qr");
-            let fresh = option(&mut args, "--fresh-seed", 2).map(|v| {
+            // Draft 5's choice of the current seed: refused, whoever asks (rule 3.3, draft 6).
+            if args.iter().any(|a| a == "--current-seed") {
+                fail(Refusal::CurrentSeed);
+            }
+            if let Some(i) = args.iter().position(|a| a == "--fresh-seed") {
+                args[i] = "--seed".into();
+            }
+            let fresh = option(&mut args, "--seed", 2).map(|v| {
                 let sc = v.get(1).filter(|x| x.starts_with("128"));
                 if sc.is_none() && v.len() == 2 {
                     args.insert(0, v[1].clone());
@@ -296,11 +346,12 @@ fn main() -> ExitCode {
             let mut s = load(&dir);
             let bytes = std::fs::read(pending).unwrap_or_else(|e| fail(e));
             let choices = Choices {
-                fresh_seed: fresh,
-                next_scheme: None,
+                seed_module: fresh.map(|f| f.0),
+                next_scheme: fresh.map(|f| f.1),
                 clean_device: clean,
+                current_seed: false,
             };
-            let review = s
+            let mut review = s
                 .review(&bytes, &choices, &mut rng)
                 .unwrap_or_else(|e| fail(e));
             println!("{}", review.summary);
@@ -313,6 +364,7 @@ fn main() -> ExitCode {
             };
             if let Some(seed) = &review.new_seed {
                 show_backup(seed);
+                typed_back_for(&mut review);
             }
             if ask("Type SIGN to sign exactly this: ") != "SIGN" {
                 fail("not signed");

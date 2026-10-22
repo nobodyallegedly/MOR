@@ -96,6 +96,14 @@ pub enum Refusal {
     /// Evidence given for an exception does not check (rule 29: only bytes
     /// open an exception, F299, F328 Q3).
     Evidence(String),
+    /// Asked to derive the next key from the current seed (draft 5's
+    /// choice): never, under draft 6's rule 3.3.
+    CurrentSeed,
+    /// The fresh seed's backup was not confirmed: nothing is signed until
+    /// part of it is typed back and matches (rule 3.3, draft 6).
+    BackupNotConfirmed,
+    /// What was typed back does not match the backup shown.
+    BackupMismatch,
 }
 
 impl fmt::Display for Refusal {
@@ -104,7 +112,7 @@ impl fmt::Display for Refusal {
             Refusal::Message(e) => write!(f, "{e}"),
             Refusal::Previous(e) => write!(f, "the previous act does not check: {e}"),
             Refusal::NoMatchingKey => f.write_str(
-                "this device holds no chain key matching the commitment in the previous act",
+                "this device holds no chain key matching the commitment in the previous act: this backup gives no key this identity's last change of keys committed to: it may be an earlier, spent one",
             ),
             Refusal::NotARotation(w) => write!(f, "the chain key signs only rotations: {w}"),
             Refusal::Rotation(e) => write!(f, "the rotation does not check: {e}"),
@@ -117,6 +125,15 @@ impl fmt::Display for Refusal {
             Refusal::Shares(e) => write!(f, "{e}"),
             Refusal::Unsupported(w) => write!(f, "not supported by this device: {w}"),
             Refusal::Evidence(e) => write!(f, "the evidence for an exception does not check: {e}"),
+            Refusal::CurrentSeed => f.write_str(
+                "every rotation draws a fresh seed: the next key is never derived from the current seed, whoever asks",
+            ),
+            Refusal::BackupNotConfirmed => f.write_str(
+                "the fresh seed's backup is not confirmed yet: write it down, then type back the parts asked; nothing is signed before",
+            ),
+            Refusal::BackupMismatch => f.write_str(
+                "what was typed back is not the backup shown: look at what you wrote down; nothing was signed",
+            ),
         }
     }
 }
@@ -196,9 +213,14 @@ pub enum Standing {
 /// What the user chooses on the device.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Choices {
-    /// Derive the next key from a fresh seed of this Module and scheme,
-    /// because the current seed may be exposed (rule 3.3).
-    pub fresh_seed: Option<(SeedModule, u8)>,
+    /// The seed Module of the fresh seed every rotation draws (rule 3.3,
+    /// draft 6); `None`: the Module of the seed whose key signs.
+    pub seed_module: Option<SeedModule>,
+    /// Draft 5's choice to derive the next key from the current seed. Kept
+    /// only to be refused, whoever asks (rule 3.3, draft 6: "At each
+    /// rotation, two set of keys are created, always."):
+    /// [`Refusal::CurrentSeed`].
+    pub current_seed: bool,
     /// The scheme of the next chain key, if not the seed's own. A scheme
     /// named by specification hash is not implemented by this device.
     pub next_scheme: Option<u8>,
@@ -235,8 +257,15 @@ enum Next {
 pub struct Review {
     pub summary: Summary,
     pub standing: Standing,
-    /// A fresh seed the user must back up before the rotation is used.
+    /// The fresh seed whose backup the user writes down and confirms before
+    /// the rotation is signed (rule 3.3, draft 6). Shown once by the caller,
+    /// then hidden; [`Review::asked`] says which parts are asked back.
     pub new_seed: Option<Seed>,
+    /// The parts of the backup asked back, by place (1-based): three words of
+    /// 24, or three groups of four characters of 18. Chosen by the device.
+    asked: Option<[usize; 3]>,
+    /// Whether the backup was typed back and matched ([`Review::confirm_backup`]).
+    backed_up: bool,
     /// The next key's shares, one per holder, for a collective.
     pub new_shares: Vec<Share>,
     identity: Hash,
@@ -248,6 +277,56 @@ pub struct Review {
     next: Next,
     signing_secret: Option<[u8; 32]>,
     repeat: Option<Vec<u8>>,
+}
+
+impl Review {
+    /// The backup's parts, as written: 24 words, or 18 groups of four characters.
+    fn parts(&self) -> usize {
+        self.new_seed.as_ref().map(|s| s.backup().split_whitespace().count()).unwrap_or(0)
+    }
+
+    /// The parts of the fresh seed's backup asked back once it is hidden, by
+    /// place (1-based); `None` where nothing new is to be backed up (a
+    /// repeat, a collective's dealt key).
+    pub fn asked(&self) -> Option<[usize; 3]> {
+        self.asked
+    }
+
+    /// Whether the backup was confirmed.
+    pub fn backed_up(&self) -> bool {
+        self.backed_up || self.new_seed.is_none()
+    }
+
+    /// Rule 3.3, draft 6: the parts asked, typed back from what was written.
+    /// Letter case and spacing do not matter. A wrong answer is refused and
+    /// may be given again; nothing is signed until it matches.
+    pub fn confirm_backup(&mut self, typed: &[&str]) -> Result<(), Refusal> {
+        let (Some(seed), Some(asked)) = (&self.new_seed, self.asked) else {
+            return Ok(());
+        };
+        let backup = seed.backup();
+        let parts: Vec<&str> = backup.split_whitespace().collect();
+        let norm = |x: &str| x.split_whitespace().collect::<String>().to_ascii_lowercase();
+        if typed.len() != 3 || asked.iter().zip(typed).any(|(&at, t)| norm(t) != parts[at - 1].to_ascii_lowercase()) {
+            return Err(Refusal::BackupMismatch);
+        }
+        self.backed_up = true;
+        Ok(())
+    }
+}
+
+/// Three different places among `n`, 1-based, in order: the parts of a
+/// backup asked back.
+pub fn ask_places(n: usize, rng: &mut (impl RngCore + CryptoRng)) -> [usize; 3] {
+    let mut out: Vec<usize> = vec![];
+    while out.len() < 3 {
+        let r = u32::from_le_bytes(random(rng)) as usize % n + 1;
+        if !out.contains(&r) {
+            out.push(r);
+        }
+    }
+    out.sort();
+    [out[0], out[1], out[2]]
 }
 
 /// The device's output: the message for the online device.
@@ -657,37 +736,30 @@ impl Signer {
         let (seed_i, key) = self
             .find_key(&prev.commit, pending.index)
             .ok_or(Refusal::NoMatchingKey)?;
-        let next = if let Some((module, scheme)) = choices.fresh_seed {
-            if scheme != 2 && scheme != 3 {
-                return Err(Refusal::Unsupported("chain-key schemes other than 2 and 3"));
-            }
-            let seed = Seed::new(module, random(rng));
-            let s = StoredSeed {
-                seed,
-                scheme,
-                from_index: pending.index + 1,
-            };
-            let k = s.seed.key(scheme, pending.index + 1);
-            (Next::Held { seed: Some(s) }, k)
-        } else {
-            let s = &self.seeds[seed_i];
-            let scheme = choices.next_scheme.unwrap_or(s.scheme);
-            if scheme != 2 && scheme != 3 {
-                return Err(Refusal::Unsupported("chain-key schemes other than 2 and 3"));
-            }
-            (
-                Next::Held { seed: None },
-                s.seed.key(scheme, pending.index + 1),
-            )
+        // Rule 3.3, draft 6: a fresh seed at every rotation, never the current one.
+        if choices.current_seed {
+            return Err(Refusal::CurrentSeed);
+        }
+        let current = &self.seeds[seed_i];
+        let module = choices.seed_module.unwrap_or(current.seed.module);
+        let scheme = choices.next_scheme.unwrap_or(current.scheme);
+        if scheme != 2 && scheme != 3 {
+            return Err(Refusal::Unsupported("chain-key schemes other than 2 and 3"));
+        }
+        let s = StoredSeed {
+            seed: Seed::new(module, random(rng)),
+            scheme,
+            // The index across a fresh seed (section 2): its key n + 1, the
+            // identity's index, never its key 0.
+            from_index: pending.index + 1,
         };
-        self.build(
-            pending,
-            prev,
-            Current::Seed { key },
-            next,
-            choices.clean_device,
-            rng,
-        )
+        let k = s.seed.key(scheme, pending.index + 1);
+        let next = (Next::Held { seed: Some(s) }, k);
+        let mut review = self.build(pending, prev, Current::Seed { key }, next, choices.clean_device, rng)?;
+        if review.new_seed.is_some() {
+            review.asked = Some(ask_places(review.parts(), rng));
+        }
+        Ok(review)
     }
 
     /// A collective's rotation (section 5): the current key rebuilt from
@@ -867,6 +939,8 @@ impl Signer {
                 summary,
                 standing,
                 new_seed: None,
+                asked: None,
+                backed_up: false,
                 new_shares: vec![],
                 identity: prev.identity,
                 request,
@@ -966,9 +1040,10 @@ impl Signer {
         let new_seed = match &next {
             Next::Held { seed: Some(s) } => {
                 summary.warn(format!(
-                    "FRESH SEED ({} Module): the next chain key comes from a new seed. {BACKUP_NOTICE}",
+                    "FRESH SEED ({} Module): the next chain key comes from a new seed, as at every rotation; its backup is confirmed before signing. {BACKUP_NOTICE}",
                     s.seed.module.name()
                 ));
+                summary.plain("The earlier backup is spent once this rotation counts at the identity's homes, which the online device knows; until then it is kept, for the same rotation only.");
                 Some(s.seed.clone())
             }
             _ => None,
@@ -991,6 +1066,8 @@ impl Signer {
             summary,
             standing,
             new_seed,
+            asked: None,
+            backed_up: false,
             new_shares,
             identity: prev.identity,
             request,
@@ -1044,6 +1121,10 @@ impl Signer {
             if !confirmed {
                 return Err(Refusal::NeedsConfirmation(e));
             }
+        }
+        // Rule 3.3, draft 6: the new chain key's backup confirmed first, then the signature.
+        if review.new_seed.is_some() && !review.backed_up {
+            return Err(Refusal::BackupNotConfirmed);
         }
         let inside = review.inside.expect("a new rotation");
         let key = match review.current.expect("a new rotation") {
