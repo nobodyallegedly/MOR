@@ -233,9 +233,9 @@ impl<'a> AgreementsView<'a> {
                     continue;
                 }
                 seen_payments.push(payment);
-                match self.committed_buyer(&proof) {
+                match self.committed_buyer(&x.id, &proof) {
                     Some((claim, buyer)) => {
-                        let state = self.sale_state(name, &buyer, &claim, Some(&proof));
+                        let state = self.sale_state(name, &buyer, &claim, Some((&x.id, &proof)));
                         let evidence = self.evidence_of(&claim);
                         sales.push(VowSale { act: claim, offer: *o, buyer, state, evidence });
                     }
@@ -279,9 +279,9 @@ impl<'a> AgreementsView<'a> {
     /// valid, on a rail binding the payer, its payer an identity; with that
     /// claim. `None` where no such claim is held, or the payer committed
     /// only a bare key.
-    fn committed_buyer(&self, proof: &[u8]) -> Option<(Hash, Hash)> {
+    fn committed_buyer(&self, record: &Hash, proof: &[u8]) -> Option<(Hash, Hash)> {
         use crate::money::{Payer, Payload as Fin};
-        let mut claims = self.payers_claims(proof);
+        let mut claims = self.payers_claims_for(record, proof);
         claims.sort();
         claims.into_iter().find_map(|id| {
             let h = self.v.get(&id)?;
@@ -337,11 +337,11 @@ impl<'a> AgreementsView<'a> {
     /// name (mechanic, the build's: one payment, one sale, whichever of the
     /// buyer's own claims of it is named); for a free sale, the buyer's
     /// signature act on the offer.
-    fn sale_acts(&self, buyer: &Hash, sale: &Hash, proof: Option<&[u8]>) -> Vec<Hash> {
+    fn sale_acts(&self, buyer: &Hash, sale: &Hash, proof: Option<(&Hash, &[u8])>) -> Vec<Hash> {
         use crate::money::{Payer, Payload as Fin};
         match proof {
-            Some(proof) => self
-                .payers_claims(proof)
+            Some((record, proof)) => self
+                .payers_claims_for(record, proof)
                 .into_iter()
                 .filter(|id| {
                     let Some(h) = self.v.get(id) else { return false };
@@ -364,7 +364,7 @@ impl<'a> AgreementsView<'a> {
     /// 13: "a confirmation likewise names the sale"; its reading, to
     /// confirm). An acknowledgement counts only alongside the act it names
     /// (Envelopes rule 4).
-    fn sale_state(&self, name: &Hash, buyer: &Hash, sale: &Hash, proof: Option<&[u8]>) -> SaleState {
+    fn sale_state(&self, name: &Hash, buyer: &Hash, sale: &Hash, proof: Option<(&Hash, &[u8])>) -> SaleState {
         let acts = self.sale_acts(buyer, sale, proof);
         let mut contests: Vec<Hash> = self
             .v

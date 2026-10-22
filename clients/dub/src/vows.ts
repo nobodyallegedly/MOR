@@ -201,15 +201,18 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
   // Each claim's rail, checked by its rail Module and stated to the core (the core reads no rail).
   const accepted = ACCEPTABLE.flatMap((x) => x.hashes);
   const railValid: [string, string, number | null][] = [];
+  // Which payment each proof is, as its rail Module says (Money rule 12): never read from the proofs' bytes.
+  const railPayments: [string, string][] = [];
   const limits: [string, boolean][] = [];
   const amounts = new Map<string, Amount>();
   for (const a of claims) {
     const d = describeAct(a) as { id: string; payload?: Uint8Array; binding?: string };
     try {
-      const j = v.moneyJudge(d.id, { money: MIRS.money, accepted }) as { rail: { answer: string } };
+      const j = v.moneyJudge(d.id, { money: MIRS.money, accepted }) as { rail: { answer: string }; payment?: string | null };
       if (j.rail.answer !== 'valid') continue;
       const c = (moneyRead(CLAIM, d.payload!) as { act: { proof: Uint8Array; amount: Amount } }).act;
       amounts.set(d.id, c.amount);
+      if (j.payment) railPayments.push([hex(new Uint8Array(c.proof)), j.payment]);
       const p = readPaymentProof(new Uint8Array(c.proof)) as { paidTo: { flow?: { pointer: string }; vault?: { declaredBy: string; entry: number } } & Record<string, unknown> };
       const to = paidToOf(p.paidTo);
       if (to) railValid.push([d.id, to[0], to[1]]);
@@ -220,7 +223,7 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
       // not judged: it counts for nothing here
     }
   }
-  const specs = withGrantLimits({ ...AGREEMENTS_SPECS, railValid }, limits);
+  const specs = withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits);
   const out: VowShown[] = [];
   for (const x of vows) {
     try {

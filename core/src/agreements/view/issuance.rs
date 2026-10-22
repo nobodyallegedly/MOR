@@ -243,7 +243,7 @@ impl<'a> AgreementsView<'a> {
     pub(super) fn paid_to_for(&self, payee: &Hash, fulfils: &Hash, unit: &Hash) -> u64 {
         use crate::money::Payload as Fin;
         let counts = |id: &Hash, amount: &crate::money::Amount, proof: &[u8]| {
-            &amount.unit == unit && self.rail_valid.get(id).is_some_and(|at| self.payment_counts(payee, at, amount, proof, fulfils))
+            &amount.unit == unit && self.rail_valid.get(id).is_some_and(|at| self.payment_counts_rec(payee, at, amount, (Some(id), proof), fulfils))
         };
         let mut receipts: Vec<((Hash, Payment), u64)> = vec![];
         let mut claims: Vec<((Hash, Payment), u64)> = vec![];

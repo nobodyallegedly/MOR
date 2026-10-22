@@ -156,7 +156,7 @@ The WebAssembly interface:
   - `agreementsPaid` throws `law/payment-unstated`, shown as unknown;
   - other verdicts treat the two as not shown the same (below).
 
-  Dub's vows (`clients/dub/src/vows.ts`) pass `railValid` and should pass `railPayments` too. Otherwise two claims of one payment would show as two sales.
+  Dub's vows (`clients/dub/src/vows.ts`) now pass `railPayments` beside `railValid`, from the `payment` that `moneyJudge` already returns. Without it, a vow's sale whose receipt and claim are one payment would read as an unsigned receipt beside a sale. This is a three-line change made here so that CI stays green; it is the Suite's to keep or reshape.
 - **A new status word, `"not counting"`**, from every function that returns an act's standing. Clients that switch on status words fall through to their default (for example the reader's `standingWords`); a plain-words line is theirs to add.
 - **`mirFileHash`** now hashes a draft with its status line. The six hashes the reader shows change; the hashes in use (`MIRS`) do not.
 - **Canonical-text errors** read "Text rule 7…12" instead of "rule 1…6". `clients/longform/test/act.test.ts` matched `/rule 4/` and is updated to `/Text rule 10/`.
