@@ -1220,6 +1220,24 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         }
         return;
       }
+      case 'play-sealed': {
+        // A film or recording bought: its bytes opened and checked by its Module in the program, then played here from a blob.
+        const box = el.closest<HTMLElement>('[data-sealed]')!;
+        const audio = box.dataset.sealedMedia === 'audio';
+        if (audio && !document.createElement('audio').canPlayType('audio/mp4; codecs="mp4a.40.2"')) {
+          box.innerHTML = '<span class="k-label k-warn">The recording is not played: this browser says it cannot play AAC sound in M4A, so nothing was fetched.</span>';
+          return;
+        }
+        el.textContent = audio ? 'Opening and checking the recording…' : 'Opening and checking the film…';
+        try {
+          const r = await b.ask<{ b64: string; type: string }>('sealed play', { publication: box.dataset.sealed, seller: box.dataset.sealedSeller });
+          const url = URL.createObjectURL(new Blob([Uint8Array.from(atob(r.b64), (c) => c.charCodeAt(0))], { type: r.type }));
+          box.innerHTML = audio ? `<audio controls src="${v.e(url)}"></audio>` : `<video controls playsinline src="${v.e(url)}"></video>`;
+        } catch (err) {
+          box.innerHTML = `<span class="k-label k-warn">The ${audio ? 'recording' : 'film'} is not played: ${v.e(errorOf(err))}</span>`;
+        }
+        return;
+      }
       case 'look':
         say('', '');
         await readPayments();

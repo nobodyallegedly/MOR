@@ -143,6 +143,19 @@ test('Agents: + Add an agent, its terms signed; the API key by its last four cha
   await shot(page, 'mac-11-api-key');
 });
 
+test('Agents › Terms: a grant read back in plain words, signed, the agent asked and accepting by its signature', async () => {
+  await col('Machine, allegedly');
+  await subTo('Terms');
+  await page.locator('#grant-form').waitFor();
+  await page.click('#grant-form button[type=submit]');
+  await page.locator('#e-grant-shown', { hasText: 'The grant, before you sign it' }).waitFor({ timeout: 60_000 });
+  api.reply = answering({ accept: true, why: 'Within these limits, yes.' });
+  await page.click('[data-action=grant-sign]');
+  await page.locator('.k-note', { hasText: /accepted/ }).first().waitFor({ timeout: 90_000 });
+  await page.locator('#e-grants', { hasText: '1 in force' }).waitFor({ timeout: 60_000 });
+  await shot(page, 'mac-17-agent-grant');
+});
+
 test('Agents › Talk: the prompt is a sealed act, answered at once, both in the feed box; the typing box at the bottom', async () => {
   await col('Machine, allegedly');
   await subTo('Talk');
@@ -228,7 +241,15 @@ test('Collectives: a test collective; Act with its permissions as chips, a post 
   await page.locator('.k-pop button', { hasText: 'Rely on it' }).waitFor();
   await page.locator('.k-pop button', { hasText: 'Correct it' }).waitFor();
   await shot(page, 'mac-21-collective-act-menu');
-  await page.keyboard.press('Escape');
+  // Correct it (the corrections cMIP), from the act's menu: read back as the collective's post, then signed; the original corrected by it.
+  await page.locator('.k-pop button', { hasText: 'Correct it' }).click();
+  await page.fill('.k-modal #correct-any textarea', 'The tablet house opens on Wednesday.');
+  await page.click('.k-modal #correct-any button[type=submit]');
+  await page.locator('.k-modal #reading').waitFor({ timeout: 90_000 });
+  await page.click('.k-modal [data-action=confirm]');
+  await done('Posted for');
+  await page.locator('#collective-feed .k-act', { hasText: 'The tablet house opens on Wednesday.' }).locator('.k-label', { hasText: 'correction of' }).waitFor({ timeout: 60_000 });
+  await page.locator('#collective-feed .k-act', { hasText: 'The tablet house opens on Tuesday.' }).locator('.k-label', { hasText: 'corrected by' }).waitFor();
   await shot(page, 'mac-22-collective-act');
   await page.click('[data-action=constitution]');
   await page.locator('.k-modal', { hasText: 'Areas: who decides which acts' }).waitFor({ timeout: 90_000 });

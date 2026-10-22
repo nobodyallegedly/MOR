@@ -204,18 +204,36 @@ export function purchaseAct(p: Purchase): KitAct {
     kind: `${p.what} · bought`,
     labels: [{ text: p.state }, ...(p.price ? [{ text: p.price }] : [])],
     text: p.kind === 'vow' ? p.text : '',
-    html: p.picture ? `<figure><img src="${e(p.picture)}" alt="The picture, opened"></figure>` : p.kind === 'file' && p.text ? `<div class="dub-sealed"><div class="k-txt" dir="auto">${e(p.text)}</div></div>` : '',
+    html: p.picture
+      ? `<figure><img src="${e(p.picture)}" alt="The picture, opened"></figure>`
+      : p.play
+        ? sealedPlayBox(p.play)
+        : p.kind === 'file' && p.text
+          ? `<div class="dub-sealed"><div class="k-txt" dir="auto">${e(p.text)}</div></div>`
+          : '',
     verified: true,
   };
+}
+
+/** A sealed film or recording opened: played when asked, checked by its Module first. */
+function sealedPlayBox(x: { publication: string; seller: string; media: 'video' | 'audio' }): string {
+  return `<div class="dub-film" data-sealed="${e(x.publication)}" data-sealed-seller="${e(x.seller)}" data-sealed-media="${x.media}"><button type="button" class="k-btn k-p" data-action="play-sealed">▶ Play the ${x.media === 'video' ? 'film' : 'recording'}</button><span>checked before it plays</span></div>`;
 }
 
 /** A sealed file a post names (round 2 and 3): its price, its state; opened once its key arrived. Bought from the act's menu. */
 function sealedBox(p: Item): string {
   const x = p.sealed!;
-  const what = x.media === 'picture' ? 'picture' : 'text';
+  const what = x.media === 'picture' ? 'picture' : x.media === 'video' ? 'film' : x.media === 'audio' ? 'recording' : 'text';
+  const opened = x.picture
+    ? `<img src="${e(x.picture)}" alt="The picture, opened">`
+    : x.media === 'video' || x.media === 'audio'
+      ? x.problem
+        ? ''
+        : sealedPlayBox({ publication: x.publication, seller: x.seller, media: x.media })
+      : `<div class="k-txt" dir="auto">${e(x.text ?? '')}</div>`;
   const state =
     x.state === 'opened' || x.state === 'yours'
-      ? `${x.picture ? `<img src="${e(x.picture)}" alt="The picture, opened">` : `<div class="k-txt" dir="auto">${e(x.text ?? '')}</div>`}<div class="k-small k-soft">${x.state === 'yours' ? 'Yours, sealed: its key is here, delivered to each buyer once your Damgar signs the receipt.' : `Opened: its key arrived from its seller, and its ${what} matches the fingerprint it was published with.`}</div>`
+      ? `${opened}<div class="k-small k-soft">${x.state === 'yours' ? 'Yours, sealed: its key is here, delivered to each buyer once your Damgar signs the receipt.' : `Opened: its key arrived from its seller, and its ${what} matches the fingerprint it was published with.`}</div>`
       : x.state === 'paying'
         ? '<div class="k-small k-soft">Bought: pay it in your wallet (Payments, in Private). Its key arrives once the seller’s Damgar signs the receipt.</div>'
         : `<div class="k-small k-soft">Sealed: its ${what} opens once paid. Buy it from the act’s menu.</div>`;

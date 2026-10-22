@@ -224,6 +224,8 @@ export interface Purchase {
   /** A file opened: its text, or its picture as a data link. */
   text: string | null;
   picture: string | null;
+  /** A film or a recording opened, played when asked (checked by its Module first). */
+  play?: { publication: string; seller: string; media: 'video' | 'audio' } | null;
   /** A vow: paid, and its sale as the relays read it; the buyer confirms or contests. */
   sale?: 'pending' | 'confirmed' | 'contested' | null;
   paid?: boolean;

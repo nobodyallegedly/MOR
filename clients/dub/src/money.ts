@@ -28,7 +28,7 @@ import { TYPES, laneRequestPayload, sendToSelf, type LaneKind } from '../../damg
 import { MESSAGES_SPEC, MONEY } from '../../damgar/src/specs.ts';
 import { say } from '../../damgar/src/units.ts';
 import { servedChain } from './carryin.ts';
-import { KEY_DELIVERY, offerWords, openSealedBytes, postSealed, readKeyDelivery, readOffer, readSealed, repost as repostAct } from '../../barebone/src/sealed.ts';
+import { KEY_DELIVERY, checkPlayable, offerWords, openSealedBytes, postSealed, readKeyDelivery, readOffer, readSealed, repost as repostAct } from '../../barebone/src/sealed.ts';
 import type { Keep, Settings } from './dub.ts';
 import { deliverSold } from './delivery.ts';
 import type { RunnerLink } from './runner.ts';
@@ -332,13 +332,34 @@ export class DubMoney {
       try {
         const bytes = await openSealedBytes(p, key, hints, via);
         if (p.media === 'picture') out.picture = `data:image/jpeg;base64,${base64(bytes)}`;
+        // A film or a recording (sold from Edubba's Publishing): checked by its Module now, played only when asked (`sealedBytes`).
+        else if (p.media === 'video' || p.media === 'audio') checkPlayable(p.media, bytes);
         else out.text = new TextDecoder().decode(bytes);
         if (out.state !== 'yours') out.state = 'opened';
       } catch (e) {
-        out.problem = `its key is here, but ${message(e)}`;
+        out.problem = p.media === 'video' || p.media === 'audio' ? `its key is here, but it is not played: ${message(e)}` : `its key is here, but ${message(e)}`;
       }
     }
     return out;
+  }
+
+  /**
+   * A sealed film or recording's bytes, opened with the key that came with
+   * the receipt (or one's own), checked against the work hash and size, then
+   * by the video or audio Module (rules 2 to 9) before they leave here: a
+   * file the Module refuses never reaches the player.
+   */
+  async sealedBytes(me: TestIdentity, hints: string[], via: Via, a: { publication: string; seller: string }): Promise<{ b64: string; type: string }> {
+    const act = (await followRef([a.publication, a.seller], hints, via)).act;
+    const p = readSealed(act);
+    if (!p || (p.media !== 'video' && p.media !== 'audio')) throw new Error('not a sealed film or recording');
+    const sold = (await this.store.money<Sold>(me.id, 'sold')) ?? {};
+    const bought = (await this.store.money<Bought>(me.id, 'bought')) ?? {};
+    const key = p.seller === me.id ? sold[p.publication]?.key : bought[p.publication]?.key;
+    if (!key) throw new Error('its key is not here: it opens once its seller’s Damgar signs the receipt');
+    const bytes = await openSealedBytes(p, key, hints, via);
+    checkPlayable(p.media, bytes);
+    return { b64: base64(bytes), type: p.media === 'video' ? 'video/mp4' : 'audio/mp4' };
   }
 
   /** Buy a sealed post under the lane: an invoice request following the seller's offer, naming the repost followed (Money claim field 6) where it was found through one. */

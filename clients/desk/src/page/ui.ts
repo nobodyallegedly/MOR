@@ -1074,6 +1074,7 @@ app.addEventListener('click', async (ev) => {
   if (b && b.closest('#e-signing')) return void (await memberAction(b));
   const tile = t.closest<HTMLElement>('[data-k-tile]');
   if (tile) {
+    say('', '');
     tab = tile.dataset.kTile as v.Tab;
     part = v.firstPart(tab, state);
     sub = '';
@@ -1081,6 +1082,7 @@ app.addEventListener('click', async (ev) => {
   }
   const tb = t.closest<HTMLElement>('[data-tab]');
   if (tb) {
+    say('', '');
     tab = tb.dataset.tab as v.Tab;
     part = v.firstPart(tab, state);
     sub = '';
@@ -1088,12 +1090,15 @@ app.addEventListener('click', async (ev) => {
   }
   const sb = t.closest<HTMLElement>('[data-sub]');
   if (sb) {
+    say('', '');
     sub = sb.dataset.sub!;
     keepAt();
     return void (await fill());
   }
   if (t.closest('[data-k-open="identity"]')) {
     adding = false;
+    // What was said gives way to the panel, as to the pop-up.
+    say('', '');
     return openIdentityPanel();
   }
   const add = t.closest<HTMLElement>('[data-k-add]');

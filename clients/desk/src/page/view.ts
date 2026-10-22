@@ -251,7 +251,9 @@ export const nameForm = (i: { id: string; name: string }) =>
   `<form id="rename" data-identity="${e(i.id)}"><label>Its name in ${NAME} (kept ${WEB ? 'in this browser' : 'on this Mac'}; never published)</label><input name="name" value="${e(i.name)}" required><div class="k-row"><button type="submit" class="k-btn k-p">Save</button></div></form>`;
 
 export function lineShown(i: State['identities'][number]): string {
-  return `<h4>${e(i.name)}: line and homes</h4><dl class="k-facts"><dt>${NAME}’s line</dt><dd>${cardWords(i.line, NAME, e)}</dd><dt>Kind</dt><dd>${i.kind === 'brought' ? 'brought here by its signing key’s words' : i.kind === 'runner' ? 'used through Kišib’s runner: no key of it here' : 'made here'}</dd></dl><p class="k-small k-faint">Its full record, every line of its acts and what a change of keys must keep, is in Kišib (Identities, An identity’s record).</p>`;
+  return `<h4>${e(i.name)}: line and homes</h4><dl class="k-facts"><dt>${NAME}’s line</dt><dd>${cardWords(i.line, NAME, e)}</dd><dt>Kind</dt><dd>${i.kind === 'brought' ? 'brought here by its signing key’s words' : i.kind === 'runner' ? 'used through Kišib’s runner: no key of it here' : 'made here'}</dd></dl><p class="k-small k-faint">Its full record, every line of its acts and what a change of keys must keep, is in Kišib (Identities, An identity’s record). Releases under its own name are made in Ummia.</p>${
+    i.releases.length ? `<h4>Its releases made here before (${i.releases.length})</h4><div class="k-list">${i.releases.map((r) => `<div><span>${e(r.name)} ${e(r.version)}</span><span class="k-r k-mono">${e(shortForm(formOf(r.id)))}</span></div>`).join('')}</div>` : ''
+  }`;
 }
 
 export function wordsShown(c: { grouped: string; words: string[]; say: string[] }): string {

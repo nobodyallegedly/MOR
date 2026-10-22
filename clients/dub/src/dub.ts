@@ -1094,11 +1094,14 @@ export class Dub {
       it.when = fp.time ? timeWords(fp.time) : null;
       it.labels = await this.labelsOf(fp.post, me.id, p, [...hints, ...this.inboxPlaces(p)], s.via);
       // A sealed post (round 2): its publication has no key; read with its offer, and opened where its key is here.
-      if (fp.post.refs.some((r) => r.kind === 'picture' && !r.bytes)) {
+      // A sealed film or recording (sold from Edubba's Publishing) is read the same way: a locked publication, never played as a public one.
+      if (fp.post.refs.some((r) => (r.kind === 'picture' && !r.bytes) || ((r.kind === 'film' || r.kind === 'recording') && /is locked: its key is not public/.test(r.problem ?? '')))) {
         const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.map((r) => (r.kind === 'picture' || r.kind === 'film' || r.kind === 'recording' ? { id: r.publication, signer: r.signer || undefined } : { id: r.id, signer: r.signer ?? r.actSigner }))).catch(() => null);
         if (sealed) {
           it.sealed = sealed;
           it.pictures = it.pictures.filter((x) => x.publication !== sealed.publication);
+          it.films = (it.films ?? []).filter((x) => x.publication !== sealed.publication);
+          it.recordings = (it.recordings ?? []).filter((x) => x.publication !== sealed.publication);
           if (sealed.seller !== fp.signer) it.repost = { by: this.whoFrom(fp.signer, me.id, p), of: this.whoFrom(sealed.seller, me.id, p) };
         }
       }
@@ -2238,6 +2241,14 @@ export class Dub {
     });
   }
 
+  /** A sealed film or recording bought (or one's own), when asked to play it: opened and checked by its Module first (`DubMoney.sealedBytes`). */
+  sealedPlay(a: { publication: string; seller: string }): Promise<{ b64: string; type: string }> {
+    return this.serial(async () => {
+      const { me, p, s, hints } = await this.ctx();
+      return this.money.sealedBytes(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readActId(a.publication), seller: readId(a.seller) });
+    });
+  }
+
   // ------------------------------------------------------------ collectives under the identity (acting as one: the same gesture as switching)
 
   /**
@@ -2341,7 +2352,8 @@ export class Dub {
           id: publication,
           form: actForm(publication),
           seller: this.whoFrom(b.seller, me.id, p),
-          what: x?.media === 'picture' ? 'picture' : 'text',
+          what: x?.media === 'picture' ? 'picture' : x?.media === 'video' ? 'film' : x?.media === 'audio' ? 'recording' : 'text',
+          play: x?.state === 'opened' && (x.media === 'video' || x.media === 'audio') ? { publication, seller: b.seller, media: x.media } : null,
           price: x?.price ?? null,
           state: x?.state === 'opened' ? 'opened: its key came with the receipt' : x?.state === 'paying' ? 'bought: pay it in your wallet; its key comes with the receipt' : (x?.problem ?? 'bought'),
           text: x?.state === 'opened' ? x.text : null,

@@ -94,6 +94,7 @@ export const OPS = [
   'correct',
   'film',
   'recording',
+  'sealed play',
   'clock',
   'collective add',
   'collective remove',
@@ -257,6 +258,8 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.correct({ id: text(a.id), text: text(a.text) });
     case 'film':
       return dub.film({ publication: text(a.publication), signer: text(a.signer) || undefined });
+    case 'sealed play':
+      return dub.sealedPlay({ publication: text(a.publication), seller: text(a.seller) });
     case 'recording':
       return dub.recording({ publication: text(a.publication), signer: text(a.signer) || undefined });
     case 'clock':
