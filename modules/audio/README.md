@@ -1,6 +1,6 @@
 # mor-audio
 
-The audio Module: the founding implementation of `modules/module-audio-draft-1.md`, a media type for task 5 of the Envelopes MIR. **No app uses it yet**: the Publishing round (Edubba) and a Dub round will, as the site uses the video Module.
+The audio Module: the founding implementation of `modules/module-audio-draft-1.md`, a media type for task 5 of the Envelopes MIR. **Dub plays and posts recordings with it**: its typing box's Audio strips a recording before it is published, and a card plays one only after this package has checked it (`clients/barebone/src/post.ts`, `publishAudio` and `soundBytes`).
 
 ## In plain words
 

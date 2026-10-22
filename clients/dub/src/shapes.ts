@@ -53,6 +53,15 @@ export interface FilmShown {
   withdrawable: boolean;
 }
 
+/** A recording a post plays (the audio Module, rule 13): played only when asked, its bytes checked first, as a film is. */
+export interface RecordingShown {
+  publication: string;
+  signer: string;
+  size: number;
+  problem: string | null;
+  withdrawable: boolean;
+}
+
 /** A quiet label on a card: answers…, correction of…, signed under a grant, a pick or a nudge and who gave it (H65). `bad`: an alarm. */
 export interface Label {
   text: string;
@@ -68,6 +77,8 @@ export interface Item {
   when?: string | null;
   /** Films it shows (H52). */
   films?: FilmShown[];
+  /** Recordings it plays (the audio Module). */
+  recordings?: RecordingShown[];
   /** Quiet labels (H65): a pick or a nudge and who gave it. */
   labels?: Label[];
   who: Who;

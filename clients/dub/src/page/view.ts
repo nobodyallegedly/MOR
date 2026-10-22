@@ -146,6 +146,12 @@ export function itemAct(it: Item, collectives: string[] = []): KitAct {
         ? `<div class="k-label k-warn">A film not shown: ${e(f.problem)}.</div>`
         : `<div class="dub-film" data-film="${e(f.publication)}" data-film-signer="${e(f.signer)}"><button type="button" class="k-btn k-p" data-action="play">▶ Play the film</button><span>${e(sizeWords(f.size))}, checked before it plays</span></div>`,
     ),
+    // A recording, as a film is (the audio Module, rule 13): its bytes fetched and checked only when asked to play.
+    ...(it.recordings ?? []).map((r) =>
+      r.problem
+        ? `<div class="k-label k-warn">A recording not shown: ${e(r.problem)}.</div>`
+        : `<div class="dub-film" data-recording="${e(r.publication)}" data-recording-signer="${e(r.signer)}"><button type="button" class="k-btn k-p" data-action="play-recording">▶ Play the recording</button><span>${e(sizeWords(r.size))}, checked before it plays</span></div>`,
+    ),
     it.doc ? `<a class="k-doc" href="${e(it.doc.link)}" target="_blank" rel="noopener noreferrer"><span dir="auto">${e(it.doc.title)}</span><br><span class="k-small k-soft">A long-form document: open it in the reader</span></a>` : '',
     it.sealed ? sealedBox(it) : '',
     it.vow ? vowBox(it) : '',
@@ -379,7 +385,7 @@ export function publicPart(s: State, lens: Lens, layers: string[]): string {
     ],
     lens,
   )}${lens === 'relay' ? pointRow('Showing', LAYERS.map((l) => ({ key: l.key, label: l.label, on: layers.includes(l.key) })), 'layer') : ''}`;
-  const tools = `<label title="A picture (JPEG)">▣<span class="dub-l"> Picture</span><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"></label><label title="A film (MP4)">▶<span class="dub-l"> Video</span><input name="video" type="file" accept=".mp4,video/mp4"></label><button type="button" data-action="at" title="Mention someone">@</button><button type="button" data-action="address">To…</button>`;
+  const tools = `<label title="A picture (JPEG)">▣<span class="dub-l"> Picture</span><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"></label><label title="A film (MP4)">▶<span class="dub-l"> Video</span><input name="video" type="file" accept=".mp4,video/mp4"></label><label title="A recording (M4A)">♪<span class="dub-l"> Audio</span><input name="audio" type="file" accept=".m4a,audio/mp4"></label><button type="button" data-action="at" title="Mention someone">@</button><button type="button" data-action="address">To…</button>`;
   return `<div class="k-body"><section class="k-pane dub-center" id="public">${feedBox({ id: 'feed', above, cards: '', empty: 'Reading the feed…', below: '<div id="feed-foot"></div>' })}
 ${typingBox({ id: 'post', placeholder: acting ? `Write something public, as ${acting.name ?? 'the collective'}…` : 'Write something public…', button: 'Post', tools, opts: '<span id="replying"></span><span id="addressed"></span><span class="dub-picked" id="picked"></span>', extra: '<div class="dub-field" id="to-field" hidden><input id="to" placeholder="To: a contact’s name, or an ID" aria-label="To" spellcheck="false"><button type="button" class="k-btn k-q" data-action="unaddress">Done</button></div>' })}</section></div>`;
 }

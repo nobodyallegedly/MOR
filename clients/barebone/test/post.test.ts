@@ -11,13 +11,14 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import jpegjs from 'jpeg-js';
-import { cborEncode, describeAct, lockMedia, unhex } from '../../genesis/src/core.ts';
+import { cborEncode, describeAct, lockMedia, unhex, workHash } from '../../genesis/src/core.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
 import { read } from '../../../modules/jpeg/src/jpeg.ts';
+import { strip as stripSound } from '../../../modules/audio/src/audio.ts';
 import { renderPage, renderPost } from '../src/html.ts';
-import { listPosts, post, readPost, withdraw, type ShownPicture } from '../src/post.ts';
+import { listPosts, post, readPost, soundBytes, withdraw, type ShownPicture, type ShownRecording } from '../src/post.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT } from '../src/specs.ts';
 
 const fixture = (name: string) =>
@@ -276,4 +277,73 @@ test("a post made before its signer's rotation is judged with the signer's seque
   // sequence before judging.
   const shown = await readPost(first, [relay.base]);
   assert.equal(shown.standing, 'valid');
+});
+
+// ---------------------------------------------------------------- a recording (the audio Module)
+
+const sound = (name: string) => new Uint8Array(readFileSync(new URL(`../../../modules/audio/test/fixtures/${name}`, import.meta.url)));
+const recordingOf = (refs: unknown[]) => refs.find((r) => (r as ShownRecording).kind === 'recording') as ShownRecording;
+const latin1 = (b: Uint8Array) => Buffer.from(b).toString('latin1');
+
+test('a recording is stripped before it is locked, shown by reference, and its bytes checked by the audio Module before it plays', async () => {
+  const tagged = sound('tagged.m4a');
+  const r = await post(author, { text: 'A song.', m4a: tagged, relays: [relay.base] });
+  const rec = r.recording!;
+  // Rule 10: the work hash, the locked hash and the size published are the stripped file's.
+  const s = stripSound(tagged);
+  assert.deepEqual(rec.removed, ['metadata', 'location', 'names', 'free']);
+  assert.equal(rec.size, s.bytes.length);
+  assert.ok(rec.size < tagged.length);
+  assert.equal(rec.work, workHash(s.bytes));
+  const got = await readPost(r.id, [relay.base]);
+  assert.equal(got.standing, 'valid');
+  const shown = recordingOf(got.refs);
+  assert.equal(shown.publication, rec.id);
+  assert.equal(shown.problem, null);
+  assert.equal(shown.size, s.bytes.length);
+  // Played only when asked: its bytes fetched, checked against the publication, read by the Module.
+  const played = await soundBytes(shown.publication, shown.signer, [relay.base]);
+  assert.ok(same(played.bytes, s.bytes), 'the stripped bytes are the ones published');
+  assert.deepEqual(played.sound.carried, [], 'nothing left besides the sound');
+  for (const tag of ['A song', 'Someone singing', 'An album', 'Recorded on a phone', '+48.8584', 'udta', 'ilst']) assert.ok(!latin1(played.bytes).includes(tag), `no ${tag} left`);
+  assert.equal(played.sound.type, 'audio/mp4; codecs="mp4a.40.2"');
+  const out = execFileSync(process.execPath, ['--import', 'tsx', 'src/cli.ts', 'show', r.id, '--relay', relay.base, '--out', join(mkdtempSync(join(tmpdir(), 'mor-post-')), 'post.html')], { cwd: new URL('..', import.meta.url), encoding: 'utf8' });
+  assert.match(out, new RegExp(`recording ${rec.id}: ${rec.size} bytes, its bytes checked when played`));
+  // Withdrawn: no longer shown.
+  await withdraw(author, rec.id, [relay.base]);
+  assert.equal(recordingOf((await readPost(r.id, [relay.base])).refs).problem, 'withdrawn by its signer');
+});
+
+test('a file the audio Module refuses is refused in plain words, and nothing is published', async () => {
+  const before = await listPosts(author.id, relay.base);
+  for (const [name, why] of [
+    ['with-picture.m4a', /a picture track/],
+    ['mp3.m4a', /not MPEG-4 audio/],
+    ['truncated.m4a', /runs past/],
+  ] as const) {
+    await assert.rejects(post(author, { text: `Not this: ${name}.`, m4a: sound(name), relays: [relay.base] }), (e: Error) => {
+      assert.match(e.message, /^not a recording the audio Module plays: /);
+      assert.match(e.message, why);
+      assert.match(e.message, /Nothing was published\.$/);
+      return true;
+    });
+  }
+  assert.deepEqual(await listPosts(author.id, relay.base), before, 'no post');
+});
+
+test('a damaged recording another client published is not played, saying why', async () => {
+  for (const [name, why] of [
+    ['truncated.m4a', /^not a recording the audio Module plays: /],
+    ['with-picture.m4a', /^not a recording the audio Module plays: a picture track/],
+  ] as const) {
+    const id = await publishRaw(other, sound(name), { spec: POST_SPECS.audio });
+    const got = await readPost(await textWith(other, `Damaged: ${name}`, [id]), [relay.base]);
+    const shown = recordingOf(got.refs);
+    assert.equal(shown.problem, null, 'judged as any act; its bytes are checked when asked to play');
+    await assert.rejects(soundBytes(shown.publication, shown.signer, [relay.base]), (e: Error) => (assert.match(e.message, why), true));
+  }
+  const wrong = await publishRaw(other, sound('mono.m4a'), { spec: POST_SPECS.audio, work: 'ef'.repeat(32) });
+  await assert.rejects(soundBytes(wrong, other.id, [relay.base]), /do not match the work hash/);
+  const locked = await publishRaw(other, sound('mono.m4a'), { spec: POST_SPECS.audio, publicKey: false });
+  assert.match(recordingOf((await readPost(await textWith(other, 'Locked.', [locked]), [relay.base])).refs).problem!, /^the recording is locked/);
 });
