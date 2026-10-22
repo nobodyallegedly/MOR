@@ -1300,8 +1300,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           feed = [r.post, ...feed.filter((x) => x.id !== r.post.id)];
           lens = 'following';
           draw();
-          say('done', `<strong>Posted.</strong>${v.lines(r.lines)}`);
+          // The feed read again before "Posted." is said: drawn again after, it would close a card's menu just opened.
           await readFeed();
+          say('done', `<strong>Posted.</strong>${v.lines(r.lines)}`);
         }
         return;
       }

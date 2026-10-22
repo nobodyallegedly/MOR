@@ -20135,8 +20135,8 @@ function mount(app2, b) {
           feed = [r.post, ...feed.filter((x) => x.id !== r.post.id)];
           lens = "following";
           draw();
-          say3("done", `<strong>Posted.</strong>${lines(r.lines)}`);
           await readFeed2();
+          say3("done", `<strong>Posted.</strong>${lines(r.lines)}`);
         }
         return;
       }

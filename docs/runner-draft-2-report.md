@@ -110,6 +110,7 @@ Draft 1's tests were adjusted only to type the passphrase and read the new risk 
 ### Building also showed
 
 - **Closing Kišib's window does not quit Kišib.** The Mac app starts its program in the background, so "Kišib closed" in a person's sense does not lock the runner. Hence Lock it now, the words where the runner is on, and question 1.
+- **A card's menu closed under the hand, in Dub.** After a post, Dub said "Posted." and only then read its feed again, drawing it anew, which closed a card's menu opened in between. CI caught it once in Dub's long browser test, which was also intermittent in round 2. Dub now reads the feed before saying "Posted." (`clients/dub/src/page/ui.ts`), and its release is rebuilt with it.
 - **Dub frames Kišib's origin as it was when Dub started** (its policy's `frame-src`). Kišib always uses port 8474 on the Mac, so this holds. A Kišib moved to another port would need Dub restarted. Unchanged from draft 1; stated here.
 
 ## 3. For the MOR lead
