@@ -3202,6 +3202,7 @@ async function actsBy(signer, hints, via = {}) {
 }
 function linesOf(o) {
   const specs = o.specs ?? MIRS;
+  const owns = (o.own.length && Array.isArray(o.own[0]) ? o.own : [o.own]).filter((l) => l.length);
   const held = /* @__PURE__ */ new Map();
   for (const a of o.acts) {
     let d;
@@ -3214,7 +3215,8 @@ function linesOf(o) {
     if (d.spec === specs.identity && (d.type === IDENTITY_TYPES.genesis || d.type === IDENTITY_TYPES.rotation || d.type === IDENTITY_TYPES.chainSignature)) continue;
     held.set(d.id, d);
   }
-  const ownPrev = new Map(o.own.map((id, i) => [id, i ? o.own[i - 1] : null]));
+  const ownPrev = new Map(owns.flatMap((line) => line.map((id, i) => [id, i ? line[i - 1] : null])));
+  const ownPosition = new Map(owns.flatMap((line) => line.map((id, i) => [id, i + 1])));
   const prevOf = (id) => {
     if (ownPrev.has(id)) return { known: true, prev: ownPrev.get(id) };
     const d = held.get(id);
@@ -3222,13 +3224,13 @@ function linesOf(o) {
     return { known: true, prev: d.prev ?? null };
   };
   const named = /* @__PURE__ */ new Set();
-  for (const id of [...held.keys(), ...o.own]) {
+  for (const id of [...held.keys(), ...ownPrev.keys()]) {
     const p = prevOf(id);
     if (p.prev) named.add(p.prev);
   }
-  const ownTip = o.own[o.own.length - 1];
+  const ownTips = new Set(owns.map((line) => line[line.length - 1]));
   const tips = [...held.values()].filter((d) => !named.has(d.id) && d.binding === o.binding).map((d) => d.id);
-  if (ownTip && !tips.includes(ownTip) && !named.has(ownTip)) tips.push(ownTip);
+  for (const t of ownTips) if (!tips.includes(t) && !named.has(t)) tips.push(t);
   const out = [];
   for (const tip of tips) {
     const d = held.get(tip);
@@ -3250,11 +3252,11 @@ function linesOf(o) {
       at = p.prev;
     }
     ids.reverse();
-    const position = d?.position ?? (ownPrev.has(tip) ? o.own.indexOf(tip) + 1 : void 0);
+    const position = d?.position ?? ownPosition.get(tip);
     if (!why && position !== void 0 && position !== ids.length) why = `its latest act says position ${position}, but ${ids.length} acts were found behind it`;
     out.push({
       tip,
-      own: tip === ownTip,
+      own: ownTips.has(tip),
       readable: !why,
       card: why ? null : { act: tip, position: ids.length, summary: runningSummary(ids) },
       latest,
@@ -3287,14 +3289,17 @@ var APP_LINES = {
   Damgar: "the accepted list, payment claims, receipts, requests and answers, sales, a vault transfer, asks for a collective\u2019s promise",
   Ummia: "the accepted list, payments prepared for an anchor, asks for a collective\u2019s release, MIP discussions"
 };
-function lineOf(app3) {
-  return app3 ? `${app3}\u2019s line` : "a line";
+function lineOf(app3, kind) {
+  const k = kind === "earlier" ? "line from before (public and private acts together)" : kind ? `${kind} line` : "line";
+  return app3 ? `${app3}\u2019s ${k}` : `a ${k}`;
 }
-function livesOn(app3) {
+var capital = (t) => t[0].toUpperCase() + t.slice(1);
+function livesOn(app3, kind) {
+  if (kind === "public") return `${app3 ? `${app3}\u2019s` : "its app\u2019s"} public acts: posts, names, routes, signatures on a collective\u2019s agreement, releases`;
   return (app3 && APP_LINES[app3]) ?? "whatever its app signed there: possibly a member key for a collective, notes, a list";
 }
 function cardText(c, app3) {
-  return `${c.act} ${c.position} ${c.summary}${c.hidden === void 0 ? "" : ` ${c.hidden}`} ${app3}${c.missing ? ` missing ${c.missing}` : ""}`;
+  return `${c.act} ${c.position} ${c.summary}${c.hidden === void 0 ? "" : ` ${c.hidden}`} ${app3}${c.line ? ` ${c.line}` : ""}${c.missing ? ` missing ${c.missing}` : ""}`;
 }
 function lineWords(l) {
   const whose = l.own ? "This device\u2019s line" : "A line made elsewhere";
@@ -3325,14 +3330,14 @@ function planLines(lines2, o = {}) {
   const shown = [];
   const unplacedSay = [];
   for (const c of cards) {
-    const whose = lineOf(c.app);
+    const whose = lineOf(c.app, c.line);
     if (!found(c.act)) {
       unplacedSay.push(
-        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: its latest act (${c.act}) is not at the identity's homes, so no reader can follow it. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it. ${c.app ? `Open ${c.app} first: it sends its acts to the homes; then give its card again.` : "Open the app that shows this card first: it sends its acts to the homes; then give its card again."}`
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: its latest act (${c.act}) is not at the identity's homes, so no reader can follow it. What lives on it (${livesOn(c.app, c.line)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it. ${c.app ? `Open ${c.app} first: it sends its acts to the homes; then give its card again.` : "Open the app that shows this card first: it sends its acts to the homes; then give its card again."}`
       );
     } else if (c.missing) {
       unplacedSay.push(
-        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: ${c.missing === 1 ? "one of its acts is" : `${c.missing} of its acts are`} not at the identity's homes (${c.app ?? "its app"} says so), so no reader can follow it past ${c.missing === 1 ? "it" : "them"}. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it.`
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: ${c.missing === 1 ? "one of its acts is" : `${c.missing} of its acts are`} not at the identity's homes (${c.app ?? "its app"} says so), so no reader can follow it past ${c.missing === 1 ? "it" : "them"}. What lives on it (${livesOn(c.app, c.line)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it.`
       );
     }
   }
@@ -3348,7 +3353,7 @@ function planLines(lines2, o = {}) {
     } else if (card2) {
       kept.push({ act: card2.act, position: card2.position, summary: card2.summary });
       shown.push({
-        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card2.position}, summary ${card2.summary}.`,
+        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${capital(lineOf(given.app, given.line))}. ` : ""}${lineWords(l)} Kept by the card given: position ${card2.position}, summary ${card2.summary}.`,
         tone: l.readable || given && !given.missing ? "ok" : "warn"
       });
     } else if (covered) {
@@ -3371,7 +3376,7 @@ function planLines(lines2, o = {}) {
   for (const c of cards) {
     if (lines2.some((l) => l.tip === c.act)) continue;
     kept.push({ act: c.act, position: c.position, summary: c.summary });
-    shown.push({ text: `${c.app ? `${c.app}\u2019s line, ending` : "A line ending"} at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}), but no reader can follow it.`, tone: found(c.act) ? "warn" : "bad" });
+    shown.push({ text: `${capital(lineOf(c.app, c.line))}, ending at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}), but no reader can follow it.`, tone: found(c.act) ? "warn" : "bad" });
   }
   for (const t of unplacedSay) shown.push({ text: t, tone: "bad" });
   const warning = [left.length ? voidWarning(left) : "", ...unplacedSay].filter(Boolean).join(" ") || null;
@@ -3597,6 +3602,28 @@ function clockDeclaration(c) {
   const ref = (r) => [unhex(r.cmip), cborDecode(unhex(r.params))];
   return { spec: MIRS.money, kind: CLOCK_KIND, cbor: cborEncode([ref(c.main), ...c.backup ? [ref(c.backup)] : []]) };
 }
+function lineFor(f, isPublic) {
+  if (f.cites) return f.sequence;
+  if (!f.split) {
+    if (f.sequence.length) f.earlier = f.sequence;
+    f.sequence = [];
+    f.private = [];
+    f.split = true;
+  }
+  return isPublic ? f.sequence : f.private ??= [];
+}
+function ownLines(f) {
+  return [f.sequence, f.private ?? [], f.earlier ?? []].filter((l) => l.length);
+}
+function ownIds(f) {
+  return ownLines(f).flat();
+}
+function freshLines(f) {
+  f.sequence = [];
+  f.private = [];
+  delete f.earlier;
+  f.split = true;
+}
 var AGREEMENTS_RECORD = 17;
 var b64 = (b) => base64(b);
 var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -3708,6 +3735,7 @@ var TestIdentity = class _TestIdentity {
     if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
       objects = [...objects ?? [], ...this.f.cites.map((d) => [this.f.identity, d])];
     }
+    const line = lineFor(this.f, opts.public);
     const made = makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
       signer: this.f.identity,
@@ -3715,14 +3743,14 @@ var TestIdentity = class _TestIdentity {
       spec,
       type,
       payload,
-      sequence: this.f.sequence,
+      sequence: line,
       public: opts.public,
       to: opts.to,
       objects,
       refs: opts.refs,
       acks: opts.acks
     });
-    this.f.sequence.push(made.id);
+    line.push(made.id);
     if (!opts.public && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
     if (this.f.cites && isRecord) this.f.cites = [made.id];
     return made;
@@ -3764,7 +3792,7 @@ var TestIdentity = class _TestIdentity {
       throw new Error("a witness act is signed only after the owner was shown what it does (Identity rule 18c)");
     }
     if (!acts.length) throw new Error("a witness act names at least one act");
-    if (acts.some((a) => this.f.sequence.includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
+    if (acts.some((a) => ownIds(this.f).includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
     const made = this.everyday(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(/* @__PURE__ */ new Map()), { public: true, acks: acts });
     const sent = await this.toHomes(made.act);
     for (const hint of opts.relays ?? []) await relayAt(hint, this.via).putAct(made.act);
@@ -3800,7 +3828,7 @@ var TestIdentity = class _TestIdentity {
     } catch {
     }
     const at = [.../* @__PURE__ */ new Set([...homes, ...routed, ...o.hints ?? []])];
-    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: this.f.sequence, acts: await actsBy(this.f.identity, at, this.via), specs: o.specs });
+    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: ownLines(this.f), acts: await actsBy(this.f.identity, at, this.via), specs: o.specs });
   }
   /**
    * What a rotation would keep (Identity rule 35, client conformance): the
@@ -4116,7 +4144,7 @@ var TestIdentity = class _TestIdentity {
    * Homes that do not answer are skipped: silence proves nothing.
    */
   async unrecognised() {
-    const known = /* @__PURE__ */ new Set([...this.f.sequence, ...this.chainActs().map((a) => actId(a))]);
+    const known = /* @__PURE__ */ new Set([...ownIds(this.f), ...this.chainActs().map((a) => actId(a))]);
     const out = [];
     const seen = /* @__PURE__ */ new Set();
     for (const h of this.f.homes) {
@@ -4256,10 +4284,16 @@ async function sendWaiting(me, via = me.via) {
   }
   return Object.keys(me.f.unsent ?? {}).length;
 }
+function linesHeld(f) {
+  if (!f.split) return f.sequence.length ? [{ ids: f.sequence }] : [];
+  return [["public", f.sequence], ["private", f.private ?? []], ["earlier", f.earlier ?? []]].filter(([, ids]) => ids.length).map(([kind, ids]) => ({ kind, ids }));
+}
 async function lineAtHomes(me, app3, via = me.via) {
-  const own = ownLine(me.f.sequence);
-  const blank = { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null };
-  if (!own.card) return { ...blank, atHomes: null, missing: 0, hidden: 0, card: null };
+  const lines2 = linesHeld(me.f).map((l) => ({ ...l, card: ownLine(l.ids).card }));
+  const acts = lines2.reduce((n, l) => n + l.ids.length, 0);
+  const shown = (l) => ({ acts, latest: l?.card.act ?? null, summary: l?.card.summary ?? null });
+  const first = lines2.find((l) => l.kind === "private") ?? lines2[0];
+  if (!lines2.length) return { ...shown(), atHomes: null, missing: 0, hidden: 0, card: null };
   const homes = me.f.homes.map((h) => h.hint);
   let places = homes;
   try {
@@ -4267,15 +4301,23 @@ async function lineAtHomes(me, app3, via = me.via) {
     places = [.../* @__PURE__ */ new Set([...homes, ...look.resolution.homes.map((h) => h.hint), ...look.routes.routes.flatMap((x) => x.hints)])];
   } catch {
   }
-  const acts = await actsBy(me.f.identity, places, via);
-  if (!acts.length) return { ...blank, atHomes: null, missing: 0, hidden: null, card: null };
-  const held = new Set(acts.map((a) => describeAct(a).id));
-  const missing = me.f.sequence.filter((id) => !held.has(id)).length;
-  const u2 = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts }));
-  const hidden = me.f.sequence.filter((id) => u2.has(id)).length;
-  const atHomes = held.has(own.card.act);
-  const card2 = { ...own.card, hidden, ...missing ? { missing } : {} };
-  return { ...blank, atHomes, missing, hidden, card: atHomes ? cardText(card2, app3) : null };
+  const found = await actsBy(me.f.identity, places, via);
+  if (!found.length) return { ...shown(first), atHomes: null, missing: 0, hidden: null, card: null };
+  const held = new Set(found.map((a) => describeAct(a).id));
+  const u2 = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts: found }));
+  const cards = lines2.map((l) => {
+    const missing = l.ids.filter((id) => !held.has(id)).length;
+    const card2 = { ...l.card, hidden: l.ids.filter((id) => u2.has(id)).length, ...l.kind ? { line: l.kind } : {}, ...missing ? { missing } : {} };
+    return { l, card: card2, missing, atHomes: held.has(l.card.act) };
+  });
+  const away = cards.find((c) => !c.atHomes);
+  return {
+    ...shown(away?.l ?? first),
+    atHomes: !away,
+    missing: cards.reduce((n, c) => n + c.missing, 0),
+    hidden: cards.reduce((n, c) => n + c.card.hidden, 0),
+    card: away ? null : cards.map((c) => cardText(c.card, app3)).join("; ")
+  };
 }
 async function ownActs(identity, secrets, places, via = {}) {
   const out = /* @__PURE__ */ new Map();
@@ -4323,7 +4365,7 @@ async function ownActs(identity, secrets, places, via = {}) {
 function lineReader(app3) {
   const seen = /* @__PURE__ */ new Map();
   return async (me, via = me.via) => {
-    const latest = me.f.sequence[me.f.sequence.length - 1] ?? null;
+    const latest = linesHeld(me.f).map((l) => l.ids[l.ids.length - 1]).join(" ") || null;
     const was = seen.get(me.f.identity);
     const waiting = Object.keys(me.f.unsent ?? {}).length > 0;
     if (was && was.latest === latest && !waiting && was.line.atHomes && Date.now() - was.at < 6e4) return was.line;
@@ -4332,9 +4374,11 @@ function lineReader(app3) {
     return line;
   };
 }
-function noLine(sequence) {
-  const own = ownLine(sequence);
-  return { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null, atHomes: null, missing: 0, hidden: null, card: null };
+function noLine(f) {
+  const lines2 = linesHeld(f);
+  const l = (lines2.find((x) => x.kind === "private") ?? lines2[0])?.ids ?? [];
+  const own = ownLine(l);
+  return { acts: lines2.reduce((n, x) => n + x.ids.length, 0), latest: own.card?.act ?? null, summary: own.card?.summary ?? null, atHomes: null, missing: 0, hidden: null, card: null };
 }
 
 // ../repo/src/specs.ts
@@ -4929,7 +4973,11 @@ function signAsMember(collective, k, at, a) {
     sequence: at.strand,
     public: a.public,
     to: a.to?.length ? a.to : void 0,
-    objects: [...a.objects ?? [], [collective, at.decision]],
+    // A text act carries exactly one object (Text rule 14): for a member
+    // key, the founding or clone that named the key, the version that is
+    // its grant, which Agreements reads as the decision it acts under
+    // (Agreements rules 58 and 73). Every other act cites the latest decision.
+    objects: a.spec === MIRS.text && a.type === 0 ? [[collective, k.terms]] : [...a.objects ?? [], [collective, at.decision]],
     refs: a.refs?.length ? a.refs : void 0
   });
   at.strand.push(made.id);
@@ -8048,7 +8096,7 @@ var Damgar = class {
     me.f.homes = r.homes;
     me.f.rule = r.rule ?? null;
     me.f.pending = null;
-    me.f.sequence = [];
+    freshLines(me.f);
     me.f.routes = null;
     const carried = carriedKey(look, seed);
     if (carried && !me.f.encryption.some((e3) => e3.act === carried.act)) me.f.encryption.push(carried);
@@ -8187,7 +8235,7 @@ var Damgar = class {
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
-      line: line ?? noLine(me.f.sequence)
+      line: line ?? noLine(me.f)
     };
     let l;
     try {
@@ -10457,7 +10505,7 @@ function cardWords(l, app3, e3) {
   const n = `${l.acts} act${l.acts === 1 ? "" : "s"}`;
   if (!l.latest) return n;
   const missing = l.missing ? ` ${l.missing === 1 ? "One act" : `${l.missing} acts`} of this line ${l.missing === 1 ? "is" : "are"} not at your homes, and ${app3} no longer holds ${l.missing === 1 ? "it" : "them"}: no reader can follow this line past ${l.missing === 1 ? "it" : "them"}, so a change of keys may lose what lives on it (a member key, notes, a list). Ki\u0161ib says so in red.` : "";
-  if (l.card) return `${n}: its card, for Ki\u0161ib, <code class="card-line">${e3(l.card)}</code>${missing ? `<br>${e3(missing)}` : ""}`;
+  if (l.card) return `${n}: ${l.card.includes(";") ? "its cards" : "its card"}, for Ki\u0161ib, <code class="card-line">${e3(l.card)}</code>${missing ? `<br>${e3(missing)}` : ""}`;
   if (l.atHomes === false) return `${n}: its latest act (<code>${e3(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e3(app3)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e3(missing)}` : ""}`;
   return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e3(l.latest)}</code>). Look again before changing your keys.`;
 }
