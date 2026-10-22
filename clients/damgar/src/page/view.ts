@@ -507,3 +507,38 @@ export function manualPane(on: boolean): string {
   return `<h2>Every step by hand</h2><p class="k-soft">For those who want to follow the real process step by step: every signature waits for you, as in round 1. Off by default.</p>
 <label class="damgar-check"><input type="checkbox" id="manual"${on ? ' checked' : ''}> Follow every step by hand (a clear demonstration of the real process)</label>`;
 }
+
+// ---------------------------------------------------------------- the act menu: Rely on it, Anchor it (decided: "Agreed")
+
+/** An act a card stands for, as the chooser says it: its receipts first, then its claims, then the request that began it. */
+export interface CardAct {
+  id: string;
+  said: string;
+}
+
+const actChoice = (acts: CardAct[]) =>
+  acts.length > 1
+    ? `<div class="damgar-ways">${acts.map((x, i) => `<label class="k-row"><input type="radio" name="act" value="${e(x.id)}"${i === 0 ? ' checked' : ''}> <span>${e(x.said)} <span class="k-mono k-faint">${e(shortForm(formOf(x.id)))}</span></span></label>`).join('')}</div>`
+    : `<input type="hidden" name="act" value="${e(acts[0].id)}"><p class="k-small"><b>${e(acts[0].said)}</b> <span class="k-mono k-faint">${e(shortForm(formOf(acts[0].id)))}</span></p>`;
+
+const noAct = '<p class="k-soft">This card is not yet an act on MOR (a draft waiting to be signed here): there is nothing to rely on or anchor.</p>';
+
+/** Rely on an act: which one (a receipt first), then RELY typed (Identity type 15, a witness act). */
+export function relyForm(acts: CardAct[]): string {
+  if (!acts.length) return noAct;
+  return `<form id="rely">${say('Relying on an act keeps it visible as disputed should its author ever disown it.', ['A witness act (Identity type 15), public at your homes and relays, naming the act: it relies on it, it pays nothing. Signed with your key, checked first; through Kišib’s panel where Kišib holds this identity.'])}${actChoice(acts)}<label>Type RELY to sign the witness act</label><input name="typed" autocomplete="off" autocapitalize="characters" spellcheck="false" required><div class="k-row"><button type="submit" class="k-btn k-p">Sign the witness act</button></div></form>`;
+}
+
+/** Anchor an act: which one, the service named and its offer read, a tier chosen; then prepared and signed here, in one step. */
+export function anchorForm(acts: CardAct[], offers: { act: string; unit: string; tiers: { tier: number; words: string }[]; words: string | null }[] | null, service = '', chosen = ''): string {
+  if (!acts.length) return noAct;
+  const which = chosen ? acts.filter((x) => x.id === chosen) : acts;
+  return `<form id="anchor-offers">${say('An anchor puts this act’s fingerprint on the Bitcoin chain, through a pooled anchoring service, paid here.', ['Anyone may anchor any act (the anchoring cMIP). The service is sent a leaf (the act’s fingerprint mixed with a random secret Damgar keeps), never the act. Damgar signs the payment’s request at once; you pay the invoice in To pay; it shows in Account › Anchors. Round 1 runs on regtest: its coins are worth nothing.'])}${actChoice(which.length ? which : acts)}
+<label>The anchoring service’s ID</label><div class="k-row"><input name="service" value="${e(service)}" required spellcheck="false" autocomplete="off" class="k-grow"><button type="submit" class="k-btn">Read its offer</button></div></form>${
+    offers === null
+      ? ''
+      : offers.length
+        ? `<form id="anchor" data-service="${e(service)}" data-act="${e(chosen)}"><div class="damgar-ways">${offers.flatMap((o) => o.tiers.map((t, i) => `<label class="k-row"><input type="radio" name="tier" value="${e(o.act)}:${t.tier}"${i === 0 ? ' checked' : ''}> <span>${e(t.words)}${o.words ? ` <span class="k-small k-soft">${e(o.words)}</span>` : ''}</span></label>`)).join('')}</div><div class="k-row"><button type="submit" class="k-btn k-p">Anchor it: sign the payment’s request</button></div></form>`
+        : '<p class="k-small k-soft">No standing offer of that service was found.</p>'
+  }`;
+}

@@ -39,6 +39,7 @@ import {
   readCommitment,
   Verifier,
   anchoringCheckTicket,
+  anchoringLeaf,
   anchoringReadTicket,
   base64,
   cborDecode,
@@ -91,7 +92,9 @@ import { newChainKey } from '../../dub/src/chainwords.ts';
 import { openerOf, type Opener } from '../../dub/src/people.ts';
 import type { RunnerLink } from '../../dub/src/runner.ts';
 import { namesOf } from '../../dub/src/names.ts';
-import { idForm, readId } from '../../genesis/src/forms.ts';
+import { idForm, readActId, readId } from '../../genesis/src/forms.ts';
+import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
+import { offers as anchorOffers } from '../../ummia/src/anchor.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { changeAccepted, publishAccepted, readAccepted, type Accepted } from './accepted.ts';
 import type { ChainSource } from './chain.ts';
@@ -235,6 +238,8 @@ export interface Book {
   payments: Record<string, Payment>;
   /** Promises signed here for a collective with this member's own key (round 3, F353), by act. */
   collectiveActs?: Record<string, { collective: string; to: string; amount: Amount; whatFor: string; asked: string[]; at: number }>;
+  /** Anchors asked from Damgar's own act menu (decided: Rely and Anchor on every act), by draft: the act, and its blind, which never leaves this app. */
+  anchored?: Record<string, { act: string; blind: string; leaf: string; service: string; offer: string; tier: number; at: number }>;
   /** The payee pointers this identity published from here, by act, newest last. */
   pointers: string[];
   /** The published accepted list's chain, where published (the accepted cMIP, 3). */
@@ -1894,6 +1899,72 @@ export class Damgar {
     if (!unitOf(a.unit)) return Promise.reject(new Error('Choose a unit. Nothing was prepared.'));
     const d: Draft = { what: 'pay', other, amount: { unit: a.unit, value: readValue(a.value) }, whatFor: a.whatFor.trim() ? a.whatFor.trim().slice(0, 280) : null, app: 'Damgar', anchor: null };
     return this.paste(base64(draftPayload(d)));
+  }
+
+  // ------------------------------------------------------------ the act menu: Rely on it, Anchor it (decided by Nobody, allegedly: "Agreed")
+
+  /**
+   * Rely on an act (a receipt, a claim, any act shown): the witness act
+   * (Identity type 15) signed once RELY is typed, as everywhere, its key
+   * checked first (H80); through Kišib's panel where the identity is used
+   * through it. It keeps that act visible as disputed should its author ever
+   * disown it.
+   */
+  rely(a: { id: string; typed: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s, book } = await this.ctx();
+      if (a.typed.trim() !== 'RELY') throw new Error('Type RELY to sign the witness act. Nothing was signed.');
+      const id = readActId(a.id);
+      if (book.acts[id]?.from === me.id || me.f.sequence.includes(id)) throw new Error('It is this identity’s own act: a witness act names other identities’ acts. Nothing was signed.');
+      await this.current(me);
+      let made: Awaited<ReturnType<TestIdentity['witness']>>;
+      try {
+        made = await me.witness([id], { shown: WITNESS_EXPLANATION, relays: s.relays });
+      } finally {
+        await this.store.saveIdentity(me);
+      }
+      if (!made.sent.some((x) => x.result)) throw new Error(`No home took the witness act: ${made.sent.map((x) => `${x.home}: ${x.error}`).join('; ')}. It is signed here, not published.`);
+      return { lines: [{ text: `You rely on ${short(id)}: witness act ${short(made.id)}, public at this identity’s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: 'ok' }] };
+    });
+  }
+
+  /** An anchoring service's standing offers (the anchoring cMIP), read from its public acts. */
+  anchorOffers(a: { service: string }): Promise<{ offers: { act: string; unit: string; tiers: { tier: number; words: string }[]; words: string | null }[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const service = readId(a.service);
+      const acc = this.acceptedSet(await this.accepted(me));
+      const found = await anchorOffers(service, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via);
+      return { offers: found.map((o) => ({ act: o.act, unit: o.unit, words: o.words, tiers: o.tiers.map((t, i) => ({ tier: i, words: `within ${t.blocks} block${t.blocks === 1 ? '' : 's'}, ${say({ unit: o.unit, value: t.price }, acc)}` })) })) };
+    });
+  }
+
+  /**
+   * Anchor an act (a receipt, a claim, any act shown), in one step here:
+   * the service's standing offer followed, a tier chosen; the payment
+   * prepared and its invoice request signed at once, as a pasted draft is;
+   * the blind kept here. The service answers with an invoice and a ticket,
+   * paid in To pay; it shows in Account › Anchors.
+   */
+  async anchor(a: { id: string; service: string; offer: string; tier: number }): Promise<{ lines: Line[] }> {
+    const id = readActId(a.id);
+    const service = readId(a.service);
+    const { me, s } = await this.serial(() => this.ctx());
+    const offer = (await anchorOffers(service, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via)).find((o) => o.act === a.offer);
+    if (!offer) throw new Error('That offer was not found at the service’s places. Nothing was signed.');
+    const tier = offer.tiers[a.tier];
+    if (!tier) throw new Error('The offer has no such tier. Nothing was signed.');
+    const blind = new Uint8Array(randomBytes(32));
+    const leaf = anchoringLeaf(id, blind) as string;
+    const d: Draft = { what: 'anchor', other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${short(id)}`, app: 'Damgar', anchor: { offer: offer.act, tier: a.tier, leaf } };
+    const pasted = await this.paste(base64(draftPayload(d)));
+    await this.serial(async () => {
+      const { book } = await this.ctx();
+      (book.anchored ??= {})[pasted.id] = { act: id, blind: hex(blind), leaf, service, offer: offer.act, tier: a.tier, at: now() };
+      await this.saveBook(me.id, book);
+    });
+    const signed = await this.signDraft(pasted.id);
+    return { lines: [{ text: `An anchor of ${short(id)} asked of ${short(service)}, tier ${a.tier} (within ${tier.blocks} blocks): the invoice request signed and sent. When the service answers with its invoice and ticket, pay it in To pay; it shows in Account › Anchors. The blind is kept here.`, tone: 'ok' }, ...signed.lines.slice(1)] };
   }
 
   /** Sign a draft (the money messages cMIP, 2.2): an invoice request, or a request to be paid. */

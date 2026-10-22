@@ -402,6 +402,10 @@ test('draft 2 by clicks: the passphrase typed twice, a message read through Kiš
 
   // Turned off: said as erasing everything; Kišib's folder holding nothing of it.
   await kp.click('[data-k-tile="runner"]');
+  // Lock now and Quit Kišib, on the page as in the seal (draft 3: "accessible from both").
+  await kp.locator('#quit-box [data-action="runner-lock"]', { hasText: 'Lock now' }).waitFor();
+  await kp.locator('#quit-box [data-action="quit"]', { hasText: 'Quit Kišib' }).waitFor();
+  assert.match(await kp.textContent('#quit-box') ?? '', /Closing Kišib’s window does not end it/);
   assert.match(await kp.textContent('.k-box:has(h3:has-text("Turn it off"))') ?? '', /erases everything/);
   let said = '';
   kp.once('dialog', (x) => {
