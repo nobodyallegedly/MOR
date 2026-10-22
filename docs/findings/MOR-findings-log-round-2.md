@@ -28,6 +28,16 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F377. Kišib on the kit, the Dubsar runner, and the chain-key signer's code to draft 6 (22 October 2026; Dubsar Suite)
+
+**Kišib on the kit**, as the mockups drew it and the redesign decided: four tiles with their danger marks (Identities 1, Runner 2, Paper 3, Collectives 3; no Runner on the web, decided "Mac only"), each opening its column; Paper and Collectives behind the quiet door; top right, "Holds nothing · runner off", or what the runner holds. Identities gains **Make an identity** (H48) and **Confirm a succession** (moved from Paper, accepted); Collectives gains **Check a share** (accepted). Every function of Kišib kept.
+
+**The Dubsar runner** (decided, `docs/design/suite-redesign.md`): its cMIP, draft 1 (`cmips/cmip-runner-draft-1.md`), and its code: Kišib signs for the apps paired with it, on the same Mac, from the signing keys given to it; off by default, nothing kept while off; the risk said first; pairing started in the app and approved in Kišib; the panel drawn by Kišib inside the asking app's window (the kit's slot), served only to the pairing's origin, unreadable by the app; standing yeses per app and kind, money, agreements and keys always asking; the key check (H80) before signing; the app's own lines (F376), and the cards the runner gives at a change of keys. The working rule's one exception, with his reason stated in the cMIP: the asking app holds no key, so it cannot put a draft on MOR. Dub is the first app to use it: + Add › Use one from Kišib, Dub holding no key; Remove only unlinks; Dub's policy frames Kišib's origin and nothing else.
+
+**The air-gapped chain-key signer's code to draft 6** (`modules/airgap/`): a fresh seed at every rotation, no choice; its backup shown, hidden, three words (or three groups of four characters) typed back before signing; a request for the current seed refused; section 7's new lines run.
+
+**No rule of the core changed**; nothing for the MOR lead. Report: `docs/kishib-runner-report.md`, with its questions for Nobody, allegedly.
+
 ## F376. Two lines per app: public acts on one, private acts on the other (21 October 2026; F373's question 1; Dubsar Suite)
 
 **The question (F373, `docs/private-lines-report.md`, question 1):** after a change of keys, a public act behind a private act on one app's line was unknown to every reader but the identity's own apps (Identity rules 33 to 35, F298, as written): a reader follows a kept line back to its first act, and cannot open another's private acts. A founding signed in Edubba after a payment draft could no longer be read in force. **Decided by Nobody, allegedly, 21 October 2026:** "Agreed", option (a).
