@@ -1107,7 +1107,7 @@ A record of an act nobody can produce changes no verdict.
 
 **A keeper's own later rotation never undoes what its records placed.** A keeper's record that a rule of this MIR reads to place an act (such as rules 7, 33, 41 and 76, a deal's declaration line, and "Made before, made after", 5), or that a relied-on version's completeness rests on (rule 47), keeps the effect that rule gave it, whatever the keeper's later rotation disowned, shown as a dispute. *A witness chosen in advance cannot un-witness.* This is Identity's stated exception to its rule that evidence counts only while its signer's chain keeps it (Identity, "Evidence counts only while its signer's chain keeps it").
 
-*What remains to trust is that a keeper records acts as they arrive. A keeper can delay recording a rotation while recording a thief's acts first, or record an act later than it arrived; nothing in the bytes shows it. That is trust in keepers, accepted and stated: choose keepers as carefully as homes.*
+*What remains to trust is that a keeper records acts as they arrive. A keeper can delay recording a rotation while recording a thief's acts first, or record an act later than it arrived; nothing in the bytes shows it. That is trust in keepers, accepted and stated: choose keepers as carefully as homes. A keeper whose signing key is stolen is such a keeper until the agreement names another: the thief's records keep their effect as the keeper's own do, since a witness chosen in advance cannot un-witness; what the keeper's sequence held before its last anchor cannot be rewritten, and a second sequence orders nothing against the first.*
 
 #### Rule 43. Keepers are always sealed
 
