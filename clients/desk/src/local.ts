@@ -95,12 +95,15 @@ export async function serveLocal(opts: {
    * a program serving none (the desk) keeps its own unchanged.
    */
   files?: Record<string, { type: string; body: Buffer }>;
+  /** Films played from bytes checked in the page (Dub, the video Module): the policy adds `media-src blob:`; a program asking none keeps its own unchanged. */
+  media?: boolean;
 }): Promise<Local> {
   const { access } = opts;
   const files = opts.files ?? {};
-  const headers = Object.values(files).some((f) => f.type.startsWith('font/'))
-    ? { ...HEADERS, 'content-security-policy': HEADERS['content-security-policy'].replace("style-src 'self';", "style-src 'self'; font-src 'self';") }
-    : HEADERS;
+  let csp = HEADERS['content-security-policy'];
+  if (Object.values(files).some((f) => f.type.startsWith('font/'))) csp = csp.replace("style-src 'self';", "style-src 'self'; font-src 'self';");
+  if (opts.media) csp = csp.replace("img-src 'self' data:;", "img-src 'self' data:; media-src blob:;");
+  const headers = csp === HEADERS['content-security-policy'] ? HEADERS : { ...HEADERS, 'content-security-policy': csp };
   const reply = (res: ServerResponse, status: number, type: string, body: string | Buffer) => send(res, status, type, body, headers);
   const secret = randomBytes(32).toString('hex');
   let port = opts.port;

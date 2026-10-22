@@ -217,10 +217,10 @@ test('the web client: a personal rotation of an identity made in Dub’s web cli
   const pos = (await di.evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name))).map((n) => Number(n.slice(1)));
   for (const [i, p] of pos.entries()) await di.nth(i).fill(chain[p - 1]);
   await dp.getByRole('button', { name: 'Go on' }).click();
-  await dp.locator('#status .note.done', { hasText: 'The identity is born' }).waitFor({ timeout: 60_000 });
+  await dp.locator('#status .k-note.k-done', { hasText: 'The identity is born' }).waitFor({ timeout: 60_000 });
   await dp.locator('form#post textarea[name=text]').fill('From Dub’s web client, before.');
   await dp.getByRole('button', { name: 'Post', exact: true }).click();
-  await dp.locator('#status .note.done', { hasText: 'Posted' }).waitFor({ timeout: 60_000 });
+  await dp.locator('#status .k-note.k-done', { hasText: 'Posted' }).waitFor({ timeout: 60_000 });
   const dumped = await dp.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((res, rej) => {
       const r = indexedDB.open('dub');

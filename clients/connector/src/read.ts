@@ -332,7 +332,9 @@ async function text(id: string, hints: string[], via: Via): Promise<Told> {
   const refs: Line[] = p.refs.map((r) =>
     r.kind === 'picture'
       ? { text: r.problem ? `It shows a picture (${short(r.publication)}) that is not shown: ${r.problem}.` : `It shows a picture (${short(r.publication)}), ${r.picture?.width}×${r.picture?.height}, verified.`, tone: r.problem ? 'warn' : undefined }
-      : { text: `It refers to act ${short(r.id)}: ${r.what}.` },
+      : r.kind === 'film'
+        ? { text: r.problem ? `It shows a film (${short(r.publication)}) that is not shown: ${r.problem}.` : `It shows a film (${short(r.publication)}), ${r.size} bytes; its bytes are checked when it is played.`, tone: r.problem ? 'warn' : undefined }
+        : { text: `It refers to act ${short(r.id)}: ${r.what}.` },
   );
   return told(id, {
     kind: 'text',

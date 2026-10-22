@@ -13,6 +13,7 @@ import { SPECS, openSealed, unhex } from '../../genesis/src/core.ts';
 import { sealFor, type TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
+import { leaveAtHomes } from '../../genesis/src/private.ts';
 import { TYPES, readSale } from '../../damgar/src/messages.ts';
 import { MESSAGES_SPEC } from '../../damgar/src/specs.ts';
 import { KEY_DELIVERY, keyDeliveryPayload } from '../../barebone/src/sealed.ts';
@@ -120,13 +121,9 @@ export async function deliverKey(me: TestIdentity, buyer: string, publication: s
       // away
     }
   }
-  for (const h of me.f.homes.map((x) => x.hint)) {
-    try {
-      await relayAt(h, a.via).putAct(made.act);
-    } catch {
-      // away
-    }
-  }
+  // At the seller's homes too, locked, its key delivered to the seller (H80's question 2): Kišib places the app's line by it.
+  await leaveAtHomes(me, made, { via: a.via });
+  await a.save();
   if (!left) throw new Error('its inbox took nothing');
   return made.id;
 }

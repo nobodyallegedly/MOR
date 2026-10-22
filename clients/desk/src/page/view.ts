@@ -14,6 +14,7 @@
 
 import { chooserHtml, type Actor } from '../../../ummia/src/acting.ts';
 import { e } from '../../../manage/src/view.ts';
+import { cardWords } from '../../../genesis/src/card-words.ts';
 import { STYLE as DUB, proposal as dubProposal, share as dubShare, SIGNING_LABEL } from '../../../dub/src/page/view.ts';
 import type { Proposal as MemberProposal, ShareShown } from '../../../dub/src/shapes.ts';
 import { STYLE as TEXT, plainHtml } from '../../../longform/src/html.ts';
@@ -661,7 +662,7 @@ export function identityDetails(s: State, id: string, drafts: DraftView[]): stri
   const answered = s.history.filter((h) => h.signer === id);
   return `<div class="head"><h2>${e(i.name)}</h2><span class="id">${grouped(i.id)}</span>${copyButton(i.id)}<span class="tag">${i.kind === 'brought' ? 'brought here' : 'made here'}</span></div>
 <div class="card" data-identity="${e(i.id)}">
-<dl class="facts"><dt>This desk's line</dt><dd>${i.line.acts} act${i.line.acts === 1 ? '' : 's'}${i.line.latest ? `; latest <code>${e(i.line.latest)}</code>, position ${i.line.acts}, summary <code>${e(i.line.summary ?? '')}</code>` : ''}</dd></dl>
+<dl class="facts"><dt>This desk's line</dt><dd>${cardWords(i.line, 'Edubba', e)}</dd></dl>
 ${WEB ? `<p class="small">${e(WEB_KEPT_SAY)}</p>` : linkSwitch(i.id, i.linked)}
 <div class="here" data-here="${e(i.id)}" role="status" aria-live="polite"></div></div>
 ${foldCard('e-record-fold', 'identity-record', 'Its record', '<div id="e-record"><p class="small">Reading it from its homes and relays…</p></div>')}

@@ -16,7 +16,8 @@
 //
 // Nothing here uses Node: the web clients use it as they are.
 
-import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, makeEveryday, openSealed, readTerms, sha256, unhex, withGrantLimits, xwingPublic } from '../../genesis/src/core.ts';
+import { leaveAtHomes, ownActs } from '../../genesis/src/private.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, makeEveryday, openSealed, pickupTag, readTerms, sha256, unhex, withGrantLimits, xwingPublic } from '../../genesis/src/core.ts';
 import { sealFor, type TestIdentity } from '../../genesis/src/identity.ts';
 import { chainOf, lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -94,17 +95,24 @@ export async function sealMemberKey(me: TestIdentity, k: { terms: string; signat
   for (const h of homes) {
     try {
       await relayAt(h, me.via).putSealed(sealed);
-      await relayAt(h, me.via).putAct(made.act);
       left++;
     } catch {
       // that home is away
     }
   }
+  // Its locked act beside it (H80's question 2): the latest act of this app's line, which Kišib must find at the homes.
+  await leaveAtHomes(me, made, { sealed: left > 0 });
   if (!left) throw new Error('No home took your member key. Your signature stands; the key stays in this app only until it is sent again.');
   return made.id;
 }
 
-/** Every member key sealed to `identity` at its homes, opened with the encryption keys an app holds (newest last, by position). */
+/**
+ * Every member key sealed to `identity` at its homes, opened with the
+ * encryption keys an app holds (newest last, by position). Judged with every
+ * act of the identity its apps can read (H80's question 2): after a change
+ * of keys, a member key counts only where a reader can follow its line to
+ * the latest act the change kept, so the line's other acts are read too.
+ */
 export async function readMemberKeys(identity: string, secrets: Uint8Array[], homes: string[], via: Via = {}): Promise<MemberKey[]> {
   const out = new Map<string, MemberKey>();
   if (!secrets.length) return [];
@@ -116,6 +124,14 @@ export async function readMemberKeys(identity: string, secrets: Uint8Array[], ho
     return [];
   }
   const at = [...new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
+  for (const x of await ownActs(identity, secrets, [...new Set([...at, ...l.routes.routes.flatMap((r) => r.hints)])], via)) {
+    try {
+      if (x.key) l.verifier.addWithKey(x.act, x.key);
+      else l.verifier.add(x.act);
+    } catch {
+      // malformed: proves nothing
+    }
+  }
   for (const h of at) {
     let after: number | undefined;
     try {
@@ -156,35 +172,42 @@ export async function readMemberKeys(identity: string, secrets: Uint8Array[], ho
 /**
  * Kišib's part (F353): after the member's own change of keys, every member
  * key sealed to them is sealed again to their new encryption key, the same
- * act, so their apps holding only the new key still open it. Returns how
- * many were sealed again.
+ * act, so their apps holding only the new key still open it. Every other act
+ * of theirs sealed to themselves is sealed again too (H80's question 2):
+ * their apps follow their lines through them. Returns how many member keys
+ * were sealed again.
  */
 export async function resealMemberKeys(identity: string, oldSecrets: Uint8Array[], newKey: Uint8Array, homes: string[], via: Via = {}): Promise<number> {
   let n = 0;
+  // Addressed to the identity, and left under its old keys' pickup tags (`leaveAtHomes`): each sealed again the same way.
+  const queries: { q: { to?: string; pickup?: string }; me?: string }[] = [{ q: { to: identity }, me: identity }, ...oldSecrets.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
   for (const h of homes) {
-    let after: number | undefined;
-    try {
-      for (;;) {
-        const page = await relayAt(h, via).feed({ to: identity, after });
-        for (const it of page.items) {
-          if (it.kind !== 'sealed') continue;
-          for (const s of oldSecrets) {
-            try {
-              const o = openSealed(it.item, identity, s) as { act: Uint8Array; key?: Uint8Array; described: { spec?: string; type?: number; signer?: string } };
-              if (o.described.spec !== MEMBER_KEYS_SPEC || o.described.type !== MEMBER_KEY || o.described.signer !== identity) break;
-              await relayAt(h, via).putSealed(sealFor(o.act, o.key, [{ id: identity, key: newKey }]));
-              n++;
-              break;
-            } catch {
-              // the next key
+    for (const { q, me } of queries) {
+      let after: number | undefined;
+      try {
+        for (;;) {
+          const page = await relayAt(h, via).feed({ ...q, after });
+          for (const it of page.items) {
+            if (it.kind !== 'sealed') continue;
+            for (const s of oldSecrets) {
+              try {
+                const o = openSealed(it.item, me, s) as { act: Uint8Array; key?: Uint8Array; described: { spec?: string; type?: number; signer?: string } };
+                if (o.described.signer !== identity) break;
+                if (me) await relayAt(h, via).putSealed(sealFor(o.act, o.key, [{ id: identity, key: newKey }]));
+                else await relayAt(h, via).putSealed(sealFor(o.act, o.key, [{ key: newKey }]), [pickupTag(newKey)]);
+                if (o.described.spec === MEMBER_KEYS_SPEC && o.described.type === MEMBER_KEY) n++;
+                break;
+              } catch {
+                // the next key
+              }
             }
           }
+          if (!page.items.length || page.next === after) break;
+          after = page.next;
         }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
+      } catch {
+        // that home is away
       }
-    } catch {
-      // that home is away
     }
   }
   return n;

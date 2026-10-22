@@ -3305,6 +3305,536 @@ function isOnlyOrientation(body) {
   return body.length === want.length && body.every((x, i) => x === want[i]);
 }
 
+// ../../modules/video/src/video.ts
+var NotFilm = class extends Error {
+  constructor(kind, message4) {
+    super(message4);
+    this.kind = kind;
+    this.name = "NotFilm";
+  }
+};
+var MAX_BYTES = 64 * 1024 * 1024 - 16;
+var MAX_SECONDS = 600;
+var MAX_LONG_SIDE = 1920;
+var MAX_SHORT_SIDE = 1080;
+var MAX_RATE = 60;
+var MAX_LEVEL = 42;
+var MAX_SAMPLE_RATE = 48e3;
+var CARRIED_WORDS2 = {
+  metadata: "metadata (titles, dates, the device, comments, cover pictures)",
+  location: "where it was filmed",
+  dates: "when it was made (the dates in its headers)",
+  names: "names written by the software that made it",
+  free: "free space that can hold anything",
+  unknown: "boxes of a kind no player reads (such as XMP)",
+  "unused-media": "media data no sample uses",
+  descriptor: "an MPEG-4 object descriptor (iods), not needed to play"
+};
+var ascii2 = (b, o, n) => String.fromCharCode(...b.subarray(o, o + n));
+var Reader = class {
+  constructor(b) {
+    this.b = b;
+    this.view = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  }
+  view;
+  need(o, n, end, what) {
+    if (o < 0 || n < 0 || o + n > end) throw new NotFilm("structure", `${what} runs past its box`);
+  }
+  u8 = (o) => this.b[o];
+  u16 = (o) => this.view.getUint16(o);
+  u32 = (o) => this.view.getUint32(o);
+  i32 = (o) => this.view.getInt32(o);
+  u64(o) {
+    const hi = this.u32(o);
+    if (hi > 2097151) throw new NotFilm("limits", "a 64-bit value beyond what a file of this size can hold");
+    return hi * 2 ** 32 + this.u32(o + 4);
+  }
+  /** The boxes between `o` and `end`, which they must fill exactly. A size of 0 (to the end) only where `toEnd` allows. */
+  boxes(o, end, toEnd = false) {
+    const out = [];
+    while (o < end) {
+      if (end - o < 8) throw new NotFilm("structure", "bytes left over that are not a box");
+      let size = this.u32(o);
+      const type = ascii2(this.b, o + 4, 4);
+      let body = o + 8;
+      if (size === 1) {
+        if (end - o < 16) throw new NotFilm("structure", `the box ${JSON.stringify(type)} runs past its parent`);
+        size = this.u64(o + 8);
+        body = o + 16;
+      } else if (size === 0) {
+        if (!toEnd) throw new NotFilm("structure", `the box ${JSON.stringify(type)} has no size`);
+        size = end - o;
+      }
+      if (type === "uuid") body += 16;
+      if (size < body - o || o + size > end) throw new NotFilm("structure", `the box ${JSON.stringify(type)} runs past its parent`);
+      out.push({ type, start: o, body, end: o + size });
+      o += size;
+    }
+    return out;
+  }
+};
+var ASIDE = { udta: "metadata", meta: "metadata", free: "free", skip: "free", uuid: "unknown" };
+function children(r, box, allowed, carried, where, skip = 0) {
+  const out = [];
+  for (const c of r.boxes(box.body + skip, box.end)) {
+    if (allowed.includes(c.type)) out.push(c);
+    else if (c.type in ASIDE) {
+      carried.add(ASIDE[c.type]);
+      if (c.type === "udta" || c.type === "meta") inspectAside(r, c, carried);
+    } else throw new NotFilm("refused", `a box of kind ${JSON.stringify(c.type)} in ${where}, which this Module does not read`);
+  }
+  return out;
+}
+function inspectAside(r, box, carried) {
+  let kids;
+  try {
+    kids = r.boxes(box.body + (box.type === "meta" ? 4 : 0), box.end);
+  } catch {
+    try {
+      kids = box.type === "meta" ? r.boxes(box.body, box.end) : [];
+    } catch {
+      kids = [];
+    }
+  }
+  for (const k of kids) {
+    if (k.type === "loci" || k.type === "\xA9xyz") carried.add("location");
+    if (k.type === "dinf") throw new NotFilm("refused", "a data reference inside the metadata, which could point outside the file");
+    if (k.type === "meta" || k.type === "udta" || k.type === "ilst" || k.type === "keys") inspectAside(r, k, carried);
+    if (k.type === "ilst" || k.type === "keys") {
+      if (/location|©xyz/i.test(ascii2(r.b, k.body, k.end - k.body))) carried.add("location");
+    }
+  }
+}
+var one = (list, type, where) => {
+  const f = list.filter((b) => b.type === type);
+  if (f.length !== 1) throw new NotFilm("structure", `${where} has ${f.length ? "more than one" : "no"} ${JSON.stringify(type)}`);
+  return f[0];
+};
+var maybe = (list, type, where) => {
+  const f = list.filter((b) => b.type === type);
+  if (f.length > 1) throw new NotFilm("structure", `${where} has more than one ${JSON.stringify(type)}`);
+  return f[0] ?? null;
+};
+var Bits = class {
+  constructor(b) {
+    this.b = b;
+  }
+  bit = 0;
+  u(n) {
+    let v = 0;
+    for (let i = 0; i < n; i++) {
+      const byte = this.bit >> 3;
+      if (byte >= this.b.length) throw new NotFilm("structure", "the parameter set ends early");
+      v = v * 2 + (this.b[byte] >> 7 - (this.bit & 7) & 1);
+      this.bit++;
+    }
+    return v;
+  }
+  ue() {
+    let zeros = 0;
+    while (this.u(1) === 0) if (++zeros > 31) throw new NotFilm("structure", "the parameter set holds a number too large");
+    return 2 ** zeros - 1 + this.u(zeros);
+  }
+  se() {
+    const k = this.ue();
+    return k & 1 ? (k + 1) / 2 : -k / 2;
+  }
+};
+function unescape(nal) {
+  const out = [];
+  for (let i = 0; i < nal.length; i++) {
+    if (i >= 2 && nal[i] === 3 && nal[i - 1] === 0 && nal[i - 2] === 0) continue;
+    out.push(nal[i]);
+  }
+  return new Uint8Array(out);
+}
+var PROFILES = { 66: "Baseline", 77: "Main", 100: "High" };
+function readSps(nal) {
+  if (!nal.length || (nal[0] & 31) !== 7) throw new NotFilm("structure", "the H.264 configuration does not hold a sequence parameter set");
+  const s = new Bits(unescape(nal.subarray(1)));
+  const profile = s.u(8);
+  s.u(8);
+  const level = s.u(8);
+  s.ue();
+  if ([100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135].includes(profile)) {
+    const chroma = s.ue();
+    if (chroma !== 1) throw new NotFilm("refused", "H.264 with colour sampled otherwise than 4:2:0, which phones do not all play");
+    if (s.ue() !== 0 || s.ue() !== 0) throw new NotFilm("refused", "H.264 with more than 8 bits a sample, which phones do not all play");
+    s.u(1);
+    if (s.u(1)) {
+      for (let i = 0; i < 8; i++) {
+        if (!s.u(1)) continue;
+        const n = i < 6 ? 16 : 64;
+        let last = 8;
+        let next = 8;
+        for (let j = 0; j < n && next !== 0; j++) {
+          next = (last + s.se() + 256) % 256;
+          last = next === 0 ? last : next;
+        }
+      }
+    }
+  }
+  s.ue();
+  const poc = s.ue();
+  if (poc === 0) s.ue();
+  else if (poc === 1) {
+    s.u(1);
+    s.se();
+    s.se();
+    const n = s.ue();
+    if (n > 255) throw new NotFilm("structure", "the parameter set is not valid");
+    for (let i = 0; i < n; i++) s.se();
+  }
+  s.ue();
+  s.u(1);
+  const wMbs = s.ue() + 1;
+  const hMaps = s.ue() + 1;
+  const frameOnly = s.u(1);
+  if (!frameOnly) throw new NotFilm("refused", "interlaced H.264, which this Module does not play");
+  s.u(1);
+  let crop = [0, 0, 0, 0];
+  if (s.u(1)) crop = [s.ue(), s.ue(), s.ue(), s.ue()];
+  const width = wMbs * 16 - 2 * (crop[0] + crop[1]);
+  const height = hMaps * 16 - 2 * (crop[2] + crop[3]);
+  if (width <= 0 || height <= 0) throw new NotFilm("structure", "the parameter set crops away the whole picture");
+  return { profile, level, width, height };
+}
+function readAvcC(r, box) {
+  const b = r.b;
+  r.need(box.body, 6, box.end, "the H.264 configuration");
+  if (b[box.body] !== 1) throw new NotFilm("structure", "the H.264 configuration is not version 1");
+  const profile = b[box.body + 1];
+  const compat = b[box.body + 2];
+  const level = b[box.body + 3];
+  if (![0, 1, 3].includes(b[box.body + 4] & 3)) throw new NotFilm("structure", "the H.264 configuration names an invalid length size");
+  let o = box.body + 5;
+  const nSps = b[o++] & 31;
+  if (!nSps) throw new NotFilm("structure", "the H.264 configuration holds no sequence parameter set");
+  let first = null;
+  for (let i = 0; i < nSps; i++) {
+    r.need(o, 2, box.end, "the H.264 configuration");
+    const n = r.u16(o);
+    r.need(o + 2, n, box.end, "a sequence parameter set");
+    first ??= b.subarray(o + 2, o + 2 + n);
+    o += 2 + n;
+  }
+  r.need(o, 1, box.end, "the H.264 configuration");
+  const nPps = b[o++];
+  if (!nPps) throw new NotFilm("structure", "the H.264 configuration holds no picture parameter set");
+  for (let i = 0; i < nPps; i++) {
+    r.need(o, 2, box.end, "the H.264 configuration");
+    const n = r.u16(o);
+    r.need(o + 2, n, box.end, "a picture parameter set");
+    o += 2 + n;
+  }
+  const sps = readSps(first);
+  if (sps.profile !== profile || sps.level !== level) throw new NotFilm("structure", "the H.264 configuration and its parameter set disagree");
+  return { profile, compat, level, width: sps.width, height: sps.height };
+}
+function descriptor(r, o, end) {
+  r.need(o, 2, end, "a descriptor");
+  const tag = r.b[o++];
+  let len = 0;
+  for (let i = 0; i < 4; i++) {
+    r.need(o, 1, end, "a descriptor");
+    const x = r.b[o++];
+    len = len * 128 + (x & 127);
+    if (!(x & 128)) break;
+    if (i === 3) throw new NotFilm("structure", "a descriptor length is too long");
+  }
+  r.need(o, len, end, "a descriptor");
+  return { tag, body: o, end: o + len };
+}
+function readEsds(r, box) {
+  const b = r.b;
+  const es = descriptor(r, box.body + 4, box.end);
+  if (es.tag !== 3) throw new NotFilm("structure", "the sound configuration has no elementary stream descriptor");
+  r.need(es.body, 3, es.end, "the sound configuration");
+  const flags = b[es.body + 2];
+  let o = es.body + 3;
+  if (flags & 128) o += 2;
+  if (flags & 64) throw new NotFilm("refused", "the sound names a stream elsewhere (a URL), which a film may not");
+  if (flags & 32) o += 2;
+  const dc = descriptor(r, o, es.end);
+  if (dc.tag !== 4) throw new NotFilm("structure", "the sound configuration has no decoder configuration");
+  r.need(dc.body, 13, dc.end, "the decoder configuration");
+  if (b[dc.body] !== 64 || b[dc.body + 1] >> 2 !== 5) throw new NotFilm("refused", "sound that is not MPEG-4 audio (AAC): only AAC-LC is played");
+  const asc = descriptor(r, dc.body + 13, dc.end);
+  if (asc.tag !== 5) throw new NotFilm("structure", "the sound configuration has no AAC configuration");
+  const bits = new Bits(b.subarray(asc.body, asc.end));
+  const aot = bits.u(5);
+  if (aot !== 2) throw new NotFilm("refused", `AAC of another kind than AAC-LC (audio object type ${aot}), which this Module does not play`);
+  const fi = bits.u(4);
+  const RATES = [96e3, 88200, 64e3, 48e3, 44100, 32e3, 24e3, 22050, 16e3, 12e3, 11025, 8e3, 7350];
+  const sampleRate = fi === 15 ? bits.u(24) : RATES[fi];
+  if (!sampleRate) throw new NotFilm("structure", "the AAC configuration names no sampling rate");
+  const channels = bits.u(4);
+  if (channels !== 1 && channels !== 2) throw new NotFilm("refused", "sound with more than two channels, or channels set elsewhere: only mono and stereo are played");
+  if (sampleRate > MAX_SAMPLE_RATE) throw new NotFilm("limits", `sound sampled at ${sampleRate} Hz, above ${MAX_SAMPLE_RATE}`);
+  return { channels, sampleRate };
+}
+var MATRIX = {
+  "65536,0,0,65536": 0,
+  "0,65536,-65536,0": 90,
+  "-65536,0,0,-65536": 180,
+  "0,-65536,65536,0": 270
+};
+function rotationOf(r, o) {
+  const m = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => r.i32(o + 4 * i));
+  if (m[2] !== 0 || m[5] !== 0 || m[8] !== 1073741824) throw new NotFilm("refused", "a track matrix that is not a quarter turn");
+  const rot = MATRIX[[m[0], m[1], m[3], m[4]].join(",")];
+  if (rot === void 0) throw new NotFilm("refused", "a track matrix that is not a quarter turn (scaled, skewed or mirrored)");
+  return rot;
+}
+function dates(r, box, v) {
+  const at = box.body + 4;
+  const n = v ? 16 : 8;
+  return { at, n, set: r.b.subarray(at, at + n).some((x) => x !== 0) };
+}
+function version(r, box, allowed) {
+  r.need(box.body, 4, box.end, `the box ${box.type}`);
+  const v = r.b[box.body];
+  if (!allowed.includes(v)) throw new NotFilm("structure", `the box ${box.type} has version ${v}`);
+  return v;
+}
+function table(r, box, entrySize, skip = 4) {
+  r.need(box.body, skip + 4, box.end, `the table ${box.type}`);
+  const n = r.u32(box.body + skip);
+  const o = box.body + skip + 4;
+  if (n * entrySize > box.end - o) throw new NotFilm("structure", `the table ${box.type} runs past its box`);
+  return { n, o };
+}
+var STBL = ["stsd", "stts", "ctts", "stss", "stsc", "stsz", "stco", "co64", "sdtp", "sgpd", "sbgp", "cslg", "stps"];
+var VISUAL_EXTRAS = ["avcC", "btrt", "pasp", "colr", "clap", "fiel"];
+var AUDIO_EXTRAS = ["esds", "btrt"];
+function readTrack(r, trak, carried) {
+  const kids = children(r, trak, ["tkhd", "edts", "mdia"], carried, "a track");
+  const tkhd = one(kids, "tkhd", "a track");
+  const tv = version(r, tkhd, [0, 1]);
+  const matrixAt = tkhd.body + 4 + (tv ? 32 : 20) + 16;
+  r.need(matrixAt, 36 + 8, tkhd.end, "the track header");
+  const rotation = rotationOf(r, matrixAt);
+  if (dates(r, tkhd, tv).set) carried.add("dates");
+  const edts = maybe(kids, "edts", "a track");
+  if (edts) for (const e of children(r, edts, ["elst"], carried, "an edit list")) version(r, e, [0, 1]);
+  const mdia = one(kids, "mdia", "a track");
+  const mk = children(r, mdia, ["mdhd", "hdlr", "minf"], carried, "a track");
+  const mdhd = one(mk, "mdhd", "a track");
+  const mv = version(r, mdhd, [0, 1]);
+  r.need(mdhd.body, mv ? 32 : 20, mdhd.end, "the media header");
+  const timescale = r.u32(mdhd.body + (mv ? 20 : 12));
+  if (!timescale) throw new NotFilm("structure", "a track with no timescale");
+  if (dates(r, mdhd, mv).set) carried.add("dates");
+  const hdlr = one(mk, "hdlr", "a track");
+  r.need(hdlr.body, 24, hdlr.end, "the handler");
+  const handler = ascii2(r.b, hdlr.body + 8, 4);
+  if (handler !== "vide" && handler !== "soun") {
+    throw new NotFilm("refused", `a track of kind ${JSON.stringify(handler)} (text, subtitles, timecode, metadata or hints): a film holds pictures and sound only`);
+  }
+  const named = hdlr.end - (hdlr.body + 24) > 1 || hdlr.end > hdlr.body + 24 && r.b[hdlr.body + 24] !== 0;
+  const minf = one(mk, "minf", "a track");
+  const nk = children(r, minf, ["vmhd", "smhd", "dinf", "stbl", "hdlr"], carried, "a track");
+  one(nk, handler === "vide" ? "vmhd" : "smhd", "a track");
+  const dinf = one(nk, "dinf", "a track");
+  const dref = one(children(r, dinf, ["dref"], carried, "a data reference"), "dref", "a data reference");
+  const refs = table(r, dref, 12);
+  const entries = r.boxes(refs.o, dref.end);
+  if (entries.length !== refs.n || refs.n !== 1) throw new NotFilm("refused", "a track whose data references are not exactly one");
+  const ref = entries[0];
+  if (ref.type !== "url " && ref.type !== "urn " || ref.end - ref.body < 4 || !(r.b[ref.body + 3] & 1)) {
+    throw new NotFilm("refused", "a track whose samples are stored outside this file (a data reference to elsewhere)");
+  }
+  const stbl = one(nk, "stbl", "a track");
+  const sk = children(r, stbl, STBL, carried, "a sample table");
+  const stsd = one(sk, "stsd", "a sample table");
+  const sd = table(r, stsd, 8);
+  const descs = r.boxes(sd.o, stsd.end);
+  if (sd.n !== 1 || descs.length !== 1) throw new NotFilm("refused", "a track with more than one sample description");
+  const entry = descs[0];
+  const t = { handler, timescale, mediaDuration: 0, samples: 0, chunks: [], rotation, names: named };
+  if (handler === "vide") {
+    if (entry.type !== "avc1") {
+      const what = entry.type === "encv" ? "encrypted pictures" : entry.type === "avc3" ? "H.264 with its parameter sets in the stream (avc3)" : `pictures coded as ${JSON.stringify(entry.type)}, not H.264`;
+      throw new NotFilm("refused", `${what}: only H.264 (avc1) is played`);
+    }
+    r.need(entry.body, 78, entry.end, "the picture description");
+    if (r.b.subarray(entry.body + 42, entry.body + 74).some((x) => x !== 0)) t.names = true;
+    const ex = children(r, { ...entry, body: entry.body + 78 }, VISUAL_EXTRAS, carried, "the picture description");
+    const v = readAvcC(r, one(ex, "avcC", "the picture description"));
+    if (!PROFILES[v.profile]) throw new NotFilm("refused", `H.264 profile ${v.profile}: only Baseline, Main and High are played`);
+    t.video = v;
+  } else {
+    if (entry.type !== "mp4a") {
+      throw new NotFilm("refused", `${entry.type === "enca" ? "encrypted sound" : `sound coded as ${JSON.stringify(entry.type)}`}: only AAC-LC (mp4a) is played`);
+    }
+    r.need(entry.body, 28, entry.end, "the sound description");
+    if (r.u16(entry.body + 8) !== 0) throw new NotFilm("refused", "a QuickTime sound description (version 1 or 2), not MP4");
+    const ex = children(r, { ...entry, body: entry.body + 28 }, AUDIO_EXTRAS, carried, "the sound description");
+    t.audio = readEsds(r, one(ex, "esds", "the sound description"));
+  }
+  const stts = table(r, one(sk, "stts", "a sample table"), 8);
+  let timed = 0;
+  for (let i = 0; i < stts.n; i++) {
+    const count2 = r.u32(stts.o + 8 * i);
+    timed += count2;
+    t.mediaDuration += count2 * r.u32(stts.o + 8 * i + 4);
+  }
+  const stsz = one(sk, "stsz", "a sample table");
+  r.need(stsz.body, 12, stsz.end, "the sample sizes");
+  const fixed = r.u32(stsz.body + 4);
+  const count = r.u32(stsz.body + 8);
+  if (!fixed && count * 4 > stsz.end - (stsz.body + 12)) throw new NotFilm("structure", "the sample sizes run past their box");
+  const sizeOf = (i) => fixed ? fixed : r.u32(stsz.body + 12 + 4 * i);
+  if (count !== timed) throw new NotFilm("structure", "a track whose sample count and timing disagree");
+  if (!count) throw new NotFilm("structure", "a track with no samples");
+  t.samples = count;
+  const ctts = maybe(sk, "ctts", "a sample table");
+  if (ctts) {
+    const c = table(r, ctts, 8);
+    let n = 0;
+    for (let i = 0; i < c.n; i++) n += r.u32(c.o + 8 * i);
+    if (n !== count) throw new NotFilm("structure", "a track whose composition offsets and samples disagree");
+  }
+  const stss = maybe(sk, "stss", "a sample table");
+  if (stss) {
+    const s = table(r, stss, 4);
+    for (let i = 0; i < s.n; i++) {
+      const k = r.u32(s.o + 4 * i);
+      if (k < 1 || k > count) throw new NotFilm("structure", "a key picture that is not a sample");
+    }
+  }
+  const stco = maybe(sk, "stco", "a sample table");
+  const co64 = maybe(sk, "co64", "a sample table");
+  if (!stco === !co64) throw new NotFilm("structure", "a track without exactly one chunk offset table");
+  const co = table(r, stco ?? co64, stco ? 4 : 8);
+  const offsets = Array.from({ length: co.n }, (_, i) => stco ? r.u32(co.o + 4 * i) : r.u64(co.o + 8 * i));
+  const stsc = table(r, one(sk, "stsc", "a sample table"), 12);
+  let sample = 0;
+  for (let i = 0; i < stsc.n; i++) {
+    const first = r.u32(stsc.o + 12 * i);
+    const per = r.u32(stsc.o + 12 * i + 4);
+    if (r.u32(stsc.o + 12 * i + 8) !== 1) throw new NotFilm("structure", "a chunk naming a sample description that is not there");
+    const next = i + 1 < stsc.n ? r.u32(stsc.o + 12 * (i + 1)) : co.n + 1;
+    if (first < 1 || next <= first || next > co.n + 1 || i === 0 && first !== 1) throw new NotFilm("structure", "the sample-to-chunk table is not in order");
+    for (let c = first; c < next; c++) {
+      let size = 0;
+      for (let k = 0; k < per; k++) {
+        if (sample >= count) throw new NotFilm("structure", "chunks hold more samples than the track has");
+        size += sizeOf(sample++);
+      }
+      t.chunks.push({ offset: offsets[c - 1], size });
+    }
+  }
+  if (sample !== count || t.chunks.length !== co.n) throw new NotFilm("structure", "chunks and samples disagree");
+  return t;
+}
+var BRANDS = ["isom", "iso2", "iso3", "iso4", "iso5", "iso6", "mp41", "mp42", "avc1"];
+function parse(bytes) {
+  if (bytes.length > MAX_BYTES) throw new NotFilm("limits", `${bytes.length} bytes, above ${MAX_BYTES} (one media object of 64 MiB, locked)`);
+  const r = new Reader(bytes);
+  if (bytes.length < 8 || ascii2(bytes, 4, 4) !== "ftyp") throw new NotFilm("structure", "it does not begin with a file type box (ftyp)");
+  const top = r.boxes(0, bytes.length, true);
+  const carried = /* @__PURE__ */ new Set();
+  const ftyp = top[0];
+  r.need(ftyp.body, 8, ftyp.end, "the file type");
+  if ((ftyp.end - ftyp.body) % 4) throw new NotFilm("structure", "the file type box is not whole brands");
+  const major = ascii2(bytes, ftyp.body, 4);
+  const brands = [major];
+  for (let o = ftyp.body + 8; o < ftyp.end; o += 4) brands.push(ascii2(bytes, o, 4));
+  if (major === "qt  ") throw new NotFilm("refused", "a QuickTime file (.mov), not MP4: remux it as MP4 first");
+  if (!brands.some((b) => BRANDS.includes(b))) throw new NotFilm("refused", `brands ${brands.join(", ")}: none is an MP4 brand`);
+  const mdats = [];
+  let moov = null;
+  let indexFirst = false;
+  for (const b of top.slice(1)) {
+    if (b.type === "moov") {
+      if (moov) throw new NotFilm("structure", "more than one movie box (moov)");
+      moov = b;
+      indexFirst = !mdats.length;
+    } else if (b.type === "mdat") mdats.push(b);
+    else if (b.type === "ftyp") throw new NotFilm("structure", "more than one file type box");
+    else if (["moof", "mfra", "sidx", "styp", "ssix", "emsg", "prft"].includes(b.type)) {
+      throw new NotFilm("refused", "a fragmented MP4 (as a live stream writes): only a whole film with one index is played");
+    } else if (b.type in ASIDE) {
+      carried.add(ASIDE[b.type]);
+      if (b.type === "udta" || b.type === "meta") inspectAside(r, b, carried);
+    } else throw new NotFilm("refused", `a box of kind ${JSON.stringify(b.type)} at the top of the file, which this Module does not read`);
+  }
+  if (!moov) throw new NotFilm("structure", "no movie box (moov): the film has no index");
+  const mk = children(r, moov, ["mvhd", "trak", "iods", "mvex"], carried, "the movie");
+  if (mk.some((b) => b.type === "mvex")) throw new NotFilm("refused", "a fragmented MP4 (mvex): only a whole film with one index is played");
+  if (mk.some((b) => b.type === "iods")) carried.add("descriptor");
+  const mvhd = one(mk, "mvhd", "the movie");
+  const mv = version(r, mvhd, [0, 1]);
+  r.need(mvhd.body, mv ? 112 : 100, mvhd.end, "the movie header");
+  const mScale = r.u32(mvhd.body + (mv ? 20 : 12));
+  const mDur = mv ? r.u64(mvhd.body + 24) : r.u32(mvhd.body + 16);
+  if (!mScale) throw new NotFilm("structure", "the movie has no timescale");
+  if (dates(r, mvhd, mv).set) carried.add("dates");
+  if (rotationOf(r, mvhd.body + (mv ? 48 : 36)) !== 0) throw new NotFilm("refused", "a movie matrix that is not the identity");
+  const traks = mk.filter((b) => b.type === "trak");
+  const tracks = traks.map((t) => readTrack(r, t, carried));
+  const video = tracks.filter((t) => t.handler === "vide");
+  const audio = tracks.filter((t) => t.handler === "soun");
+  if (video.length !== 1) throw new NotFilm("refused", `${video.length || "no"} picture tracks: a film has exactly one`);
+  if (audio.length > 1) throw new NotFilm("refused", `${audio.length} sound tracks: a film has one at most`);
+  if (tracks.some((t) => t.names)) carried.add("names");
+  const chunks = tracks.flatMap((t) => t.chunks).sort((a2, b) => a2.offset - b.offset);
+  let used = 0;
+  let prevEnd = 0;
+  for (const c of chunks) {
+    if (c.offset < prevEnd) throw new NotFilm("structure", "two chunks of samples overlap");
+    if (!mdats.some((m) => c.offset >= m.body && c.offset + c.size <= m.end)) throw new NotFilm("structure", "a chunk of samples lies outside the media data");
+    prevEnd = c.offset + c.size;
+    used += c.size;
+  }
+  if (used < mdats.reduce((n, m) => n + (m.end - m.body), 0)) carried.add("unused-media");
+  const v = video[0];
+  const turned = v.rotation === 90 || v.rotation === 270;
+  const vv = v.video;
+  const long = Math.max(vv.width, vv.height);
+  const short5 = Math.min(vv.width, vv.height);
+  if (long > MAX_LONG_SIDE || short5 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
+  if (vv.level > MAX_LEVEL) throw new NotFilm("limits", `H.264 level ${vv.level / 10}, above ${MAX_LEVEL / 10}`);
+  const seconds = Math.max(mDur / mScale, ...tracks.map((t) => t.mediaDuration / t.timescale));
+  if (seconds > MAX_SECONDS) throw new NotFilm("limits", `${Math.round(seconds)} seconds long, beyond ${MAX_SECONDS}`);
+  const vSeconds = v.mediaDuration / v.timescale;
+  const rate = vSeconds > 0 ? v.samples / vSeconds : Infinity;
+  if (rate > MAX_RATE * 1.01) throw new NotFilm("limits", `${Math.round(rate)} pictures a second, beyond ${MAX_RATE}`);
+  const hex22 = (n) => n.toString(16).padStart(2, "0");
+  const vcodec = `avc1.${hex22(vv.profile)}${hex22(vv.compat)}${hex22(vv.level)}`;
+  const a = audio[0];
+  const film = {
+    brand: major,
+    duration: Math.round(seconds * 1e3) / 1e3,
+    video: {
+      codec: vcodec,
+      profile: PROFILES[vv.profile],
+      level: vv.level,
+      width: vv.width,
+      height: vv.height,
+      rotation: v.rotation,
+      shown: turned ? { width: vv.height, height: vv.width } : { width: vv.width, height: vv.height },
+      samples: v.samples,
+      rate: Math.round(rate * 1e3) / 1e3
+    },
+    audio: a ? { codec: "mp4a.40.2", channels: a.audio.channels, sampleRate: a.audio.sampleRate, samples: a.samples } : null,
+    type: `video/mp4; codecs="${vcodec}${a ? ", mp4a.40.2" : ""}"`,
+    indexFirst,
+    carried: Object.keys(CARRIED_WORDS2).filter((c) => carried.has(c))
+  };
+  return { film, ftyp, moov, tracks, traks };
+}
+function read2(bytes) {
+  try {
+    return parse(bytes).film;
+  } catch (e) {
+    if (e instanceof NotFilm) throw e;
+    if (e instanceof RangeError) throw new NotFilm("structure", "a box runs past the end of the file");
+    throw e;
+  }
+}
+
 // ../longform/src/specs.ts
 var test = (s) => sha2562(s);
 var LONGFORM_SPECS = {
@@ -3324,7 +3854,9 @@ var POST_SPECS = {
   /** The long-form text format cMIP: a post naming it is rendered with it. */
   longform: LONGFORM_SPECS.longform,
   /** The JPEG Module (modules/module-jpeg-draft-1.md). */
-  jpeg: test2("JPEG Module, draft 1, test value until publication")
+  jpeg: test2("JPEG Module, draft 1, test value until publication"),
+  /** The video Module (modules/module-video-draft-1.md): a film, named by its test value until publication, as the JPEG Module is. */
+  video: test2("video Module, draft 1, test value until publication")
 };
 var TEXT_ACT = 0;
 var PUBLICATION = 0;
@@ -3425,7 +3957,22 @@ async function readRef(r, hints, via, judge) {
   if (!d.public) return { kind: "act", id, signer, what: "a private act", actSigner: d.signer };
   if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: "act", id, signer, what: "a text act", actSigner: d.signer };
   if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, signer, what: "an act of a specification this client does not implement", actSigner: d.signer };
+  const media = cborDecode(d.payload).get(0);
+  if (media instanceof Uint8Array && hex(media) === POST_SPECS.video) return readFilmRef(act, d, hints, via, judge);
   return readPicture(act, d, hints, via, judge);
+}
+async function readFilmRef(act, d, hints, via, judge) {
+  const m = cborDecode(d.payload);
+  const size = m.get(3);
+  const out = { kind: "film", publication: d.id, signer: d.signer ?? "", standing: "unknown", problem: null, withdrawn: null, size: typeof size === "number" ? size : 0 };
+  const no = (why) => (out.problem = why, out);
+  if (!d.signer) return no("the publication has no signer");
+  out.standing = await judge.standing(act, d.id, d.signer);
+  if (out.standing !== "valid") return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (!(m.get(5) instanceof Uint8Array)) return no("the film is locked: its key is not public");
+  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge);
+  if (out.withdrawn) return no("withdrawn by its signer");
+  return out;
 }
 async function readPicture(act, d, hints, via, judge) {
   const out = {
@@ -3555,7 +4102,7 @@ function linkOpenShown(s, i) {
   return underFloor(s, i) !== null;
 }
 var AUTOLINK = /^<((?:https?|mailto):[^ <>]+)>/;
-function parse(source) {
+function parse2(source) {
   const lines = [];
   let start = 0;
   for (; ; ) {
@@ -4426,7 +4973,7 @@ function picture(p, poster) {
 <figcaption>JPEG, ${p.picture.shownWidth} \xD7 ${p.picture.shownHeight}, publication <code>${short(p.publication)}</code>, ${standingWords(p.standing)}.${by}${still}</figcaption></figure>`;
 }
 function renderPost(p) {
-  const text2 = p.format === POST_SPECS.longform ? renderHtml(parse(p.text)) : `<div class="mor-post-text" dir="auto">${escapeHtml(p.text)}</div>`;
+  const text2 = p.format === POST_SPECS.longform ? renderHtml(parse2(p.text)) : `<div class="mor-post-text" dir="auto">${escapeHtml(p.text)}</div>`;
   const others = p.refs.filter((r) => r.kind === "act").map((r) => {
     const by = r.kind === "act" && r.signer ? `, signed by <code title="${r.signer}">${short(r.signer)}</code> as the reference says` : "";
     return `<div class="mor-post-by">Refers to <code>${short(r.id)}</code>${by}: ${escapeHtml(r.kind === "act" ? r.what : "")}.</div>`;
@@ -5253,7 +5800,7 @@ function picture2(p) {
 <figcaption>JPEG, ${p.picture.shownWidth} \xD7 ${p.picture.shownHeight}, checked against its publication.</figcaption></figure>`;
 }
 function text(post) {
-  return isLongForm(post.format) ? `<div class="f-text f-lf">${renderHtml(parse(post.text))}</div>` : `<div class="f-text" dir="auto">${escapeHtml(post.text)}</div>`;
+  return isLongForm(post.format) ? `<div class="f-text f-lf">${renderHtml(parse2(post.text))}</div>` : `<div class="f-text" dir="auto">${escapeHtml(post.text)}</div>`;
 }
 function note(a, picked, authors) {
   const label = picked ? ` <span class="f-label" data-picked="${picked}">Picked by ${escapeHtml(nameOf(authors, picked))}</span>` : "";
@@ -6301,536 +6848,6 @@ It decides nothing and refuses nothing: a specification is named by its own hash
   const body = listing.lines.length ? listing.lines.map((l) => lineHtml(l, all)).join("\n") : '<p class="l-none">No verified specification found at the relays read.</p>';
   const specs = `<section id="l-specs"><h2 class="l-h">cMIPs and Modules</h2>${body}${versionsHtml(listing)}${unverifiedHtml(listing)}</section>`;
   return `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${style}"></head><body>${top}${extensionsHtml(listing, reader)}${xtypesHtml(listing)}${mipsHtml(listing)}${specs}</body></html>`;
-}
-
-// ../../modules/video/src/video.ts
-var NotFilm = class extends Error {
-  constructor(kind, message4) {
-    super(message4);
-    this.kind = kind;
-    this.name = "NotFilm";
-  }
-};
-var MAX_BYTES = 64 * 1024 * 1024 - 16;
-var MAX_SECONDS = 600;
-var MAX_LONG_SIDE = 1920;
-var MAX_SHORT_SIDE = 1080;
-var MAX_RATE = 60;
-var MAX_LEVEL = 42;
-var MAX_SAMPLE_RATE = 48e3;
-var CARRIED_WORDS2 = {
-  metadata: "metadata (titles, dates, the device, comments, cover pictures)",
-  location: "where it was filmed",
-  dates: "when it was made (the dates in its headers)",
-  names: "names written by the software that made it",
-  free: "free space that can hold anything",
-  unknown: "boxes of a kind no player reads (such as XMP)",
-  "unused-media": "media data no sample uses",
-  descriptor: "an MPEG-4 object descriptor (iods), not needed to play"
-};
-var ascii2 = (b, o, n) => String.fromCharCode(...b.subarray(o, o + n));
-var Reader = class {
-  constructor(b) {
-    this.b = b;
-    this.view = new DataView(b.buffer, b.byteOffset, b.byteLength);
-  }
-  view;
-  need(o, n, end, what) {
-    if (o < 0 || n < 0 || o + n > end) throw new NotFilm("structure", `${what} runs past its box`);
-  }
-  u8 = (o) => this.b[o];
-  u16 = (o) => this.view.getUint16(o);
-  u32 = (o) => this.view.getUint32(o);
-  i32 = (o) => this.view.getInt32(o);
-  u64(o) {
-    const hi = this.u32(o);
-    if (hi > 2097151) throw new NotFilm("limits", "a 64-bit value beyond what a file of this size can hold");
-    return hi * 2 ** 32 + this.u32(o + 4);
-  }
-  /** The boxes between `o` and `end`, which they must fill exactly. A size of 0 (to the end) only where `toEnd` allows. */
-  boxes(o, end, toEnd = false) {
-    const out = [];
-    while (o < end) {
-      if (end - o < 8) throw new NotFilm("structure", "bytes left over that are not a box");
-      let size = this.u32(o);
-      const type = ascii2(this.b, o + 4, 4);
-      let body = o + 8;
-      if (size === 1) {
-        if (end - o < 16) throw new NotFilm("structure", `the box ${JSON.stringify(type)} runs past its parent`);
-        size = this.u64(o + 8);
-        body = o + 16;
-      } else if (size === 0) {
-        if (!toEnd) throw new NotFilm("structure", `the box ${JSON.stringify(type)} has no size`);
-        size = end - o;
-      }
-      if (type === "uuid") body += 16;
-      if (size < body - o || o + size > end) throw new NotFilm("structure", `the box ${JSON.stringify(type)} runs past its parent`);
-      out.push({ type, start: o, body, end: o + size });
-      o += size;
-    }
-    return out;
-  }
-};
-var ASIDE = { udta: "metadata", meta: "metadata", free: "free", skip: "free", uuid: "unknown" };
-function children(r, box, allowed, carried, where, skip = 0) {
-  const out = [];
-  for (const c of r.boxes(box.body + skip, box.end)) {
-    if (allowed.includes(c.type)) out.push(c);
-    else if (c.type in ASIDE) {
-      carried.add(ASIDE[c.type]);
-      if (c.type === "udta" || c.type === "meta") inspectAside(r, c, carried);
-    } else throw new NotFilm("refused", `a box of kind ${JSON.stringify(c.type)} in ${where}, which this Module does not read`);
-  }
-  return out;
-}
-function inspectAside(r, box, carried) {
-  let kids;
-  try {
-    kids = r.boxes(box.body + (box.type === "meta" ? 4 : 0), box.end);
-  } catch {
-    try {
-      kids = box.type === "meta" ? r.boxes(box.body, box.end) : [];
-    } catch {
-      kids = [];
-    }
-  }
-  for (const k of kids) {
-    if (k.type === "loci" || k.type === "\xA9xyz") carried.add("location");
-    if (k.type === "dinf") throw new NotFilm("refused", "a data reference inside the metadata, which could point outside the file");
-    if (k.type === "meta" || k.type === "udta" || k.type === "ilst" || k.type === "keys") inspectAside(r, k, carried);
-    if (k.type === "ilst" || k.type === "keys") {
-      if (/location|©xyz/i.test(ascii2(r.b, k.body, k.end - k.body))) carried.add("location");
-    }
-  }
-}
-var one = (list, type, where) => {
-  const f = list.filter((b) => b.type === type);
-  if (f.length !== 1) throw new NotFilm("structure", `${where} has ${f.length ? "more than one" : "no"} ${JSON.stringify(type)}`);
-  return f[0];
-};
-var maybe = (list, type, where) => {
-  const f = list.filter((b) => b.type === type);
-  if (f.length > 1) throw new NotFilm("structure", `${where} has more than one ${JSON.stringify(type)}`);
-  return f[0] ?? null;
-};
-var Bits = class {
-  constructor(b) {
-    this.b = b;
-  }
-  bit = 0;
-  u(n) {
-    let v = 0;
-    for (let i = 0; i < n; i++) {
-      const byte = this.bit >> 3;
-      if (byte >= this.b.length) throw new NotFilm("structure", "the parameter set ends early");
-      v = v * 2 + (this.b[byte] >> 7 - (this.bit & 7) & 1);
-      this.bit++;
-    }
-    return v;
-  }
-  ue() {
-    let zeros = 0;
-    while (this.u(1) === 0) if (++zeros > 31) throw new NotFilm("structure", "the parameter set holds a number too large");
-    return 2 ** zeros - 1 + this.u(zeros);
-  }
-  se() {
-    const k = this.ue();
-    return k & 1 ? (k + 1) / 2 : -k / 2;
-  }
-};
-function unescape(nal) {
-  const out = [];
-  for (let i = 0; i < nal.length; i++) {
-    if (i >= 2 && nal[i] === 3 && nal[i - 1] === 0 && nal[i - 2] === 0) continue;
-    out.push(nal[i]);
-  }
-  return new Uint8Array(out);
-}
-var PROFILES = { 66: "Baseline", 77: "Main", 100: "High" };
-function readSps(nal) {
-  if (!nal.length || (nal[0] & 31) !== 7) throw new NotFilm("structure", "the H.264 configuration does not hold a sequence parameter set");
-  const s = new Bits(unescape(nal.subarray(1)));
-  const profile = s.u(8);
-  s.u(8);
-  const level = s.u(8);
-  s.ue();
-  if ([100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135].includes(profile)) {
-    const chroma = s.ue();
-    if (chroma !== 1) throw new NotFilm("refused", "H.264 with colour sampled otherwise than 4:2:0, which phones do not all play");
-    if (s.ue() !== 0 || s.ue() !== 0) throw new NotFilm("refused", "H.264 with more than 8 bits a sample, which phones do not all play");
-    s.u(1);
-    if (s.u(1)) {
-      for (let i = 0; i < 8; i++) {
-        if (!s.u(1)) continue;
-        const n = i < 6 ? 16 : 64;
-        let last = 8;
-        let next = 8;
-        for (let j = 0; j < n && next !== 0; j++) {
-          next = (last + s.se() + 256) % 256;
-          last = next === 0 ? last : next;
-        }
-      }
-    }
-  }
-  s.ue();
-  const poc = s.ue();
-  if (poc === 0) s.ue();
-  else if (poc === 1) {
-    s.u(1);
-    s.se();
-    s.se();
-    const n = s.ue();
-    if (n > 255) throw new NotFilm("structure", "the parameter set is not valid");
-    for (let i = 0; i < n; i++) s.se();
-  }
-  s.ue();
-  s.u(1);
-  const wMbs = s.ue() + 1;
-  const hMaps = s.ue() + 1;
-  const frameOnly = s.u(1);
-  if (!frameOnly) throw new NotFilm("refused", "interlaced H.264, which this Module does not play");
-  s.u(1);
-  let crop = [0, 0, 0, 0];
-  if (s.u(1)) crop = [s.ue(), s.ue(), s.ue(), s.ue()];
-  const width = wMbs * 16 - 2 * (crop[0] + crop[1]);
-  const height = hMaps * 16 - 2 * (crop[2] + crop[3]);
-  if (width <= 0 || height <= 0) throw new NotFilm("structure", "the parameter set crops away the whole picture");
-  return { profile, level, width, height };
-}
-function readAvcC(r, box) {
-  const b = r.b;
-  r.need(box.body, 6, box.end, "the H.264 configuration");
-  if (b[box.body] !== 1) throw new NotFilm("structure", "the H.264 configuration is not version 1");
-  const profile = b[box.body + 1];
-  const compat = b[box.body + 2];
-  const level = b[box.body + 3];
-  if (![0, 1, 3].includes(b[box.body + 4] & 3)) throw new NotFilm("structure", "the H.264 configuration names an invalid length size");
-  let o = box.body + 5;
-  const nSps = b[o++] & 31;
-  if (!nSps) throw new NotFilm("structure", "the H.264 configuration holds no sequence parameter set");
-  let first = null;
-  for (let i = 0; i < nSps; i++) {
-    r.need(o, 2, box.end, "the H.264 configuration");
-    const n = r.u16(o);
-    r.need(o + 2, n, box.end, "a sequence parameter set");
-    first ??= b.subarray(o + 2, o + 2 + n);
-    o += 2 + n;
-  }
-  r.need(o, 1, box.end, "the H.264 configuration");
-  const nPps = b[o++];
-  if (!nPps) throw new NotFilm("structure", "the H.264 configuration holds no picture parameter set");
-  for (let i = 0; i < nPps; i++) {
-    r.need(o, 2, box.end, "the H.264 configuration");
-    const n = r.u16(o);
-    r.need(o + 2, n, box.end, "a picture parameter set");
-    o += 2 + n;
-  }
-  const sps = readSps(first);
-  if (sps.profile !== profile || sps.level !== level) throw new NotFilm("structure", "the H.264 configuration and its parameter set disagree");
-  return { profile, compat, level, width: sps.width, height: sps.height };
-}
-function descriptor(r, o, end) {
-  r.need(o, 2, end, "a descriptor");
-  const tag = r.b[o++];
-  let len = 0;
-  for (let i = 0; i < 4; i++) {
-    r.need(o, 1, end, "a descriptor");
-    const x = r.b[o++];
-    len = len * 128 + (x & 127);
-    if (!(x & 128)) break;
-    if (i === 3) throw new NotFilm("structure", "a descriptor length is too long");
-  }
-  r.need(o, len, end, "a descriptor");
-  return { tag, body: o, end: o + len };
-}
-function readEsds(r, box) {
-  const b = r.b;
-  const es = descriptor(r, box.body + 4, box.end);
-  if (es.tag !== 3) throw new NotFilm("structure", "the sound configuration has no elementary stream descriptor");
-  r.need(es.body, 3, es.end, "the sound configuration");
-  const flags = b[es.body + 2];
-  let o = es.body + 3;
-  if (flags & 128) o += 2;
-  if (flags & 64) throw new NotFilm("refused", "the sound names a stream elsewhere (a URL), which a film may not");
-  if (flags & 32) o += 2;
-  const dc = descriptor(r, o, es.end);
-  if (dc.tag !== 4) throw new NotFilm("structure", "the sound configuration has no decoder configuration");
-  r.need(dc.body, 13, dc.end, "the decoder configuration");
-  if (b[dc.body] !== 64 || b[dc.body + 1] >> 2 !== 5) throw new NotFilm("refused", "sound that is not MPEG-4 audio (AAC): only AAC-LC is played");
-  const asc = descriptor(r, dc.body + 13, dc.end);
-  if (asc.tag !== 5) throw new NotFilm("structure", "the sound configuration has no AAC configuration");
-  const bits = new Bits(b.subarray(asc.body, asc.end));
-  const aot = bits.u(5);
-  if (aot !== 2) throw new NotFilm("refused", `AAC of another kind than AAC-LC (audio object type ${aot}), which this Module does not play`);
-  const fi = bits.u(4);
-  const RATES = [96e3, 88200, 64e3, 48e3, 44100, 32e3, 24e3, 22050, 16e3, 12e3, 11025, 8e3, 7350];
-  const sampleRate = fi === 15 ? bits.u(24) : RATES[fi];
-  if (!sampleRate) throw new NotFilm("structure", "the AAC configuration names no sampling rate");
-  const channels = bits.u(4);
-  if (channels !== 1 && channels !== 2) throw new NotFilm("refused", "sound with more than two channels, or channels set elsewhere: only mono and stereo are played");
-  if (sampleRate > MAX_SAMPLE_RATE) throw new NotFilm("limits", `sound sampled at ${sampleRate} Hz, above ${MAX_SAMPLE_RATE}`);
-  return { channels, sampleRate };
-}
-var MATRIX = {
-  "65536,0,0,65536": 0,
-  "0,65536,-65536,0": 90,
-  "-65536,0,0,-65536": 180,
-  "0,-65536,65536,0": 270
-};
-function rotationOf(r, o) {
-  const m = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => r.i32(o + 4 * i));
-  if (m[2] !== 0 || m[5] !== 0 || m[8] !== 1073741824) throw new NotFilm("refused", "a track matrix that is not a quarter turn");
-  const rot = MATRIX[[m[0], m[1], m[3], m[4]].join(",")];
-  if (rot === void 0) throw new NotFilm("refused", "a track matrix that is not a quarter turn (scaled, skewed or mirrored)");
-  return rot;
-}
-function dates(r, box, v) {
-  const at = box.body + 4;
-  const n = v ? 16 : 8;
-  return { at, n, set: r.b.subarray(at, at + n).some((x) => x !== 0) };
-}
-function version(r, box, allowed) {
-  r.need(box.body, 4, box.end, `the box ${box.type}`);
-  const v = r.b[box.body];
-  if (!allowed.includes(v)) throw new NotFilm("structure", `the box ${box.type} has version ${v}`);
-  return v;
-}
-function table(r, box, entrySize, skip = 4) {
-  r.need(box.body, skip + 4, box.end, `the table ${box.type}`);
-  const n = r.u32(box.body + skip);
-  const o = box.body + skip + 4;
-  if (n * entrySize > box.end - o) throw new NotFilm("structure", `the table ${box.type} runs past its box`);
-  return { n, o };
-}
-var STBL = ["stsd", "stts", "ctts", "stss", "stsc", "stsz", "stco", "co64", "sdtp", "sgpd", "sbgp", "cslg", "stps"];
-var VISUAL_EXTRAS = ["avcC", "btrt", "pasp", "colr", "clap", "fiel"];
-var AUDIO_EXTRAS = ["esds", "btrt"];
-function readTrack(r, trak, carried) {
-  const kids = children(r, trak, ["tkhd", "edts", "mdia"], carried, "a track");
-  const tkhd = one(kids, "tkhd", "a track");
-  const tv = version(r, tkhd, [0, 1]);
-  const matrixAt = tkhd.body + 4 + (tv ? 32 : 20) + 16;
-  r.need(matrixAt, 36 + 8, tkhd.end, "the track header");
-  const rotation = rotationOf(r, matrixAt);
-  if (dates(r, tkhd, tv).set) carried.add("dates");
-  const edts = maybe(kids, "edts", "a track");
-  if (edts) for (const e of children(r, edts, ["elst"], carried, "an edit list")) version(r, e, [0, 1]);
-  const mdia = one(kids, "mdia", "a track");
-  const mk = children(r, mdia, ["mdhd", "hdlr", "minf"], carried, "a track");
-  const mdhd = one(mk, "mdhd", "a track");
-  const mv = version(r, mdhd, [0, 1]);
-  r.need(mdhd.body, mv ? 32 : 20, mdhd.end, "the media header");
-  const timescale = r.u32(mdhd.body + (mv ? 20 : 12));
-  if (!timescale) throw new NotFilm("structure", "a track with no timescale");
-  if (dates(r, mdhd, mv).set) carried.add("dates");
-  const hdlr = one(mk, "hdlr", "a track");
-  r.need(hdlr.body, 24, hdlr.end, "the handler");
-  const handler = ascii2(r.b, hdlr.body + 8, 4);
-  if (handler !== "vide" && handler !== "soun") {
-    throw new NotFilm("refused", `a track of kind ${JSON.stringify(handler)} (text, subtitles, timecode, metadata or hints): a film holds pictures and sound only`);
-  }
-  const named = hdlr.end - (hdlr.body + 24) > 1 || hdlr.end > hdlr.body + 24 && r.b[hdlr.body + 24] !== 0;
-  const minf = one(mk, "minf", "a track");
-  const nk = children(r, minf, ["vmhd", "smhd", "dinf", "stbl", "hdlr"], carried, "a track");
-  one(nk, handler === "vide" ? "vmhd" : "smhd", "a track");
-  const dinf = one(nk, "dinf", "a track");
-  const dref = one(children(r, dinf, ["dref"], carried, "a data reference"), "dref", "a data reference");
-  const refs = table(r, dref, 12);
-  const entries = r.boxes(refs.o, dref.end);
-  if (entries.length !== refs.n || refs.n !== 1) throw new NotFilm("refused", "a track whose data references are not exactly one");
-  const ref = entries[0];
-  if (ref.type !== "url " && ref.type !== "urn " || ref.end - ref.body < 4 || !(r.b[ref.body + 3] & 1)) {
-    throw new NotFilm("refused", "a track whose samples are stored outside this file (a data reference to elsewhere)");
-  }
-  const stbl = one(nk, "stbl", "a track");
-  const sk = children(r, stbl, STBL, carried, "a sample table");
-  const stsd = one(sk, "stsd", "a sample table");
-  const sd = table(r, stsd, 8);
-  const descs = r.boxes(sd.o, stsd.end);
-  if (sd.n !== 1 || descs.length !== 1) throw new NotFilm("refused", "a track with more than one sample description");
-  const entry = descs[0];
-  const t = { handler, timescale, mediaDuration: 0, samples: 0, chunks: [], rotation, names: named };
-  if (handler === "vide") {
-    if (entry.type !== "avc1") {
-      const what = entry.type === "encv" ? "encrypted pictures" : entry.type === "avc3" ? "H.264 with its parameter sets in the stream (avc3)" : `pictures coded as ${JSON.stringify(entry.type)}, not H.264`;
-      throw new NotFilm("refused", `${what}: only H.264 (avc1) is played`);
-    }
-    r.need(entry.body, 78, entry.end, "the picture description");
-    if (r.b.subarray(entry.body + 42, entry.body + 74).some((x) => x !== 0)) t.names = true;
-    const ex = children(r, { ...entry, body: entry.body + 78 }, VISUAL_EXTRAS, carried, "the picture description");
-    const v = readAvcC(r, one(ex, "avcC", "the picture description"));
-    if (!PROFILES[v.profile]) throw new NotFilm("refused", `H.264 profile ${v.profile}: only Baseline, Main and High are played`);
-    t.video = v;
-  } else {
-    if (entry.type !== "mp4a") {
-      throw new NotFilm("refused", `${entry.type === "enca" ? "encrypted sound" : `sound coded as ${JSON.stringify(entry.type)}`}: only AAC-LC (mp4a) is played`);
-    }
-    r.need(entry.body, 28, entry.end, "the sound description");
-    if (r.u16(entry.body + 8) !== 0) throw new NotFilm("refused", "a QuickTime sound description (version 1 or 2), not MP4");
-    const ex = children(r, { ...entry, body: entry.body + 28 }, AUDIO_EXTRAS, carried, "the sound description");
-    t.audio = readEsds(r, one(ex, "esds", "the sound description"));
-  }
-  const stts = table(r, one(sk, "stts", "a sample table"), 8);
-  let timed = 0;
-  for (let i = 0; i < stts.n; i++) {
-    const count2 = r.u32(stts.o + 8 * i);
-    timed += count2;
-    t.mediaDuration += count2 * r.u32(stts.o + 8 * i + 4);
-  }
-  const stsz = one(sk, "stsz", "a sample table");
-  r.need(stsz.body, 12, stsz.end, "the sample sizes");
-  const fixed = r.u32(stsz.body + 4);
-  const count = r.u32(stsz.body + 8);
-  if (!fixed && count * 4 > stsz.end - (stsz.body + 12)) throw new NotFilm("structure", "the sample sizes run past their box");
-  const sizeOf = (i) => fixed ? fixed : r.u32(stsz.body + 12 + 4 * i);
-  if (count !== timed) throw new NotFilm("structure", "a track whose sample count and timing disagree");
-  if (!count) throw new NotFilm("structure", "a track with no samples");
-  t.samples = count;
-  const ctts = maybe(sk, "ctts", "a sample table");
-  if (ctts) {
-    const c = table(r, ctts, 8);
-    let n = 0;
-    for (let i = 0; i < c.n; i++) n += r.u32(c.o + 8 * i);
-    if (n !== count) throw new NotFilm("structure", "a track whose composition offsets and samples disagree");
-  }
-  const stss = maybe(sk, "stss", "a sample table");
-  if (stss) {
-    const s = table(r, stss, 4);
-    for (let i = 0; i < s.n; i++) {
-      const k = r.u32(s.o + 4 * i);
-      if (k < 1 || k > count) throw new NotFilm("structure", "a key picture that is not a sample");
-    }
-  }
-  const stco = maybe(sk, "stco", "a sample table");
-  const co64 = maybe(sk, "co64", "a sample table");
-  if (!stco === !co64) throw new NotFilm("structure", "a track without exactly one chunk offset table");
-  const co = table(r, stco ?? co64, stco ? 4 : 8);
-  const offsets = Array.from({ length: co.n }, (_, i) => stco ? r.u32(co.o + 4 * i) : r.u64(co.o + 8 * i));
-  const stsc = table(r, one(sk, "stsc", "a sample table"), 12);
-  let sample = 0;
-  for (let i = 0; i < stsc.n; i++) {
-    const first = r.u32(stsc.o + 12 * i);
-    const per = r.u32(stsc.o + 12 * i + 4);
-    if (r.u32(stsc.o + 12 * i + 8) !== 1) throw new NotFilm("structure", "a chunk naming a sample description that is not there");
-    const next = i + 1 < stsc.n ? r.u32(stsc.o + 12 * (i + 1)) : co.n + 1;
-    if (first < 1 || next <= first || next > co.n + 1 || i === 0 && first !== 1) throw new NotFilm("structure", "the sample-to-chunk table is not in order");
-    for (let c = first; c < next; c++) {
-      let size = 0;
-      for (let k = 0; k < per; k++) {
-        if (sample >= count) throw new NotFilm("structure", "chunks hold more samples than the track has");
-        size += sizeOf(sample++);
-      }
-      t.chunks.push({ offset: offsets[c - 1], size });
-    }
-  }
-  if (sample !== count || t.chunks.length !== co.n) throw new NotFilm("structure", "chunks and samples disagree");
-  return t;
-}
-var BRANDS = ["isom", "iso2", "iso3", "iso4", "iso5", "iso6", "mp41", "mp42", "avc1"];
-function parse2(bytes) {
-  if (bytes.length > MAX_BYTES) throw new NotFilm("limits", `${bytes.length} bytes, above ${MAX_BYTES} (one media object of 64 MiB, locked)`);
-  const r = new Reader(bytes);
-  if (bytes.length < 8 || ascii2(bytes, 4, 4) !== "ftyp") throw new NotFilm("structure", "it does not begin with a file type box (ftyp)");
-  const top = r.boxes(0, bytes.length, true);
-  const carried = /* @__PURE__ */ new Set();
-  const ftyp = top[0];
-  r.need(ftyp.body, 8, ftyp.end, "the file type");
-  if ((ftyp.end - ftyp.body) % 4) throw new NotFilm("structure", "the file type box is not whole brands");
-  const major = ascii2(bytes, ftyp.body, 4);
-  const brands = [major];
-  for (let o = ftyp.body + 8; o < ftyp.end; o += 4) brands.push(ascii2(bytes, o, 4));
-  if (major === "qt  ") throw new NotFilm("refused", "a QuickTime file (.mov), not MP4: remux it as MP4 first");
-  if (!brands.some((b) => BRANDS.includes(b))) throw new NotFilm("refused", `brands ${brands.join(", ")}: none is an MP4 brand`);
-  const mdats = [];
-  let moov = null;
-  let indexFirst = false;
-  for (const b of top.slice(1)) {
-    if (b.type === "moov") {
-      if (moov) throw new NotFilm("structure", "more than one movie box (moov)");
-      moov = b;
-      indexFirst = !mdats.length;
-    } else if (b.type === "mdat") mdats.push(b);
-    else if (b.type === "ftyp") throw new NotFilm("structure", "more than one file type box");
-    else if (["moof", "mfra", "sidx", "styp", "ssix", "emsg", "prft"].includes(b.type)) {
-      throw new NotFilm("refused", "a fragmented MP4 (as a live stream writes): only a whole film with one index is played");
-    } else if (b.type in ASIDE) {
-      carried.add(ASIDE[b.type]);
-      if (b.type === "udta" || b.type === "meta") inspectAside(r, b, carried);
-    } else throw new NotFilm("refused", `a box of kind ${JSON.stringify(b.type)} at the top of the file, which this Module does not read`);
-  }
-  if (!moov) throw new NotFilm("structure", "no movie box (moov): the film has no index");
-  const mk = children(r, moov, ["mvhd", "trak", "iods", "mvex"], carried, "the movie");
-  if (mk.some((b) => b.type === "mvex")) throw new NotFilm("refused", "a fragmented MP4 (mvex): only a whole film with one index is played");
-  if (mk.some((b) => b.type === "iods")) carried.add("descriptor");
-  const mvhd = one(mk, "mvhd", "the movie");
-  const mv = version(r, mvhd, [0, 1]);
-  r.need(mvhd.body, mv ? 112 : 100, mvhd.end, "the movie header");
-  const mScale = r.u32(mvhd.body + (mv ? 20 : 12));
-  const mDur = mv ? r.u64(mvhd.body + 24) : r.u32(mvhd.body + 16);
-  if (!mScale) throw new NotFilm("structure", "the movie has no timescale");
-  if (dates(r, mvhd, mv).set) carried.add("dates");
-  if (rotationOf(r, mvhd.body + (mv ? 48 : 36)) !== 0) throw new NotFilm("refused", "a movie matrix that is not the identity");
-  const traks = mk.filter((b) => b.type === "trak");
-  const tracks = traks.map((t) => readTrack(r, t, carried));
-  const video = tracks.filter((t) => t.handler === "vide");
-  const audio = tracks.filter((t) => t.handler === "soun");
-  if (video.length !== 1) throw new NotFilm("refused", `${video.length || "no"} picture tracks: a film has exactly one`);
-  if (audio.length > 1) throw new NotFilm("refused", `${audio.length} sound tracks: a film has one at most`);
-  if (tracks.some((t) => t.names)) carried.add("names");
-  const chunks = tracks.flatMap((t) => t.chunks).sort((a2, b) => a2.offset - b.offset);
-  let used = 0;
-  let prevEnd = 0;
-  for (const c of chunks) {
-    if (c.offset < prevEnd) throw new NotFilm("structure", "two chunks of samples overlap");
-    if (!mdats.some((m) => c.offset >= m.body && c.offset + c.size <= m.end)) throw new NotFilm("structure", "a chunk of samples lies outside the media data");
-    prevEnd = c.offset + c.size;
-    used += c.size;
-  }
-  if (used < mdats.reduce((n, m) => n + (m.end - m.body), 0)) carried.add("unused-media");
-  const v = video[0];
-  const turned = v.rotation === 90 || v.rotation === 270;
-  const vv = v.video;
-  const long = Math.max(vv.width, vv.height);
-  const short5 = Math.min(vv.width, vv.height);
-  if (long > MAX_LONG_SIDE || short5 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
-  if (vv.level > MAX_LEVEL) throw new NotFilm("limits", `H.264 level ${vv.level / 10}, above ${MAX_LEVEL / 10}`);
-  const seconds = Math.max(mDur / mScale, ...tracks.map((t) => t.mediaDuration / t.timescale));
-  if (seconds > MAX_SECONDS) throw new NotFilm("limits", `${Math.round(seconds)} seconds long, beyond ${MAX_SECONDS}`);
-  const vSeconds = v.mediaDuration / v.timescale;
-  const rate = vSeconds > 0 ? v.samples / vSeconds : Infinity;
-  if (rate > MAX_RATE * 1.01) throw new NotFilm("limits", `${Math.round(rate)} pictures a second, beyond ${MAX_RATE}`);
-  const hex22 = (n) => n.toString(16).padStart(2, "0");
-  const vcodec = `avc1.${hex22(vv.profile)}${hex22(vv.compat)}${hex22(vv.level)}`;
-  const a = audio[0];
-  const film = {
-    brand: major,
-    duration: Math.round(seconds * 1e3) / 1e3,
-    video: {
-      codec: vcodec,
-      profile: PROFILES[vv.profile],
-      level: vv.level,
-      width: vv.width,
-      height: vv.height,
-      rotation: v.rotation,
-      shown: turned ? { width: vv.height, height: vv.width } : { width: vv.width, height: vv.height },
-      samples: v.samples,
-      rate: Math.round(rate * 1e3) / 1e3
-    },
-    audio: a ? { codec: "mp4a.40.2", channels: a.audio.channels, sampleRate: a.audio.sampleRate, samples: a.samples } : null,
-    type: `video/mp4; codecs="${vcodec}${a ? ", mp4a.40.2" : ""}"`,
-    indexFirst,
-    carried: Object.keys(CARRIED_WORDS2).filter((c) => carried.has(c))
-  };
-  return { film, ftyp, moov, tracks, traks };
-}
-function read2(bytes) {
-  try {
-    return parse2(bytes).film;
-  } catch (e) {
-    if (e instanceof NotFilm) throw e;
-    if (e instanceof RangeError) throw new NotFilm("structure", "a box runs past the end of the file");
-    throw e;
-  }
 }
 
 // src/shell/film.ts

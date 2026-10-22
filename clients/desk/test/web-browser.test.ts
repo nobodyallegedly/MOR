@@ -1,14 +1,16 @@
 // Edubba's web client (testing only) in headless Chromium, by clicks and
 // typing alone, as people on several devices: the founder in Edubba's web
-// client, each member in Dub's web client, each in its own browser profile,
+// client, each member made in Dub's web client and signing in an Edubba web
+// client of its own (Dub's Signing tab removed, decided 21 October 2026),
+// each in its own browser profile,
 // both clients built as released and served with their headers. Real homes
 // and a relay on local ports; nothing simulated.
 //
 // The banner on every screen; no Agents tab, nothing of Claude's, no test
 // collective, no folder; an identity brought by its ID (written for people)
 // and its words; one tab at a time; a real collective founded with members
-// signing in Dub on the web, the shares dealt, nothing of a share kept in any
-// browser; a member change signed in Dub on the web, then waiting for Kišib;
+// signing in their own Edubba on the web, the shares dealt, nothing of a share
+// kept in any browser; a member change signed there, then waiting for Kišib;
 // a correction; a collective brought by its ID, read only; the forms written
 // for people; every list and feed in its own scrollable box (H42).
 // `MOR_SCREENSHOTS=DIR` keeps every new screen.
@@ -203,7 +205,7 @@ async function makeIn(page: Page): Promise<string> {
   const positions = (await inputs.evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name))).map((n) => Number(n.slice(1)));
   for (const [i, p] of positions.entries()) await inputs.nth(i).fill(written[p - 1]);
   await page.getByRole('button', { name: 'Go on' }).click();
-  await done(page, '#status .note.done', 'The identity is born');
+  await done(page, '#status .k-note.k-done', 'The identity is born');
   return page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((res) => {
       const r = indexedDB.open('dub');
@@ -216,44 +218,75 @@ async function makeIn(page: Page): Promise<string> {
   });
 }
 
-/** Turn Signing on in a Dub page's identity window, and come back to its Signing tab. */
-async function signingOn(page: Page) {
-  await page.locator('[data-action=window]').click();
-  await page.locator('#signing-on').waitFor();
-  await page.locator('#signing-on').check();
-  await done(page, '#status .note', /Signing is on/);
-  await page.getByRole('button', { name: 'Back to Dub' }).click();
-  await page.locator('[data-tab=signing]').click();
+/**
+ * A member's Edubba, by its Dub page (Dub's Signing tab removed, decided 21
+ * October 2026: members sign in Edubba, Collectives › To sign).
+ */
+const edubbaOf = new Map<Page, Page>();
+
+/**
+ * Carry a member from Dub on the web into an Edubba on the web of its own
+ * browser, by clicks: its ID and signing key's words read in Dub's identity
+ * menu, brought into Edubba, which then acts as it.
+ */
+async function signingOn(dub: Page, name: string) {
+  await dub.locator('[data-k-open="identity"]').click();
+  await dub.locator('[data-k-idmenu]').first().click();
+  await dub.getByRole('menuitem', { name: /^Words/ }).click();
+  await dub.locator('#carry-words').waitFor({ timeout: 60_000 });
+  const words = (await dub.locator('#carry-words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
+  const id = (await dub.locator('.k-mbody .k-mono').innerText()).replace(/\s+/g, '');
+  await dub.locator('[data-k-popup="close"]').click();
+  const ed = await pageOf(edubbaBase);
+  await ed.locator('h1.mark', { hasText: 'Edubba' }).waitFor({ timeout: 60_000 });
+  await places(ed);
+  await ed.click('[data-action=tab][data-tab=identities]');
+  await ed.click('.entry.add[data-id=new]');
+  await ed.fill('#bring-identity input[name=name]', name);
+  await ed.fill('#bring-identity input[name=id]', id);
+  await ed.fill('#bring-identity textarea[name=words]', words.join(' '));
+  await ed.click('#bring-identity button[type=submit]');
+  await done(ed, '#e-status .note.done', `“${name}” is here`);
+  edubbaOf.set(dub, ed);
 }
 
-/** In a Dub page: sign the proposal whose title says `what`. */
-async function signIn(page: Page, what: RegExp, reload = false) {
-  // A proposal arriving later is found on opening (as for a release in test/real-browser.test.ts).
-  if (reload) {
-    await page.reload();
-    await page.locator('[data-tab=signing]').waitFor({ timeout: 60_000 });
+/** Collectives › To sign, in a member's Edubba, read again. */
+async function toSign(ed: Page, reload: boolean) {
+  if (reload) await ed.reload();
+  await ed.locator('h1.mark', { hasText: 'Edubba' }).waitFor({ timeout: 60_000 });
+  // Edubba looks by itself while To sign is open, its buttons waiting meanwhile: a click waits for them.
+  if (!(await ed.locator('#e-signing').isVisible())) {
+    await ed.click('[data-action=tab][data-tab=collectives]', { timeout: 90_000 });
+    await ed.click('#e-to-sign', { timeout: 90_000 });
   }
-  await page.locator('[data-tab=signing]').click();
-  const card = page.locator('.proposal', { has: page.locator('h3', { hasText: what }) }).first();
+  await ed.locator('[data-action=member-look]').click({ timeout: 90_000 });
+}
+
+/** In a member's Edubba: sign the proposal whose title says `what`. */
+async function signIn(dub: Page, what: RegExp, reload = false) {
+  const ed = edubbaOf.get(dub)!;
+  await toSign(ed, reload);
+  const card = ed.locator('#e-signing .proposal', { has: ed.locator('h3', { hasText: what }) }).first();
   await card.waitFor({ timeout: 90_000 });
   await card.getByRole('button', { name: 'Sign it' }).click();
-  await done(page, '#status .note.done', 'Signed');
+  await done(ed, '#e-status .note.done', 'Signed');
 }
 
-/** In a Dub page: show its share once, hide it, type three words back; its words. */
-async function shareIn(page: Page): Promise<string[]> {
-  await page.locator('[data-tab=signing]').click();
-  await page.locator('[data-action=share]').first().waitFor({ timeout: 90_000 });
-  await page.locator('[data-action=share]').first().click();
-  await page.locator('#share-words').waitFor({ timeout: 60_000 });
-  const words = (await page.locator('#share-words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
-  await page.getByRole('button', { name: /I have written share \d+ and its 24 words down/ }).click();
-  const form = page.locator('form.share-back');
+/** In a member's Edubba: show its share once, hide it, type three words back; its words. */
+async function shareIn(dub: Page): Promise<string[]> {
+  const ed = edubbaOf.get(dub)!;
+  await toSign(ed, false);
+  await ed.locator('#e-signing [data-action=share]').first().waitFor({ timeout: 90_000 });
+  await ed.locator('#e-signing [data-action=share]').first().click();
+  await ed.locator('#share-words').waitFor({ timeout: 60_000 });
+  const words = (await ed.locator('#share-words span').allInnerTexts()).map((t) => t.replace(/^\d+\.\s*/, '').trim());
+  await ed.getByRole('button', { name: /I have written share \d+ and its 24 words down/ }).click();
+  const form = ed.locator('#e-signing form.share-back');
   const inputs = form.locator('input');
   const positions = (await inputs.evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name))).map((n) => Number(n.slice(1)));
   for (const [i, p] of positions.entries()) await inputs.nth(i).fill(words[p - 1]);
   await form.getByRole('button', { name: 'Check them' }).click();
-  await done(page, '#status .note.done', 'Your share is written down');
+  await done(ed, '#e-status .note.done', 'The share is written down');
   return words;
 }
 
@@ -353,7 +386,7 @@ test('the banner on every screen; no Agents tab and nothing of Claude’s; an id
   assert.deepEqual(problems, []);
 });
 
-test('a real collective founded in the web client, its members signing in Dub on the web; the shares dealt and kept nowhere; a member change; a correction; a collective brought read only', async () => {
+test('a real collective founded in the web client, its members made in Dub on the web and signing in their own Edubba; the shares dealt and kept nowhere; a member change; a correction; a collective brought read only', async () => {
   const nobody = await elsewhere();
   // A post of its own, made where it was made, to correct here later.
   const first = await postAs(nobody, { text: 'The tablet house opens on Monday.', relays: [relay.base] });
@@ -438,10 +471,10 @@ test('a real collective founded in the web client, its members signing in Dub on
   await done(ed, '#e-status .note.done', 'The founding of “The tablet house” is proposed');
   assert.match(await ed.locator('#e-status').innerText(), /The terms are act mact1/);
 
-  // Each member reads it in plain words in Dub on the web, and signs.
-  await signingOn(ana);
+  // Each member, made in Dub on the web, reads it in plain words in its own Edubba on the web, and signs (Dub's Signing tab removed, decided).
+  await signingOn(ana, 'Ana');
   await signIn(ana, /Found a collective/);
-  await signingOn(bo);
+  await signingOn(bo, 'Bo');
   await signIn(bo, /Found a collective/);
 
   // The answers, looked for by themselves; founding refused until what this device holds is read; then dealt.
@@ -469,7 +502,7 @@ test('a real collective founded in the web client, its members signing in Dub on
   const bw = await shareIn(bo);
 
   // Nothing of a share in any browser's storage, read whole; the collective's file holds its signing key, never its chain key.
-  const places_ = { edubba: await kept(ed), ana: await kept(ana), bo: await kept(bo) };
+  const places_ = { edubba: await kept(ed), ana: await kept(ana), bo: await kept(bo), anaEdubba: await kept(edubbaOf.get(ana)!), boEdubba: await kept(edubbaOf.get(bo)!) };
   for (const w of [mine, aw, bw]) {
     const v = fromWords(w);
     for (const [where, text] of Object.entries(places_)) {
@@ -530,7 +563,7 @@ test('a real collective founded in the web client, its members signing in Dub on
   await done(ed, '#e-status .note.done', /proposed/);
   await signIn(ana, /Change a collective’s agreement/, true);
   await signIn(bo, /Change a collective’s agreement/, true);
-  await signingOn(cy);
+  await signingOn(cy, 'Cy');
   await signIn(cy, /Change a collective’s agreement/);
   await ed.locator('.proposal-status', { hasText: '4 of 4 signed' }).waitFor({ timeout: 120_000 });
   await done(ed, '.proposal-status .note.warn', 'that is Kišib’s work');
@@ -614,14 +647,19 @@ test('the Publishing tab in the web client by clicks: who acts; a protected text
   // In Dub on the web, a reader following the seller sees the picture sealed and the vow for sale.
   const reader = await pageOf(dubBase);
   await makeIn(reader);
-  await reader.locator('#people summary').click();
+  await reader.locator('[data-k-open="contacts"]').click();
   await reader.locator('form#follow input[name=id]').fill(shownId(seller.id));
-  await reader.locator('form#follow').getByRole('button', { name: 'Follow' }).click();
-  await done(reader, '#status .note.done', 'Followed');
-  await reader.locator('.sealed-post .label', { hasText: 'A sealed picture' }).waitFor({ timeout: 90_000 });
-  await reader.locator('.vow-post', { hasText: 'A seat at the reading of the tablets.' }).waitFor({ timeout: 90_000 });
-  assert.ok(await reader.locator('.vow-post [data-action=buy-vow]').isVisible(), 'the vow can be bought, under the lane');
-  assert.equal(await reader.locator('img.sealed-picture').count(), 0, 'nothing of the picture shown before it is bought');
+  await reader.locator('form#follow').getByRole('button', { name: 'Add to contacts' }).click();
+  await done(reader, '#status .k-note.k-done', 'Added to contacts');
+  await reader.keyboard.press('Escape');
+  await reader.locator('#feed .k-act .k-kind', { hasText: 'sealed picture' }).waitFor({ timeout: 90_000 });
+  const vow = reader.locator('#feed .k-act', { hasText: 'A seat at the reading of the tablets.' });
+  await vow.waitFor({ timeout: 90_000 });
+  // The vow can be bought from its act's menu (Dub's own items, below the line).
+  await vow.locator('.k-actid').click();
+  assert.ok(await reader.getByRole('menuitem', { name: 'Buy', exact: true }).isVisible(), 'the vow can be bought, from its menu');
+  await reader.keyboard.press('Escape');
+  assert.equal(await reader.locator('#feed .k-act .dub-sealed img').count(), 0, 'nothing of the picture shown before it is bought');
   await shot(reader, 'dub-sealed-and-vow');
   assert.deepEqual(problems, []);
 });

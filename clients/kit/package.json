@@ -1,0 +1,22 @@
+{
+  "name": "mor-kit",
+  "version": "0.1.0",
+  "description": "The Dubsar Suite's kit: the shared pieces every app's page uses (the look, tiles and their column, the feed box, the act card and its two menus, the pop-up thread, the profile page, the identity panel, contacts and @, the slot for another app's panel, one-line disclaimers, the clock line). Pieces only: no app's logic.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "esbuild": "^0.25",
+    "playwright-core": "1.56",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

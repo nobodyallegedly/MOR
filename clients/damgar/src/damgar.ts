@@ -67,7 +67,7 @@ import {
   lightningAddress,
   readOnchainProof,
 } from '../../genesis/src/core.ts';
-import { ownLine } from '../../genesis/src/lines.ts';
+import { leaveAtHomes, lineReader, noLine, sendWaiting, type LineAtHomes } from '../../genesis/src/private.ts';
 import { REVOCATION, acceptance, authorityOf, grantInWords, makeGrantKey, personGrantPayload, revocationPayload, signUnderGrant, type Authority, type GrantRead, type Kind } from '../../grants/src/grant.ts';
 import { GRANT_LIMITS_SPEC, encodeLimits, readLimits, refuseBeforeSigning, type Limits } from '../../grants/src/limits.ts';
 import { actsUnder, reaches, revocationsOf, type HeldLane } from '../../grants/src/lanes.ts';
@@ -298,6 +298,24 @@ interface Opened {
 const railName = (m: string) => (m === SPEC.lightning.hash ? 'Lightning' : m === SPEC.onchain.hash ? 'on-chain' : `rail Module ${m.slice(0, 8)}…`);
 
 export class Damgar {
+  /** This app's line as the homes hold it, for its card (H80's question 2). */
+  private readonly line = lineReader('Damgar');
+
+  /** This app's line: what waits sent first, in its own turn (the file read again there, the key checked first), then read back. Null where the homes could not be read. */
+  private async lineNow(me: TestIdentity, via: Via): Promise<LineAtHomes | null> {
+    if (Object.keys(me.f.unsent ?? {}).length) {
+      await this.serial(async () => {
+        const f = await this.store.identity(me.id);
+        if (!f) return;
+        // Sending signs a key delivery to oneself: only with a key still current (H80).
+        await this.current(f);
+        await sendWaiting(f, via);
+        await this.store.saveIdentity(f);
+        me.f.unsent = f.f.unsent;
+      }).catch(() => undefined);
+    }
+    return this.line(me, via).catch(() => null);
+  }
   private queue: Promise<unknown> = Promise.resolve();
   /** The accepted list as last read, by identity (memory only). */
   private lists = new Map<string, { list: Accepted; at: number }>();
@@ -575,7 +593,8 @@ export class Damgar {
     if (!me) return out;
     const s = (await this.store.read<Settings>(me.id, 'settings')) ?? { relays: [], via: {} };
     const book = { ...NO_BOOK(), ...((await this.store.read<Book>(me.id, 'book')) ?? {}) };
-    const own = ownLine(me.f.sequence);
+    // Damgar's line, its card naming only an act the homes hold (H80's question 2): what waited sent first.
+    const line = await this.lineNow(me, s.via);
     out.identity = {
       id: me.id,
       grouped: groupId(me.id),
@@ -584,7 +603,7 @@ export class Damgar {
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
-      line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
+      line: line ?? noLine(me.f.sequence),
     };
     let l: Accepted;
     try {
@@ -2785,13 +2804,10 @@ export class Damgar {
         // that relay is away
       }
     }
-    for (const h of me.f.homes.map((x) => x.hint)) {
-      try {
-        await relayAt(h, s.via).putAct(made.act);
-      } catch {
-        // that home is away
-      }
-    }
+    // At this identity's homes too, locked, its key delivered to itself (H80's question 2): Kišib places Damgar's line by it.
+    // Under a lane, the act is the grant's strand, not this line: its locked act left there, as before, and nothing more signed.
+    await leaveAtHomes(me, made, { via: s.via, lockedOnly: how.by === 'lane' });
+    await this.store.saveIdentity(me);
     if (!left) throw new Error(`${short(to)}’s inbox (${inbox.join(', ')}) took nothing. It was signed and kept here; try again later.`);
     return made.id;
   }

@@ -35,3 +35,5 @@ Where a text cannot be built as written, or the code shows it wrong: stop on tha
 **Do not:** change a rule beyond the findings named here; write any finding number, review label or history into the eight texts; rename cMIPs or Modules (the Dubsar Suite's).
 
 **Rules that never bend:** never write the author's personal name or nicknames in anything that enters the repository; write "Nobody, allegedly". No server addresses, onion addresses or keys (test keys from fixed seeds in the vectors are test data, labelled so). Test identities only; regtest or signet only. Work on the branch `claude/s2-core-and-vectors` from main (the freeze-ready texts are merged, pull request 83); open a pull request; do not merge.
+
+**The apps share this core** (the Dubsar Suite's sessions are running on other branches): where you change what the core's WebAssembly interface offers the clients, keep the existing functions working beside the new ones, or list each change in the report under "For the Dubsar Suite", so the suite's sessions can follow at merge.
