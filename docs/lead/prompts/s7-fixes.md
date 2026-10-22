@@ -1,0 +1,25 @@
+The fixes after Fable's review of the C verifier, in the MOR repository (`nobodyallegedly/MOR`): the texts, the core and the vectors, so that a second box can be sealed and the C verifier run against it.
+
+**What happened.** A session built a verifier in C from the freeze-ready texts and vectors alone (`nobodyallegedly/MOR-CBOX`, pull request 1): 285 of 285 vector checks agree; it recorded 49 questions. Fable judged them (`docs/reviews/fable-c-verifier-review.md`): no text wrong; nine sentences left unsaid; two places where the code took a convenience against the text (the MIR hash, "same payment"); vectors to add. The decisions are F380.
+
+**Read first, yourself:** `CLAUDE.md`; `docs/state-of-mor.md`; `docs/lead/workbook.md`; F380 at the top of `docs/findings/MOR-findings-log-round-2.md`, in full; Fable's review, in full; the C session's `QUESTIONS.md` and `REPORT.md` (in `MOR-CBOX`, branch `claude/c-verifier`, if attached; otherwise as Fable quotes them); `core/vectors/README.md`, `core/examples/gen_vectors.rs` and `core/examples/support/verdicts.rs`; then the passages of the freeze-ready texts each fix touches, never through a summary.
+
+**Part 1. The two conditions** (F380, 1). The MIR hash over the file's bytes less one final line break, nothing else (Development rule 26 says so already; `Spec::mir_file_hash`, `frozen_text`, the reader's `mirFileHash` follow; a draft's status line dropped only by a tool, named so); the vector Fable gives for it. "Same payment" from the rail's answer handed as a fact, unknown without it (Money's text says so already; the core's `payments` map follows); the two vectors Fable gives.
+
+**Part 2. The texts.** Write F380's sentences into the freeze-ready texts in place, in their voice, with no finding number: Q14, Q15 with Q49, Q17 (the seventh rotation check, decided by Nobody, allegedly), Q18, Q24, Q35, Q5, Q1, Q4, Q33, Q6. Then the core where it differs from them (Q17's rotation check; Q14's "not counting"; Q15's pending acts and the seven stop reasons; Q18; Q35 without a fixed depth). List every text change in `docs/lead/workbook.md` under "After the box", one line each, so the next C run and any later review can tell a known change from a divergence. Then a stranger's reading by a subagent limited to the eight texts, over what you changed; fix wording, list the rest.
+
+**Part 3. The vectors.** In the generator, never by hand: one content key per act (Q6); the receipt's hash in an inclusion-proof fact (Q12); Q30's label; the keepers' rule `[0]` (Q39); and the vectors Fable lists for Q3, Q11, Q14, Q15, Q17, Q18, Q27, Q35, Q36, Q41, Q46, each with the verdict the texts now give and the rule. Update `core/vectors/README.md` and `scripts/c-box/vectors-README.md` (the box's own README: no code paths, no finding numbers) to match. Extend the Python check where it can judge the new cases.
+
+**Part 4. The heavy rules** (F380, 4), if the budget allows, as the last part: a small reusable family of chain-signature acts (SLH-DSA-SHA2-128f, the smaller scheme the core adopts), built once and shared by many cases, so that vectors reach a collective's fork and closing, a succession confirmed, a record putting an operational clone in force, an agreement as a party, and a chain of judgment. Keep the files' size stated in the README. Stop at a clean point if this runs long; Parts 1 to 3 come first.
+
+**When the code shows a text cannot be written as decided**, or a new vector finds the core and a text apart in a way no finding settles: stop on that point, write the question in plain words, then precisely, with options, your lean and the cost, and go on with the rest.
+
+**Finding number.** If this session records a finding of its own, it is **F381**; do not take another (the leads reserve numbers in one register; ask if you need a second).
+
+**The apps share this core** (the Dubsar Suite's sessions run on other branches): where you change what the core's WebAssembly interface offers the clients, keep the existing functions working beside the new ones, or list each change in the report under "For the Dubsar Suite".
+
+**Report:** `docs/s7-report.md`: plain words first (what changed in the texts, the core and the vectors; what a C verifier now meets that it did not), then precisely; the questions; the stranger's reading; `scripts/c-box/make-c-box.sh` run at the end into a scratch folder to show the box assembles and refuses nothing. Check CI yourself before saying it is green. Keep a progress file (`docs/s7-progress.md`) so a next session can continue.
+
+**Do not:** change a rule beyond F380; write any finding number, review label or history into the eight texts; rename cMIPs or Modules (the Dubsar Suite's).
+
+**Rules that never bend:** never write the author's personal name or nicknames in anything that enters the repository; write "Nobody, allegedly". No server addresses, onion addresses or keys (test keys from fixed seeds in the vectors are test data, labelled so). Test identities only; regtest or signet only. Work on a branch `claude/s7-fixes` from main; open a pull request; do not merge.
