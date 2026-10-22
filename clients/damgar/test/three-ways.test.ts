@@ -75,6 +75,16 @@ test('by hand: shown in Dub to copy, pasted in Damgar, read in plain words, sign
   }
 });
 
+test('Tip from a card’s signer menu in Damgar: a draft prepared there, waiting in To pay, read and signed as any', async () => {
+  const { alice, bob } = await people();
+  const t = await alice.damgar.c.ask<{ id: string; lines: { text: string }[] }>('tip', { to: bob.id, value: '250', unit: R, whatFor: 'from Damgar' });
+  assert.match(t.lines.map((l) => l.text).join(' '), /pay .* 250 regtest satoshis, for “from Damgar”/);
+  const item = (await alice.damgar.c.ask<{ items: ToSign[] }>('to sign')).items.find((i) => i.id === t.id)!;
+  assert.equal(item.app, 'Damgar');
+  await alice.damgar.c.ask('sign draft', { id: t.id });
+  assert.ok((await toSign(bob)).some((i) => i.kind === 'invoice'), 'Bob’s side has the invoice request');
+});
+
 test('Ask Damgar: queued in Waiting; on this computer Damgar woken, its panel framed only for Dub, unreadable from Dub, authorised there; from a post and from a profile', async () => {
   const { alice, bob, post } = await people();
   const dubOrigin = alice.dub.app.base;

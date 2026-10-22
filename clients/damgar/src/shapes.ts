@@ -87,6 +87,8 @@ export interface PaymentShown {
   /** Paying for an anchor: the ticket. */
   /** `checked`: its deadline read against the chain followed (never in the web client, which follows none). */
   ticket: { batch: number; deadline: number; tier: number; checked: boolean } | null;
+  /** The invoice request that began it, where this side sent one: the act its card shows until a claim or receipt exists. */
+  request?: string | null;
   /** A transfer to one's vault on Lightning (H46, F355): the invoice to make on the vault's node, with this description hash. */
   vaultInvoice?: { node: string; descriptionHash: string } | null;
 }

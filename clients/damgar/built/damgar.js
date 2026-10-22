@@ -10195,6 +10195,7 @@ var Damgar = class {
       lines: lines2,
       at: p.at,
       ticket: p.ticket ? { batch: p.ticket.batch, deadline: p.ticket.deadline, tier: p.ticket.tier, checked: p.ticket.checked !== false } : null,
+      request: p.invoiceRequest || null,
       vaultInvoice: p.vault && p.stage === "asked" && p.rail === SPEC.lightning.hash ? { node: readLightningAddress(b642(p.address))?.node ?? "", descriptionHash: p.key } : null
     };
   }
@@ -12018,7 +12019,7 @@ var TILES = [
 function topBar(s, tab, acting) {
   const i = s.identity;
   const tabs = tab ? `<nav class="k-tabs" aria-label="Damgar">${TILES.map((t) => `<button type="button" class="k-tab${t.key === tab ? " k-on" : ""}" data-tab="${t.key}"${t.key === tab ? ' aria-current="page"' : ""}>${e(t.name)}${t.key === "waiting" && s.counts.toSign + s.counts.toPay ? `<span class="k-count">${s.counts.toSign + s.counts.toPay}</span>` : ""}</button>`).join("")}</nav>` : "";
-  const me = i ? meButton({ name: i.name ?? (i.runner ? "via Ki\u0161ib" : "No name"), form: i.form, as: acting ? { name: acting.name, form: acting.form } : null }) : "";
+  const me = i ? meButton({ name: i.name ?? (i.runner ? "via Ki\u0161ib" : shortForm(i.form)), form: i.form, as: acting ? { name: acting.name, form: acting.form } : null }) : "";
   return top({ left: `<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME2, "icon.png")}</button>${tabs}`, right: me });
 }
 function home(s, web, acting) {
@@ -12224,7 +12225,7 @@ function promiseRead(r) {
 }
 var amounts = (xs) => xs.length ? xs.map((x) => e(x.said)).join("<br>") : '<span class="k-faint">none</span>';
 function summaryPane(a) {
-  const asks = a.asks.length ? `<h3>Requests and debts</h3><div class="k-list">${a.asks.map((x) => `<div><span>${x.side === "out" ? "You asked" : "Asked of you by"} <span class="k-mono">${e(x.other.short)}</span>: ${e(x.amount.said)}${x.whatFor ? `, for \u201C${e(x.whatFor)}\u201D` : ""}</span><span class="k-r">${e(x.state)}</span></div>`).join("")}</div>` : "";
+  const asks = a.asks.length ? `<h3>Requests and debts</h3><div class="k-list">${a.asks.map((x) => `<div><span>${x.side === "out" ? "You asked" : "Asked of you by"} <span class="k-mono">${e(shortForm(formOf(x.other.id, "mid")))}</span>: ${e(x.amount.said)}${x.whatFor ? `, for \u201C${e(x.whatFor)}\u201D` : ""}</span><span class="k-r">${e(x.state)}</span></div>`).join("")}</div>` : "";
   return `<h2>Summary</h2>
 ${say2("Per unit, never summed across units. Each verified from the rail\u2019s evidence.", a.notes)}
 <div class="damgar-totals"><div class="k-box k-fill"><dl class="k-facts">${a.totals.map((t) => `<dt>${e(t.label)}</dt><dd>${amounts(t.amounts)}</dd>`).join("")}</dl></div></div>
@@ -12514,13 +12515,15 @@ function mount(app2, b) {
     cards = [];
   }
   const itemCard = (t) => cardOf({ id: t.id, who: t.from, kind: `${t.kind === "draft" ? t.byHand ? "pasted by hand" : t.app ? `from ${t.app}` : "a draft" : t.kind === "lane" ? `lane \xB7 from ${t.app ?? "an app"}` : t.kind}`, text: t.title, html: `<div class="k-box">${itemActs(t)}</div>`, labels: t.unknown ? [{ text: "unknown here: nothing can be signed for it", tone: "warn" }] : [], verified: !t.unknown, lines: t.lines });
+  const shortOf = (w) => shortForm(formOf(w.id, "mid"));
   const paymentCard = (p, forPay) => {
     const bad = p.proofs.some((x) => x.rail.answer === "invalid");
+    const first = p.proofs[0];
     return cardOf({
-      id: p.proofs[0]?.act ?? p.key,
-      who: p.other,
-      kind: p.to === "vault" && p.other.me ? "to your vault" : p.side === "out" ? "paid out" : "paid in",
-      text: `${p.side === "out" ? p.other.me ? "To your vault" : `To ${p.other.short}` : `From ${p.other.short}`} \xB7 ${p.amount.said}`,
+      id: first?.act ?? p.request ?? p.key,
+      who: first ? first.by : p.side === "out" ? { id: meId(), short: "", me: true } : p.other,
+      kind: p.to === "vault" && p.other.me ? "to your vault" : p.side === "out" ? "you pay" : "paid to you",
+      text: `${p.side === "out" ? p.other.me ? "To your vault" : `To ${shortOf(p.other)}` : `From ${shortOf(p.other)}`} \xB7 ${p.amount.said}`,
       html: `<div class="k-box">${payment(p, forPay)}</div>`,
       labels: [{ text: p.stageSaid }, ...[...new Set(p.proofs.map((x) => `${x.kind === "claim" ? "claim" : "receipt"}: ${x.how}`))].map((text3) => ({ text: text3 }))],
       verified: confirmed(p),
@@ -12581,7 +12584,7 @@ function mount(app2, b) {
         await b.ask("look").catch(() => void 0);
         const l = await b.ask("lanes");
         const apps = l.lanes.filter((x) => !x.here);
-        return `<h2>Under the lanes</h2>${say2("What other apps paid under their lanes: they finish those payments themselves; the record is kept here.", ["Read from the acts under each lane whose keys the app delivered to this identity. An act whose key was not delivered (an identity used through Ki\u0161ib\u2019s runner in that app) is counted as sealed, and said."])}${apps.map((x) => `<h3>${e(x.label)} <span class="k-small k-soft">${e(x.state)}</span></h3><dl class="k-facts">${laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: "", me: true }, kind: `under \u201C${x.label}\u201D`, text: `To ${p.to.short} \xB7 ${p.amount.said}${p.whatFor ? ` \xB7 for \u201C${p.whatFor}\u201D` : ""}`, labels: [{ text: p.stage === "paid" ? "paid: its claim signed under the lane" : p.stage === "refused" ? "refused by the payee: not counted" : "asked: its invoice request signed under the lane" }], verified: p.stage === "paid", lines: [{ text: `Signed by ${x.app} under the lane \u201C${x.label}\u201D, not with your own key.` }] })).join("") || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? "" : "s"} sealed: not counted.</p>` : ""}</div>`).join("") || '<p class="k-empty">No app holds a lane of this identity.</p>'}`;
+        return `<h2>Under the lanes</h2>${say2("What other apps paid under their lanes: they finish those payments themselves; the record is kept here.", ["Read from the acts under each lane whose keys the app delivered to this identity. An act whose key was not delivered (an identity used through Ki\u0161ib\u2019s runner in that app) is counted as sealed, and said."])}${apps.map((x) => `<h3>${e(x.label)} <span class="k-small k-soft">${e(x.state)}</span></h3><dl class="k-facts">${laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: "", me: true }, kind: `under \u201C${x.label}\u201D`, text: `To ${shortOf(p.to)} \xB7 ${p.amount.said}${p.whatFor ? ` \xB7 for \u201C${p.whatFor}\u201D` : ""}`, labels: [{ text: p.stage === "paid" ? "paid: its claim signed under the lane" : p.stage === "refused" ? "refused by the payee: not counted" : "asked: its invoice request signed under the lane" }], verified: p.stage === "paid", lines: [{ text: `Signed by ${x.app} under the lane \u201C${x.label}\u201D, not with your own key.` }] })).join("") || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? "" : "s"} sealed: not counted.</p>` : ""}</div>`).join("") || '<p class="k-empty">No app holds a lane of this identity.</p>'}`;
       }
       const a = await b.ask("account");
       if (part === "payments") return `<h2>Payments</h2>${say2("Each payment a card: its claim and receipt, how each was signed, and whether each verifies.", ["Paid and confirmed: settled, its receipt and a claim each valid by the rail\u2019s own evidence. Open a card\u2019s ID for why it is valid."])}<div class="k-feed" id="account-feed">${a.payments.map((p) => paymentCard(p, false)).join("") || '<p class="k-empty">No payment yet.</p>'}</div>`;
@@ -12628,7 +12631,7 @@ function mount(app2, b) {
     const ids = s.held.map((h) => ({
       id: h.id,
       form: formOf(h.id, "mid"),
-      name: h.name ?? (h.runner ? "via Ki\u0161ib" : null),
+      name: h.name ?? (h.runner ? "via Ki\u0161ib" : shortForm(formOf(h.id, "mid"))),
       on: h.active && !acting,
       collectives: h.active ? (s.identity?.collectives ?? []).map((c) => ({ id: c.id, form: c.form, name: c.name ?? shortForm(c.form), on: acting?.id === c.id })) : []
     }));

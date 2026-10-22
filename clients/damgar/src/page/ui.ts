@@ -255,13 +255,17 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   const itemCard = (t: ToSign) =>
     cardOf({ id: t.id, who: t.from, kind: `${t.kind === 'draft' ? (t.byHand ? 'pasted by hand' : t.app ? `from ${t.app}` : 'a draft') : t.kind === 'lane' ? `lane · from ${t.app ?? 'an app'}` : t.kind}`, text: t.title, html: `<div class="k-box">${v.itemActs(t)}</div>`, labels: t.unknown ? [{ text: 'unknown here: nothing can be signed for it', tone: 'warn' }] : [], verified: !t.unknown, lines: t.lines });
 
+  /** An identity in words on a card: its `mid1…` short form (Damgar keeps no contacts). */
+  const shortOf = (w: Who) => shortForm(v.formOf(w.id, 'mid'));
   const paymentCard = (p: PaymentShown, forPay: boolean) => {
     const bad = p.proofs.some((x) => x.rail.answer === 'invalid');
+    // Its act: the first claim or receipt, else the invoice request that began it; signed by the payer (you, paying out) or the payee.
+    const first = p.proofs[0];
     return cardOf({
-      id: p.proofs[0]?.act ?? p.key,
-      who: p.other,
-      kind: p.to === 'vault' && p.other.me ? 'to your vault' : p.side === 'out' ? 'paid out' : 'paid in',
-      text: `${p.side === 'out' ? (p.other.me ? 'To your vault' : `To ${p.other.short}`) : `From ${p.other.short}`} · ${p.amount.said}`,
+      id: first?.act ?? p.request ?? p.key,
+      who: first ? first.by : p.side === 'out' ? { id: meId(), short: '', me: true } : p.other,
+      kind: p.to === 'vault' && p.other.me ? 'to your vault' : p.side === 'out' ? 'you pay' : 'paid to you',
+      text: `${p.side === 'out' ? (p.other.me ? 'To your vault' : `To ${shortOf(p.other)}`) : `From ${shortOf(p.other)}`} · ${p.amount.said}`,
       html: `<div class="k-box">${v.payment(p, forPay)}</div>`,
       labels: [{ text: p.stageSaid }, ...[...new Set(p.proofs.map((x) => `${x.kind === 'claim' ? 'claim' : 'receipt'}: ${x.how}`))].map((text) => ({ text }))],
       verified: v.confirmed(p),
@@ -333,7 +337,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         const apps = l.lanes.filter((x) => !x.here);
         return `<h2>Under the lanes</h2>${v.say('What other apps paid under their lanes: they finish those payments themselves; the record is kept here.', ['Read from the acts under each lane whose keys the app delivered to this identity. An act whose key was not delivered (an identity used through Kišib’s runner in that app) is counted as sealed, and said.'])}${
           apps
-            .map((x) => `<h3>${v.e(x.label)} <span class="k-small k-soft">${v.e(x.state)}</span></h3><dl class="k-facts">${v.laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: '', me: true }, kind: `under “${x.label}”`, text: `To ${p.to.short} · ${p.amount.said}${p.whatFor ? ` · for “${p.whatFor}”` : ''}`, labels: [{ text: p.stage === 'paid' ? 'paid: its claim signed under the lane' : p.stage === 'refused' ? 'refused by the payee: not counted' : 'asked: its invoice request signed under the lane' }], verified: p.stage === 'paid', lines: [{ text: `Signed by ${x.app} under the lane “${x.label}”, not with your own key.` }] })).join('') || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? '' : 's'} sealed: not counted.</p>` : ''}</div>`)
+            .map((x) => `<h3>${v.e(x.label)} <span class="k-small k-soft">${v.e(x.state)}</span></h3><dl class="k-facts">${v.laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: '', me: true }, kind: `under “${x.label}”`, text: `To ${shortOf(p.to)} · ${p.amount.said}${p.whatFor ? ` · for “${p.whatFor}”` : ''}`, labels: [{ text: p.stage === 'paid' ? 'paid: its claim signed under the lane' : p.stage === 'refused' ? 'refused by the payee: not counted' : 'asked: its invoice request signed under the lane' }], verified: p.stage === 'paid', lines: [{ text: `Signed by ${x.app} under the lane “${x.label}”, not with your own key.` }] })).join('') || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? '' : 's'} sealed: not counted.</p>` : ''}</div>`)
             .join('') || '<p class="k-empty">No app holds a lane of this identity.</p>'
         }`;
       }
@@ -385,7 +389,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     const ids = s.held.map((h) => ({
       id: h.id,
       form: v.formOf(h.id, 'mid'),
-      name: h.name ?? (h.runner ? 'via Kišib' : null),
+      name: h.name ?? (h.runner ? 'via Kišib' : shortForm(v.formOf(h.id, 'mid'))),
       on: h.active && !acting,
       collectives: h.active ? (s.identity?.collectives ?? []).map((c) => ({ id: c.id, form: c.form, name: c.name ?? shortForm(c.form), on: acting?.id === c.id })) : [],
     }));

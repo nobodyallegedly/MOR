@@ -430,7 +430,8 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   await shot(gp, 'mac-24-act-menu');
   await gp.keyboard.press('Escape');
   await paidCard.locator('.k-signer').click();
-  assert.deepEqual((await gp.locator('.k-pop [data-k-item]').allInnerTexts()).map((x) => x.split('\n')[0]), ['Copy ID', 'Copy ID link', 'Open profile', 'Follow: add to contacts', 'Tip', 'Mute']);
+  // Its signer: Alice herself (she signed the claim, or the invoice request): what you take, nothing to change.
+  assert.deepEqual((await gp.locator('.k-pop [data-k-item]').allInnerTexts()).map((x) => x.split('\n')[0]), ['Copy ID', 'Copy ID link', 'Open profile']);
   await shot(gp, 'mac-25-signer-menu');
   await gp.keyboard.press('Escape');
   await go(gp, 'account', 'summary');

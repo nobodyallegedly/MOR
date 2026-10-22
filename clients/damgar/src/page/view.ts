@@ -110,7 +110,7 @@ export interface Acting {
 export function topBar(s: State, tab: Tab | null, acting: Acting | null): string {
   const i = s.identity;
   const tabs = tab ? `<nav class="k-tabs" aria-label="Damgar">${TILES.map((t) => `<button type="button" class="k-tab${t.key === tab ? ' k-on' : ''}" data-tab="${t.key}"${t.key === tab ? ' aria-current="page"' : ''}>${e(t.name)}${t.key === 'waiting' && s.counts.toSign + s.counts.toPay ? `<span class="k-count">${s.counts.toSign + s.counts.toPay}</span>` : ''}</button>`).join('')}</nav>` : '';
-  const me = i ? meButton({ name: i.name ?? (i.runner ? 'via Kišib' : 'No name'), form: i.form, as: acting ? { name: acting.name, form: acting.form } : null }) : '';
+  const me = i ? meButton({ name: i.name ?? (i.runner ? 'via Kišib' : shortForm(i.form)), form: i.form, as: acting ? { name: acting.name, form: acting.form } : null }) : '';
   return top({ left: `<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME, 'icon.png')}</button>${tabs}`, right: me });
 }
 
@@ -396,7 +396,7 @@ const amounts = (xs: Shown[]) => (xs.length ? xs.map((x) => e(x.said)).join('<br
 /** Summary: per unit, never added across units; requests and debts; what it does not judge. */
 export function summaryPane(a: Account): string {
   const asks = a.asks.length
-    ? `<h3>Requests and debts</h3><div class="k-list">${a.asks.map((x) => `<div><span>${x.side === 'out' ? 'You asked' : 'Asked of you by'} <span class="k-mono">${e(x.other.short)}</span>: ${e(x.amount.said)}${x.whatFor ? `, for “${e(x.whatFor)}”` : ''}</span><span class="k-r">${e(x.state)}</span></div>`).join('')}</div>`
+    ? `<h3>Requests and debts</h3><div class="k-list">${a.asks.map((x) => `<div><span>${x.side === 'out' ? 'You asked' : 'Asked of you by'} <span class="k-mono">${e(shortForm(formOf(x.other.id, 'mid')))}</span>: ${e(x.amount.said)}${x.whatFor ? `, for “${e(x.whatFor)}”` : ''}</span><span class="k-r">${e(x.state)}</span></div>`).join('')}</div>`
     : '';
   return `<h2>Summary</h2>
 ${say('Per unit, never summed across units. Each verified from the rail’s evidence.', a.notes)}
