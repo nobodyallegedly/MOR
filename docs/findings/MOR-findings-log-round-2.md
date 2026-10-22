@@ -28,6 +28,16 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F386. A buyer may contest a purchase, as a vow's buyer contests a sale: a protection forgotten (22 October 2026)
+
+**Asked by Nobody, allegedly:** "Is it possible to contest a purchase? Or only a vow? I pay to see a specific content, but the person sends a file with something else for example, how is it handled at the moment?"
+
+**Read in the texts first (the project lead):** a publication is sold with its work hash; a client MUST check unlocked media against it before treating a purchase as delivered (Envelopes rule 21), and a key delivery that does not open what it names is ignored and shown (Envelopes, key delivery). So wrong bytes are caught by the bytes, the seller's signed key delivery the evidence. But right bytes under a misleading description ("a concert", a slideshow delivered) is a dispute MOR cannot judge, and the buyer had no place to record it: a vow's buyer may contest a sale (Agreements, "Contest (type 14)"), while standing (rule 54) goes to parties, stake holders and named keepers, arbitrators or verifiers, and a buyer under a standing offer is none of them. *Why it was missed (archaeology):* vows exist for what MOR cannot hash; a publication was treated as provable, since its bytes match or not. That holds for the bytes, never for the words.
+
+**Decided by Nobody, allegedly, 22 October 2026: "Yes, it is core. But it is a protection we forgot about."** On the project lead's lean: the buyer of a purchase has standing to contest that purchase, in the contest act's existing format (field 0 the purchase: the buyer's claim of the payment, or for a free purchase its signature act; field 1 absent, or the promise not kept in words where the offer's words make one), shown beside the purchase, voiding nothing and changing no payment, refund or verdict, exactly as a vow's buyer's contest. Signed by anyone else, it shows nothing. *Why core:* a protection only the buyer can sign, and the same for every app; left to a cMIP, the buyer of one app could say and another's could not.
+
+**Where:** Agreements 17 (rule 54 and "Contest (type 14)"), the core, a vector; S7d. A change after the second box, listed under "After the box".
+
 ## F383. S7b's four questions, judged by Fable (22 October 2026)
 
 **From** `docs/s7b-report.md` (pull request 98, merged), sent to Fable before deciding. **Taken by the project lead under delegation**, each as Fable judges:
