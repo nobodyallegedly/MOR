@@ -283,6 +283,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
 
   /** Films checked in this page, by publication: shown in whichever card holds them now, a redraw included. */
   const films = new Map<string, string>();
+  /** Recordings checked, by publication, as films are. */
+  const recordings = new Map<string, string>();
   function showFilms() {
     for (const box of app.querySelectorAll<HTMLElement>('[data-film]')) {
       const url = films.get(box.dataset.film ?? '');
@@ -293,6 +295,16 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       video.src = url;
       video.dataset.checked = 'yes';
       box.replaceWith(video);
+    }
+    // Recordings, as films: played only from bytes the Module checked, on the listener's action (the audio Module, rule 11).
+    for (const box of app.querySelectorAll<HTMLElement>('[data-recording]')) {
+      const url = recordings.get(box.dataset.recording ?? '');
+      if (!url) continue;
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.src = url;
+      audio.dataset.checked = 'yes';
+      box.replaceWith(audio);
     }
   }
 
@@ -613,6 +625,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       if (it?.vow?.state === 'for sale' && !it.who.me && !it.vow.problem) after.push({ key: 'buy-vow', label: 'Buy' });
       for (const p of it?.pictures.filter((x) => x.withdrawable) ?? []) after.push({ key: `withdraw:${p.publication}`, label: 'Withdraw the picture' });
       for (const f of it?.films?.filter((x) => x.withdrawable) ?? []) after.push({ key: `withdraw:${f.publication}`, label: 'Withdraw the film' });
+      for (const r of it?.recordings?.filter((x) => x.withdrawable) ?? []) after.push({ key: `withdraw:${r.publication}`, label: 'Withdraw the recording' });
       // Decided (question 5): confirm or contest only on vows the identity bought.
       const vow = it?.vow?.state === 'bought' ? it.vow.vow : d?.purchase?.kind === 'vow' && d.purchase.paid && d.purchase.sale !== 'confirmed' && d.purchase.sale !== 'contested' ? d.purchase.id : null;
       if (vow) after.push({ key: `confirm:${vow}`, label: 'Confirm: it was kept', line: true }, { key: `contest:${vow}`, label: 'Contest it…' });
@@ -918,10 +931,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
 
   app.addEventListener('change', async (ev) => {
     const el = ev.target as HTMLInputElement;
-    if (el.name === 'picture' || el.name === 'video') {
-      const other = app.querySelector<HTMLInputElement>(`#post input[name="${el.name === 'picture' ? 'video' : 'picture'}"]`);
-      if (other && el.files?.[0]) other.value = '';
-      fill('picked', el.files?.[0] ? `${el.name === 'video' ? 'Film' : 'Picture'}: ${v.e(el.files[0].name)} <button type="button" class="k-x" data-action="unpick" aria-label="Not this file">×</button>` : '');
+    if (el.name === 'picture' || el.name === 'video' || el.name === 'audio') {
+      // One file at a time: picking one forgets the others.
+      if (el.files?.[0]) for (const other of app.querySelectorAll<HTMLInputElement>('#post input[type=file]')) if (other !== el) other.value = '';
+      fill('picked', el.files?.[0] ? `${el.name === 'video' ? 'Film' : el.name === 'audio' ? 'Recording' : 'Picture'}: ${v.e(el.files[0].name)} <button type="button" class="k-x" data-action="unpick" aria-label="Not this file">×</button>` : '');
     }
     if (el.id === 'publish-list') {
       const on = el.checked;
@@ -1188,6 +1201,25 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         }
         return;
       }
+      case 'play-recording': {
+        const box = el.closest<HTMLElement>('[data-recording]')!;
+        // A browser that says it cannot decode AAC in M4A is said so before anything is fetched (the audio Module, rule 12).
+        if (!document.createElement('audio').canPlayType('audio/mp4; codecs="mp4a.40.2"')) {
+          box.innerHTML = '<span class="k-label k-warn">The recording is not played: this browser says it cannot play AAC sound in M4A, so nothing was fetched.</span>';
+          return;
+        }
+        el.textContent = 'Reading and checking the recording…';
+        try {
+          // Checked by the audio Module (rules 2 to 9) before its bytes come back: a recording it refuses never reaches the player.
+          const r = await b.ask<{ b64: string; type: string }>('recording', { publication: box.dataset.recording, signer: box.dataset.recordingSigner });
+          const bytes = Uint8Array.from(atob(r.b64), (c) => c.charCodeAt(0));
+          recordings.set(box.dataset.recording!, URL.createObjectURL(new Blob([bytes], { type: 'audio/mp4' })));
+          showFilms();
+        } catch (err) {
+          box.innerHTML = `<span class="k-label k-warn">The recording is not played: ${v.e(errorOf(err))}</span>`;
+        }
+        return;
+      }
       case 'look':
         say('', '');
         await readPayments();
@@ -1325,11 +1357,12 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'post': {
         const pic = (form.elements.namedItem('picture') as HTMLInputElement).files?.[0];
         const film = (form.elements.namedItem('video') as HTMLInputElement).files?.[0];
+        const sound = (form.elements.namedItem('audio') as HTMLInputElement | null)?.files?.[0];
         const reply = replying ? { id: replying.id, signer: replying.signer } : undefined;
         const to = $<HTMLInputElement>('to');
         if (to?.value.trim()) addressed.push({ id: namedIn(to, contacts()), name: to.value.trim() });
-        const r = await busy(film ? 'Checking the film, stripping it, publishing, and reading it back…' : pic ? 'Stripping the picture, publishing, and reading it back…' : 'Publishing, and reading it back…', async () =>
-          b.ask<{ post: Item; lines: v.Line[] }>('post', { text: String(d.get('text') ?? ''), jpeg: pic ? await base64(pic) : '', mp4: film ? await base64(film) : '', to: addressed.map((a) => a.id), reply }),
+        const r = await busy(film ? 'Checking the film, stripping it, publishing, and reading it back…' : sound ? 'Checking the recording, stripping it, publishing, and reading it back…' : pic ? 'Stripping the picture, publishing, and reading it back…' : 'Publishing, and reading it back…', async () =>
+          b.ask<{ post: Item; lines: v.Line[] }>('post', { text: String(d.get('text') ?? ''), jpeg: pic ? await base64(pic) : '', mp4: film ? await base64(film) : '', m4a: sound ? await base64(sound) : '', to: addressed.map((a) => a.id), reply }),
         );
         if (r) {
           form.reset();

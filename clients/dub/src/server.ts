@@ -23,7 +23,7 @@ import { DAMGAR_DIR, DamgarLink } from './damgar-link.ts';
 /** What the browser's key signs, before the request body. */
 export const DOMAIN = 'MOR post, version 1\n';
 export const CODE_LABEL = 'MOR post pairing code';
-/** A picture or a film travels from the page as base64 inside the request: up to 96 MiB of request (a film is at most 64 MiB, the video Module's limit). */
+/** A picture, a film or a recording travels from the page as base64 inside the request: up to 96 MiB of request (a film or a recording is at most 64 MiB, the video and audio Modules' limit). */
 export const LIMIT = 96 << 20;
 
 const here = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));

@@ -1,6 +1,6 @@
 # Module: Dubsar Audio
 
-*Draft 1, 21 October 2026, a Dubsar Suite session (`docs/texts-r0-report.md`). **Not yet approved.** Decided by Nobody, allegedly, 21 October 2026: "let's have an audio module"; its format, M4A (accepted). Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against the Envelopes MIR draft 10, the Development MIR draft 10, the video Module draft 1 (whose pattern and code it follows), the JPEG Module draft 1 and the relay transport cMIP draft 5. Not core: a media type for task 5 (media interpretation), frozen at publication, competing with any other. Named with the house prefix "Dubsar" (F356). The code is `modules/audio/`, which uses the video Module's code (`modules/video/src/video.ts`) for everything the two Modules share. Not yet used by any app: the Publishing and Dub rounds will.*
+*Draft 1, 21 October 2026, a Dubsar Suite session (`docs/texts-r0-report.md`). **Not yet approved.** Decided by Nobody, allegedly, 21 October 2026: "let's have an audio module"; its format, M4A (accepted). Its hash stays a draft hash until its creator is named at step 17; until then it is named by a test value. Written against the Envelopes MIR draft 10, the Development MIR draft 10, the video Module draft 1 (whose pattern and code it follows), the JPEG Module draft 1 and the relay transport cMIP draft 5. Not core: a media type for task 5 (media interpretation), frozen at publication, competing with any other. Named with the house prefix "Dubsar" (F356). The code is `modules/audio/`, which uses the video Module's code (`modules/video/src/video.ts`) for everything the two Modules share. Used by Dub, which plays and posts recordings with it.*
 
 *Reading this document: normal text is the specification. Italic text is commentary, reasoning and examples.*
 
@@ -96,7 +96,7 @@ Envelopes (publication, media lock, work hash, withdrawal) and Development. The 
 
 ## A recording in a post
 
-13. **By reference.** A post plays a recording by naming its publication in the text act's `refs`, as it shows a picture (JPEG Module, rule 7) or a film (video Module, rule 13): judged as any act through its own signer's identity chain, shown under that signer, its bytes checked against the locked hash, the work hash and the size before anything plays, and shown as not available once withdrawn. A client fetches a recording's bytes only when the reader asks to play it. *Not built: no app uses this Module yet; the Publishing and Dub rounds will.*
+13. **By reference.** A post plays a recording by naming its publication in the text act's `refs`, as it shows a picture (JPEG Module, rule 7) or a film (video Module, rule 13): judged as any act through its own signer's identity chain, shown under that signer, its bytes checked against the locked hash, the work hash and the size before anything plays, and shown as not available once withdrawn. A client fetches a recording's bytes only when the reader asks to play it. *Built in Dub, which plays and posts recordings by reference.*
 
 ## The refusals, in plain words
 

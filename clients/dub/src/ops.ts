@@ -93,6 +93,7 @@ export const OPS = [
   'anchor',
   'correct',
   'film',
+  'recording',
   'clock',
   'collective add',
   'collective remove',
@@ -158,6 +159,7 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
         text: text(a.text),
         jpeg: text(a.jpeg) ? p.bytes(text(a.jpeg)) : undefined,
         mp4: text(a.mp4) ? p.bytes(text(a.mp4)) : undefined,
+        m4a: text(a.m4a) ? p.bytes(text(a.m4a)) : undefined,
         to: Array.isArray(a.to) ? list(a.to) : text(a.to),
         reply: reply ? { id: text(reply.id), signer: text(reply.signer) } : undefined,
       });
@@ -255,6 +257,8 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.correct({ id: text(a.id), text: text(a.text) });
     case 'film':
       return dub.film({ publication: text(a.publication), signer: text(a.signer) || undefined });
+    case 'recording':
+      return dub.recording({ publication: text(a.publication), signer: text(a.signer) || undefined });
     case 'clock':
       return dub.setClock({ id: text(a.id), name: text(a.name) });
     case 'collective add':

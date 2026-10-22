@@ -27,12 +27,13 @@ import { leaveAtHomes, lineReader, noLine, sendWaiting, type LineAtHomes } from 
 import { TestIdentity, TEST_LABEL, freshLines, ownIds, sealFor, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, type Via } from '../../genesis/src/transport.ts';
-import { Judge, filmBytes, leaveInInbox, post, readPost, textPayload, withdraw, type ShownFilm, type ShownPicture, type ShownPost } from '../../barebone/src/post.ts';
+import { Judge, filmBytes, leaveInInbox, post, readPost, soundBytes, textPayload, withdraw, type ShownFilm, type ShownPicture, type ShownPost, type ShownRecording } from '../../barebone/src/post.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from '../../barebone/src/specs.ts';
 import { readFeed, type FeedPost } from '../../site/src/feed.ts';
 import { makeLink } from '../../reader/src/link.ts';
 import { compose } from '../../longform/src/text.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
+import { CARRIED_WORDS as SOUND_CARRIED_WORDS } from '../../../modules/audio/src/audio.ts';
 import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { actForm, idForm, idWhere, readActId, readId, readIdWhere } from '../../genesis/src/forms.ts';
 import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
@@ -52,7 +53,7 @@ import { fetchAct, readProposal, SHARE_SAY, SIGNING_OFF_SAY, SIGNING_SAY } from 
 import { carriedKey, lookCurrent, servedChain } from './carryin.ts';
 import { NAME, NAME_WITHDRAWAL, namePayload, namesOf, readName } from './names.ts';
 import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PEOPLE_SPEC_1, PUBLISH_WARNING, SEALED_LIST, followListPayload, openerOf, readFollowList, readSealedList, sealedListPayload, type Followed, type Kept, type Opened, type Opener, type People } from './people.ts';
-import type { Collective, FilmShown, Held, Item, Label, Line, Message, Pic, PayWays, Proposal, Purchase, ShareShown, State, Who } from './shapes.ts';
+import type { Collective, FilmShown, Held, Item, Label, Line, Message, Pic, PayWays, Proposal, Purchase, RecordingShown, ShareShown, State, Who } from './shapes.ts';
 import { sendDraft } from '../../damgar/src/messages.ts';
 import { anchoringLeaf, randomBytes } from '../../genesis/src/core.ts';
 import { UNITS_MODULES, readValue, say } from '../../damgar/src/units.ts';
@@ -914,12 +915,12 @@ export class Dub {
    * addressed to its signer, and left in its inbox where it has one. No
    * private switch here: the private side is its own tab.
    */
-  post(a: { text: string; jpeg?: Uint8Array; mp4?: Uint8Array; to?: string | string[]; reply?: { id: string; signer: string } }): Promise<{ post: Item; lines: Line[] }> {
+  post(a: { text: string; jpeg?: Uint8Array; mp4?: Uint8Array; m4a?: Uint8Array; to?: string | string[]; reply?: { id: string; signer: string } }): Promise<{ post: Item; lines: Line[] }> {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
       const { text, changes } = compose(a.text);
       if (!text.trim()) throw new Error('Write something to post.');
-      if (a.jpeg && a.mp4) throw new Error('A picture or a film, one at a time. Nothing was posted.');
+      if ([a.jpeg, a.mp4, a.m4a].filter(Boolean).length > 1) throw new Error('A picture, a film or a recording, one at a time. Nothing was posted.');
       if (s.acting) return this.postAsCollective(me, s, p, hints, text, a);
       const to: { id: string; inbox: string[] | null; why?: string }[] = [];
       // To…, and each @ chosen by name (a mention is an address: the post names them and is left in their inboxes).
@@ -964,7 +965,7 @@ export class Dub {
         }
       }
       await this.current(me);
-      const made = await this.signed(me, () => post(me, { text, jpeg: a.jpeg, mp4: a.mp4, relays: s.relays, to: to.length ? to.map((t) => t.id) : undefined, refs }));
+      const made = await this.signed(me, () => post(me, { text, jpeg: a.jpeg, mp4: a.mp4, m4a: a.m4a, relays: s.relays, to: to.length ? to.map((t) => t.id) : undefined, refs }));
       const lines: Line[] = changes.map((c) => ({ text: `Text: ${c}.` }));
       for (const t of to) {
         if (!t.inbox?.length) {
@@ -984,6 +985,7 @@ export class Dub {
         });
       }
       if (made.film) lines.push({ text: made.film.removed.length ? `Taken out of the film before publishing: ${made.film.removed.join('; ')}.` : 'The film carried nothing to take out.', tone: 'ok' });
+      if (made.recording) lines.push({ text: made.recording.removed.length ? `Taken out of the recording before publishing: ${made.recording.removed.map((c) => SOUND_CARRIED_WORDS[c]).join('; ')}.` : 'The recording carried nothing to take out.', tone: 'ok' });
       const shown = await readPost(made.id, hints, s.via);
       return { post: this.item(shown, me.id, p, s, 'feed', [], false), lines };
     });
@@ -995,9 +997,9 @@ export class Dub {
    * reply's reference. Where the area asks more keys than one, it counts
    * once its other holders sign it (in Edubba's To sign), said.
    */
-  private async postAsCollective(me: TestIdentity, s: Settings, p: People, hints: string[], text: string, a: { jpeg?: Uint8Array; mp4?: Uint8Array; to?: string | string[]; reply?: { id: string; signer: string } }): Promise<{ post: Item; lines: Line[] }> {
+  private async postAsCollective(me: TestIdentity, s: Settings, p: People, hints: string[], text: string, a: { jpeg?: Uint8Array; mp4?: Uint8Array; m4a?: Uint8Array; to?: string | string[]; reply?: { id: string; signer: string } }): Promise<{ post: Item; lines: Line[] }> {
     const collective = s.acting!;
-    if (a.jpeg || a.mp4 || (Array.isArray(a.to) ? a.to.some((x) => x.trim()) : a.to?.trim())) throw new Error('As a collective, Dub posts text and replies only: no picture, film or address. Nothing was posted.');
+    if (a.jpeg || a.mp4 || a.m4a || (Array.isArray(a.to) ? a.to.some((x) => x.trim()) : a.to?.trim())) throw new Error('As a collective, Dub posts text and replies only: no picture, film, recording or address. Nothing was posted.');
     const k = await this.memberKeyHere(me, s, collective, hints);
     if (!k.key || k.why) throw new Error(`Dub cannot post as this collective: ${k.why ?? 'no member key'} Nothing was posted.`);
     await this.current(me);
@@ -1036,6 +1038,9 @@ export class Dub {
     const films: FilmShown[] = sp.refs
       .filter((r): r is ShownFilm => r.kind === 'film')
       .map((r) => ({ publication: r.publication, signer: r.signer, size: r.size, problem: r.problem, withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === 'valid' }));
+    const recordings: RecordingShown[] = sp.refs
+      .filter((r): r is ShownRecording => r.kind === 'recording')
+      .map((r) => ({ publication: r.publication, signer: r.signer, size: r.size, problem: r.problem, withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === 'valid' }));
     const doc =
       isLongForm(sp.format)
         ? { title: titleOf(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) }
@@ -1049,6 +1054,7 @@ export class Dub {
       doc,
       pictures,
       films,
+      recordings,
       answers,
       toMe,
       via,
@@ -1089,7 +1095,7 @@ export class Dub {
       it.labels = await this.labelsOf(fp.post, me.id, p, [...hints, ...this.inboxPlaces(p)], s.via);
       // A sealed post (round 2): its publication has no key; read with its offer, and opened where its key is here.
       if (fp.post.refs.some((r) => r.kind === 'picture' && !r.bytes)) {
-        const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.map((r) => (r.kind === 'picture' || r.kind === 'film' ? { id: r.publication, signer: r.signer || undefined } : { id: r.id, signer: r.signer ?? r.actSigner }))).catch(() => null);
+        const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.map((r) => (r.kind === 'picture' || r.kind === 'film' || r.kind === 'recording' ? { id: r.publication, signer: r.signer || undefined } : { id: r.id, signer: r.signer ?? r.actSigner }))).catch(() => null);
         if (sealed) {
           it.sealed = sealed;
           it.pictures = it.pictures.filter((x) => x.publication !== sealed.publication);
@@ -2219,6 +2225,16 @@ export class Dub {
       const signer = a.signer ? readId(a.signer) : null;
       const r = await filmBytes(readActId(a.publication), signer, [...hints, ...this.inboxPlaces(p)], s.via);
       return { b64: base64(r.bytes), type: r.film.type };
+    });
+  }
+
+  /** A recording's bytes, when asked to play it (the audio Module, rule 13): checked against its publication and read by the Module (rules 2 to 9) before they leave here, as a film's are. */
+  recording(a: { publication: string; signer?: string }): Promise<{ b64: string; type: string }> {
+    return this.serial(async () => {
+      const { p, s, hints } = await this.ctx();
+      const signer = a.signer ? readId(a.signer) : null;
+      const r = await soundBytes(readActId(a.publication), signer, [...hints, ...this.inboxPlaces(p)], s.via);
+      return { b64: base64(r.bytes), type: r.sound.type };
     });
   }
 
