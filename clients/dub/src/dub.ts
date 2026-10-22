@@ -22,7 +22,7 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { IDENTITY_TYPES, MIRS, SPECS, resignationPayload, sha256, base64, cborDecode, cborEncode, describeAct, hex, openSealed, shareOnPaper, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
+import { IDENTITY_TYPES, MIRS, SPECS, resignationPayload, sha256, base64, cborDecode, cborEncode, describeAct, hex, openSealed, openWithKey, shareOnPaper, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
 import { leaveAtHomes, lineReader, noLine, sendWaiting, type LineAtHomes } from '../../genesis/src/private.ts';
 import { TestIdentity, TEST_LABEL, freshLines, ownIds, sealFor, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
@@ -51,7 +51,7 @@ import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { fetchAct, readProposal, SHARE_SAY, SIGNING_OFF_SAY, SIGNING_SAY } from './signing.ts';
 import { carriedKey, lookCurrent, servedChain } from './carryin.ts';
 import { NAME, NAME_WITHDRAWAL, namePayload, namesOf, readName } from './names.ts';
-import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PEOPLE_SPEC_1, PUBLISH_WARNING, SEALED_LIST, followListPayload, readFollowList, readSealedList, sealedListPayload, type Followed, type Kept, type People } from './people.ts';
+import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PEOPLE_SPEC_1, PUBLISH_WARNING, SEALED_LIST, followListPayload, openerOf, readFollowList, readSealedList, sealedListPayload, type Followed, type Kept, type Opened, type Opener, type People } from './people.ts';
 import type { Collective, FilmShown, Held, Item, Label, Line, Message, Pic, PayWays, Proposal, Purchase, ShareShown, State, Who } from './shapes.ts';
 import { sendDraft } from '../../damgar/src/messages.ts';
 import { anchoringLeaf, randomBytes } from '../../genesis/src/core.ts';
@@ -63,6 +63,7 @@ import { DubMoney, LANE_SAY, type LaneShownHere, type SealedShown } from './mone
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 import { isLongForm } from '../../barebone/src/corrections.ts';
 import type { RunnerLink } from './runner.ts';
+import type { DamgarLink, Woken } from './damgar-link.ts';
 
 export type { Line, State } from './shapes.ts';
 
@@ -101,8 +102,12 @@ export const RUNNER_OLD_KEY_SAY =
 /** Said where an identity used through Kišib would need its words here (the Dubsar runner cMIP, 6.4). */
 export const RUNNER_HOLDS_SAY = 'Kišib’s runner holds this identity’s signing key, on this Mac; Dub holds none of its keys. Its words are given and changed in Kišib, never here.';
 
-/** Said where an identity used through Kišib would open private messages (the Dubsar runner cMIP, section 8: draft 1 signs, it opens nothing). */
-export const RUNNER_NO_OPEN_SAY = 'Kišib’s runner holds this identity’s keys, and Dub none: its private messages are sent from here, but not opened here (the runner signs; it opens nothing yet).';
+/** Said where Kišib does not let Dub open what is sealed to an identity used through it (the Dubsar runner cMIP, draft 2, section 8). */
+export const RUNNER_NO_OPEN_SAY =
+  'Kišib does not let Dub open what is sealed to this identity: Dub sends its private messages, but cannot read the answers, nor keep its contacts list sealed to it. To allow it, in Kišib: Runner, Apps, Dub, “may open what is sealed to this identity”.';
+
+/** Said where Kišib opens for Dub what is sealed to an identity used through it (draft 2, section 8). */
+export const RUNNER_OPENS_SAY = 'Kišib opens for Dub what is sealed to this identity: its private messages and its sealed contacts list are read here, Dub holding no key. Each opening is listed in Kišib (Runner, Signed).';
 
 /** Said where the identity's encryption key is not one this app holds (the carry Module, draft 2, 2a.3). */
 export const NO_KEY_SAY =
@@ -257,7 +262,7 @@ export class Dub {
 
   constructor(
     readonly store: Keep,
-    readonly opts: { web?: boolean; reader?: string; runner?: RunnerLink } = {},
+    readonly opts: { web?: boolean; reader?: string; runner?: RunnerLink; /** Damgar on this computer, to wake for a payment (the program only). */ damgar?: DamgarLink } = {},
   ) {
     this.money = new DubMoney(store, { web: !!opts.web, app: opts.web ? 'Dub on the web' : 'Dub on this computer' });
   }
@@ -272,6 +277,31 @@ export class Dub {
   /** The encryption keys this app holds of an identity, newest first: none for one used through Kišib. */
   private secrets(me: TestIdentity): Uint8Array[] {
     return [...me.f.encryption].reverse().filter((e) => e.secret).map((e) => unhex(e.secret));
+  }
+
+  /**
+   * How this app opens what is sealed to an identity: with the encryption
+   * keys it holds; for one used through Kišib, through its runner, where
+   * Kišib lets Dub (the Dubsar runner cMIP, draft 2, section 8). Where it
+   * cannot, `open` is null and `problem` says why, plainly: Kišib does not
+   * let Dub, is locked, or does not run; or no key is here.
+   */
+  private async opener(me: TestIdentity): Promise<{ open: Opener | null; problem: string | null }> {
+    const secrets = this.secrets(me);
+    if (secrets.length) return { open: openerOf(me.id, secrets), problem: null };
+    const r = this.opts.runner;
+    if (me.f.signingSecret || !r) return { open: null, problem: NO_KEY_SAY };
+    let p;
+    try {
+      p = await r.paired();
+    } catch (e) {
+      return { open: null, problem: message(e).replace(/ Nothing was signed\.$/, '') };
+    }
+    if (!p || p.state !== 'approved' || !p.identities.some((x) => x.id === me.id)) return { open: null, problem: 'Dub is not paired with Kišib for this identity any more: its private messages are not opened here.' };
+    if (!p.open) return { open: null, problem: RUNNER_NO_OPEN_SAY };
+    const open: Opener = async (sealed) =>
+      (await r.open(me.id, sealed)).map((o) => (o ? ({ ...o, described: (o.key ? openWithKey(o.act, o.key) : describeAct(o.act)) as Opened['described'] } as Opened) : null));
+    return { open, problem: null };
   }
 
   /** One thing at a time: a sequence must never be signed twice at once. */
@@ -340,6 +370,7 @@ export class Dub {
       // This app's line, its card naming only an act the homes hold (H80's question 2): what waited sent first.
       const line = await this.lineNow(me, s.via);
       if (!pend) out.stage = 'ready';
+      const { problem: opening } = await this.opener(me);
       out.identity = {
         id: me.id,
         grouped: groupId(me.id),
@@ -349,7 +380,8 @@ export class Dub {
         kind: s.kind,
         homes: me.f.homes.map((h) => h.hint),
         relays: s.relays,
-        encryption: this.secrets(me).length > 0,
+        encryption: !opening,
+        opening,
         oldChainKey: !!me.f.safety.seeds,
         line: line ?? noLine(me.f),
         list: p.list,
@@ -658,9 +690,9 @@ export class Dub {
 
   // ------------------------------------------------------------ an identity used through Kišib (the Dubsar runner cMIP)
 
-  /** Whether this Dub can use Kišib's runner: on the Mac only (decided), never the web client. */
+  /** Whether this Dub can use Kišib's runner: the computer's program only (decided), never the web client. */
   private runner(): RunnerLink {
-    if (!this.opts.runner) throw new Error('Kišib’s runner is on the Mac only: this Dub cannot use it. Bring the identity with its signing key’s words instead.');
+    if (!this.opts.runner) throw new Error('Kišib’s runner is in the computer’s program only, never the web client: this Dub cannot use it. Bring the identity with its signing key’s words instead.');
     return this.opts.runner;
   }
 
@@ -730,7 +762,7 @@ export class Dub {
       return {
         lines: [
           { text: `Dub uses ${k.name ?? fingerprint(k.id)} through Kišib’s runner: Kišib holds its signing key, Dub none. Each act is shown by Kišib, in its panel here, before it is signed, unless you gave Dub a standing yes for that kind in Kišib.`, tone: 'ok' },
-          { text: RUNNER_NO_OPEN_SAY, tone: 'warn' },
+          p.open ? { text: RUNNER_OPENS_SAY, tone: 'ok' } : { text: RUNNER_NO_OPEN_SAY, tone: 'warn' },
           { text: LINE_SAY, tone: 'warn' },
         ],
       };
@@ -1196,7 +1228,12 @@ export class Dub {
       problems.push('This identity declares no inbox: nothing addressed to it can be found here.');
       return problems;
     }
-    const secrets = this.secrets(me);
+    const { open, problem: cannot } = await this.opener(me);
+    // Containers kept unopened only because nothing here could open them are read again once something can.
+    if (open && p.inbox.items.some((k) => k.retry)) {
+      p.inbox.items = p.inbox.items.filter((k) => !k.retry);
+      p.inbox.after = {};
+    }
     const looked = new Map<string, Promise<Lookup>>();
     const judge = async (signer: string, act: Uint8Array, id: string, key?: Uint8Array) => {
       let l = looked.get(signer);
@@ -1215,8 +1252,11 @@ export class Dub {
       try {
         for (;;) {
           const page = await relayAt(hint, s.via).feed({ to: me.id, after });
+          const sealed = page.items.filter((it) => it.kind === 'sealed').map((it) => it.item);
+          const opened = new Map<Uint8Array, Opened | null>();
+          if (open && sealed.length) (await open(sealed)).forEach((o, i) => opened.set(sealed[i], o));
           for (const it of page.items) {
-            const k = await this.readItem(it.kind, it.item, me.id, secrets, judge);
+            const k = await this.readItem(it.kind, it.item, me.id, it.kind === 'sealed' ? (opened.get(it.item) ?? null) : null, open ? null : cannot, judge);
             if (k && !p.inbox.items.some((x) => x.key === k.key)) p.inbox.items.push(k);
           }
           if (!page.items.length || page.next === after) break;
@@ -1231,29 +1271,19 @@ export class Dub {
     return problems;
   }
 
+  /** One item of the inbox: a sealed container as opened (`opened`), or `cannot` say why nothing here opens it. */
   private async readItem(
     kind: 'act' | 'sealed',
     bytes: Uint8Array,
     me: string,
-    secrets: Uint8Array[],
+    opened: Opened | null,
+    cannot: string | null,
     judge: (signer: string, act: Uint8Array, id: string, key?: Uint8Array) => Promise<string>,
   ): Promise<Kept | null> {
     let act = bytes;
     let key: Uint8Array | undefined;
     let d: Described;
     if (kind === 'sealed') {
-      type Opened = { act: Uint8Array; key?: Uint8Array; described: Described };
-      const open = (): Opened | null => {
-        for (const s of secrets) {
-          try {
-            return openSealed(bytes, me, s) as Opened;
-          } catch {
-            // the next key
-          }
-        }
-        return null;
-      };
-      const opened = open();
       if (!opened) {
         return {
           key: `sealed:${sealedId(bytes)}`,
@@ -1264,12 +1294,13 @@ export class Dub {
           refs: [],
           to: [],
           found: now(),
-          problem: secrets.length ? 'a sealed message that does not open with this identity’s encryption keys' : NO_KEY_SAY,
+          problem: cannot ?? 'a sealed message that does not open with this identity’s encryption keys',
+          ...(cannot ? { retry: true } : {}),
         };
       }
       act = opened.act;
       key = opened.key;
-      d = opened.described;
+      d = opened.described as Described;
     } else {
       try {
         d = describeAct(bytes) as Described;
@@ -1312,7 +1343,7 @@ export class Dub {
    * side, the messages sealed to it, with those sent from here. Muted
    * identities are left out (the people cMIP, 2.2), and counted.
    */
-  async inbox(): Promise<{ toYou: Item[]; messages: Message[]; encryption: boolean; hidden: number; problems: string[] }> {
+  async inbox(): Promise<{ toYou: Item[]; messages: Message[]; encryption: boolean; opening: string | null; hidden: number; problems: string[] }> {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
       const problems = await this.readInbox(me, s, p, hints);
@@ -1391,7 +1422,8 @@ export class Dub {
           })),
         )),
       ].sort((a, b) => b.at - a.at);
-      return { toYou, messages, encryption: this.secrets(me).length > 0, hidden, problems };
+      const { problem: opening } = await this.opener(me);
+      return { toYou, messages, encryption: !opening, opening, hidden, problems };
     });
   }
 
@@ -2303,6 +2335,15 @@ export class Dub {
       const purchase = a.kind === 'buy' || a.kind === 'vow';
       const noDraft = 'A purchase names the seller’s offer, which a money message to Damgar cannot carry yet: buy it under Dub’s lane.';
       let spent: string | null = null;
+      let left: string | null = null;
+      let total: string | null = null;
+      const held = lane?.grant ? ((await this.store.money<{ lanes?: { grant: string; total?: { unit: string; value: number } | null }[] }>(me.id, 'keys'))?.lanes ?? []).find((x) => x.grant === lane.grant) : undefined;
+      if (lane?.grant && held?.total) {
+        // The cap in all (the grant limits cMIP, draft 3): Dub's own count, the one it refuses by.
+        const used = await this.money.engine.laneSpent(me.id, lane.grant, held.total.unit);
+        total = say(held.total, new Set([held.total.unit]));
+        left = say({ unit: held.total.unit, value: Math.max(0, held.total.value - used) }, new Set([held.total.unit]));
+      }
       if (lane?.grant) {
         const book = (await this.store.money<{ payments?: Record<string, { side: string; amount: { unit: string; value: number }; how?: { by: string; grant?: string }; stage: string }> }>(me.id, 'book')) ?? {};
         const by = new Map<string, number>();
@@ -2311,9 +2352,9 @@ export class Dub {
       }
       return {
         lane: lane
-          ? { open: true, why: null, label: lane.label, perPayment: lane.cap, until: lane.until, spent }
-          : { open: false, why: lanes.some((l) => l.state === 'asked') ? 'Dub’s lane is asked, not yet granted in Damgar.' : 'Dub has no lane from Damgar: ask for one in the identity’s menu (A lane from Damgar).', label: null, perPayment: null, until: null, spent: null },
-        damgar: purchase ? { open: false, why: noDraft } : { open: true, why: null },
+          ? { open: true, why: null, label: lane.label, perPayment: lane.cap, until: lane.until, spent, total, left }
+          : { open: false, why: lanes.some((l) => l.state === 'asked') ? 'Dub’s lane is asked, not yet granted in Damgar.' : 'Dub has no lane from Damgar: ask for one in the identity’s menu (A lane from Damgar).', label: null, perPayment: null, until: null, spent: null, total: null, left: null },
+        damgar: purchase ? { open: false, why: noDraft } : { open: true, why: null, wakes: !!this.opts.damgar },
         hand: purchase ? { open: false, why: noDraft } : { open: true, why: null },
       };
     });
@@ -2326,14 +2367,41 @@ export class Dub {
    * to copy, signed and sent by nothing here). Tip a post, pay an identity
    * (from its profile), buy a file or a vow.
    */
-  pay(a: { how: 'lane' | 'damgar' | 'hand'; kind: 'tip' | 'buy' | 'vow' | 'pay'; signer: string; post?: string; publication?: string; vow?: string; repost?: string; reposter?: string; value?: string; unit?: string; whatFor?: string }): Promise<{ lines: Line[]; hand?: { text: string; said: string[] } }> {
+  pay(a: { how: 'lane' | 'damgar' | 'hand'; kind: 'tip' | 'buy' | 'vow' | 'pay'; signer: string; post?: string; publication?: string; vow?: string; repost?: string; reposter?: string; value?: string; unit?: string; whatFor?: string }): Promise<{ lines: Line[]; hand?: { text: string; said: string[] }; woken?: Woken }> {
     if (a.kind === 'buy' && a.how === 'lane') return this.buy({ publication: a.publication ?? '', seller: a.signer, post: a.post, repost: a.repost, reposter: a.reposter });
     if (a.kind === 'vow' && a.how === 'lane') return this.buyVow({ vow: a.vow ?? '', seller: a.signer, post: a.post ?? '' });
     if (a.kind === 'buy' || a.kind === 'vow') return Promise.reject(new Error('A purchase is made under Dub’s lane: a money message to Damgar cannot carry its offer yet. Nothing was signed.'));
     if (a.how === 'lane' && a.kind === 'tip') return this.tipNow({ post: a.post ?? '', signer: a.signer, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor });
     if (a.how === 'lane') return this.payNow({ signer: a.signer, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor ?? '' });
-    if (a.how === 'damgar') return this.moneyDraft({ what: 'pay', other: a.signer, post: a.post, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor });
+    if (a.how === 'damgar') return this.askDamgar({ other: a.signer, post: a.post, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor });
     return this.byHand({ signer: a.signer, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor ?? '' });
+  }
+
+  /**
+   * The second way, Ask Damgar: the payment left on MOR as a draft sealed to
+   * this identity, which Damgar queues in Waiting (2); on this computer,
+   * Damgar is then woken and draws its panel inside Dub's window, where the
+   * person authorises it (2A). Not running, or the web client: it waits in
+   * Damgar, said.
+   */
+  private async askDamgar(a: { other: string; post?: string; value: string; unit: string; whatFor?: string }): Promise<{ lines: Line[]; woken?: Woken }> {
+    const r = await this.moneyDraft({ what: 'pay', ...a });
+    const d = this.opts.damgar;
+    if (!d || !r.draft) return { lines: r.lines };
+    try {
+      const { me } = await this.ctx();
+      const woken = await d.wake({ identity: me.id, draft: r.draft });
+      return { lines: [{ text: 'Damgar found the payment on MOR: authorise it in Damgar’s panel, here.', tone: 'ok' }], woken };
+    } catch (e) {
+      return { lines: [...r.lines, { text: message(e), tone: 'warn' }] };
+    }
+  }
+
+  /** Where Damgar's panel stands (2A): waiting, signed, declined or expired. */
+  async damgarAnswer(request: string): Promise<{ answer: string; lines: Line[] }> {
+    if (!this.opts.damgar) return { answer: 'expired', lines: [] };
+    const r = await this.opts.damgar.answer(request);
+    return { answer: r.answer, lines: r.lines.map((l) => ({ text: l.text, tone: l.tone === 'warn' ? 'warn' : l.tone === 'ok' ? 'ok' : undefined })) };
   }
 
   /** Pay an identity now, under the lane (from its profile): the invoice request signed with the lane's key. */
@@ -2382,7 +2450,7 @@ export class Dub {
    * homes, where Damgar, holding the same identity, picks it up, reads it in
    * plain words, and signs or declines it. Dub signs only the draft.
    */
-  moneyDraft(a: { what: 'pay' | 'ask'; other: string; value: string; unit: string; whatFor?: string; post?: string }): Promise<{ lines: Line[] }> {
+  moneyDraft(a: { what: 'pay' | 'ask'; other: string; value: string; unit: string; whatFor?: string; post?: string }): Promise<{ lines: Line[]; draft?: string }> {
     return this.serial(async () => {
       const { me, s, hints } = await this.ctx();
       let other: string;
@@ -2406,8 +2474,9 @@ export class Dub {
       return {
         lines: [
           { text: `Prepared, not signed: ${a.what === 'pay' ? 'a tip' : 'a request to be paid'}, sealed to this identity and left at its homes (${r.left.join(', ')}).`, tone: 'ok' },
-          { text: 'Open Damgar with this identity: the draft waits there, in To sign, to be read and signed or declined. Dub signs no money act.' },
+          { text: 'Open Damgar with this identity: the draft waits there, in Waiting, to be read and signed or declined. Dub signs no money act.' },
         ],
+        draft: r.id,
       };
     });
   }
@@ -2471,12 +2540,12 @@ export class Dub {
   // ------------------------------------------------------------ money under a lane, round 2 (F338, F351)
 
   /** Ask Damgar for a lane (sealed to oneself); nothing is paid until it is granted there. */
-  laneAsk(a: { label: string; cap: string; unit: string; until: number | null; clock: string }): Promise<{ lines: Line[] }> {
+  laneAsk(a: { label: string; cap: string; total?: string; unit: string; until: number | null; clock: string }): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
       await this.current(me);
       if (!UNITS_MODULES.some((m) => m.units.some((u) => u.hash === a.unit))) throw new Error('Choose a unit. Nothing was asked.');
-      const lines = await this.money.askLane(me, s, { label: a.label, cap: readValue(a.cap), unit: a.unit, until: a.until, clock: a.clock.trim().toLowerCase() || null, app: this.money.engine.opts.app! });
+      const lines = await this.money.askLane(me, s, { label: a.label, cap: readValue(a.cap), total: a.total?.trim() ? readValue(a.total) : null, unit: a.unit, until: a.until, clock: a.clock.trim().toLowerCase() || null, app: this.money.engine.opts.app! });
       return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
     });
   }
@@ -2614,17 +2683,17 @@ export class Dub {
    */
   private async syncFollows(me: TestIdentity, s: Settings, p: People, change?: (p: People) => void): Promise<Line[]> {
     const homes = me.f.homes.map((h) => h.hint);
-    const secrets = this.secrets(me);
+    const { open, problem: cannot } = await this.opener(me);
     const save = async () => {
       this.synced.set(me.id, now());
       await this.store.savePeople(me.id, p);
     };
-    if (!secrets.length) {
+    if (!open) {
       change?.(p);
       await save();
-      return [{ text: 'This app holds no encryption key of this identity, so its follow list cannot be sealed to it: the list stays in this app only.', tone: 'warn' }];
+      return [{ text: me.f.signingSecret || !this.opts.runner ? 'This app holds no encryption key of this identity, so its follow list cannot be sealed to it: the list stays in this app only.' : `The follow list stays in this app only, not sealed to this identity: ${cannot}`, tone: 'warn' }];
     }
-    const found = await readSealedList(me.id, secrets, homes, s.via);
+    const found = await readSealedList(me.id, open, homes, s.via);
     const ours = p.sealed?.version ?? 0;
     const lines: Line[] = [];
     let base: Followed[] = p.follows;
@@ -2648,7 +2717,8 @@ export class Dub {
     }
     await this.current(me);
     const look = await lookUp(me.id, homes, s.via);
-    const held = me.f.encryption.find((e) => look.encryptionKey && hex(xwingPublic(unhex(e.secret))) === hex(look.encryptionKey));
+    // The key it is sealed to: held here, or, for an identity used through Kišib, its public half (Kišib opens it).
+    const held = me.f.encryption.find((e) => look.encryptionKey && (e.secret ? hex(xwingPublic(unhex(e.secret))) : e.public) === hex(look.encryptionKey));
     if (!held || !look.encryptionKey) {
       await save();
       return [...lines, { text: 'The encryption key this identity publishes is not one this app holds: the follow list stays in this app, not sealed.', tone: 'warn' }];

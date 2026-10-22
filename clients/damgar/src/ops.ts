@@ -53,6 +53,17 @@ export const OPS = [
   'collective add',
   'collective promise read',
   'collective promise',
+  'collective remove',
+  'make',
+  'make confirm',
+  'paste',
+  'tip',
+  'runner',
+  'runner pair',
+  'runner take',
+  'runner asking',
+  'runner drop',
+  'runner unpair',
 ] as const;
 
 /** An expiry, as seconds since 1970, from a number or a date the page sends; none where empty. */
@@ -161,6 +172,28 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
       return d.vaultTransfer({ entry: Number(a.entry ?? 0), value: text(a.value), digest: text(a.digest) });
     case 'vault invoice':
       return d.vaultInvoice(text(a.key), text(a.invoice));
+    case 'collective remove':
+      return d.collectiveRemove(text(a.id));
+    case 'make':
+      return d.make({ homes: list(a.homes), relays: list(a.relays) });
+    case 'make confirm':
+      return d.makeConfirm(list(a.typed));
+    case 'tip':
+      return d.tip({ to: text(a.to), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor) });
+    case 'paste':
+      return d.paste(text(a.text));
+    case 'runner':
+      return d.runnerState();
+    case 'runner pair':
+      return d.runnerPair();
+    case 'runner take':
+      return d.runnerTake({ id: text(a.id) });
+    case 'runner asking':
+      return d.runnerAsking();
+    case 'runner drop':
+      return d.runnerDrop({ request: text(a.request) });
+    case 'runner unpair':
+      return d.runnerUnpair();
     case 'answer address':
       return d.answerAddress(text(a.id));
     default:

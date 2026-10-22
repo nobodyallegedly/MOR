@@ -54,6 +54,7 @@ interface Inbox {
   toYou: Item[];
   messages: Message[];
   encryption: boolean;
+  opening?: string | null;
   hidden: number;
   problems: string[];
 }
@@ -98,6 +99,47 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
     slot = { close: () => s.close(), request: a.request };
   }
+  /**
+   * Damgar's panel in Dub's slot (Ask Damgar, 2A): framed only from Damgar's
+   * origin as Dub's program knows it; Dub cannot read it or press its
+   * buttons. Dub asks its program, every second, whether it was answered,
+   * and closes the frame then. Closed by the person, the payment still waits
+   * in Damgar.
+   */
+  function damgarPanel(w: { request: string; panel: string; title: string; origin: string }) {
+    let s: ReturnType<typeof openSlot>;
+    let over = false;
+    try {
+      s = openSlot(app, {
+        app: 'damgar',
+        by: 'Damgar',
+        host: 'Dub',
+        src: w.panel,
+        allowed: [w.origin, w.origin.replace('127.0.0.1', 'localhost')],
+        closed: () => {
+          over = true;
+          say('', `${v.e(w.title)}: it waits in Damgar, in Waiting, to be signed or declined there.`);
+        },
+      });
+    } catch (e) {
+      return say('error', v.e(errorOf(e)));
+    }
+    void (async () => {
+      while (!over) {
+        await new Promise((r) => setTimeout(r, 1000));
+        if (over) return;
+        const a = await raw<{ answer: string; lines: v.Line[] }>('damgar answer', { request: w.request }).catch(() => null);
+        if (!a || a.answer === 'waiting') continue;
+        over = true;
+        // Let the person read Damgar's own words in the frame a moment, then close it.
+        await new Promise((r) => setTimeout(r, 1500));
+        s.close();
+        say(a.answer === 'signed' ? 'done' : '', a.answer === 'signed' ? `Damgar signed it. ${v.lines(a.lines)}` : a.answer === 'declined' ? 'Declined in Damgar: nothing was signed.' : 'Damgar’s panel waited past its ten minutes: the payment still waits in Damgar.');
+        return;
+      }
+    })();
+  }
+
   /** Each request to Dub's program, for an identity used through Kišib: while it waits, Kišib's panel is drawn when one is asked for. */
   b.ask = async <T>(op: string, a?: Record<string, unknown>): Promise<T> => {
     if (b.web || NOT_WATCHED.has(op) || state?.identity?.kind !== 'runner') return raw<T>(op, a);
@@ -507,7 +549,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     else app.insertAdjacentHTML('beforeend', html);
     const notes = [
       ...(inbox && !inbox.encryption
-        ? [state?.identity?.kind === 'runner' ? 'Kišib’s runner holds this identity’s keys, and Dub none: its private messages are sent from here, but not opened here (the runner signs; it opens nothing yet).' : 'No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.']
+        ? [inbox.opening ?? 'No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.']
         : []),
       ...(inbox?.hidden ? [`${inbox.hidden} from muted identities, not shown.`] : []),
       ...(state?.proposalsWaiting ? [`${state.proposalsWaiting === 1 ? 'A proposal to sign waits' : `${state.proposalsWaiting} proposals to sign wait`} in this identity’s inbox: sign them in Edubba, Collectives › To sign.`] : []),
@@ -755,7 +797,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     { key: 'make', label: 'Make one', say: 'its chain key’s words shown once' },
     { key: 'bring', label: 'Bring one', say: 'its ID and its signing key’s words' },
     b.web
-      ? { key: 'kishib', label: 'Use one from Kišib', say: 'through Kišib’s runner, on the Mac only: not in the web client', empty: true }
+      ? { key: 'kishib', label: 'Use one from Kišib', say: 'through Kišib’s runner, in the computer’s program only: never in the web client', empty: true }
       : { key: 'kishib', label: 'Use one from Kišib', say: 'through Kišib’s runner, on this Mac: Dub holds no key' },
   ];
 
@@ -835,7 +877,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         return;
       case 'lane': {
         closePanel();
-        const r = await b.ask<{ lanes: { label: string; state: string; cap: string; until: number | null }[]; say: string[] }>('lanes').catch(() => null);
+        const r = await b.ask<{ lanes: { label: string; state: string; cap: string; total: string | null; until: number | null }[]; say: string[] }>('lanes').catch(() => null);
         const body = popup.show('A lane from Damgar', v.laneForm(s, b.web, r?.say ?? []));
         const l = body.querySelector('#lanes');
         if (l) l.innerHTML = r ? v.lanesHere(r.lanes) : '';
@@ -1252,7 +1294,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'lane': {
         const until = String(d.get('until') ?? '');
         const r = await busy('Sealing the lane’s request to this identity…', () =>
-          b.ask<Lines>('lane ask', { label: String(d.get('label') ?? ''), cap: String(d.get('cap') ?? ''), unit: String(d.get('unit') ?? ''), until: until ? Math.floor(new Date(until).getTime() / 1000) : '', clock: String(d.get('clock') ?? '') }),
+          b.ask<Lines>('lane ask', { label: String(d.get('label') ?? ''), cap: String(d.get('cap') ?? ''), total: String(d.get('total') ?? ''), unit: String(d.get('unit') ?? ''), until: until ? Math.floor(new Date(until).getTime() / 1000) : '', clock: String(d.get('clock') ?? '') }),
         );
         if (r) {
           popup.close();
@@ -1299,8 +1341,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           feed = [r.post, ...feed.filter((x) => x.id !== r.post.id)];
           lens = 'following';
           draw();
-          say('done', `<strong>Posted.</strong>${v.lines(r.lines)}`);
+          // The feed read again before "Posted." is said: drawn again after, it would close a card's menu just opened.
           await readFeed();
+          say('done', `<strong>Posted.</strong>${v.lines(r.lines)}`);
         }
         return;
       }
@@ -1341,11 +1384,17 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         if (!paying) return;
         const how = String(d.get('how') ?? '');
         const r = await busy(how === 'lane' ? 'Signing under Dub’s lane…' : how === 'damgar' ? 'Sealing the payment for Damgar…' : 'Writing it out…', () =>
-          b.ask<{ lines: v.Line[]; hand?: { text: string; said: string[] } }>('pay', { ...paying, how, value: String(d.get('value') ?? ''), unit: String(d.get('unit') ?? ''), whatFor: String(d.get('whatFor') ?? '') }),
+          b.ask<{ lines: v.Line[]; hand?: { text: string; said: string[] }; woken?: { request: string; panel: string; title: string; origin: string } }>('pay', { ...paying, how, value: String(d.get('value') ?? ''), unit: String(d.get('unit') ?? ''), whatFor: String(d.get('whatFor') ?? '') }),
         );
         if (!r) return;
         if (r.hand) {
           popup.replace(`${v.lines(r.lines)}${v.byHand(r.hand)}`);
+          return;
+        }
+        if (r.woken) {
+          // Ask Damgar, on this computer (2A): Damgar found the draft on MOR and draws its panel here, in the slot; Dub learns only the answer.
+          popup.close();
+          damgarPanel(r.woken);
           return;
         }
         if (how === 'lane') {

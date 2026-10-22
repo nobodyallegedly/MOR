@@ -463,18 +463,18 @@ export function payChooser(o: { title: string; sub: string; kind: 'tip' | 'buy' 
   const way = (key: 'lane' | 'damgar' | 'hand', label: string, open: boolean, said: string) =>
     `<label class="${open ? '' : 'dub-closed'}"><input type="radio" name="how" value="${key}"${open ? '' : ' disabled'}${key === first ? ' checked' : ''}><span><span>${e(label)}</span><span class="k-small k-soft">${e(said)}</span></span></label>`;
   const laneSaid = w.lane.open
-    ? `Dub signs it now, with its lane’s key. Per payment: at most ${w.lane.perPayment}${w.lane.until ? ` · until ${new Date(w.lane.until * 1000).toISOString().slice(0, 10)}` : ''} · paid under it so far: ${w.lane.spent} (Dub’s own count).`
+    ? `Dub signs it now, with its lane’s key. Per payment: at most ${w.lane.perPayment}${w.lane.total ? ` · In all: ${w.lane.left} left of ${w.lane.total}` : ''}${w.lane.until ? ` · until ${new Date(w.lane.until * 1000).toISOString().slice(0, 10)}` : ''} · paid under it so far: ${w.lane.spent} (Dub’s own count${w.lane.total ? '; the cap in all is kept by Dub and counted in Damgar, not judged by verifiers' : ''}).`
     : (w.lane.why ?? '');
   const amount = o.kind === 'tip' || o.kind === 'pay';
   return `<form class="dub-modal-form" id="pay" data-kind="${e(o.kind)}"><p class="k-small k-soft">${e(o.sub)}</p>
 ${amount ? `<div class="k-row"><input name="value" inputmode="numeric" placeholder="Amount" required class="k-grow"><select name="unit">${unitOptions(o.units)}</select></div><input name="whatFor" placeholder="What for (optional)" maxlength="280">` : `<p>${e(o.price ?? '')}</p>`}
-<div class="dub-ways">${way('lane', 'Under Dub’s lane', w.lane.open, laneSaid)}${way('damgar', 'Ask Damgar', w.damgar.open, w.damgar.open ? 'Dub sends it to Damgar as a money message sealed to you; Damgar queues it in Waiting, reads it to you and signs it there.' : (w.damgar.why ?? ''))}${way('hand', 'By hand', w.hand.open, w.hand.open ? 'Dub shows the payment to copy into Damgar; nothing is signed or sent from here.' : (w.hand.why ?? ''))}</div>
+<div class="dub-ways">${way('lane', 'Under Dub’s lane', w.lane.open, laneSaid)}${way('damgar', 'Ask Damgar', w.damgar.open, w.damgar.open ? (w.damgar.wakes ? 'Dub leaves it on MOR, sealed to you, and wakes Damgar: Damgar pops up here, reads it to you, and you authorise it in its panel. It waits in Damgar’s Waiting too.' : 'Dub leaves it on MOR, sealed to you; Damgar queues it in Waiting, reads it to you and signs it there.') : (w.damgar.why ?? ''))}${way('hand', 'By hand', w.hand.open, w.hand.open ? 'Dub shows the payment to copy into Damgar; nothing is signed or sent from here.' : (w.hand.why ?? ''))}</div>
 <div class="k-row"><button type="submit" class="k-btn k-p"${first ? '' : ' disabled'}>${o.kind === 'tip' ? 'Tip' : o.kind === 'pay' ? 'Pay' : 'Buy it'}</button><span class="k-grow"></span><span class="k-small k-faint">the record goes to Damgar’s account</span></div><div id="pay-said"></div></form>`;
 }
 
 /** The payment by hand, shown to copy (the money messages cMIP's draft, section 2.1). */
 export function byHand(h: { text: string; said: string[] }): string {
-  return `<div class="k-box">${lines(h.said.map((text) => ({ text })))}<label>The draft, as the money messages cMIP writes it (section 2.1), in base64: copy it into Damgar</label><textarea class="dub-hand" readonly>${e(h.text)}</textarea><div class="k-row"><button type="button" class="k-btn" data-copy-text="${e(h.text)}">Copy it</button></div>${say('Damgar’s place to paste it is its own next round.', ['Until Damgar takes a pasted draft, the payment’s words above are what to give it by hand.'])}</div>`;
+  return `<div class="k-box">${lines(h.said.map((text) => ({ text })))}<label>The draft, as the money messages cMIP writes it (section 2.1), in base64: copy it into Damgar</label><textarea class="dub-hand" readonly>${e(h.text)}</textarea><div class="k-row"><button type="button" class="k-btn" data-copy-text="${e(h.text)}">Copy it</button></div>${say('In Damgar: Waiting, + Paste an act to sign.', ['Damgar reads it to you in plain words, and you sign it or decline it there. Nothing is signed or sent from Dub.'])}</div>`;
 }
 
 /** Rely on an act, read back first, RELY typed (as Edubba asks). */
@@ -540,7 +540,7 @@ export function lineFacts(s: State): string {
   const i = s.identity!;
   return `<dl class="k-facts"><dt>Its ID</dt><dd class="k-mono">${e(i.form)}</dd><dt>Made</dt><dd>${i.kind === 'made' ? 'Here. Its chain key was shown once as words, and is kept nowhere here.' : 'Elsewhere, brought here by its signing key’s words. Its chain key is not here.'}</dd>
 ${i.oldChainKey ? '<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app’s folder, unused and untouched.</dd>' : ''}
-<dt>Private messages</dt><dd>${i.encryption ? 'Its encryption key is here: its private messages open here.' : 'No encryption key here: its private messages cannot be opened here.'}</dd>
+<dt>Private messages</dt><dd>${i.kind === 'runner' ? e(i.encryption ? 'Opened here through Kišib, which holds its key: each opening is listed in Kišib.' : (i.opening ?? 'Not opened here.')) : i.encryption ? 'Its encryption key is here: its private messages open here.' : 'No encryption key here: its private messages cannot be opened here.'}</dd>
 <dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd><dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd>
 <dt>This app’s line</dt><dd>${cardWords(i.line, 'Dub', e)}</dd></dl>
 ${say('A change of keys must keep this line.', ['If the signing key is ever changed (in Kišib, with the chain key’s words), that change must keep this line, or the posts made here become void: take the line above to it.'])}`;
@@ -551,14 +551,15 @@ export function laneForm(s: State, web: boolean, said: string[]): string {
   return `${say('A lane lets Dub pay by itself, within a cap Damgar grants.', said)}<div id="lanes"><p class="k-small k-soft">Reading the lanes…</p></div>
 <form id="lane" class="dub-modal-form"><input name="label" value="${web ? 'Dub on the web' : 'Dub on this computer'}" maxlength="80" autocomplete="off">
 <div class="k-row"><input name="cap" inputmode="numeric" placeholder="At most, per payment" required class="k-grow"><select name="unit">${unitOptions(s.units)}</select></div>
+<div class="k-row"><input name="total" inputmode="numeric" placeholder="In all, for the whole lane (optional)" class="k-grow"></div>
 <label>Until (optional), judged on a timestamp clock: its ID</label><div class="k-row"><input name="until" type="datetime-local"><input name="clock" class="k-grow" placeholder="the clock’s ID" spellcheck="false" value="${e(s.identity!.clock?.form ?? '')}"></div>
 <div class="k-row"><button type="submit" class="k-btn k-p">Ask Damgar for this lane</button></div></form>
 <h4>Payments under the lane</h4><div id="payments"><p class="k-small k-soft">Reading…</p></div>`;
 }
 
 /** The lanes asked here, and where each stands. */
-export function lanesHere(ls: { label: string; state: string; cap: string; until: number | null }[]): string {
-  return ls.length ? `<ul class="k-small">${ls.map((l) => `<li>${e(l.label)} · ${e(l.state)} · at most ${e(l.cap)} a payment${l.until ? ` · until ${e(new Date(l.until * 1000).toISOString().slice(0, 16).replace('T', ' '))} UTC` : ''}</li>`).join('')}</ul>` : '<p class="k-small k-soft">No lane yet: Dub pays nothing by itself.</p>';
+export function lanesHere(ls: { label: string; state: string; cap: string; total?: string | null; until: number | null }[]): string {
+  return ls.length ? `<ul class="k-small">${ls.map((l) => `<li>${e(l.label)} · ${e(l.state)} · at most ${e(l.cap)} a payment${l.total ? ` · in all ${e(l.total)}` : ''}${l.until ? ` · until ${e(new Date(l.until * 1000).toISOString().slice(0, 16).replace('T', ' '))} UTC` : ''}</li>`).join('')}</ul>` : '<p class="k-small k-soft">No lane yet: Dub pays nothing by itself.</p>';
 }
 
 /** A payment as Damgar's code shows it, the part Dub draws. */
@@ -607,7 +608,9 @@ ${i.muted.length ? `<details class="k-say"><summary>Muted (${i.muted.length})<sp
 ${say(i.list === 'published' ? 'Published: anyone reads the IDs; your names for them stay sealed.' : 'Your names for them stay sealed to you. The same list in Public and Private.', [
   i.encryption
     ? `Whom it follows, with the names you gave, is a private act sealed to this identity and kept at its homes${i.sealed ? ` (version ${i.sealed.version})` : ''}: any app holding this identity reads it; nobody else can. Its homes and relays see only that a private act exists, and roughly how big it is; whoever holds the signing key’s words reads it.`
-    : 'This app holds no encryption key of this identity, so the list stays in this app only.',
+    : i.kind === 'runner'
+      ? `The list stays in this app only, not sealed to this identity: ${i.opening ?? 'Kišib does not open for Dub.'}`
+      : 'This app holds no encryption key of this identity, so the list stays in this app only.',
   'Muting stays in this app, always.',
   ...(i.sealed?.forked ? ['The list was forked: two apps changed it at once. The longer branch is shown.'] : []),
 ])}`;
@@ -632,8 +635,8 @@ export interface RunnerState {
 
 /** + Add, Use one from Kišib: pair, then choose an identity Kišib lets Dub use. */
 export function runnerForm(r: RunnerState): string {
-  const intro = '<p class="k-small k-soft">Kišib’s runner keeps the identity’s signing key on this Mac; Dub holds none of its keys. Each act Dub would sign is shown by Kišib, in its own panel inside this window, before Kišib signs it (unless you give Dub a standing yes for that kind, in Kišib). Money, agreements and keys always ask.</p>';
-  if (!r.available) return `${intro}<p>Kišib’s runner is on the Mac only.</p>`;
+  const intro = '<p class="k-small k-soft">Kišib’s runner keeps the identity’s signing key on this Mac; Dub holds none of its keys. Each act Dub would sign is shown by Kišib, in its own panel inside this window, before Kišib signs it (unless you give Dub a standing yes for that kind, in Kišib). Money, agreements, relying on another’s act, and keys always ask. Where you let Dub, in Kišib, Kišib also opens what is sealed to the identity, so that Dub reads its private messages.</p>';
+  if (!r.available) return `${intro}<p>Kišib’s runner is in the computer’s program only, never in the web client.</p>`;
   const problem = r.problem ? `<div class="k-note k-error">${e(r.problem)}</div>` : '';
   if (r.state === 'approved') {
     const ids = r.identities.map((x) => `<div class="k-idline"><span class="k-dot k-alt">${e((x.name ?? 'M')[0].toUpperCase())}</span><span class="k-grow"><span class="k-n">${e(x.name ?? 'No name')}</span><br><span class="k-s k-mono">${e(shortForm(x.form))}</span></span>${x.held ? '<span class="k-small k-faint">used here</span>' : `<button type="button" class="k-btn k-p" data-action="runner-take" data-id="${e(x.id)}">Use it</button>`}</div>`).join('');

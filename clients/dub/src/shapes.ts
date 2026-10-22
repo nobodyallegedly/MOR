@@ -149,7 +149,10 @@ export interface State {
     homes: string[];
     relays: string[];
     /** Whether this app holds the identity's encryption key (the carry Module, draft 2, 2a). */
+    /** Whether what is sealed to it opens here: with a key held here, or through Kišib's runner (draft 2). */
     encryption: boolean;
+    /** Why it does not, in plain words; null where it does. */
+    opening?: string | null;
     /** An identity made by Dub on the Mac before 16 October 2026 keeps its chain key in the app's folder, unused. */
     oldChainKey: boolean;
     /** This app's line; its card for Kišib names only an act the homes hold (H80's question 2). */
@@ -190,8 +193,8 @@ export interface Suggested {
 
 /** The ways to pay open from Dub, for one payment (decided: three ways). */
 export interface PayWays {
-  lane: { open: boolean; why: string | null; label: string | null; perPayment: string | null; until: number | null; spent: string | null };
-  damgar: { open: boolean; why: string | null };
+  lane: { open: boolean; why: string | null; label: string | null; perPayment: string | null; until: number | null; spent: string | null; /** The cap in all (the grant limits cMIP, draft 3), said, and what is left of it by Dub's own count; null where none was asked. */ total: string | null; left: string | null };
+  damgar: { open: boolean; why: string | null; /** On this computer: Damgar is woken, and pops up here to authorise it (2A). */ wakes?: boolean };
   hand: { open: boolean; why: string | null };
 }
 

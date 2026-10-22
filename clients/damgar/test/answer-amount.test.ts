@@ -68,7 +68,7 @@ test('above the receipts lane’s cap the payee’s Damgar waits and says why; w
 
   // Above the cap: judged on the answer by the grant limits cMIP; it waits for Bob, saying why.
   const above = await tip('6000');
-  assert.ok(above.lines.some((l) => /make an invoice in your wallet, in To sign\. Not answered by itself: .*6000 is above the grant’s cap of 5000 per act\.$/.test(l.text)), JSON.stringify(above.lines));
+  assert.ok(above.lines.some((l) => /make an invoice in your wallet, in Waiting\. Not answered by itself: .*6000 is above the grant’s cap of 5000 per act\.$/.test(l.text)), JSON.stringify(above.lines));
   assert.equal(link.made.length, 0, 'no invoice made by itself');
   const inv = (await bob.damgar.c.ask<{ items: ToSign[] }>('to sign')).items.find((i) => i.kind === 'invoice')!;
   assert.ok(inv, 'the invoice to make waits in To sign');

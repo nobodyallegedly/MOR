@@ -17,7 +17,7 @@ export function panel(o: { request: string; nonce: string; title: string; as: st
 ${o.always ? `<label class="k-rp-check"><input type="checkbox" name="always" value="on"> ${e(o.always)}</label>` : ''}
 <div class="k-row"><button type="submit" name="answer" value="sign" class="k-btn k-p">Sign it</button><button type="submit" name="answer" value="decline" class="k-btn k-q">Decline</button></div>
 </form>
-<p class="k-small k-faint">Money, agreements and keys always ask.</p></main></body></html>`;
+<p class="k-small k-faint">Money, agreements, relying on another’s act, and keys always ask.</p></main></body></html>`;
 }
 
 /** What the frame shows once answered, or where no request waits. */

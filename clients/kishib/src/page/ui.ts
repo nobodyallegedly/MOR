@@ -119,16 +119,19 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
     box.innerHTML = runner.signed
       .map((s) => {
         const form = actFormOf(s.identity, 'mid');
+        const at = `${new Date(s.at * 1000).toISOString().replace('T', ' ').slice(0, 16)} UTC`;
+        const kind = runner!.kinds.find((k) => k.kind === s.kind)?.name ?? s.kind;
+        // Draft 2: an opening is listed beside what was signed, said as an opening (nothing signed), keyed by its sealed container.
         const a: KitAct = {
-          id: s.act,
+          id: s.opened && s.sealed ? s.sealed : s.act,
           form: actFormOf(s.act),
           signer: { id: s.identity, form, link: form, name: s.name, me: true },
-          kind: `${s.app} · ${runner!.kinds.find((k) => k.kind === s.kind)?.name ?? s.kind}`,
+          kind: s.opened ? `${s.app} · opened · ${kind}` : `${s.app} · ${kind}`,
           text: s.words.join(' '),
-          labels: [{ text: `${s.standing ? 'signed without asking' : 'asked, and signed'} · ${s.line === 'apart' ? 'on a line of its own' : `${s.app}’s ${s.line} line, position ${s.position}`} · ${new Date(s.at * 1000).toISOString().replace('T', ' ').slice(0, 16)} UTC` }],
+          labels: [{ text: s.opened ? `opened, nothing signed · ${s.times === 1 ? 'once' : `${s.times} times`} · last ${at}` : `${s.standing ? 'signed without asking' : 'asked, and signed'} · ${s.line === 'apart' ? 'on a line of its own' : `${s.app}’s ${s.line} line, position ${s.position}`} · ${at}` }],
           verified: false,
         };
-        drawn.set(s.act, { act: a, s });
+        drawn.set(a.id, { act: a, s });
         return card(a);
       })
       .join('');
@@ -149,6 +152,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         draw();
         const f = app.querySelector<HTMLFormElement>('#form-record');
         if (f) (f.elements.namedItem('id') as HTMLInputElement).value = a.signer.form;
+        return;
+      }
+      if (key === 'why' && s.opened) {
+        popup.show('An opening', `${v.lines([{ text: `Kišib opened, for ${s.app}, what was sealed to this identity: ${s.times === 1 ? 'once' : `${s.times} times`}. An opening signs nothing; ${s.app} reads the act inside, not the identity’s key.` }])}<div class="kishib-review">${s.words.map((w) => `<p dir="auto">${v.e(w)}</p>`).join('')}</div>`);
         return;
       }
       if (key === 'why') {
@@ -185,7 +192,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
   };
 
   /** Clear every field that held words, once they were sent. */
-  const clear = (form: HTMLFormElement) => (Array.from(form.elements) as HTMLInputElement[]).forEach((el) => el.tagName === 'TEXTAREA' && (el.value = ''));
+  const clear = (form: HTMLFormElement) => (Array.from(form.elements) as HTMLInputElement[]).forEach((el) => (el.tagName === 'TEXTAREA' || el.type === 'password') && (el.value = ''));
 
   const PLANS: Record<string, string> = { rotate: 'rotate plan', escape: 'escape plan', confirm: 'confirm plan', start: 'collective start', give: 'collective give', make: 'make plan' };
 
@@ -230,6 +237,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         clear(form);
         $('result')!.innerHTML = `<div class="kishib-review" id="answer"><h3>${v.e(r.title)}</h3>${v.lines(r.lines)}</div>`;
         return;
+      }
+      case 'unlock': {
+        // Draft 2: the passphrase asked when Kišib starts with the runner on.
+        const r = await act(() => b.ask<v.RunnerView>('runner unlock', { passphrase: a.passphrase, again: a.again }));
+        clear(form);
+        if (!r) return;
+        runner = r;
+        draw();
+        return done('Unlocked: the runner’s keys, apps and log are back. The apps paired sign through it again; none pairs again.');
       }
       case 'give-runner': {
         const r = await act(() => b.ask<v.RunnerView>('runner give', a));
@@ -347,26 +363,38 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         return $('risk-read')?.focus();
       case 'runner-on': {
         if (!$<HTMLInputElement>('risk-read')?.checked) return fail(new Error('Read the risk, and tick it, before the runner is turned on. It stays off.'));
-        const r = await act(() => b.ask<v.RunnerView>('runner on', { read: true }));
+        const pass = $<HTMLInputElement>('runner-pass');
+        const again = $<HTMLInputElement>('runner-pass-again');
+        const r = await act(() => b.ask<v.RunnerView>('runner on', { read: true, passphrase: pass?.value ?? '', again: again?.value ?? '' }));
+        if (pass) pass.value = '';
+        if (again) again.value = '';
         if (!r) return;
         runner = r;
         draw();
-        return done('The runner is on. Give it an identity (Identities, Held here), then pair an app: in Dub, the identity panel, + Add, Use one from Kišib.');
+        return done('The runner is on, its file encrypted under your passphrase. Give it an identity (Identities, Held here), then pair an app: in Dub, the identity panel, + Add, Use one from Kišib.');
+      }
+      case 'runner-lock': {
+        const r = await act(() => b.ask<v.RunnerView>('runner lock'));
+        if (!r) return;
+        runner = r;
+        draw();
+        return done('Locked: the runner signs and opens nothing until its passphrase is given again. Nothing was erased.');
       }
       case 'runner-off-ask':
         return $<HTMLElement>('runner-state')?.nextElementSibling?.scrollIntoView({ block: 'center' });
       case 'runner-off': {
-        if (!confirm('Turn the runner off? Kišib forgets every signing key it holds, every app paired with it and what it signed. The apps stop signing through it.')) return;
+        if (!confirm('Turn the runner off? It erases everything: every signing key it holds, every app paired with it, and what it signed and opened. The apps stop signing through it. Turned on again, it starts from nothing.')) return;
         const r = await act(() => b.ask<v.RunnerView>('runner off'));
         if (!r) return;
         runner = r;
         draw();
-        return done('The runner is off: every key, pairing and record it held is forgotten, its file overwritten and removed.');
+        return done('The runner is off: every key, pairing and record it held is erased, its file overwritten and removed.');
       }
       case 'approve': {
         const box = t.closest<HTMLElement>('.kishib-app')!;
         const identities = [...box.querySelectorAll<HTMLInputElement>('input[name="allow"]:checked')].map((x) => x.value);
-        const r = await act(() => b.ask<v.RunnerView>('runner approve', { pairing: d.pairing, identities }));
+        const open = !!box.querySelector<HTMLInputElement>('input[name="open"]')?.checked;
+        const r = await act(() => b.ask<v.RunnerView>('runner approve', { pairing: d.pairing, identities, open }));
         if (r) {
           runner = r;
           draw();
@@ -386,6 +414,14 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
       }
       case 'yes': {
         const r = await act(() => b.ask<v.RunnerView>('runner yes', { pairing: d.pairing, kind: d.kind, on: d.on === '1' }));
+        if (r) {
+          runner = r;
+          draw();
+        }
+        return;
+      }
+      case 'opening': {
+        const r = await act(() => b.ask<v.RunnerView>('runner opening', { pairing: d.pairing, on: d.on === '1' }));
         if (r) {
           runner = r;
           draw();

@@ -8,7 +8,7 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readCards } from '../../genesis/src/lines.ts';
-import { asking, clickPanel, closeAll, changeKeys, dub, dubBeside, kishib, refused, standing, start, type Relay } from './world.ts';
+import { asking, clickPanel, closeAll, changeKeys, dub, dubBeside, kishib, refused, standing, start, runnerOn, type Relay } from './world.ts';
 import { SPECS } from '../../genesis/src/core.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { RUNNER_SPENT_SAY, type RunnerView } from '../src/runner.ts';
@@ -38,7 +38,7 @@ test('an identity held by the runner posts and messages from Dub; its keys chang
   const other = await dub(H, [relay.base]);
 
   const k = await kishib();
-  await k.c.ask('runner on', { read: true });
+  await runnerOn(k.c);
   await k.c.ask('runner give', { id: a.id, address: H[0], words });
   const d = await dubBeside(k.dir);
   await d.c.ask('runner pair');

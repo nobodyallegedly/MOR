@@ -8,7 +8,8 @@
 // against their last common act, never dropping a change (2.6), and reads
 // the tips again just before sending (2.5).
 
-import { MIRS, SPECS, Verifier, cborDecode, cborEncode, hex, openSealed, unhex, xwingPublic } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, hex, unhex, xwingPublic } from '../../genesis/src/core.ts';
+import { openerOf, type Opener } from '../../dub/src/people.ts';
 import { sealFor, type TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { leaveAtHomes } from '../../genesis/src/private.ts';
@@ -83,10 +84,12 @@ function readList(id: string, payload: Uint8Array): ListAct | null {
 }
 
 /** Every valid act of the list at the identity's homes (2.4). */
-async function readActs(identity: string, secrets: Uint8Array[], homes: string[], via: Via): Promise<{ acts: Map<string, ListAct>; problems: string[] }> {
+async function readActs(identity: string, keys: Uint8Array[] | Opener, homes: string[], via: Via): Promise<{ acts: Map<string, ListAct>; problems: string[] }> {
   const acts = new Map<string, ListAct>();
   const problems: string[] = [];
-  if (!secrets.length) return { acts, problems: ['this app holds no encryption key of this identity'] };
+  if (Array.isArray(keys) && !keys.length) return { acts, problems: ['this app holds no encryption key of this identity'] };
+  // With the keys held here, or through Kišib's runner where Damgar holds none (the Dubsar runner cMIP, draft 2, section 8).
+  const open: Opener = Array.isArray(keys) ? openerOf(identity, keys) : keys;
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   let l: Awaited<ReturnType<typeof lookUp>>;
   try {
@@ -100,17 +103,9 @@ async function readActs(identity: string, secrets: Uint8Array[], homes: string[]
     try {
       for (;;) {
         const page = await relayAt(h, via).feed({ to: identity, after });
-        for (const it of page.items) {
-          if (it.kind !== 'sealed') continue;
-          let o: Opened | null = null;
-          for (const s of secrets) {
-            try {
-              o = openSealed(it.item, identity, s) as Opened;
-              break;
-            } catch {
-              // the next key
-            }
-          }
+        const sealed = page.items.filter((it) => it.kind === 'sealed').map((it) => it.item);
+        const opened = sealed.length ? await open(sealed) : [];
+        for (const o of opened) {
           const d = o?.described;
           if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== ACCEPTED_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
           if (o.key) l.verifier.addWithKey(o.act, o.key);
@@ -145,8 +140,8 @@ function ancestors(acts: Map<string, ListAct>, id: string): Set<string> {
 }
 
 /** Read the list: the tips, and what counts (2.4, 2.6). */
-export async function readAccepted(identity: string, secrets: Uint8Array[], homes: string[], via: Via = {}): Promise<Accepted> {
-  const { acts, problems } = await readActs(identity, secrets, homes, via);
+export async function readAccepted(identity: string, keys: Uint8Array[] | Opener, homes: string[], via: Via = {}): Promise<Accepted> {
+  const { acts, problems } = await readActs(identity, keys, homes, via);
   const followed = new Set<string>();
   for (const a of acts.values()) {
     if (a.previous) followed.add(a.previous);
@@ -191,12 +186,13 @@ const sameTips = (a: ListAct[], b: ListAct[]) => a.map((x) => x.id).join() === b
 export async function changeAccepted(
   me: TestIdentity,
   change: (entries: Map<string, string | null>) => void,
-  opts: { via?: Via; save: () => Promise<void>; check: () => Promise<void> },
+  opts: { via?: Via; save: () => Promise<void>; check: () => Promise<void>; open?: Opener | null },
 ): Promise<{ written: string | null; list: Accepted }> {
   const via = opts.via ?? {};
   const homes = me.f.homes.map((h) => h.hint);
-  const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
-  if (!secrets.length) throw new Error('This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.');
+  const held = [...me.f.encryption].reverse().filter((e) => e.secret).map((e) => unhex(e.secret));
+  const secrets: Uint8Array[] | Opener = held.length ? held : (opts.open ?? []);
+  if (Array.isArray(secrets) && !secrets.length) throw new Error('This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.');
   for (let round = 0; round < 5; round++) {
     const read = await readAccepted(me.id, secrets, homes, via);
     if (read.problems.length >= homes.length && !read.tips.length) throw new Error(`The identity’s homes did not answer (${read.problems.join('; ')}): the accepted list was not changed.`);
@@ -209,14 +205,14 @@ export async function changeAccepted(
     if (!sameTips(again.tips, read.tips)) continue;
     await opts.check();
     const look = await lookUp(me.id, homes, via);
-    if (!look.encryptionKey || !me.f.encryption.some((e) => hex(xwingPublic(unhex(e.secret))) === hex(look.encryptionKey!))) {
+    if (!look.encryptionKey || !me.f.encryption.some((e) => (e.secret ? hex(xwingPublic(unhex(e.secret))) : e.public) === hex(look.encryptionKey!))) {
       throw new Error('The encryption key this identity publishes is not one this app holds: the accepted list cannot be sealed. Nothing was changed.');
     }
     const [first, ...others] = read.tips;
     const payload = listPayload({ version: read.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
     let made: { act: Uint8Array; id: string; key: Uint8Array };
     try {
-      made = me.sign(ACCEPTED_SPEC, SEALED_LIST, payload, { public: false, to: [me.id] });
+      made = await me.signNow(ACCEPTED_SPEC, SEALED_LIST, payload, { public: false, to: [me.id] });
     } finally {
       await opts.save();
     }
@@ -244,7 +240,7 @@ export async function publishAccepted(me: TestIdentity, list: Accepted, relays: 
   const payload = listPayload({ version: (previous?.version ?? 0) + 1, previous: previous?.act ?? null, merged: [], entries: withdrawn ? new Map() : list.entries }, withdrawn);
   let made: { act: Uint8Array; id: string };
   try {
-    made = me.sign(ACCEPTED_SPEC, PUBLISHED_LIST, payload, { public: true });
+    made = await me.signNow(ACCEPTED_SPEC, PUBLISHED_LIST, payload, { public: true });
   } finally {
     await save();
   }

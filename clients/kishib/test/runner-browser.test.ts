@@ -1,4 +1,4 @@
-// The Dubsar runner by clicks (`cmips/cmip-runner-draft-1.md`): Kišib's page
+// The Dubsar runner by clicks (`cmips/cmip-runner-draft-2.md`): Kišib's page
 // and Dub's page, each its own program on this computer, against real homes
 // and a relay. Kišib's runner turned on with the risk read first; an
 // identity given to it; Dub paired from its first screen and approved in
@@ -8,7 +8,12 @@
 // signed, each act a card with the kit's two menus; an unpaired origin
 // refused by the slot, and the panel refused in another page's frame;
 // Revoke, then Dub refused; turned off, Kišib's folder holding nothing of it.
-// At a Mac's size, then the panel again at a phone's.
+// At a Mac's size, then the panel again at a phone's. Then draft 2: the
+// passphrase chosen by clicks, typed twice; a private message from someone
+// else read in Dub through Kišib, Dub approved with “may open”, the opening
+// listed in Signed; Kišib closed and opened again, “Runner locked” top right,
+// the passphrase given on its first screen, Dub signing again with no new
+// pairing; turned off, said as erasing everything.
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,7 +23,7 @@ import { join } from 'node:path';
 import { chromium, type Browser, type Page } from 'playwright-core';
 import { hex } from '../../genesis/src/core.ts';
 import { fromWords } from '../../../modules/carry/src/carry.ts';
-import { closeAll, dub, dubBeside, everything, kishib, standing, start, type Relay } from './world.ts';
+import { closeAll, dub, dubBeside, everything, kishib, kishibAgain, PASS, standing, start, type Relay } from './world.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const shots = process.env.MOR_SCREENSHOTS;
@@ -74,13 +79,15 @@ test('the runner by clicks: Kišib and Dub, the panel inside Dub’s window', as
   await kp.click('[data-k-tile="runner"]');
   await shot(kp, 'mac-01-off');
   // The risk said first; Turn it on refused until it is read.
-  assert.match(await kp.textContent('#risk') ?? '', /Whoever gets into this Mac can sign/);
+  assert.match(await kp.textContent('#risk') ?? '', /Whoever gets into this Mac while Kišib is open and unlocked can sign/);
   await kp.click('[data-action="runner-on"]');
   await kp.waitForSelector('#status .k-error');
   assert.ok(!existsSync(join(k.dir, 'runner.json')));
   await kp.check('#risk-read');
+  await kp.fill('#runner-pass', PASS);
+  await kp.fill('#runner-pass-again', PASS);
   await kp.click('[data-action="runner-on"]');
-  await kp.waitForSelector('#runner-state >> text=On');
+  await kp.waitForSelector('#runner-state >> text=since');
   assert.ok(existsSync(join(k.dir, 'runner.json')));
 
   // An identity given to it: Identities, Held here.
@@ -96,9 +103,11 @@ test('the runner by clicks: Kišib and Dub, the panel inside Dub’s window', as
 
   // Dub, holding no identity: its first screen, Use one from Kišib.
   const d = await dubBeside(k.dir);
-  // Dub's policy frames Kišib's origin, and nothing else.
+  // Dub's policy frames Kišib's origin, then Damgar's (its money panel, since Damgar's round 3), and nothing else.
   const policy = (await fetch(`${d.app.base}/`)).headers.get('content-security-policy') ?? '';
-  assert.equal(/frame-src ([^;]*);/.exec(policy)?.[1], `${k.app.base} ${k.app.base.replace('127.0.0.1', 'localhost')}`);
+  const framed = (/frame-src ([^;]*);/.exec(policy)?.[1] ?? '').split(' ');
+  assert.deepEqual(framed.slice(0, 2), [k.app.base, k.app.base.replace('127.0.0.1', 'localhost')]);
+  assert.deepEqual(framed.slice(2).map((o) => o.replace(/:\d+$/, '')), ['http://127.0.0.1', 'http://localhost'], 'Damgar’s origin, on this computer, and nothing else');
   const D = await open(`${d.app.base}/#pair=${d.app.access.newCode()}`);
   const dp = D.page;
   await dp.waitForSelector('#from-kishib');
@@ -289,6 +298,123 @@ test('the runner by clicks: Kišib and Dub, the panel inside Dub’s window', as
   for (const f of [hex(fromWords(words)), words, a.id]) assert.ok(!all.includes(f), 'nothing of the runner remains');
   assert.match(await kp.textContent('.kishib-holds') ?? '', /Holds nothing\s*runner off/);
   await shot(kp, 'mac-08-off-again');
+
+  assert.deepEqual(K.errors, []);
+  assert.deepEqual(D.errors, []);
+  await K.context.close();
+  await D.context.close();
+});
+
+
+test('draft 2 by clicks: the passphrase typed twice, a message read through Kišib, Kišib closed and opened again, “Runner locked”, the passphrase given, Dub signing again without pairing, off erasing everything', async () => {
+  const H = homes.map((h) => h.base);
+  const a = await dub(H, [relay.base]);
+  const words = (await a.c.ask<{ words: string[] }>('carry')).words.join(' ');
+  await a.c.ask('name', { name: 'Max' });
+  const other = await dub(H, [relay.base]);
+  await other.c.ask('name', { name: 'River' });
+
+  let k = await kishib();
+  let K = await open(`${k.app.base}/#pair=${k.app.access.newCode()}`);
+  let kp = K.page;
+  await kp.waitForSelector('.k-tile');
+  await kp.click('[data-k-tile="runner"]');
+  // The passphrase chosen, typed twice: two that differ refused, the runner still off.
+  await kp.check('#risk-read');
+  await kp.fill('#runner-pass', PASS);
+  await kp.fill('#runner-pass-again', 'not the same passphrase');
+  await kp.click('[data-action="runner-on"]');
+  await kp.waitForSelector('#status >> text=typed twice differs');
+  assert.ok(!existsSync(join(k.dir, 'runner.json')));
+  await shot(kp, 'd2-01-passphrase');
+  await kp.fill('#runner-pass', PASS);
+  await kp.fill('#runner-pass-again', PASS);
+  await kp.click('[data-action="runner-on"]');
+  await kp.waitForSelector('#runner-state >> text=since');
+  assert.equal(await kp.inputValue('#runner-pass').catch(() => ''), '');
+  await kp.click('[data-tab="identities"]');
+  await kp.fill('#form-give-runner [name="id"]', a.id);
+  await kp.fill('#form-give-runner [name="address"]', H[0]);
+  await kp.fill('#form-give-runner [name="words"]', words);
+  await kp.click('#form-give-runner button[type="submit"]');
+  await kp.waitForSelector(`[data-held="${a.id}"]`);
+
+  // Dub paired, approved in Kišib with “may open what is sealed to this identity”.
+  const d = await dubBeside(k.dir);
+  const D = await open(`${d.app.base}/#pair=${d.app.access.newCode()}`);
+  const dp = D.page;
+  await dp.click('#from-kishib [data-k-add="kishib"]');
+  await dp.click('[data-action="runner-pair"]');
+  const code = (await dp.textContent('#runner-code'))!.trim();
+  await kp.click('[data-tab="runner"]');
+  await kp.click('[data-k-col="apps"]');
+  await kp.waitForSelector(`.kishib-app >> text=${code}`);
+  assert.equal(await kp.isChecked('.kishib-app input[name="open"]'), false, 'off unless chosen');
+  await kp.check('.kishib-app input[name="open"]');
+  await shot(kp, 'd2-02-approve-open');
+  await kp.click('[data-action="approve"]');
+  await kp.waitForSelector('[data-open] button.k-on:has-text("Yes")');
+  await dp.click('[data-action="runner-look"]');
+  await dp.click(`[data-action="runner-take"][data-id="${a.id}"]`);
+  await dp.waitForSelector('.k-me');
+
+  // River writes to Max privately: read in Dub, through Kišib.
+  await other.c.ask('message', { to: a.id, text: 'A word for Max, sealed.' });
+  await dp.locator('[data-k-part="private"]').click();
+  await dp.locator('[data-conv]', { hasText: 'River' }).click({ timeout: 60_000 });
+  await dp.locator('#thread .k-act', { hasText: 'A word for Max, sealed.' }).waitFor({ timeout: 60_000 });
+  await shot(dp, 'd2-03-dub-private');
+  // Listed in Kišib's Signed, as an opening.
+  await kp.click('[data-k-col="signed"]');
+  await kp.waitForSelector('#signed .k-act >> text=Opened for Dub: a private message');
+  assert.match(await kp.locator('#signed .k-act', { hasText: 'Opened for Dub' }).first().innerText(), /opened, nothing signed/);
+  await shot(kp, 'd2-04-signed-opened');
+
+  // Kišib closed, and opened again: “Runner locked” top right; its first screen asks the passphrase.
+  await K.context.close();
+  k = await kishibAgain(k);
+  K = await open(`${k.app.base}/#pair=${k.app.access.newCode()}`);
+  kp = K.page;
+  await kp.waitForSelector('#form-unlock');
+  assert.match(await kp.textContent('.kishib-holds') ?? '', /Runner locked/);
+  await shot(kp, 'd2-05-locked');
+  // Meanwhile Dub is told plainly.
+  await dp.locator('[data-k-part="public"]').click();
+  await dp.fill('#post textarea', 'While Kišib is locked.');
+  await dp.click('#post button[type="submit"]');
+  await dp.waitForSelector('#status >> text=Kišib is locked');
+  await shot(dp, 'd2-06-dub-locked');
+  // A wrong passphrase: nothing opened.
+  await kp.fill('#form-unlock [name="passphrase"]', 'not the passphrase');
+  await kp.click('#form-unlock button[type="submit"]');
+  await kp.waitForSelector('#status >> text=does not open');
+  assert.match(await kp.textContent('.kishib-holds') ?? '', /Runner locked/);
+  await kp.fill('#form-unlock [name="passphrase"]', PASS);
+  await kp.click('#form-unlock button[type="submit"]');
+  await kp.waitForSelector('.kishib-holds >> text=Holds Max');
+  // Dub signs again, never paired again.
+  await dp.fill('#post textarea', 'After Kišib was opened again.');
+  await dp.click('#post button[type="submit"]');
+  await dp.frameLocator('.k-frame iframe').locator('button:has-text("Sign it")').click();
+  await dp.waitForSelector('.k-act >> text=After Kišib was opened again.');
+  const id = await dp.locator('.k-act', { hasText: 'After Kišib was opened again.' }).getAttribute('data-k-act');
+  assert.equal(await standing(id!, a.id, [...H, relay.base]), 'valid');
+
+  // Turned off: said as erasing everything; Kišib's folder holding nothing of it.
+  await kp.click('[data-k-tile="runner"]');
+  assert.match(await kp.textContent('.k-box:has(h3:has-text("Turn it off"))') ?? '', /erases everything/);
+  let said = '';
+  kp.once('dialog', (x) => {
+    said = x.message();
+    void x.accept();
+  });
+  await kp.click('[data-action="runner-off"]');
+  await kp.waitForSelector('#risk');
+  assert.match(said, /erases everything/);
+  assert.ok(!existsSync(join(k.dir, 'runner.json')));
+  const all = everything(join(k.dir, '..'));
+  for (const f of [hex(fromWords(words)), words, a.id]) assert.ok(!all.includes(f), 'nothing of the runner remains');
+  await shot(kp, 'd2-07-off');
 
   assert.deepEqual(K.errors, []);
   assert.deepEqual(D.errors, []);

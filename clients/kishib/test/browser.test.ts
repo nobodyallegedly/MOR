@@ -277,7 +277,7 @@ test('the web client: a personal rotation of an identity made in Dub’s web cli
   assert.equal(await page.locator('link[rel=apple-touch-icon]').getAttribute('href'), 'apple-touch-icon.png');
   await shot(page, '01-start');
   assert.ok((await kept(page)).empty, 'nothing kept at the start');
-  // The tiles of the web client: no Runner (Mac only, decided), each with its danger marks; top right, Kišib holds nothing.
+  // The tiles of the web client: no Runner (never on the web, decided), each with its danger marks; top right, Kišib holds nothing.
   assert.deepEqual(await page.locator('[data-k-tile]').evaluateAll((xs) => xs.map((x) => [(x as HTMLElement).dataset.kTile, x.querySelector('.k-dm')!.className])), [
     ['identities', 'k-dm k-l1'],
     ['paper', 'k-dm k-l3'],

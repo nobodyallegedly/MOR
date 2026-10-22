@@ -11,7 +11,11 @@
 //! - how **rail Modules** plug in ([`RailModule`]);
 //! - how a receipt or claim is **verified** ([`verify`]): the payee's own
 //!   pointer or vault names the rail address, the commitment is recomputed
-//!   from the act, and the rail Module's rule checks the rail's proof.
+//!   from the act, and the rail Module's rule checks the rail's proof;
+//! - since draft 4 (F355), **step 4a** ([`transfer_to_oneself`]): a
+//!   commitment whose `fulfils` names the vault declaration it is paid to
+//!   is a transfer to oneself, paid by the payee's own identity and buying
+//!   nothing, or the answer is invalid.
 //!
 //! Nothing here signs anything: receipts are signed by receivers, claims by
 //! payers (F112).
@@ -472,6 +476,31 @@ fn address(
     }
 }
 
+/// Step 4a (draft 4, F355): where `fulfils` is the very act `paid-to` names
+/// as declaring the vault, the act is a transfer to oneself, and only that:
+/// its payer is its payee's identity (a receipt's field 2; a claim's
+/// signer, never an anonymous key), and it names no purchase. Otherwise the
+/// answer is invalid (decided by Nobody, allegedly, 21 October 2026: not an
+/// ordinary payment that fulfils nothing). Checked from the act alone: step
+/// 3 has already found the declaration counting on the payee's chain.
+pub fn transfer_to_oneself(fulfils: &Hash, payee: &Hash, payer: Option<&Payer>, purchase: bool, paid_to: &PaidTo) -> Result<(), Answer> {
+    let PaidTo::Vault { declared_by, .. } = paid_to else { return Ok(()) };
+    if declared_by != fulfils {
+        return Ok(());
+    }
+    if !matches!(payer, Some(Payer::Identity(p)) if p == payee) {
+        return Err(Answer::Invalid(
+            "it names the vault declaration it is paid to as what it fulfils, a transfer to oneself, but its payer is not the payee's own identity (the payment cMIP draft 4, step 4a)".into(),
+        ));
+    }
+    if purchase {
+        return Err(Answer::Invalid(
+            "a transfer to oneself buys nothing, and this one names a purchase (the payment cMIP draft 4, step 4a)".into(),
+        ));
+    }
+    Ok(())
+}
+
 /// Verify a receipt or claim (Money rules 2 to 4; the payment cMIP,
 /// "Verifying a receipt or claim").
 ///
@@ -542,6 +571,9 @@ pub fn verify(record: Record, held: &dyn Held, modules: &Modules) -> Verificatio
         Ok(a) => a,
         Err(a) => return out(a),
     };
+    if let Err(a) = transfer_to_oneself(fulfils, payee, payer.as_ref(), purchase.is_some(), &p.paid_to) {
+        return out(a);
+    }
     let commitment = Commitment {
         rail: *rail,
         payee: *payee,

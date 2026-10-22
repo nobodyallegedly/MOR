@@ -32,6 +32,25 @@ export async function kishib(now?: () => number): Promise<{ app: Running; c: Cli
   return { app, c, dir };
 }
 
+/** The runner's passphrase in these tests (the Dubsar runner cMIP, draft 2): a test value. */
+export const PASS = 'test passphrase, not a real one';
+
+/** Turn Kišib's runner on: the risk read, the passphrase chosen, typed twice. */
+export const runnerOn = (c: Client) => c.ask('runner on', { read: true, passphrase: PASS, again: PASS });
+
+/** Kišib closed and opened again on the same folder (the Mac restarted, or Kišib quit): a new program, a new page paired. */
+export async function kishibAgain(k: { app: Running; dir: string }): Promise<{ app: Running; c: Client; dir: string }> {
+  // On its own port again, as on the Mac (Dub's policy frames Kišib's origin by its port).
+  const port = k.app.port;
+  await k.app.close();
+  apps.splice(apps.indexOf(k.app), 1);
+  const app = await serve({ dir: k.dir, port });
+  apps.push(app);
+  const c = await Client.open(await newKey(), app.base, DOMAIN);
+  await c.ask('pair', { code: app.access.newCode(), label: 'test' });
+  return { app, c, dir: k.dir };
+}
+
 /** A Dub with a new identity made in it: its chain key's words written, three typed back. */
 export async function dub(homes: string[], relays: string[]): Promise<{ app: DubRunning; c: Client; dir: string; id: string; chainWords: string[] }> {
   const dir = mkdtempSync(join(tmpdir(), 'kishib-dub-'));

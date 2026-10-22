@@ -40,6 +40,8 @@ test('the release in built/: every file, each with its fingerprints listed, the 
   assert.match(contentSecurityPolicy(), /img-src 'self'/);
   assert.ok(page.includes(WEB_BANNER), 'the banner is in the page itself, outside the script');
   for (const risk of [/could copy its signing key, and the on-chain request key/, /can be lost, or read by what runs in this page/, /holds no wallet/, /follows no chain/]) assert.match(WEB_BANNER, risk);
+  // In one line, its "?" opening the rest (the redesign's one-line disclaimers).
+  assert.match(WEB_BANNER, /^<details class="k-say damgar-banner" id="for-testing-only"/);
   assert.ok(CODE_TEST_ONLY.startsWith(TEST_ONLY), 'the page and the code say the same');
   const script = readFileSync(join(BUILT, 'damgar.js'), 'utf8');
   assert.ok(!/\/(home|Users|root)\//.test(script), 'no build machine folder in the script');
@@ -91,17 +93,15 @@ test('mor-damgar check: a server serving the release is SAME; one altering the s
   }
 });
 
-test('Damgar’s tint (H36): the gold of the Money layer, by Kišib’s rule, on outlines, separators and quiet accents only; red only for alarms', () => {
-  assert.deepEqual(TINT, { layer: '#e8b33a', line: '#382e16', edge: '#4a3b1a', accent: '#8e6f28' });
+test('Damgar’s colour on the kit: the Money layer’s gold, in pastel fills; red only for alarms; its icon’s tint (H47)', () => {
+  assert.deepEqual(TINT, { layer: '#e8b33a', pastel: '#f2d89c' });
+  assert.match(STYLE, /\.k-damgar\{--k-c:#e8b33a;--k-p:#f2d89c;/);
+  // Red stays the alarm's: the kit's --k-bad, never on a tile but an alarm.
+  assert.match(STYLE, /--k-bad:#c4645f/);
+  for (const m of STYLE.matchAll(/\.k-tile\.k-d[23]\{([^}]*)\}/g)) assert.doesNotMatch(m[1], /--k-bad/);
+  // The icon's tint, by H36's rule (H47: the duck alone, gold-tinted): the stone at 70% over the dark, the carving at 60%, the base at 30%, the layer's gold on its lit edges; no square behind it.
   const over = (share: number) => '#' + [0, 2, 4].map((i) => Math.round(parseInt('06080c'.slice(i, i + 2), 16) + share * (parseInt(TINT.layer.slice(1 + i, 3 + i), 16) - parseInt('06080c'.slice(i, i + 2), 16))).toString(16).padStart(2, '0')).join('');
-  assert.deepEqual([over(0.22), over(0.3), over(0.6)], [TINT.line, TINT.edge, TINT.accent]);
-  assert.match(STYLE, /:root\{--line:#382e16;--edge:#4a3b1a;--tint:#8e6f28\}/);
-  const textUses = [...STYLE.matchAll(/([^{}]+)\{[^}]*(?<![-a-z])color:var\(--tint\)/g)].map((m) => m[1].trim());
-  assert.deepEqual(textUses, ['details>summary::before']);
-  assert.match(STYLE, /--bad:#b4615f/);
-  // The icon's tint, by the same rule (H47: the duck alone, gold-tinted): the stone at 70% over the dark, the carving at 60%, the base at 30%, the layer's gold on its lit edges; no square behind it.
   const svg = readFileSync(join(here, 'static/icon/damgar.svg'), 'utf8');
-  for (const c of ['#a4802c', TINT.accent, TINT.edge, TINT.layer]) assert.ok(svg.includes(c), c);
-  assert.equal(over(0.7), '#a4802c');
+  for (const c of [over(0.7), over(0.6), over(0.3), TINT.layer]) assert.ok(svg.includes(c), c);
   assert.ok(!/<rect /.test(svg), 'no tablet, no square: the duck alone');
 });

@@ -10,7 +10,11 @@ import { closeAll, kishib, person, start, type Relay } from './world.ts';
 import { changeKeys } from '../../kishib/test/world.ts';
 import { TestNode } from './node.ts';
 import type { Account, PaymentShown, Rails, ToSign } from '../src/shapes.ts';
-import { SPEC } from '../src/specs.ts';
+import { MONEY, SPEC } from '../src/specs.ts';
+import { Store } from '../src/store.ts';
+import { lightningProof, moneyPayload, paymentCommitment, paymentProof, unhex } from '../../genesis/src/core.ts';
+import { lookUp } from '../../genesis/src/lookup.ts';
+import { randomBytes } from 'node:crypto';
 
 let homes: Relay[];
 let relay: Relay;
@@ -108,5 +112,33 @@ test('a vault declared in Kišib, shown in Damgar; above its limit, a payment go
   assert.equal(rec.proofs[0].rail.answer, 'valid', JSON.stringify(rec.proofs));
   const sealedAtHome = (await (await import('../../genesis/src/transport.ts')).relayAt(H[0]).feed({ to: bob.id })).items.filter((i) => i.kind === 'sealed').length;
   assert.ok(sealedAtHome > 0, 'the record sealed to Bob at his home');
+  // The payment cMIP, draft 4 (F355): the transfer names the act that declared the vault as what it follows (step 4a), not Bob's payee pointer.
+  const declaredBy = r.vault!.declaredBy;
+  assert.match(tr.lines.map((l) => l.text).join(' '), /a transfer to yourself, which buys nothing/);
+  const accepted = { money: MONEY, accepted: [SPEC.payment, SPEC.lightning.hash, SPEC.units.regtest] };
+  // A claim into Bob's vault, as an outsider reads it: signed by `who`, naming `fulfils`.
+  const claimInto = async (who: string, dir: string, fulfils: string, value: number) => {
+    const signer = (await new Store(dir).identity(who))!;
+    const amount = { unit: SPEC.units.regtest, value };
+    const paidTo = { kind: 'vault', declaredBy, entry: 0 };
+    const salt = new Uint8Array(randomBytes(16));
+    const key = paymentCommitment({ rail: SPEC.lightning.hash, payee: bob.id, amount, fulfils, payer: who, paidTo, salt }) as string;
+    const inv = vault.invoice(value, key);
+    const rail = lightningProof(inv.invoice, unhex(inv.preimage)) as Uint8Array;
+    const made = moneyPayload({ type: 'claim', rail: SPEC.lightning.hash, proof: paymentProof({ paidTo, salt, rail }), payee: bob.id, amount, fulfils }) as { type: number; payload: Uint8Array };
+    const act = signer.sign(MONEY, made.type, made.payload, { public: true });
+    const l = await lookUp(bob.id, H);
+    if (who !== bob.id) await lookUp(who, H, {}, l.verifier);
+    l.verifier.add(act.act);
+    return (l.verifier.moneyJudge(act.id, accepted) as { rail: { answer: string; why: string } }).rail;
+  };
+  // Bob's own transfer, as its claim says it: valid.
+  assert.equal((await claimInto(bob.id, bob.damgar.dir, declaredBy, 1200)).answer, 'valid');
+  // Naming the vault declaration, but paid by Alice: invalid (step 4a), though the rail carried it.
+  const byAlice = await claimInto(alice.id, alice.damgar.dir, declaredBy, 1200);
+  assert.equal(byAlice.answer, 'invalid', JSON.stringify(byAlice));
+  assert.match(byAlice.why, /step 4a/);
+  // Draft 3's form, still read: Bob's own payee pointer as what it follows.
+  const pointer = (await bob.damgar.c.ask<Rails>('rails')).pointer!.act;
+  assert.equal((await claimInto(bob.id, bob.damgar.dir, pointer, 1300)).answer, 'valid');
 });
-
