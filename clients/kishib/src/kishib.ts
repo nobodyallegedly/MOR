@@ -648,6 +648,10 @@ export class Kishib {
         run: async () => {
           const fresh = freshSeed();
           const signing = newSigningSecret();
+          // Its commitment now: the seed is overwritten once its words are typed back, before the genesis is signed (as a change of keys does).
+          const key = chainKeyAt(fresh, 3, 0);
+          const commit = { scheme: key.scheme, commit: key.commit };
+          wipe(key.seeds);
           const h: Held = {
             kind: 'make',
             id: '',
@@ -663,9 +667,7 @@ export class Kishib {
             title: 'A new identity: first, its paper',
             lines: [{ text: 'Nothing is signed yet. First, the chain key’s words: write them down, then type three back. Only then does Kišib sign the identity and send it.', tone: 'warn' }],
             sign: async () => {
-              const key = chainKeyAt(fresh, 3, 0);
-              const genesis = makeGenesis({ identitySpec: SPECS.identity, signingSecret: signing, chainKeyScheme: key.scheme, chainKeyCommit: key.commit, homes });
-              wipe(key.seeds);
+              const genesis = makeGenesis({ identitySpec: SPECS.identity, signingSecret: signing, chainKeyScheme: commit.scheme, chainKeyCommit: commit.commit, homes });
               const id = actId(genesis);
               const t = holding(id, id, signing, [genesis], homes);
               const routes = t.sign(SPECS.identity, IDENTITY_TYPES.routes, routesPayload({ version: 1, routes: [{ scope: null, hints: relays, kind: 0 }, { scope: null, hints: relays, kind: 1 }] }), { public: true });

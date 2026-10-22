@@ -85,17 +85,20 @@ test('the runner by clicks: Kišib and Dub, the panel inside Dub’s window', as
 
   // An identity given to it: Identities, Held here.
   await kp.click('[data-tab="identities"]');
-  await kp.waitForSelector('#form-give');
-  await kp.fill('#form-give [name="id"]', a.id);
-  await kp.fill('#form-give [name="address"]', H[0]);
-  await kp.fill('#form-give [name="words"]', words);
-  await kp.click('#form-give button[type="submit"]');
+  await kp.waitForSelector('#form-give-runner');
+  await kp.fill('#form-give-runner [name="id"]', a.id);
+  await kp.fill('#form-give-runner [name="address"]', H[0]);
+  await kp.fill('#form-give-runner [name="words"]', words);
+  await kp.click('#form-give-runner button[type="submit"]');
   await kp.waitForSelector(`[data-held="${a.id}"]`);
   assert.match(await kp.textContent('.kishib-holds') ?? '', /Holds Max\s*runner on/);
   await shot(kp, 'mac-02-held');
 
   // Dub, holding no identity: its first screen, Use one from Kišib.
   const d = await dubBeside(k.dir);
+  // Dub's policy frames Kišib's origin, and nothing else.
+  const policy = (await fetch(`${d.app.base}/`)).headers.get('content-security-policy') ?? '';
+  assert.equal(/frame-src ([^;]*);/.exec(policy)?.[1], `${k.app.base} ${k.app.base.replace('127.0.0.1', 'localhost')}`);
   const D = await open(`${d.app.base}/#pair=${d.app.access.newCode()}`);
   const dp = D.page;
   await dp.waitForSelector('#from-kishib');

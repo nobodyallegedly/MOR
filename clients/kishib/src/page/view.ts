@@ -44,7 +44,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .kishib-banner ol{margin:4px 0;padding-left:1.4em}
 .k-home.kishib-three>.k-tile:last-child{grid-column:1 / -1}
 .kishib-foot{flex:none;padding:0 28px 10px}
-.kishib-holds{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 14px;border:1px solid var(--k-line);border-radius:999px;font-size:14px}
+.kishib-holds{display:flex;align-items:center;gap:10px;white-space:nowrap;flex:none;padding:4px 6px 4px 14px;border:1px solid var(--k-line);border-radius:999px;font-size:14px}
 .kishib-holds .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
 .kishib-door{flex:1;display:grid;place-items:center;padding:20px}
 .kishib-door .k-box{max-width:560px;width:100%;padding:28px 32px;border-radius:22px;background:var(--k-raise);border-color:var(--k-line)}
@@ -341,7 +341,7 @@ ${h.spent ? `<div class="k-note k-error">Its keys were changed with its chain ke
     )
     .join('');
   return `<h2>Held here</h2><p class="k-soft k-small">The identities Kišib’s runner keeps, by their signing keys, on this Mac. Remove one, and Kišib forgets its key; the apps using it through Kišib stop signing as it.</p>${rows || '<p class="k-soft">None yet.</p>'}
-<form id="form-give" data-kind="give-runner" class="k-box" autocomplete="off"><h3>Give an identity to the runner</h3><p class="k-small k-soft">By its signing key’s words, as Dub shows them (its identity’s menu, Words): Kišib checks they give the key its homes serve. Never the chain key’s words.</p>${idField('id', 'The identity')}${address}${words('words', 'Its signing key’s 24 words')}<div class="k-row"><button type="submit" class="k-btn k-p">Keep it here</button><span class="k-small k-faint">kept while the runner is on</span></div></form>`;
+<form id="form-give-runner" data-kind="give-runner" class="k-box" autocomplete="off"><h3>Give an identity to the runner</h3><p class="k-small k-soft">By its signing key’s words, as Dub shows them (its identity’s menu, Words): Kišib checks they give the key its homes serve. Never the chain key’s words.</p>${idField('id', 'The identity')}${address}${words('words', 'Its signing key’s 24 words')}<div class="k-row"><button type="submit" class="k-btn k-p">Keep it here</button><span class="k-small k-faint">kept while the runner is on</span></div></form>`;
 }
 
 function runnerApps(r: RunnerView | null): string {

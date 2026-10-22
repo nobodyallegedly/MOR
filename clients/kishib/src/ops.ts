@@ -23,6 +23,9 @@ function vaultOf(a: Record<string, unknown>): import('./kishib.ts').VaultChange 
   };
 }
 
+/** The runner's operations (the Dubsar runner cMIP): the program's only (`server.ts`), never the web client's, which has no runner (Mac only, decided). */
+export const RUNNER_OPS = ['runner state', 'runner on', 'runner off', 'runner give', 'runner remove', 'runner approve', 'runner revoke', 'runner yes', 'runner answer', 'runner cards', 'runner standing'] as const;
+
 /** The names of every operation, so a page and a test can be checked against them. */
 export const OPS = [
   'state',

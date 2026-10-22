@@ -161,10 +161,11 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
 
   attachColumn(app, async (key) => {
     part = key;
+    const runnerTab = tab === 'runner';
     // The runner's parts are read fresh: what waits, what was signed.
-    if (tab === 'runner' && !b.web) runner = (await b.ask<v.RunnerView>('runner state').catch(() => null)) ?? runner;
+    if (runnerTab && !b.web) runner = (await b.ask<v.RunnerView>('runner state').catch(() => null)) ?? runner;
     if (part !== key) return;
-    if (tab === 'runner') return draw();
+    if (runnerTab) return draw();
     const pane = $('pane');
     if (pane && tab) pane.innerHTML = v.part(tab, key, b.web, b.web ? null : runner);
     const st = $('status');

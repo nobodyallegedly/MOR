@@ -18,7 +18,7 @@ import { sha256, workHash } from '../../genesis/src/core.ts';
 import { BUILT, WEB_FILES } from '../src/web/released.ts';
 import { contentSecurityPolicy } from '../src/web/headers.ts';
 import { WEB_BANNER, TEST_ONLY, STYLE, TINT } from '../src/page/view.ts';
-import { OPS } from '../src/ops.ts';
+import { OPS, RUNNER_OPS } from '../src/ops.ts';
 import { check } from '../src/cli.ts';
 
 const here = fileURLToPath(new URL('..', import.meta.url));
@@ -62,7 +62,10 @@ test('the page asks only for operations the program and the web client answer', 
   const ui = readFileSync(join(here, 'src/page/ui.ts'), 'utf8');
   const asked = [...ui.matchAll(/b\.ask(?:<[^>]*>)?\('([a-z ]+)'/g)].map((m) => m[1]);
   const mapped = [...ui.matchAll(/: '([a-z ]+ (?:plan|start|give))'/g)].map((m) => m[1]);
-  for (const op of [...asked, ...mapped, 'collective gather', 'collective rotate']) assert.ok((OPS as readonly string[]).includes(op), `the page asks for ${op}, which no operation answers`);
+  for (const op of [...asked, ...mapped, 'collective gather', 'collective rotate']) assert.ok([...OPS, ...RUNNER_OPS].includes(op as never), `the page asks for ${op}, which no operation answers`);
+  // The runner's are the program's only: the server answers each of them.
+  const server = readFileSync(join(here, 'src/server.ts'), 'utf8');
+  for (const op of RUNNER_OPS) assert.ok(server.includes(`case '${op}':`), `the program answers ${op}`);
 });
 
 test('mor-kishib check: a server serving the release is SAME; one altering the script is caught on that file', async () => {
@@ -93,15 +96,11 @@ test('mor-kishib check: a server serving the release is SAME; one altering the s
   }
 });
 
-test('Kišib’s tint (H36): the glacier blue of the Identity layer, at low saturation, on outlines, separators and quiet accents only', () => {
-  assert.deepEqual(TINT, { layer: '#8ec5f0', line: '#24323e', edge: '#2f4150', accent: '#587995' });
-  // Each value is the layer colour laid over the background #06080c at its share.
-  const over = (share: number) => '#' + [0, 2, 4].map((i) => Math.round(parseInt('06080c'.slice(i, i + 2), 16) + share * (parseInt(TINT.layer.slice(1 + i, 3 + i), 16) - parseInt('06080c'.slice(i, i + 2), 16))).toString(16).padStart(2, '0')).join('');
-  assert.deepEqual([over(0.22), over(0.3), over(0.6)], [TINT.line, TINT.edge, TINT.accent]);
-  assert.match(STYLE, /:root\{--line:#24323e;--edge:#2f4150;--tint:#587995\}/);
-  // Never on text that must be read: the accent colours a fold's mark only, borders otherwise.
-  const textUses = [...STYLE.matchAll(/([^{}]+)\{[^}]*(?<![-a-z])color:var\(--tint\)/g)].map((m) => m[1].trim());
-  assert.deepEqual(textUses, ['details>summary::before']);
-  // Red stays the alarm's: --bad unchanged from Dub's.
-  assert.match(STYLE, /--bad:#b4615f/);
+test('Kišib’s colour on the kit: the Identity layer’s glacier blue, in pastel fills; red only for alarms', () => {
+  assert.deepEqual(TINT, { layer: '#8ec5f0', pastel: '#cfe5f7' });
+  assert.match(STYLE, /\.k-kishib\{--k-c:#8ec5f0;--k-p:#cfe5f7;/);
+  // Red stays the alarm's: the kit's --k-bad, never on a tile but an alarm.
+  assert.match(STYLE, /--k-bad:#c4645f/);
+  // A tile's danger marks thicken its edge, never in red: red only where a tile carries an alarm.
+  for (const m of STYLE.matchAll(/\.k-tile\.k-d[23]\{([^}]*)\}/g)) assert.doesNotMatch(m[1], /--k-bad/);
 });
