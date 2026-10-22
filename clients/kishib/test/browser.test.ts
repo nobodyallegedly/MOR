@@ -122,7 +122,7 @@ after(async () => {
 });
 
 async function open(url: string): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await browser.newContext({ viewport: { width: 760, height: 900 } });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await context.newPage();
   page.on('console', (m) => {
     if (m.type() === 'error' && !/status of 4\d\d|Failed to load resource/.test(m.text())) problems.push(m.text());
@@ -476,7 +476,7 @@ test('the program’s page on the Mac: a collective rotation from two of three p
   const { H, e, f, fWords, ana, cy, col, clone, papers } = await founded(homes, relay);
   const aWords = (await ana.c.ask<{ words: string[] }>('carry')).words.join(' ');
   const k = await kishib();
-  const context = await browser.newContext({ viewport: { width: 760, height: 900 } });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await context.newPage();
   page.on('pageerror', (e) => problems.push(e.message));
   await page.goto(`${k.app.base}/#pair=${k.app.access.newCode()}`);

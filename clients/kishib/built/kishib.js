@@ -412,10 +412,10 @@ var Verifier = class {
    * @param {string} held
    * @returns {any}
    */
-  agreementsForkAlarm(specs, payment, held) {
+  agreementsForkAlarm(specs, payment, held2) {
     const ptr0 = passStringToWasm0(payment, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(held, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passStringToWasm0(held2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_agreementsForkAlarm(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
@@ -1038,10 +1038,10 @@ var Verifier = class {
    * @param {string} act
    * @param {string} home
    */
-  foundAtHome(act, home) {
+  foundAtHome(act, home2) {
     const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(home, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passStringToWasm0(home2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_foundAtHome(this.__wbg_ptr, ptr0, len0, ptr1, len1);
     if (ret[1]) {
@@ -3131,6 +3131,7 @@ var Relay = class {
 var relayAt = (hint, via = {}) => new Relay(hint, via[hint] ?? hint);
 
 // ../genesis/src/lines.ts
+var KINDS = ["public", "private", "earlier"];
 var IDENTITY_WORDS = {
   [IDENTITY_TYPES.routes]: "routes: where its acts are found and where to reach it",
   4: "a name",
@@ -3201,7 +3202,8 @@ async function actsBy(signer, hints, via = {}) {
 }
 function linesOf(o) {
   const specs = o.specs ?? MIRS;
-  const held = /* @__PURE__ */ new Map();
+  const owns = (o.own.length && Array.isArray(o.own[0]) ? o.own : [o.own]).filter((l) => l.length);
+  const held2 = /* @__PURE__ */ new Map();
   for (const a of o.acts) {
     let d;
     try {
@@ -3211,26 +3213,27 @@ function linesOf(o) {
     }
     if (d.signer !== o.identity) continue;
     if (d.spec === specs.identity && (d.type === IDENTITY_TYPES.genesis || d.type === IDENTITY_TYPES.rotation || d.type === IDENTITY_TYPES.chainSignature)) continue;
-    held.set(d.id, d);
+    held2.set(d.id, d);
   }
-  const ownPrev = new Map(o.own.map((id, i) => [id, i ? o.own[i - 1] : null]));
+  const ownPrev = new Map(owns.flatMap((line) => line.map((id, i) => [id, i ? line[i - 1] : null])));
+  const ownPosition = new Map(owns.flatMap((line) => line.map((id, i) => [id, i + 1])));
   const prevOf = (id) => {
     if (ownPrev.has(id)) return { known: true, prev: ownPrev.get(id) };
-    const d = held.get(id);
+    const d = held2.get(id);
     if (!d || d.spec === void 0) return { known: false, prev: null };
     return { known: true, prev: d.prev ?? null };
   };
   const named = /* @__PURE__ */ new Set();
-  for (const id of [...held.keys(), ...o.own]) {
+  for (const id of [...held2.keys(), ...ownPrev.keys()]) {
     const p = prevOf(id);
     if (p.prev) named.add(p.prev);
   }
-  const ownTip = o.own[o.own.length - 1];
-  const tips = [...held.values()].filter((d) => !named.has(d.id) && d.binding === o.binding).map((d) => d.id);
-  if (ownTip && !tips.includes(ownTip) && !named.has(ownTip)) tips.push(ownTip);
+  const ownTips = new Set(owns.map((line) => line[line.length - 1]));
+  const tips = [...held2.values()].filter((d) => !named.has(d.id) && d.binding === o.binding).map((d) => d.id);
+  for (const t of ownTips) if (!tips.includes(t) && !named.has(t)) tips.push(t);
   const out = [];
   for (const tip of tips) {
-    const d = held.get(tip);
+    const d = held2.get(tip);
     const latest = d ? whatIs(d, specs) : "an act made on this device";
     const ids = [];
     let at = tip;
@@ -3243,17 +3246,17 @@ function linesOf(o) {
       ids.push(at);
       const p = prevOf(at);
       if (!p.known) {
-        why = held.has(at) ? `it holds a private act made elsewhere (${at.slice(0, 12)}\u2026): only the app that made it can read which act comes before it` : `an act in it (${at.slice(0, 12)}\u2026) was not found at its homes or relays`;
+        why = held2.has(at) ? `it holds a private act made elsewhere (${at.slice(0, 12)}\u2026): only the app that made it can read which act comes before it` : `an act in it (${at.slice(0, 12)}\u2026) was not found at its homes or relays`;
         break;
       }
       at = p.prev;
     }
     ids.reverse();
-    const position = d?.position ?? (ownPrev.has(tip) ? o.own.indexOf(tip) + 1 : void 0);
+    const position = d?.position ?? ownPosition.get(tip);
     if (!why && position !== void 0 && position !== ids.length) why = `its latest act says position ${position}, but ${ids.length} acts were found behind it`;
     out.push({
       tip,
-      own: tip === ownTip,
+      own: ownTips.has(tip),
       readable: !why,
       card: why ? null : { act: tip, position: ids.length, summary: runningSummary(ids) },
       latest,
@@ -3286,10 +3289,13 @@ var APP_LINES = {
   Damgar: "the accepted list, payment claims, receipts, requests and answers, sales, a vault transfer, asks for a collective\u2019s promise",
   Ummia: "the accepted list, payments prepared for an anchor, asks for a collective\u2019s release, MIP discussions"
 };
-function lineOf(app2) {
-  return app2 ? `${app2}\u2019s line` : "a line";
+function lineOf(app2, kind) {
+  const k = kind === "earlier" ? "line from before (public and private acts together)" : kind ? `${kind} line` : "line";
+  return app2 ? `${app2}\u2019s ${k}` : `a ${k}`;
 }
-function livesOn(app2) {
+var capital = (t) => t[0].toUpperCase() + t.slice(1);
+function livesOn(app2, kind) {
+  if (kind === "public") return `${app2 ? `${app2}\u2019s` : "its app\u2019s"} public acts: posts, names, routes, signatures on a collective\u2019s agreement, releases`;
   return (app2 && APP_LINES[app2]) ?? "whatever its app signed there: possibly a member key for a collective, notes, a list";
 }
 function lineWords(l) {
@@ -3314,21 +3320,21 @@ function planLines(lines2, o = {}) {
     }
     if (leaveOut.has(c.act)) throw new Error(`${c.act} is both given a card and left out`);
   }
-  const held = o.held ? new Set(o.held) : null;
-  const found = (act) => held ? held.has(act) : lines2.some((l) => l.tip === act);
+  const held2 = o.held ? new Set(o.held) : null;
+  const found = (act) => held2 ? held2.has(act) : lines2.some((l) => l.tip === act);
   const kept = [];
   const left = [];
   const shown = [];
   const unplacedSay = [];
   for (const c of cards) {
-    const whose = lineOf(c.app);
+    const whose = lineOf(c.app, c.line);
     if (!found(c.act)) {
       unplacedSay.push(
-        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: its latest act (${c.act}) is not at the identity's homes, so no reader can follow it. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it. ${c.app ? `Open ${c.app} first: it sends its acts to the homes; then give its card again.` : "Open the app that shows this card first: it sends its acts to the homes; then give its card again."}`
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: its latest act (${c.act}) is not at the identity's homes, so no reader can follow it. What lives on it (${livesOn(c.app, c.line)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it. ${c.app ? `Open ${c.app} first: it sends its acts to the homes; then give its card again.` : "Open the app that shows this card first: it sends its acts to the homes; then give its card again."}`
       );
     } else if (c.missing) {
       unplacedSay.push(
-        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: ${c.missing === 1 ? "one of its acts is" : `${c.missing} of its acts are`} not at the identity's homes (${c.app ?? "its app"} says so), so no reader can follow it past ${c.missing === 1 ? "it" : "them"}. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it.`
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: ${c.missing === 1 ? "one of its acts is" : `${c.missing} of its acts are`} not at the identity's homes (${c.app ?? "its app"} says so), so no reader can follow it past ${c.missing === 1 ? "it" : "them"}. What lives on it (${livesOn(c.app, c.line)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it.`
       );
     }
   }
@@ -3344,7 +3350,7 @@ function planLines(lines2, o = {}) {
     } else if (card2) {
       kept.push({ act: card2.act, position: card2.position, summary: card2.summary });
       shown.push({
-        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}\u2019s line. ` : ""}${lineWords(l)} Kept by the card given: position ${card2.position}, summary ${card2.summary}.`,
+        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${capital(lineOf(given.app, given.line))}. ` : ""}${lineWords(l)} Kept by the card given: position ${card2.position}, summary ${card2.summary}.`,
         tone: l.readable || given && !given.missing ? "ok" : "warn"
       });
     } else if (covered) {
@@ -3367,7 +3373,7 @@ function planLines(lines2, o = {}) {
   for (const c of cards) {
     if (lines2.some((l) => l.tip === c.act)) continue;
     kept.push({ act: c.act, position: c.position, summary: c.summary });
-    shown.push({ text: `${c.app ? `${c.app}\u2019s line, ending` : "A line ending"} at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}), but no reader can follow it.`, tone: found(c.act) ? "warn" : "bad" });
+    shown.push({ text: `${capital(lineOf(c.app, c.line))}, ending at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}), but no reader can follow it.`, tone: found(c.act) ? "warn" : "bad" });
   }
   for (const t of unplacedSay) shown.push({ text: t, tone: "bad" });
   const warning = [left.length ? voidWarning(left) : "", ...unplacedSay].filter(Boolean).join(" ") || null;
@@ -3379,7 +3385,7 @@ function checkWarned(plan, warned) {
   }
 }
 function readCards(text2) {
-  return text2.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+  return text2.split(/[\n;]/).map((l) => l.trim()).filter(Boolean).map((l) => {
     const [act, position, summary, ...rest] = l.split(/[\s:,]+/);
     if (!act || !position || !summary) throw new Error(`\u201C${l}\u201D: a card is a latest act, a position and a summary`);
     const c = { act: act.toLowerCase(), position: Number(position), summary: summary.toLowerCase() };
@@ -3387,6 +3393,7 @@ function readCards(text2) {
     for (let i = 0; i < rest.length; i++) {
       const w = rest[i];
       if (/^missing$/i.test(w) && /^\d+$/.test(rest[i + 1] ?? "")) c.missing = Number(rest[++i]);
+      else if (words2.length && !c.line && KINDS.includes(w.toLowerCase())) c.line = w.toLowerCase();
       else if (/^\d+$/.test(w) && c.hidden === void 0 && !words2.length) c.hidden = Number(w);
       else if (/^[\p{L}\p{M}’'-]+$/u.test(w)) words2.push(w);
       else throw new Error(`\u201C${l}\u201D: a card is a latest act, a position and a summary, then what its app adds (a count and its name)`);
@@ -6023,6 +6030,23 @@ function clockDeclaration(c) {
   const ref = (r) => [unhex(r.cmip), cborDecode(unhex(r.params))];
   return { spec: MIRS.money, kind: CLOCK_KIND, cbor: cborEncode([ref(c.main), ...c.backup ? [ref(c.backup)] : []]) };
 }
+function lineFor(f, isPublic) {
+  if (f.cites) return f.sequence;
+  if (!f.split) {
+    if (f.sequence.length) f.earlier = f.sequence;
+    f.sequence = [];
+    f.private = [];
+    f.split = true;
+  }
+  return isPublic ? f.sequence : f.private ??= [];
+}
+function ownLines(f) {
+  return [f.sequence, f.private ?? [], f.earlier ?? []].filter((l) => l.length);
+}
+function ownIds(f) {
+  return ownLines(f).flat();
+}
+var HELD_ELSEWHERE_SAY = "This identity\u2019s signing key is not held by this app: it is signed for by Ki\u0161ib\u2019s runner, and this act cannot be signed that way here. Nothing was signed.";
 var AGREEMENTS_RECORD = 17;
 var b64 = (b) => base64(b);
 var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -6031,6 +6055,8 @@ var TestIdentity = class _TestIdentity {
     this.f = f;
     this.via = via;
   }
+  /** Where this file holds no signing key: who signs for it (the Dubsar runner cMIP). Never saved with the file. */
+  signer;
   get id() {
     return this.f.identity;
   }
@@ -6125,15 +6151,28 @@ var TestIdentity = class _TestIdentity {
     return this.submitChainAct(this.chainActs()[0], this.f.homes);
   }
   // ------------------------------------------------------------ everyday acts
-  everyday(spec, type, payload, opts) {
-    if (opts.acks?.length && !ACK_SPECS.includes(spec)) {
+  /** The objects an everyday act carries: a collective's action cites the decision it acts under, after the entries its type defines (F127). */
+  everydayObjects(spec, type, objects, acks) {
+    if (acks?.length && !ACK_SPECS.includes(spec)) {
       throw new Error("only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act");
     }
     const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
-    let objects = opts.objects;
     if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
       objects = [...objects ?? [], ...this.f.cites.map((d) => [this.f.identity, d])];
     }
+    return objects;
+  }
+  /** After an act is made: on its line, waiting for the homes if private, a record cited next. */
+  everydayMade(spec, type, isPublic, line, made) {
+    line.push(made.id);
+    if (!isPublic && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
+    if (this.f.cites && spec === MIRS.agreements && type === AGREEMENTS_RECORD) this.f.cites = [made.id];
+    return made;
+  }
+  everyday(spec, type, payload, opts) {
+    if (!this.f.signingSecret) throw new Error(HELD_ELSEWHERE_SAY);
+    const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
+    const line = lineFor(this.f, opts.public);
     const made = makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
       signer: this.f.identity,
@@ -6141,17 +6180,40 @@ var TestIdentity = class _TestIdentity {
       spec,
       type,
       payload,
-      sequence: this.f.sequence,
+      sequence: line,
       public: opts.public,
       to: opts.to,
       objects,
       refs: opts.refs,
       acks: opts.acks
     });
-    this.f.sequence.push(made.id);
-    if (!opts.public && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
-    if (this.f.cites && isRecord) this.f.cites = [made.id];
-    return made;
+    return this.everydayMade(spec, type, opts.public, line, made);
+  }
+  /**
+   * An everyday act signed here, or, where this file holds no signing key,
+   * by its `signer` (Kišib's runner, which may wait for the person's click).
+   * The line is the same either way. One act at a time: the caller keeps
+   * signing serial, as every app does.
+   */
+  async everydayNow(spec, type, payload, opts) {
+    if (this.f.signingSecret || !this.signer) return this.everyday(spec, type, payload, opts);
+    const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
+    const line = lineFor(this.f, opts.public);
+    const made = await this.signer({
+      identity: this.f.identity,
+      binding: this.f.binding,
+      line: this.f.cites ? "public" : opts.public ? "public" : "private",
+      sequence: [...line],
+      spec,
+      type,
+      payload,
+      public: opts.public,
+      ...opts.to ? { to: opts.to } : {},
+      ...objects ? { objects } : {},
+      ...opts.refs ? { refs: opts.refs } : {},
+      ...opts.acks ? { acks: opts.acks } : {}
+    });
+    return this.everydayMade(spec, type, opts.public, line, made);
   }
   /** Send an everyday identity act to every home: its standing depends on it (Envelopes, "How acts reach people"). */
   async toHomes(act) {
@@ -6173,7 +6235,7 @@ var TestIdentity = class _TestIdentity {
   async publishRoutes(routes) {
     const version = (this.f.routes?.version ?? 0) + 1;
     const payload = routesPayload({ version, previous: this.f.routes?.act, routes });
-    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
+    const made = await this.everydayNow(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
     this.f.routes = { version, act: made.id };
     return { id: made.id, sent: await this.toHomes(made.act) };
   }
@@ -6190,8 +6252,8 @@ var TestIdentity = class _TestIdentity {
       throw new Error("a witness act is signed only after the owner was shown what it does (Identity rule 18c)");
     }
     if (!acts.length) throw new Error("a witness act names at least one act");
-    if (acts.some((a) => this.f.sequence.includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
-    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(/* @__PURE__ */ new Map()), { public: true, acks: acts });
+    if (acts.some((a) => ownIds(this.f).includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
+    const made = await this.everydayNow(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(/* @__PURE__ */ new Map()), { public: true, acks: acts });
     const sent = await this.toHomes(made.act);
     for (const hint of opts.relays ?? []) await relayAt(hint, this.via).putAct(made.act);
     return { id: made.id, act: made.act, sent };
@@ -6207,7 +6269,7 @@ var TestIdentity = class _TestIdentity {
     const version = (last?.version ?? 0) + 1;
     const secret = given ?? newEncryptionSecret();
     const payload = encryptionKeyPayload(version, last?.act, xwingPublic(secret));
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
+    const made = await this.everydayNow(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
     this.f.encryption.push({ version, act: made.id, secret: hex(secret) });
     return { id: made.id, sent: await this.toHomes(made.act) };
   }
@@ -6226,7 +6288,7 @@ var TestIdentity = class _TestIdentity {
     } catch {
     }
     const at = [.../* @__PURE__ */ new Set([...homes, ...routed, ...o.hints ?? []])];
-    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: this.f.sequence, acts: await actsBy(this.f.identity, at, this.via), specs: o.specs });
+    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: ownLines(this.f), acts: await actsBy(this.f.identity, at, this.via), specs: o.specs });
   }
   /**
    * What a rotation would keep (Identity rule 35, client conformance): the
@@ -6462,7 +6524,7 @@ var TestIdentity = class _TestIdentity {
     const inbox = them.inbox(SPECS.envelopes);
     if (!inbox) throw new Error("that identity declares no inbox");
     const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, {
+    const made = await this.everydayNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, {
       public: false,
       to: [opts.to]
     });
@@ -6480,7 +6542,7 @@ var TestIdentity = class _TestIdentity {
   /** Deliver a content key to a bare key someone supplied, found by its pickup tag. */
   async deliverKeyToBare(opts) {
     const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, { public: false });
+    const made = await this.everydayNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, { public: false });
     const sealed = sealFor(made.act, made.key, [{ key: opts.bareKey }]);
     for (const hint of opts.relays) await relayAt(hint, this.via).putSealed(sealed, [pickupTag(opts.bareKey)]);
     return { delivery: made.id, sealed: sealedId(sealed) };
@@ -6493,6 +6555,10 @@ var TestIdentity = class _TestIdentity {
   sign(spec, type, payload, opts) {
     return this.everyday(spec, type, payload, opts);
   }
+  /** As `sign`, by the runner where this file holds no signing key (the Dubsar runner cMIP). */
+  signNow(spec, type, payload, opts) {
+    return this.everydayNow(spec, type, payload, opts);
+  }
   /**
    * Sign a private act on a line of its own (one act, first in its line),
    * outside this identity's sequence, never left at its homes: for an act
@@ -6502,6 +6568,7 @@ var TestIdentity = class _TestIdentity {
    * soon after it is made.
    */
   signApart(spec, type, payload, opts = {}) {
+    if (!this.f.signingSecret) throw new Error(HELD_ELSEWHERE_SAY);
     return makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
       signer: this.f.identity,
@@ -6515,12 +6582,17 @@ var TestIdentity = class _TestIdentity {
       refs: opts.refs
     });
   }
+  /** As `signApart`, by the runner where this file holds no signing key: the act on its line of its own (`apart`). */
+  async signApartNow(spec, type, payload, opts = {}) {
+    if (this.f.signingSecret || !this.signer) return this.signApart(spec, type, payload, opts);
+    return this.signer({ identity: this.f.identity, binding: this.f.binding, line: "apart", sequence: [], spec, type, payload, public: false, ...opts.to ? { to: opts.to } : {}, ...opts.refs ? { refs: opts.refs } : {} });
+  }
   /**
    * Publish an act on this identity's own relays, for example a private
    * post whose key it will deliver. Returns the act id and its content key.
    */
   async publish(spec, type, payload, opts) {
-    const made = this.everyday(spec, type, payload, {
+    const made = await this.everydayNow(spec, type, payload, {
       public: opts.public,
       to: opts.to,
       objects: opts.objects,
@@ -6542,7 +6614,7 @@ var TestIdentity = class _TestIdentity {
    * Homes that do not answer are skipped: silence proves nothing.
    */
   async unrecognised() {
-    const known = /* @__PURE__ */ new Set([...this.f.sequence, ...this.chainActs().map((a) => actId(a))]);
+    const known = /* @__PURE__ */ new Set([...ownIds(this.f), ...this.chainActs().map((a) => actId(a))]);
     const out = [];
     const seen = /* @__PURE__ */ new Set();
     for (const h of this.f.homes) {
@@ -6642,9 +6714,9 @@ function sealFor(act, key, recipients) {
   recipients.forEach((r, i) => record({ kind: "encapsulate", publicKey: r.key, eseed: eseeds[i], ct: parts.capsules[i] }));
   return sealed;
 }
-function failure(home, e3) {
-  if (e3 instanceof RelayError) return { home, error: e3.reason, code: e3.code };
-  return { home, error: String(e3) };
+function failure(home2, e3) {
+  if (e3 instanceof RelayError) return { home: home2, error: e3.reason, code: e3.code };
+  return { home: home2, error: String(e3) };
 }
 
 // ../repo/src/specs.ts
@@ -6692,29 +6764,30 @@ var SPLIT_CMIP = sha2562("split cMIP, draft 2, test value until publication");
 // ../genesis/src/private.ts
 function ownKey(me) {
   const e3 = me.f.encryption[me.f.encryption.length - 1];
-  return e3 ? xwingPublic(unhex(e3.secret)) : null;
+  if (!e3) return null;
+  return e3.secret ? xwingPublic(unhex(e3.secret)) : e3.public ? unhex(e3.public) : null;
 }
 async function leaveAtHomes(me, made, o = {}) {
   const via = o.via ?? me.via;
   const key = o.sealed || o.lockedOnly ? null : ownKey(me);
   const to = describeAct(made.act).to ?? [];
-  let copy = null;
-  if (key && to.length === 1 && to[0] === me.f.identity) copy = { sealed: sealFor(made.act, made.key, [{ id: me.f.identity, key }]), tags: [] };
-  else if (key && !to.length) copy = { sealed: sealFor(made.act, made.key, [{ key }]), tags: [pickupTag(key)] };
+  let copy2 = null;
+  if (key && to.length === 1 && to[0] === me.f.identity) copy2 = { sealed: sealFor(made.act, made.key, [{ id: me.f.identity, key }]), tags: [] };
+  else if (key && !to.length) copy2 = { sealed: sealFor(made.act, made.key, [{ key }]), tags: [pickupTag(key)] };
   else if (key) {
-    const kd = me.signApart(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.f.identity] });
-    copy = { sealed: sealFor(kd.act, kd.key, [{ id: me.f.identity, key }]), tags: [] };
+    const kd = await me.signApartNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.f.identity] });
+    copy2 = { sealed: sealFor(kd.act, kd.key, [{ id: me.f.identity, key }]), tags: [] };
   }
   const took = [];
   for (const h of me.f.homes) {
     try {
       await relayAt(h.hint, via).putAct(made.act);
-      if (copy) await relayAt(h.hint, via).putSealed(copy.sealed, copy.tags);
+      if (copy2) await relayAt(h.hint, via).putSealed(copy2.sealed, copy2.tags);
       took.push(h.hint);
     } catch {
     }
   }
-  if (took.length && (o.sealed || o.lockedOnly || copy) && me.f.unsent?.[made.id]) delete me.f.unsent[made.id];
+  if (took.length && (o.sealed || o.lockedOnly || copy2) && me.f.unsent?.[made.id]) delete me.f.unsent[made.id];
   return took;
 }
 
@@ -6921,11 +6994,11 @@ function readChanges(beforePayload, afterPayload, names) {
   for (const id of ids) {
     const b = before.areas.find((a2) => a2.id === id);
     const a = after.areas.find((x) => x.id === id);
-    const held = (x) => x.holders.length ? `any ${x.threshold} of ${list(x.holders.map(names))}` : "nobody: frozen";
-    if (!b && a) out.push({ text: `A new area, \u201C${a.name}\u201D (area ${id}): ${held(a)}.` });
+    const held2 = (x) => x.holders.length ? `any ${x.threshold} of ${list(x.holders.map(names))}` : "nobody: frozen";
+    if (!b && a) out.push({ text: `A new area, \u201C${a.name}\u201D (area ${id}): ${held2(a)}.` });
     else if (b && !a) out.push({ text: `The \u201C${b.name}\u201D area (area ${id}) is dropped.`, tone: "warn" });
     else if (a && b && JSON.stringify(a) !== JSON.stringify(b)) {
-      out.push({ text: `The \u201C${a.name}\u201D area (area ${id}) is now decided by ${held(a)} (was ${held(b)}).` });
+      out.push({ text: `The \u201C${a.name}\u201D area (area ${id}) is now decided by ${held2(a)} (was ${held2(b)}).` });
     }
   }
   const rule = (r, parties) => ruleWords(r, parties, names);
@@ -7753,6 +7826,37 @@ var CollectiveSitting = class _CollectiveSitting {
 function orderedChain(rd) {
   return rd.look.resolution.links.map((l) => rd.chainActs.get(l.act)).filter(Boolean);
 }
+async function checkShare(a) {
+  const papers = a.papers.filter((p) => p.number.trim() || p.words.trim()).map((p) => paperOf(p.number, p.words));
+  if (!papers.length) throw new Error("Give a share: its number and its 24 words.");
+  try {
+    const c = await readCollective(readId(a.collective), addresses(a.address), a.via);
+    const lines2 = [{ text: `The words of ${papers.length === 1 ? "this share are" : "these shares are"} written right: their checksum holds.`, tone: "ok" }];
+    for (const p of papers) {
+      if (p.x > c.holders.length) {
+        lines2.push({ text: `Share ${p.x}: this collective deals ${c.holders.length} shares, so there is no share ${p.x}. Copied wrong, or another collective\u2019s.`, tone: "bad" });
+        continue;
+      }
+      lines2.push({ text: `Share ${p.x} of ${c.holders.length}, held by ${short3(c.holders[p.x - 1])} by the agreement in force; any ${c.threshold} shares rebuild its chain key.` });
+    }
+    const xs = new Set(papers.map((p) => p.x));
+    if (xs.size !== papers.length) throw new Error("Two of these papers carry the same number: each share once.");
+    if (papers.length >= c.threshold) {
+      try {
+        const rebuilt = rebuildChainKeyFromPaper({ seedModule: "words", scheme: c.scheme, index: c.index, commit: c.commit, papers: papers.slice(0, c.threshold).map((p) => ({ x: p.x, value: p.value })) });
+        wipe(rebuilt.seeds);
+        lines2.push({ text: `These ${c.threshold} papers rebuild the chain key the collective\u2019s chain commits to now (key ${c.index}): right, and current. The key was overwritten at once; nothing was signed.`, tone: "ok" });
+      } catch {
+        lines2.push({ text: `These ${c.threshold} papers do not rebuild the chain key the collective\u2019s chain commits to now: one is copied wrong, or of an earlier dealing (a rotation since dealt new shares). Which one cannot be told. Nothing was signed.`, tone: "bad" });
+      }
+    } else {
+      lines2.push({ text: `One paper alone cannot be checked against the key: its blinding is not on paper, so only ${c.threshold} papers together say whether they rebuild it. Give ${c.threshold - papers.length} more here, in the same room, to check them (nothing is signed).`, tone: "warn" });
+    }
+    return { title: "A paper share, checked", lines: lines2 };
+  } finally {
+    wipe(...papers.map((p) => p.value));
+  }
+}
 
 // src/kishib.ts
 var SPENT_PAPER_SAY = (position) => `These are an earlier chain-key paper of this identity: the change of its keys at position ${position + 1} used it and committed a key of a new paper, so it changes these keys no more. Use the newest paper, the chain key\u2019s words Ki\u0161ib showed at the last change. Nothing was signed, and the words are forgotten.`;
@@ -7764,6 +7868,16 @@ var PAPER_LINES = [
 var LAST_OF_OLD_PAPER_SAY = "This paper already made an earlier change of these keys: until 21 October 2026 Ki\u0161ib reused one paper for every change. This change is its last. It commits a key of a new paper, whose words are shown once the homes\u2019 receipts are in; this paper is spent after it.";
 var message5 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var short4 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var MADE_CHAIN_WORDS_SAY = [
+  "These are the chain key\u2019s words of a new identity: its first paper, made now on this device. They are the only way ever to change its keys, here in Ki\u0161ib.",
+  "Write them on paper, in order, and keep it apart from everything that goes online. Never type them into Dub, Edubba, Damgar or a wallet: only Ki\u0161ib takes them.",
+  "They are shown once. When you say they are written, they are hidden, three are asked back, and Ki\u0161ib forgets them; only then is the identity signed and sent to its homes. Closed before, nothing was made, and this paper is worthless."
+];
+var MADE_WORDS_SAY = [
+  "These are the new identity\u2019s signing key\u2019s words: whoever holds them can sign as it and read its private messages. They are not the chain key\u2019s words.",
+  "Write them on paper, in order. Bring the identity into Dub, Edubba, Damgar or Ummia with its ID and these words; or give them to Ki\u0161ib\u2019s runner (Runner, Identities held here), on this Mac.",
+  "They are shown once. When you say they are written, they are hidden, three are asked back, and Ki\u0161ib forgets them: it keeps nothing of the identity."
+];
 var PLAN_LIFE = 15 * 60 * 1e3;
 var Kishib = class {
   plans = /* @__PURE__ */ new Map();
@@ -8069,8 +8183,8 @@ var Kishib = class {
   async send() {
     const h = this.held;
     const lines2 = [];
-    for (const home of h.homes) {
-      lines2.push(await put(home.hint, h.bytes, h.before));
+    for (const home2 of h.homes) {
+      lines2.push(await put(home2.hint, h.bytes, h.before));
     }
     for (const w of h.with) {
       for (const hint of w.to) {
@@ -8135,11 +8249,11 @@ var Kishib = class {
     h.positions = void 0;
     if (h.chain) {
       h.stage = "paper";
-      return { words: toWords(h.chain), say: NEW_CHAIN_WORDS_SAY, which: "chain" };
+      return { words: toWords(h.chain), say: h.kind === "make" ? MADE_CHAIN_WORDS_SAY : NEW_CHAIN_WORDS_SAY, which: "chain" };
     }
     if (h.stage === "sent") throw new Error("Not yet: the new signing key\u2019s words are shown once the homes\u2019 receipts are in, so they are never words of a key that does not count.");
     h.stage = "counts";
-    return { words: toWords(h.signing), say: NEW_WORDS_SAY, which: "signing" };
+    return { words: toWords(h.signing), say: h.kind === "make" ? MADE_WORDS_SAY : NEW_WORDS_SAY, which: "signing" };
   }
   /** Hide the words; three positions to type back. */
   written() {
@@ -8176,7 +8290,10 @@ var Kishib = class {
       await sign();
       h.stage = "sent";
       await this.send();
-      h.lines = [{ text: "The new chain key\u2019s words are written and forgotten here; then the change was signed and sent. Once the homes accept it, the new paper is the one that counts and the old one is spent: destroy it then.", tone: "ok" }, ...h.lines];
+      h.lines = [
+        h.kind === "make" ? { text: "The chain key\u2019s words are written and forgotten here; then the identity was signed and sent to its homes. Its signing key\u2019s words come once their receipts are in.", tone: "ok" } : { text: "The new chain key\u2019s words are written and forgotten here; then the change was signed and sent. Once the homes accept it, the new paper is the one that counts and the old one is spent: destroy it then.", tone: "ok" },
+        ...h.lines
+      ];
       return this.state();
     }
     wipe(h.signing);
@@ -8186,6 +8303,100 @@ var Kishib = class {
     h.stage = "done";
     h.lines = [...h.lines, { text: "The new signing key is forgotten here. Ki\u0161ib holds nothing of this identity now: only your two new papers do, the chain key\u2019s and the signing key\u2019s.", tone: "ok" }];
     return this.state();
+  }
+  // ------------------------------------------------------------ make an identity (H48)
+  /**
+   * Review a new identity (H48: "Kišib is an ID hub and should allow to
+   * create new identities"): its homes, its relays, a chain key from a new
+   * paper and a signing key, made as Dub makes one. Confirmed, the paper's
+   * words come first, written and three typed back before anything is
+   * signed; then its genesis, routes and encryption key (the one its signing
+   * words carry, so every app bringing it opens its messages) are signed and
+   * sent; once the homes' receipts are in, its signing key's words are shown
+   * once. Kišib keeps nothing of it.
+   */
+  async makePlan(a) {
+    this.busy();
+    const via = a.via ?? {};
+    const hints = addresses(a.homes);
+    const relays = a.relays.trim() ? addresses(a.relays) : hints;
+    const homes = [];
+    for (const hint of hints) {
+      let info;
+      try {
+        info = await relayAt(hint, via).info();
+      } catch (e3) {
+        throw new Error(`${hint} did not answer: ${message5(e3)}. Nothing was made.`);
+      }
+      const op = info.get(0);
+      if (!(op instanceof Uint8Array)) throw new Error(`${hint} is not a home: it declares no operator. Nothing was made.`);
+      homes.push({ operator: hex(op), hint });
+    }
+    const sections2 = [
+      {
+        heading: "What is made",
+        lines: [
+          { text: `A new identity, living at ${hints.join(", ")}: its homes keep its chain and sign their receipts.` },
+          { text: `Its relays, where its posts are published and its inbox is: ${relays.join(", ")}.` },
+          { text: "A chain key, from a new paper made now on this device (key 0 of its words). Its 24 words are shown first: you write them down and type three back, and only then is the identity signed and sent.", tone: "warn" },
+          { text: "A signing key, made now. Its words are shown once the homes\u2019 receipts are in: bring the identity into the apps with them, or give them to Ki\u0161ib\u2019s runner.", tone: "warn" },
+          { text: "Its encryption key, the one its signing words carry: every app bringing it opens its private messages." },
+          { text: "Ki\u0161ib keeps nothing of it: once both papers are written, it forgets them.", tone: "ok" }
+        ]
+      }
+    ];
+    const signs2 = ["Once the paper\u2019s three words are typed back, Ki\u0161ib signs the identity\u2019s genesis with its new signing key, committing the paper\u2019s chain key, and its routes and encryption key; then sends them to its homes and relays."];
+    const digest = sha2562(cborEncode(["MOR Ki\u0161ib new identity, version 1", homes.map((h) => [h.operator, h.hint]), relays]));
+    return this.plan(
+      { digest, title: "Make an identity", summary: ["A test identity, made as Dub makes one: its chain key on paper, its signing key\u2019s words for the apps.", FORGOTTEN_SAY], sections: sections2, signs: signs2, warning: null, blocking: [] },
+      {
+        wipe: () => void 0,
+        run: async () => {
+          const fresh = freshSeed();
+          const signing = newSigningSecret();
+          const key = chainKeyAt(fresh, 3, 0);
+          const commit = { scheme: key.scheme, commit: key.commit };
+          wipe(key.seeds);
+          const h = {
+            kind: "make",
+            id: "",
+            bytes: null,
+            act: null,
+            homes,
+            before: [],
+            with: [],
+            places: [...hints, ...relays],
+            signing,
+            chain: fresh,
+            stage: "paper",
+            title: "A new identity: first, its paper",
+            lines: [{ text: "Nothing is signed yet. First, the chain key\u2019s words: write them down, then type three back. Only then does Ki\u0161ib sign the identity and send it.", tone: "warn" }],
+            sign: async () => {
+              const genesis = makeGenesis({ identitySpec: SPECS.identity, signingSecret: signing, chainKeyScheme: commit.scheme, chainKeyCommit: commit.commit, homes });
+              const id = actId(genesis);
+              const t = holding(id, id, signing, [genesis], homes);
+              const routes = t.sign(SPECS.identity, IDENTITY_TYPES.routes, routesPayload({ version: 1, routes: [{ scope: null, hints: relays, kind: 0 }, { scope: null, hints: relays, kind: 1 }] }), { public: true });
+              const enc = t.sign(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, encryptionKeyPayload(1, void 0, xwingPublic(encryptionSecret(signing))), { public: true });
+              h.id = id;
+              h.act = id;
+              h.bytes = genesis;
+              h.with = [
+                { bytes: genesis, to: relays },
+                { bytes: routes.act, to: [...hints, ...relays] },
+                { bytes: enc.act, to: [...hints, ...relays] }
+              ];
+              h.title = `A new identity, ${short4(id)}`;
+            }
+          };
+          this.held = h;
+          return this.sitting();
+        }
+      }
+    );
+  }
+  /** A collective's paper share checked (accepted, new): its words, its number among the holders, and, with enough papers, the key they rebuild. Nothing is signed. */
+  async checkShare(a) {
+    return checkShare({ ...a, via: a.via ?? {} });
   }
   // ------------------------------------------------------------ must: escape a contested position (F299)
   /**
@@ -8582,6 +8793,13 @@ async function run(k, op, a) {
       return k.checkWords({ id: text(a.id), address: text(a.address), words: text(a.words) });
     case "record":
       return k.record({ id: text(a.id), address: text(a.address) });
+    case "make plan":
+      return k.makePlan({ homes: text(a.homes), relays: text(a.relays) });
+    case "check share": {
+      const numbers = Array.isArray(a.numbers) ? a.numbers.map(String) : [text(a.number)];
+      const words2 = Array.isArray(a.shares) ? a.shares.map(String) : [text(a.shareWords)];
+      return k.checkShare({ collective: text(a.collective), address: text(a.address), papers: numbers.map((n, i) => ({ number: n, words: words2[i] ?? "" })) });
+    }
     case "rotate plan":
       return k.rotatePlan({ id: text(a.id), address: text(a.address), words: text(a.words), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list2(a.leaveOut), cards: text(a.cards), vault: vaultOf(a) });
     case "escape plan":
@@ -8620,11 +8838,6 @@ async function run(k, op, a) {
     default:
       throw new Error(`unknown operation ${op}`);
   }
-}
-
-// ../manage/src/view.ts
-function e(s) {
-  return String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
 // ../kit/src/style.ts
@@ -8880,6 +9093,62 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 `;
 
 // ../kit/src/html.ts
+var e = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+function shortForm(form2) {
+  const one = form2.indexOf("1");
+  if (one < 0 || form2.length < one + 10) return form2;
+  return `${form2.slice(0, one + 4)}\u2026${form2.slice(-3)}`;
+}
+function card(a, o = {}) {
+  const s = a.signer;
+  const name = s.name ?? (s.collective ? "a collective" : "");
+  const signer = `<button type="button" class="k-signer" data-k-menu="signer" aria-haspopup="menu"><span class="k-sid">${e(shortForm(s.form))}</span>${name ? `<span class="k-nm" dir="auto">${e(name)}</span>` : ""}${s.ownName && s.ownName !== s.name ? `<span class="k-dn" dir="auto">\u201C${e(s.ownName)}\u201D</span>` : ""}${a.of ? `<span class="k-of" dir="auto">of ${e(a.of)}</span>` : ""}${s.me ? '<span class="k-dn">you</span>' : ""}</button>`;
+  const labels = (a.labels ?? []).map((l) => `<div class="k-label${l.tone === "bad" ? " k-bad" : l.tone === "warn" ? " k-warn" : ""}">${e(l.text)}</div>`).join("");
+  const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : "";
+  const text2 = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? "")}</div>` : "";
+  const foot = `<div class="k-foot">${a.verified && !a.alarm ? '<span class="k-v" title="verified">\u2713</span>' : ""}${a.alarm ? `<span class="k-alarmline">${e(a.alarm)}</span>` : ""}<button type="button" class="k-actid" data-k-menu="act" aria-haspopup="menu">${e(shortForm(a.form))}</button></div>`;
+  return `<article class="k-act${o.selected ? " k-sel" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${labels}${text2}${a.html ?? ""}${foot}</article>`;
+}
+function signerMenu(app2, w, own) {
+  const below = w.me ? own : [w.followed ? { key: "unfollow", label: "Following: remove from contacts" } : { key: "follow", label: "Follow: add to contacts" }, ...own, w.muted ? { key: "unmute", label: "Unmute" } : { key: "mute", label: "Mute" }];
+  return menu(`${w.name ? `${w.name} \xB7 ` : ""}${shortForm(w.form)}`, [
+    { key: "copy-id", label: "Copy ID" },
+    { key: "copy-link", label: "Copy ID link" },
+    { key: "profile", label: "Open profile" }
+  ], app2, below);
+}
+function actMenu(app2, a, own, signs2 = true) {
+  const opens = a.corrects ? "Open what it corrects" : "Open what it answers";
+  const every = signs2 ? [{ key: "rely", label: "Rely on it" }, { key: "anchor", label: "Anchor it" }, ...a.own ? [{ key: "correct", label: "Correct it" }] : []] : [];
+  return menu(shortForm(a.form), [
+    { key: "copy-act", label: "Copy act ID" },
+    { key: "open", label: opens, disabled: !a.answers && !a.corrects, hint: !a.answers && !a.corrects ? "nothing" : void 0 },
+    { key: "why", label: "Why it\u2019s valid" }
+  ], app2, [...own.before, ...every, ...own.after]);
+}
+function menu(title, take, app2, below) {
+  const item = (m) => `${m.line ? "<hr>" : ""}<button type="button" role="menuitem" data-k-item="${e(m.key)}"${m.disabled ? " disabled" : ""}>${e(m.label)}${m.hint ? `<span class="k-k">${e(m.hint)}</span>` : ""}</button>`;
+  return `<div class="k-pop" role="menu"><div class="k-t">${e(title)}</div>${take.map(item).join("")}${below.length ? `<hr><div class="k-own">${e(app2)}\u2019s own</div>${below.map(item).join("")}` : ""}</div>`;
+}
+function top(o) {
+  return `<header class="k-top">${o.left}<span class="k-grow"></span>${o.center ?? ""}<span class="k-grow"></span>${o.right}</header>`;
+}
+function appMark(name, icon) {
+  return `<div class="k-app">${icon ? `<img src="${e(icon)}" alt="">` : ""}<span class="k-nm">${e(name)}</span></div>`;
+}
+var danger = (l) => `<span class="k-dm k-l${l}" title="danger ${l} of 3" aria-label="danger ${l} of 3"><i></i><i></i><i></i></span>`;
+function tiles(ts) {
+  return `<div class="k-home">${ts.map((t) => `<button type="button" class="k-tile k-d${t.danger}${t.alert ? " k-alarm" : ""}" data-k-tile="${e(t.key)}">${ICONS[t.icon]}${danger(t.danger)}<h2>${e(t.name)}</h2><p>${e(t.say)}</p>${t.alert ? `<span class="k-alert">${e(t.alert)}</span>` : ""}</button>`).join("")}</div>`;
+}
+function opened(column2, on, pane) {
+  const col = column2.map((c) => c === "-" ? '<div class="k-sep"></div>' : typeof c === "string" ? `<h3>${e(c)}</h3>` : `<button type="button" data-k-col="${e(c.key)}" class="${c.key === on ? "k-on" : ""}">${e(c.label)}${c.k != null ? `<span class="k-k">${e(c.k)}</span>` : ""}</button>`).join("");
+  return `<div class="k-body k-opened${on ? " k-chosen" : ""}"><aside class="k-col">${col}</aside><section class="k-pane"><button type="button" class="k-back" data-k-back="column">\u2190 Back</button>${pane}</section></div>`;
+}
+function say2(line, more) {
+  const rest = Array.isArray(more) ? more.map((m) => `<p>${e(m)}</p>`).join("") : more;
+  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text">${rest}</div></details>`;
+}
+var note = (kind, html) => `<div class="k-note${kind ? ` k-${kind}` : ""}" role="status">${html}</div>`;
 var SVG = (d) => `<svg class="k-ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 var ICONS = {
   identities: SVG('<circle cx="24" cy="17" r="8"/><path d="M9 41c2-9 8-13 15-13s13 4 15 13"/>'),
@@ -8898,6 +9167,211 @@ var ICONS = {
   publish: SVG('<path d="M10 40h28M24 32V8M15 17l9-9 9 9"/>'),
   choose: SVG('<path d="M8 12l3 3 6-6M8 24l3 3 6-6M8 36l3 3 6-6M22 12h18M22 24h18M22 36h18"/>')
 };
+
+// ../kit/src/dom.ts
+async function copy(text2) {
+  try {
+    await navigator.clipboard.writeText(text2);
+    return true;
+  } catch {
+    try {
+      const t = document.createElement("textarea");
+      t.value = text2;
+      t.setAttribute("readonly", "");
+      t.className = "k-offscreen";
+      document.body.append(t);
+      t.select();
+      const ok = document.execCommand("copy");
+      t.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+var openMenu = null;
+function closeMenu() {
+  if (!openMenu) return;
+  openMenu.pop.remove();
+  openMenu.button.classList.remove("k-open");
+  openMenu.button.setAttribute("aria-expanded", "false");
+  openMenu.done?.();
+  openMenu = null;
+}
+function place(pop, button, prefer) {
+  const r = button.getBoundingClientRect();
+  const w = pop.offsetWidth;
+  const h = pop.offsetHeight;
+  const vw = document.documentElement.clientWidth;
+  const vh = document.documentElement.clientHeight;
+  let left = prefer === "above" ? r.right - w : r.left;
+  left = Math.max(8, Math.min(left, vw - w - 8));
+  let topAt = prefer === "below" ? r.bottom + 6 : r.top - h - 6;
+  if (topAt + h > vh - 8) topAt = r.top - h - 6;
+  if (topAt < 8) topAt = Math.min(r.bottom + 6, vh - h - 8);
+  pop.style.left = `${Math.round(left)}px`;
+  pop.style.top = `${Math.round(Math.max(8, topAt))}px`;
+}
+function popAt(button, html, prefer, pick, done) {
+  closeMenu();
+  const holder = document.createElement("div");
+  holder.innerHTML = html;
+  const pop = holder.firstElementChild;
+  (button.closest(".k-page") ?? document.body).append(pop);
+  place(pop, button, prefer);
+  button.classList.add("k-open");
+  button.setAttribute("aria-expanded", "true");
+  openMenu = { pop, button, done };
+  pop.addEventListener("click", (ev) => {
+    const item = ev.target.closest("button[data-k-item]");
+    if (!item || item.disabled) return;
+    ev.stopPropagation();
+    pick(item.dataset.kItem, item);
+  });
+  pop.querySelector("button:not([disabled])")?.focus({ preventScroll: true });
+  return pop;
+}
+async function copied(item, text2) {
+  const ok = await copy(text2);
+  const k = document.createElement("span");
+  k.className = "k-k";
+  k.textContent = ok ? "copied" : "select it: copying refused";
+  item.querySelector(".k-k")?.remove();
+  item.append(k);
+  item.dataset.kCopied = ok ? "yes" : "no";
+  setTimeout(closeMenu, ok ? 450 : 2400);
+}
+function attachCards(root, host) {
+  root.addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-k-menu]");
+    if (!b) return;
+    const card2 = b.closest("[data-k-act]");
+    if (!card2) return;
+    ev.stopPropagation();
+    if (openMenu?.button === b) return closeMenu();
+    const a = host.act(card2.dataset.kAct);
+    if (!a) return;
+    const which = b.dataset.kMenu;
+    card2.classList.add("k-sel");
+    const html = which === "signer" ? signerMenu(host.app, a.signer, host.signerItems(a)) : actMenu(host.app, a, host.actItems(a), host.signs !== false);
+    popAt(
+      b,
+      html,
+      which === "signer" ? "below" : "above",
+      (key, item) => {
+        if (key === "copy-id") return void copied(item, a.signer.form);
+        if (key === "copy-link") return void copied(item, a.signer.link);
+        if (key === "copy-act") return void copied(item, a.form);
+        closeMenu();
+        host.choose(key, a, card2);
+      },
+      () => card2.classList.remove("k-sel")
+    );
+  });
+}
+function attachClosing(doc = document) {
+  doc.addEventListener("click", (ev) => {
+    if (!openMenu) return;
+    const t = ev.target;
+    if (openMenu.pop.contains(t) || openMenu.button.contains(t)) return;
+    closeMenu();
+  });
+  doc.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape") return;
+    if (openMenu) return closeMenu();
+    if (panel) return closePanel();
+    popup?.close();
+  });
+}
+var panel = null;
+function closePanel() {
+  if (!panel) return;
+  closeMenu();
+  panel.el.remove();
+  panel.shade.remove();
+  panel.done?.();
+  panel = null;
+}
+var Popup = class {
+  constructor(page, drawn = () => void 0) {
+    this.page = page;
+    this.drawn = drawn;
+  }
+  stack = [];
+  shade = null;
+  box = null;
+  scroll = [];
+  get open() {
+    return !!this.box;
+  }
+  /** Open with this content, or, when open, put it in place of what is shown (Back returns). */
+  show(title, html) {
+    if (!this.box) {
+      for (const st of this.page.querySelectorAll(".k-status")) if (st.querySelector(".k-done")) st.innerHTML = "";
+      this.scroll = [...this.page.querySelectorAll(".k-feed")].map((el) => ({ el, top: el.scrollTop }));
+      this.shade = document.createElement("div");
+      this.shade.className = "k-shade";
+      this.shade.addEventListener("click", () => this.close());
+      this.box = document.createElement("div");
+      this.box.className = "k-modal";
+      this.box.setAttribute("role", "dialog");
+      this.box.setAttribute("aria-modal", "true");
+      this.box.addEventListener("click", (ev) => {
+        const t = ev.target;
+        if (t.closest('[data-k-popup="back"]')) this.back();
+        else if (t.closest('[data-k-popup="close"]')) this.close();
+      });
+      this.page.append(this.shade, this.box);
+      popup = this;
+    }
+    this.stack.push({ title, html });
+    return this.draw();
+  }
+  /** Replace what is shown now, without a new step (content read late). */
+  replace(html) {
+    if (!this.box || !this.stack.length) return null;
+    this.stack[this.stack.length - 1].html = html;
+    return this.draw();
+  }
+  back() {
+    if (this.stack.length <= 1) return this.close();
+    this.stack.pop();
+    this.draw();
+  }
+  close() {
+    closeMenu();
+    this.box?.remove();
+    this.shade?.remove();
+    this.box = this.shade = null;
+    this.stack = [];
+    for (const s of this.scroll) s.el.scrollTop = s.top;
+    if (popup === this) popup = null;
+  }
+  draw() {
+    const now = this.stack[this.stack.length - 1];
+    const back = this.stack.length > 1 ? '<button type="button" class="k-round" data-k-popup="back" aria-label="Back">\u2190</button>' : "";
+    this.box.innerHTML = `<div class="k-mh">${back}<h3 dir="auto">${escapeText(now.title)}</h3><button type="button" class="k-round" data-k-popup="close" aria-label="Close">\xD7</button></div><div class="k-mbody">${now.html}</div>`;
+    const body = this.box.querySelector(".k-mbody");
+    this.drawn(body);
+    return body;
+  }
+};
+var popup = null;
+var escapeText = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+function attachColumn(root, chose) {
+  root.addEventListener("click", (ev) => {
+    const t = ev.target;
+    const c = t.closest("[data-k-col]");
+    const opened2 = t.closest(".k-opened");
+    if (c && opened2) {
+      opened2.querySelectorAll("[data-k-col]").forEach((x) => x.classList.toggle("k-on", x === c));
+      opened2.classList.add("k-chosen");
+      chose(c.dataset.kCol);
+      return;
+    }
+    if (t.closest('[data-k-back="column"]') && opened2) opened2.classList.remove("k-chosen");
+  });
+}
 
 // ../dub/src/page/family.ts
 var TEST_ONLY = "Test identities only, until MOR is frozen";
@@ -9052,6 +9526,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-first h2{font-size:24px;margin:8px 0 4px}
 .dub-first form{margin:6px 0}
 .dub-picked{font-size:12.5px;color:var(--k-soft)}
+.dub-code{font-size:22px;letter-spacing:.14em;color:var(--k-text);margin:6px 0}
 .dub-film{display:flex;align-items:center;gap:10px;border:1px solid var(--k-line);border-radius:12px;padding:10px 12px;margin:6px 0;font-size:14px;color:var(--k-soft)}
 .dub-sealed{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:6px 0}
 .dub-sealed img{margin:6px 0}
@@ -9091,314 +9566,648 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 }
 .dub-film .k-btn{white-space:nowrap}
 @media (min-width:601px){.dub-private .k-back{display:none}}`;
+function actFormOf(hex2, label = "mact") {
+  if (!/^[0-9a-f]{64}$/.test(hex2)) return hex2;
+  const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const bytes = hex2.match(/../g).map((b) => parseInt(b, 16));
+  const data = [];
+  let acc = 0;
+  let bits = 0;
+  for (const b of bytes) {
+    acc = acc << 8 | b;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      data.push(acc >> bits & 31);
+    }
+  }
+  if (bits) data.push(acc << 5 - bits & 31);
+  const polymod = (v) => {
+    const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
+    let chk = 1;
+    for (const x of v) {
+      const top2 = chk >> 25;
+      chk = (chk & 33554431) << 5 ^ x;
+      for (let i = 0; i < 5; i++) if (top2 >> i & 1) chk ^= G[i];
+    }
+    return chk;
+  };
+  const hrp = [...label].map((c) => c.charCodeAt(0));
+  const pm = polymod([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
+  return `${label}1${[...data, ...check].map((d) => CHARSET[d]).join("")}`;
+}
+
+// src/page/panel.ts
+var PANEL_STYLE = `
+body.k-runner-panel{margin:0;background:#0b0e14;color:var(--k-text);font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+.k-rp{padding:14px 18px 10px}
+.k-rp h3{font-weight:300;font-size:19px;margin:0 0 2px}
+.k-rp p{margin:4px 0}
+.k-rp-words{border:1px solid var(--k-edge);border-radius:10px;padding:8px 12px;margin:10px 0;max-height:40vh;overflow:auto;background:var(--k-raise)}
+.k-rp-check{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--k-text);margin:8px 0}
+.k-rp .k-btn{border-radius:999px;padding:8px 16px;font:inherit;cursor:pointer;border:1px solid var(--k-edge);background:none;color:var(--k-text)}
+.k-rp .k-btn.k-p{background:var(--k-p);color:#0a0c10;border-color:var(--k-p)}
+.k-rp .k-btn.k-q{border-color:transparent;color:var(--k-soft)}`;
 
 // src/page/view.ts
 var NAME = "Ki\u0161ib";
 var TEST_ONLY3 = "Test identities only, until MOR is frozen";
-var WEB_BANNER3 = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY3}. The risks, in plain words:</p>
+var TINT3 = { layer: APPS.kishib.colour, pastel: APPS.kishib.pastel };
+var WEB_BANNER3 = `<details class="k-say kishib-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY3}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>The words you type here are your chain key: whoever serves this page\u2019s code at that moment could copy them, and with them change your identity\u2019s keys, or keep a collective\u2019s whole key.</li>
 <li>This browser, its extensions and whatever else runs on this device see what you type. A collective\u2019s whole chain key is rebuilt in the device that rotates it.</li>
 <li>Ki\u0161ib keeps nothing in this browser\u2019s storage; but nothing can prove a device forgot what it held.</li></ol>
-<p>Use the app on a clean device for anything of value; ideally a device used for nothing else. Never here for a real identity.</p></div>`;
-var TINT3 = { layer: "#8ec5f0", line: "#24323e", edge: "#2f4150", accent: "#587995" };
-var STYLE2 = `${STYLE}
-:root{--line:${TINT3.line};--edge:${TINT3.edge};--tint:${TINT3.accent}}
-button:hover,.door:hover{border-color:var(--tint)}
-input:focus,textarea:focus{border-color:var(--tint)}
-details>summary::before{color:var(--tint)}
-.bar{border-bottom-color:var(--edge)}
-.door{display:block;width:100%;text-align:left;border:1px solid var(--edge);border-radius:14px;padding:12px 16px;margin:10px 0;background:none}
-.door strong{display:block;font-weight:400;font-size:15px;color:var(--text)}
-.door span{display:block;font-size:13px;color:var(--soft);margin-top:2px}
-.door.rare strong{color:var(--soft)}
-.review{border:1px solid var(--edge);border-radius:12px;padding:12px 14px;margin:12px 0;background:var(--raise)}
-.review h3{margin:14px 0 4px;font-size:13px;color:var(--soft)}
-.review ul{margin:4px 0;padding-left:1.1em;font-size:14px}
-.review li{margin:3px 0}
-li.bad{color:var(--bad)}
-li.ok{color:var(--text)}
-li.warn{color:var(--soft)}
-.signs{border:1px solid var(--edge);border-radius:10px;padding:10px 12px;margin:12px 0}
-.signs p{margin:4px 0;font-size:14px}
-.mustread{border:1px solid var(--bad);border-radius:12px;padding:12px 14px;margin:12px 0}
-.mustread h3{margin:0 0 6px;font-weight:400}
-.fpr{font:15px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--identity);letter-spacing:.04em}
-.full{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--soft);overflow-wrap:anywhere}`;
-var note2 = (kind, html) => `<div class="note ${kind}">${html}</div>`;
-var lines = (ls) => `<ul>${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>`;
-function testNotice(web) {
-  return web ? "" : `<div class="banner" id="test-only">${TEST_ONLY3}. Ki\u0161ib writes nothing of your words to this device; what it holds for an act lives in the program\u2019s memory, and is gone when it stops.</div>`;
+<p>Use the app on a clean device for anything of value; ideally a device used for nothing else. Never here for a real identity.</p></div></details>`;
+var STYLE2 = `${KIT_STYLE}
+${PANEL_STYLE}
+body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
+#app.k-page{flex:1;min-height:0;height:auto}
+.kishib-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.kishib-banner strong{font-weight:400;color:var(--k-text)}
+.kishib-banner ol{margin:4px 0;padding-left:1.4em}
+.k-home.kishib-three>.k-tile:last-child{grid-column:1 / -1}
+.kishib-foot{flex:none;padding:0 28px 10px}
+.kishib-holds{display:flex;align-items:center;gap:10px;white-space:nowrap;flex:none;padding:4px 6px 4px 14px;border:1px solid var(--k-line);border-radius:999px;font-size:14px}
+.kishib-holds .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
+.kishib-door{flex:1;display:grid;place-items:center;padding:20px}
+.kishib-door .k-box{max-width:560px;width:100%;padding:28px 32px;border-radius:22px;background:var(--k-raise);border-color:var(--k-line)}
+.kishib-door .k-ic{width:44px;height:44px;color:var(--k-p)}
+.kishib-door h2{font-size:30px;margin:10px 0 6px}
+.kishib-steps{display:flex;flex-wrap:wrap;gap:6px;font-size:13px;color:var(--k-faint);margin:2px 0 10px}
+.kishib-steps .k-done-step{color:var(--k-soft)}
+.kishib-steps .k-now{color:var(--k-text)}
+.kishib-pane form{max-width:760px}
+.kishib-pane textarea{min-height:76px}
+.kishib-check{display:flex!important;gap:8px;align-items:center;color:var(--k-text)!important;font-size:14px!important}
+.kishib-review{border:1px solid var(--k-line);border-radius:14px;padding:10px 16px;margin:10px 0;background:var(--k-raise)}
+.kishib-review h3{font-size:14px;color:var(--k-soft);margin:12px 0 4px}
+.kishib-review ul,.kishib-lines{margin:4px 0;padding-left:1.1em;font-size:14px}
+.kishib-review li,.kishib-lines li{margin:3px 0}
+li.bad{color:var(--k-bad)}
+li.warn{color:var(--k-soft)}
+.kishib-must{border:1px solid var(--k-bad);border-radius:14px;padding:12px 16px;margin:10px 0}
+.kishib-signs{border:1px solid var(--k-edge);border-radius:12px;padding:8px 14px;margin:10px 0;font-size:14px}
+.kishib-fpr{font:15px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id);letter-spacing:.04em}
+.kishib-full{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere}
+.kishib-typed{display:flex;gap:12px;flex-wrap:wrap}
+.kishib-typed label{flex:1;min-width:120px}
+.kishib-seg{display:inline-flex;border:1px solid var(--k-edge);border-radius:999px;padding:3px;gap:2px}
+.kishib-seg button{padding:4px 16px;border-radius:999px;color:var(--k-soft);font-size:14px}
+.kishib-seg button.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
+.kishib-app{border:1px solid var(--k-line);border-radius:14px;padding:12px 16px;margin:10px 0}
+.kishib-app h3{font-size:17px}
+.kishib-kinds{border-top:1px solid var(--k-line);margin-top:8px}
+.kishib-kinds>div{display:flex;align-items:center;gap:12px;padding:8px 2px;border-bottom:1px solid var(--k-line);font-size:14.5px}
+.kishib-kinds .k-r{margin-left:auto}
+.kishib-wait{border:1px solid var(--k-edge);border-radius:14px;padding:12px 16px;margin:10px 0;background:var(--k-raise)}
+.kishib-wait h3{font-size:17px}
+.kishib-pane .k-feed{flex:none;max-height:none}
+@media (max-width:600px){
+  .k-home.kishib-three{grid-template-rows:repeat(3,1fr)}
+  .k-home.kishib-three>.k-tile:last-child{grid-column:auto}
+  .kishib-holds .k-n,.kishib-holds .k-s{display:none}
+  .kishib-holds{padding:6px 10px}
+  .k-top .k-tabs{display:none}
+  .kishib-door .k-box{padding:20px}
+}`;
+var lines = (ls) => `<ul class="kishib-lines">${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>`;
+var TILES = [
+  { key: "identities", name: "Identities", say: "Make an identity. Read any identity\u2019s record. Confirm a succession.", icon: "identities", danger: 1 },
+  { key: "runner", name: "Runner", say: "Off. On this Mac only: when on, Ki\u0161ib signs for the apps you approve, from keys it keeps.", icon: "runner", danger: 2 },
+  { key: "paper", name: "Paper", say: "The chain key\u2019s 24 words: check them, change keys, change the vault, name a successor, escape.", icon: "paper", danger: 3 },
+  { key: "collectives", name: "Collectives", say: "A collective\u2019s rotation: waiting for you, start it, in the same room, check a share.", icon: "collectives", danger: 3 }
+];
+var tilesFor = (web) => TILES.filter((t) => !web || t.key !== "runner");
+function holds(web, r) {
+  if (web || !r?.on) return `<button type="button" class="kishib-holds" data-action="holds" title="What Ki\u0161ib holds"><span class="k-n">Holds nothing</span><span class="k-s">${web ? "web" : "runner off"}</span><span class="k-dot k-alt">\u2013</span></button>`;
+  const names = r.held.map((h) => h.name ?? shortForm(h.form));
+  const shown = names.length ? names.length <= 2 ? names.join(", ") : `${names.length} identities` : "nothing yet";
+  return `<button type="button" class="kishib-holds" data-action="holds" title="What Ki\u0161ib\u2019s runner holds"><span class="k-n">Holds ${e(shown)}</span><span class="k-s">runner on</span><span class="k-dot">${e(String(names.length))}</span></button>`;
 }
-function top2(web = false, back = false) {
-  return `<header class="bar"><h1 class="mark">${NAME}</h1><span class="grow"></span>${back ? '<button class="quiet" data-action="home">Back to the start</button>' : `<span class="small">${web ? "web client, for testing only" : "this machine only"}</span>`}</header>
-${testNotice(web)}`;
+function topBar(web, tab, r) {
+  const tabs = tab ? `<nav class="k-tabs" aria-label="Ki\u0161ib">${tilesFor(web).map((t) => `<button type="button" class="k-tab${t.key === tab ? " k-on" : ""}" data-tab="${t.key}"${t.key === tab ? ' aria-current="page"' : ""}>${e(t.name)}</button>`).join("")}</nav>` : "";
+  return top({ left: `<button type="button" class="k-btn k-q kishib-home-btn" data-action="home-tiles" title="The four tiles">${appMark(NAME, "icon.png")}</button>${tabs}`, right: holds(web, r) });
 }
-function pairing() {
-  return `${top2()}
-<h2>Pair this browser</h2>
-<p class="small">This page acts for the Ki\u0161ib program running on this machine. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
-<form id="pair" class="row"><input id="pair-code" class="grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
-<button type="submit">Pair</button></form>
-<div id="pair-status"></div>`;
+function home(web, r) {
+  const ts = tilesFor(web).map((t) => t.key === "runner" && r?.on ? { ...t, say: `On: ${r.held.length} ${r.held.length === 1 ? "identity" : "identities"} held, ${r.apps.filter((a) => a.state === "approved").length} ${r.apps.filter((a) => a.state === "approved").length === 1 ? "app" : "apps"} paired${r.waiting.length ? `, ${r.waiting.length} waiting` : ""}. Ki\u0161ib signs for the apps you approve.` } : t);
+  return `${topBar(web, null, r)}<div class="k-body k-col-flex">${tiles(ts).replace('class="k-home"', `class="k-home${ts.length === 3 ? " kishib-three" : ""}"`)}</div>
+<div class="kishib-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "Ki\u0161ib writes nothing of your words to this device; what it holds for an act lives in the program\u2019s memory, and is gone when it stops. The runner, while on, is the one exception: it keeps the signing keys you give it, in Ki\u0161ib\u2019s folder."])}</div>`;
 }
-function start(web) {
-  const door = (action, title, say3, rare = false) => `<button class="door${rare ? " rare" : ""}" data-action="open" data-form="${action}"><strong>${title}</strong><span>${say3}</span></button>`;
-  return `${top2(web)}
-<p>Ki\u0161ib is the one place where a chain key is used, from paper, and then forgotten. Open it only for the act at hand.</p>
-<h2>What it does</h2>
-${door("rotate", "Change an identity\u2019s keys", "From its chain key\u2019s 24 words on paper: a new signing key, every line of its acts kept. For a lost or stolen phone, or any time.")}
-${door("vault", "Change the vault", "Declare, change or remove where payments above a limit must go, and the limit. A change of keys: the chain key\u2019s paper is needed, and a new signing key\u2019s paper is written.")}
-${door("start", "Rotate a collective", "From its members\u2019 paper shares, completing a member change signed in Edubba. Started by the member who proposed it.")}
-${door("give", "Give my share to a collective\u2019s rotation", "When a member asks for your paper share: read the rotation, then give it.")}
-${door("escape", "Escape a contested position", "Someone else changed your keys with your chain key\u2019s words: leave with both keys, to new homes.")}
-${door("succession", "Name or confirm a successor", "Name the identity that succeeds yours (with the chain key\u2019s words), or, as the successor, confirm it.")}
-<h2>What it may do</h2>
-${door("check", "Check paper words", "Whether these are the right words for an identity. Nothing is signed.", true)}
-${door("record", "Show an identity\u2019s record", "Its homes, receipts, lines and any contest, in plain words.", true)}`;
+function column(tab, web, r) {
+  switch (tab) {
+    case "identities":
+      return [
+        ...r?.on && !web ? [{ key: "held", label: "Held here", k: r.held.length }, "-"] : [],
+        { key: "make", label: "Make an identity" },
+        { key: "record", label: "Read a record" },
+        { key: "confirm", label: "Confirm a succession" },
+        ...!r?.on && !web ? ["-", { key: "held", label: "Held by the runner", k: "off" }] : []
+      ];
+    case "runner":
+      return [
+        { key: "onoff", label: "On or off" },
+        { key: "apps", label: "Apps", k: r?.apps.length ?? 0 },
+        { key: "waiting", label: "Waiting", k: r?.waiting.length ?? 0 },
+        { key: "signed", label: "Signed", k: r?.signed.length ?? 0 }
+      ];
+    case "paper":
+      return [
+        { key: "check", label: "Check the paper" },
+        { key: "rotate", label: "Change keys" },
+        { key: "vault", label: "Change the vault" },
+        { key: "successor", label: "Name a successor" },
+        "-",
+        { key: "escape", label: "Escape a contested position" }
+      ];
+    case "collectives":
+      return [
+        { key: "give", label: "Waiting for you" },
+        { key: "start", label: "Start a rotation" },
+        { key: "room", label: "In the same room" },
+        { key: "checkshare", label: "Check a share", k: "new" }
+      ];
+  }
 }
-var idField = (name, label) => `<label>${label} (mid1\u2026, or its hexadecimal)</label><input name="${name}" type="text" autocomplete="off" spellcheck="false" required>`;
+var firstPart = (tab, r, web) => tab === "identities" ? r?.on && !web ? "held" : "make" : tab === "runner" ? "onoff" : tab === "paper" ? "check" : "give";
+function tabPage(web, tab, part2, pane, r) {
+  return `${topBar(web, tab, r)}${opened(column(tab, web, r), part2, `<div class="kishib-pane" id="pane">${pane}</div><div id="status"></div>`)}`;
+}
+function door(web, tab, r) {
+  const icon = tab === "paper" ? ICONS.paper : ICONS.collectives;
+  return `${topBar(web, tab, r)}<div class="k-body kishib-door"><div class="k-box" id="door">${icon}<h2>${tab === "paper" ? "Paper" : "Collectives"}</h2>
+<p class="k-soft">Have your paper ready. Ki\u0161ib uses the words for one act and forgets them.</p>
+<p class="k-soft">${tab === "paper" ? "Here the chain key\u2019s 24 words are typed, used for one act, and forgotten. Ki\u0161ib writes nothing of them to this device." : "Here a collective\u2019s paper shares are typed, used for one rotation, and forgotten."} Be alone with this screen.</p>
+<div class="k-row"><button type="button" class="k-btn k-p" data-action="open-door">Open ${tab === "paper" ? "Paper" : "Collectives"}</button><button type="button" class="k-btn k-q" data-action="home-tiles">Not now</button></div></div></div>`;
+}
+var idField = (name, label, required = true) => `<label>${label} (mid1\u2026, or its hexadecimal)</label><input name="${name}" type="text" autocomplete="off" spellcheck="false"${required ? " required" : ""}>`;
 var words = (name, label) => `<label>${label}</label><textarea name="${name}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>`;
-var address = `<label>An address where it is found (one of its homes)</label><input name="address" type="text" placeholder="https://" required>`;
-var forgotten = `<p class="small">What you type is used for this act alone, then overwritten. Nothing is written to this device.</p>`;
+var address = `<label>One of its homes</label><input name="address" type="text" placeholder="https://" required>`;
+var forgotten = say2("What you type is used for this act alone, then overwritten.", ["Nothing is written to this device. Close Ki\u0161ib, and nothing of your words remains."]);
+var submit = (label, after = "Nothing is signed before you read it back.") => `<div class="k-row"><button type="submit" class="k-btn k-p">${e(label)}</button><span class="k-small k-faint">${e(after)}</span></div>`;
 var units = [];
 var setUnits = (u2) => units = u2 ?? [];
-var vaultFields = `<details{open}><summary>The vault (optional): keep it, change it, or remove it</summary>
-<p class="small">The vault is where a payment above a limit must go, per unit, and the one place a thief holding only the signing key cannot point payments (Money rules 2 and 3). It changes only with the chain key, so only here. Its node or key should be another than your flow\u2019s, which Damgar names.</p>
-<label>The vault</label><select name="vault"><option value="keep"{keep}>Keep it as it is</option><option value="set"{set}>Declare it anew, as below</option><option value="remove">Remove it (every payment to the flow)</option></select>
-<div class="row"><label>Its unit <select name="vaultUnit" data-vault-units>${"{units}"}</select></label><label>Network <select name="vaultNetwork"><option value="3" selected>regtest</option><option value="2">signet</option></select></label></div>
+function vaultFields(open) {
+  return `<details class="k-box"${open ? " open" : ""}><summary>+ The vault: ${open ? "declare it anew, or remove it" : "keep it as it is"}</summary>
+<p class="k-small k-soft">The vault is where a payment above a limit must go, per unit, and the one place a thief holding only the signing key cannot point payments (Money rules 2 and 3). It changes only with the chain key, so only here. Its node or key should be another than your flow\u2019s, which Damgar names.</p>
+<label>The vault</label><select name="vault"><option value="keep"${open ? "" : " selected"}>Keep it as it is</option><option value="set"${open ? " selected" : ""}>Declare it anew, as below</option><option value="remove">Remove it (every payment to the flow)</option></select>
+<div class="k-row"><label class="k-grow">Its unit <select name="vaultUnit" data-vault-units>${units.map((u2) => `<option value="${e(u2.hash)}">${e(u2.label)}</option>`).join("")}</select></label><label class="k-grow">Network <select name="vaultNetwork"><option value="3" selected>regtest</option><option value="2">signet</option></select></label></div>
 <label>Lightning: the vault\u2019s node key (66 hexadecimal characters; not your flow\u2019s node)</label><input name="vaultNode" autocomplete="off" spellcheck="false">
 <label>Its limit: the largest single payment that may still go to the flow (0: every payment to the vault)</label><input name="vaultLightningLimit" inputmode="numeric" value="0">
 <label>On-chain: the vault\u2019s Bitcoin key, x-only (64 hexadecimal characters)</label><input name="vaultKey" autocomplete="off" spellcheck="false">
 <label>Its request key (Damgar\u2019s Settings show one; it signs address requests, and must stay online)</label><input name="vaultRequest" autocomplete="off" spellcheck="false">
 <label>Its limit</label><input name="vaultOnchainLimit" inputmode="numeric" value="0"></details>`;
+}
 var VAULT_SAY = [
   "Changing the vault or its limit is a change of keys. Only the chain key changes the vault (Money rules 2 and 3), so a thief holding only the signing key can never move it.",
   "You need the chain key\u2019s paper, your newest one (written when the identity was made, or shown at its last change of keys). Ki\u0161ib first shows two new sets of 24 words, each once: the new chain key\u2019s (a new paper, for the next change; the old paper is then spent), written down before anything is signed; then it signs a change of keys that keeps every line of acts and declares the vault anew (or removes it), and once the homes accept it shows the new signing key\u2019s, to give to Dub and Damgar.",
   "The old signing key\u2019s words stop counting once the homes receipt the change."
 ];
-var vaultHtml = (open) => vaultFields.replace("{open}", open ? " open" : "").replace("{keep}", open ? "" : " selected").replace("{set}", open ? " selected" : "").replace("{units}", units.map((u2) => `<option value="${e(u2.hash)}">${e(u2.label)}</option>`).join(""));
-function form2(kind, web) {
-  const f = (title, intro, body, button) => `${top2(web, true)}<h2>${title}</h2><p class="small">${intro}</p><form id="form-${kind}" data-kind="${kind}">${body}${forgotten}<div class="row"><button type="submit" class="primary">${button}</button></div></form><div id="status"></div>`;
-  switch (kind) {
-    case "rotate":
+var cardsFold = (runnerOn) => `<details class="k-box"><summary>+ Lines another app made that cannot be read here</summary><label>Their cards, one per line, copied whole from each app\u2019s identity window (Dub, Edubba, Damgar, Ummia): latest act, position, summary, then the app\u2019s count and name</label><textarea name="cards"></textarea>${runnerOn ? '<div class="k-row"><button type="button" class="k-btn" data-action="runner-cards">Add the cards of the lines Ki\u0161ib\u2019s runner signed</button><span class="k-small k-faint">for an identity the runner holds: Dub\u2019s lines, signed here</span></div>' : ""}</details>`;
+var STEPS = ["The words", "Read back", "New chain paper", "Signed", "New signing words"];
+function steps(at) {
+  return `<div class="kishib-steps" aria-label="Steps">${STEPS.map((s, i) => `<span class="${i < at ? "k-done-step" : i === at ? "k-now" : ""}">${i < at ? "\u2713 " : ""}${e(s)}</span>${i < STEPS.length - 1 ? "<span>\u203A</span>" : ""}`).join("")}</div>`;
+}
+function part(tab, key, web, r) {
+  const f = (kind, title, intro, body, button = "Read it back", after) => `<h2>${e(title)}</h2><p class="k-soft k-small">${e(intro)}</p><form id="form-${kind}" data-kind="${kind}" autocomplete="off">${body}${forgotten}${submit(button, after)}</form><div id="result"></div>`;
+  const runnerOn = !web && !!r?.on;
+  switch (`${tab}/${key}`) {
+    case "identities/held":
+      return held(r);
+    case "identities/make":
       return f(
+        "make",
+        "Make an identity",
+        "A new identity: its homes, its relays, a chain key on a new paper, a signing key for the apps. Its chain key\u2019s words are shown once and three asked back before anything is signed; its signing key\u2019s words once its homes take it. Ki\u0161ib keeps nothing.",
+        `<label>Its homes (one address per line): where it lives, and anyone can check it</label><textarea name="homes" required placeholder="https://"></textarea><label>Its relays, if you like (where its posts are published and its inbox is): its homes otherwise</label><textarea name="relays" placeholder="https://"></textarea>`
+      );
+    case "identities/record":
+      return f("record", "An identity\u2019s record", "Homes, receipts, lines of acts, any contest, any succession, as any reader would see it, judged by the core library. Reading signs nothing.", `${idField("id", "The identity")}${address}`, "Read it", "Reading signs nothing.");
+    case "identities/confirm":
+      return f(
+        "confirm",
+        "Confirm a succession",
+        "As the successor: the identity that named you in a change of its keys is followed only once you confirm it, with an act of your own naming that change (F300). It uses your signing key\u2019s words, not paper.",
+        `${idField("owner", "The identity that named you")}${idField("successor", "Your ID")}${address}${words("words", "Your signing key\u2019s 24 words (as Dub shows them)")}`
+      );
+    case "paper/check":
+      return f("check", "Check the paper", "Ki\u0161ib derives the chain key from the words and compares it with what the identity\u2019s chain commits to: right, spent, or not these. Nothing is signed.", `${idField("id", "The identity")}${address}${words("words", "The chain key\u2019s 24 words, in order")}`, "Check them", "Nothing is signed.");
+    case "paper/rotate":
+      return `${steps(0)}${f(
+        "rotate",
         "Change an identity\u2019s keys",
-        "Ki\u0161ib reads the identity from its homes and every relay its routes name, finds every line of its acts (Dub\u2019s, Edubba\u2019s, the web client\u2019s), and reads it all back in plain words before anything is signed.",
-        `${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (its newest paper: written when it was made, or shown at its last change of keys; never the signing key\u2019s words)")}
-<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line, copied whole from each app\u2019s identity window (Dub, Edubba, Damgar, Ummia): latest act, position, summary, then the app\u2019s count and name</label><textarea name="cards"></textarea></details>${vaultHtml(false)}`,
-        "Read it back"
-      );
-    case "vault":
-      return `${top2(web, true)}<h2>Change the vault</h2>
-<div class="review" id="vault-say">${lines(VAULT_SAY.map((text2) => ({ text: text2 })))}</div>
-<form id="form-rotate" data-kind="rotate">${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words, in order (its newest paper: written when it was made, or shown at its last change of keys; never the signing key\u2019s words)")}
-<details><summary>Lines another app made that cannot be read here</summary><label>Their cards, one per line, copied whole from each app\u2019s identity window (Dub, Edubba, Damgar, Ummia): latest act, position, summary, then the app\u2019s count and name</label><textarea name="cards"></textarea></details>${vaultHtml(true)}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
-    case "succession":
-      return `${top2(web, true)}<h2>Name or confirm a successor</h2>
-<p class="small">A succession needs both sides (F300): the identity names its successor in a change of its keys, signed with its chain key; the successor confirms it with an act of its own. Until it confirms, clients show it as declared and follow nobody.</p>
-<h3>Name a successor, as the identity that will be succeeded</h3>
-<form id="form-rotate" data-kind="rotate">${idField("id", "Your identity\u2019s ID")}${address}${words("words", "Your chain key\u2019s 24 words")}${idField("successor", "The successor\u2019s ID")}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form>
-<h3>Confirm, as the successor</h3>
-<form id="form-confirm" data-kind="confirm">${idField("owner", "The ID of the identity that named you")}${idField("successor", "Your ID")}${address}${words("words", "Your signing key\u2019s 24 words (as Dub shows them)")}${forgotten}<div class="row"><button type="submit" class="primary">Read it back</button></div></form><div id="status"></div>`;
-    case "escape":
+        "From its chain key\u2019s paper: a new signing key, and a new chain-key paper, every line of its acts kept. Ki\u0161ib reads the identity from its homes and every relay its routes name, finds every line of its acts, and reads it all back in plain words before anything is signed.",
+        `${idField("id", "The identity")}${address}${words("words", "The chain key\u2019s 24 words, in order (its newest paper; never the signing key\u2019s words)")}${cardsFold(runnerOn)}${vaultFields(false)}`
+      )}`;
+    case "paper/vault":
+      return `<h2>Change the vault</h2><div class="kishib-review" id="vault-say">${lines(VAULT_SAY.map((text2) => ({ text: text2 })))}</div><form id="form-rotate" data-kind="rotate">${idField("id", "The identity")}${address}${words("words", "The chain key\u2019s 24 words, in order (its newest paper)")}${cardsFold(runnerOn)}${vaultFields(true)}${forgotten}${submit("Read it back")}</form><div id="result"></div>`;
+    case "paper/successor":
       return f(
-        "Escape a contested position, with both keys",
-        "For when someone else has changed your identity\u2019s keys with your chain key\u2019s words (they were stolen), or two changes contest one position of a self-hosted identity. You need both papers: the chain key\u2019s words, and the signing key\u2019s words of the key you held before. You leave to new homes.",
-        `${idField("id", "The identity\u2019s ID")}${address}${words("words", "Its chain key\u2019s 24 words")}${words("signingWords", "Its signing key\u2019s 24 words, the key you held before the other change")}
-<label>New homes (one address per line): not the old ones, which hold the other change</label><textarea name="homes" required placeholder="https://"></textarea>`,
-        "Read it back"
+        "rotate",
+        "Name a successor",
+        "The identity names its successor in a change of its keys, signed from its chain key\u2019s paper. Nobody follows it until the successor confirms it (Identities, Confirm a succession). This identity goes on living.",
+        `${idField("id", "Your identity")}${address}${words("words", "Your chain key\u2019s 24 words")}${idField("successor", "The successor")}${cardsFold(runnerOn)}`
       );
-    case "start":
+    case "paper/escape":
       return f(
-        "Rotate a collective",
-        "This completes a member change proposed in Edubba and signed by every member. The member who proposed it starts here. Remote: the other members give their shares in their own Ki\u0161ib, within an hour. In the same room: their papers are typed here, one after another.",
-        `${idField("collective", "The collective\u2019s ID")}${address}
-<label>Your share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>
-${words("shareWords", "Your share\u2019s 24 words")}
-<label class="check"><input type="checkbox" name="room"> Everyone is here: type every paper on this device; nothing is sent, and no signing words are needed</label>
-<div data-remote>${idField("founder", "Your ID (you proposed the change)")}${words("founderWords", "Your signing key\u2019s 24 words: they open your members\u2019 answers, with the one-time keys their new shares go to")}</div>`,
-        "Read it back"
+        "escape",
+        "Escape a contested position",
+        "Last, and set apart: for when someone else has changed your identity\u2019s keys with your chain key\u2019s words (they were stolen), or two changes contest one position of a self-hosted identity. You need both papers: the chain key\u2019s words, and the signing key\u2019s words of the key you held before. You leave to new homes.",
+        `${idField("id", "The identity")}${address}${words("words", "Its chain key\u2019s 24 words")}${words("signingWords", "Its signing key\u2019s 24 words, the key you held before the other change")}<label>New homes (one address per line): not the old ones, which hold the other change</label><textarea name="homes" required placeholder="https://"></textarea>`
       );
-    case "give":
+    case "collectives/give":
       return f(
-        "Give my share to a collective\u2019s rotation",
-        "The member who started the rotation sent you its fingerprint (in Dub, in the proposal\u2019s thread). Ki\u0161ib reads the rotation back to you first.",
-        `${idField("collective", "The collective\u2019s ID")}<label>The rotation\u2019s fingerprint (64 characters)</label><input name="fingerprint" type="text" autocomplete="off" spellcheck="false" required>${address}
-<div class="row"><button type="button" data-action="read request">Read the rotation first</button></div><div id="request"></div>
-${idField("member", "Your ID")}<label>Your share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>
-${words("shareWords", "Your share\u2019s 24 words")}${words("memberWords", "Your signing key\u2019s 24 words (to sign the small act that carries your share)")}`,
-        "Read it back"
+        "give",
+        "Waiting for you: give your share",
+        "A member who started a rotation sent you its fingerprint (in Dub, in the proposal\u2019s thread). Ki\u0161ib reads the rotation back to you first. Your share goes sealed to a one-time key that expires within the hour.",
+        `${idField("collective", "The collective")}<label>The rotation\u2019s fingerprint (64 characters)</label><input name="fingerprint" type="text" autocomplete="off" spellcheck="false" required>${address}
+<div class="k-row"><button type="button" class="k-btn" data-action="read request">Read the rotation first</button></div><div id="request"></div>
+${idField("member", "Your ID")}<label>Your share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>${words("shareWords", "Your share\u2019s 24 words")}${words("memberWords", "Your signing key\u2019s 24 words (to sign the small act that carries your share)")}`
       );
-    case "check":
-      return f("Check paper words", "Ki\u0161ib derives the chain key from the words and compares it with what the identity\u2019s chain commits to. Nothing is signed.", `${idField("id", "The identity\u2019s ID")}${address}${words("words", "The chain key\u2019s 24 words")}`, "Check them");
-    case "record":
-      return f("Show an identity\u2019s record", "As any reader would see it, judged by the core library.", `${idField("id", "The identity\u2019s ID")}${address}`, "Read it");
+    case "collectives/start":
+    case "collectives/room": {
+      const room = key === "room";
+      return f(
+        "start",
+        room ? "In the same room" : "Start a rotation",
+        room ? "Everyone is here: the papers are typed into this Ki\u0161ib one after another; nothing is sent, and no signing words are needed. Every new share is shown on this screen, once." : "This completes a member change proposed in Edubba and signed by every member. The member who proposed it starts here; the other members give their shares in their own Ki\u0161ib, within an hour.",
+        `${idField("collective", "The collective")}${address}<label>Your share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>${words("shareWords", "Your share\u2019s 24 words")}${room ? '<input type="hidden" name="room" value="1">' : `${idField("founder", "Your ID (you proposed the change)")}${words("founderWords", "Your signing key\u2019s 24 words: they open your members\u2019 answers, with the one-time keys their new shares go to")}`}`
+      );
+    }
+    case "collectives/checkshare":
+      return f(
+        "checkshare",
+        "Check a share",
+        "A paper share of a collective\u2019s chain key: its number and its 24 words, checked against the collective. One paper says whether it is written right and whose it is; as many papers as rebuild the key say whether they still rebuild it. Nothing is signed.",
+        `${idField("collective", "The collective")}${address}<label>The share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>${words("shareWords", "The share\u2019s 24 words")}
+<details class="k-box"><summary>+ More papers, typed here in the same room, to check together</summary><label>One per line: the number, then its 24 words (\u201C2 word word \u2026\u201D)</label><textarea name="more"></textarea></details>`,
+        "Check it",
+        "Nothing is signed."
+      );
+    case "runner/onoff":
+      return runnerOnOff(r);
+    case "runner/apps":
+      return runnerApps(r);
+    case "runner/waiting":
+      return runnerWaiting(r);
+    case "runner/signed":
+      return runnerSigned(r);
     default:
-      return start(web);
+      return "";
   }
+}
+var when2 = (s) => new Date(s * 1e3).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+function runnerOnOff(r) {
+  if (!r) return "";
+  const seg = `<div class="kishib-seg" role="group" aria-label="The runner"><button type="button" class="${r.on ? "" : "k-on"}" data-action="${r.on ? "runner-off-ask" : ""}">Off</button><button type="button" class="${r.on ? "k-on" : ""}" data-action="${r.on ? "" : "runner-on-ask"}">On</button></div>`;
+  const state = r.on ? `<div class="k-box k-fill" id="runner-state"><div class="k-row"><div class="k-grow"><b>On</b> <span class="k-small k-soft">since ${e(when2(r.since))}</span><p class="k-small k-soft">Ki\u0161ib keeps the signing keys of ${r.held.length} ${r.held.length === 1 ? "identity" : "identities"} on this Mac, in its folder. The chain key: never.</p></div>${seg}</div></div>
+<div class="k-box"><h3>Turn it off</h3><p class="k-small k-soft">Ki\u0161ib forgets every key it holds, every app paired with it and what it signed. Its file is overwritten, then removed. The apps then sign with their own words again, or not at all.</p><div class="k-row"><button type="button" class="k-btn k-alarm" data-action="runner-off">Turn it off, and forget it all</button></div></div>` : `<div class="k-box k-fill" id="runner-state"><div class="k-row"><div class="k-grow"><b>Off</b><p class="k-small k-soft">No key stored. Every app signs with its own words, as today.</p></div>${seg}</div></div>
+<div class="k-box" id="risk"><h3>Before you turn it on, the risk</h3>${lines(r.risk.map((text2) => ({ text: text2 })))}<label class="kishib-check"><input type="checkbox" id="risk-read"> I have read the risk</label><div class="k-row"><span class="k-grow"></span><button type="button" class="k-btn" data-action="runner-on">Turn it on</button></div></div>
+<p class="k-small k-faint">The risk is optional: you may leave it off for good.</p>`;
+  return `<h2>The runner</h2><p class="k-soft k-small">Mac only. An app asks to pair; you approve here; then Ki\u0161ib signs for it, showing what it signs in a panel inside the app\u2019s window. The app never holds a key.</p>${state}`;
+}
+function held(r) {
+  if (!r?.on) {
+    return `<h2>Held by the runner</h2><p class="k-soft">The runner is off: Ki\u0161ib holds nothing. Turned on (Runner), it keeps the signing keys of the identities you give it here, and signs with them for the apps you approve.</p><div class="k-row"><button type="button" class="k-btn" data-tab="runner">Open Runner</button></div>`;
+  }
+  const rows = r.held.map(
+    (h) => `<div class="kishib-app" data-held="${e(h.id)}"><div class="k-row"><span class="k-dot">${e((h.name ?? "M")[0].toUpperCase())}</span><div class="k-grow"><h3>${e(h.name ?? "No name")}</h3><span class="k-mono k-soft">${e(shortForm(h.form))}</span></div><button type="button" class="k-btn k-q" data-action="held-record" data-id="${e(h.id)}">Its record</button><button type="button" class="k-btn k-q" data-action="held-remove" data-id="${e(h.id)}">Remove</button></div>
+<p class="k-small k-soft">${h.apps.length ? `Used by ${e(h.apps.join(", "))}.` : "No app uses it yet."}</p>
+${h.spent ? `<div class="k-note k-error">Its keys were changed with its chain key: the signing key the runner holds no longer counts, and it signs nothing for it. Give the new signing key\u2019s words.<form class="kishib-renew" data-renew="${e(h.id)}"><input type="hidden" name="id" value="${e(h.id)}"><label>One of its homes</label><input name="address" placeholder="https://" required><label>The new signing key\u2019s 24 words</label><textarea name="words" required autocomplete="off" spellcheck="false"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Take the new words</button></div></form></div>` : ""}</div>`
+  ).join("");
+  return `<h2>Held here</h2><p class="k-soft k-small">The identities Ki\u0161ib\u2019s runner keeps, by their signing keys, on this Mac. Remove one, and Ki\u0161ib forgets its key; the apps using it through Ki\u0161ib stop signing as it.</p>${rows || '<p class="k-soft">None yet.</p>'}
+<form id="form-give-runner" data-kind="give-runner" class="k-box" autocomplete="off"><h3>Give an identity to the runner</h3><p class="k-small k-soft">By its signing key\u2019s words, as Dub shows them (its identity\u2019s menu, Words): Ki\u0161ib checks they give the key its homes serve. Never the chain key\u2019s words.</p>${idField("id", "The identity")}${address}${words("words", "Its signing key\u2019s 24 words")}<div class="k-row"><button type="submit" class="k-btn k-p">Keep it here</button><span class="k-small k-faint">kept while the runner is on</span></div></form>`;
+}
+function runnerApps(r) {
+  if (!r?.on) return `<h2>Apps</h2><p class="k-soft">The runner is off: no app is paired. Turn it on first (On or off).</p>`;
+  const name = (id) => r.held.find((h) => h.id === id)?.name ?? shortForm(r.held.find((h) => h.id === id)?.form ?? id);
+  const waiting = r.apps.filter((a) => a.state === "waiting").map(
+    (a) => `<div class="kishib-app" data-pairing="${e(a.id)}"><h3>${e(a.name)} asks to pair</h3><p class="k-small k-soft">From ${e(a.origin)}, on this computer. Its code: <b class="kishib-fpr">${e(a.code)}</b>: approve only if ${e(a.name)} shows the same.</p>
+<p class="k-small">The identities ${e(a.name)} may use through Ki\u0161ib:</p>${r.held.map((h) => `<label class="kishib-check"><input type="checkbox" name="allow" value="${e(h.id)}" checked> ${e(h.name ?? "No name")} <span class="k-mono k-faint">${e(shortForm(h.form))}</span></label>`).join("") || '<p class="k-small k-soft">Ki\u0161ib holds no identity yet: give one first (Identities, Held here).</p>'}
+<div class="k-row"><button type="button" class="k-btn k-p" data-action="approve" data-pairing="${e(a.id)}">Approve</button><button type="button" class="k-btn k-q" data-action="refuse" data-pairing="${e(a.id)}">Refuse</button></div></div>`
+  ).join("");
+  const kinds = r.kinds;
+  const approved = r.apps.filter((a) => a.state === "approved").map(
+    (a) => `<div class="kishib-app" data-app="${e(a.id)}"><div class="k-row"><div class="k-grow"><h3>${e(a.name)}</h3><span class="k-small k-faint">${e(a.origin)} \xB7 paired ${a.approved ? e(when2(a.approved)) : ""}</span></div><button type="button" class="k-btn k-alarm" data-action="revoke" data-pairing="${e(a.id)}">Revoke</button></div>
+<p class="k-small k-soft">Signs as ${e(a.identities.map(name).join(", ") || "no identity")}.</p>
+<div class="kishib-kinds">${kinds.filter((k) => !k.always).map((k) => `<div><span>${e(a.name)} \xB7 ${e(k.name)}</span><span class="k-r kishib-seg" role="group"><button type="button" class="${a.yes.includes(k.kind) ? "" : "k-on"}" data-action="yes" data-pairing="${e(a.id)}" data-kind="${k.kind}" data-on="0">Ask</button><button type="button" class="${a.yes.includes(k.kind) ? "k-on" : ""}" data-action="yes" data-pairing="${e(a.id)}" data-kind="${k.kind}" data-on="1">Yes</button></span></div>`).join("")}<div><span class="k-soft">Money acts, agreements, keys, and acts Ki\u0161ib cannot read</span><span class="k-r k-small k-faint">always ask</span></div></div></div>`
+  ).join("");
+  return `<h2>Apps</h2><p class="k-soft k-small">Each app paired with the runner: what it may sign without asking (a standing yes, per kind), and what always asks. Revoke, and the app signs through Ki\u0161ib no more.</p>${waiting}${approved || (waiting ? "" : '<p class="k-soft">No app is paired. In Dub, the identity panel: + Add, Use one from Ki\u0161ib.</p>')}`;
+}
+function runnerWaiting(r) {
+  if (!r?.on) return `<h2>Waiting</h2><p class="k-soft">The runner is off.</p>`;
+  const ws = r.waiting.map(
+    (w) => `<div class="kishib-wait" data-request="${e(w.request)}"><h3>${e(w.title)}</h3><p class="k-small k-soft">As ${e(w.name ?? "this identity")} \xB7 asked ${e(when2(w.at))}</p><div class="kishib-review">${w.words.map((x) => `<p dir="auto">${e(x)}</p>`).join("")}</div>
+${w.always ? '<p class="k-small k-faint">Money, agreements and keys always ask.</p>' : `<label class="kishib-check"><input type="checkbox" data-always="${e(w.request)}"> Always yes for ${e(w.app)}\u2019s ${e(r.kinds.find((k) => k.kind === w.kind)?.name ?? w.kind)}</label>`}
+<div class="k-row"><button type="button" class="k-btn k-p" data-action="answer" data-yes="1" data-request="${e(w.request)}">Sign it</button><button type="button" class="k-btn k-q" data-action="answer" data-yes="0" data-request="${e(w.request)}">Decline</button></div></div>`
+  ).join("");
+  return `<h2>Waiting</h2><p class="k-soft k-small">Requests not answered yet, in case their panel was closed in the app. Each waits ten minutes; the app that asked still waits for its answer.</p>${ws || '<p class="k-soft">Nothing waits.</p>'}`;
+}
+function runnerSigned(r) {
+  if (!r?.on) return `<h2>Signed</h2><p class="k-soft">The runner is off: it keeps no record.</p>`;
+  return `<h2>Signed</h2><p class="k-soft k-small">Every act the runner signed while on, newest first; kept only while it is on.</p><div class="k-feedwrap"><div class="k-feed" id="signed">${r.signed.length ? "" : '<p class="k-empty">Nothing signed yet.</p>'}</div></div>`;
 }
 function sections(ss) {
   return ss.map((s) => `<h3>${e(s.heading)}</h3>${lines(s.lines)}`).join("");
 }
-function review(r, web, mustRead) {
+function review(r, mustRead, change) {
   const blocked = r.blocking.length > 0;
   const must = mustRead ? r.sections[0] : null;
   const rest = mustRead ? r.sections.slice(1) : r.sections;
-  return `${top2(web, true)}<h2>${e(r.title)}</h2>
-${r.summary.map((s) => `<p class="small">${e(s)}</p>`).join("")}
-${must ? `<div class="mustread" id="mustread"><h3>${e(must.heading)}</h3>${lines(must.lines)}<label class="check"><input type="checkbox" id="read-it"> I have read this, and chosen this device knowingly</label></div>` : ""}
-<div class="review">${sections(rest)}</div>
-${blocked ? note2("error", `Nothing can be signed yet:${lines(r.blocking.map((t) => ({ text: t, tone: "bad" })))}`) : ""}
-${r.warning ? note2("error", `${e(r.warning)}<label class="check"><input type="checkbox" id="warned"> I have read this: go on as it says</label>`) : ""}
-<div class="signs"><span class="label">What is signed</span>${r.signs.map((s) => `<p>${e(s)}</p>`).join("")}</div>
-<div class="row"><button class="primary" data-action="sign" ${blocked ? "disabled" : ""}>Sign it</button><button data-action="home">Cancel, and forget the words</button></div><div id="status"></div>`;
+  return `${change ? steps(1) : ""}<h2>${e(r.title)}</h2>
+${r.summary.map((s) => `<p class="k-small k-soft">${e(s)}</p>`).join("")}
+${must ? `<div class="kishib-must" id="mustread"><h3>${e(must.heading)}</h3>${lines(must.lines)}<label class="kishib-check"><input type="checkbox" id="read-it"> I have read this, and chosen this device knowingly</label></div>` : ""}
+<div class="kishib-review">${sections(rest)}</div>
+${blocked ? note("error", `Nothing can be signed yet:${lines(r.blocking.map((t) => ({ text: t, tone: "bad" })))}`) : ""}
+${r.warning ? `<div class="k-alarmbox">${e(r.warning)}<label class="kishib-check"><input type="checkbox" id="warned"> I have read this: go on as it says</label></div>` : ""}
+<div class="kishib-signs"><span class="k-small k-faint">What is signed</span>${r.signs.map((s) => `<p>${e(s)}</p>`).join("")}</div>
+<div class="k-row"><button type="button" class="k-btn k-p" data-action="sign" ${blocked ? "disabled" : ""}>Sign it</button><button type="button" class="k-btn k-q" data-action="forget">Cancel, and forget the words</button></div>`;
 }
-function wordsShown(ws, say3, web, label = "The new signing key\u2019s words") {
-  return `${top2(web)}<h2>${e(label)}</h2>${say3.map((s) => `<p class="small">${e(s)}</p>`).join("")}
-<div class="words" id="words">${ws.map((w, i) => `<span><b>${i + 1}</b>${e(w)}</span>`).join("")}</div>
-<div class="row"><button class="primary" data-action="written">I have written them down</button></div>`;
+function wordsShown(ws, say22, label, step) {
+  return `${step !== null ? steps(step) : ""}<h2>${e(label)}</h2>${say22.map((s) => `<p class="k-small k-soft">${e(s)}</p>`).join("")}
+<div class="k-words" id="words">${ws.map((w, i) => `<span><b>${i + 1}.</b>${e(w)}</span>`).join("")}</div>
+<div class="k-row"><button type="button" class="k-btn k-p" data-action="written">I have written them down</button></div>`;
 }
-function askBack(positions, web) {
-  return `${top2(web)}<h2>Three of the words, from your paper</h2><p class="small">The words are hidden. Type the ones asked, from what you wrote.</p>
-<form id="typed"><div class="typed">${positions.map((p) => `<label>Word ${p}<input name="w${p}" autocomplete="off" spellcheck="false" required></label>`).join("")}</div>
-<div class="row"><button type="submit" class="primary">Check</button><button type="button" data-action="show words">Show them again</button></div></form><div id="status"></div>`;
+function askBack(positions, step) {
+  return `${step !== null ? steps(step) : ""}<h2>Three of the words, from your paper</h2><p class="k-small k-soft">The words are hidden. Type the ones asked, from what you wrote.</p>
+<form id="typed"><div class="kishib-typed">${positions.map((p) => `<label>Word ${p}<input name="w${p}" autocomplete="off" spellcheck="false" required></label>`).join("")}</div>
+<div class="k-row"><button type="submit" class="k-btn k-p">Check</button><button type="button" class="k-btn k-q" data-action="show words">Show them again</button></div></form>`;
 }
-function sitting(s, web) {
-  const btn = (action, label, primary = false, extra = "") => `<button ${primary ? 'class="primary" ' : ""}data-action="${action}"${extra}>${label}</button>`;
+function sitting(s) {
+  const btn = (action, label, primary = false, extra = "") => `<button type="button" class="k-btn${primary ? " k-p" : ""}" data-action="${action}"${extra}>${label}</button>`;
   const q = s.request;
-  const req = q ? `<div class="review" id="request-state">${q.room ? `<p>${q.have} of ${q.need} paper shares are in, typed here.</p>` : `<p>Fingerprint of this rotation</p><p class="fpr">${e(q.fingerprint)}</p><p class="full">${e(q.full)}</p><p>${q.have} of ${q.need} shares are in. The one-time key expires at ${e(new Date(q.expires * 1e3).toISOString().replace("T", " ").slice(0, 16))} UTC (this device\u2019s clock).</p>`}</div>` : "";
+  const req = q ? `<div class="kishib-review" id="request-state">${q.room ? `<p>${q.have} of ${q.need} paper shares are in, typed here.</p>` : `<p>Fingerprint of this rotation</p><p class="kishib-fpr">${e(q.fingerprint)}</p><p class="kishib-full">${e(q.full)}</p><p>${q.have} of ${q.need} shares are in. The one-time key expires at ${e(when2(q.expires))} (this device\u2019s clock).</p>`}</div>` : "";
   const acts = [];
   if (s.stage === "sent") acts.push(btn("refresh", "Look again"), btn("resend", "Send it again (the same bytes)", true));
-  if (s.stage === "paper") acts.push(btn("show words", "Show the new chain key\u2019s words (a new paper)", true));
-  if (s.stage === "counts" && s.kind !== "confirm") acts.push(btn("show words", s.kind === "collective" ? "Show the collective\u2019s new signing key\u2019s words" : "Show the new signing key\u2019s words", true));
+  if (s.stage === "paper") acts.push(btn("show words", s.kind === "make" ? "Show the chain key\u2019s words (its paper)" : "Show the new chain key\u2019s words (a new paper)", true));
+  if (s.stage === "counts" && s.kind !== "confirm") acts.push(btn("show words", s.kind === "collective" ? "Show the collective\u2019s new signing key\u2019s words" : s.kind === "make" ? "Show its signing key\u2019s words" : "Show the new signing key\u2019s words", true));
   if (s.stage === "shown") acts.push(btn("show words", "Show them again"));
   if (s.stage === "waiting" && q) {
     if (!q.room) acts.push(btn("gather", "Look for the members\u2019 shares", q.have < q.need));
     if (q.have >= q.need) acts.push(btn("rotate collective", "Rebuild, rotate and deal now", true));
   }
-  const paper = s.stage === "waiting" && q?.room && q.have < q.need ? `<form id="paper"><label>The next share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>${words("words", "Its 24 words")}<div class="row"><button type="submit" class="primary">Add this paper</button></div></form>` : "";
-  const shares = s.shares?.length ? `<h3>New shares to show here, once each</h3><ul class="say">${s.shares.map((x) => `<li>Share ${x.x}, for <span class="fp">${e(x.holder.slice(0, 8))}\u2026${e(x.holder.slice(-4))}</span>: ${x.shown ? "written down, forgotten here" : btn("show share", "Show it", false, ` data-holder="${e(x.holder)}"`)}</li>`).join("")}</ul>` : "";
+  const paper = s.stage === "waiting" && q?.room && q.have < q.need ? `<form id="paper"><label>The next share\u2019s number</label><input name="number" type="text" inputmode="numeric" autocomplete="off" required>${words("words", "Its 24 words")}<div class="k-row"><button type="submit" class="k-btn k-p">Add this paper</button></div></form>` : "";
+  const shares = s.shares?.length ? `<h3>New shares to show here, once each</h3><ul class="kishib-lines">${s.shares.map((x) => `<li>Share ${x.x}, for <span class="k-mono">${e(x.holder.slice(0, 8))}\u2026${e(x.holder.slice(-4))}</span>: ${x.shown ? "written down, forgotten here" : btn("show share", "Show it", false, ` data-holder="${e(x.holder)}"`)}</li>`).join("")}</ul>` : "";
   const done = s.stage === "done" || s.stage === "expired";
-  return `${top2(web)}<h2>${e(s.title)}</h2>${req}<div class="review">${lines(s.lines)}</div>${paper}${shares}
-<div class="row">${acts.join("")}${done && !(s.shares ?? []).some((x) => !x.shown) ? btn("home", "Done: back to the start", true) : ""}</div><div id="status"></div>`;
+  const step = s.kind === "identity" ? { paper: 2, sent: 3, counts: 4, shown: s.words === "signing" ? 4 : 2, done: 5 }[s.stage] : void 0;
+  return `${step !== void 0 ? steps(step) : ""}<h2>${e(s.title)}</h2>${req}<div class="kishib-review">${lines(s.lines)}</div>${paper}${shares}
+<div class="k-row">${acts.join("")}${done && !(s.shares ?? []).some((x) => !x.shown) ? btn("forget", "Done", true) : ""}</div>`;
+}
+var tabOf = (s) => s.kind === "make" || s.kind === "confirm" ? "identities" : s.kind === "collective" ? "collectives" : "paper";
+function pairing() {
+  return `${top({ left: appMark(NAME, "icon.png"), right: "" })}<div class="k-body kishib-door"><div class="k-box"><h2>Pair this browser</h2>
+<p class="k-small k-soft">This page acts for the Ki\u0161ib program running on this machine. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
+<form id="pair" class="k-row"><input id="pair-code" class="k-grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
+<button type="submit" class="k-btn k-p">Pair</button></form><div id="pair-status"></div></div></div>`;
+}
+function alone(html) {
+  return `${top({ left: appMark(NAME, "icon.png"), right: "" })}<div class="k-body kishib-door"><div class="k-box">${html}</div></div>`;
 }
 
 // src/page/ui.ts
 function mount(app2, b) {
   const $ = (id) => document.getElementById(id);
+  app2.classList.add("k-page", "k-kishib");
+  let state = null;
+  let runner = null;
+  let tab = null;
+  let part2 = null;
+  let door2 = null;
   let current = null;
+  const popup2 = new Popup(app2);
+  attachClosing();
+  const errorOf = (err) => err instanceof Error ? err.message : String(err);
   const fail = (err) => {
     if (b.unpaired?.(err)) {
       app2.innerHTML = pairing();
       return;
     }
-    const s = $("status");
-    const html = note2("error", e(err instanceof Error ? err.message : String(err)));
+    const s = $("status") ?? $("result");
+    const html = note("error", e(errorOf(err)));
     if (s) {
       s.innerHTML = html;
       s.scrollIntoView({ block: "nearest" });
-    } else app2.insertAdjacentHTML("beforeend", html);
+    } else app2.insertAdjacentHTML("beforeend", `<div id="status" class="k-status">${html}</div>`);
   };
-  const busy = (on) => app2.querySelectorAll("button").forEach((x) => x.disabled = on || x.dataset.blocked === "1");
+  const done = (html) => {
+    const s = $("status");
+    if (s) s.innerHTML = note("done", html);
+  };
   async function act(f) {
-    busy(true);
+    const was = [...app2.querySelectorAll("button")].map((x) => [x, x.disabled]);
+    app2.querySelectorAll("button").forEach((x) => x.disabled = true);
     try {
       return await f();
     } catch (err) {
       fail(err);
       return void 0;
     } finally {
-      app2.querySelectorAll("button").forEach((x) => {
-        if (x.dataset.action === "sign" && current?.review.blocking.length) return;
-        x.disabled = false;
-      });
+      for (const [x, d] of was) if (x.isConnected) x.disabled = d;
     }
   }
-  async function show(state) {
+  function draw(pane) {
+    const r = b.web ? null : runner;
+    if (!tab) {
+      app2.innerHTML = home(b.web, r);
+      return;
+    }
+    if ((tab === "paper" || tab === "collectives") && door2 !== tab && !state?.sitting) {
+      app2.innerHTML = door(b.web, tab, r);
+      return;
+    }
+    app2.innerHTML = tabPage(b.web, tab, part2, pane ?? part(tab, part2 ?? "", b.web, r), r);
+    if (tab === "runner" && part2 === "signed") drawSigned();
+  }
+  async function show(s) {
+    state = s;
     current = null;
-    setUnits(state.units);
-    if (!state.sitting) {
-      app2.innerHTML = start(b.web);
-      return;
+    if (s.runner) runner = s.runner;
+    setUnits(s.units);
+    const st = s.sitting;
+    if (st) {
+      tab = tabOf(st);
+      door2 = tab;
+      if (st.stage === "shown" && st.positions) return draw(askBack(st.positions, st.kind === "identity" ? st.words === "signing" ? 4 : 2 : null));
+      return draw(sitting(st));
     }
-    if (state.sitting.stage === "shown" && state.sitting.positions) {
-      app2.innerHTML = askBack(state.sitting.positions, b.web);
-      return;
-    }
-    app2.innerHTML = sitting(state.sitting, b.web);
+    draw();
   }
-  const values = (form3) => {
+  function openTab(t) {
+    if (state?.sitting && tabOf(state.sitting) !== t && state.sitting.stage !== "done") {
+      tab = tabOf(state.sitting);
+      void show(state);
+      return fail(new Error("Ki\u0161ib is in the middle of an act: finish it, or forget it (Cancel), first. One act at a time."));
+    }
+    tab = t;
+    part2 = firstPart(t, runner, b.web);
+    if (door2 !== t) door2 = null;
+    draw();
+  }
+  const drawn = /* @__PURE__ */ new Map();
+  function drawSigned() {
+    const box = $("signed");
+    if (!box || !runner) return;
+    drawn.clear();
+    box.innerHTML = runner.signed.map((s) => {
+      const form2 = actFormOf(s.identity, "mid");
+      const a = {
+        id: s.act,
+        form: actFormOf(s.act),
+        signer: { id: s.identity, form: form2, link: form2, name: s.name, me: true },
+        kind: `${s.app} \xB7 ${runner.kinds.find((k) => k.kind === s.kind)?.name ?? s.kind}`,
+        text: s.words.join(" "),
+        labels: [{ text: `${s.standing ? "signed without asking" : "asked, and signed"} \xB7 ${s.line === "apart" ? "on a line of its own" : `${s.app}\u2019s ${s.line} line, position ${s.position}`} \xB7 ${new Date(s.at * 1e3).toISOString().replace("T", " ").slice(0, 16)} UTC` }],
+        verified: false
+      };
+      drawn.set(s.act, { act: a, s });
+      return card(a);
+    }).join("");
+  }
+  attachCards(app2, {
+    app: "Ki\u0161ib",
+    signs: false,
+    act: (id) => drawn.get(id)?.act,
+    signerItems: () => [],
+    actItems: () => ({ before: [], after: [] }),
+    async choose(key, a) {
+      const s = drawn.get(a.id)?.s;
+      if (!s) return;
+      if (key === "profile") {
+        tab = "identities";
+        part2 = "record";
+        draw();
+        const f = app2.querySelector("#form-record");
+        if (f) f.elements.namedItem("id").value = a.signer.form;
+        return;
+      }
+      if (key === "why") {
+        const body = popup2.show("Why it\u2019s valid", `<p class="k-small k-soft">Reading its standing at its homes\u2026</p>`);
+        const r = await b.ask("runner standing", { act: s.act, identity: s.identity }).catch((e3) => ({ lines: [{ text: errorOf(e3), tone: "warn" }] }));
+        if (body.isConnected) popup2.replace(`${lines(r.lines)}<div class="kishib-review">${s.words.map((w) => `<p dir="auto">${e(w)}</p>`).join("")}</div>`);
+      }
+    }
+  });
+  attachColumn(app2, async (key) => {
+    part2 = key;
+    const runnerTab = tab === "runner";
+    if (runnerTab && !b.web) runner = await b.ask("runner state").catch(() => null) ?? runner;
+    if (part2 !== key) return;
+    if (runnerTab) return draw();
+    const pane = $("pane");
+    if (pane && tab) pane.innerHTML = part(tab, key, b.web, b.web ? null : runner);
+    const st = $("status");
+    if (st) st.innerHTML = "";
+    if (tab === "runner" && key === "signed") drawSigned();
+  });
+  const values = (form2) => {
     const out = {};
-    for (const el of Array.from(form3.elements)) {
-      if (!el.name) continue;
+    for (const el of Array.from(form2.elements)) {
+      if (!el.name || el.name === "allow") continue;
       out[el.name] = el.type === "checkbox" ? el.checked : el.value;
     }
     return out;
   };
-  const clear = (form3) => Array.from(form3.elements).forEach((el) => el.tagName === "TEXTAREA" && (el.value = ""));
-  const OPS = { rotate: "rotate plan", escape: "escape plan", confirm: "confirm plan", start: "collective start", give: "collective give" };
-  app2.addEventListener("change", (ev) => {
-    const t = ev.target;
-    if (t.name === "room") {
-      const remote = app2.querySelector("[data-remote]");
-      if (remote) {
-        remote.hidden = t.checked;
-        remote.querySelectorAll("input,textarea").forEach((x) => x.required = !t.checked);
-      }
-    }
-  });
+  const clear = (form2) => Array.from(form2.elements).forEach((el) => el.tagName === "TEXTAREA" && (el.value = ""));
+  const PLANS = { rotate: "rotate plan", escape: "escape plan", confirm: "confirm plan", start: "collective start", give: "collective give", make: "make plan" };
+  function showReview(r, kind) {
+    current = { review: r, must: kind === "start" };
+    const pane = $("pane");
+    if (pane) pane.innerHTML = review(r, current.must, kind === "rotate");
+    pane?.scrollTo?.(0, 0);
+  }
   app2.addEventListener("submit", async (ev) => {
-    const form3 = ev.target;
-    const id = form3.getAttribute("id") ?? "";
+    const form2 = ev.target;
+    const id = form2.getAttribute("id") ?? "";
     if (id === "pair") return;
     ev.preventDefault();
-    const a = values(form3);
-    if (id.startsWith("form-")) {
-      const kind = form3.dataset.kind;
-      if (kind === "check" || kind === "record") {
-        const r2 = await act(() => b.ask(kind === "check" ? "check words" : "record", a));
-        if (!r2) return;
-        clear(form3);
-        $("status").innerHTML = `<div class="review"><h3>${e(r2.title)}</h3>${r2.lines ? lines(r2.lines) : sections(r2.sections ?? [])}</div>`;
+    const a = values(form2);
+    if (form2.classList.contains("kishib-renew")) {
+      const r = await act(() => b.ask("runner give", { id: a.id, address: a.address, words: a.words }));
+      if (!r) return;
+      runner = r;
+      draw();
+      return done("The new signing key\u2019s words are taken: the runner signs for this identity again, with its new key.");
+    }
+    const kind = form2.dataset.kind ?? "";
+    switch (kind) {
+      case "check":
+      case "record": {
+        const r = await act(() => b.ask(kind === "check" ? "check words" : "record", a));
+        if (!r) return;
+        clear(form2);
+        $("result").innerHTML = `<div class="kishib-review" id="answer"><h3>${e(r.title)}</h3>${r.lines ? lines(r.lines) : sections(r.sections ?? [])}</div>`;
         return;
       }
-      const r = await act(() => b.ask(OPS[kind], a));
-      if (!r) return;
-      clear(form3);
-      current = { review: r, must: kind === "start" };
-      app2.innerHTML = review(r, b.web, current.must);
-      window.scrollTo(0, 0);
-      return;
+      case "checkshare": {
+        const more = String(a.more ?? "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => /^(\d+)\s+(.*)$/.exec(l) ?? [l, "", l]);
+        const r = await act(() => b.ask("check share", { collective: a.collective, address: a.address, numbers: [a.number, ...more.map((m) => m[1])], shares: [a.shareWords, ...more.map((m) => m[2])] }));
+        if (!r) return;
+        clear(form2);
+        $("result").innerHTML = `<div class="kishib-review" id="answer"><h3>${e(r.title)}</h3>${lines(r.lines)}</div>`;
+        return;
+      }
+      case "give-runner": {
+        const r = await act(() => b.ask("runner give", a));
+        if (!r) return;
+        runner = r;
+        draw();
+        return done("Kept by the runner, on this Mac: approve it for an app in Runner, Apps.");
+      }
+      default:
+        if (PLANS[kind]) {
+          const r = await act(() => b.ask(PLANS[kind], { ...a, ...a.room === "1" ? { room: true } : {} }));
+          if (!r) return;
+          clear(form2);
+          return showReview(r, kind);
+        }
     }
     if (id === "typed") {
       const typed = Object.keys(a).sort((x, y) => Number(x.slice(1)) - Number(y.slice(1))).map((k) => String(a[k]));
       const s = await act(() => b.ask("words typed", { typed }));
-      if (s) await show(s);
+      if (s) await show({ ...s, runner: runner ?? void 0 });
       return;
     }
     if (id === "paper") {
       const s = await act(() => b.ask("collective paper", a));
-      if (s) await show(s);
+      if (s) await show({ ...s, runner: runner ?? void 0 });
     }
   });
   app2.addEventListener("click", async (ev) => {
-    const t = ev.target.closest("[data-action]");
-    if (!t) return;
-    const action = t.dataset.action;
-    switch (action) {
-      case "open":
-        app2.innerHTML = form2(t.dataset.form, b.web);
-        return;
-      case "home": {
+    const t = ev.target;
+    const tile = t.closest("[data-k-tile]");
+    if (tile) return openTab(tile.dataset.kTile);
+    const tb = t.closest("[data-tab]");
+    if (tb) return openTab(tb.dataset.tab);
+    const el = t.closest("[data-action]");
+    if (!el) return;
+    const d = el.dataset;
+    const again = async (s) => s && show({ ...s, runner: runner ?? void 0 });
+    switch (d.action) {
+      case "home-tiles":
+        if (state?.sitting && state.sitting.stage !== "done") return fail(new Error("Ki\u0161ib is in the middle of an act: finish it, or forget it (Cancel), first."));
+        tab = null;
+        part2 = null;
+        door2 = null;
+        return draw();
+      case "holds":
+        return openTab(b.web ? "identities" : runner?.on ? "identities" : "runner");
+      case "open-door":
+        door2 = tab;
+        return draw();
+      case "forget": {
         const s = await act(() => b.ask("forget"));
-        if (s) await show(s);
+        if (s) {
+          state = { ...s, runner: runner ?? void 0 };
+          current = null;
+          draw();
+        }
         return;
       }
       case "read request": {
-        const form3 = t.closest("form");
-        const a = values(form3);
+        const form2 = t.closest("form");
+        const a = values(form2);
         const r = await act(() => b.ask("collective read", { collective: a.collective, fingerprint: a.fingerprint, address: a.address }));
-        if (r) $("request").innerHTML = `<div class="review"><h3>${e(r.title)}</h3>${sections(r.sections)}</div>`;
+        if (r) $("request").innerHTML = `<div class="kishib-review"><h3>${e(r.title)}</h3>${sections(r.sections)}</div>`;
         return;
       }
       case "sign": {
@@ -9406,45 +10215,146 @@ function mount(app2, b) {
         if (current.must && !$("read-it")?.checked) return fail(new Error("Read what this device will hold, and say so, before anything is done."));
         const warned = current.review.warning ? $("warned")?.checked ? current.review.warning : void 0 : void 0;
         if (current.review.warning && !warned) return fail(new Error("A line of acts would be left out, or cannot be placed: read the warning in red and tick it, or go back and give its card."));
-        const s = await act(() => b.ask("confirm", { plan: current.review.plan, digest: current.review.digest, ...warned ? { warned } : {} }));
-        if (s) await show(s);
-        return;
+        return again(await act(() => b.ask("confirm", { plan: current.review.plan, digest: current.review.digest, ...warned ? { warned } : {} })));
       }
       case "refresh":
       case "resend":
       case "gather":
       case "rotate collective": {
-        const op = action === "gather" ? "collective gather" : action === "rotate collective" ? "collective rotate" : action;
-        const s = await act(() => b.ask(op));
-        if (s) await show(s);
-        return;
+        const op = d.action === "gather" ? "collective gather" : d.action === "rotate collective" ? "collective rotate" : d.action;
+        return again(await act(() => b.ask(op)));
       }
       case "show words": {
         const w = await act(() => b.ask("words show"));
-        if (w) app2.innerHTML = wordsShown(w.words, w.say, b.web, w.holder ? "The collective\u2019s new signing key\u2019s words" : w.which === "chain" ? "The new chain key\u2019s words: a new paper" : "The new signing key\u2019s words");
+        if (!w) return;
+        const st = state?.sitting;
+        const label = w.holder ? "The collective\u2019s new signing key\u2019s words" : st?.kind === "make" ? w.which === "chain" ? "Its chain key\u2019s words: its first paper" : "Its signing key\u2019s words" : w.which === "chain" ? "Write a new chain-key paper" : "The new signing key\u2019s words";
+        const pane = $("pane");
+        if (pane) pane.innerHTML = wordsShown(w.words, w.say, label, st?.kind === "identity" ? w.which === "chain" ? 2 : 4 : null);
         return;
       }
       case "written": {
         if (app2.querySelector("#words[data-share]")) {
           const holder = app2.querySelector("#words").dataset.share;
-          const s2 = await act(() => b.ask("collective share written", { holder }));
-          if (s2) await show(s2);
-          return;
+          return again(await act(() => b.ask("collective share written", { holder })));
         }
-        const s = await act(() => b.ask("words written"));
-        if (s) await show(s);
-        return;
+        return again(await act(() => b.ask("words written")));
       }
       case "show share": {
-        const holder = t.dataset.holder;
+        const holder = d.holder;
         const r = await act(() => b.ask("collective share", { holder }));
         if (!r) return;
-        app2.innerHTML = wordsShown(r.words, [...r.say, `Share number ${r.x}. The new dealing\u2019s fingerprint: ${r.fingerprint}.`], b.web, `New share ${r.x} of the collective\u2019s chain key`);
-        app2.querySelector("#words").setAttribute("data-share", holder);
+        const pane = $("pane");
+        if (pane) {
+          pane.innerHTML = wordsShown(r.words, [...r.say, `Share number ${r.x}. The new dealing\u2019s fingerprint: ${r.fingerprint}.`], `New share ${r.x} of the collective\u2019s chain key`, null);
+          pane.querySelector("#words").setAttribute("data-share", holder);
+        }
+        return;
+      }
+      // ------------------------------------------------ the runner (the program only)
+      case "runner-on-ask":
+        $("risk")?.scrollIntoView({ block: "center" });
+        return $("risk-read")?.focus();
+      case "runner-on": {
+        if (!$("risk-read")?.checked) return fail(new Error("Read the risk, and tick it, before the runner is turned on. It stays off."));
+        const r = await act(() => b.ask("runner on", { read: true }));
+        if (!r) return;
+        runner = r;
+        draw();
+        return done("The runner is on. Give it an identity (Identities, Held here), then pair an app: in Dub, the identity panel, + Add, Use one from Ki\u0161ib.");
+      }
+      case "runner-off-ask":
+        return $("runner-state")?.nextElementSibling?.scrollIntoView({ block: "center" });
+      case "runner-off": {
+        if (!confirm("Turn the runner off? Ki\u0161ib forgets every signing key it holds, every app paired with it and what it signed. The apps stop signing through it.")) return;
+        const r = await act(() => b.ask("runner off"));
+        if (!r) return;
+        runner = r;
+        draw();
+        return done("The runner is off: every key, pairing and record it held is forgotten, its file overwritten and removed.");
+      }
+      case "approve": {
+        const box = t.closest(".kishib-app");
+        const identities = [...box.querySelectorAll('input[name="allow"]:checked')].map((x) => x.value);
+        const r = await act(() => b.ask("runner approve", { pairing: d.pairing, identities }));
+        if (r) {
+          runner = r;
+          draw();
+          done("Approved: the app may now use the identities chosen, each act shown in Ki\u0161ib\u2019s panel inside its window.");
+        }
+        return;
+      }
+      case "refuse":
+      case "revoke": {
+        if (d.action === "revoke" && !confirm("Revoke this app? It signs through Ki\u0161ib no more, and what waits from it is dropped.")) return;
+        const r = await act(() => b.ask("runner revoke", { pairing: d.pairing }));
+        if (r) {
+          runner = r;
+          draw();
+        }
+        return;
+      }
+      case "yes": {
+        const r = await act(() => b.ask("runner yes", { pairing: d.pairing, kind: d.kind, on: d.on === "1" }));
+        if (r) {
+          runner = r;
+          draw();
+        }
+        return;
+      }
+      case "answer": {
+        const always = !!app2.querySelector(`[data-always="${CSS.escape(d.request)}"]`)?.checked;
+        const r = await act(() => b.ask("runner answer", { request: d.request, yes: d.yes === "1", always }));
+        if (r) {
+          runner = r;
+          draw();
+          done(d.yes === "1" ? "Signed: the app that asked has its signature." : "Declined: nothing was signed.");
+        }
+        return;
+      }
+      case "held-record": {
+        const h = runner?.held.find((x) => x.id === d.id);
+        const r = await act(() => b.ask("record", { id: d.id, address: h?.homes[0] ?? "" }));
+        if (r) popup2.show(r.title, sections(r.sections));
+        return;
+      }
+      case "held-remove": {
+        if (!confirm("Remove this identity from the runner? Ki\u0161ib forgets its signing key; the apps using it through Ki\u0161ib stop signing as it. The identity itself is not touched.")) return;
+        const r = await act(() => b.ask("runner remove", { id: d.id }));
+        if (r) {
+          runner = r;
+          draw();
+        }
+        return;
+      }
+      case "runner-cards": {
+        const form2 = t.closest("form");
+        const id = form2.elements.namedItem("id").value.trim();
+        const r = await act(() => b.ask("runner cards", { id }));
+        if (!r) return;
+        const area = form2.elements.namedItem("cards");
+        if (!r.cards) return fail(new Error("Ki\u0161ib\u2019s runner signed no line for this identity under its current key (or does not hold it)."));
+        area.value = [area.value.trim(), ...r.cards.split("; ")].filter(Boolean).join("\n");
         return;
       }
     }
   });
+  if (!b.web) {
+    setInterval(async () => {
+      if (document.hidden || tab === null || !runner?.on) return;
+      let r;
+      try {
+        r = await b.ask("runner state");
+      } catch {
+        return;
+      }
+      const changed = JSON.stringify([r.apps, r.waiting, r.signed.length, r.held]) !== JSON.stringify([runner.apps, runner.waiting, runner.signed.length, runner.held]);
+      runner = r;
+      if (!changed) return;
+      if (tab === "runner" && part2 !== "onoff") draw();
+      else app2.querySelectorAll(".kishib-holds").forEach((x) => x.outerHTML = holds(b.web, runner));
+    }, 2e3);
+  }
   return { show };
 }
 
@@ -9452,13 +10362,13 @@ function mount(app2, b) {
 var app = document.getElementById("app");
 var kishib = new Kishib({ web: true });
 var ask = (op, a = {}) => run(kishib, op, a);
-var ui = mount(app, { web: true, ask, start: start2 });
-async function start2() {
+var ui = mount(app, { web: true, ask, start });
+async function start() {
   if (!crypto?.getRandomValues) {
-    app.innerHTML = `${top2(true)}${note2("error", "This browser has no secure source of randomness: Ki\u0161ib cannot run here.")}`;
+    app.innerHTML = alone(note("error", "This browser has no secure source of randomness: Ki\u0161ib cannot run here."));
     return;
   }
   await ui.show(kishib.state());
 }
 addEventListener("pagehide", () => kishib.forget());
-void start2();
+void start();

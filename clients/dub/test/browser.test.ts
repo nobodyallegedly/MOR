@@ -415,7 +415,8 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await g.publishRoutes([{ scope: null, hints: [relay.base], kind: 0 }]);
   await page.locator('[data-k-open="identity"]').click();
   await page.locator('[data-k-add="toggle"]').click();
-  assert.ok(await page.locator('[data-k-add="kishib"]').isDisabled(), 'use one from Kišib: an empty place for round 2');
+  // Use one from Kišib: open on the Mac (Kišib's runner, `../kishib/test/runner-browser.test.ts`); an empty place in the web client.
+  assert.ok(!(await page.locator('[data-k-add="kishib"]').isDisabled()), 'use one from Kišib, on the Mac');
   await page.locator('[data-k-add="bring"]').click();
   const bring = modal.locator('form#bring');
   await bring.locator('input[name=id]').fill(groupId(g.id));
