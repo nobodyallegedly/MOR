@@ -431,7 +431,7 @@ fn a_kept_act_whose_line_is_not_held_is_unknown_5_5c() {
     }
     assert_eq!(reader.status(&first), Status::Unknown, "unknown, never void");
     assert_eq!(reader.status(&stray), Status::Unknown, "void needs the kept line rebuilt");
-    assert_eq!(reader.status(&third), Status::Unknown, "the tip too: whether its summary fits its line cannot be told (rotation check 7)");
+    assert_eq!(reader.status(&third), Status::Valid, "the tip, named by the rotation: check 7 applies where the line is held");
     reader.add(w.v.get(&second).unwrap().act.clone()).unwrap();
     assert_eq!(reader.status(&first), Status::Valid);
     assert_eq!(reader.status(&stray), Status::Void);

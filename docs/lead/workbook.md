@@ -76,7 +76,7 @@ Read its report and its questions; read the CI run yourself (a session's green i
 Any change to the eight texts after the box was sealed (MOR commit `564ca17`) is listed here, so Fable's review can tell a known difference from a divergence the C session found.
 
 S7 (branch `claude/s7-fixes`, F380), one line each:
-- Identity, "The rotation checks": a seventh check, a kept tip's summary fitting its line where the line is held; a tip that does not fit keeps nothing, itself included; a rotation whose every tip's line is held and none fits is invalid; its reason and stated cost in italics (Q17).
+- Identity, "The rotation checks": a seventh check, a kept tip's summary fitting its line where the line is held; a tip that does not fit keeps nothing, itself included, and one whose sequence the verifier does not hold is kept by its name; a rotation whose every tip's line is held and none fits is invalid; its reason and stated cost in italics (Q17).
 - Identity, "Which rotation counts", a new paragraph "A rotation that does not count": passing the checks and losing at its position is neither invalid nor void but **not counting**; acts bound to it fail everyday check 2 (Q14).
 - Identity, "Which rotation counts", a new paragraph "What stops a chain": the seven reasons a verifier names, and two verifiers holding the same acts name the same one (Q15, Q49).
 - Identity, rule 34: an acknowledgement counts only when signed with the acknowledging identity's own key, never a scoped key (Q18).

@@ -1670,16 +1670,20 @@ impl Verifier {
 
     /// Whether an act lies in a rotation's kept ancestry: a kept tip or an
     /// earlier act of its line, proved by the tip's running summary from
-    /// the act ids the verifier holds (rotation check 7: a tip whose line
-    /// does not fit keeps nothing, itself included). `CannotTell` where a
-    /// line it could lie on cannot be rebuilt (F298).
+    /// the act ids the verifier holds (rotation check 7: a tip whose line,
+    /// held, does not fit keeps nothing, itself included; a tip whose line
+    /// is not held is kept by its name, what lies below it unknown).
+    /// `CannotTell` where a line it could lie on cannot be rebuilt (F298).
     fn in_kept_ancestry(&self, x: &Held, r: &Rotation, signer: &Hash) -> Kept {
         let Some(p) = x.inside.position else {
             return Kept::No;
         };
         let mut tell = true;
         for t in &r.kept {
-            if p >= 1 && (p < t.position || (p == t.position && t.act == x.id)) {
+            if t.act == x.id && !matches!(self.line(signer, t), Line::Mismatch) {
+                return Kept::Yes;
+            }
+            if p >= 1 && p < t.position {
                 match self.line(signer, t) {
                     Line::Rebuilt(ids) if ids[p as usize - 1] == x.id => return Kept::Yes,
                     Line::Rebuilt(_) | Line::Mismatch => {}

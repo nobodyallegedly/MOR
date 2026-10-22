@@ -24,7 +24,7 @@ A stranger, given only the eight texts, read the new sentences. Its comments tig
 
 The core also now follows the new sentences:
 - It knows "not counting".
-- It no longer keeps a line's last act by its name alone.
+- A kept line's last act whose held line does not fit keeps nothing; held without its line, it stays kept by its name, as before.
 - It follows "belongs to" at any depth.
 - It names the first broken rule of canonical text in the order the rules are numbered, as the C verifier does, rather than the first faulty character.
 
@@ -91,7 +91,7 @@ No finding number, review label or history appears in them.
 
 **Core changes:**
 - **`Status::NotCounting`** (`chain.rs`, `lost_at`). A rotation or chain signature that is a candidate at a position where another counts. Acts bound to it stay invalid, by everyday check 2.
-- **Rotation check 7.** `kept_tips_fit` excludes, as a candidate, a rotation naming at least one tip where every tip's line is held and none fits. `in_kept_ancestry` no longer keeps a tip by name: the tip too must lie on its rebuilt line. A tip whose line is not held is unknown.
+- **Rotation check 7.** `kept_tips_fit` excludes, as a candidate, a rotation naming at least one tip where every tip's line is held and none fits. In `in_kept_ancestry`, a tip whose held line does not fit keeps nothing, itself included. A tip whose line is not held is still kept by its name, with what lies below it unknown, since check 7 applies "where the verifier holds that line". A first version made such a tip unknown; the collective client's rollback test (3.7w) caught it, and the text now says this case in so many words.
 - **"Belongs to"** (`keepers.rs`). It is followed with a seen-set instead of a depth of four. `belongs_to_judged` says whether every step was held. `keeper_unknown_acts` with `Verifier::keepers_cannot_tell` makes a void act whose keepers cannot be read in full unknown.
 - **Canonical text** (`text.rs`). Each rule is checked over the whole string, in the order numbered, and `TextError::rule` gives Text's numbers, 7 to 12. The error messages read "Text rule 10: …".
 - **Q15 and Q18** needed no code. Acts bound to a contested rotation were already pending (`waiting()`), and an acknowledgement already needed `Status::Valid`.
@@ -100,8 +100,7 @@ No finding number, review label or history appears in them.
 - `core/tests/chain.rs`: a spent chain key revealed again, and a thief's losing rotation, are now not counting.
 - `core/tests/drafts_after_step_15.rs`:
   - F292's buggy-client rotation, with its only tip not fitting, is invalid; a second scenario shows a misfit tip beside a fitting one keeping nothing.
-  - 5.5c's tip is unknown until its line arrives.
-- The harness gauntlet: 5.5c, two 5.7 steps and 5.7c, the same way.
+- The harness gauntlet: two 5.7 steps and 5.7c, the same way.
 - `core/tests/agreements_invariants.rs` (IT2b) picked "the first publication" by id order. With the new content keys that order changed, so it now takes the act it means, the collective's latest.
 
 ### Part 3, the vectors
