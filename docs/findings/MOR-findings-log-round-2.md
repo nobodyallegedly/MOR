@@ -28,6 +28,17 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F383. S7b's four questions, judged by Fable (22 October 2026)
+
+**From** `docs/s7b-report.md` (pull request 98, merged), sent to Fable before deciding. **Taken by the project lead under delegation**, each as Fable judges:
+
+1. **A kept tip whose line the verifier does not hold** stays kept by its name, what lies below it unknown (as the core, the collective client's rollback and the suite's 5.5c stand). The same reasoning as F381, 1: a home receipts a rotation without the owner's private lines, so a tip unknown until its line is held would be unknown to the home itself. Identity's section 6 is reworded ("an act below a kept tip whose line it cannot rebuild"), with one italic sentence for the stated cost: a tip kept by name becomes void when its line arrives and does not fit, which only the owner's own broken client can bring about.
+2. **"The genesis unknown" stops the chain**, as written; no verdict differs. One clause in Identity's Part four: what a client shows past an unknown genesis (rotations it can check in form) is display, not resolution.
+3. **The order of the seven stop reasons, as the core has it (confirmed by Fable from `chain.rs`):** before the first position, no genesis, then the genesis unknown, then the genesis invalid; at a position, the end of what is held, then a contest no later act can resolve, then cannot tell, then a contest in the homes' tally, then pending. Written in the text with its principle, so it survives a rewrite of the code: what no later act can change comes before what a later act could decide, and that before waiting. Deliberate and said so: a contest among finals beats cannot tell (nothing can undo it); a contest in the tally yields to cannot tell (the undecided objection could still make a homeless rotation count there).
+4. **More than one unstated "same payment" pair:** (c), the project lead's lean (Fable's judgment attributes it to Nobody, allegedly; it was the lead's): with one unstated pair in play, the answer is judged both ways, exactly; with two or more, unknown. "In play" means the pairs the answer depends on, never every unstated pair the view holds, so unknown does not spread. Sound rather than complete, linear in cost; written in the text so two verifiers answer alike. *Not chosen:* (a) documenting the two-way approximation (a definite answer it cannot defend, the convenience removed in S7 coming back); exact judgment up to a fixed small number of pairs (Fable's refinement; it would need that number in the text, and is left for MOR2 if wanted).
+
+**Where:** S7c, then a second box.
+
 ## F381. S7's four questions, judged by Fable: check 7's "invalid" clause dropped (22 October 2026)
 
 **From** `docs/s7-report.md` (pull request 96), sent to Fable before deciding (the working rule since 22 October), Fable's judgment received the same afternoon.
