@@ -372,6 +372,7 @@ Clients and key Modules SHOULD keep the signing key and the chain key separate, 
 4. A new signing key and a next chain-key commitment are present; the position (field 1) is at least 1; a homeless rotation (field 11) declares a new set of homes (field 6).
 5. Any new home rule or audit requirement meets the conditions for genesis, counted against the new set of homes if one is given. A home rule the rotation leaves in place must meet them too, against the new set of homes; if it does not, the rotation is invalid. *The owner's client sends a rule that fits, or null for the default, whenever it changes the homes; it never quietly changes a protection the owner chose.*
 6. A closure flag is valid on any rotation; it has effect only for identities whose declared homes name the signer as operator.
+7. Each kept tip's running summary is the summary of the line it names up to that tip, where the verifier holds that line. A tip whose summary does not fit keeps nothing, itself included; a rotation whose every tip's line the verifier holds, none fitting, is invalid. *A thief holding the chain key already chooses what to keep; a summary that does not fit gives nobody anything, and comes only from a broken client. Stated cost: an owner's broken client voids its own line at a change of keys; others' reliance survives by acknowledgement and keepers, and the owner rotates again with the next chain key.*
 
 #### Which rotation counts
 
@@ -384,6 +385,10 @@ For each position n of an identity chain, starting at 1 (a chain signature count
    - **Threshold k:** a rotation counts if homes of at least k distinct operators have receipts for it.
 4. If no rotation counts at position n under the rule, a homeless rotation at n may count under the homeless procedure (section 10).
 5. If nothing counts at position n, later positions are not evaluated: the latest act that counts is the one at n minus one.
+
+**A rotation that does not count.** A rotation that passes the rotation checks but does not count at its position, because another counts there, is neither invalid nor void: it is **not counting**, and a client shows it so. The acts bound to it are judged by the rotation that counts: their binding names no act that counts (everyday check 2).
+
+**What stops a chain.** Resolving an identity chain gives the act that counts at each position and the reason the chain stops, which a verifier names, one of seven: no genesis is held; the genesis is unknown to it (signed under a scheme it lacks); the genesis is invalid; nothing that can count is held for the next position (the end of what is held); acts are held for the next position and none counts yet (pending); the next position is contested; or whether one counts there cannot be told (section 6, "A verifier that cannot tell answers unknown"). Two verifiers holding the same acts, facts and attempts name the same reason.
 
 ### 6. What a rotation keeps
 
@@ -402,7 +407,7 @@ If it lies outside the kept ancestry, or within it but listed as disowned, it is
 - another identity acknowledged it (Envelopes; by an act of a type the Identity, Money or Agreements MIR defines, such as a witness act);
 - or a named keeper recorded it before recording the rotation (Agreements: the keeper record, type 2, and Agreements rules 41 and 42);
 
-then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements), and only while its own signer's chain keeps it valid (below), save the exception stated there for keeper records.
+then it is valid and shown as disputed. A keeper record or acknowledgement counts only alongside the act it names (Envelopes, Agreements), and only while its own signer's chain keeps it valid (below), save the exception stated there for keeper records. An acknowledgement counts only when signed with the acknowledging identity's own key, never with a scoped key: reliance is the identity's, not a grantee's.
 
 *Disowning an act does not cost the owner the genuine acts that followed it: later acts in the line stay valid, because their validity rests on being inside the kept ancestry, not on the disowned act's.*
 
@@ -507,7 +512,7 @@ With several homes and no declared rule, the default of rule 2 applies.
 
 #### Rule 42. A contested rotation's rule waits
 
-A rule changed in a contested rotation takes effect only once the contest is settled. An invalid rotation never counts.
+A rule changed in a contested rotation takes effect only once the contest is settled, and an act bound to a contested rotation is pending, never valid and not invalid, until the contest is settled. An invalid rotation never counts.
 
 #### Rule 43. An outvoted home
 

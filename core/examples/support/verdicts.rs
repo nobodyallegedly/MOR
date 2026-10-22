@@ -80,6 +80,7 @@ fn status_name(s: Status) -> &'static str {
         Status::Pending => "pending",
         Status::Invalid => "invalid",
         Status::Unknown => "unknown",
+        Status::NotCounting => "not counting",
         Status::Scoped => "scoped",
     }
 }
@@ -321,9 +322,12 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
                     "dishonest": r.dishonest.iter().map(|(o, p)| json!({ "operator": match o { mor_core::identity::Operator::Id(x) => hx(x), mor_core::identity::Operator::Own => "own".into() }, "from_position": p })).collect::<Vec<_>>() })
         }
         "status after keepers" => {
-            let rescued = view(w).keeper_disputed_acts();
+            let (rescued, unknown) = { let v = view(w); (v.keeper_disputed_acts(), v.keeper_unknown_acts()) };
             for a in rescued {
                 w.v.keeper_recorded(a);
+            }
+            for a in unknown {
+                w.v.keepers_cannot_tell(a);
             }
             json!(status_name(w.v.status(&h("act"))))
         }

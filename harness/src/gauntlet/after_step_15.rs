@@ -19,7 +19,9 @@ fn receipted(p: &Put) -> bool {
 impl Gauntlet {
     /// 5.5c (F298): a reader holding the rotation and its kept tip but not
     /// every act of the line leading to it: the first post is unknown, never
-    /// void, until the line arrives; then valid.
+    /// void, until the line arrives; then valid. The tip too is unknown until
+    /// then: whether its summary fits its line cannot be told (rotation
+    /// check 7).
     pub(super) async fn step5c_reader_without_the_line(&mut self) {
         let t = Ran::Throwaway;
         let h = self.throwaway("home-5c").await;
@@ -42,7 +44,7 @@ impl Gauntlet {
             "5.5c",
             t,
             "(F298) a reader holding the rotation and its kept tip but not the whole line: the first post is unknown, never void, until the line arrives; then valid",
-            receipted(&put) && rd.chain(&j.id) == vec![j.id, r.id()] && before == (Status::Unknown, Status::Valid) && after == Status::Valid,
+            receipted(&put) && rd.chain(&j.id) == vec![j.id, r.id()] && before == (Status::Unknown, Status::Unknown) && after == Status::Valid,
             format!("{before:?}, then {after:?}"),
         );
         self.done(&rd);

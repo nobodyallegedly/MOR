@@ -74,7 +74,21 @@ Read its report and its questions; read the CI run yourself (a session's green i
 ## After the box
 
 Any change to the eight texts after the box was sealed (MOR commit `564ca17`) is listed here, so Fable's review can tell a known difference from a divergence the C session found.
-- None yet.
+
+S7 (branch `claude/s7-fixes`, F380), one line each:
+- Identity, "The rotation checks": a seventh check, a kept tip's summary fitting its line where the line is held; a tip that does not fit keeps nothing, itself included; a rotation whose every tip's line is held and none fits is invalid; its reason and stated cost in italics (Q17).
+- Identity, "Which rotation counts", a new paragraph "A rotation that does not count": passing the checks and losing at its position is neither invalid nor void but **not counting**; acts bound to it fail everyday check 2 (Q14).
+- Identity, "Which rotation counts", a new paragraph "What stops a chain": the seven reasons a verifier names, and two verifiers holding the same acts name the same one (Q15, Q49).
+- Identity, rule 34: an acknowledgement counts only when signed with the acknowledging identity's own key, never a scoped key (Q18).
+- Identity, rule 42: an act bound to a contested rotation is pending until the contest is settled (Q15).
+- Text, rule 14: naming the collective's latest decision is the client's duty; a verifier accepts any decision of the collective's own (Q24).
+- Text, rule 13: where a text breaks several of rules 7 to 12, the one named is the first in the order numbered (Q1).
+- Envelopes, before rule 1: the rules are numbered for reading and checked in the order the bytes allow; any one broken makes the act invalid (Q4).
+- Envelopes, rule 5: every CBOR text string in the inside, map keys included, at any depth, whatever specification the act names (Q5).
+- Envelopes, rule 9: marked client conformance; no verdict reads it (Q6).
+- Agreements, "Belongs to": followed through every step the acts held allow, at no fixed depth; unknown beyond an act not held (Q35).
+- Agreements, terms field 11's comment: the clone's `objects` names the parent and an act of its line, its latest where the client holds it, as the clone's rule says (Q33).
+- Development, rule 26: unchanged; the core's MIR hash now follows it (Q46). Money, rule 12: unchanged; the core now follows it (Q27).
 
 ## Text edits waiting for the freeze-ready branch
 

@@ -72,6 +72,8 @@ Every act names, inside, the specification that defines its type by hash, and a 
 
 *The act's format, and how its lock and commitments fit together, are in Part three ("The act").*
 
+The rules below are numbered for reading. A verifier checks them in the order the bytes allow: the outside, then the locked bytes against the locked hash, then the inside once unlocked, against the inside commitment, then the inside's shape and its text. An act that breaks any of them is invalid, whichever it finds first.
+
 #### Rule 1. One shape, in deterministic CBOR
 
 An act MUST decode as deterministic CBOR in the shape Part three gives ("The act"); an unknown key, outside or inside, makes it invalid.
@@ -92,7 +94,7 @@ An act's signature scheme is checked as Identity defines: a scheme the client do
 
 #### Rule 5. Canonical text
 
-Every text field MUST be canonical text (Text MIR).
+Every text field MUST be canonical text (Text MIR): every CBOR text string in the inside, map keys included, at any depth, whatever specification the act names.
 
 #### Rule 6. Hints never decide
 
@@ -112,7 +114,7 @@ Identity acts are the public face of an identity: genesis, rotations, receipts, 
 
 #### Rule 9. A new key for every object
 
-A content key MUST NOT be reused for two objects.
+*Client conformance.* A content key MUST NOT be reused for two objects. *It binds whoever locks; no verdict reads it, and a verifier does not refuse an act for it.*
 
 ### 3. Private delivery
 

@@ -1519,6 +1519,7 @@ impl Verifier {
             Status::Pending => "pending",
             Status::Invalid => "invalid",
             Status::Unknown => "unknown",
+            Status::NotCounting => "not counting",
             Status::Scoped => "scoped",
         }
         .into())
@@ -1564,6 +1565,7 @@ impl Verifier {
             Status::Pending => "pending",
             Status::Invalid => "invalid",
             Status::Unknown => "unknown",
+            Status::NotCounting => "not counting",
             Status::Scoped => "scoped",
         }
         .into())

@@ -264,6 +264,7 @@ fn verdict_vectors() {
         Status::Pending => "pending",
         Status::Invalid => "invalid",
         Status::Unknown => "unknown",
+        Status::NotCounting => "not counting",
         Status::Scoped => "scoped",
     };
     let mut n = 0;
@@ -317,9 +318,15 @@ fn verdict_vectors() {
                     json!({ "counting": r.links.iter().map(|l| hex::encode(l.act)).collect::<Vec<_>>(), "next": stop, "dishonest": dishonest })
                 }
                 "status after keepers" => {
-                    let rescued = AgreementsView::new(&v, mirs.clone()).keeper_disputed_acts();
+                    let (rescued, unknown) = {
+                        let av = AgreementsView::new(&v, mirs.clone());
+                        (av.keeper_disputed_acts(), av.keeper_unknown_acts())
+                    };
                     for a in rescued {
                         v.keeper_recorded(a);
+                    }
+                    for a in unknown {
+                        v.keepers_cannot_tell(a);
                     }
                     json!(name(v.status(&h(&ask["act"]))))
                 }

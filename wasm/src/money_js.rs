@@ -1064,6 +1064,7 @@ impl Verifier {
             Status::Pending => "pending",
             Status::Invalid => "invalid",
             Status::Unknown => "unknown",
+            Status::NotCounting => "not counting",
             Status::Scoped => "scoped",
         };
         let signer_ok = signer.is_some_and(|s| money::check_signer(&p, &s, &cited).is_ok());

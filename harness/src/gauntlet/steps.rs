@@ -213,7 +213,7 @@ impl Gauntlet {
         let ok = own.iter().all(receipted)
             && told
             && rd.chain(&a.id).last() == Some(&r4.id())
-            && rd.status(&rival.id()) == Status::Invalid;
+            && rd.status(&rival.id()) == Status::NotCounting;
         self.check(
             "5.7",
             real,
@@ -347,13 +347,13 @@ impl Gauntlet {
         rd.add_act(&p);
         rd.add_act(&tpost);
         let ok = rd.chain(&j.id) == vec![j.id, own.id()]
-            && rd.status(&thief.id()) == Status::Invalid
+            && rd.status(&thief.id()) == Status::NotCounting
             && rd.status(&tpost.id()) == Status::Invalid
             && rd.status(&p.id()) == Status::Valid;
         self.check(
             "5.7",
             t,
-            "the thief's rotation, held only by the lax home, misses the majority: J's counts, the thief's acts are invalid, J's history stays valid, and the lax home is outvoted",
+            "the thief's rotation, held only by the lax home, misses the majority: J's counts, the thief's rotation is not counting and its act invalid, J's history stays valid, and the lax home is outvoted",
             ok,
             format!("chain {} long", rd.chain(&j.id).len()),
         );
@@ -838,7 +838,7 @@ impl Gauntlet {
             t,
             "(F92) after the home closes, a thief with the first, used chain key makes a homeless rotation at that old position and rotates again at once: the rotations the home receipted still count, the thief's chain counts for nothing",
             rd.chain(&j0.id) == vec![j0.id, r1.id(), r2.id()]
-                && rd.status(&thr.id()) == Status::Invalid
+                && rd.status(&thr.id()) == Status::NotCounting
                 && rd.status(&t2.id()) == Status::Invalid,
             format!("chain {} long", rd.chain(&j0.id).len()),
         );
