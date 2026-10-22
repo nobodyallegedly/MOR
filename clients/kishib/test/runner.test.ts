@@ -6,14 +6,11 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { hex } from '../../genesis/src/core.ts';
 import { fromWords } from '../../../modules/carry/src/carry.ts';
-import { Client, newKey } from '../../desk/src/page/api.ts';
-import { serve as serveDub, DOMAIN as DUB_DOMAIN } from '../../dub/src/server.ts';
-import { apps, closeAll, dub, everything, kishib, refused, standing, start, type Relay } from './world.ts';
+import { apps, asking, clickPanel, closeAll, dub, dubBeside, everything, kishib, refused, standing, start, type Relay } from './world.ts';
 import { OFF_SAY, RUNNER_SPENT_SAY, type RunnerView } from '../src/runner.ts';
 
 let homes: Relay[];
@@ -28,35 +25,6 @@ after(async () => {
   await closeAll();
   for (const h of [...homes, relay]) await h.stop();
 });
-
-/** A Dub on this computer that knows where Kišib's folder is. */
-export async function dubBeside(kishibDir: string) {
-  const dir = mkdtempSync(join(tmpdir(), 'kishib-runner-dub-'));
-  const app = await serveDub({ dir, port: 0, kishib: kishibDir });
-  apps.push(app);
-  const c = await Client.open(await newKey(), app.base, DUB_DOMAIN);
-  await c.ask('pair', { code: app.access.newCode(), label: 'test' });
-  return { app, c, dir };
-}
-
-/** The panel, as its frame loads it and the person clicks in it. */
-export async function clickPanel(panel: string, answer: 'sign' | 'decline', always = false): Promise<string> {
-  const html = await (await fetch(panel, { headers: { 'sec-fetch-dest': 'iframe' } })).text();
-  const n = /name="n" value="([0-9a-f]+)"/.exec(html)?.[1];
-  assert.ok(n, html);
-  const body = new URLSearchParams({ n, answer, ...(always ? { always: 'on' } : {}) });
-  return (await fetch(panel, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'sec-fetch-dest': 'iframe' }, body })).text();
-}
-
-/** Wait for Dub's request to show its panel. */
-export async function asking(c: Client): Promise<{ request: string; panel: string; title: string }> {
-  for (let i = 0; i < 200; i++) {
-    const a = (await c.ask<{ asking: { request: string; panel: string; title: string } | null }>('runner asking')).asking;
-    if (a) return a;
-    await new Promise((r) => setTimeout(r, 50));
-  }
-  throw new Error('no panel was asked for');
-}
 
 test('the runner: off by default, the risk read first, Dub paired and approved, a post through its panel, a standing yes, money and agreements always asking, Waiting, Revoke, off with every key gone', async () => {
   const H = homes.map((h) => h.base);
