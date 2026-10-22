@@ -97,6 +97,7 @@ S7 (branch `claude/s7-fixes`, F380), one line each:
 S7b (branch `claude/s7b-follow-up`, F381), one line each:
 - Identity, "The rotation checks", check 7: the clause making a rotation invalid when every tip's sequence is held and none fits is dropped; "a tip that does not fit never makes the rotation invalid, whatever the verifier holds" added, and the commentary says why (a home receipts without the private lines; validity is fixed by the bytes).
 - Identity, "What stops a chain": two reasons renamed, "the genesis unknown" and "the genesis invalid".
+- After a stranger's reading: check 7 says what "fits" means, that a verifier can tell only holding every act of the sequence up to the tip, and that it decides what is kept, never validity, nor a failure under rule 29; its commentary says "valid" where it said "counts"; "What stops a chain" names each reason in bold; section 6's "Void needs …" speaks of every kept tip's line and the kept ancestry.
 
 ## Text edits waiting for the freeze-ready branch
 
