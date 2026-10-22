@@ -206,7 +206,6 @@ export class Desk {
         }
       }
       lines.push({ text: `Its acts are found at, and its inbox is, ${relays.join(', ')}. Its encryption key is the one its signing key’s words carry.` });
-      lines.push({ text: a.linked ? 'Linked to Claude: Claude may prepare drafts for it, which you approve here.' : 'Not linked to Claude.' });
       this.writeLinked();
       return { title: `“${name}” is born`, lines, acts: [id.id, routes.id, key.id] };
     });

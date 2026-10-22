@@ -66,7 +66,7 @@ export const TEST_MODE_SAY =
 
 /** Said beside "+ Found a real collective" (H27; the page's REAL_SAY, `page/view.ts`), word for word. */
 export const REAL_SAY =
-  'A real collective: each member is a person with their own identity, on their own device. Each reads the founding in plain words and signs it in their own app (Dub’s Signing tab, or Edubba). Its chain key is dealt as one share per member, written on paper; no app keeps a share.';
+  'A real collective: each member is a person with their own identity, on their own device. Each reads the founding in plain words and signs it in their own Edubba (To sign, on a computer or on the web). Its chain key is dealt as one share per member, written on paper; no app keeps a share.';
 
 /** Said where a member change waits for its rotation (decided by Nobody, allegedly: "Wait for Kišib"). */
 /**
@@ -78,7 +78,7 @@ export const REAL_SAY =
  */
 export const FOUNDING_SAY: Line[] = [
   { text: 'Founding deals the collective’s chain key on this device: one person, you, deals every member’s share. For a moment this Edubba holds the whole chain key, and sees every share before it goes.', tone: 'bad' },
-  { text: 'If this device were compromised, or the person holding it dishonest, they could keep the key and later act alone, past the threshold the members agreed: the trusted-dealer weakness (F337; the air-gapped signer Module’s stated price, F97). Nothing can prove a device forgot a key. Kišib’s rotations of the collective have the same moment, on the starter’s device.', tone: 'bad' },
+  { text: 'If this device were compromised, or the person holding it dishonest, they could keep the key and later act alone, past the threshold the members agreed: the trusted-dealer weakness (the air-gapped signer Module’s stated price). Nothing can prove a device forgot a key. Kišib’s rotations of the collective have the same moment, on the starter’s device.', tone: 'bad' },
   { text: 'So found on the cleanest device you have: this app rather than any web page, ideally a computer used for nothing else. Making the key jointly, never whole anywhere, is not practical yet for the signature the chain key uses: a MOR 2 research item.', tone: 'warn' },
   { text: 'The practices Edubba follows: the key alive only in memory, dealt at once and overwritten, never written anywhere; each member’s share sealed to the one-time key their own Dub made; the shares to show here (yours, and any hand to hand) held in memory for one hour at most, then overwritten and lost: show them in one sitting, within the hour.' },
   { text: 'Afterwards every member writes their share on paper. A later change of members, or of the collective’s keys, is done in Kišib, from those papers.' },

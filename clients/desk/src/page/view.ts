@@ -45,7 +45,7 @@ export const TINT = { layer: APPS.edubba.colour, pastel: APPS.edubba.pastel } as
 export const WEB_BANNER = `<details class="k-say edubba-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}; regtest or signet only.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>Whoever serves this page’s code at the moment you bring an identity here could copy its signing key: with it, sign as you (proposals, signatures, a collective’s acts) and read its private messages.</li>
 <li>This browser’s storage keeps, as they are and not locked: the signing and encryption keys of each identity you bring; the signing key of each collective you found here; and, while you sign as a member, the one-time key for your share until you have written the share down. That storage can be lost (cleared, a private window, the browser tidying up), or read by what runs in this page.</li>
-<li>Founding a collective here deals its chain key in this page: for a moment this page holds the whole chain key, in its memory, never in its storage; your share and any shown hand to hand wait there, an hour at most, until shown, and a reload or a closed tab loses them. If this page’s code or this device were not honest, it could keep the chain key and later act alone (F337). For a collective that matters, found it in Edubba on a computer.</li>
+<li>Founding a collective here deals its chain key in this page: for a moment this page holds the whole chain key, in its memory, never in its storage; your share and any shown hand to hand wait there, an hour at most, until shown, and a reload or a closed tab loses them. If this page’s code or this device were not honest, it could keep the chain key and later act alone. For a collective that matters, found it in Edubba on a computer.</li>
 <li>No agents, no API key and nothing from Claude here: those need Edubba on the Mac.</li></ol>
 <p>Never bring a real identity here.</p></div></details>`;
 
@@ -78,6 +78,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .edubba-diary{background:var(--k-wash);border-radius:16px;padding:16px 18px}
 .edubba-diary .edubba-act{border:1px solid var(--k-edge);border-radius:12px;padding:10px 12px;margin:10px 0;background:var(--k-bg)}
 .edubba-modal-body{min-height:0;overflow:auto}
+.k-typing .k-tools .k-btn.k-p{color:var(--k-ink)}
 .edubba-play{display:flex;align-items:center;gap:10px;border:1px solid var(--k-line);border-radius:12px;padding:10px 12px;margin:6px 0;font-size:14px;color:var(--k-soft)}
 @media (max-width:600px){
   .k-top .k-tabs{display:none}
@@ -185,7 +186,7 @@ export function firstPart(tab: Tab, s: State): string {
 
 /** A tile opened: its column on the left, the part on the right. */
 export function tabPage(s: State, tab: Tab, part: string, k: Parameters<typeof column>[2], as: Acting | null, alarms: string, counts: Partial<Record<Tab, number>>): string {
-  return `${topBar(s, tab, as, counts)}${alarms}${opened(column(tab, s, k), part, `<div class="edubba-pane" id="pane"><p class="k-empty">Reading…</p></div>`)}<div id="status" class="k-status"></div>`;
+  return `${topBar(s, tab, as, counts)}${alarms}${opened(column(tab, s, k), part, `<div class="edubba-pane" id="pane"><p class="k-empty">Reading…</p></div>`)}<div id="e-status" class="k-status" role="status" aria-live="polite"></div>`;
 }
 
 /** The pane's inner tabs (an agent's four, a collective's five). */
@@ -286,7 +287,7 @@ export function runnerForm(r: { available: boolean; state: string | null; code: 
       ? `<p class="k-small k-soft">Kišib approved Edubba. The identities it lets Edubba use:</p>${ids || '<p class="k-small k-soft">None yet: choose some for Edubba in Kišib (Runner, Apps).</p>'}`
       : r.state === 'waiting'
         ? `<p class="k-small k-soft">Waiting for Kišib: approve Edubba there (Runner, Apps), comparing this code:</p><p class="k-mono">${e(r.code ?? '')}</p><div class="k-row"><button type="button" class="k-btn" data-action="runner-look">Look again</button></div>`
-        : `<p class="k-small k-soft">Edubba holds no key of an identity used through Kišib: Kišib signs, in its panel inside Edubba’s window, for To sign (as Dub does). Member keys are added to Kišib one at a time, on an app’s ask, each approved there.</p><div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-pair">Pair with Kišib</button></div>`;
+        : `<p class="k-small k-soft">Edubba holds no key of an identity used through Kišib: Kišib signs, in its panel inside Edubba’s window, for To sign (as Dub does); let Edubba open what is sealed to it there (Runner, Apps), so the proposals sent to it can be read here. Member keys are added to Kišib one at a time, on an app’s ask, each approved there.</p><div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-pair">Pair with Kišib</button></div>`;
   return `<h4>Use one from Kišib</h4>${r.problem ? `<p class="k-small k-bad">${e(r.problem)}</p>` : ''}${state}`;
 }
 

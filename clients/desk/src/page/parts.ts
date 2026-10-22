@@ -56,7 +56,7 @@ export const TEST_MODE_SAY =
 
 /** Said beside "+ Found a real collective" (H27; `src/real.ts`, REAL_SAY), word for word. */
 export const REAL_SAY =
-  'A real collective: each member is a person with their own identity, on their own device. Each reads the founding in plain words and signs it in their own app (Dub’s Signing tab, or Edubba). Its chain key is dealt as one share per member, written on paper; no app keeps a share.';
+  'A real collective: each member is a person with their own identity, on their own device. Each reads the founding in plain words and signs it in their own Edubba (To sign, on a computer or on the web). Its chain key is dealt as one share per member, written on paper; no app keeps a share.';
 
 export const KEY_SAY =
   'The key goes from this page to the program once, and is kept in a file on this Mac that only your account can read (~/.config/mor). This page never holds it again: it is shown by its last four characters only.';
@@ -360,17 +360,15 @@ export function anchors(xs: { act: string; label: string; service: string; tier:
 
 export function newIdentity(): string {
   if (WEB) return bringIdentityWeb();
-  return `<h2>A new identity, or one you have</h2><section class="card"><h3>Make a new identity</h3><form id="new-identity"><label>Its name, kept on this Mac</label><input name="name" type="text" placeholder="A name" required>
-<label class="check"><input name="linked" type="checkbox"> Claude may prepare drafts for it</label>
+  return `<section class="card"><h3>Make a new identity</h3><form id="new-identity"><label>Its name, kept on this Mac</label><input name="name" type="text" placeholder="A name" required>
 <div class="row"><button type="submit" class="primary">Make it</button></div></form>
-<p class="small">A test identity is born at the homes named in Settings, with its acts and its inbox at the relays, and the encryption key its signing key's words carry. If Claude may prepare drafts for it, its name and fingerprint are written to the drafts folder, so Claude can name it.</p></section>
+<p class="small">A test identity is born at the homes named in Settings, with its acts and its inbox at the relays, and the encryption key its signing key's words carry.</p></section>
 <section class="card"><h3>Bring an identity you have</h3>
 <p class="small">Its ID and its signing key’s words, as Dub shows them (“Show the signing key’s words”). Edubba reads it from its homes and keeps it only if the words give its current signing key. Nothing is signed or published by bringing it.</p>
 <form id="bring-identity"><label>Its name, kept on this Mac</label><input name="name" type="text" placeholder="A name" required>
 <label>Its ID</label><input name="id" type="text" autocomplete="off" spellcheck="false" required>
 <label>Its signing key’s 24 words, in order</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes; empty: the homes and relays in Settings)</label><input name="address" type="text" placeholder="https://">
-<label class="check"><input name="linked" type="checkbox"> Claude may prepare drafts for it</label>
 <p class="small">Never type the chain key’s words here: they belong to Kišib, the app where a change of keys is done, and to paper. Whoever holds the signing key’s words can sign as this identity and read its private messages: Edubba keeps them in its folder, as every key here.</p>
 <div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>`;
 }
@@ -394,7 +392,6 @@ export function settings(s: State): string {
 <label>Homes, one address per line: where new identities live</label><textarea name="homes">${e(s.settings.homes.map((h) => h.hint).join('\n'))}</textarea>
 <label>Relays, one per line: where acts are published, and the inbox of new identities (empty: the homes)</label><textarea name="relays">${e(s.settings.relays.join('\n'))}</textarea>
 <label>Other ways to reach an address, one per line, as address=where (for example the onion home at its local port)</label><textarea name="via">${e(via)}</textarea>
-<label>The drafts folder, shared with the Claude connector</label><input name="drafts" type="text" value="${e(s.settings.drafts)}">
 <div class="row"><button type="submit">Save settings</button></div>
 <div class="here" id="settings-status" role="status" aria-live="polite"></div></form>`;
 }
@@ -436,7 +433,7 @@ export function foundCollective(): string {
   return `<h2>Found a test collective</h2>${note('warn', `<strong>Test mode, for trying things alone.</strong> ${e(TEST_MODE_SAY)} To found one with other people, each on their own device, choose “+ Found a real collective”.`)}<div class="colroot" data-collective-root id="e-col-root"><div id="status"></div><div id="review"></div>
 <section class="card"><h3>Its founding</h3><div id="found"></div></section>
 <section class="card"><h3>Members held here</h3><p class="small">Yourself, and the simulated members a test collective needs: held in the collective client's folder.</p><div id="identities"></div></section></div>
-<p class="small">A release under one’s own name is made in Ummia, the developers’ app (F339).</p>`;
+<p class="small">A release under one’s own name is made in Ummia, the developers’ app.</p>`;
 }
 
 /** "+ Bring an existing collective" (H15): by its ID, read from its homes, one of your identities among its members. */
@@ -485,7 +482,7 @@ export function posts(r: { items: { id: string; text: string; standing: string; 
 /** F337, said where a real collective is founded (src/real.ts, FOUNDING_SAY), word for word. */
 export const FOUNDING_SAY: Line[] = [
   { text: 'Founding deals the collective’s chain key on this device: one person, you, deals every member’s share. For a moment this Edubba holds the whole chain key, and sees every share before it goes.', tone: 'bad' },
-  { text: 'If this device were compromised, or the person holding it dishonest, they could keep the key and later act alone, past the threshold the members agreed: the trusted-dealer weakness (F337; the air-gapped signer Module’s stated price, F97). Nothing can prove a device forgot a key. Kišib’s rotations of the collective have the same moment, on the starter’s device.', tone: 'bad' },
+  { text: 'If this device were compromised, or the person holding it dishonest, they could keep the key and later act alone, past the threshold the members agreed: the trusted-dealer weakness (F337; the air-gapped signer Module’s stated price). Nothing can prove a device forgot a key. Kišib’s rotations of the collective have the same moment, on the starter’s device.', tone: 'bad' },
   { text: 'So found on the cleanest device you have: this app rather than any web page, ideally a computer used for nothing else. Making the key jointly, never whole anywhere, is not practical yet for the signature the chain key uses: a MOR 2 research item.', tone: 'warn' },
   { text: 'The practices Edubba follows: the key alive only in memory, dealt at once and overwritten, never written anywhere; each member’s share sealed to the one-time key their own Dub made; the shares to show here (yours, and any hand to hand) held in memory for one hour at most, then overwritten and lost: show them in one sitting, within the hour.' },
   { text: 'Afterwards every member writes their share on paper. A later change of members, or of the collective’s keys, is done in Kišib, from those papers.' },
@@ -595,7 +592,7 @@ export interface PublishingShown {
   actors: Actor[];
   acting: string | null;
   as: string | null;
-  works: { publication: string; offer: string; as: string; member: string; collective: boolean; media: 'text' | 'picture'; title: string; price: number; words: string; at: number; delivered: Record<string, string>; toMembers: string | null }[];
+  works: { publication: string; offer: string; as: string; member: string; collective: boolean; media: 'text' | 'picture' | 'video' | 'audio'; title: string; price: number; words: string; at: number; delivered: Record<string, string>; toMembers: string | null }[];
   vows: { vow: string; offer: string; as: string; collective: boolean; words: string; title: string; price: number; at: number }[];
   held: string[];
   say: string[];
@@ -736,14 +733,14 @@ export function realFound(s: State): string {
   return `<h2>Found a real collective</h2>
 ${note('', `<strong>Real, not a test.</strong> ${e(REAL_SAY)}`)}
 ${WEB ? note('warn', `<strong>This is a web page.</strong> ${e(WEB_FOUNDING_SAY)}`) : ''}
-${note('', 'How: each member reads the founding terms in plain words and signs on their own device (Dub’s Signing tab, turned on in its identity window; or “To sign” in an Edubba holding them). The collective is founded once every one has signed. Its chain key is then dealt as one share per member, kept on paper: a member’s share goes sealed to a one-time key their Dub makes when they sign, or is shown here, hand to hand; yours is shown here once. No app keeps a share.')}
+${note('', 'How: each member reads the founding terms in plain words and signs on their own device, in their own Edubba (Collectives, To sign; on a computer or on the web). The collective is founded once every one has signed. Its chain key is then dealt as one share per member, kept on paper: a member’s share goes sealed to a one-time key their Edubba makes when they sign, or is shown here, hand to hand; yours is shown here once. No app keeps a share.')}
 <section class="card"><form id="real-found">
 <label>Its name, ${kept()}</label><input name="name" type="text" required>
 <label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}"${i.id === s.acting ? ' selected' : ''}>${e(i.name)}</option>`).join('')}</select>
 <label>Its other members, from your contacts</label>${contactPicks(s, [])}
 <label>Or by ID, one per line</label><textarea name="typed" spellcheck="false"></textarea>
 <h3>Who decides what</h3>
-<p class="small">Members are the columns; tap a box to give that member’s key power in that row. The constitution first, then the judges, then the areas (Agreements rules 60 and 62). Each member signs with a key of their own, made as they sign (F353).</p>
+<p class="small">Members are the columns; tap a box to give that member’s key power in that row. The constitution first, then the judges, then the areas (Agreements rules 60 and 62). Each member signs with a key of their own, made as they sign.</p>
 <div id="e-grid-real-found"><p class="small">Choose the members above: the grid follows.</p></div>
 <label>The words everyone signs (empty: the grid’s sentences)</label><textarea name="words"></textarea>
 <div class="row"><button type="submit" class="primary">Review the founding</button></div></form></section>
@@ -767,7 +764,7 @@ export function proposalStatus(s: State, p: RealProposal): string {
     p.kind === 'founding'
       ? p.founded
         ? `<p class="small">Founded: ${fp(p.founded)}.</p>`
-        : `<div class="card"><h4>Before you found: what this device will hold (F337)</h4>${lines(FOUNDING_SAY)}<label class="check"><input type="checkbox" id="real-found-read-${e(p.act.slice(0, 12))}"> I have read what this device will hold, and found on it knowingly</label></div><div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Found it: deal the shares</button></div>`
+        : `<div class="card"><h4>Before you found: what this device will hold</h4>${lines(FOUNDING_SAY)}<label class="check"><input type="checkbox" id="real-found-read-${e(p.act.slice(0, 12))}"> I have read what this device will hold, and found on it knowingly</label></div><div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? '' : ' disabled'}>Found it: deal the shares</button></div>`
       : p.kind === 'money'
         ? p.rotated
           ? note('done', `In force: recorded at the collective’s line ${fp(p.rotated)}; its payments go to its split service.`)
@@ -847,7 +844,7 @@ export const WEB_FOUNDING_SAY =
 
 /** Said on the web where a collective's release would be made (`../ops.ts`, RELEASE_ON_WEB), word for word. */
 export const RELEASE_ON_WEB =
-  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
+  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective. A release proposed there is signed here, in “To sign”, and checked as anyone would.';
 
 /** Said where a lone seller's referral is judged (F215, F351): kept equal to the reading in `../publishing.ts`. */
 export const JUDGED_SAY =
@@ -882,7 +879,7 @@ export function keepersShown(s: State, id: string, k: KeepersShown): string {
           (d) =>
             `<li class="${d.counts || d.keepers.length ? 'warn' : 'bad'}">${person(s, d.member)}’s signature on ${e(d.what)} (${fp(d.signature)}) was disowned by their own rotation${d.rotation ? ` (${fp(d.rotation)})` : ''}: under Identity it is ${e(d.status)}. ${
               d.counts || d.keepers.length
-                ? `Shown as a dispute, not a void:${d.counts ? ' the collective’s line placed it before any line registering that rotation, so the version it signed stays in force for the collective (C5, F302);' : ''}${d.keepers.length ? ` ${d.keepers.map((x) => person(s, x)).join(', ')} recorded it before recording the rotation (rule 41).` : ''}`
+                ? `Shown as a dispute, not a void:${d.counts ? ' the collective’s line placed it before any line registering that rotation, so the version it signed stays in force for the collective (C5);' : ''}${d.keepers.length ? ` ${d.keepers.map((x) => person(s, x)).join(', ')} recorded it before recording the rotation (rule 41).` : ''}`
                 : 'Nothing placed it before the rotation: it counts for nothing.'
             }</li>`,
         )

@@ -326,7 +326,6 @@ export class Setup {
             ? { text: 'Its encryption key is the one the words carry: its private messages open here.', tone: 'ok' }
             : { text: 'Edubba holds no encryption key for it: its encryption key was not made from its signing key’s words, so its private messages cannot be opened here.', tone: 'warn' },
           { text: inbox?.length ? `Its inbox is at ${inbox.join(', ')}.` : 'It declares no inbox: nothing can be delivered to it.' },
-          { text: a.linked ? 'Linked to Claude: Claude may prepare drafts for it, which you approve here.' : 'Not linked to Claude.' },
           { text: BRING_LINE_SAY, tone: 'warn' },
         ],
         acts: [id],

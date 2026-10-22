@@ -347,7 +347,7 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'bring': {
         const d = await setup.bring({ name: text(a.name), id: text(a.id), words: text(a.words), address: text(a.address), linked: false });
         // On the web, Claude's connector is out of the picture: nothing said of it.
-        return web ? { ...d, lines: d.lines.filter((l) => !/linked to Claude/.test(l.text)) } : d;
+        return d;
       }
       case 'fold':
         // H14, H26, H34: a fold as the person left it; a collective's "What you may do for it" by the collective's ID, every other by its name.

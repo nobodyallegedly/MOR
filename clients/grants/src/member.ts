@@ -81,12 +81,13 @@ function readPayload(p: Uint8Array): Omit<MemberKey, 'act' | 'position'> | null 
 export async function sealMemberKey(me: TestIdentity, k: { terms: string; signature: string; public: [number, Uint8Array]; secret: Uint8Array }, save: () => Promise<void> | void): Promise<string> {
   const homes = me.f.homes.map((h) => h.hint);
   const look = await lookUp(me.id, homes, me.via);
-  if (!look.encryptionKey || !me.f.encryption.some((e) => hex(xwingPublic(unhex(e.secret))) === hex(look.encryptionKey!))) {
+  // The public half is enough to seal: an identity used through Kišib's runner holds no secret here, and Kišib, letting this app's identity open, reads it back.
+  if (!look.encryptionKey || !me.f.encryption.some((e) => (e.secret ? hex(xwingPublic(unhex(e.secret))) : e.public) === hex(look.encryptionKey!))) {
     throw new Error('The encryption key this identity publishes is not one this app holds: your member key cannot be sealed to you. Your signature stands; the key stays in this app only.');
   }
   let made: { act: Uint8Array; id: string; key: Uint8Array };
   try {
-    made = me.sign(MEMBER_KEYS_SPEC, MEMBER_KEY, memberKeyPayload(k), { public: false, to: [me.id] });
+    made = await me.signNow(MEMBER_KEYS_SPEC, MEMBER_KEY, memberKeyPayload(k), { public: false, to: [me.id] });
   } finally {
     await save();
   }
