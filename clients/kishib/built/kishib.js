@@ -9713,7 +9713,7 @@ function column(tab, web, r) {
       return [
         { key: "onoff", label: "On or off" },
         { key: "apps", label: "Apps", k: r?.apps.length ?? 0 },
-        { key: "waiting", label: "Waiting", k: r?.waiting.length ?? 0 },
+        { key: "waiting", label: "Waiting", k: (r?.waiting.length ?? 0) + (r?.memberAsks.length ?? 0) },
         { key: "signed", label: "Signed", k: r?.signed.length ?? 0 }
       ];
     case "paper":
@@ -9870,20 +9870,21 @@ function unlockBox(r) {
 ${choose ? '<label>The passphrase again</label><input name="again" type="password" autocomplete="off" required>' : ""}
 <div class="k-row"><button type="submit" class="k-btn k-p">${choose ? "Encrypt it, and unlock" : "Unlock"}</button><span class="k-small k-faint">Forgotten? It cannot be found again: turn the runner off (Runner), which erases everything, then give the signing words again.</span></div></form>`;
 }
+var quitBox = (on) => `<div class="k-box" id="quit-box"><h3>${on ? "Lock now, or quit Ki\u0161ib" : "Quit Ki\u0161ib"}</h3><p class="k-small k-soft">${on ? "Locked, the runner signs and opens nothing until its passphrase is given again; nothing is erased, no app pairs again. " : ""}<b>Closing Ki\u0161ib\u2019s window does not end it</b>: its program keeps running${on ? ", unlocked" : ""}. Quit Ki\u0161ib ends it${on ? ", locking the runner" : ""}; so does restarting the Mac. On the Mac, Ki\u0161ib\u2019s seal in the menu bar offers the same.</p><div class="k-row">${on ? '<button type="button" class="k-btn" data-action="runner-lock">Lock now</button>' : ""}<button type="button" class="k-btn" data-action="quit">Quit Ki\u0161ib</button></div></div>`;
 var offBox = (locked) => `<div class="k-box"><h3>Turn it off</h3><p class="k-small k-soft">Turning the runner off <b>erases everything</b>: every signing key it holds, every app paired with it, and the log of what it signed and opened. Its file is overwritten, then removed. Turned on again, it starts from nothing: the risk read, a passphrase chosen, the words given again, each app paired again.${locked ? " This is the way out of a forgotten passphrase." : ""}</p><div class="k-row"><button type="button" class="k-btn k-alarm" data-action="runner-off">Turn it off, and erase everything</button></div></div>`;
 function runnerOnOff(r) {
   if (!r) return "";
   const seg = `<div class="kishib-seg" role="group" aria-label="The runner"><button type="button" class="${r.state === "off" ? "k-on" : ""}" data-action="${r.state === "off" ? "" : "runner-off-ask"}">Off</button><button type="button" class="${r.state === "off" ? "" : "k-on"}" data-action="${r.state === "off" ? "runner-on-ask" : ""}">${r.state === "locked" ? "Locked" : "On"}</button></div>`;
   const state = r.state === "on" ? `<div class="k-box k-fill" id="runner-state"><div class="k-row"><div class="k-grow"><b>On</b> <span class="k-small k-soft">since ${e(when2(r.since))}</span><p class="k-small k-soft">Ki\u0161ib keeps the signing keys of ${r.held.length} ${r.held.length === 1 ? "identity" : "identities"} on this Mac, in its folder, encrypted under the runner\u2019s passphrase. The chain key: never.</p></div>${seg}</div></div>
-<div class="k-box"><h3>Lock it now</h3><p class="k-small k-soft">Locked, the runner signs and opens nothing until its passphrase is given again; nothing is erased, no app pairs again. Quitting Ki\u0161ib, or restarting the Mac, locks it too. <b>Closing Ki\u0161ib\u2019s window alone does not</b>: its program keeps running, unlocked.</p><div class="k-row"><button type="button" class="k-btn" data-action="runner-lock">Lock it now</button></div></div>
+${quitBox(true)}
 ${offBox(false)}` : r.state === "locked" ? `<div class="k-box k-fill" id="runner-state"><div class="k-row"><div class="k-grow"><b>Locked</b><p class="k-small k-soft">What the runner keeps is on this Mac, encrypted; it signs and opens nothing until its passphrase is given.</p></div>${seg}</div></div>
-${unlockBox(r)}${offBox(true)}` : `<div class="k-box k-fill" id="runner-state"><div class="k-row"><div class="k-grow"><b>Off</b><p class="k-small k-soft">No key stored. Every app signs with its own words, as today.</p></div>${seg}</div></div>
+${unlockBox(r)}${quitBox(false)}${offBox(true)}` : `<div class="k-box k-fill" id="runner-state"><div class="k-row"><div class="k-grow"><b>Off</b><p class="k-small k-soft">No key stored. Every app signs with its own words, as today.</p></div>${seg}</div></div>
 <div class="k-box" id="risk"><h3>Before you turn it on, the risk</h3>${lines(r.risk.map((text2) => ({ text: text2 })))}
 <label>Choose the runner\u2019s passphrase (at least 8 characters): asked each time Ki\u0161ib starts</label><input id="runner-pass" type="password" autocomplete="new-password">
 <label>The passphrase again</label><input id="runner-pass-again" type="password" autocomplete="new-password">
 <p class="k-small k-soft">Forget it, and it cannot be found again: the runner is then turned off, erasing everything, and the signing words given again.</p>
 <label class="kishib-check"><input type="checkbox" id="risk-read"> I have read the risk</label><div class="k-row"><span class="k-grow"></span><button type="button" class="k-btn" data-action="runner-on">Turn it on</button></div></div>
-<p class="k-small k-faint">The risk is optional: you may leave it off for good.</p>`;
+<p class="k-small k-faint">The risk is optional: you may leave it off for good.</p>${quitBox(false)}`;
   return `<h2>The runner</h2><p class="k-soft k-small">On this Mac\u2019s program only, never in the web client. An app asks to pair; you approve here; then Ki\u0161ib signs for it, showing what it signs in a panel inside the app\u2019s window. The app never holds a key.</p>${state}`;
 }
 var notOn = (r, title, off) => `<h2>${title}</h2>${r?.state === "locked" ? `<p class="k-soft">The runner is locked: what it keeps is encrypted until its passphrase is given.</p>${unlockBox(r)}` : `<p class="k-soft">${off}</p>`}`;
@@ -9895,20 +9896,27 @@ function held(r) {
   const rows = r.held.map(
     (h) => `<div class="kishib-app" data-held="${e(h.id)}"><div class="k-row"><span class="k-dot">${e((h.name ?? "M")[0].toUpperCase())}</span><div class="k-grow"><h3>${e(h.name ?? "No name")}</h3><span class="k-mono k-soft">${e(shortForm(h.form))}</span></div><button type="button" class="k-btn k-q" data-action="held-record" data-id="${e(h.id)}">Its record</button><button type="button" class="k-btn k-q" data-action="held-remove" data-id="${e(h.id)}">Remove</button></div>
 <p class="k-small k-soft">${h.apps.length ? `Used by ${e(h.apps.join(", "))}.` : "No app uses it yet."}</p>
+${h.members.length ? `<div class="kishib-members"><p class="k-small">Its own keys for its collectives, held here with it (encrypted):</p>${h.members.map((m) => `<div class="k-row" data-member="${e(m.collective)}"><span class="k-mono k-grow">${e(shortForm(m.form))}</span><span class="k-small k-faint">added ${e(when2(m.added))}</span><button type="button" class="k-btn k-q" data-action="member-remove" data-id="${e(h.id)}" data-collective="${e(m.collective)}">Remove</button></div>`).join("")}</div>` : ""}
 ${h.spent ? `<div class="k-note k-error">Its keys were changed with its chain key: the signing key the runner holds no longer counts, and it signs nothing for it. Give the new signing key\u2019s words.<form class="kishib-renew" data-renew="${e(h.id)}"><input type="hidden" name="id" value="${e(h.id)}"><label>One of its homes</label><input name="address" placeholder="https://" required><label>The new signing key\u2019s 24 words</label><textarea name="words" required autocomplete="off" spellcheck="false"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Take the new words</button></div></form></div>` : ""}</div>`
   ).join("");
-  return `<h2>Held here</h2><p class="k-soft k-small">The identities Ki\u0161ib\u2019s runner keeps, by their signing keys, on this Mac, encrypted under its passphrase. Remove one, and Ki\u0161ib forgets its key; the apps using it through Ki\u0161ib stop signing as it.</p>${rows || '<p class="k-soft">None yet.</p>'}
+  return `<h2>Held here</h2><p class="k-soft k-small">The identities Ki\u0161ib\u2019s runner keeps, by their signing keys, on this Mac, encrypted under its passphrase, with their own keys for their collectives. Remove one, and Ki\u0161ib forgets its keys; the apps using it through Ki\u0161ib stop signing as it.</p>${memberAsks(r)}${rows || '<p class="k-soft">None yet.</p>'}
 <form id="form-give-runner" data-kind="give-runner" class="k-box" autocomplete="off"><h3>Give an identity to the runner</h3><p class="k-small k-soft">By its signing key\u2019s words, as Dub shows them (its identity\u2019s menu, Words): Ki\u0161ib checks they give the key its homes serve. Never the chain key\u2019s words.</p>${idField("id", "The identity")}${address}${words("words", "Its signing key\u2019s 24 words")}<div class="k-row"><button type="submit" class="k-btn k-p">Keep it here</button><span class="k-small k-faint">kept while the runner is on, encrypted</span></div></form>`;
 }
+function memberAsks(r) {
+  return r.memberAsks.map(
+    (x) => `<div class="kishib-wait" data-member-ask="${e(x.id)}"><h3>${e(x.app)} asks Ki\u0161ib to hold ${e(x.name ?? "this identity")}\u2019s key for a collective</h3><p class="k-small k-soft">The collective ${e(shortForm(x.form))} \xB7 asked ${e(when2(x.at))}. Ki\u0161ib opens the key sealed to ${e(x.name ?? "this identity")} at its homes and keeps it here, encrypted. Acting as the collective, ${e(x.app)} then asks, and Ki\u0161ib\u2019s panel shows each act before Ki\u0161ib signs it; the key never goes to ${e(x.app)}.</p>
+<div class="k-row"><button type="button" class="k-btn k-p" data-action="member-answer" data-ask="${e(x.id)}" data-yes="1">Add it</button><button type="button" class="k-btn k-q" data-action="member-answer" data-ask="${e(x.id)}" data-yes="0">Refuse</button></div></div>`
+  ).join("");
+}
 var OPEN_WORDS = "may open what is sealed to this identity";
-var openSay = (app2) => `${app2} then reads the private messages sent to it, and its sealed contacts list, through Ki\u0161ib, without a panel each time (an opening signs nothing). Each opening is listed in Signed. Revoke ${app2}, and it ends.`;
+var openSay = (app2) => `Chosen for each identity (decided: \u201Cper identity, per app\u201D). ${app2} then reads the private messages sent to that identity, and its sealed contacts list, through Ki\u0161ib, without a panel each time (an opening signs nothing; Ki\u0161ib returns the act and the key of that one act, never the identity\u2019s keys). Each opening is listed in Signed. Revoke ${app2}, and it ends.`;
 function runnerApps(r) {
   if (!r?.on) return notOn(r, "Apps", "The runner is off: no app is paired. Turn it on first (On or off).");
   const name = (id) => r.held.find((h) => h.id === id)?.name ?? shortForm(r.held.find((h) => h.id === id)?.form ?? id);
   const waiting = r.apps.filter((a) => a.state === "waiting").map(
     (a) => `<div class="kishib-app" data-pairing="${e(a.id)}"><h3>${e(a.name)} asks to pair</h3><p class="k-small k-soft">From ${e(a.origin)}, on this computer. Its code: <b class="kishib-fpr">${e(a.code)}</b>: approve only if ${e(a.name)} shows the same.</p>
-<p class="k-small">The identities ${e(a.name)} may use through Ki\u0161ib:</p>${r.held.map((h) => `<label class="kishib-check"><input type="checkbox" name="allow" value="${e(h.id)}" checked> ${e(h.name ?? "No name")} <span class="k-mono k-faint">${e(shortForm(h.form))}</span></label>`).join("") || '<p class="k-small k-soft">Ki\u0161ib holds no identity yet: give one first (Identities, Held here).</p>'}
-<label class="kishib-check"><input type="checkbox" name="open"> ${e(a.name)} ${OPEN_WORDS}</label><p class="k-small k-faint">Off unless chosen. ${e(openSay(a.name))} Without it, ${e(a.name)} sends private messages but cannot read the answers.</p>
+<p class="k-small">The identities ${e(a.name)} may use through Ki\u0161ib, and, for each, whether ${e(a.name)} ${OPEN_WORDS}:</p>${r.held.map((h) => `<div class="k-row kishib-allow"><label class="kishib-check k-grow"><input type="checkbox" name="allow" value="${e(h.id)}" checked> ${e(h.name ?? "No name")} <span class="k-mono k-faint">${e(shortForm(h.form))}</span></label><label class="kishib-check"><input type="checkbox" name="open" value="${e(h.id)}"> ${OPEN_WORDS}</label></div>`).join("") || '<p class="k-small k-soft">Ki\u0161ib holds no identity yet: give one first (Identities, Held here).</p>'}
+<p class="k-small k-faint">Opening is off unless chosen. ${e(openSay(a.name))} Without it, ${e(a.name)} sends private messages as that identity but cannot read the answers.</p>
 <div class="k-row"><button type="button" class="k-btn k-p" data-action="approve" data-pairing="${e(a.id)}">Approve</button><button type="button" class="k-btn k-q" data-action="refuse" data-pairing="${e(a.id)}">Refuse</button></div></div>`
   ).join("");
   const kinds = r.kinds;
@@ -9916,8 +9924,10 @@ function runnerApps(r) {
     (a) => `<div class="kishib-app" data-app="${e(a.id)}"><div class="k-row"><div class="k-grow"><h3>${e(a.name)}</h3><span class="k-small k-faint">${e(a.origin)} \xB7 paired ${a.approved ? e(when2(a.approved)) : ""}</span></div><button type="button" class="k-btn k-alarm" data-action="revoke" data-pairing="${e(a.id)}">Revoke</button></div>
 <p class="k-small k-soft">Signs as ${e(a.identities.map(name).join(", ") || "no identity")}.</p>
 <div class="kishib-kinds">${kinds.filter((k) => !k.always).map((k) => `<div><span>${e(a.name)} \xB7 ${e(k.name)}</span><span class="k-r kishib-seg" role="group"><button type="button" class="${a.yes.includes(k.kind) ? "" : "k-on"}" data-action="yes" data-pairing="${e(a.id)}" data-kind="${k.kind}" data-on="0">Ask</button><button type="button" class="${a.yes.includes(k.kind) ? "k-on" : ""}" data-action="yes" data-pairing="${e(a.id)}" data-kind="${k.kind}" data-on="1">Yes</button></span></div>`).join("")}<div><span class="k-soft">Money acts, agreements, relying on another\u2019s act, keys, and acts Ki\u0161ib cannot read</span><span class="k-r k-small k-faint">always ask</span></div>
-<div data-open="${e(a.id)}"><span>${e(a.name)} ${OPEN_WORDS}</span><span class="k-r kishib-seg" role="group"><button type="button" class="${a.open ? "" : "k-on"}" data-action="opening" data-pairing="${e(a.id)}" data-on="0">No</button><button type="button" class="${a.open ? "k-on" : ""}" data-action="opening" data-pairing="${e(a.id)}" data-on="1">Yes</button></span></div></div>
-<p class="k-small k-faint">${a.open ? e(openSay(a.name)) : `${e(a.name)} sends private messages as these identities but cannot read the answers.`}</p></div>`
+${a.identities.map(
+      (id) => `<div data-open="${e(a.id)}" data-identity="${e(id)}"><span>${e(a.name)} ${OPEN_WORDS.replace("this identity", e(name(id)))}</span><span class="k-r kishib-seg" role="group"><button type="button" class="${a.opens.includes(id) ? "" : "k-on"}" data-action="opening" data-pairing="${e(a.id)}" data-identity="${e(id)}" data-on="0">No</button><button type="button" class="${a.opens.includes(id) ? "k-on" : ""}" data-action="opening" data-pairing="${e(a.id)}" data-identity="${e(id)}" data-on="1">Yes</button></span></div>`
+    ).join("")}</div>
+<p class="k-small k-faint">${a.opens.length ? e(openSay(a.name)) : `${e(a.name)} sends private messages as these identities but cannot read the answers.`}</p></div>`
   ).join("");
   return `<h2>Apps</h2><p class="k-soft k-small">Each app paired with the runner: what it may sign without asking (a standing yes, per kind), what always asks, and whether it may have what is sealed to its identities opened. Revoke, and the app signs and opens through Ki\u0161ib no more.</p>${waiting}${approved || (waiting ? "" : '<p class="k-soft">No app is paired. In Dub, the identity panel: + Add, Use one from Ki\u0161ib.</p>')}`;
 }
@@ -9928,7 +9938,7 @@ function runnerWaiting(r) {
 ${w.always ? '<p class="k-small k-faint">Money, agreements, relying on another\u2019s act, and keys always ask.</p>' : `<label class="kishib-check"><input type="checkbox" data-always="${e(w.request)}"> Always yes for ${e(w.app)}\u2019s ${e(r.kinds.find((k) => k.kind === w.kind)?.name ?? w.kind)}</label>`}
 <div class="k-row"><button type="button" class="k-btn k-p" data-action="answer" data-yes="1" data-request="${e(w.request)}">Sign it</button><button type="button" class="k-btn k-q" data-action="answer" data-yes="0" data-request="${e(w.request)}">Decline</button></div></div>`
   ).join("");
-  return `<h2>Waiting</h2><p class="k-soft k-small">Requests not answered yet, in case their panel was closed in the app. Each waits ten minutes; the app that asked still waits for its answer.</p>${ws || '<p class="k-soft">Nothing waits.</p>'}`;
+  return `<h2>Waiting</h2><p class="k-soft k-small">Requests not answered yet, in case their panel was closed in the app. Each waits ten minutes; the app that asked still waits for its answer.</p>${memberAsks(r)}${ws || (r.memberAsks.length ? "" : '<p class="k-soft">Nothing waits.</p>')}`;
 }
 function runnerSigned(r) {
   if (!r?.on) return notOn(r, "Signed", "The runner is off: it keeps no record.");
@@ -10085,7 +10095,7 @@ function mount(app2, b) {
         signer: { id: s.identity, form: form2, link: form2, name: s.name, me: true },
         kind: s.opened ? `${s.app} \xB7 opened \xB7 ${kind}` : `${s.app} \xB7 ${kind}`,
         text: s.words.join(" "),
-        labels: [{ text: s.opened ? `opened, nothing signed \xB7 ${s.times === 1 ? "once" : `${s.times} times`} \xB7 last ${at}` : `${s.standing ? "signed without asking" : "asked, and signed"} \xB7 ${s.line === "apart" ? "on a line of its own" : `${s.app}\u2019s ${s.line} line, position ${s.position}`} \xB7 ${at}` }],
+        labels: [{ text: s.opened ? `opened, nothing signed \xB7 ${s.times === 1 ? "once" : `${s.times} times`} \xB7 last ${at}` : `${s.lane ? "signed without asking: a lane\u2019s record, to the identity itself" : s.standing ? "signed without asking" : "asked, and signed"} \xB7 ${s.as ? `as the collective ${shortForm(actFormOf(s.as, "mid"))}, with its member key` : s.line === "apart" ? "on a line of its own" : `${s.app}\u2019s ${s.line} line, position ${s.position}`} \xB7 ${at}` }],
         verified: false
       };
       drawn.set(a.id, { act: a, s });
@@ -10308,6 +10318,13 @@ function mount(app2, b) {
         draw();
         return done("The runner is on, its file encrypted under your passphrase. Give it an identity (Identities, Held here), then pair an app: in Dub, the identity panel, + Add, Use one from Ki\u0161ib.");
       }
+      case "quit": {
+        if (!confirm("Quit Ki\u0161ib? Its program ends, and the runner, if on, is locked: the apps sign through it no more until Ki\u0161ib is opened again and its passphrase given. Nothing is erased.")) return;
+        const r = await act(() => b.ask("quit"));
+        if (!r) return;
+        app2.innerHTML = `<div class="k-body"><div class="k-box" id="quit-done"><h2>Ki\u0161ib has quit</h2><p class="k-soft">Its program has ended${runner?.state === "off" ? "" : ", and the runner is locked"}. Open Ki\u0161ib again from your Applications (or its seal in the menu bar).</p></div></div>`;
+        return;
+      }
       case "runner-lock": {
         const r = await act(() => b.ask("runner lock"));
         if (!r) return;
@@ -10328,8 +10345,8 @@ function mount(app2, b) {
       case "approve": {
         const box = t.closest(".kishib-app");
         const identities = [...box.querySelectorAll('input[name="allow"]:checked')].map((x) => x.value);
-        const open = !!box.querySelector('input[name="open"]')?.checked;
-        const r = await act(() => b.ask("runner approve", { pairing: d.pairing, identities, open }));
+        const opens = [...box.querySelectorAll('input[name="open"]:checked')].map((x) => x.value).filter((x) => identities.includes(x));
+        const r = await act(() => b.ask("runner approve", { pairing: d.pairing, identities, opens }));
         if (r) {
           runner = r;
           draw();
@@ -10355,8 +10372,26 @@ function mount(app2, b) {
         }
         return;
       }
+      case "member-answer": {
+        const r = await act(() => b.ask("runner member answer", { ask: d.ask, yes: d.yes === "1" }));
+        if (r) {
+          runner = r;
+          draw();
+          if (d.yes === "1") done("Kept: Ki\u0161ib holds this identity\u2019s key for the collective, encrypted. The app acts as the collective through Ki\u0161ib\u2019s panel.");
+        }
+        return;
+      }
+      case "member-remove": {
+        if (!confirm("Forget this collective\u2019s key here? The app using the identity through Ki\u0161ib can no longer act as the collective. The key itself stays sealed to the identity at its homes.")) return;
+        const r = await act(() => b.ask("runner member remove", { identity: d.id, collective: d.collective }));
+        if (r) {
+          runner = r;
+          draw();
+        }
+        return;
+      }
       case "opening": {
-        const r = await act(() => b.ask("runner opening", { pairing: d.pairing, on: d.on === "1" }));
+        const r = await act(() => b.ask("runner opening", { pairing: d.pairing, identity: d.identity, on: d.on === "1" }));
         if (r) {
           runner = r;
           draw();
@@ -10409,7 +10444,7 @@ function mount(app2, b) {
       } catch {
         return;
       }
-      const changed = JSON.stringify([r.apps, r.waiting, r.signed.length, r.held]) !== JSON.stringify([runner.apps, runner.waiting, runner.signed.length, runner.held]);
+      const changed = JSON.stringify([r.apps, r.waiting, r.signed.length, r.held, r.memberAsks]) !== JSON.stringify([runner.apps, runner.waiting, runner.signed.length, runner.held, runner.memberAsks]);
       runner = r;
       if (!changed) return;
       if (tab === "runner" && part2 !== "onoff") draw();

@@ -1377,6 +1377,38 @@ function anchoringCheckTicket(offer_act, ticket, commitment, leaf, now2) {
   }
   return v5;
 }
+function anchoringLeaf(act, blind) {
+  let deferred4_0;
+  let deferred4_1;
+  try {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(blind, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.anchoringLeaf(ptr0, len0, ptr1, len1);
+    var ptr3 = ret[0];
+    var len3 = ret[1];
+    if (ret[3]) {
+      ptr3 = 0;
+      len3 = 0;
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    deferred4_0 = ptr3;
+    deferred4_1 = len3;
+    return getStringFromWasm0(ptr3, len3);
+  } finally {
+    wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+  }
+}
+function anchoringReadOffer(act) {
+  const ptr0 = passArray8ToWasm0(act, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.anchoringReadOffer(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
 function anchoringReadTicket(payload) {
   const ptr0 = passArray8ToWasm0(payload, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
@@ -7519,47 +7551,7 @@ function readForm(typed, want) {
 }
 var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
 var readId = (typed) => readForm(typed, "mid").hex;
-
-// ../dub/src/carryin.ts
-var message = (e3) => e3 instanceof Error ? e3.message : String(e3);
-var NOT_CURRENT = "These words do not give this identity\u2019s current signing key: they are another identity\u2019s, an earlier key\u2019s, or written wrong. Nothing was kept. If these are your chain key\u2019s words, they must never be typed into an online app.";
-async function lookCurrent(id, seed, hints, via) {
-  let pub;
-  try {
-    pub = signingPublic(seed);
-  } catch {
-    throw new Error("The words do not hold a signing key. Nothing was kept.");
-  }
-  let look;
-  try {
-    look = await lookUp(id, hints, via);
-  } catch (e3) {
-    throw new Error(`This identity was not found at ${hints.join(", ")}: ${message(e3)}`);
-  }
-  const r = look.resolution;
-  if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing can be signed for it until they agree.");
-  if (r.stop === "pending" || r.waiting.length) throw new Error("A change of its keys is waiting for its homes: bring it once that change counts, with the new words.");
-  if (!r.signingKey || !r.links.length) throw new Error(`Its chain could not be read (${r.stop}).`);
-  if (hex(r.signingKey) !== hex(pub)) throw new Error(NOT_CURRENT);
-  return look;
-}
-async function servedChain(id, homes, via) {
-  for (const h of homes) {
-    try {
-      const chain = (await relayAt(h.hint, via).identity(id)).chain;
-      if (chain.length) return chain;
-    } catch {
-    }
-  }
-  throw new Error("None of its homes served its chain.");
-}
-function carriedKey(look, seed) {
-  const secret = encryptionSecret(seed);
-  if (!look.encryptionKey || !look.encryptionKeyAct || hex(xwingPublic(secret)) !== hex(look.encryptionKey)) return null;
-  const e3 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
-  const version = e3.payload ? Number(cborDecode(e3.payload).get(0)) : 1;
-  return { version, act: look.encryptionKeyAct, secret: hex(secret) };
-}
+var readActId = (typed) => readForm(typed, "mact").hex;
 
 // src/units.ts
 var u = moneySpecs().units;
@@ -7743,190 +7735,6 @@ var labelOf = (hash) => {
   return `${a.name}, draft ${a.draft}: ${u2?.name ?? "a unit"}`;
 };
 var isAccepted = (a, accepted) => a.hashes.every((h) => accepted.has(h));
-
-// src/accepted.ts
-var SEALED_LIST = 1;
-var PUBLISHED_LIST = 0;
-function listPayload(a, withdrawn = false) {
-  const m = /* @__PURE__ */ new Map([[0, a.version]]);
-  if (a.previous) m.set(1, unhex(a.previous));
-  m.set(
-    2,
-    [...a.entries.entries()].sort(([x], [y]) => x < y ? -1 : 1).map(([h, label]) => label ? [unhex(h), label.slice(0, 120)] : [unhex(h)])
-  );
-  if (a.merged.length) m.set(3, a.merged.map(unhex));
-  if (withdrawn) m.set(4, true);
-  return cborEncode(m);
-}
-function readList(id, payload) {
-  try {
-    const m = cborDecode(payload);
-    for (const k of m.keys()) if (![0, 1, 2, 3].includes(k)) return null;
-    const version = m.get(0);
-    if (typeof version !== "number" || version < 1) return null;
-    const prev = m.get(1);
-    if (version === 1 !== (prev === void 0)) return null;
-    const entries = /* @__PURE__ */ new Map();
-    for (const x of m.get(2)) {
-      if (!Array.isArray(x) || !(x[0] instanceof Uint8Array) || x[0].length !== 32) return null;
-      entries.set(hex(x[0]), typeof x[1] === "string" ? x[1].slice(0, 120) : null);
-    }
-    const merged = (m.get(3) ?? []).map((x) => {
-      if (!(x instanceof Uint8Array) || x.length !== 32) throw new Error("merged");
-      return hex(x);
-    });
-    return { id, version, previous: prev instanceof Uint8Array ? hex(prev) : null, merged, entries };
-  } catch {
-    return null;
-  }
-}
-async function readActs(identity, keys, homes, via) {
-  const acts = /* @__PURE__ */ new Map();
-  const problems = [];
-  if (Array.isArray(keys) && !keys.length) return { acts, problems: ["this app holds no encryption key of this identity"] };
-  const open = Array.isArray(keys) ? openerOf(identity, keys) : keys;
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
-  let l;
-  try {
-    l = await lookUp(identity, homes, via, v);
-  } catch (e3) {
-    return { acts, problems: [`its homes did not answer (${e3 instanceof Error ? e3.message : String(e3)})`] };
-  }
-  const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
-  for (const h of at) {
-    let after;
-    try {
-      for (; ; ) {
-        const page = await relayAt(h, via).feed({ to: identity, after });
-        const sealed = page.items.filter((it) => it.kind === "sealed").map((it) => it.item);
-        const opened2 = sealed.length ? await open(sealed) : [];
-        for (const o of opened2) {
-          const d = o?.described;
-          if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== ACCEPTED_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
-          if (o.key) l.verifier.addWithKey(o.act, o.key);
-          else l.verifier.add(o.act);
-          if (l.verifier.status(d.id) !== "valid") continue;
-          const x = readList(d.id, d.payload);
-          if (x) acts.set(d.id, x);
-        }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
-      }
-    } catch (e3) {
-      problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
-    }
-  }
-  return { acts, problems };
-}
-function ancestors(acts, id) {
-  const out = /* @__PURE__ */ new Set();
-  const walk = (x) => {
-    if (out.has(x)) return;
-    out.add(x);
-    const a = acts.get(x);
-    if (!a) return;
-    if (a.previous) walk(a.previous);
-    for (const m of a.merged) walk(m);
-  };
-  walk(id);
-  return out;
-}
-async function readAccepted(identity, keys, homes, via = {}) {
-  const { acts, problems } = await readActs(identity, keys, homes, via);
-  const followed = /* @__PURE__ */ new Set();
-  for (const a of acts.values()) {
-    if (a.previous) followed.add(a.previous);
-    for (const m of a.merged) followed.add(m);
-  }
-  const tips = [...acts.values()].filter((a) => !followed.has(a.id)).sort((x, y) => x.id < y.id ? -1 : 1);
-  const version = Math.max(0, ...tips.map((t) => t.version));
-  if (tips.length <= 1) return { entries: new Map(tips[0]?.entries ?? []), tips, merged: [], version, problems };
-  const anc = tips.map((t) => ancestors(acts, t.id));
-  const common = [...anc[0]].filter((x) => anc.every((s) => s.has(x)) && acts.has(x));
-  const base = common.map((x) => acts.get(x)).sort((a, b) => b.version - a.version)[0];
-  const baseEntries = base?.entries ?? /* @__PURE__ */ new Map();
-  const entries = new Map(baseEntries);
-  const merged = [];
-  for (const t of tips) {
-    for (const [h, label] of t.entries) {
-      if (!baseEntries.has(h)) {
-        entries.set(h, label);
-        merged.push(`Added in one app: ${label ?? labelOf(h) ?? h.slice(0, 12)}.`);
-      }
-    }
-    for (const h of baseEntries.keys()) {
-      if (!t.entries.has(h) && entries.has(h)) {
-        entries.delete(h);
-        merged.push(`Removed in one app: ${baseEntries.get(h) ?? labelOf(h) ?? h.slice(0, 12)}.`);
-      }
-    }
-  }
-  return { entries, tips, merged: [...new Set(merged)], version, problems };
-}
-var sameTips = (a, b) => a.map((x) => x.id).join() === b.map((x) => x.id).join();
-async function changeAccepted(me, change, opts) {
-  const via = opts.via ?? {};
-  const homes = me.f.homes.map((h) => h.hint);
-  const held = [...me.f.encryption].reverse().filter((e3) => e3.secret).map((e3) => unhex(e3.secret));
-  const secrets = held.length ? held : opts.open ?? [];
-  if (Array.isArray(secrets) && !secrets.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
-  for (let round = 0; round < 5; round++) {
-    const read = await readAccepted(me.id, secrets, homes, via);
-    if (read.problems.length >= homes.length && !read.tips.length) throw new Error(`The identity\u2019s homes did not answer (${read.problems.join("; ")}): the accepted list was not changed.`);
-    const next = new Map(read.entries);
-    change(next);
-    const same = read.tips.length === 1 && JSON.stringify([...next].sort()) === JSON.stringify([...read.entries].sort());
-    if (same || !read.tips.length && !next.size) return { written: null, list: read };
-    const again = await readAccepted(me.id, secrets, homes, via);
-    if (!sameTips(again.tips, read.tips)) continue;
-    await opts.check();
-    const look = await lookUp(me.id, homes, via);
-    if (!look.encryptionKey || !me.f.encryption.some((e3) => (e3.secret ? hex(xwingPublic(unhex(e3.secret))) : e3.public) === hex(look.encryptionKey))) {
-      throw new Error("The encryption key this identity publishes is not one this app holds: the accepted list cannot be sealed. Nothing was changed.");
-    }
-    const [first, ...others] = read.tips;
-    const payload = listPayload({ version: read.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
-    let made;
-    try {
-      made = await me.signNow(ACCEPTED_SPEC, SEALED_LIST, payload, { public: false, to: [me.id] });
-    } finally {
-      await opts.save();
-    }
-    const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
-    let left = 0;
-    for (const h of homes) {
-      try {
-        await relayAt(h, via).putSealed(sealed);
-        left++;
-      } catch {
-      }
-    }
-    await leaveAtHomes(me, made, { via, sealed: left > 0 });
-    await opts.save();
-    if (!left) throw new Error("No home took the accepted list: nothing was changed. Try again.");
-    return { written: made.id, list: { entries: next, tips: [{ id: made.id, version: read.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next }], merged: read.merged, version: read.version + 1, problems: [] } };
-  }
-  throw new Error("Another app kept changing the accepted list while this one wrote: nothing was changed. Try again.");
-}
-async function publishAccepted(me, list3, relays, previous, withdrawn, save) {
-  const payload = listPayload({ version: (previous?.version ?? 0) + 1, previous: previous?.act ?? null, merged: [], entries: withdrawn ? /* @__PURE__ */ new Map() : list3.entries }, withdrawn);
-  let made;
-  try {
-    made = await me.signNow(ACCEPTED_SPEC, PUBLISHED_LIST, payload, { public: true });
-  } finally {
-    await save();
-  }
-  let left = 0;
-  for (const r of relays) {
-    try {
-      await relayAt(r, me.via).putAct(made.act);
-      left++;
-    } catch {
-    }
-  }
-  if (!left) throw new Error("No relay took the published list.");
-  return made.id;
-}
 
 // src/messages.ts
 var TYPES = { draft: 1, request: 2, invoiceRequest: 3, answer: 4, laneRequest: 5, sale: 6 };
@@ -8114,12 +7922,263 @@ function salePayload(x) {
   );
 }
 
+// ../ummia/src/anchor.ts
+async function placesOf(service, hints, via) {
+  const l = await lookUp(service, hints, via);
+  const places = [.../* @__PURE__ */ new Set([...l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints), ...l.resolution.homes.map((h) => h.hint), ...hints])];
+  return { l, places };
+}
+async function offers(service, hints, via = {}) {
+  const { l, places } = await placesOf(service, hints, via);
+  const out = /* @__PURE__ */ new Map();
+  for (const h of places) {
+    try {
+      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.agreements })).items) {
+        if (it.kind !== "act") continue;
+        try {
+          const o = anchoringReadOffer(it.item);
+          l.verifier.add(it.item);
+          if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words });
+        } catch {
+        }
+      }
+    } catch {
+    }
+  }
+  return [...out.values()];
+}
+
+// ../dub/src/carryin.ts
+var message = (e3) => e3 instanceof Error ? e3.message : String(e3);
+var NOT_CURRENT = "These words do not give this identity\u2019s current signing key: they are another identity\u2019s, an earlier key\u2019s, or written wrong. Nothing was kept. If these are your chain key\u2019s words, they must never be typed into an online app.";
+async function lookCurrent(id, seed, hints, via) {
+  let pub;
+  try {
+    pub = signingPublic(seed);
+  } catch {
+    throw new Error("The words do not hold a signing key. Nothing was kept.");
+  }
+  let look;
+  try {
+    look = await lookUp(id, hints, via);
+  } catch (e3) {
+    throw new Error(`This identity was not found at ${hints.join(", ")}: ${message(e3)}`);
+  }
+  const r = look.resolution;
+  if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing can be signed for it until they agree.");
+  if (r.stop === "pending" || r.waiting.length) throw new Error("A change of its keys is waiting for its homes: bring it once that change counts, with the new words.");
+  if (!r.signingKey || !r.links.length) throw new Error(`Its chain could not be read (${r.stop}).`);
+  if (hex(r.signingKey) !== hex(pub)) throw new Error(NOT_CURRENT);
+  return look;
+}
+async function servedChain(id, homes, via) {
+  for (const h of homes) {
+    try {
+      const chain = (await relayAt(h.hint, via).identity(id)).chain;
+      if (chain.length) return chain;
+    } catch {
+    }
+  }
+  throw new Error("None of its homes served its chain.");
+}
+function carriedKey(look, seed) {
+  const secret = encryptionSecret(seed);
+  if (!look.encryptionKey || !look.encryptionKeyAct || hex(xwingPublic(secret)) !== hex(look.encryptionKey)) return null;
+  const e3 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
+  const version = e3.payload ? Number(cborDecode(e3.payload).get(0)) : 1;
+  return { version, act: look.encryptionKeyAct, secret: hex(secret) };
+}
+
+// src/accepted.ts
+var SEALED_LIST = 1;
+var PUBLISHED_LIST = 0;
+function listPayload(a, withdrawn = false) {
+  const m = /* @__PURE__ */ new Map([[0, a.version]]);
+  if (a.previous) m.set(1, unhex(a.previous));
+  m.set(
+    2,
+    [...a.entries.entries()].sort(([x], [y]) => x < y ? -1 : 1).map(([h, label]) => label ? [unhex(h), label.slice(0, 120)] : [unhex(h)])
+  );
+  if (a.merged.length) m.set(3, a.merged.map(unhex));
+  if (withdrawn) m.set(4, true);
+  return cborEncode(m);
+}
+function readList(id, payload) {
+  try {
+    const m = cborDecode(payload);
+    for (const k of m.keys()) if (![0, 1, 2, 3].includes(k)) return null;
+    const version = m.get(0);
+    if (typeof version !== "number" || version < 1) return null;
+    const prev = m.get(1);
+    if (version === 1 !== (prev === void 0)) return null;
+    const entries = /* @__PURE__ */ new Map();
+    for (const x of m.get(2)) {
+      if (!Array.isArray(x) || !(x[0] instanceof Uint8Array) || x[0].length !== 32) return null;
+      entries.set(hex(x[0]), typeof x[1] === "string" ? x[1].slice(0, 120) : null);
+    }
+    const merged = (m.get(3) ?? []).map((x) => {
+      if (!(x instanceof Uint8Array) || x.length !== 32) throw new Error("merged");
+      return hex(x);
+    });
+    return { id, version, previous: prev instanceof Uint8Array ? hex(prev) : null, merged, entries };
+  } catch {
+    return null;
+  }
+}
+async function readActs(identity, keys, homes, via) {
+  const acts = /* @__PURE__ */ new Map();
+  const problems = [];
+  if (Array.isArray(keys) && !keys.length) return { acts, problems: ["this app holds no encryption key of this identity"] };
+  const open = Array.isArray(keys) ? openerOf(identity, keys) : keys;
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  let l;
+  try {
+    l = await lookUp(identity, homes, via, v);
+  } catch (e3) {
+    return { acts, problems: [`its homes did not answer (${e3 instanceof Error ? e3.message : String(e3)})`] };
+  }
+  const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via).feed({ to: identity, after });
+        const sealed = page.items.filter((it) => it.kind === "sealed").map((it) => it.item);
+        const opened2 = sealed.length ? await open(sealed) : [];
+        for (const o of opened2) {
+          const d = o?.described;
+          if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== ACCEPTED_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
+          if (o.key) l.verifier.addWithKey(o.act, o.key);
+          else l.verifier.add(o.act);
+          if (l.verifier.status(d.id) !== "valid") continue;
+          const x = readList(d.id, d.payload);
+          if (x) acts.set(d.id, x);
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch (e3) {
+      problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
+    }
+  }
+  return { acts, problems };
+}
+function ancestors(acts, id) {
+  const out = /* @__PURE__ */ new Set();
+  const walk = (x) => {
+    if (out.has(x)) return;
+    out.add(x);
+    const a = acts.get(x);
+    if (!a) return;
+    if (a.previous) walk(a.previous);
+    for (const m of a.merged) walk(m);
+  };
+  walk(id);
+  return out;
+}
+async function readAccepted(identity, keys, homes, via = {}) {
+  const { acts, problems } = await readActs(identity, keys, homes, via);
+  const followed = /* @__PURE__ */ new Set();
+  for (const a of acts.values()) {
+    if (a.previous) followed.add(a.previous);
+    for (const m of a.merged) followed.add(m);
+  }
+  const tips = [...acts.values()].filter((a) => !followed.has(a.id)).sort((x, y) => x.id < y.id ? -1 : 1);
+  const version = Math.max(0, ...tips.map((t) => t.version));
+  if (tips.length <= 1) return { entries: new Map(tips[0]?.entries ?? []), tips, merged: [], version, problems };
+  const anc = tips.map((t) => ancestors(acts, t.id));
+  const common = [...anc[0]].filter((x) => anc.every((s) => s.has(x)) && acts.has(x));
+  const base = common.map((x) => acts.get(x)).sort((a, b) => b.version - a.version)[0];
+  const baseEntries = base?.entries ?? /* @__PURE__ */ new Map();
+  const entries = new Map(baseEntries);
+  const merged = [];
+  for (const t of tips) {
+    for (const [h, label] of t.entries) {
+      if (!baseEntries.has(h)) {
+        entries.set(h, label);
+        merged.push(`Added in one app: ${label ?? labelOf(h) ?? h.slice(0, 12)}.`);
+      }
+    }
+    for (const h of baseEntries.keys()) {
+      if (!t.entries.has(h) && entries.has(h)) {
+        entries.delete(h);
+        merged.push(`Removed in one app: ${baseEntries.get(h) ?? labelOf(h) ?? h.slice(0, 12)}.`);
+      }
+    }
+  }
+  return { entries, tips, merged: [...new Set(merged)], version, problems };
+}
+var sameTips = (a, b) => a.map((x) => x.id).join() === b.map((x) => x.id).join();
+async function changeAccepted(me, change, opts) {
+  const via = opts.via ?? {};
+  const homes = me.f.homes.map((h) => h.hint);
+  const held = [...me.f.encryption].reverse().filter((e3) => e3.secret).map((e3) => unhex(e3.secret));
+  const secrets = held.length ? held : opts.open ?? [];
+  if (Array.isArray(secrets) && !secrets.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
+  for (let round = 0; round < 5; round++) {
+    const read = await readAccepted(me.id, secrets, homes, via);
+    if (read.problems.length >= homes.length && !read.tips.length) throw new Error(`The identity\u2019s homes did not answer (${read.problems.join("; ")}): the accepted list was not changed.`);
+    const next = new Map(read.entries);
+    change(next);
+    const same = read.tips.length === 1 && JSON.stringify([...next].sort()) === JSON.stringify([...read.entries].sort());
+    if (same || !read.tips.length && !next.size) return { written: null, list: read };
+    const again = await readAccepted(me.id, secrets, homes, via);
+    if (!sameTips(again.tips, read.tips)) continue;
+    await opts.check();
+    const look = await lookUp(me.id, homes, via);
+    if (!look.encryptionKey || !me.f.encryption.some((e3) => (e3.secret ? hex(xwingPublic(unhex(e3.secret))) : e3.public) === hex(look.encryptionKey))) {
+      throw new Error("The encryption key this identity publishes is not one this app holds: the accepted list cannot be sealed. Nothing was changed.");
+    }
+    const [first, ...others] = read.tips;
+    const payload = listPayload({ version: read.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
+    let made;
+    try {
+      made = await me.signNow(ACCEPTED_SPEC, SEALED_LIST, payload, { public: false, to: [me.id] });
+    } finally {
+      await opts.save();
+    }
+    const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
+    let left = 0;
+    for (const h of homes) {
+      try {
+        await relayAt(h, via).putSealed(sealed);
+        left++;
+      } catch {
+      }
+    }
+    await leaveAtHomes(me, made, { via, sealed: left > 0 });
+    await opts.save();
+    if (!left) throw new Error("No home took the accepted list: nothing was changed. Try again.");
+    return { written: made.id, list: { entries: next, tips: [{ id: made.id, version: read.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next }], merged: read.merged, version: read.version + 1, problems: [] } };
+  }
+  throw new Error("Another app kept changing the accepted list while this one wrote: nothing was changed. Try again.");
+}
+async function publishAccepted(me, list3, relays, previous, withdrawn, save) {
+  const payload = listPayload({ version: (previous?.version ?? 0) + 1, previous: previous?.act ?? null, merged: [], entries: withdrawn ? /* @__PURE__ */ new Map() : list3.entries }, withdrawn);
+  let made;
+  try {
+    made = await me.signNow(ACCEPTED_SPEC, PUBLISHED_LIST, payload, { public: true });
+  } finally {
+    await save();
+  }
+  let left = 0;
+  for (const r of relays) {
+    try {
+      await relayAt(r, me.via).putAct(made.act);
+      left++;
+    } catch {
+    }
+  }
+  if (!left) throw new Error("No relay took the published list.");
+  return made.id;
+}
+
 // src/damgar.ts
 var LINE_SAY = "Damgar keeps its own line of acts for this identity (its money acts and messages). If the signing key is ever changed with the chain key, in Ki\u0161ib, that change must keep this line, or every claim and receipt signed here becomes void. Ki\u0161ib reads it from the homes and keeps it.";
 var SPENT_SAY = "This identity\u2019s signing key was changed elsewhere, with its chain key, so the signing key\u2019s words Damgar holds no longer count. Nothing was signed. To go on here, give Damgar the new signing key\u2019s words.";
 var RUNNER_OLD_KEY_SAY = "This identity\u2019s keys were changed with its chain key, and Ki\u0161ib\u2019s runner still holds the old signing key: nothing was signed. Give the runner the new signing key\u2019s words, in Ki\u0161ib (Runner, Identities held here). Damgar then goes on, in new lines.";
 var RUNNER_HOLDS_SAY = "Ki\u0161ib\u2019s runner holds this identity\u2019s signing key, on this Mac; Damgar holds none of its keys. Its words are given and changed in Ki\u0161ib, never here.";
-var RUNNER_NO_OPEN_SAY = "Ki\u0161ib does not let Damgar open what is sealed to this identity: drafts, requests and payments sealed to it are not read here. To allow it, in Ki\u0161ib: Runner, Apps, Damgar, \u201Cmay open what is sealed to this identity\u201D.";
+var RUNNER_NO_OPEN_SAY = "Ki\u0161ib does not let Damgar open what is sealed to this identity: drafts, requests and payments sealed to it are not read here. To allow it, in Ki\u0161ib: Runner, Apps, Damgar, \u201Cmay open what is sealed to\u201D this identity.";
 var NO_KEY_SAY = "Damgar holds no encryption key for this identity, so nothing sealed to it opens here: no draft, no request, no payment. Its encryption key was not made from its signing key\u2019s words.";
 var REQUEST_KEY_SAY = [
   "Damgar makes an on-chain request key and keeps it here, beside the signing key. It signs, for each payment, the request that binds a fresh address to that payment alone. It answers address requests by itself when they arrive through MOR.",
@@ -8215,7 +8274,7 @@ var Damgar = class {
       return { open: null, problem: message2(e3).replace(/ Nothing was signed\.$/, "") };
     }
     if (!p || p.state !== "approved" || !p.identities.some((x) => x.id === me.id)) return { open: null, problem: "Damgar is not paired with Ki\u0161ib for this identity any more: nothing sealed to it opens here." };
-    if (!p.open) return { open: null, problem: RUNNER_NO_OPEN_SAY };
+    if (!p.opens.includes(me.id)) return { open: null, problem: RUNNER_NO_OPEN_SAY };
     const open = async (sealed) => (await r.open(me.id, sealed)).map((o) => o ? { ...o, described: o.key ? openWithKey(o.act, o.key) : describeAct(o.act) } : null);
     return { open, problem: null };
   }
@@ -8280,7 +8339,7 @@ var Damgar = class {
       return {
         lines: [
           { text: `Damgar uses ${k.name ?? short(k.id)} through Ki\u0161ib\u2019s runner: Ki\u0161ib holds its signing key, Damgar none. Every money act is shown by Ki\u0161ib, in its panel here, before it is signed: money always asks.`, tone: "ok" },
-          p.open ? { text: "Ki\u0161ib opens for Damgar what is sealed to this identity: drafts, requests and payments are read here, Damgar holding no key.", tone: "ok" } : { text: RUNNER_NO_OPEN_SAY, tone: "warn" },
+          p.opens.includes(k.id) ? { text: "Ki\u0161ib opens for Damgar what is sealed to this identity: drafts, requests and payments are read here, Damgar holding no key.", tone: "ok" } : { text: RUNNER_NO_OPEN_SAY, tone: "warn" },
           { text: LINE_SAY, tone: "warn" }
         ]
       };
@@ -9610,6 +9669,68 @@ var Damgar = class {
     const d = { what: "pay", other, amount: { unit: a.unit, value: readValue(a.value) }, whatFor: a.whatFor.trim() ? a.whatFor.trim().slice(0, 280) : null, app: "Damgar", anchor: null };
     return this.paste(base64(draftPayload(d)));
   }
+  // ------------------------------------------------------------ the act menu: Rely on it, Anchor it (decided by Nobody, allegedly: "Agreed")
+  /**
+   * Rely on an act (a receipt, a claim, any act shown): the witness act
+   * (Identity type 15) signed once RELY is typed, as everywhere, its key
+   * checked first (H80); through Kišib's panel where the identity is used
+   * through it. It keeps that act visible as disputed should its author ever
+   * disown it.
+   */
+  rely(a) {
+    return this.serial(async () => {
+      const { me, s, book } = await this.ctx();
+      if (a.typed.trim() !== "RELY") throw new Error("Type RELY to sign the witness act. Nothing was signed.");
+      const id = readActId(a.id);
+      if (book.acts[id]?.from === me.id || me.f.sequence.includes(id)) throw new Error("It is this identity\u2019s own act: a witness act names other identities\u2019 acts. Nothing was signed.");
+      await this.current(me);
+      let made;
+      try {
+        made = await me.witness([id], { shown: WITNESS_EXPLANATION, relays: s.relays });
+      } finally {
+        await this.store.saveIdentity(me);
+      }
+      if (!made.sent.some((x) => x.result)) throw new Error(`No home took the witness act: ${made.sent.map((x) => `${x.home}: ${x.error}`).join("; ")}. It is signed here, not published.`);
+      return { lines: [{ text: `You rely on ${short(id)}: witness act ${short(made.id)}, public at this identity\u2019s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: "ok" }] };
+    });
+  }
+  /** An anchoring service's standing offers (the anchoring cMIP), read from its public acts. */
+  anchorOffers(a) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const service = readId(a.service);
+      const acc = this.acceptedSet(await this.accepted(me));
+      const found = await offers(service, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via);
+      return { offers: found.map((o) => ({ act: o.act, unit: o.unit, words: o.words, tiers: o.tiers.map((t, i) => ({ tier: i, words: `within ${t.blocks} block${t.blocks === 1 ? "" : "s"}, ${say({ unit: o.unit, value: t.price }, acc)}` })) })) };
+    });
+  }
+  /**
+   * Anchor an act (a receipt, a claim, any act shown), in one step here:
+   * the service's standing offer followed, a tier chosen; the payment
+   * prepared and its invoice request signed at once, as a pasted draft is;
+   * the blind kept here. The service answers with an invoice and a ticket,
+   * paid in To pay; it shows in Account › Anchors.
+   */
+  async anchor(a) {
+    const id = readActId(a.id);
+    const service = readId(a.service);
+    const { me, s } = await this.serial(() => this.ctx());
+    const offer = (await offers(service, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via)).find((o) => o.act === a.offer);
+    if (!offer) throw new Error("That offer was not found at the service\u2019s places. Nothing was signed.");
+    const tier = offer.tiers[a.tier];
+    if (!tier) throw new Error("The offer has no such tier. Nothing was signed.");
+    const blind = new Uint8Array(randomBytes(32));
+    const leaf = anchoringLeaf(id, blind);
+    const d = { what: "anchor", other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${short(id)}`, app: "Damgar", anchor: { offer: offer.act, tier: a.tier, leaf } };
+    const pasted = await this.paste(base64(draftPayload(d)));
+    await this.serial(async () => {
+      const { book } = await this.ctx();
+      (book.anchored ??= {})[pasted.id] = { act: id, blind: hex(blind), leaf, service, offer: offer.act, tier: a.tier, at: now() };
+      await this.saveBook(me.id, book);
+    });
+    const signed = await this.signDraft(pasted.id);
+    return { lines: [{ text: `An anchor of ${short(id)} asked of ${short(service)}, tier ${a.tier} (within ${tier.blocks} blocks): the invoice request signed and sent. When the service answers with its invoice and ticket, pay it in To pay; it shows in Account \u203A Anchors. The blind is kept here.`, tone: "ok" }, ...signed.lines.slice(1)] };
+  }
   /** Sign a draft (the money messages cMIP, 2.2): an invoice request, or a request to be paid. */
   signDraft(id) {
     return this.serial(async () => {
@@ -10860,10 +10981,31 @@ var Damgar = class {
       } catch {
       }
     }
+    const throughKisib = how.by === "lane" && !!this.opts.app && !me.f.signingSecret && !!this.opts.runner;
     await leaveAtHomes(me, made, { via: s.via, lockedOnly: how.by === "lane" && !(this.opts.app && me.f.signingSecret) });
+    if (throughKisib) await this.laneRecordThroughKisib(me, s, made).catch(() => void 0);
     await this.store.saveIdentity(me);
     if (!left) throw new Error(`${short(to)}\u2019s inbox (${inbox.join(", ")}) took nothing. It was signed and kept here; try again later.`);
     return made.id;
+  }
+  /**
+   * The record of a payment made under the lane, for an identity used
+   * through Kišib (the Dubsar runner cMIP, draft 3, 7.5): its key delivered
+   * to the identity itself, signed by Kišib without a panel, sealed to the
+   * identity's own encryption key and left at its homes, where Damgar reads
+   * it. Where Kišib does not sign it, the payment stays sealed, not counted.
+   */
+  async laneRecordThroughKisib(me, s, made) {
+    const own = me.f.encryption.at(-1);
+    const key = own?.secret ? xwingPublic(unhex(own.secret)) : own?.public ? unhex(own.public) : null;
+    if (!key) return;
+    try {
+      const kd = await me.signApartNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.id] });
+      const sealed = sealFor(kd.act, kd.key, [{ id: me.id, key }]);
+      for (const h of me.f.homes) await relayAt(h.hint, s.via).putSealed(sealed).catch(() => void 0);
+    } finally {
+      await this.store.saveIdentity(me);
+    }
   }
   /**
    * How a payer's act is signed here: inside another app (Dub), only under
@@ -11070,6 +11212,12 @@ async function runOp(d, op, a) {
       return d.make({ homes: list2(a.homes), relays: list2(a.relays) });
     case "make confirm":
       return d.makeConfirm(list2(a.typed));
+    case "rely":
+      return d.rely({ id: text2(a.id), typed: text2(a.typed) });
+    case "anchor offers":
+      return d.anchorOffers({ service: text2(a.service) });
+    case "anchor":
+      return d.anchor({ id: text2(a.id), service: text2(a.service), offer: text2(a.offer), tier: Number(a.tier) });
     case "tip":
       return d.tip({ to: text2(a.to), value: text2(a.value), unit: text2(a.unit), whatFor: text2(a.whatFor) });
     case "paste":
@@ -12142,7 +12290,7 @@ function spent2(sayIt) {
 var verdict = (v) => `<span class="damgar-v ${e(v.answer)}" title="${e(v.why)}">${e(v.answer)}</span>`;
 var btn = (action, id, label, primary = false, key = "id") => `<button type="button" class="k-btn${primary ? " k-p" : " k-q"}" data-action="${e(action)}" data-${key}="${e(id)}">${e(label)}</button>`;
 function itemActs(t) {
-  const offers = t.offers.map((o) => {
+  const offers2 = t.offers.map((o) => {
     switch (o) {
       case "sign":
         return btn("sign draft", t.id, t.kind === "draft" && t.title.startsWith("A request") ? "Sign and send the request" : "Sign it", true);
@@ -12166,7 +12314,7 @@ function itemActs(t) {
   }).join("");
   const invoice = t.offers.includes("invoice") ? `<label>The description hash to give your wallet</label><div class="damgar-copy">${e(t.descriptionHash ?? "")}</div><button type="button" class="k-btn k-q k-small" data-action="copy" data-text="${e(t.descriptionHash ?? "")}">Copy it</button>
 <form class="invoice" data-id="${e(t.id)}"><label>The invoice your wallet made (BOLT 11)</label><textarea name="invoice" required spellcheck="false" placeholder="lnbcrt\u2026"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Check it and send it</button></div></form>` : "";
-  return `${t.amount ? `<p>${e(t.amount.said)}</p>` : ""}${lines(t.lines)}${invoice}<div class="damgar-acts">${offers}</div>`;
+  return `${t.amount ? `<p>${e(t.amount.said)}</p>` : ""}${lines(t.lines)}${invoice}<div class="damgar-acts">${offers2}</div>`;
 }
 function payment(p, forPay = false) {
   const proofs = p.proofs.length ? `<div class="damgar-proofs">${p.proofs.map((x) => `<div class="p"><span>${x.kind === "claim" ? "Claim" : "Receipt"} by ${e(x.by.me ? "you" : x.by.short)}</span><span class="k-small k-soft">${e(x.how)}</span>${verdict(x.rail)}<span class="k-small k-soft">rail: ${e(x.rail.why || "the rail\u2019s own evidence holds")}</span>${x.confirmations ? `<span class="k-small">${x.confirmations[0]} of ${x.confirmations[1]} confirmations</span>` : ""}</div><div class="p k-small">Beside it: ${verdict(x.beside)} ${e(x.beside.why)}${x.standing !== "valid" ? ` \xB7 the act itself: ${e(x.standing)}` : ""}</div>`).join("")}</div>` : "";
@@ -12310,6 +12458,18 @@ function relaysPane(s, chain) {
 function manualPane(on) {
   return `<h2>Every step by hand</h2><p class="k-soft">For those who want to follow the real process step by step: every signature waits for you, as in round 1. Off by default.</p>
 <label class="damgar-check"><input type="checkbox" id="manual"${on ? " checked" : ""}> Follow every step by hand (a clear demonstration of the real process)</label>`;
+}
+var actChoice = (acts) => acts.length > 1 ? `<div class="damgar-ways">${acts.map((x, i) => `<label class="k-row"><input type="radio" name="act" value="${e(x.id)}"${i === 0 ? " checked" : ""}> <span>${e(x.said)} <span class="k-mono k-faint">${e(shortForm(formOf(x.id)))}</span></span></label>`).join("")}</div>` : `<input type="hidden" name="act" value="${e(acts[0].id)}"><p class="k-small"><b>${e(acts[0].said)}</b> <span class="k-mono k-faint">${e(shortForm(formOf(acts[0].id)))}</span></p>`;
+var noAct = '<p class="k-soft">This card is not yet an act on MOR (a draft waiting to be signed here): there is nothing to rely on or anchor.</p>';
+function relyForm(acts) {
+  if (!acts.length) return noAct;
+  return `<form id="rely">${say2("Relying on an act keeps it visible as disputed should its author ever disown it.", ["A witness act (Identity type 15), public at your homes and relays, naming the act: it relies on it, it pays nothing. Signed with your key, checked first; through Ki\u0161ib\u2019s panel where Ki\u0161ib holds this identity."])}${actChoice(acts)}<label>Type RELY to sign the witness act</label><input name="typed" autocomplete="off" autocapitalize="characters" spellcheck="false" required><div class="k-row"><button type="submit" class="k-btn k-p">Sign the witness act</button></div></form>`;
+}
+function anchorForm(acts, offers2, service = "", chosen = "") {
+  if (!acts.length) return noAct;
+  const which = chosen ? acts.filter((x) => x.id === chosen) : acts;
+  return `<form id="anchor-offers">${say2("An anchor puts this act\u2019s fingerprint on the Bitcoin chain, through a pooled anchoring service, paid here.", ["Anyone may anchor any act (the anchoring cMIP). The service is sent a leaf (the act\u2019s fingerprint mixed with a random secret Damgar keeps), never the act. Damgar signs the payment\u2019s request at once; you pay the invoice in To pay; it shows in Account \u203A Anchors. Round 1 runs on regtest: its coins are worth nothing."])}${actChoice(which.length ? which : acts)}
+<label>The anchoring service\u2019s ID</label><div class="k-row"><input name="service" value="${e(service)}" required spellcheck="false" autocomplete="off" class="k-grow"><button type="submit" class="k-btn">Read its offer</button></div></form>${offers2 === null ? "" : offers2.length ? `<form id="anchor" data-service="${e(service)}" data-act="${e(chosen)}"><div class="damgar-ways">${offers2.flatMap((o) => o.tiers.map((t, i) => `<label class="k-row"><input type="radio" name="tier" value="${e(o.act)}:${t.tier}"${i === 0 ? " checked" : ""}> <span>${e(t.words)}${o.words ? ` <span class="k-small k-soft">${e(o.words)}</span>` : ""}</span></label>`)).join("")}</div><div class="k-row"><button type="submit" class="k-btn k-p">Anchor it: sign the payment\u2019s request</button></div></form>` : '<p class="k-small k-soft">No standing offer of that service was found.</p>'}`;
 }
 
 // src/page/ui.ts
@@ -12499,6 +12659,7 @@ function mount(app2, b) {
   }
   const drawn = /* @__PURE__ */ new Map();
   let cards = [];
+  let anchoring = [];
   const meId = () => state?.identity?.id ?? "";
   const kitWho = (w) => {
     const form2 = formOf(w.id, "mid");
@@ -12506,7 +12667,7 @@ function mount(app2, b) {
   };
   const cardOf = (x) => {
     const a = { id: x.id, form: formOf(x.id), signer: kitWho(x.who), kind: x.kind ?? null, text: x.text, html: x.html, labels: x.labels, verified: !!x.verified, alarm: x.alarm ?? null };
-    cards.push({ act: a, who: x.who, lines: x.lines });
+    cards.push({ act: a, who: x.who, lines: x.lines, acts: x.acts ?? [] });
     return card(a);
   };
   function drawCards() {
@@ -12514,12 +12675,18 @@ function mount(app2, b) {
     for (const c of cards) drawn.set(c.act.id, c);
     cards = [];
   }
-  const itemCard = (t) => cardOf({ id: t.id, who: t.from, kind: `${t.kind === "draft" ? t.byHand ? "pasted by hand" : t.app ? `from ${t.app}` : "a draft" : t.kind === "lane" ? `lane \xB7 from ${t.app ?? "an app"}` : t.kind}`, text: t.title, html: `<div class="k-box">${itemActs(t)}</div>`, labels: t.unknown ? [{ text: "unknown here: nothing can be signed for it", tone: "warn" }] : [], verified: !t.unknown, lines: t.lines });
+  const itemCard = (t) => cardOf({ id: t.id, who: t.from, kind: `${t.kind === "draft" ? t.byHand ? "pasted by hand" : t.app ? `from ${t.app}` : "a draft" : t.kind === "lane" ? `lane \xB7 from ${t.app ?? "an app"}` : t.kind}`, text: t.title, html: `<div class="k-box">${itemActs(t)}</div>`, labels: t.unknown ? [{ text: "unknown here: nothing can be signed for it", tone: "warn" }] : [], verified: !t.unknown, lines: t.lines, acts: [] });
   const shortOf = (w) => shortForm(formOf(w.id, "mid"));
   const paymentCard = (p, forPay) => {
     const bad = p.proofs.some((x) => x.rail.answer === "invalid");
     const first = p.proofs[0];
+    const acts = [
+      ...p.proofs.filter((x) => x.kind === "receipt").map((x) => ({ id: x.act, said: `The receipt, by ${x.by.me ? "you" : shortOf(x.by)}` })),
+      ...p.proofs.filter((x) => x.kind === "claim").map((x) => ({ id: x.act, said: `The claim, by ${x.by.me ? "you" : shortOf(x.by)}` })),
+      ...p.request ? [{ id: p.request, said: "The invoice request that began it" }] : []
+    ];
     return cardOf({
+      acts,
       id: first?.act ?? p.request ?? p.key,
       who: first ? first.by : p.side === "out" ? { id: meId(), short: "", me: true } : p.other,
       kind: p.to === "vault" && p.other.me ? "to your vault" : p.side === "out" ? "you pay" : "paid to you",
@@ -12533,8 +12700,8 @@ function mount(app2, b) {
   };
   attachCards(app2, {
     app: "Damgar",
-    // Damgar signs no everyday act: Rely on it and Anchor it are Dub's and Edubba's (an Identity act; an anchor prepared there, paid here).
-    signs: false,
+    // Rely on it and Anchor it, below the line, on every act (decided by Nobody, allegedly: "Agreed"; Damgar's round 3, question 3): a witness act signed here, an anchor prepared and paid here.
+    signs: true,
     act: (id) => drawn.get(id)?.act,
     signerItems: (a) => a.signer.me ? [] : [{ key: "tip", label: "Tip" }],
     actItems: () => ({ before: [], after: [] }),
@@ -12545,6 +12712,12 @@ function mount(app2, b) {
       if (key === "profile") return void popup2.show(a.signer.me ? "You" : shortForm(a.signer.form), `<dl class="k-facts"><dt>ID</dt><dd class="k-mono">${e(a.signer.form)}</dd></dl><div class="k-row"><button type="button" class="k-btn k-small" data-action="copy" data-text="${e(a.signer.form)}">Copy ID</button></div><p class="k-small k-soft">Full record in Ki\u0161ib. Their posts and profile are in Dub.</p>`);
       if (key === "follow" || key === "mute" || key === "unfollow" || key === "unmute") return void popup2.show("Contacts are Dub\u2019s", '<p class="k-soft">Damgar keeps no contacts: follow and mute in Dub, from their card or profile. Damgar shows who paid and whom you paid by their IDs.</p>');
       if (key === "tip") return void popup2.show(`Tip ${shortForm(a.signer.form)}`, tipForm(a.signer.id));
+      if (key === "rely") return void popup2.show("Rely on it", relyForm(c.acts));
+      if (key === "anchor") {
+        anchoring = c.acts;
+        return void popup2.show("Anchor it", anchorForm(c.acts, null));
+      }
+      if (key === "correct") return void popup2.show("Correct it", '<p class="k-soft">Corrections are Dub\u2019s: Damgar signs no text.</p>');
     }
   });
   const tipForm = (to) => `<form id="tip" data-to="${e(to)}"><div class="k-row"><input name="value" inputmode="numeric" placeholder="Amount" required class="k-grow"><select name="unit">${units().map((u2) => `<option value="${e(u2.hash)}"${/regtest/.test(u2.label) ? " selected" : ""}>${e(u2.label)}</option>`).join("")}</select></div><input name="whatFor" placeholder="What for (optional)" maxlength="280"><p class="k-small k-soft">It waits in To pay, read in plain words, to be signed there; you pay it in your own wallet.</p><div class="k-row"><button type="submit" class="k-btn k-p">Prepare the tip</button></div></form>`;
@@ -12584,7 +12757,7 @@ function mount(app2, b) {
         await b.ask("look").catch(() => void 0);
         const l = await b.ask("lanes");
         const apps = l.lanes.filter((x) => !x.here);
-        return `<h2>Under the lanes</h2>${say2("What other apps paid under their lanes: they finish those payments themselves; the record is kept here.", ["Read from the acts under each lane whose keys the app delivered to this identity. An act whose key was not delivered (an identity used through Ki\u0161ib\u2019s runner in that app) is counted as sealed, and said."])}${apps.map((x) => `<h3>${e(x.label)} <span class="k-small k-soft">${e(x.state)}</span></h3><dl class="k-facts">${laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: "", me: true }, kind: `under \u201C${x.label}\u201D`, text: `To ${shortOf(p.to)} \xB7 ${p.amount.said}${p.whatFor ? ` \xB7 for \u201C${p.whatFor}\u201D` : ""}`, labels: [{ text: p.stage === "paid" ? "paid: its claim signed under the lane" : p.stage === "refused" ? "refused by the payee: not counted" : "asked: its invoice request signed under the lane" }], verified: p.stage === "paid", lines: [{ text: `Signed by ${x.app} under the lane \u201C${x.label}\u201D, not with your own key.` }] })).join("") || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? "" : "s"} sealed: not counted.</p>` : ""}</div>`).join("") || '<p class="k-empty">No app holds a lane of this identity.</p>'}`;
+        return `<h2>Under the lanes</h2>${say2("What other apps paid under their lanes: they finish those payments themselves; the record is kept here.", ["Read from the acts under each lane whose keys the app delivered to this identity. An act whose key was not delivered (an identity used through Ki\u0161ib\u2019s runner in that app) is counted as sealed, and said."])}${apps.map((x) => `<h3>${e(x.label)} <span class="k-small k-soft">${e(x.state)}</span></h3><dl class="k-facts">${laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: "", me: true }, kind: `under \u201C${x.label}\u201D`, text: `To ${shortOf(p.to)} \xB7 ${p.amount.said}${p.whatFor ? ` \xB7 for \u201C${p.whatFor}\u201D` : ""}`, labels: [{ text: p.stage === "paid" ? "paid: its claim signed under the lane" : p.stage === "refused" ? "refused by the payee: not counted" : "asked: its invoice request signed under the lane" }], verified: p.stage === "paid", lines: [{ text: `Signed by ${x.app} under the lane \u201C${x.label}\u201D, not with your own key.` }], acts: [...p.claims.map((c) => ({ id: c, said: "Its claim, signed under the lane" })), ...p.request ? [{ id: p.request, said: "Its invoice request, signed under the lane" }] : []] })).join("") || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? "" : "s"} sealed: not counted.</p>` : ""}</div>`).join("") || '<p class="k-empty">No app holds a lane of this identity.</p>'}`;
       }
       const a = await b.ask("account");
       if (part === "payments") return `<h2>Payments</h2>${say2("Each payment a card: its claim and receipt, how each was signed, and whether each verifies.", ["Paid and confirmed: settled, its receipt and a claim each valid by the rail\u2019s own evidence. Open a card\u2019s ID for why it is valid."])}<div class="k-feed" id="account-feed">${a.payments.map((p) => paymentCard(p, false)).join("") || '<p class="k-empty">No payment yet.</p>'}</div>`;
@@ -12929,6 +13102,30 @@ function mount(app2, b) {
           part = "to-pay";
           await draw();
           done({ lines: r.lines.slice(0, 1) });
+        }
+        return;
+      }
+      case "rely": {
+        const r = await act(() => b.ask("rely", { id: str(fd, "act"), typed: str(fd, "typed") }));
+        if (r) popup2.close(), done(r);
+        return;
+      }
+      case "anchor-offers": {
+        const service = str(fd, "service");
+        const chosen = str(fd, "act");
+        const r = await act(() => b.ask("anchor offers", { service }));
+        if (r) popup2.replace(anchorForm(anchoring, r.offers, service, chosen));
+        return;
+      }
+      case "anchor": {
+        const [offer, tier] = str(fd, "tier").split(":");
+        const r = await act(() => b.ask("anchor", { id: f.dataset.act, service: f.dataset.service, offer, tier: Number(tier) }));
+        if (r) {
+          popup2.close();
+          state = await b.ask("state");
+          [tab, part] = ["account", "anchors"];
+          await draw();
+          done(r);
         }
         return;
       }
