@@ -6778,6 +6778,21 @@ function carriedKey(look, seed) {
   return { version: version2, act: look.encryptionKeyAct, secret: hex(secret) };
 }
 
+// ../dub/src/people.ts
+var PEOPLE_SPEC = sha2562("People cMIP, draft 2, test value until publication");
+var PEOPLE_SPEC_1 = sha2562("People cMIP, draft 1, test value until publication");
+function openerOf(identity, secrets) {
+  return async (sealed) => sealed.map((bytes) => {
+    for (const s of secrets) {
+      try {
+        return openSealed(bytes, identity, s);
+      } catch {
+      }
+    }
+    return null;
+  });
+}
+
 // ../damgar/src/units.ts
 var u = moneySpecs().units;
 var BITCOIN_UNITS = {
@@ -6986,10 +7001,11 @@ function readList(id, payload) {
     return null;
   }
 }
-async function readActs(identity, secrets, homes, via) {
+async function readActs(identity, keys, homes, via) {
   const acts2 = /* @__PURE__ */ new Map();
   const problems = [];
-  if (!secrets.length) return { acts: acts2, problems: ["this app holds no encryption key of this identity"] };
+  if (Array.isArray(keys) && !keys.length) return { acts: acts2, problems: ["this app holds no encryption key of this identity"] };
+  const open = Array.isArray(keys) ? openerOf(identity, keys) : keys;
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   let l;
   try {
@@ -7003,16 +7019,9 @@ async function readActs(identity, secrets, homes, via) {
     try {
       for (; ; ) {
         const page = await relayAt(h, via).feed({ to: identity, after });
-        for (const it of page.items) {
-          if (it.kind !== "sealed") continue;
-          let o = null;
-          for (const s of secrets) {
-            try {
-              o = openSealed(it.item, identity, s);
-              break;
-            } catch {
-            }
-          }
+        const sealed = page.items.filter((it) => it.kind === "sealed").map((it) => it.item);
+        const opened = sealed.length ? await open(sealed) : [];
+        for (const o of opened) {
           const d = o?.described;
           if (!o || !d || acts2.has(d.id) || d.public || d.signer !== identity || d.spec !== ACCEPTED_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
           if (o.key) l.verifier.addWithKey(o.act, o.key);
@@ -7043,8 +7052,8 @@ function ancestors(acts2, id) {
   walk(id);
   return out;
 }
-async function readAccepted(identity, secrets, homes, via = {}) {
-  const { acts: acts2, problems } = await readActs(identity, secrets, homes, via);
+async function readAccepted(identity, keys, homes, via = {}) {
+  const { acts: acts2, problems } = await readActs(identity, keys, homes, via);
   const followed = /* @__PURE__ */ new Set();
   for (const a of acts2.values()) {
     if (a.previous) followed.add(a.previous);
@@ -7079,8 +7088,9 @@ var sameTips = (a, b) => a.map((x) => x.id).join() === b.map((x) => x.id).join()
 async function changeAccepted(me, change, opts) {
   const via = opts.via ?? {};
   const homes = me.f.homes.map((h) => h.hint);
-  const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
-  if (!secrets.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
+  const held = [...me.f.encryption].reverse().filter((e3) => e3.secret).map((e3) => unhex(e3.secret));
+  const secrets = held.length ? held : opts.open ?? [];
+  if (Array.isArray(secrets) && !secrets.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
   for (let round = 0; round < 5; round++) {
     const read3 = await readAccepted(me.id, secrets, homes, via);
     if (read3.problems.length >= homes.length && !read3.tips.length) throw new Error(`The identity\u2019s homes did not answer (${read3.problems.join("; ")}): the accepted list was not changed.`);
@@ -7092,14 +7102,14 @@ async function changeAccepted(me, change, opts) {
     if (!sameTips(again.tips, read3.tips)) continue;
     await opts.check();
     const look = await lookUp(me.id, homes, via);
-    if (!look.encryptionKey || !me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey))) {
+    if (!look.encryptionKey || !me.f.encryption.some((e3) => (e3.secret ? hex(xwingPublic(unhex(e3.secret))) : e3.public) === hex(look.encryptionKey))) {
       throw new Error("The encryption key this identity publishes is not one this app holds: the accepted list cannot be sealed. Nothing was changed.");
     }
     const [first, ...others] = read3.tips;
     const payload = listPayload({ version: read3.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
     let made;
     try {
-      made = me.sign(ACCEPTED_SPEC, SEALED_LIST, payload, { public: false, to: [me.id] });
+      made = await me.signNow(ACCEPTED_SPEC, SEALED_LIST, payload, { public: false, to: [me.id] });
     } finally {
       await opts.save();
     }
@@ -7123,7 +7133,7 @@ async function publishAccepted(me, list3, relays, previous, withdrawn, save) {
   const payload = listPayload({ version: (previous?.version ?? 0) + 1, previous: previous?.act ?? null, merged: [], entries: withdrawn ? /* @__PURE__ */ new Map() : list3.entries }, withdrawn);
   let made;
   try {
-    made = me.sign(ACCEPTED_SPEC, PUBLISHED_LIST, payload, { public: true });
+    made = await me.signNow(ACCEPTED_SPEC, PUBLISHED_LIST, payload, { public: true });
   } finally {
     await save();
   }
