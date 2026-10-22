@@ -361,6 +361,22 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
                     "dishonest": r.dishonest.iter().map(|(o, p)| json!({ "operator": match o { mor_core::identity::Operator::Id(x) => hx(x), mor_core::identity::Operator::Own => "own".into() }, "from_position": p })).collect::<Vec<_>>() })
         }
         "succession" => succession_json(w.v.succession(&h("identity"))),
+        "fork" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            match v.fork(&h("act")) {
+                Ok(e) => json!({ "complete": e.complete }),
+                Err(_) => json!("unknown"),
+            }
+        }
+        "closing" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            match v.closing(&h("act")) {
+                Ok(e) => json!({ "complete": e.complete }),
+                Err(_) => json!("unknown"),
+            }
+        }
         "vow" => {
             let mut v = view(w);
             facts.apply_view(&mut v);
@@ -1282,6 +1298,112 @@ pub fn agreements(out: &mut Out) {
     }
     out.case(&mut w2, "the same kind of act signed before the record: does not count", "Agreements, record (type 17); rule 60",
         "Before the record the founding is in force, which names that cMIP for no task: the act falls in no area, and the collective has areas.", Facts::default(), ask("consent counts", &before), json!(false), None);
+
+    // The heavy rules, on one collective whose members sign with their chain keys (SLH-DSA-SHA2-128f):
+    // every case below holds acts of this one family, so its chain signatures are paid once.
+    // A collective's closing (rule 47a): the closing, signed by every member with a chain signature.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let (f, cid) = (col.founding, col.c.id);
+    let before = text_act(&mut w, &mut col.c, "The collective's last notice before it closes.", None);
+    sign(&mut w, &mut col.m[0], &before);
+    let tip = KeptTip { act: *col.c.seq.last().unwrap(), position: col.c.seq.len() as u64, summary: mor_core::mmr::summary(&col.c.seq) };
+    let closing = agreements::Closing { agreement: f, collective: cid, chain_act: col.c.binding, tips: vec![tip], open: vec![] };
+    let k = ag_act(&mut w, &mut col.m[0], agreements::types::CLOSING, closing.to_map(), obj(f));
+    let mut ends = vec![];
+    for i in 0..3 {
+        let (e, q) = w.chain_sign(&col.m[i], k);
+        col.m[i] = q;
+        ends.push(e);
+    }
+    let after = text_act(&mut w, &mut col.c, "A notice signed with the collective's key after it closed.", None);
+    sign(&mut w, &mut col.m[0], &after);
+    let family = w.log.clone();
+    let hold = |leave: &[Hash]| {
+        let mut w = World::new();
+        for (a, _) in &family {
+            if !leave.contains(&a.id()) {
+                w.add(a);
+            }
+        }
+        w
+    };
+    out.case(&mut hold(&[]), "a collective's closing signed by every member with a chain signature: complete", "Agreements rule 47a; Identity, chain signatures",
+        "Every voice of the agreement in force signed it with its chain key; the collective owes nothing and holds no stake.", Facts::default(), ask("closing", &k), json!({ "complete": true }), None);
+    out.case(&mut hold(&[ends[2]]), "the same, one member's chain signature not held: not complete", "Agreements rule 47a",
+        "A closing needs every voice: the third member's chain signature is not among the acts held.", Facts::default(), ask("closing", &k), json!({ "complete": false }), None);
+    out.case(&mut hold(&[]), "an act of the collective after its closing: it does not count", "Agreements rules 47a and 60",
+        "Closed: what the collective's keys sign afterwards counts for nothing, its area's holder signing or not.", Facts::default(), ask("consent counts", &after), json!(false), None);
+    out.case(&mut hold(&[]), "an act of the collective before its closing: it still counts", "Agreements rules 47a and 60",
+        "What it signed before the closing, with its area's holder, stands.", Facts::default(), ask("consent counts", &before), json!(true), None);
+
+    // A collective's fork (rule 47a): each side founds its successor first; the fork names them; every member signs it with a chain signature.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let (f, cid) = (col.founding, col.c.id);
+    let ids: Vec<Hash> = col.m.iter().map(|p| p.id).collect();
+    let before = text_act(&mut w, &mut col.c, "The collective's last notice before it forks.", None);
+    sign(&mut w, &mut col.m[0], &before);
+    let mut successor = |w: &mut World, col: &mut Col, name: &str, side: &[usize]| {
+        let members: Vec<Hash> = side.iter().map(|i| ids[*i]).collect();
+        let mut t = view(w).terms(&f).unwrap();
+        t.parties = members.clone();
+        t.clone = Rule::Threshold(members.len().min(2) as u64);
+        if let Some(areas) = t.areas.as_mut() {
+            areas[0].holders = vec![members[0]];
+            areas[1].holders = vec![*members.last().unwrap()];
+            areas[1].threshold = 1;
+        }
+        if let Some(g) = t.grammar.as_mut() {
+            g.signing = Holding::Shares { threshold: 1, members: members.clone() };
+            g.chain_key = Holding::Shares { threshold: members.len() as u64, members: members.clone() };
+        }
+        t.forked_from = Some(cid);
+        let x = ag_act(w, &mut col.m[side[0]], agreements::types::TERMS, t.to_map(), None);
+        for i in side {
+            sign(w, &mut col.m[*i], &x);
+        }
+        w.genesis_with(name, vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &x)]), 3).id
+    };
+    let sa = successor(&mut w, &mut col, "side A", &[0]);
+    let sb = successor(&mut w, &mut col, "side B", &[1, 2]);
+    let tip = KeptTip { act: *col.c.seq.last().unwrap(), position: col.c.seq.len() as u64, summary: mor_core::mmr::summary(&col.c.seq) };
+    let fork = agreements::Fork {
+        agreement: f,
+        collective: cid,
+        chain_act: col.c.binding,
+        tips: vec![tip],
+        sides: vec![agreements::Side { successor: sa, members: vec![ids[0]] }, agreements::Side { successor: sb, members: vec![ids[1], ids[2]] }],
+        shares: vec![],
+        debts: vec![],
+    };
+    let k = ag_act(&mut w, &mut col.m[0], agreements::types::FORK, fork.to_map(), obj(f));
+    let mut ends = vec![];
+    for i in 0..3 {
+        let (e, q) = w.chain_sign(&col.m[i], k);
+        col.m[i] = q;
+        ends.push(e);
+    }
+    let after = text_act(&mut w, &mut col.c, "A notice signed with the original's key after the fork.", None);
+    sign(&mut w, &mut col.m[0], &after);
+    let family = w.log.clone();
+    let hold = |leave: &[Hash]| {
+        let mut w = World::new();
+        for (a, _) in &family {
+            if !leave.contains(&a.id()) {
+                w.add(a);
+            }
+        }
+        w
+    };
+    out.case(&mut hold(&[]), "a collective's fork into two sides, each successor founded first, signed by every member with a chain signature: complete", "Agreements rule 47a; Identity, chain signatures",
+        "Every member on its sides signed it with its chain key, meeting the constitutional rule; each successor's founding names the original and fits its side; there is no debt to hand out.", Facts::default(), ask("fork", &k), json!({ "complete": true }), None);
+    out.case(&mut hold(&[ends[1]]), "the same, one member's chain signature not held: not complete", "Agreements rule 47a",
+        "The constitutional rule is every party: the second member's chain signature is not among the acts held.", Facts::default(), ask("fork", &k), json!({ "complete": false }), None);
+    out.case(&mut hold(&[]), "an act of the original after its fork: it does not count", "Agreements rules 47a and 60",
+        "The original is closed in Agreements by its fork: what its keys sign afterwards counts for nothing.", Facts::default(), ask("consent counts", &after), json!(false), None);
+    out.case(&mut hold(&[]), "an act of the original before its fork: it still counts", "Agreements rules 47a and 60",
+        "What it signed before the fork, with its area's holder, stands.", Facts::default(), ask("consent counts", &before), json!(true), None);
 
     // Deadlines.
     let clock = Reference { cmip: spec("a test clock cMIP"), params: Value::Uint(0) };
