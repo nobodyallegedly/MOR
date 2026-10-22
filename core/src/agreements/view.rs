@@ -134,10 +134,12 @@ pub struct AgreementsView<'a> {
     /// Set when an answer compared two records whose sameness rests on a
     /// payment not stated in [`Self::payments`] ([`Self::unstated_payment_read`]).
     unstated: std::cell::Cell<bool>,
-    /// What such a comparison answers while an answer is judged
-    /// ([`Self::judged`]): first that the two are not one payment, then that
-    /// they are. An answer the same both ways does not depend on them.
-    assume_same: std::cell::Cell<bool>,
+    /// The pairs such comparisons asked about while an answer is judged
+    /// ([`Self::judged`]), each written in order.
+    read: std::cell::RefCell<BTreeSet<(Payment, Payment)>>,
+    /// The one pair the answer being judged takes as one payment, on its
+    /// second reading ([`Self::judged`]); every other pair is two.
+    assumed: std::cell::RefCell<Option<(Payment, Payment)>>,
     /// Pairs `(clock Module, rail Module)` where the clock Module reads the
     /// rail's own proof as the payment's anchor (F201, F202: the Bitcoin
     /// clock and the on-chain rail): on such a clock, rule 15 compares the
@@ -606,7 +608,8 @@ impl<'a> AgreementsView<'a> {
             rail_pending: BTreeSet::new(),
             payments: BTreeMap::new(),
             unstated: Default::default(),
-            assume_same: Default::default(),
+            read: Default::default(),
+            assumed: Default::default(),
             rail_clocks: BTreeSet::new(),
             absence_accepted: BTreeSet::new(),
             anchored: Default::default(),
@@ -673,7 +676,8 @@ impl<'a> AgreementsView<'a> {
             rail_pending: self.rail_pending.clone(),
             payments: self.payments.clone(),
             unstated: Default::default(),
-            assume_same: Default::default(),
+            read: Default::default(),
+            assumed: Default::default(),
             rail_clocks: self.rail_clocks.clone(),
             absence_accepted: self.absence_accepted.clone(),
             anchored: self.anchored.clone(),
@@ -6612,6 +6616,17 @@ pub enum Disagreement {
 /// What payment a receipt or claim is (Money rule 12; F200, F380), as
 /// Money's rules that tell payments apart compare it: never by the proof's
 /// bytes.
+/// An answer judged on whether records whose payment is not stated are one
+/// payment ([`AgreementsView::two_ways`]).
+pub(crate) enum Ways<T> {
+    /// No such pair asked about: the answer.
+    One(T),
+    /// One pair: the answer taking it as two payments, then as one.
+    Both(T, T),
+    /// Two or more pairs: unknown (Money rule 12).
+    Unknown,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Payment {
     /// An empty proof: no payment.
@@ -8353,15 +8368,19 @@ impl<'a> AgreementsView<'a> {
     /// Whether two payments are one (Money rule 12): both stated and equal,
     /// or one record compared with itself. Where either is unstated, the
     /// answer is unknown: noted, and answered as the answer being judged
-    /// assumes ([`Self::judged`]): not one payment, unless it assumes so.
+    /// assumes ([`Self::judged`]): not one payment, unless it takes this
+    /// pair as one.
     pub fn same_payment_as(&self, a: &Payment, b: &Payment) -> bool {
         match (a, b) {
             (Payment::None, _) | (_, Payment::None) => false,
             (Payment::Stated(x), Payment::Stated(y)) => x == y,
             _ if a == b => true,
             _ => {
+                let pair = if a < b { (a.clone(), b.clone()) } else { (b.clone(), a.clone()) };
                 self.unstated.set(true);
-                self.assume_same.get()
+                let same = self.assumed.borrow().as_ref() == Some(&pair);
+                self.read.borrow_mut().insert(pair);
+                same
             }
         }
     }
@@ -8381,25 +8400,46 @@ impl<'a> AgreementsView<'a> {
         self.unstated.get()
     }
 
-    /// `f`'s answer, or `None` (unknown) where it depends on whether two
-    /// records whose payment is not stated are one payment (Money rule 12;
-    /// F381): `f` is answered assuming every such pair is not one payment,
-    /// and, where it compared any, again assuming every such pair is; the
-    /// same answer both ways does not depend on them, and stands. Scoped to
-    /// this answer: a caller judging its own answer judges it the same way.
-    fn judged<T: PartialEq>(&self, f: impl Fn() -> T) -> Option<T> {
-        let outer = (self.unstated.replace(false), self.assume_same.replace(false));
+    /// `f` answered as Money rule 12 judges an answer that depends on
+    /// whether records whose payment is not stated are one payment (F381,
+    /// F383): with no such pair, `f`'s answer; with one, `f` answered taking
+    /// it as two payments and then as one ([`Ways::Both`]); with two or more,
+    /// unknown. The pairs counted are those `f` asks about, never every
+    /// unstated pair the view holds; a pair first asked on the second
+    /// reading is a second pair. Scoped to this answer: a judged answer
+    /// inside `f` is judged on its own, and its pairs are not `f`'s.
+    pub(super) fn two_ways<T>(&self, f: impl Fn() -> T) -> Ways<T> {
+        let outer = (self.unstated.replace(false), self.read.take(), self.assumed.take());
         let first = f();
-        let r = if !self.unstated.get() {
-            Some(first)
-        } else {
-            self.assume_same.set(true);
-            let second = f();
-            (first == second).then_some(first)
+        let pairs = self.read.take();
+        let r = match pairs.len() {
+            0 => Ways::One(first),
+            1 => {
+                *self.assumed.borrow_mut() = pairs.first().cloned();
+                let second = f();
+                if self.read.take().is_subset(&pairs) {
+                    Ways::Both(first, second)
+                } else {
+                    Ways::Unknown
+                }
+            }
+            _ => Ways::Unknown,
         };
         self.unstated.set(outer.0);
-        self.assume_same.set(outer.1);
+        *self.read.borrow_mut() = outer.1;
+        *self.assumed.borrow_mut() = outer.2;
         r
+    }
+
+    /// `f`'s answer, or `None` (unknown) where it depends on whether records
+    /// whose payment is not stated are one payment ([`Self::two_ways`]): the
+    /// same answer both ways stands.
+    fn judged<T: PartialEq>(&self, f: impl Fn() -> T) -> Option<T> {
+        match self.two_ways(f) {
+            Ways::One(a) => Some(a),
+            Ways::Both(a, b) => (a == b).then_some(a),
+            Ways::Unknown => None,
+        }
     }
 
     /// [`Self::judged`] for an answer that may fail: unknown is
@@ -8408,30 +8448,22 @@ impl<'a> AgreementsView<'a> {
         self.judged(f).unwrap_or(Err(AgreementsError::PaymentUnstated))
     }
 
-    /// [`Self::judged`] for a list: answered both ways, each entry found
-    /// both ways stands, and each found one way only is given back marked
+    /// [`Self::judged`] for a list: with one pair, each entry found both
+    /// ways stands, and each found one way only is given back marked
     /// (`mark`) as resting on a payment not stated; the order is the first
-    /// answer's, then the second's.
+    /// answer's, then the second's. With two or more pairs, the list is
+    /// unknown.
     pub(super) fn judged_list<T: PartialEq + Clone>(&self, f: impl Fn() -> R<Vec<T>>, mark: impl Fn(T) -> T) -> R<Vec<T>> {
-        let outer = (self.unstated.replace(false), self.assume_same.replace(false));
-        let first = f();
-        let r = if !self.unstated.get() {
-            first
-        } else {
-            self.assume_same.set(true);
-            match (first, f()) {
-                (Ok(a), Ok(b)) => {
-                    let mut out: Vec<T> = a.iter().map(|x| if b.contains(x) { x.clone() } else { mark(x.clone()) }).collect();
-                    out.extend(b.iter().filter(|x| !a.contains(x)).map(|x| mark(x.clone())));
-                    Ok(out)
-                }
-                (Err(e), Err(g)) if e == g => Err(e),
-                _ => Err(AgreementsError::PaymentUnstated),
+        match self.two_ways(f) {
+            Ways::One(a) => a,
+            Ways::Both(Ok(a), Ok(b)) => {
+                let mut out: Vec<T> = a.iter().map(|x| if b.contains(x) { x.clone() } else { mark(x.clone()) }).collect();
+                out.extend(b.iter().filter(|x| !a.contains(x)).map(|x| mark(x.clone())));
+                Ok(out)
             }
-        };
-        self.unstated.set(outer.0);
-        self.assume_same.set(outer.1);
-        r
+            Ways::Both(Err(e), Err(g)) if e == g => Err(e),
+            _ => Err(AgreementsError::PaymentUnstated),
+        }
     }
 
     /// Whether two proofs are of the same payment (F200; rules 10, 12, 15).
