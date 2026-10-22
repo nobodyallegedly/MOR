@@ -27,9 +27,8 @@ fn obj(x: Hash) -> Option<Vec<Object>> {
 
 /// Fable's A6 (Agreements Q5, taken): an Agreements act outside its type's
 /// format, or of a retired or undefined type, is invalid for a verifier
-/// that knows the Agreements MIR's hash; a keeper record (type 2), whose
-/// format is still open, is not judged on its format; an act in its format
-/// is valid.
+/// that knows the Agreements MIR's hash, a keeper record (type 2) included;
+/// an act in its format is valid.
 #[test]
 fn an_agreements_act_outside_its_format_is_invalid_a6() {
     let mut w = World::new();
@@ -54,8 +53,20 @@ fn an_agreements_act_outside_its_format_is_invalid_a6() {
         let a = act(&mut w, t, p, o);
         assert_eq!(w.v.status(&a), Status::Invalid, "{what}");
     }
-    let keeper = act(&mut w, agreements::types::KEEPER_RECORD, vec![(Value::Uint(0), Value::Uint(1))], obj(x));
-    assert_ne!(w.v.status(&keeper), Status::Invalid, "a keeper record's format is open: not judged on it");
+    // The keeper record (type 2): `{ 0 => [act, signer] }`, naming no chain
+    // in `objects` (Agreements 17, "Keeper record (type 2)").
+    let rec = agreements::KeeperRecord { act: x, signer: h("its signer") };
+    let keeper = act(&mut w, agreements::types::KEEPER_RECORD, rec.to_map(), None);
+    assert_eq!(w.v.status(&keeper), Status::Valid, "a keeper record in its format");
+    for (what, p, o) in [
+        ("field 0 not an array", vec![(Value::Uint(0), Value::Uint(1))], None),
+        ("one hash only", vec![(Value::Uint(0), Value::Array(vec![Value::Bytes(x.to_vec())]))], None),
+        ("a field it does not define", [rec.to_map(), vec![(Value::Uint(1), Value::Uint(0))]].concat(), None),
+        ("naming a chain in objects", rec.to_map(), obj(x)),
+    ] {
+        let a = act(&mut w, agreements::types::KEEPER_RECORD, p, o);
+        assert_eq!(w.v.status(&a), Status::Invalid, "{what}");
+    }
 }
 
 /// Agreements draft 14, "Issuance offer (type 26)" and "Proxy (type 27) and

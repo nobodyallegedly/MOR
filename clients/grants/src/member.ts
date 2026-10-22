@@ -279,8 +279,8 @@ export async function chainFor(collective: string, k: MemberKey, hints: string[]
 /**
  * An act of the collective signed with a member's key (F353): its signer
  * the collective, its binding the member's signature naming the key, citing
- * the collective's latest decision (rule 58; for a text, its one object,
- * Text rule 14), on the key's own strand.
+ * the collective's latest decision (rule 58; for a text, its one object is
+ * the version that named the key, Text rule 14), on the key's own strand.
  */
 export function signAsMember(
   collective: string,
@@ -298,7 +298,11 @@ export function signAsMember(
     sequence: at.strand,
     public: a.public,
     to: a.to?.length ? a.to : undefined,
-    objects: [...(a.objects ?? []), [collective, at.decision]],
+    // A text act carries exactly one object (Text rule 14): for a member
+    // key, the founding or clone that named the key, the version that is
+    // its grant, which Agreements reads as the decision it acts under
+    // (Agreements rules 58 and 73). Every other act cites the latest decision.
+    objects: a.spec === MIRS.text && a.type === 0 ? [[collective, k.terms]] : [...(a.objects ?? []), [collective, at.decision]],
     refs: a.refs?.length ? a.refs : undefined,
   }) as { act: Uint8Array; id: string; key: Uint8Array };
   at.strand.push(made.id);

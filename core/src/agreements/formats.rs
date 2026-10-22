@@ -2829,6 +2829,52 @@ impl Contest {
     }
 }
 
+// ---------------------------------------------------------------- the keeper record
+
+/// Keeper record (type 2; Agreements, "Keeper record (type 2)", rules 37 to
+/// 42): a keeper's signed statement that it recorded one act, `{ 0 => [act,
+/// signer] }`. Signed by the keeper's operator as an everyday act, public,
+/// naming no chain in `objects`; its `prev` names the operator's previous
+/// keeper record, so its records are one sequence, the keeper's sequence.
+/// Whether it counts (the act held and valid, its signer the one named, the
+/// keeper one an agreement the act belongs to names) is the view's
+/// ([`super::AgreementsView::keeper_sequences`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct KeeperRecord {
+    /// 0, first: the act recorded, by its id.
+    pub act: Hash,
+    /// 0, second: the identity that signed it.
+    pub signer: Hash,
+}
+
+impl KeeperRecord {
+    pub fn to_map(&self) -> Vec<(Value, Value)> {
+        vec![(Value::Uint(0), Value::Array(vec![b(&self.act), b(&self.signer)]))]
+    }
+
+    /// Decode strictly: a closed map of one field, an array of two hashes,
+    /// and no `objects`.
+    pub fn decode(inside: &Inside) -> R<KeeperRecord> {
+        let mut rec = None;
+        for (k, v) in &inside.payload {
+            match k {
+                Value::Uint(0) => {
+                    let a = tuple(v, 2, "keeper record: field 0 is [act, signer]")?;
+                    rec = Some(KeeperRecord {
+                        act: hash(&a[0], "keeper record: the act recorded")?,
+                        signer: hash(&a[1], "keeper record: the act's signer")?,
+                    });
+                }
+                _ => return Err(AgreementsError::Shape("keeper record: unknown field (the format is { 0 => [act, signer] })")),
+            }
+        }
+        if inside.objects.is_some() {
+            return Err(AgreementsError::Shape("keeper record: it names no chain in objects"));
+        }
+        rec.ok_or(AgreementsError::Shape("keeper record: field 0, the act recorded and its signer"))
+    }
+}
+
 // ---------------------------------------------------------------- a deal's fork, settled by its arbitrator
 
 /// Settlement request (type 22; DQ8, decided 9 October 2026): a party who

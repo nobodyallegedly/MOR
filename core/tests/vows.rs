@@ -552,10 +552,10 @@ fn f268_only_a_cmip_declaring_it_checks_proofs_of_delivery() {
     assert_eq!(agreements::delivery_checkers(&held), vec![declared], "listed: only the declared checker");
     let v = view(&w);
     assert_eq!(v.proven_delivery(&a, b"delivered", &held).unwrap(), agreements::ProofVerdict::Proven);
-    match v.proven_delivery(&b, b"delivered", &held).unwrap() {
-        agreements::ProofVerdict::Unknown(why) => assert!(why.contains("F268"), "{why}"),
-        other => panic!("a checker its cMIP does not declare was asked: {other:?}"),
-    }
+    // Development 11: field 12 serves discovery only; a verifier asks the
+    // checker of whatever cMIP the offer names, declared or not, and the
+    // proof decides.
+    assert_eq!(v.proven_delivery(&b, b"delivered", &held).unwrap(), (&Undeclared as &dyn agreements::ProofChecker).check(&b, &mor_core::cbor::encode(&Value::Uint(7)), b"delivered"));
 }
 
 /// F268: the specification format's field marking a proof-of-delivery
