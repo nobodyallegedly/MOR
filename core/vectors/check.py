@@ -592,12 +592,8 @@ def py_spec(content, money, held):
 
 
 def frozen_text(file):
-    t = file[:-1] if file.endswith("\n") else file
-    lines = t.split("\n")
-    if (len(lines) > 3 and lines[0].startswith("# ") and lines[1] == "" and len(lines[2]) >= 2
-            and lines[2].startswith("*") and lines[2].endswith("*") and not lines[2].startswith("**") and lines[3] == ""):
-        return "\n".join([lines[0]] + lines[3:])
-    return t
+    # Development rule 26: the file's content less one final line break, and nothing else.
+    return file[:-1] if file.endswith("\n") else file
 
 
 def H(x):

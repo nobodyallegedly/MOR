@@ -938,7 +938,8 @@ pub fn mir_hashes() -> Vec<J> {
     let files = [
         ("a frozen text, no final line break", "# MIR: Test\n\n## Part one\n\nA rule."),
         ("the same with one final line break, not part of the text", "# MIR: Test\n\n## Part one\n\nA rule.\n"),
-        ("the same as a draft, its status line dropped from the header", "# MIR: Test\n\n*Draft 1, for review.*\n\n## Part one\n\nA rule."),
+        ("the same as a draft: its status line is part of the text, like every line of the file", "# MIR: Test\n\n*Draft 1, for review.*\n\n## Part one\n\nA rule."),
+        ("an italic line after the title, then one final line break: the italic line is part of the text", "# T\n\n*an italic line*\n\nbody\n"),
     ];
     let mut out = vec![];
     for (name, f) in files {

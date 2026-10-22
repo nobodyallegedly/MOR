@@ -483,8 +483,9 @@ pub fn mir_hash(text: &str) -> R<String> {
 }
 
 /// The spec hash of a MIR from its file, as Development rule 26 reads a
-/// frozen text's file: at most one final line break removed, the header
-/// reduced to the text's name, the text canonical. Throws otherwise.
+/// file: at most one final line break removed and nothing else (every line,
+/// a draft's status line included, is part of the text), the text
+/// canonical. Throws otherwise.
 #[wasm_bindgen(js_name = mirFileHash)]
 pub fn mir_file_hash(file: &str) -> R<String> {
     Ok(hx(&mor_core::development::Spec::mir_file_hash(file).map_err(err)?))
