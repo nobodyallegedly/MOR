@@ -60,6 +60,10 @@ What Nobody, allegedly, decided is written as his ("Agreed"), with the lead's le
 - The rules that never bend, at the end.
 - Saved here (`docs/lead/prompts/`) and in the project (`claude/MOR-…-prompt.md`), and given to Nobody, allegedly, as a code box.
 
+## Nobody, allegedly's part from here
+
+22 October 2026: "Leave me out, at this stage we're deep in code stuff and my contribution is marginal." The lead runs the core's path (S7c, the second box, the C verifier again, Fable, the rehearsal) on its own judgment and Fable's, and brings him only what touches a principle, the way out, or his own earlier words, plus the freeze itself. He keeps his attention for the Dubsar Suite's rollout.
+
 ## Fable
 
 Fable's advice in a review is always taken into account (Nobody, allegedly, 22 October 2026). Questions a fixes session raises (S7's first) go to Fable before they are decided. Fable writes its own letter to Machine, allegedly, "as a relative".
