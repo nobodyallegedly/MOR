@@ -7,5 +7,9 @@
 
 - Part 1, "same payment" (Q27): `AgreementsView::payments` is the rail's answer, keyed by proof; a record not listed is `Payment::Unstated`, and comparing it with another record is unknown (`same_payment_as` notes it). `paid_toward` and `disagreements` return `None` for unknown; `paid` (and a closing's debts) answer `AgreementsError::PaymentUnstated`. Records of one payment count once (`one_count`). Tests in `core/tests` state their stand-in rails' answer (`common::stand_in_payments`); the Lightning story states the Lightning Module's. WebAssembly: `specs.railPayments`. Five verdict vectors (Money, rule 12) and the existing two given their payment fact.
 
+- Part 2, the texts: F380's sentences written in place (listed in `docs/lead/workbook.md`, "After the box"), then tightened after a stranger's reading. The core: `Status::NotCounting`; rotation check 7 (`kept_tips_fit`; no tip kept by name); "belongs to" at no fixed depth (`belongs_to_judged`, `keeper_unknown_acts`, `Verifier::keepers_cannot_tell`).
+- Part 3, the vectors: content keys per act; receipts named in proofs; `[0]`; the Q30 label; canonical text numbered 7 to 12 and judged in the order numbered (`text::check` aligned); NaN at single width; sixteen new verdict vectors (85 in all); both READMEs, with "What changed since the previous edition"; the Python check (key reuse, rule order, MIR hash).
+
 ## Next
-- Part 2, Part 3, Part 4 (if budget allows), the report.
+- The report (`docs/s7-report.md`), the pull request, CI.
+- Part 4, Part 3, Part 4 (if budget allows), the report.

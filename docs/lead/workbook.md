@@ -88,6 +88,9 @@ S7 (branch `claude/s7-fixes`, F380), one line each:
 - Envelopes, rule 9: marked client conformance; no verdict reads it (Q6).
 - Agreements, "Belongs to": followed through every step the acts held allow, at no fixed depth; unknown beyond an act not held (Q35).
 - Agreements, terms field 11's comment: the clone's `objects` names the parent and an act of its line, its latest where the client holds it, as the clone's rule says (Q33).
+- Agreements, rule 45: the parent's latest act marked client conformance (the latest the client holds; a verifier accepts any act of the parent's chain), with the field 11 comment (Q33).
+- Envelopes, "How to read this MIR": the client conformance mark defined (Q6).
+- After a stranger's reading (a subagent limited to the eight texts), the wording above was tightened: check 7 reads a tip's sequence up to and including it, and applies only to a rotation naming at least one tip; acts bound to a rotation not counting fail everyday check 2 and are invalid; rule 34's sentence is for that rule only, and names the signing key; rule 42 waits until the contest ends (by the escape at a self-hosted identity); Text rule 14's sentence is client conformance; Envelopes' order of checks names rules 1, 2, 3, 5 and 7 and leaves rules 4 and 30 as they are; "belongs to" is followed step by step, what is found through acts held standing.
 - Development, rule 26: unchanged; the core's MIR hash now follows it (Q46). Money, rule 12: unchanged; the core now follows it (Q27).
 
 ## Text edits waiting for the freeze-ready branch
