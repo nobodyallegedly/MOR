@@ -21333,9 +21333,21 @@ function sealedListPayload(a) {
   );
   return cborEncode(m);
 }
-async function readSealedList(identity2, secrets, homes, via = {}) {
+function openerOf(identity2, secrets) {
+  return async (sealed) => sealed.map((bytes) => {
+    for (const s of secrets) {
+      try {
+        return openSealed(bytes, identity2, s);
+      } catch {
+      }
+    }
+    return null;
+  });
+}
+async function readSealedList(identity2, keys, homes, via = {}) {
   const out = { act: null, version: 0, follows: [], forked: false, problems: [] };
-  if (!secrets.length) return out;
+  if (Array.isArray(keys) && !keys.length) return out;
+  const open = Array.isArray(keys) ? openerOf(identity2, keys) : keys;
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   let l;
   try {
@@ -21351,16 +21363,9 @@ async function readSealedList(identity2, secrets, homes, via = {}) {
     try {
       for (; ; ) {
         const page = await relayAt(h, via).feed({ to: identity2, after: after2 });
-        for (const it of page.items) {
-          if (it.kind !== "sealed") continue;
-          let o = null;
-          for (const s of secrets) {
-            try {
-              o = openSealed(it.item, identity2, s);
-              break;
-            } catch {
-            }
-          }
+        const sealed = page.items.filter((it) => it.kind === "sealed");
+        const opened2 = sealed.length ? await open(sealed.map((it) => it.item)) : [];
+        for (const o of opened2) {
           const d = o?.described;
           if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity2 || d.spec !== PEOPLE_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
           if (o.key) l.verifier.addWithKey(o.act, o.key);
@@ -26275,7 +26280,8 @@ var LINE_SAY2 = "This app keeps its own line of acts for this identity. If the s
 var SPENT_SAY2 = "This identity\u2019s signing key was changed elsewhere, with its chain key, so the signing key\u2019s words this app holds no longer count. Nothing was signed. Changing keys is Ki\u0161ib\u2019s work, not Dub\u2019s. To go on here, give this app the new signing key\u2019s words.";
 var RUNNER_OLD_KEY_SAY = "This identity\u2019s keys were changed with its chain key, and Ki\u0161ib\u2019s runner still holds the old signing key: nothing was signed. Give the runner the new signing key\u2019s words, in Ki\u0161ib (Runner, Identities held here). Dub then goes on, in new lines.";
 var RUNNER_HOLDS_SAY = "Ki\u0161ib\u2019s runner holds this identity\u2019s signing key, on this Mac; Dub holds none of its keys. Its words are given and changed in Ki\u0161ib, never here.";
-var RUNNER_NO_OPEN_SAY = "Ki\u0161ib\u2019s runner holds this identity\u2019s keys, and Dub none: its private messages are sent from here, but not opened here (the runner signs; it opens nothing yet).";
+var RUNNER_NO_OPEN_SAY = "Ki\u0161ib does not let Dub open what is sealed to this identity: Dub sends its private messages, but cannot read the answers, nor keep its contacts list sealed to it. To allow it, in Ki\u0161ib: Runner, Apps, Dub, \u201Cmay open what is sealed to this identity\u201D.";
+var RUNNER_OPENS_SAY = "Ki\u0161ib opens for Dub what is sealed to this identity: its private messages and its sealed contacts list are read here, Dub holding no key. Each opening is listed in Ki\u0161ib (Runner, Signed).";
 var NO_KEY_SAY2 = "This app holds no encryption key for this identity, so its private messages cannot be opened here: its encryption key was not made from its signing key\u2019s words. Messages can still be sent from here.";
 var READER = "https://reader.dubsar.org/";
 var NO_SIGNING = () => ({ answered: {}, waiting: {}, received: {} });
@@ -26329,6 +26335,29 @@ var Dub = class _Dub {
   /** The encryption keys this app holds of an identity, newest first: none for one used through Kišib. */
   secrets(me) {
     return [...me.f.encryption].reverse().filter((e3) => e3.secret).map((e3) => unhex(e3.secret));
+  }
+  /**
+   * How this app opens what is sealed to an identity: with the encryption
+   * keys it holds; for one used through Kišib, through its runner, where
+   * Kišib lets Dub (the Dubsar runner cMIP, draft 2, section 8). Where it
+   * cannot, `open` is null and `problem` says why, plainly: Kišib does not
+   * let Dub, is locked, or does not run; or no key is here.
+   */
+  async opener(me) {
+    const secrets = this.secrets(me);
+    if (secrets.length) return { open: openerOf(me.id, secrets), problem: null };
+    const r = this.opts.runner;
+    if (me.f.signingSecret || !r) return { open: null, problem: NO_KEY_SAY2 };
+    let p;
+    try {
+      p = await r.paired();
+    } catch (e3) {
+      return { open: null, problem: message6(e3).replace(/ Nothing was signed\.$/, "") };
+    }
+    if (!p || p.state !== "approved" || !p.identities.some((x) => x.id === me.id)) return { open: null, problem: "Dub is not paired with Ki\u0161ib for this identity any more: its private messages are not opened here." };
+    if (!p.open) return { open: null, problem: RUNNER_NO_OPEN_SAY };
+    const open = async (sealed) => (await r.open(me.id, sealed)).map((o) => o ? { ...o, described: o.key ? openWithKey(o.act, o.key) : describeAct(o.act) } : null);
+    return { open, problem: null };
   }
   /** One thing at a time: a sequence must never be signed twice at once. */
   serial(f) {
@@ -26388,6 +26417,7 @@ var Dub = class _Dub {
       const p = await this.store.people(me.id);
       const line = await this.lineNow(me, s.via);
       if (!pend) out.stage = "ready";
+      const { problem: opening } = await this.opener(me);
       out.identity = {
         id: me.id,
         grouped: groupId(me.id),
@@ -26397,7 +26427,8 @@ var Dub = class _Dub {
         kind: s.kind,
         homes: me.f.homes.map((h) => h.hint),
         relays: s.relays,
-        encryption: this.secrets(me).length > 0,
+        encryption: !opening,
+        opening,
         oldChainKey: !!me.f.safety.seeds,
         line: line ?? noLine(me.f),
         list: p.list,
@@ -26677,9 +26708,9 @@ var Dub = class _Dub {
     });
   }
   // ------------------------------------------------------------ an identity used through Kišib (the Dubsar runner cMIP)
-  /** Whether this Dub can use Kišib's runner: on the Mac only (decided), never the web client. */
+  /** Whether this Dub can use Kišib's runner: the computer's program only (decided), never the web client. */
   runner() {
-    if (!this.opts.runner) throw new Error("Ki\u0161ib\u2019s runner is on the Mac only: this Dub cannot use it. Bring the identity with its signing key\u2019s words instead.");
+    if (!this.opts.runner) throw new Error("Ki\u0161ib\u2019s runner is in the computer\u2019s program only, never the web client: this Dub cannot use it. Bring the identity with its signing key\u2019s words instead.");
     return this.opts.runner;
   }
   /** Where Dub's pairing with Kišib stands (2.4), for + Add, Use one from Kišib. */
@@ -26746,7 +26777,7 @@ var Dub = class _Dub {
       return {
         lines: [
           { text: `Dub uses ${k.name ?? fingerprint2(k.id)} through Ki\u0161ib\u2019s runner: Ki\u0161ib holds its signing key, Dub none. Each act is shown by Ki\u0161ib, in its panel here, before it is signed, unless you gave Dub a standing yes for that kind in Ki\u0161ib.`, tone: "ok" },
-          { text: RUNNER_NO_OPEN_SAY, tone: "warn" },
+          p.open ? { text: RUNNER_OPENS_SAY, tone: "ok" } : { text: RUNNER_NO_OPEN_SAY, tone: "warn" },
           { text: LINE_SAY2, tone: "warn" }
         ]
       };
@@ -27165,7 +27196,11 @@ var Dub = class _Dub {
       problems.push("This identity declares no inbox: nothing addressed to it can be found here.");
       return problems;
     }
-    const secrets = this.secrets(me);
+    const { open, problem: cannot } = await this.opener(me);
+    if (open && p.inbox.items.some((k) => k.retry)) {
+      p.inbox.items = p.inbox.items.filter((k) => !k.retry);
+      p.inbox.after = {};
+    }
     const looked = /* @__PURE__ */ new Map();
     const judge2 = async (signer, act, id, key) => {
       let l = looked.get(signer);
@@ -27184,8 +27219,11 @@ var Dub = class _Dub {
       try {
         for (; ; ) {
           const page = await relayAt(hint, s.via).feed({ to: me.id, after: after2 });
+          const sealed = page.items.filter((it) => it.kind === "sealed").map((it) => it.item);
+          const opened2 = /* @__PURE__ */ new Map();
+          if (open && sealed.length) (await open(sealed)).forEach((o, i) => opened2.set(sealed[i], o));
           for (const it of page.items) {
-            const k = await this.readItem(it.kind, it.item, me.id, secrets, judge2);
+            const k = await this.readItem(it.kind, it.item, me.id, it.kind === "sealed" ? opened2.get(it.item) ?? null : null, open ? null : cannot, judge2);
             if (k && !p.inbox.items.some((x) => x.key === k.key)) p.inbox.items.push(k);
           }
           if (!page.items.length || page.next === after2) break;
@@ -27199,21 +27237,12 @@ var Dub = class _Dub {
     await this.store.savePeople(me.id, p);
     return problems;
   }
-  async readItem(kind, bytes, me, secrets, judge2) {
+  /** One item of the inbox: a sealed container as opened (`opened`), or `cannot` say why nothing here opens it. */
+  async readItem(kind, bytes, me, opened2, cannot, judge2) {
     let act = bytes;
     let key;
     let d;
     if (kind === "sealed") {
-      const open = () => {
-        for (const s of secrets) {
-          try {
-            return openSealed(bytes, me, s);
-          } catch {
-          }
-        }
-        return null;
-      };
-      const opened2 = open();
       if (!opened2) {
         return {
           key: `sealed:${sealedId(bytes)}`,
@@ -27224,7 +27253,8 @@ var Dub = class _Dub {
           refs: [],
           to: [],
           found: now6(),
-          problem: secrets.length ? "a sealed message that does not open with this identity\u2019s encryption keys" : NO_KEY_SAY2
+          problem: cannot ?? "a sealed message that does not open with this identity\u2019s encryption keys",
+          ...cannot ? { retry: true } : {}
         };
       }
       act = opened2.act;
@@ -27349,7 +27379,8 @@ var Dub = class _Dub {
           }))
         )
       ].sort((a, b) => b.at - a.at);
-      return { toYou, messages, encryption: this.secrets(me).length > 0, hidden, problems };
+      const { problem: opening } = await this.opener(me);
+      return { toYou, messages, encryption: !opening, opening, hidden, problems };
     });
   }
   /**
@@ -28480,17 +28511,17 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
    */
   async syncFollows(me, s, p, change) {
     const homes = me.f.homes.map((h) => h.hint);
-    const secrets = this.secrets(me);
+    const { open, problem: cannot } = await this.opener(me);
     const save = async () => {
       this.synced.set(me.id, now6());
       await this.store.savePeople(me.id, p);
     };
-    if (!secrets.length) {
+    if (!open) {
       change?.(p);
       await save();
-      return [{ text: "This app holds no encryption key of this identity, so its follow list cannot be sealed to it: the list stays in this app only.", tone: "warn" }];
+      return [{ text: me.f.signingSecret || !this.opts.runner ? "This app holds no encryption key of this identity, so its follow list cannot be sealed to it: the list stays in this app only." : `The follow list stays in this app only, not sealed to this identity: ${cannot}`, tone: "warn" }];
     }
-    const found2 = await readSealedList(me.id, secrets, homes, s.via);
+    const found2 = await readSealedList(me.id, open, homes, s.via);
     const ours = p.sealed?.version ?? 0;
     const lines4 = [];
     let base = p.follows;
@@ -28515,7 +28546,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
     }
     await this.current(me);
     const look = await lookUp(me.id, homes, s.via);
-    const held = me.f.encryption.find((e3) => look.encryptionKey && hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey));
+    const held = me.f.encryption.find((e3) => look.encryptionKey && (e3.secret ? hex(xwingPublic(unhex(e3.secret))) : e3.public) === hex(look.encryptionKey));
     if (!held || !look.encryptionKey) {
       await save();
       return [...lines4, { text: "The encryption key this identity publishes is not one this app holds: the follow list stays in this app, not sealed.", tone: "warn" }];
