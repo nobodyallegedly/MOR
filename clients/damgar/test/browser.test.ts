@@ -372,7 +372,10 @@ test('Edubba’s pieces by clicks: a payment prepared for Damgar; a collective�
   // Kišib: the change of keys, its vault fields.
   const k = await kishib();
   const { page: kp } = await open(`${k.app.base}/#pair=${k.app.access.newCode()}`);
-  await kp.locator('button.door', { hasText: 'Change an identity’s keys' }).click();
+  // Paper's tile, its quiet door, then Change keys.
+  await kp.click('[data-k-tile="paper"]');
+  await kp.click('[data-action="open-door"]');
+  await kp.click('[data-k-col="rotate"]');
   await sees(kp, 'form#form-rotate', 'kishib-rotate');
   await kp.locator('form#form-rotate details', { hasText: 'The vault' }).locator('summary').click();
   assert.ok((await kp.locator('form#form-rotate [name=vaultUnit] option').allInnerTexts()).some((t) => /regtest satoshis/.test(t)));
