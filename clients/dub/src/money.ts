@@ -31,6 +31,7 @@ import { servedChain } from './carryin.ts';
 import { KEY_DELIVERY, offerWords, openSealedBytes, postSealed, readKeyDelivery, readOffer, readSealed, repost as repostAct } from '../../barebone/src/sealed.ts';
 import type { Keep, Settings } from './dub.ts';
 import { deliverSold } from './delivery.ts';
+import type { RunnerLink } from './runner.ts';
 import { contestSale, readVow, readVowOffer, vowSales } from './vows.ts';
 import { collectiveNow, collectivePlaces } from '../../grants/src/member.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
@@ -163,9 +164,10 @@ export class DubMoney {
 
   constructor(
     private store: Keep,
-    opts: { web: boolean; app: string },
+    opts: { web: boolean; app: string; runner?: RunnerLink },
   ) {
-    this.engine = new Damgar(new DamgarKeepInDub(store), { web: opts.web, app: opts.app });
+    // With Kišib's runner (the Mac), an identity used through Kišib signs a lane's record through it (the Dubsar runner cMIP, draft 3, 7.5).
+    this.engine = new Damgar(new DamgarKeepInDub(store), { web: opts.web, app: opts.app, runner: opts.runner });
   }
 
   private async keys(id: string): Promise<KeysHere> {

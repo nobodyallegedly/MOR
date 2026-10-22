@@ -21,7 +21,9 @@
 // pairing that asked, carrying no script.
 
 import type { Server } from 'node:http';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Access, Refusal } from '../../collective/src/access.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -69,8 +71,20 @@ const panelHeaders = (ancestors: string[]) => ({
 const publicHeaders = { 'x-content-type-options': 'nosniff', 'cache-control': 'no-store', 'cross-origin-resource-policy': 'cross-origin', 'access-control-allow-origin': '*' };
 
 /** Start the program on 127.0.0.1 at `port` (0: any free port), with its folder at `dir`. */
-export async function serve(opts: { dir: string; port: number; now?: () => number; via?: import('../../genesis/src/transport.ts').Via }): Promise<Running> {
+export async function serve(opts: { dir: string; port: number; now?: () => number; via?: import('../../genesis/src/transport.ts').Via; quit?: () => void }): Promise<Running> {
   mkdirSync(opts.dir, { recursive: true, mode: 0o700 });
+  // The seal's door (the Dubsar runner cMIP, draft 3, section 10): a token in Kišib's folder, owner only, new at each start; read by the
+  // menu-bar seal on this Mac, never by a web page (it sends a header no page may send without asking first, and no page reads the folder).
+  const sealToken = randomBytes(32).toString('hex');
+  writeFileSync(join(opts.dir, 'seal.json'), JSON.stringify({ token: sealToken }) + '\n', { mode: 0o600 });
+  let quitting = false;
+  /** Quit Kišib (decided: "accessible from both", the seal and the page): the runner locked first, then the program ends; closing a window never does. */
+  const quit = () => {
+    if (quitting) return;
+    quitting = true;
+    runner.lock();
+    setTimeout(() => (opts.quit ? opts.quit() : void running.close()), 50);
+  };
   const access = new Access(opts.dir, { domain: DOMAIN, label: CODE_LABEL });
   const kishib = new Kishib({ now: opts.now });
   const runner = new Runner(opts.dir, { via: opts.via });
@@ -89,6 +103,10 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
         return {};
       case 'state':
         return { ...kishib.state(), runner: runner.view() };
+      // Quit Kišib, from its page (draft 3): the runner locked, the program ended.
+      case 'quit':
+        quit();
+        return { quit: true, runner: runner.view() };
       // The runner, from Kišib's own page (section 6 and 2.2): the program only, never the web client.
       case 'runner state':
         return runner.view();
@@ -105,13 +123,17 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
       case 'runner remove':
         return runner.remove({ id: text(a.id) });
       case 'runner approve':
-        return runner.approve({ pairing: text(a.pairing), identities: list(a.identities), open: a.open === true });
+        return runner.approve({ pairing: text(a.pairing), identities: list(a.identities), opens: list(a.opens) });
       case 'runner revoke':
         return runner.revoke({ pairing: text(a.pairing) });
       case 'runner yes':
         return runner.setYes({ pairing: text(a.pairing), kind: text(a.kind), on: a.on === true });
+      case 'runner member answer':
+        return runner.memberAnswer({ ask: text(a.ask), yes: a.yes === true });
+      case 'runner member remove':
+        return runner.memberRemove({ identity: text(a.identity), collective: text(a.collective) });
       case 'runner opening':
-        return runner.setOpen({ pairing: text(a.pairing), on: a.on === true });
+        return runner.setOpen({ pairing: text(a.pairing), identity: text(a.identity), on: a.on === true });
       case 'runner answer':
         return runner.pageAnswer({ request: text(a.request), yes: a.yes === true, always: a.always === true });
       case 'runner cards':
@@ -129,6 +151,7 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
   files['/icon.png'] = { type: 'image/png', body: readFileSync(here('static/icon/kishib.png')) };
   let base = '';
   const routes = async (req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> => {
+    if (url.pathname.startsWith('/seal/')) return sealDoor(req, res, url), true;
     if (!url.pathname.startsWith('/runner/')) return false;
     const fail = (e: unknown) => json(res, e instanceof RunnerRefusal ? e.status : 422, { error: e instanceof Error ? e.message : String(e) });
     const token = req.headers['mor-runner'] as string | undefined;
@@ -183,6 +206,9 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
           if (!Array.isArray(a.sealed) || a.sealed.some((x) => typeof x !== 'string')) throw new RunnerRefusal(400, 'The request names no sealed containers. Nothing was opened.');
           return json(res, 200, runner.open(token, { identity: text(a.identity), sealed: (a.sealed as string[]).map((x) => Uint8Array.from(Buffer.from(x, 'base64'))) })), true;
         }
+        case '/runner/member':
+          // Draft 3, section 9: an app asks Kišib to hold the identity's key for a collective; answered in Kišib.
+          return json(res, 200, runner.memberAsk(token, { identity: text(a.identity), collective: text(a.collective), places: list(a.places) })), true;
         case '/runner/drop':
           runner.drop(token, { request: text(a.request) });
           return json(res, 200, {}), true;
@@ -193,9 +219,38 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
       return fail(e), true;
     }
   };
+  /** The seal's door: its state for the menu bar, and Open Kišib, Lock now, Quit Kišib, Turn off (draft 3, section 10). */
+  const sealDoor = (req: IncomingMessage, res: ServerResponse, url: URL) => {
+    const given = Buffer.from(String(req.headers['mor-seal'] ?? ''));
+    const want = Buffer.from(sealToken);
+    if (given.length !== want.length || !timingSafeEqual(given, want)) return json(res, 403, { error: 'Only Kišib’s seal on this computer opens this door.' });
+    const v = runner.view();
+    const said = () => ({ state: v.state, waiting: v.waiting.length + v.memberAsks.length + v.apps.filter((a) => a.state === 'waiting').length, held: v.held.length });
+    try {
+      if (req.method === 'GET' && url.pathname === '/seal/state') return json(res, 200, said());
+      if (req.method !== 'POST') return json(res, 405, { error: 'not allowed' });
+      switch (url.pathname) {
+        case '/seal/open':
+          return json(res, 200, { url: `${local.base}/#pair=${access.newCode()}` });
+        case '/seal/lock':
+          runner.lock();
+          return json(res, 200, { state: runner.state });
+        case '/seal/off':
+          runner.turnOff();
+          return json(res, 200, { state: runner.state });
+        case '/seal/quit':
+          quit();
+          return json(res, 200, { state: runner.state, quit: true });
+        default:
+          return json(res, 404, { error: 'not found' });
+      }
+    } catch (e) {
+      return json(res, 422, { error: e instanceof Error ? e.message : String(e) });
+    }
+  };
   const local = await serveLocal({ dir: opts.dir, port: opts.port, access, index, script, style: STYLE, version: built, api, files, routes });
   base = local.base;
-  return {
+  const running: Running = {
     server: local.server,
     port: local.port,
     base: local.base,
@@ -204,7 +259,9 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
     runner,
     close: async () => {
       kishib.forget();
+      rmSync(join(opts.dir, 'seal.json'), { force: true });
       await local.close();
     },
   };
+  return running;
 }

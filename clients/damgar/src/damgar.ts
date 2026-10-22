@@ -32,6 +32,7 @@
 
 import {
   ENVELOPES_TYPES,
+  keyDeliveryPayload,
   MIRS,
   SPECS,
   readKeyDelivery,
@@ -117,7 +118,7 @@ export const RUNNER_OLD_KEY_SAY = 'This identity’s keys were changed with its 
 /** Said where an identity used through Kišib would need its words here. */
 export const RUNNER_HOLDS_SAY = 'Kišib’s runner holds this identity’s signing key, on this Mac; Damgar holds none of its keys. Its words are given and changed in Kišib, never here.';
 /** Said where Kišib does not let Damgar open what is sealed to an identity. */
-export const RUNNER_NO_OPEN_SAY = 'Kišib does not let Damgar open what is sealed to this identity: drafts, requests and payments sealed to it are not read here. To allow it, in Kišib: Runner, Apps, Damgar, “may open what is sealed to this identity”.';
+export const RUNNER_NO_OPEN_SAY = 'Kišib does not let Damgar open what is sealed to this identity: drafts, requests and payments sealed to it are not read here. To allow it, in Kišib: Runner, Apps, Damgar, “may open what is sealed to” this identity.';
 export const NO_KEY_SAY =
   'Damgar holds no encryption key for this identity, so nothing sealed to it opens here: no draft, no request, no payment. Its encryption key was not made from its signing key’s words.';
 
@@ -390,7 +391,7 @@ export class Damgar {
       return { open: null, problem: message(e).replace(/ Nothing was signed\.$/, '') };
     }
     if (!p || p.state !== 'approved' || !p.identities.some((x) => x.id === me.id)) return { open: null, problem: 'Damgar is not paired with Kišib for this identity any more: nothing sealed to it opens here.' };
-    if (!p.open) return { open: null, problem: RUNNER_NO_OPEN_SAY };
+    if (!p.opens.includes(me.id)) return { open: null, problem: RUNNER_NO_OPEN_SAY };
     const open: Opener = async (sealed) =>
       (await r.open(me.id, sealed)).map((o) => (o ? ({ ...o, described: (o.key ? openWithKey(o.act, o.key) : describeAct(o.act)) as Described } as Opened) : null));
     return { open, problem: null };
@@ -461,7 +462,7 @@ export class Damgar {
       return {
         lines: [
           { text: `Damgar uses ${k.name ?? short(k.id)} through Kišib’s runner: Kišib holds its signing key, Damgar none. Every money act is shown by Kišib, in its panel here, before it is signed: money always asks.`, tone: 'ok' },
-          p.open ? { text: 'Kišib opens for Damgar what is sealed to this identity: drafts, requests and payments are read here, Damgar holding no key.', tone: 'ok' } : { text: RUNNER_NO_OPEN_SAY, tone: 'warn' },
+          p.opens.includes(k.id) ? { text: 'Kišib opens for Damgar what is sealed to this identity: drafts, requests and payments are read here, Damgar holding no key.', tone: 'ok' } : { text: RUNNER_NO_OPEN_SAY, tone: 'warn' },
           { text: LINE_SAY, tone: 'warn' },
         ],
       };
@@ -3245,11 +3246,35 @@ export class Damgar {
     // Under a lane, the act is the grant's strand, not this line: its locked act left there, as before. Signed in another app (Dub) holding the
     // identity's own key, its content key is delivered to the identity itself too, so Damgar opens it and keeps the payment's record (decided:
     // a payment under the lane is finished in the app, its record in Damgar's account; the grant limits cMIP, draft 3, 8.4). Through Kišib's
-    // runner it is not: each delivery would ask in Kišib's panel; Damgar then shows those acts sealed, and the app's own count stands.
+    // runner, it is too (the Dubsar runner cMIP, draft 3, 7.5; decided: "if establishing lanes it has to be setup this way"): the locked act
+    // first, at the homes, then its key delivered to the identity itself, which Kišib signs without a panel once it reads, at the homes,
+    // that the act is the identity's, signed under a lane, and opens with that key.
+    const throughKisib = how.by === 'lane' && !!this.opts.app && !me.f.signingSecret && !!this.opts.runner;
     await leaveAtHomes(me, made, { via: s.via, lockedOnly: how.by === 'lane' && !(this.opts.app && me.f.signingSecret) });
+    if (throughKisib) await this.laneRecordThroughKisib(me, s, made).catch(() => undefined);
     await this.store.saveIdentity(me);
     if (!left) throw new Error(`${short(to)}’s inbox (${inbox.join(', ')}) took nothing. It was signed and kept here; try again later.`);
     return made.id;
+  }
+
+  /**
+   * The record of a payment made under the lane, for an identity used
+   * through Kišib (the Dubsar runner cMIP, draft 3, 7.5): its key delivered
+   * to the identity itself, signed by Kišib without a panel, sealed to the
+   * identity's own encryption key and left at its homes, where Damgar reads
+   * it. Where Kišib does not sign it, the payment stays sealed, not counted.
+   */
+  private async laneRecordThroughKisib(me: TestIdentity, s: Settings, made: { id: string; key: Uint8Array }): Promise<void> {
+    const own = me.f.encryption.at(-1);
+    const key = own?.secret ? (xwingPublic(unhex(own.secret)) as Uint8Array) : own?.public ? unhex(own.public) : null;
+    if (!key) return;
+    try {
+      const kd = await me.signApartNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false) as Uint8Array, { to: [me.id] });
+      const sealed = sealFor(kd.act, kd.key, [{ id: me.id, key }]);
+      for (const h of me.f.homes) await relayAt(h.hint, s.via).putSealed(sealed).catch(() => undefined);
+    } finally {
+      await this.store.saveIdentity(me);
+    }
   }
 
   /**

@@ -104,7 +104,10 @@ export const RUNNER_HOLDS_SAY = 'Kišib’s runner holds this identity’s signi
 
 /** Said where Kišib does not let Dub open what is sealed to an identity used through it (the Dubsar runner cMIP, draft 2, section 8). */
 export const RUNNER_NO_OPEN_SAY =
-  'Kišib does not let Dub open what is sealed to this identity: Dub sends its private messages, but cannot read the answers, nor keep its contacts list sealed to it. To allow it, in Kišib: Runner, Apps, Dub, “may open what is sealed to this identity”.';
+  'Kišib does not let Dub open what is sealed to this identity: Dub sends its private messages, but cannot read the answers, nor keep its contacts list sealed to it. To allow it, in Kišib: Runner, Apps, Dub, “may open what is sealed to” this identity.';
+
+/** Said where Dub asked Kišib to hold an identity's key for a collective (the Dubsar runner cMIP, draft 3, 9.1). */
+export const RUNNER_MEMBER_ASKED_SAY = 'Kišib holds this identity’s keys, so it holds its key for this collective too: Dub asked Kišib to add it. Approve it in Kišib (Identities, Held here, or Runner, Waiting), then choose the collective here again. The key never comes to Dub.';
 
 /** Said where Kišib opens for Dub what is sealed to an identity used through it (draft 2, section 8). */
 export const RUNNER_OPENS_SAY = 'Kišib opens for Dub what is sealed to this identity: its private messages and its sealed contacts list are read here, Dub holding no key. Each opening is listed in Kišib (Runner, Signed).';
@@ -264,7 +267,7 @@ export class Dub {
     readonly store: Keep,
     readonly opts: { web?: boolean; reader?: string; runner?: RunnerLink; /** Damgar on this computer, to wake for a payment (the program only). */ damgar?: DamgarLink } = {},
   ) {
-    this.money = new DubMoney(store, { web: !!opts.web, app: opts.web ? 'Dub on the web' : 'Dub on this computer' });
+    this.money = new DubMoney(store, { web: !!opts.web, app: opts.web ? 'Dub on the web' : 'Dub on this computer', runner: opts.runner });
   }
 
   /** An identity held here; one used through Kišib's runner signs by it (the Dubsar runner cMIP). */
@@ -298,7 +301,7 @@ export class Dub {
       return { open: null, problem: message(e).replace(/ Nothing was signed\.$/, '') };
     }
     if (!p || p.state !== 'approved' || !p.identities.some((x) => x.id === me.id)) return { open: null, problem: 'Dub is not paired with Kišib for this identity any more: its private messages are not opened here.' };
-    if (!p.open) return { open: null, problem: RUNNER_NO_OPEN_SAY };
+    if (!p.opens.includes(me.id)) return { open: null, problem: RUNNER_NO_OPEN_SAY };
     const open: Opener = async (sealed) =>
       (await r.open(me.id, sealed)).map((o) => (o ? ({ ...o, described: (o.key ? openWithKey(o.act, o.key) : describeAct(o.act)) as Opened['described'] } as Opened) : null));
     return { open, problem: null };
@@ -762,7 +765,7 @@ export class Dub {
       return {
         lines: [
           { text: `Dub uses ${k.name ?? fingerprint(k.id)} through Kišib’s runner: Kišib holds its signing key, Dub none. Each act is shown by Kišib, in its panel here, before it is signed, unless you gave Dub a standing yes for that kind in Kišib.`, tone: 'ok' },
-          p.open ? { text: RUNNER_OPENS_SAY, tone: 'ok' } : { text: RUNNER_NO_OPEN_SAY, tone: 'warn' },
+          p.opens.includes(k.id) ? { text: RUNNER_OPENS_SAY, tone: 'ok' } : { text: RUNNER_NO_OPEN_SAY, tone: 'warn' },
           { text: LINE_SAY, tone: 'warn' },
         ],
       };
@@ -1000,7 +1003,11 @@ export class Dub {
     await this.current(me);
     const refs: [string, string][] = a.reply ? [[readId(a.reply.id), readId(a.reply.signer)]] : [];
     const at = await chainFor(collective, k.key, k.places, s.via);
-    const made = signAsMember(collective, k.key, at, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text), public: true, ...(refs.length ? { refs } : {}) });
+    const made =
+      !me.f.signingSecret && this.opts.runner
+        ? // Through Kišib (draft 3, 9.2): the act asked of Kišib, its panel shown here, signed there with the member key it holds.
+          await this.opts.runner.request({ identity: me.id, as: collective, line: 'member', binding: k.key.signature, sequence: at.strand, spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text), public: true, objects: [[collective, k.key.terms]], ...(refs.length ? { refs } : {}) })
+        : signAsMember(collective, k.key, at, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text), public: true, ...(refs.length ? { refs } : {}) });
     const took = await publishAt([made.act], [...new Set([...s.relays, ...k.places])], s.via);
     if (!took.length) throw new Error('No relay took the post. Nothing counts yet: try again.');
     const lines: Line[] = [{ text: `Posted as the collective, with your own member key, at ${took.join(', ')}.`, tone: 'ok' }];
@@ -2250,8 +2257,15 @@ export class Dub {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
       if (a.id) {
-        const c = (s.collectives ?? []).find((x) => x.id === a.id);
+        let c = (s.collectives ?? []).find((x) => x.id === a.id);
         if (!c) throw new Error('That collective is not under this identity here.');
+        // Used through Kišib: the key may have been added there since (draft 3, 9.1).
+        if (!c.available && !me.f.signingSecret && this.opts.runner) {
+          const r = await this.memberKeyHere(me, s, c.id, me.f.homes.map((h) => h.hint));
+          c = { id: c.id, available: !r.why, why: r.why };
+          s.collectives = [...(s.collectives ?? []).filter((x) => x.id !== c!.id), c];
+          await this.store.saveSettings(me.id, s);
+        }
         if (!c.available) throw new Error(`Dub cannot act as it: ${c.why ?? 'its member key is not here'}`);
       }
       await this.store.saveSettings(me.id, { ...s, acting: a.id });
@@ -2259,11 +2273,33 @@ export class Dub {
     });
   }
 
-  /** The member key this identity holds for a collective, and the area reaching public posts; `why` where it cannot act. */
+  /**
+   * The member key this identity holds for a collective, and the area
+   * reaching public posts; `why` where it cannot act. For an identity used
+   * through Kišib (the Dubsar runner cMIP, draft 3, section 9), Kišib holds
+   * the key: Dub reads its public parts from Kišib, and, where Kišib holds
+   * none yet, asks Kišib to add it, approved there. Its secret never comes
+   * here (`secret` empty).
+   */
   private async memberKeyHere(me: TestIdentity, s: Settings, collective: string, hints: string[]): Promise<{ key: MemberKey | null; places: string[]; why: string | null; number: number }> {
     const places = [...new Set([...(await collectivePlaces(collective, hints, s.via).catch(() => [] as string[])), ...hints])];
-    const keys = await readMemberKeys(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), s.via).catch(() => [] as MemberKey[]);
-    const key = keys.length ? await memberKeyFor(keys, collective, places, s.via).catch(() => null) : null;
+    let key: MemberKey | null;
+    if (!me.f.signingSecret && this.opts.runner) {
+      const r = this.opts.runner;
+      const p = await r.paired().catch((e) => {
+        throw new Error(message(e).replace(/ Nothing was signed\.$/, ''));
+      });
+      const held = p?.identities.find((x) => x.id === me.id)?.members?.find((m) => m.collective === collective);
+      if (!held) {
+        if (p?.state !== 'approved') return { key: null, places, why: 'Dub is not paired with Kišib for this identity any more.', number: 0 };
+        await r.memberAsk(me.id, collective, places);
+        return { key: null, places, why: RUNNER_MEMBER_ASKED_SAY, number: 0 };
+      }
+      key = { act: '', terms: held.terms, signature: held.signature, public: [0, new Uint8Array()], secret: new Uint8Array(), position: held.position };
+    } else {
+      const keys = await readMemberKeys(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), s.via).catch(() => [] as MemberKey[]);
+      key = keys.length ? await memberKeyFor(keys, collective, places, s.via).catch(() => null) : null;
+    }
     if (!key) return { key: null, places, why: 'no member key of this identity for it was found at its homes (one is made when you sign its founding, in Edubba).', number: 0 };
     const reach = await areaReaching(collective, places, { spec: POST_SPECS.text, type: TEXT_ACT }, s.via).catch(() => ({ agreement: null, area: null }));
     if (!reach.area) return { key, places, why: 'its agreement in force gives no area reaching public posts.', number: 0 };

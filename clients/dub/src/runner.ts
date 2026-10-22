@@ -40,6 +40,24 @@ interface Kept {
   at: number;
 }
 
+/** A member key Kišib holds for an identity (draft 3): its public parts only, never its secret. */
+export interface HeldMember {
+  collective: string;
+  terms: string;
+  signature: string;
+  position: number;
+}
+
+/** Where Dub's pairing stands (2.4): the identities it may use, which of them it may have opened (draft 3, per identity), and the member keys Kišib holds for each. */
+export interface Paired {
+  state: string;
+  code: string;
+  opens: string[];
+  identities: { id: string; name: string | null; binding: string; key: string; spent: boolean; homes: string[]; members?: HeldMember[] }[];
+  /** The collectives' keys this app asked Kišib to add, waiting for their approval there. */
+  asked?: { identity: string; collective: string }[];
+}
+
 /** A request waiting for the person, while Dub waits for its answer. */
 export interface Asking {
   request: string;
@@ -112,13 +130,13 @@ export class RunnerLink {
   }
 
   /** Where the pairing stands (2.4), with the identities Kišib lets Dub use once approved. Null: never paired here. */
-  async paired(): Promise<{ state: string; code: string; open: boolean; identities: { id: string; name: string | null; binding: string; key: string; spent: boolean; homes: string[] }[] } | null> {
+  async paired(): Promise<Paired | null> {
     const k = this.kept();
     if (!k) return null;
     try {
       return await this.call('/runner/paired', {}, k.token);
     } catch (e) {
-      if (/no longer knows this app/.test(message(e))) return { state: 'revoked', code: k.code, open: false, identities: [] };
+      if (/no longer knows this app/.test(message(e))) return { state: 'revoked', code: k.code, opens: [], identities: [] };
       throw e;
     }
   }
@@ -160,7 +178,26 @@ export class RunnerLink {
    * own page, until it is signed, declined, withdrawn here, or expires.
    */
   signer(): Signer {
-    return async (req: SignRequest) => {
+    return (req: SignRequest) => this.request(req);
+  }
+
+  /**
+   * Ask Kišib to hold an identity's key for a collective (draft 3, 9.1),
+   * approved in Kišib. Answered held (Kišib has it) or asked.
+   */
+  async memberAsk(identity: string, collective: string, places: string[]): Promise<{ held: boolean; asked: boolean }> {
+    const k = this.kept();
+    if (!k) throw new Error('Dub is not paired with Kišib’s runner: + Add, Use one from Kišib.');
+    return this.call('/runner/member', { identity, collective, places }, k.token);
+  }
+
+  /**
+   * A request to Kišib (section 3): an act of the identity, or (draft 3,
+   * section 9) of a collective it is a member of (`as`, on the member key's
+   * strand), signed with the key Kišib holds.
+   */
+  async request(req: SignRequest | (Omit<SignRequest, 'line'> & { line: 'member'; as: string })): Promise<{ act: Uint8Array; id: string; key: Uint8Array }> {
+    {
       const k = this.kept();
       if (!k) throw new Error('Dub is not paired with Kišib’s runner: + Add, Use one from Kišib. Nothing was signed.');
       let a = await this.call<Answer>('/runner/ask', { ...req, payload: Buffer.from(req.payload).toString('base64') }, k.token);
@@ -183,7 +220,7 @@ export class RunnerLink {
       }
       if (!a.signed) throw new Error('Kišib’s runner did not sign. Nothing was signed.');
       return { act: unb64(a.signed.act), id: a.signed.id, key: unb64(a.signed.key) };
-    };
+    }
   }
 
   /** Withdraw the request waiting now (the person said not to sign it, from Dub). */

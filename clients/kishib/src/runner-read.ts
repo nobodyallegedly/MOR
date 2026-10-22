@@ -18,6 +18,14 @@ import { UNITS_MODULES, say as sayAmount } from '../../damgar/src/units.ts';
 import { GRANT_LIMITS_SPEC } from '../../grants/src/limits.ts';
 import { MEMBER_KEYS_SPEC } from '../../grants/src/member.ts';
 
+/**
+ * A request as the runner reads it (3.1): an everyday act of the identity,
+ * on one of the app's lines or apart; or (draft 3, section 9) an act of a
+ * collective the identity is a member of (`as`), signed with the member key
+ * Kišib holds for it, on that key's own strand (`line: 'member'`).
+ */
+export type RunnerRequest = Omit<SignRequest, 'line'> & { line: SignRequest['line'] | 'member'; as?: string };
+
 /** The kinds of act (section 5.1). */
 export type Kind = 'posts' | 'messages' | 'names' | 'contacts' | 'money' | 'agreements' | 'keys' | 'other';
 
@@ -56,16 +64,17 @@ const CHAIN = [IDENTITY_TYPES.genesis, IDENTITY_TYPES.rotation, IDENTITY_TYPES.r
 const MONEY = new Set<string>([MIRS.money, ...MESSAGES_SPECS, MONEY_SPECS.payment, MONEY_SPECS.anchoring, MONEY_SPECS.split, MONEY_SPECS.conversion, GRANT_LIMITS_SPEC]);
 
 /** Why the runner refuses a request outright, or null. */
-export function refusedOutright(r: SignRequest): string | null {
+export function refusedOutright(r: RunnerRequest): string | null {
   if (r.spec === SPECS.identity && CHAIN.includes(r.type)) return 'This is an act of the identity’s chain: only its chain key signs it, from paper, and the runner never holds the chain key. Nothing was signed.';
   if (r.line === 'public' && !r.public) return 'A private act on the public line: each app keeps its private acts on its private line. Nothing was signed.';
   if (r.line === 'private' && r.public) return 'A public act on the private line: each app keeps its public acts on its public line. Nothing was signed.';
   if (r.line === 'apart' && r.public) return 'An act on a line of its own is a private act. Nothing was signed.';
+  if ((r.line === 'member') !== (r.as !== undefined)) return 'An act of a collective goes on its member key’s own strand, and nothing else does. Nothing was signed.';
   return null;
 }
 
 /** The kind of an act, from its specification and type (5.1). */
-export function kindOf(r: SignRequest): Kind {
+export function kindOf(r: RunnerRequest): Kind {
   if (r.spec === POST_SPECS.text && r.type === TEXT_ACT) return r.public ? 'posts' : 'messages';
   if (r.spec === SPECS.envelopes) {
     if (r.type === PUBLICATION) return r.public ? 'posts' : 'messages';
@@ -85,7 +94,7 @@ export function kindOf(r: SignRequest): Kind {
 }
 
 /** A key delivered to the identity itself: its target and key (7.3), or null. */
-export function deliveredToItself(r: SignRequest): { target: string; key: Uint8Array } | null {
+export function deliveredToItself(r: RunnerRequest): { target: string; key: Uint8Array } | null {
   if (r.spec !== SPECS.envelopes || r.type !== ENVELOPES_TYPES.keyDelivery || r.public) return null;
   if (r.to?.length !== 1 || r.to[0] !== r.identity) return null;
   try {
@@ -114,7 +123,7 @@ const map = (b: Uint8Array): Map<number, unknown> | null => {
 };
 
 /** The act in plain words (4.3): what it says, then what it names. `name` is the app's. */
-export function wordsOf(r: SignRequest, app: string): string[] {
+export function wordsOf(r: RunnerRequest, app: string): string[] {
   const out: string[] = [];
   const m = map(r.payload);
   const kind = kindOf(r);
@@ -172,6 +181,6 @@ export function wordsOf(r: SignRequest, app: string): string[] {
   const to = (r.to ?? []).filter((t) => t !== r.identity);
   if (to.length) out.push(`${r.public ? 'Addressed to' : 'Sealed to'} ${to.map(who).join(', ')}.`);
   if (!r.public && r.to?.length === 1 && r.to[0] === r.identity) out.push('Sealed to the identity itself, for its own apps.');
-  out.push(r.line === 'apart' ? `On a line of its own, outside ${app}’s lines.` : `On ${app}’s ${r.line} line, at position ${r.sequence.length + 1}.`);
+  out.push(r.line === 'member' ? `As the collective ${who(r.as!)}, with this identity’s own member key, on that key’s strand, at position ${r.sequence.length + 1}.` : r.line === 'apart' ? `On a line of its own, outside ${app}’s lines.` : `On ${app}’s ${r.line} line, at position ${r.sequence.length + 1}.`);
   return out;
 }

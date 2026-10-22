@@ -565,7 +565,7 @@ test('Use one from Kišib: Damgar paired with Kišib’s runner; a payment signe
   const st = await k.c.ask<{ apps: { id: string; code: string; name: string }[] }>('runner state');
   const app = st.apps.find((x) => x.code === code)!;
   assert.equal(app.name, 'Damgar');
-  await k.c.ask('runner approve', { pairing: app.id, identities: [max.id], open: true });
+  await k.c.ask('runner approve', { pairing: app.id, identities: [max.id], opens: [max.id] });
   await gp.locator('[data-action="runner-look"]').click();
   await gp.locator(`[data-runner-take="${max.id}"]`).click();
   // What Max accepts is sealed to Max: signed through Kišib too, its panel in Damgar's window.

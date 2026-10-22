@@ -27,7 +27,7 @@
 import { closeSync, existsSync, openSync, readFileSync, renameSync, rmSync, statSync, writeSync, writeFileSync } from 'node:fs';
 import { createCipheriv, createDecipheriv, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { join } from 'node:path';
-import { base64, cborEncode, hex, keyDeliveryPayload, makeEveryday, openSealed, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
+import { base64, cborEncode, describeAct, hex, keyDeliveryPayload, makeEveryday, openSealed, openWithKey, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { cardText, ownLine } from '../../genesis/src/lines.ts';
 import type { Home, SignRequest } from '../../genesis/src/identity.ts';
@@ -36,9 +36,10 @@ import { idForm, readId } from '../../genesis/src/forms.ts';
 import { Refused as WordsRefused, encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
 import { lookCurrent, NOT_CURRENT } from '../../dub/src/carryin.ts';
 import { namesOf } from '../../dub/src/names.ts';
-import { ALWAYS_ASKS, KIND_NAME, KIND_ONE, KINDS, deliveredToItself, kindOf, refusedOutright, wordsOf, type Kind } from './runner-read.ts';
+import { ALWAYS_ASKS, KIND_NAME, KIND_ONE, KINDS, deliveredToItself, kindOf, refusedOutright, wordsOf, type Kind, type RunnerRequest } from './runner-read.ts';
+import { memberKeyFor, readMemberKeys } from '../../grants/src/member.ts';
 
-export type { Kind };
+export type { Kind, RunnerRequest };
 export { KIND_NAME, KINDS, ALWAYS_ASKS };
 
 /** Said before the runner is turned on, and read (6.2; draft 2: the passphrase). */
@@ -47,7 +48,7 @@ export const RISK_SAY = [
   'Whoever gets into this Mac while Kišib is open and unlocked can sign as those identities through Kišib, within what you allowed. Kišib’s folder alone gives them nothing without the passphrase.',
   'Still at risk: someone who saw your passphrase typed, or who guesses it; a Mac taken, or a program running as you, while Kišib is open and unlocked.',
   'Forget the passphrase, and the runner cannot be opened again: turn it off, which erases everything, and give the signing words again.',
-  'Quitting Kišib, or restarting the Mac, locks the runner, and so does Lock it now: its keys, apps and log stay, encrypted, until the passphrase is given again. Closing Kišib’s window alone does not: its program keeps running, unlocked.',
+  'Quitting Kišib (from its page, or its seal in the menu bar), or restarting the Mac, locks the runner, and so does Lock now: its keys, apps and log stay, encrypted, until the passphrase is given again. Closing Kišib’s window does not: its program keeps running, unlocked.',
   'Its panel is drawn by Kišib inside the asking app’s window. A malicious app could cover it or trick a click: a gap you accept.',
   'Money, agreements, relying on another’s act, and keys always ask, even with a standing yes.',
   'An app you let open what is sealed to an identity reads its private messages through Kišib without asking each time; each opening is listed.',
@@ -64,7 +65,16 @@ export const LOCKED_SAY = 'Kišib is locked: its runner signs and opens nothing 
 export const WRONG_SAY = 'That passphrase does not open Kišib’s runner: nothing was opened. Forgotten, it cannot be found again: turn the runner off (it erases everything) and give the signing words again.';
 
 /** Said where an app may not open what is sealed to an identity (draft 2, section 8). Its first words are how an app knows it. */
-export const NO_OPEN_SAY = 'Kišib does not open what is sealed to this identity for this app: it may send, not read. To allow it, in Kišib: Runner, Apps, “may open what is sealed to this identity”. Nothing was opened.';
+export const NO_OPEN_SAY = 'Kišib does not open what is sealed to this identity for this app: it may send, not read. To allow it, in Kišib: Runner, Apps, the app, “may open what is sealed to this identity” beside the identity. Nothing was opened.';
+
+/** Said where an app asks to sign as a collective whose key Kišib does not hold for the identity (draft 3, 9.2). */
+export const NO_MEMBER_SAY = 'Kišib holds no key of this identity for that collective: ask Kišib to add it (from the app: the collective, Add it in Kišib), then approve it in Kišib (Identities, Held here). Nothing was signed.';
+
+/** Said when a lane's key delivery is signed without a panel (draft 3, 7.5). */
+const LANE_WORDS = (app: string) => `The key of a payment ${app} signed under its own lane, delivered to the identity itself, so that Damgar keeps its record. It moves no money, and gives nothing to anyone else.`;
+
+/** The identities an app may have what is sealed to them opened (draft 3, per identity; draft 2's one choice read as all of them). */
+export const opensOf = (p: { identities: string[]; open?: boolean; opens?: string[] }): string[] => (p.opens ?? (p.open ? p.identities : [])).filter((x) => p.identities.includes(x));
 
 /** The passphrase's shortest length (draft 2, 6.2). */
 export const PASSPHRASE_MIN = 8;
@@ -98,6 +108,35 @@ interface HeldId {
   given: number;
   /** Its homes now serve another key: nothing is signed until the new words are given (3.5). */
   spent?: boolean;
+  /** Draft 3: its own keys for its collectives, opened from its homes, kept with it (decided: "kišib should be able to hold your key and the keys you hold for your collectives"). */
+  members?: HeldMember[];
+}
+
+/** A member key held for an identity (draft 3, section 9): the member keys cMIP's, its secret kept here only. */
+interface HeldMember {
+  collective: string;
+  /** The sealed act it came in. */
+  act: string;
+  /** The founding or clone that named it, and the identity's signature act naming it (the binding of the acts it signs). */
+  terms: string;
+  signature: string;
+  public: [number, string];
+  /** Its private half, hex: never returned to an app. */
+  secret: string;
+  position: number;
+  added: number;
+}
+
+/** An app's ask that Kišib hold a collective's key for an identity (draft 3, 9.1): waiting for the person, in Kišib. */
+interface MemberAsk {
+  id: string;
+  app: string;
+  appName: string;
+  identity: string;
+  collective: string;
+  /** Where the app reads the collective: its places, to find which founding names the key. */
+  places: string[];
+  at: number;
 }
 
 /** A pairing (2.3). */
@@ -111,8 +150,10 @@ interface Pairing {
   state: 'waiting' | 'approved' | 'refused';
   identities: string[];
   yes: Kind[];
-  /** Draft 2: may have what is sealed to its identities opened (off unless chosen). */
+  /** Draft 2: may have what is sealed to its identities opened (off unless chosen). Read as every identity it may use (draft 3). */
   open?: boolean;
+  /** Draft 3: the identities whose sealed acts it may have opened, each chosen (decided: "per identity, per app"). */
+  opens?: string[];
   asked: number;
   approved?: number;
 }
@@ -126,7 +167,7 @@ interface Signed {
   kind: Kind;
   words: string[];
   act: string;
-  line: SignRequest['line'];
+  line: RunnerRequest['line'];
   position: number;
   /** For a private act: SHA-256 of the key delivery that leaves its content key to the identity itself (7.3). */
   companion?: string;
@@ -139,6 +180,10 @@ interface Signed {
   /** For an opening: the sealed container's ID, and how many times the app had it opened. */
   sealed?: string;
   times?: number;
+  /** Draft 3: signed as this collective, with the identity's member key. */
+  as?: string;
+  /** Draft 3: the key of an act signed under the app's own lane, delivered to the identity itself, without a panel. */
+  lane?: boolean;
 }
 
 /** The latest act of an app's line, as signed here (7.2): the line's IDs, for its card. */
@@ -158,6 +203,8 @@ interface RunnerFile {
   apps: Pairing[];
   log: Signed[];
   lines: LineKept[];
+  /** Draft 3: the collectives' keys apps asked Kišib to hold, waiting for the person. */
+  memberAsks?: MemberAsk[];
 }
 
 /** The runner's file on disk (draft 2, 6.3): everything sealed under the passphrase's key. */
@@ -187,7 +234,7 @@ interface Waiting {
   identity: string;
   kind: Kind;
   words: string[];
-  req: SignRequest;
+  req: RunnerRequest;
   at: number;
   /** The single-use value written into the panel last drawn (4.4). */
   nonce: string | null;
@@ -216,10 +263,12 @@ export interface RunnerView {
   upgrade: boolean;
   since: number | null;
   risk: string[];
-  held: { id: string; form: string; name: string | null; spent: boolean; apps: string[]; homes: string[] }[];
-  apps: { id: string; name: string; origin: string; code: string; state: Pairing['state']; identities: string[]; yes: Kind[]; open: boolean; asked: number; approved: number | null }[];
+  held: { id: string; form: string; name: string | null; spent: boolean; apps: string[]; homes: string[]; members: { collective: string; form: string; added: number }[] }[];
+  /** Draft 3: the collectives' keys apps asked Kišib to hold, waiting for an answer here. */
+  memberAsks: { id: string; app: string; identity: string; name: string | null; collective: string; form: string; at: number }[];
+  apps: { id: string; name: string; origin: string; code: string; state: Pairing['state']; identities: string[]; yes: Kind[]; opens: string[]; asked: number; approved: number | null }[];
   waiting: { request: string; app: string; identity: string; name: string | null; kind: Kind; title: string; words: string[]; at: number; always: boolean }[];
-  signed: { at: number; app: string; identity: string; name: string | null; kind: Kind; words: string[]; act: string; standing: boolean; line: string; position: number; opened: boolean; sealed: string | null; times: number }[];
+  signed: { at: number; app: string; identity: string; name: string | null; kind: Kind; words: string[]; act: string; standing: boolean; line: string; position: number; opened: boolean; sealed: string | null; times: number; as: string | null; lane: boolean }[];
   kinds: { kind: Kind; name: string; always: boolean }[];
 }
 
@@ -236,7 +285,7 @@ export class RunnerRefusal extends Error {
 const tokenHash = (t: string) => sha256(`MOR Kišib runner token\n${t}`);
 
 /** The fingerprint of a request (3.3): SHA-256 of its fields in deterministic CBOR. */
-export function requestPrint(r: SignRequest): string {
+export function requestPrint(r: RunnerRequest): string {
   return sha256(
     cborEncode([
       r.identity,
@@ -251,6 +300,8 @@ export function requestPrint(r: SignRequest): string {
       r.acks ?? null,
       r.binding,
       r.sequence,
+      // Draft 3: an act of a collective names it; draft 2's requests keep their fingerprint.
+      ...(r.as !== undefined ? [r.as] : []),
     ]),
   );
 }
@@ -395,7 +446,7 @@ export class Runner {
   }
 
   /**
-   * Lock it now, without quitting Kišib (6.4): the key derived from the
+   * Lock now, without quitting Kišib (6.4): the key derived from the
    * passphrase and everything opened forgotten from memory; the file on disk
    * stays, encrypted; the passphrase is asked again. Requests waiting are
    * dropped, nothing signed.
@@ -407,7 +458,7 @@ export class Runner {
     const env = JSON.parse(readFileSync(p, 'utf8')) as Envelope;
     for (const w of this.waiting.values()) this.settle(w, { declined: true });
     this.waiting.clear();
-    for (const h of this.f.held) h.secret = '0'.repeat(h.secret.length);
+    for (const h of this.f.held) wipe(h);
     this.key?.fill(0);
     this.f = this.key = this.kdf = null;
     this.env = env;
@@ -419,7 +470,7 @@ export class Runner {
     const p = join(this.dir, FILE);
     for (const w of this.waiting.values()) this.settle(w, { declined: true });
     this.waiting.clear();
-    for (const h of [...(this.f?.held ?? []), ...(this.legacy?.held ?? [])]) h.secret = '0'.repeat(h.secret.length);
+    for (const h of [...(this.f?.held ?? []), ...(this.legacy?.held ?? [])]) wipe(h);
     this.key?.fill(0);
     this.f = this.key = this.kdf = this.env = this.legacy = null;
     for (const x of [p, `${p}.tmp`]) erase(x);
@@ -473,7 +524,8 @@ export class Runner {
   remove(a: { id: string }): RunnerView {
     const f = this.file();
     const h = f.held.find((x) => x.id === a.id);
-    if (h) h.secret = '0'.repeat(h.secret.length);
+    if (h) wipe(h);
+    f.memberAsks = (f.memberAsks ?? []).filter((x) => x.identity !== a.id);
     f.held = f.held.filter((x) => x.id !== a.id);
     f.log = f.log.filter((x) => x.identity !== a.id);
     f.lines = f.lines.filter((x) => x.identity !== a.id);
@@ -514,23 +566,34 @@ export class Runner {
   }
 
   /** What an app learns of its pairing (2.4). */
-  paired(token: string | undefined): { state: Pairing['state']; name: string; code: string; open: boolean; identities: { id: string; name: string | null; binding: string; key: string; spent: boolean; homes: string[] }[] } {
+  paired(token: string | undefined): {
+    state: Pairing['state'];
+    name: string;
+    code: string;
+    opens: string[];
+    identities: { id: string; name: string | null; binding: string; key: string; spent: boolean; homes: string[]; members: { collective: string; terms: string; signature: string; position: number }[] }[];
+    asked: { identity: string; collective: string }[];
+  } {
     const p = this.pairingOf(token, false);
     const f = this.file();
     return {
       state: p.state,
       name: p.name,
       code: p.code,
-      open: p.state === 'approved' && !!p.open,
+      opens: p.state === 'approved' ? opensOf(p) : [],
       identities:
         p.state === 'approved'
-          ? f.held.filter((h) => p.identities.includes(h.id)).map((h) => ({ id: h.id, name: h.name, binding: h.binding, key: hex(signingPublic(unhex(h.secret))), spent: !!h.spent, homes: h.homes.map((x) => x.hint) }))
+          ? f.held
+              .filter((h) => p.identities.includes(h.id))
+              // Draft 3: the member keys held for it, their public parts only (never a secret).
+              .map((h) => ({ id: h.id, name: h.name, binding: h.binding, key: hex(signingPublic(unhex(h.secret))), spent: !!h.spent, homes: h.homes.map((x) => x.hint), members: (h.members ?? []).map((m) => ({ collective: m.collective, terms: m.terms, signature: m.signature, position: m.position })) }))
           : [],
+      asked: (f.memberAsks ?? []).filter((x) => x.app === p.id).map((x) => ({ identity: x.identity, collective: x.collective })),
     };
   }
 
   /** Approve a pairing (2.2), with the identities the app may use, and whether it may have what is sealed to them opened (draft 2, 8.1). */
-  approve(a: { pairing: string; identities: string[]; open?: boolean }): RunnerView {
+  approve(a: { pairing: string; identities: string[]; opens?: string[] }): RunnerView {
     const f = this.file();
     const p = f.apps.find((x) => x.id === a.pairing);
     if (!p) throw new Error('No such pairing waits here.');
@@ -538,7 +601,9 @@ export class Runner {
     if (!ids.length) throw new Error('Choose at least one identity the app may use: give one to the runner first (Identities held here).');
     p.state = 'approved';
     p.identities = ids;
-    if (a.open !== undefined) p.open = a.open;
+    if (a.opens !== undefined) p.opens = a.opens.filter((x) => ids.includes(x));
+    else if (p.opens) p.opens = p.opens.filter((x) => ids.includes(x));
+    delete p.open;
     p.approved = Math.floor(this.now() / 1000);
     this.save();
     return this.view();
@@ -551,11 +616,14 @@ export class Runner {
     return this.approve(a);
   }
 
-  /** Let an approved app have what is sealed to its identities opened, or no more (draft 2, 8.1). */
-  setOpen(a: { pairing: string; on: boolean }): RunnerView {
+  /** Let an approved app have what is sealed to one of its identities opened, or no more (draft 3: per identity, per app). */
+  setOpen(a: { pairing: string; identity: string; on: boolean }): RunnerView {
     const p = this.file().apps.find((x) => x.id === a.pairing && x.state === 'approved');
     if (!p) throw new Error('No such app is paired here.');
-    p.open = a.on;
+    if (!p.identities.includes(a.identity)) throw new Error('This app does not use that identity through Kišib.');
+    const now = opensOf(p);
+    p.opens = a.on ? [...new Set([...now, a.identity])] : now.filter((x) => x !== a.identity);
+    delete p.open;
     this.save();
     return this.view();
   }
@@ -611,7 +679,7 @@ export class Runner {
   }
 
   /** A request from an app (3.1): signed at once under a standing yes or as a companion, asked in a panel otherwise, refused with its reason. */
-  async ask(token: string | undefined, req: SignRequest, panelBase: string): Promise<Answer> {
+  async ask(token: string | undefined, req: RunnerRequest, panelBase: string): Promise<Answer> {
     const p = this.pairingOf(token);
     const f = this.file();
     if (!p.identities.includes(req.identity)) throw new RunnerRefusal(403, `Kišib’s runner does not sign as ${idForm(req.identity)} for ${p.name}: approve it for this app in Kišib (Runner, Apps). Nothing was signed.`);
@@ -619,6 +687,7 @@ export class Runner {
     if (!h) throw new RunnerRefusal(403, 'Kišib’s runner does not hold this identity any more. Nothing was signed.');
     const outright = refusedOutright(req);
     if (outright) throw new RunnerRefusal(400, outright);
+    if (req.as !== undefined) return this.askAsMember(p, h, req, panelBase);
     await this.keyCheck(h);
     if (req.binding !== h.binding) throw new RunnerRefusal(409, 'The request names the identity’s key before its last change: the app reads the identity again and starts new lines. Nothing was signed.');
     this.sweep();
@@ -634,6 +703,8 @@ export class Runner {
     if (own && req.line === 'apart') {
       const of = f.log.find((x) => x.app === p.id && x.identity === req.identity && x.act === own.target && x.companion === sha256(keyDeliveryPayload(own.target, own.key, false)));
       if (of) return { signed: wire(this.sign(h, p, req, of.kind, [`The key of ${of.act.slice(0, 8)}… delivered to the identity itself, for its own apps.`], { standing: true, of: of.act })) };
+      // Draft 3 (decided: "if establishing lanes it has to be setup this way"): the key of a payment the app signed under its own lane, delivered to the identity itself.
+      if (await this.underOwnLane(h, own)) return { signed: wire(this.sign(h, p, req, 'keys', [LANE_WORDS(p.name)], { standing: true, of: own.target, lane: true })) };
     }
     const kind = kindOf(req);
     const words = wordsOf(req, p.name);
@@ -644,16 +715,146 @@ export class Runner {
   }
 
   private asks(w: Waiting, p: Pairing, panelBase: string): Answer {
-    return { asks: { request: w.fp, panel: `${panelBase}/runner/panel/${w.fp}`, kind: w.kind, title: `${p.name} asks Kišib to sign ${KIND_ONE[w.kind]}` } };
+    return { asks: { request: w.fp, panel: `${panelBase}/runner/panel/${w.fp}`, kind: w.kind, title: titleOf(p.name, w) } };
+  }
+
+  /**
+   * Whether a key delivered to the identity itself is the key of an act the
+   * app signed under a lane of this identity (draft 3, 7.5): the act, read
+   * from the identity's homes, opens with that key, is the identity's, is
+   * signed under another binding than its own key's (a grant), and is valid
+   * for any reader of its homes. Signed with the lane's key, it shows the
+   * app holds that lane. Anything else is a key act, asked in the panel.
+   */
+  private async underOwnLane(h: HeldId, own: { target: string; key: Uint8Array }): Promise<boolean> {
+    try {
+      const hints = h.homes.map((x) => x.hint);
+      let bytes: Uint8Array | null = null;
+      for (const hint of hints) {
+        bytes = await relayAt(hint, this.via).getAct(own.target).catch(() => null);
+        if (bytes) break;
+      }
+      if (!bytes) return false;
+      const d = openWithKey(bytes, own.key) as { id: string; signer?: string; binding?: string };
+      if (d.id !== own.target || d.signer !== h.id || !d.binding || d.binding === h.binding) return false;
+      const look = await lookUp(h.id, hints, this.via);
+      for (const hint of hints) {
+        const grant = await relayAt(hint, this.via).getAct(d.binding).catch(() => null);
+        if (grant) {
+          look.verifier.add(grant);
+          break;
+        }
+      }
+      look.verifier.addWithKey(bytes, own.key);
+      const st = look.verifier.status(d.id) as string;
+      return st === 'valid' || st === 'scoped';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * An act of a collective, as one of its members (draft 3, section 9;
+   * decided: Kišib "signs with them itself through its panel"): signed with
+   * the member key Kišib holds for the identity, after the panel, always.
+   * The key never leaves Kišib; the app has the signed act, as for any act.
+   */
+  private askAsMember(p: Pairing, h: HeldId, req: RunnerRequest, panelBase: string): Answer {
+    const k = h.members?.find((m) => m.collective === req.as);
+    if (!k) throw new RunnerRefusal(403, NO_MEMBER_SAY);
+    if (req.binding !== k.signature) throw new RunnerRefusal(409, 'The request names another member key than the one Kišib holds for this collective: the app reads the collective again. Nothing was signed.');
+    this.sweep();
+    const fp = requestPrint(req);
+    const was = this.waiting.get(fp);
+    if (was && was.app === p.id) {
+      if (was.made) return { signed: wire(was.made) };
+      if (!was.declined) return this.asks(was, p, panelBase);
+      this.waiting.delete(fp);
+    }
+    const w: Waiting = { fp, app: p.id, identity: h.id, kind: kindOf(req), words: wordsOf(req, p.name), req, at: this.now(), nonce: null, wake: [] };
+    this.waiting.set(fp, w);
+    return this.asks(w, p, panelBase);
+  }
+
+  // ------------------------------------------------------------ member keys (draft 3, section 9)
+
+  /** An app asks Kišib to hold the identity's key for a collective (9.1): waiting for the person, here. */
+  memberAsk(token: string | undefined, a: { identity: string; collective: string; places: string[] }): { held: boolean; asked: boolean } {
+    const p = this.pairingOf(token);
+    const f = this.file();
+    if (!p.identities.includes(a.identity)) throw new RunnerRefusal(403, `Kišib’s runner does not hold ${idForm(a.identity)} for ${p.name}. Nothing was asked.`);
+    const h = f.held.find((x) => x.id === a.identity);
+    if (!h) throw new RunnerRefusal(403, 'Kišib’s runner does not hold this identity any more. Nothing was asked.');
+    const collective = readId(a.collective);
+    if (h.members?.some((m) => m.collective === collective)) return { held: true, asked: false };
+    f.memberAsks = (f.memberAsks ?? []).filter((x) => !(x.app === p.id && x.identity === h.id && x.collective === collective));
+    if (f.memberAsks.length >= 10) throw new RunnerRefusal(429, 'Too many keys wait to be added in Kišib: answer them first.');
+    const places = [...new Set(a.places.map((x) => x.trim()).filter((x) => /^https?:\/\//.test(x)))].slice(0, 8);
+    f.memberAsks.push({ id: randomBytes(8).toString('hex'), app: p.id, appName: p.name, identity: h.id, collective, places, at: Math.floor(this.now() / 1000) });
+    this.save();
+    return { held: false, asked: true };
+  }
+
+  /**
+   * Answer an app's ask (9.1). Yes: Kišib, holding the identity's words,
+   * opens the member keys sealed to it at its homes (the member keys cMIP,
+   * as any app holding the words does), takes the one for this collective,
+   * and keeps it with the identity, encrypted under the passphrase.
+   */
+  async memberAnswer(a: { ask: string; yes: boolean }): Promise<RunnerView> {
+    const f = this.file();
+    const x = (f.memberAsks ?? []).find((m) => m.id === a.ask);
+    if (!x) throw new Error('This ask waits no more.');
+    f.memberAsks = (f.memberAsks ?? []).filter((m) => m.id !== a.ask);
+    if (!a.yes) {
+      this.save();
+      return this.view();
+    }
+    const h = f.held.find((m) => m.id === x.identity);
+    if (!h) throw new Error('Kišib does not hold this identity any more.');
+    const seed = unhex(h.secret);
+    const enc = encryptionSecret(seed);
+    seed.fill(0);
+    const homes = h.homes.map((m) => m.hint);
+    let k;
+    try {
+      const keys = await readMemberKeys(h.id, [enc], homes, this.via);
+      k = keys.length ? await memberKeyFor(keys, x.collective, [...new Set([...x.places, ...homes])], this.via) : null;
+    } finally {
+      enc.fill(0);
+    }
+    if (!k) {
+      this.save();
+      throw new Error(`No key of ${h.name ?? 'this identity'} for that collective was found sealed to it at its homes: one is made when it signs the collective’s founding (in Edubba). Nothing was kept.`);
+    }
+    h.members = [...(h.members ?? []).filter((m) => m.collective !== x.collective), { collective: x.collective, act: k.act, terms: k.terms, signature: k.signature, public: [k.public[0], hex(k.public[1])], secret: hex(k.secret), position: k.position, added: Math.floor(this.now() / 1000) }];
+    k.secret.fill(0);
+    this.save();
+    return this.view();
+  }
+
+  /** Forget a member key held for an identity (9.4). */
+  memberRemove(a: { identity: string; collective: string }): RunnerView {
+    const f = this.file();
+    const h = f.held.find((m) => m.id === a.identity);
+    const k = h?.members?.find((m) => m.collective === a.collective);
+    if (!h || !k) throw new Error('Kišib holds no such key.');
+    k.secret = '0'.repeat(k.secret.length);
+    h.members = (h.members ?? []).filter((m) => m.collective !== a.collective);
+    this.save();
+    return this.view();
   }
 
   /** Sign, keep what is signed, and the line's act for its card. */
-  private sign(h: HeldId, p: Pairing, req: SignRequest, kind: Kind, words: string[], o: { standing?: boolean; of?: string } = {}) {
+  private sign(h: HeldId, p: Pairing, req: RunnerRequest, kind: Kind, words: string[], o: { standing?: boolean; of?: string; lane?: boolean } = {}) {
     const f = this.file();
+    // Draft 3: as a collective, with the member key held for the identity (9.2).
+    const member = req.as !== undefined ? h.members?.find((m) => m.collective === req.as) : undefined;
+    if (req.as !== undefined && !member) throw new RunnerRefusal(403, NO_MEMBER_SAY);
     const made = makeEveryday({
-      signingSecret: unhex(h.secret),
-      signer: h.id,
-      binding: h.binding,
+      signingSecret: unhex(member ? member.secret : h.secret),
+      signer: member ? member.collective : h.id,
+      binding: member ? member.signature : h.binding,
       spec: req.spec,
       type: req.type,
       payload: req.payload,
@@ -664,10 +865,10 @@ export class Runner {
       refs: req.refs,
       acks: req.acks,
     }) as { act: Uint8Array; id: string; key: Uint8Array };
-    const entry: Signed = { at: Math.floor(this.now() / 1000), app: p.id, appName: p.name, identity: h.id, kind, words, act: made.id, line: req.line, position: req.sequence.length + 1, ...(o.standing ? { standing: true } : {}), ...(o.of ? { of: o.of } : {}) };
-    if (!req.public && req.line !== 'apart') entry.companion = sha256(keyDeliveryPayload(made.id, made.key, false));
+    const entry: Signed = { at: Math.floor(this.now() / 1000), app: p.id, appName: p.name, identity: h.id, kind, words, act: made.id, line: req.line, position: req.sequence.length + 1, ...(o.standing ? { standing: true } : {}), ...(o.of ? { of: o.of } : {}), ...(member ? { as: member.collective } : {}), ...(o.lane ? { lane: true } : {}) };
+    if (!req.public && req.line !== 'apart' && !member) entry.companion = sha256(keyDeliveryPayload(made.id, made.key, false));
     f.log.push(entry);
-    if (req.line !== 'apart') {
+    if (req.line === 'public' || req.line === 'private') {
       const line = req.line;
       f.lines = f.lines.filter((l) => !(l.identity === h.id && l.app === p.id && l.line === line));
       f.lines.push({ identity: h.id, app: p.id, appName: p.name, binding: h.binding, line, ids: [...req.sequence, made.id] });
@@ -750,7 +951,7 @@ export class Runner {
   open(token: string | undefined, a: { identity: string; sealed: Uint8Array[] }): { opened: ({ act: string; key: string | null } | null)[] } {
     const p = this.pairingOf(token);
     const f = this.file();
-    if (!p.open) throw new RunnerRefusal(403, NO_OPEN_SAY);
+    if (p.identities.includes(a.identity) && !opensOf(p).includes(a.identity)) throw new RunnerRefusal(403, NO_OPEN_SAY);
     if (!p.identities.includes(a.identity)) throw new RunnerRefusal(403, `Kišib’s runner does not open for ${p.name} as ${idForm(a.identity)}: approve it for this app in Kišib (Runner, Apps). Nothing was opened.`);
     const h = f.held.find((x) => x.id === a.identity);
     if (!h) throw new RunnerRefusal(403, 'Kišib’s runner does not hold this identity any more. Nothing was opened.');
@@ -830,10 +1031,10 @@ export class Runner {
   panelWords(x: NonNullable<ReturnType<Runner['panelFor']>>): { title: string; as: string; words: string[]; always: string | null } {
     const { w, app, held } = x;
     return {
-      title: `${app.name} asks Kišib to sign ${KIND_ONE[w.kind]}`,
-      as: `As ${held.name ?? 'this identity'} · ${short(idForm(held.id))} · ${w.req.public ? 'public' : 'private'}`,
+      title: titleOf(app.name, w),
+      as: w.req.as !== undefined ? `As the collective ${short(idForm(w.req.as))}, with ${held.name ?? 'this identity'}’s own member key · ${w.req.public ? 'public' : 'private'}` : `As ${held.name ?? 'this identity'} · ${short(idForm(held.id))} · ${w.req.public ? 'public' : 'private'}`,
       words: w.words,
-      always: ALWAYS_ASKS.includes(w.kind) ? null : `Always yes for ${app.name}’s ${KIND_NAME[w.kind]}`,
+      always: ALWAYS_ASKS.includes(w.kind) || w.req.as !== undefined ? null : `Always yes for ${app.name}’s ${KIND_NAME[w.kind]}`,
     };
   }
 
@@ -884,21 +1085,28 @@ export class Runner {
       upgrade: !!this.legacy,
       since: f?.since ?? null,
       risk: RISK_SAY,
-      held: (f?.held ?? []).map((h) => ({ id: h.id, form: idForm(h.id), name: h.name, spent: !!h.spent, homes: h.homes.map((x) => x.hint), apps: (f?.apps ?? []).filter((p) => p.state === 'approved' && p.identities.includes(h.id)).map((p) => p.name) })),
-      apps: (f?.apps ?? []).map((p) => ({ id: p.id, name: p.name, origin: p.origin, code: p.code, state: p.state, identities: p.identities, yes: p.yes, open: !!p.open, asked: p.asked, approved: p.approved ?? null })),
+      held: (f?.held ?? []).map((h) => ({ id: h.id, form: idForm(h.id), name: h.name, spent: !!h.spent, homes: h.homes.map((x) => x.hint), apps: (f?.apps ?? []).filter((p) => p.state === 'approved' && p.identities.includes(h.id)).map((p) => p.name), members: (h.members ?? []).map((m) => ({ collective: m.collective, form: idForm(m.collective), added: m.added })) })),
+      memberAsks: (f?.memberAsks ?? []).map((x) => ({ id: x.id, app: x.appName, identity: x.identity, name: name(x.identity), collective: x.collective, form: idForm(x.collective), at: x.at })),
+      apps: (f?.apps ?? []).map((p) => ({ id: p.id, name: p.name, origin: p.origin, code: p.code, state: p.state, identities: p.identities, yes: p.yes, opens: opensOf(p), asked: p.asked, approved: p.approved ?? null })),
       waiting: [...this.waiting.values()]
         .filter((w) => !w.made && !w.declined)
         .map((w) => {
           const app = f?.apps.find((p) => p.id === w.app);
-          return { request: w.fp, app: app?.name ?? 'an app', identity: w.identity, name: name(w.identity), kind: w.kind, title: `${app?.name ?? 'An app'} asks Kišib to sign ${KIND_ONE[w.kind]}`, words: w.words, at: Math.floor(w.at / 1000), always: ALWAYS_ASKS.includes(w.kind) };
+          return { request: w.fp, app: app?.name ?? 'an app', identity: w.identity, name: name(w.identity), kind: w.kind, title: titleOf(app?.name ?? 'An app', w), words: w.words, at: Math.floor(w.at / 1000), always: ALWAYS_ASKS.includes(w.kind) || w.req.as !== undefined };
         }),
       signed: (f?.log ?? [])
         .slice()
         .reverse()
-        .map((s) => ({ at: s.at, app: s.appName, identity: s.identity, name: name(s.identity), kind: s.kind, words: s.words, act: s.act, standing: !!s.standing, line: s.line, position: s.position, opened: !!s.opened, sealed: s.sealed ?? null, times: s.times ?? 1 })),
+        .map((s) => ({ at: s.at, app: s.appName, identity: s.identity, name: name(s.identity), kind: s.kind, words: s.words, act: s.act, standing: !!s.standing, line: s.line, position: s.position, opened: !!s.opened, sealed: s.sealed ?? null, times: s.times ?? 1, as: s.as ?? null, lane: !!s.lane })),
       kinds: KINDS.map((k) => ({ kind: k, name: KIND_NAME[k], always: ALWAYS_ASKS.includes(k) })),
     };
   }
+}
+
+/** An identity's secrets overwritten in memory, its member keys' with them. */
+function wipe(h: HeldId) {
+  h.secret = '0'.repeat(h.secret.length);
+  for (const m of h.members ?? []) m.secret = '0'.repeat(m.secret.length);
 }
 
 /** A file overwritten, as far as software can (a copy the system made elsewhere is out of reach), then removed. */
@@ -915,6 +1123,9 @@ function erase(x: string) {
   rmSync(x, { force: true });
 }
 
+/** A request's title, as the panel and Waiting say it. */
+const titleOf = (app: string, w: { kind: Kind; req: RunnerRequest }) => `${app} asks Kišib to sign ${KIND_ONE[w.kind]}${w.req.as !== undefined ? ' as a collective' : ''}`;
+
 /** At most this many sealed containers opened in one request. */
 export const OPEN_MAX = 100;
 
@@ -926,7 +1137,7 @@ const short = (form: string) => {
 const wire = (m: { act: Uint8Array; id: string; key: Uint8Array }) => ({ act: base64(m.act), id: m.id, key: base64(m.key) });
 
 /** A request as an app sends it (3.1), read from JSON: the payload in base64. */
-export function readRequest(v: unknown): SignRequest {
+export function readRequest(v: unknown): RunnerRequest {
   const o = (v ?? {}) as Record<string, unknown>;
   const str = (x: unknown, what: string) => {
     if (typeof x !== 'string') throw new RunnerRefusal(400, `The request’s ${what} is missing. Nothing was signed.`);
@@ -939,7 +1150,7 @@ export function readRequest(v: unknown): SignRequest {
   };
   const list = (x: unknown, what: string): string[] | undefined => (x === undefined || x === null ? undefined : Array.isArray(x) ? x.map((y) => h64(y, what)) : (() => { throw new RunnerRefusal(400, `The request’s ${what} is not a list. Nothing was signed.`); })());
   const line = str(o.line, 'line');
-  if (line !== 'public' && line !== 'private' && line !== 'apart') throw new RunnerRefusal(400, 'The request names no line: public, private or apart. Nothing was signed.');
+  if (line !== 'public' && line !== 'private' && line !== 'apart' && line !== 'member') throw new RunnerRefusal(400, 'The request names no line: public, private, apart or member. Nothing was signed.');
   const type = o.type;
   if (typeof type !== 'number' || !Number.isInteger(type) || type < 0) throw new RunnerRefusal(400, 'The request’s type is not a number. Nothing was signed.');
   const payload = Uint8Array.from(Buffer.from(str(o.payload, 'payload'), 'base64'));
@@ -958,6 +1169,7 @@ export function readRequest(v: unknown): SignRequest {
     ...(Array.isArray(o.objects) ? { objects: o.objects.map(pair) } : {}),
     ...(refs ? { refs } : {}),
     ...(list(o.acks, 'acks') ? { acks: list(o.acks, 'acks') } : {}),
+    ...(o.as !== undefined && o.as !== null ? { as: h64(o.as, 'collective') } : {}),
   };
 }
 

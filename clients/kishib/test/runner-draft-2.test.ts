@@ -125,7 +125,7 @@ test('locked: Kišib closed with the runner on, reopened, the passphrase given: 
   assert.equal((await state(k.c)).signed.length, 2);
   assert.equal((await state(k.c)).apps.length, 1, 'no new pairing');
 
-  // Lock it now, without quitting Kišib: locked, Dub refused; the passphrase given, back.
+  // Lock now, without quitting Kišib: locked, Dub refused; the passphrase given, back.
   assert.equal((await k.c.ask<RunnerView>('runner lock')).state, 'locked');
   await refused(d.c.ask('post', { text: 'Locked from the page.' }), /Kišib is locked/);
   assert.equal((await k.c.ask<RunnerView>('runner unlock', { passphrase: PASS })).apps.length, 1);
@@ -173,8 +173,8 @@ test('opening: Dub approved with “may open” reads a private message from som
   const d = await dubBeside(k.dir);
   await d.c.ask('runner pair');
   const p = (await state(k.c)).apps[0];
-  let v = await k.c.ask<RunnerView>('runner approve', { pairing: p.id, identities: [a.id], open: true });
-  assert.equal(v.apps[0].open, true);
+  let v = await k.c.ask<RunnerView>('runner approve', { pairing: p.id, identities: [a.id], opens: [a.id] });
+  assert.deepEqual(v.apps[0].opens, [a.id]);
   const took = await d.c.ask<{ lines: { text: string }[] }>('runner take', { id: a.id });
   assert.ok(took.lines.some((l) => l.text === RUNNER_OPENS_SAY));
 
@@ -217,7 +217,7 @@ test('opening: Dub approved with “may open” reads a private message from som
   assert.equal(box2.opening, RUNNER_NO_OPEN_SAY);
   assert.ok(!box2.messages.some((m) => m.text === 'A private reply for A, sealed to it.'));
   assert.ok(box2.messages.some((m) => m.problem === RUNNER_NO_OPEN_SAY), 'the sealed reply is listed, unread, said why');
-  await k.c.ask('runner opening', { pairing: p2.id, on: true });
+  await k.c.ask('runner opening', { pairing: p2.id, identity: a.id, on: true });
   box2 = await d2.c.ask('inbox');
   assert.equal(box2.encryption, true);
   assert.ok(box2.messages.some((m) => m.text === 'A private reply for A, sealed to it.'), 'read once allowed');
@@ -228,7 +228,7 @@ test('opening: Dub approved with “may open” reads a private message from som
   const probe = k.app.runner.pair({ name: 'Probe', origin: 'http://127.0.0.1:1' });
   k.app.runner.approve({ pairing: probe.pairing, identities: [a.id] });
   assert.throws(() => k.app.runner.open(probe.token, { identity: a.id, sealed }), re(NO_OPEN_SAY));
-  k.app.runner.setOpen({ pairing: probe.pairing, on: true });
+  k.app.runner.setOpen({ pairing: probe.pairing, identity: a.id, on: true });
   const got = k.app.runner.open(probe.token, { identity: a.id, sealed });
   assert.ok(got.opened.some(Boolean));
   const enc = encryptionSecret(fromWords(words));

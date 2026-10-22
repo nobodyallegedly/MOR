@@ -6,7 +6,13 @@
 #   sh scripts/make-app.sh
 # The app remembers where Node and this folder are; run it again if either
 # moves. It is not signed or notarised (as Dub, README). The program's
-# folder is ~/mor-kishib: it holds only which browsers are paired.
+# folder is ~/mor-kishib: it holds only which browsers are paired, and the
+# runner's file, encrypted, while the runner is on or locked.
+#
+# Kišib's seal in the menu bar (the Dubsar runner cMIP, draft 3, section 10):
+# a small Swift helper (seal/main.swift), built here into the app where
+# Apple's command-line tools are present (xcode-select --install), and started
+# with Kišib. Without them, Kišib works the same, with no seal: said below.
 set -e
 here=$(cd "$(dirname "$0")/.." && pwd)
 node=$(command -v node)
@@ -29,9 +35,26 @@ cat > "$app/Contents/Info.plist" <<PLIST
 <key>LSUIElement</key><true/>
 </dict></plist>
 PLIST
+seal="$app/Contents/MacOS/kishib-seal"
+# A seal left running from an earlier build is stopped before its file is replaced.
+pkill -f "$seal" 2>/dev/null || true
+rm -f "$seal"
+if command -v xcrun >/dev/null 2>&1 && xcrun --find swiftc >/dev/null 2>&1; then
+  if xcrun swiftc -O -o "$seal" "$here/seal/main.swift"; then
+    echo "made Kišib's seal in the menu bar"
+  else
+    echo "Kišib's seal did not build (above): Kišib works, without its seal in the menu bar."
+  fi
+else
+  echo "Apple's command-line tools are not installed (xcode-select --install), so Kišib's seal in the menu bar is not built: Kišib works without it. Run this script again once they are."
+fi
 cat > "$app/Contents/MacOS/kishib" <<SCRIPT
 #!/bin/sh
-cd "$here" && exec "$node" --import tsx src/cli.ts open >> "\$HOME/mor-kishib-launcher.log" 2>&1
+cd "$here" && "$node" --import tsx src/cli.ts open >> "\$HOME/mor-kishib-launcher.log" 2>&1
+# Its seal in the menu bar, once: started with Kišib if built and not already there.
+if [ -x "$seal" ] && ! pgrep -f "$seal" >/dev/null 2>&1; then
+  nohup "$seal" >/dev/null 2>&1 &
+fi
 SCRIPT
 chmod +x "$app/Contents/MacOS/kishib"
 # Finder reads an app's icon again once the app is newer than what it remembers.
