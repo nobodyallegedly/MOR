@@ -325,6 +325,16 @@ fn verdict_vectors() {
                         .collect();
                     json!({ "counting": r.links.iter().map(|l| hex::encode(l.act)).collect::<Vec<_>>(), "next": stop, "dishonest": dishonest })
                 }
+                "succession" => {
+                    use mor_core::chain::SuccessionSeen as S;
+                    match v.succession(&h(&ask["identity"])) {
+                        S::None => json!({ "seen": "none" }),
+                        S::Declared { successor, .. } => json!({ "seen": "declared", "successor": hex::encode(successor) }),
+                        S::Confirmed { successor, confirmation, .. } => json!({ "seen": "confirmed, followed", "successor": hex::encode(successor), "confirmation": hex::encode(confirmation) }),
+                        S::Unknown { successor, .. } => json!({ "seen": "unknown", "successor": hex::encode(successor) }),
+                        S::Elsewhere { .. } => json!({ "seen": "another protocol's" }),
+                    }
+                }
                 "status after keepers" => {
                     let (rescued, unknown) = {
                         let av = AgreementsView::new(&v, mirs.clone());
@@ -401,7 +411,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 85);
+    assert_eq!(n, 87);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.

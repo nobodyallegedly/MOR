@@ -35,7 +35,7 @@ The core also now follows the new sentences:
 - One mislabelled case is renamed.
 - Canonical text uses Text's own rule numbers (7 to 12).
 - There is a new NaN case.
-- There are sixteen new verdict vectors, 85 in all.
+- There are eighteen new verdict vectors, 87 in all.
 
 **What a C verifier now meets that it did not.** Each of these has a vector:
 - a rotation not counting;
@@ -51,7 +51,7 @@ The core also now follows the new sentences:
 
 Both vector READMEs end with "What changed since the previous edition". They list each of these changes, so that the next C run can tell a known change from a divergence.
 
-**What is not done.** Part 4, the reusable family of chain-signature acts for the heavy rules, is not built (below).
+**What is not done.** Of Part 4, only a succession, declared and confirmed, has vectors. The reusable family of chain-signature acts for a collective's fork and closing, and the rest, is not built (below).
 
 ## Precisely
 
@@ -137,16 +137,18 @@ No finding number, review label or history appears in them.
 
 Facts gain `rail_payments`, `content_keys` and `found_at_home`, and the file's `about` says so. Q41 was written with a change of payment cMIP, not of an area's number, because an area is in the constitutional tier (Agreements, "Any other change to the constitutional tier (the change rules, the key grammar, the areas)…"), which only a rotation declares. The core refused the area version for that reason, and the text agrees.
 
-**Totals:** 85 verdict vectors (24 Identity, 8 Text, 5 Envelopes, 11 Money, 24 Agreements, 7 Development, 6 MIR hashes); `verdicts.json` is about 1.1 MB. The Python check judges 26 verdict vectors and 192 checks in all. Regenerating the vectors gives the same bytes.
+**Totals:** 87 verdict vectors (26 Identity, 8 Text, 5 Envelopes, 11 Money, 24 Agreements, 7 Development, 6 MIR hashes); `verdicts.json` is about 1.1 MB. The Python check judges 26 verdict vectors and 192 checks in all. Regenerating the vectors gives the same bytes.
 
-### Part 4, not built
+### Part 4, begun
 
-Part 4 is the family of chain-signature acts for the heavy rules (collective fork and closing, succession confirmed, nesting, judgment). I stopped before it at a clean point. Parts 1 to 3 changed the core's money and chain rules and every act id, and CI must be green on them first.
+One heavy rule now has vectors without new chain signatures: **a succession**, declared (shown, not followed) and confirmed by the successor's link confirmation naming the rotation (followed), under a new "succession" question. It costs one rotation's signature, already in the pool.
+
+The rest of Part 4 is the family of chain-signature acts for the collective's fork and closing, agreements as parties, and judgment. I stopped before it at a clean point. Parts 1 to 3 changed the core's money and chain rules and every act id, and CI must be green on them first.
 
 The plan for a next session:
 - Build one collective with SLH-DSA-SHA2-128f chain signatures in a shared prefix of the pool: its founding, its members' chain signatures, one closing and one fork side. Name every case on it by act id, so that the signatures (17 kB each) are paid once.
 - State the file's size in the README.
-- Start with succession confirmed (one rotation and one confirmation), then the closing, then the fork.
+- Start with the closing, then the fork.
 
 ## For the Dubsar Suite
 

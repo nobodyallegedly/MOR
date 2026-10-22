@@ -85,6 +85,18 @@ fn status_name(s: Status) -> &'static str {
     }
 }
 
+/// A succession as a verifier sees it (Identity, "Succession").
+pub fn succession_json(s: mor_core::chain::SuccessionSeen) -> J {
+    use mor_core::chain::SuccessionSeen as S;
+    match s {
+        S::None => json!({ "seen": "none" }),
+        S::Declared { successor, .. } => json!({ "seen": "declared", "successor": hx(&successor) }),
+        S::Confirmed { successor, confirmation, .. } => json!({ "seen": "confirmed, followed", "successor": hx(&successor), "confirmation": hx(&confirmation) }),
+        S::Unknown { successor, .. } => json!({ "seen": "unknown", "successor": hx(&successor) }),
+        S::Elsewhere { .. } => json!({ "seen": "another protocol's" }),
+    }
+}
+
 pub fn backing_name(b: &Backing) -> &'static str {
     match b {
         Backing::NotUnderGrant => "not under a grant",
@@ -333,6 +345,7 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             json!({ "counting": r.links.iter().map(|l| hx(&l.act)).collect::<Vec<_>>(), "next": stop,
                     "dishonest": r.dishonest.iter().map(|(o, p)| json!({ "operator": match o { mor_core::identity::Operator::Id(x) => hx(x), mor_core::identity::Operator::Own => "own".into() }, "from_position": p })).collect::<Vec<_>>() })
         }
+        "succession" => succession_json(w.v.succession(&h("identity"))),
         "status after keepers" => {
             let (rescued, unknown) = { let v = view(w); (v.keeper_disputed_acts(), v.keeper_unknown_acts()) };
             for a in rescued {
@@ -554,7 +567,22 @@ pub fn identity(out: &mut Out) {
     w.receipt(&mut home, &s.id, &r, 1);
     let res = w.v.resolve(&s.id);
     assert_eq!(res.states[1].successor, Some(Successor { protocol: "mor".into(), identifier: heir.id.to_vec() }));
+    let log = w.log.clone();
     out.case(&mut w, "a rotation declaring a successor: it counts, the succession declared", "Identity, \"Succession\"", "The rotation counts; the successor is shown as declared until it confirms.", Facts::default(), ask_status(&r), json!("valid"), None);
+    let mut w2 = World::new();
+    for (a, _) in &log {
+        w2.add(a);
+    }
+    out.case(&mut w2, "the succession, unconfirmed: declared, not followed", "Identity, \"Succession\"", "The successor has not confirmed it.",
+        Facts::default(), json!({ "question": "succession", "identity": hx(&s.id) }), json!({ "seen": "declared", "successor": hx(&heir.id) }), None);
+    let mut w3 = World::new();
+    for (a, _) in &log {
+        w3.add(a);
+    }
+    let mut heir = heir;
+    let conf = { let a = w3.everyday_act(&mut heir, mirs().identity, mor_core::identity::types::LINK_CONFIRMATION, vec![], Some(vec![Object { chain: s.id, predecessor: r }]), None); w3.add(&a) };
+    out.case(&mut w3, "the succession confirmed by the successor's link confirmation naming the rotation: followed", "Identity, \"Succession\"", "A succession to a MOR identity is followed once that identity confirms it.",
+        Facts::default(), json!({ "question": "succession", "identity": hx(&s.id) }), json!({ "seen": "confirmed, followed", "successor": hx(&heir.id), "confirmation": hx(&conf) }), None);
 
     // A forged receipt changes nothing.
     let mut w = World::new();
