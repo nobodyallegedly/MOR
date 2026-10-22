@@ -160,7 +160,14 @@ impl<'a> AgreementsView<'a> {
     /// together at least its exact proportion of the price (mechanic, the
     /// build's: no holder pays less than its exact part).
     #[allow(clippy::too_many_arguments)]
+    /// Judged as [`Self::judged`] says: unknown only where it depends on
+    /// whether two records whose payment is not stated are one payment.
     fn took_up(&self, col: &Col, at: Line<'a>, x: &Held, offer: &IssuanceOffer, h: &Hash, share: u64, lapsed: bool) -> R<bool> {
+        self.judged_r(|| self.took_up_unjudged(col, at, x, offer, h, share, lapsed))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn took_up_unjudged(&self, col: &Col, at: Line<'a>, x: &Held, offer: &IssuanceOffer, h: &Hash, share: u64, lapsed: bool) -> R<bool> {
         for s in self.v.signed_by(h) {
             if !self.is_agreements(s, types::SIGNATURE) || decode_signature(&s.inside).ok() != Some(x.id) {
                 continue;
@@ -243,10 +250,10 @@ impl<'a> AgreementsView<'a> {
     pub(super) fn paid_to_for(&self, payee: &Hash, fulfils: &Hash, unit: &Hash) -> u64 {
         use crate::money::Payload as Fin;
         let counts = |id: &Hash, amount: &crate::money::Amount, proof: &[u8]| {
-            &amount.unit == unit && self.rail_valid.get(id).is_some_and(|at| self.payment_counts(payee, at, amount, proof, fulfils))
+            &amount.unit == unit && self.rail_valid.get(id).is_some_and(|at| self.payment_counts_rec(payee, at, amount, (Some(id), proof), fulfils))
         };
-        let mut receipts: Vec<(Vec<u8>, u64)> = vec![];
-        let mut claims: BTreeMap<Vec<u8>, u64> = BTreeMap::new();
+        let mut receipts: Vec<((Hash, Payment), u64)> = vec![];
+        let mut claims: Vec<((Hash, Payment), u64)> = vec![];
         for r in self.v.held_acts() {
             if r.inside.spec != self.mirs.money {
                 continue;
@@ -260,23 +267,17 @@ impl<'a> AgreementsView<'a> {
                         && counts(&r.id, &rc.amount, &rc.proof)
                         && !self.receipt_overruled(&rc) =>
                 {
-                    receipts.push((self.payment_of(&rc.proof), rc.amount.value));
+                    receipts.push(((rc.rail, self.record_payment(&r.id, &rc.proof)), rc.amount.value));
                 }
                 Ok(Fin::Claim(c))
                     if &c.fulfils == fulfils && &c.payee == payee && self.payers_claim(r) && counts(&r.id, &c.amount, &c.proof) && !self.claim_overruled(&c) =>
                 {
-                    let m = claims.entry(self.payment_of(&c.proof)).or_default();
-                    *m = (*m).max(c.amount.value);
+                    claims.push(((c.rail, self.record_payment(&r.id, &c.proof)), c.amount.value));
                 }
                 _ => {}
             }
         }
-        let mut sum = receipts.iter().map(|(_, v)| *v).fold(0u64, u64::saturating_add);
-        for (proof, claimed) in claims {
-            let receipted = receipts.iter().filter(|(p, _)| p == &proof).map(|(_, v)| *v).fold(0u64, u64::saturating_add);
-            sum = sum.saturating_add(claimed.saturating_sub(receipted));
-        }
-        sum
+        self.one_count(&receipts, &claims)
     }
 }
 

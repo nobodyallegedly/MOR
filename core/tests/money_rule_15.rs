@@ -140,7 +140,7 @@ impl Lab {
     }
 
     fn view(&self) -> AgreementsView<'_> {
-        let mut v = AgreementsView::new(&self.w.v, mirs());
+        let mut v = common::stand_in_payments(AgreementsView::new(&self.w.v, mirs()));
         v.rail_valid = self.rail_valid.clone();
         v.anchored = self.anchors.clone();
         v
@@ -256,7 +256,7 @@ impl Lab {
     }
 
     fn paid(&self, debt: &Hash) -> u64 {
-        self.view().paid_toward(debt)
+        self.view().paid_toward(debt).unwrap()
     }
 }
 

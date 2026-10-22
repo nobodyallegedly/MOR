@@ -401,7 +401,7 @@ impl Held for AgreementsHeld<'_> {
         out
     }
     fn payment_counts(&self, payee: &Hash, at: &PaidAt, amount: &Amount, proof: &[u8], fulfils: &Hash) -> Option<bool> {
-        Some(self.view.payment_counts(payee, at, amount, proof, fulfils))
+        self.view.payment_counts(payee, at, amount, proof, fulfils)
     }
 }
 
@@ -570,10 +570,10 @@ fn a_twin_proof_is_invalid_and_one_payment_counts_once() {
     let at = |index: u64| OnchainProof { request: p.request, confirmations: None, paid: Some(Paid { tx: t.clone(), output: 0, block: Some(Block { index, branch: branch.clone(), headers: headers.clone() }) }) };
     let (_, a) = s.receipt(&mut bob, label.id, debt, to_bob, p.salt, sat(1_000), &at(2));
     assert_eq!(a, Answer::Valid);
-    assert_eq!(s.view().paid_toward(&debt), 1_000);
+    assert_eq!(s.view().paid_toward(&debt).unwrap(), 1_000);
     let (_, a) = s.claim(&mut label, debt, to_bob, p.salt, sat(1_000), &at(3));
     assert!(matches!(a, Answer::Invalid(ref w) if w.contains("canonical")), "FIXED (F200): {a:?}");
-    assert_eq!(s.view().paid_toward(&debt), 1_000, "FIXED (F200): one payment of 1,000 counts once");
+    assert_eq!(s.view().paid_toward(&debt).unwrap(), 1_000, "FIXED (F200): one payment of 1,000 counts once");
 }
 
 // ---------------------------------------------------------------- 2b. Question 2, option 1: the pending claim's anchor
@@ -633,13 +633,13 @@ fn on_a_clock_that_is_not_bitcoin_a_pending_claim_counts_only_for_its_own_transa
     let (valid1, a) = s.claim(&mut label, d1, to_thief, p1.salt, sat(20_000), &proof1);
     assert_eq!(a, Answer::Valid);
     s.anchor(valid1, 170);
-    assert_eq!(s.view().paid_toward(&d1), 0, "FIXED (F200): the pending claim was for another transaction, another payment; nothing protects this one");
+    assert_eq!(s.view().paid_toward(&d1).unwrap(), 0, "FIXED (F200): the pending claim was for another transaction, another payment; nothing protects this one");
     // The second is the very transaction held back, broadcast now.
     let proof2 = p2.confirmed(&kept2, &mut s.chain);
     let (valid2, a) = s.claim(&mut label, d2, to_thief, p2.salt, sat(20_000), &proof2);
     assert_eq!(a, Answer::Valid);
     s.anchor(valid2, 175);
-    assert_eq!(s.view().paid_toward(&d2), 20_000, "STATED COST (F203): a transaction held back and anchored in the window is protected though paid after the lock change; the owner bears, and closes it by declaring Bitcoin as its clock");
+    assert_eq!(s.view().paid_toward(&d2).unwrap(), 20_000, "STATED COST (F203): a transaction held back and anchored in the window is protected though paid after the lock change; the owner bears, and closes it by declaring Bitcoin as its clock");
     let clock = Clock { main: s.main.reference(), backup: None };
     assert!(fin::claim_in_time(LockPoint::Main(160), &clock, &pending2, &s.anchors));
 }
@@ -679,7 +679,7 @@ fn the_owners_hour_wide_lever_is_shut_by_the_pending_claims_anchor() {
     let (valid, a) = s.claim(&mut label, d, to_owner, p.salt, sat(20_000), &proof);
     assert_eq!(a, Answer::Valid);
     s.anchor(valid, 170);
-    assert_eq!(s.view().paid_toward(&d), 20_000, "FIXED (F203): the claim anchored at payment counts once the same payment is valid; the owner's lever is shut");
+    assert_eq!(s.view().paid_toward(&d).unwrap(), 20_000, "FIXED (F203): the claim anchored at payment counts once the same payment is valid; the owner's lever is shut");
 }
 
 // ================================================================ 3. Privacy: what the chain and others learn

@@ -82,13 +82,13 @@ test('a text act naming a format this client lacks is still shown, as plain text
 
 test('a text that is not canonical never becomes a valid act', async () => {
   const bad = 'trailing space \nhere';
-  assert.throws(() => checkText(bad), /rule 4/);
+  assert.throws(() => checkText(bad), /Text rule 10/);
   const made = await author.publish(LONGFORM_SPECS.text, TEXT_ACT, textPayload(bad), { public: true, relays: [] });
   assert.equal((describeAct(made.act) as { payload?: Uint8Array }).payload, undefined, 'it does not open');
   // A relay that can open it (it is public) refuses it, or a reader does.
   await relayAt(relay.base).putAct(made.act).then(
     async () => {
-      await assert.rejects(readDocument(made.id, [relay.base]), /rule 4/);
+      await assert.rejects(readDocument(made.id, [relay.base]), /Text rule 10/);
     },
     () => {},
   );

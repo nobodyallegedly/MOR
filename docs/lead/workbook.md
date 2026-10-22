@@ -75,7 +75,29 @@ Read its report and its questions; read the CI run yourself (a session's green i
 ## After the box
 
 Any change to the eight texts after the box was sealed (MOR commit `564ca17`) is listed here, so Fable's review can tell a known difference from a divergence the C session found.
-- None yet.
+
+S7 (branch `claude/s7-fixes`, F380), one line each:
+- Identity, "The rotation checks": a seventh check, a kept tip's summary fitting its line where the line is held; a tip that does not fit keeps nothing, itself included, and one whose sequence the verifier does not hold is kept by its name; a rotation whose every tip's line is held and none fits is invalid; its reason and stated cost in italics (Q17).
+- Identity, "Which rotation counts", a new paragraph "A rotation that does not count": passing the checks and losing at its position is neither invalid nor void but **not counting**; acts bound to it fail everyday check 2 (Q14).
+- Identity, "Which rotation counts", a new paragraph "What stops a chain": the seven reasons a verifier names, and two verifiers holding the same acts name the same one (Q15, Q49).
+- Identity, rule 34: an acknowledgement counts only when signed with the acknowledging identity's own key, never a scoped key (Q18).
+- Identity, rule 42: an act bound to a contested rotation is pending until the contest is settled (Q15).
+- Text, rule 14: naming the collective's latest decision is the client's duty; a verifier accepts any decision of the collective's own (Q24).
+- Text, rule 13: where a text breaks several of rules 7 to 12, the one named is the first in the order numbered (Q1).
+- Envelopes, before rule 1: the rules are numbered for reading and checked in the order the bytes allow; any one broken makes the act invalid (Q4).
+- Envelopes, rule 5: every CBOR text string in the inside, map keys included, at any depth, whatever specification the act names (Q5).
+- Envelopes, rule 9: marked client conformance; no verdict reads it (Q6).
+- Agreements, "Belongs to": followed through every step the acts held allow, at no fixed depth; unknown beyond an act not held (Q35).
+- Agreements, terms field 11's comment: the clone's `objects` names the parent and an act of its line, its latest where the client holds it, as the clone's rule says (Q33).
+- Agreements, rule 45: the parent's latest act marked client conformance (the latest the client holds; a verifier accepts any act of the parent's chain), with the field 11 comment (Q33).
+- Envelopes, "How to read this MIR": the client conformance mark defined (Q6).
+- After a stranger's reading (a subagent limited to the eight texts), the wording above was tightened: check 7 reads a tip's sequence up to and including it, and applies only to a rotation naming at least one tip; acts bound to a rotation not counting fail everyday check 2 and are invalid; rule 34's sentence is for that rule only, and names the signing key; rule 42 waits until the contest ends (by the escape at a self-hosted identity); Text rule 14's sentence is client conformance; Envelopes' order of checks names rules 1, 2, 3, 5 and 7 and leaves rules 4 and 30 as they are; "belongs to" is followed step by step, what is found through acts held standing.
+- Development, rule 26: unchanged; the core's MIR hash now follows it (Q46). Money, rule 12: unchanged; the core now follows it (Q27).
+
+S7b (branch `claude/s7b-follow-up`, F381), one line each:
+- Identity, "The rotation checks", check 7: the clause making a rotation invalid when every tip's sequence is held and none fits is dropped; "a tip that does not fit never makes the rotation invalid, whatever the verifier holds" added, and the commentary says why (a home receipts without the private lines; validity is fixed by the bytes).
+- Identity, "What stops a chain": two reasons renamed, "the genesis unknown" and "the genesis invalid".
+- After a stranger's reading: check 7 says what "fits" means, that a verifier can tell only holding every act of the sequence up to the tip, and that it decides what is kept, never validity, nor a failure under rule 29; its commentary says "valid" where it said "counts"; "What stops a chain" names each reason in bold; section 6's "Void needs …" speaks of every kept tip's line and the kept ancestry.
 
 ## Text edits waiting for the freeze-ready branch
 

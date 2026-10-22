@@ -264,6 +264,7 @@ fn verdict_vectors() {
         Status::Pending => "pending",
         Status::Invalid => "invalid",
         Status::Unknown => "unknown",
+        Status::NotCounting => "not counting",
         Status::Scoped => "scoped",
     };
     let mut n = 0;
@@ -272,15 +273,23 @@ fn verdict_vectors() {
             let what = c["name"].as_str().unwrap();
             let mut v = Verifier::with_mirs(mirs.identity, mirs.money, mirs.agreements).knowing_envelopes_and_text(mirs.envelopes, mirs.text);
             let mut refused = vec![];
+            let facts = &c["facts"];
             for id in c["acts"].as_array().unwrap() {
                 let act = Act::decode(&b(&f["pool"][id.as_str().unwrap()])).unwrap();
                 assert_eq!(hex::encode(act.id()), id.as_str().unwrap(), "{what}: the act's id");
-                if v.add(act).is_err() {
+                // A private act's content key, held as a recipient holds it.
+                let key: Option<[u8; 32]> = facts["content_keys"].get(id.as_str().unwrap()).map(|k| b(k).try_into().unwrap());
+                if v.add_with_key(act, key.as_ref()).is_err() {
                     refused.push(h(id));
                 }
             }
-            let facts = &c["facts"];
+            for x in facts["found_at_home"].as_array().into_iter().flatten() {
+                v.found_at_home(h(&x["act"]), h(&x["operator"]));
+            }
             for p in facts["inclusion_proofs"].as_array().into_iter().flatten() {
+                // The proof names the receipt it proves (Identity, "Audit"):
+                // the receipt is held, and is the one the verifier proves.
+                assert!(c["acts"].as_array().unwrap().iter().any(|a| a == &p["receipt"]), "{what}: the receipt a proof names is held");
                 v.add_inclusion_proof(h(&p["summary"]), p["index"].as_u64().unwrap(), p["path"].as_array().unwrap().iter().map(h).collect());
             }
             for o in facts["failed_to_reach"].as_array().into_iter().flatten() {
@@ -302,8 +311,8 @@ fn verdict_vectors() {
                     let r = v.resolve(&h(&ask["identity"]));
                     let stop = match r.stop {
                         Stop::NoGenesis => "no genesis",
-                        Stop::Unknown => "unknown",
-                        Stop::Invalid => "invalid genesis",
+                        Stop::GenesisUnknown => "genesis unknown",
+                        Stop::GenesisInvalid => "genesis invalid",
                         Stop::End => "end",
                         Stop::Pending(_) => "pending",
                         Stop::Contested(_) => "contested",
@@ -316,10 +325,50 @@ fn verdict_vectors() {
                         .collect();
                     json!({ "counting": r.links.iter().map(|l| hex::encode(l.act)).collect::<Vec<_>>(), "next": stop, "dishonest": dishonest })
                 }
+                "vow" => {
+                    use mor_core::agreements::SaleState as S;
+                    match with_facts(&v, &mirs, facts).vow(&h(&ask["vow"])) {
+                        Err(_) => json!("unknown"),
+                        Ok(e) => json!({
+                            "sales": e.sales.iter().map(|x| json!({ "act": hex::encode(x.act), "buyer": hex::encode(x.buyer), "state": match &x.state {
+                                S::Pending => "pending", S::Confirmed { .. } => "confirmed", S::Contested { .. } => "contested", S::Unknown => "unknown" } })).collect::<Vec<_>>(),
+                            "unsigned": e.unsigned.iter().map(hex::encode).collect::<Vec<_>>(),
+                            "unknown": e.unknown.iter().map(hex::encode).collect::<Vec<_>>(),
+                        }),
+                    }
+                }
+                "refund repaid" => with_facts(&v, &mirs, facts)
+                    .refund_repaid(&h(&ask["payment"]), &mor_core::money::RefundTo::Identity(h(&ask["to"])), &h(&ask["unit"]))
+                    .map_or(json!("unknown"), |x| json!(x)),
+                "version in force" => with_facts(&v, &mirs, facts).version_in_force(&h(&ask["act"])).map_or(json!("unknown"), |x| json!(hex::encode(x))),
+                "fork" => match with_facts(&v, &mirs, facts).fork(&h(&ask["act"])) {
+                    Ok(e) => json!({ "complete": e.complete }),
+                    Err(_) => json!("unknown"),
+                },
+                "closing" => match with_facts(&v, &mirs, facts).closing(&h(&ask["act"])) {
+                    Ok(e) => json!({ "complete": e.complete }),
+                    Err(_) => json!("unknown"),
+                },
+                "succession" => {
+                    use mor_core::chain::SuccessionSeen as S;
+                    match v.succession(&h(&ask["identity"])) {
+                        S::None => json!({ "seen": "none" }),
+                        S::Declared { successor, .. } => json!({ "seen": "declared", "successor": hex::encode(successor) }),
+                        S::Confirmed { successor, confirmation, .. } => json!({ "seen": "confirmed, followed", "successor": hex::encode(successor), "confirmation": hex::encode(confirmation) }),
+                        S::Unknown { successor, .. } => json!({ "seen": "unknown", "successor": hex::encode(successor) }),
+                        S::Elsewhere { .. } => json!({ "seen": "another protocol's" }),
+                    }
+                }
                 "status after keepers" => {
-                    let rescued = AgreementsView::new(&v, mirs.clone()).keeper_disputed_acts();
+                    let (rescued, unknown) = {
+                        let av = AgreementsView::new(&v, mirs.clone());
+                        (av.keeper_disputed_acts(), av.keeper_unknown_acts())
+                    };
                     for a in rescued {
                         v.keeper_recorded(a);
+                    }
+                    for a in unknown {
+                        v.keepers_cannot_tell(a);
                     }
                     json!(name(v.status(&h(&ask["act"]))))
                 }
@@ -345,9 +394,10 @@ fn verdict_vectors() {
                 "deadline" => {
                     let k = Keepers {
                         operators: ask["keepers"].as_array().unwrap().iter().map(h).collect(),
-                        rule: match ask["rule"].as_u64().unwrap() {
-                            0 => Rule::All,
-                            k => Rule::Threshold(k),
+                        rule: match ask["rule"].as_array().unwrap().iter().map(|x| x.as_u64().unwrap()).collect::<Vec<_>>().as_slice() {
+                            [0] => Rule::All,
+                            [1, k] => Rule::Threshold(*k),
+                            r => panic!("{what}: a keepers' rule the format does not write: {r:?}"),
                         },
                     };
                     let clock = Reference::decode(&cbor::decode(&b(&ask["clock"])).unwrap()).unwrap();
@@ -358,8 +408,8 @@ fn verdict_vectors() {
                         Deadline::Undetermined => "undetermined",
                     })
                 }
-                "paid toward" => json!(with_facts(&v, &mirs, facts).paid_toward(&h(&ask["act"]))),
-                "disagreements" => json!(with_facts(&v, &mirs, facts).disagreements(&h(&ask["receiver"])).len()),
+                "paid toward" => with_facts(&v, &mirs, facts).paid_toward(&h(&ask["act"])).map_or(json!("unknown"), |x| json!(x)),
+                "disagreements" => with_facts(&v, &mirs, facts).disagreements(&h(&ask["receiver"])).map_or(json!("unknown"), |x| json!(x.len())),
                 q => panic!("{what}: a question this check does not know: {q}"),
             };
             assert_eq!(got, c["verdict"], "{layer}: {what}");
@@ -385,7 +435,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 63);
+    assert_eq!(n, 108);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.
@@ -398,6 +448,15 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     }
     for r in facts["rail_valid"].as_array().into_iter().flatten() {
         av.rail_valid.insert(h(&r["act"]), mor_core::money::PaidAt::Flow(h(&r["paid_to_flow"])));
+    }
+    for r in facts["rail_payments"].as_array().into_iter().flatten() {
+        av.payments.insert(b(&r["proof"]), b(&r["payment"]));
+    }
+    for x in facts["judges_lapsed"].as_array().into_iter().flatten() {
+        av.judges_lapsed.insert((h(&x["question"]), h(&x["judge"])));
+    }
+    for x in facts["settled_out_of_turn"].as_array().into_iter().flatten() {
+        av.settled_out_of_turn.insert(h(x));
     }
     av
 }

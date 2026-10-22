@@ -160,19 +160,32 @@ impl<'a> AgreementsView<'a> {
     // ------------------------------------------------------------ belongs to
 
     /// The agreements `act` belongs to ("Belongs to"), each as the version
-    /// it names (a terms act, or a lone seller's offer), without repeats.
-    /// Followed through at most a few acts it answers.
+    /// it names (a terms act, or a lone seller's offer), without repeats,
+    /// followed through every step the acts held allow, at no fixed depth.
     pub fn belongs_to(&self, act: &Hash) -> Vec<Hash> {
-        let mut out = vec![];
-        self.belongs_into(act, 0, &mut out);
-        out
+        self.belongs_to_judged(act).0
     }
 
-    fn belongs_into(&self, act: &Hash, depth: usize, out: &mut Vec<Hash>) {
-        if depth > 4 {
+    /// [`Self::belongs_to`], and whether it is complete: `false` where a
+    /// step names an act this verifier does not hold, beyond which what the
+    /// act belongs to is unknown.
+    pub fn belongs_to_judged(&self, act: &Hash) -> (Vec<Hash>, bool) {
+        let mut out = vec![];
+        let mut seen = vec![];
+        let mut complete = true;
+        self.belongs_into(act, &mut seen, &mut out, &mut complete);
+        (out, complete)
+    }
+
+    fn belongs_into(&self, act: &Hash, seen: &mut Vec<Hash>, out: &mut Vec<Hash>, complete: &mut bool) {
+        if seen.contains(act) {
             return;
         }
-        let Some(x) = self.v.get(act) else { return };
+        seen.push(*act);
+        let Some(x) = self.v.get(act) else {
+            *complete = false;
+            return;
+        };
         let push = |h: Hash, out: &mut Vec<Hash>| {
             if !out.contains(&h) {
                 out.push(h);
@@ -193,22 +206,25 @@ impl<'a> AgreementsView<'a> {
         // Named in `objects`: the agreement, or an act of its chain.
         for o in x.inside.objects.iter().flatten() {
             for c in [o.chain, o.predecessor] {
-                if let Some(h) = self.v.get(&c) {
-                    if self.is_agreements(h, types::TERMS) {
-                        push(c, out);
-                    }
+                match self.v.get(&c) {
+                    Some(h) if self.is_agreements(h, types::TERMS) => push(c, out),
+                    Some(_) => {}
+                    None => *complete = false,
                 }
             }
         }
         // Through the act it answers.
-        let follow = |h: &Hash, out: &mut Vec<Hash>| {
-            let Some(y) = self.v.get(h) else { return };
+        let mut follow = |h: &Hash, out: &mut Vec<Hash>| {
+            let Some(y) = self.v.get(h) else {
+                *complete = false;
+                return;
+            };
             if self.is_agreements(y, types::TERMS) {
                 if !out.contains(h) {
                     out.push(*h);
                 }
             } else {
-                self.belongs_into(h, depth + 1, out);
+                self.belongs_into(h, seen, out, complete);
             }
         };
         if x.inside.spec == self.mirs.money {
@@ -333,17 +349,33 @@ impl<'a> AgreementsView<'a> {
     /// Agreements rules 41 and 42): what a caller states to Identity by
     /// [`Verifier::keeper_recorded`], so that Identity shows them disputed.
     pub fn keeper_disputed_acts(&self) -> Vec<Hash> {
-        let mut out = vec![];
+        self.keepers_judged().0
+    }
+
+    /// The acts a rotation voids whose keepers' records cannot be read in
+    /// full, since an agreement they may belong to lies beyond an act this
+    /// verifier does not hold ("Belongs to"), and that no keeper read
+    /// rescues: what a caller states to Identity by
+    /// [`Verifier::keepers_cannot_tell`], so that Identity shows them
+    /// unknown, never void.
+    pub fn keeper_unknown_acts(&self) -> Vec<Hash> {
+        self.keepers_judged().1
+    }
+
+    fn keepers_judged(&self) -> (Vec<Hash>, Vec<Hash>) {
+        let (mut rescued, mut unknown) = (vec![], vec![]);
         for h in self.v.held_acts() {
             if !matches!(self.v.status(&h.id), Status::Void | Status::Disputed) {
                 continue;
             }
             let Some(r) = self.v.judged_by(&h.id) else { continue };
             if self.keepers_recorded_before(&h.id, &r) {
-                out.push(h.id);
+                rescued.push(h.id);
+            } else if self.v.status(&h.id) == Status::Void && !self.belongs_to_judged(&h.id).1 {
+                unknown.push(h.id);
             }
         }
-        out
+        (rescued, unknown)
     }
 
     // ------------------------------------------------------------ deadlines

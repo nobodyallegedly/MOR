@@ -483,8 +483,9 @@ pub fn mir_hash(text: &str) -> R<String> {
 }
 
 /// The spec hash of a MIR from its file, as Development rule 26 reads a
-/// frozen text's file: at most one final line break removed, the header
-/// reduced to the text's name, the text canonical. Throws otherwise.
+/// file: at most one final line break removed and nothing else (every line,
+/// a draft's status line included, is part of the text), the text
+/// canonical. Throws otherwise.
 #[wasm_bindgen(js_name = mirFileHash)]
 pub fn mir_file_hash(file: &str) -> R<String> {
     Ok(hx(&mor_core::development::Spec::mir_file_hash(file).map_err(err)?))
@@ -1441,8 +1442,8 @@ impl Verifier {
         let res = self.inner.resolve(&unhex(identity)?);
         let (stop, waiting) = match &res.stop {
             Stop::NoGenesis => ("no-genesis", vec![]),
-            Stop::Unknown => ("unknown", vec![]),
-            Stop::Invalid => ("invalid", vec![]),
+            Stop::GenesisUnknown => ("genesis-unknown", vec![]),
+            Stop::GenesisInvalid => ("genesis-invalid", vec![]),
             Stop::End => ("end", vec![]),
             Stop::Pending(w) => ("pending", w.clone()),
             Stop::Contested(w) => ("contested", w.clone()),
@@ -1518,6 +1519,7 @@ impl Verifier {
             Status::Pending => "pending",
             Status::Invalid => "invalid",
             Status::Unknown => "unknown",
+            Status::NotCounting => "not counting",
             Status::Scoped => "scoped",
         }
         .into())
@@ -1563,6 +1565,7 @@ impl Verifier {
             Status::Pending => "pending",
             Status::Invalid => "invalid",
             Status::Unknown => "unknown",
+            Status::NotCounting => "not counting",
             Status::Scoped => "scoped",
         }
         .into())
@@ -1723,6 +1726,15 @@ struct SpecsIn {
     /// are read from the buyers' claims with it (rule 13).
     #[serde(default)]
     rail_valid: Vec<(String, String, Option<u64>)>,
+    /// What "the same payment" is (Money rule 12, F380): pairs `[proof,
+    /// payment]`, a receipt's or claim's proof (field 1) and the payment
+    /// its rail Module says it is (the payment cMIP's `payment`), as the
+    /// client read them. Two records are one payment only where both are
+    /// listed with one payment; where an answer rests on a record not
+    /// listed, it is unknown (an error coded `law/payment-unstated`),
+    /// whether the proofs' bytes match or not.
+    #[serde(default)]
+    rail_payments: Vec<(String, String)>,
     /// Absence proof (Agreements rule 51, F172): pairs `[declaration, act]`, an
     /// abandonment declaration and the record or clone using it, that the
     /// absence-proof cMIP its clause names (key 3) accepted, as the client
@@ -1808,6 +1820,9 @@ impl SpecsIn {
                 None => money::PaidAt::Flow(at),
             });
         }
+        for (proof, payment) in &self.rail_payments {
+            view.payments.insert(hex::decode(proof).map_err(err)?, hex::decode(payment).map_err(err)?);
+        }
         for (d, by) in &self.absence_accepted {
             view.absence_accepted.insert((unhex(d)?, unhex(by)?));
         }
@@ -1867,6 +1882,9 @@ struct VowOut {
     offers: Vec<String>,
     sales: Vec<VowSaleOut>,
     unsigned: Vec<String>,
+    /// Payments whose place among the sales rests on whether two records
+    /// whose payment is not stated are one payment (Money rule 12).
+    unknown: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -3318,6 +3336,7 @@ impl Verifier {
                 unit: hx(&o.amount.unit),
                 value: o.amount.value,
                 still_broken: o.still_broken,
+                unknown: o.unknown,
             })
             .collect();
         to_js(&out)
@@ -3573,7 +3592,10 @@ impl Verifier {
 
     /// What is paid toward an obligation, as a binding answer: an error
     /// coded `agreements/own-attempt` where it rests on this client's own failed
-    /// attempts to reach homes, shown as unknown (F153).
+    /// attempts to reach homes, shown as unknown (F153); an error coded
+    /// `law/payment-unstated` where it rests on whether two receipts
+    /// or claims are one payment and `specs.railPayments` does not say
+    /// (Money rule 12, F380), shown as unknown.
     #[wasm_bindgen(js_name = agreementsPaid)]
     pub fn agreements_paid(&self, specs: JsValue, id: &str) -> R<u64> {
         let s = specs_of(specs)?;
@@ -3699,11 +3721,13 @@ impl Verifier {
                         agreements::SaleState::Pending => ("pending", vec![]),
                         agreements::SaleState::Confirmed { by } => ("confirmed", by.iter().map(hx).collect()),
                         agreements::SaleState::Contested { by } => ("contested", by.iter().map(hx).collect()),
+                        agreements::SaleState::Unknown => ("unknown", vec![]),
                     };
                     VowSaleOut { act: hx(&x.act), offer: hx(&x.offer), buyer: hx(&x.buyer), state: state.into(), by, evidence: x.evidence.iter().map(hx).collect() }
                 })
                 .collect(),
             unsigned: e.unsigned.iter().map(hx).collect(),
+            unknown: e.unknown.iter().map(hx).collect(),
         })
     }
 
@@ -3934,6 +3958,9 @@ struct OwedBackOut {
     unit: String,
     value: u64,
     still_broken: bool,
+    /// Whether it rests on whether two records whose payment is not stated
+    /// are one payment (Money rule 12): whether it is owed is unknown.
+    unknown: bool,
 }
 
 #[derive(Serialize)]

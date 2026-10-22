@@ -57,22 +57,29 @@ fn the_core_texts_are_committed_as_canonical_text_f324() {
 }
 
 /// Development rule 26: the text a file holds is its content with at most
-/// one final line break removed and the header reduced to the text's name;
-/// a MIR's spec hash is computed from that text.
+/// one final line break removed, and nothing else; a MIR's spec hash is
+/// computed from that text. Dropping a draft's status line is a tool's
+/// option, never on the hash's path.
 #[test]
 fn a_mir_hash_reads_the_file_as_rule_26_says() {
     use mor_core::development::Spec;
     let file = "# MIR: Test\n\n*Draft 1, for review.*\n\n## Part one\n\nText.";
     let frozen = "# MIR: Test\n\n## Part one\n\nText.";
-    assert_eq!(Spec::frozen_text(file), frozen);
-    assert_eq!(Spec::frozen_text(&format!("{file}\n")), frozen);
+    assert_eq!(Spec::frozen_text(file), file, "every line of the file is part of the text");
+    assert_eq!(Spec::frozen_text(&format!("{file}\n")), file);
     assert_eq!(Spec::frozen_text(frozen), frozen);
     let h = Spec::mir_file_hash(frozen).unwrap();
-    assert_eq!(Spec::mir_file_hash(file).unwrap(), h);
+    assert_ne!(Spec::mir_file_hash(file).unwrap(), h, "a status line is hashed with the rest");
     assert_eq!(Spec::mir_file_hash(&format!("{frozen}\n")).unwrap(), h);
     assert_eq!(h, Spec::hash_of(&Spec::mir_content(frozen)));
     assert!(Spec::mir_file_hash(&format!("{frozen}\n\n")).is_err(), "two final line breaks");
     assert!(Spec::mir_file_hash("# MIR: Test\n\nText. ").is_err(), "a trailing space");
-    // A bold first paragraph is no status line.
-    assert_eq!(Spec::frozen_text("# MIR: T\n\n**Bold.**\n\nText."), "# MIR: T\n\n**Bold.**\n\nText.");
+    // An italic paragraph after the title (the MICS's and the suite's
+    // reading notes, once their status lines are gone) is part of the text.
+    let italic = "# T\n\n*an italic line*\n\nbody\n";
+    assert_eq!(Spec::frozen_text(italic), "# T\n\n*an italic line*\n\nbody");
+    // The tool: a draft's status line dropped, said so, and nothing else.
+    assert_eq!(Spec::draft_without_status_line(file), frozen);
+    assert_eq!(Spec::draft_without_status_line(italic), "# T\n\n*an italic line*\n\nbody");
+    assert_eq!(Spec::draft_without_status_line("# MIR: T\n\n**Bold.**\n\nText."), "# MIR: T\n\n**Bold.**\n\nText.");
 }

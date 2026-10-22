@@ -16,13 +16,9 @@ import { mirsHtml } from '../src/view.ts';
 const spec = fileURLToPath(new URL('../../../spec/', import.meta.url));
 const read = async (file: string) => readFileSync(spec + file, 'utf8');
 
-/** Development rule 26, by hand: at most one final line break removed, and a
- * draft's italic status line after the name, with the blank line before it, dropped. */
+/** Development rule 26, by hand: at most one final line break removed, and nothing else. */
 function frozen(file: string): string {
-  const t = file.endsWith('\n') ? file.slice(0, -1) : file;
-  const l = t.split('\n');
-  if (l.length > 3 && l[0].startsWith('# ') && l[1] === '' && /^\*[^*].*\*$/.test(l[2]) && l[3] === '') return [l[0], ...l.slice(3)].join('\n');
-  return t;
+  return file.endsWith('\n') ? file.slice(0, -1) : file;
 }
 
 /** The second recomputation: CBOR by hand, the tagged hash by hand. */
@@ -57,14 +53,14 @@ test('the texts shipped are the newest draft of each MIR under spec/', () => {
   }
 });
 
-test('one final line break is not part of the text; the header is reduced to the name (Development rule 26)', async () => {
+test('one final line break is not part of the text; every other line is, a draft\'s status line included (Development rule 26)', async () => {
   const plain = await recompute(read);
   const withBreak = await recompute(async (file) => (await read(file)) + '\n');
   assert.deepEqual(withBreak.map((r) => r.hash), plain.map((r) => r.hash));
   const money = await read('MIR-money-draft-11.md');
   assert.match(money, /^# MIR: Money\n\n\*Draft 11, /, 'the draft carries a status line');
   const reduced = money.replace(/^(# MIR: Money)\n\n\*[^\n]*\*\n/, '$1\n');
-  assert.equal(apart(money), apart(reduced), 'the status line is not hashed');
+  assert.notEqual(apart(money), apart(reduced), 'the status line is hashed with the rest');
 });
 
 test('a text that is not canonical is not recomputed, and the reader says so', async () => {

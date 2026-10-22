@@ -41,7 +41,7 @@ fn genesis_checks() {
         None,
     );
     assert_eq!(w.v.status(&b.id), Status::Invalid);
-    assert_eq!(w.v.resolve(&b.id).stop, Stop::Invalid);
+    assert_eq!(w.v.resolve(&b.id).stop, Stop::GenesisInvalid);
     // A threshold must be more than half the operators, and no more than all.
     let c = w.genesis(
         "carol",
@@ -227,9 +227,11 @@ fn a_chain_signature_takes_a_position_and_changes_no_key() {
     // The rotation judges the key it replaces, set at genesis: "after" was
     // not kept (the default keeps the person's own sequence, which holds it).
     assert_eq!(w.v.status(&after), Status::Valid);
-    // Revealing a spent chain key again: never counts.
+    // Revealing a spent chain key again: never counts. It passes the
+    // rotation checks at position 1, where another counts: not counting,
+    // neither invalid nor void (Identity, "Which rotation counts").
     let (late, _) = w.chain_sign(&a, sha256(b"another fork"));
-    assert_eq!(w.v.status(&late), Status::Invalid);
+    assert_eq!(w.v.status(&late), Status::NotCounting);
     // Two acts revealing the same chain key compete for one position.
     let mut w2 = World::new();
     let s = w2.genesis("self", vec![own_home()], None, None);
@@ -684,7 +686,7 @@ fn a_thiefs_rotation_held_only_by_the_lax_home_loses() {
         Status::Invalid,
         "its binding never counts"
     );
-    assert_eq!(w.v.status(&thief), Status::Invalid);
+    assert_eq!(w.v.status(&thief), Status::NotCounting, "it passes the rotation checks and loses: not counting");
 }
 
 // ---------------------------------------------------------------- stolen operator keys (5.7b, 5.7d)

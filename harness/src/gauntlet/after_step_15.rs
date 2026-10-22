@@ -19,7 +19,9 @@ fn receipted(p: &Put) -> bool {
 impl Gauntlet {
     /// 5.5c (F298): a reader holding the rotation and its kept tip but not
     /// every act of the line leading to it: the first post is unknown, never
-    /// void, until the line arrives; then valid.
+    /// void, until the line arrives; then valid. The tip itself, named by
+    /// the rotation, is valid: rotation check 7 applies where the line is
+    /// held.
     pub(super) async fn step5c_reader_without_the_line(&mut self) {
         let t = Ran::Throwaway;
         let h = self.throwaway("home-5c").await;

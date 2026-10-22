@@ -106,7 +106,7 @@ impl Held for AgreementsHeld<'_> {
         None
     }
     fn payment_counts(&self, payee: &Hash, at: &PaidAt, amount: &Amount, proof: &[u8], fulfils: &Hash) -> Option<bool> {
-        Some(self.view.payment_counts(payee, at, amount, proof, fulfils))
+        self.view.payment_counts(payee, at, amount, proof, fulfils)
     }
     fn claim(&self, id: &Hash) -> Option<(Claim, Hash, Citations)> {
         let x = self.view.v.get(id)?;
@@ -292,7 +292,7 @@ fn f225_a_default_is_refunded_for_real_and_shown_repaid() {
     let Judgment::Default { refund } = service::judge(&offer, &ticket, &payment, &[], None, &BitcoinClock { chain: &chain }) else { panic!("a default") };
     assert_eq!((refund.amount, refund.to.clone()), (sat(50), RefundTo::Identity(aid)));
     let clock = BitcoinClock { chain: &chain };
-    let repaid = |s: &Story| s.view().refund_repaid(&owed, &refund.to, &refund.amount.unit);
+    let repaid = |s: &Story| s.view().refund_repaid(&owed, &refund.to, &refund.amount.unit).unwrap();
     assert_eq!(repaid(&s), 0);
     assert_eq!(service::standing(&refund, repaid(&s), &clock), Standing::Owed { left: 50 });
     // Paid to Ben's pointer, naming Ana's payment: it repays nothing.
@@ -328,7 +328,7 @@ fn rq1_a_refund_to_the_refund_rail_the_payers_claim_names_is_checked_and_shown_r
     let (_, owed, a) = s.pay_to(&mut ana, sid, PaidTo::Flow { pointer: sp, rail: 0 }, "the service's node", 50, oid, "ana buys one hash", Some(refund_rail));
     assert_eq!(a, Answer::Valid);
     let to = RefundTo::Identity(aid);
-    let repaid = |s: &Story| s.view().refund_repaid(&owed, &to, &sat(1).unit);
+    let repaid = |s: &Story| s.view().refund_repaid(&owed, &to, &sat(1).unit).unwrap();
     // To her pointer: valid on the rail, but her claim named a refund rail.
     let (_, _, a) = s.pay(&mut service, aid, ap, "ana's node", 50, owed, "back to ana's pointer");
     assert_eq!(a, Answer::Valid);
@@ -388,7 +388,7 @@ fn rq1_a_refund_to_a_bare_key_is_checked_where_its_claim_said() {
     let (owed, a) = s.claim(&mut once, &claim);
     assert_eq!(a, Answer::Valid, "the anonymous payment, verified");
     let to = RefundTo::Key(bare);
-    let repaid = |s: &Story| s.view().refund_repaid(&owed, &to, &sat(1).unit);
+    let repaid = |s: &Story| s.view().refund_repaid(&owed, &to, &sat(1).unit).unwrap();
     assert_eq!(repaid(&s), 0);
     let there = PaidTo::Refund { claim: owed };
     let (_, _, a) = s.pay_to(&mut service, once.id, there, "the service's node", 50, owed, "to the wrong node", None);

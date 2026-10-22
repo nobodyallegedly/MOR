@@ -5,9 +5,10 @@
 // `spec/`, canonical text, no final line break), fetches them from its own
 // folder, and computes each hash with the core library, `tagged_hash(
 // "MOR/spec", {0: 4, 9: text})`, the text read from the file as Development
-// rule 26 reads it: at most one final line break removed, the header
-// reduced to the text's name (`mirFileHash`). Two readers built by two people from the same
-// texts show the same six hashes; two that differ, differ about a text.
+// rule 26 reads it: at most one final line break removed, and nothing else
+// (`mirFileHash`); a draft's status line is part of its text until the
+// freeze removes it. Two readers built by two people from the same texts
+// show the same six hashes; two that differ, differ about a text.
 //
 // Until the freeze the texts are the current drafts, and the hashes the
 // reader judges with are still the test values every client and relay

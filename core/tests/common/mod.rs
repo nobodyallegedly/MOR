@@ -183,6 +183,16 @@ impl Default for World {
     }
 }
 
+/// A content key and nonce for one act, derived from its inside and who
+/// signs it (test data, labelled so): a new key for every object (Envelopes
+/// rule 9), the same act always locked alike.
+pub fn content_key_for(inside: &Inside, signer: Option<Hash>, binding: Option<Hash>) -> ([u8; 32], [u8; 24]) {
+    let enc = [inside.encode(), signer.map(|x| x.to_vec()).unwrap_or_default(), binding.map(|x| x.to_vec()).unwrap_or_default()].concat();
+    let key = sha256(&[&b"mor test data: content key of the act whose inside is "[..], &enc].concat());
+    let nonce = sha256(&[&b"mor test data: nonce of the act whose inside is "[..], &enc].concat());
+    (key, nonce[..24].try_into().unwrap())
+}
+
 impl World {
     pub fn new() -> Self {
         World {
@@ -237,7 +247,7 @@ impl World {
         binding: Option<Hash>,
         sign: impl FnOnce(&Hash) -> Signature,
     ) -> Act {
-        let (key, nonce, _) = self.fresh();
+        let (key, nonce) = content_key_for(inside, signer, binding);
         act::make(
             inside,
             &key,
@@ -489,7 +499,7 @@ impl World {
             hint: None,
             salt,
         };
-        let (key, nonce, _) = self.fresh();
+        let (key, nonce) = content_key_for(&inside, Some(p.id), Some(p.binding));
         let sign = p.sign.clone();
         let a = act::make(
             &inside,
@@ -661,4 +671,28 @@ pub fn publication(mut fields: Vec<(Value, Value)>) -> Vec<(Value, Value)> {
     }
     fields.sort_by(|a, b| mor_core::cbor::encode(&a.0).cmp(&mor_core::cbor::encode(&b.0)));
     fields
+}
+
+/// The stand-in rails these tests use answer that a proof is its own
+/// payment. What "the same payment" is, each rail Module says, and a
+/// verifier is handed that answer, never reading it from the proofs' bytes
+/// (Money rule 12; F380): this states the stand-in rails' answer for every
+/// receipt and claim `v`'s verifier holds, beside any answer already stated.
+pub fn stand_in_payments(mut v: mor_core::agreements::AgreementsView<'_>) -> mor_core::agreements::AgreementsView<'_> {
+    use mor_core::money::Payload;
+    let money = v.mirs.money;
+    for h in v.v.held_acts() {
+        if h.inside.spec != money {
+            continue;
+        }
+        let proof = match Payload::decode(h.inside.type_, &h.inside.payload) {
+            Ok(Payload::Receipt(r)) => r.proof,
+            Ok(Payload::Claim(c)) => c.proof,
+            _ => continue,
+        };
+        if !proof.is_empty() {
+            v.payments.entry(proof.clone()).or_insert(proof);
+        }
+    }
+    v
 }
