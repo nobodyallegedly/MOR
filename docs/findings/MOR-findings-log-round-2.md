@@ -28,6 +28,17 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F381. S7's four questions, judged by Fable: check 7's "invalid" clause dropped (22 October 2026)
+
+**From** `docs/s7-report.md` (pull request 96), sent to Fable before deciding (the working rule since 22 October), Fable's judgment received the same afternoon.
+
+1. **Check 7's second clause, decided by Nobody, allegedly ("Yes, agree to drop it"),** on S7's, Fable's and the project lead's lean (b): a kept tip whose summary does not fit keeps nothing (F380, unchanged); the clause making a rotation invalid when every tip is held and none fits is dropped. *Why (S7, confirmed by Fable):* a home receipts a rotation without holding the owner's private lines, so it could never run the check, while a reader holding the lines would overrule the receipt; two honest verifiers holding different acts would resolve one chain differently, against Identity's "validity is fixed by the bytes". *Fable:* the clause was its own addition to the Q17 sentence, "the second review pattern … written into Identity by me"; (c), unknown, would be worse, stalling the chain for readers with the lines while the home counts it. (b) adds no power to anyone: whoever holds the chain key could already disown every line. *The project lead:* took the clause from Fable's sentence without testing it against "fixed by the bytes"; S7 did.
+2. **The stop reasons (taken under delegation, as Fable judges):** the reading stands (an invalid rotation at the next position counts for nothing and the chain ends at what is held); the two reasons are renamed for what they mean: "the genesis unknown" and "the genesis invalid", so a third implementer does not build a reason the other two lack.
+3. **Byte-identical proofs as two payments (taken, as Fable judges):** Money rule 12 stays silent; a rail Module names the payment from its proof's bytes, so the vector describes nothing; Fable withdraws it. A sentence on how a Module reads its own proofs would be the core describing a Module's inside.
+4. **Unknown "same payment" carried through (taken, as Fable judges, scoped):** an answer that depends on an unstated pair is unknown; a list or a sale that does not depend on it keeps its answer. Unknown must not spread to the whole view, or clients route around it and the convenience returns.
+
+**Where:** S7b (the follow-up), with Part 4's family of chain-signature vectors.
+
 ## F380. Fable's review of the C verifier: what closes each question (22 October 2026)
 
 **From** `docs/reviews/fable-c-verifier-review.md` (pull request 94): the texts found wrong nowhere; "freezable, with two conditions".
