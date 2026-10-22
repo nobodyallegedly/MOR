@@ -54,6 +54,7 @@ interface Inbox {
   toYou: Item[];
   messages: Message[];
   encryption: boolean;
+  opening?: string | null;
   hidden: number;
   problems: string[];
 }
@@ -507,7 +508,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     else app.insertAdjacentHTML('beforeend', html);
     const notes = [
       ...(inbox && !inbox.encryption
-        ? [state?.identity?.kind === 'runner' ? 'Kišib’s runner holds this identity’s keys, and Dub none: its private messages are sent from here, but not opened here (the runner signs; it opens nothing yet).' : 'No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.']
+        ? [inbox.opening ?? 'No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.']
         : []),
       ...(inbox?.hidden ? [`${inbox.hidden} from muted identities, not shown.`] : []),
       ...(state?.proposalsWaiting ? [`${state.proposalsWaiting === 1 ? 'A proposal to sign waits' : `${state.proposalsWaiting} proposals to sign wait`} in this identity’s inbox: sign them in Edubba, Collectives › To sign.`] : []),
@@ -755,7 +756,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     { key: 'make', label: 'Make one', say: 'its chain key’s words shown once' },
     { key: 'bring', label: 'Bring one', say: 'its ID and its signing key’s words' },
     b.web
-      ? { key: 'kishib', label: 'Use one from Kišib', say: 'through Kišib’s runner, on the Mac only: not in the web client', empty: true }
+      ? { key: 'kishib', label: 'Use one from Kišib', say: 'through Kišib’s runner, in the computer’s program only: never in the web client', empty: true }
       : { key: 'kishib', label: 'Use one from Kišib', say: 'through Kišib’s runner, on this Mac: Dub holds no key' },
   ];
 

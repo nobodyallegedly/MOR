@@ -130,7 +130,7 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
     case 'forget':
       await dub.forget(text(a.id));
       return {};
-    // An identity used through Kišib's runner (the Dubsar runner cMIP): the program on the Mac only.
+    // An identity used through Kišib's runner (the Dubsar runner cMIP): the computer's program only, never the web client.
     case 'runner':
       return dub.runnerState();
     case 'runner pair':

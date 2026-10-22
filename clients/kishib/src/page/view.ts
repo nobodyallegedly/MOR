@@ -4,7 +4,7 @@
 // (`docs/design/suite-redesign.md`, "Kišib"; the mockups `kishib-*`): four
 // tiles with their danger marks, each opening its column; Paper and
 // Collectives behind the quiet door; top right, what Kišib holds. The web
-// client has no Runner tile (Mac only, decided). Everything from the
+// client has no Runner tile (never on the web, decided). Everything from the
 // program, from relays or typed by the person is escaped.
 
 import { APPS, KIT_STYLE } from '../../../kit/src/style.ts';
@@ -96,16 +96,18 @@ export type Tab = 'identities' | 'runner' | 'paper' | 'collectives';
 
 const TILES: (Tile & { key: Tab })[] = [
   { key: 'identities', name: 'Identities', say: 'Make an identity. Read any identity’s record. Confirm a succession.', icon: 'identities', danger: 1 },
-  { key: 'runner', name: 'Runner', say: 'Off. On this Mac only: when on, Kišib signs for the apps you approve, from keys it keeps.', icon: 'runner', danger: 2 },
+  { key: 'runner', name: 'Runner', say: 'Off. In this program only, never on the web: when on, Kišib signs for the apps you approve, from keys it keeps, encrypted.', icon: 'runner', danger: 2 },
   { key: 'paper', name: 'Paper', say: 'The chain key’s 24 words: check them, change keys, change the vault, name a successor, escape.', icon: 'paper', danger: 3 },
   { key: 'collectives', name: 'Collectives', say: 'A collective’s rotation: waiting for you, start it, in the same room, check a share.', icon: 'collectives', danger: 3 },
 ];
 
-/** The tiles shown here: the web client has no Runner (Mac only, decided). */
+/** The tiles shown here: the web client has no Runner (never on the web, decided: “Correct, I meant not on web”). */
 export const tilesFor = (web: boolean) => TILES.filter((t) => !web || t.key !== 'runner');
 
 /** What Kišib holds, top right (decided: "the only place where an ID can be held is the new runner"). */
 export function holds(web: boolean, r: RunnerView | null): string {
+  // Draft 2: locked, it holds what it kept, encrypted, and signs nothing until its passphrase is given.
+  if (!web && r?.state === 'locked') return `<button type="button" class="kishib-holds" data-action="holds" title="Kišib’s runner is locked: give its passphrase"><span class="k-n">Runner locked</span><span class="k-s">passphrase</span><span class="k-dot k-alt">–</span></button>`;
   if (web || !r?.on) return `<button type="button" class="kishib-holds" data-action="holds" title="What Kišib holds"><span class="k-n">Holds nothing</span><span class="k-s">${web ? 'web' : 'runner off'}</span><span class="k-dot k-alt">–</span></button>`;
   const names = r.held.map((h) => h.name ?? shortForm(h.form));
   const shown = names.length ? (names.length <= 2 ? names.join(', ') : `${names.length} identities`) : 'nothing yet';
@@ -120,9 +122,17 @@ export function topBar(web: boolean, tab: Tab | null, r: RunnerView | null): str
 
 /** The first screen: four tiles (three on the web), their danger marks, the test notice in one line. */
 export function home(web: boolean, r: RunnerView | null): string {
-  const ts = tilesFor(web).map((t) => (t.key === 'runner' && r?.on ? { ...t, say: `On: ${r.held.length} ${r.held.length === 1 ? 'identity' : 'identities'} held, ${r.apps.filter((a) => a.state === 'approved').length} ${r.apps.filter((a) => a.state === 'approved').length === 1 ? 'app' : 'apps'} paired${r.waiting.length ? `, ${r.waiting.length} waiting` : ''}. Kišib signs for the apps you approve.` } : t));
-  return `${topBar(web, null, r)}<div class="k-body k-col-flex">${tiles(ts).replace('class="k-home"', `class="k-home${ts.length === 3 ? ' kishib-three' : ''}"`)}</div>
-<div class="kishib-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Kišib writes nothing of your words to this device; what it holds for an act lives in the program’s memory, and is gone when it stops. The runner, while on, is the one exception: it keeps the signing keys you give it, in Kišib’s folder.'])}</div>`;
+  const ts = tilesFor(web).map((t) =>
+    t.key === 'runner' && r?.on
+      ? { ...t, say: `On: ${r.held.length} ${r.held.length === 1 ? 'identity' : 'identities'} held, ${r.apps.filter((a) => a.state === 'approved').length} ${r.apps.filter((a) => a.state === 'approved').length === 1 ? 'app' : 'apps'} paired${r.waiting.length ? `, ${r.waiting.length} waiting` : ''}. Kišib signs for the apps you approve.` }
+      : t.key === 'runner' && r?.state === 'locked'
+        ? { ...t, say: 'Locked: what it keeps is encrypted on this Mac. Give its passphrase, and it signs again for the apps you approved.' }
+        : t,
+  );
+  // Draft 2: Kišib started with the runner on asks its passphrase first.
+  const locked = !web && r?.state === 'locked' ? unlockBox(r) : '';
+  return `${topBar(web, null, r)}<div class="k-body k-col-flex">${locked}${tiles(ts).replace('class="k-home"', `class="k-home${ts.length === 3 ? ' kishib-three' : ''}"`)}</div>
+<div class="kishib-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'Kišib writes nothing of your words to this device; what it holds for an act lives in the program’s memory, and is gone when it stops. The runner, while on, is the one exception: it keeps the signing keys you give it, in Kišib’s folder, encrypted under its passphrase.'])}</div>`;
 }
 
 /** Each tab's column. */
@@ -131,10 +141,11 @@ export function column(tab: Tab, web: boolean, r: RunnerView | null): ColumnEntr
     case 'identities':
       return [
         ...(r?.on && !web ? [{ key: 'held', label: 'Held here', k: r.held.length } as ColumnEntry, '-' as ColumnEntry] : []),
+        ...(r?.state === 'locked' && !web ? [{ key: 'held', label: 'Held here', k: 'locked' } as ColumnEntry, '-' as ColumnEntry] : []),
         { key: 'make', label: 'Make an identity' },
         { key: 'record', label: 'Read a record' },
         { key: 'confirm', label: 'Confirm a succession' },
-        ...(!r?.on && !web ? ['-' as ColumnEntry, { key: 'held', label: 'Held by the runner', k: 'off' } as ColumnEntry] : []),
+        ...(r?.state === 'off' && !web ? ['-' as ColumnEntry, { key: 'held', label: 'Held by the runner', k: 'off' } as ColumnEntry] : []),
       ];
     case 'runner':
       return [
@@ -163,7 +174,7 @@ export function column(tab: Tab, web: boolean, r: RunnerView | null): ColumnEntr
 }
 
 /** The part a tab opens on. */
-export const firstPart = (tab: Tab, r: RunnerView | null, web: boolean): string => (tab === 'identities' ? (r?.on && !web ? 'held' : 'make') : tab === 'runner' ? 'onoff' : tab === 'paper' ? 'check' : 'give');
+export const firstPart = (tab: Tab, r: RunnerView | null, web: boolean): string => (tab === 'identities' ? (r && r.state !== 'off' && !web ? 'held' : 'make') : tab === 'runner' ? 'onoff' : tab === 'paper' ? 'check' : 'give');
 
 /** A tab opened, its column on the left, the part on the right. */
 export function tabPage(web: boolean, tab: Tab, part: string | null, pane: string, r: RunnerView | null): string {
@@ -316,22 +327,48 @@ ${idField('member', 'Your ID')}<label>Your share’s number</label><input name="
 
 const when = (s: number) => new Date(s * 1000).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 
+/** The passphrase asked when Kišib starts with the runner on (draft 2, 6.2): the runner is locked until it is given. */
+export function unlockBox(r: RunnerView): string {
+  const choose = r.upgrade;
+  return `<form class="k-box k-fill" id="form-unlock" data-kind="unlock" autocomplete="off"><h3>Kišib’s runner is locked</h3>
+<p class="k-small k-soft">${choose ? 'Its file, written by an earlier Kišib, keeps its keys in the clear: choose a passphrase now, typed twice, and Kišib encrypts it under it. The keys, the apps and the log are kept.' : 'Kišib was closed, or the Mac restarted: what the runner keeps (its keys, the apps paired with it, what it signed and opened) waits on this Mac, encrypted. Give its passphrase, and everything is back; no app pairs again. Until then, an app asking is told that Kišib is locked.'}</p>
+<label>${choose ? 'Choose a passphrase (at least 8 characters)' : 'The runner’s passphrase'}</label><input name="passphrase" type="password" autocomplete="off" required>
+${choose ? '<label>The passphrase again</label><input name="again" type="password" autocomplete="off" required>' : ''}
+<div class="k-row"><button type="submit" class="k-btn k-p">${choose ? 'Encrypt it, and unlock' : 'Unlock'}</button><span class="k-small k-faint">Forgotten? It cannot be found again: turn the runner off (Runner), which erases everything, then give the signing words again.</span></div></form>`;
+}
+
+const offBox = (locked: boolean) =>
+  `<div class="k-box"><h3>Turn it off</h3><p class="k-small k-soft">Turning the runner off <b>erases everything</b>: every signing key it holds, every app paired with it, and the log of what it signed and opened. Its file is overwritten, then removed. Turned on again, it starts from nothing: the risk read, a passphrase chosen, the words given again, each app paired again.${locked ? ' This is the way out of a forgotten passphrase.' : ''}</p><div class="k-row"><button type="button" class="k-btn k-alarm" data-action="runner-off">Turn it off, and erase everything</button></div></div>`;
+
 function runnerOnOff(r: RunnerView | null): string {
   if (!r) return '';
-  const seg = `<div class="kishib-seg" role="group" aria-label="The runner"><button type="button" class="${r.on ? '' : 'k-on'}" data-action="${r.on ? 'runner-off-ask' : ''}">Off</button><button type="button" class="${r.on ? 'k-on' : ''}" data-action="${r.on ? '' : 'runner-on-ask'}">On</button></div>`;
-  const state = r.on
-    ? `<div class="k-box k-fill" id="runner-state"><div class="k-row"><div class="k-grow"><b>On</b> <span class="k-small k-soft">since ${e(when(r.since!))}</span><p class="k-small k-soft">Kišib keeps the signing keys of ${r.held.length} ${r.held.length === 1 ? 'identity' : 'identities'} on this Mac, in its folder. The chain key: never.</p></div>${seg}</div></div>
-<div class="k-box"><h3>Turn it off</h3><p class="k-small k-soft">Kišib forgets every key it holds, every app paired with it and what it signed. Its file is overwritten, then removed. The apps then sign with their own words again, or not at all.</p><div class="k-row"><button type="button" class="k-btn k-alarm" data-action="runner-off">Turn it off, and forget it all</button></div></div>`
-    : `<div class="k-box k-fill" id="runner-state"><div class="k-row"><div class="k-grow"><b>Off</b><p class="k-small k-soft">No key stored. Every app signs with its own words, as today.</p></div>${seg}</div></div>
-<div class="k-box" id="risk"><h3>Before you turn it on, the risk</h3>${lines(r.risk.map((text) => ({ text })))}<label class="kishib-check"><input type="checkbox" id="risk-read"> I have read the risk</label><div class="k-row"><span class="k-grow"></span><button type="button" class="k-btn" data-action="runner-on">Turn it on</button></div></div>
+  const seg = `<div class="kishib-seg" role="group" aria-label="The runner"><button type="button" class="${r.state === 'off' ? 'k-on' : ''}" data-action="${r.state === 'off' ? '' : 'runner-off-ask'}">Off</button><button type="button" class="${r.state === 'off' ? '' : 'k-on'}" data-action="${r.state === 'off' ? 'runner-on-ask' : ''}">${r.state === 'locked' ? 'Locked' : 'On'}</button></div>`;
+  const state =
+    r.state === 'on'
+      ? `<div class="k-box k-fill" id="runner-state"><div class="k-row"><div class="k-grow"><b>On</b> <span class="k-small k-soft">since ${e(when(r.since!))}</span><p class="k-small k-soft">Kišib keeps the signing keys of ${r.held.length} ${r.held.length === 1 ? 'identity' : 'identities'} on this Mac, in its folder, encrypted under the runner’s passphrase. The chain key: never.</p></div>${seg}</div></div>
+<div class="k-box"><h3>Lock it now</h3><p class="k-small k-soft">Locked, the runner signs and opens nothing until its passphrase is given again; nothing is erased, no app pairs again. Quitting Kišib, or restarting the Mac, locks it too. <b>Closing Kišib’s window alone does not</b>: its program keeps running, unlocked.</p><div class="k-row"><button type="button" class="k-btn" data-action="runner-lock">Lock it now</button></div></div>
+${offBox(false)}`
+      : r.state === 'locked'
+        ? `<div class="k-box k-fill" id="runner-state"><div class="k-row"><div class="k-grow"><b>Locked</b><p class="k-small k-soft">What the runner keeps is on this Mac, encrypted; it signs and opens nothing until its passphrase is given.</p></div>${seg}</div></div>
+${unlockBox(r)}${offBox(true)}`
+        : `<div class="k-box k-fill" id="runner-state"><div class="k-row"><div class="k-grow"><b>Off</b><p class="k-small k-soft">No key stored. Every app signs with its own words, as today.</p></div>${seg}</div></div>
+<div class="k-box" id="risk"><h3>Before you turn it on, the risk</h3>${lines(r.risk.map((text) => ({ text })))}
+<label>Choose the runner’s passphrase (at least 8 characters): asked each time Kišib starts</label><input id="runner-pass" type="password" autocomplete="new-password">
+<label>The passphrase again</label><input id="runner-pass-again" type="password" autocomplete="new-password">
+<p class="k-small k-soft">Forget it, and it cannot be found again: the runner is then turned off, erasing everything, and the signing words given again.</p>
+<label class="kishib-check"><input type="checkbox" id="risk-read"> I have read the risk</label><div class="k-row"><span class="k-grow"></span><button type="button" class="k-btn" data-action="runner-on">Turn it on</button></div></div>
 <p class="k-small k-faint">The risk is optional: you may leave it off for good.</p>`;
-  return `<h2>The runner</h2><p class="k-soft k-small">Mac only. An app asks to pair; you approve here; then Kišib signs for it, showing what it signs in a panel inside the app’s window. The app never holds a key.</p>${state}`;
+  return `<h2>The runner</h2><p class="k-soft k-small">On this Mac’s program only, never in the web client. An app asks to pair; you approve here; then Kišib signs for it, showing what it signs in a panel inside the app’s window. The app never holds a key.</p>${state}`;
 }
+
+/** What a part of the runner says while the runner is not on. */
+const notOn = (r: RunnerView | null, title: string, off: string) => `<h2>${title}</h2>${r?.state === 'locked' ? `<p class="k-soft">The runner is locked: what it keeps is encrypted until its passphrase is given.</p>${unlockBox(r)}` : `<p class="k-soft">${off}</p>`}`;
 
 /** Identities held by the runner, with their record and Remove; the form to give one. */
 function held(r: RunnerView | null): string {
+  if (r?.state === 'locked') return notOn(r, 'Held here', '');
   if (!r?.on) {
-    return `<h2>Held by the runner</h2><p class="k-soft">The runner is off: Kišib holds nothing. Turned on (Runner), it keeps the signing keys of the identities you give it here, and signs with them for the apps you approve.</p><div class="k-row"><button type="button" class="k-btn" data-tab="runner">Open Runner</button></div>`;
+    return `<h2>Held by the runner</h2><p class="k-soft">The runner is off: Kišib holds nothing. Turned on (Runner), it keeps the signing keys of the identities you give it here, encrypted under its passphrase, and signs with them for the apps you approve.</p><div class="k-row"><button type="button" class="k-btn" data-tab="runner">Open Runner</button></div>`;
   }
   const rows = r.held
     .map(
@@ -340,18 +377,23 @@ function held(r: RunnerView | null): string {
 ${h.spent ? `<div class="k-note k-error">Its keys were changed with its chain key: the signing key the runner holds no longer counts, and it signs nothing for it. Give the new signing key’s words.<form class="kishib-renew" data-renew="${e(h.id)}"><input type="hidden" name="id" value="${e(h.id)}"><label>One of its homes</label><input name="address" placeholder="https://" required><label>The new signing key’s 24 words</label><textarea name="words" required autocomplete="off" spellcheck="false"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Take the new words</button></div></form></div>` : ''}</div>`,
     )
     .join('');
-  return `<h2>Held here</h2><p class="k-soft k-small">The identities Kišib’s runner keeps, by their signing keys, on this Mac. Remove one, and Kišib forgets its key; the apps using it through Kišib stop signing as it.</p>${rows || '<p class="k-soft">None yet.</p>'}
-<form id="form-give-runner" data-kind="give-runner" class="k-box" autocomplete="off"><h3>Give an identity to the runner</h3><p class="k-small k-soft">By its signing key’s words, as Dub shows them (its identity’s menu, Words): Kišib checks they give the key its homes serve. Never the chain key’s words.</p>${idField('id', 'The identity')}${address}${words('words', 'Its signing key’s 24 words')}<div class="k-row"><button type="submit" class="k-btn k-p">Keep it here</button><span class="k-small k-faint">kept while the runner is on</span></div></form>`;
+  return `<h2>Held here</h2><p class="k-soft k-small">The identities Kišib’s runner keeps, by their signing keys, on this Mac, encrypted under its passphrase. Remove one, and Kišib forgets its key; the apps using it through Kišib stop signing as it.</p>${rows || '<p class="k-soft">None yet.</p>'}
+<form id="form-give-runner" data-kind="give-runner" class="k-box" autocomplete="off"><h3>Give an identity to the runner</h3><p class="k-small k-soft">By its signing key’s words, as Dub shows them (its identity’s menu, Words): Kišib checks they give the key its homes serve. Never the chain key’s words.</p>${idField('id', 'The identity')}${address}${words('words', 'Its signing key’s 24 words')}<div class="k-row"><button type="submit" class="k-btn k-p">Keep it here</button><span class="k-small k-faint">kept while the runner is on, encrypted</span></div></form>`;
 }
 
+/** Said of the opening permission (draft 2, section 8): off unless chosen. */
+const OPEN_WORDS = 'may open what is sealed to this identity';
+const openSay = (app: string) => `${app} then reads the private messages sent to it, and its sealed contacts list, through Kišib, without a panel each time (an opening signs nothing). Each opening is listed in Signed. Revoke ${app}, and it ends.`;
+
 function runnerApps(r: RunnerView | null): string {
-  if (!r?.on) return `<h2>Apps</h2><p class="k-soft">The runner is off: no app is paired. Turn it on first (On or off).</p>`;
+  if (!r?.on) return notOn(r, 'Apps', 'The runner is off: no app is paired. Turn it on first (On or off).');
   const name = (id: string) => r.held.find((h) => h.id === id)?.name ?? shortForm(r.held.find((h) => h.id === id)?.form ?? id);
   const waiting = r.apps
     .filter((a) => a.state === 'waiting')
     .map(
       (a) => `<div class="kishib-app" data-pairing="${e(a.id)}"><h3>${e(a.name)} asks to pair</h3><p class="k-small k-soft">From ${e(a.origin)}, on this computer. Its code: <b class="kishib-fpr">${e(a.code)}</b>: approve only if ${e(a.name)} shows the same.</p>
 <p class="k-small">The identities ${e(a.name)} may use through Kišib:</p>${r.held.map((h) => `<label class="kishib-check"><input type="checkbox" name="allow" value="${e(h.id)}" checked> ${e(h.name ?? 'No name')} <span class="k-mono k-faint">${e(shortForm(h.form))}</span></label>`).join('') || '<p class="k-small k-soft">Kišib holds no identity yet: give one first (Identities, Held here).</p>'}
+<label class="kishib-check"><input type="checkbox" name="open"> ${e(a.name)} ${OPEN_WORDS}</label><p class="k-small k-faint">Off unless chosen. ${e(openSay(a.name))} Without it, ${e(a.name)} sends private messages but cannot read the answers.</p>
 <div class="k-row"><button type="button" class="k-btn k-p" data-action="approve" data-pairing="${e(a.id)}">Approve</button><button type="button" class="k-btn k-q" data-action="refuse" data-pairing="${e(a.id)}">Refuse</button></div></div>`,
     )
     .join('');
@@ -364,28 +406,30 @@ function runnerApps(r: RunnerView | null): string {
 <div class="kishib-kinds">${kinds
         .filter((k) => !k.always)
         .map((k) => `<div><span>${e(a.name)} · ${e(k.name)}</span><span class="k-r kishib-seg" role="group"><button type="button" class="${a.yes.includes(k.kind) ? '' : 'k-on'}" data-action="yes" data-pairing="${e(a.id)}" data-kind="${k.kind}" data-on="0">Ask</button><button type="button" class="${a.yes.includes(k.kind) ? 'k-on' : ''}" data-action="yes" data-pairing="${e(a.id)}" data-kind="${k.kind}" data-on="1">Yes</button></span></div>`)
-        .join('')}<div><span class="k-soft">Money acts, agreements, keys, and acts Kišib cannot read</span><span class="k-r k-small k-faint">always ask</span></div></div></div>`,
+        .join('')}<div><span class="k-soft">Money acts, agreements, relying on another’s act, keys, and acts Kišib cannot read</span><span class="k-r k-small k-faint">always ask</span></div>
+<div data-open="${e(a.id)}"><span>${e(a.name)} ${OPEN_WORDS}</span><span class="k-r kishib-seg" role="group"><button type="button" class="${a.open ? '' : 'k-on'}" data-action="opening" data-pairing="${e(a.id)}" data-on="0">No</button><button type="button" class="${a.open ? 'k-on' : ''}" data-action="opening" data-pairing="${e(a.id)}" data-on="1">Yes</button></span></div></div>
+<p class="k-small k-faint">${a.open ? e(openSay(a.name)) : `${e(a.name)} sends private messages as these identities but cannot read the answers.`}</p></div>`,
     )
     .join('');
-  return `<h2>Apps</h2><p class="k-soft k-small">Each app paired with the runner: what it may sign without asking (a standing yes, per kind), and what always asks. Revoke, and the app signs through Kišib no more.</p>${waiting}${approved || (waiting ? '' : '<p class="k-soft">No app is paired. In Dub, the identity panel: + Add, Use one from Kišib.</p>')}`;
+  return `<h2>Apps</h2><p class="k-soft k-small">Each app paired with the runner: what it may sign without asking (a standing yes, per kind), what always asks, and whether it may have what is sealed to its identities opened. Revoke, and the app signs and opens through Kišib no more.</p>${waiting}${approved || (waiting ? '' : '<p class="k-soft">No app is paired. In Dub, the identity panel: + Add, Use one from Kišib.</p>')}`;
 }
 
 function runnerWaiting(r: RunnerView | null): string {
-  if (!r?.on) return `<h2>Waiting</h2><p class="k-soft">The runner is off.</p>`;
+  if (!r?.on) return notOn(r, 'Waiting', 'The runner is off.');
   const ws = r.waiting
     .map(
       (w) => `<div class="kishib-wait" data-request="${e(w.request)}"><h3>${e(w.title)}</h3><p class="k-small k-soft">As ${e(w.name ?? 'this identity')} · asked ${e(when(w.at))}</p><div class="kishib-review">${w.words.map((x) => `<p dir="auto">${e(x)}</p>`).join('')}</div>
-${w.always ? '<p class="k-small k-faint">Money, agreements and keys always ask.</p>' : `<label class="kishib-check"><input type="checkbox" data-always="${e(w.request)}"> Always yes for ${e(w.app)}’s ${e(r.kinds.find((k) => k.kind === w.kind)?.name ?? w.kind)}</label>`}
+${w.always ? '<p class="k-small k-faint">Money, agreements, relying on another’s act, and keys always ask.</p>' : `<label class="kishib-check"><input type="checkbox" data-always="${e(w.request)}"> Always yes for ${e(w.app)}’s ${e(r.kinds.find((k) => k.kind === w.kind)?.name ?? w.kind)}</label>`}
 <div class="k-row"><button type="button" class="k-btn k-p" data-action="answer" data-yes="1" data-request="${e(w.request)}">Sign it</button><button type="button" class="k-btn k-q" data-action="answer" data-yes="0" data-request="${e(w.request)}">Decline</button></div></div>`,
     )
     .join('');
   return `<h2>Waiting</h2><p class="k-soft k-small">Requests not answered yet, in case their panel was closed in the app. Each waits ten minutes; the app that asked still waits for its answer.</p>${ws || '<p class="k-soft">Nothing waits.</p>'}`;
 }
 
-/** What the runner signed, newest first: each act a card with the kit's two menus (drawn by `ui.ts`). */
+/** What the runner signed and opened, newest first: each a card with the kit's two menus (drawn by `ui.ts`). */
 function runnerSigned(r: RunnerView | null): string {
-  if (!r?.on) return `<h2>Signed</h2><p class="k-soft">The runner is off: it keeps no record.</p>`;
-  return `<h2>Signed</h2><p class="k-soft k-small">Every act the runner signed while on, newest first; kept only while it is on.</p><div class="k-feedwrap"><div class="k-feed" id="signed">${r.signed.length ? '' : '<p class="k-empty">Nothing signed yet.</p>'}</div></div>`;
+  if (!r?.on) return notOn(r, 'Signed', 'The runner is off: it keeps no record.');
+  return `<h2>Signed</h2><p class="k-soft k-small">Every act the runner signed, and everything it opened for an app, newest first; kept, encrypted, until the runner is turned off.</p><div class="k-feedwrap"><div class="k-feed" id="signed">${r.signed.length ? '' : '<p class="k-empty">Nothing signed yet.</p>'}</div></div>`;
 }
 
 // ---------------------------------------------------------------- sittings

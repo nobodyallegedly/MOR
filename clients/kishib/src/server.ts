@@ -10,12 +10,13 @@
 // browsers' public keys (`access.json`) and how to reach the running
 // program (`run.json`). Never a word, a key or an act: what Kišib holds for
 // an act lives in this program's memory, and is gone when it stops. The one
-// exception is the runner, while it is on and only then (`runner.json`: the
-// signing keys given to it, its pairings, what it signed; the Dubsar runner
-// cMIP, decided by Nobody, allegedly).
+// exception is the runner, while it is on or locked and only then
+// (`runner.json`: the signing keys given to it, its pairings, what it signed
+// and opened, all encrypted under its passphrase, never in the clear; the
+// Dubsar runner cMIP, draft 2, decided by Nobody, allegedly).
 //
 // The runner's doors (`/runner/…`): one for apps on this computer (pairing,
-// requests, answers; JSON, a token in a header, never readable by a web
+// requests, answers, openings; JSON, a token in a header, never readable by a web
 // page), and one for its panel, a page framed only by the origin of the
 // pairing that asked, carrying no script.
 
@@ -92,7 +93,11 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
       case 'runner state':
         return runner.view();
       case 'runner on':
-        return runner.turnOn({ read: a.read === true });
+        return runner.turnOn({ read: a.read === true, passphrase: text(a.passphrase), again: text(a.again) });
+      case 'runner lock':
+        return runner.lock();
+      case 'runner unlock':
+        return runner.unlock({ passphrase: text(a.passphrase), again: text(a.again) });
       case 'runner off':
         return runner.turnOff();
       case 'runner give':
@@ -100,11 +105,13 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
       case 'runner remove':
         return runner.remove({ id: text(a.id) });
       case 'runner approve':
-        return runner.approve({ pairing: text(a.pairing), identities: list(a.identities) });
+        return runner.approve({ pairing: text(a.pairing), identities: list(a.identities), open: a.open === true });
       case 'runner revoke':
         return runner.revoke({ pairing: text(a.pairing) });
       case 'runner yes':
         return runner.setYes({ pairing: text(a.pairing), kind: text(a.kind), on: a.on === true });
+      case 'runner opening':
+        return runner.setOpen({ pairing: text(a.pairing), on: a.on === true });
       case 'runner answer':
         return runner.pageAnswer({ request: text(a.request), yes: a.yes === true, always: a.always === true });
       case 'runner cards':
@@ -157,7 +164,7 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
     // The door for apps (sections 2 to 4): JSON, POST only, a header a web page cannot send without asking first.
     if (req.method !== 'POST' || (!token && !req.headers['mor-runner-pair'])) return json(res, 403, { error: 'Only an app on this computer talks to Kišib’s runner.' }), true;
     try {
-      const body = (await readBody(req, url.pathname === '/runner/ask' ? RUNNER_LIMIT : 1 << 16)).toString('utf8');
+      const body = (await readBody(req, url.pathname === '/runner/ask' || url.pathname === '/runner/open' ? RUNNER_LIMIT : 1 << 16)).toString('utf8');
       const a = (body ? JSON.parse(body) : {}) as Record<string, unknown>;
       switch (url.pathname) {
         case '/runner/pair':
@@ -171,6 +178,11 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
           return json(res, 200, await runner.ask(token, readRequest(a), base)), true;
         case '/runner/answer':
           return json(res, 200, await runner.result(token, { request: text(a.request), wait: typeof a.wait === 'number' ? a.wait : 0 })), true;
+        case '/runner/open': {
+          // Draft 2, section 8: what is sealed to an identity, opened for an app allowed to.
+          if (!Array.isArray(a.sealed) || a.sealed.some((x) => typeof x !== 'string')) throw new RunnerRefusal(400, 'The request names no sealed containers. Nothing was opened.');
+          return json(res, 200, runner.open(token, { identity: text(a.identity), sealed: (a.sealed as string[]).map((x) => Uint8Array.from(Buffer.from(x, 'base64'))) })), true;
+        }
         case '/runner/drop':
           runner.drop(token, { request: text(a.request) });
           return json(res, 200, {}), true;

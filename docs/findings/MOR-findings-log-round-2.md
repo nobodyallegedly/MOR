@@ -28,6 +28,19 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F378. The Dubsar runner, draft 2: the keys encrypted at rest, locked and off, opening what is sealed (22 October 2026; F377's five questions; Dubsar Suite)
+
+**The questions (F377, `docs/kishib-runner-report.md`, section 5). Decided by Nobody, allegedly, 22 October 2026:**
+1. The keys protected at rest: "Agreed, it needs to be protected", option (b): a passphrase each time Kišib starts, the keys encrypted under it.
+2. Opening what is sealed to an identity: "Yes": a choice when approving an app, off unless chosen; no panel per opening; each opening counted.
+3. Relying always asks with the runner on: "Ok, agreed".
+4. Locked and off, two states: "Yes, agreed".
+5. "Mac only" means never in the web client: "Correct, I meant not on web".
+
+**Built:** the runner's cMIP, draft 2 (`cmips/cmip-runner-draft-2.md`; draft 1 kept), each change marked. Kišib: a passphrase chosen when the runner is turned on, typed twice, what forgetting it means said; everything the runner keeps (keys, pairings, the log) sealed at each write with AES-256-GCM under a key derived from the passphrase with scrypt (128 MiB), never in the clear; locked when Kišib closes ("Runner locked" top right, the passphrase asked on its first screen, everything back with no app paired again, a wrong passphrase opening nothing, every app's request refused while locked, said plainly); off erasing everything, said so; "may open what is sealed to this identity" when approving an app and in each app's line, each opening listed in Signed with its app and kind; relying said among what always asks. Dub: an identity used through Kišib opens its inbox and its sealed contacts list through the runner where allowed; where not, it says it can send but not read, and how to allow it; a locked Kišib said plainly. The risk said when turning the runner on is now true as written, with what is still at risk (a passphrase seen or guessed; a computer taken, or a program running as the person, while Kišib is unlocked).
+
+**No rule of the core changed**; nothing for the MOR lead. Report: `docs/runner-draft-2-report.md`, with its questions for Nobody, allegedly.
+
 ## F377. Kišib on the kit, the Dubsar runner, and the chain-key signer's code to draft 6 (22 October 2026; Dubsar Suite)
 
 **Kišib on the kit**, as the mockups drew it and the redesign decided: four tiles with their danger marks (Identities 1, Runner 2, Paper 3, Collectives 3; no Runner on the web, decided "Mac only"), each opening its column; Paper and Collectives behind the quiet door; top right, "Holds nothing · runner off", or what the runner holds. Identities gains **Make an identity** (H48) and **Confirm a succession** (moved from Paper, accepted); Collectives gains **Check a share** (accepted). Every function of Kišib kept.
