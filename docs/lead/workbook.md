@@ -73,7 +73,9 @@ Fable's advice in a review is always taken into account (Nobody, allegedly, 22 O
 
 ## Before merging a session's work
 
-Read its report and its questions; read the CI run yourself (a session's green is not CI's); take the questions to Nobody, allegedly, one at a time, with a lean; record the answers; merge; update the state file.
+Read its report and its questions; read the CI run yourself (a session's green is not CI's); take the questions to Fable (and to Nobody, allegedly, where they touch a principle); record the answers; merge; update the state file.
+
+**A pull request that changes `core/`, `wasm/` or anything the clients bundle** (the Dubsar Suite lead, 22 October 2026, after the lead merged pull request 98 without rebuilding the releases and left main red): it rebuilds every web release that carries the WebAssembly (the display client, Dub, Kišib, Damgar, Ummia, Edubba) in its own branch, as their READMEs say, and is green on GitHub, the reproducible display client included, before it is merged. Tell the Suite lead through Nobody, allegedly, before and after each merge, so the two leads never merge into main at the same time. The handover said it too: releases are dispatched by hand, one after another, never with a push to main in between.
 
 ## For Fable, from the C session (noted by the lead)
 
