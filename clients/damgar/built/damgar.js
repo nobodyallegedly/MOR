@@ -3624,6 +3624,7 @@ function freshLines(f) {
   delete f.earlier;
   f.split = true;
 }
+var HELD_ELSEWHERE_SAY = "This identity\u2019s signing key is not held by this app: it is signed for by Ki\u0161ib\u2019s runner, and this act cannot be signed that way here. Nothing was signed.";
 var AGREEMENTS_RECORD = 17;
 var b64 = (b) => base64(b);
 var unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -3632,6 +3633,8 @@ var TestIdentity = class _TestIdentity {
     this.f = f;
     this.via = via;
   }
+  /** Where this file holds no signing key: who signs for it (the Dubsar runner cMIP). Never saved with the file. */
+  signer;
   get id() {
     return this.f.identity;
   }
@@ -3726,15 +3729,27 @@ var TestIdentity = class _TestIdentity {
     return this.submitChainAct(this.chainActs()[0], this.f.homes);
   }
   // ------------------------------------------------------------ everyday acts
-  everyday(spec, type, payload, opts) {
-    if (opts.acks?.length && !ACK_SPECS.includes(spec)) {
+  /** The objects an everyday act carries: a collective's action cites the decision it acts under, after the entries its type defines (F127). */
+  everydayObjects(spec, type, objects, acks) {
+    if (acks?.length && !ACK_SPECS.includes(spec)) {
       throw new Error("only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act");
     }
     const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
-    let objects = opts.objects;
     if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
       objects = [...objects ?? [], ...this.f.cites.map((d) => [this.f.identity, d])];
     }
+    return objects;
+  }
+  /** After an act is made: on its line, waiting for the homes if private, a record cited next. */
+  everydayMade(spec, type, isPublic, line, made) {
+    line.push(made.id);
+    if (!isPublic && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
+    if (this.f.cites && spec === MIRS.agreements && type === AGREEMENTS_RECORD) this.f.cites = [made.id];
+    return made;
+  }
+  everyday(spec, type, payload, opts) {
+    if (!this.f.signingSecret) throw new Error(HELD_ELSEWHERE_SAY);
+    const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
     const line = lineFor(this.f, opts.public);
     const made = makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
@@ -3750,10 +3765,33 @@ var TestIdentity = class _TestIdentity {
       refs: opts.refs,
       acks: opts.acks
     });
-    line.push(made.id);
-    if (!opts.public && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
-    if (this.f.cites && isRecord) this.f.cites = [made.id];
-    return made;
+    return this.everydayMade(spec, type, opts.public, line, made);
+  }
+  /**
+   * An everyday act signed here, or, where this file holds no signing key,
+   * by its `signer` (Kišib's runner, which may wait for the person's click).
+   * The line is the same either way. One act at a time: the caller keeps
+   * signing serial, as every app does.
+   */
+  async everydayNow(spec, type, payload, opts) {
+    if (this.f.signingSecret || !this.signer) return this.everyday(spec, type, payload, opts);
+    const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
+    const line = lineFor(this.f, opts.public);
+    const made = await this.signer({
+      identity: this.f.identity,
+      binding: this.f.binding,
+      line: this.f.cites ? "public" : opts.public ? "public" : "private",
+      sequence: [...line],
+      spec,
+      type,
+      payload,
+      public: opts.public,
+      ...opts.to ? { to: opts.to } : {},
+      ...objects ? { objects } : {},
+      ...opts.refs ? { refs: opts.refs } : {},
+      ...opts.acks ? { acks: opts.acks } : {}
+    });
+    return this.everydayMade(spec, type, opts.public, line, made);
   }
   /** Send an everyday identity act to every home: its standing depends on it (Envelopes, "How acts reach people"). */
   async toHomes(act) {
@@ -3775,7 +3813,7 @@ var TestIdentity = class _TestIdentity {
   async publishRoutes(routes) {
     const version = (this.f.routes?.version ?? 0) + 1;
     const payload = routesPayload({ version, previous: this.f.routes?.act, routes });
-    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
+    const made = await this.everydayNow(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
     this.f.routes = { version, act: made.id };
     return { id: made.id, sent: await this.toHomes(made.act) };
   }
@@ -3793,7 +3831,7 @@ var TestIdentity = class _TestIdentity {
     }
     if (!acts.length) throw new Error("a witness act names at least one act");
     if (acts.some((a) => ownIds(this.f).includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
-    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(/* @__PURE__ */ new Map()), { public: true, acks: acts });
+    const made = await this.everydayNow(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(/* @__PURE__ */ new Map()), { public: true, acks: acts });
     const sent = await this.toHomes(made.act);
     for (const hint of opts.relays ?? []) await relayAt(hint, this.via).putAct(made.act);
     return { id: made.id, act: made.act, sent };
@@ -3809,7 +3847,7 @@ var TestIdentity = class _TestIdentity {
     const version = (last?.version ?? 0) + 1;
     const secret = given ?? newEncryptionSecret();
     const payload = encryptionKeyPayload(version, last?.act, xwingPublic(secret));
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
+    const made = await this.everydayNow(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
     this.f.encryption.push({ version, act: made.id, secret: hex(secret) });
     return { id: made.id, sent: await this.toHomes(made.act) };
   }
@@ -4064,7 +4102,7 @@ var TestIdentity = class _TestIdentity {
     const inbox = them.inbox(SPECS.envelopes);
     if (!inbox) throw new Error("that identity declares no inbox");
     const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, {
+    const made = await this.everydayNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, {
       public: false,
       to: [opts.to]
     });
@@ -4082,7 +4120,7 @@ var TestIdentity = class _TestIdentity {
   /** Deliver a content key to a bare key someone supplied, found by its pickup tag. */
   async deliverKeyToBare(opts) {
     const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, { public: false });
+    const made = await this.everydayNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, { public: false });
     const sealed = sealFor(made.act, made.key, [{ key: opts.bareKey }]);
     for (const hint of opts.relays) await relayAt(hint, this.via).putSealed(sealed, [pickupTag(opts.bareKey)]);
     return { delivery: made.id, sealed: sealedId(sealed) };
@@ -4095,6 +4133,10 @@ var TestIdentity = class _TestIdentity {
   sign(spec, type, payload, opts) {
     return this.everyday(spec, type, payload, opts);
   }
+  /** As `sign`, by the runner where this file holds no signing key (the Dubsar runner cMIP). */
+  signNow(spec, type, payload, opts) {
+    return this.everydayNow(spec, type, payload, opts);
+  }
   /**
    * Sign a private act on a line of its own (one act, first in its line),
    * outside this identity's sequence, never left at its homes: for an act
@@ -4104,6 +4146,7 @@ var TestIdentity = class _TestIdentity {
    * soon after it is made.
    */
   signApart(spec, type, payload, opts = {}) {
+    if (!this.f.signingSecret) throw new Error(HELD_ELSEWHERE_SAY);
     return makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
       signer: this.f.identity,
@@ -4117,12 +4160,17 @@ var TestIdentity = class _TestIdentity {
       refs: opts.refs
     });
   }
+  /** As `signApart`, by the runner where this file holds no signing key: the act on its line of its own (`apart`). */
+  async signApartNow(spec, type, payload, opts = {}) {
+    if (this.f.signingSecret || !this.signer) return this.signApart(spec, type, payload, opts);
+    return this.signer({ identity: this.f.identity, binding: this.f.binding, line: "apart", sequence: [], spec, type, payload, public: false, ...opts.to ? { to: opts.to } : {}, ...opts.refs ? { refs: opts.refs } : {} });
+  }
   /**
    * Publish an act on this identity's own relays, for example a private
    * post whose key it will deliver. Returns the act id and its content key.
    */
   async publish(spec, type, payload, opts) {
-    const made = this.everyday(spec, type, payload, {
+    const made = await this.everydayNow(spec, type, payload, {
       public: opts.public,
       to: opts.to,
       objects: opts.objects,
@@ -4253,7 +4301,8 @@ function failure(home, e3) {
 var unb642 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 function ownKey(me) {
   const e3 = me.f.encryption[me.f.encryption.length - 1];
-  return e3 ? xwingPublic(unhex(e3.secret)) : null;
+  if (!e3) return null;
+  return e3.secret ? xwingPublic(unhex(e3.secret)) : e3.public ? unhex(e3.public) : null;
 }
 async function leaveAtHomes(me, made, o = {}) {
   const via = o.via ?? me.via;
@@ -4263,7 +4312,7 @@ async function leaveAtHomes(me, made, o = {}) {
   if (key && to.length === 1 && to[0] === me.f.identity) copy = { sealed: sealFor(made.act, made.key, [{ id: me.f.identity, key }]), tags: [] };
   else if (key && !to.length) copy = { sealed: sealFor(made.act, made.key, [{ key }]), tags: [pickupTag(key)] };
   else if (key) {
-    const kd = me.signApart(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.f.identity] });
+    const kd = await me.signApartNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.f.identity] });
     copy = { sealed: sealFor(kd.act, kd.key, [{ id: me.f.identity, key }]), tags: [] };
   }
   const took = [];
@@ -7811,12 +7860,12 @@ async function sendToSelf(me, type, payload, opts) {
   const homes = me.f.homes.map((h) => h.hint);
   const look = await lookUp(me.id, homes, opts.via ?? {});
   if (!look.encryptionKey) throw new Error("This identity publishes no encryption key, so nothing can be sealed to it: the draft cannot travel to Damgar. Nothing was signed.");
-  if (!me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey))) {
+  if (!me.f.encryption.some((e3) => (e3.secret ? hex(xwingPublic(unhex(e3.secret))) : e3.public ?? "") === hex(look.encryptionKey))) {
     throw new Error("The encryption key this identity publishes is not one this app holds: Damgar, holding the same words, could not open the draft either. Nothing was signed.");
   }
   let made;
   try {
-    made = me.sign(MESSAGES_SPEC, type, payload, { public: false, to: [me.id], refs: opts.refs });
+    made = await me.signNow(MESSAGES_SPEC, type, payload, { public: false, to: [me.id], refs: opts.refs });
   } finally {
     await opts.save();
   }
@@ -10935,6 +10984,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-first h2{font-size:24px;margin:8px 0 4px}
 .dub-first form{margin:6px 0}
 .dub-picked{font-size:12.5px;color:var(--k-soft)}
+.dub-code{font-size:22px;letter-spacing:.14em;color:var(--k-text);margin:6px 0}
 .dub-film{display:flex;align-items:center;gap:10px;border:1px solid var(--k-line);border-radius:12px;padding:10px 12px;margin:6px 0;font-size:14px;color:var(--k-soft)}
 .dub-sealed{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:6px 0}
 .dub-sealed img{margin:6px 0}
