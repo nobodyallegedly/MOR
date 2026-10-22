@@ -613,28 +613,27 @@ test('Edubbaâ€™s pieces by clicks: a payment prepared for Damgar; a collectiveâ€
   const { f, col } = await founded(H, R, e);
   await e.c.ask('acting as', { id: f.id });
   const { page: ep } = await open(`${e.app.base}/#pair=${e.app.access.newCode()}`);
-  // Identities tab: pay someone.
-  await sees(ep, 'button[data-tab=identities], [data-tab=identities]', 'edubba');
-  await ep.locator('[data-tab=identities]').first().click();
-  await sees(ep, '#e-pay', 'edubba-pay');
-  await ep.locator('#e-pay > summary').click();
-  await ep.locator('form#pay-someone [name=to]').fill(svc.id);
-  await ep.locator('form#pay-someone [name=value]').fill('42');
-  await ep.locator('form#pay-someone [name=whatFor]').fill('a thank you');
-  await shot(ep, 'edubba-pay-someone');
-  await ep.locator('form#pay-someone').getByRole('button', { name: 'Prepare it for Damgar' }).click();
-  await sees(ep, 'form#pay-someone .note.done', 'edubba-paid');
-  assert.match(await ep.locator('form#pay-someone .note.done').innerText(), /Prepared, not signed/);
-  // Collectives tab: the anchor of one of its acts, the service's offer read, a tier chosen.
-  await ep.locator('[data-tab=collectives]').first().click();
-  await sees(ep, '#e-real-anchor', 'edubba-collective');
+  // Round 4: Edubba on the kit. Pay someone moved to Dub's profile; a collective's Money tab pays a member and anchors one of its acts.
+  await sees(ep, '[data-k-tile=collectives]', 'edubba');
+  await ep.locator('[data-k-tile=collectives]').click();
+  await ep.locator('.edubba-tabs button', { hasText: 'Money' }).click();
+  await sees(ep, '#e-real-pay', 'edubba-collective');
+  await ep.locator('#e-real-pay > summary').click();
+  await ep.locator('form#pay-member [name=to]').fill(svc.id);
+  await ep.locator('form#pay-member [name=value]').fill('42');
+  await ep.locator('form#pay-member [name=whatFor]').fill('a thank you');
+  await shot(ep, 'edubba-pay-member');
+  await ep.locator('form#pay-member').getByRole('button', { name: 'Prepare it for Damgar' }).click();
+  await sees(ep, 'form#pay-member .k-note.k-done', 'edubba-paid');
+  assert.match(await ep.locator('form#pay-member .k-note.k-done').innerText(), /Prepared, not signed/);
+  // The anchor of one of its acts, the service's offer read, a tier chosen.
   await ep.locator('#e-real-anchor > summary').click();
   await ep.locator('form#anchor-offers [name=service]').fill(svc.id);
   await ep.locator('form#anchor-offers').getByRole('button', { name: 'Read its offer' }).click();
   await sees(ep, 'form.anchor-ask', 'edubba-offer');
   await shot(ep, 'edubba-anchor-offer');
   await ep.getByRole('button', { name: 'Prepare the payment for Damgar' }).click();
-  await sees(ep, 'form.anchor-ask .note.done', 'edubba-anchored');
+  await sees(ep, 'form.anchor-ask .k-note.k-done', 'edubba-anchored');
   await sees(ep, '#e-anchors .item', 'edubba-anchors');
   await shot(ep, 'edubba-anchors');
   // The founder's Damgar holds both drafts.

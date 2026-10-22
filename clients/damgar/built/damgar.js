@@ -4940,7 +4940,7 @@ var LINK_SAY = [
 var NEGOTIATION = 18;
 var negotiationPayload = (text3) => cborEncode(/* @__PURE__ */ new Map([[0, text3.normalize("NFC")]]));
 async function negotiate(by, to, o) {
-  const made = by.sign(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
+  const made = await by.signNow(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
     public: false,
     to: [to.id],
     objects: o.thread ? [[o.thread, o.previous ?? o.thread]] : void 0,
@@ -11363,6 +11363,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act.k-sel{background:var(--k-wash);border-radius:12px;padding-left:10px;padding-right:10px;border-bottom-color:transparent}
 .k-act figure{margin:8px 0 4px}
 .k-act img,.k-act video{display:block;max-width:100%;max-height:60vh;height:auto;border-radius:12px;image-orientation:from-image}
+.k-act audio{display:block;width:100%;margin:6px 0}
 .k-act .k-doc{display:block;border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px;text-decoration:none}
 .k-act .k-box{border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0}
 

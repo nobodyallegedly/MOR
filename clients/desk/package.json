@@ -1,7 +1,7 @@
 {
   "name": "mor-desk",
   "version": "0.1.0",
-  "description": "Edubba (called MOR Identities until 16 October 2026, F333): the tablet house, with no command line. Three tabs: Agents (each agent's terms under the nudge cMIP, its queue, nudges, its cap and API key, a prompt box whose words are a signed private act, and MOR as seen by it), Identities (drafts from the Claude connector read in plain words and approved, declined or sent back; what each identity received, sorted) and Collectives (acting for a collective in text and pictures, with what its agreement lets you do; its constitution in plain words; the collective client's work). Test identities only.",
+  "description": "Edubba (called MOR Identities until 16 October 2026, F333): the Dubsar Suite's agreements hub, on the kit. Four tiles (three on the web): Agents (Mac only: Talk, Queue, Mind, Terms; the diary behind a public act), Collectives (Act, Members, Money, Keepers, To sign), Publishing (protected text, pictures, video, audio), Vows (simple vows; Track). Test identities only.",
   "license": "MIT OR Apache-2.0",
   "private": true,
   "type": "module",

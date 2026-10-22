@@ -403,7 +403,7 @@ export function collectiveHead(c: State['collectives'][number], sub: string, toS
 
 /** Act: what you may do as chips, the collective's feed, the typing box (post for it). */
 export function actPane(o: { name: string; acting: string; chips: string; cards: string; typing: string | null; note?: string }): string {
-  return `<div class="edubba-chips"><span>Acting as ${e(o.acting)}, for ${e(o.name)}. What you may do, from its agreement:</span>${o.chips}</div>${o.note ? `<p class="k-small k-soft">${o.note}</p>` : ''}
+  return `<div class="edubba-chips"><span>Acting as ${e(o.acting)}, for ${e(o.name)}. What you may do, from its agreement:</span>${o.chips}</div>${o.note ? `<p class="k-small k-soft" id="e-perms">${o.note}</p>` : ''}
 <div id="e-post-review" class="e-in"></div>${feedBox({ id: 'collective-feed', cards: o.cards, empty: `Nothing posted for ${o.name} yet.` })}${o.typing ?? ''}`;
 }
 
