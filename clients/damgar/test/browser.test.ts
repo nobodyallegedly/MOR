@@ -220,15 +220,22 @@ test('Damgar by clicks: the web client and the program’s page, a tip from Dub 
   await bob.c.ask('post', { text: 'A post worth a tip.' });
   await alice.c.ask('follow', { id: bob.id, name: 'Bob' });
   const { page: dp } = await open(`${alice.app.base}/#pair=${alice.app.access.newCode()}`);
-  await sees(dp, 'article.post', 'dub-feed');
-  const post = dp.locator('article.post', { hasText: 'A post worth a tip.' });
-  await post.getByRole('button', { name: 'Tip' }).click();
-  await post.locator('form.tip [name=value]').fill('1500');
+  // Dub on the kit (21 October 2026): Tip in the act's menu, then the pay chooser's Ask Damgar.
+  const post = dp.locator('#feed .k-act', { hasText: 'A post worth a tip.' });
+  await post.waitFor({ timeout: 60_000 });
+  await post.locator('.k-actid').click();
+  await dp.getByRole('menuitem', { name: 'Tip', exact: true }).click();
+  const tip = dp.locator('.k-modal form#pay');
+  await tip.waitFor({ timeout: 60_000 });
+  await tip.locator('[name=value]').fill('1500');
+  await tip.locator('input[value=damgar]').check();
   await shot(dp, 'dub-tip');
-  assert.match(await done(dp, post.getByRole('button', { name: 'Prepare it for Damgar' }), 'dub-tipped'), /Prepared, not signed/);
-  await dp.locator('button.tab[data-tab=private]').click();
-  await dp.locator('details[data-fold=askpaid] > summary').click();
-  await shot(dp, 'dub-ask-to-be-paid');
+  await tip.getByRole('button', { name: 'Tip' }).click();
+  const tipped = dp.locator('#status .k-note.k-done');
+  await tipped.waitFor({ timeout: 60_000 });
+  assert.match(await tipped.innerText(), /Prepared, not signed/);
+  await dp.locator('[data-k-part="private"]').click();
+  await shot(dp, 'dub-private');
 
   // Alice's web client: To sign, the draft read in plain words; signed.
   await ap.getByRole('button', { name: 'Look again' }).click();

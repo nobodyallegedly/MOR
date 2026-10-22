@@ -44,12 +44,12 @@ None open. Questions 2 and 3 of `docs/private-lines-report.md` are accepted as l
 
 ## 5. Human test steps (on the Mac)
 
-*Checked against the READMEs of Dub, Edubba, Damgar, Ummia and Kišib. Test identities only; regtest only.*
+*Checked against the READMEs of Dub (rebuilt on the kit, pull request 87), Edubba, Damgar, Ummia and Kišib. Test identities only; regtest only.*
 
 1. **Bring the Mac up to this branch.** In Terminal, from the MOR folder: `git pull`, then `cd clients/genesis && npm install && npm run wasm`, then `npm install` in `clients/desk`, `clients/dub`, `clients/kishib`, `clients/damgar` and `clients/ummia`. Rebuild each app as its README says (`sh scripts/make-app.sh`).
-2. **Three new test identities.** In Dub, make **A** and write its chain key's words on a paper; make **iPa** and **iPh** in other Dubs. Bring A into Edubba, Damgar and Ummia.
-3. **A private act first, then a founding.** In Edubba, "Pay someone" from A (a small amount): a private draft for Damgar. Then found a real collective with iPa and iPh, its Money area held by A and iPa. iPa and iPh sign in Dub's Signing tab; gather and found it in Edubba.
-4. **The cards.** In Edubba's Identities tab, "This desk's line" shows "its cards, for Kišib": two, joined by "; ", one ending `Edubba public`, the other `Edubba private`. Do the same in Dub's identity window, and in Damgar's and Ummia's once each has signed something.
+2. **Three new test identities.** In Dub, make **A** (the identity panel, top right › **+ Add** › make one) and write its chain key's words on a paper; make **iPa** and **iPh** the same way. Bring all three into Edubba (Identities, by ID and signing words), and A into Damgar and Ummia.
+3. **A private act first, then a founding.** In Edubba, "Pay someone" from A (a small amount): a private draft for Damgar. Then found a real collective with iPa and iPh, its Money area held by A and iPa. iPa and iPh sign in Edubba: **Collectives › To sign**, as each of them (Dub has no Signing tab now); gather and found it in Edubba.
+4. **The cards.** In Edubba's Identities tab, "This desk's line" shows "its cards, for Kišib": two, joined by "; ", one ending `Edubba public`, the other `Edubba private`. In Dub: the identity panel (top right) › A's menu › **Line and homes**, "This app's line", its cards (Dub's public line, and its private one once A has sent a message). Damgar's and Ummia's identity windows show theirs once each has signed something.
 5. **The change of keys.** In Kišib, change A's keys from its paper, pasting every app's cards. The review names "Edubba's public line" and "Edubba's private line", each kept, and nothing is in red. Sign it, as Kišib's README says.
 6. **The founding still counts.** In Damgar, take A's new words and add the collective: its Money area is read ("Its Money area, …"), which needs its agreement in force, founded after the private draft. Sign a promise for the collective: "Signed for the collective with your own key".
 7. **An identity from before (optional).** Use an identity held in Edubba since before this branch. Its window shows a third card, `Edubba earlier`, for the mixed line it kept. Give it to Kišib with the others: the review says "Edubba's line from before (public and private acts together)", kept.

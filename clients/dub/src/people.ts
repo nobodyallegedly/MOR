@@ -44,6 +44,8 @@ export interface Kept {
   /** When this app first found it, in seconds since 1970: this app's time, not a signed one. */
   found: number;
   problem?: string;
+  /** A text act's format, where it names one (the appended collective cMIP's, a correction's…). */
+  format?: string | null;
   /** An Agreements negotiation message (H18: a proposal to sign, or an answer in its thread): its thread, the message it follows, what it acknowledges. */
   talk?: { thread: string; previous: string | null; acks: string[] };
 }
@@ -55,6 +57,10 @@ export interface Sent {
   text: string;
   /** When this app sent it: this app's time, not a signed one. */
   at: number;
+  /** Everyone else it was sealed to (Cc). */
+  cc?: string[];
+  /** A collective appended to it (the appended collective cMIP). */
+  of?: string | null;
 }
 
 /** What Dub keeps about people, for one identity it holds. Never published, except the follow list by choice. */

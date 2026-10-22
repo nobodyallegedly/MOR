@@ -128,14 +128,14 @@ var Folder = class {
   async flushed() {
     await this.writing;
     if (this.refused) {
-      const e2 = this.refused;
+      const e3 = this.refused;
       this.refused = null;
-      throw new Error(`This browser refused to keep Edubba\u2019s files (${e2.message}): what was just done may not be kept.`);
+      throw new Error(`This browser refused to keep Edubba\u2019s files (${e3.message}): what was just done may not be kept.`);
     }
   }
   scheduled = false;
-  queue(path, e2) {
-    this.changed.set(path, e2);
+  queue(path, e3) {
+    this.changed.set(path, e3);
     if (this.scheduled) return;
     this.scheduled = true;
     this.writing = this.writing.then(
@@ -160,20 +160,20 @@ var Folder = class {
       })
     );
   }
-  set(path, e2) {
-    if (e2) this.files.set(path, e2);
+  set(path, e3) {
+    if (e3) this.files.set(path, e3);
     else this.files.delete(path);
-    this.queue(path, e2);
+    this.queue(path, e3);
   }
   get(path) {
     return this.files.get(normal(path));
   }
   file(path, op) {
     const p = normal(path);
-    const e2 = this.files.get(p);
-    if (!e2) throw fail("ENOENT", `no such file or directory, ${op}`, p);
-    if (e2.dir) throw fail("EISDIR", `illegal operation on a directory, ${op}`, p);
-    return e2.data;
+    const e3 = this.files.get(p);
+    if (!e3) throw fail("ENOENT", `no such file or directory, ${op}`, p);
+    if (e3.dir) throw fail("EISDIR", `illegal operation on a directory, ${op}`, p);
+    return e3.data;
   }
   write(path, data, op) {
     const p = normal(path);
@@ -184,9 +184,9 @@ var Folder = class {
   }
   mkdir(path, recursive) {
     const p = normal(path);
-    const e2 = this.files.get(p);
-    if (e2) {
-      if (e2.dir && recursive) return;
+    const e3 = this.files.get(p);
+    if (e3) {
+      if (e3.dir && recursive) return;
       throw fail("EEXIST", "file already exists, mkdir", p);
     }
     if (!this.files.get(parent(p))) {
@@ -198,9 +198,9 @@ var Folder = class {
   /** The names directly inside a folder, sorted. */
   list(path) {
     const p = normal(path);
-    const e2 = this.files.get(p);
-    if (!e2) throw fail("ENOENT", "no such file or directory, scandir", p);
-    if (!e2.dir) throw fail("ENOTDIR", "not a directory, scandir", p);
+    const e3 = this.files.get(p);
+    if (!e3) throw fail("ENOENT", "no such file or directory, scandir", p);
+    if (!e3.dir) throw fail("ENOTDIR", "not a directory, scandir", p);
     const head = p === "/" ? "/" : `${p}/`;
     return [...this.files.keys()].filter((k) => k !== p && k.startsWith(head) && !k.slice(head.length).includes("/")).map((k) => k.slice(head.length)).sort();
   }
@@ -216,19 +216,19 @@ var Folder = class {
     if (a === b) return;
     for (const k of this.under(b)) this.set(k, null);
     for (const k of this.under(a)) {
-      const e2 = this.files.get(k);
+      const e3 = this.files.get(k);
       this.set(k, null);
-      this.set(b + k.slice(a.length), e2);
+      this.set(b + k.slice(a.length), e3);
     }
   }
   remove(path, o, op) {
     const p = normal(path);
-    const e2 = this.files.get(p);
-    if (!e2) {
+    const e3 = this.files.get(p);
+    if (!e3) {
       if (o.force) return;
       throw fail("ENOENT", `no such file or directory, ${op}`, p);
     }
-    if (e2.dir && !o.recursive && this.list(p).length) throw fail("ENOTEMPTY", `directory not empty, ${op}`, p);
+    if (e3.dir && !o.recursive && this.list(p).length) throw fail("ENOTEMPTY", `directory not empty, ${op}`, p);
     for (const k of this.under(p)) this.set(k, null);
   }
 };
@@ -283,14 +283,14 @@ function chmodSync(p, _mode) {
   if (!folder.get(p)) throw Object.assign(new Error(`ENOENT: no such file or directory, chmod '${p}'`), { code: "ENOENT" });
 }
 function stat(p) {
-  const e2 = folder.get(p);
-  if (!e2) throw Object.assign(new Error(`ENOENT: no such file or directory, stat '${p}'`), { code: "ENOENT" });
+  const e3 = folder.get(p);
+  if (!e3) throw Object.assign(new Error(`ENOENT: no such file or directory, stat '${p}'`), { code: "ENOENT" });
   return {
-    isFile: () => !e2.dir,
-    isDirectory: () => e2.dir,
+    isFile: () => !e3.dir,
+    isDirectory: () => e3.dir,
     isSymbolicLink: () => false,
-    size: e2.dir ? 0 : e2.data.length,
-    mode: e2.dir ? 16832 : 33152,
+    size: e3.dir ? 0 : e3.data.length,
+    mode: e3.dir ? 16832 : 33152,
     mtimeMs: 0
   };
 }
@@ -1718,6 +1718,38 @@ function anchoringCheckTicket(offer_act, ticket, commitment, leaf, now8) {
   }
   return v5;
 }
+function anchoringLeaf(act, blind) {
+  let deferred4_0;
+  let deferred4_1;
+  try {
+    const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(blind, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.anchoringLeaf(ptr0, len0, ptr1, len1);
+    var ptr3 = ret[0];
+    var len3 = ret[1];
+    if (ret[3]) {
+      ptr3 = 0;
+      len3 = 0;
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    deferred4_0 = ptr3;
+    deferred4_1 = len3;
+    return getStringFromWasm0(ptr3, len3);
+  } finally {
+    wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+  }
+}
+function anchoringReadOffer(act) {
+  const ptr0 = passArray8ToWasm0(act, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.anchoringReadOffer(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
 function anchoringReadTicket(payload) {
   const ptr0 = passArray8ToWasm0(payload, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
@@ -1823,12 +1855,12 @@ function describeAct(bytes) {
   }
   return takeFromExternrefTable0(ret[0]);
 }
-function encryptionKeyPayload(version, previous, _public) {
+function encryptionKeyPayload(version2, previous, _public) {
   var ptr0 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
   var len0 = WASM_VECTOR_LEN;
   const ptr1 = passArray8ToWasm0(_public, wasm.__wbindgen_malloc);
   const len1 = WASM_VECTOR_LEN;
-  const ret = wasm.encryptionKeyPayload(version, ptr0, len0, ptr1, len1);
+  const ret = wasm.encryptionKeyPayload(version2, ptr0, len0, ptr1, len1);
   if (ret[3]) {
     throw takeFromExternrefTable0(ret[2]);
   }
@@ -2774,13 +2806,13 @@ function __wbg_get_imports() {
       return ret;
     },
     __wbindgen_init_externref_table: function() {
-      const table = wasm.__wbindgen_externrefs;
-      const offset = table.grow(4);
-      table.set(0, void 0);
-      table.set(offset + 0, void 0);
-      table.set(offset + 1, null);
-      table.set(offset + 2, true);
-      table.set(offset + 3, false);
+      const table2 = wasm.__wbindgen_externrefs;
+      const offset = table2.grow(4);
+      table2.set(0, void 0);
+      table2.set(offset + 0, void 0);
+      table2.set(offset + 1, null);
+      table2.set(offset + 2, true);
+      table2.set(offset + 3, false);
     }
   };
   return {
@@ -2904,8 +2936,8 @@ function getUint8ArrayMemory0() {
 function handleError(f, args) {
   try {
     return f.apply(this, args);
-  } catch (e2) {
-    const idx = addToExternrefTable0(e2);
+  } catch (e3) {
+    const idx = addToExternrefTable0(e3);
     wasm.__wbindgen_exn_store(idx);
   }
 }
@@ -3015,12 +3047,12 @@ async function __wbg_load(module2, imports) {
     if (typeof WebAssembly.instantiateStreaming === "function") {
       try {
         return await WebAssembly.instantiateStreaming(module2, imports);
-      } catch (e2) {
+      } catch (e3) {
         const validResponse = expectedResponseType(module2.type);
         if (validResponse && module2.headers.get("Content-Type") !== "application/wasm") {
-          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e2);
+          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e3);
         } else {
-          throw e2;
+          throw e3;
         }
       }
     }
@@ -3547,10 +3579,10 @@ var Relay = class {
       let reason = `HTTP ${r.status}`;
       let acts = [];
       try {
-        const e2 = cborDecode(body);
-        code = e2.get(0);
-        reason = e2.get(1) ?? reason;
-        acts = bytesList(e2.get(2));
+        const e3 = cborDecode(body);
+        code = e3.get(0);
+        reason = e3.get(1) ?? reason;
+        acts = bytesList(e3.get(2));
       } catch {
       }
       throw new RelayError(code, reason, acts, r.status);
@@ -3620,9 +3652,9 @@ var Relay = class {
     try {
       const a = await this.call(`/acts/${id}`);
       return actId(a) === id ? a : null;
-    } catch (e2) {
-      if (e2 instanceof RelayError && e2.code === CODE.notHeld) return null;
-      throw e2;
+    } catch (e3) {
+      if (e3 instanceof RelayError && e3.code === CODE.notHeld) return null;
+      throw e3;
     }
   }
   /** `POST /media`: the relay's answer is checked against the bytes sent. */
@@ -3640,9 +3672,9 @@ var Relay = class {
     try {
       const b = await this.call(`/media/${lockedHash}`);
       return sha2562(b) === lockedHash ? b : null;
-    } catch (e2) {
-      if (e2 instanceof RelayError && e2.code === CODE.notHeld) return null;
-      throw e2;
+    } catch (e3) {
+      if (e3 instanceof RelayError && e3.code === CODE.notHeld) return null;
+      throw e3;
     }
   }
   async feed(q) {
@@ -3681,8 +3713,8 @@ var relayAt = (hint, via = {}) => new Relay(hint, via[hint] ?? hint);
 
 // ../genesis/src/kex.ts
 var kexLog = { recording: false, entries: [] };
-function record(e2) {
-  if (kexLog.recording) kexLog.entries.push(e2);
+function record(e3) {
+  if (kexLog.recording) kexLog.entries.push(e3);
 }
 
 // ../genesis/src/lines.ts
@@ -3904,15 +3936,15 @@ function planLines(lines4, o = {}) {
   const covered = counts2 !== null && counts2 === o.unplaced.length && !unplacedSay.length;
   const unread = [];
   for (const l of lines4) {
-    const card = cards.find((c2) => c2.act === l.tip) ?? l.card;
+    const card2 = cards.find((c2) => c2.act === l.tip) ?? l.card;
     const given = cards.find((c2) => c2.act === l.tip);
     if (leaveOut.has(l.tip)) {
       left.push(l);
       shown3.push({ text: `${lineWords(l)} Left out by name: its acts become void.`, tone: "bad" });
-    } else if (card) {
-      kept2.push({ act: card.act, position: card.position, summary: card.summary });
+    } else if (card2) {
+      kept2.push({ act: card2.act, position: card2.position, summary: card2.summary });
       shown3.push({
-        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${capital(lineOf(given.app, given.line))}. ` : ""}${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`,
+        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${capital(lineOf(given.app, given.line))}. ` : ""}${lineWords(l)} Kept by the card given: position ${card2.position}, summary ${card2.summary}.`,
         tone: l.readable || given && !given.missing ? "ok" : "warn"
       });
     } else if (covered) {
@@ -4126,10 +4158,10 @@ async function lookUp(identity2, hints, via = {}, into) {
       });
     }
   }
-  const e2 = v.latest(identity2, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
+  const e3 = v.latest(identity2, SPECS.envelopes, ENVELOPES_TYPES.encryptionKey);
   let encryptionKey = null;
-  if (e2.payload) {
-    const p = cborDecode(e2.payload);
+  if (e3.payload) {
+    const p = cborDecode(e3.payload);
     const [scheme, key] = p.get(2);
     if (scheme === 4) encryptionKey = key;
   }
@@ -4148,7 +4180,7 @@ async function lookUp(identity2, hints, via = {}, into) {
     unreachable,
     notTried,
     routes: { act: r.act ?? null, contested: r.contested, routes },
-    encryptionKeyAct: e2.act ?? null,
+    encryptionKeyAct: e3.act ?? null,
     encryptionKey,
     inbox(spec) {
       const inboxes = routes.filter((x) => x.kind === 1);
@@ -4172,8 +4204,8 @@ async function referTo(id, hints, via = {}) {
   if (!d.public) return out;
   try {
     return { ...out, chain: await chainOf(signer, hints, via) };
-  } catch (e2) {
-    return { ...out, chainProblem: `the identity chain of ${signer} was not found: ${e2 instanceof Error ? e2.message : e2}` };
+  } catch (e3) {
+    return { ...out, chainProblem: `the identity chain of ${signer} was not found: ${e3 instanceof Error ? e3.message : e3}` };
   }
 }
 async function chainOf(identity2, hints, via = {}) {
@@ -4197,8 +4229,8 @@ async function carryChains(act, relays, hints, via = {}, known = /* @__PURE__ */
     if (!chain?.length) {
       try {
         chain = await chainOf(signer, [.../* @__PURE__ */ new Set([...hints, ...relays])], via);
-      } catch (e2) {
-        out.notFound.push({ signer, why: e2 instanceof Error ? e2.message : String(e2) });
+      } catch (e3) {
+        out.notFound.push({ signer, why: e3 instanceof Error ? e3.message : String(e3) });
         continue;
       }
     }
@@ -4210,8 +4242,8 @@ async function carryChains(act, relays, hints, via = {}, known = /* @__PURE__ */
           try {
             await relayAt(r.hint, via).putAct(c2);
             r.kept++;
-          } catch (e2) {
-            r.refused.push(e2 instanceof Error ? e2.message : String(e2));
+          } catch (e3) {
+            r.refused.push(e3 instanceof Error ? e3.message : String(e3));
           }
         }
       })
@@ -4250,8 +4282,8 @@ async function followRef(r, hints, via = {}) {
   let l;
   try {
     l = await lookUp(named, hints, via);
-  } catch (e2) {
-    throw new Error(`the act ${id} was not found at ${hints.join(", ")}, and its signer ${named} could not be looked up there: ${e2 instanceof Error ? e2.message : e2}`);
+  } catch (e3) {
+    throw new Error(`the act ${id} was not found at ${hints.join(", ")}, and its signer ${named} could not be looked up there: ${e3 instanceof Error ? e3.message : e3}`);
   }
   for (const n of l.notTried) if (!notTried.some((x) => x.hint === n.hint)) notTried.push(n);
   const places = l.verifier.places(named).filter((p) => !hints.includes(p));
@@ -4388,8 +4420,8 @@ var TestIdentity = class _TestIdentity {
       const r = this.relay(h.hint);
       try {
         out.push({ home: h.hint, result: await r.putAct(act) });
-      } catch (e2) {
-        if (e2 instanceof RelayError && e2.code === CODE.missingPredecessor) {
+      } catch (e3) {
+        if (e3 instanceof RelayError && e3.code === CODE.missingPredecessor) {
           try {
             for (const earlier of this.chainActs()) {
               if (actId(earlier) !== actId(act)) await r.putAct(earlier);
@@ -4401,7 +4433,7 @@ var TestIdentity = class _TestIdentity {
             continue;
           }
         }
-        out.push(failure(h.hint, e2));
+        out.push(failure(h.hint, e3));
       }
     }
     return out;
@@ -4446,8 +4478,8 @@ var TestIdentity = class _TestIdentity {
     for (const h of this.f.homes) {
       try {
         out.push({ home: h.hint, result: await this.relay(h.hint).putAct(act) });
-      } catch (e2) {
-        out.push(failure(h.hint, e2));
+      } catch (e3) {
+        out.push(failure(h.hint, e3));
       }
     }
     return out;
@@ -4458,10 +4490,10 @@ var TestIdentity = class _TestIdentity {
    * (inbox). Save the file after, since the sequence moved.
    */
   async publishRoutes(routes) {
-    const version = (this.f.routes?.version ?? 0) + 1;
-    const payload = routesPayload({ version, previous: this.f.routes?.act, routes });
+    const version2 = (this.f.routes?.version ?? 0) + 1;
+    const payload = routesPayload({ version: version2, previous: this.f.routes?.act, routes });
     const made = this.everyday(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
-    this.f.routes = { version, act: made.id };
+    this.f.routes = { version: version2, act: made.id };
     return { id: made.id, sent: await this.toHomes(made.act) };
   }
   /**
@@ -4491,11 +4523,11 @@ var TestIdentity = class _TestIdentity {
    */
   async publishEncryptionKey(given) {
     const last = this.f.encryption.at(-1);
-    const version = (last?.version ?? 0) + 1;
+    const version2 = (last?.version ?? 0) + 1;
     const secret = given ?? newEncryptionSecret();
-    const payload = encryptionKeyPayload(version, last?.act, xwingPublic(secret));
+    const payload = encryptionKeyPayload(version2, last?.act, xwingPublic(secret));
     const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
-    this.f.encryption.push({ version, act: made.id, secret: hex(secret) });
+    this.f.encryption.push({ version: version2, act: made.id, secret: hex(secret) });
     return { id: made.id, sent: await this.toHomes(made.act) };
   }
   // ------------------------------------------------------------ rotation
@@ -4623,8 +4655,8 @@ var TestIdentity = class _TestIdentity {
       try {
         anchored = await this.anchorQuorum(lookup, p.id, before, anchoring);
         this.f.anchored = [...this.f.anchored ?? [], ...anchored.map((a) => ({ act: a.act, on: a.on, proof: b64(a.proof) }))];
-      } catch (e2) {
-        unanchored = e2.message;
+      } catch (e3) {
+        unanchored = e3.message;
       }
     }
     return { counts: counts2, lookup, anchored, unanchored };
@@ -4713,8 +4745,8 @@ var TestIdentity = class _TestIdentity {
           } catch {
           }
         }
-      } catch (e2) {
-        if (!(e2 instanceof TypeError) && !(e2 instanceof RelayError)) throw e2;
+      } catch (e3) {
+        if (!(e3 instanceof TypeError) && !(e3 instanceof RelayError)) throw e3;
       }
     }
   }
@@ -4859,7 +4891,7 @@ var TestIdentity = class _TestIdentity {
    */
   async readInbox(opts) {
     const out = [];
-    const secrets = [...this.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const secrets = [...this.f.encryption].reverse().map((e3) => unhex(e3.secret));
     for (const hint of opts.inbox) {
       const page = await relayAt(hint, this.via).feed({ to: this.f.identity });
       for (const it of page.items) {
@@ -4875,8 +4907,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
   let parts;
   try {
     parts = sealedParts(sealed);
-  } catch (e2) {
-    return { sealed: id, opened: false, error: String(e2) };
+  } catch (e3) {
+    return { sealed: id, opened: false, error: String(e3) };
   }
   const index = me === null ? 0 : parts.to.indexOf(me);
   if (index < 0) return { sealed: id, opened: false, error: "not addressed to this identity" };
@@ -4886,8 +4918,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
     let o;
     try {
       o = openSealed(sealed, me ?? void 0, secret);
-    } catch (e2) {
-      lastError = String(e2);
+    } catch (e3) {
+      lastError = String(e3);
       continue;
     }
     const d = o.described;
@@ -4905,8 +4937,8 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
         if (o.key) them.verifier.addWithKey(o.act, o.key);
         else them.verifier.add(o.act);
         r.status = them.verifier.status(d.id);
-      } catch (e2) {
-        r.status = `sender not found: ${e2}`;
+      } catch (e3) {
+        r.status = `sender not found: ${e3}`;
       }
     }
     return r;
@@ -4929,9 +4961,9 @@ function sealFor(act, key, recipients) {
   recipients.forEach((r, i) => record({ kind: "encapsulate", publicKey: r.key, eseed: eseeds[i], ct: parts.capsules[i] }));
   return sealed;
 }
-function failure(home, e2) {
-  if (e2 instanceof RelayError) return { home, error: e2.reason, code: e2.code };
-  return { home, error: String(e2) };
+function failure(home, e3) {
+  if (e3 instanceof RelayError) return { home, error: e3.reason, code: e3.code };
+  return { home, error: String(e3) };
 }
 
 // ../../modules/carry/src/english.ts
@@ -7039,6 +7071,7 @@ function typedBack(words2, positions, typed) {
 // ../genesis/src/forms.ts
 var form = (label, hex3) => formEncode(label, unhex(hex3));
 var idForm = (id) => form("mid", id);
+var actForm = (id) => form("mact", id);
 var idWhere = (id, hints) => formWithHints("mid", unhex(id), hints.filter((h) => /^https?:\/\//.test(h)));
 function readForm(typed, want) {
   const t = typed.trim();
@@ -7048,12 +7081,13 @@ function readForm(typed, want) {
   try {
     const r = formRead(t, want);
     return { hex: r.data, hints: r.hints, bare: r.bare };
-  } catch (e2) {
-    throw new Refused(e2 instanceof Error ? e2.message : String(e2));
+  } catch (e3) {
+    throw new Refused(e3 instanceof Error ? e3.message : String(e3));
   }
 }
 var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
 var readId = (typed) => readForm(typed, "mid").hex;
+var readActId = (typed) => readForm(typed, "mact").hex;
 function readIdWhere(typed) {
   const t = typed.trim().replace(/^.*#/, "");
   const parts = t.split(/\s+/).filter(Boolean);
@@ -7148,7 +7182,7 @@ function encodeTerms(t) {
     [3, [[1, unhex(MIRS.envelopes), 0]]],
     [5, RELEASE_AREA]
   ]);
-  const field4 = t.parent ? [...t.mark ?? []].sort((a, b) => markOrder(a.power) - markOrder(b.power)).map((e2) => [powerValue(e2.power), [...e2.signers].sort().map(unhex)]) : [0];
+  const field4 = t.parent ? [...t.mark ?? []].sort((a, b) => markOrder(a.power) - markOrder(b.power)).map((e3) => [powerValue(e3.power), [...e3.signers].sort().map(unhex)]) : [0];
   const m = /* @__PURE__ */ new Map([
     [0, t.parties.map(unhex)],
     [1, t.text],
@@ -7316,7 +7350,7 @@ function markMatches(mark, needs) {
   const key = (p) => "constitutional" in p ? "constitutional" : "clone" in p ? "clone" : "judicial" in p ? "judicial" : `area ${p.area}`;
   const want = needs.map((n) => n.form === "area" ? `area ${n.area}` : n.form);
   const sorted = [...mark].sort((a, b) => markOrder(a.power) - markOrder(b.power));
-  return JSON.stringify(sorted.map((e2) => key(e2.power))) === JSON.stringify(want);
+  return JSON.stringify(sorted.map((e3) => key(e3.power))) === JSON.stringify(want);
 }
 async function carryChain(by, relays) {
   for (const hint of relays) {
@@ -7498,7 +7532,9 @@ var POST_SPECS = {
   /** The long-form text format cMIP: a post naming it is rendered with it. */
   longform: LONGFORM_SPECS.longform,
   /** The JPEG Module (modules/module-jpeg-draft-1.md). */
-  jpeg: test3("JPEG Module, draft 1, test value until publication")
+  jpeg: test3("JPEG Module, draft 1, test value until publication"),
+  /** The video Module (modules/module-video-draft-1.md): a film, named by its test value until publication, as the JPEG Module is. */
+  video: test3("video Module, draft 1, test value until publication")
 };
 var TEXT_ACT = 0;
 var PUBLICATION = 0;
@@ -7634,14 +7670,14 @@ function readExif(body) {
   if (!first) return none;
   let orientation = null;
   let location2 = false;
-  for (const e2 of first.list) {
-    if (e2.tag === 274 && e2.type === 3 && e2.count === 1) orientation = r16(e2.at);
-    if (e2.tag === 34853) location2 = true;
+  for (const e3 of first.list) {
+    if (e3.tag === 274 && e3.type === 3 && e3.count === 1) orientation = r16(e3.at);
+    if (e3.tag === 34853) location2 = true;
   }
   let thumbnail = false;
   if (first.next > 0 && first.next < t.length) {
     const second = entries2(first.next);
-    if (second) thumbnail = second.list.some((e2) => e2.tag === 513 || e2.tag === 273);
+    if (second) thumbnail = second.list.some((e3) => e3.tag === 513 || e3.tag === 273);
   }
   return { orientation, location: location2, thumbnail };
 }
@@ -7678,11 +7714,11 @@ function read(b) {
       else carries.add("other-application-data");
     } else if (m === APP1) {
       if (ascii(s.body, 0, "Exif\0\0")) {
-        const e2 = readExif(s.body);
-        if (!exifSeen) orientation = e2.orientation;
+        const e3 = readExif(s.body);
+        if (!exifSeen) orientation = e3.orientation;
         exifSeen = true;
-        if (e2.location) carries.add("location");
-        if (e2.thumbnail) carries.add("exif-thumbnail");
+        if (e3.location) carries.add("location");
+        if (e3.thumbnail) carries.add("exif-thumbnail");
         if (!isOnlyOrientation(s.body)) carries.add("exif");
       } else if (ascii(s.body, 0, "http://ns.adobe.com/xap/1.0/") || ascii(s.body, 0, "http://ns.adobe.com/xmp/")) {
         carries.add("xmp");
@@ -7763,9 +7799,9 @@ function isJfif(body) {
   return ascii(body, 0, "JFIF\0") && body.length >= 14;
 }
 function isOnlyOrientation(body) {
-  const e2 = readExif(body);
-  if (e2.orientation === null || e2.orientation < 2 || e2.orientation > 8) return false;
-  const want = orientationExif(e2.orientation);
+  const e3 = readExif(body);
+  if (e3.orientation === null || e3.orientation < 2 || e3.orientation > 8) return false;
+  const want = orientationExif(e3.orientation);
   return body.length === want.length && body.every((x, i) => x === want[i]);
 }
 function strip(b) {
@@ -7817,6 +7853,645 @@ function concat(parts) {
     o += p.length;
   }
   return out;
+}
+
+// ../../modules/video/src/video.ts
+var NotFilm = class extends Error {
+  constructor(kind, message7) {
+    super(message7);
+    this.kind = kind;
+    this.name = "NotFilm";
+  }
+};
+var MAX_BYTES = 64 * 1024 * 1024 - 16;
+var MAX_SECONDS = 600;
+var MAX_LONG_SIDE = 1920;
+var MAX_SHORT_SIDE = 1080;
+var MAX_RATE = 60;
+var MAX_LEVEL = 42;
+var MAX_SAMPLE_RATE = 48e3;
+var CARRIED_WORDS2 = {
+  metadata: "metadata (titles, dates, the device, comments, cover pictures)",
+  location: "where it was filmed",
+  dates: "when it was made (the dates in its headers)",
+  names: "names written by the software that made it",
+  free: "free space that can hold anything",
+  unknown: "boxes of a kind no player reads (such as XMP)",
+  "unused-media": "media data no sample uses",
+  descriptor: "an MPEG-4 object descriptor (iods), not needed to play"
+};
+var ascii2 = (b, o, n) => String.fromCharCode(...b.subarray(o, o + n));
+var Reader = class {
+  constructor(b) {
+    this.b = b;
+    this.view = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  }
+  view;
+  need(o, n, end, what) {
+    if (o < 0 || n < 0 || o + n > end) throw new NotFilm("structure", `${what} runs past its box`);
+  }
+  u8 = (o) => this.b[o];
+  u16 = (o) => this.view.getUint16(o);
+  u32 = (o) => this.view.getUint32(o);
+  i32 = (o) => this.view.getInt32(o);
+  u64(o) {
+    const hi = this.u32(o);
+    if (hi > 2097151) throw new NotFilm("limits", "a 64-bit value beyond what a file of this size can hold");
+    return hi * 2 ** 32 + this.u32(o + 4);
+  }
+  /** The boxes between `o` and `end`, which they must fill exactly. A size of 0 (to the end) only where `toEnd` allows. */
+  boxes(o, end, toEnd = false) {
+    const out = [];
+    while (o < end) {
+      if (end - o < 8) throw new NotFilm("structure", "bytes left over that are not a box");
+      let size = this.u32(o);
+      const type = ascii2(this.b, o + 4, 4);
+      let body = o + 8;
+      if (size === 1) {
+        if (end - o < 16) throw new NotFilm("structure", `the box ${JSON.stringify(type)} runs past its parent`);
+        size = this.u64(o + 8);
+        body = o + 16;
+      } else if (size === 0) {
+        if (!toEnd) throw new NotFilm("structure", `the box ${JSON.stringify(type)} has no size`);
+        size = end - o;
+      }
+      if (type === "uuid") body += 16;
+      if (size < body - o || o + size > end) throw new NotFilm("structure", `the box ${JSON.stringify(type)} runs past its parent`);
+      out.push({ type, start: o, body, end: o + size });
+      o += size;
+    }
+    return out;
+  }
+};
+var ASIDE = { udta: "metadata", meta: "metadata", free: "free", skip: "free", uuid: "unknown" };
+function children(r, box3, allowed, carried, where, skip = 0) {
+  const out = [];
+  for (const c2 of r.boxes(box3.body + skip, box3.end)) {
+    if (allowed.includes(c2.type)) out.push(c2);
+    else if (c2.type in ASIDE) {
+      carried.add(ASIDE[c2.type]);
+      if (c2.type === "udta" || c2.type === "meta") inspectAside(r, c2, carried);
+    } else throw new NotFilm("refused", `a box of kind ${JSON.stringify(c2.type)} in ${where}, which this Module does not read`);
+  }
+  return out;
+}
+function inspectAside(r, box3, carried) {
+  let kids;
+  try {
+    kids = r.boxes(box3.body + (box3.type === "meta" ? 4 : 0), box3.end);
+  } catch {
+    try {
+      kids = box3.type === "meta" ? r.boxes(box3.body, box3.end) : [];
+    } catch {
+      kids = [];
+    }
+  }
+  for (const k of kids) {
+    if (k.type === "loci" || k.type === "\xA9xyz") carried.add("location");
+    if (k.type === "dinf") throw new NotFilm("refused", "a data reference inside the metadata, which could point outside the file");
+    if (k.type === "meta" || k.type === "udta" || k.type === "ilst" || k.type === "keys") inspectAside(r, k, carried);
+    if (k.type === "ilst" || k.type === "keys") {
+      if (/location|©xyz/i.test(ascii2(r.b, k.body, k.end - k.body))) carried.add("location");
+    }
+  }
+}
+var one = (list10, type, where) => {
+  const f = list10.filter((b) => b.type === type);
+  if (f.length !== 1) throw new NotFilm("structure", `${where} has ${f.length ? "more than one" : "no"} ${JSON.stringify(type)}`);
+  return f[0];
+};
+var maybe = (list10, type, where) => {
+  const f = list10.filter((b) => b.type === type);
+  if (f.length > 1) throw new NotFilm("structure", `${where} has more than one ${JSON.stringify(type)}`);
+  return f[0] ?? null;
+};
+var Bits = class {
+  constructor(b) {
+    this.b = b;
+  }
+  bit = 0;
+  u(n) {
+    let v = 0;
+    for (let i = 0; i < n; i++) {
+      const byte = this.bit >> 3;
+      if (byte >= this.b.length) throw new NotFilm("structure", "the parameter set ends early");
+      v = v * 2 + (this.b[byte] >> 7 - (this.bit & 7) & 1);
+      this.bit++;
+    }
+    return v;
+  }
+  ue() {
+    let zeros = 0;
+    while (this.u(1) === 0) if (++zeros > 31) throw new NotFilm("structure", "the parameter set holds a number too large");
+    return 2 ** zeros - 1 + this.u(zeros);
+  }
+  se() {
+    const k = this.ue();
+    return k & 1 ? (k + 1) / 2 : -k / 2;
+  }
+};
+function unescape(nal) {
+  const out = [];
+  for (let i = 0; i < nal.length; i++) {
+    if (i >= 2 && nal[i] === 3 && nal[i - 1] === 0 && nal[i - 2] === 0) continue;
+    out.push(nal[i]);
+  }
+  return new Uint8Array(out);
+}
+var PROFILES = { 66: "Baseline", 77: "Main", 100: "High" };
+function readSps(nal) {
+  if (!nal.length || (nal[0] & 31) !== 7) throw new NotFilm("structure", "the H.264 configuration does not hold a sequence parameter set");
+  const s = new Bits(unescape(nal.subarray(1)));
+  const profile = s.u(8);
+  s.u(8);
+  const level = s.u(8);
+  s.ue();
+  if ([100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135].includes(profile)) {
+    const chroma = s.ue();
+    if (chroma !== 1) throw new NotFilm("refused", "H.264 with colour sampled otherwise than 4:2:0, which phones do not all play");
+    if (s.ue() !== 0 || s.ue() !== 0) throw new NotFilm("refused", "H.264 with more than 8 bits a sample, which phones do not all play");
+    s.u(1);
+    if (s.u(1)) {
+      for (let i = 0; i < 8; i++) {
+        if (!s.u(1)) continue;
+        const n = i < 6 ? 16 : 64;
+        let last = 8;
+        let next = 8;
+        for (let j = 0; j < n && next !== 0; j++) {
+          next = (last + s.se() + 256) % 256;
+          last = next === 0 ? last : next;
+        }
+      }
+    }
+  }
+  s.ue();
+  const poc = s.ue();
+  if (poc === 0) s.ue();
+  else if (poc === 1) {
+    s.u(1);
+    s.se();
+    s.se();
+    const n = s.ue();
+    if (n > 255) throw new NotFilm("structure", "the parameter set is not valid");
+    for (let i = 0; i < n; i++) s.se();
+  }
+  s.ue();
+  s.u(1);
+  const wMbs = s.ue() + 1;
+  const hMaps = s.ue() + 1;
+  const frameOnly = s.u(1);
+  if (!frameOnly) throw new NotFilm("refused", "interlaced H.264, which this Module does not play");
+  s.u(1);
+  let crop = [0, 0, 0, 0];
+  if (s.u(1)) crop = [s.ue(), s.ue(), s.ue(), s.ue()];
+  const width = wMbs * 16 - 2 * (crop[0] + crop[1]);
+  const height = hMaps * 16 - 2 * (crop[2] + crop[3]);
+  if (width <= 0 || height <= 0) throw new NotFilm("structure", "the parameter set crops away the whole picture");
+  return { profile, level, width, height };
+}
+function readAvcC(r, box3) {
+  const b = r.b;
+  r.need(box3.body, 6, box3.end, "the H.264 configuration");
+  if (b[box3.body] !== 1) throw new NotFilm("structure", "the H.264 configuration is not version 1");
+  const profile = b[box3.body + 1];
+  const compat = b[box3.body + 2];
+  const level = b[box3.body + 3];
+  if (![0, 1, 3].includes(b[box3.body + 4] & 3)) throw new NotFilm("structure", "the H.264 configuration names an invalid length size");
+  let o = box3.body + 5;
+  const nSps = b[o++] & 31;
+  if (!nSps) throw new NotFilm("structure", "the H.264 configuration holds no sequence parameter set");
+  let first = null;
+  for (let i = 0; i < nSps; i++) {
+    r.need(o, 2, box3.end, "the H.264 configuration");
+    const n = r.u16(o);
+    r.need(o + 2, n, box3.end, "a sequence parameter set");
+    first ??= b.subarray(o + 2, o + 2 + n);
+    o += 2 + n;
+  }
+  r.need(o, 1, box3.end, "the H.264 configuration");
+  const nPps = b[o++];
+  if (!nPps) throw new NotFilm("structure", "the H.264 configuration holds no picture parameter set");
+  for (let i = 0; i < nPps; i++) {
+    r.need(o, 2, box3.end, "the H.264 configuration");
+    const n = r.u16(o);
+    r.need(o + 2, n, box3.end, "a picture parameter set");
+    o += 2 + n;
+  }
+  const sps = readSps(first);
+  if (sps.profile !== profile || sps.level !== level) throw new NotFilm("structure", "the H.264 configuration and its parameter set disagree");
+  return { profile, compat, level, width: sps.width, height: sps.height };
+}
+function descriptor(r, o, end) {
+  r.need(o, 2, end, "a descriptor");
+  const tag = r.b[o++];
+  let len = 0;
+  for (let i = 0; i < 4; i++) {
+    r.need(o, 1, end, "a descriptor");
+    const x = r.b[o++];
+    len = len * 128 + (x & 127);
+    if (!(x & 128)) break;
+    if (i === 3) throw new NotFilm("structure", "a descriptor length is too long");
+  }
+  r.need(o, len, end, "a descriptor");
+  return { tag, body: o, end: o + len };
+}
+function readEsds(r, box3) {
+  const b = r.b;
+  const es = descriptor(r, box3.body + 4, box3.end);
+  if (es.tag !== 3) throw new NotFilm("structure", "the sound configuration has no elementary stream descriptor");
+  r.need(es.body, 3, es.end, "the sound configuration");
+  const flags = b[es.body + 2];
+  let o = es.body + 3;
+  if (flags & 128) o += 2;
+  if (flags & 64) throw new NotFilm("refused", "the sound names a stream elsewhere (a URL), which a film may not");
+  if (flags & 32) o += 2;
+  const dc = descriptor(r, o, es.end);
+  if (dc.tag !== 4) throw new NotFilm("structure", "the sound configuration has no decoder configuration");
+  r.need(dc.body, 13, dc.end, "the decoder configuration");
+  if (b[dc.body] !== 64 || b[dc.body + 1] >> 2 !== 5) throw new NotFilm("refused", "sound that is not MPEG-4 audio (AAC): only AAC-LC is played");
+  const asc = descriptor(r, dc.body + 13, dc.end);
+  if (asc.tag !== 5) throw new NotFilm("structure", "the sound configuration has no AAC configuration");
+  const bits = new Bits(b.subarray(asc.body, asc.end));
+  const aot = bits.u(5);
+  if (aot !== 2) throw new NotFilm("refused", `AAC of another kind than AAC-LC (audio object type ${aot}), which this Module does not play`);
+  const fi = bits.u(4);
+  const RATES = [96e3, 88200, 64e3, 48e3, 44100, 32e3, 24e3, 22050, 16e3, 12e3, 11025, 8e3, 7350];
+  const sampleRate = fi === 15 ? bits.u(24) : RATES[fi];
+  if (!sampleRate) throw new NotFilm("structure", "the AAC configuration names no sampling rate");
+  const channels = bits.u(4);
+  if (channels !== 1 && channels !== 2) throw new NotFilm("refused", "sound with more than two channels, or channels set elsewhere: only mono and stereo are played");
+  if (sampleRate > MAX_SAMPLE_RATE) throw new NotFilm("limits", `sound sampled at ${sampleRate} Hz, above ${MAX_SAMPLE_RATE}`);
+  return { channels, sampleRate };
+}
+var MATRIX = {
+  "65536,0,0,65536": 0,
+  "0,65536,-65536,0": 90,
+  "-65536,0,0,-65536": 180,
+  "0,-65536,65536,0": 270
+};
+function rotationOf(r, o) {
+  const m = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => r.i32(o + 4 * i));
+  if (m[2] !== 0 || m[5] !== 0 || m[8] !== 1073741824) throw new NotFilm("refused", "a track matrix that is not a quarter turn");
+  const rot = MATRIX[[m[0], m[1], m[3], m[4]].join(",")];
+  if (rot === void 0) throw new NotFilm("refused", "a track matrix that is not a quarter turn (scaled, skewed or mirrored)");
+  return rot;
+}
+function dates(r, box3, v) {
+  const at2 = box3.body + 4;
+  const n = v ? 16 : 8;
+  return { at: at2, n, set: r.b.subarray(at2, at2 + n).some((x) => x !== 0) };
+}
+function version(r, box3, allowed) {
+  r.need(box3.body, 4, box3.end, `the box ${box3.type}`);
+  const v = r.b[box3.body];
+  if (!allowed.includes(v)) throw new NotFilm("structure", `the box ${box3.type} has version ${v}`);
+  return v;
+}
+function table(r, box3, entrySize, skip = 4) {
+  r.need(box3.body, skip + 4, box3.end, `the table ${box3.type}`);
+  const n = r.u32(box3.body + skip);
+  const o = box3.body + skip + 4;
+  if (n * entrySize > box3.end - o) throw new NotFilm("structure", `the table ${box3.type} runs past its box`);
+  return { n, o };
+}
+var STBL = ["stsd", "stts", "ctts", "stss", "stsc", "stsz", "stco", "co64", "sdtp", "sgpd", "sbgp", "cslg", "stps"];
+var VISUAL_EXTRAS = ["avcC", "btrt", "pasp", "colr", "clap", "fiel"];
+var AUDIO_EXTRAS = ["esds", "btrt"];
+function readTrack(r, trak, carried) {
+  const kids = children(r, trak, ["tkhd", "edts", "mdia"], carried, "a track");
+  const tkhd = one(kids, "tkhd", "a track");
+  const tv = version(r, tkhd, [0, 1]);
+  const matrixAt = tkhd.body + 4 + (tv ? 32 : 20) + 16;
+  r.need(matrixAt, 36 + 8, tkhd.end, "the track header");
+  const rotation = rotationOf(r, matrixAt);
+  if (dates(r, tkhd, tv).set) carried.add("dates");
+  const edts = maybe(kids, "edts", "a track");
+  if (edts) for (const e3 of children(r, edts, ["elst"], carried, "an edit list")) version(r, e3, [0, 1]);
+  const mdia = one(kids, "mdia", "a track");
+  const mk = children(r, mdia, ["mdhd", "hdlr", "minf"], carried, "a track");
+  const mdhd = one(mk, "mdhd", "a track");
+  const mv = version(r, mdhd, [0, 1]);
+  r.need(mdhd.body, mv ? 32 : 20, mdhd.end, "the media header");
+  const timescale = r.u32(mdhd.body + (mv ? 20 : 12));
+  if (!timescale) throw new NotFilm("structure", "a track with no timescale");
+  if (dates(r, mdhd, mv).set) carried.add("dates");
+  const hdlr = one(mk, "hdlr", "a track");
+  r.need(hdlr.body, 24, hdlr.end, "the handler");
+  const handler = ascii2(r.b, hdlr.body + 8, 4);
+  if (handler !== "vide" && handler !== "soun") {
+    throw new NotFilm("refused", `a track of kind ${JSON.stringify(handler)} (text, subtitles, timecode, metadata or hints): a film holds pictures and sound only`);
+  }
+  const named = hdlr.end - (hdlr.body + 24) > 1 || hdlr.end > hdlr.body + 24 && r.b[hdlr.body + 24] !== 0;
+  const minf = one(mk, "minf", "a track");
+  const nk = children(r, minf, ["vmhd", "smhd", "dinf", "stbl", "hdlr"], carried, "a track");
+  one(nk, handler === "vide" ? "vmhd" : "smhd", "a track");
+  const dinf = one(nk, "dinf", "a track");
+  const dref = one(children(r, dinf, ["dref"], carried, "a data reference"), "dref", "a data reference");
+  const refs = table(r, dref, 12);
+  const entries2 = r.boxes(refs.o, dref.end);
+  if (entries2.length !== refs.n || refs.n !== 1) throw new NotFilm("refused", "a track whose data references are not exactly one");
+  const ref = entries2[0];
+  if (ref.type !== "url " && ref.type !== "urn " || ref.end - ref.body < 4 || !(r.b[ref.body + 3] & 1)) {
+    throw new NotFilm("refused", "a track whose samples are stored outside this file (a data reference to elsewhere)");
+  }
+  const stbl = one(nk, "stbl", "a track");
+  const sk = children(r, stbl, STBL, carried, "a sample table");
+  const stsd = one(sk, "stsd", "a sample table");
+  const sd = table(r, stsd, 8);
+  const descs = r.boxes(sd.o, stsd.end);
+  if (sd.n !== 1 || descs.length !== 1) throw new NotFilm("refused", "a track with more than one sample description");
+  const entry2 = descs[0];
+  const t = { handler, timescale, mediaDuration: 0, samples: 0, chunks: [], rotation, names: named };
+  if (handler === "vide") {
+    if (entry2.type !== "avc1") {
+      const what = entry2.type === "encv" ? "encrypted pictures" : entry2.type === "avc3" ? "H.264 with its parameter sets in the stream (avc3)" : `pictures coded as ${JSON.stringify(entry2.type)}, not H.264`;
+      throw new NotFilm("refused", `${what}: only H.264 (avc1) is played`);
+    }
+    r.need(entry2.body, 78, entry2.end, "the picture description");
+    if (r.b.subarray(entry2.body + 42, entry2.body + 74).some((x) => x !== 0)) t.names = true;
+    const ex = children(r, { ...entry2, body: entry2.body + 78 }, VISUAL_EXTRAS, carried, "the picture description");
+    const v = readAvcC(r, one(ex, "avcC", "the picture description"));
+    if (!PROFILES[v.profile]) throw new NotFilm("refused", `H.264 profile ${v.profile}: only Baseline, Main and High are played`);
+    t.video = v;
+  } else {
+    if (entry2.type !== "mp4a") {
+      throw new NotFilm("refused", `${entry2.type === "enca" ? "encrypted sound" : `sound coded as ${JSON.stringify(entry2.type)}`}: only AAC-LC (mp4a) is played`);
+    }
+    r.need(entry2.body, 28, entry2.end, "the sound description");
+    if (r.u16(entry2.body + 8) !== 0) throw new NotFilm("refused", "a QuickTime sound description (version 1 or 2), not MP4");
+    const ex = children(r, { ...entry2, body: entry2.body + 28 }, AUDIO_EXTRAS, carried, "the sound description");
+    t.audio = readEsds(r, one(ex, "esds", "the sound description"));
+  }
+  const stts = table(r, one(sk, "stts", "a sample table"), 8);
+  let timed = 0;
+  for (let i = 0; i < stts.n; i++) {
+    const count4 = r.u32(stts.o + 8 * i);
+    timed += count4;
+    t.mediaDuration += count4 * r.u32(stts.o + 8 * i + 4);
+  }
+  const stsz = one(sk, "stsz", "a sample table");
+  r.need(stsz.body, 12, stsz.end, "the sample sizes");
+  const fixed = r.u32(stsz.body + 4);
+  const count3 = r.u32(stsz.body + 8);
+  if (!fixed && count3 * 4 > stsz.end - (stsz.body + 12)) throw new NotFilm("structure", "the sample sizes run past their box");
+  const sizeOf = (i) => fixed ? fixed : r.u32(stsz.body + 12 + 4 * i);
+  if (count3 !== timed) throw new NotFilm("structure", "a track whose sample count and timing disagree");
+  if (!count3) throw new NotFilm("structure", "a track with no samples");
+  t.samples = count3;
+  const ctts = maybe(sk, "ctts", "a sample table");
+  if (ctts) {
+    const c2 = table(r, ctts, 8);
+    let n = 0;
+    for (let i = 0; i < c2.n; i++) n += r.u32(c2.o + 8 * i);
+    if (n !== count3) throw new NotFilm("structure", "a track whose composition offsets and samples disagree");
+  }
+  const stss = maybe(sk, "stss", "a sample table");
+  if (stss) {
+    const s = table(r, stss, 4);
+    for (let i = 0; i < s.n; i++) {
+      const k = r.u32(s.o + 4 * i);
+      if (k < 1 || k > count3) throw new NotFilm("structure", "a key picture that is not a sample");
+    }
+  }
+  const stco = maybe(sk, "stco", "a sample table");
+  const co64 = maybe(sk, "co64", "a sample table");
+  if (!stco === !co64) throw new NotFilm("structure", "a track without exactly one chunk offset table");
+  const co = table(r, stco ?? co64, stco ? 4 : 8);
+  const offsets = Array.from({ length: co.n }, (_, i) => stco ? r.u32(co.o + 4 * i) : r.u64(co.o + 8 * i));
+  const stsc = table(r, one(sk, "stsc", "a sample table"), 12);
+  let sample = 0;
+  for (let i = 0; i < stsc.n; i++) {
+    const first = r.u32(stsc.o + 12 * i);
+    const per = r.u32(stsc.o + 12 * i + 4);
+    if (r.u32(stsc.o + 12 * i + 8) !== 1) throw new NotFilm("structure", "a chunk naming a sample description that is not there");
+    const next = i + 1 < stsc.n ? r.u32(stsc.o + 12 * (i + 1)) : co.n + 1;
+    if (first < 1 || next <= first || next > co.n + 1 || i === 0 && first !== 1) throw new NotFilm("structure", "the sample-to-chunk table is not in order");
+    for (let c2 = first; c2 < next; c2++) {
+      let size = 0;
+      for (let k = 0; k < per; k++) {
+        if (sample >= count3) throw new NotFilm("structure", "chunks hold more samples than the track has");
+        size += sizeOf(sample++);
+      }
+      t.chunks.push({ offset: offsets[c2 - 1], size });
+    }
+  }
+  if (sample !== count3 || t.chunks.length !== co.n) throw new NotFilm("structure", "chunks and samples disagree");
+  return t;
+}
+var BRANDS = ["isom", "iso2", "iso3", "iso4", "iso5", "iso6", "mp41", "mp42", "avc1"];
+function parse(bytes) {
+  if (bytes.length > MAX_BYTES) throw new NotFilm("limits", `${bytes.length} bytes, above ${MAX_BYTES} (one media object of 64 MiB, locked)`);
+  const r = new Reader(bytes);
+  if (bytes.length < 8 || ascii2(bytes, 4, 4) !== "ftyp") throw new NotFilm("structure", "it does not begin with a file type box (ftyp)");
+  const top3 = r.boxes(0, bytes.length, true);
+  const carried = /* @__PURE__ */ new Set();
+  const ftyp = top3[0];
+  r.need(ftyp.body, 8, ftyp.end, "the file type");
+  if ((ftyp.end - ftyp.body) % 4) throw new NotFilm("structure", "the file type box is not whole brands");
+  const major = ascii2(bytes, ftyp.body, 4);
+  const brands = [major];
+  for (let o = ftyp.body + 8; o < ftyp.end; o += 4) brands.push(ascii2(bytes, o, 4));
+  if (major === "qt  ") throw new NotFilm("refused", "a QuickTime file (.mov), not MP4: remux it as MP4 first");
+  if (!brands.some((b) => BRANDS.includes(b))) throw new NotFilm("refused", `brands ${brands.join(", ")}: none is an MP4 brand`);
+  const mdats = [];
+  let moov = null;
+  let indexFirst = false;
+  for (const b of top3.slice(1)) {
+    if (b.type === "moov") {
+      if (moov) throw new NotFilm("structure", "more than one movie box (moov)");
+      moov = b;
+      indexFirst = !mdats.length;
+    } else if (b.type === "mdat") mdats.push(b);
+    else if (b.type === "ftyp") throw new NotFilm("structure", "more than one file type box");
+    else if (["moof", "mfra", "sidx", "styp", "ssix", "emsg", "prft"].includes(b.type)) {
+      throw new NotFilm("refused", "a fragmented MP4 (as a live stream writes): only a whole film with one index is played");
+    } else if (b.type in ASIDE) {
+      carried.add(ASIDE[b.type]);
+      if (b.type === "udta" || b.type === "meta") inspectAside(r, b, carried);
+    } else throw new NotFilm("refused", `a box of kind ${JSON.stringify(b.type)} at the top of the file, which this Module does not read`);
+  }
+  if (!moov) throw new NotFilm("structure", "no movie box (moov): the film has no index");
+  const mk = children(r, moov, ["mvhd", "trak", "iods", "mvex"], carried, "the movie");
+  if (mk.some((b) => b.type === "mvex")) throw new NotFilm("refused", "a fragmented MP4 (mvex): only a whole film with one index is played");
+  if (mk.some((b) => b.type === "iods")) carried.add("descriptor");
+  const mvhd = one(mk, "mvhd", "the movie");
+  const mv = version(r, mvhd, [0, 1]);
+  r.need(mvhd.body, mv ? 112 : 100, mvhd.end, "the movie header");
+  const mScale = r.u32(mvhd.body + (mv ? 20 : 12));
+  const mDur = mv ? r.u64(mvhd.body + 24) : r.u32(mvhd.body + 16);
+  if (!mScale) throw new NotFilm("structure", "the movie has no timescale");
+  if (dates(r, mvhd, mv).set) carried.add("dates");
+  if (rotationOf(r, mvhd.body + (mv ? 48 : 36)) !== 0) throw new NotFilm("refused", "a movie matrix that is not the identity");
+  const traks = mk.filter((b) => b.type === "trak");
+  const tracks = traks.map((t) => readTrack(r, t, carried));
+  const video = tracks.filter((t) => t.handler === "vide");
+  const audio = tracks.filter((t) => t.handler === "soun");
+  if (video.length !== 1) throw new NotFilm("refused", `${video.length || "no"} picture tracks: a film has exactly one`);
+  if (audio.length > 1) throw new NotFilm("refused", `${audio.length} sound tracks: a film has one at most`);
+  if (tracks.some((t) => t.names)) carried.add("names");
+  const chunks = tracks.flatMap((t) => t.chunks).sort((a2, b) => a2.offset - b.offset);
+  let used = 0;
+  let prevEnd = 0;
+  for (const c2 of chunks) {
+    if (c2.offset < prevEnd) throw new NotFilm("structure", "two chunks of samples overlap");
+    if (!mdats.some((m) => c2.offset >= m.body && c2.offset + c2.size <= m.end)) throw new NotFilm("structure", "a chunk of samples lies outside the media data");
+    prevEnd = c2.offset + c2.size;
+    used += c2.size;
+  }
+  if (used < mdats.reduce((n, m) => n + (m.end - m.body), 0)) carried.add("unused-media");
+  const v = video[0];
+  const turned = v.rotation === 90 || v.rotation === 270;
+  const vv = v.video;
+  const long = Math.max(vv.width, vv.height);
+  const short12 = Math.min(vv.width, vv.height);
+  if (long > MAX_LONG_SIDE || short12 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
+  if (vv.level > MAX_LEVEL) throw new NotFilm("limits", `H.264 level ${vv.level / 10}, above ${MAX_LEVEL / 10}`);
+  const seconds = Math.max(mDur / mScale, ...tracks.map((t) => t.mediaDuration / t.timescale));
+  if (seconds > MAX_SECONDS) throw new NotFilm("limits", `${Math.round(seconds)} seconds long, beyond ${MAX_SECONDS}`);
+  const vSeconds = v.mediaDuration / v.timescale;
+  const rate = vSeconds > 0 ? v.samples / vSeconds : Infinity;
+  if (rate > MAX_RATE * 1.01) throw new NotFilm("limits", `${Math.round(rate)} pictures a second, beyond ${MAX_RATE}`);
+  const hex22 = (n) => n.toString(16).padStart(2, "0");
+  const vcodec = `avc1.${hex22(vv.profile)}${hex22(vv.compat)}${hex22(vv.level)}`;
+  const a = audio[0];
+  const film = {
+    brand: major,
+    duration: Math.round(seconds * 1e3) / 1e3,
+    video: {
+      codec: vcodec,
+      profile: PROFILES[vv.profile],
+      level: vv.level,
+      width: vv.width,
+      height: vv.height,
+      rotation: v.rotation,
+      shown: turned ? { width: vv.height, height: vv.width } : { width: vv.width, height: vv.height },
+      samples: v.samples,
+      rate: Math.round(rate * 1e3) / 1e3
+    },
+    audio: a ? { codec: "mp4a.40.2", channels: a.audio.channels, sampleRate: a.audio.sampleRate, samples: a.samples } : null,
+    type: `video/mp4; codecs="${vcodec}${a ? ", mp4a.40.2" : ""}"`,
+    indexFirst,
+    carried: Object.keys(CARRIED_WORDS2).filter((c2) => carried.has(c2))
+  };
+  return { film, ftyp, moov, tracks, traks };
+}
+function read2(bytes) {
+  try {
+    return parse(bytes).film;
+  } catch (e3) {
+    if (e3 instanceof NotFilm) throw e3;
+    if (e3 instanceof RangeError) throw new NotFilm("structure", "a box runs past the end of the file");
+    throw e3;
+  }
+}
+function box(type, ...parts) {
+  const n = 8 + parts.reduce((s, p) => s + p.length, 0);
+  const out = new Uint8Array(n);
+  new DataView(out.buffer).setUint32(0, n);
+  for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i);
+  let o = 8;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+function concat2(parts) {
+  const out = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
+  let o = 0;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+function strip2(bytes) {
+  const p = parse(bytes);
+  return { bytes: stripped(bytes, p), removed: p.film.carried };
+}
+function stripped(bytes, p) {
+  const r = new Reader(bytes);
+  const keep2 = (b) => bytes.subarray(b.start, b.end);
+  const undated = (b) => {
+    const out = bytes.slice(b.start, b.end);
+    const d = dates(r, b, bytes[b.body]);
+    out.fill(0, d.at - b.start, d.at - b.start + d.n);
+    return out;
+  };
+  const drop = (list10) => list10.filter((b) => !(b.type in ASIDE) && b.type !== "iods");
+  const kids = (b, skip = 0) => drop(r.boxes(b.body + skip, b.end));
+  const all = p.tracks.flatMap((t) => t.chunks).sort((a, b) => a.offset - b.offset);
+  const placed = /* @__PURE__ */ new Map();
+  let at2 = 0;
+  for (const c2 of all) {
+    placed.set(c2, at2);
+    at2 += c2.size;
+  }
+  const rebuild = (mdatBody2) => {
+    const traks = p.traks.map((trak, ti) => {
+      const track = p.tracks[ti];
+      const parts = kids(trak).map((b) => {
+        if (b.type === "tkhd") return undated(b);
+        if (b.type !== "mdia") return b.type === "edts" ? box("edts", ...kids(b).map(keep2)) : keep2(b);
+        return box(
+          "mdia",
+          ...kids(b).map((m) => {
+            if (m.type === "hdlr") {
+              const fixed = bytes.slice(m.body, m.body + 24);
+              return box("hdlr", fixed, new Uint8Array(1));
+            }
+            if (m.type === "mdhd") return undated(m);
+            if (m.type !== "minf") return keep2(m);
+            return box(
+              "minf",
+              ...kids(m).filter((n) => n.type !== "hdlr").map((n) => {
+                if (n.type === "dinf") return box("dinf", ...kids(n).map(keep2));
+                if (n.type !== "stbl") return keep2(n);
+                return box(
+                  "stbl",
+                  ...kids(n).map((s) => {
+                    if (s.type === "stsd") {
+                      const entry2 = r.boxes(s.body + 8, s.end)[0];
+                      const head = bytes.slice(entry2.body, entry2.body + (track.handler === "vide" ? 78 : 28));
+                      if (track.handler === "vide") head.fill(0, 42, 74);
+                      const extras = kids(entry2, head.length).map(keep2);
+                      return box("stsd", bytes.subarray(s.body, s.body + 8), box(entry2.type, head, ...extras));
+                    }
+                    if (s.type === "stco" || s.type === "co64") {
+                      const w = s.type === "stco" ? 4 : 8;
+                      const out = new Uint8Array(8 + w * track.chunks.length);
+                      const dv = new DataView(out.buffer);
+                      dv.setUint32(4, track.chunks.length);
+                      track.chunks.forEach((c2, i) => {
+                        const o = mdatBody2 + placed.get(c2);
+                        if (w === 4) dv.setUint32(8 + 4 * i, o);
+                        else {
+                          dv.setUint32(8 + 8 * i, Math.floor(o / 2 ** 32));
+                          dv.setUint32(12 + 8 * i, o % 2 ** 32);
+                        }
+                      });
+                      return box(s.type, out);
+                    }
+                    return keep2(s);
+                  })
+                );
+              })
+            );
+          })
+        );
+      });
+      return box("trak", ...parts);
+    });
+    const mvhd = r.boxes(p.moov.body, p.moov.end).find((b) => b.type === "mvhd");
+    return box("moov", undated(mvhd), ...traks);
+  };
+  const ftyp = keep2(p.ftyp);
+  const size = rebuild(0).length;
+  const mdatBody = ftyp.length + size + 8;
+  const moov = rebuild(mdatBody);
+  const media = new Uint8Array(at2);
+  for (const c2 of all) media.set(bytes.subarray(c2.offset, c2.offset + c2.size), placed.get(c2));
+  return concat2([ftyp, moov, box("mdat", media)]);
 }
 
 // ../barebone/src/corrections.ts
@@ -7877,10 +8552,39 @@ function textPayload(text4, format = null) {
   if (format) m.set(1, unhex(format));
   return cborEncode(m);
 }
+async function publishVideo(by, mp4, relays) {
+  if (mp4.length > MAX_BYTES) throw new Error(`the film is ${mp4.length} bytes; the video Module takes at most ${MAX_BYTES}. Nothing was published.`);
+  let s;
+  let film;
+  try {
+    s = strip2(mp4);
+    film = read2(s.bytes);
+  } catch (e3) {
+    if (e3 instanceof NotFilm) throw new Error(`not a film the video Module plays: ${e3.message}. Nothing was published.`);
+    throw e3;
+  }
+  const l = lockMedia(s.bytes);
+  const payload = cborEncode(
+    /* @__PURE__ */ new Map([
+      [0, unhex(POST_SPECS.video)],
+      [1, unhex(l.workHash)],
+      [2, unhex(l.lockedHash)],
+      [3, s.bytes.length],
+      [4, l.nonce],
+      [5, l.key],
+      [6, relays]
+    ])
+  );
+  await carryChain2(by, relays);
+  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
+  return { id: made.id, act: made.act, removed: s.removed, film, work: l.workHash, size: s.bytes.length };
+}
 async function post(by, opts) {
   const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
+  const film = opts.mp4 ? await publishVideo(by, opts.mp4, opts.relays) : null;
   await carryChain2(by, opts.relays);
-  const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...opts.refs ?? []];
+  const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...film ? [referenceTo(film.act)] : [], ...opts.refs ?? []];
   const corrected = opts.corrects && opts.format === void 0 ? await fetchAct(typeof opts.corrects === "string" ? opts.corrects : opts.corrects[0], opts.relays, {}) : null;
   const format = opts.format !== void 0 ? opts.format : opts.corrects ? correctionFormatFor(corrected ? formatOfPayload(describeAct(corrected).payload) : null) : null;
   const made = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(opts.text, format), {
@@ -7889,7 +8593,7 @@ async function post(by, opts) {
     refs: refs.length ? refs : void 0,
     to: opts.to?.length ? opts.to : void 0
   });
-  return { id: made.id, act: made.act, picture };
+  return { id: made.id, act: made.act, picture, film };
 }
 async function leaveInInbox(by, act, inbox) {
   const out = { left: [], failed: [] };
@@ -7899,8 +8603,8 @@ async function leaveInInbox(by, act, inbox) {
       for (const c2 of by.chainActs()) await r.putAct(c2).catch(() => void 0);
       await r.putAct(act);
       out.left.push(hint);
-    } catch (e2) {
-      out.failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
+    } catch (e3) {
+      out.failed.push({ relay: hint, reason: e3 instanceof Error ? e3.message : String(e3) });
     }
   }
   return out;
@@ -7976,21 +8680,68 @@ async function readRef(r, hints, via, judge2) {
     if (judge2.notTried) {
       for (const n of f.notTried) if (!judge2.notTried.some((x) => x.hint === n.hint)) judge2.notTried.push(n);
     }
-  } catch (e2) {
-    const why = e2 instanceof Error ? e2.message : String(e2);
+  } catch (e3) {
+    const why = e3 instanceof Error ? e3.message : String(e3);
     if (/the reference is wrong/.test(why)) return { kind: "act", id, signer, what: why };
   }
   if (!act) return { kind: "act", id, signer, what: signer ? "not found at the relays asked, nor at its signer's routes and homes" : "not found at the relays asked" };
   let d;
   try {
     d = describeChecked(act, id);
-  } catch (e2) {
-    return { kind: "act", id, signer, what: `not a valid act: ${e2 instanceof Error ? e2.message : e2}` };
+  } catch (e3) {
+    return { kind: "act", id, signer, what: `not a valid act: ${e3 instanceof Error ? e3.message : e3}` };
   }
   if (!d.public) return { kind: "act", id, signer, what: "a private act", actSigner: d.signer };
   if (d.spec === POST_SPECS.text && d.type === TEXT_ACT) return { kind: "act", id, signer, what: "a text act", actSigner: d.signer };
   if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, signer, what: "an act of a specification this client does not implement", actSigner: d.signer };
+  const media = cborDecode(d.payload).get(0);
+  if (media instanceof Uint8Array && hex(media) === POST_SPECS.video) return readFilmRef(act, d, hints, via, judge2);
   return readPicture(act, d, hints, via, judge2);
+}
+async function readFilmRef(act, d, hints, via, judge2) {
+  const m = cborDecode(d.payload);
+  const size = m.get(3);
+  const out = { kind: "film", publication: d.id, signer: d.signer ?? "", standing: "unknown", problem: null, withdrawn: null, size: typeof size === "number" ? size : 0 };
+  const no = (why) => (out.problem = why, out);
+  if (!d.signer) return no("the publication has no signer");
+  out.standing = await judge2.standing(act, d.id, d.signer);
+  if (out.standing !== "valid") return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (!(m.get(5) instanceof Uint8Array)) return no("the film is locked: its key is not public");
+  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge2);
+  if (out.withdrawn) return no("withdrawn by its signer");
+  return out;
+}
+async function filmBytes(publication2, signer, hints, via = {}) {
+  const act = signer ? (await followRef([publication2, signer], hints, via)).act : await fetchAct(publication2, hints, via);
+  if (!act) throw new Error("the film\u2019s publication was not found");
+  const d = describeChecked(act, publication2);
+  const m = cborDecode(d.payload);
+  const spec = m.get(0);
+  if (!(spec instanceof Uint8Array) || hex(spec) !== POST_SPECS.video) throw new Error("not a film");
+  const work = m.get(1);
+  const lockedHash = m.get(2);
+  const size = m.get(3);
+  const nonce = m.get(4);
+  const key = m.get(5);
+  if (!(key instanceof Uint8Array)) throw new Error("the film is locked: its key is not public");
+  if (!(work instanceof Uint8Array) || !(lockedHash instanceof Uint8Array) || typeof size !== "number" || !(nonce instanceof Uint8Array)) throw new Error("the publication does not describe its media");
+  const named = Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : [];
+  const media = (places) => firstOf(places.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getMedia(hex(lockedHash)));
+  const locked2 = await media(hints) ?? await media(named.filter((n) => !hints.includes(n)));
+  if (!locked2) throw new Error("its bytes were not found");
+  let plain2;
+  try {
+    plain2 = openMedia(locked2, key, nonce);
+  } catch {
+    throw new Error("its key does not open its bytes");
+  }
+  if (workHash(plain2) !== hex(work) || plain2.length !== size) throw new Error("its bytes do not match the work hash and size it was published with");
+  try {
+    return { bytes: plain2, film: read2(plain2) };
+  } catch (e3) {
+    if (e3 instanceof NotFilm) throw new Error(`not a film the video Module plays: ${e3.message}`);
+    throw e3;
+  }
 }
 async function readPicture(act, d, hints, via, judge2) {
   const out = {
@@ -8034,9 +8785,9 @@ async function readPicture(act, d, hints, via, judge2) {
   if (workHash(plain2) !== hex(work) || plain2.length !== size) return no("its bytes do not match the work hash and size it was published with");
   try {
     out.picture = read(plain2);
-  } catch (e2) {
-    if (e2 instanceof NotJpeg) return no(`not a JPEG this client reads: ${e2.message}`);
-    throw e2;
+  } catch (e3) {
+    if (e3 instanceof NotJpeg) return no(`not a JPEG this client reads: ${e3.message}`);
+    throw e3;
   }
   out.bytes = plain2;
   return out;
@@ -8128,8 +8879,8 @@ async function postSealed(by, a) {
   const publication2 = await by.publish(POST_SPECS.envelopes, PUBLICATION, w.payload, { public: true, relays: a.relays });
   for (const hint of a.relays) await relayAt(hint, by.via).putMedia(w.locked);
   const offer = await by.publish(MIRS.agreements, OFFER, offerPayload({ sells: { publication: publication2.id }, price: a.price, words: a.words }), { public: true, relays: a.relays });
-  const post2 = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.teaser), { public: true, relays: a.relays, refs: [referenceTo(publication2.act), referenceTo(offer.act)] });
-  return { publication: publication2.id, offer: offer.id, post: post2.id, key: w.key, acts: { publication: publication2.act, offer: offer.act, post: post2.act }, removed: w.removed };
+  const post3 = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.teaser), { public: true, relays: a.relays, refs: [referenceTo(publication2.act), referenceTo(offer.act)] });
+  return { publication: publication2.id, offer: offer.id, post: post3.id, key: w.key, acts: { publication: publication2.act, offer: offer.act, post: post3.act }, removed: w.removed };
 }
 function readSealed(act) {
   const d = describeAct(act);
@@ -8233,8 +8984,8 @@ async function repost(by, a) {
 // ../genesis/src/private.ts
 var unb642 = (s) => Uint8Array.from(atob(s), (c2) => c2.charCodeAt(0));
 function ownKey(me) {
-  const e2 = me.f.encryption[me.f.encryption.length - 1];
-  return e2 ? xwingPublic(unhex(e2.secret)) : null;
+  const e3 = me.f.encryption[me.f.encryption.length - 1];
+  return e3 ? xwingPublic(unhex(e3.secret)) : null;
 }
 async function leaveAtHomes(me, made, o = {}) {
   const via = o.via ?? me.via;
@@ -8288,8 +9039,8 @@ async function lineAtHomes(me, app3, via = me.via) {
   const u2 = new Set(unplaced({ identity: me.f.identity, binding: me.f.binding, acts: found2 }));
   const cards = lines4.map((l) => {
     const missing = l.ids.filter((id) => !held.has(id)).length;
-    const card = { ...l.card, hidden: l.ids.filter((id) => u2.has(id)).length, ...l.kind ? { line: l.kind } : {}, ...missing ? { missing } : {} };
-    return { l, card, missing, atHomes: held.has(l.card.act) };
+    const card2 = { ...l.card, hidden: l.ids.filter((id) => u2.has(id)).length, ...l.kind ? { line: l.kind } : {}, ...missing ? { missing } : {} };
+    return { l, card: card2, missing, atHomes: held.has(l.card.act) };
   });
   const away = cards.find((c2) => !c2.atHomes);
   return {
@@ -8372,8 +9123,8 @@ function decodeStamp(payload) {
   let m;
   try {
     m = cborDecode(payload);
-  } catch (e2) {
-    throw new NotAStamp(`not CBOR (${e2 instanceof Error ? e2.message : e2})`);
+  } catch (e3) {
+    throw new NotAStamp(`not CBOR (${e3 instanceof Error ? e3.message : e3})`);
   }
   if (!(m instanceof Map)) throw new NotAStamp("not a map");
   for (const k of m.keys()) if (k !== 0 && k !== 1) throw new NotAStamp(`${String(k)} is not one of its fields`);
@@ -8396,9 +9147,9 @@ function asStamp(d, clock) {
   try {
     const s = decodeStamp(d.payload);
     return { stamp: d.id, time: s.time, acts: s.acts };
-  } catch (e2) {
-    if (e2 instanceof NotAStamp) return null;
-    throw e2;
+  } catch (e3) {
+    if (e3 instanceof NotAStamp) return null;
+    throw e3;
   }
 }
 function earliest(stamps) {
@@ -8491,14 +9242,14 @@ function readLimits(v) {
     out.cap = { unit: hex(c2[0]), value: c2[1] };
   }
   if (m.has(1)) {
-    const e2 = m.get(1);
-    if (!Array.isArray(e2) || e2.length !== 3 || !h32(e2[0]) || typeof e2[2] !== "number") throw new Error("the expiry is not [clock, reference, point]");
-    if (hex(e2[0]) === CLOCKS.timestamp) {
-      if (!h32(e2[1])) throw new Error("a timestamp clock is named by its identity");
-      out.expiry = { clock: "timestamp", identity: hex(e2[1]), time: e2[2] };
+    const e3 = m.get(1);
+    if (!Array.isArray(e3) || e3.length !== 3 || !h32(e3[0]) || typeof e3[2] !== "number") throw new Error("the expiry is not [clock, reference, point]");
+    if (hex(e3[0]) === CLOCKS.timestamp) {
+      if (!h32(e3[1])) throw new Error("a timestamp clock is named by its identity");
+      out.expiry = { clock: "timestamp", identity: hex(e3[1]), time: e3[2] };
     } else {
-      if (typeof e2[1] !== "number") throw new Error("a Bitcoin clock is named by its network");
-      out.expiry = { clock: "height", spec: hex(e2[0]), network: e2[1], height: e2[2] };
+      if (typeof e3[1] !== "number") throw new Error("a Bitcoin clock is named by its network");
+      out.expiry = { clock: "height", spec: hex(e3[0]), network: e3[1], height: e3[2] };
     }
   }
   return out;
@@ -8595,8 +9346,8 @@ function readGrant2(payload) {
     else {
       try {
         limits = readLimits(m.get(3));
-      } catch (e2) {
-        limitsProblem = `its limits cannot be read: ${e2 instanceof Error ? e2.message : String(e2)}`;
+      } catch (e3) {
+        limitsProblem = `its limits cannot be read: ${e3 instanceof Error ? e3.message : String(e3)}`;
       }
     }
   }
@@ -8763,8 +9514,8 @@ async function negotiate(by, to, o) {
       for (const c2 of by.chainActs()) await r.putAct(c2).catch(() => void 0);
       await r.putSealed(sealed);
       left.push(hint);
-    } catch (e2) {
-      failed.push({ relay: hint, reason: e2 instanceof Error ? e2.message : String(e2) });
+    } catch (e3) {
+      failed.push({ relay: hint, reason: e3 instanceof Error ? e3.message : String(e3) });
     }
   }
   if (o.home !== false) await leaveAtHomes(by, made);
@@ -8903,7 +9654,7 @@ function readPayload(p) {
 async function sealMemberKey(me, k, save) {
   const homes = me.f.homes.map((h) => h.hint);
   const look = await lookUp(me.id, homes, me.via);
-  if (!look.encryptionKey || !me.f.encryption.some((e2) => hex(xwingPublic(unhex(e2.secret))) === hex(look.encryptionKey))) {
+  if (!look.encryptionKey || !me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey))) {
     throw new Error("The encryption key this identity publishes is not one this app holds: your member key cannot be sealed to you. Your signature stands; the key stays in this app only.");
   }
   let made;
@@ -9200,8 +9951,8 @@ async function judgeCollective(collective, acts, hints, via = {}, limits = []) {
   for (const id of acts) {
     try {
       out.set(id, v.agreementsConsent(withGrantLimits(AGREEMENTS_SPECS, limits), id));
-    } catch (e2) {
-      out.set(id, { kind: "unread", reason: e2 instanceof Error ? e2.message : String(e2), met: false, areas: [] });
+    } catch (e3) {
+      out.set(id, { kind: "unread", reason: e3 instanceof Error ? e3.message : String(e3), met: false, areas: [] });
     }
   }
   return out;
@@ -9543,7 +10294,7 @@ async function sendToSelf(me, type, payload, opts) {
   const homes = me.f.homes.map((h) => h.hint);
   const look = await lookUp(me.id, homes, opts.via ?? {});
   if (!look.encryptionKey) throw new Error("This identity publishes no encryption key, so nothing can be sealed to it: the draft cannot travel to Damgar. Nothing was signed.");
-  if (!me.f.encryption.some((e2) => hex(xwingPublic(unhex(e2.secret))) === hex(look.encryptionKey))) {
+  if (!me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey))) {
     throw new Error("The encryption key this identity publishes is not one this app holds: Damgar, holding the same words, could not open the draft either. Nothing was signed.");
   }
   let made;
@@ -9672,10 +10423,10 @@ function readSale(payload) {
 }
 
 // ../dub/src/delivery.ts
-var message = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var list = (xs) => [...new Set(xs.filter(Boolean))];
 async function salesTold(me, via) {
-  const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+  const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
   const out = [];
   for (const h of me.f.homes.map((x) => x.hint)) {
     let after2;
@@ -9720,8 +10471,8 @@ async function deliverSold(me, sold, a) {
     try {
       mine.delivered[x.buyer] = await deliverKey(me, x.buyer, x.publication, mine.key, { ...a, current: async () => void 0 });
       out.push(`The key of your sealed ${mine.media === "picture" ? "picture" : "post"} was delivered to ${x.buyer.slice(0, 8)}\u2026, sealed to them: a sale your Damgar signed the receipt for.`);
-    } catch (e2) {
-      out.push(`The key could not be delivered to ${x.buyer.slice(0, 8)}\u2026 yet: ${message(e2)}`);
+    } catch (e3) {
+      out.push(`The key could not be delivered to ${x.buyer.slice(0, 8)}\u2026 yet: ${message(e3)}`);
     }
   }
   return out;
@@ -9794,8 +10545,8 @@ function vowOfferWords(words2, price) {
 async function publishVow(by, a) {
   const vow = await by.publish(SPECS.envelopes, VOW, vowPayload(a.words), { public: true, relays: a.relays });
   const offer = await by.publish(MIRS.agreements, OFFER, offerPayload({ sells: { vow: vow.id }, price: a.price, words: a.offerWords }), { public: true, relays: a.relays });
-  const post2 = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.title), { public: true, relays: a.relays, refs: [referenceTo(vow.act), referenceTo(offer.act)] });
-  return { vow: vow.id, offer: offer.id, post: post2.id };
+  const post3 = await by.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.title), { public: true, relays: a.relays, refs: [referenceTo(vow.act), referenceTo(offer.act)] });
+  return { vow: vow.id, offer: offer.id, post: post3.id };
 }
 async function contestSale(by, a) {
   const made = await by.publish(MIRS.agreements, CONTEST, vowContestPayload(a.vow, a.sale, a.promise?.trim() || void 0), { public: true, relays: a.relays, objects: [[a.vow, a.vow]] });
@@ -9877,15 +10628,15 @@ async function vowSales(identity2, relays, via = {}) {
   const out = [];
   for (const x of vows) {
     try {
-      const e2 = v.agreementsVow(specs, x.name);
+      const e3 = v.agreementsVow(specs, x.name);
       out.push({
-        name: e2.name,
-        signer: e2.signer,
-        void: e2.void,
-        words: e2.words,
-        offers: e2.offers,
-        sales: e2.sales.map((s) => ({ ...s, promise: s.state === "contested" ? promiseOf(contests, s.by) : null, amount: amounts.get(s.act) ?? null })),
-        unsigned: e2.unsigned.length
+        name: e3.name,
+        signer: e3.signer,
+        void: e3.void,
+        words: e3.words,
+        offers: e3.offers,
+        sales: e3.sales.map((s) => ({ ...s, promise: s.state === "contested" ? promiseOf(contests, s.by) : null, amount: amounts.get(s.act) ?? null })),
+        unsigned: e3.unsigned.length
       });
     } catch (err8) {
       problems.push(`The vow ${x.name.slice(0, 8)}\u2026 could not be read: ${err8 instanceof Error ? err8.message : String(err8)}`);
@@ -10058,7 +10809,7 @@ function gridOf(g, members) {
     const ts = a.kinds.filter((k) => "spec" in k);
     return ts.length ? ts.map((k) => `${k.spec}:${k.type}`) : void 0;
   };
-  const layerOf = (a) => {
+  const layerOf2 = (a) => {
     const l = a.kinds.find((k) => "layer" in k);
     if (l) return l.layer;
     const t = a.kinds[0];
@@ -10068,7 +10819,7 @@ function gridOf(g, members) {
   const rows = (g.areas ?? []).map((a) => ({
     id: a.id,
     name: a.name,
-    layer: layerOf(a),
+    layer: layerOf2(a),
     kinds: kinds(a),
     holders: a.holders.filter((h) => members.includes(h)),
     number: a.threshold,
@@ -10118,7 +10869,7 @@ function gridSay(grid, names2) {
 }
 
 // src/publishing.ts
-var err = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var err = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var short2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var now = () => Math.floor(Date.now() / 1e3);
 var list3 = (xs) => [...new Set(xs.filter(Boolean))];
@@ -10177,7 +10928,7 @@ var Publishing = class {
       areaReaching(id, places, { spec: MIRS.agreements, type: OFFER }, s.via).catch(() => ({ agreement: null, area: null })),
       areaReaching(id, places, { spec: SPECS.envelopes, type: VOW }, s.via).catch(() => ({ agreement: null, area: null }))
     ]);
-    const keys = await readMemberKeys(me.id, me.f.encryption.map((e2) => unhex(e2.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
+    const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
     const key = keys.length ? await memberKeyFor(keys, id, places, s.via).catch(() => null) : null;
     let why = null;
     if (!p.agreement) why = "its agreement in force could not be read from its relays and homes";
@@ -10199,7 +10950,7 @@ var Publishing = class {
       if (acting) {
         const me = this.me(acting);
         for (const id of this.collectiveIds(acting, b)) {
-          const c2 = await this.collectiveHere(me, id).catch((e2) => ({ why: err(e2) }));
+          const c2 = await this.collectiveHere(me, id).catch((e3) => ({ why: err(e3) }));
           cs.push({ id, available: !c2.why, why: c2.why ?? null });
         }
       }
@@ -10296,8 +11047,8 @@ var Publishing = class {
         try {
           service = readId(a.service ?? "");
           if (service === acting) blocking.push("The split service is another identity than yours.");
-        } catch (e2) {
-          blocking.push(`The split service: ${err(e2)}`);
+        } catch (e3) {
+          blocking.push(`The split service: ${err(e3)}`);
         }
         if (!/^[0-9a-f]{64}$/.test(serviceKey)) blocking.push("The split service\u2019s key for you: 64 hexadecimal characters, as the service gives it.");
       }
@@ -10311,8 +11062,8 @@ var Publishing = class {
       if (bytes.length && Number.isSafeInteger(price) && price > 0) {
         try {
           work = lockWork({ media, bytes, price: { unit: REGTEST_UNIT, value: price }, relays: s.relays });
-        } catch (e2) {
-          blocking.push(e2 instanceof NotJpeg ? `That file is not a JPEG picture: ${e2.message}` : media === "text" ? "That text is not UTF-8: give a plain text." : err(e2));
+        } catch (e3) {
+          blocking.push(e3 instanceof NotJpeg ? `That file is not a JPEG picture: ${e3.message}` : media === "text" ? "That text is not UTF-8: give a plain text." : err(e3));
         }
       }
       const names2 = this.store.names();
@@ -10400,9 +11151,9 @@ var Publishing = class {
         offerPayload({ sells: { publication: publication2.id }, price: { unit: REGTEST_UNIT, value: a.price }, words: a.words, ...deal2 ? { under: deal2, payee: me.id } : {} }),
         { public: true, relays: s.relays, ...deal2 ? { objects: [[deal2, deal2]] } : {} }
       );
-      const post2 = await me.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.title), { public: true, relays: s.relays, refs: [referenceTo(publication2.act), referenceTo(offer.act)] });
+      const post3 = await me.publish(POST_SPECS.text, TEXT_ACT, textPayload(a.title), { public: true, relays: s.relays, refs: [referenceTo(publication2.act), referenceTo(offer.act)] });
       const b = this.book();
-      b.works.unshift({ publication: publication2.id, offer: offer.id, post: post2.id, as: me.id, member: me.id, collective: false, media: a.media, title: a.title, price: a.price, words: a.words, relays: s.relays, at: now(), key: a.work.key, delivered: {}, toMembers: null, deal: deal2 });
+      b.works.unshift({ publication: publication2.id, offer: offer.id, post: post3.id, as: me.id, member: me.id, collective: false, media: a.media, title: a.title, price: a.price, words: a.words, relays: s.relays, at: now(), key: a.work.key, delivered: {}, toMembers: null, deal: deal2 });
       this.save(b);
       return {
         title: "Published, sealed",
@@ -10411,7 +11162,7 @@ var Publishing = class {
           ...deal2 ? [{ text: `Its deal (${short2(deal2)}) is signed: its split service answers buyers once it accepts your grant, and pays you and each reposter.`, tone: "ok" }] : [],
           { text: "A buyer pays from Dub or Damgar; once your Damgar signs the receipt, Edubba delivers the key when you open this tab (or press \u201CDeliver keys\u201D)." }
         ],
-        acts: [publication2.id, offer.id, post2.id]
+        acts: [publication2.id, offer.id, post3.id]
       };
     } finally {
       this.store.saveIdentity(me);
@@ -10428,9 +11179,9 @@ var Publishing = class {
       public: true,
       objects: [[c2.agreement, c2.agreement]]
     });
-    const post2 = signAsMember(c2.id, c2.key, at2, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(a.title), public: true, refs: [referenceTo(pub.act), referenceTo(off.act)] });
+    const post3 = signAsMember(c2.id, c2.key, at2, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(a.title), public: true, refs: [referenceTo(pub.act), referenceTo(off.act)] });
     const places = list3([...c2.places, ...s.relays]);
-    const took = await publishAt([pub.act, off.act, post2.act], places, s.via);
+    const took = await publishAt([pub.act, off.act, post3.act], places, s.via);
     if (!took.length) throw new Error("No relay took the publication: nothing counts. Try again.");
     for (const h of took) await relayAt(h, s.via).putMedia(a.work.locked).catch(() => void 0);
     const { parties } = await collectiveNow(c2.id, c2.places, s.via);
@@ -10455,11 +11206,11 @@ var Publishing = class {
       }
       if (left) toMembers = kd.id;
       lines4.push(left ? { text: `Its key is sealed to every member (${to.length}), at ${left} of the collective\u2019s places.`, tone: "ok" } : { text: "Its key could not be left at the collective\u2019s places: deliver it again from here.", tone: "warn" });
-    } catch (e2) {
-      lines4.push({ text: `Its key was not delivered to the members: ${err(e2)}`, tone: "warn" });
+    } catch (e3) {
+      lines4.push({ text: `Its key was not delivered to the members: ${err(e3)}`, tone: "warn" });
     }
     const b = this.book();
-    b.works.unshift({ publication: pub.id, offer: off.id, post: post2.id, as: c2.id, member: me.id, collective: true, media: a.media, title: a.title, price: a.price, words: a.words, relays: took, at: now(), key: a.work.key, delivered: {}, toMembers });
+    b.works.unshift({ publication: pub.id, offer: off.id, post: post3.id, as: c2.id, member: me.id, collective: true, media: a.media, title: a.title, price: a.price, words: a.words, relays: took, at: now(), key: a.work.key, delivered: {}, toMembers });
     this.save(b);
     return {
       title: "Published by the collective, sealed",
@@ -10468,7 +11219,7 @@ var Publishing = class {
         ...lines4,
         ...(c2.publishing?.number ?? 1) > 1 || (c2.offers?.number ?? 1) > 1 ? [{ text: "An area asks more keys than yours: its other holders sign it in their own apps before it counts.", tone: "warn" }] : []
       ],
-      acts: [pub.id, off.id, post2.id]
+      acts: [pub.id, off.id, post3.id]
     };
   }
   // ------------------------------------------------------------ vows (Agreements rule 13)
@@ -10563,13 +11314,13 @@ var Publishing = class {
       public: true,
       objects: [[c2.agreement, c2.agreement]]
     });
-    const post2 = signAsMember(c2.id, c2.key, at2, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(a.title), public: true, refs: [referenceTo(vow.act), referenceTo(off.act)] });
-    const took = await publishAt([vow.act, off.act, post2.act], list3([...c2.places, ...s.relays]), s.via);
+    const post3 = signAsMember(c2.id, c2.key, at2, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(a.title), public: true, refs: [referenceTo(vow.act), referenceTo(off.act)] });
+    const took = await publishAt([vow.act, off.act, post3.act], list3([...c2.places, ...s.relays]), s.via);
     if (!took.length) throw new Error("No relay took the vow: nothing counts. Try again.");
     const b = this.book();
-    b.vows.unshift({ vow: vow.id, offer: off.id, post: post2.id, as: c2.id, member: me.id, collective: true, words: a.words, title: a.title, price: a.price, at: now() });
+    b.vows.unshift({ vow: vow.id, offer: off.id, post: post3.id, as: c2.id, member: me.id, collective: true, words: a.words, title: a.title, price: a.price, at: now() });
     this.save(b);
-    return { title: "A vow of the collective, published", lines: [{ text: `\u201C${a.title}\u201D is published by the collective ${short2(c2.id)}, signed with your own key for it, its offer under its agreement in force and paying the collective.`, tone: "ok" }], acts: [vow.id, off.id, post2.id] };
+    return { title: "A vow of the collective, published", lines: [{ text: `\u201C${a.title}\u201D is published by the collective ${short2(c2.id)}, signed with your own key for it, its offer under its agreement in force and paying the collective.`, tone: "ok" }], acts: [vow.id, off.id, post3.id] };
   }
   /**
    * The look-up (decided by Nobody, allegedly, 17 October 2026: "no need to
@@ -10638,7 +11389,7 @@ var Publishing = class {
    */
   async deliverForCollective(me, b) {
     const s = this.settings();
-    const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
     const inbox = list3([...me.f.homes.map((h) => h.hint), ...s.relays]);
     const seen = /* @__PURE__ */ new Map();
     for (const h of inbox) {
@@ -10683,8 +11434,8 @@ var Publishing = class {
         }
         w.delivered[sale.buyer] = await this.collectiveKeyDelivery(me, w, sale.buyer);
         lines4.push({ text: `The key of the collective\u2019s \u201C${w.title}\u201D was delivered to ${short2(sale.buyer)}, as the collective, sealed to them and to every member: a sale its split service receipted.`, tone: "ok" });
-      } catch (e2) {
-        lines4.push({ text: `The key of \u201C${w.title}\u201D could not be delivered to ${short2(sale.buyer)} yet: ${err(e2)}`, tone: "warn" });
+      } catch (e3) {
+        lines4.push({ text: `The key of \u201C${w.title}\u201D could not be delivered to ${short2(sale.buyer)} yet: ${err(e3)}`, tone: "warn" });
       }
     }
     return lines4;
@@ -10740,8 +11491,8 @@ var Publishing = class {
         if (!this.store.holds(member)) continue;
         try {
           lines4.push(...await this.deliverForCollective(this.me(member), b));
-        } catch (e2) {
-          lines4.push({ text: `A collective\u2019s sales could not be read: ${err(e2)}`, tone: "warn" });
+        } catch (e3) {
+          lines4.push({ text: `A collective\u2019s sales could not be read: ${err(e3)}`, tone: "warn" });
         }
       }
       this.save(b);
@@ -11089,10 +11840,10 @@ function decodeManifest(bytes) {
   });
   let impl;
   if (m.has(6)) {
-    const entries2 = list10(m.get(6), "implements").map((e2) => {
-      if (!Array.isArray(e2) || e2.length < 1 || e2.length > 2) throw new Error("manifest: an implemented specification is [spec, ? hint]");
-      const spec = hex(bytesOf2(e2[0], 32, "an implemented specification"));
-      return e2.length === 2 ? { spec, hint: hex(bytesOf2(e2[1], 32, "a publication hint")) } : { spec };
+    const entries2 = list10(m.get(6), "implements").map((e3) => {
+      if (!Array.isArray(e3) || e3.length < 1 || e3.length > 2) throw new Error("manifest: an implemented specification is [spec, ? hint]");
+      const spec = hex(bytesOf2(e3[0], 32, "an implemented specification"));
+      return e3.length === 2 ? { spec, hint: hex(bytesOf2(e3[1], 32, "a publication hint")) } : { spec };
     });
     if (!entries2.length) throw new Error("manifest: implements names at least one specification");
     entries2.forEach((x, i) => {
@@ -11157,8 +11908,8 @@ async function toRelays(relays, via, put) {
     try {
       await put(relayAt(hint, via));
       ok++;
-    } catch (e2) {
-      errors.push(`${hint}: ${e2 instanceof Error ? e2.message : e2}`);
+    } catch (e3) {
+      errors.push(`${hint}: ${e3 instanceof Error ? e3.message : e3}`);
     }
   }
   if (!ok) throw new Error(`no relay took it: ${errors.join("; ")}`);
@@ -11168,10 +11919,10 @@ var HEX642 = /^[0-9a-f]{64}$/;
 function implementsField(entries2) {
   if (!entries2?.length) return void 0;
   const by = /* @__PURE__ */ new Map();
-  for (const e2 of entries2) {
-    if (!HEX642.test(e2.spec)) throw new Error(`implements: a spec hash is 64 hex digits, not \u201C${e2.spec}\u201D`);
-    if (e2.hint !== void 0 && !HEX642.test(e2.hint)) throw new Error(`implements: a hint is an act id, 64 hex digits, not \u201C${e2.hint}\u201D`);
-    if (!by.has(e2.spec)) by.set(e2.spec, e2);
+  for (const e3 of entries2) {
+    if (!HEX642.test(e3.spec)) throw new Error(`implements: a spec hash is 64 hex digits, not \u201C${e3.spec}\u201D`);
+    if (e3.hint !== void 0 && !HEX642.test(e3.hint)) throw new Error(`implements: a hint is an act id, 64 hex digits, not \u201C${e3.hint}\u201D`);
+    if (!by.has(e3.spec)) by.set(e3.spec, e3);
   }
   return [...by.values()].sort((x, y) => x.spec < y.spec ? -1 : x.spec > y.spec ? 1 : 0);
 }
@@ -11285,8 +12036,8 @@ async function verifyRelease(release2, hints, opts = {}) {
   try {
     const l = await lookUp(d.signer, hints, via, v);
     homes = l.resolution.homes.map((h) => h.hint);
-  } catch (e2) {
-    return fail3(`the collective's identity was not found: ${e2}`);
+  } catch (e3) {
+    return fail3(`the collective's identity was not found: ${e3}`);
   }
   v.add(act);
   for (const a of await allBy2(d.signer, [.../* @__PURE__ */ new Set([...hints, ...homes])], via)) {
@@ -11363,8 +12114,8 @@ async function verifyRelease(release2, hints, opts = {}) {
   r.foundAt = foundAt;
   try {
     consent = v.agreementsConsent(AGREEMENTS_SPECS, release2);
-  } catch (e2) {
-    return fail3(`Agreements: ${e2 instanceof Error ? e2.message : e2}`);
+  } catch (e3) {
+    return fail3(`Agreements: ${e3 instanceof Error ? e3.message : e3}`);
   }
   if (standing2 === "scoped" && (consent.kind === "not-collective" || consent.kind === "no-area")) return fail3("the publication is signed with a scoped key, and no collective\u2019s lane backs it");
   r.agreement = consent.agreement;
@@ -11393,8 +12144,8 @@ async function verifyRelease(release2, hints, opts = {}) {
       return fail3("the manifest does not match its work hash or size");
     }
     manifest = decodeManifest(plain2);
-  } catch (e2) {
-    return fail3(`the manifest: ${e2 instanceof Error ? e2.message : e2}`);
+  } catch (e3) {
+    return fail3(`the manifest: ${e3 instanceof Error ? e3.message : e3}`);
   }
   r.manifest = manifest;
   const got = [];
@@ -11528,8 +12279,8 @@ async function sellerAlarm(me, payment, hints, via = {}) {
   };
   const a0 = ag(named);
   const root = (a0 ? lineage(named) : lineage(agreement2)).at(-1);
-  const top2 = root ? ag(root) : null;
-  if (!top2 || top2.collective) return null;
+  const top3 = root ? ag(root) : null;
+  if (!top3 || top3.collective) return null;
   const mine = [...fetched].filter((x) => lineage(x).at(-1) === root && ag(x)?.exists === true && ag(x).signed.includes(me));
   const held = mine.sort((a, b) => lineage(b).length - lineage(a).length)[0] ?? null;
   if (!a0) {
@@ -11546,13 +12297,13 @@ async function sellerAlarm(me, payment, hints, via = {}) {
   let fork = null;
   try {
     fork = v.agreementsDealFork(AGREEMENTS_SPECS, named);
-  } catch (e2) {
+  } catch (e3) {
     return {
       kind: "fork",
       named,
       held,
       words: [
-        `ALARM: this payment names version ${short3(named)} of a deal whose versions branch in a way Agreements do not settle (${e2 instanceof Error ? e2.message : String(e2)}). Look at the whole deal with every party before relying on it (Agreements rule 45b, F186).`
+        `ALARM: this payment names version ${short3(named)} of a deal whose versions branch in a way Agreements do not settle (${e3 instanceof Error ? e3.message : String(e3)}). Look at the whole deal with every party before relying on it (Agreements rule 45b, F186).`
       ]
     };
   }
@@ -11604,9 +12355,9 @@ async function sellerAlarm(me, payment, hints, via = {}) {
     ]
   };
 }
-async function dealRoot(version, hints, via = {}) {
+async function dealRoot(version2, hints, via = {}) {
   const seen = /* @__PURE__ */ new Set();
-  for (let x = version; !seen.has(x); ) {
+  for (let x = version2; !seen.has(x); ) {
     seen.add(x);
     let next;
     for (const h of hints) {
@@ -11628,10 +12379,10 @@ async function dealRoot(version, hints, via = {}) {
   return null;
 }
 function splitGaps(numbers) {
-  const top2 = Math.max(0, ...numbers);
+  const top3 = Math.max(0, ...numbers);
   const have = new Set(numbers);
   const out = [];
-  for (let n = 1; n <= top2; n++) if (!have.has(n)) out.push(n);
+  for (let n = 1; n <= top3; n++) if (!have.has(n)) out.push(n);
   return out;
 }
 
@@ -11682,7 +12433,7 @@ function linkOpenShown(s, i) {
   return underFloor(s, i) !== null;
 }
 var AUTOLINK = /^<((?:https?|mailto):[^ <>]+)>/;
-function parse(source) {
+function parse2(source) {
   const lines4 = [];
   let start2 = 0;
   for (; ; ) {
@@ -11834,13 +12585,13 @@ var Parser = class {
         out.push({ t: "list", ordered: first.kind === ".", items });
         continue;
       }
-      const children = [...this.inline(l)];
+      const children2 = [...this.inline(l)];
       i++;
       while (i < lines4.length && this.text(lines4[i]) !== "" && !this.starts(lines4[i], depth)) {
-        children.push({ t: "break", at: lines4[i - 1].to }, ...this.inline(lines4[i]));
+        children2.push({ t: "break", at: lines4[i - 1].to }, ...this.inline(lines4[i]));
         i++;
       }
-      out.push({ t: "paragraph", children });
+      out.push({ t: "paragraph", children: children2 });
     }
     return out;
   }
@@ -12001,29 +12752,29 @@ var Parser = class {
     for (const j of stack) delete toks[j].pair;
     const root = [];
     const frames = [root];
-    const top2 = () => frames[frames.length - 1];
+    const top3 = () => frames[frames.length - 1];
     for (const tk of toks) {
       if (tk.k === "node") {
-        top2().push(tk.node);
+        top3().push(tk.node);
       } else if (tk.pair === "open") {
         this.mark("em-open", tk.span.from, tk.span.to);
         const outer = [];
         if (tk.n === 1) {
-          top2().push({ t: "em", children: outer });
+          top3().push({ t: "em", children: outer });
           frames.push(outer);
         } else if (tk.n === 2) {
-          top2().push({ t: "strong", children: outer });
+          top3().push({ t: "strong", children: outer });
           frames.push(outer);
         } else {
           const inner = [];
-          top2().push({ t: "strong", children: [{ t: "em", children: inner }] });
+          top3().push({ t: "strong", children: [{ t: "em", children: inner }] });
           frames.push(inner);
         }
       } else if (tk.pair === "close") {
         this.mark("em-close", tk.span.from, tk.span.to);
         frames.pop();
       } else {
-        top2().push({ t: "text", span: tk.span });
+        top3().push({ t: "text", span: tk.span });
       }
     }
     return merge(root);
@@ -12321,8 +13072,8 @@ function checkBound(doc, declared = DECLARED, endsBlock = ENDS_BLOCK) {
   const said = (i) => JSON.stringify(s[i] ?? "");
   const lineStart = (i) => s.lastIndexOf("\n", i - 1) + 1;
   const lineEnd = (i) => {
-    const e2 = s.indexOf("\n", i);
-    return e2 < 0 ? n : e2;
+    const e3 = s.indexOf("\n", i);
+    return e3 < 0 ? n : e3;
   };
   const markers = new Uint8Array(n);
   const markerSpans = (bs) => {
@@ -12488,7 +13239,7 @@ function compose(raw) {
 
 // ../collective/src/explain.ts
 var short4 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
-var count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+var count = (n, one2, many = `${one2}s`) => `${n} ${n === 1 ? one2 : many}`;
 function termsOf(payload) {
   return readTerms(payload, AGREEMENTS_SPECS);
 }
@@ -12619,8 +13370,8 @@ var AGREEMENTS_SAYS = {
 function problemWords(p) {
   return `${AGREEMENTS_SAYS[p.code] ?? `Agreements refuse these terms (${p.code})`}. Agreements' own words: \u201C${p.text}\u201D.`;
 }
-function agreementsThrown(e2) {
-  const m = /^law\/([a-z]+): ([\s\S]*)$/.exec(e2 instanceof Error ? e2.message : String(e2));
+function agreementsThrown(e3) {
+  const m = /^law\/([a-z]+): ([\s\S]*)$/.exec(e3 instanceof Error ? e3.message : String(e3));
   return m ? { code: m[1], text: m[2] } : null;
 }
 function withAgreements(hints, others) {
@@ -12697,8 +13448,8 @@ function readAgreement(t, names2, parent2) {
       const at2 = (x) => t.parties.indexOf(x) + 1 || Infinity;
       return [...ids].sort((x, y) => at2(x) - at2(y));
     };
-    for (const e2 of t.mark ?? []) {
-      lines4.push({ text: `It says it comes in by ${powerWords(e2.power, areas, names2)} of that agreement, signed by ${list4(order(e2.signers).map(names2))}.` });
+    for (const e3 of t.mark ?? []) {
+      lines4.push({ text: `It says it comes in by ${powerWords(e3.power, areas, names2)} of that agreement, signed by ${list4(order(e3.signers).map(names2))}.` });
     }
     lines4.push({
       text: "Agreements check that these are exactly the powers its changes need, and that those named meet them, counted among the voices that remain. A false mark sinks the clone, whatever signatures it gathers (F104)."
@@ -13002,8 +13753,8 @@ function readChanges(beforePayload, afterPayload, names2) {
   let plan;
   try {
     plan = planOf(beforePayload, afterPayload);
-  } catch (e2) {
-    out.push({ text: `Agreements cannot say what this clone changes: ${e2 instanceof Error ? e2.message : e2}`, tone: "bad" });
+  } catch (e3) {
+    out.push({ text: `Agreements cannot say what this clone changes: ${e3 instanceof Error ? e3.message : e3}`, tone: "bad" });
     return out;
   }
   const areaName = (id) => before.areas.find((a) => a.id === id)?.name ?? after2.areas.find((a) => a.id === id)?.name ?? `area ${id}`;
@@ -13015,12 +13766,12 @@ function readChanges(beforePayload, afterPayload, names2) {
   if (!plan.changes.length) out.push({ text: "Agreements find nothing changed in the terms." });
   const areas = before.areas;
   out.push({ text: `So its mark must name ${list4(plan.needs.map((p) => powerWords(p, areas, names2)))} (Agreements rule 44c).` });
-  const claimed = (after2.mark ?? []).map((e2) => powerKey(e2.power));
+  const claimed = (after2.mark ?? []).map((e3) => powerKey(e3.power));
   if (JSON.stringify(claimed) === JSON.stringify(plan.needs.map(powerKey))) {
     out.push({ text: "Its mark names exactly that.", tone: "ok" });
   } else {
     out.push({
-      text: `Its mark names ${list4((after2.mark ?? []).map((e2) => powerWords(e2.power, areas, names2))) || "nothing"}: a false mark sinks the clone (F104).`,
+      text: `Its mark names ${list4((after2.mark ?? []).map((e3) => powerWords(e3.power, areas, names2))) || "nothing"}: a false mark sinks the clone (F104).`,
       tone: "bad"
     });
   }
@@ -13067,7 +13818,7 @@ function readRelease(m, before) {
 // ../reader/src/read.ts
 function titleOf(p) {
   if (isLongForm(p.format)) {
-    const t = title(parse(p.text));
+    const t = title(parse2(p.text));
     if (t) return t;
   }
   const first = p.text.split("\n").find((l) => l.trim()) ?? "";
@@ -13102,9 +13853,9 @@ function countControls(s) {
 }
 
 // ../grants/src/lanes.ts
-function reaches(kinds, spec, type, layerOf) {
+function reaches(kinds, spec, type, layerOf2) {
   if (!kinds?.length) return true;
-  return kinds.some((k) => "layer" in k ? layerOf(spec) === k.layer : k.spec === spec && k.type === type);
+  return kinds.some((k) => "layer" in k ? layerOf2(spec) === k.layer : k.spec === spec && k.type === type);
 }
 async function grantsForKey(person2, key, hints, via = {}) {
   const out = [];
@@ -13139,7 +13890,7 @@ async function actsUnder(grantor, grant2, hints, via = {}) {
 }
 
 // ../connector/src/read.ts
-var err2 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var err2 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 async function fetchFirst2(id, hints, via) {
   for (const h of hints) {
     try {
@@ -13227,8 +13978,8 @@ async function readAct(id, hints, via = {}, depth = 1) {
   let d;
   try {
     d = describeChecked2(act, id);
-  } catch (e2) {
-    return told(id, { title: "Not a valid act", counts: false, verdict: `What the relay served is not a valid act: ${err2(e2)}.`, problems: [err2(e2)] });
+  } catch (e3) {
+    return told(id, { title: "Not a valid act", counts: false, verdict: `What the relay served is not a valid act: ${err2(e3)}.`, problems: [err2(e3)] });
   }
   const judge2 = new Judge2(hints, via);
   if (d.public && d.binding && d.signer && d.binding !== d.signer) {
@@ -13305,8 +14056,8 @@ async function grant(act, d, judge2, hints, via) {
   let g;
   try {
     g = readGrant2(d.payload);
-  } catch (e2) {
-    return told(d.id, { title: "A grant that cannot be read", signer: d.signer ?? null, standing: standing2, counts: false, verdict: `A grant whose payload is not as Agreements write it: ${err2(e2)}.` });
+  } catch (e3) {
+    return told(d.id, { title: "A grant that cannot be read", signer: d.signer ?? null, standing: standing2, counts: false, verdict: `A grant whose payload is not as Agreements write it: ${err2(e3)}.` });
   }
   const lane = g.grantee === d.signer;
   const revoked = (await revocationsOf(d.signer, d.id, hints, via).catch(() => [])).length > 0;
@@ -13342,15 +14093,15 @@ async function text2(id, hints, via) {
   let p;
   try {
     p = await readPost(id, hints, via);
-  } catch (e2) {
-    return told(id, { kind: "text", title: "A text act", counts: false, verdict: `A text act that could not be read: ${err2(e2)}.`, problems: [err2(e2)] });
+  } catch (e3) {
+    return told(id, { kind: "text", title: "A text act", counts: false, verdict: `A text act that could not be read: ${err2(e3)}.`, problems: [err2(e3)] });
   }
   const ok = p.standing === "valid";
   const lines4 = [{ text: `Signed by the identity ${p.signer}.` }, standingLine(p.standing)];
   const corrected = correctionOf(p);
   const format = p.format === POST_SPECS.longform ? "It is written in the long-form text format (formatted text)." : isCorrectionFormat(p.format) ? corrected ? `Correction: it corrects act ${short4(corrected)}, an act of the same signer, which stays as signed (the corrections cMIP)${p.format === LONG_FORM_CORRECTION ? "; written in long form (formatted text, the long-form text format)" : ""}.` : "It is in the corrections format, but the act it names first is not one of its own signer\u2019s: no correction, an ordinary text naming that act (the corrections cMIP, 1.3)." : p.format ? `It names a format this connector does not implement (${short4(p.format)}); its text is shown plain.` : "It is plain text.";
   const refs = p.refs.map(
-    (r) => r.kind === "picture" ? { text: r.problem ? `It shows a picture (${short4(r.publication)}) that is not shown: ${r.problem}.` : `It shows a picture (${short4(r.publication)}), ${r.picture?.width}\xD7${r.picture?.height}, verified.`, tone: r.problem ? "warn" : void 0 } : { text: `It refers to act ${short4(r.id)}: ${r.what}.` }
+    (r) => r.kind === "picture" ? { text: r.problem ? `It shows a picture (${short4(r.publication)}) that is not shown: ${r.problem}.` : `It shows a picture (${short4(r.publication)}), ${r.picture?.width}\xD7${r.picture?.height}, verified.`, tone: r.problem ? "warn" : void 0 } : r.kind === "film" ? { text: r.problem ? `It shows a film (${short4(r.publication)}) that is not shown: ${r.problem}.` : `It shows a film (${short4(r.publication)}), ${r.size} bytes; its bytes are checked when it is played.`, tone: r.problem ? "warn" : void 0 } : { text: `It refers to act ${short4(r.id)}: ${r.what}.` }
   );
   return told(id, {
     kind: "text",
@@ -13460,14 +14211,14 @@ async function agreement(act, d, judge2) {
   let t;
   try {
     t = termsOf(d.payload);
-  } catch (e2) {
+  } catch (e3) {
     return told(d.id, {
       kind: "agreement",
       title: "An agreement",
       signer: d.signer ?? null,
       counts: false,
-      verdict: `An agreement that cannot be read here: ${err2(e2)}. Agreements leaves some fields' formats open; terms that use them are not read.`,
-      problems: [err2(e2)]
+      verdict: `An agreement that cannot be read here: ${err2(e3)}. Agreements leaves some fields' formats open; terms that use them are not read.`,
+      problems: [err2(e3)]
     });
   }
   const standing2 = await judge2.standing(act, d);
@@ -13509,8 +14260,8 @@ async function agreement(act, d, judge2) {
   try {
     agreements = judge2.v.agreementsAgreement(AGREEMENTS_SPECS, d.id);
     if (agreements.invalid) problems.push(`Agreements find it invalid: ${agreements.invalid}`);
-  } catch (e2) {
-    problems.push(`Agreements: ${err2(e2)}`);
+  } catch (e3) {
+    problems.push(`Agreements: ${err2(e3)}`);
   }
   let replaced = null;
   const ready = [];
@@ -13666,7 +14417,7 @@ async function identity(id, hints, via = {}, judge2 = new Judge2(hints, via)) {
 // ../connector/src/draft.ts
 var DRAFT_LABEL = "MOR draft, version 2";
 var same = (a, b) => Buffer.from(a).equals(Buffer.from(b));
-var err3 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var err3 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var sha2563 = (b) => createHash("sha256").update(b).digest("hex");
 var MAX_NOTE = 2e3;
 var MAX_MEDIA = 8 << 20;
@@ -13692,8 +14443,8 @@ function decodeDraft(bytes) {
   let m;
   try {
     m = cborDecode(bytes);
-  } catch (e2) {
-    throw new Error(`not a draft: ${err3(e2)}`);
+  } catch (e3) {
+    throw new Error(`not a draft: ${err3(e3)}`);
   }
   if (!(m instanceof Map) || m.get(0) !== DRAFT_LABEL) throw new Error(`not a ${DRAFT_LABEL}`);
   for (const k of m.keys()) if (typeof k !== "number" || k < 0 || k > 12) throw new Error(`a draft with an unknown field ${String(k)}`);
@@ -13711,12 +14462,12 @@ function decodeDraft(bytes) {
   const payload = m.get(4);
   const pub = m.get(5);
   const relays = m.get(8);
-  const note4 = m.has(11) ? m.get(11) : null;
+  const note5 = m.has(11) ? m.get(11) : null;
   if (typeof type !== "number") throw new Error("a draft whose type is not a number");
   if (!(payload instanceof Uint8Array)) throw new Error("a draft without a payload");
   if (typeof pub !== "boolean") throw new Error("a draft that does not say whether the act is public");
   if (!Array.isArray(relays) || !relays.every((r) => typeof r === "string")) throw new Error("a draft whose relays are not addresses");
-  if (note4 !== null && typeof note4 !== "string") throw new Error("a draft whose note is not text");
+  if (note5 !== null && typeof note5 !== "string") throw new Error("a draft whose note is not text");
   const media = list10(10, "media");
   if (!media.every((x) => x instanceof Uint8Array)) throw new Error("a draft whose media are not bytes");
   const d = {
@@ -13739,7 +14490,7 @@ function decodeDraft(bytes) {
     relays,
     to: list10(9, "recipients").map((r) => h(r, "recipient")),
     media,
-    note: note4,
+    note: note5,
     reworks: m.has(12) ? h(m.get(12), "reworked draft") : null
   };
   if (!same(encodeDraft(d), bytes)) throw new Error("a draft not in its one deterministic encoding");
@@ -13773,8 +14524,8 @@ function textOf(d, blocking) {
   let p = null;
   try {
     p = cborDecode(d.payload);
-  } catch (e2) {
-    blocking.push(`Its payload is not deterministic CBOR: ${err3(e2)}.`);
+  } catch (e3) {
+    blocking.push(`Its payload is not deterministic CBOR: ${err3(e3)}.`);
   }
   const text4 = p?.get(0);
   const format = p?.get(1);
@@ -13787,13 +14538,13 @@ function textOf(d, blocking) {
   if (d.objects.length) blocking.push("A text act names no objects.");
   try {
     checkText(text4);
-  } catch (e2) {
-    blocking.push(`Its text is not canonical text (Text MIR, rule 1): ${err3(e2)}.`);
+  } catch (e3) {
+    blocking.push(`Its text is not canonical text (Text MIR, rule 1): ${err3(e3)}.`);
   }
   if (format === void 0) what.push({ text: "Plain text: what you read below is exactly what is signed." });
   else if (format instanceof Uint8Array && hex(format) === POST_SPECS.longform) {
     what.push({ text: "Written in the long-form text format: readers render headings, emphasis and links from it; the plain text below is exactly what is signed." });
-    const breach = checkBound(parse(text4));
+    const breach = checkBound(parse2(text4));
     if (breach) blocking.push(`The long-form format would show it differently from its bytes (${breach}).`);
   } else blocking.push("It names a format the desk does not implement.");
   const n = countControls(text4);
@@ -13840,8 +14591,8 @@ async function readPost2(d, who3, hints, via) {
     try {
       const r = await recipientOf(to, hints, via);
       what.push({ text: `It answers an act of the identity ${short4(to)}: a copy, sealed to that identity, is left in its inbox at ${r.inbox.join(", ")}. The relays there see whom it is for, never who sent it or what it answers. The act itself names that identity among its recipients, which anyone reading it publicly can see, as they can see what it answers.` });
-    } catch (e2) {
-      what.push({ text: `It answers an act of the identity ${short4(to)}, which cannot be given a copy in its inbox: ${err3(e2)}. It is published all the same.`, tone: "warn" });
+    } catch (e3) {
+      what.push({ text: `It answers an act of the identity ${short4(to)}, which cannot be given a copy in its inbox: ${err3(e3)}. It is published all the same.`, tone: "warn" });
     }
   }
   what.push({ text: "It is public: anyone who fetches it can read it, and it cannot be unpublished; a later withdrawal only asks readers not to show it." });
@@ -13874,8 +14625,8 @@ async function readMessage2(d, who3, hints, via) {
     try {
       const r = await recipientOf(d.to[0], hints, via);
       lines4.push({ text: `It is sealed to the current encryption key of the identity ${d.to[0]}, and left in its inbox at ${r.inbox.join(", ")}.` });
-    } catch (e2) {
-      blocking.push(`It cannot be delivered: ${err3(e2)}.`);
+    } catch (e3) {
+      blocking.push(`It cannot be delivered: ${err3(e3)}.`);
     }
   }
   what.push(...(await refLines(d, hints, via, blocking)).lines);
@@ -13900,8 +14651,8 @@ async function readPicture2(d, who3) {
   let m = null;
   try {
     m = cborDecode(d.payload);
-  } catch (e2) {
-    blocking.push(`Its payload is not deterministic CBOR: ${err3(e2)}.`);
+  } catch (e3) {
+    blocking.push(`Its payload is not deterministic CBOR: ${err3(e3)}.`);
   }
   if (!d.public) blocking.push("A publication is public: the offer is seen by all.");
   if (d.refs.length || d.objects.length) blocking.push("A publication of a picture refers to nothing and names no chain.");
@@ -13930,8 +14681,8 @@ async function readPicture2(d, who3) {
       picture = { jpeg, width: p.width, height: p.height };
       lines4.push({ text: `A JPEG picture, ${p.width}\xD7${p.height}, stripped to the picture alone: no location, camera data, preview or hidden picture.`, tone: p.carries.length ? "bad" : "ok" });
       if (!(work instanceof Uint8Array) || hex(work) !== workHash(jpeg)) blocking.push("The publication's work hash is not the picture's.");
-    } catch (e2) {
-      blocking.push(`The picture does not open with the key in the publication, or is not a JPEG: ${err3(e2)}.`);
+    } catch (e3) {
+      blocking.push(`The picture does not open with the key in the publication, or is not a JPEG: ${err3(e3)}.`);
     }
   }
   lines4.push({ text: "It is public: anyone who fetches it can see the picture, and it cannot be unpublished; a later withdrawal only asks readers not to show it." });
@@ -13957,8 +14708,8 @@ async function readWithdrawal(d, who3, hints, via) {
   let p = null;
   try {
     p = cborDecode(d.payload);
-  } catch (e2) {
-    blocking.push(`Its payload is not deterministic CBOR: ${err3(e2)}.`);
+  } catch (e3) {
+    blocking.push(`Its payload is not deterministic CBOR: ${err3(e3)}.`);
   }
   if (p && p.size) blocking.push("A withdrawal carries an empty payload.");
   const pub = d.objects[0]?.[0];
@@ -14471,8 +15222,8 @@ function asMap2(payload, what, fields) {
   let m;
   try {
     m = cborDecode(payload);
-  } catch (e2) {
-    throw new Invalid(`${what}: not CBOR (${e2 instanceof Error ? e2.message : e2})`);
+  } catch (e3) {
+    throw new Invalid(`${what}: not CBOR (${e3 instanceof Error ? e3.message : e3})`);
   }
   if (!(m instanceof Map)) throw new Invalid(`${what}: not a map`);
   for (const k of m.keys()) if (!fields.includes(k)) throw new Invalid(`${what}: ${String(k)} is not one of its fields`);
@@ -14494,10 +15245,10 @@ function decodeTerms(payload) {
   const t = { principals: hashes(m.get(0), "the principals (field 0)"), allowed: [] };
   const list10 = m.get(1);
   if (!Array.isArray(list10)) throw new Invalid("the actions allowed (field 1) are not a list");
-  list10.forEach((e2, i) => {
+  list10.forEach((e3, i) => {
     const at2 = `field 1, entry ${i + 1}`;
-    if (!Array.isArray(e2) || e2.length !== 3) throw new Invalid(`${at2} is not [kind, whom, free]`);
-    const [kind, whom, free] = e2;
+    if (!Array.isArray(e3) || e3.length !== 3) throw new Invalid(`${at2} is not [kind, whom, free]`);
+    const [kind, whom, free] = e3;
     if (kind !== 0 && kind !== 1 && kind !== 2) throw new Invalid(`${at2}: its kind is not 0, 1 or 2`);
     if (typeof free !== "boolean") throw new Invalid(`${at2}: free is not true or false`);
     const w = whom === null ? null : hashes(whom, `${at2}, whom`);
@@ -14529,8 +15280,8 @@ function decodeNudge(payload) {
     if (typeof t !== "string") throw new Invalid("the context (field 3) is not text");
     try {
       checkText(t);
-    } catch (e2) {
-      throw new Invalid(`the context (field 3): ${e2 instanceof Error ? e2.message : e2}`);
+    } catch (e3) {
+      throw new Invalid(`the context (field 3): ${e3 instanceof Error ? e3.message : e3}`);
     }
     n.context = t;
   }
@@ -14541,7 +15292,7 @@ function decodePick(payload) {
   return { agent: hash(m.get(0), "the agent (field 0)"), terms: hash(m.get(1), "the terms (field 1)"), picked: hash(m.get(2), "the act picked (field 2)") };
 }
 function entryFor(t, kind, addressees) {
-  return t.allowed.find((e2) => e2.kind === kind && (e2.whom === null || addressees.every((x) => e2.whom.includes(x))));
+  return t.allowed.find((e3) => e3.kind === kind && (e3.whom === null || addressees.every((x) => e3.whom.includes(x))));
 }
 var fpOf = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var listOf = (xs) => xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
@@ -14599,8 +15350,8 @@ var Reading = class {
     if (h.acks.length) return { problem: "the terms carry acknowledgements, which makes them invalid (Envelopes rule 18)" };
     try {
       return { terms: decodeTerms(h.payload), held: h };
-    } catch (e2) {
-      return { problem: `the terms are invalid under this cMIP: ${e2 instanceof Error ? e2.message : e2}` };
+    } catch (e3) {
+      return { problem: `the terms are invalid under this cMIP: ${e3 instanceof Error ? e3.message : e3}` };
     }
   }
   /** Later versions (item 3): from successor to successor while there is exactly one; stopping at a fork. */
@@ -14652,8 +15403,8 @@ var Reading = class {
         agent = r.pick.agent;
         termsId = r.pick.terms;
       }
-    } catch (e2) {
-      return done2("invalid", [`it is invalid under this cMIP: ${e2 instanceof Error ? e2.message : e2}`]);
+    } catch (e3) {
+      return done2("invalid", [`it is invalid under this cMIP: ${e3 instanceof Error ? e3.message : e3}`]);
     }
     const t = this.termsAct(termsId);
     if (!t) return done2("unknown", [`the terms it names, ${fpOf(termsId)}, are not held`]);
@@ -14881,15 +15632,15 @@ var Reading = class {
     const id = `to be signed by ${a.signer}`;
     this.acts.set(id, { id, signer: a.signer, public: a.public, to: a.to, opened: true, spec: NUDGE_SPECS.text, type: TEXT_ACT2, prev: a.prev, refs: a.refs, acks: [], payload: void 0 });
     try {
-      const read2 = this.readAction(id);
-      if (!read2) return { ok: true, why: "it is read under no terms of this cMIP: no terms of its signer held, or it reaches no one", reading: null };
-      if (read2.verdict !== "within, free" && read2.verdict !== "within, by pick") return { ok: false, why: read2.words, reading: read2 };
-      for (const c2 of [read2.nudge, read2.pick]) {
+      const read3 = this.readAction(id);
+      if (!read3) return { ok: true, why: "it is read under no terms of this cMIP: no terms of its signer held, or it reaches no one", reading: null };
+      if (read3.verdict !== "within, free" && read3.verdict !== "within, by pick") return { ok: false, why: read3.words, reading: read3 };
+      for (const c2 of [read3.nudge, read3.pick]) {
         if (!c2) continue;
         const may = this.mayAct(c2.id);
-        if (!may.ok) return { ok: false, why: `its ${c2.kind} may not be acted on: ${may.why}`, reading: read2 };
+        if (!may.ok) return { ok: false, why: `its ${c2.kind} may not be acted on: ${may.why}`, reading: read3 };
       }
-      return { ok: true, why: read2.words, reading: read2 };
+      return { ok: true, why: read3.words, reading: read3 };
     } finally {
       this.acts.delete(id);
     }
@@ -14952,7 +15703,7 @@ var Reading = class {
 // src/desk.ts
 var b643 = (b) => Buffer.from(b).toString("base64");
 var unb644 = (s) => Uint8Array.from(Buffer.from(s, "base64"));
-var err4 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var err4 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var short5 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var now2 = () => Math.floor(Date.now() / 1e3);
 var MAX_NOTE2 = 4e3;
@@ -14960,7 +15711,7 @@ var SORTED = ["new", "to answer", "answered", "ignored"];
 var KEY_CHANGED_SAY = "This identity\u2019s signing key was changed elsewhere, with its chain key\u2019s paper words: a change of keys is done in Ki\u0161ib, never in Edubba. The key Edubba holds no longer counts, so Edubba signs nothing more with it. If you did not change it, someone holding the chain key\u2019s words may have: open Ki\u0161ib. To go on here, give the new signing key\u2019s words in the identity\u2019s record (Identities tab).";
 var COLLECTIVE_KEY_CHANGED_SAY = "This collective\u2019s signing key was changed elsewhere, in Ki\u0161ib, with its members\u2019 paper shares. The key Edubba holds for it no longer counts, so Edubba signs nothing more for it with that key. To go on here, give the collective\u2019s new signing key\u2019s words under its member change (Collectives tab).";
 var CONTESTED_SAY = "Its homes disagree about its keys (contested): nothing is signed with them until it is settled, in Ki\u0161ib (\u201CEscape a contested position\u201D).";
-async function keyChangedAt(id, secret, hints, via, say3) {
+async function keyChangedAt(id, secret, hints, via, say4) {
   let r;
   try {
     r = (await lookUp(id, [...new Set(hints)], via)).resolution;
@@ -14968,7 +15719,7 @@ async function keyChangedAt(id, secret, hints, via, say3) {
     return null;
   }
   if (r.stop === "contested") return CONTESTED_SAY;
-  return r.signingKey && hex(r.signingKey) !== hex(signingPublic(unhex(secret))) ? say3 : null;
+  return r.signingKey && hex(r.signingKey) !== hex(signingPublic(unhex(secret))) ? say4 : null;
 }
 var Desk = class {
   constructor(store) {
@@ -14999,8 +15750,8 @@ var Desk = class {
       let info;
       try {
         info = await relayAt(hint, a.via).info();
-      } catch (e2) {
-        throw new Error(`${hint} did not answer: ${err4(e2)}`);
+      } catch (e3) {
+        throw new Error(`${hint} did not answer: ${err4(e3)}`);
       }
       const op = info.get(0);
       if (!(op instanceof Uint8Array)) throw new Error(`${hint} is not a home: it declares no operator`);
@@ -15192,7 +15943,7 @@ var Desk = class {
       if (loadAnswer(dir, digest)) continue;
       try {
         out.push(await this.view(digest, time));
-      } catch (e2) {
+      } catch (e3) {
         out.push({
           digest,
           time,
@@ -15203,7 +15954,7 @@ var Desk = class {
           summary: [],
           sections: [],
           plain: [],
-          blocking: [err4(e2)],
+          blocking: [err4(e3)],
           note: null,
           reworks: null,
           picture: null
@@ -15222,10 +15973,10 @@ var Desk = class {
     this.store.record({ time, draft: a.draft, verdict: a.verdict, signer: d.signer, title: title2, note: a.note, act: a.act });
   }
   /** Send a draft back to Claude with the owner's note, saying what to change. Nothing is signed. */
-  async sendBack(digest, note4) {
+  async sendBack(digest, note5) {
     return this.serial(async () => {
       this.answered(digest);
-      const n = note4.trim();
+      const n = note5.trim();
       if (!n) throw new Error("Write a note: it is what Claude reworks the draft from.");
       if (n.length > MAX_NOTE2) throw new Error(`The note is longer than ${MAX_NOTE2} characters.`);
       const { draft: d } = loadDraft(this.store.settings().drafts, digest);
@@ -15235,12 +15986,12 @@ var Desk = class {
     });
   }
   /** Decline a draft. Nothing is signed; Claude is told, with the note if one is given. */
-  async decline(digest, note4) {
+  async decline(digest, note5) {
     return this.serial(async () => {
       this.answered(digest);
       const { draft: d } = loadDraft(this.store.settings().drafts, digest);
       const r = await readDraft2(d, this.hints(), this.via);
-      this.answer({ draft: digest, verdict: "declined", note: note4.trim().slice(0, MAX_NOTE2) }, d, r.title);
+      this.answer({ draft: digest, verdict: "declined", note: note5.trim().slice(0, MAX_NOTE2) }, d, r.title);
       return { title: "Declined", lines: [{ text: "Nothing was signed." }], acts: [] };
     });
   }
@@ -15299,8 +16050,8 @@ var Desk = class {
         try {
           const r = await recipientOf(t, this.hints(), this.via);
           rec.copies.push({ to: t, sealed: b643(sealFor(made.act, void 0, [{ id: t, key: r.key }])), inbox: r.inbox });
-        } catch (e2) {
-          rec.noCopy.push({ to: t, why: err4(e2) });
+        } catch (e3) {
+          rec.noCopy.push({ to: t, why: err4(e3) });
         }
       }
     }
@@ -15347,7 +16098,7 @@ var Desk = class {
       const homes = me.f.homes.map((h) => h.hint);
       const look = await lookUp(me.id, homes, this.via);
       if (!look.encryptionKey) throw new Error("This identity publishes no encryption key, so nothing can be sealed to it. Nothing was signed.");
-      if (!me.f.encryption.some((e2) => hex(xwingPublic(unhex(e2.secret))) === hex(look.encryptionKey))) {
+      if (!me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey))) {
         throw new Error("The encryption key this identity publishes is not one Edubba holds: what is sealed to it would not open here. Nothing was signed.");
       }
       await this.keyCurrent(me.id);
@@ -15455,8 +16206,8 @@ var Desk = class {
         try {
           await relayAt(hint, via).putSealed(unb644(rec.sealed));
           out.push({ to: `inbox ${hint}`, accepted: true, answer: "sealed and delivered" });
-        } catch (e2) {
-          out.push({ to: `inbox ${hint}`, accepted: false, answer: `refused: ${e2 instanceof RelayError ? e2.reason : err4(e2)}` });
+        } catch (e3) {
+          out.push({ to: `inbox ${hint}`, accepted: false, answer: `refused: ${e3 instanceof RelayError ? e3.reason : err4(e3)}` });
         }
       }
       const homes = rec.key ? await leaveAtHomes(me, { act, id: rec.act, key: unb644(rec.key) }, { via }) : [];
@@ -15481,13 +16232,13 @@ var Desk = class {
           try {
             await relayAt(hint, via).putMedia(unb644(m));
             answer += ", and the picture";
-          } catch (e2) {
-            answer += `; the picture refused: ${e2 instanceof RelayError ? e2.reason : err4(e2)}`;
+          } catch (e3) {
+            answer += `; the picture refused: ${e3 instanceof RelayError ? e3.reason : err4(e3)}`;
           }
         }
         out.push({ to: hint, accepted: got.id === rec.act, answer });
-      } catch (e2) {
-        out.push({ to: hint, accepted: false, answer: `refused: ${e2 instanceof RelayError ? e2.reason : err4(e2)}` });
+      } catch (e3) {
+        out.push({ to: hint, accepted: false, answer: `refused: ${e3 instanceof RelayError ? e3.reason : err4(e3)}` });
       }
     }
     for (const c2 of rec.copies ?? []) {
@@ -15496,8 +16247,8 @@ var Desk = class {
         try {
           await relayAt(hint, via).putSealed(unb644(c2.sealed));
           out.push({ to: `inbox ${hint}`, accepted: true, answer: `a copy sealed to ${c2.to.slice(0, 12)}\u2026, whose act it answers` });
-        } catch (e2) {
-          out.push({ to: `inbox ${hint}`, accepted: false, answer: `the copy for ${c2.to.slice(0, 12)}\u2026 refused: ${e2 instanceof RelayError ? e2.reason : err4(e2)}` });
+        } catch (e3) {
+          out.push({ to: `inbox ${hint}`, accepted: false, answer: `the copy for ${c2.to.slice(0, 12)}\u2026 refused: ${e3 instanceof RelayError ? e3.reason : err4(e3)}` });
         }
       }
     }
@@ -15521,7 +16272,7 @@ var Desk = class {
       const inbox = [...new Set(l.routes.routes.filter((r) => r.kind === 1).flatMap((r) => r.hints))];
       const rec = this.store.received(identity2);
       const mine = new Set(ownIds(me.f));
-      const secrets = [...me.f.encryption].reverse().map((e2) => Uint8Array.from(Buffer.from(e2.secret, "hex")));
+      const secrets = [...me.f.encryption].reverse().map((e3) => Uint8Array.from(Buffer.from(e3.secret, "hex")));
       const problems = inbox.length ? [] : ["This identity declares no inbox: nothing can be delivered to it."];
       let added = 0;
       for (const hint of inbox) {
@@ -15541,8 +16292,8 @@ var Desk = class {
             after2 = page.next;
           }
           if (after2 !== void 0) rec.after[hint] = after2;
-        } catch (e2) {
-          problems.push(`${hint}: ${err4(e2)}`);
+        } catch (e3) {
+          problems.push(`${hint}: ${err4(e3)}`);
         }
       }
       const groups2 = /* @__PURE__ */ new Map();
@@ -15557,10 +16308,10 @@ var Desk = class {
         const gaps = splitGaps(numbers);
         const unnumbered = items.filter((x) => x.split.number === null).length;
         const repeated = [...new Set(numbers.filter((n, i) => numbers.indexOf(n) !== i))].sort((a, b) => a - b);
-        const top2 = items.reduce((a, b) => (b.split.number ?? 0) > (a.split.number ?? 0) ? b : a);
+        const top3 = items.reduce((a, b) => (b.split.number ?? 0) > (a.split.number ?? 0) ? b : a);
         for (const x of items) if (x.alarm?.startsWith("ALARM (Agreements rule 15a")) delete x.alarm;
         if (gaps.length || unnumbered || repeated.length) {
-          top2.alarm = [
+          top3.alarm = [
             gaps.length ? `ALARM (Agreements rule 15a, F188): this service's splits under this deal skip: ${gaps.length === 1 ? `the split numbered ${gaps[0]} was` : `the splits numbered ${gaps.join(", ")} were`} never delivered here. Splits are being made where this identity is not shown: the deal may have a branch hidden from it.` : "ALARM (Agreements rule 15a, QF4): the numbers on this service's splits under this deal break the plan.",
             unnumbered ? `${unnumbered} split${unnumbered === 1 ? "" : "s"} of this service under this deal carr${unnumbered === 1 ? "ies" : "y"} no number: a deviation that breaks the plan (Agreements rule 15a, QF4).` : "",
             ...repeated.map(
@@ -15596,8 +16347,8 @@ var Desk = class {
             const i = parts.to.indexOf(me);
             if (i >= 0) record({ kind: "decapsulate", secret: s, ct: parts.capsules[i] });
             return openSealed(bytes, me, s);
-          } catch (e2) {
-            why = err4(e2);
+          } catch (e3) {
+            why = err4(e3);
           }
         }
         return null;
@@ -15611,8 +16362,8 @@ var Desk = class {
       act = bytes;
       try {
         d = describeAct(bytes);
-      } catch (e2) {
-        return { ...base, key: `act:${Buffer.from(bytes.subarray(0, 16)).toString("hex")}`, kind: "other", from: null, act: null, private: false, standing: "invalid", problem: `Not a valid act: ${err4(e2)}.` };
+      } catch (e3) {
+        return { ...base, key: `act:${Buffer.from(bytes.subarray(0, 16)).toString("hex")}`, kind: "other", from: null, act: null, private: false, standing: "invalid", problem: `Not a valid act: ${err4(e3)}.` };
       }
     }
     let standing2 = "unknown";
@@ -15622,8 +16373,8 @@ var Desk = class {
         if (key) them.verifier.addWithKey(act, key);
         else them.verifier.add(act);
         standing2 = them.verifier.status(d.id);
-      } catch (e2) {
-        standing2 = `its signer was not found (${err4(e2)})`;
+      } catch (e3) {
+        standing2 = `its signer was not found (${err4(e3)})`;
       }
     }
     const refs = d.refs ?? [];
@@ -15667,8 +16418,8 @@ var Desk = class {
         const alarm = await sellerAlarm(me, act, hints, this.via);
         if (alarm?.kind === "older") item2.notice = alarm.words.join(" ");
         else if (alarm) item2.alarm = alarm.words.join(" ");
-      } catch (e2) {
-        item2.alarm = `The version of the deal this payment names could not be checked (${err4(e2)}): look at the deal before relying on it (Agreements rule 45b, F186).`;
+      } catch (e3) {
+        item2.alarm = `The version of the deal this payment names could not be checked (${err4(e3)}): look at the deal before relying on it (Agreements rule 45b, F186).`;
       }
     }
     if (d.spec === REPO_SPECS.agreements) item2.problem = "An Agreements act: read it in the collective client.";
@@ -15770,7 +16521,7 @@ var Desk = class {
           linked: i.linked,
           kind: i.kind ?? "made",
           line: { acts: own.acts, latest: own.card?.act ?? null, summary: own.card?.summary ?? null },
-          releases: [...i.releases ?? []].reverse().map(({ id, name, version, folder: folder2 }) => ({ id, name, version, folder: folder2 })),
+          releases: [...i.releases ?? []].reverse().map(({ id, name, version: version2, folder: folder2 }) => ({ id, name, version: version2, folder: folder2 })),
           received: r.items.map((x) => ({ ...x, fromName: x.from ? names2(x.from) : null, text: x.text === void 0 ? void 0 : escapeControls(x.text) }))
         };
       }),
@@ -15816,7 +16567,7 @@ var shownId = (hex3) => shownForm("mid", hex3);
 var shownAct = (hex3) => shownForm("mact", hex3);
 
 // ../dub/src/carryin.ts
-var message2 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message2 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var NOT_CURRENT = "These words do not give this identity\u2019s current signing key: they are another identity\u2019s, an earlier key\u2019s, or written wrong. Nothing was kept. If these are your chain key\u2019s words, they must never be typed into an online app.";
 async function lookCurrent(id, seed, hints, via) {
   let pub;
@@ -15828,8 +16579,8 @@ async function lookCurrent(id, seed, hints, via) {
   let look;
   try {
     look = await lookUp(id, hints, via);
-  } catch (e2) {
-    throw new Error(`This identity was not found at ${hints.join(", ")}: ${message2(e2)}`);
+  } catch (e3) {
+    throw new Error(`This identity was not found at ${hints.join(", ")}: ${message2(e3)}`);
   }
   const r = look.resolution;
   if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing can be signed for it until they agree.");
@@ -15851,9 +16602,9 @@ async function servedChain(id, homes, via) {
 function carriedKey(look, seed) {
   const secret = encryptionSecret(seed);
   if (!look.encryptionKey || !look.encryptionKeyAct || hex(xwingPublic(secret)) !== hex(look.encryptionKey)) return null;
-  const e2 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
-  const version = e2.payload ? Number(cborDecode(e2.payload).get(0)) : 1;
-  return { version, act: look.encryptionKeyAct, secret: hex(secret) };
+  const e3 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
+  const version2 = e3.payload ? Number(cborDecode(e3.payload).get(0)) : 1;
+  return { version: version2, act: look.encryptionKeyAct, secret: hex(secret) };
 }
 
 // src/folders.ts
@@ -15863,8 +16614,8 @@ function refusedSay(path, code) {
   }
   return `This system did not let Edubba read ${path} (${code === "EPERM" ? "operation not permitted" : "permission denied"}): check the folder's permissions, or choose another folder.`;
 }
-var codeOf = (e2) => e2?.code ?? "";
-var refused = (e2) => ["EPERM", "EACCES"].includes(codeOf(e2));
+var codeOf = (e3) => e3?.code ?? "";
+var refused = (e3) => ["EPERM", "EACCES"].includes(codeOf(e3));
 function readPath(typed, keepEnd = false) {
   let t = typed.replace(/[\r\n]+/g, "").replace(/^\s+/, "");
   if (!keepEnd) t = t.replace(/(?<!\\)\s+$/, "");
@@ -15895,8 +16646,8 @@ function difference(name, typed) {
 function entries(dir) {
   try {
     return readdirSync(dir);
-  } catch (e2) {
-    if (refused(e2)) return { refused: codeOf(e2) };
+  } catch (e3) {
+    if (refused(e3)) return { refused: codeOf(e3) };
     return [];
   }
 }
@@ -15928,16 +16679,16 @@ function folderOf(typed) {
     let isDir = false;
     try {
       isDir = statSync(p).isDirectory();
-    } catch (e2) {
-      if (refused(e2)) throw new Error(refusedSay(p, codeOf(e2)));
+    } catch (e3) {
+      if (refused(e3)) throw new Error(refusedSay(p, codeOf(e3)));
       continue;
     }
     if (!isDir) throw new Error(`${p} is a file, not a folder.`);
     try {
       readdirSync(p);
-    } catch (e2) {
-      if (refused(e2)) throw new Error(refusedSay(p, codeOf(e2)));
-      throw e2;
+    } catch (e3) {
+      if (refused(e3)) throw new Error(refusedSay(p, codeOf(e3)));
+      throw e3;
     }
     return realpathSync(resolve(p));
   }
@@ -15948,7 +16699,7 @@ function folderOf(typed) {
 }
 
 // src/setup.ts
-var err5 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var err5 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var short6 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var RELY = "RELY";
 var BRING_LINE_SAY = "Edubba keeps its own line of acts for this identity. If its signing key is ever changed (with the chain key, in Ki\u0161ib), that change must keep this line, or every act signed here becomes void. Its record, on this tab, shows this line\u2019s latest act, position and summary.";
@@ -15982,12 +16733,12 @@ function filesOf(folder2) {
   }
   const files = [];
   const walk = (dir, rel) => {
-    for (const e2 of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name < b.name ? -1 : 1)) {
-      if (e2.name.startsWith(".")) continue;
-      const p = rel ? `${rel}/${e2.name}` : e2.name;
-      if (e2.isSymbolicLink()) skipped.push(`${p}: a link, not followed`);
-      else if (e2.isDirectory()) walk(join(dir, e2.name), p);
-      else if (e2.isFile()) files.push({ path: p, bytes: new Uint8Array(readFileSync(join(dir, e2.name))) });
+    for (const e3 of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name < b.name ? -1 : 1)) {
+      if (e3.name.startsWith(".")) continue;
+      const p = rel ? `${rel}/${e3.name}` : e3.name;
+      if (e3.isSymbolicLink()) skipped.push(`${p}: a link, not followed`);
+      else if (e3.isDirectory()) walk(join(dir, e3.name), p);
+      else if (e3.isFile()) files.push({ path: p, bytes: new Uint8Array(readFileSync(join(dir, e3.name))) });
       else skipped.push(`${p}: not a file`);
     }
   };
@@ -16007,9 +16758,9 @@ var Setup = class {
     return [.../* @__PURE__ */ new Set([...me.f.homes.map((h) => h.hint), ...s.relays, ...s.homes.map((h) => h.hint)])];
   }
   entry(id) {
-    const e2 = this.store.book().identities.find((x) => x.id === id);
-    if (!e2) throw new Error(`Edubba does not hold ${id}`);
-    return e2;
+    const e3 = this.store.book().identities.find((x) => x.id === id);
+    if (!e3) throw new Error(`Edubba does not hold ${id}`);
+    return e3;
   }
   // ------------------------------------------------------------ the record
   /**
@@ -16018,12 +16769,12 @@ var Setup = class {
    * guessed.
    */
   async record(id) {
-    const e2 = this.entry(id);
+    const e3 = this.entry(id);
     const me = this.store.identity(id);
     const hints = this.hintsFor(me);
     const problems = [];
     const sections = [];
-    const kind = e2.kind ?? "made";
+    const kind = e3.kind ?? "made";
     sections.push({
       heading: "Where it came from",
       lines: [
@@ -16114,9 +16865,9 @@ var Setup = class {
       try {
         id = readId(a.id);
         seed = fromWords(a.words);
-      } catch (e2) {
-        if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
-        throw e2;
+      } catch (e3) {
+        if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
+        throw e3;
       }
       if (this.store.holds(id)) throw new Error("Edubba already holds this identity.");
       const s = this.store.settings();
@@ -16208,8 +16959,8 @@ var Setup = class {
         them.verifier.add(bytes);
         const standing2 = them.verifier.status(d.id);
         lines4.push(standing2 === "valid" ? { text: "Valid, through its signer\u2019s identity chain.", tone: "ok" } : { text: `Its standing through its signer\u2019s chain: ${standing2}.`, tone: "bad" });
-      } catch (e2) {
-        lines4.push({ text: `Its signer was not found: its standing cannot be told (${err5(e2)}).`, tone: "warn" });
+      } catch (e3) {
+        lines4.push({ text: `Its signer was not found: its standing cannot be told (${err5(e3)}).`, tone: "warn" });
       }
     }
     if (ownIds(me.f).includes(id)) blocking.push("It is this identity\u2019s own act: a witness act names other identities\u2019 acts.");
@@ -16231,9 +16982,9 @@ var Setup = class {
    */
   async witness(identity2, act, shown3, typed) {
     if (typed.trim() !== RELY) throw new Error(`Type ${RELY} to sign the witness act. Nothing was signed.`);
-    const read2 = await this.readAct(identity2, act);
-    if (read2.blocking.length) throw new Error(`${read2.blocking.join(" ")} Nothing was signed.`);
-    return this.desk.witness(identity2, read2.act, shown3);
+    const read3 = await this.readAct(identity2, act);
+    if (read3.blocking.length) throw new Error(`${read3.blocking.join(" ")} Nothing was signed.`);
+    return this.desk.witness(identity2, read3.act, shown3);
   }
   // ------------------------------------------------------------ releases under one's own name (H16)
 };
@@ -17117,8 +17868,8 @@ var Actions = class {
       let info;
       try {
         info = await relayAt(hint, a.via).info();
-      } catch (e2) {
-        throw new Error(`${hint} did not answer: ${e2 instanceof Error ? e2.message : e2}`);
+      } catch (e3) {
+        throw new Error(`${hint} did not answer: ${e3 instanceof Error ? e3.message : e3}`);
       }
       const op = info.get(0);
       if (!(op instanceof Uint8Array)) throw new Error(`${hint} is not a home: it declares no operator`);
@@ -17211,10 +17962,10 @@ var Actions = class {
   async prepareRelease(a) {
     const names2 = this.store.names();
     const { p, save, collective } = this.publisher(a.publisher);
-    const version = a.version.trim();
+    const version2 = a.version.trim();
     const name = a.name?.trim() || "MOR";
     const blocking = [];
-    if (!version) blocking.push("Give the release a version, for example 11b.1.");
+    if (!version2) blocking.push("Give the release a version, for example 11b.1.");
     if (!p.relays.length) blocking.push("Name at least one relay first, under Settings: the files go there.");
     if (collective?.f.pending) blocking.push("A member change of this collective is still waiting for its homes. Send it again first: a release signed with the old key would be void once the change counts.");
     let voices = [];
@@ -17240,9 +17991,9 @@ var Actions = class {
         "The Releases area has no holder left whose voice remains: it is frozen, and a release would count for nothing until the members refit it, by a change of members or rules that gives the area a holder again (Agreements rule 37b)."
       );
     }
-    if (p.releases.some((r) => r.version === version)) blocking.push(`A release ${version} was already published by ${names2(a.publisher)}. Choose another version.`);
+    if (p.releases.some((r) => r.version === version2)) blocking.push(`A release ${version2} was already published by ${names2(a.publisher)}. Choose another version.`);
     const dir = this.checkout();
-    const prepared = prepareRelease(p, { name, version, files: gitFiles(dir), source: gitSource(dir) });
+    const prepared = prepareRelease(p, { name, version: version2, files: gitFiles(dir), source: gitSource(dir) });
     const who3 = collective ? [
       {
         text: `It is published by ${names2(a.publisher)}, signed with its signing key. It is not a release yet: it counts once ${anyOf(need, voices, names2)}, the holders of its Releases area whose voice remains, have signed it, each with an act of their own (agreement in force ${short4(collective.f.agreement)}).`
@@ -17255,7 +18006,7 @@ var Actions = class {
     ];
     who3.push({ text: `The manifest and every new file go to ${p.relays.join(", ")}.` });
     const reading2 = {
-      title: `Publish ${name} ${version} as ${names2(a.publisher)}`,
+      title: `Publish ${name} ${version2} as ${names2(a.publisher)}`,
       summary: [
         `Every file git tracks in ${dir} is listed with its fingerprint; ${count(prepared.upload.length, "file is", "files are")} new since the last release and uploaded.`,
         "Anyone can later fetch the release by its id and check every file against the list."
@@ -17273,7 +18024,7 @@ var Actions = class {
         const out = await publishPrepared(p, prepared, this.via);
         save();
         return {
-          title: `${name} ${version} is published`,
+          title: `${name} ${version2} is published`,
           lines: [
             { text: `Release ${out.id}.`, tone: "ok" },
             { text: `${count(out.manifest.files.length, "file")}, ${out.uploaded} uploaded new.` },
@@ -17320,8 +18071,8 @@ var Actions = class {
     let broken;
     try {
       broken = v.agreementsBroken(AGREEMENTS_SPECS, c2.identity) ?? null;
-    } catch (e2) {
-      return { ...none, unread: e2 instanceof Error ? e2.message : String(e2) };
+    } catch (e3) {
+      return { ...none, unread: e3 instanceof Error ? e3.message : String(e3) };
     }
     if (broken) return { ...none, broken, brokenAct: v.agreementsBrokenAct(AGREEMENTS_SPECS, c2.identity) ?? null };
     const cur = v.agreementsCurrent(AGREEMENTS_SPECS, c2.identity);
@@ -17405,15 +18156,15 @@ var Actions = class {
     const agreements = await this.agreementsOf(c2, o.joining);
     if (agreements.broken) return brokenWords("the collective", agreements.broken);
     if (!agreements.agreement) return `Agreements' own reading of the collective could not be had (${agreements.unread ?? "nothing found"}).`;
-    for (const e2 of mark) {
-      const what = powerWords2(e2.power);
-      const p = "area" in e2.power ? { form: "area", area: e2.power.area } : { form: Object.keys(e2.power)[0] };
+    for (const e3 of mark) {
+      const what = powerWords2(e3.power);
+      const p = "area" in e3.power ? { form: "area", area: e3.power.area } : { form: Object.keys(e3.power)[0] };
       const nv = agreements.v.agreementsNextVoices(AGREEMENTS_SPECS, c2.identity, p, o.leaving ?? []);
       if (nv.error) return `Agreements cannot count ${what}: ${nv.error}.`;
-      const out = e2.signers.filter((s) => !nv.voices.includes(s));
+      const out = e3.signers.filter((s) => !nv.voices.includes(s));
       if (out.length) return `The mark names ${list4(out.map(names2))} for ${what}, whose voice Agreements do not count there (rule 44d).`;
-      if (nv.needed == null || e2.signers.length < nv.needed) {
-        return `The mark names ${e2.signers.length} for ${what}, but Agreements count ${anyOf(nv.needed ?? 0, nv.voices, names2)} there (rules 44d, 45a): the clone would be invalid.`;
+      if (nv.needed == null || e3.signers.length < nv.needed) {
+        return `The mark names ${e3.signers.length} for ${what}, but Agreements count ${anyOf(nv.needed ?? 0, nv.voices, names2)} there (rules 44d, 45a): the clone would be invalid.`;
       }
     }
     if (o.clone) {
@@ -17464,9 +18215,9 @@ var Actions = class {
   read(payload) {
     try {
       return termsOf(payload);
-    } catch (e2) {
-      const p = agreementsThrown(e2);
-      throw new Error(p ? problemWords(p) : `Agreements cannot read these terms: ${e2 instanceof Error ? e2.message : e2}`);
+    } catch (e3) {
+      const p = agreementsThrown(e3);
+      throw new Error(p ? problemWords(p) : `Agreements cannot read these terms: ${e3 instanceof Error ? e3.message : e3}`);
     }
   }
   hintsOf(c2) {
@@ -17493,8 +18244,8 @@ var Actions = class {
       const plan = await c2.planLines({ leaveOut, cards });
       shown3 = plan.shown;
       warning = plan.warning;
-    } catch (e2) {
-      blocking.push(`The lines of the collective's acts: ${e2 instanceof Error ? e2.message : e2}.`);
+    } catch (e3) {
+      blocking.push(`The lines of the collective's acts: ${e3 instanceof Error ? e3.message : e3}.`);
     }
     return {
       section: { heading: "Lines of acts the rotation keeps (Identity rule 35)", lines: [...shown3, ...warning ? [{ text: warning, tone: "bad" }] : []] },
@@ -17595,8 +18346,8 @@ var Actions = class {
     }
     const payload = encodeTerms(collectiveTerms(g, members, members[0]));
     const t = this.read(payload);
-    const read2 = readAgreement(t, names2);
-    blocking.push(...withAgreements(rulesHints(toRules(g), members.length), read2.blocking));
+    const read3 = readAgreement(t, names2);
+    blocking.push(...withAgreements(rulesHints(toRules(g), members.length), read3.blocking));
     const reading2 = {
       title: `Found the collective \u201C${name}\u201D`,
       summary: [
@@ -17606,7 +18357,7 @@ var Actions = class {
         ...g.stakes ? [`Each founder's share of all the collective's income, in its founding terms, which name the collective as null, "this collective" (F124 S1): ${g.stakes[0].holders.map(([h, n]) => `${names2(h)} ${n / 1e4}%`).join(", ")}.`] : []
       ],
       sections: [
-        ...read2.sections,
+        ...read3.sections,
         {
           heading: "Signed on this device",
           lines: [
@@ -17623,7 +18374,7 @@ var Actions = class {
           ]
         }
       ],
-      plain: [{ heading: "The words everyone signs", text: t.text }, ...read2.plain],
+      plain: [{ heading: "The words everyone signs", text: t.text }, ...read3.plain],
       blocking
     };
     reading2.sections.push(...beforeSigning(payload, names2));
@@ -17719,7 +18470,7 @@ var Actions = class {
     const lm = this.agreementsMark(c2, agreements, (m) => encodeTerms(collectiveTerms(g, members, holder, c2.f.agreement, m)), [...resigning, ...recoveringOut], names2);
     blocking.push(...lm.blocking);
     const mark = lm.mark.length ? lm.mark : [{ power: { constitutional: true }, signers: staying.filter((m) => this.store.holds(m) && !departed.has(m)) }];
-    const signersStaying = [...new Set(mark.flatMap((e2) => e2.signers))];
+    const signersStaying = [...new Set(mark.flatMap((e3) => e3.signers))];
     const payload = encodeTerms(collectiveTerms(g, members, holder, c2.f.agreement, mark));
     const after2 = this.read(payload);
     const hints = this.hintsOf(c2);
@@ -17735,8 +18486,8 @@ var Actions = class {
     }
     if (!members.length) blocking.push("Nobody would be left.");
     if (!join2.length && !leave.size && !changedGovernance) blocking.push("Nothing changes.");
-    const read2 = readAgreement(after2, names2, before?.t);
-    blocking.push(...withAgreements(members.length ? rulesHints(toRules(g), members.length) : [], read2.blocking));
+    const read3 = readAgreement(after2, names2, before?.t);
+    blocking.push(...withAgreements(members.length ? rulesHints(toRules(g), members.length) : [], read3.blocking));
     const usedRebuilders = rebuilders.slice(0, c2.f.safety.threshold);
     const title2 = join2.length && !leave.size ? `Add ${join2.map(names2).join(", ")} to \u201C${cname}\u201D` : leave.size && !join2.length ? `Remove ${[...leave].map(names2).join(", ")} from \u201C${cname}\u201D` : join2.length || leave.size ? `Change the members of \u201C${cname}\u201D` : `Change the rules of \u201C${cname}\u201D`;
     const summary = [];
@@ -17783,7 +18534,7 @@ var Actions = class {
         { heading: "What changes", lines: [...changes, ...lm.lines, ...notes, ...warnings] },
         kept2.section,
         ...resigning.length ? [{ heading: "Drafts left behind", lines: resigning.flatMap((m) => this.draftLines(names2(m), drafts2[m], "resignation")) }] : [],
-        ...read2.sections.map((s) => ({ ...s, heading: `After the change: ${s.heading.charAt(0).toLowerCase()}${s.heading.slice(1)}` })),
+        ...read3.sections.map((s) => ({ ...s, heading: `After the change: ${s.heading.charAt(0).toLowerCase()}${s.heading.slice(1)}` })),
         {
           heading: "Signed on this device",
           lines: [
@@ -17797,7 +18548,7 @@ var Actions = class {
       plain: [
         { heading: "The words after the change", text: after2.text },
         ...before && before.t.text !== after2.text ? [{ heading: "The words before", text: before.t.text }] : [],
-        ...read2.plain
+        ...read3.plain
       ],
       blocking
     };
@@ -17960,10 +18711,10 @@ var Actions = class {
    */
   draftLines(who3, drafts2, act) {
     const back = act === "resignation" ? `brings ${who3} back` : `gives ${who3} the Releases area back`;
-    const one = drafts2.length === 1;
+    const one2 = drafts2.length === 1;
     return drafts2.length ? [
       {
-        text: `${who3} signed ${one ? "a version" : `${drafts2.length} versions`} of the agreement that ${one ? "is" : "are"} not in force: ${list4(drafts2.map(short4))}. The ${act} names ${one ? "it" : "them"} as left behind, so that none ever ${back}, whichever line puts ${one ? "it" : "one"} in force (F207).`
+        text: `${who3} signed ${one2 ? "a version" : `${drafts2.length} versions`} of the agreement that ${one2 ? "is" : "are"} not in force: ${list4(drafts2.map(short4))}. The ${act} names ${one2 ? "it" : "them"} as left behind, so that none ever ${back}, whichever line puts ${one2 ? "it" : "one"} in force (F207).`
       },
       { text: `A version ${who3} signed that is not held at the collective's relays cannot be named here: if a line ever put it in force, it would ${act === "resignation" ? `bring ${who3} back` : `give ${who3} the Releases area back`} (F207, a stated cost).`, tone: "warn" }
     ] : [
@@ -18272,7 +19023,7 @@ var Actions = class {
         changes.push({ text: `${list4(steppingDown.map(names2))} stepped down from the Releases area, and this rollback redraws the area: whoever it names as a holder and signs it holds the area again (Agreements rules 37b, 44d).`, tone: "warn" });
       }
     }
-    const signers = [...new Set(mark.flatMap((e2) => e2.signers))];
+    const signers = [...new Set(mark.flatMap((e3) => e3.signers))];
     const rebuilders = c2.f.safety.shares.filter((x) => this.store.holds(x.holder) && !leaving.includes(x.holder)).map((x) => x.holder);
     const usedRebuilders = rebuilders.slice(0, c2.f.safety.threshold);
     if (rebuilders.length < c2.f.safety.threshold) {
@@ -18400,14 +19151,14 @@ var Actions = class {
       const rr = agreements.v.agreementsRollbackRegisters(AGREEMENTS_SPECS, c2.identity, registers);
       if (rr.error) return `Agreements refuse what the rollback would register: ${rr.error}.`;
     }
-    for (const e2 of mark) {
-      const what = powerWords2(e2.power);
-      const p = "area" in e2.power ? { form: "area", area: e2.power.area } : { form: Object.keys(e2.power)[0] };
+    for (const e3 of mark) {
+      const what = powerWords2(e3.power);
+      const p = "area" in e3.power ? { form: "area", area: e3.power.area } : { form: Object.keys(e3.power)[0] };
       const nv = agreements.v.agreementsRollbackVoices(AGREEMENTS_SPECS, c2.identity, p, leaving);
       if (nv.error) return `Agreements cannot count ${what}: ${nv.error}.`;
-      const out = e2.signers.filter((s) => !nv.voices.includes(s));
+      const out = e3.signers.filter((s) => !nv.voices.includes(s));
       if (out.length) return `The mark names ${list4(out.map(names2))} for ${what}, whose voice Agreements do not count there (rule 44d).`;
-      if (nv.needed == null || e2.signers.length < nv.needed) return `The mark names ${e2.signers.length} for ${what}, but Agreements count ${anyOf(nv.needed ?? 0, nv.voices, names2)} there (rules 37d, 44d).`;
+      if (nv.needed == null || e3.signers.length < nv.needed) return `The mark names ${e3.signers.length} for ${what}, but Agreements count ${anyOf(nv.needed ?? 0, nv.voices, names2)} there (rules 37d, 44d).`;
     }
     if (clone) {
       const a = agreements.v.agreementsRollbackAgreement(AGREEMENTS_SPECS, clone);
@@ -18543,7 +19294,7 @@ var Actions = class {
     const k = areaCount?.needed ?? 0;
     if (agreements.agreement && !agreements.broken && !voices.length) blocking.push("The Releases area is frozen: nobody holds it, so nobody can change its words until the members refit it (Agreements rule 37b).");
     else blocking.push(...lm.blocking);
-    const signers = a.signers?.length ? [...new Set(a.signers)] : lm.mark.find((e2) => "area" in e2.power)?.signers ?? [];
+    const signers = a.signers?.length ? [...new Set(a.signers)] : lm.mark.find((e3) => "area" in e3.power)?.signers ?? [];
     if (a.signers?.length) {
       for (const s of signers) {
         if (!voices.includes(s)) blocking.push(`${names2(s)} does not hold the Releases area with a voice that remains, as Agreements count it, so their signature cannot meet its power.`);
@@ -18642,7 +19393,7 @@ var Actions = class {
     const agreements = await this.agreementsOf(c2);
     const lm = hints.length ? null : this.agreementsMark(c2, agreements, (m) => encodeTerms(collectiveTerms(g, c2.f.members, c2.f.signingHolder, c2.f.agreement, m)), [], names2);
     const voices = lm?.counts.find((x) => "judicial" in x.power)?.voices ?? [];
-    const signers = a.signers?.length ? [...new Set(a.signers)] : lm?.mark.find((e2) => "judicial" in e2.power)?.signers ?? [];
+    const signers = a.signers?.length ? [...new Set(a.signers)] : lm?.mark.find((e3) => "judicial" in e3.power)?.signers ?? [];
     if (lm) {
       if (a.signers?.length) {
         for (const s of signers) {
@@ -18795,11 +19546,11 @@ var Actions = class {
     const at2 = this.hintsOf(c2);
     const named = b ? b.before : c2.f.agreement;
     const clause = c2.f.members.includes(a.member) ? await c2.clauseOf(a.member, this.via, named) : null;
-    const version = clause ? await this.termsAct(clause, at2) : null;
+    const version2 = clause ? await this.termsAct(clause, at2) : null;
     if (c2.f.members.includes(a.member) && !clause) blocking.push(`${who3} signed no version of the agreement that this program can find on ${at2.join(", ")}.`);
-    else if (clause && !version) blocking.push(`The version ${who3} signed last (${short4(clause)}) could not be fetched from ${at2.join(", ")}, so its clause cannot be read.`);
-    const ab = version?.t.abandonment;
-    if (version && (!ab || ab.authority !== "others" || !ab.threshold || !ab.outcomes.includes(0))) {
+    else if (clause && !version2) blocking.push(`The version ${who3} signed last (${short4(clause)}) could not be fetched from ${at2.join(", ")}, so its clause cannot be read.`);
+    const ab = version2?.t.abandonment;
+    if (version2 && (!ab || ab.authority !== "others" || !ab.threshold || !ab.outcomes.includes(0))) {
       blocking.push(`The clause ${who3} signed does not let the other members remove a voice, so this client cannot declare it.`);
     }
     const k = ab?.threshold ?? c2.f.governance.abandonmentOthers;
@@ -19095,8 +19846,8 @@ var Actions = class {
   /** The creditor's releases kept for debt `id`, in whichever collective here signed it (F303). */
   reliedOf(id) {
     for (const x of this.store.book().collectives.filter((y) => this.store.isCollective(y.id))) {
-      const e2 = (this.store.collective(x.id).f.debts ?? []).find((d) => d.id === id);
-      if (e2) return e2.relied ?? [];
+      const e3 = (this.store.collective(x.id).f.debts ?? []).find((d) => d.id === id);
+      if (e3) return e3.relied ?? [];
     }
     return [];
   }
@@ -19176,7 +19927,7 @@ var Actions = class {
     const g = { ...c2.f.governance, stakes };
     const lm = this.agreementsMark(c2, agreements, (mk) => encodeTerms(collectiveTerms(g, c2.f.members, c2.f.signingHolder, c2.f.agreement, mk)), [], names2);
     blocking.push(...lm.blocking);
-    const signers = lm.mark.find((e2) => "clone" in e2.power)?.signers ?? voices.filter((x) => this.store.holds(x));
+    const signers = lm.mark.find((e3) => "clone" in e3.power)?.signers ?? voices.filter((x) => this.store.holds(x));
     const mark = lm.mark.length ? lm.mark : [{ power: { clone: true }, signers }];
     const payload = encodeTerms(collectiveTerms(g, c2.f.members, c2.f.signingHolder, c2.f.agreement, mark));
     if (!blocking.length) blocking.push(...withAgreements([], readAgreement(this.read(payload), names2).blocking));
@@ -19244,7 +19995,7 @@ var Actions = class {
     const agreements = await this.agreementsOf(c2);
     const lm = this.agreementsMark(c2, agreements, (m) => encodeTerms(collectiveTerms({ ...c2.f.governance, splitGrant: "0".repeat(64) }, c2.f.members, c2.f.signingHolder, c2.f.agreement, m)), [], names2);
     blocking.push(...lm.blocking);
-    const voices = lm.mark.flatMap((e2) => e2.signers);
+    const voices = lm.mark.flatMap((e3) => e3.signers);
     const reading2 = {
       title: `A split service for \u201C${cname}\u201D`,
       summary: [
@@ -19306,14 +20057,14 @@ var Actions = class {
     if (!addresses.length) blocking.push("Give at least one address.");
     const hints = isCol ? this.hintsOf(this.store.collective(a.owner)) : this.store.settings().relays;
     let previous;
-    let version = 1;
+    let version2 = 1;
     for (const x of await allBy2(a.owner, hints, this.via)) {
       try {
         const d = describeAct(x);
         if (d.spec !== MIRS.money || d.type !== MONEY_TYPES.pointer || !d.payload) continue;
         const v = cborDecode(d.payload).get(1);
-        if (v >= version) {
-          version = v + 1;
+        if (v >= version2) {
+          version2 = v + 1;
           previous = d.id;
         }
       } catch {
@@ -19321,14 +20072,14 @@ var Actions = class {
     }
     const payload = pointerPayload({
       payee: a.owner,
-      version,
+      version: version2,
       previous,
       rails: addresses.map((x) => [TEST_RAIL, new TextEncoder().encode(x)])
     });
     const reading2 = {
       title: `A payee pointer for ${names2(a.owner)}`,
       summary: [
-        `Version ${version}: payments to ${names2(a.owner)} go to ${list4(addresses.map((x) => `\u201C${x}\u201D`))}, on a test rail (no real money).`,
+        `Version ${version2}: payments to ${names2(a.owner)} go to ${list4(addresses.map((x) => `\u201C${x}\u201D`))}, on a test rail (no real money).`,
         isCol ? "Where the collective's agreement names a split service, this pointer counts for Agreements only if every address in it is also in the service's own pointer, and every entry of its vault in the service's own vault (Agreements rule 18, F123, F124 P2). A wallet reading only Money cannot check it (cost stated)." : "An ordinary pointer of a test identity."
       ],
       sections: [],
@@ -19346,12 +20097,12 @@ var Actions = class {
           const x2 = await col.id.publish(MIRS.money, MONEY_TYPES.pointer, payload, { public: true, relays: col.f.relays });
           col.f.pointers = [...col.f.pointers ?? [], x2.id];
           this.store.saveCollective(col);
-          return { title: "The pointer is published", lines: [{ text: `Pointer ${x2.id}, version ${version}.`, tone: "ok" }], acts: [x2.id] };
+          return { title: "The pointer is published", lines: [{ text: `Pointer ${x2.id}, version ${version2}.`, tone: "ok" }], acts: [x2.id] };
         }
         const i = this.store.identity(a.owner);
         const x = await i.publish(MIRS.money, MONEY_TYPES.pointer, payload, { public: true, relays: this.store.settings().relays });
         this.store.saveIdentity(i);
-        return { title: "The pointer is published", lines: [{ text: `Pointer ${x.id}, version ${version}.`, tone: "ok" }], acts: [x.id] };
+        return { title: "The pointer is published", lines: [{ text: `Pointer ${x.id}, version ${version2}.`, tone: "ok" }], acts: [x.id] };
       }
     });
   }
@@ -19417,8 +20168,8 @@ var Actions = class {
       turns = t ? Array.from(t, Number) : null;
       if (previous === null) before = [];
       else {
-        const e2 = v.agreementsSplit(specs, previous);
-        before = e2.tally.find(([st]) => st === index)?.[1] ?? null;
+        const e3 = v.agreementsSplit(specs, previous);
+        before = e3.tally.find(([st]) => st === index)?.[1] ?? null;
       }
       if (!turns || !before) blocking.push("The turns of tied leftover units cannot be read: the service's previous split for the stake is not held, or carries no count (Agreements rule 15a, F171).");
     }
@@ -19511,7 +20262,7 @@ var Actions = class {
     const names2 = this.store.names();
     const c2 = this.store.collective(a.collective);
     const { v, specs } = await this.agreementsVerifier(c2, this.concerned(c2));
-    const e2 = v.agreementsSplit(specs, a.split);
+    const e3 = v.agreementsSplit(specs, a.split);
     const entry2 = (c2.f.splits ?? []).find((x) => x.id === a.split);
     const index = entry2?.stake ?? this.stakeIndex(c2, null);
     const own = this.ownStake(c2);
@@ -19519,19 +20270,19 @@ var Actions = class {
     const kept2 = this.store.kept(a.holder);
     const mine = kept2[key] ?? null;
     const who3 = names2(a.holder);
-    const carried = e2.tally.find(([st]) => st === index)?.[1] ?? null;
-    const paid = e2.payouts.filter(([, , st]) => st === index).map(([h, n]) => [h, Number(n)]);
+    const carried = e3.tally.find(([st]) => st === index)?.[1] ?? null;
+    const paid = e3.payouts.filter(([, , st]) => st === index).map(([h, n]) => [h, Number(n)]);
     const pot = paid.reduce((x, [, n]) => x + n, 0);
     const expected = agreementsSplitTally({ pot, holders: own, paid, before: mine?.counts ?? [] });
     const count3 = (v2, h) => v2.filter(([x]) => x === h).reduce((s, [, n]) => s + Number(n), 0);
     const sameCount = carried !== null && [...carried, ...expected].every(([h]) => count3(carried, h) === count3(expected, h));
     const knownSplits = new Set((c2.f.splits ?? []).map((x) => x.id));
-    if (!mine && e2.cites.some((x) => knownSplits.has(x))) {
+    if (!mine && e3.cites.some((x) => knownSplits.has(x))) {
       kept2[key] = { tip: a.split, counts: carried ?? [] };
       this.store.saveKept(a.holder, kept2);
       return { text: `${who3}'s client: it keeps the chain from this split on; the earlier splits for the stake were never delivered to it, so this count is not checked here (Agreements rule 15a, F171).`, tone: "warn" };
     }
-    const citesLatest = mine ? mine.tip === null ? !e2.cites.some((x) => knownSplits.has(x)) : e2.cites.includes(mine.tip) : true;
+    const citesLatest = mine ? mine.tip === null ? !e3.cites.some((x) => knownSplits.has(x)) : e3.cites.includes(mine.tip) : true;
     if (citesLatest && sameCount) {
       kept2[key] = { tip: a.split, counts: carried ?? [] };
       this.store.saveKept(a.holder, kept2);
@@ -19557,28 +20308,28 @@ var Actions = class {
     const c2 = this.store.collective(a.collective);
     const departed = c2.f.governance.departed ?? [];
     const { v, specs } = await this.agreementsVerifier(c2, this.concerned(c2));
-    const e2 = v.agreementsSplit(specs, a.split);
+    const e3 = v.agreementsSplit(specs, a.split);
     const others = (hs) => list4(hs.map(short4));
     const lines4 = [
-      ...e2.problems.map((p) => ({ text: `NOT THE NAMED SERVICE'S SPLIT UNDER THE AGREEMENT IN FORCE: ${p}.`, tone: "bad" })),
-      ...e2.unevidenced.map((r) => ({ text: `ROLE SHARE WITHOUT EVIDENCE THAT HOLDS: ${names2(r)} (Agreements rule 22).`, tone: "bad" })),
-      ...e2.unplanned.map((r) => ({ text: `Paid to ${names2(r)} as a fee, a role or a named receiver that the split plan and fees of the version in force do not name: nothing in the agreement justifies it (Agreements rules 26, 27).` })),
-      ...e2.fees.map(([, r, n]) => ({ text: `Fee: ${n}, received by ${names2(r)}.` })),
-      ...e2.payouts.filter(([, , st]) => st !== null).map(([r, n]) => ({ text: `Paid: ${n} to ${names2(r)}${departed.includes(r) ? " (a departed holder)" : ""}.` })),
-      e2.sums === false ? { text: "The payouts do not add up to what arrived (Agreements rule 21): an invalid split.", tone: "bad" } : { text: "The payouts add up exactly to what arrived.", tone: "ok" },
-      ...e2.undelivered.length ? [{ text: `Not delivered to ${list4(e2.undelivered.map(names2))}, whom it pays (Q9).`, tone: "bad" }] : [{ text: "Delivered to every holder it pays (Q9).", tone: "ok" }],
-      ...e2.mismatched.length ? e2.mismatched.map(([, h, paid, due]) => ({ text: `DOES NOT MATCH ITS STAKE: ${names2(h)} is paid ${paid}, their share is ${due} (F124 N10, rule 26).`, tone: "bad" })) : [{ text: "Every payout matches its stake exactly, every fee alike for every stake, member or departed (F124 N10).", tone: "ok" }],
-      ...e2.turnsUnknown.length ? [{ text: "Who should have had a tied leftover unit is unknown: the service's previous split for the stake is not held, or carries no count, so the turns cannot be read (Agreements rule 15a, F165, F171). The rest is checked.", tone: "warn" }] : [],
-      ...e2.countUnknown.length && !e2.turnsUnknown.length ? [{ text: "The running count cannot be checked: the service's previous split for the stake is not held, or carries no count (Agreements rule 15a, F171). The rest is checked.", tone: "warn" }] : [],
+      ...e3.problems.map((p) => ({ text: `NOT THE NAMED SERVICE'S SPLIT UNDER THE AGREEMENT IN FORCE: ${p}.`, tone: "bad" })),
+      ...e3.unevidenced.map((r) => ({ text: `ROLE SHARE WITHOUT EVIDENCE THAT HOLDS: ${names2(r)} (Agreements rule 22).`, tone: "bad" })),
+      ...e3.unplanned.map((r) => ({ text: `Paid to ${names2(r)} as a fee, a role or a named receiver that the split plan and fees of the version in force do not name: nothing in the agreement justifies it (Agreements rules 26, 27).` })),
+      ...e3.fees.map(([, r, n]) => ({ text: `Fee: ${n}, received by ${names2(r)}.` })),
+      ...e3.payouts.filter(([, , st]) => st !== null).map(([r, n]) => ({ text: `Paid: ${n} to ${names2(r)}${departed.includes(r) ? " (a departed holder)" : ""}.` })),
+      e3.sums === false ? { text: "The payouts do not add up to what arrived (Agreements rule 21): an invalid split.", tone: "bad" } : { text: "The payouts add up exactly to what arrived.", tone: "ok" },
+      ...e3.undelivered.length ? [{ text: `Not delivered to ${list4(e3.undelivered.map(names2))}, whom it pays (Q9).`, tone: "bad" }] : [{ text: "Delivered to every holder it pays (Q9).", tone: "ok" }],
+      ...e3.mismatched.length ? e3.mismatched.map(([, h, paid, due]) => ({ text: `DOES NOT MATCH ITS STAKE: ${names2(h)} is paid ${paid}, their share is ${due} (F124 N10, rule 26).`, tone: "bad" })) : [{ text: "Every payout matches its stake exactly, every fee alike for every stake, member or departed (F124 N10).", tone: "ok" }],
+      ...e3.turnsUnknown.length ? [{ text: "Who should have had a tied leftover unit is unknown: the service's previous split for the stake is not held, or carries no count, so the turns cannot be read (Agreements rule 15a, F165, F171). The rest is checked.", tone: "warn" }] : [],
+      ...e3.countUnknown.length && !e3.turnsUnknown.length ? [{ text: "The running count cannot be checked: the service's previous split for the stake is not held, or carries no count (Agreements rule 15a, F171). The rest is checked.", tone: "warn" }] : [],
       // The tally chain (Agreements rule 15a, rule 46b, F171): each break breaks the plan.
-      ...e2.breaks.map((b) => ({
+      ...e3.breaks.map((b) => ({
         text: b.kind === "reset" ? `THE TALLY CHAIN IS RESET: this split and ${others(b.with)} each cite no previous split for the stake, so one of them restarts the count (Agreements rule 15a, rule 46b, F171).` : b.kind === "fork" ? `THE TALLY CHAIN FORKS: this split and ${others(b.with)} both cite ${short4(b.previous ?? "")} as the previous split for the stake (Agreements rule 15a, rule 46b, F171).` : b.kind === "count" ? "THE RUNNING COUNT DOES NOT ADD UP: it is not the previous split's count plus this split's leftover units (Agreements rule 15a, rule 46b, F171)." : "THE SPLIT CARRIES NO RUNNING COUNT for a stake it pays (Agreements rule 15a, F171).",
         tone: "bad"
       }))
     ];
     return {
-      mismatched: e2.mismatched.length,
-      breaks: e2.breaks.length,
+      mismatched: e3.mismatched.length,
+      breaks: e3.breaks.length,
       reading: { title: `The split ${short4(a.split)}`, summary: [], sections: [{ heading: "What the core library finds", lines: lines4 }], plain: [], blocking: [] }
     };
   }
@@ -19764,7 +20515,7 @@ var Actions = class {
           debts
         });
         const first = this.store.identity(sides[0][0]);
-        const objects = [[col.f.agreement, col.f.agreement], ...gate.named.map((e3) => [col.f.agreement, e3])];
+        const objects = [[col.f.agreement, col.f.agreement], ...gate.named.map((e4) => [col.f.agreement, e4])];
         const x = await first.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.fork, payload, { public: true, relays, objects });
         acts.push(x.id);
         const ids = [];
@@ -19781,15 +20532,15 @@ var Actions = class {
           this.store.saveCollective(sc);
         }
         const { v, specs } = await this.agreementsVerifier(col, [...this.concerned(col), ...successors.map((x2) => x2.identity)]);
-        const e2 = v.agreementsFork(specs, x.id);
-        if (e2.complete) col.f.closed = x.id;
+        const e3 = v.agreementsFork(specs, x.id);
+        if (e3.complete) col.f.closed = x.id;
         this.store.saveCollective(col);
         return {
-          title: e2.complete ? `\u201C${cname}\u201D is forked, and closed in Agreements` : `The fork of \u201C${cname}\u201D is not complete`,
+          title: e3.complete ? `\u201C${cname}\u201D is forked, and closed in Agreements` : `The fork of \u201C${cname}\u201D is not complete`,
           lines: [
             ...successors.map((sc, i) => ({ text: `Side ${i + 1}'s successor: ${sc.identity}, founded first, forked from \u201C${cname}\u201D (a back-link).` })),
-            { text: `Fork ${x.id}, signed by ${listed.length}.`, tone: e2.complete ? "ok" : "bad" },
-            ...e2.complete ? [{ text: `Shares by default: ${e2.shares.map((n2, i) => `side ${i + 1} ${n2 / 1e4}%`).join(", ")}.` }] : [{ text: e2.why ?? "", tone: "bad" }]
+            { text: `Fork ${x.id}, signed by ${listed.length}.`, tone: e3.complete ? "ok" : "bad" },
+            ...e3.complete ? [{ text: `Shares by default: ${e3.shares.map((n2, i) => `side ${i + 1} ${n2 / 1e4}%`).join(", ")}.` }] : [{ text: e3.why ?? "", tone: "bad" }]
           ],
           acts
         };
@@ -19851,11 +20602,11 @@ var Actions = class {
           this.store.saveIdentity(i);
         }
         const { v, specs } = await this.agreementsVerifier(col, [...this.concerned(col), ...owners]);
-        const e2 = v.agreementsRelease(specs, x.id);
+        const e3 = v.agreementsRelease(specs, x.id);
         const names2 = this.store.names();
         return {
-          title: e2.complete ? "Released to the public domain" : "The release is not complete",
-          lines: [{ text: `Release ${x.id}, signed by ${list4(e2.signed.map(names2))}.`, tone: e2.complete ? "ok" : "bad" }, ...e2.why ? [{ text: e2.why, tone: "bad" }] : []],
+          title: e3.complete ? "Released to the public domain" : "The release is not complete",
+          lines: [{ text: `Release ${x.id}, signed by ${list4(e3.signed.map(names2))}.`, tone: e3.complete ? "ok" : "bad" }, ...e3.why ? [{ text: e3.why, tone: "bad" }] : []],
           acts: [x.id]
         };
       }
@@ -19944,7 +20695,7 @@ var Actions = class {
         const tips = seq.length ? [{ act: seq[seq.length - 1], position: seq.length, summary: runningSummary(seq) }] : [];
         const payload = closingPayload({ agreement: col.f.agreement, collective: col.identity, chainAct: col.f.identity.binding, tips, open: leftOpen });
         const first = this.store.identity(signers[0]);
-        const objects = [[col.f.agreement, col.f.agreement], ...gate.named.map((e3) => [col.f.agreement, e3])];
+        const objects = [[col.f.agreement, col.f.agreement], ...gate.named.map((e4) => [col.f.agreement, e4])];
         const x = await first.publish(REPO_SPECS.agreements, AGREEMENTS_TYPES.closing, payload, { public: true, relays: col.f.relays, objects });
         const acts = [x.id];
         const ids = [];
@@ -19955,12 +20706,12 @@ var Actions = class {
         }
         for (const i of ids) this.store.saveIdentity(i);
         const { v, specs } = await this.agreementsVerifier(col, this.concerned(col));
-        const e2 = v.agreementsClosing(specs, x.id);
-        if (e2.complete) col.f.closed = x.id;
+        const e3 = v.agreementsClosing(specs, x.id);
+        if (e3.complete) col.f.closed = x.id;
         this.store.saveCollective(col);
         return {
-          title: e2.complete ? `\u201C${cname}\u201D is closed in Agreements` : `The closing of \u201C${cname}\u201D does not take effect`,
-          lines: [{ text: `Closing ${x.id}.`, tone: e2.complete ? "ok" : "bad" }, ...e2.why ? [{ text: e2.why, tone: "bad" }] : []],
+          title: e3.complete ? `\u201C${cname}\u201D is closed in Agreements` : `The closing of \u201C${cname}\u201D does not take effect`,
+          lines: [{ text: `Closing ${x.id}.`, tone: e3.complete ? "ok" : "bad" }, ...e3.why ? [{ text: e3.why, tone: "bad" }] : []],
           acts
         };
       }
@@ -20055,7 +20806,7 @@ var Actions = class {
         const x = await creditor.publish(MIRS.money, MONEY_TYPES.release, payload, { public: true, relays: col.f.relays });
         this.store.saveIdentity(creditor);
         for (const o of [col, ...this.store.book().collectives.filter((y) => this.store.isCollective(y.id)).map((y) => this.store.collective(y.id))]) {
-          const entry2 = (o.f.debts ?? []).find((e3) => e3.id === a.debt);
+          const entry2 = (o.f.debts ?? []).find((e4) => e4.id === a.debt);
           if (entry2) {
             entry2.relied = [...entry2.relied ?? [], x.id];
             this.store.saveCollective(o);
@@ -20063,10 +20814,10 @@ var Actions = class {
           }
         }
         const { v, specs } = await this.agreementsVerifier(col, this.concerned(col));
-        const e2 = v.agreementsDebtRelease(specs, x.id);
+        const e3 = v.agreementsDebtRelease(specs, x.id);
         return {
-          title: e2.counts ? "The debt is released by its creditor" : "The release ends nothing",
-          lines: [{ text: `Creditor's release ${x.id}.`, tone: e2.counts ? "ok" : "bad" }, ...e2.why ? [{ text: e2.why, tone: "bad" }] : []],
+          title: e3.counts ? "The debt is released by its creditor" : "The release ends nothing",
+          lines: [{ text: `Creditor's release ${x.id}.`, tone: e3.counts ? "ok" : "bad" }, ...e3.why ? [{ text: e3.why, tone: "bad" }] : []],
           acts: [x.id]
         };
       }
@@ -20207,18 +20958,18 @@ var Actions = class {
     const blocking = [];
     const { text: text4, changes } = compose(a.text);
     if (!text4.trim()) blocking.push("Write something to post.");
-    let stripped = null;
+    let stripped2 = null;
     let removed = [];
     if (a.jpeg) {
       try {
         const s = strip(Uint8Array.from(Buffer.from(a.jpeg, "base64")));
-        stripped = s.bytes;
+        stripped2 = s.bytes;
         removed = s.removed.map((r) => CARRIED_WORDS[r]);
-      } catch (e2) {
-        blocking.push(`The picture is not a JPEG this client can publish: ${e2 instanceof Error ? e2.message : e2}`);
+      } catch (e3) {
+        blocking.push(`The picture is not a JPEG this client can publish: ${e3 instanceof Error ? e3.message : e3}`);
       }
     }
-    const item2 = perms.items[stripped ? 1 : 0];
+    const item2 = perms.items[stripped2 ? 1 : 0];
     if (!item2) blocking.push(...perms.notes.map((n) => n.text));
     else if (item2.state === "no") blocking.push(`${item2.what} is not something you can do now: ${item2.lines.filter((l) => l.tone === "bad").map((l) => l.text).join(" ") || "its key or the signatures it needs are not held here."}`);
     const sign2 = (item2?.needs ?? []).map((n) => {
@@ -20229,7 +20980,7 @@ var Actions = class {
     const corrects = a.corrects?.trim().toLowerCase() || null;
     if (corrects && !/^[0-9a-f]{64}$/.test(corrects)) blocking.push("A correction names the act it corrects by its ID.");
     const reading2 = {
-      title: `${corrects ? "A correction" : "A post"} for the collective \u201C${perms.name}\u201D${stripped ? ", with a picture" : ""}`,
+      title: `${corrects ? "A correction" : "A post"} for the collective \u201C${perms.name}\u201D${stripped2 ? ", with a picture" : ""}`,
       summary: [
         ...corrects ? [`Labelled \u201CCorrection\u201D: it corrects the collective\u2019s act ${short4(corrects)}, which stays as signed; apps that know the corrections cMIP show \u201Ccorrected by\u201D on it.`] : [],
         `Signed with ${names2(c2.identity)}'s own key, public: anyone can read it. It is an act of the collective, not of its members.`,
@@ -20238,7 +20989,7 @@ var Actions = class {
       sections: [
         { heading: "Why it may be done", lines: item2?.lines ?? [] },
         ...changes.length ? [{ heading: "The text, made canonical", lines: changes.map((x) => ({ text: x })) }] : [],
-        ...stripped ? [{ heading: "The picture", lines: [{ text: removed.length ? `Taken out before publishing: ${removed.join("; ")}.` : "It carried nothing to take out." }, { text: `Published as ${stripped.length} bytes, locked, at ${list4(c2.f.relays)}.` }] }] : [],
+        ...stripped2 ? [{ heading: "The picture", lines: [{ text: removed.length ? `Taken out before publishing: ${removed.join("; ")}.` : "It carried nothing to take out." }, { text: `Published as ${stripped2.length} bytes, locked, at ${list4(c2.f.relays)}.` }] }] : [],
         ...sign2.map((n) => ({
           heading: `The \u201C${n.name}\u201D area's signatures`,
           lines: n.signers.map((m) => ({ text: `${names2(m)} signs it${perms.you.includes(m) ? " (you)" : ": a simulated member held here, its consent simulated"}.`, tone: perms.you.includes(m) ? void 0 : "warn" }))
@@ -20249,11 +21000,11 @@ var Actions = class {
     };
     return this.plan({
       kind: "post",
-      digest: digestOf("post", a.collective, text4, stripped ?? new Uint8Array(), ...corrects ? [corrects] : []),
+      digest: digestOf("post", a.collective, text4, stripped2 ?? new Uint8Array(), ...corrects ? [corrects] : []),
       reading: reading2,
       depends: [a.collective, ...sign2.flatMap((n) => n.signers)],
       run: async () => {
-        const made = await post(c2.id, { text: text4, jpeg: stripped ?? void 0, relays: c2.f.relays, corrects: corrects ? [corrects, c2.identity] : void 0 });
+        const made = await post(c2.id, { text: text4, jpeg: stripped2 ?? void 0, relays: c2.f.relays, corrects: corrects ? [corrects, c2.identity] : void 0 });
         this.store.saveCollective(c2);
         const lines4 = [{ text: `Posted for \u201C${perms.name}\u201D: ${short4(made.id)}${made.picture ? `, with the picture ${short4(made.picture.id)}` : ""}.`, tone: "ok" }];
         const acts = [made.id, ...made.picture ? [made.picture.id] : []];
@@ -20276,8 +21027,8 @@ var Actions = class {
               text: `${id === made.id ? "The text" : "The picture"}: ${k.met ? k.kind === "areas" ? "counts for the collective, its area\u2019s signatures met" : "counts for the collective, on its own signature" : `does not count yet (${k.kind}${k.reason ? `: ${k.reason}` : ""})`}.`,
               tone: k.met ? "ok" : "bad"
             });
-          } catch (e2) {
-            lines4.push({ text: `Agreements could not read ${short4(id)}: ${e2 instanceof Error ? e2.message : e2}`, tone: "bad" });
+          } catch (e3) {
+            lines4.push({ text: `Agreements could not read ${short4(id)}: ${e3 instanceof Error ? e3.message : e3}`, tone: "bad" });
           }
         }
         return { title: `Posted for \u201C${perms.name}\u201D`, lines: lines4, acts };
@@ -20494,10 +21245,10 @@ async function readFollowList(identity2, places, via = {}) {
           if (v.status(d.id) !== "valid") continue;
           try {
             const m = cborDecode(d.payload);
-            const version = Number(m.get(0));
+            const version2 = Number(m.get(0));
             const prev = m.get(1);
             const ids = m.get(2).filter((x) => x instanceof Uint8Array).map(hex);
-            acts.set(d.id, { version, previous: prev instanceof Uint8Array ? hex(prev) : null, ids, withdrawn: m.get(3) === true });
+            acts.set(d.id, { version: version2, previous: prev instanceof Uint8Array ? hex(prev) : null, ids, withdrawn: m.get(3) === true });
           } catch {
           }
         }
@@ -20536,8 +21287,8 @@ async function readSealedList(identity2, secrets, homes, via = {}) {
   let l;
   try {
     l = await lookUp(identity2, homes, via, v);
-  } catch (e2) {
-    out.problems.push(`its homes did not answer (${e2 instanceof Error ? e2.message : String(e2)})`);
+  } catch (e3) {
+    out.problems.push(`its homes did not answer (${e3 instanceof Error ? e3.message : String(e3)})`);
     return out;
   }
   const at2 = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
@@ -20579,17 +21330,17 @@ async function readSealedList(identity2, secrets, homes, via = {}) {
         if (!page.items.length || page.next === after2) break;
         after2 = page.next;
       }
-    } catch (e2) {
-      out.problems.push(`${h}: ${e2 instanceof Error ? e2.message : String(e2)}`);
+    } catch (e3) {
+      out.problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
     }
   }
-  const best = (from, version) => {
-    const next = [...acts.entries()].filter(([, a]) => a.previous === from && a.version === version + 1);
+  const best = (from, version2) => {
+    const next = [...acts.entries()].filter(([, a]) => a.previous === from && a.version === version2 + 1);
     if (next.length > 1) out.forked = true;
     let pick = null;
     for (const [id] of next) {
-      const below = best(id, version + 1);
-      const depth = below ? below.depth : version + 1;
+      const below = best(id, version2 + 1);
+      const depth = below ? below.depth : version2 + 1;
       const tip2 = below ? below.id : id;
       if (!pick || depth > pick.depth || depth === pick.depth && tip2 < pick.tip) pick = { id: tip2, depth, tip: tip2 };
     }
@@ -20604,7 +21355,7 @@ async function readSealedList(identity2, secrets, homes, via = {}) {
 }
 
 // src/real.ts
-var err6 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var err6 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var short7 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var now3 = () => Math.floor(Date.now() / 1e3);
 var b645 = (b) => Buffer.from(b).toString("base64");
@@ -20696,23 +21447,23 @@ var Real = class {
    */
   async readLists() {
     const problems = [];
-    let read2 = 0;
-    for (const e2 of this.store.book().identities) {
-      const me = this.store.identity(e2.id);
+    let read3 = 0;
+    for (const e3 of this.store.book().identities) {
+      const me = this.store.identity(e3.id);
       const secrets = [...me.f.encryption].reverse().map((x) => unhex(x.secret));
       if (!secrets.length) continue;
       try {
-        const l = await readSealedList(e2.id, secrets, me.f.homes.map((h) => h.hint), this.via);
+        const l = await readSealedList(e3.id, secrets, me.f.homes.map((h) => h.hint), this.via);
         if (l.act) {
-          this.listed.set(e2.id, l.follows);
-          read2++;
+          this.listed.set(e3.id, l.follows);
+          read3++;
         }
-        problems.push(...l.problems.map((x) => `${e2.name}: ${x}`));
+        problems.push(...l.problems.map((x) => `${e3.name}: ${x}`));
       } catch (x) {
-        problems.push(`${e2.name}: ${err6(x)}`);
+        problems.push(`${e3.name}: ${err6(x)}`);
       }
     }
-    return { read: read2, problems };
+    return { read: read3, problems };
   }
   addContact(typed, name) {
     const id = readId(typed);
@@ -20826,8 +21577,8 @@ var Real = class {
       try {
         await sealMemberKey(me, { terms: act, signature: own.id, public: key.public, secret: key.secret }, () => this.store.saveIdentity(me));
         lines4.push({ text: `${this.names()(me.id)}\u2019s own key for this collective is named in the signature and sealed to them at their homes: once it is complete, it signs for them in the areas they hold (F353).`, tone: "ok" });
-      } catch (e2) {
-        lines4.push({ text: `The signature names a key of ${this.names()(me.id)}\u2019s own, but it could not be sealed to them: ${err6(e2)}`, tone: "bad" });
+      } catch (e3) {
+        lines4.push({ text: `The signature names a key of ${this.names()(me.id)}\u2019s own, but it could not be sealed to them: ${err6(e3)}`, tone: "bad" });
       }
     }
     return own;
@@ -20843,9 +21594,9 @@ var Real = class {
         this.store.saveIdentity(me);
         threads[m] = sent.id;
         lines4.push({ text: sent.left.length ? `Sent to ${this.names()(m)}, sealed, in its inbox (${sent.left.join(", ")}).` : `Not delivered to ${this.names()(m)}: ${sent.failed.map((f) => `${f.relay}: ${f.reason}`).join("; ")}.`, tone: sent.left.length ? "ok" : "bad" });
-      } catch (e2) {
+      } catch (e3) {
         this.store.saveIdentity(me);
-        lines4.push({ text: `Not sent to ${this.names()(m)}: ${err6(e2)}`, tone: "bad" });
+        lines4.push({ text: `Not sent to ${this.names()(m)}: ${err6(e3)}`, tone: "bad" });
       }
     }
     return threads;
@@ -20869,8 +21620,8 @@ var Real = class {
       try {
         const id = readId(t2);
         if (id !== a.founder && !others.includes(id)) others.push(id);
-      } catch (e2) {
-        blocking.push(`\u201C${t2}\u201D: ${err6(e2)}`);
+      } catch (e3) {
+        blocking.push(`\u201C${t2}\u201D: ${err6(e3)}`);
       }
     }
     const members = [a.founder, ...others];
@@ -20888,8 +21639,8 @@ var Real = class {
       let rules;
       try {
         rules = fromRules(a.rules ?? { safety: 2, release: 2, clone: 2, others: Math.max(1, members.length - 1) });
-      } catch (e2) {
-        blocking.push(err6(e2));
+      } catch (e3) {
+        blocking.push(err6(e3));
         rules = fromRules({ safety: 2, release: 2, clone: 2, others: Math.max(1, members.length - 1) });
       }
       g = { ...rules, text: a.words?.trim() || standardWords(name || "unnamed", rules) };
@@ -20898,13 +21649,13 @@ var Real = class {
     let payload;
     try {
       payload = TestCollective.foundingTerms(g, members);
-    } catch (e2) {
-      blocking.push(`Agreements refuse these terms: ${err6(e2)}`);
+    } catch (e3) {
+      blocking.push(`Agreements refuse these terms: ${err6(e3)}`);
       return this.plan({ digest: sha2562(`refused founding ${Date.now()}`), reading: { title: `Found the collective \u201C${name}\u201D`, summary: [], sections: said.map((x) => ({ heading: x.heading, lines: x.lines.map((text4) => ({ text: text4 })) })), plain: [], blocking }, run: async () => ({ title: "", lines: [], acts: [] }) });
     }
     const t = termsOf(payload);
-    const read2 = readAgreement(t, names2);
-    blocking.push(...withAgreements(a.grid ? [] : rulesHints({ safety: g.safetyThreshold, release: g.releaseThreshold, clone: g.cloneThreshold, others: g.abandonmentOthers }, members.length), read2.blocking));
+    const read3 = readAgreement(t, names2);
+    blocking.push(...withAgreements(a.grid ? [] : rulesHints({ safety: g.safetyThreshold, release: g.releaseThreshold, clone: g.cloneThreshold, others: g.abandonmentOthers }, members.length), read3.blocking));
     const reading2 = {
       title: `Propose to found the collective \u201C${name}\u201D`,
       summary: [
@@ -20913,7 +21664,7 @@ var Real = class {
       ],
       sections: [
         ...said.map((x) => ({ heading: x.heading, lines: x.lines.map((text4) => ({ text: text4 })) })),
-        ...read2.sections,
+        ...read3.sections,
         {
           heading: "How it travels",
           lines: [
@@ -20924,7 +21675,7 @@ var Real = class {
         { heading: "Before you found: what this device will hold (F337)", lines: FOUNDING_SAY },
         ...beforeSigning(payload, names2)
       ],
-      plain: [{ heading: "The words everyone signs", text: t.text }, ...read2.plain],
+      plain: [{ heading: "The words everyone signs", text: t.text }, ...read3.plain],
       blocking
     };
     return this.plan({
@@ -20972,12 +21723,12 @@ var Real = class {
       const p = this.proposal(act);
       const me = this.store.identity(p.founder);
       const problems = [];
-      const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+      const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
       let inbox = [];
       try {
         inbox = (await lookUp(me.id, this.hints(me.f.homes.map((h) => h.hint)), this.via)).inbox(REPO_SPECS.agreements) ?? [];
-      } catch (e2) {
-        problems.push(`The founder\u2019s inbox could not be looked up: ${err6(e2)}`);
+      } catch (e3) {
+        problems.push(`The founder\u2019s inbox could not be looked up: ${err6(e3)}`);
       }
       const threads = new Map(Object.entries(p.threads).map(([m, t]) => [t, m]));
       for (const hint of inbox) {
@@ -21015,8 +21766,8 @@ var Real = class {
             if (!page.items.length || page.next === after2) break;
             after2 = page.next;
           }
-        } catch (e2) {
-          problems.push(`${hint}: ${err6(e2)}`);
+        } catch (e3) {
+          problems.push(`${hint}: ${err6(e3)}`);
         }
       }
       this.saveProposal(p);
@@ -21057,7 +21808,7 @@ var Real = class {
    * its one-time key (or held in memory to be shown here once, hand to hand),
    * the founder's own held to be shown once. Nothing of a share is written.
    */
-  found(act, read2 = false) {
+  found(act, read3 = false) {
     return this.desk.serial(async () => {
       const p = this.proposal(act);
       if (p.kind !== "founding") throw new Error("Not a founding.");
@@ -21067,7 +21818,7 @@ var Real = class {
       if (!st.enough) throw new Error(`Waiting for ${st.waiting.map(this.names()).join(", ")}: founding terms exist only once every party has signed (Agreements rule 1).`);
       const missing = p.members.filter((m) => m !== p.founder && !p.answers[m]?.oneTime && !(p.byHand ?? []).includes(m));
       if (missing.length) throw new Error(`No one-time key from ${missing.map(this.names()).join(", ")}: their share can only be shown here, hand to hand. Choose that for them first.`);
-      if (!read2) throw new Error("Read what this device will hold while founding (F337), and tick it, first. Nothing was dealt.");
+      if (!read3) throw new Error("Read what this device will hold while founding (F337), and tick it, first. Nothing was dealt.");
       await this.desk.keyCurrent(p.founder);
       const s = this.store.settings();
       const { collective: c2, shares } = await TestCollective.foundSigned({ agreement: p.act, members: p.members, homes: s.homes, relays: p.relays, governance: p.governance, via: this.via });
@@ -21103,9 +21854,9 @@ var Real = class {
           });
           this.store.saveIdentity(me);
           lines4.push({ text: `Share ${x}, sealed to ${this.names()(m)}\u2019s one-time key (${sealed.left.join(", ")}).`, tone: "ok" });
-        } catch (e2) {
+        } catch (e3) {
           this.store.saveIdentity(me);
-          lines4.push({ text: `Share ${x} could not be sent to ${this.names()(m)}: ${err6(e2)}. Lost: a share is never kept here.`, tone: "bad" });
+          lines4.push({ text: `Share ${x} could not be sent to ${this.names()(m)}: ${err6(e3)}. Lost: a share is never kept here.`, tone: "bad" });
         }
         sh.share.fill(0);
       }
@@ -21151,8 +21902,8 @@ var Real = class {
       try {
         const id = readId(t);
         if (!members.includes(id)) members.push(id);
-      } catch (e2) {
-        blocking.push(`\u201C${t}\u201D: ${err6(e2)}`);
+      } catch (e3) {
+        blocking.push(`\u201C${t}\u201D: ${err6(e3)}`);
       }
     }
     if (members.length < 2) blocking.push("A collective has at least two members.");
@@ -21171,13 +21922,13 @@ var Real = class {
     }
     try {
       clone = c2.cloneFor(members, governance);
-    } catch (e2) {
+    } catch (e3) {
       const reading3 = {
         title: "This member change cannot be proposed as it stands",
-        summary: [`Agreements refuse it: ${err6(e2)}.`, "With fewer members, the rules\u2019 numbers (shares that rebuild the key, who judges absence) must change with them; changing them in the same proposal is not offered here yet."],
+        summary: [`Agreements refuse it: ${err6(e3)}.`, "With fewer members, the rules\u2019 numbers (shares that rebuild the key, who judges absence) must change with them; changing them in the same proposal is not offered here yet."],
         sections: [],
         plain: [],
-        blocking: [...blocking, `Agreements refuse it: ${err6(e2)}.`]
+        blocking: [...blocking, `Agreements refuse it: ${err6(e3)}.`]
       };
       return this.plan({ digest: sha2562(`refused ${a.collective} ${members.join(",")}`), reading: reading3, run: async () => ({ title: "", lines: [], acts: [] }) });
     }
@@ -21258,8 +22009,8 @@ var Real = class {
     let service = "";
     try {
       service = readId(a.service);
-    } catch (e2) {
-      blocking.push(`The split service: ${err6(e2)}`);
+    } catch (e3) {
+      blocking.push(`The split service: ${err6(e3)}`);
     }
     if (service && members.includes(service)) blocking.push("The split service is a separate identity, not a member.");
     const key = a.serviceKey.trim().toLowerCase();
@@ -21269,8 +22020,8 @@ var Real = class {
       try {
         const id = readId(k);
         if (!keepers.includes(id)) keepers.push(id);
-      } catch (e2) {
-        blocking.push(`A keeper: ${err6(e2)}`);
+      } catch (e3) {
+        blocking.push(`A keeper: ${err6(e3)}`);
       }
     }
     if (keepers.length && (!Number.isSafeInteger(a.keepersNeeded) || a.keepersNeeded < 1 || a.keepersNeeded > keepers.length)) blocking.push(`Keepers: how many must record an act, from 1 to ${keepers.length}.`);
@@ -21286,8 +22037,8 @@ var Real = class {
     if (!blocking.length) {
       try {
         preview = c2.sameMembersClone(governance("00".repeat(32)));
-      } catch (e2) {
-        blocking.push(`Agreements refuse it: ${err6(e2)}.`);
+      } catch (e3) {
+        blocking.push(`Agreements refuse it: ${err6(e3)}.`);
       }
     }
     const cname = this.collectives().find((x) => x.id === a.collective)?.name ?? short7(a.collective);
@@ -21397,7 +22148,7 @@ var Real = class {
     for (const id of [by, ...this.store.book().identities.map((i) => i.id)].filter((x, i, xs) => xs.indexOf(x) === i)) {
       if (!area.holders.includes(id) || !this.store.holds(id)) continue;
       const me = this.store.identity(id);
-      const keys = await readMemberKeys(me.id, me.f.encryption.map((e2) => unhex(e2.secret)), me.f.homes.map((h) => h.hint), this.via).catch(() => []);
+      const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), this.via).catch(() => []);
       const key = keys.length ? await memberKeyFor(keys, c2.identity, places, this.via).catch(() => null) : null;
       if (key) {
         signer = { me, key };
@@ -21441,8 +22192,8 @@ var Real = class {
         lines4.push(
           ptr.needed > 1 ? { text: `The area asks ${ptr.needed} keys: ${ptr.asked.length ? `${ptr.asked.map(names2).join(", ")} ${ptr.asked.length === 1 ? "is" : "are"} asked for theirs, in their own app` : "nobody could be asked"}${ptr.notAsked.length ? `; not reached: ${ptr.notAsked.map(names2).join(", ")}` : ""}. Until then a buyer\u2019s payment cannot reach the service.`, tone: "warn" } : { text: "One key of the area: a buyer\u2019s payment goes there now, the service answering for the collective.", tone: "ok" }
         );
-      } catch (e2) {
-        lines4.push({ text: `Its payee pointer could not be pointed at the split service yet: ${err6(e2)}`, tone: "warn" });
+      } catch (e3) {
+        lines4.push({ text: `Its payee pointer could not be pointed at the split service yet: ${err6(e3)}`, tone: "warn" });
       }
       return { title: "In force", lines: lines4, acts };
     });
@@ -21586,12 +22337,12 @@ var Real = class {
     const folder2 = folderOf(a.folder);
     const { how, files } = filesOf(folder2);
     const blocking = [];
-    const version = a.version.trim();
-    if (!version) blocking.push("Give the release a version.");
-    if (c2.f.releases.some((r) => r.version === version)) blocking.push(`A release ${version} was published already.`);
+    const version2 = a.version.trim();
+    if (!version2) blocking.push("Give the release a version.");
+    if (c2.f.releases.some((r) => r.version === version2)) blocking.push(`A release ${version2} was published already.`);
     if (c2.f.pending) blocking.push("A member change waits for its rotation: a release signed with the old key would be void once it counts (F100).");
     const pub = { id: c2.id, relays: c2.f.relays, releases: c2.f.releases };
-    const prepared = prepareRelease(pub, { name: a.name.trim() || "release", version: version || "0", files, source: how === "git" ? gitSource(folder2) : void 0 });
+    const prepared = prepareRelease(pub, { name: a.name.trim() || "release", version: version2 || "0", files, source: how === "git" ? gitSource(folder2) : void 0 });
     const founder = this.proposals().find((p) => p.founded === a.collective)?.founder ?? c2.f.signingHolder;
     const holders2 = c2.f.members;
     const sections = [
@@ -21647,9 +22398,9 @@ var b646 = (b) => Buffer.from(b).toString("base64");
 function seedOf(words2) {
   try {
     return fromWords(words2);
-  } catch (e2) {
-    if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
-    throw e2;
+  } catch (e3) {
+    if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
+    throw e3;
   }
 }
 var AfterKishib = class {
@@ -21687,13 +22438,13 @@ var AfterKishib = class {
       const carried = carriedKey(look, seed);
       const last = me.f.encryption.at(-1);
       if (carried) {
-        if (!me.f.encryption.some((e2) => e2.act === carried.act)) me.f.encryption.push(carried);
+        if (!me.f.encryption.some((e3) => e3.act === carried.act)) me.f.encryption.push(carried);
         this.store.saveIdentity(me);
         lines4.push({ text: "Its encryption key is the one the new words carry.", tone: "ok" });
       } else if (last && look.encryptionKeyAct === last.act) {
         this.store.saveIdentity(me);
         await me.publishEncryptionKey(encryptionSecret(seed));
-        const resealed = await resealMemberKeys(me.id, me.f.encryption.slice(0, -1).map((e2) => unhex(e2.secret)), xwingPublic(encryptionSecret(seed)), me.f.homes.map((h) => h.hint), me.via).catch(() => 0);
+        const resealed = await resealMemberKeys(me.id, me.f.encryption.slice(0, -1).map((e3) => unhex(e3.secret)), xwingPublic(encryptionSecret(seed)), me.f.homes.map((h) => h.hint), me.via).catch(() => 0);
         if (resealed) lines4.push({ text: `Its ${resealed} member key${resealed === 1 ? "" : "s"} for collectives, sealed to it, sealed again to the new encryption key: unchanged, so its apps still act with them (F353).`, tone: "ok" });
         this.store.saveIdentity(me);
         lines4.push({ text: "Its encryption key was renewed from the new words (Edubba published the last one): messages sealed from now on open only with them.", tone: "ok" });
@@ -21959,7 +22710,7 @@ async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT, clock = n
   const judge2 = new FeedJudge(relays, via);
   const lines4 = [];
   const found2 = /* @__PURE__ */ new Map();
-  const placesOf = /* @__PURE__ */ new Map();
+  const placesOf2 = /* @__PURE__ */ new Map();
   const problems = /* @__PURE__ */ new Map();
   await Promise.all(
     authors.map(async (a) => {
@@ -21972,13 +22723,13 @@ async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT, clock = n
       }
       const { asked, unreachable } = placesFor(l, relays);
       lines4.push({ ...a, asked, unreachable, problem, found: 0, verified: 0 });
-      placesOf.set(a.identity, asked);
+      placesOf2.set(a.identity, asked);
       if (problem) problems.set(a.identity, problem);
     })
   );
   lines4.sort((x, y) => authors.findIndex((a) => a.identity === x.identity) - authors.findIndex((a) => a.identity === y.identity));
-  for (const a of authors) await actsBy2(a.identity, placesOf.get(a.identity), via, found2);
-  let clockLine = null;
+  for (const a of authors) await actsBy2(a.identity, placesOf2.get(a.identity), via, found2);
+  let clockLine2 = null;
   let times;
   if (clock) {
     let l = null;
@@ -21989,32 +22740,32 @@ async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT, clock = n
       problem = message3(err8);
     }
     const { asked, unreachable } = placesFor(l, relays, TIMESTAMP_SPEC);
-    clockLine = { ...clock, asked, unreachable, problem, found: 0, verified: 0, placed: 0 };
+    clockLine2 = { ...clock, asked, unreachable, problem, found: 0, verified: 0, placed: 0 };
     if (!problem) {
-      const read2 = await readStamps(clock.identity, asked, judge2, via);
-      clockLine.found = read2.found;
-      clockLine.verified = read2.verified.length;
-      times = earliestByNames([...found2.values()].map((x) => ({ id: x.d.id, links: linksOf(x.d) })), read2.earliest);
+      const read3 = await readStamps(clock.identity, asked, judge2, via);
+      clockLine2.found = read3.found;
+      clockLine2.verified = read3.verified.length;
+      times = earliestByNames([...found2.values()].map((x) => ({ id: x.d.id, links: linksOf(x.d) })), read3.earliest);
     }
   }
   const rank = (s) => authors.findIndex((a) => a.identity === s);
   const all = [...found2.values()].map((x) => x.d);
   const placed = times ? all.filter((d) => isPost(d) && times.has(d.id)).length : 0;
-  if (clockLine) clockLine.placed = placed;
+  if (clockLine2) clockLine2.placed = placed;
   const byClock = placed > 0;
   const order = signedOrder(all, rank, byClock ? times : void 0);
   const shown3 = order.slice(0, limit);
   const posts2 = await Promise.all(
     shown3.map(async (id) => {
       const { d } = found2.get(id);
-      const p = await readOne(id, d.signer, d.position ?? null, placesOf.get(d.signer), via, judge2, problems.get(d.signer) ?? null);
+      const p = await readOne(id, d.signer, d.position ?? null, placesOf2.get(d.signer), via, judge2, problems.get(d.signer) ?? null);
       if (byClock) p.time = times.get(id) ?? null;
       return p;
     })
   );
   const answered = /* @__PURE__ */ new Map();
   const byId2 = new Map(posts2.map((p) => [p.id, p]));
-  const everywhere = [...new Set([...placesOf.values()].flat())];
+  const everywhere = [...new Set([...placesOf2.values()].flat())];
   const named = new Set(authors.map((a) => a.identity));
   for (const p of posts2) {
     if (!p.post || p.problem) continue;
@@ -22088,7 +22839,7 @@ async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT, clock = n
     line.found = order.filter((id) => found2.get(id).d.signer === line.identity).length;
     line.verified = mine.filter((p) => !p.problem).length;
   }
-  return { authors: lines4, posts: posts2, more: order.length - shown3.length, answered, clock: clockLine, order: byClock ? "clock" : "signed" };
+  return { authors: lines4, posts: posts2, more: order.length - shown3.length, answered, clock: clockLine2, order: byClock ? "clock" : "signed" };
 }
 
 // ../reader/src/link.ts
@@ -22096,6 +22847,54 @@ function makeLink(page, act, relays = []) {
   const base = page.replace(/#.*$/, "");
   const q = relays.length ? "?" + relays.map((r) => `r=${encodeURIComponent(r)}`).join("&") : "";
   return `${base}#${act}${q}`;
+}
+
+// ../dub/src/appended.ts
+var APPENDED_FORMAT = sha2562("Appended collective cMIP, draft 1, test value until publication");
+function appendedOf(format, refs) {
+  if (format !== APPENDED_FORMAT) return null;
+  const first = refs[0]?.id;
+  return first && /^[0-9a-f]{64}$/.test(first) ? first : null;
+}
+var appendedRef = (collective) => collective;
+async function membership(member, collective, hints, via = {}) {
+  try {
+    const places = await collectivePlaces(collective, hints, via);
+    const now8 = await collectiveNow(collective, places, via);
+    if (!now8.agreement) return { checked: false, why: "its agreement in force was not found at its places" };
+    const t = await termsAt(now8.agreement, places, via);
+    if (!t?.parties) return { checked: false, why: "its agreement in force could not be read" };
+    if (now8.departed.includes(member)) return { checked: false, why: "the writer has left it" };
+    return t.parties.includes(member) ? { checked: true, why: null } : { checked: false, why: "the writer is not one of its members" };
+  } catch (e3) {
+    return { checked: false, why: `it could not be read (${e3 instanceof Error ? e3.message : String(e3)})` };
+  }
+}
+
+// ../ummia/src/anchor.ts
+async function placesOf(service, hints, via) {
+  const l = await lookUp(service, hints, via);
+  const places = [.../* @__PURE__ */ new Set([...l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints), ...l.resolution.homes.map((h) => h.hint), ...hints])];
+  return { l, places };
+}
+async function offers(service, hints, via = {}) {
+  const { l, places } = await placesOf(service, hints, via);
+  const out = /* @__PURE__ */ new Map();
+  for (const h of places) {
+    try {
+      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.agreements })).items) {
+        if (it.kind !== "act") continue;
+        try {
+          const o = anchoringReadOffer(it.item);
+          l.verifier.add(it.item);
+          if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words });
+        } catch {
+        }
+      }
+    } catch {
+    }
+  }
+  return [...out.values()];
 }
 
 // ../dub/src/chainwords.ts
@@ -22312,7 +23111,7 @@ async function readCollective(me, id, hints, via) {
   const t = await termsOf2(now8.agreement, hints, via);
   const a = t?.areas.find((x) => x.kinds.some((k) => k.form === "layer" && k.layer === MONEY_LAYER || k.spec === AGREEMENTS_SPECS.money));
   const area = a ? { id: a.id, name: a.name, holders: a.holders, number: a.threshold, cap: capOf2(a.limits) } : null;
-  const keys = await readMemberKeys(me.id, me.f.encryption.map((e2) => unhex(e2.secret)), me.f.homes.map((h) => h.hint), via).catch(() => []);
+  const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), via).catch(() => []);
   const key = keys.length ? await memberKeyFor(keys, id, hints, via).catch(() => null) : null;
   let why = null;
   if (!area) why = "Its constitution draws no Money area: the collective\u2019s money acts count on its own key, held by its founder\u2019s Edubba.";
@@ -22366,10 +23165,10 @@ function readList(id, payload) {
   try {
     const m = cborDecode(payload);
     for (const k of m.keys()) if (![0, 1, 2, 3].includes(k)) return null;
-    const version = m.get(0);
-    if (typeof version !== "number" || version < 1) return null;
+    const version2 = m.get(0);
+    if (typeof version2 !== "number" || version2 < 1) return null;
     const prev = m.get(1);
-    if (version === 1 !== (prev === void 0)) return null;
+    if (version2 === 1 !== (prev === void 0)) return null;
     const entries2 = /* @__PURE__ */ new Map();
     for (const x of m.get(2)) {
       if (!Array.isArray(x) || !(x[0] instanceof Uint8Array) || x[0].length !== 32) return null;
@@ -22379,7 +23178,7 @@ function readList(id, payload) {
       if (!(x instanceof Uint8Array) || x.length !== 32) throw new Error("merged");
       return hex(x);
     });
-    return { id, version, previous: prev instanceof Uint8Array ? hex(prev) : null, merged, entries: entries2 };
+    return { id, version: version2, previous: prev instanceof Uint8Array ? hex(prev) : null, merged, entries: entries2 };
   } catch {
     return null;
   }
@@ -22392,8 +23191,8 @@ async function readActs(identity2, secrets, homes, via) {
   let l;
   try {
     l = await lookUp(identity2, homes, via, v);
-  } catch (e2) {
-    return { acts, problems: [`its homes did not answer (${e2 instanceof Error ? e2.message : String(e2)})`] };
+  } catch (e3) {
+    return { acts, problems: [`its homes did not answer (${e3 instanceof Error ? e3.message : String(e3)})`] };
   }
   const at2 = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
   for (const h of at2) {
@@ -22422,8 +23221,8 @@ async function readActs(identity2, secrets, homes, via) {
         if (!page.items.length || page.next === after2) break;
         after2 = page.next;
       }
-    } catch (e2) {
-      problems.push(`${h}: ${e2 instanceof Error ? e2.message : String(e2)}`);
+    } catch (e3) {
+      problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
     }
   }
   return { acts, problems };
@@ -22449,8 +23248,8 @@ async function readAccepted(identity2, secrets, homes, via = {}) {
     for (const m of a.merged) followed.add(m);
   }
   const tips = [...acts.values()].filter((a) => !followed.has(a.id)).sort((x, y) => x.id < y.id ? -1 : 1);
-  const version = Math.max(0, ...tips.map((t) => t.version));
-  if (tips.length <= 1) return { entries: new Map(tips[0]?.entries ?? []), tips, merged: [], version, problems };
+  const version2 = Math.max(0, ...tips.map((t) => t.version));
+  if (tips.length <= 1) return { entries: new Map(tips[0]?.entries ?? []), tips, merged: [], version: version2, problems };
   const anc = tips.map((t) => ancestors(acts, t.id));
   const common = [...anc[0]].filter((x) => anc.every((s) => s.has(x)) && acts.has(x));
   const base = common.map((x) => acts.get(x)).sort((a, b) => b.version - a.version)[0];
@@ -22471,30 +23270,30 @@ async function readAccepted(identity2, secrets, homes, via = {}) {
       }
     }
   }
-  return { entries: entries2, tips, merged: [...new Set(merged)], version, problems };
+  return { entries: entries2, tips, merged: [...new Set(merged)], version: version2, problems };
 }
 var sameTips = (a, b) => a.map((x) => x.id).join() === b.map((x) => x.id).join();
 async function changeAccepted(me, change, opts) {
   const via = opts.via ?? {};
   const homes = me.f.homes.map((h) => h.hint);
-  const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+  const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
   if (!secrets.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
   for (let round = 0; round < 5; round++) {
-    const read2 = await readAccepted(me.id, secrets, homes, via);
-    if (read2.problems.length >= homes.length && !read2.tips.length) throw new Error(`The identity\u2019s homes did not answer (${read2.problems.join("; ")}): the accepted list was not changed.`);
-    const next = new Map(read2.entries);
+    const read3 = await readAccepted(me.id, secrets, homes, via);
+    if (read3.problems.length >= homes.length && !read3.tips.length) throw new Error(`The identity\u2019s homes did not answer (${read3.problems.join("; ")}): the accepted list was not changed.`);
+    const next = new Map(read3.entries);
     change(next);
-    const same3 = read2.tips.length === 1 && JSON.stringify([...next].sort()) === JSON.stringify([...read2.entries].sort());
-    if (same3 || !read2.tips.length && !next.size) return { written: null, list: read2 };
+    const same3 = read3.tips.length === 1 && JSON.stringify([...next].sort()) === JSON.stringify([...read3.entries].sort());
+    if (same3 || !read3.tips.length && !next.size) return { written: null, list: read3 };
     const again = await readAccepted(me.id, secrets, homes, via);
-    if (!sameTips(again.tips, read2.tips)) continue;
+    if (!sameTips(again.tips, read3.tips)) continue;
     await opts.check();
     const look = await lookUp(me.id, homes, via);
-    if (!look.encryptionKey || !me.f.encryption.some((e2) => hex(xwingPublic(unhex(e2.secret))) === hex(look.encryptionKey))) {
+    if (!look.encryptionKey || !me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey))) {
       throw new Error("The encryption key this identity publishes is not one this app holds: the accepted list cannot be sealed. Nothing was changed.");
     }
-    const [first, ...others] = read2.tips;
-    const payload = listPayload({ version: read2.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
+    const [first, ...others] = read3.tips;
+    const payload = listPayload({ version: read3.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
     let made;
     try {
       made = me.sign(ACCEPTED_SPEC, SEALED_LIST2, payload, { public: false, to: [me.id] });
@@ -22513,7 +23312,7 @@ async function changeAccepted(me, change, opts) {
     await leaveAtHomes(me, made, { via, sealed: left > 0 });
     await opts.save();
     if (!left) throw new Error("No home took the accepted list: nothing was changed. Try again.");
-    return { written: made.id, list: { entries: next, tips: [{ id: made.id, version: read2.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next }], merged: read2.merged, version: read2.version + 1, problems: [] } };
+    return { written: made.id, list: { entries: next, tips: [{ id: made.id, version: read3.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next }], merged: read3.merged, version: read3.version + 1, problems: [] } };
   }
   throw new Error("Another app kept changing the accepted list while this one wrote: nothing was changed. Try again.");
 }
@@ -22567,7 +23366,7 @@ var ACCOUNT_NOTES = [
 ];
 var NO_BOOK2 = () => ({ after: {}, acts: {}, drafts: {}, requestsIn: {}, requestsOut: {}, invoices: {}, payments: {}, pointers: [], published: null });
 var list5 = (xs) => [...new Set(xs.map((s) => s.trim()).filter(Boolean))];
-var message4 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message4 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var now4 = () => Math.floor(Date.now() / 1e3);
 var short9 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var b647 = (s) => Uint8Array.from(atob(s), (c2) => c2.charCodeAt(0));
@@ -22639,9 +23438,9 @@ var Damgar = class {
       try {
         id = readId(a.id);
         seed = fromWords(a.words);
-      } catch (e2) {
-        if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
-        throw e2;
+      } catch (e3) {
+        if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
+        throw e3;
       }
       if ((await this.store.held()).includes(id)) return this.renewHeld(id, seed);
       const address = a.address.trim();
@@ -22689,9 +23488,9 @@ var Damgar = class {
       let seed;
       try {
         seed = fromWords(words2);
-      } catch (e2) {
-        if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
-        throw e2;
+      } catch (e3) {
+        if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
+        throw e3;
       }
       return this.renewHeld(active, seed);
     });
@@ -22713,7 +23512,7 @@ var Damgar = class {
     freshLines(me.f);
     me.f.routes = null;
     const carried = carriedKey(look, seed);
-    if (carried && !me.f.encryption.some((e2) => e2.act === carried.act)) me.f.encryption.push(carried);
+    if (carried && !me.f.encryption.some((e3) => e3.act === carried.act)) me.f.encryption.push(carried);
     await this.store.saveIdentity(me);
     return {
       lines: [
@@ -22751,9 +23550,9 @@ var Damgar = class {
     try {
       await this.current(me);
       return { current: true, say: null };
-    } catch (e2) {
-      if (message4(e2) === SPENT_SAY) return { current: false, say: SPENT_SAY };
-      throw e2;
+    } catch (e3) {
+      if (message4(e3) === SPENT_SAY) return { current: false, say: SPENT_SAY };
+      throw e3;
     }
   }
   async current(me) {
@@ -22770,7 +23569,7 @@ var Damgar = class {
   async accepted(me, fresh = false) {
     const c2 = this.lists.get(me.id);
     if (c2 && !fresh && c2.at + 60 > now4()) return c2.list;
-    const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
     const l = await readAccepted(me.id, secrets, me.f.homes.map((h) => h.hint), me.via);
     this.lists.set(me.id, { list: l, at: now4() });
     return l;
@@ -22854,8 +23653,8 @@ var Damgar = class {
     let l;
     try {
       l = await this.accepted(me);
-    } catch (e2) {
-      l = { entries: /* @__PURE__ */ new Map(), tips: [], merged: [], version: 0, problems: [message4(e2)] };
+    } catch (e3) {
+      l = { entries: /* @__PURE__ */ new Map(), tips: [], merged: [], version: 0, problems: [message4(e3)] };
     }
     const set = this.acceptedSet(l);
     out.accept = ACCEPTABLE.map((a) => ({ key: a.key, name: a.name, kind: a.kind, draft: a.draft, text: a.text, does: a.does, here: a.here, built: a.built, needs: a.needs, accepted: isAccepted(a, set), hashes: a.hashes }));
@@ -22888,8 +23687,8 @@ var Damgar = class {
         let c2;
         try {
           c2 = await readCollective(me, id, places, s.via);
-        } catch (e2) {
-          c2 = { id, agreement: null, area: null, key: null, why: message4(e2) };
+        } catch (e3) {
+          c2 = { id, agreement: null, area: null, key: null, why: message4(e3) };
         }
         const acts = [];
         for (const [act, x] of Object.entries(book.collectiveActs ?? {}).filter(([, x2]) => x2.collective === id)) {
@@ -22990,7 +23789,7 @@ var Damgar = class {
       const lines4 = [];
       try {
         const l = await lookUp(me.id, me.f.homes.map((h) => h.hint), s.via);
-        if (l.encryptionKey && !me.f.encryption.some((e2) => hex(xwingPublic(unhex(e2.secret))) === hex(l.encryptionKey))) {
+        if (l.encryptionKey && !me.f.encryption.some((e3) => hex(xwingPublic(unhex(e3.secret))) === hex(l.encryptionKey))) {
           const c2 = carriedKey(l, unhex(me.f.signingSecret));
           if (c2) {
             me.f.encryption.push(c2);
@@ -23000,14 +23799,14 @@ var Damgar = class {
         }
       } catch {
       }
-      const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+      const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
       if (!secrets.length) return { lines: [{ text: NO_KEY_SAY, tone: "warn" }], problems };
       let unopened = 0;
       let inbox = [];
       try {
         inbox = await this.inboxOf(me, s);
-      } catch (e2) {
-        problems.push(`Its inbox could not be looked up: ${message4(e2)}`);
+      } catch (e3) {
+        problems.push(`Its inbox could not be looked up: ${message4(e3)}`);
       }
       const places = list5([...me.f.homes.map((h) => h.hint), ...inbox]);
       const fresh = [];
@@ -23035,8 +23834,8 @@ var Damgar = class {
             after2 = page.next;
           }
           book.after[hint] = after2 ?? 0;
-        } catch (e2) {
-          problems.push(`${hint}: ${message4(e2)}`);
+        } catch (e3) {
+          problems.push(`${hint}: ${message4(e3)}`);
         }
       }
       const looked = /* @__PURE__ */ new Map();
@@ -23049,8 +23848,8 @@ var Damgar = class {
           if (o.key) x.verifier.addWithKey(o.act, o.key);
           else x.verifier.add(o.act);
           return x.verifier.status(o.described.id);
-        } catch (e2) {
-          return `its signer was not found (${message4(e2)})`;
+        } catch (e3) {
+          return `its signer was not found (${message4(e3)})`;
         }
       };
       for (const o of fresh) {
@@ -23070,8 +23869,8 @@ var Damgar = class {
         book.acts[d.id] = { act: base64(o.act), key: o.key ? base64(o.key) : void 0, from: d.signer };
         try {
           await this.file(me, s, book, d, lines4);
-        } catch (e2) {
-          problems.push(`${short9(d.signer)}: ${message4(e2)}`);
+        } catch (e3) {
+          problems.push(`${short9(d.signer)}: ${message4(e3)}`);
         }
       }
       if (unopened) problems.push(`${unopened} sealed act${unopened === 1 ? "" : "s"} addressed to this identity did not open with the encryption keys Damgar holds: sealed to a key it does not hold.`);
@@ -23111,8 +23910,8 @@ var Damgar = class {
       if (!readers[d.type]) return unread(`a message of type ${d.type}, which the money messages cMIP draft 1 does not define`);
       try {
         readers[d.type](d.payload);
-      } catch (e2) {
-        return unread(message4(e2));
+      } catch (e3) {
+        return unread(message4(e3));
       }
       if (d.type === TYPES.laneRequest) {
         (book.laneRequests ??= {})[d.id] = { found: t, stage: "new", grant: null };
@@ -23212,8 +24011,8 @@ var Damgar = class {
     let look;
     try {
       look = await lookUp(id, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via);
-    } catch (e2) {
-      throw new Error(`${short9(id)} was not found: ${message4(e2)}`);
+    } catch (e3) {
+      throw new Error(`${short9(id)} was not found: ${message4(e3)}`);
     }
     const outbox = look.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints);
     const acts = await this.actsOf(id, [...outbox, ...look.resolution.homes.map((h) => h.hint), ...s.relays], s.via, look);
@@ -23307,8 +24106,8 @@ var Damgar = class {
           inv.stage = "answered";
           lines4.push({ text: `${short9(inv.from)} wants to pay you ${say(f.amount, acc)} on Lightning: Damgar answered by itself, with an invoice your node made through its receive-only link, under your receipts lane.`, tone: "ok" });
           return;
-        } catch (e2) {
-          lines4.push({ text: `Damgar could not make the invoice by itself (${message4(e2)}): make it in your wallet, in To sign.`, tone: "warn" });
+        } catch (e3) {
+          lines4.push({ text: `Damgar could not make the invoice by itself (${message4(e3)}): make it in your wallet, in To sign.`, tone: "warn" });
           return;
         }
       }
@@ -23321,8 +24120,8 @@ var Damgar = class {
     let decoded;
     try {
       decoded = lightningInvoice(t);
-    } catch (e2) {
-      return [`${message4(e2)}. Copy the whole invoice from your wallet`];
+    } catch (e3) {
+      return [`${message4(e3)}. Copy the whole invoice from your wallet`];
     }
     const addr = readLightningAddress(b647(p.address));
     const problems = [];
@@ -23379,9 +24178,9 @@ var Damgar = class {
       address = new Uint8Array(rail.address);
     } else if (f.paidTo.kind === "vault") {
       const v = look.verifier.moneyVault(MONEY, me.id);
-      const e2 = v && v.declaredBy === f.paidTo.declaredBy ? v.entries[f.paidTo.entry] : void 0;
-      if (!e2 || e2.railModule !== f.rail || e2.unit !== f.amount.unit) return fail3("it names no entry of the vault in force for this rail and unit");
-      address = new Uint8Array(e2.source);
+      const e3 = v && v.declaredBy === f.paidTo.declaredBy ? v.entries[f.paidTo.entry] : void 0;
+      if (!e3 || e3.railModule !== f.rail || e3.unit !== f.amount.unit) return fail3("it names no entry of the vault in force for this rail and unit");
+      address = new Uint8Array(e3.source);
     } else return fail3("a refund rail: not answered by Damgar in round 1");
     const network = f.rail === SPEC.lightning.hash ? readLightningAddress(address)?.network : readOnchainAddress(address)?.network;
     if (network === void 0 || unitOf(f.amount.unit)?.unit.network !== network) return fail3("the rail does not carry the amount\u2019s unit");
@@ -23596,8 +24395,8 @@ var Damgar = class {
         if (x.stage !== "new") continue;
         try {
           items.push(await this.readDraftItem(me, s, book, id, acc));
-        } catch (e2) {
-          problems.push(`A draft ${short9(id)}: ${message4(e2)}`);
+        } catch (e3) {
+          problems.push(`A draft ${short9(id)}: ${message4(e3)}`);
         }
       }
       for (const [id, x] of Object.entries(book.unread ?? {})) {
@@ -23636,8 +24435,8 @@ var Damgar = class {
         if (x.stage !== "new") continue;
         try {
           items.push(this.laneItem(me, book, id, acc));
-        } catch (e2) {
-          problems.push(`A lane asked ${short9(id)}: ${message4(e2)}`);
+        } catch (e3) {
+          problems.push(`A lane asked ${short9(id)}: ${message4(e3)}`);
         }
       }
       for (const [id, x] of Object.entries(book.invoices)) {
@@ -23716,7 +24515,7 @@ var Damgar = class {
     const about = (d.refs ?? []).map((r, i) => `${r.slice(0, 8)}\u2026${d.refSigners?.[i] ? ` by ${short9(d.refSigners[i])}` : ""}`);
     if (dr.what === "confirm") {
       lines4.unshift({ text: `Prepared in ${dr.app}, not signed there: confirm your purchase from ${short9(dr.other)}, ${say(dr.amount, acc)}: what was promised was kept.` });
-      const c2 = await this.ownClaim(me, s, dr).catch((e2) => ({ why: message4(e2) }));
+      const c2 = await this.ownClaim(me, s, dr).catch((e3) => ({ why: message4(e3) }));
       if ("why" in c2) {
         unknown = true;
         lines4.push({ text: `${c2.why}: it cannot be signed.`, tone: "warn" });
@@ -23733,9 +24532,9 @@ var Damgar = class {
           const r = await this.route(me, s, dr.other, dr.amount, acc);
           lines4.push({ text: `On ${railName(r.module)}, to ${r.to === "flow" ? "their flow (their payee pointer in force)" : "their vault"}. ${r.why}`.trim(), tone: "ok" });
           lines4.push({ text: "Signing sends them an invoice request, sealed: the payment\u2019s fingerprint (the commitment: who pays whom, how much, for what, where), for their side to bind. Nothing is paid yet; you pay in your own wallet, from Pay." });
-        } catch (e2) {
+        } catch (e3) {
           unknown = true;
-          lines4.push({ text: message4(e2), tone: "warn" });
+          lines4.push({ text: message4(e3), tone: "warn" });
         }
       }
       if (dr.what === "anchor" && dr.anchor) lines4.push({ text: `For an anchor of one act on the Bitcoin clock, through the service\u2019s standing offer ${short9(dr.anchor.offer)}, tier ${dr.anchor.tier}. The service is sent the leaf (a fingerprint mixed with a random secret ${dr.app} keeps), never the act. Whether the payment follows its offer is Agreements\u2019 to judge: unknown here.` });
@@ -24182,8 +24981,8 @@ var Damgar = class {
       if (d.signer !== r.identity || !(d.refs ?? []).includes(publication2)) return "the act it names is no repost of this publication by its referrer";
       if (l.verifier.status(r.evidence) !== "valid") return "the repost does not count";
       return null;
-    } catch (e2) {
-      return `the reposter was not found (${message4(e2)})`;
+    } catch (e3) {
+      return `the reposter was not found (${message4(e3)})`;
     }
   }
   /**
@@ -24199,8 +24998,8 @@ var Damgar = class {
       if (p.side !== "in" || !p.claims.length || p.receipts.length) continue;
       try {
         lines4.push(...await this.receiptOf(me, s, book, p, null));
-      } catch (e2) {
-        problems.push(`A receipt Damgar could not sign by itself: ${message4(e2)}`);
+      } catch (e3) {
+        problems.push(`A receipt Damgar could not sign by itself: ${message4(e3)}`);
       }
     }
     for (const [id, x] of Object.entries(book.drafts)) {
@@ -24217,8 +25016,8 @@ var Damgar = class {
         x.stage = "signed";
         x.payment = p.key;
         lines4.push({ text: `The referral share to ${short9(dr.other)} is asked for by itself, under your referral lane: when they answer, it is in Pay, to pay in your wallet.`, tone: "ok" });
-      } catch (e2) {
-        lines4.push({ text: `The referral share to ${short9(dr.other)} waits in To sign (${message4(e2)}).` });
+      } catch (e3) {
+        lines4.push({ text: `The referral share to ${short9(dr.other)} waits in To sign (${message4(e3)}).` });
       }
     }
   }
@@ -24234,8 +25033,8 @@ var Damgar = class {
       let l = null;
       try {
         l = await this.judge(me, s, book, others);
-      } catch (e2) {
-        problems.push(`This identity could not be looked up: ${message4(e2)}`);
+      } catch (e3) {
+        problems.push(`This identity could not be looked up: ${message4(e3)}`);
       }
       const opts = await this.judgeOpts(me);
       const payments = Object.values(book.payments).sort((a, b) => b.at - a.at).map((p) => {
@@ -24243,8 +25042,8 @@ var Damgar = class {
           let j = { rail: { answer: "unknown", why: "not judged" }, beside: { answer: "unknown", why: "" }, standing: "unknown" };
           try {
             if (l) j = l.verifier.moneyJudge(act, opts);
-          } catch (e2) {
-            j.rail.why = message4(e2);
+          } catch (e3) {
+            j.rail.why = message4(e3);
           }
           return { act, kind, by: this.who(kind === "claim" ? p.side === "out" ? me.id : p.other : p.side === "out" ? p.other : me.id, me.id), rail: j.rail, beside: j.beside, standing: j.standing, confirmations: j.confirmations ?? null, how: this.howSaid(book, act, j.standing) };
         });
@@ -24343,13 +25142,13 @@ var Damgar = class {
   // ------------------------------------------------------------ lanes (F338 round 2, F351)
   /** A lane's grant in plain words, read back before it is signed: what it reaches, how much one act may move, until when, who holds its key. */
   laneWords(me, g, acc) {
-    const read2 = { grantee: me.id, scope: 2, kinds: g.kinds, limits: g.limits, limitsProblem: null, key: "" };
+    const read3 = { grantee: me.id, scope: 2, kinds: g.kinds, limits: g.limits, limitsProblem: null, key: "" };
     const kindSaid = (k) => k.spec === MONEY && k.type === 2 ? "receipts (\u201CI received this\u201D)" : k.spec === MONEY && k.type === 3 ? "payment claims (\u201CI paid this\u201D)" : MESSAGES_SPECS.includes(k.spec) && k.type === 3 ? "invoice requests (asking a payee where to pay)" : MESSAGES_SPECS.includes(k.spec) && k.type === 4 ? "answers to invoice requests (an invoice, or an address)" : `acts of type ${k.type} of ${k.spec.slice(0, 8)}\u2026`;
     const out = [
       `A lane named \u201C${g.label}\u201D, asked by ${g.app}: a grant of this identity to itself (Agreements draft 15, rule 73, F351), naming a key that ${g.app} made and holds. With it, ${g.app} signs in your name, by itself, without opening Damgar, within these limits only.`,
       `What it may sign: ${g.kinds.map(kindSaid).join("; ")}. Nothing else: never a grant, a revocation, a pointer, a debt or a post.`,
       g.limits?.cap ? `How much one act may move: at most ${say({ unit: g.limits.cap.unit, value: g.limits.cap.value }, acc)} (the grant limits cMIP, 2). An act above it is refused before it is signed, and one signed anyway counts for nothing.` : "How much one act may move: no cap. A lane without a cap is refused here.",
-      g.limits?.expiry?.clock === "timestamp" ? grantInWords(read2, me.id, short9).find((l) => l.startsWith("Until")) ?? "" : "Until: no expiry; it ends only when you revoke it.",
+      g.limits?.expiry?.clock === "timestamp" ? grantInWords(read3, me.id, short9).find((l) => l.startsWith("Until")) ?? "" : "Until: no expiry; it ends only when you revoke it.",
       "Every act signed under it is shown, here and to every reader, as signed under this lane, not with your own key. One revocation ends it, here in Lanes.",
       "Public: the grant is published at your relays and homes (rule 73: a private grant backs nothing), so anyone can see that you hold such a lane, and its limits. Its name stays here."
     ];
@@ -24398,8 +25197,8 @@ var Damgar = class {
     const lines4 = [];
     try {
       limits = r.limits === null ? null : readLimits(r.limits);
-    } catch (e2) {
-      lines4.push({ text: `Its limits cannot be read (${message4(e2)}): it cannot be granted.`, tone: "warn" });
+    } catch (e3) {
+      lines4.push({ text: `Its limits cannot be read (${message4(e3)}): it cannot be granted.`, tone: "warn" });
     }
     const unknown = !acc.has(GRANT_LIMITS_SPEC) || !limits?.cap;
     if (!acc.has(GRANT_LIMITS_SPEC)) lines4.push({ text: "Lanes carry their limits under the grant limits cMIP, which you do not accept: accept it in Settings to grant a lane.", tone: "warn" });
@@ -24563,33 +25362,33 @@ var Damgar = class {
     const acc = this.acceptedSet(await this.accepted(me));
     const { vault, pointer } = await this.ownVault(me, s);
     const blocking = [];
-    const e2 = vault?.entries[a.entry];
+    const e3 = vault?.entries[a.entry];
     if (!vault) blocking.push("Your identity\u2019s chain declares no vault: declare one in Ki\u0161ib, in a change of keys (Money rule 2).");
-    else if (!e2) blocking.push("Choose one of your vault\u2019s entries.");
+    else if (!e3) blocking.push("Choose one of your vault\u2019s entries.");
     if (!pointer) blocking.push("You have no payee pointer yet: a transfer to your vault follows it (a reading: the payment cMIP\u2019s next draft will let it name the vault itself). Say where you are paid first.");
     const value = Number(a.value);
     if (!Number.isSafeInteger(value) || value <= 0) blocking.push("An amount is a whole number above zero.");
-    if (e2 && !acc.has(e2.railModule)) blocking.push(`${railName(e2.railModule)} is not accepted for this identity (Settings).`);
-    if (e2 && e2.railModule === SPEC.onchain.hash && value > 0 && value < 330) blocking.push("Amounts below 330 satoshis cannot be paid on the on-chain rail.");
-    const amount = e2 && value > 0 ? { unit: e2.unit, value } : null;
+    if (e3 && !acc.has(e3.railModule)) blocking.push(`${railName(e3.railModule)} is not accepted for this identity (Settings).`);
+    if (e3 && e3.railModule === SPEC.onchain.hash && value > 0 && value < 330) blocking.push("Amounts below 330 satoshis cannot be paid on the on-chain rail.");
+    const amount = e3 && value > 0 ? { unit: e3.unit, value } : null;
     const lines4 = [];
     const costs = [];
-    if (e2 && amount) {
-      const where = e2.railModule === SPEC.lightning.hash ? `its node ${readLightningAddress(e2.source)?.node.slice(0, 16) ?? "?"}\u2026` : `its Bitcoin key ${readOnchainAddress(e2.source)?.key.slice(0, 16) ?? "?"}\u2026`;
+    if (e3 && amount) {
+      const where = e3.railModule === SPEC.lightning.hash ? `its node ${readLightningAddress(e3.source)?.node.slice(0, 16) ?? "?"}\u2026` : `its Bitcoin key ${readOnchainAddress(e3.source)?.key.slice(0, 16) ?? "?"}\u2026`;
       lines4.push(
-        { text: `To your vault: the entry on ${railName(e2.railModule)}, ${where}, declared in your chain (act ${vault.declaredBy.slice(0, 12)}\u2026) with the chain key.` },
+        { text: `To your vault: the entry on ${railName(e3.railModule)}, ${where}, declared in your chain (act ${vault.declaredBy.slice(0, 12)}\u2026) with the chain key.` },
         { text: `The amount: ${say(amount, acc)}, from your wallet (on regtest, the test wallet). It is a payment from you to you: Damgar binds it, you pay it in your wallet and paste the proof back, and Damgar checks it as any payment (F355).` },
-        e2.railModule === SPEC.lightning.hash ? { text: "The fee: your wallet\u2019s routing fee, which it shows before you pay. Damgar holds no wallet and cannot see it. Between two nodes with a direct channel it is usually none." } : { text: "The fee: the miners\u2019 fee your wallet sets when it sends, on top of the amount. Damgar holds no wallet and cannot see it; on regtest the test wallet chooses it." }
+        e3.railModule === SPEC.lightning.hash ? { text: "The fee: your wallet\u2019s routing fee, which it shows before you pay. Damgar holds no wallet and cannot see it. Between two nodes with a direct channel it is usually none." } : { text: "The fee: the miners\u2019 fee your wallet sets when it sends, on top of the amount. Damgar holds no wallet and cannot see it; on regtest the test wallet chooses it." }
       );
-      if (e2.railModule === SPEC.lightning.hash) lines4.push({ text: "Its invoice is made by your vault\u2019s node, not by Damgar: you make it there (on regtest, in the test wallet, on the vault\u2019s node) with the description hash Damgar shows, and paste it back." });
+      if (e3.railModule === SPEC.lightning.hash) lines4.push({ text: "Its invoice is made by your vault\u2019s node, not by Damgar: you make it there (on regtest, in the test wallet, on the vault\u2019s node) with the description hash Damgar shows, and paste it back." });
       costs.push(
         { text: "This money can then be spent only with the chain key and its record: the vault\u2019s own key, declared with your chain key in Ki\u0161ib, and the record Damgar keeps sealed to you at your homes (your claim of the payment, its commitment and salt included).", tone: "warn" },
-        ...e2.railModule === SPEC.onchain.hash ? [{ text: "On-chain, the money sits at an address made from your vault\u2019s key and this payment\u2019s commitment: without the record, the vault\u2019s key alone does not find it.", tone: "warn" }] : [],
+        ...e3.railModule === SPEC.onchain.hash ? [{ text: "On-chain, the money sits at an address made from your vault\u2019s key and this payment\u2019s commitment: without the record, the vault\u2019s key alone does not find it.", tone: "warn" }] : [],
         { text: "One way only: Damgar never takes money out of the vault. Withdrawing needs the chain key and stays in Ki\u0161ib.", tone: "warn" }
       );
     }
-    const digest = sha2562(cborEncode(["MOR Damgar transfer to the vault, version 1", me.id, a.entry, vault?.declaredBy ?? "", e2?.unit ?? "", value, pointer ?? ""]));
-    return { lines: lines4, costs, blocking, digest, plan: e2 && amount && pointer && !blocking.length ? { entry: a.entry, amount, declaredBy: vault.declaredBy, module: e2.railModule, source: e2.source, pointer } : null };
+    const digest = sha2562(cborEncode(["MOR Damgar transfer to the vault, version 1", me.id, a.entry, vault?.declaredBy ?? "", e3?.unit ?? "", value, pointer ?? ""]));
+    return { lines: lines4, costs, blocking, digest, plan: e3 && amount && pointer && !blocking.length ? { entry: a.entry, amount, declaredBy: vault.declaredBy, module: e3.railModule, source: e3.source, pointer } : null };
   }
   /** A transfer to the vault read back before anything is bound (H46, F355). */
   vaultTransferRead(a) {
@@ -24766,11 +25565,11 @@ var Damgar = class {
         pointer,
         vault: v ? {
           declaredBy: v.declaredBy,
-          entries: v.entries.map((e2) => ({
-            unit: { unit: e2.unit, value: 0, said: unitOf(e2.unit)?.unit.name ?? `unit ${e2.unit.slice(0, 8)}\u2026` },
-            railName: railName(e2.railModule),
-            limit: { unit: e2.unit, value: e2.limit, said: say({ unit: e2.unit, value: e2.limit }, acc) },
-            said: e2.limit === 0 ? "every payment in this unit goes to the vault (flow off)" : `a single payment above ${say({ unit: e2.unit, value: e2.limit }, acc)} goes to your vault, not your flow`
+          entries: v.entries.map((e3) => ({
+            unit: { unit: e3.unit, value: 0, said: unitOf(e3.unit)?.unit.name ?? `unit ${e3.unit.slice(0, 8)}\u2026` },
+            railName: railName(e3.railModule),
+            limit: { unit: e3.unit, value: e3.limit, said: say({ unit: e3.unit, value: e3.limit }, acc) },
+            said: e3.limit === 0 ? "every payment in this unit goes to the vault (flow off)" : `a single payment above ${say({ unit: e3.unit, value: e3.limit }, acc)} goes to your vault, not your flow`
           }))
         } : null,
         requestKey: keys.request ? onchainKey(unhex(keys.request)) : null,
@@ -25050,7 +25849,7 @@ var DamgarKeepInDub = class {
   }
 };
 var now5 = () => Math.floor(Date.now() / 1e3);
-var message5 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message5 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var list6 = (xs) => [...new Set(xs.filter(Boolean))];
 var DubMoney = class {
   constructor(store, opts) {
@@ -25122,7 +25921,7 @@ var DubMoney = class {
   }
   /** The payments asked here: answered ones to pay in the wallet, the others waiting, after a look for answers and receipts. */
   async payments() {
-    const looked = await this.engine.look().catch((e2) => ({ lines: [], problems: [message5(e2)] }));
+    const looked = await this.engine.look().catch((e3) => ({ lines: [], problems: [message5(e3)] }));
     const pay = (await this.engine.pay()).payments;
     const done2 = (await this.engine.account()).payments.filter((p) => p.side === "out" && !pay.some((x) => x.key === p.key)).slice(0, 10);
     return { payments: pay, done: done2, problems: looked.problems };
@@ -25204,8 +26003,8 @@ var DubMoney = class {
         if (p.media === "picture") out.picture = `data:image/jpeg;base64,${base64(bytes)}`;
         else out.text = new TextDecoder().decode(bytes);
         if (out.state !== "yours") out.state = "opened";
-      } catch (e2) {
-        out.problem = `its key is here, but ${message5(e2)}`;
+      } catch (e3) {
+        out.problem = `its key is here, but ${message5(e3)}`;
       }
     }
     return out;
@@ -25252,7 +26051,7 @@ var DubMoney = class {
     const bought = await this.store.money(me.id, "bought") ?? {};
     const waiting = Object.entries(bought).filter(([, b]) => !b.key);
     if (!waiting.length) return [];
-    const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
     const out = [];
     for (const h of list6([...inbox, ...me.f.homes.map((x) => x.hint)])) {
       let after2;
@@ -25343,21 +26142,21 @@ var DubMoney = class {
   }
   /** Buy a vow under the lane: an invoice request following its offer; its claim, once paid, is also published, so its sale is seen (Agreements rule 13). */
   async buyVow(me, hints, via, a) {
-    const card = await this.readVowRef(me, hints, via, [{ id: a.post, signer: a.seller }, ...(describeAct((await followRef([a.post, a.seller], hints, via)).act).refs ?? []).map((id) => ({ id, signer: a.seller }))]);
-    if (!card || card.vow !== a.vow) throw new Error("That post names no vow. Nothing was signed.");
-    if (card.seller === me.id) throw new Error("That vow is your own. Nothing was signed.");
-    if (!card.offer || card.problem) throw new Error(`${card.problem ?? "No offer was found"}. Nothing was signed.`);
-    const offer = readVowOffer((await followRef([card.offer, card.seller], hints, via)).act, card.seller, card.vow);
+    const card2 = await this.readVowRef(me, hints, via, [{ id: a.post, signer: a.seller }, ...(describeAct((await followRef([a.post, a.seller], hints, via)).act).refs ?? []).map((id) => ({ id, signer: a.seller }))]);
+    if (!card2 || card2.vow !== a.vow) throw new Error("That post names no vow. Nothing was signed.");
+    if (card2.seller === me.id) throw new Error("That vow is your own. Nothing was signed.");
+    if (!card2.offer || card2.problem) throw new Error(`${card2.problem ?? "No offer was found"}. Nothing was signed.`);
+    const offer = readVowOffer((await followRef([card2.offer, card2.seller], hints, via)).act, card2.seller, card2.vow);
     let purchase = null;
     if (offer.under) {
-      const now8 = await collectiveNow(card.seller, await collectivePlaces(card.seller, hints, via), via).catch(() => null);
+      const now8 = await collectiveNow(card2.seller, await collectivePlaces(card2.seller, hints, via), via).catch(() => null);
       purchase = [offer.under, now8?.agreement ?? offer.under];
     }
-    const r = await this.engine.payUnderLane({ payee: card.seller, amount: offer.price, whatFor: "a vow", fulfils: offer.offer, refs: [[card.vow, card.seller]], visible: true, purchase });
+    const r = await this.engine.payUnderLane({ payee: card2.seller, amount: offer.price, whatFor: "a vow", fulfils: offer.offer, refs: [[card2.vow, card2.seller]], visible: true, purchase });
     const vows = await this.store.money(me.id, "vows") ?? {};
-    vows[card.vow] = { seller: card.seller, offer: offer.offer, payment: r.key, post: a.post, words: card.words };
+    vows[card2.vow] = { seller: card2.seller, offer: offer.offer, payment: r.key, post: a.post, words: card2.words };
     await this.store.saveMoney(me.id, "vows", vows);
-    return [...r.lines.map((l) => l.text), "Once paid, your claim of the payment is published too: it is the sale, pending until you confirm or contest it (Signing tab)."];
+    return [...r.lines.map((l) => l.text), "Once paid, your claim of the payment is published too: it is the sale, pending until you confirm or contest it, in its menu (Purchases)."];
   }
   /** The vows bought here, each with its sale's state as the relays asked read it (the look-up, `vows.ts`). */
   async vowsBought(me, hints, via) {
@@ -25425,7 +26224,7 @@ var NO_KEY_SAY2 = "This app holds no encryption key for this identity, so its pr
 var READER = "https://reader.dubsar.org/";
 var NO_SIGNING = () => ({ answered: {}, waiting: {}, received: {} });
 var list7 = (xs) => [...new Set(xs.map((s) => s.trim()).filter(Boolean))];
-var message6 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var message6 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var now6 = () => Math.floor(Date.now() / 1e3);
 var fingerprint2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 function randomBelow(n) {
@@ -25472,10 +26271,15 @@ var Dub = class _Dub {
     return next;
   }
   // ------------------------------------------------------------ who is who
+  /** Where this app found the identities it shows (its own relays): the hint an ID link carries where nothing better is known. */
+  near = [];
   whoFrom(id, me, p) {
     const f = p?.follows.find((x) => x.id === id);
+    const hints = [...p?.where?.[id] ?? [], ...this.near].filter((h) => /^https?:\/\//.test(h)).slice(0, 1);
     return {
       id,
+      form: /^[0-9a-f]{64}$/.test(id) ? idForm(id) : id,
+      link: /^[0-9a-f]{64}$/.test(id) ? idWhere(id, hints) : id,
       short: fingerprint2(id),
       names: this.names.get(id)?.names ?? [],
       pet: f?.name ?? null,
@@ -25534,8 +26338,12 @@ var Dub = class _Dub {
         sealed: p.sealed ? { version: p.sealed.version, forked: !!p.sealed.forked } : null,
         signing: !!s.signing,
         follows: p.follows.map((f) => this.whoFrom(f.id, me.id, p)),
-        muted: p.muted.map((m) => this.whoFrom(m, me.id, p))
+        muted: p.muted.map((m) => this.whoFrom(m, me.id, p)),
+        collectives: (s.collectives ?? []).map((c2) => ({ id: c2.id, form: idForm(c2.id), name: this.names.get(c2.id)?.names[0] ?? null, available: c2.available, why: c2.why })),
+        acting: s.acting ?? null,
+        clock: s.clock ? { id: s.clock.id, form: idForm(s.clock.id), name: s.clock.name } : null
       };
+      out.proposalsWaiting = p.inbox.items.filter((k) => k.talk && k.talk.thread === k.key && k.from && k.from !== me.id && k.refs.length).length;
     }
     return out;
   }
@@ -25545,6 +26353,7 @@ var Dub = class _Dub {
     if (!me) throw new Error("No identity in use: make one, or bring one, in the identity window.");
     const s = await this.store.settings(me.id);
     const p = await this.store.people(me.id);
+    this.near = s.relays.slice(0, 1);
     return { me, s, p, hints: [.../* @__PURE__ */ new Set([...s.relays, ...me.f.homes.map((h) => h.hint), ...Object.values(p.where ?? {}).flat()])] };
   }
   /** Each home's operator, as it declares itself (relay transport cMIP, `info`). */
@@ -25555,8 +26364,8 @@ var Dub = class _Dub {
       let info;
       try {
         info = await relayAt(hint, via).info();
-      } catch (e2) {
-        throw new Error(`${hint} did not answer: ${message6(e2)}`);
+      } catch (e3) {
+        throw new Error(`${hint} did not answer: ${message6(e3)}`);
       }
       const op = info.get(0);
       if (!(op instanceof Uint8Array)) throw new Error(`${hint} is not a home: it declares no operator`);
@@ -25641,8 +26450,8 @@ var Dub = class _Dub {
       if (p.name) {
         try {
           lines4.push(...(await this.publishName(id, { relays: p.relays, via: p.via }, p.name)).lines);
-        } catch (e2) {
-          lines4.push({ text: `The display name was not published (${message6(e2)}). Give it again in the identity window.`, tone: "warn" });
+        } catch (e3) {
+          lines4.push({ text: `The display name was not published (${message6(e3)}). Give it again in the identity window.`, tone: "warn" });
         }
       }
       return { lines: lines4 };
@@ -25665,9 +26474,9 @@ var Dub = class _Dub {
       try {
         id = readId(a.id);
         seed = fromWords(a.words);
-      } catch (e2) {
-        if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
-        throw e2;
+      } catch (e3) {
+        if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
+        throw e3;
       }
       if ((await this.store.held()).includes(id)) return this.renewHeld(id, seed);
       const address = a.address.trim();
@@ -25735,9 +26544,9 @@ var Dub = class _Dub {
       let seed;
       try {
         seed = fromWords(words2);
-      } catch (e2) {
-        if (e2 instanceof Refused) throw new Error(`${e2.message}. Nothing was kept.`);
-        throw e2;
+      } catch (e3) {
+        if (e3 instanceof Refused) throw new Error(`${e3.message}. Nothing was kept.`);
+        throw e3;
       }
       return this.renewHeld(active, seed);
     });
@@ -25762,13 +26571,13 @@ var Dub = class _Dub {
     const carried = this.carriedKey(look, seed);
     const last = me.f.encryption.at(-1);
     if (carried) {
-      if (!me.f.encryption.some((e2) => e2.act === carried.act)) me.f.encryption.push(carried);
+      if (!me.f.encryption.some((e3) => e3.act === carried.act)) me.f.encryption.push(carried);
       lines4.push({ text: "Its encryption key is the one the new words carry.", tone: "ok" });
       await this.store.saveIdentity(me);
     } else if (last && look.encryptionKeyAct === last.act) {
       await this.store.saveIdentity(me);
       await me.publishEncryptionKey(encryptionSecret(seed));
-      const resealed = await resealMemberKeys(me.id, me.f.encryption.slice(0, -1).map((e2) => unhex(e2.secret)), xwingPublic(encryptionSecret(seed)), me.f.homes.map((h) => h.hint), me.via).catch(() => 0);
+      const resealed = await resealMemberKeys(me.id, me.f.encryption.slice(0, -1).map((e3) => unhex(e3.secret)), xwingPublic(encryptionSecret(seed)), me.f.homes.map((h) => h.hint), me.via).catch(() => 0);
       if (resealed) lines4.push({ text: `Its ${resealed} member key${resealed === 1 ? "" : "s"} for collectives, sealed to it, sealed again to the new encryption key: unchanged, so its apps still act with them (F353).`, tone: "ok" });
       await this.store.saveIdentity(me);
       lines4.push({ text: "Its encryption key was renewed from the new words: messages sealed from now on open only with them. Messages sealed before, to the old key, stay readable by whoever held the old words.", tone: "ok" });
@@ -25816,9 +26625,9 @@ var Dub = class _Dub {
     try {
       await this.current(me);
       return { current: true, say: null };
-    } catch (e2) {
-      if (message6(e2) === SPENT_SAY2) return { current: false, say: SPENT_SAY2 };
-      throw e2;
+    } catch (e3) {
+      if (message6(e3) === SPENT_SAY2) return { current: false, say: SPENT_SAY2 };
+      throw e3;
     }
   }
   /** Refuse to sign once a rotation counts that this app did not see: the key it holds is spent. */
@@ -25891,23 +26700,26 @@ var Dub = class _Dub {
       const { me, s, p, hints } = await this.ctx();
       const { text: text4, changes } = compose(a.text);
       if (!text4.trim()) throw new Error("Write something to post.");
+      if (a.jpeg && a.mp4) throw new Error("A picture or a film, one at a time. Nothing was posted.");
+      if (s.acting) return this.postAsCollective(me, s, p, hints, text4, a);
       const to = [];
-      if (a.to?.trim()) {
+      for (const typed of (Array.isArray(a.to) ? a.to : [a.to ?? ""]).map((x) => x.trim()).filter(Boolean)) {
         let id;
         let where = [];
         try {
-          ({ id, hints: where } = readIdWhere(a.to));
-        } catch (e2) {
-          throw new Error(`To: ${message6(e2)}. Nothing was posted.`);
+          ({ id, hints: where } = readIdWhere(typed));
+        } catch (e3) {
+          throw new Error(`To: ${message6(e3)}. Nothing was posted.`);
         }
+        if (to.some((t) => t.id === id)) continue;
         if (id === me.id) throw new Error("To: that is this identity itself. Nothing was posted.");
         let inbox;
         try {
           inbox = (await lookUp(id, [...where, ...hints], s.via)).inbox(SPECS.text);
-        } catch (e2) {
-          throw new Error(`To: the identity ${fingerprint2(id)} was not found: ${message6(e2)}. Nothing was posted.`);
+        } catch (e3) {
+          throw new Error(`To: the identity ${shortId(id)} was not found: ${message6(e3)}. Nothing was posted.`);
         }
-        if (!inbox?.length) throw new Error(`To: the identity ${fingerprint2(id)} declares no inbox, so nothing can be left for it. Nothing was posted.`);
+        if (!inbox?.length) throw new Error(`To: the identity ${shortId(id)} declares no inbox, so nothing can be left for it. Nothing was posted.`);
         to.push({ id, inbox });
       }
       let refs;
@@ -25917,29 +26729,29 @@ var Dub = class _Dub {
         let act;
         try {
           act = (await followRef([id, signer], [...hints, ...this.inboxPlaces(p)], s.via)).act;
-        } catch (e2) {
-          throw new Error(`The post answered could not be found: ${message6(e2)}. Nothing was posted.`);
+        } catch (e3) {
+          throw new Error(`The post answered could not be found: ${message6(e3)}. Nothing was posted.`);
         }
         const d = describeAct(act);
         refs = [[d.id, d.signer]];
         if (d.signer !== me.id && !to.some((t) => t.id === d.signer)) {
           try {
             to.push({ id: d.signer, inbox: (await lookUp(d.signer, hints, s.via)).inbox(SPECS.text) });
-          } catch (e2) {
-            to.push({ id: d.signer, inbox: null, why: message6(e2) });
+          } catch (e3) {
+            to.push({ id: d.signer, inbox: null, why: message6(e3) });
           }
         }
       }
       await this.current(me);
-      const made = await this.signed(me, () => post(me, { text: text4, jpeg: a.jpeg, relays: s.relays, to: to.length ? to.map((t) => t.id) : void 0, refs }));
+      const made = await this.signed(me, () => post(me, { text: text4, jpeg: a.jpeg, mp4: a.mp4, relays: s.relays, to: to.length ? to.map((t) => t.id) : void 0, refs }));
       const lines4 = changes.map((c2) => ({ text: `Text: ${c2}.` }));
       for (const t of to) {
         if (!t.inbox?.length) {
-          lines4.push({ text: `${fingerprint2(t.id)} declares no inbox${t.why ? ` (${t.why})` : ""}: the reply is published, not left for it.`, tone: "warn" });
+          lines4.push({ text: `${shortId(t.id)} declares no inbox${t.why ? ` (${t.why})` : ""}: the reply is published, not left for it.`, tone: "warn" });
           continue;
         }
         const { left, failed } = await leaveInInbox(me, made.act, t.inbox);
-        if (left.length) lines4.push({ text: `Left in the inbox of ${fingerprint2(t.id)} too, unsealed: anyone may read it.`, tone: "ok" });
+        if (left.length) lines4.push({ text: `Left in the inbox of ${shortId(t.id)} too, unsealed: anyone may read it.`, tone: "ok" });
         if (failed.length) lines4.push({ text: `Its inbox did not take it at ${failed.map((f) => `${f.relay} (${f.reason})`).join(", ")}.`, tone: left.length ? "warn" : "bad" });
       }
       if (made.picture) {
@@ -25948,9 +26760,37 @@ var Dub = class _Dub {
           tone: "ok"
         });
       }
+      if (made.film) lines4.push({ text: made.film.removed.length ? `Taken out of the film before publishing: ${made.film.removed.join("; ")}.` : "The film carried nothing to take out.", tone: "ok" });
       const shown3 = await readPost(made.id, hints, s.via);
       return { post: this.item(shown3, me.id, p, s, "feed", [], false), lines: lines4 };
     });
+  }
+  /**
+   * A public post signed as the collective acted as, with this identity's
+   * own member key (F353), in the area reaching public posts: text, and a
+   * reply's reference. Where the area asks more keys than one, it counts
+   * once its other holders sign it (in Edubba's To sign), said.
+   */
+  async postAsCollective(me, s, p, hints, text4, a) {
+    const collective = s.acting;
+    if (a.jpeg || a.mp4 || (Array.isArray(a.to) ? a.to.some((x) => x.trim()) : a.to?.trim())) throw new Error("As a collective, Dub posts text and replies only: no picture, film or address. Nothing was posted.");
+    const k = await this.memberKeyHere(me, s, collective, hints);
+    if (!k.key || k.why) throw new Error(`Dub cannot post as this collective: ${k.why ?? "no member key"} Nothing was posted.`);
+    await this.current(me);
+    const refs = a.reply ? [[readId(a.reply.id), readId(a.reply.signer)]] : [];
+    const at2 = await chainFor(collective, k.key, k.places, s.via);
+    const made = signAsMember(collective, k.key, at2, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text4), public: true, ...refs.length ? { refs } : {} });
+    const took = await publishAt([made.act], [.../* @__PURE__ */ new Set([...s.relays, ...k.places])], s.via);
+    if (!took.length) throw new Error("No relay took the post. Nothing counts yet: try again.");
+    const lines4 = [{ text: `Posted as the collective, with your own member key, at ${took.join(", ")}.`, tone: "ok" }];
+    if (k.number > 1) lines4.push({ text: `Its area asks ${k.number} keys: it counts once another holder signs it too (Edubba, Collectives \u203A To sign).`, tone: "warn" });
+    let item2;
+    try {
+      item2 = this.item(await readPost(made.id, [...s.relays, ...k.places], s.via), me.id, p, s, "feed", [], false);
+    } catch {
+      item2 = { id: made.id, form: actForm(made.id), who: this.whoFrom(collective, me.id, p), standing: "unknown", text: text4, doc: null, pictures: [], answers: [], toMe: false, via: "feed", problem: null, seen: true };
+    }
+    return { post: item2, lines: lines4 };
   }
   /** A post read and judged, as the page shows it. */
   item(sp, me, p, s, via, answers, toMe) {
@@ -25962,14 +26802,17 @@ var Dub = class _Dub {
       problem: r.problem,
       withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === "valid"
     }));
+    const films = sp.refs.filter((r) => r.kind === "film").map((r) => ({ publication: r.publication, signer: r.signer, size: r.size, problem: r.problem, withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === "valid" }));
     const doc = isLongForm(sp.format) ? { title: titleOf2(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) } : null;
     return {
       id: sp.id,
+      form: actForm(sp.id),
       who: this.whoFrom(sp.signer, me, p),
       standing: sp.standing,
       text: doc ? "" : sp.text,
       doc,
       pictures,
+      films,
       answers,
       toMe,
       via,
@@ -25988,8 +26831,8 @@ var Dub = class _Dub {
   async feed(fresh = false) {
     const { notes, changed: followsChanged } = await this.refreshFollows(fresh);
     const { me, s, p, hints } = await this.ctx();
-    const authors = [me.id, ...p.follows.map((f) => f.id).filter((id) => !p.muted.includes(id))].map((identity2) => ({ identity: identity2, name: null }));
-    const feed = await readFeed(authors, hints, s.via);
+    const authors = [me.id, ...s.acting ? [s.acting] : [], ...p.follows.map((f) => f.id).filter((id) => !p.muted.includes(id))].map((identity2) => ({ identity: identity2, name: null }));
+    const feed = await readFeed(authors, hints, s.via, void 0, s.clock ? { identity: s.clock.id, name: s.clock.name } : null);
     await this.warm([...feed.posts.map((x) => x.signer), ...[...feed.answered.values()].map((x) => x.signer).filter(Boolean)], hints, s.via);
     const items = [];
     for (const fp3 of feed.posts) {
@@ -26003,33 +26846,37 @@ var Dub = class _Dub {
       });
       const toMe = fp3.signer !== me.id && answers.some((x) => x.who?.me);
       const it = { ...this.item(fp3.post, me.id, p, s, "feed", fp3.corrects ? answers.filter((x) => x.id !== fp3.corrects) : answers, toMe), corrects: fp3.corrects ?? null, correctedBy: fp3.correctedBy ?? [] };
+      it.when = fp3.time ? timeWords(fp3.time) : null;
+      it.labels = await this.labelsOf(fp3.post, me.id, p, [...hints, ...this.inboxPlaces(p)], s.via);
       if (fp3.post.refs.some((r) => r.kind === "picture" && !r.bytes)) {
-        const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp3.post.refs.map((r) => r.kind === "picture" ? { id: r.publication, signer: r.signer || void 0 } : { id: r.id, signer: r.signer ?? r.actSigner })).catch(() => null);
+        const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp3.post.refs.map((r) => r.kind === "picture" || r.kind === "film" ? { id: r.publication, signer: r.signer || void 0 } : { id: r.id, signer: r.signer ?? r.actSigner })).catch(() => null);
         if (sealed) {
           it.sealed = sealed;
           it.pictures = it.pictures.filter((x) => x.publication !== sealed.publication);
           if (sealed.seller !== fp3.signer) it.repost = { by: this.whoFrom(fp3.signer, me.id, p), of: this.whoFrom(sealed.seller, me.id, p) };
         }
       }
-      if (!it.sealed && fp3.post.refs.some((r) => r.kind !== "picture")) {
-        const vow = await this.money.readVowRef(me, [...hints, ...this.inboxPlaces(p)], s.via, fp3.post.refs.filter((r) => r.kind !== "picture").map((r) => ({ id: r.id, signer: r.signer ?? r.actSigner }))).catch(() => null);
+      if (!it.sealed && fp3.post.refs.some((r) => r.kind === "act")) {
+        const vow = await this.money.readVowRef(me, [...hints, ...this.inboxPlaces(p)], s.via, fp3.post.refs.filter((r) => r.kind === "act").map((r) => ({ id: r.id, signer: r.signer ?? r.actSigner }))).catch(() => null);
         if (vow) it.vow = vow;
       }
       items.push(it);
     }
     for (const it of items) {
       if (it.standing === "valid" || it.via !== "feed") continue;
-      const a = await authorityOfId(it.id, hints, s.via, { names: (id) => this.whoFrom(id, me.id, p).pet ?? this.whoFrom(id, me.id, p).names[0] ?? fingerprint2(id) }).catch(() => null);
+      const a = await authorityOfId(it.id, hints, s.via, { names: (id) => this.whoFrom(id, me.id, p).pet ?? this.whoFrom(id, me.id, p).names[0] ?? shortId(id) }).catch(() => null);
       if (!a) continue;
       const backed = a.backing === "backed" || a.backing === "binds";
       it.authority = { words: a.words, backed };
       it.problem = backed ? null : it.problem;
     }
-    const problems = feed.authors.filter((a) => a.problem).map((a) => `${fingerprint2(a.identity)}: ${a.problem}`);
-    return { items, more: feed.more, problems, notes, followsChanged };
+    const problems = feed.authors.filter((a) => a.problem).map((a) => `${shortId(a.identity)}: ${a.problem}`);
+    if (feed.clock?.problem) problems.push(`${s.clock?.name ?? "The clock"}: ${feed.clock.problem}`);
+    const clock = s.clock ? { name: s.clock.name, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null;
+    return { items, more: feed.more, problems, notes, followsChanged, clock };
   }
   unread(fp3, me, p) {
-    return { id: fp3.id, who: this.whoFrom(fp3.signer, me, p), standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "feed", problem: fp3.problem, seen: true };
+    return { id: fp3.id, form: actForm(fp3.id), who: this.whoFrom(fp3.signer, me, p), standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "feed", problem: fp3.problem, seen: true };
   }
   // ------------------------------------------------------------ the relay view (H29)
   /** What each relay was read up to, and its latest acts, by address (this app's memory only). */
@@ -26043,7 +26890,7 @@ var Dub = class _Dub {
    * is named by what it is. Muted identities are left out (the people cMIP,
    * 2.2), and counted. At most `max` shown.
    */
-  async relay(max = 30) {
+  async relay(max = 30, layers = RELAY_DEFAULT) {
     const { me, s, p, hints } = await this.ctx();
     const problems = [];
     const columns = [];
@@ -26064,8 +26911,8 @@ var Dub = class _Dub {
           if (!page.items.length || page.next === c2.after) break;
           c2.after = page.next;
         }
-      } catch (e2) {
-        problems.push(`${hint}: ${message6(e2)}`);
+      } catch (e3) {
+        problems.push(`${hint}: ${message6(e3)}`);
       }
       this.relays.set(hint, c2);
       columns.push([...c2.acts].reverse().map((x) => ({ ...x, hint })));
@@ -26073,6 +26920,7 @@ var Dub = class _Dub {
     const order = [];
     for (let i = 0; columns.some((c2) => i < c2.length); i++) for (const c2 of columns) if (c2[i] && !order.some((x) => x.id === c2[i].id)) order.push(c2[i]);
     let hidden = 0;
+    let left = 0;
     const picked = [];
     for (const x of order) {
       const d = describeAct(x.act);
@@ -26080,8 +26928,14 @@ var Dub = class _Dub {
         hidden++;
         continue;
       }
+      if (!layers.includes(layerOf(d))) {
+        left++;
+        continue;
+      }
       if (picked.length < max) picked.push({ d, hint: x.hint });
     }
+    const times = await this.clockTimes(s, hints);
+    if (times.size) picked.sort((a, b) => (times.get(b.d.id) ?? -1) - (times.get(a.d.id) ?? -1));
     await this.warm(picked.map((x) => x.d.signer ?? x.d.id), hints, s.via);
     const judge2 = new Judge([.../* @__PURE__ */ new Set([...s.relays, ...hints])], s.via);
     const items = [];
@@ -26090,16 +26944,18 @@ var Dub = class _Dub {
       if (d.spec === POST_SPECS.text && d.type === TEXT_ACT && d.signer) {
         try {
           const shown3 = await readPost(d.id, [hint, ...s.relays, ...hints], s.via, judge2);
-          items.push({ ...this.item(shown3, me.id, p, s, "relay", [], false), what: null });
+          items.push({ ...this.item(shown3, me.id, p, s, "relay", [], false), what: null, labels: await this.labelsOf(shown3, me.id, p, [hint, ...s.relays, ...hints], s.via) });
           continue;
-        } catch (e2) {
-          items.push({ id: d.id, who: who3, standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "relay", problem: message6(e2), seen: true, what: "A post" });
+        } catch (e3) {
+          items.push({ id: d.id, form: actForm(d.id), who: who3, standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "relay", problem: message6(e3), seen: true, what: "A post" });
           continue;
         }
       }
-      items.push({ id: d.id, who: who3, standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "relay", problem: null, seen: true, what: whatAct(d) });
+      items.push({ id: d.id, form: actForm(d.id), who: who3, standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "relay", problem: null, seen: true, what: whatAct(d) });
     }
-    return { items, hidden, problems };
+    for (const it of items) it.when = times.has(it.id) ? timeWords(times.get(it.id)) : null;
+    const clock = s.clock ? { name: s.clock.name, placed: items.filter((x) => x.when).length, shown: items.length } : null;
+    return { items, hidden, left, problems, clock };
   }
   // ------------------------------------------------------------ the inbox: "to you", and the private side
   inboxPlaces(p) {
@@ -26118,14 +26974,14 @@ var Dub = class _Dub {
     try {
       const l = await lookUp(me.id, hints, s.via);
       inbox = list7(l.routes.routes.filter((r) => r.kind === 1).flatMap((r) => r.hints));
-    } catch (e2) {
-      problems.push(`Its inbox could not be looked up: ${message6(e2)}`);
+    } catch (e3) {
+      problems.push(`Its inbox could not be looked up: ${message6(e3)}`);
     }
     if (!inbox.length) {
       problems.push("This identity declares no inbox: nothing addressed to it can be found here.");
       return problems;
     }
-    const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
     const looked = /* @__PURE__ */ new Map();
     const judge2 = async (signer, act, id, key) => {
       let l = looked.get(signer);
@@ -26135,8 +26991,8 @@ var Dub = class _Dub {
         if (key) x.verifier.addWithKey(act, key);
         else x.verifier.add(act);
         return x.verifier.status(id);
-      } catch (e2) {
-        return `its signer was not found (${message6(e2)})`;
+      } catch (e3) {
+        return `its signer was not found (${message6(e3)})`;
       }
     };
     for (const hint of inbox) {
@@ -26152,8 +27008,8 @@ var Dub = class _Dub {
           after2 = page.next;
         }
         p.inbox.after[hint] = after2 ?? 0;
-      } catch (e2) {
-        problems.push(`${hint}: ${message6(e2)}`);
+      } catch (e3) {
+        problems.push(`${hint}: ${message6(e3)}`);
       }
     }
     await this.store.savePeople(me.id, p);
@@ -26200,9 +27056,13 @@ var Dub = class _Dub {
     if (!d.signer || d.signer === me) return null;
     const isText = d.spec === POST_SPECS.text && d.type === TEXT_ACT && !!d.payload;
     let text4 = null;
+    let format = null;
     if (isText) {
-      const t = cborDecode(d.payload).get(0);
+      const m = cborDecode(d.payload);
+      const t = m.get(0);
       if (typeof t === "string") text4 = t;
+      const f = m.get(1);
+      if (f instanceof Uint8Array) format = hex(f);
     }
     const talk = readMessage(d);
     if (talk) text4 = talk.text;
@@ -26215,6 +27075,7 @@ var Dub = class _Dub {
       standing: await judge2(d.signer, act, d.id, key),
       refs: (d.refs ?? []).map((id, i) => ({ id, signer: d.refSigners?.[i] ?? null })),
       to: d.to ?? [],
+      format,
       found: now6(),
       problem: d.payload ? void 0 : "a private act whose key was not delivered with it: it cannot be read here"
     };
@@ -26244,6 +27105,7 @@ var Dub = class _Dub {
         } catch {
           item2 = {
             id: k.key,
+            form: actForm(k.key),
             who: this.whoFrom(k.from, me.id, p),
             standing: k.standing,
             text: k.text ?? "",
@@ -26259,18 +27121,49 @@ var Dub = class _Dub {
         item2.seen = p.seen.includes(k.key);
         toYou.push(item2);
       }
+      const privates = shown3.filter((k) => k.kind === "private" || k.kind === "other" && k.key.startsWith("sealed:"));
+      const appended = [...privates.flatMap((k) => k.from && appendedOf(k.format, k.refs) ? [appendedOf(k.format, k.refs)] : []), ...p.sent.flatMap((x) => x.of ? [x.of] : [])];
+      await this.warm([...appended, ...privates.flatMap((k) => k.to), ...p.sent.flatMap((x) => x.cc ?? [])], hints, s.via);
+      const ofFor = async (from, collective) => {
+        if (!collective) return null;
+        const m = await this.member(from, collective, hints, s.via);
+        return { id: collective, name: this.names.get(collective)?.names[0] ?? null, checked: m.checked, why: m.why };
+      };
+      const unknown = { id: "", short: "unknown", names: [], pet: null, me: false, followed: false, muted: false, form: "", link: "" };
       const messages = [
-        ...shown3.filter((k) => k.kind === "private" || k.kind === "other" && k.key.startsWith("sealed:")).map((k) => ({
-          key: k.key,
-          who: k.from ? this.whoFrom(k.from, me.id, p) : { id: "", short: "unknown", names: [], pet: null, me: false, followed: false, muted: false },
-          dir: "in",
-          text: k.text ?? "",
-          standing: k.standing,
-          at: k.found,
-          seen: p.seen.includes(k.key),
-          problem: k.problem ?? (k.standing === "valid" ? null : `not verified: ${k.standing}`)
-        })),
-        ...p.sent.map((x) => ({ key: x.id, who: this.whoFrom(x.to, me.id, p), dir: "out", text: x.text, standing: "valid", at: x.at, seen: true, problem: null }))
+        ...await Promise.all(
+          privates.map(async (k) => ({
+            key: k.key,
+            form: k.key.startsWith("sealed:") ? "" : actForm(k.key),
+            who: k.from ? this.whoFrom(k.from, me.id, p) : unknown,
+            with: k.from ?? k.key,
+            // Every recipient sees who else received it (decided: "all parties see it").
+            cc: k.to.filter((x) => x !== me.id).map((x) => this.whoFrom(x, me.id, p)),
+            of: k.from ? await ofFor(k.from, appendedOf(k.format, k.refs)) : null,
+            dir: "in",
+            text: k.text ?? "",
+            standing: k.standing,
+            at: k.found,
+            seen: p.seen.includes(k.key),
+            problem: k.problem ?? (k.standing === "valid" ? null : `not verified: ${k.standing}`)
+          }))
+        ),
+        ...await Promise.all(
+          p.sent.map(async (x) => ({
+            key: x.id,
+            form: actForm(x.id),
+            who: this.whoFrom(me.id, me.id, p),
+            with: x.to,
+            cc: (x.cc ?? []).map((y) => this.whoFrom(y, me.id, p)),
+            of: await ofFor(me.id, x.of ?? null),
+            dir: "out",
+            text: x.text,
+            standing: "valid",
+            at: x.at,
+            seen: true,
+            problem: null
+          }))
+        )
       ].sort((a, b) => b.at - a.at);
       return { toYou, messages, encryption: me.f.encryption.length > 0, hidden, problems };
     });
@@ -26286,43 +27179,67 @@ var Dub = class _Dub {
   message(a) {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
-      let to;
-      let where = [];
-      try {
-        ({ id: to, hints: where } = readIdWhere(a.to));
-      } catch (e2) {
-        throw new Error(`To: ${message6(e2)}. Nothing was sent.`);
-      }
-      if (to === me.id) throw new Error("To: that is this identity itself. Nothing was sent.");
+      if (s.acting) throw new Error("A collective writes in public only, from Dub: write in your own name, and append the collective to your message. Nothing was sent.");
+      const read3 = (typed, label) => {
+        try {
+          return readIdWhere(typed);
+        } catch (e3) {
+          throw new Error(`${label}: ${message6(e3)}. Nothing was sent.`);
+        }
+      };
+      const first = read3(a.to, "To");
+      const all = [first, ...(a.cc ?? []).filter((x) => x.trim()).map((x) => read3(x, "Cc"))];
+      const to = first.id;
+      const ids = [...new Set(all.map((x) => x.id))];
+      if (ids.includes(me.id)) throw new Error("To or Cc: that is this identity itself. Nothing was sent.");
       const { text: text4 } = compose(a.text);
       if (!text4.trim()) throw new Error("Write something to send.");
-      let l;
-      try {
-        l = await lookUp(to, [...where, ...hints], s.via);
-      } catch (e2) {
-        throw new Error(`To: the identity ${fingerprint2(to)} was not found: ${message6(e2)}. Nothing was sent.`);
+      let of = null;
+      if (a.collective) {
+        of = readId(a.collective);
+        if (!(s.collectives ?? []).some((c2) => c2.id === of)) throw new Error("Only a collective added under this identity can be appended. Nothing was sent.");
       }
-      if (!l.encryptionKey) throw new Error(`To: the identity ${fingerprint2(to)} has published no encryption key, so nothing can be sealed to it. Nothing was sent.`);
-      const inbox = l.inbox(SPECS.text);
-      if (!inbox?.length) throw new Error(`To: the identity ${fingerprint2(to)} declares no inbox. Nothing was sent.`);
+      const reach = [];
+      for (const x of all.filter((y, i) => all.findIndex((z) => z.id === y.id) === i)) {
+        let l;
+        try {
+          l = await lookUp(x.id, [...x.hints, ...hints], s.via);
+        } catch (e3) {
+          throw new Error(`The identity ${shortId(x.id)} was not found: ${message6(e3)}. Nothing was sent.`);
+        }
+        if (!l.encryptionKey) throw new Error(`The identity ${shortId(x.id)} has published no encryption key, so nothing can be sealed to it. Nothing was sent.`);
+        const inbox = l.inbox(SPECS.text);
+        if (!inbox?.length) throw new Error(`The identity ${shortId(x.id)} declares no inbox. Nothing was sent.`);
+        reach.push({ id: x.id, key: l.encryptionKey, inbox });
+      }
       await this.current(me);
-      const made = await this.signed(me, async () => me.sign(SPECS.text, TEXT_ACT, textPayload(text4), { public: false, to: [to] }));
-      const sealed = sealFor(made.act, made.key, [{ id: to, key: l.encryptionKey }]);
+      const made = await this.signed(
+        me,
+        async () => me.sign(SPECS.text, TEXT_ACT, textPayload(text4, of ? APPENDED_FORMAT : null), { public: false, to: ids, ...of ? { refs: [appendedRef(of)] } : {} })
+      );
+      const sealed = sealFor(made.act, made.key, reach.map((r) => ({ id: r.id, key: r.key })));
       const lines4 = [];
       let left = 0;
-      for (const h of inbox) {
-        try {
-          await relayAt(h, s.via).putSealed(sealed);
-          left++;
-        } catch (e2) {
-          lines4.push({ text: `${h} did not take it: ${message6(e2)}`, tone: "warn" });
+      for (const r of reach) {
+        let here = 0;
+        for (const h of r.inbox) {
+          try {
+            await relayAt(h, s.via).putSealed(sealed);
+            here++;
+          } catch (e3) {
+            lines4.push({ text: `${h} did not take it: ${message6(e3)}`, tone: "warn" });
+          }
         }
+        if (here) left++;
+        else if (r.id !== to) lines4.push({ text: `No inbox of ${shortId(r.id)} (Cc) took it.`, tone: "bad" });
       }
-      if (!left) throw new Error(`No inbox of ${fingerprint2(to)} took the message: ${lines4.map((x) => x.text).join("; ")}. It is signed, not delivered.`);
+      if (!left) throw new Error(`No inbox took the message: ${lines4.map((x) => x.text).join("; ")}. It is signed, not delivered.`);
       await this.signed(me, () => leaveAtHomes(me, made, { via: s.via }));
-      p.sent.push({ id: made.id, to, text: text4, at: now6() });
+      const cc = ids.filter((x) => x !== to);
+      p.sent.push({ id: made.id, to, text: text4, at: now6(), ...cc.length ? { cc } : {}, ...of ? { of } : {} });
       await this.store.savePeople(me.id, p);
-      lines4.unshift({ text: `Sealed to ${fingerprint2(to)} and left in its inbox: only it can open it.`, tone: "ok" });
+      lines4.unshift({ text: cc.length ? `Sealed to ${this.nameOf(to, me.id, p)} and, in Cc, ${cc.map((x) => this.nameOf(x, me.id, p)).join(", ")}, and left in each inbox: only they can open it, and each sees who else received it.` : `Sealed to ${this.nameOf(to, me.id, p)} and left in their inbox: only they can open it.`, tone: "ok" });
+      if (of) lines4.push({ text: `Written in your own name, with the collective ${this.nameOf(of, me.id, p)} appended: it binds nothing, and the reader\u2019s app shows it only where your membership checks.` });
       return { lines: lines4 };
     });
   }
@@ -26367,8 +27284,8 @@ var Dub = class _Dub {
           const got = await fetchAct3(act, places, s.via);
           if (!got) problem = `The act it asks you to sign (${act}) was not found at ${places.join(", ")}.`;
           else reading2 = await readProposal(got.act, names2, places, s.via);
-        } catch (e2) {
-          problem = `It could not be read: ${message6(e2)}`;
+        } catch (e3) {
+          problem = `It could not be read: ${message6(e3)}`;
         }
         const ans = st.answered[k.key] ?? null;
         const w = st.waiting[k.key];
@@ -26452,7 +27369,7 @@ var Dub = class _Dub {
       const key = holds ? makeMemberKey() : null;
       let own = null;
       if ((reading2.kind === "act" || reading2.kind === "release") && collective) {
-        const keys = await readMemberKeys(me.id, me.f.encryption.map((e2) => unhex(e2.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
+        const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
         own = keys.length ? await memberKeyFor(keys, collective, where, s.via).catch(() => null) : null;
       }
       let made;
@@ -26468,8 +27385,8 @@ var Dub = class _Dub {
         try {
           await this.signed(me, () => sealMemberKey(me, { terms: act, signature: made.id, public: key.public, secret: key.secret }, () => void 0));
           lines4.push({ text: `Your own key for this collective was made and named in your signature: once the collective is complete, it signs for you in the areas you hold, from any of your apps. Its private half is sealed to you at your homes (it sits there encrypted, a stated cost; F353).`, tone: "ok" });
-        } catch (e2) {
-          lines4.push({ text: `Your own key was named in your signature, but could not be sealed to you: ${message6(e2)}`, tone: "bad" });
+        } catch (e3) {
+          lines4.push({ text: `Your own key was named in your signature, but could not be sealed to you: ${message6(e3)}`, tone: "bad" });
         }
       }
       let oneTime;
@@ -26566,8 +27483,8 @@ ${compose(why).text}` : DECLINED, thread, previous: last, acks: [last] }));
           await this.signed(me, () => negotiate(me, reach, { text: `${RESIGNED}
 ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] }));
           lines4.push({ text: "The founder was told, in the founding\u2019s thread: their Edubba registers it and proposes the change of members without you." });
-        } catch (e2) {
-          lines4.push({ text: `The founder could not be told (${message6(e2)}): their Edubba still finds your resignation at the collective\u2019s relays.`, tone: "warn" });
+        } catch (e3) {
+          lines4.push({ text: `The founder could not be told (${message6(e3)}): their Edubba still finds your resignation at the collective\u2019s relays.`, tone: "warn" });
         }
       }
       st.left = { ...st.left ?? {}, [thread]: made.id };
@@ -26678,6 +27595,489 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       return { lines: lines4 };
     });
   }
+  // ------------------------------------------------------------ the redesign (21 October 2026): what the act card's menus, the profile and the mailbox ask
+  /** Memberships checked lately (the appended collective cMIP), by member and collective: this app's memory only. */
+  checked = /* @__PURE__ */ new Map();
+  /** Whether `member` is a member of `collective` now, read at most every ten minutes. */
+  async member(member, collective, hints, via) {
+    const k = `${member}:${collective}`;
+    const c2 = this.checked.get(k);
+    if (c2 && c2.at + NAMES_FOR > now6()) return c2.r;
+    const r = await membership(member, collective, hints, via);
+    this.checked.set(k, { at: now6(), r });
+    return r;
+  }
+  /** Stamps read lately from the clock named (H54), by clock: this app's memory only, at most once a minute. */
+  stamps = /* @__PURE__ */ new Map();
+  /** When the clock this identity names says it held each act (its earliest stamp); empty where none is named or it cannot be read. */
+  async clockTimes(s, hints) {
+    if (!s.clock) return /* @__PURE__ */ new Map();
+    const c2 = this.stamps.get(s.clock.id);
+    if (c2 && c2.at + 60 > now6()) return c2.earliest;
+    try {
+      const places = [.../* @__PURE__ */ new Set([...await this.placesOf(s.clock.id, hints, s.via), ...hints])];
+      const r = await readStamps(s.clock.id, places, new Judge(places, s.via), s.via);
+      this.stamps.set(s.clock.id, { at: now6(), earliest: r.earliest });
+      return r.earliest;
+    } catch {
+      return /* @__PURE__ */ new Map();
+    }
+  }
+  /**
+   * Name the timestamp clock this identity's feeds are ordered by (H54; the
+   * timestamp clock Module, draft 2): its ID, and a name for it here. Empty:
+   * none, each signer's own order. Nothing is signed.
+   */
+  setClock(a) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      if (!a.id.trim()) {
+        await this.store.saveSettings(me.id, { ...s, clock: null });
+        return { lines: [{ text: "No clock named: feeds are in each signer\u2019s own order, which is not a time." }] };
+      }
+      const id = readId(a.id);
+      const name = a.name.trim().slice(0, 48) || `the clock ${shortId(id)}`;
+      await this.store.saveSettings(me.id, { ...s, clock: { id, name } });
+      this.stamps.delete(id);
+      return { lines: [{ text: `Feeds are ordered by ${name}\u2019s clock: its word on when it held each act, never a verdict. Acts it did not stamp keep their signer\u2019s own order.`, tone: "ok" }] };
+    });
+  }
+  /** Labels a post carries (H65): an agent's answer to a pick or under a nudge, and who gave it, read from the acts it names first. */
+  async labelsOf(sp, me, p, places, via) {
+    const out = [];
+    for (const r of sp.refs) {
+      if (r.kind !== "act" || !r.actSigner || r.what === "a text act") continue;
+      try {
+        const act = (await followRef(r.signer ? [r.id, r.signer] : r.id, places, via)).act;
+        const d = describeAct(act);
+        if (d.spec !== NUDGE_SPECS.nudge || !d.payload || !d.signer) continue;
+        const name = this.nameOf(d.signer, me, p);
+        if (d.type === NUDGE_TYPES.pick && decodePick(d.payload).agent === sp.signer) out.push({ text: `a pick by ${name}` });
+        if (d.type === NUDGE_TYPES.nudge && decodeNudge(d.payload).agent === sp.signer) out.push({ text: `under a nudge from ${name}` });
+      } catch {
+      }
+    }
+    return out;
+  }
+  /** An identity's name as this app says it: the name given here, its display name, or its fingerprint. */
+  nameOf(id, me, p) {
+    const w = this.whoFrom(id, me, p);
+    return id === me ? "you" : w.pet ?? w.names[0] ?? shortId(id);
+  }
+  /** One act, read and judged, as a card shows it: a post as the feed reads posts, any other act named by what it is. */
+  async readOne(id, signer, me, p, s, places) {
+    try {
+      const sp = await readPost(id, places, s.via);
+      const it = this.item(sp, me, p, s, "feed", [], false);
+      await this.warm([sp.signer], places, s.via);
+      it.who = this.whoFrom(sp.signer, me, p);
+      it.labels = await this.labelsOf(sp, me, p, places, s.via);
+      return it;
+    } catch {
+    }
+    let act;
+    try {
+      act = (await followRef(signer ? [id, signer] : id, places, s.via)).act;
+    } catch (e3) {
+      throw new Error(`The act ${shortAct(id)} was not found: ${message6(e3)}. Silence proves nothing: another relay may hold it.`);
+    }
+    const d = describeAct(act);
+    const by = d.signer ?? d.id;
+    await this.warm([by], places, s.via);
+    let standing2 = "unknown";
+    try {
+      const l = await lookUp(by, places, s.via);
+      l.verifier.add(act);
+      standing2 = l.verifier.status(d.id);
+    } catch {
+    }
+    return { id: d.id, form: actForm(d.id), who: this.whoFrom(by, me, p), standing: standing2, text: d.public ? "" : "A private act: only its recipients can open it.", doc: null, pictures: [], answers: [], toMe: false, via: "relay", problem: standing2 === "valid" ? null : `not verified: ${standing2}`, seen: true, what: whatAct(d) };
+  }
+  /**
+   * Open an act by its ID (H50, H74): what a post answers or corrects,
+   * fetched from where its signer lives. Read, judged and returned as a card;
+   * nothing is signed.
+   */
+  open(a) {
+    return this.serial(async () => {
+      const { me, p, s, hints } = await this.ctx();
+      const id = readActId(a.id);
+      const signer = a.signer ? readId(a.signer) : null;
+      const places = [.../* @__PURE__ */ new Set([...hints, ...this.inboxPlaces(p), ...signer ? await this.placesOf(signer, hints, s.via) : []])];
+      return { item: await this.readOne(id, signer, me.id, p, s, places) };
+    });
+  }
+  /**
+   * Why an act is valid, or not, in plain words (the act's menu): what it is,
+   * who signed it and with what key their identity chain counts, its
+   * standing as the core library judges it, and what it names. Nothing is
+   * signed.
+   */
+  why(a) {
+    return this.serial(async () => {
+      const { me, p, s, hints } = await this.ctx();
+      const id = readActId(a.id);
+      const signer = a.signer ? readId(a.signer) : null;
+      const places = [.../* @__PURE__ */ new Set([...hints, ...this.inboxPlaces(p), ...signer ? await this.placesOf(signer, hints, s.via) : []])];
+      let act;
+      try {
+        act = (await followRef(signer ? [id, signer] : id, places, s.via)).act;
+      } catch (e3) {
+        return { title: "Not found", lines: [{ text: `The act ${shortAct(id)} was not found at ${places.join(", ")}: ${message6(e3)}. Silence proves nothing: another relay may hold it.`, tone: "warn" }] };
+      }
+      const d = describeAct(act);
+      const by = d.signer ?? d.id;
+      await this.warm([by], places, s.via);
+      const lines4 = [{ text: `${whatAct(d)}, act ${actForm(d.id)}.` }];
+      if (!d.signer) lines4.push({ text: "An identity\u2019s genesis: it makes the identity whose ID is its own." });
+      else lines4.push({ text: `Signed by ${this.nameOf(by, me.id, p)} (${idForm(by)}).` });
+      let standing2 = "unknown";
+      try {
+        const l = await lookUp(by, places, s.via);
+        l.verifier.add(act);
+        standing2 = l.verifier.status(d.id);
+        if (l.resolution.stop === "contested") lines4.push({ text: "Its signer\u2019s homes disagree about its keys: its identity is contested.", tone: "bad" });
+        else lines4.push({ text: `Its signer\u2019s identity chain was read from ${l.resolution.homes.length} home${l.resolution.homes.length === 1 ? "" : "s"}, ${l.resolution.links.length} act${l.resolution.links.length === 1 ? "" : "s"} long.` });
+      } catch (e3) {
+        lines4.push({ text: `Its signer was not found: ${message6(e3)}.`, tone: "warn" });
+      }
+      const w = standingWords(standing2);
+      lines4.push({ text: w.words.replace(" in this browser", " here"), tone: w.ok ? "ok" : standing2 === "void" || standing2 === "invalid" ? "bad" : "warn" });
+      if (standing2 !== "valid" && d.signer) {
+        const auth = await authorityOfId(d.id, places, s.via, { names: (x) => this.nameOf(x, me.id, p) }).catch(() => null);
+        if (auth) lines4.push({ text: auth.words, tone: auth.backing === "backed" || auth.backing === "binds" ? "ok" : "warn" });
+      }
+      if (d.refs?.length) lines4.push({ text: `It names ${d.refs.length} other act${d.refs.length === 1 ? "" : "s"}: ${d.refs.map((r) => shortAct(r)).join(", ")}.` });
+      if (d.to?.length) lines4.push({ text: `It is addressed to ${d.to.map((x) => this.nameOf(x, me.id, p)).join(", ")}.` });
+      lines4.push({ text: "A verdict rests on signatures and identity chains only: no clock, no relay and no app decides it." });
+      return { title: w.ok ? "Why it\u2019s valid" : "Why it is not valid", lines: lines4 };
+    });
+  }
+  /**
+   * An identity's profile (decided: "light and friendly"): its name and
+   * display name, where it lives (and since when, by the clock named, where
+   * it stamped its genesis), trouble only where there is, and its posts.
+   */
+  profile(a) {
+    return this.serial(async () => {
+      const { me, p, s, hints } = await this.ctx();
+      const { id, hints: where } = readIdWhere(a.id);
+      const places = [.../* @__PURE__ */ new Set([...where, ...hints])];
+      await this.warm([id], places, s.via);
+      let lives = "Where it lives was not found.";
+      let trouble = null;
+      let theirs = [];
+      try {
+        const l = await lookUp(id, places, s.via);
+        const homes = l.resolution.homes.map((h) => hostOf(h.hint));
+        const relays = list7(l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints));
+        theirs = [...l.resolution.homes.map((h) => h.hint), ...relays];
+        lives = `Lives on ${homes.length === 1 ? "one home" : `${homes.length} homes`} (${homes.join(", ")}), reached through ${relays.length === 1 ? "one relay" : `${relays.length} relays`}.`;
+        if (l.resolution.stop === "contested") trouble = "Its homes disagree about its keys: this identity is contested. Its acts may not be what they seem.";
+        const t = await this.clockTimes(s, hints);
+        const since = t.get(id);
+        if (since) lives += ` Since ${timeWords(since)}, by ${s.clock.name}\u2019s clock.`;
+      } catch (e3) {
+        trouble = `It could not be looked up: ${message6(e3)}.`;
+      }
+      const feed = await readFeed([{ identity: id, name: null }], [.../* @__PURE__ */ new Set([...theirs, ...places])], s.via, void 0, s.clock ? { identity: s.clock.id, name: s.clock.name } : null);
+      const items = [];
+      for (const fp3 of feed.posts) {
+        if (!fp3.post) continue;
+        const it = { ...this.item(fp3.post, me.id, p, s, "feed", fp3.answers.map((x) => ({ id: x, who: null, snippet: null })), false), corrects: fp3.corrects ?? null, correctedBy: fp3.correctedBy ?? [] };
+        it.when = fp3.time ? timeWords(fp3.time) : null;
+        items.push(it);
+      }
+      return {
+        who: this.whoFrom(id, me.id, p),
+        lives,
+        trouble,
+        items,
+        clock: feed.clock ? { name: s.clock?.name ?? feed.clock.name ?? "the clock", placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null,
+        problems: feed.authors.filter((x) => x.problem).map((x) => x.problem)
+      };
+    });
+  }
+  /** Rely on an act, read back first (H77; Identity, the witness act): what it is, who signed it, and what signing says. Nothing is signed. */
+  relyRead(a) {
+    return this.serial(async () => {
+      const { me, p, s, hints } = await this.ctx();
+      const id = readActId(a.id);
+      const signer = a.signer ? readId(a.signer) : null;
+      const places = [.../* @__PURE__ */ new Set([...hints, ...this.inboxPlaces(p), ...signer ? await this.placesOf(signer, hints, s.via) : []])];
+      const blocking = [];
+      const lines4 = [];
+      try {
+        const act = (await followRef(signer ? [id, signer] : id, places, s.via)).act;
+        const d = describeAct(act);
+        lines4.push({ text: `${whatAct(d)}, act ${actForm(d.id)}, signed by ${this.nameOf(d.signer ?? d.id, me.id, p)}.` });
+        if (d.signer === me.id || ownIds(me.f).includes(d.id)) blocking.push("It is this identity\u2019s own act: a witness act names other identities\u2019 acts.");
+      } catch (e3) {
+        blocking.push(`It was not found (${message6(e3)}): Dub relies only on an act it has read.`);
+      }
+      return { lines: lines4, explanation: WITNESS_EXPLANATION, blocking };
+    });
+  }
+  /** Sign the witness act, once RELY is typed (as Edubba asks), its key checked first (H80). */
+  rely(a) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      if (s.acting) throw new Error("A collective relies on nothing from Dub: switch back to the identity itself. Nothing was signed.");
+      if (a.typed.trim() !== "RELY") throw new Error("Type RELY to sign the witness act. Nothing was signed.");
+      const id = readActId(a.id);
+      if (ownIds(me.f).includes(id)) throw new Error("It is this identity\u2019s own act. Nothing was signed.");
+      await this.current(me);
+      const made = await this.signed(me, () => me.witness([id], { shown: WITNESS_EXPLANATION, relays: s.relays }));
+      if (!made.sent.some((x) => x.result)) throw new Error(`No home took the witness act: ${made.sent.map((x) => `${x.home}: ${x.error}`).join("; ")}. It is signed here, not published.`);
+      return { lines: [{ text: `You rely on ${shortAct(id)}: witness act ${shortAct(made.id)}, public at this identity\u2019s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: "ok" }] };
+    });
+  }
+  /** An anchoring service's standing offers (the anchoring cMIP, draft 5), read from its public acts; the person names the service. */
+  anchorOffers(a) {
+    return this.serial(async () => {
+      const { s, hints } = await this.ctx();
+      const service = readIdWhere(a.service);
+      const found2 = await offers(service.id, [...service.hints, ...hints], s.via);
+      return { offers: found2.map((o) => ({ act: o.act, unit: o.unit, words: o.words, tiers: o.tiers.map((t, i) => ({ tier: i, words: `within ${t.blocks} block${t.blocks === 1 ? "" : "s"}, ${say({ unit: o.unit, value: t.price }, /* @__PURE__ */ new Set([o.unit]))}` })) })) };
+    });
+  }
+  /**
+   * Anchor an act (decided: beside Rely, on any act; the anchoring cMIP: "anyone
+   * may anchor any act"): a payment prepared for Damgar, as Ummia and Edubba
+   * prepare one (the money messages cMIP, an anchor draft), sealed to this
+   * identity at its homes; its blind kept here. Dub signs no money act.
+   */
+  anchor(a) {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      const id = readActId(a.id);
+      const service = readIdWhere(a.service);
+      const offer = (await offers(service.id, [...service.hints, ...hints], s.via)).find((o) => o.act === a.offer);
+      if (!offer) throw new Error("That offer was not found at the service\u2019s places. Nothing was prepared.");
+      const tier = offer.tiers[a.tier];
+      if (!tier) throw new Error("The offer has no such tier. Nothing was prepared.");
+      await this.current(me);
+      const blind = new Uint8Array(randomBytes(32));
+      const leaf = anchoringLeaf(id, blind);
+      const r = await sendDraft(me, { what: "anchor", other: service.id, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${shortAct(id)}`, app: "Dub", anchor: { offer: offer.act, tier: a.tier, leaf } }, { via: s.via, save: () => this.store.saveIdentity(me) });
+      const kept2 = await this.store.money(me.id, "anchors") ?? [];
+      kept2.push({ act: id, blind: hex(blind), leaf, service: service.id, offer: offer.act, tier: a.tier, draft: r.id, at: now6() });
+      await this.store.saveMoney(me.id, "anchors", kept2);
+      return {
+        lines: [
+          { text: `Asked: an anchor of ${shortAct(id)} on the Bitcoin chain, within ${tier.blocks} blocks, for ${say({ unit: offer.unit, value: tier.price }, /* @__PURE__ */ new Set([offer.unit]))}.`, tone: "ok" },
+          { text: `The payment is prepared, not signed: sealed to you at your homes (${r.left.join(", ")}), it waits in Damgar, in Waiting. The blind that ties the anchor to this act is kept here.` }
+        ]
+      };
+    });
+  }
+  /**
+   * Correct one's own act (the corrections cMIP, draft 2): a new post naming
+   * it first, labelled "Correction"; the old one stays as signed. Only this
+   * identity's own acts.
+   */
+  correct(a) {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      const id = readActId(a.id);
+      const { text: text4 } = compose(a.text);
+      if (!text4.trim()) throw new Error("Write the correction. Nothing was signed.");
+      let act;
+      try {
+        act = (await followRef([id, me.id], hints, s.via)).act;
+      } catch (e3) {
+        throw new Error(`The act to correct was not found: ${message6(e3)}. Nothing was signed.`);
+      }
+      if (describeAct(act).signer !== me.id) throw new Error("Only this identity\u2019s own acts are corrected here (a reply is the way to answer another\u2019s). Nothing was signed.");
+      await this.current(me);
+      const made = await this.signed(me, () => post(me, { text: text4, relays: s.relays, corrects: [id, me.id] }));
+      return { lines: [{ text: `Correction ${shortAct(made.id)}, naming ${shortAct(id)}, which stays as it was signed: readers show it with \u201Ccorrected by\u201D.`, tone: "ok" }] };
+    });
+  }
+  /** A film's bytes, when asked to play it (the video Module, rule 13): checked against its publication before they leave here. */
+  film(a) {
+    return this.serial(async () => {
+      const { p, s, hints } = await this.ctx();
+      const signer = a.signer ? readId(a.signer) : null;
+      const r = await filmBytes(readActId(a.publication), signer, [...hints, ...this.inboxPlaces(p)], s.via);
+      return { b64: base64(r.bytes), type: r.film.type };
+    });
+  }
+  // ------------------------------------------------------------ collectives under the identity (acting as one: the same gesture as switching)
+  /**
+   * Add a collective this identity can act as from here, by its ID: its
+   * member key (F353) read from this identity's homes, and the area of its
+   * agreement in force that reaches public posts. Added even where it cannot
+   * act yet, saying why.
+   */
+  collectiveAdd(a) {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      const { id, hints: where } = readIdWhere(a.id);
+      if (id === me.id) throw new Error("That is this identity itself.");
+      const r = await this.memberKeyHere(me, s, id, [...where, ...hints]);
+      const rest = (s.collectives ?? []).filter((c2) => c2.id !== id);
+      await this.store.saveSettings(me.id, { ...s, collectives: [...rest, { id, available: !r.why, why: r.why }] });
+      await this.warm([id], [...where, ...hints], s.via);
+      return { lines: [r.why ? { text: `Added, not usable yet: ${r.why}`, tone: "warn" } : { text: `${this.names.get(id)?.names[0] ?? shortId(id)} is under this identity: choose it in the identity panel to act as it.`, tone: "ok" }] };
+    });
+  }
+  /** Forget a collective here (nothing is published); acting as it stops. */
+  collectiveRemove(a) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.store.saveSettings(me.id, { ...s, collectives: (s.collectives ?? []).filter((c2) => c2.id !== a.id), acting: s.acting === a.id ? null : s.acting ?? null });
+      return { lines: [{ text: "Removed from this app. Nothing is published; the collective and your membership are untouched." }] };
+    });
+  }
+  /** Act as a collective under this identity, or (null) as the identity itself. */
+  actAs(a) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      if (a.id) {
+        const c2 = (s.collectives ?? []).find((x) => x.id === a.id);
+        if (!c2) throw new Error("That collective is not under this identity here.");
+        if (!c2.available) throw new Error(`Dub cannot act as it: ${c2.why ?? "its member key is not here"}`);
+      }
+      await this.store.saveSettings(me.id, { ...s, acting: a.id });
+      return { lines: [] };
+    });
+  }
+  /** The member key this identity holds for a collective, and the area reaching public posts; `why` where it cannot act. */
+  async memberKeyHere(me, s, collective, hints) {
+    const places = [.../* @__PURE__ */ new Set([...await collectivePlaces(collective, hints, s.via).catch(() => []), ...hints])];
+    const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
+    const key = keys.length ? await memberKeyFor(keys, collective, places, s.via).catch(() => null) : null;
+    if (!key) return { key: null, places, why: "no member key of this identity for it was found at its homes (one is made when you sign its founding, in Edubba).", number: 0 };
+    const reach = await areaReaching(collective, places, { spec: POST_SPECS.text, type: TEXT_ACT }, s.via).catch(() => ({ agreement: null, area: null }));
+    if (!reach.area) return { key, places, why: "its agreement in force gives no area reaching public posts.", number: 0 };
+    if (!reach.area.holders.includes(me.id)) return { key, places, why: `this identity holds no box in its area \u201C${reach.area.name}\u201D, which reaches public posts.`, number: 0 };
+    return { key, places, why: null, number: reach.area.number };
+  }
+  // ------------------------------------------------------------ Purchases (decided, 21 October 2026)
+  /** Files bought and vows purchased here, each as it stands: a file opened once its key arrived, a vow with its sale. */
+  purchases() {
+    return this.serial(async () => {
+      const { me, s, p, hints } = await this.ctx();
+      const places = [.../* @__PURE__ */ new Set([...hints, ...this.inboxPlaces(p), ...s.relays])];
+      const bought = await this.store.money(me.id, "bought") ?? {};
+      const problems = [];
+      const items = [];
+      await this.warm(Object.values(bought).map((b) => b.seller), places, s.via);
+      for (const [publication2, b] of Object.entries(bought)) {
+        const x = await this.money.read(me, places, s.via, [{ id: publication2, signer: b.seller }]).catch((e3) => (problems.push(message6(e3)), null));
+        items.push({
+          kind: "file",
+          id: publication2,
+          form: actForm(publication2),
+          seller: this.whoFrom(b.seller, me.id, p),
+          what: x?.media === "picture" ? "picture" : "text",
+          price: x?.price ?? null,
+          state: x?.state === "opened" ? "opened: its key came with the receipt" : x?.state === "paying" ? "bought: pay it in your wallet; its key comes with the receipt" : x?.problem ?? "bought",
+          text: x?.state === "opened" ? x.text : null,
+          picture: x?.state === "opened" ? x.picture : null
+        });
+      }
+      const vows = await this.money.vowsBought(me, places, s.via).catch((e3) => (problems.push(message6(e3)), []));
+      await this.warm(vows.map((v) => v.seller), places, s.via);
+      for (const v of vows) {
+        items.push({
+          kind: "vow",
+          id: v.vow,
+          form: actForm(v.vow),
+          seller: this.whoFrom(v.seller, me.id, p),
+          what: "vow",
+          price: v.price,
+          state: !v.paid ? "not paid yet" : v.sale === "confirmed" ? "confirmed: it was kept" : v.sale === "contested" ? `contested${v.promise ? `: \u201C${v.promise}\u201D` : ""}` : "not yet confirmed: confirm or contest it in its menu",
+          text: v.words,
+          picture: null,
+          sale: v.sale,
+          paid: v.paid
+        });
+      }
+      return { items, problems };
+    });
+  }
+  // ------------------------------------------------------------ paying from Dub, three ways (decided, 21 October 2026)
+  /**
+   * The ways open for one payment (decided: "Dub has no money signing by
+   * default, everything has to be done in Damgar… now we're looking at
+   * using more to do something closer to a prototype"): under Dub's lane,
+   * with what is left of it; Ask Damgar, a money message it queues; by
+   * hand, the draft shown to copy for Damgar. A purchase names its offer,
+   * which a money message cannot carry yet: only the lane buys.
+   */
+  payWays(a) {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      const lanes = await this.money.lanes(me, s, hints).catch(() => []);
+      const lane = lanes.find((l) => l.state === "in force");
+      const purchase = a.kind === "buy" || a.kind === "vow";
+      const noDraft = "A purchase names the seller\u2019s offer, which a money message to Damgar cannot carry yet: buy it under Dub\u2019s lane.";
+      let spent = null;
+      if (lane?.grant) {
+        const book = await this.store.money(me.id, "book") ?? {};
+        const by = /* @__PURE__ */ new Map();
+        for (const x of Object.values(book.payments ?? {})) if (x.side === "out" && x.how?.by === "lane" && x.how.grant === lane.grant && x.stage !== "refused" && x.stage !== "declined") by.set(x.amount.unit, (by.get(x.amount.unit) ?? 0) + x.amount.value);
+        spent = by.size ? [...by].map(([unit, value]) => say({ unit, value }, /* @__PURE__ */ new Set([unit]))).join(", ") : "nothing yet";
+      }
+      return {
+        lane: lane ? { open: true, why: null, label: lane.label, perPayment: lane.cap, until: lane.until, spent } : { open: false, why: lanes.some((l) => l.state === "asked") ? "Dub\u2019s lane is asked, not yet granted in Damgar." : "Dub has no lane from Damgar: ask for one in the identity\u2019s menu (A lane from Damgar).", label: null, perPayment: null, until: null, spent: null },
+        damgar: purchase ? { open: false, why: noDraft } : { open: true, why: null },
+        hand: purchase ? { open: false, why: noDraft } : { open: true, why: null }
+      };
+    });
+  }
+  /**
+   * Pay, the way chosen: under Dub's lane (Dub signs with the lane's key,
+   * refused past its cap or expiry); Ask Damgar (a money message sealed to
+   * this identity, which Damgar queues); or by hand (the same draft, shown
+   * to copy, signed and sent by nothing here). Tip a post, pay an identity
+   * (from its profile), buy a file or a vow.
+   */
+  pay(a) {
+    if (a.kind === "buy" && a.how === "lane") return this.buy({ publication: a.publication ?? "", seller: a.signer, post: a.post, repost: a.repost, reposter: a.reposter });
+    if (a.kind === "vow" && a.how === "lane") return this.buyVow({ vow: a.vow ?? "", seller: a.signer, post: a.post ?? "" });
+    if (a.kind === "buy" || a.kind === "vow") return Promise.reject(new Error("A purchase is made under Dub\u2019s lane: a money message to Damgar cannot carry its offer yet. Nothing was signed."));
+    if (a.how === "lane" && a.kind === "tip") return this.tipNow({ post: a.post ?? "", signer: a.signer, value: a.value ?? "", unit: a.unit ?? "", whatFor: a.whatFor });
+    if (a.how === "lane") return this.payNow({ signer: a.signer, value: a.value ?? "", unit: a.unit ?? "", whatFor: a.whatFor ?? "" });
+    if (a.how === "damgar") return this.moneyDraft({ what: "pay", other: a.signer, post: a.post, value: a.value ?? "", unit: a.unit ?? "", whatFor: a.whatFor });
+    return this.byHand({ signer: a.signer, value: a.value ?? "", unit: a.unit ?? "", whatFor: a.whatFor ?? "" });
+  }
+  /** Pay an identity now, under the lane (from its profile): the invoice request signed with the lane's key. */
+  payNow(a) {
+    return this.serial(async () => {
+      const { me, s, hints } = await this.ctx();
+      await this.money.lanes(me, s, hints);
+      const payee = readId(a.signer);
+      if (payee === me.id) throw new Error("That is this identity itself. Nothing was signed.");
+      const whatFor = a.whatFor.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : null;
+      const r = await this.money.engine.payUnderLane({ payee, amount: { unit: a.unit, value: readValue(a.value) }, whatFor });
+      return { lines: r.lines.map((l) => ({ text: l.text, tone: "ok" })) };
+    });
+  }
+  /**
+   * The third way, by hand: the payment as a draft of the money messages
+   * cMIP (section 2.1), written out to copy into Damgar. Nothing is signed or
+   * sent from here. Damgar's "paste an act to sign" is its own round's.
+   */
+  byHand(a) {
+    return this.serial(async () => {
+      const { me, p } = await this.ctx();
+      const other = readId(a.signer);
+      if (other === me.id) throw new Error("That is this identity itself. Nothing was prepared.");
+      if (!UNITS_MODULES.some((m) => m.units.some((u2) => u2.hash === a.unit))) throw new Error("Choose a unit. Nothing was prepared.");
+      const amount = { unit: a.unit, value: readValue(a.value) };
+      const d = { what: "pay", other, amount, whatFor: a.whatFor.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : null, app: "Dub", anchor: null };
+      return {
+        lines: [{ text: "Shown, not signed and not sent: copy it into Damgar, which reads it to you and signs it there." }],
+        hand: {
+          text: base64(draftPayload(d)),
+          said: [`To ${this.nameOf(other, me.id, p)} (${idForm(other)})`, `Amount: ${say(amount, /* @__PURE__ */ new Set([amount.unit]))}`, ...d.whatFor ? [`What for: ${d.whatFor}`] : [], "From: this identity, paid in your own wallet"]
+        }
+      };
+    });
+  }
   // ------------------------------------------------------------ money, prepared here and signed in Damgar (F338)
   /**
    * A tip on a post, or a request to be paid, prepared here and never
@@ -26693,8 +28093,8 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       let other;
       try {
         other = readId(a.other);
-      } catch (e2) {
-        throw new Error(`${a.what === "pay" ? "Whom to tip" : "Whom to ask"}: ${message6(e2)}. Nothing was prepared.`);
+      } catch (e3) {
+        throw new Error(`${a.what === "pay" ? "Whom to tip" : "Whom to ask"}: ${message6(e3)}. Nothing was prepared.`);
       }
       if (other === me.id) throw new Error("That is this identity itself. Nothing was prepared.");
       if (!UNITS_MODULES.some((m) => m.units.some((u2) => u2.hash === a.unit))) throw new Error("Choose a unit. Nothing was prepared.");
@@ -26896,7 +28296,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
    */
   async syncFollows(me, s, p, change) {
     const homes = me.f.homes.map((h) => h.hint);
-    const secrets = [...me.f.encryption].reverse().map((e2) => unhex(e2.secret));
+    const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
     const save = async () => {
       this.synced.set(me.id, now6());
       await this.store.savePeople(me.id, p);
@@ -26931,14 +28331,14 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
     }
     await this.current(me);
     const look = await lookUp(me.id, homes, s.via);
-    const held = me.f.encryption.find((e2) => look.encryptionKey && hex(xwingPublic(unhex(e2.secret))) === hex(look.encryptionKey));
+    const held = me.f.encryption.find((e3) => look.encryptionKey && hex(xwingPublic(unhex(e3.secret))) === hex(look.encryptionKey));
     if (!held || !look.encryptionKey) {
       await save();
       return [...lines4, { text: "The encryption key this identity publishes is not one this app holds: the follow list stays in this app, not sealed.", tone: "warn" }];
     }
-    const version = Math.max(found2.version, ours) + 1;
+    const version2 = Math.max(found2.version, ours) + 1;
     const previous = found2.act && found2.version >= ours ? found2.act : p.sealed?.act ?? null;
-    const made = await this.signed(me, async () => me.sign(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version, previous, follows: p.follows }), { public: false, to: [me.id] }));
+    const made = await this.signed(me, async () => me.sign(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version: version2, previous, follows: p.follows }), { public: false, to: [me.id] }));
     const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
     let left = 0;
     for (const h of homes) {
@@ -26949,11 +28349,11 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       }
     }
     await this.signed(me, () => leaveAtHomes(me, made, { via: s.via, sealed: left > 0 }));
-    p.sealed = { version, act: made.id };
+    p.sealed = { version: version2, act: made.id };
     p.carried = true;
     await save();
     lines4.push(
-      left ? { text: `The follow list, with the names you gave, is sealed to this identity and kept at its homes (version ${version}): any app holding this identity reads it; nobody else can.`, tone: "ok" } : { text: "No home took the sealed follow list: it is kept here, and sealed again at the next change.", tone: "warn" }
+      left ? { text: `The follow list, with the names you gave, is sealed to this identity and kept at its homes (version ${version2}): any app holding this identity reads it; nobody else can.`, tone: "ok" } : { text: "No home took the sealed follow list: it is kept here, and sealed again at the next change.", tone: "warn" }
     );
     return lines4;
   }
@@ -26968,8 +28368,8 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
         const notes = (await this.syncFollows(me, s, p)).filter((l) => l.tone === "warn" || l.tone === "ok").map((l) => l.text);
         return { notes, changed: JSON.stringify(p.follows) !== was };
       });
-    } catch (e2) {
-      return { notes: [`The follow list kept at this identity\u2019s homes could not be read: ${message6(e2)}`], changed: false };
+    } catch (e3) {
+      return { notes: [`The follow list kept at this identity\u2019s homes could not be read: ${message6(e3)}`], changed: false };
     }
   }
   /** Follow an identity, by its ID or the signer of an act shown; a name for it, if given, stays in this app. */
@@ -27041,13 +28441,13 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       if (found2.act && found2.version >= (last?.version ?? 0)) last = { version: found2.version, act: found2.act };
     } catch {
     }
-    const version = (last?.version ?? 0) + 1;
-    const payload = followListPayload({ version, previous: last?.act ?? null, ids: p.follows.map((f) => f.id), withdrawn });
+    const version2 = (last?.version ?? 0) + 1;
+    const payload = followListPayload({ version: version2, previous: last?.act ?? null, ids: p.follows.map((f) => f.id), withdrawn });
     const made = await this.signed(me, async () => me.publish(PEOPLE_SPEC, FOLLOW_LIST, payload, { public: true, relays: s.relays }));
-    p.published = { version, act: made.id };
+    p.published = { version: version2, act: made.id };
     await this.store.savePeople(me.id, p);
     return [
-      withdrawn ? { text: `The follow list is private again: a last, empty version (${version}) says so. What was published stays published.`, tone: "warn" } : { text: `The follow list is published (version ${version}): ${p.follows.length} identit${p.follows.length === 1 ? "y" : "ies"}, by ID only. The names you gave them stay here.`, tone: "ok" }
+      withdrawn ? { text: `The follow list is private again: a last, empty version (${version2}) says so. What was published stays published.`, tone: "warn" } : { text: `The follow list is published (version ${version2}): ${p.follows.length} identit${p.follows.length === 1 ? "y" : "ies"}, by ID only. The names you gave them stay here.`, tone: "ok" }
     ];
   }
   // ------------------------------------------------------------ pictures
@@ -27071,6 +28471,16 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
     });
   }
 };
+var RELAY_DEFAULT = ["text", "envelopes"];
+function layerOf(d) {
+  if (d.spec === POST_SPECS.text) return "text";
+  if (d.spec === SPECS.envelopes) return "envelopes";
+  if (d.spec === SPECS.identity) return "identity";
+  if (d.spec === MIRS.agreements) return "agreements";
+  if (d.spec === MIRS.money) return "money";
+  if (d.spec === MIRS.development) return "development";
+  return "other";
+}
 function whatAct(d) {
   if (d.spec === SPECS.identity) {
     if (d.type === IDENTITY_TYPES.genesis) return "A new identity (its genesis)";
@@ -27094,13 +28504,33 @@ function whatAct(d) {
   if (d.spec === PEOPLE_SPEC || d.spec === PEOPLE_SPEC_1) return d.type === FOLLOW_LIST ? "A published follow list" : "A people act";
   return "An act of another specification";
 }
+function shortId(id) {
+  const f = shownId(id);
+  return f.length > 16 ? `${f.slice(0, 8)}\u2026${f.slice(-3)}` : f;
+}
+function shortAct(id) {
+  const f = shownAct(id);
+  return f.length > 16 ? `${f.slice(0, 8)}\u2026${f.slice(-3)}` : f;
+}
+function hostOf(hint) {
+  try {
+    return new URL(hint).host;
+  } catch {
+    return hint;
+  }
+}
+function timeWords(t) {
+  const d = new Date(t * 1e3);
+  const m = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getUTCMonth()];
+  return `${d.getUTCDate()} ${m} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
+}
 function titleOf2(text4) {
   const first = text4.split("\n").find((l) => l.trim()) ?? "";
   return first.replace(/^#+\s*/, "").trim().slice(0, 120) || "A document";
 }
 function snippet(text4) {
-  const one = text4.replace(/\s+/g, " ").trim();
-  return one.length > 80 ? `${one.slice(0, 79)}\u2026` : one;
+  const one2 = text4.replace(/\s+/g, " ").trim();
+  return one2.length > 80 ? `${one2.slice(0, 79)}\u2026` : one2;
 }
 async function digestOf3(x) {
   const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x));
@@ -27244,8 +28674,8 @@ var Corrections = class {
         })),
         problems: f.authors.filter((a) => a.problem).map((a) => a.problem)
       };
-    } catch (e2) {
-      return { items: [], problems: [e2 instanceof Error ? e2.message : String(e2)] };
+    } catch (e3) {
+      return { items: [], problems: [e3 instanceof Error ? e3.message : String(e3)] };
     }
   }
   /** Correct one of its own acts: refused where the act is not found, or is someone else's (the cMIP, 1.3). */
@@ -27580,8 +29010,8 @@ function operations(p, opts) {
           const c2 = real.collective(x.id);
           try {
             await desk.collectiveKeyCurrent({ id: x.id, signingSecret: c2.f.identity.signingSecret, homes: c2.f.identity.homes, relays: c2.f.relays });
-          } catch (e2) {
-            out.push({ id: x.id, name: x.name, say: e2.message.replace(/ Nothing was signed\.$/, ""), kind: "collective" });
+          } catch (e3) {
+            out.push({ id: x.id, name: x.name, say: e3.message.replace(/ Nothing was signed\.$/, ""), kind: "collective" });
           }
         }
         return out;
@@ -27882,8 +29312,8 @@ async function gather(id, hints, via = {}, names2 = (h) => h) {
     try {
       found2.inForce = v.agreementsVersionInForce(AGREEMENTS_SPECS, id);
       found2.fork = v.agreementsDealFork(AGREEMENTS_SPECS, id) ?? null;
-    } catch (e2) {
-      found2.owed.push({ text: `Which version of the deal is in force cannot be said: ${e2 instanceof Error ? e2.message : String(e2)}`, tone: "warn" });
+    } catch (e3) {
+      found2.owed.push({ text: `Which version of the deal is in force cannot be said: ${e3 instanceof Error ? e3.message : String(e3)}`, tone: "warn" });
     }
     const grants = terms.get(14);
     const services = /* @__PURE__ */ new Set();
@@ -27916,7 +29346,7 @@ async function gather(id, hints, via = {}, names2 = (h) => h) {
 }
 
 // src/collectives.ts
-var err7 = (e2) => e2 instanceof Error ? e2.message : String(e2);
+var err7 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var short11 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var Collectives = class {
   constructor(dir, desk) {
@@ -27965,8 +29395,8 @@ var Collectives = class {
     let look;
     try {
       look = await lookUp(id, hints, via, v);
-    } catch (e2) {
-      throw new Error(`No collective ${short11(id)} was found at ${hints.join(", ")}: ${err7(e2)}. Nothing was kept.`);
+    } catch (e3) {
+      throw new Error(`No collective ${short11(id)} was found at ${hints.join(", ")}: ${err7(e3)}. Nothing was kept.`);
     }
     hints = [.../* @__PURE__ */ new Set([...hints, ...look.resolution.homes.map((h) => h.hint), ...look.routes.routes.flatMap((r) => r.hints)])];
     const added = /* @__PURE__ */ new Set();
@@ -28019,8 +29449,8 @@ var Collectives = class {
     for (let round = 0; round < 8; round++) {
       try {
         cur = v.agreementsCurrent(AGREEMENTS_SPECS, id) ?? null;
-      } catch (e2) {
-        const missing = /act ([0-9a-f]{64}) is not held/.exec(err7(e2))?.[1];
+      } catch (e3) {
+        const missing = /act ([0-9a-f]{64}) is not held/.exec(err7(e3))?.[1];
         const terms2 = missing ? await termsAt3(missing) : null;
         if (terms2) {
           for (const p of terms2.t.parties) await addAll(p);
@@ -28031,7 +29461,7 @@ var Collectives = class {
           await addAll(signer);
           continue;
         }
-        throw new Error(`Agreements cannot read ${short11(id)} as a collective: ${err7(e2)}. Nothing was kept.`);
+        throw new Error(`Agreements cannot read ${short11(id)} as a collective: ${err7(e3)}. Nothing was kept.`);
       }
       if (!cur) break;
       const terms = await termsAt3(cur.agreement);
@@ -28100,8 +29530,8 @@ var Collectives = class {
     let r;
     try {
       r = await this.read(b.id, b.hints);
-    } catch (e2) {
-      out.notes.push({ text: err7(e2).replace(/ Nothing was kept\.$/, ""), tone: "bad" });
+    } catch (e3) {
+      out.notes.push({ text: err7(e3).replace(/ Nothing was kept\.$/, ""), tone: "bad" });
       return out;
     }
     out.agreement = r.agreement;
@@ -28165,8 +29595,8 @@ var Collectives = class {
       const g = await gather(id, [.../* @__PURE__ */ new Set([...c2.f.relays, ...this.store.settings().relays, ...this.store.settings().homes.map((h) => h.hint)])], this.store.settings().via, names2);
       found2 = g.found;
       payload = g.payload;
-    } catch (e2) {
-      if (!payload) throw new Error(`Its agreement ${short11(id)} was not found: ${err7(e2)}`);
+    } catch (e3) {
+      if (!payload) throw new Error(`Its agreement ${short11(id)} was not found: ${err7(e3)}`);
     }
     const a = assess(payload, names2, found2);
     return {
@@ -28207,8 +29637,8 @@ var Collectives = class {
         })),
         problems: f.authors.filter((a) => a.problem).map((a) => a.problem)
       };
-    } catch (e2) {
-      return { items: [], problems: [err7(e2)] };
+    } catch (e3) {
+      return { items: [], problems: [err7(e3)] };
     }
   }
 };
@@ -28354,16 +29784,288 @@ function e(s) {
 }
 
 // ../genesis/src/card-words.ts
-function cardWords(l, app3, e2) {
+function cardWords(l, app3, e3) {
   const n = `${l.acts} act${l.acts === 1 ? "" : "s"}`;
   if (!l.latest) return n;
   const missing = l.missing ? ` ${l.missing === 1 ? "One act" : `${l.missing} acts`} of this line ${l.missing === 1 ? "is" : "are"} not at your homes, and ${app3} no longer holds ${l.missing === 1 ? "it" : "them"}: no reader can follow this line past ${l.missing === 1 ? "it" : "them"}, so a change of keys may lose what lives on it (a member key, notes, a list). Ki\u0161ib says so in red.` : "";
-  if (l.card) return `${n}: ${l.card.includes(";") ? "its cards" : "its card"}, for Ki\u0161ib, <code class="card-line">${e2(l.card)}</code>${missing ? `<br>${e2(missing)}` : ""}`;
-  if (l.atHomes === false) return `${n}: its latest act (<code>${e2(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e2(app3)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e2(missing)}` : ""}`;
-  return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e2(l.latest)}</code>). Look again before changing your keys.`;
+  if (l.card) return `${n}: ${l.card.includes(";") ? "its cards" : "its card"}, for Ki\u0161ib, <code class="card-line">${e3(l.card)}</code>${missing ? `<br>${e3(missing)}` : ""}`;
+  if (l.atHomes === false) return `${n}: its latest act (<code>${e3(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e3(app3)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e3(missing)}` : ""}`;
+  return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e3(l.latest)}</code>). Look again before changing your keys.`;
 }
 
-// ../dub/src/page/view.ts
+// ../kit/src/style.ts
+var APPS = {
+  kishib: { name: "Ki\u0161ib", colour: "#8ec5f0", pastel: "#cfe5f7", wash: "rgba(207,229,247,.075)", wash2: "rgba(207,229,247,.15)" },
+  dub: { name: "Dub", colour: "#e9dfcd", pastel: "#efe8dc", wash: "rgba(239,232,220,.06)", wash2: "rgba(239,232,220,.13)" },
+  damgar: { name: "Damgar", colour: "#e8b33a", pastel: "#f2d89c", wash: "rgba(242,216,156,.07)", wash2: "rgba(242,216,156,.15)" },
+  edubba: { name: "Edubba", colour: "#48c08c", pastel: "#a9e3c7", wash: "rgba(169,227,199,.07)", wash2: "rgba(169,227,199,.15)" },
+  ummia: { name: "Ummia", colour: "#ee8b74", pastel: "#f7c4b7", wash: "rgba(247,196,183,.07)", wash2: "rgba(247,196,183,.15)" }
+};
+var tints = Object.keys(APPS).map((a) => `.k-${a}{--k-c:${APPS[a].colour};--k-p:${APPS[a].pastel};--k-wash:${APPS[a].wash};--k-wash2:${APPS[a].wash2}}`).join("\n");
+var KIT_STYLE = `@font-face{font-family:Inter;font-style:normal;font-weight:300;font-display:swap;src:url(inter_light.woff2) format("woff2")}
+@font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(inter_regular.woff2) format("woff2")}
+:root{color-scheme:dark;--k-bg:#06080c;--k-raise:#0d1017;--k-raise2:#131720;--k-pop:#0f131a;--k-line:#232a35;--k-edge:#323a47;--k-text:#d6dae1;--k-soft:#8a919d;--k-faint:#4f5663;--k-ink:#0a0c10;--k-bad:#c4645f;--k-id:#9aa8b8;--k-c:#e9dfcd;--k-p:#efe8dc;--k-wash:rgba(239,232,220,.06);--k-wash2:rgba(239,232,220,.13)}
+${tints}
+.k-page,.k-page *{box-sizing:border-box}
+html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);color:var(--k-text);overflow:hidden}
+.k-page{font:300 15px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;color:var(--k-text);background:var(--k-bg);position:relative;display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:none;margin:0;padding:0}
+:where(.k-page) button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:where(.k-page) button:disabled{opacity:.45;cursor:default}
+:where(.k-page) :is(h1,h2,h3,h4){font-weight:300;margin:0;letter-spacing:.005em}
+:where(.k-page) p{margin:6px 0}
+:where(.k-page) a{color:var(--k-text);text-decoration:underline;text-decoration-color:var(--k-faint);text-underline-offset:3px}
+:where(.k-page) :is(input,textarea,select){font:inherit;font-size:15px;color:var(--k-text);background:var(--k-raise);border:1px solid var(--k-edge);border-radius:10px;padding:8px 11px;width:100%}
+:where(.k-page) :is(input,textarea,select):focus{outline:none;border-color:var(--k-p)}
+:where(.k-page) input:is([type=checkbox],[type=radio]){width:auto;accent-color:var(--k-p)}
+:where(.k-page) label{display:block;margin:10px 0 4px;font-size:13px;color:var(--k-soft)}
+.k-page [hidden]{display:none!important}
+.k-mono,:where(.k-page) code{font:12.5px/1.4 ui-monospace,"SF Mono",Menlo,monospace}
+.k-soft{color:var(--k-soft)}.k-faint{color:var(--k-faint)}.k-small{font-size:13px}
+.k-grow{flex:1}
+.k-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.k-bad{color:var(--k-bad)}
+.k-offscreen{position:fixed;left:-9999px;top:0;opacity:0}
+
+/* the top of every window: the app (or Contacts) left, a switch or tabs in the middle, the identity right */
+.k-top{display:flex;align-items:center;gap:14px;height:56px;padding:0 20px;border-bottom:1px solid var(--k-line);flex:none;position:relative;z-index:5;background:var(--k-bg)}
+.k-app{display:flex;align-items:center;gap:10px;font-size:16px;letter-spacing:.04em}
+.k-app img{width:26px;height:26px;border-radius:6px}
+.k-menu-btn{display:flex;align-items:center;gap:8px;color:var(--k-soft);font-size:14px;padding:6px 10px;border:1px solid var(--k-line);border-radius:10px}
+.k-menu-btn:hover{color:var(--k-text)}
+.k-switch{display:flex;border:1px solid var(--k-edge);border-radius:999px;padding:3px;gap:2px}
+.k-switch button{padding:5px 18px;border-radius:999px;color:var(--k-soft);font-size:14px;display:flex;align-items:center;gap:6px}
+.k-switch button.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
+.k-count{display:inline-block;min-width:1.4em;padding:0 6px;border-radius:999px;background:var(--k-edge);color:var(--k-text);font-size:11px;line-height:1.6;text-align:center}
+.k-count:empty{display:none}
+.k-on .k-count{background:var(--k-ink);color:var(--k-p)}
+.k-me{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 12px;border:1px solid var(--k-line);border-radius:999px;max-width:42%}
+.k-me .k-n{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k-me .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);white-space:nowrap}
+.k-dot{width:26px;height:26px;border-radius:50%;background:var(--k-p);color:var(--k-ink);display:grid;place-items:center;font-size:12px;font-weight:400;flex:none}
+.k-dot.k-c{border-radius:7px}
+.k-dot.k-alt{background:var(--k-raise2);color:var(--k-text);border:1px solid var(--k-edge)}
+.k-body{flex:1;min-height:0;display:flex;position:relative}
+.k-tabs{display:flex;gap:4px}
+.k-tab{padding:6px 14px;border-radius:999px;color:var(--k-soft);font-size:14px;display:flex;align-items:center;gap:8px}
+.k-tab.k-on{background:var(--k-p);color:var(--k-ink);font-weight:400}
+
+/* tiles: big, an icon and words, danger marks; the edge thickens with the level; never red but for an alarm */
+.k-home{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:18px;padding:24px 28px 12px}
+.k-tile{position:relative;border-radius:22px;background:linear-gradient(160deg,var(--k-wash2),var(--k-wash) 55%,rgba(255,255,255,.015));border:1px solid var(--k-line);padding:26px 28px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;text-align:left}
+.k-tile:hover,.k-tile:focus-visible{outline:1px solid var(--k-p);outline-offset:-1px}
+.k-tile .k-ic{position:absolute;left:26px;top:24px;width:58px;height:58px;color:var(--k-p)}
+.k-tile h2{font-size:34px;letter-spacing:.01em;color:var(--k-p)}
+.k-tile p{color:var(--k-soft);font-size:14.5px;max-width:36em}
+.k-tile .k-dm{position:absolute;right:24px;top:26px}
+.k-tile.k-d2{border-color:rgba(255,255,255,.14);border-width:1.5px}
+.k-tile.k-d3{border-color:rgba(255,255,255,.24);border-width:2.5px}
+.k-tile.k-alarm{border-color:var(--k-bad)}
+.k-tile .k-alert{position:absolute;right:24px;bottom:24px;color:var(--k-bad);font-size:13px;border:1px solid var(--k-bad);border-radius:999px;padding:2px 10px}
+.k-dm{display:inline-flex;align-items:flex-end;gap:3px;height:20px}
+.k-dm i{display:block;width:5px;border-radius:2px;background:var(--k-edge)}
+.k-dm i:nth-child(1){height:8px}.k-dm i:nth-child(2){height:13px}.k-dm i:nth-child(3){height:19px}
+.k-dm.k-l1 i:nth-child(1),.k-dm.k-l2 i:nth-child(-n+2),.k-dm.k-l3 i{background:var(--k-p)}
+
+/* a tile opened: its column on the left, the part on the right; on a phone the column folds away once a part is chosen */
+.k-col{width:248px;flex:none;border-right:1px solid var(--k-line);padding:18px 12px;display:flex;flex-direction:column;gap:2px;overflow:auto}
+.k-col h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--k-faint);margin:14px 10px 6px}
+.k-col h3:first-child{margin-top:0}
+.k-col button{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;color:var(--k-soft);font-size:14.5px;text-align:left;width:100%}
+.k-col button.k-on{background:var(--k-wash2);color:var(--k-text)}
+.k-col button.k-on::before{content:"";width:3px;height:16px;border-radius:2px;background:var(--k-p);margin-left:-4px}
+.k-col button .k-k{margin-left:auto;font-size:12px;color:var(--k-faint)}
+.k-col .k-sep{height:1px;background:var(--k-line);margin:10px 8px}
+.k-pane{flex:1;min-width:0;padding:22px 30px;overflow:auto;display:flex;flex-direction:column}
+.k-pane>h2{font-size:24px;margin-bottom:4px}
+.k-back{display:none;align-items:center;gap:6px;color:var(--k-soft);font-size:14px;margin:0 0 8px}
+
+/* the feed box: fills its space and scrolls inside, never the page */
+.k-feedwrap{flex:1;min-height:0;display:flex;flex-direction:column}
+.k-controls{display:flex;align-items:center;gap:6px;margin:0 0 10px;flex-wrap:wrap}
+.k-lens{padding:5px 14px;border-radius:999px;font-size:14px;color:var(--k-soft);border:1px solid var(--k-line);white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.k-lens.k-on{background:var(--k-p);color:var(--k-ink);border-color:var(--k-p)}
+.k-point{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 8px;font-size:13px;color:var(--k-soft)}
+.k-point .k-lbl{color:var(--k-faint);min-width:5.5em}
+.k-feed{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;border:1px solid var(--k-line);border-radius:16px;padding:6px 14px;background:#080a0f;position:relative}
+.k-feed::-webkit-scrollbar{width:8px}.k-feed::-webkit-scrollbar-thumb{background:var(--k-edge);border-radius:4px}.k-feed::-webkit-scrollbar-track,.k-feed::-webkit-scrollbar-corner{background:transparent}.k-feed::-webkit-scrollbar-button{display:none;height:0}
+.k-empty{padding:28px 0;color:var(--k-faint);font-size:14px;text-align:center}
+.k-clock{font-size:12px;color:var(--k-faint);margin:6px 2px 0}
+
+/* the act card, the same in every app: the signer top left, the act bottom right, each its own menu */
+.k-act{position:relative;padding:12px 2px 10px;border-bottom:1px solid var(--k-line)}
+.k-act:last-child{border-bottom:0}
+.k-act .k-signer{display:inline-flex;align-items:baseline;gap:9px;padding:2px 8px 2px 0;border-radius:8px;max-width:100%;flex-wrap:wrap;text-align:left}
+.k-act .k-sid,.k-act .k-actid{font:12px ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-id)}
+.k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
+.k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
+.k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
+.k-act .k-when{float:right;font-size:12px;color:var(--k-faint)}
+.k-act .k-txt{margin:4px 0 6px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.k-act .k-label{font-size:12.5px;color:var(--k-soft);margin:2px 0}
+.k-act .k-label.k-warn{color:var(--k-c)}
+.k-act .k-kind{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--k-soft);border:1px solid var(--k-line);border-radius:5px;padding:1px 6px;margin-right:6px}
+.k-act .k-foot{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--k-faint);flex-wrap:wrap}
+.k-act .k-actid{margin-left:auto;padding:2px 0 2px 8px;border-radius:8px}
+.k-act .k-v{color:var(--k-p);font-size:12px}
+.k-act .k-alarmline{color:var(--k-bad);font-size:12.5px}
+.k-act .k-signer.k-open,.k-act .k-actid.k-open{background:var(--k-wash2);outline:1px solid var(--k-p)}
+.k-act.k-sel{background:var(--k-wash);border-radius:12px;padding-left:10px;padding-right:10px;border-bottom-color:transparent}
+.k-act figure{margin:8px 0 4px}
+.k-act img,.k-act video{display:block;max-width:100%;max-height:60vh;height:auto;border-radius:12px;image-orientation:from-image}
+.k-act .k-doc{display:block;border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px;text-decoration:none}
+.k-act .k-box{border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0}
+
+/* menus: what you take above a line, what changes something below */
+.k-pop{position:fixed;z-index:40;min-width:236px;max-width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;padding:6px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-pop .k-t{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint);padding:6px 10px 4px;overflow-wrap:anywhere}
+.k-pop button{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:9px;font-size:14px;color:var(--k-text);width:100%;text-align:left}
+.k-pop button:hover,.k-pop button:focus-visible{background:var(--k-wash);outline:none}
+.k-pop button:disabled{color:var(--k-faint);opacity:1}
+.k-pop button .k-k{margin-left:auto;font-size:11.5px;color:var(--k-faint)}
+.k-pop hr{border:0;border-top:1px solid var(--k-edge);margin:5px 4px}
+.k-pop .k-own{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--k-p);padding:4px 10px 2px;opacity:.75}
+
+/* the typing box: always in the same place, the bottom */
+.k-typing{flex:none;display:flex;flex-direction:column;gap:6px;border:1px solid var(--k-edge);border-radius:16px;padding:10px 12px;margin-top:12px;background:var(--k-raise);position:relative}
+.k-typing .k-line{display:flex;align-items:flex-end;gap:10px}
+.k-typing textarea{flex:1;border:0;background:none;padding:2px 0;min-height:24px;max-height:30vh;resize:none;font-size:15px}
+.k-typing .k-tools{display:flex;gap:8px;align-items:center;color:var(--k-soft);font-size:13px}
+.k-typing .k-tools button,.k-typing .k-tools label{color:var(--k-soft);font-size:13px;margin:0;cursor:pointer;display:inline-flex;align-items:center}
+.k-typing .k-tools button:hover,.k-typing .k-tools label:hover{color:var(--k-text)}
+.k-typing input[type=file]{display:none}
+.k-typing .k-opts{display:flex;gap:8px;flex-wrap:wrap}
+.k-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border:1px solid var(--k-edge);border-radius:999px;font-size:14px;color:var(--k-text)}
+.k-btn.k-p{background:var(--k-p);border-color:var(--k-p);color:var(--k-ink);font-weight:400}
+.k-btn.k-q{border-color:transparent;color:var(--k-soft)}
+.k-btn.k-alarm{border-color:var(--k-bad);color:var(--k-bad)}
+.k-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;border:1px solid var(--k-edge);font-size:13px;color:var(--k-soft)}
+.k-chip.k-on{background:var(--k-wash2);border-color:transparent;color:var(--k-text)}
+.k-chip .k-x{color:var(--k-faint)}
+
+/* overlays: the pop-up thread, panels, frames */
+.k-shade{position:fixed;inset:0;background:rgba(3,4,6,.66);z-index:30}
+.k-shade.k-light{background:rgba(3,4,6,.45)}
+.k-modal{position:fixed;z-index:31;left:50%;top:50%;transform:translate(-50%,-50%);width:min(600px,calc(100% - 28px));max-height:calc(100% - 60px);display:flex;flex-direction:column;background:#0b0e14;border:1px solid var(--k-edge);border-radius:18px;padding:16px 18px;box-shadow:0 24px 60px rgba(0,0,0,.7)}
+.k-modal .k-mh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.k-modal .k-mh h3{font-size:17px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.k-round{font-size:18px;color:var(--k-soft);width:30px;height:30px;border:1px solid var(--k-line);border-radius:50%;display:grid;place-items:center;flex:none}
+.k-modal .k-mbody{min-height:0;overflow:auto;display:flex;flex-direction:column}
+.k-modal .k-feed{max-height:60vh;flex:none}
+.k-panel{position:fixed;z-index:32;right:16px;top:62px;width:360px;max-height:calc(100% - 78px);overflow:auto;background:#0e1118;border:1px solid var(--k-edge);border-radius:16px;padding:10px;box-shadow:0 20px 50px rgba(0,0,0,.7)}
+.k-panel.k-left{left:16px;right:auto}
+.k-panel h4{font-size:16px;font-weight:300}
+.k-idrow{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;width:100%;text-align:left}
+.k-idrow.k-on{background:var(--k-wash2)}
+.k-idrow .k-n{font-size:14.5px}
+.k-idrow .k-s{font:11.5px ui-monospace,Menlo,monospace;color:var(--k-faint)}
+.k-idrow .k-tagc{font-size:11px;color:var(--k-soft);border:1px solid var(--k-line);border-radius:999px;padding:0 7px;margin-left:4px}
+.k-idrow.k-sub{margin-left:26px;width:calc(100% - 26px)}
+.k-idline{display:flex;align-items:center;gap:4px}
+.k-idline>.k-idrow{flex:1;min-width:0}
+.k-more{color:var(--k-soft);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--k-line);flex:none}
+.k-sepline{height:1px;background:var(--k-line);margin:6px 4px}
+.k-foot-note{font-size:12.5px;color:var(--k-faint);padding:6px 8px}
+.k-panel .k-pane-in{padding:4px 6px}
+
+/* the slot: another app's panel, drawn by that app in a frame this app cannot read or change */
+.k-frame{position:fixed;z-index:50;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100% - 28px));border-radius:20px;padding:4px;background:repeating-linear-gradient(45deg,var(--k-fc) 0 10px,var(--k-fc2) 10px 20px)}
+.k-frame .k-by{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--k-ink);padding:4px 10px 6px;font-weight:400}
+.k-frame iframe{display:block;width:100%;height:min(420px,70vh);border:0;border-radius:16px;background:#090c11}
+.k-frame.k-kishib{--k-fc:#cfe5f7;--k-fc2:#9fc9ea}
+.k-frame.k-damgar{--k-fc:#f2d89c;--k-fc2:#d9b55e}
+.k-frame.k-edubba{--k-fc:#a9e3c7;--k-fc2:#76c9a0}
+.k-frame.k-ummia{--k-fc:#f7c4b7;--k-fc2:#e99a86}
+.k-frame.k-dub{--k-fc:#efe8dc;--k-fc2:#cfc4b0}
+
+/* a disclaimer in one line; the "?" opens the rest */
+.k-say{font-size:12.5px;color:var(--k-faint);margin:6px 0}
+.k-say>summary{list-style:none;cursor:pointer;display:inline}
+.k-say>summary::-webkit-details-marker{display:none}
+.k-help{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--k-edge);color:var(--k-soft);font-size:11px;margin-left:6px;vertical-align:1px}
+.k-say[open]>summary .k-help{background:var(--k-wash2);color:var(--k-text)}
+.k-say .k-more-text{margin:6px 0 2px;color:var(--k-soft);font-size:13px;max-width:48em}
+.k-say .k-more-text p{margin:4px 0}
+.k-alarmbox{border:1px solid var(--k-bad);border-radius:12px;padding:10px 12px;margin:8px 0;color:var(--k-text);font-size:14px}
+
+/* notes the app says: done, error */
+.k-note{margin:8px 0;padding:8px 12px;border-left:2px solid var(--k-line);font-size:14px;color:var(--k-soft)}
+.k-note.k-done{border-left-color:var(--k-p);color:var(--k-text)}
+.k-note.k-error{border-left-color:var(--k-bad);color:var(--k-text)}
+.k-note ul{margin:4px 0 0;padding-left:1.1em}
+.k-note li.k-bad,.k-note li.bad{color:var(--k-bad)}
+.k-status{position:fixed;z-index:45;left:50%;top:64px;transform:translateX(-50%);width:min(560px,calc(100% - 24px));max-height:40vh;overflow:auto;background:var(--k-pop);border:1px solid var(--k-edge);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6)}
+.k-status:empty{display:none}
+.k-status .k-note{margin:0;border-left:0;padding:10px 40px 10px 14px}
+.k-status .k-close{position:absolute;right:8px;top:8px}
+
+/* the profile page: light and friendly */
+.k-prof{max-width:760px;width:100%;margin:0 auto;flex:1;display:flex;flex-direction:column;min-height:0}
+.k-prof .k-hero{display:flex;gap:18px;align-items:center;padding:8px 0 12px;flex-wrap:wrap}
+.k-prof .k-hero .k-dot{width:64px;height:64px;font-size:26px;font-weight:300}
+.k-prof .k-hero h2{font-size:30px;overflow-wrap:anywhere}
+.k-prof .k-own-name{color:var(--k-soft);font-size:14px}
+
+/* lists, words */
+.k-list{border-top:1px solid var(--k-line)}
+.k-list>div,.k-list>li{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--k-line);font-size:14.5px;list-style:none}
+.k-list .k-r{margin-left:auto;color:var(--k-soft);font-size:13px}
+.k-words{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 16px;padding:14px 18px;border:1px solid var(--k-edge);border-radius:14px;font:14.5px ui-monospace,Menlo,monospace;margin:10px 0;background:var(--k-raise)}
+.k-words b{display:inline-block;min-width:2em;color:var(--k-faint);font-weight:400}
+.k-box{border:1px solid var(--k-line);border-radius:14px;padding:14px 16px;margin:10px 0}
+.k-box.k-fill{background:var(--k-wash);border-color:transparent}
+.k-facts{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;font-size:14px;margin:6px 0}
+.k-facts dt{color:var(--k-faint)}.k-facts dd{margin:0;color:var(--k-soft);overflow-wrap:anywhere}
+
+/* phone: one column; the column becomes the first screen and folds away once a part is chosen */
+@media (max-width:600px){
+  .k-top{height:52px;padding:0 10px;gap:8px}
+  .k-app .k-nm,.k-hide-phone{display:none!important}
+  .k-me{padding:3px;border:0}
+  .k-me .k-n,.k-me .k-s{display:none}
+  .k-menu-btn .k-l{display:none}
+  .k-switch button{padding:4px 11px}
+  .k-home{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr);gap:10px;padding:12px}
+  .k-tile{padding:16px 18px;border-radius:18px}
+  .k-tile .k-ic{width:40px;height:40px;left:18px;top:16px}
+  .k-tile h2{font-size:24px}
+  .k-tile p{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .k-tile .k-dm{right:16px;top:18px}
+  .k-opened .k-col{width:100%;border-right:0;padding:12px}
+  .k-opened .k-pane{display:none;padding:12px}
+  .k-opened.k-chosen .k-col{display:none}
+  .k-opened.k-chosen .k-pane{display:flex}
+  .k-opened.k-chosen .k-back{display:inline-flex}
+  .k-pane{padding:12px}
+  .k-words{grid-template-columns:repeat(3,1fr);font-size:12.5px;padding:10px 12px;gap:4px 10px}
+  .k-panel{left:8px;right:8px;width:auto;top:56px}
+  .k-pop:not([data-k-suggest]){left:8px!important;right:8px!important;top:auto!important;bottom:8px!important;max-width:none;width:auto;min-width:0;border-radius:16px}
+  .k-modal{padding:12px;width:calc(100% - 16px);max-height:calc(100% - 24px)}
+  .k-act .k-when{display:none}
+  .k-feed{padding:4px 10px}
+}
+`;
+
+// ../kit/src/html.ts
+var SVG = (d) => `<svg class="k-ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+var ICONS = {
+  identities: SVG('<circle cx="24" cy="17" r="8"/><path d="M9 41c2-9 8-13 15-13s13 4 15 13"/>'),
+  runner: SVG('<rect x="7" y="13" width="20" height="22" rx="4"/><path d="M27 20h6a6 6 0 0 1 0 12h-6M33 26h8M14 22h6M14 27h6"/>'),
+  paper: SVG('<path d="M13 6h16l8 8v28H13z"/><path d="M29 6v8h8M18 22h14M18 28h14M18 34h9"/>'),
+  collectives: SVG('<circle cx="16" cy="18" r="5.5"/><circle cx="32" cy="18" r="5.5"/><circle cx="24" cy="12" r="5"/><path d="M6 38c1-7 5-10 10-10s7 2 8 5c1-3 3-5 8-5s9 3 10 10"/>'),
+  waiting: SVG('<path d="M14 6h20M14 42h20M16 6c0 10 16 12 16 18S16 32 16 42M32 6c0 10-16 12-16 18s16 8 16 18"/>'),
+  account: SVG('<rect x="8" y="9" width="32" height="30" rx="4"/><path d="M8 17h32M15 25h8M15 31h12M31 25h3M31 31h3"/>'),
+  lanes: SVG('<path d="M14 42 19 6M34 42 29 6M24 10v4M24 21v5M24 33v6"/>'),
+  settings: SVG('<path d="M10 14h28M10 24h28M10 34h28"/><circle cx="18" cy="14" r="3.5"/><circle cx="31" cy="24" r="3.5"/><circle cx="22" cy="34" r="3.5"/>'),
+  agents: SVG('<rect x="10" y="12" width="28" height="24" rx="7"/><circle cx="19" cy="24" r="2.4"/><circle cx="29" cy="24" r="2.4"/><path d="M24 6v6M6 22v6M42 22v6"/>'),
+  publishing: SVG('<path d="M8 30v8h32v-8M24 30V8M15 17l9-9 9 9"/>'),
+  vows: SVG('<circle cx="24" cy="22" r="12"/><path d="M18 22l4 4 8-8M17 33l-3 9 10-5 10 5-3-9"/>'),
+  look: SVG('<path d="M4 24s7-12 20-12 20 12 20 12-7 12-20 12S4 24 4 24z"/><circle cx="24" cy="24" r="6"/>'),
+  discuss: SVG('<path d="M6 10h24v16H16l-6 6v-6H6z"/><path d="M34 18h8v16h-4v6l-6-6H22v-4"/>'),
+  publish: SVG('<path d="M10 40h28M24 32V8M15 17l9-9 9 9"/>'),
+  choose: SVG('<path d="M8 12l3 3 6-6M8 24l3 3 6-6M8 36l3 3 6-6M22 12h18M22 24h18M22 36h18"/>')
+};
+
+// ../dub/src/page/family.ts
 var TEST_ONLY = "Test identities only, until MOR is frozen";
 var WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY}. Two risks, in plain words:</p>
 <ol><li>Whoever serves this page's code at the moment an identity is made here could copy its keys.</li>
@@ -28517,9 +30219,9 @@ ${r.plain.map((x) => `<h4>${e(x.heading)}</h4><p class="small">As plain text, ch
 ${r.blocking.length ? note("error", `<strong>It cannot be signed here:</strong>${lines(r.blocking.map((text4) => ({ text: text4 })))}`) : ""}`;
   const share2 = p.share === "none" ? "" : p.share === "waiting" ? `<p class="small">Your share of the collective\u2019s chain key will arrive once every member has signed and the founder\u2019s Edubba deals the key. Its one-time key waits in this app until then. Dub looks for it by itself while this tab is open.</p><div class="row"><button class="primary" data-action="lookshare">Look for my share</button><button class="quiet" data-action="sharehand" data-thread="${e(p.thread)}">I received my share by hand</button></div>` : p.share === "ready" ? `<div class="row"><button class="primary" data-action="share" data-thread="${e(p.thread)}">Show my share of the chain key, once</button></div>` : p.share === "shown" ? shareTypeBack(p.thread, p.positions ?? []) : p.share === "byHand" ? '<p class="small">Your share came by hand. The one-time key is destroyed.</p>' : '<p class="small">Your share is written down. The one-time key is destroyed: nothing of it is here.</p>';
   const actions = p.answer ? `<p class="state">${e(STATE_OF[p.answer.verdict])}${p.answer.signature ? ` \xB7 signature act <span class="fp" title="${e(p.answer.signature)}">${e(p.answer.signature.slice(0, 8))}\u2026</span>` : ""}</p>` : r.blocking.length ? `<div class="row"><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div>` : `<div class="row"><button class="primary" data-action="accept" data-thread="${e(p.thread)}">Sign it</button><button data-action="decline" data-thread="${e(p.thread)}">Decline</button></div><p class="small">Your signature is an act of yours, public: it binds you to exactly what is read above.</p>`;
-  const read2 = p.answer ? `<details data-fold="proposal:${e(p.thread)}"><summary>What was proposed, in plain words</summary>${body}</details>` : body;
+  const read3 = p.answer ? `<details data-fold="proposal:${e(p.thread)}"><summary>What was proposed, in plain words</summary>${body}</details>` : body;
   const leave = p.answer?.verdict === "signed" && p.collective && (r.kind === "founding" || r.kind === "clone") && (p.share === "received" || p.share === "byHand") ? p.left ? `<p class="small">You resigned: act <span class="fp" title="${e(p.left)}">${e(p.left.slice(0, 8))}\u2026</span>. It takes effect once the collective registers it.</p>` : `<div class="row"><button class="quiet" data-action="leave-read" data-thread="${e(p.thread)}">Leave this collective\u2026</button></div><div class="leave" data-leave="${e(p.thread)}"></div>` : "";
-  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${read2}${actions}${share2}${leave}</div>`;
+  return `<div class="proposal" data-thread="${e(p.thread)}">${head}${read3}${actions}${share2}${leave}</div>`;
 }
 function leaveRead(thread, r) {
   return `<div class="say-leave">${lines(r.lines)}<div class="row"><button class="primary" data-action="leave-collective" data-thread="${e(thread)}" data-digest="${e(r.digest)}">Sign my resignation</button></div><p class="small">Your resignation is an act of yours, public. Nobody else signs it.</p></div>`;
@@ -28536,6 +30238,64 @@ function share(s) {
 function shareTypeBack(thread, positions) {
   return `<form class="share-back" data-thread="${e(thread)}"><span class="label">Three words of your share</span><p class="small">From what you wrote down. The one-time key is destroyed only once these are right.</p><div class="typed">${positions.map((p) => `<label>Word ${p} <input name="w${p}" type="text" autocomplete="off" spellcheck="false" required></label>`).join("")}</div><div class="row"><button type="submit" class="primary">Check them</button></div></form>`;
 }
+
+// ../dub/src/page/view.ts
+var TEST_ONLY2 = "Test identities only, until MOR is frozen";
+var TINT2 = { layer: APPS.dub.colour, pastel: APPS.dub.pastel };
+var WEB_BANNER2 = `<details class="k-say dub-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY2}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>Two risks, in plain words:</p>
+<ol><li>Whoever serves this page\u2019s code at the moment an identity is made here could copy its keys.</li>
+<li>This browser\u2019s storage, where the identity\u2019s signing key is kept, can be lost, or read by what runs in this page.</li></ol>
+<p>An identity that is to hold anything of value is made with a downloaded app, or with a chain key kept offline: never here.</p></div></details>`;
+var PAGE_STYLE2 = `${KIT_STYLE}
+body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
+#app.k-page{flex:1;min-height:0;height:auto}
+.dub-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.dub-banner strong{font-weight:400;color:var(--k-text)}
+.dub-banner ol{margin:4px 0;padding-left:1.4em}
+.dub-center{max-width:820px;margin:0 auto;width:100%}
+.dub-first{max-width:640px;margin:0 auto;width:100%;overflow:auto;padding:24px 20px 40px}
+.dub-first h2{font-size:24px;margin:8px 0 4px}
+.dub-first form{margin:6px 0}
+.dub-picked{font-size:12.5px;color:var(--k-soft)}
+.dub-film{display:flex;align-items:center;gap:10px;border:1px solid var(--k-line);border-radius:12px;padding:10px 12px;margin:6px 0;font-size:14px;color:var(--k-soft)}
+.dub-sealed{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:6px 0}
+.dub-sealed img{margin:6px 0}
+.dub-convs{width:300px;flex:none;border-right:1px solid var(--k-line);display:flex;flex-direction:column;min-height:0}
+#private-notes{padding:0 14px 10px}
+.dub-convs .dub-find{margin:12px;width:calc(100% - 24px)}
+.dub-convs .dub-list{overflow:auto;flex:1;min-height:0}
+.dub-conv{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--k-line);width:100%;text-align:left}
+.dub-conv.k-on{background:var(--k-wash2)}
+.dub-conv .k-n{font-size:14.5px}
+.dub-conv .dub-l{font-size:13px;color:var(--k-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;display:block}
+.dub-conv .dub-w{margin-left:auto;font-size:11.5px;color:var(--k-faint);align-self:flex-start;white-space:nowrap}
+.dub-conv .k-count{background:var(--k-p);color:var(--k-ink);margin-left:6px}
+.dub-thread{flex:1;min-width:0;display:flex;flex-direction:column;padding:14px 22px 16px;min-height:0}
+.dub-thread .dub-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.dub-thread .dub-head h2{font-size:20px}
+.dub-cc{font-size:12.5px;color:var(--k-soft)}
+.dub-field{display:flex;gap:8px;align-items:center}
+.dub-field input{flex:1}
+.dub-modal-form textarea{min-height:5em}
+.dub-ways{border-top:1px solid var(--k-line);margin:8px 0}
+.dub-ways label{display:flex;gap:10px;align-items:flex-start;padding:10px 6px;border-bottom:1px solid var(--k-line);margin:0;color:var(--k-text);font-size:14.5px;cursor:pointer}
+.dub-ways label.dub-closed{color:var(--k-faint);cursor:default}
+.dub-ways input{margin-top:4px}
+.dub-ways .k-small{display:block}
+.dub-hand{width:100%;min-height:6em;font:12px ui-monospace,Menlo,monospace}
+.dub-note-line{font-size:13px;color:var(--k-soft);margin:0 0 8px}
+@media (max-width:600px){
+  .dub-banner{padding:5px 10px}
+  .dub-private .dub-convs{width:100%;border-right:0}
+  .dub-private .dub-thread{display:none;padding:10px 12px}
+  .dub-private.k-chosen .dub-convs{display:none}
+  .dub-private.k-chosen .dub-thread{display:flex}
+  .dub-private .k-back{display:inline-flex}
+  .dub-first{padding:16px 14px 30px}
+  .k-typing .dub-l{display:none}
+}
+.dub-film .k-btn{white-space:nowrap}
+@media (min-width:601px){.dub-private .k-back{display:none}}`;
 
 // ../longform/src/html.ts
 var ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -28587,7 +30347,7 @@ table.grid tr.kinds td{text-align:left;white-space:normal}
 table.grid tfoot td{vertical-align:top;font-size:12px;color:var(--soft);white-space:normal;text-align:left;min-width:6em}
 table.grid .areamore{display:flex;flex-direction:column;gap:4px;margin-top:4px;font-size:12px}`;
 var list9 = (xs) => xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
-var box = (on, row, m, label) => `<td><button type="button" class="box${on ? " on" : ""}" data-grid-cell="${e(row)}" data-m="${e(m)}" aria-pressed="${on}" title="${e(label)}">${on ? "\u25A0" : ""}</button></td>`;
+var box2 = (on, row, m, label) => `<td><button type="button" class="box${on ? " on" : ""}" data-grid-cell="${e(row)}" data-m="${e(m)}" aria-pressed="${on}" title="${e(label)}">${on ? "\u25A0" : ""}</button></td>`;
 var locked = (label) => `<td><span class="locked" title="${e(label)}">\u25A0</span></td>`;
 var num = (field, value, _min, _max) => `<input type="number" data-grid-num="${e(field)}" value="${value}" inputmode="numeric">`;
 function areaRows(g, l, i, name) {
@@ -28599,7 +30359,7 @@ function areaRows(g, l, i, name) {
   const capSay = l.cap ? `; above ${l.cap.toLocaleString("en")}, ${l.number + 1} keys` : "";
   const row = `<tr data-area="${i}"><th class="rowname"><input class="areaname" type="text" data-grid-name="${i}" value="${e(l.name)}" aria-label="The area's name" placeholder="Its name">
 <div class="areamore">${layer}<label class="check"><input type="checkbox" data-grid-some="${i}"${some ? " checked" : ""}> Only some kinds of act</label>${money2}<button type="button" class="quiet" data-grid-remove="${i}">Remove this area</button></div></th>
-${g.members.map((m) => box(l.holders.includes(m), `area:${i}`, m, `${name(m)}\u2019s key counts in \u201C${l.name}\u201D`)).join("")}
+${g.members.map((m) => box2(l.holders.includes(m), `area:${i}`, m, `${name(m)}\u2019s key counts in \u201C${l.name}\u201D`)).join("")}
 <td>${num(`area:${i}`, l.number, 1, Math.max(1, holders2.length))} <span class="small">of ${holders2.length}</span></td>
 <td class="say">${e(reachSay(l))}: ${e(keysSay)}${e(capSay)}.</td></tr>`;
   if (!some) return row;
@@ -28625,7 +30385,7 @@ function gridTable(form2, g, name) {
 <thead><tr><th class="rowname"></th>${cols}<th>Keys needed</th><th>In words</th></tr></thead>
 <tbody>
 ${band("The constitution")}
-<tr><th class="rowname">Change members and areas</th>${g.members.map((m) => box(c2.holders.includes(m), "const", m, `${name(m)} has a voice in changing the constitution`)).join("")}
+<tr><th class="rowname">Change members and areas</th>${g.members.map((m) => box2(c2.holders.includes(m), "const", m, `${name(m)} has a voice in changing the constitution`)).join("")}
 <td>${all ? num("const", c2.number, 1, n) : `${c2.holders.length} <span class="small">of ${c2.holders.length}</span>`}</td><td class="say">${e(constSay)}.</td></tr>
 <tr><th class="rowname">Rebuild the chain key</th>${g.members.map((m) => locked(`${name(m)} holds a share, on paper`)).join("")}
 <td>${num("chain", g.chainKey, 1, n)} <span class="small">of ${n}</span></td><td class="say">One share per member, on paper; any ${g.chainKey} rebuild it. Fewer than every member, so the loss of one never freezes it (F96).</td></tr>
@@ -28654,10 +30414,10 @@ var PROMPT_SAY = "What you type here is an act: a private message from your iden
 var TEST_MODE_SAY = "Test mode: every member is held in this Edubba, and their consent is simulated: you decide for all of them. The shares of its chain key are kept in this Edubba\u2019s folder. For trying things alone, and for the tests: nobody else is asked, and nothing it signs binds anyone but you.";
 var REAL_SAY = "A real collective: each member is a person with their own identity, on their own device. Each reads the founding in plain words and signs it in their own app (Dub\u2019s Signing tab, or Edubba). Its chain key is dealt as one share per member, written on paper; no app keeps a share.";
 var KEY_SAY = "The key goes from this page to the program once, and is kept in a file on this Mac that only your account can read (~/.config/mor). This page never holds it again: it is shown by its last four characters only.";
-var TINT2 = { layer: "#48c08c", line: "#153028", edge: "#1a3f32", accent: "#2e7659" };
+var TINT3 = { layer: "#48c08c", line: "#153028", edge: "#1a3f32", accent: "#2e7659" };
 var STYLE4 = `${STYLE2}${GRID_STYLE}
 ${STYLE3}
-:root{--line:${TINT2.line};--edge:${TINT2.edge};--tint:${TINT2.accent}}
+:root{--line:${TINT3.line};--edge:${TINT3.edge};--tint:${TINT3.accent}}
 button:hover,.door:hover{border-color:var(--tint)}
 input:focus,textarea:focus{border-color:var(--tint)}
 details>summary::before{color:var(--tint)}
@@ -28781,7 +30541,7 @@ function fp(h) {
 }
 var bare = (n) => (n ?? "").replace(/ \[[0-9a-f]{8}…[0-9a-f]{4}\]$/, "");
 var grouped2 = (id) => `<span title="${e(id.match(/.{1,4}/g).join(" "))}">${e(shownId(id))}</span>`;
-var note2 = (kind, html) => `<div class="note ${kind}">${html}</div>`;
+var note3 = (kind, html) => `<div class="note ${kind}">${html}</div>`;
 function foldCard(id, key, title2, body, open = true, after2 = "") {
   return `<details class="card fold" id="${e(id)}" data-fold="${e(key)}"${open ? " open" : ""}><summary><h3>${title2}</h3>${after2}<span class="small hint"></span></summary>${body}</details>`;
 }
@@ -28793,13 +30553,13 @@ function done(d) {
 }
 var plain = (text4) => `<div class="plain">${plainHtml(text4)}</div>`;
 var copyButton = (id) => `<button class="copy" data-action="copy" data-id="${e(shownId(id))}" title="Copies the ID written for people (mid1\u2026), to paste where an identity is asked for">Copy ID</button>`;
-function top(tab = null, counts2 = {}) {
+function top2(tab = null, counts2 = {}) {
   const t = (k, words2) => `<button class="tab${tab === k ? " on" : ""}" data-action="tab" data-tab="${k}" aria-pressed="${tab === k}">${words2}<span class="count">${counts2[k] ? counts2[k] : ""}</span></button>`;
   return `<header class="bar"><h1 class="mark">${NAME3}</h1>${tab ? `<nav class="tabs" aria-label="Edubba">${WEB ? "" : t("agents", "Agents")}${t("collectives", "Collectives")}${t("publishing", "Publishing")}${t("identities", "Identities")}</nav><span class="grow"></span>${t("settings", "Settings")}` : `<span class="grow"></span><span class="small">${WEB ? "for testing only" : "this machine only"}</span>`}</header>
 ${WEB ? "" : '<p class="testonly">Test identities only, until MOR is frozen. Every key is held in software in this program\u2019s folders: a prototype, never for a real identity.</p>'}`;
 }
 function pairing() {
-  return `${top()}
+  return `${top2()}
 <h2>Pair this browser</h2>
 <p class="small">This page acts for the program running on this Mac, which holds the keys. Open it with the Edubba app (it pairs by itself), or enter a code the program gave.</p>
 <form id="pair" class="row"><input id="pair-code" class="grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
@@ -28870,7 +30630,7 @@ function folderPicker(l, target) {
 <div class="picker" data-target="${e(target)}">
 <div class="row">${l.places.map((p) => `<button class="quiet" data-action="folder-open" data-path="${e(p.path)}">${e(p.name)}</button>`).join("")}</div>
 <p class="path" id="e-picker-path">${e(l.path)}</p>
-${l.problem ? note2("error", e(l.problem)) : ""}
+${l.problem ? note3("error", e(l.problem)) : ""}
 <div class="row">${l.parent ? `<button data-action="folder-open" data-path="${e(l.parent)}">\u2191 Up</button>` : ""}<span class="grow"></span><button class="primary" data-action="folder-use" data-path="${e(l.path)}"${l.problem ? " disabled" : ""}>Use this folder</button></div>
 <ul>${l.folders.map(
     (f) => `<li><button class="quiet" data-action="folder-open" data-path="${e(f.path)}">${f.spaced ? `\u201C${e(f.name)}\u201D` : e(f.name)}</button><span>${f.spaced ? `<span class="spaced">${e(f.spaced)}</span> ` : ""}${f.git ? '<span class="tag">git</span>' : ""}</span></li>`
@@ -28928,7 +30688,7 @@ function agentDetails(s, a, drafts2 = []) {
 <p class="small">${a.named ? `Display name \u201C${e(a.named.name)}\u201D published (${fp(a.named.act)}).` : 'No display name published from here. <button class="copy" data-action="agent-name">Publish its display name</button>'} Owner: ${e(owner)} ${a.owner ? fp(a.owner) : ""}.</p>
 <div class="row"><button data-action="agent-view">MOR as seen by this agent \u2192</button></div>
 <div class="here" id="e-agent-here" role="status" aria-live="polite"></div>
-${a.stopped ? note2("error", `<strong>Stopped:</strong> ${e(a.stopped)}`) : ""}
+${a.stopped ? note3("error", `<strong>Stopped:</strong> ${e(a.stopped)}`) : ""}
 
 ${foldCard("e-terms-card", "agent-terms", `Its terms${a.terms ? ` <span class="small">act ${fp(a.terms.act)}</span>` : ""}`, `${a.terms ? lines2(a.terms.words.map((text4) => ({ text: text4 }))) : '<p class="small">Not signed.</p>'}
 <div class="switch" role="group" aria-label="Answering"><span>Answering</span> ${switchB(true, "On")}${switchB(false, "Off")}</div>
@@ -28992,7 +30752,7 @@ ${v.inbox.map(
   ).join("") || '<p class="empty small">Nothing received yet.</p>'}`;
 }
 function draft(d) {
-  const blocking = d.blocking.length ? note2("error", `<strong>This cannot be approved:</strong><ul>${d.blocking.map((b) => `<li>${e(b)}</li>`).join("")}</ul>`) : "";
+  const blocking = d.blocking.length ? note3("error", `<strong>This cannot be approved:</strong><ul>${d.blocking.map((b) => `<li>${e(b)}</li>`).join("")}</ul>`) : "";
   const claude = d.note !== null ? `<h4>Claude's note to you</h4><p class="small">Claude's words about the draft. They are not signed and say nothing about what the draft does: the reading below does.</p><div class="claude">${e(d.note)}</div>` : "";
   const rework = d.reworks ? `<h4>A rework</h4><p class="small">It replaces draft <code>${e(d.reworks.digest.slice(0, 12))}</code>, which you sent back with this note:</p><div class="yours">${e(d.reworks.note)}</div>${d.reworks.text !== null ? `<details><summary>The text of the draft it replaces</summary>${plain(d.reworks.text)}</details>` : ""}` : "";
   const picture = d.picture ? `<h4>The picture, exactly as it will be published (${d.picture.width}\xD7${d.picture.height})</h4><div class="picture"><img alt="The picture to be published" src="${e(d.picture.src)}"></div>` : "";
@@ -29045,8 +30805,8 @@ function item(identity2, x) {
   if (x.act) facts.push(`Act ${fp(x.act)}.`);
   const sorts = PILES.filter(([s]) => s !== "new").map(([s, w]) => `<button data-action="sort" data-identity="${e(identity2)}" data-key="${e(x.key)}" data-sorted="${e(s)}" aria-pressed="${x.sorted === s}">${e(w)}</button>`).join("");
   return `<div class="item" data-item="${e(x.key)}" data-kind="${e(x.kind)}"><strong>${e(KIND2[x.kind])}</strong> <span class="small">${facts.join(" ")}</span>
-${x.alarm ? note2("error", e(x.alarm)) : ""}${x.notice ? note2("", e(x.notice)) : ""}
-${x.problem ? note2("warn", e(x.problem)) : ""}
+${x.alarm ? note3("error", e(x.alarm)) : ""}${x.notice ? note3("", e(x.notice)) : ""}
+${x.problem ? note3("warn", e(x.problem)) : ""}
 ${(x.assessment ?? []).map((s) => `<h4>${e(s.heading)}</h4>${lines2(s.lines)}`).join("")}
 ${x.text !== void 0 ? plain(x.text) : ""}
 <div class="sorts">${sorts}${x.act && x.from && x.standing === "valid" ? `<button data-action="witness" data-identity="${e(identity2)}" data-act="${e(x.act)}">Rely on this act\u2026</button>` : ""}</div></div>`;
@@ -29085,18 +30845,18 @@ ${piles}`)}
 ${foldCard("e-answered", "identity-answered", `What you answered for it (${answered.length})`, history2(answered), false)}`;
 }
 function record3(r) {
-  const card = (l) => l.card ? `<dl class="facts card-of"><dt>Latest act</dt><dd><code title="${e(l.card.act)}">${e(shownAct(l.card.act))}</code></dd><dt>Position</dt><dd>${l.card.position}</dd><dt>Summary</dt><dd><code>${e(l.card.summary)}</code></dd></dl>` : "";
+  const card2 = (l) => l.card ? `<dl class="facts card-of"><dt>Latest act</dt><dd><code title="${e(l.card.act)}">${e(shownAct(l.card.act))}</code></dd><dt>Position</dt><dd>${l.card.position}</dd><dt>Summary</dt><dd><code>${e(l.card.summary)}</code></dd></dl>` : "";
   return `<p class="small">As its homes and relays show it now. Nothing here is signed.</p>
-${r.problems.map((p) => note2("warn", e(p))).join("")}
+${r.problems.map((p) => note3("warn", e(p))).join("")}
 ${r.spent ? renewIdentityForm(r.id) : ""}
 ${r.sections.map((x) => `<h4>${e(x.heading)}</h4>${lines2(x.lines)}`).join("")}
 <h4>Its lines of acts (${r.lines.length})</h4>
 <p class="small">A change of its signing key (in Ki\u0161ib, with the chain key) must keep every line, or that line\u2019s acts become void (Identity rule 35). Where Ki\u0161ib cannot read a line, give it the latest act, position and summary shown here.</p>
-${r.lines.map((l) => `<div class="item" data-line="${e(l.card?.act ?? "")}"><span class="small">${e(l.words)}</span>${card(l)}</div>`).join("") || '<p class="empty small">No line of acts found yet.</p>'}
+${r.lines.map((l) => `<div class="item" data-line="${e(l.card?.act ?? "")}"><span class="small">${e(l.words)}</span>${card2(l)}</div>`).join("") || '<p class="empty small">No line of acts found yet.</p>'}
 <div class="row"><button class="quiet" data-action="record" data-identity="${e(r.id)}">Read it again</button></div>`;
 }
 function relyShown(identity2, r) {
-  const blocked = r.blocking.length ? note2("error", `<strong>It cannot be relied on from here:</strong><ul>${r.blocking.map((b) => `<li>${e(b)}</li>`).join("")}</ul>`) : "";
+  const blocked = r.blocking.length ? note3("error", `<strong>It cannot be relied on from here:</strong><ul>${r.blocking.map((b) => `<li>${e(b)}</li>`).join("")}</ul>`) : "";
   return `<div class="card review"><h4>The act ${fp(r.act)}</h4>${lines2(r.lines)}
 ${r.text !== null ? `<p class="small">Its words, as plain text, character for character:</p>${plain(r.text)}` : ""}
 <h4>What signing does</h4><p>${e(r.explanation)}</p>
@@ -29128,10 +30888,10 @@ var ANCHOR_SAY = [
   "You pay the service\u2019s price in Damgar, following its standing offer; its ticket promises a batch and a deadline (a block). Left out of its batch, or late, the price is owed back under its offer.",
   "Round 1 runs on regtest, with a test anchoring service of ours, labelled: its coins are worth nothing."
 ];
-function anchorOffers(collective, act, service, offers, units2) {
-  if (!offers.length) return note2("warn", "No standing offer under the anchoring cMIP was found for that identity.");
+function anchorOffers(collective, act, service, offers2, units2) {
+  if (!offers2.length) return note3("warn", "No standing offer under the anchoring cMIP was found for that identity.");
   const unit = (h) => units2.find((u2) => u2.hash === h)?.label ?? `unit ${h.slice(0, 8)}\u2026`;
-  return offers.map(
+  return offers2.map(
     (o) => `<form class="card anchor-ask" data-collective="${e(collective)}" data-act="${e(act)}" data-service="${e(service)}" data-offer="${e(o.act)}"><h4>Its standing offer ${fp(o.act)}</h4>${o.words ? `<p class="small">${e(o.words)}</p>` : ""}
 ${o.tiers.map((t, i) => `<label class="check"><input type="radio" name="tier" value="${i}"${i === 0 ? " checked" : ""}> Within ${t.blocks} blocks, for ${t.price} ${e(unit(o.unit))}</label>`).join("")}
 <div class="row"><button type="submit" class="primary">Prepare the payment for Damgar</button></div></form>`
@@ -29227,7 +30987,7 @@ ${sub === "act" ? `<div id="e-perms"><p class="small">Reading its agreement in f
 <details class="card"><summary>What was signed, in every collective</summary><div id="history"></div></details></div>`}`;
 }
 function foundCollective() {
-  return `<h2>Found a test collective</h2>${note2("warn", `<strong>Test mode, for trying things alone.</strong> ${e(TEST_MODE_SAY)} To found one with other people, each on their own device, choose \u201C+ Found a real collective\u201D.`)}<div class="colroot" data-collective-root id="e-col-root"><div id="status"></div><div id="review"></div>
+  return `<h2>Found a test collective</h2>${note3("warn", `<strong>Test mode, for trying things alone.</strong> ${e(TEST_MODE_SAY)} To found one with other people, each on their own device, choose \u201C+ Found a real collective\u201D.`)}<div class="colroot" data-collective-root id="e-col-root"><div id="status"></div><div id="review"></div>
 <section class="card"><h3>Its founding</h3><div id="found"></div></section>
 <section class="card"><h3>Members held here</h3><p class="small">Yourself, and the simulated members a test collective needs: held in the collective client's folder.</p><div id="identities"></div></section></div>
 <p class="small">A release under one\u2019s own name is made in Ummia, the developers\u2019 app (F339).</p>`;
@@ -29274,15 +31034,15 @@ var KIND_WORDS = { instruction: "Your standing instruction", person: "About", sa
 function memoryCard(r) {
   const live = r.notes.filter((n) => !n.dropped);
   const dropped = r.notes.filter((n) => n.dropped);
-  const one = (n) => `<div class="item"><span class="small">${KIND_WORDS[n.kind]}${n.kind === "person" ? ` ${e(bare(n.aboutName))} ${n.about ? fp(n.about) : ""}` : ""} \xB7 ${fp(n.id)}${n.dropped ? ` \xB7 dropped${n.dropped.by === "owner" ? " at your request" : " by it"}${n.dropped.why ? `: ${e(n.dropped.why)}` : ""}` : ""}</span><div class="text" dir="auto">${e(n.text)}</div>${n.dropped ? "" : `<div class="row"><button class="quiet" data-action="note-retire" data-note="${e(n.id)}">Retire this note</button></div>`}</div>`;
+  const one2 = (n) => `<div class="item"><span class="small">${KIND_WORDS[n.kind]}${n.kind === "person" ? ` ${e(bare(n.aboutName))} ${n.about ? fp(n.about) : ""}` : ""} \xB7 ${fp(n.id)}${n.dropped ? ` \xB7 dropped${n.dropped.by === "owner" ? " at your request" : " by it"}${n.dropped.why ? `: ${e(n.dropped.why)}` : ""}` : ""}</span><div class="text" dir="auto">${e(n.text)}</div>${n.dropped ? "" : `<div class="row"><button class="quiet" data-action="note-retire" data-note="${e(n.id)}">Retire this note</button></div>`}</div>`;
   return foldCard(
     "e-memory-card",
     "agent-memory",
     `Its notes (${live.length})`,
     `<p class="small">What it keeps between answers: your standing instructions (only from your own prompts), a note about each identity it deals with, what it said publicly, its open threads. Loaded each time it answers, under a size cap. Retiring a note signs a later act marking it dropped; the note stays.</p>
 ${r.problems.map((p) => `<p class="small">${e(p)}</p>`).join("")}
-${live.map(one).join("") || '<p class="empty small">No notes yet.</p>'}
-${dropped.length ? `<details><summary class="small">Dropped (${dropped.length})</summary>${dropped.map(one).join("")}</details>` : ""}
+${live.map(one2).join("") || '<p class="empty small">No notes yet.</p>'}
+${dropped.length ? `<details><summary class="small">Dropped (${dropped.length})</summary>${dropped.map(one2).join("")}</details>` : ""}
 <p class="small">${e(r.costs)}</p>
 <h4>Its diary</h4>
 <p class="small">A reflection it writes for itself every day, sealed to itself; on a day it did nothing, it reflects on itself instead: its notes, its instructions, its stillness. Each entry is one call to Claude a day, counted under its cap, quiet days included. Shown nowhere unless you choose to read it.</p>
@@ -29290,21 +31050,21 @@ ${dropped.length ? `<details><summary class="small">Dropped (${dropped.length})<
     false
   );
 }
-function diaryAsk(say3, button) {
-  return `<div class="card"><p>${e(say3)}</p><div class="row"><button class="primary" data-action="diary-read">${e(button.replace(/^Read/, "Yes, read"))}</button><button data-action="diary-close">Not now</button></div></div>`;
+function diaryAsk(say4, button) {
+  return `<div class="card"><p>${e(say4)}</p><div class="row"><button class="primary" data-action="diary-read">${e(button.replace(/^Read/, "Yes, read"))}</button><button data-action="diary-close">Not now</button></div></div>`;
 }
 function diary(r) {
   return `<div class="card">${r.entries.map((x) => `<div class="item"><h4>${e(x.day)}</h4><p dir="auto">${e(x.striking)}</p><p dir="auto">${e(x.reflection)}</p><p dir="auto" class="small">${e(x.why)}</p></div>`).join("") || '<p class="empty small">Nothing written yet.</p>'}<div class="row"><button data-action="diary-close">Close the diary</button></div></div>`;
 }
 var GRANT_SAY = "A grant lets your agent sign in your name, within what you choose: which acts, how much one act may move, until when. It holds a key of its own for it, never yours; every act it signs that way names the grant, so anyone reading it sees it was signed by your agent, on your authority. One revocation ends it.";
 function grantsCard(list10) {
-  const one = (g) => `<div class="item"><span class="small">Grant ${fp(g.grant)} from ${e(bare(g.grantorName))} \xB7 ${g.revoked ? `revoked by ${fp(g.revoked)}` : g.accepted ? `accepted by its signature ${fp(g.accepted)}` : g.declined ? `declined: ${e(g.declined)}` : "not answered yet"}</span>${lines2(g.words.map((text4) => ({ text: text4 })))}${g.acts.length ? `<h4>Signed under it (${g.acts.length})</h4>${g.acts.map((x) => `<div class="small">${fp(x.act)}: ${e(x.words)}</div>`).join("")}` : ""}<div class="row">${!g.revoked ? `<button data-action="grant-revoke" data-grant="${e(g.grant)}">Revoke it</button>` : ""}${!g.accepted && !g.revoked ? `<button data-action="grant-ask" data-grant="${e(g.grant)}">Ask it again</button>` : ""}</div></div>`;
+  const one2 = (g) => `<div class="item"><span class="small">Grant ${fp(g.grant)} from ${e(bare(g.grantorName))} \xB7 ${g.revoked ? `revoked by ${fp(g.revoked)}` : g.accepted ? `accepted by its signature ${fp(g.accepted)}` : g.declined ? `declined: ${e(g.declined)}` : "not answered yet"}</span>${lines2(g.words.map((text4) => ({ text: text4 })))}${g.acts.length ? `<h4>Signed under it (${g.acts.length})</h4>${g.acts.map((x) => `<div class="small">${fp(x.act)}: ${e(x.words)}</div>`).join("")}` : ""}<div class="row">${!g.revoked ? `<button data-action="grant-revoke" data-grant="${e(g.grant)}">Revoke it</button>` : ""}${!g.accepted && !g.revoked ? `<button data-action="grant-ask" data-grant="${e(g.grant)}">Ask it again</button>` : ""}</div></div>`;
   return foldCard(
     "e-grants-card",
     "agent-grants",
     `Its grants from you (${list10.filter((g) => g.accepted && !g.revoked).length} in force)`,
     `<p class="small">${e(GRANT_SAY)}</p>
-${list10.map(one).join("")}
+${list10.map(one2).join("")}
 <form id="grant-form"><h4>Grant it authority</h4>
 <div class="row"><label class="check"><input type="checkbox" name="kinds" value="posts" checked> Posts and messages</label><label class="check"><input type="checkbox" name="kinds" value="publications"> Publications</label><label class="check"><input type="checkbox" name="kinds" value="money"> Money acts (promises to pay, claims, receipts)</label></div>
 <div class="row"><label>At most per act <input name="cap" type="number" min="0" class="narrow" placeholder="no cap"> regtest satoshis</label></div>
@@ -29330,7 +31090,7 @@ function vowSalesShown(r, names2) {
     ).join("")}</ul>` : '<p class="small">No sale seen: nobody signed onto it at the relays asked, so it carries no state (rule 13).</p>';
     return `<div class="item"><h3>${e(v.words[0] ?? "")}</h3><div class="meta">${v.void ? "its first act void (its signer\u2019s change of keys): the name stands \xB7 " : ""}${counts2.confirmed} confirmed \xB7 ${counts2.contested} contested \xB7 ${counts2.pending} pending${v.unsigned ? ` \xB7 ${v.unsigned} paid with no buyer signed on` : ""}</div>${sales}</div>`;
   }).join("") : '<p class="empty">No vow of that identity at the relays asked.</p>';
-  return `<p class="small">Asked of ${e(r.asked.join(", "))}: only what they hold is seen; nothing is indexed.</p>${r.problems.length ? note2("warn", lines2(r.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}${vows}`;
+  return `<p class="small">Asked of ${e(r.asked.join(", "))}: only what they hold is seen; nothing is indexed.</p>${r.problems.length ? note3("warn", lines2(r.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}${vows}`;
 }
 function publishingTab(p) {
   const works = p.works.length ? p.works.map(
@@ -29373,8 +31133,8 @@ function constitution(name, c2) {
   return `<button class="close" data-action="dialog-close">Close</button>
 <h2>The constitution of ${e(name)}</h2>
 <p class="small">Its agreement ${c2.inForce ? "in force" : "held here"}, ${fp(c2.agreement)}, read in plain words by the deal-assessment tool.</p>
-${c2.note ? note2("warn", e(c2.note)) : ""}
-${c2.problem ? note2("error", e(c2.problem)) : ""}
+${c2.note ? note3("warn", e(c2.note)) : ""}
+${c2.problem ? note3("error", e(c2.problem)) : ""}
 ${c2.summary.map((x) => `<p>${e(x)}</p>`).join("")}
 ${c2.sections.map((s) => `<h4>${e(s.heading)}</h4>${lines2(s.lines)}`).join("")}
 ${c2.plain.map((p) => `<h4>${e(p.heading)}</h4>${plain(p.text)}`).join("")}
@@ -29403,9 +31163,9 @@ ${s.contacts.length ? `<ul class="plain feed">${s.contacts.map((c2) => `<li>${e(
 function realFound(s) {
   const founders = s.identities.filter((i) => !s.agents.some((a) => a.id === i.id));
   return `<h2>Found a real collective</h2>
-${note2("", `<strong>Real, not a test.</strong> ${e(REAL_SAY)}`)}
-${WEB ? note2("warn", `<strong>This is a web page.</strong> ${e(WEB_FOUNDING_SAY)}`) : ""}
-${note2("", "How: each member reads the founding terms in plain words and signs on their own device (Dub\u2019s Signing tab, turned on in its identity window; or \u201CTo sign\u201D in an Edubba holding them). The collective is founded once every one has signed. Its chain key is then dealt as one share per member, kept on paper: a member\u2019s share goes sealed to a one-time key their Dub makes when they sign, or is shown here, hand to hand; yours is shown here once. No app keeps a share.")}
+${note3("", `<strong>Real, not a test.</strong> ${e(REAL_SAY)}`)}
+${WEB ? note3("warn", `<strong>This is a web page.</strong> ${e(WEB_FOUNDING_SAY)}`) : ""}
+${note3("", "How: each member reads the founding terms in plain words and signs on their own device (Dub\u2019s Signing tab, turned on in its identity window; or \u201CTo sign\u201D in an Edubba holding them). The collective is founded once every one has signed. Its chain key is then dealt as one share per member, kept on paper: a member\u2019s share goes sealed to a one-time key their Dub makes when they sign, or is shown here, hand to hand; yours is shown here once. No app keeps a share.")}
 <section class="card"><form id="real-found">
 <label>Its name, ${kept()}</label><input name="name" type="text" required>
 <label>You: the founder, who proposes, signs first, and holds its signing key here</label><select name="founder">${founders.map((i) => `<option value="${e(i.id)}"${i.id === s.acting ? " selected" : ""}>${e(i.name)}</option>`).join("")}</select>
@@ -29427,7 +31187,7 @@ function proposalStatus(s, p) {
     return `<tr data-member="${e(m)}"><td>${person(s, m)}${m === p.founder ? ' <span class="small">(here)</span>' : ""}</td><td class="state ${st === "signed" ? "" : "no"}">${e(STANDS[st])}</td><td>${share2}</td></tr>`;
   };
   const what = p.kind === "founding" ? "Founding terms" : p.kind === "clone" ? "A member change" : p.kind === "money" ? "Its money" : "A release";
-  const next = p.kind === "founding" ? p.founded ? `<p class="small">Founded: ${fp(p.founded)}.</p>` : `<div class="card"><h4>Before you found: what this device will hold (F337)</h4>${lines2(FOUNDING_SAY2)}<label class="check"><input type="checkbox" id="real-found-read-${e(p.act.slice(0, 12))}"> I have read what this device will hold, and found on it knowingly</label></div><div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? "" : " disabled"}>Found it: deal the shares</button></div>` : p.kind === "money" ? p.rotated ? note2("done", `In force: recorded at the collective\u2019s line ${fp(p.rotated)}; its payments go to its split service.`) : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-money-record" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? "" : " disabled"}>Record it</button></div>` : p.kind === "clone" ? p.rotated ? note2("done", `In force: Ki\u0161ib\u2019s rotation ${fp(p.rotated)} declares it, and Edubba follows it.`) : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button></div>${p.standing.enough ? `${note2("warn", e(WAIT_FOR_KISIB))}${renewCollectiveForm(p.collective)}` : ""}` : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button data-action="real-release-standing" data-act="${e(p.act)}">Check it as anyone would</button></div>`;
+  const next = p.kind === "founding" ? p.founded ? `<p class="small">Founded: ${fp(p.founded)}.</p>` : `<div class="card"><h4>Before you found: what this device will hold (F337)</h4>${lines2(FOUNDING_SAY2)}<label class="check"><input type="checkbox" id="real-found-read-${e(p.act.slice(0, 12))}"> I have read what this device will hold, and found on it knowingly</label></div><div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-found" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? "" : " disabled"}>Found it: deal the shares</button></div>` : p.kind === "money" ? p.rotated ? note3("done", `In force: recorded at the collective\u2019s line ${fp(p.rotated)}; its payments go to its split service.`) : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button class="primary" data-action="real-money-record" data-act="${e(p.act)}"${p.standing.enough && !p.standing.declined.length ? "" : " disabled"}>Record it</button></div>` : p.kind === "clone" ? p.rotated ? note3("done", `In force: Ki\u0161ib\u2019s rotation ${fp(p.rotated)} declares it, and Edubba follows it.`) : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button></div>${p.standing.enough ? `${note3("warn", e(WAIT_FOR_KISIB))}${renewCollectiveForm(p.collective)}` : ""}` : `<div class="row"><button data-action="real-gather" data-act="${e(p.act)}">Look for answers</button><button data-action="real-release-standing" data-act="${e(p.act)}">Check it as anyone would</button></div>`;
   return `<section class="card proposal-status" data-proposal="${e(p.act)}"><h3>${what} <span class="small">act ${fp(p.act)}</span></h3>
 <p class="small">${p.standing.signed.length} of ${p.signers.length} signed; ${p.kind === "release" ? `it counts with ${p.needed}` : "every one must sign"}.</p>
 <table class="signers"><tr><th>Member</th><th>Signed</th><th></th></tr>${p.signers.map(row).join("")}</table>
@@ -29437,7 +31197,7 @@ var COLLECTIVE_RENEW_SAY = "When Ki\u0161ib\u2019s rotation counts, it shows the
 var RENEW_SAY = "Its signing key was changed elsewhere (in Ki\u0161ib, with the chain key\u2019s words). Edubba signs nothing more with the old one. Give the new signing key\u2019s words, as Ki\u0161ib showed them once, to go on here.";
 var KEY_CHANGED_START = ["This identity\u2019s signing key was changed elsewhere", "This collective\u2019s signing key was changed elsewhere"];
 function renewIdentityForm(id, name) {
-  return `<form id="identity-renew" data-identity="${e(id)}" class="card">${note2("error", e(RENEW_SAY))}<label>${name ? `${e(name)}: the` : "The"} new signing key\u2019s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Take the new words</button></div></form>`;
+  return `<form id="identity-renew" data-identity="${e(id)}" class="card">${note3("error", e(RENEW_SAY))}<label>${name ? `${e(name)}: the` : "The"} new signing key\u2019s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit" class="primary">Take the new words</button></div></form>`;
 }
 function renewCollectiveForm(collective) {
   return `<form id="real-renew" data-collective="${e(collective)}"><p class="small">${e(COLLECTIVE_RENEW_SAY)}</p><label>The collective\u2019s new signing key\u2019s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="row"><button type="submit">Take the new words</button></div></form>`;
@@ -29515,7 +31275,7 @@ function realDetails(s, id, c2) {
 <div class="row"><button data-action="constitution">Its constitution, in plain words</button></div>
 ${foldCard("e-real-members", "collective-members", `Its members (${c2.members.length})`, `<ul class="plain">${c2.members.map((m) => `<li>${person(s, m)}${m === c2.holder ? ' <span class="small">holds its signing key, here</span>' : ""}</li>`).join("")}</ul>
 <p class="small">Its chain key: one share per member, kept on paper, any ${c2.threshold} rebuilding it. ${c2.fingerprint ? `Dealing fingerprint <code>${e(c2.fingerprint.match(/.{1,4}/g).slice(0, 8).join(" "))}</code>.` : "Dealt in Ki\u0161ib: its fingerprint was shown there and in each member\u2019s Dub."} No app holds a share.</p>
-${c2.pending ? note2("warn", "A member change was rotated and waits for its homes to count it.") : ""}`)}
+${c2.pending ? note3("warn", "A member change was rotated and waits for its homes to count it.") : ""}`)}
 ${(c2.resigned ?? []).length ? `<section class="card" id="e-resigned"><h3>Leaving alone (rule 70)</h3><ul class="plain">${(c2.resigned ?? []).map((r) => `<li>${person(s, r.member)} resigned, act ${fp(r.act)}. ${r.registered ? `Registered at the collective\u2019s line ${fp(r.registered)}: now propose the change of members without them, below.` : `<button data-action="real-register-resignation" data-collective="${e(id)}" data-act="${e(r.act)}">Register it at the collective\u2019s line</button>`}</li>`).join("")}</ul><p class="small">A member can always leave alone: nobody else signs a resignation. It takes effect at the collective\u2019s line registering it; the change of members without them then waits for Ki\u0161ib, as any member change.</p></section>` : ""}
 ${sharesHere(s, id, c2.toShow)}<div id="e-shares-here"></div>
 <div id="e-perms"><p class="small">Reading its agreement in force\u2026</p></div>
@@ -29562,12 +31322,12 @@ select{font:inherit;padding:5px 8px;border-radius:6px;border:1px solid var(--lin
 function fp2(h) {
   return `<code title="${e(h)}">${e(h.slice(0, 8))}\u2026${e(h.slice(-4))}</code>`;
 }
-var note3 = (kind, html) => `<div class="note ${kind}">${html}</div>`;
+var note4 = (kind, html) => `<div class="note ${kind}">${html}</div>`;
 function lines3(ls) {
   return `<ul>${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>`;
 }
 function reading(r, review) {
-  const blocking = r.blocking.length ? note3("error", `<strong>This cannot be signed:</strong><ul>${r.blocking.map((b) => `<li>${e(b)}</li>`).join("")}</ul>`) : "";
+  const blocking = r.blocking.length ? note4("error", `<strong>This cannot be signed:</strong><ul>${r.blocking.map((b) => `<li>${e(b)}</li>`).join("")}</ul>`) : "";
   const plain2 = r.plain.map((p) => `<h3>${e(p.heading)}</h3><p class="small">As plain text, character for character; any invisible control is shown as U+\u2026 .</p><div class="plain">${plainHtml(p.text, { showControls: true })}</div>`).join("");
   const actions = review ? `<p class="small">Digest of exactly what is signed: <span class="digest" id="review-digest">${e(review.digest)}</span></p>
 <div class="row"><button data-action="confirm" ${r.blocking.length ? "disabled" : ""}>Sign</button><button class="quiet" data-action="cancel">Cancel</button></div>` : `<div class="row"><button class="quiet" data-action="dismiss">Close</button></div>`;
@@ -29627,12 +31387,12 @@ ${heldMembers.map((m) => `<button class="quiet" data-action="sign" data-release=
     ).join("");
     const others = s.identities.filter((i) => !c2.members.some((m) => m.id === i.id));
     const mine = c2.members.filter((m) => !m.left && s.identities.find((i) => i.id === m.id)?.mine);
-    const agreementsNote = c2.law.broken ? note3("error", `<strong>Agreements read this collective as broken.</strong> No agreement can be found in force for it, so nothing signed in its name counts, and no change of it can come into force. Agreements' reason: ${e(c2.law.broken)}. <span class="small">The rules below are this device's copy, not rules in force.</span>${c2.law.rollback ? `<br>The way back is a rollback: a new rotation brings back the agreement in force just before the broken act, signed under its rule for changing the constitution; what was signed since stays shown and counts for nothing. <button data-action="rollback" data-collective="${e(c2.id)}">Review a rollback</button><details class="rollback"><summary>Roll back with new numbers</summary><p class="small">Where the rules before the broken act do not fit the members left after it.</p><form class="rollback" data-collective="${e(c2.id)}">${rulesFields(c2.rules)}${linesFields()}<div class="row"><button type="submit">Review the rollback</button></div></form></details>` : ""}`) : c2.law.unread ? note3("warn", `Agreements' own reading of this collective could not be had (${e(c2.law.unread)}). <span class="small">The rules below are this device's copy; nothing is signed until Agreements can count.</span>`) : "";
-    const declaredNote = (c2.declared ?? []).length ? note3(
+    const agreementsNote = c2.law.broken ? note4("error", `<strong>Agreements read this collective as broken.</strong> No agreement can be found in force for it, so nothing signed in its name counts, and no change of it can come into force. Agreements' reason: ${e(c2.law.broken)}. <span class="small">The rules below are this device's copy, not rules in force.</span>${c2.law.rollback ? `<br>The way back is a rollback: a new rotation brings back the agreement in force just before the broken act, signed under its rule for changing the constitution; what was signed since stays shown and counts for nothing. <button data-action="rollback" data-collective="${e(c2.id)}">Review a rollback</button><details class="rollback"><summary>Roll back with new numbers</summary><p class="small">Where the rules before the broken act do not fit the members left after it.</p><form class="rollback" data-collective="${e(c2.id)}">${rulesFields(c2.rules)}${linesFields()}<div class="row"><button type="submit">Review the rollback</button></div></form></details>` : ""}`) : c2.law.unread ? note4("warn", `Agreements' own reading of this collective could not be had (${e(c2.law.unread)}). <span class="small">The rules below are this device's copy; nothing is signed until Agreements can count.</span>`) : "";
+    const declaredNote = (c2.declared ?? []).length ? note4(
       "warn",
       `<strong>Declared absent.</strong><br>${c2.declared.map((d) => `${e(d.text)}${d.held && !d.contested ? ` <button class="quiet" data-action="contest" data-collective="${e(c2.id)}" data-declaration="${e(d.act)}">Contest as ${e(d.name)}</button>` : ""}`).join("<br>")}`
     ) : "";
-    const owedNote = (c2.owedBack ?? []).length ? note3(
+    const owedNote = (c2.owedBack ?? []).length ? note4(
       "warn",
       `<strong>Owed back.</strong><br>${c2.owedBack.map((o) => `${fp2(o.payment)}: ${e(o.text)}${o.toKind === "identity" && !o.notice && !c2.closed ? ` <button class="quiet" data-action="notice" data-collective="${e(c2.id)}" data-payment="${e(o.payment)}">Send ${e(o.toName)} a notice</button>` : ""}`).join("<br>")}`
     ) : "";
@@ -29650,7 +31410,7 @@ ${owedNote}
 <dt>Records drawn</dt><dd>${c2.records}${c2.departed.length ? `; left: ${c2.departed.map((d) => e(d.name)).join(", ")}` : ""}${c2.steppedDown.length ? `; stepped down: ${c2.steppedDown.map((d) => e(d.name)).join(", ")}` : ""}</dd>
 <dt>Relays</dt><dd>${c2.relays.map(e).join("<br>")}</dd></dl>
 ${releaseArea(s, c2)}
-${c2.pending ? note3("warn", `A member change is waiting for the homes. <button data-action="resend" data-collective="${e(c2.id)}">Send it again</button> <span class="small">(the same bytes: nothing new is signed)</span>`) : ""}
+${c2.pending ? note4("warn", `A member change is waiting for the homes. <button data-action="resend" data-collective="${e(c2.id)}">Send it again</button> <span class="small">(the same bytes: nothing new is signed)</span>`) : ""}
 <h4>Releases</h4>${releases ? `<ul class="plain">${releases}</ul>` : '<p class="small">None yet.</p>'}
 <form class="release row" data-collective="${e(c2.id)}"><input name="version" type="text" placeholder="Version, e.g. 11b.1" required><button type="submit">Review a release</button></form>
 ${mine.map((m) => `<button class="quiet" data-action="leave" data-collective="${e(c2.id)}" data-member="${e(m.id)}">Leave as ${e(nameOf(s, m.id))}</button>`).join(" ")}
@@ -29673,7 +31433,7 @@ function linesFields() {
 <label>Cards of lines this device cannot read: latest act, position and summary, one line each</label><textarea name="cards"></textarea></details>`;
 }
 function money(s, c2) {
-  if (c2.closed) return note3("warn", `Ended by its fork or closing ${fp2(c2.closed)}: what its keys sign afterwards counts for nothing in Agreements.`);
+  if (c2.closed) return note4("warn", `Ended by its fork or closing ${fp2(c2.closed)}: what its keys sign afterwards counts for nothing in Agreements.`);
   const id = e(c2.id);
   const back = c2.forkedFrom ? `<p class="small">Forked from ${fp2(c2.forkedFrom)}.</p>` : "";
   const stakes = back + (c2.stakes.length ? `<p class="small">Shares of all its income: ${c2.stakes.map((x) => `${e(x.name)} ${x.percent}%${x.member ? "" : " (departed)"}`).join(", ")}.</p>` : '<p class="small">No stakes in the collective yet.</p>');
@@ -29740,14 +31500,14 @@ function mount(root, o) {
   const c2 = { ask: o.ask };
   let state2 = null;
   let review = null;
-  function say3(kind, html) {
+  function say4(kind, html) {
     const s = $2("status");
-    if (s) s.innerHTML = html ? note3(kind, html) : "";
+    if (s) s.innerHTML = html ? note4(kind, html) : "";
     if (html) s?.scrollIntoView({ block: "nearest" });
   }
   function fail3(err8) {
     if (o.fail?.(err8)) return;
-    say3("error", e(err8 instanceof Error ? err8.message : String(err8)));
+    say4("error", e(err8 instanceof Error ? err8.message : String(err8)));
   }
   const fill2 = (id, html) => {
     const el = $2(id);
@@ -29764,7 +31524,7 @@ function mount(root, o) {
     fill2("settings", settings2(state2));
   }
   async function busy2(words3, f) {
-    say3("", `<span class="small">${e(words3)}</span>`);
+    say4("", `<span class="small">${e(words3)}</span>`);
     root.querySelectorAll("button").forEach((b) => b.disabled = true);
     try {
       return await f();
@@ -29780,7 +31540,7 @@ function mount(root, o) {
     const r = await busy2("Preparing, and reading it back\u2026", () => c2.ask("prepare", args));
     if (!r) return;
     review = r;
-    say3("", "");
+    say4("", "");
     fill2("review", reading(r.reading, r));
     if (r.reading.blocking.length) $2("reading")?.querySelector("[data-action=confirm]")?.setAttribute("disabled", "");
     $2("reading")?.scrollIntoView({ block: "start" });
@@ -29795,7 +31555,7 @@ function mount(root, o) {
     review = null;
     fill2("review", "");
     await refresh2();
-    say3("done", `<strong>${e(d.title)}</strong><ul>${d.lines.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>`);
+    say4("done", `<strong>${e(d.title)}</strong><ul>${d.lines.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>`);
     await o.done?.(d);
   }
   const words2 = (s) => typeof s === "string" ? s.trim() : "";
@@ -29823,7 +31583,7 @@ function mount(root, o) {
         if (review) void c2.ask("cancel", { plan: review.plan }).catch(() => void 0);
         review = null;
         fill2("review", "");
-        say3("", "Nothing was signed.");
+        say4("", "Nothing was signed.");
         break;
       case "dismiss":
         fill2("review", "");
@@ -29831,7 +31591,7 @@ function mount(root, o) {
       case "verify": {
         const r = await busy2("Fetching and checking every file\u2026", () => c2.ask("verify", { release: d.release }));
         if (r) {
-          say3("", "");
+          say4("", "");
           show(r.reading);
         }
         break;
@@ -29866,7 +31626,7 @@ function mount(root, o) {
           () => c2.ask(d.action, d.action === "check-split" ? { collective: d.collective, split: d.split } : { collective: d.collective })
         );
         if (r) {
-          say3("", "");
+          say4("", "");
           show(r.reading);
         }
         break;
@@ -29892,7 +31652,7 @@ function mount(root, o) {
       if (which === "verify") {
         const r = await busy2("Fetching and checking every file\u2026", () => c2.ask("verify", { release: release2, at: at2 }));
         if (r) {
-          say3("", "");
+          say4("", "");
           show(r.reading);
         }
         return;
@@ -29906,7 +31666,7 @@ function mount(root, o) {
       );
       if (r) {
         await refresh2();
-        say3("done", "Settings saved.");
+        say4("done", "Settings saved.");
       }
       return;
     }
@@ -29972,9 +31732,9 @@ function formMembers(fid) {
 }
 function drawGrid(fid) {
   const g = grids.get(fid);
-  const box2 = $(`e-grid-${fid}`);
-  if (!g || !box2) return;
-  box2.innerHTML = gridTable(fid, g, gridName);
+  const box3 = $(`e-grid-${fid}`);
+  if (!g || !box3) return;
+  box3.innerHTML = gridTable(fid, g, gridName);
 }
 async function syncGrid(fid) {
   const members = formMembers(fid);
@@ -29999,9 +31759,9 @@ async function syncGrid(fid) {
   drawGrid(fid);
 }
 function gridEvent(el) {
-  const box2 = el.closest("[data-grid-form]");
-  if (!box2) return false;
-  const fid = box2.dataset.gridForm;
+  const box3 = el.closest("[data-grid-form]");
+  if (!box3) return false;
+  const fid = box3.dataset.gridForm;
   const g = grids.get(fid);
   if (!g) return false;
   touched.add(fid);
@@ -30069,9 +31829,9 @@ app.addEventListener("input", (ev) => {
   if (el.dataset.gridName !== void 0) gridEvent(el);
 });
 var unpaired = (err8) => err8 instanceof Refused2 && err8.status === 401 && /not paired/.test(err8.message);
-function say2(kind, html, where) {
+function say3(kind, html, where) {
   const s = where ?? $("e-status");
-  if (s) s.innerHTML = html ? note2(kind, html) : "";
+  if (s) s.innerHTML = html ? note3(kind, html) : "";
   if (html) s?.scrollIntoView({ block: "nearest" });
 }
 function fail2(err8, where) {
@@ -30080,7 +31840,7 @@ function fail2(err8, where) {
     return;
   }
   const m = err8 instanceof Error ? err8.message : String(err8);
-  say2("error", e(m), where);
+  say3("error", e(m), where);
   if (KEY_CHANGED_START.some((x) => m.startsWith(x))) void offerRenew(where);
 }
 async function offerRenew(where, changed) {
@@ -30096,7 +31856,7 @@ var fill = (id, html) => {
 var hereFor = (id) => id ? app.querySelector(`.here[data-here="${CSS.escape(id)}"]`) : null;
 var working = false;
 async function busy(words2, f, where) {
-  say2("", `<span class="small">${e(words2)}</span>`, where);
+  say3("", `<span class="small">${e(words2)}</span>`, where);
   working = true;
   const was = [...app.querySelectorAll("button")].map((b) => [b, b.disabled]);
   app.querySelectorAll("button").forEach((b) => b.disabled = true);
@@ -30117,7 +31877,7 @@ function counts() {
   };
 }
 async function draw() {
-  fill("e-top", top(at.tab, counts()));
+  fill("e-top", top2(at.tab, counts()));
   collectiveMount = null;
   const body = $("e-body");
   switch (at.tab) {
@@ -30146,7 +31906,7 @@ async function draw() {
       body.innerHTML = publishingTab(p);
       if (p.works.length) {
         void c.ask("publishing deliver").then((r) => {
-          if (r.lines.some((l) => /delivered/.test(l.text))) say2("done", lines2(r.lines));
+          if (r.lines.some((l) => /delivered/.test(l.text))) say3("done", lines2(r.lines));
         }).catch(() => void 0);
       }
       return;
@@ -30226,7 +31986,7 @@ async function mountCollective() {
           at.collective = added.id;
           at.sub = "constitution";
           await draw();
-        } else fill("e-top", top(at.tab, counts()));
+        } else fill("e-top", top2(at.tab, counts()));
       }
     }
   });
@@ -30249,7 +32009,7 @@ async function drawRecord(id, again = true) {
     records.set(id, r);
     if (at.identity === id) fill("e-record", record3(r));
   } catch (err8) {
-    if (at.identity === id) fill("e-record", note2("error", e(err8 instanceof Error ? err8.message : String(err8))));
+    if (at.identity === id) fill("e-record", note3("error", e(err8 instanceof Error ? err8.message : String(err8))));
   }
 }
 function keepForms() {
@@ -30279,7 +32039,7 @@ async function drawMoney(collective) {
     if (sel) sel.innerHTML = acts.map((a) => `<option value="${e(a.act)}">${e(a.label)} (${e(a.act.slice(0, 8))}\u2026)</option>`).join("");
     fill("e-anchors", anchors(await c.ask("money anchors", { collective })));
   } catch (err8) {
-    fill("e-anchors", note2("error", e(err8 instanceof Error ? err8.message : String(err8))));
+    fill("e-anchors", note3("error", e(err8 instanceof Error ? err8.message : String(err8))));
   }
 }
 async function drawKeepers(id) {
@@ -30287,7 +32047,7 @@ async function drawKeepers(id) {
     const k = await c.ask("real keepers", { collective: id });
     if (at.collective === id) fill("e-keepers", keepersShown(state, id, k));
   } catch (err8) {
-    fill("e-keepers", note2("error", e(err8 instanceof Error ? err8.message : String(err8))));
+    fill("e-keepers", note3("error", e(err8 instanceof Error ? err8.message : String(err8))));
   }
 }
 async function drawAct(id) {
@@ -30295,14 +32055,14 @@ async function drawAct(id) {
     const p = await c.ask("collective permissions", { collective: id });
     if (at.collective === id) fill("e-perms", permissions(p, state.unfolded?.[id] !== false));
   } catch (err8) {
-    fill("e-perms", note2("error", e(err8 instanceof Error ? err8.message : String(err8))));
+    fill("e-perms", note3("error", e(err8 instanceof Error ? err8.message : String(err8))));
   }
   try {
     const r = await c.ask("collective posts", { collective: id });
     const held = state.collectives.find((x) => x.id === id);
     if (at.collective === id) fill("e-posts", posts(r, held?.brought || held?.real ? null : { kind: "collective", id }));
   } catch (err8) {
-    fill("e-posts", note2("error", e(err8 instanceof Error ? err8.message : String(err8))));
+    fill("e-posts", note3("error", e(err8 instanceof Error ? err8.message : String(err8))));
   }
 }
 async function drawAgentExtras(agent) {
@@ -30310,13 +32070,13 @@ async function drawAgentExtras(agent) {
     const g = await c.ask("agent grants", { agent });
     if (at.agent === agent) fill("e-grants", grantsCard(g));
   } catch (err8) {
-    fill("e-grants", note2("error", e(err8 instanceof Error ? err8.message : String(err8))));
+    fill("e-grants", note3("error", e(err8 instanceof Error ? err8.message : String(err8))));
   }
   try {
     const n = await c.ask("agent notes", { agent });
     if (at.agent === agent) fill("e-memory", memoryCard(n));
   } catch (err8) {
-    fill("e-memory", note2("error", e(err8 instanceof Error ? err8.message : String(err8))));
+    fill("e-memory", note3("error", e(err8 instanceof Error ? err8.message : String(err8))));
   }
 }
 async function drawIdentityPosts(identity2) {
@@ -30325,7 +32085,7 @@ async function drawIdentityPosts(identity2) {
     const r = await c.ask("identity posts", { identity: identity2 });
     if (at.identity === identity2) fill("e-ident-posts", identityPosts(identity2, r));
   } catch (err8) {
-    fill("e-ident-posts", note2("error", e(err8 instanceof Error ? err8.message : String(err8))));
+    fill("e-ident-posts", note3("error", e(err8 instanceof Error ? err8.message : String(err8))));
   }
 }
 function toBase64(b) {
@@ -30346,7 +32106,7 @@ async function readMember() {
     if ($("share-shown") || [...app.querySelectorAll("#e-signing form.share-back input")].some((i) => i.value)) return;
     fill("e-detail", memberSigning(state, r));
   } catch (err8) {
-    fill("e-signing", note2("error", e(err8 instanceof Error ? err8.message : String(err8))));
+    fill("e-signing", note3("error", e(err8 instanceof Error ? err8.message : String(err8))));
   }
 }
 async function memberAction(b) {
@@ -30357,14 +32117,14 @@ async function memberAction(b) {
       const r = await busy("Signing, and answering the proposer\u2026", () => c.ask("member accept", { thread: d.thread }));
       if (r) {
         await readMember();
-        say2("done", `<strong>Signed.</strong><ul>${r.lines.map((l) => `<li>${e(l.text)}</li>`).join("")}</ul>`);
+        say3("done", `<strong>Signed.</strong><ul>${r.lines.map((l) => `<li>${e(l.text)}</li>`).join("")}</ul>`);
       }
       return;
     }
     case "leave-read": {
       const r = await busy("Reading the collective\u2019s agreement in force\u2026", () => c.ask("member leave read", { thread: d.thread }));
-      const box2 = app.querySelector(`#e-signing [data-leave="${CSS.escape(d.thread)}"]`);
-      if (r && box2) box2.innerHTML = leaveRead(d.thread, r);
+      const box3 = app.querySelector(`#e-signing [data-leave="${CSS.escape(d.thread)}"]`);
+      if (r && box3) box3.innerHTML = leaveRead(d.thread, r);
       return;
     }
     case "leave-collective": {
@@ -30372,7 +32132,7 @@ async function memberAction(b) {
       const r = await busy("Signing the resignation, and telling the founder\u2026", () => c.ask("member leave", { thread: d.thread, digest: d.digest }));
       if (r) {
         await readMember();
-        say2("done", `<strong>Resigned.</strong><ul>${r.lines.map((l) => `<li>${e(l.text)}</li>`).join("")}</ul>`);
+        say3("done", `<strong>Resigned.</strong><ul>${r.lines.map((l) => `<li>${e(l.text)}</li>`).join("")}</ul>`);
       }
       return;
     }
@@ -30382,22 +32142,22 @@ async function memberAction(b) {
       const r = await busy("Declining\u2026", () => c.ask("member decline", { thread: d.thread, why }));
       if (r) {
         await readMember();
-        say2("done", r.lines.map((l) => e(l.text)).join(" "));
+        say3("done", r.lines.map((l) => e(l.text)).join(" "));
       }
       return;
     }
     case "share": {
       const r = await busy("Opening the share with its one-time key, and checking it against the dealing\u2026", () => c.ask("member share", { thread: d.thread }));
       if (r) {
-        say2("", "");
-        const card = app.querySelector(`#e-signing .proposal[data-thread="${CSS.escape(r.thread)}"]`);
-        if (card) card.outerHTML = memberShare(r);
+        say3("", "");
+        const card2 = app.querySelector(`#e-signing .proposal[data-thread="${CSS.escape(r.thread)}"]`);
+        if (card2) card2.outerHTML = memberShare(r);
       }
       return;
     }
     case "share-written": {
-      const card = $("share-shown");
-      if (card) card.outerHTML = `<div class="proposal" data-thread="${e(d.thread)}">${shareTypeBack(d.thread, (d.positions ?? "").split(",").map(Number))}</div>`;
+      const card2 = $("share-shown");
+      if (card2) card2.outerHTML = `<div class="proposal" data-thread="${e(d.thread)}">${shareTypeBack(d.thread, (d.positions ?? "").split(",").map(Number))}</div>`;
       return;
     }
     case "sharehand": {
@@ -30405,13 +32165,13 @@ async function memberAction(b) {
       const r = await busy("Destroying the one-time key\u2026", () => c.ask("member sharehand", { thread: d.thread }));
       if (r) {
         await readMember();
-        say2("done", r.lines.map((l) => e(l.text)).join(" "));
+        say3("done", r.lines.map((l) => e(l.text)).join(" "));
       }
       return;
     }
     case "lookshare":
       await busy("Looking for the share\u2026", readMember);
-      say2("", "");
+      say3("", "");
       return;
   }
 }
@@ -30438,8 +32198,8 @@ async function gatherAll() {
     const list10 = app.querySelector(".list[aria-label=Collectives]");
     if (list10) list10.outerHTML = collectiveList(state, at.collective);
     for (const p of state.proposals) {
-      const card = app.querySelector(`section.proposal-status[data-proposal="${CSS.escape(p.act)}"]`);
-      if (card) card.outerHTML = proposalStatus(state, p);
+      const card2 = app.querySelector(`section.proposal-status[data-proposal="${CSS.escape(p.act)}"]`);
+      if (card2) card2.outerHTML = proposalStatus(state, p);
     }
   } finally {
     gathering = false;
@@ -30475,13 +32235,13 @@ async function watch() {
     shown2 = drafts.map((d) => d.digest).join(",");
     if (at.tab === "identities" || at.tab === "agents" && !at.seeing && !at.adding && state.agents.length) {
       await draw();
-      for (const [digest, note4] of notes) {
+      for (const [digest, note5] of notes) {
         const t = app.querySelector(`form.send-back[data-digest="${CSS.escape(digest)}"] textarea`);
-        if (t) t.value = note4;
+        if (t) t.value = note5;
       }
       const fresh = waiting.filter((d) => !before.has(d)).length;
       if (fresh) fill("drafts-watch", fresh === 1 ? "A new draft from Claude arrived." : `${fresh} new drafts from Claude arrived.`);
-    } else fill("e-top", top(at.tab, counts()));
+    } else fill("e-top", top2(at.tab, counts()));
   } catch (err8) {
     if (unpaired(err8)) fail2(err8);
   }
@@ -30490,7 +32250,7 @@ async function after(d) {
   if (!d) return;
   await readDrafts();
   await refresh();
-  say2("done", done(d));
+  say3("done", done(d));
 }
 async function copy(text4) {
   try {
@@ -30527,7 +32287,7 @@ app.addEventListener("click", async (ev) => {
   switch (d.action) {
     case "member-look":
       await busy("Reading the inbox for proposals and shares\u2026", readMember);
-      say2("", "");
+      say3("", "");
       break;
     case "pick-folder":
       await picker(d.target);
@@ -30536,7 +32296,7 @@ app.addEventListener("click", async (ev) => {
       const r = await busy("Drawing the collective\u2019s line, registering the resignation\u2026", () => c.ask("real register resignation", { collective: d.collective, act: d.act }));
       if (r) {
         await draw().catch(fail2);
-        say2("done", lines2(r.lines));
+        say3("done", lines2(r.lines));
       }
       break;
     }
@@ -30555,7 +32315,7 @@ app.addEventListener("click", async (ev) => {
       const r = await busy("Reading the follow lists sealed to your identities\u2026", () => c.ask("real lists"));
       if (r) {
         await refresh();
-        say2(r.problems.length ? "warn" : "done", `${r.read === 1 ? "One follow list read" : `${r.read} follow lists read`}.${r.problems.map((p) => `<br>${e(p)}`).join("")}`);
+        say3(r.problems.length ? "warn" : "done", `${r.read === 1 ? "One follow list read" : `${r.read} follow lists read`}.${r.problems.map((p) => `<br>${e(p)}`).join("")}`);
       }
       break;
     }
@@ -30563,7 +32323,7 @@ app.addEventListener("click", async (ev) => {
       const why = prompt("Why retire this note? (optional, kept with it)") ?? "";
       const r = await busy("Signing a later act that marks the note dropped\u2026", () => c.ask("agent note retire", { agent: at.agent, note: d.note, why }));
       if (r) {
-        say2("done", done(r));
+        say3("done", done(r));
         await drawAgentExtras(at.agent);
       }
       break;
@@ -30584,7 +32344,7 @@ app.addEventListener("click", async (ev) => {
     case "grant-sign": {
       const r = await busy("Signing the grant; asking your agent whether it accepts\u2026", () => c.ask("agent grant publish", { agent: at.agent, digest: d.digest }));
       if (r) {
-        say2(r.title.includes("accepted") ? "done" : "warn", done(r));
+        say3(r.title.includes("accepted") ? "done" : "warn", done(r));
         await drawAgentExtras(at.agent);
       }
       break;
@@ -30596,7 +32356,7 @@ app.addEventListener("click", async (ev) => {
       if (!confirm("Revoke this grant? Its key backs nothing signed after the revocation.")) break;
       const r = await busy("Signing the revocation\u2026", () => c.ask("agent grant revoke", { agent: at.agent, grant: d.grant }));
       if (r) {
-        say2("done", done(r));
+        say3("done", done(r));
         await drawAgentExtras(at.agent);
       }
       break;
@@ -30604,7 +32364,7 @@ app.addEventListener("click", async (ev) => {
     case "grant-ask": {
       const r = await busy("Asking your agent whether it accepts\u2026", () => c.ask("agent grant ask", { agent: at.agent, grant: d.grant }));
       if (r) {
-        say2("done", done(r));
+        say3("done", done(r));
         await drawAgentExtras(at.agent);
       }
       break;
@@ -30612,19 +32372,19 @@ app.addEventListener("click", async (ev) => {
     case "tab":
       at.tab = d.tab;
       at.seeing = false;
-      say2("", "");
+      say3("", "");
       await draw().catch(fail2);
       break;
     case "pick-agent":
       at.agent = d.id;
       at.seeing = false;
       at.adding = false;
-      say2("", "");
+      say3("", "");
       await draw().catch(fail2);
       break;
     case "add-agent":
       at.adding = true;
-      say2("", "");
+      say3("", "");
       await draw().catch(fail2);
       break;
     case "add-cancel":
@@ -30633,25 +32393,25 @@ app.addEventListener("click", async (ev) => {
       break;
     case "pick-identity":
       at.identity = d.id;
-      say2("", "");
+      say3("", "");
       await draw().catch(fail2);
       break;
     case "pick-collective":
       at.collective = d.id;
       at.sub = "act";
       postReview = null;
-      say2("", "");
+      say3("", "");
       await draw().catch(fail2);
       break;
     case "sub":
       at.sub = d.sub;
-      say2("", "");
+      say3("", "");
       await draw().catch(fail2);
       break;
     case "agent-view":
       at.seeing = true;
       await busy("Reading what it reads\u2026", draw);
-      say2("", "");
+      say3("", "");
       break;
     case "agent-back":
       at.seeing = false;
@@ -30674,7 +32434,7 @@ app.addEventListener("click", async (ev) => {
     case "constitution": {
       const r = await busy("Reading its agreement in force\u2026", () => c.ask("collective constitution", { collective: at.collective }));
       if (r) {
-        say2("", "");
+        say3("", "");
         fill("e-dialog-body", constitution(state.collectives.find((x) => x.id === at.collective)?.name ?? "", r));
         $("e-dialog").showModal();
       }
@@ -30684,7 +32444,7 @@ app.addEventListener("click", async (ev) => {
       const r = await busy("Preparing the confirmation for Damgar\u2026", () => c.ask("publishing confirm sale", { vow: b.dataset.vow, sale: b.dataset.sale, buyer: b.dataset.buyer, seller: b.dataset.seller, unit: b.dataset.unit, value: Number(b.dataset.value) }));
       if (r) {
         b.replaceWith(Object.assign(document.createElement("span"), { className: "small", textContent: "Prepared for Damgar." }));
-        say2("done", done(r));
+        say3("done", done(r));
       }
       break;
     }
@@ -30692,7 +32452,7 @@ app.addEventListener("click", async (ev) => {
       const r = await busy("Looking for sales and delivering keys\u2026", () => c.ask("publishing deliver"));
       if (r) {
         await draw();
-        say2("done", lines2(r.lines));
+        say3("done", lines2(r.lines));
       }
       break;
     }
@@ -30706,7 +32466,7 @@ app.addEventListener("click", async (ev) => {
         if (done3) {
           pubReview = null;
           await draw();
-          say2("done", done(done3));
+          say3("done", done(done3));
         }
         return;
       }
@@ -30717,7 +32477,7 @@ app.addEventListener("click", async (ev) => {
           realReview = null;
           if (at.collective === "real") at.collective = `p:${done3.acts[0]}`;
           await refresh();
-          say2("done", done(done3));
+          say3("done", done(done3));
         }
         return;
       }
@@ -30728,7 +32488,7 @@ app.addEventListener("click", async (ev) => {
         postReview = null;
         fill("e-post-review", "");
         $("collective-post")?.reset();
-        say2("done", done(done2));
+        say3("done", done(done2));
         await drawAct(at.collective);
       }
       break;
@@ -30738,13 +32498,13 @@ app.addEventListener("click", async (ev) => {
         void c.ask("real cancel", { plan: realReview.plan }).catch(() => void 0);
         realReview = null;
         fill("e-real-review", "");
-        say2("", "Nothing was signed.");
+        say3("", "Nothing was signed.");
         break;
       }
       if (postReview) void c.ask("collective cancel", { plan: postReview.plan }).catch(() => void 0);
       postReview = null;
       fill("e-post-review", "");
-      say2("", "Nothing was signed.");
+      say3("", "Nothing was signed.");
       break;
     case "contact-remove":
       if (await busy("Removing\u2026", () => c.ask("real contact remove", { id: d.id }))) await refresh();
@@ -30752,7 +32512,7 @@ app.addEventListener("click", async (ev) => {
     case "real-keep": {
       const r = await busy("Recording what arrived, its signers\u2019 chains checked first\u2026", () => c.ask("real keep", { collective: d.collective, keeper: d.keeper }), $("e-keepers"));
       if (r) {
-        say2("done", lines2(r.lines), $("e-keepers"));
+        say3("done", lines2(r.lines), $("e-keepers"));
         await drawKeepers(d.collective);
       }
       break;
@@ -30762,7 +32522,7 @@ app.addEventListener("click", async (ev) => {
       const r = await busy("Recording it on the collective\u2019s line, and pointing its payee pointer at the service\u2026", () => c.ask("real money record", { act: d.act }), where());
       if (r) {
         await refresh();
-        say2("done", lines2(r.lines), where());
+        say3("done", lines2(r.lines), where());
       }
       break;
     }
@@ -30771,28 +32531,28 @@ app.addEventListener("click", async (ev) => {
       const r = await busy("Reading the answers in your inbox\u2026", () => c.ask("real gather", { act: d.act }), where());
       if (r) {
         await refresh();
-        if (r.problems.length) say2("warn", r.problems.map(e).join("<br>"), where());
+        if (r.problems.length) say3("warn", r.problems.map(e).join("<br>"), where());
       }
       break;
     }
     case "real-found": {
-      const read2 = $(`real-found-read-${d.act.slice(0, 12)}`)?.checked === true;
-      if (!read2) {
-        say2("warn", "Read what this device will hold while founding (F337), and tick it, first. Nothing was dealt.");
+      const read3 = $(`real-found-read-${d.act.slice(0, 12)}`)?.checked === true;
+      if (!read3) {
+        say3("warn", "Read what this device will hold while founding (F337), and tick it, first. Nothing was dealt.");
         break;
       }
       const r = await busy("Dealing the chain key, founding the collective, sealing each share to its one-time key\u2026", () => c.ask("real found", { act: d.act, read: true }));
       if (r) {
         at.collective = r.acts[0];
         await refresh();
-        say2("done", done(r));
+        say3("done", done(r));
       }
       break;
     }
     case "real-show-share": {
       const r = await busy("Opening the share, once\u2026", () => c.ask("real show share", { collective: d.collective, member: d.member }));
       if (r) {
-        say2("", "");
+        say3("", "");
         fill("e-shares-here", shareHere(d.collective, r, state.identities.find((i) => i.id === d.member)?.name ?? state.contacts.find((x) => x.id === d.member)?.name ?? "a member"));
         $("e-shares-here")?.scrollIntoView({ block: "start" });
       }
@@ -30804,7 +32564,7 @@ app.addEventListener("click", async (ev) => {
     case "real-release-standing": {
       const where = () => app.querySelector(`[data-here-proposal="${CSS.escape(d.act)}"]`);
       const r = await busy("Checking the release as a fresh verifier\u2026", () => c.ask("real release standing", { act: d.act }), where());
-      if (r) say2(r.ok ? "done" : "warn", r.ok ? `It counts as the collective\u2019s release, signed by ${r.signers.length} members.` : `It does not count yet: ${r.problems.map(e).join(" ")}`, where());
+      if (r) say3(r.ok ? "done" : "warn", r.ok ? `It counts as the collective\u2019s release, signed by ${r.signers.length} members.` : `It does not count yet: ${r.problems.map(e).join(" ")}`, where());
       break;
     }
     case "drafts":
@@ -30812,7 +32572,7 @@ app.addEventListener("click", async (ev) => {
         await readDrafts();
         await draw();
       });
-      say2("", "");
+      say3("", "");
       break;
     case "approve":
       await after(await busy("Signing and sending\u2026", () => c.ask("approve", { digest: d.digest })));
@@ -30828,7 +32588,7 @@ app.addEventListener("click", async (ev) => {
       const r = await busy("Opening the inbox\u2026", () => c.ask("refresh", { identity: d.identity }), where());
       if (r) {
         await refresh();
-        say2(r.problems.length ? "warn" : "done", `${r.added === 1 ? "1 new item" : `${r.added} new items`}.${r.problems.map((p) => `<br>${e(p)}`).join("")}`, where());
+        say3(r.problems.length ? "warn" : "done", `${r.added === 1 ? "1 new item" : `${r.added} new items`}.${r.problems.map((p) => `<br>${e(p)}`).join("")}`, where());
       }
       break;
     }
@@ -30844,7 +32604,7 @@ app.addEventListener("click", async (ev) => {
       try {
         await c.ask("link", { id: d.identity, on });
         await refresh();
-        say2("done", on ? "Saved: Claude may now prepare drafts for this identity." : "Saved: Claude may no longer prepare drafts for this identity; drafts for it are refused.", hereFor(d.identity));
+        say3("done", on ? "Saved: Claude may now prepare drafts for this identity." : "Saved: Claude may no longer prepare drafts for this identity; drafts for it are refused.", hereFor(d.identity));
       } catch (err8) {
         fail2(err8, hereFor(d.identity));
       }
@@ -30895,7 +32655,7 @@ app.addEventListener("click", async (ev) => {
       const r = await busy("Looking at what it received\u2026", () => c.ask("machine look", { agent }));
       if (r) {
         await refresh();
-        say2(r.stopped || r.problems.length ? "warn" : "done", `${r.answered === 1 ? "One answer sent" : `${r.answered} answers sent`}.${[r.stopped ?? "", ...r.problems].filter(Boolean).map((p) => `<br>${e(p)}`).join("")}`);
+        say3(r.stopped || r.problems.length ? "warn" : "done", `${r.answered === 1 ? "One answer sent" : `${r.answered} answers sent`}.${[r.stopped ?? "", ...r.problems].filter(Boolean).map((p) => `<br>${e(p)}`).join("")}`);
       }
       break;
     }
@@ -30905,7 +32665,7 @@ app.addEventListener("click", async (ev) => {
     case "machine-picks": {
       const keys = [...app.querySelectorAll("input[name=pick-select]:checked")].map((x) => x.value);
       if (!keys.length) {
-        fill("e-picks-shown", note2("warn", "Select the acts to pick first."));
+        fill("e-picks-shown", note3("warn", "Select the acts to pick first."));
         break;
       }
       const t = await busy("Reading the picks\u2026", () => c.ask("machine picks", { agent, keys }), $("e-picks-shown"));
@@ -30925,8 +32685,8 @@ app.addEventListener("click", async (ev) => {
     case "code": {
       const r = await busy("Making a code\u2026", () => c.ask("code"));
       if (r) {
-        say2("", "");
-        fill("code", note2("", `Code for another browser, valid ten minutes, once: <span class="code">${e(r.code)}</span>`));
+        say3("", "");
+        fill("code", note3("", `Code for another browser, valid ten minutes, once: <span class="code">${e(r.code)}</span>`));
       }
       break;
     }
@@ -30957,7 +32717,7 @@ app.addEventListener("submit", async (ev) => {
     const r = await busy("Reading the collective from its relays and homes, and your key for it\u2026", () => c.ask("publishing collective add", { id: words(d.get("collective")) }));
     if (r) {
       await draw();
-      say2("done", lines2(r.lines));
+      say3("done", lines2(r.lines));
     }
     return;
   }
@@ -30965,7 +32725,7 @@ app.addEventListener("submit", async (ev) => {
     const r = await busy("Reading it back\u2026", () => c.ask("publishing vow read", { words: words(d.get("words")), title: words(d.get("title")), price: words(d.get("price")) }));
     if (r) {
       pubReview = { plan: r.plan, digest: r.digest };
-      say2("", "");
+      say3("", "");
       fill("e-vow-review", `<div class="colroot">${reading(r.reading, r)}</div>`);
       $("e-vow-review")?.scrollIntoView({ block: "start" });
     }
@@ -30981,7 +32741,7 @@ app.addEventListener("submit", async (ev) => {
     const r = await busy("Signing the contest\u2026", () => c.ask("publishing contest", { vow: form2.dataset.vow, sale: form2.dataset.sale, buyer: form2.dataset.buyer, promise: words(d.get("promise")) }));
     if (r) {
       form2.replaceWith(Object.assign(document.createElement("span"), { className: "small", textContent: "Contested." }));
-      say2("done", done(r));
+      say3("done", done(r));
     }
     return;
   }
@@ -30995,7 +32755,7 @@ app.addEventListener("submit", async (ev) => {
     const r = await busy("Reading it back\u2026", () => c.ask("publishing work read", { media, data, title: words(d.get("title")), price: words(d.get("price")), referral: words(d.get("referral")), service: words(d.get("service")), serviceKey: words(d.get("serviceKey")) }));
     if (r) {
       pubReview = { plan: r.plan, digest: r.digest };
-      say2("", "");
+      say3("", "");
       fill("e-pub-review", `<div class="colroot">${reading(r.reading, r)}</div>`);
       $("e-pub-review")?.scrollIntoView({ block: "start" });
     }
@@ -31005,9 +32765,9 @@ app.addEventListener("submit", async (ev) => {
     try {
       await c.ask("pair", { code: $("pair-code").value, label: "this browser" });
       await start();
-      say2("done", "This browser is paired.");
+      say3("done", "This browser is paired.");
     } catch (err8) {
-      fill("pair-status", note2("error", e(err8 instanceof Error ? err8.message : String(err8))));
+      fill("pair-status", note3("error", e(err8 instanceof Error ? err8.message : String(err8))));
     }
     return;
   }
@@ -31015,8 +32775,9 @@ app.addEventListener("submit", async (ev) => {
     const typed = [...form2.querySelectorAll("input")].map((i) => i.value);
     const r = await busy("Checking the words, then destroying the one-time key\u2026", () => c.ask("member shareback", { thread: form2.dataset.thread, typed }));
     if (r) {
+      form2.reset();
       await readMember();
-      say2("done", `<strong>The share is written down.</strong> ${r.lines.map((l) => e(l.text)).join(" ")}`);
+      say3("done", `<strong>The share is written down.</strong> ${r.lines.map((l) => e(l.text)).join(" ")}`);
     }
     return;
   }
@@ -31040,7 +32801,7 @@ app.addEventListener("submit", async (ev) => {
     if (r) {
       form2.reset();
       form2.querySelectorAll("input,select,button").forEach((x) => x.disabled = true);
-      say2("done", done(r));
+      say3("done", done(r));
       fill("e-terms", termsShown(r.agent, r.owner, own, r.terms));
       $("e-terms")?.scrollIntoView({ block: "start" });
     }
@@ -31050,8 +32811,8 @@ app.addEventListener("submit", async (ev) => {
     const r = await busy("Signing your prompt, sealing it to the agent; it is answering\u2026", () => c.ask("agent prompt", { agent, text: String(d.get("text") ?? "") }));
     if (r) {
       await refresh();
-      say2("", "");
-      say2("done", done(r), $("e-agent-here"));
+      say3("", "");
+      say3("done", done(r), $("e-agent-here"));
       $("e-prompt")?.scrollIntoView({ block: "end" });
     }
     return;
@@ -31067,7 +32828,7 @@ app.addEventListener("submit", async (ev) => {
     form2.reset();
     if (r) {
       await refresh();
-      say2("done", own ? `It uses a key of its own${r.last4 ? `, \u2026${e(r.last4)}` : ""}.` : "It uses the shared key.");
+      say3("done", own ? `It uses a key of its own${r.last4 ? `, \u2026${e(r.last4)}` : ""}.` : "It uses the shared key.");
     }
     return;
   }
@@ -31099,7 +32860,7 @@ app.addEventListener("submit", async (ev) => {
     if (kind === "identity") {
       const r2 = await busy("Signing the correction\u2026", () => c.ask("identity correct", { identity: form2.dataset.id, act: form2.dataset.act, text: String(d.get("text") ?? "") }));
       if (r2) {
-        say2("done", done(r2));
+        say3("done", done(r2));
         await draw();
       }
       return;
@@ -31107,7 +32868,7 @@ app.addEventListener("submit", async (ev) => {
     const r = await busy("Preparing the correction, and reading it back\u2026", () => c.ask("collective prepare", { kind: "post", collective: form2.dataset.id, text: String(d.get("text") ?? ""), corrects: form2.dataset.act }));
     if (r) {
       postReview = r;
-      say2("", "");
+      say3("", "");
       fill("e-post-review", `<div class="colroot">${reading(r.reading, r)}</div>`);
       $("e-post-review")?.scrollIntoView({ block: "start" });
     }
@@ -31119,7 +32880,7 @@ app.addEventListener("submit", async (ev) => {
     const r = await busy("Preparing, and reading it back\u2026", () => c.ask("collective prepare", { kind: "post", collective: at.collective, text: String(d.get("text") ?? ""), jpeg }));
     if (r) {
       postReview = r;
-      say2("", "");
+      say3("", "");
       fill("e-post-review", `<div class="colroot">${reading(r.reading, r)}</div>`);
       $("e-post-review")?.scrollIntoView({ block: "start" });
     }
@@ -31153,7 +32914,7 @@ app.addEventListener("submit", async (ev) => {
   }
   if (fid === "pay-someone" || fid === "pay-member") {
     const r = await busy("Sealing the draft to the identity\u2026", () => c.ask("money pay", { identity: form2.dataset.identity, to: words(d.get("to")), value: words(d.get("value")), unit: words(d.get("unit")), whatFor: String(d.get("whatFor") ?? "") }), form2);
-    if (r) say2("done", lines2(r.lines), form2);
+    if (r) say3("done", lines2(r.lines), form2);
     return;
   }
   if (fid === "anchor-offers") {
@@ -31167,7 +32928,7 @@ app.addEventListener("submit", async (ev) => {
     const tier = Number(d.get("tier") ?? 0);
     const r = await busy("Making the blind and sealing the draft\u2026", () => c.ask("money anchor", { identity: state.acting, collective: form2.dataset.collective, act: form2.dataset.act, service: form2.dataset.service, offer: form2.dataset.offer, tier }), form2);
     if (r) {
-      say2("done", lines2(r.lines), form2);
+      say3("done", lines2(r.lines), form2);
       fill("e-anchors", anchors(await c.ask("money anchors", { collective: form2.dataset.collective })));
     }
     return;
@@ -31189,7 +32950,7 @@ app.addEventListener("submit", async (ev) => {
     );
     if (r) {
       realReview = { plan: r.plan, digest: r.digest };
-      say2("", "");
+      say3("", "");
       fill("e-real-review", `<div class="colroot">${reading(r.reading, r)}</div>`);
       $("e-real-review")?.scrollIntoView({ block: "start" });
     }
@@ -31210,7 +32971,7 @@ app.addEventListener("submit", async (ev) => {
     );
     if (r) {
       realReview = { plan: r.plan, digest: r.digest };
-      say2("", "");
+      say3("", "");
       fill("e-real-review", `<div class="colroot">${reading(r.reading, r)}</div>`);
       $("e-real-review")?.scrollIntoView({ block: "start" });
     }
@@ -31228,7 +32989,7 @@ app.addEventListener("submit", async (ev) => {
       app.querySelectorAll(".renew-here").forEach((x) => x.remove());
       await refresh();
       if (fid === "identity-renew") await drawRecord(id);
-      say2("done", done(r));
+      say3("done", done(r));
     } else if (inline && !form2.isConnected) await offerRenew();
     return;
   }
@@ -31237,7 +32998,7 @@ app.addEventListener("submit", async (ev) => {
     const r = await busy("Checking the words\u2026", () => c.ask("real share back", { collective: form2.dataset.collective, member: form2.dataset.member, typed }));
     if (r) {
       await refresh();
-      say2("done", done(r));
+      say3("done", done(r));
     }
     return;
   }
@@ -31261,7 +33022,7 @@ app.addEventListener("submit", async (ev) => {
       records.delete(form2.dataset.identity);
       fill("e-rely-shown", "");
       void drawRecord(form2.dataset.identity);
-      say2("done", `<strong>Witness act signed and sent.</strong><br>Act ${e(r.id)}.`, $("e-rely-shown"));
+      say3("done", `<strong>Witness act signed and sent.</strong><br>Act ${e(r.id)}.`, $("e-rely-shown"));
     }
     return;
   }
@@ -31281,7 +33042,7 @@ app.addEventListener("submit", async (ev) => {
     );
     if (r) {
       state = await c.ask("state");
-      say2("done", "Settings saved.", $("settings-status"));
+      say3("done", "Settings saved.", $("settings-status"));
     }
   }
 });
@@ -31291,20 +33052,20 @@ async function start() {
     return;
   }
   if (!window.isSecureContext || !crypto?.subtle) {
-    app.innerHTML = `${top()}${note2("error", "This page keeps a key in the browser, which browsers allow only on the machine itself (http://127.0.0.1) or over https.")}`;
+    app.innerHTML = `${top2()}${note3("error", "This page keeps a key in the browser, which browsers allow only on the machine itself (http://127.0.0.1) or over https.")}`;
     return;
   }
   let keys;
   try {
     keys = await loadKey();
   } catch (err8) {
-    app.innerHTML = `${top()}${note2("error", `This browser cannot make or keep an Ed25519 key (${e(err8 instanceof Error ? err8.message : String(err8))}). A recent Firefox, Safari or Chrome can; a private window may not keep it.`)}`;
+    app.innerHTML = `${top2()}${note3("error", `This browser cannot make or keep an Ed25519 key (${e(err8 instanceof Error ? err8.message : String(err8))}). A recent Firefox, Safari or Chrome can; a private window may not keep it.`)}`;
     return;
   }
   try {
     c = await Client.open(keys);
   } catch (err8) {
-    app.innerHTML = `${top()}${note2("error", e(err8 instanceof Error ? err8.message : String(err8)))}`;
+    app.innerHTML = `${top2()}${note3("error", e(err8 instanceof Error ? err8.message : String(err8)))}`;
     return;
   }
   const linked = /^#pair=([0-9A-Za-z-]+)$/.exec(location.hash)?.[1];
@@ -31322,7 +33083,7 @@ async function start() {
       app.innerHTML = pairing();
       return;
     }
-    app.innerHTML = `${top()}${note2("error", e(err8 instanceof Error ? err8.message : String(err8)))}`;
+    app.innerHTML = `${top2()}${note3("error", e(err8 instanceof Error ? err8.message : String(err8)))}`;
     return;
   }
   app.innerHTML = frame();
@@ -31339,7 +33100,7 @@ async function startWeb(w) {
   try {
     state = await c.ask("state");
   } catch (err8) {
-    app.innerHTML = `${top()}${note2("error", e(err8 instanceof Error ? err8.message : String(err8)))}`;
+    app.innerHTML = `${top2()}${note3("error", e(err8 instanceof Error ? err8.message : String(err8)))}`;
     return;
   }
   at.tab = state.identities.length ? "collectives" : "identities";
@@ -31354,7 +33115,7 @@ async function startWeb(w) {
 function opened() {
   void c.ask("keys check").then(async (xs) => {
     if (!xs.length || working) return;
-    say2("warn", xs.map((x) => `<strong>${e(x.name)}</strong>: ${e(x.say)}`).join("<br>"));
+    say3("warn", xs.map((x) => `<strong>${e(x.name)}</strong>: ${e(x.say)}`).join("<br>"));
     await offerRenew(null, xs.filter((x) => KEY_CHANGED_START.some((k) => x.say.startsWith(k))));
   }).catch(() => void 0);
   void gatherAll();
@@ -31371,7 +33132,7 @@ app.addEventListener("change", async (ev) => {
     if (r) {
       pubReview = null;
       await draw();
-      say2("done", lines2(r.lines));
+      say3("done", lines2(r.lines));
     }
     return;
   }
@@ -31379,7 +33140,7 @@ app.addEventListener("change", async (ev) => {
     const r = await busy("Acting as another identity\u2026", () => c.ask("acting as", { id: el.value }));
     if (r) {
       await refresh();
-      say2("done", `Acting as ${e(state.identities.find((i) => i.id === state.acting)?.name ?? "it")}.`);
+      say3("done", `Acting as ${e(state.identities.find((i) => i.id === state.acting)?.name ?? "it")}.`);
     }
     return;
   }
@@ -31443,7 +33204,7 @@ function begin(o = {}) {
 var DIR = "/edubba";
 var LOCK = "edubba-web";
 var app2 = document.getElementById("app");
-var stop = (html) => app2.innerHTML = `${top()}${note2("error", html)}`;
+var stop = (html) => app2.innerHTML = `${top2()}${note3("error", html)}`;
 function only() {
   if (!navigator.locks) return Promise.resolve(true);
   return new Promise((resolve3) => {

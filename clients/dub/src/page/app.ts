@@ -47,20 +47,20 @@ app.addEventListener('submit', async (ev) => {
 
 async function start() {
   if (!window.isSecureContext || !crypto?.subtle) {
-    app.innerHTML = `${v.top()}${v.note('error', 'This page keeps a key in the browser, which browsers allow only on the machine itself (http://127.0.0.1) or over https.')}`;
+    app.innerHTML = `${v.alone(v.note('error', 'This page keeps a key in the browser, which browsers allow only on the machine itself (http://127.0.0.1) or over https.'))}`;
     return;
   }
   let keys: CryptoKeyPair;
   try {
     keys = await loadKey();
   } catch (err) {
-    app.innerHTML = `${v.top()}${v.note('error', `This browser cannot make or keep an Ed25519 key (${v.e(err instanceof Error ? err.message : String(err))}). A recent Firefox, Safari or Chrome can; a private window may not keep it.`)}`;
+    app.innerHTML = `${v.alone(v.note('error', `This browser cannot make or keep an Ed25519 key (${v.e(err instanceof Error ? err.message : String(err))}). A recent Firefox, Safari or Chrome can; a private window may not keep it.`))}`;
     return;
   }
   try {
     c = await Client.open(keys, '', DOMAIN);
   } catch (err) {
-    app.innerHTML = `${v.top()}${v.note('error', v.e(err instanceof Error ? err.message : String(err)))}`;
+    app.innerHTML = `${v.alone(v.note('error', v.e(err instanceof Error ? err.message : String(err))))}`;
     return;
   }
   // The app's link carries a one-time code in the fragment, which never leaves this browser.
@@ -81,7 +81,7 @@ async function start() {
       app.innerHTML = v.pairing();
       return;
     }
-    app.innerHTML = `${v.top()}${v.note('error', v.e(err instanceof Error ? err.message : String(err)))}`;
+    app.innerHTML = `${v.alone(v.note('error', v.e(err instanceof Error ? err.message : String(err))))}`;
     return;
   }
   await ui.show(state);

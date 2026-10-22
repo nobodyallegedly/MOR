@@ -61,6 +61,9 @@ jobs:
       - name: clients/manage
         if: success() || failure()
         run: cd clients/manage && npm ci --no-audit --no-fund && npm test
+      - name: clients/kit
+        if: success() || failure()
+        run: cd clients/kit && npm ci --no-audit --no-fund && npm test
       - name: clients/dub
         if: success() || failure()
         run: cd clients/desk && npm ci --no-audit --no-fund && cd ../dub && npm ci --no-audit --no-fund && npm test

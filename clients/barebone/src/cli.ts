@@ -56,6 +56,8 @@ function summary(p: ShownPost): string {
               (r.signer !== p.signer ? `, by ${r.signer}` : '')
           : `  picture ${r.publication}: not shown, ${r.problem}`,
       );
+    } else if (r.kind === 'film') {
+      lines.push(r.problem ? `  film ${r.publication}: not shown, ${r.problem}` : `  film ${r.publication}: ${r.size} bytes, its bytes checked when played`);
     } else lines.push(`  refers to ${r.id}: ${r.what}`);
   }
   return lines.join('\n');
