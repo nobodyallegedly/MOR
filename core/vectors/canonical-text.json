@@ -1,5 +1,5 @@
 {
-  "description": "Canonical text (Text MIP). `rule` is the first rule broken, checking rules 1 to 5 in text order and rule 6 (NFC, Unicode 17.0 tables) last; null if canonical.",
+  "description": "Canonical text (Text). `rule` is the first rule broken, checking rules 1 to 5 in text order and rule 6 (NFC, Unicode 17.0 tables) last; null if canonical.",
   "unicode_version": "17.0.0",
   "vectors": [
     {

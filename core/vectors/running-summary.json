@@ -12,7 +12,7 @@
     "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
     "e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6"
   ],
-  "description": "Running summary (Envelope, Sequences): root of a Merkle mountain range over act ids. leaf = tagged_hash(\"MOR/mmr-leaf\", id); node = tagged_hash(\"MOR/mmr-node\", left || right); peaks bagged right to left as node(peak, bagged so far); one peak is its own root; no acts gives 32 zero bytes. The act ids here are stand-ins: SHA-256 of the single byte 1, 2, 3 ...",
+  "description": "Running summary (Envelopes, \"Sequences\"): root of a Merkle mountain range over act ids. leaf = tagged_hash(\"MOR/mmr-leaf\", id); node = tagged_hash(\"MOR/mmr-node\", left || right); peaks bagged right to left as node(peak, bagged so far); one peak is its own root; no acts gives 32 zero bytes. The act ids here are stand-ins: SHA-256 of the single byte 1, 2, 3 ...",
   "summaries": [
     {
       "acts": 0,

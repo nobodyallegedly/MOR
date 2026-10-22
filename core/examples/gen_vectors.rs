@@ -211,7 +211,7 @@ fn text_vectors() -> J {
         })
         .collect();
     json!({
-        "description": "Canonical text (Text MIP). `rule` is the first rule broken, checking rules 1 to 5 in text order and rule 6 (NFC, Unicode 17.0 tables) last; null if canonical.",
+        "description": "Canonical text (Text). `rule` is the first rule broken, checking rules 1 to 5 in text order and rule 6 (NFC, Unicode 17.0 tables) last; null if canonical.",
         "unicode_version": "17.0.0",
         "vectors": v,
     })
@@ -240,7 +240,7 @@ fn summary_vectors() -> J {
         .map(|n| json!({ "acts": n, "summary": hx(&mmr::summary(&ids[..n])) }))
         .collect();
     json!({
-        "description": "Running summary (Envelope, Sequences): root of a Merkle mountain range over act ids. leaf = tagged_hash(\"MOR/mmr-leaf\", id); node = tagged_hash(\"MOR/mmr-node\", left || right); peaks bagged right to left as node(peak, bagged so far); one peak is its own root; no acts gives 32 zero bytes. The act ids here are stand-ins: SHA-256 of the single byte 1, 2, 3 ...",
+        "description": "Running summary (Envelopes, \"Sequences\"): root of a Merkle mountain range over act ids. leaf = tagged_hash(\"MOR/mmr-leaf\", id); node = tagged_hash(\"MOR/mmr-node\", left || right); peaks bagged right to left as node(peak, bagged so far); one peak is its own root; no acts gives 32 zero bytes. The act ids here are stand-ins: SHA-256 of the single byte 1, 2, 3 ...",
         "act_ids": ids.iter().map(|h| hx(h)).collect::<Vec<_>>(),
         "summaries": summaries,
     })
@@ -316,7 +316,7 @@ fn three_acts() -> J {
         ids.push(id);
     }
     json!({
-        "description": "The three-act running-summary vector (Envelope, Sequences; F78). Three public text acts (Text MIP type 0) in one sequence of one signer. Each act carries prev, its position and the running summary up to and including the previous act; act 1 carries the empty summary. `summary_including_last` is the summary over all three, as a rotation's kept tip carries it. `spec`, `signer` and `binding` are stand-ins (SHA-256 of a label): MIP hashes are fixed only at freeze, and signatures are part 2 of the core library, so no signature is given. The act id does not depend on the signature.",
+        "description": "The three-act running-summary vector (Envelopes, \"Sequences\"). Three public text acts (Text, type 0) in one sequence of one signer. Each act carries prev, its position and the running summary up to and including the previous act; act 1 carries the empty summary. `summary_including_last` is the summary over all three, as a rotation's kept tip carries it. `spec`, `signer` and `binding` are stand-ins (SHA-256 of a label): MIR hashes are fixed only at the freeze, and signatures are part 2 of the core library, so no signature is given. The act id does not depend on the signature.",
         "spec": hx(&spec),
         "signer": hx(&signer),
         "binding": hx(&binding),
@@ -462,7 +462,7 @@ fn invalid_acts() -> J {
     })
 }
 
-/// A sealed container in Envelopes draft 10's format (F293): `[to,
+/// A sealed container in the Envelopes MIR's format: `[to,
 /// locked-act]`, no one-time key and no signature. Every input fixed: the
 /// recipient's X-Wing secret, the inner act (private, addressed to the
 /// recipient, signed with a fixed Schnorr key), the container key, the
@@ -508,7 +508,7 @@ fn sealed_container() -> J {
     let opened = envelopes::open(&sealed, Some(&recipient), &dk).unwrap();
     assert_eq!(opened.act, inner);
     json!({
-        "description": "A sealed container in Envelopes draft 10's format (F293): sealed = [to, locked-act], no one-time key and no signature, its outside unauthenticated by design. locked-act = [capsules, nonce, locked], one capsule [ct, wrapped] per recipient: ct the X-Wing ciphertext of encapsulating to the recipient's key with eseed, wrapped the container key locked under tagged_hash(\"MOR/sealed/wrap\", shared secret) with a zero nonce; locked opens with the container key and nonce to contents = [act, key], the inner act and its content key. The recipient's public key is X-Wing's from the secret given. Every input is fixed; the spec, signer and binding are stand-ins.",
+        "description": "A sealed container in the Envelopes MIR's format: sealed = [to, locked-act], no one-time key and no signature, its outside unauthenticated by design. locked-act = [capsules, nonce, locked], one capsule [ct, wrapped] per recipient: ct the X-Wing ciphertext of encapsulating to the recipient's key with eseed, wrapped the container key locked under tagged_hash(\"MOR/sealed/wrap\", shared secret) with a zero nonce; locked opens with the container key and nonce to contents = [act, key], the inner act and its content key. The recipient's public key is X-Wing's from the secret given. Every input is fixed; the spec, signer and binding are stand-ins.",
         "recipient": hx(&recipient),
         "recipient_xwing_secret": hx(&fixed("mor-core vector: recipient X-Wing secret")),
         "recipient_xwing_public": hx(&dk.public.key),
@@ -761,7 +761,7 @@ fn textual_forms() -> J {
     };
     let hints = ["https://home1.example.org", "https://relay.example.org/mor"];
     json!({
-        "about": "Identity draft 14, part three, \"Written for people\" (F349): bech32m (BIP-350), lowercase; labels mid, mact, mkey, mspec, mwork; a key's data is Identity's [scheme, key] in deterministic CBOR; the where-it-lives form is the short form, then ?r= hints, percent-encoded, outside the checksum; bare hex (64 characters) accepted for a 32-byte hash.",
+        "about": "Identity, part three, \"Written for people\": bech32m (BIP-350), lowercase; labels mid, mact, mkey, mspec, mwork; a key's data is Identity's [scheme, key] in deterministic CBOR; the where-it-lives form is the short form, then ?r= hints, percent-encoded, outside the checksum; bare hex (64 characters) accepted for a 32-byte hash.",
         "forms": forms,
         "upper": { "form": id.to_ascii_uppercase(), "want": "mid", "data": hx(&fixed("an identity")) },
         "lives": { "form": tf::with_hints(Kind::Identity, &fixed("an identity"), &hints), "want": "mid", "data": hx(&fixed("an identity")), "hints": hints },
