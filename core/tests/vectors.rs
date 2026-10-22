@@ -337,6 +337,9 @@ fn verdict_vectors() {
                         }),
                     }
                 }
+                "purchase contests" => with_facts(&v, &mirs, facts)
+                    .purchase_contests(&h(&ask["purchase"]))
+                    .map_or(json!("unknown"), |x| json!(x.iter().map(hex::encode).collect::<Vec<_>>())),
                 "refund repaid" => with_facts(&v, &mirs, facts)
                     .refund_repaid(&h(&ask["payment"]), &mor_core::money::RefundTo::Identity(h(&ask["to"])), &h(&ask["unit"]))
                     .map_or(json!("unknown"), |x| json!(x)),
@@ -435,7 +438,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 108);
+    assert_eq!(n, 110);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.

@@ -2752,6 +2752,12 @@ pub const NESTING_BOUND: usize = 8;
 ///   `[[vow, vow]]`; field 1, optional, the promise not kept (reading (Q3):
 ///   a buyer may know only that something went wrong).
 ///
+/// - the buyer of a purchase contests **that purchase** (F386): field 0 the
+///   purchase (the buyer's payer's claim of the payment, or, for an offer
+///   at no price, the buyer's signature act on it), named in `objects` as
+///   chain and predecessor, `[[purchase, purchase]]`; field 1, optional,
+///   the promise not kept, in words only.
+///
 /// A contest of any other act, or by another with standing (rule 54, was
 /// 57a), keeps its meaning open (OF25 a, decided in text).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -2764,7 +2770,8 @@ pub struct Contest {
     /// `objects` names the act itself (a declaration's contest). Not in the
     /// payload (draft 11, "Contest (type 14)": mechanics, to confirm).
     pub vow: Option<Hash>,
-    /// 1: for a vow only, the promise not kept (F253, reading (Q3)).
+    /// 1: the promise not kept (F253, reading (Q3)): for a vow's sale, in
+    /// words or a cMIP's terms; for a purchase, in words only (F386).
     pub promise: Option<Promise>,
 }
 
@@ -2787,6 +2794,12 @@ impl Contest {
     /// A vow's contest naming the sale (draft 11, rule 13, F253).
     pub fn of_sale(vow: Hash, sale: Hash, promise: Option<Promise>) -> Contest {
         Contest { act: sale, vow: Some(vow), promise }
+    }
+
+    /// A buyer's contest of a purchase (F386): the purchase, and, optionally,
+    /// the promise not kept, in words.
+    pub fn of_purchase(purchase: Hash, promise: Option<String>) -> Contest {
+        Contest { act: purchase, vow: None, promise: promise.map(Promise::Words) }
     }
 
     /// The act its `objects` names as chain and predecessor: the vow, or
@@ -2831,8 +2844,11 @@ impl Contest {
             _ => return Err(AgreementsError::Shape("contest: objects must name the act it answers, or the vow, as chain and predecessor")),
         };
         let vow = (named != act).then_some(named);
-        if vow.is_none() && promise.is_some() {
-            return Err(AgreementsError::Shape("contest: field 1, the promise not kept, is for a vow's contest only (F253)"));
+        // Field 1 in words is read from the bytes alone in either form: a
+        // purchase's contest may carry it (F386), and only the view can
+        // tell a purchase. In a cMIP's terms, only a vow's sale's.
+        if vow.is_none() && matches!(promise, Some(Promise::Terms(..))) {
+            return Err(AgreementsError::Shape("contest: field 1 in a cMIP's terms is for a vow's sale's contest only; a purchase's contest says it in words (F253, F386)"));
         }
         Ok(Contest { act, vow, promise })
     }

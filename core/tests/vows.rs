@@ -389,7 +389,9 @@ fn draft_11_f253_a_contest_names_the_sale_not_the_vow() {
 
 /// Reading (Q3): naming the promise not kept is optional (field 1), in
 /// words as canonical text or in a cMIP's terms; a contest names the same
-/// sale either way. Field 1 belongs to a vow's contest only.
+/// sale either way. Field 1 in a cMIP's terms belongs to a vow's sale's
+/// contest only; in words, a purchase's contest may carry it too (F386), so
+/// a declaration's contest carrying words is in format and shows nothing.
 #[test]
 fn draft_11_q3_the_promise_not_kept_is_optional() {
     let (mut w, _club, mut fan, name, _offer, claims) = season();
@@ -402,11 +404,15 @@ fn draft_11_q3_the_promise_not_kept_is_optional() {
     let terms = agreements::Promise::Terms(spec("a ticketing cMIP"), Value::Uint(2));
     let k2 = contest_with(&mut w, &mut fan, name, claims[1], Some(terms.clone()));
     assert_eq!(agreements::Contest::decode(&w.v.get(&k2).unwrap().inside).unwrap().promise, Some(terms));
-    // A declaration's contest carries no promise.
+    // Outside a vow's sale, a promise in a cMIP's terms is out of format.
     let d = spec("a declaration of absence");
-    let bad = agreements::Contest { act: d, vow: None, promise: Some(agreements::Promise::Words("x".into())) };
+    let bad = agreements::Contest { act: d, vow: None, promise: Some(agreements::Promise::Terms(spec("a ticketing cMIP"), Value::Uint(2))) };
     let a = agreements_act(&mut w, &mut fan, agreements::types::CONTEST, bad.to_map(), Some(vec![Object { chain: d, predecessor: d }]));
-    assert!(agreements::Contest::decode(&w.v.get(&a).unwrap().inside).is_err(), "field 1 is for a vow's contest only");
+    assert!(agreements::Contest::decode(&w.v.get(&a).unwrap().inside).is_err(), "field 1 in a cMIP's terms is for a vow's sale's contest only");
+    // In words it is in format (a purchase's contest carries it, F386).
+    let words = agreements::Contest { act: d, vow: None, promise: Some(agreements::Promise::Words("x".into())) };
+    let a = agreements_act(&mut w, &mut fan, agreements::types::CONTEST, words.to_map(), Some(vec![Object { chain: d, predecessor: d }]));
+    assert!(agreements::Contest::decode(&w.v.get(&a).unwrap().inside).is_ok());
     // Words that are not canonical text never make an act at all (core: every
     // text in an act is canonical), so the contest's own check is a second line.
 }

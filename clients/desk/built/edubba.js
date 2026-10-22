@@ -1018,6 +1018,29 @@ var Verifier = class {
     return takeFromExternrefTable0(ret[0]);
   }
   /**
+   * The contests shown beside a purchase (Agreements rule 54, "Contest
+   * (type 14)", F386), by the act that is the purchase (the buyer's
+   * payer's claim of the payment, or the buyer's signature act on an
+   * offer at no price): the buyer's own contests of it, ascending. A
+   * contest by anyone else shows nothing; for an act that is no
+   * purchase, none shows. `specs.railValid` names the claims whose rail
+   * the client checked. Errs where it is unknown (Money rule 12).
+   * @param {any} specs
+   * @param {string} purchase
+   * @returns {string[]}
+   */
+  agreementsPurchaseContests(specs, purchase) {
+    const ptr0 = passStringToWasm0(purchase, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.verifier_agreementsPurchaseContests(this.__wbg_ptr, specs, ptr0, len0);
+    if (ret[3]) {
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v2;
+  }
+  /**
    * A payment for a work, judged (F126, F127 W2, F128 W4): "purchase",
    * "no-purchase" (a refund owed to the payer, with why), or "unrecorded"
    * (on a request rail, a collective seller's actions chain has not
