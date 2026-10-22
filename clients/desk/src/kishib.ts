@@ -21,6 +21,7 @@
 import { cborDecode, describeAct, hex, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
 import { resealMemberKeys } from '../../grants/src/member.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
+import { freshLines } from '../../genesis/src/identity.ts';
 import { Refused, encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
 import { carriedKey, lookCurrent, servedChain, NOT_CURRENT } from '../../dub/src/carryin.ts';
 import { REPO_SPECS, FOUNDING_AGREEMENT } from '../../repo/src/specs.ts';
@@ -81,8 +82,8 @@ export class AfterKishib {
       me.f.homes = r.homes;
       me.f.rule = r.rule ?? null;
       me.f.pending = null;
-      // A new line under the new binding (the carry Module, 4.3): the old line ended with the old key.
-      me.f.sequence = [];
+      // New lines under the new binding (the carry Module, 4.3; F376: public and private): the old ones ended with the old key.
+      freshLines(me.f);
       me.f.routes = me.f.routes && look.routes.act === me.f.routes.act ? me.f.routes : null;
       const lines: Line[] = [{ text: 'The new words give its current signing key. Edubba signs with them from now on, in a new line.', tone: 'ok' }];
       const carried = carriedKey(look, seed);

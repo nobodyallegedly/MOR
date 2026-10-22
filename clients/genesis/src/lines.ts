@@ -55,7 +55,13 @@ export interface Card {
   missing?: number;
   /** Not named either: which app's line, as the app names itself (Dub, Edubba, Damgar, Ummia). */
   app?: string;
+  /** Not named either: which of the app's lines (F376): its public line, its private line, or the one it kept before. */
+  line?: LineKind;
 }
+
+/** An app's lines since F376: public acts on one, private acts on another, and the mixed line it kept before, frozen. */
+export type LineKind = 'public' | 'private' | 'earlier';
+const KINDS: LineKind[] = ['public', 'private', 'earlier'];
 
 /** One line of acts, as read. */
 export interface FoundLine {
@@ -194,12 +200,14 @@ export async function actsBy(signer: string, hints: string[], via: Via = {}): Pr
  * The lines of `identity` that a rotation replacing the signing key bound
  * by `binding` judges: every line whose latest act was signed with that
  * key, from the acts `acts` (as `actsBy` reads them), followed back by
- * `prev` to its first act. `own` is this device's sequence, oldest first:
- * its own acts are followed from it, private ones included. This device's
+ * `prev` to its first act. `own` is this device's sequence, oldest first,
+ * or its lines (F376: public, private, and the one kept before), each
+ * oldest first: its own acts are followed from them, private ones included. This device's
  * line is always among them, even where no relay holds it yet.
  */
-export function linesOf(o: { identity: string; binding: string; own: string[]; acts: Uint8Array[]; specs?: Specs }): FoundLine[] {
+export function linesOf(o: { identity: string; binding: string; own: string[] | string[][]; acts: Uint8Array[]; specs?: Specs }): FoundLine[] {
   const specs = o.specs ?? MIRS;
+  const owns = (o.own.length && Array.isArray(o.own[0]) ? (o.own as string[][]) : [o.own as string[]]).filter((l) => l.length);
   const held = new Map<string, Described>();
   for (const a of o.acts) {
     let d: Described;
@@ -214,7 +222,8 @@ export function linesOf(o: { identity: string; binding: string; own: string[]; a
     held.set(d.id, d);
   }
   // This device's own acts: their order is known from its sequence, even where private.
-  const ownPrev = new Map<string, string | null>(o.own.map((id, i) => [id, i ? o.own[i - 1] : null]));
+  const ownPrev = new Map<string, string | null>(owns.flatMap((line) => line.map((id, i): [string, string | null] => [id, i ? line[i - 1] : null])));
+  const ownPosition = new Map<string, number>(owns.flatMap((line) => line.map((id, i): [string, number] => [id, i + 1])));
   const prevOf = (id: string): { known: boolean; prev: string | null } => {
     if (ownPrev.has(id)) return { known: true, prev: ownPrev.get(id)! };
     const d = held.get(id);
@@ -225,13 +234,13 @@ export function linesOf(o: { identity: string; binding: string; own: string[]; a
   // elsewhere names nothing this device can read, so an act it follows may
   // look like a tip: it is shown, and its line's card asked for.
   const named = new Set<string>();
-  for (const id of [...held.keys(), ...o.own]) {
+  for (const id of [...held.keys(), ...ownPrev.keys()]) {
     const p = prevOf(id);
     if (p.prev) named.add(p.prev);
   }
-  const ownTip = o.own[o.own.length - 1];
+  const ownTips = new Set(owns.map((line) => line[line.length - 1]));
   const tips = [...held.values()].filter((d) => !named.has(d.id) && d.binding === o.binding).map((d) => d.id);
-  if (ownTip && !tips.includes(ownTip) && !named.has(ownTip)) tips.push(ownTip);
+  for (const t of ownTips) if (!tips.includes(t) && !named.has(t)) tips.push(t);
   const out: FoundLine[] = [];
   for (const tip of tips) {
     const d = held.get(tip);
@@ -255,11 +264,11 @@ export function linesOf(o: { identity: string; binding: string; own: string[]; a
       at = p.prev;
     }
     ids.reverse();
-    const position = d?.position ?? (ownPrev.has(tip) ? o.own.indexOf(tip) + 1 : undefined);
+    const position = d?.position ?? ownPosition.get(tip);
     if (!why && position !== undefined && position !== ids.length) why = `its latest act says position ${position}, but ${ids.length} acts were found behind it`;
     out.push({
       tip,
-      own: tip === ownTip,
+      own: ownTips.has(tip),
       readable: !why,
       card: why ? null : { act: tip, position: ids.length, summary: runningSummary(ids) },
       latest,
@@ -306,12 +315,16 @@ export const APP_LINES: Record<string, string> = {
 };
 
 /** An app's line, named for the person: “Edubba’s line”, or “a line” where the card names no app. */
-export function lineOf(app: string | undefined): string {
-  return app ? `${app}’s line` : 'a line';
+export function lineOf(app: string | undefined, kind?: LineKind): string {
+  const k = kind === 'earlier' ? 'line from before (public and private acts together)' : kind ? `${kind} line` : 'line';
+  return app ? `${app}’s ${k}` : `a ${k}`;
 }
 
+const capital = (t: string) => t[0].toUpperCase() + t.slice(1);
+
 /** What may live on that app's line, in plain words. */
-export function livesOn(app: string | undefined): string {
+export function livesOn(app: string | undefined, kind?: LineKind): string {
+  if (kind === 'public') return `${app ? `${app}’s` : 'its app’s'} public acts: posts, names, routes, signatures on a collective’s agreement, releases`;
   return (app && APP_LINES[app]) ?? 'whatever its app signed there: possibly a member key for a collective, notes, a list';
 }
 
@@ -319,10 +332,12 @@ export function livesOn(app: string | undefined): string {
  * A card as an app shows it, for Kišib: its latest act, position and summary
  * (what the rotation names), then how many of its acts Kišib cannot place
  * by reading, then the app's name, and, where acts are missing from the
- * homes, how many: `<act> <position> <summary> <hidden> <App>[ missing <n>]`.
+ * homes, how many: `<act> <position> <summary> <hidden> <App> <line>[ missing <n>]`,
+ * `<line>` naming which of its lines (F376). An app's cards together are
+ * joined by “; ”, so that they copy as one piece of text.
  */
 export function cardText(c: Card, app: string): string {
-  return `${c.act} ${c.position} ${c.summary}${c.hidden === undefined ? '' : ` ${c.hidden}`} ${app}${c.missing ? ` missing ${c.missing}` : ''}`;
+  return `${c.act} ${c.position} ${c.summary}${c.hidden === undefined ? '' : ` ${c.hidden}`} ${app}${c.line ? ` ${c.line}` : ''}${c.missing ? ` missing ${c.missing}` : ''}`;
 }
 
 /** The plain words for one line. */
@@ -386,14 +401,14 @@ export function planLines(lines: FoundLine[], o: { leaveOut?: string[]; cards?: 
   // Red, before anything is signed: lines kept by a card that no reader can follow.
   const unplacedSay: string[] = [];
   for (const c of cards) {
-    const whose = lineOf(c.app);
+    const whose = lineOf(c.app, c.line);
     if (!found(c.act)) {
       unplacedSay.push(
-        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: its latest act (${c.act}) is not at the identity's homes, so no reader can follow it. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it. ${c.app ? `Open ${c.app} first: it sends its acts to the homes; then give its card again.` : 'Open the app that shows this card first: it sends its acts to the homes; then give its card again.'}`,
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: its latest act (${c.act}) is not at the identity's homes, so no reader can follow it. What lives on it (${livesOn(c.app, c.line)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it. ${c.app ? `Open ${c.app} first: it sends its acts to the homes; then give its card again.` : 'Open the app that shows this card first: it sends its acts to the homes; then give its card again.'}`,
       );
     } else if (c.missing) {
       unplacedSay.push(
-        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: ${c.missing === 1 ? 'one of its acts is' : `${c.missing} of its acts are`} not at the identity's homes (${c.app ?? 'its app'} says so), so no reader can follow it past ${c.missing === 1 ? 'it' : 'them'}. What lives on it (${livesOn(c.app)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it.`,
+        `${whose[0].toUpperCase()}${whose.slice(1)} is not placed: ${c.missing === 1 ? 'one of its acts is' : `${c.missing} of its acts are`} not at the identity's homes (${c.app ?? 'its app'} says so), so no reader can follow it past ${c.missing === 1 ? 'it' : 'them'}. What lives on it (${livesOn(c.app, c.line)}) may stop counting after this change, as if the line were left out: a member key for a collective would be lost with it.`,
       );
     }
   }
@@ -410,7 +425,7 @@ export function planLines(lines: FoundLine[], o: { leaveOut?: string[]; cards?: 
     } else if (card) {
       kept.push({ act: card.act, position: card.position, summary: card.summary });
       shown.push({
-        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${given.app}’s line. ` : ''}${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`,
+        text: l.readable && !given?.app ? `${lineWords(l)} Kept.` : `${given?.app ? `${capital(lineOf(given.app, given.line))}. ` : ''}${lineWords(l)} Kept by the card given: position ${card.position}, summary ${card.summary}.`,
         tone: l.readable || (given && !given.missing) ? 'ok' : 'warn',
       });
     } else if (covered) {
@@ -433,7 +448,7 @@ export function planLines(lines: FoundLine[], o: { leaveOut?: string[]; cards?: 
   for (const c of cards) {
     if (lines.some((l) => l.tip === c.act)) continue;
     kept.push({ act: c.act, position: c.position, summary: c.summary });
-    shown.push({ text: `${c.app ? `${c.app}’s line, ending` : 'A line ending'} at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}), but no reader can follow it.`, tone: found(c.act) ? 'warn' : 'bad' });
+    shown.push({ text: `${capital(lineOf(c.app, c.line))}, ending at ${c.act}, not found at the identity's homes or relays: kept by the card given (position ${c.position}, summary ${c.summary}), but no reader can follow it.`, tone: found(c.act) ? 'warn' : 'bad' });
   }
   for (const t of unplacedSay) shown.push({ text: t, tone: 'bad' });
   const warning = [left.length ? voidWarning(left) : '', ...unplacedSay].filter(Boolean).join(' ') || null;
@@ -452,11 +467,12 @@ export function checkWarned(plan: LinePlan, warned: string | undefined): void {
  * position and its summary, separated by spaces, colons or commas (as an
  * app's card shows them); then, as the apps show them since H80's question 2,
  * how many of its acts Kišib cannot place, the app's name, and “missing” and
- * a number where acts are missing from the homes.
+ * a number where acts are missing from the homes; since F376, which of its
+ * lines (public, private, earlier). Cards are one per line, or joined by “;”.
  */
 export function readCards(text: string): Card[] {
   return text
-    .split('\n')
+    .split(/[\n;]/)
     .map((l) => l.trim())
     .filter(Boolean)
     .map((l) => {
@@ -467,6 +483,7 @@ export function readCards(text: string): Card[] {
       for (let i = 0; i < rest.length; i++) {
         const w = rest[i];
         if (/^missing$/i.test(w) && /^\d+$/.test(rest[i + 1] ?? '')) c.missing = Number(rest[++i]);
+        else if (words.length && !c.line && (KINDS as string[]).includes(w.toLowerCase())) c.line = w.toLowerCase() as LineKind;
         else if (/^\d+$/.test(w) && c.hidden === undefined && !words.length) c.hidden = Number(w);
         else if (/^[\p{L}\p{M}’'-]+$/u.test(w)) words.push(w);
         else throw new Error(`“${l}”: a card is a latest act, a position and a summary, then what its app adds (a count and its name)`);

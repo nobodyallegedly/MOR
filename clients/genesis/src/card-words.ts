@@ -16,7 +16,8 @@ export function cardWords(l: LineShown, app: string, e: (s: string) => string): 
   const n = `${l.acts} act${l.acts === 1 ? '' : 's'}`;
   if (!l.latest) return n;
   const missing = l.missing ? ` ${l.missing === 1 ? 'One act' : `${l.missing} acts`} of this line ${l.missing === 1 ? 'is' : 'are'} not at your homes, and ${app} no longer holds ${l.missing === 1 ? 'it' : 'them'}: no reader can follow this line past ${l.missing === 1 ? 'it' : 'them'}, so a change of keys may lose what lives on it (a member key, notes, a list). Kišib says so in red.` : '';
-  if (l.card) return `${n}: its card, for Kišib, <code class="card-line">${e(l.card)}</code>${missing ? `<br>${e(missing)}` : ''}`;
+  // F376: an app's public and private lines (and the line kept before) each have a card, joined by “; ”: copied whole, as one.
+  if (l.card) return `${n}: ${l.card.includes(';') ? 'its cards' : 'its card'}, for Kišib, <code class="card-line">${e(l.card)}</code>${missing ? `<br>${e(missing)}` : ''}`;
   if (l.atHomes === false) return `${n}: its latest act (<code>${e(l.latest)}</code>) is not at your homes yet, so there is no card for Kišib: ${e(app)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e(missing)}` : ''}`;
   return `${n}: your homes did not answer, so there is no card for Kišib now (latest <code>${e(l.latest)}</code>). Look again before changing your keys.`;
 }

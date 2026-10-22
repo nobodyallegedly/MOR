@@ -76,7 +76,7 @@ import type { InvoiceLink, LinkConfig } from './link.ts';
 import { LINK_SAY } from './link-say.ts';
 import { promiseDigest, promisePayload, promiseSay, readCollective, signPromise, standing, type CollectiveHere } from './collective.ts';
 import { collectiveNow, collectivePlaces, collectivePointer, splitServiceOf, type ConsentRead } from '../../grants/src/member.ts';
-import { TestIdentity, TEST_LABEL, sealFor, type IdentityFile } from '../../genesis/src/identity.ts';
+import { TestIdentity, TEST_LABEL, freshLines, sealFor, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { Refused, fromWords, groupId, toWords } from '../../../modules/carry/src/carry.ts';
@@ -447,7 +447,7 @@ export class Damgar {
     me.f.homes = r.homes;
     me.f.rule = r.rule ?? null;
     me.f.pending = null;
-    me.f.sequence = [];
+    freshLines(me.f);
     me.f.routes = null;
     const carried = carriedKey(look, seed);
     if (carried && !me.f.encryption.some((e) => e.act === carried.act)) me.f.encryption.push(carried);
@@ -603,7 +603,7 @@ export class Damgar {
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
-      line: line ?? noLine(me.f.sequence),
+      line: line ?? noLine(me.f),
     };
     let l: Accepted;
     try {

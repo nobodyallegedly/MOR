@@ -23,7 +23,7 @@ import { existsSync, lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { IDENTITY_TYPES, SPECS, base64, cborDecode, describeAct, hex, signingPublic, unhex } from '../../genesis/src/core.ts';
-import { TestIdentity, TEST_LABEL, type IdentityFile } from '../../genesis/src/identity.ts';
+import { TestIdentity, TEST_LABEL, ownIds, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { lineWords, whatIs } from '../../genesis/src/lines.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
@@ -379,7 +379,7 @@ export class Setup {
         lines.push({ text: `Its signer was not found: its standing cannot be told (${err(e)}).`, tone: 'warn' });
       }
     }
-    if (me.f.sequence.includes(id)) blocking.push('It is this identity’s own act: a witness act names other identities’ acts.');
+    if (ownIds(me.f).includes(id)) blocking.push('It is this identity’s own act: a witness act names other identities’ acts.');
     let text: string | null = null;
     if (d.public && d.spec === SPECS.text && d.type === 0 && d.payload) {
       try {

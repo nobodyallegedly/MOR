@@ -250,6 +250,9 @@ test('Damgar by clicks: the web client and the program’s page, a tip from Dub 
   await bp.locator('button.tab[data-tab=sign]').click();
   await bp.getByRole('button', { name: 'Look again' }).click();
   await sees(bp, 'form.invoice', 'invoice');
+  // That look done before pasting: a redraw landing between a paste's focus and its typing would take the empty field
+  // away under it (the page keeps what was typed, not an empty field's focus). The next look is the one tested.
+  await settled(bp);
   const dh = (await bp.locator('.item .copy').first().innerText()).trim();
   await shot(bp, 'damgar-to-sign-invoice');
   const made = node.invoice(1500, dh);

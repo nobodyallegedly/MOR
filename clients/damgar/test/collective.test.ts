@@ -112,14 +112,14 @@ test('a member acts for the collective from Damgar with their own key: within th
     .map((l: any) => l.card)
     .filter(Boolean)
     .join('\n');
-  assert.match(cards, / Edubba$/m, 'Edubba’s card, naming its app');
-  assert.match(cards, / Damgar$/m, 'Damgar’s card, naming its app');
+  assert.match(cards, / Edubba private\b/, 'Edubba’s card, naming its app and its private line (F376)');
+  assert.match(cards, / Damgar private\b/, 'Damgar’s card, naming its app and its private line (F376)');
   const k = await kishib();
   const rv2 = await k.c.ask<any>('rotate plan', { id: A.id, address: H[0], words: A.chainWords.join(' '), cards });
   const said = JSON.stringify(rv2.sections);
   assert.equal(rv2.warning, null, `every line placed, nothing left out: ${said}`);
-  assert.match(said, /Edubba’s line\. A line Kišib cannot read[^"]*Kept by the card given/);
-  assert.match(said, /Damgar’s line\. A line Kišib cannot read[^"]*Kept by the card given/);
+  assert.match(said, /Edubba’s private line\. A line Kišib cannot read[^"]*Kept by the card given/);
+  assert.match(said, /Damgar’s private line\. A line Kišib cannot read[^"]*Kept by the card given/);
   assert.match(said, /more acts? Kišib cannot read[^"]*lie on the lines kept by the cards given/);
   const fresh = await changeKeys(k.c, rv2);
   const atHomes = async () => (await relayAt(H[0]).feed({ signer: A.id })).items.length;

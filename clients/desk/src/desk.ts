@@ -11,7 +11,7 @@
 import { ACK_SPECS, IDENTITY_TYPES, SPECS, ENVELOPES_TYPES, cborDecode, describeAct, hex, openSealed, sealedParts, signingPublic, unhex, xwingPublic } from '../../genesis/src/core.ts';
 import { encryptionSecret } from '../../../modules/carry/src/carry.ts';
 import { NAME, namePayload, readName } from '../../dub/src/names.ts';
-import { TestIdentity, sealFor, type Home, type Reference } from '../../genesis/src/identity.ts';
+import { TestIdentity, nextLine, ownIds, sealFor, type Home, type Reference } from '../../genesis/src/identity.ts';
 import { carryChains, lookUp, refAct } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, RelayError, type Via } from '../../genesis/src/transport.ts';
 import { record as recordKex } from '../../genesis/src/kex.ts';
@@ -281,7 +281,7 @@ export class Desk {
     const r = new Reading(this.store.names());
     for (const k of this.store.keptActs()) r.add(k.act, k.key);
     for (const it of this.store.received(signer).items) if (it.raw) r.add(unb64(it.raw.act), it.raw.key ? unb64(it.raw.key) : undefined);
-    const seq = this.store.identity(signer).f.sequence;
+    const seq = nextLine(this.store.identity(signer).f, a.public);
     const may = r.maySign({ signer, public: a.public, to: a.to, refs: a.refs.map(refAct), prev: seq[seq.length - 1] });
     return may.ok ? null : `Its agency terms do not let it be signed (nudge cMIP draft 3, client conformance): ${may.why}`;
   }
@@ -733,7 +733,7 @@ export class Desk {
       const l = await lookUp(identity, hints, via);
       const inbox = [...new Set(l.routes.routes.filter((r) => r.kind === 1).flatMap((r) => r.hints))];
       const rec = this.store.received(identity);
-      const mine = new Set(me.f.sequence);
+      const mine = new Set(ownIds(me.f));
       const secrets = [...me.f.encryption].reverse().map((e) => Uint8Array.from(Buffer.from(e.secret, 'hex')));
       const problems: string[] = inbox.length ? [] : ['This identity declares no inbox: nothing can be delivered to it.'];
       let added = 0;
@@ -1004,7 +1004,7 @@ export class Desk {
         }).catch(() => undefined);
       }
       const me = this.store.identity(i.id);
-      out[i.id] = await this.line(me, this.via).catch(() => noLine(me.f.sequence));
+      out[i.id] = await this.line(me, this.via).catch(() => noLine(me.f));
     }
     return out;
   }

@@ -481,11 +481,14 @@ test('a line this client cannot read (a private act made elsewhere) is shown as 
   await assert.rejects(t.prepareRotation(), /Nothing was signed/);
   // A card that contradicts a line read here is refused.
   await assert.rejects(t.planRotation({ cards: [{ act: p1.id, position: 2, summary: '00'.repeat(32) }] }), /does not match/);
-  // Its card, copied from the app that made it: kept.
-  const card = ownLine(app.f.sequence).card!;
+  // Its card, copied from the app that made it: kept. Since F376 the app keeps its private acts on a line of their own
+  // (the private act first on it), and its public act on another, which this client reads by itself.
+  assert.deepEqual([app.f.sequence, app.f.private], [[p1.id], [x.id]], 'two lines: public, private');
+  const card = ownLine(app.f.private!).card!;
   const { plan } = await t.planRotation({ cards: [card] });
   assert.equal(plan.warning, null, 'nothing left out');
-  assert.ok(plan.kept.some((k) => k.act === x.id && k.position === 2));
+  assert.ok(plan.kept.some((k) => k.act === x.id && k.position === 1));
+  assert.ok(plan.kept.some((k) => k.act === p1.id), 'the public line, read here, kept');
   await rotate(t, { cards: [card] });
   assert.equal(await standing(t, x.id, x.key), 'valid', 'the private act, kept by its card');
   assert.equal(await standing(t, p1.id), 'valid');

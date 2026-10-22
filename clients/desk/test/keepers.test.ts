@@ -5,9 +5,11 @@
 // collective. Its money terms name a keeper, an Edubba agent. Every member
 // signs them; Edubba records them; the agent keeps (Agreements rules 37,
 // 40): it records each act around the collective as it arrives, its
-// signers' rotations first, one public act per record (OF21 a, d). Then iPh
-// changes their keys in Kišib, leaving out the line their Dub signed on (a
-// phone lost, say): their signature on the money terms is void under
+// signers' rotations first, one public act per record (OF21 a, d). iPh signs
+// the money terms in a second Dub (their phone). Then iPh changes their keys
+// in Kišib, leaving out the phone's lines (the phone lost; since F376 each
+// app keeps two lines, so a device's lines are what a change of keys can
+// leave out): their signature on the money terms is void under
 // Identity. The agent records the rotation after the signature. Edubba
 // shows it as a dispute, not a void: the collective's line placed it before
 // any line registering that rotation (C5, F302), and the keeper recorded it
@@ -21,7 +23,7 @@ import { join } from 'node:path';
 import { collectiveNow } from '../../grants/src/member.ts';
 import { keeperLog } from '../../grants/src/keeper.ts';
 import { closeAll, dub, edubba, start, type Relay } from '../../damgar/test/world.ts';
-import { changeKeys, kishib } from '../../kishib/test/world.ts';
+import { changeKeys, dubBringing, kishib } from '../../kishib/test/world.ts';
 import { closeAll as closeKishib } from '../../kishib/test/world.ts';
 import { SplitService } from '../../split-service/src/service.ts';
 import { foundCollective } from './cast.ts';
@@ -64,7 +66,9 @@ test('keepers: an Edubba agent records the collective’s acts; a member’s rot
   assert.deepEqual(review.reading.blocking, []);
   assert.match(JSON.stringify(review.reading), /Keeper of the tablets.*an act counts as recorded once every one of them recorded it/);
   const clone = (await e.c.ask<Done>('real confirm', { plan: review.plan, digest: review.digest })).acts[0];
-  for (const m of [iPa, iPh]) {
+  const phone = await dubBringing(iPh.id, iPh.words, H[0]);
+  await phone.c.ask('signing', { on: true });
+  for (const m of [iPa, phone]) {
     const p = (await m.c.ask<any>('proposals')).proposals.find((x: any) => x.act === clone);
     await m.c.ask('accept', { thread: p.thread });
   }
@@ -82,14 +86,15 @@ test('keepers: an Edubba agent records the collective’s acts; a member’s rot
   const log = (await keeperLog(keeper, [...H, ...RL])).map((x) => x.act);
   await assert.rejects(e.c.ask('real keep', { collective, keeper: iPa.id }), /no keeper its agreement in force names/);
 
-  // iPh changes their keys in Kišib, leaving out the line their Dub signed the money terms on (a phone lost, say).
+  // iPh changes their keys in Kišib, leaving out the phone's public line, its signature on the money terms (the phone lost).
+  // No card is given, as before F376: the private lines are left out too, after the warning. A private line kept by its
+  // card would leave a reader unable to tell that the signature is void (unknown, F298; docs/two-lines-report.md, 3).
   const sig = (await e.c.ask<any>('real gather', { act: clone })).proposal.answers[iPh.id].signature as string;
   const kk = await kishib();
-  const probe = await kk.c.ask<any>('rotate plan', { id: iPh.id, address: H[0], words: iPh.chainWords.join(' ') });
-  const lines = probe.sections.find((x: any) => /Its lines/.test(x.heading)).lines.map((l: any) => l.text as string);
-  await kk.c.ask('cancel', { plan: probe.plan }).catch(() => undefined);
-  const where = lines.find((t: string) => t.includes(sig));
-  const r = await kk.c.ask<any>('rotate plan', { id: iPh.id, address: H[0], words: iPh.chainWords.join(' '), leaveOut: where && /Kept\.$/.test(where) ? [sig] : [] });
+  const r = await kk.c.ask<any>('rotate plan', { id: iPh.id, address: H[0], words: iPh.chainWords.join(' '), leaveOut: [sig] });
+  const said = JSON.stringify(r.sections);
+  assert.match(said, /A line of acts: \d acts?, [^"]*Kept\./, 'the first Dub’s public line, its founding signature on it, read and kept');
+  assert.match(said, new RegExp(`${sig}[^"]*Left out by name`), 'the phone’s public line, left out');
   assert.deepEqual(r.blocking, []);
   assert.ok(r.warning, 'Kišib warns that a line left out becomes void');
   // H79: the new paper written before the change is signed, the new signing key's words once it counts.

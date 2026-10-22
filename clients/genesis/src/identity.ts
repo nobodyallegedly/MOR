@@ -144,8 +144,18 @@ export interface IdentityFile {
   clock?: Clock | null;
   /** The anchors this client obtained after its lock changes (Money rule 15, F181). */
   anchored?: { act: string; on: 'main' | 'backup'; proof: string }[];
-  /** The everyday sequence, act ids, oldest first. */
+  /**
+   * The everyday sequence, act ids, oldest first. Since F376, this app's
+   * public line: its public acts only, so that anyone can follow it after a
+   * change of keys. For a collective, its one line.
+   */
   sequence: string[];
+  /** This app's private line (F376): its private acts, kept through a change of keys by its card. */
+  private?: string[];
+  /** The line this app kept before F376, public and private acts together: frozen, kept by its own card. */
+  earlier?: string[];
+  /** Whether this file keeps its public and private acts on two lines (F376). */
+  split?: boolean;
   routes: { version: number; act: string } | null;
   /** Every encryption key published, oldest first; old ones still open old deliveries. */
   encryption: { version: number; act: string; secret: string }[];
@@ -171,6 +181,51 @@ export interface IdentityFile {
    * again before this app shows its line's card. Absent for a collective.
    */
   unsent?: Record<string, { act: string; key: string }>;
+}
+
+/**
+ * The line an act goes on (F376, decided by Nobody, allegedly, 21 October
+ * 2026, option (a) of `docs/private-lines-report.md`'s question 1): a
+ * member's public acts on one line, its private acts on another, so that a
+ * public act is never behind a private one and anyone can follow the public
+ * line after a change of keys. A file from before keeps its mixed line as
+ * it is (`earlier`), kept by its own card; both new lines start empty. A
+ * collective keeps its one line (its acts are the collective's).
+ */
+export function lineFor(f: IdentityFile, isPublic: boolean): string[] {
+  if (f.cites) return f.sequence;
+  if (!f.split) {
+    if (f.sequence.length) f.earlier = f.sequence;
+    f.sequence = [];
+    f.private = [];
+    f.split = true;
+  }
+  return isPublic ? f.sequence : (f.private ??= []);
+}
+
+/** The line the next act goes on, as `lineFor` would choose it, without changing the file (a draft read before signing). */
+export function nextLine(f: IdentityFile, isPublic: boolean): string[] {
+  if (f.cites) return f.sequence;
+  if (!f.split) return [];
+  return isPublic ? f.sequence : (f.private ?? []);
+}
+
+/** Every line this file keeps, each oldest first: the public, the private, and the one kept before F376. Empty lines left out. */
+export function ownLines(f: IdentityFile): string[][] {
+  return [f.sequence, f.private ?? [], f.earlier ?? []].filter((l) => l.length);
+}
+
+/** Every act on this file's lines. */
+export function ownIds(f: IdentityFile): string[] {
+  return ownLines(f).flat();
+}
+
+/** New lines for new words (an identity brought again, or its key renewed): nothing of the earlier lines continues. */
+export function freshLines(f: IdentityFile): void {
+  f.sequence = [];
+  f.private = [];
+  delete f.earlier;
+  f.split = true;
 }
 
 /** Agreements' record (type 17): a decision, which cites by its kept tips (F127). */
@@ -326,6 +381,8 @@ export class TestIdentity {
     if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
       objects = [...(objects ?? []), ...this.f.cites.map((d): [string, string] => [this.f.identity, d])];
     }
+    // F376: a member's public and private acts on two lines; a collective's on its one.
+    const line = lineFor(this.f, opts.public);
     const made = makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
       signer: this.f.identity,
@@ -333,14 +390,14 @@ export class TestIdentity {
       spec,
       type,
       payload,
-      sequence: this.f.sequence,
+      sequence: line,
       public: opts.public,
       to: opts.to,
       objects,
       refs: opts.refs,
       acks: opts.acks,
     }) as { act: Uint8Array; id: string; key: Uint8Array };
-    this.f.sequence.push(made.id);
+    line.push(made.id);
     // A private act waits to be left at the homes, locked and sealed to this identity (`private.ts`): a member's line, not a collective's.
     if (!opts.public && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
     // A record is the collective's latest decision: its next actions cite it.
@@ -387,7 +444,7 @@ export class TestIdentity {
       throw new Error('a witness act is signed only after the owner was shown what it does (Identity rule 18c)');
     }
     if (!acts.length) throw new Error('a witness act names at least one act');
-    if (acts.some((a) => this.f.sequence.includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
+    if (acts.some((a) => ownIds(this.f).includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
     const made = this.everyday(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(new Map()), { public: true, acks: acts });
     const sent = await this.toHomes(made.act);
     for (const hint of opts.relays ?? []) await relayAt(hint, this.via).putAct(made.act);
@@ -427,7 +484,7 @@ export class TestIdentity {
       // its homes did not answer: what the hints hold is still read
     }
     const at = [...new Set([...homes, ...routed, ...(o.hints ?? [])])];
-    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: this.f.sequence, acts: await actsBy(this.f.identity, at, this.via), specs: o.specs });
+    return linesOf({ identity: this.f.identity, binding: this.f.binding, own: ownLines(this.f), acts: await actsBy(this.f.identity, at, this.via), specs: o.specs });
   }
 
   /**
@@ -803,7 +860,7 @@ export class TestIdentity {
    * Homes that do not answer are skipped: silence proves nothing.
    */
   async unrecognised(): Promise<{ id: string; home: string; private: boolean }[]> {
-    const known = new Set([...this.f.sequence, ...this.chainActs().map((a) => actId(a))]);
+    const known = new Set([...ownIds(this.f), ...this.chainActs().map((a) => actId(a))]);
     const out: { id: string; home: string; private: boolean }[] = [];
     const seen = new Set<string>();
     for (const h of this.f.homes) {

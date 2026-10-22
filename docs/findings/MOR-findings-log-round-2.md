@@ -28,6 +28,16 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F376. Two lines per app: public acts on one, private acts on the other (21 October 2026; F373's question 1; Dubsar Suite)
+
+**The question (F373, `docs/private-lines-report.md`, question 1):** after a change of keys, a public act behind a private act on one app's line was unknown to every reader but the identity's own apps (Identity rules 33 to 35, F298, as written): a reader follows a kept line back to its first act, and cannot open another's private acts. A founding signed in Edubba after a payment draft could no longer be read in force. **Decided by Nobody, allegedly, 21 October 2026:** "Agreed", option (a).
+
+**Built:** each app keeps its public acts on one line and its private acts on another (`lineFor`, `clients/genesis/src/identity.ts`): anyone follows the public line after a change of keys; the app's card keeps the private one. A file from before keeps its mixed line as it is, frozen (`earlier`), kept by its own card; both new lines start empty at its next act. New words start new lines (as the one line did). A collective keeps its one line. Each app's window shows a card per line, joined by "; ", each naming its app and its line (public, private, earlier); Kišib reads them so and says each line by name. **No rule changed.** Tested: a founding signed after a private act stays valid for every reader after the founder's change of keys (`clients/ummia/test/private-lines.test.ts`). `docs/two-lines-report.md`.
+
+**Questions 2 and 3, accepted as leaned (21 October 2026), stated costs said in the READMEs:** a message one sends is readable again by whoever holds one's signing words (its key delivered to oneself, F373); Kišib takes the apps' counts on their word, which changes only what it says, never what a change of keys keeps.
+
+*For the MOR lead, information only:* an act left out of a change of keys reads unknown, not void, to a reader who cannot open a private line kept by its card that is longer than the act's position (F298, as written; since F373); nothing binding rests on it. `docs/two-lines-report.md`, section 3.
+
 ## F375. S2's questions: a member key's decision, a stolen keeper key, a payment cMIP without field 2 (22 October 2026)
 
 **From** `docs/s2-report.md` (pull request 88, merged). **Taken by the project lead under delegation** ("you'll decide the rest"), each as S2 leaned:
