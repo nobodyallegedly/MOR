@@ -2471,27 +2471,10 @@
             }
           ]
         },
-        "name": "the same without the rail's answer: the acknowledging claim's sale stands, confirmed; whether the first claim is another sale, and where the receipt belongs, unknown",
+        "name": "the same without the rail's answer: three records whose payment is not stated, so three pairs the vow depends on: unknown",
         "rule": "Money rule 12; Envelopes, \"Vows\"",
-        "verdict": {
-          "sales": [
-            {
-              "act": "0e970f55fd2186c17d22c305044257e6f0808c5540da0f7a6c94cb140acb2aee",
-              "buyer": "dde9350c751bf2ef6aa1af3ba96695599f53624758002a38561ace75d0411aca",
-              "state": "confirmed"
-            },
-            {
-              "act": "7ed755625c992fbb18c8f68e014a567b5afa98cccd27be8e7622a5015ca45cc5",
-              "buyer": "dde9350c751bf2ef6aa1af3ba96695599f53624758002a38561ace75d0411aca",
-              "state": "unknown"
-            }
-          ],
-          "unknown": [
-            "0136fd76144ec4890d4bf9d7f39f1b0f68ae4c64075ca1c59741f477d83fd6bd"
-          ],
-          "unsigned": []
-        },
-        "why": "The acknowledging claim signs the fan on and confirms, whichever payment it is: that stands. Whether the first claim and the receipt are of the same payment is the rail's to say: what depends on it is unknown, nothing else."
+        "verdict": "unknown",
+        "why": "With one pair whose payment is not stated, an answer is judged both ways; the receipt and the two claims make three pairs, each of which the vow's sales depend on: with two or more, the answer is unknown."
       },
       {
         "acts": [

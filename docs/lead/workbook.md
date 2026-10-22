@@ -100,6 +100,13 @@ S7b (branch `claude/s7b-follow-up`, F381), one line each:
 - Identity, "What stops a chain": two reasons renamed, "the genesis unknown" and "the genesis invalid".
 - After a stranger's reading: check 7 says what "fits" means, that a verifier can tell only holding every act of the sequence up to the tip, and that it decides what is kept, never validity, nor a failure under rule 29; its commentary says "valid" where it said "counts"; "What stops a chain" names each reason in bold; section 6's "Void needs …" speaks of every kept tip's line and the kept ancestry.
 
+S7c (branch `claude/s7c-last-texts`, F383), one line each:
+- Identity, section 6, "A verifier that cannot tell answers unknown": "a kept tip whose line it cannot rebuild" becomes "an act below a kept tip whose line it cannot rebuild"; one italic sentence for the stated cost (a tip kept by its name becomes void when its line arrives and does not fit, which only the owner's own broken client can bring about).
+- Identity, Part four, the scenario of an identity born under a signing scheme a client lacks: what the client shows past that genesis is display, not resolution; the chain's resolution stops at the genesis unknown.
+- Identity, "Which rotation counts", after "What stops a chain": the order of the seven reasons where more than one fits, its principle, and the exception in italics (a contest among final rotations beats cannot tell; a contest in the homes' tally yields to it).
+- Money, rule 12, a new paragraph "Where the rail's answer is not held": unknown without the rail's answer; an answer depending on one such pair judged both ways, standing where both agree; on two or more, unknown; only the pairs the answer depends on count; a list is one answer, entry by entry; its cost in italics.
+- After a stranger's reading: section 6's stated cost says valid to void (or disputed), once the line arrives; "the genesis unknown" adds "and no check it can apply fails" (Envelopes rule 30); the later contest is "under the home rule", citing rules 40, 44 and 4; the exception says "no objection can undo it"; Money's paragraph names the rail's answer of which payment a proof is (not rule 8's), says "a pair whose sameness is asked only when another is taken as one payment", and a list with two or more pairs is unknown.
+
 ## Text edits waiting for the freeze-ready branch
 
 Small decided changes that arrive while a session holds the branch; the lead makes them, or hands them to the next session, once the branch is free.

@@ -171,44 +171,37 @@ impl<'a> AgreementsView<'a> {
     }
 
     /// A vow, read (F237, F240): its chain, the offers naming it, and each
-    /// sale with its state. A sale that depends on whether two records
-    /// whose payment is not stated are one payment is marked
-    /// [`SaleState::Unknown`], and such an unsigned payment is listed in
-    /// `unknown`; every other sale and payment stands (Money rule 12; F381).
+    /// sale with its state. Where the vow depends on whether one pair of
+    /// records whose payment is not stated are one payment, a sale that
+    /// depends on it is marked [`SaleState::Unknown`], and such an unsigned
+    /// payment is listed in `unknown`; every other sale and payment stands.
+    /// Where it depends on two or more such pairs, the vow is unknown
+    /// ([`AgreementsError::PaymentUnstated`]; Money rule 12; F381, F383).
     pub fn vow(&self, name: &Hash) -> R<VowEval> {
-        let outer = (self.unstated.replace(false), self.assume_same.replace(false));
-        let first = self.vow_unjudged(name);
-        let r = if !self.unstated.get() {
-            first
-        } else {
-            self.assume_same.set(true);
-            match (first, self.vow_unjudged(name)) {
-                (Ok(mut a), Ok(b)) => {
-                    let mut sales: Vec<VowSale> = vec![];
-                    for x in a.sales.iter().chain(b.sales.iter()) {
-                        if sales.iter().any(|y| y.act == x.act) {
-                            continue;
-                        }
-                        let both = a.sales.contains(x) && b.sales.contains(x);
-                        sales.push(if both { x.clone() } else { VowSale { state: SaleState::Unknown, ..x.clone() } });
+        match self.two_ways(|| self.vow_unjudged(name)) {
+            Ways::One(a) => a,
+            Ways::Both(Ok(mut a), Ok(b)) => {
+                let mut sales: Vec<VowSale> = vec![];
+                for x in a.sales.iter().chain(b.sales.iter()) {
+                    if sales.iter().any(|y| y.act == x.act) {
+                        continue;
                     }
-                    sales.sort_by(|p, q| p.act.cmp(&q.act));
-                    let unsigned: Vec<Hash> = a.unsigned.iter().filter(|x| b.unsigned.contains(x)).copied().collect();
-                    let mut unknown: Vec<Hash> = a.unsigned.iter().chain(b.unsigned.iter()).filter(|x| !unsigned.contains(x)).copied().collect();
-                    unknown.sort();
-                    unknown.dedup();
-                    a.sales = sales;
-                    a.unsigned = unsigned;
-                    a.unknown = unknown;
-                    Ok(a)
+                    let both = a.sales.contains(x) && b.sales.contains(x);
+                    sales.push(if both { x.clone() } else { VowSale { state: SaleState::Unknown, ..x.clone() } });
                 }
-                (Err(e), Err(f)) if e == f => Err(e),
-                _ => Err(AgreementsError::PaymentUnstated),
+                sales.sort_by(|p, q| p.act.cmp(&q.act));
+                let unsigned: Vec<Hash> = a.unsigned.iter().filter(|x| b.unsigned.contains(x)).copied().collect();
+                let mut unknown: Vec<Hash> = a.unsigned.iter().chain(b.unsigned.iter()).filter(|x| !unsigned.contains(x)).copied().collect();
+                unknown.sort();
+                unknown.dedup();
+                a.sales = sales;
+                a.unsigned = unsigned;
+                a.unknown = unknown;
+                Ok(a)
             }
-        };
-        self.unstated.set(outer.0);
-        self.assume_same.set(outer.1);
-        r
+            Ways::Both(Err(e), Err(f)) if e == f => Err(e),
+            _ => Err(AgreementsError::PaymentUnstated),
+        }
     }
 
     fn vow_unjudged(&self, name: &Hash) -> R<VowEval> {
