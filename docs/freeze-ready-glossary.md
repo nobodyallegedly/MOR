@@ -40,8 +40,10 @@
 | line | An act of a collective (a record or a rotation; forks and closings end its lines) at which an event changing who may act for it takes effect. Second meanings found (a purchase's line, a deal's line of versions, an identity's own line): question 45 and the term question. | Agreements, "Made before, made after" |
 | record | A collective's everyday line (type 17), writing a clone and registering departures. Distinct from a keeper record. | Agreements, "Record (type 17)" |
 | everyday act | Every act other than genesis, a rotation and a chain signature: it carries `signer`, `binding` and `prev` and sits in a sequence (technical pass: written as defined). | Identity, "Everyday act"; Envelopes rule 13 |
-| belongs to | An act belongs to an agreement when it names it, or an act of its chain, in `objects`, or through the act it answers (a receipt or claim through the claim it pays under and what it fulfils; an obligation through its agreement or offer). Its keepers' records count for it. | Agreements, "Belongs to", rule 42 |
+| belongs to | An act belongs to an agreement when it names it, or an act of its chain, in `objects`, or through the act it answers (a receipt or claim through the claim it pays under and what it fulfils; an obligation through its agreement or offer). Its keepers' records count for it: those of the version in force for the act; every act in a collective's name belongs to the collective's agreement (S2, F371.2). | Agreements, "Belongs to", rule 42 |
 | text field | Every CBOR text string anywhere in an act, whatever specification defines it. | Text, "Text field" |
+| fulfils | What a receipt's field 5 or a claim's field 4 names: the act the payment follows. Judged by Money only where it names an act Money or Agreements reads; naming anything else, the payment fulfils nothing in Money's sense (S2, F370). | Money, "What a payment fulfils" |
+| payment cMIP | A cMIP whose field 2 lists Money's task 6; a rail Module is a Module whose field 5 names one, decided by decoding that cMIP (S2, F371.4). | Development, "A rail Module's kind and binding" |
 | clock | What an anchor is made on: a clock Module and its parameters under the anchoring cMIP. Kept apart from "time reference", which is only task 10's. | Envelopes, task "Anchoring" |
 
 ## Words checked

@@ -60,6 +60,10 @@ mod vows;
 mod issuance;
 /// Proxies (Agreements draft 14, rule 97; F327).
 mod proxies;
+/// Keepers read from their records (type 2), "belongs to", deadlines
+/// (Agreements 17, rules 33 and 36 to 42).
+mod keepers;
+pub use keepers::{Deadline, KeeperSequence};
 pub use vows::{SaleState, VowEval, VowSale};
 /// Agreements as parties of agreements (Agreements draft 11, rule 15,
 /// F254): named by their line, consenting by their own rule, no loops, the
@@ -74,10 +78,10 @@ pub struct AgreementsView<'a> {
     /// The layers each extension declares in its specification (Development,
     /// field 10), as the caller read them from the specifications it holds.
     pub ext_layers: BTreeMap<Hash, Vec<u64>>,
-    /// Each keeper operator's records, as act ids in the keeper's own order.
-    /// The keeper record's exact format is still open (Agreements, type 2), so a
-    /// verifier states what it holds, as it states `keeper_recorded` to
-    /// Identity.
+    /// Keeper logs the caller states, each operator's records as act ids
+    /// in the keeper's own order: read beside the keeper records (type 2)
+    /// the verifier holds, which the view reads itself
+    /// ([`Self::keeper_sequence`]). A stated log is one more sequence.
     pub keeper_logs: BTreeMap<Hash, Vec<Hash>>,
     /// The rail Modules this verifier adopted, each with its kind and what
     /// its proof binds, read from its specification, fields 11 and 13
@@ -238,6 +242,8 @@ pub struct AgreementsView<'a> {
     /// grant's backing (F350), once each; and those being judged.
     money_backed: RefCell<BTreeMap<Hash, bool>>,
     money_judging: RefCell<BTreeSet<Hash>>,
+    /// Each keeper's sequence, read from the records held, once.
+    keeper_seqs: RefCell<BTreeMap<Hash, Rc<KeeperSequence>>>,
     closed: RefCell<BTreeMap<Hash, Option<Closed>>>,
     ending: RefCell<BTreeSet<Hash>>,
     citing: RefCell<BTreeSet<Hash>>,
@@ -503,6 +509,13 @@ pub enum Backing {
     /// lies within them. Unknown, never "Backed" (audit, October 2026,
     /// gap 10); the collective's own adoption still binds (rule 40).
     Unknown { grant: Hash, reason: String },
+    /// A revocation's history does not hold the act, but another identity
+    /// (never the grantee) acknowledged it, or a keeper of an agreement it
+    /// belongs to recorded it before recording the revocation (Agreements
+    /// rule 76): valid, and shown as disputed. It confers nothing (no
+    /// stake, no obligation, no consent) unless the grantor adopts it,
+    /// which makes it [`Backing::Binds`].
+    Disputed { grant: Hash, reason: String },
 }
 
 /// The collective's state after everything held: for showing.
@@ -599,6 +612,7 @@ impl<'a> AgreementsView<'a> {
             busy: RefCell::new(BTreeSet::new()),
             money_backed: RefCell::new(BTreeMap::new()),
             money_judging: RefCell::new(BTreeSet::new()),
+            keeper_seqs: RefCell::new(BTreeMap::new()),
             closed: RefCell::new(BTreeMap::new()),
             ending: RefCell::new(BTreeSet::new()),
             citing: RefCell::new(BTreeSet::new()),
@@ -663,6 +677,7 @@ impl<'a> AgreementsView<'a> {
             busy: RefCell::new(BTreeSet::new()),
             money_backed: RefCell::new(BTreeMap::new()),
             money_judging: RefCell::new(BTreeSet::new()),
+            keeper_seqs: RefCell::new(BTreeMap::new()),
             closed: RefCell::new(BTreeMap::new()),
             ending: RefCell::new(BTreeSet::new()),
             citing: RefCell::new(BTreeSet::new()),
@@ -935,16 +950,21 @@ impl<'a> AgreementsView<'a> {
         if h.act.outside.signer != Some(col.id) {
             return None;
         }
-        if self.member_key(h).is_some() {
-            // F353: a member's key acts under the decisions it cites.
+        if let Some((_, _, version)) = self.member_key(h) {
+            // F353: a member's key acts under the decisions it cites; the
+            // founding or clone that named the key, its grant, stands as
+            // such a decision (Agreements rule 58; Text rule 14's one object
+            // for a member key's text): at the link the chain declared it,
+            // or that of the record writing it.
             let mut k = None;
             for y in Self::cites(h, &col.id) {
-                if let Some(d) = self.v.get(&y) {
-                    if self.is_decision(col, d) {
-                        if let Some(l) = self.decision_link(col, d) {
-                            k = Some(k.map_or(l, |m: usize| m.max(l)));
-                        }
-                    }
+                let l = match self.v.get(&y) {
+                    Some(d) if self.is_decision(col, d) => self.decision_link(col, d),
+                    Some(_) if y == version => self.version_link(col, &version),
+                    _ => None,
+                };
+                if let Some(l) = l {
+                    k = Some(k.map_or(l, |m: usize| m.max(l)));
                 }
             }
             return k;
@@ -1025,6 +1045,9 @@ impl<'a> AgreementsView<'a> {
         let Some(h) = self.v.get(act) else { return false };
         if !self.is_agreements(h, types::TERMS) || Terms::decode(&h.inside.payload).map_or(true, |t| t.is_collective()) {
             return false;
+        }
+        if self.terms(act).is_ok_and(|t| t.keepers.iter().any(|k| k.operators.iter().any(|op| self.keeper_recorded_act(op, act)))) {
+            return true;
         }
         if self.keeper_logs.values().any(|log| log.contains(act)) {
             return true;
@@ -1598,13 +1621,7 @@ impl<'a> AgreementsView<'a> {
         let placed: Vec<Hash> = k
             .operators
             .iter()
-            .filter(|op| {
-                self.keeper_logs.get(*op).is_some_and(|log| {
-                    let a = log.iter().position(|z| z == x);
-                    let b = log.iter().position(|z| z == y);
-                    matches!((a, b), (Some(a), Some(b)) if a < b)
-                })
-            })
+            .filter(|op| self.keeper_before(op, x, y))
             .copied()
             .collect();
         !placed.is_empty() && k.rule.met(&k.operators, &placed)
@@ -1634,6 +1651,26 @@ impl<'a> AgreementsView<'a> {
         declared_in(&res.states[k].declarations, &self.agreements())?
             .ok()
             .map(|d| d.agreement)
+    }
+
+    /// The link at which the collective's own record puts `version` in
+    /// force: the first link whose chain declares it, or the link of the
+    /// first record of the collective writing it as its clone.
+    fn version_link(&self, col: &Col, version: &Hash) -> Option<usize> {
+        let agreements = self.agreements();
+        let declared = (0..col.res.states.len())
+            .find(|k| declared_in(&col.res.states[*k].declarations, &agreements).and_then(|d| d.ok()).is_some_and(|d| d.agreement == *version));
+        let recorded = self
+            .v
+            .signed_by(&col.id)
+            .filter(|r| self.is_agreements(r, types::RECORD) && Self::own_key(col, r))
+            .filter(|r| Record::decode(&r.inside).is_ok_and(|x| x.clone == Some(*version)))
+            .filter_map(|r| col.pos(r))
+            .min();
+        match (declared, recorded) {
+            (Some(a), Some(b)) => Some(a.min(b)),
+            (a, b) => a.or(b),
+        }
     }
 
     /// Whether any chain act up to `k` declares an agreement.
@@ -2586,9 +2623,19 @@ impl<'a> AgreementsView<'a> {
             return Ok(None);
         }
         let mut decision = false;
+        // A member key's grant, the founding or clone that named it, stands
+        // as a decision it acts under (rule 58).
+        let version = self.member_key(x).map(|(_, _, v)| v);
         for y in Self::cites(x, &col.id) {
             let h = self.held(&y)?;
-            if self.is_decision(col, h) {
+            if Some(y) == version && self.version_link(col, &y).is_some() {
+                if let (Some(b), Some(at)) = (b, self.version_link(col, &y)) {
+                    if at > b {
+                        return Ok(Some("it cites a decision under a later key than its own (F127)".into()));
+                    }
+                }
+                decision = true;
+            } else if self.is_decision(col, h) {
                 if let (Some(b), Some(at)) = (b, self.decision_link(col, h)) {
                     if at > b {
                         return Ok(Some("it cites a decision under a later key than its own (F127)".into()));
@@ -2742,13 +2789,7 @@ impl<'a> AgreementsView<'a> {
         let placed: Vec<Hash> = k
             .operators
             .iter()
-            .filter(|op| {
-                self.keeper_logs.get(*op).is_some_and(|log| {
-                    let px = log.iter().position(|a| a == &x.id);
-                    let pl = log.iter().position(|a| a == &lh.id);
-                    matches!((px, pl), (Some(a), Some(b)) if a < b)
-                })
-            })
+            .filter(|op| self.keeper_before(op, &x.id, &lh.id))
             .copied()
             .collect();
         Ok(!placed.is_empty() && k.rule.met(&k.operators, &placed))
@@ -4477,7 +4518,7 @@ impl<'a> AgreementsView<'a> {
                         agreement: self.in_force(act)?.unwrap_or(g.id),
                         grant,
                     },
-                    Backing::NotBacked { grant, reason } => Consent::Ungranted { grant, reason },
+                    Backing::NotBacked { grant, reason } | Backing::Disputed { grant, reason } => Consent::Ungranted { grant, reason },
                     Backing::Unknown { grant, reason } => Consent::Unknown { grant, reason },
                     Backing::NotUnderGrant => Consent::Ungranted {
                         grant: g.id,
@@ -5305,7 +5346,27 @@ impl<'a> AgreementsView<'a> {
             if acked(&|_| true)? {
                 return Ok(Backing::Binds { grant: gh.id });
             }
-            return not("the revocation ended the grant, and its history does not hold the act: the ending wins (the tie rule, F128 G1)");
+            // Rule 76: another identity's acknowledgement, never the
+            // grantee's (nor the grantor's, which is an adoption, above),
+            // by an act of a type that may carry one, standing under its
+            // signer's chain; or a keeper of an agreement the act belongs
+            // to that recorded it before recording the revocation.
+            let other = self.v.acknowledgements(act).any(|a| {
+                a.act.outside.signer.is_some_and(|s| s != c && s != g.grantee) && self.status(&a.id) == Status::Valid
+            });
+            if other {
+                return Ok(Backing::Disputed {
+                    grant: gh.id,
+                    reason: "the revocation's history does not hold it, but another identity acknowledged it: valid, shown as disputed, conferring nothing unless the grantor adopts it (rule 76)".into(),
+                });
+            }
+            if self.keepers_recorded_before(act, &r.id) {
+                return Ok(Backing::Disputed {
+                    grant: gh.id,
+                    reason: "the revocation's history does not hold it, but a keeper of an agreement it belongs to recorded it before recording the revocation: valid, shown as disputed, conferring nothing unless the grantor adopts it (rule 76)".into(),
+                });
+            }
+            return not("the revocation ended the grant, and its history does not hold the act, and no other identity acknowledged it nor a keeper recorded it first: void, the ending winning (the tie rule, rule 76; F128 G1)");
         }
         // G2 (F128): a departure emptying the grant's area ends every grant
         // in it, a decision ending powers: the same, with no suspension and

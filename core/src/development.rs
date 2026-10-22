@@ -176,6 +176,20 @@ pub struct Known {
     pub payment_cmip: Option<Hash>,
 }
 
+/// Money's payment task (Development, the task table: task 6).
+pub const PAYMENT_TASK: u64 = 6;
+
+/// A specification decoded with the payment cMIP told from bytes
+/// ([`Spec::decode_judged`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Judged {
+    Spec(Spec),
+    NoSpecification(NoSpecification),
+    /// Whether it is a specification rests on a specification this verifier
+    /// does not hold: the cMIP its field 5 names.
+    Unknown(Hash),
+}
+
 fn no<T>(w: impl Into<String>) -> Result<T, NoSpecification> {
     Err(NoSpecification(w.into()))
 }
@@ -376,9 +390,79 @@ impl Spec {
         Ok(Spec { kind, creator, tasks, types, dependencies, implements, rules, fee, predecessor, text, layers, checks_delivery, rail })
     }
 
+    /// Whether this is a payment cMIP (Development, "A rail Module's kind
+    /// and binding"): a cMIP whose field 2 lists Money's payment task,
+    /// `[money, 6]`, `money` being the Money MIR's spec hash.
+    pub fn is_payment_cmip(&self, money: &Hash) -> bool {
+        self.kind == kinds::CMIP && self.tasks.iter().flatten().any(|(m, t)| m == money && *t == PAYMENT_TASK)
+    }
+
+    /// Decode a specification's content as Development 11 has it, the
+    /// payment cMIP told from bytes: a Module whose field 5 names a payment
+    /// cMIP (one whose own field 2 lists Money's task 6) must carry fields 11
+    /// and 13. `cmip` gives the content, encoded, of a specification the
+    /// verifier holds, by hash. A Module lacking fields 11 and 13 whose field
+    /// 5 names a specification the verifier does not hold is unknown (that
+    /// hash); one naming a held payment cMIP is no specification. Every
+    /// other answer is [`Self::decode`]'s with no payment cMIP named.
+    pub fn decode_judged(encoded: &[u8], money: &Hash, cmip: &dyn Fn(&Hash) -> Option<Vec<u8>>) -> Judged {
+        let s = match Self::decode(encoded, &Known::default()) {
+            Ok(s) => s,
+            Err(e) => return Judged::NoSpecification(e),
+        };
+        if s.kind != kinds::MODULE || s.rail.is_some() {
+            return Judged::Spec(s);
+        }
+        let Some(target) = s.implements else { return Judged::Spec(s) };
+        let Some(bytes) = cmip(&target) else { return Judged::Unknown(target) };
+        match Self::decode(&bytes, &Known::default()) {
+            Ok(c) if c.is_payment_cmip(money) => Judged::NoSpecification(NoSpecification(
+                "a Module whose field 5 names a payment cMIP (its field 2 lists Money's task 6) carries fields 11 and 13".into(),
+            )),
+            _ => Judged::Spec(s),
+        }
+    }
+
     /// The spec hash of encoded content: `tagged_hash("MOR/spec", content)`.
     pub fn hash_of(encoded: &[u8]) -> Hash {
         hash::spec_hash(encoded)
+    }
+
+    /// The text a frozen specification's file holds (Development rule 26):
+    /// the file's content with at most one final line break removed, and
+    /// its header reduced to the text's name: where the first line (`# ` and
+    /// the name) is followed by a blank line and one line in italics (a
+    /// draft's status line, `*…*`) and a blank line, that italic line and
+    /// the blank line before it are dropped. At the freeze no file carries
+    /// such a line, and the text is the file's, less its final line break.
+    pub fn frozen_text(file: &str) -> String {
+        let t = file.strip_suffix('\n').unwrap_or(file);
+        let mut lines = t.split('\n');
+        let (Some(first), Some(blank), Some(status)) = (lines.next(), lines.next(), lines.next()) else {
+            return t.to_string();
+        };
+        let after = lines.next();
+        let italic = status.len() >= 2 && status.starts_with('*') && status.ends_with('*') && !status.starts_with("**");
+        if first.starts_with("# ") && blank.is_empty() && italic && after == Some("") {
+            let head = first.len() + 1 + blank.len() + 1 + status.len() + 1;
+            return format!("{first}\n{}", &t[head..]);
+        }
+        t.to_string()
+    }
+
+    /// The content of a core document's file, as rule 26 hashes it: kind 4
+    /// (a MIR), 6 (the MICS document) or 7 (a test suite), and its frozen
+    /// text ([`Self::frozen_text`]), which must be canonical text: a file
+    /// with two final line breaks, or a trailing space, is refused.
+    pub fn file_content(kind: u64, file: &str) -> Result<Vec<u8>, String> {
+        let text = Self::frozen_text(file);
+        crate::text::check(&text).map_err(|e| format!("not canonical text: {e}"))?;
+        Ok(crate::cbor::encode(&Value::Map(vec![(Value::Uint(0), Value::Uint(kind)), (Value::Uint(9), Value::Text(text))])))
+    }
+
+    /// A MIR's spec hash from its file (Development rule 26).
+    pub fn mir_file_hash(file: &str) -> Result<Hash, String> {
+        Ok(Self::hash_of(&Self::file_content(kinds::MIR, file)?))
     }
 
     /// A MIR's content as the format writes it: kind 4 and the text, no

@@ -112,3 +112,15 @@ The verifier indexed an act again each time it was given it. A reader fetches th
 2. **F100, a collective signs its own releases** (decided by Nobody, allegedly): an act of a collective of a type its grammar lists counts only with visible signatures of parties who signed the agreement in force, which is the one its own chain declared at the act's binding. The collective's rotation at a member change fences the old rules off. Agreements draft 6, freeze test suite v15.
 
 The readings Agreements draft 6 takes where the texts were silent are listed in `clients/repo/README.md`.
+
+## Aligned to the freeze-ready texts (S2)
+
+The core follows Identity 15, Text 11, Envelopes 11, Money 11, Agreements 17 and Development 11 where they had moved past it (`docs/s2-report.md`):
+
+1. **Keeper records read from the acts held** (Agreements, "Keeper record (type 2)", rules 37 to 42): type 2 decoded strictly (`KeeperRecord`), a keeper's sequence built from its records' `prev` (`AgreementsView::keeper_sequence`), one record before another only in its ancestry, a record counting only alongside its act and its signer. A log the caller states (`keeper_logs`) still counts, as one more sequence.
+2. **"Belongs to" and the keepers of the version in force** (`belongs_to`, `keepers_version`, `keepers_for`), and the acts a rotation voids that such keepers recorded first (`keeper_disputed_acts`, to state to Identity with `Verifier::keeper_recorded`).
+3. **Deadlines** (rule 33, `AgreementsView::deadline`): met by an anchor of the act, or by keepers' records before records anchored by the point; missed only by keepers' sequences anchored past it, under the keepers' rule; otherwise undetermined.
+4. **An act a revocation does not hold** (rule 76): `Backing::Disputed` where another identity, never the grantee, acknowledged it or a keeper recorded it before the revocation; conferring nothing unless the grantor adopts it.
+5. **A member key's text** (Text rule 14): its one object `[collective, version]`; the version stands as the decision it acts under (Agreements rule 58).
+6. **A payment cMIP told from bytes** (Development, "A rail Module's kind and binding"): `Spec::decode_judged`, `Spec::is_payment_cmip`; `Known::payment_cmip` still works.
+7. **A MIR's spec hash from its file** (Development rule 26): `Spec::frozen_text`, `Spec::file_content`, `Spec::mir_file_hash` (one final line break removed, the header reduced to the name); `mirFileHash` in the WebAssembly bindings.

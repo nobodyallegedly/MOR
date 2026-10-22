@@ -482,6 +482,14 @@ pub fn mir_hash(text: &str) -> R<String> {
     Ok(hx(&mor_core::development::Spec::hash_of(&mor_core::development::Spec::mir_content(text))))
 }
 
+/// The spec hash of a MIR from its file, as Development rule 26 reads a
+/// frozen text's file: at most one final line break removed, the header
+/// reduced to the text's name, the text canonical. Throws otherwise.
+#[wasm_bindgen(js_name = mirFileHash)]
+pub fn mir_file_hash(file: &str) -> R<String> {
+    Ok(hx(&mor_core::development::Spec::mir_file_hash(file).map_err(err)?))
+}
+
 #[wasm_bindgen(js_name = actId)]
 pub fn act_id(bytes: &[u8]) -> R<String> {
     Ok(hx(&Act::decode(bytes).map_err(err)?.id()))
@@ -3395,6 +3403,7 @@ impl Verifier {
             agreements::Backing::NotBacked { grant, reason } => ("not-backed", Some(grant), Some(reason)),
             agreements::Backing::Binds { grant } => ("binds", Some(grant), None),
             agreements::Backing::Unknown { grant, reason } => ("unknown", Some(grant), Some(reason)),
+            agreements::Backing::Disputed { grant, reason } => ("disputed", Some(grant), Some(reason)),
         };
         to_js(&BackingOut {
             kind: kind.into(),

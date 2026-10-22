@@ -13,7 +13,7 @@ import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Browser } from 'playwright-core';
 import { TestIdentity } from '../../genesis/src/identity.ts';
-import { SPECS, cborEncode, mirHash } from '../../genesis/src/core.ts';
+import { SPECS, cborEncode, mirFileHash } from '../../genesis/src/core.ts';
 import { MIR_TEXTS } from '../src/mirs.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { start, type Running } from '../../genesis/test/world.ts';
@@ -170,7 +170,7 @@ test('the front page lists the documents, verified; a link to nothing says so', 
   const mirs = await page.$$eval('#mirs li', (ls) => ls.map((l) => [(l as HTMLElement).dataset.mir, (l as HTMLElement).dataset.hash]));
   assert.deepEqual(
     mirs,
-    MIR_TEXTS.map(({ layer, file }) => [layer, mirHash(readFileSync(join(here, '../../spec', file), 'utf8'))]),
+    MIR_TEXTS.map(({ layer, file }) => [layer, mirFileHash(readFileSync(join(here, '../../spec', file), 'utf8'))]),
     'the same six as the core library recomputes outside the browser',
   );
   await page.click('#docs li:nth-child(2) a');

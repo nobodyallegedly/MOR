@@ -194,3 +194,44 @@ fn the_six_mir_hashes_follow_from_their_texts_8_1() {
         assert_eq!(Spec::hash_of(&c), mor_core::hash::spec_hash(&c));
     }
 }
+
+/// Development 11, "A rail Module's kind and binding": a payment cMIP is one
+/// whose own field 2 lists Money's task 6, decided from bytes. A Module
+/// naming one without fields 11 and 13 is no specification; naming a cMIP
+/// of another task, it is a specification; naming one the verifier does
+/// not hold, unknown. A Module carrying fields 11 and 13 is judged without
+/// the cMIP.
+#[test]
+fn a_payment_cmip_is_told_by_its_own_field_2() {
+    use mor_core::development::Judged;
+    let money = h("the Money MIR");
+    let cmip = |tasks: Vec<(Hash, u64)>| {
+        content(vec![
+            (0, Value::Uint(kinds::CMIP)),
+            (1, b(h("a creator"))),
+            (2, Value::Array(tasks.into_iter().map(|(m, t)| Value::Array(vec![b(m), Value::Uint(t)])).collect())),
+            (9, t("A cMIP.")),
+        ])
+    };
+    let payment = cmip(vec![(money, 6)]);
+    let split = cmip(vec![(h("the Agreements MIR"), 8)]);
+    let held = |x: &Hash| -> Option<Vec<u8>> {
+        if *x == h("a payment cMIP") {
+            Some(payment.clone())
+        } else if *x == h("a split cMIP") {
+            Some(split.clone())
+        } else {
+            None
+        }
+    };
+    let module = |under: &str| content(vec![(0, Value::Uint(kinds::MODULE)), (1, b(h("a creator"))), (5, b(h(under))), (9, t("A Module."))]);
+    assert!(Spec::decode(&payment, &Known::default()).unwrap().is_payment_cmip(&money));
+    assert!(!Spec::decode(&split, &Known::default()).unwrap().is_payment_cmip(&money));
+    assert!(matches!(Spec::decode_judged(&module("a payment cMIP"), &money, &held), Judged::NoSpecification(_)));
+    assert!(matches!(Spec::decode_judged(&module("a split cMIP"), &money, &held), Judged::Spec(_)));
+    assert_eq!(Spec::decode_judged(&module("a cMIP not held"), &money, &held), Judged::Unknown(h("a cMIP not held")));
+    let mut rail = rail_module(0, vec![0, 1]);
+    assert!(matches!(Spec::decode_judged(&rail, &money, &|_| None), Judged::Spec(_)), "fields 11 and 13 carried: no cMIP needed");
+    rail.push(0);
+    assert!(matches!(Spec::decode_judged(&rail, &money, &held), Judged::NoSpecification(_)), "not deterministic CBOR");
+}

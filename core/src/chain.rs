@@ -1937,6 +1937,20 @@ impl Verifier {
         // identity chain is a scoped key's (Identity rule 8): Agreements
         // judge whether the grant backs it (rules 73 to 80, `backing`).
         if let Some(b) = x.act.outside.binding {
+            // A holder's member key (Text rule 14; Agreements rule 73): the
+            // binding is the holder's signature act on a founding or clone,
+            // naming the key; the one object names, as predecessor, that
+            // founding or clone, the version that is its grant, never the
+            // signature act itself.
+            if res.position_of(&b).is_none() {
+                if let Some(sig) = self.acts.get(&b) {
+                    if sig.inside.spec == agreements && sig.inside.type_ == crate::agreements::types::SIGNATURE && sig.signer() != Some(signer) {
+                        if let Ok((version, Some(_))) = crate::agreements::decode_signature_key(&sig.inside) {
+                            return Some(o.predecessor == version);
+                        }
+                    }
+                }
+            }
             if o.predecessor == b && res.position_of(&b).is_none() {
                 return Some(true);
             }

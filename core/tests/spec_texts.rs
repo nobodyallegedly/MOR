@@ -44,9 +44,35 @@ fn the_core_texts_are_committed_as_canonical_text_f324() {
     let mut bad = vec![];
     for f in &files {
         let s = std::fs::read_to_string(f).unwrap();
-        if let Err(e) = mor_core::text::check(&s) {
+        // Development rule 26: a file may end with exactly one line break,
+        // not part of its text; the texts are committed without one for now.
+        if let Err(e) = mor_core::development::Spec::file_content(4, &s) {
             bad.push(format!("{}: {e}", f.display()));
+        }
+        if s.ends_with('\n') {
+            bad.push(format!("{}: committed with a final line break (kept without one until the freeze)", f.display()));
         }
     }
     assert!(bad.is_empty(), "not canonical text (Development draft 10, rule 26; F324):\n{}", bad.join("\n"));
+}
+
+/// Development rule 26: the text a file holds is its content with at most
+/// one final line break removed and the header reduced to the text's name;
+/// a MIR's spec hash is computed from that text.
+#[test]
+fn a_mir_hash_reads_the_file_as_rule_26_says() {
+    use mor_core::development::Spec;
+    let file = "# MIR: Test\n\n*Draft 1, for review.*\n\n## Part one\n\nText.";
+    let frozen = "# MIR: Test\n\n## Part one\n\nText.";
+    assert_eq!(Spec::frozen_text(file), frozen);
+    assert_eq!(Spec::frozen_text(&format!("{file}\n")), frozen);
+    assert_eq!(Spec::frozen_text(frozen), frozen);
+    let h = Spec::mir_file_hash(frozen).unwrap();
+    assert_eq!(Spec::mir_file_hash(file).unwrap(), h);
+    assert_eq!(Spec::mir_file_hash(&format!("{frozen}\n")).unwrap(), h);
+    assert_eq!(h, Spec::hash_of(&Spec::mir_content(frozen)));
+    assert!(Spec::mir_file_hash(&format!("{frozen}\n\n")).is_err(), "two final line breaks");
+    assert!(Spec::mir_file_hash("# MIR: Test\n\nText. ").is_err(), "a trailing space");
+    // A bold first paragraph is no status line.
+    assert_eq!(Spec::frozen_text("# MIR: T\n\n**Bold.**\n\nText."), "# MIR: T\n\n**Bold.**\n\nText.");
 }

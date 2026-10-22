@@ -15979,3 +15979,328 @@ fn a_member_key_counts_once_complete_and_the_latest_replaces_it() {
     let old = publish(&mut lab, &mut a);
     assert!(matches!(lab.consent(&old), Consent::Ungranted { ref reason, .. } if reason.contains("later version")), "{:?}", lab.consent(&old));
 }
+
+// ---------------------------------------------------------------- S2: keepers read from their records, deadlines, rule 76, a member key's text
+
+/// A keeper record (type 2) of `keeper`, naming `act` and `signer`: an
+/// everyday act of the keeper's operator, public, in its sequence.
+fn keep(w: &mut World, keeper: &mut Person, act: Hash, signer: Hash) -> Hash {
+    agreements_act(w, keeper, agreements::types::KEEPER_RECORD, agreements::KeeperRecord { act, signer }.to_map(), None)
+}
+
+/// A deal between `a` and `b`, naming `keepers` under `rule`, signed by both.
+fn kept_deal(w: &mut World, a: &mut Person, b: &mut Person, keepers: Vec<Hash>, rule: Rule) -> Hash {
+    let mut deal = deal_terms(a.id, b.id);
+    deal.keepers = Some(Keepers { operators: keepers, rule });
+    let x = agreements_act(w, a, agreements::types::TERMS, deal.to_map(), None);
+    sign(w, a, &x);
+    sign(w, b, &x);
+    x
+}
+
+/// Agreements 17, rules 37, 41 and 42 and "Keeper record (type 2)": the
+/// view reads a keeper's sequence from the records it holds. One record is
+/// before another when it lies in the other's ancestry; records of two
+/// sequences of one operator are not ordered; a record naming the wrong
+/// signer, or an act not held, counts for nothing; a private record is no
+/// keeper record.
+#[test]
+fn a_keepers_sequence_is_read_from_its_records() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut keeper = w.genesis("a keeper", vec![own_home()], None, None);
+    let x = w.post(&mut ana, "an act");
+    let y = w.post(&mut ana, "a later act");
+    let mut second = keeper.clone();
+    let rx = keep(&mut w, &mut keeper, x, ana.id);
+    let ry = keep(&mut w, &mut keeper, y, ana.id);
+    let v = view(&w);
+    let s = v.keeper_sequence(&keeper.id);
+    assert!(s.before(&rx, &ry) && !s.before(&ry, &rx));
+    assert!(v.keeper_before(&keeper.id, &x, &y) && !v.keeper_before(&keeper.id, &y, &x));
+    drop(v);
+    // A second sequence of the same operator (its first record names no
+    // earlier one): never ordered against the first.
+    second.seq.clear();
+    let z = w.post(&mut ana, "a third act");
+    keep(&mut w, &mut second, z, ana.id);
+    let v = view(&w);
+    assert!(!v.keeper_before(&keeper.id, &x, &z) && !v.keeper_before(&keeper.id, &z, &y), "two sequences are not ordered");
+    drop(v);
+    // A record naming another signer, or an act not held, counts for nothing.
+    let q = w.post(&mut ana, "a fourth act");
+    let kid = keeper.id;
+    keep(&mut w, &mut keeper, q, kid);
+    let unheld = spec("an act nobody holds");
+    keep(&mut w, &mut keeper, unheld, ana.id);
+    let last = w.post(&mut ana, "a fifth act");
+    keep(&mut w, &mut keeper, last, ana.id);
+    let v = view(&w);
+    assert!(!v.keeper_before(&keeper.id, &q, &last), "the wrong signer");
+    assert!(!v.keeper_recorded_act(&keeper.id, &unheld), "an act nobody can produce");
+    assert!(v.keeper_before(&keeper.id, &x, &last));
+}
+
+/// Agreements 17, "Belongs to", rules 41 and 42, Identity rule 34: an act
+/// naming a deal in `objects` belongs to it; its keeper's record of it,
+/// before its record of the signer's rotation disowning it, makes it
+/// disputed, not void. The same recorded by a keeper the deal does not
+/// name stays void. Freeze suite v30, "Belongs to".
+#[test]
+fn a_deals_keeper_keeps_a_disowned_act_disputed() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut keeper = w.genesis("the deal's keeper", vec![own_home()], None, None);
+    let mut stranger = w.genesis("a keeper nobody named", vec![own_home()], None, None);
+    let deal = kept_deal(&mut w, &mut ana, &mut ben, vec![keeper.id], Rule::All);
+    let live = |w: &mut World, p: &mut Person| agreements_act(w, p, agreements::new_types::LIVENESS, liveness(deal), obj(deal));
+    let x = live(&mut w, &mut ana);
+    let y = live(&mut w, &mut ana);
+    assert_eq!(view(&w).belongs_to(&x), vec![deal]);
+    assert_eq!(view(&w).keepers_for(&x).len(), 1);
+    keep(&mut w, &mut keeper, x, ana.id);
+    keep(&mut w, &mut stranger, y, ana.id);
+    let (r, _) = w.rotate(&ana, Rot { disowned: Some(vec![x, y]), ..Default::default() });
+    keep(&mut w, &mut keeper, r, ana.id);
+    keep(&mut w, &mut stranger, r, ana.id);
+    assert_eq!(w.v.status(&x), Status::Void, "before Identity is told");
+    let rescued = view(&w).keeper_disputed_acts();
+    assert_eq!(rescued, vec![x], "the deal's keeper, not the unnamed one");
+    for a in rescued {
+        w.v.keeper_recorded(a);
+    }
+    assert_eq!(w.v.status(&x), Status::Disputed);
+    assert_eq!(w.v.status(&y), Status::Void);
+}
+
+/// Agreements 17, rule 33: a deadline met by an anchor of the act, or by
+/// keepers whose records of it lie before records anchored by the point;
+/// missed only by keepers' sequences anchored past it that hold no record
+/// of it, enough that the keepers' rule can no longer be met; otherwise
+/// undetermined. An anchor of the act wins over any keeper's silence.
+/// Freeze suite v30, scenario 1 step 8 and the deadlines component.
+#[test]
+fn a_deadline_met_missed_or_undetermined_rule_33() {
+    use mor_core::envelopes::anchoring::{Anchor, Reference};
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut k: Vec<Person> = ["k1", "k2", "k3"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+    let ops: Vec<Hash> = k.iter().map(|p| p.id).collect();
+    let keepers = Keepers { operators: ops.clone(), rule: Rule::Threshold(2) };
+    let clock = Reference { cmip: spec("a clock"), params: Value::Uint(0) };
+    let at = |v: &mut AgreementsView, act: Hash, point: u64| v.anchored.add(&Anchor { act, reference: clock.clone(), point });
+    let x = w.post(&mut ana, "the delivery");
+    let other = w.post(&mut ana, "something else");
+    // k1 and k2 record the delivery; k3 records only something else.
+    let r1 = keep(&mut w, &mut k[0], x, ana.id);
+    let r2 = keep(&mut w, &mut k[1], x, ana.id);
+    let r3 = keep(&mut w, &mut k[2], other, ana.id);
+    let mut v = view(&w);
+    assert_eq!(v.deadline(&x, Some(&keepers), &clock, 100), agreements::Deadline::Undetermined, "nothing anchored");
+    at(&mut v, r1, 90);
+    assert_eq!(v.deadline(&x, Some(&keepers), &clock, 100), agreements::Deadline::Undetermined, "one keeper of two needed");
+    at(&mut v, r2, 99);
+    assert_eq!(v.deadline(&x, Some(&keepers), &clock, 100), agreements::Deadline::Met { by_anchor: false });
+    // Missed: two keepers' sequences anchored past the point lack the act.
+    let y = w.post(&mut ana, "a late delivery");
+    let s1 = keep(&mut w, &mut k[0], other, ana.id);
+    let mut v = view(&w);
+    at(&mut v, s1, 150);
+    at(&mut v, r3, 150);
+    assert_eq!(v.deadline(&y, Some(&keepers), &clock, 100), agreements::Deadline::Missed { keepers: vec![ops[0], ops[2]] });
+    // One silent keeper is not enough under two of three.
+    let mut v = view(&w);
+    at(&mut v, r3, 150);
+    assert_eq!(v.deadline(&y, Some(&keepers), &clock, 100), agreements::Deadline::Undetermined);
+    // An anchor of the act itself wins over every keeper's silence.
+    let mut v = view(&w);
+    at(&mut v, s1, 150);
+    at(&mut v, r3, 150);
+    at(&mut v, y, 100);
+    assert_eq!(v.deadline(&y, Some(&keepers), &clock, 100), agreements::Deadline::Met { by_anchor: true });
+    // A single keeper: its anchored silence shows it missed; its record
+    // before the anchored one does not show it late.
+    let one = Keepers { operators: vec![ops[2]], rule: Rule::All };
+    let mut v = view(&w);
+    at(&mut v, r3, 150);
+    assert_eq!(v.deadline(&y, Some(&one), &clock, 100), agreements::Deadline::Missed { keepers: vec![ops[2]] });
+    assert_eq!(v.deadline(&y, None, &clock, 100), agreements::Deadline::Undetermined, "no keeper, no anchor");
+}
+
+/// Agreements 17, rule 76: an act of a grant key the revocation's history
+/// does not hold is void, unless another identity, never the grantee,
+/// acknowledged it, or a keeper of an agreement it belongs to recorded it
+/// before recording the revocation: then it is shown disputed, conferring
+/// nothing unless the grantor adopts it. Freeze suite v30, "A revoked
+/// grant's acts".
+#[test]
+fn an_act_a_revocation_misses_is_void_or_disputed_rule_76() {
+    let mut w = World::new();
+    let mut singer = w.genesis("a singer", vec![own_home()], None, None);
+    let mut agent = w.genesis("her agent", vec![own_home()], None, None);
+    let mut fan = w.genesis("a fan", vec![own_home()], None, None);
+    let mut keeper = w.genesis("a keeper", vec![own_home()], None, None);
+    let env = mirs().envelopes;
+    let deal = kept_deal(&mut w, &mut singer, &mut fan, vec![keeper.id], Rule::All);
+    let grant = Grant { kinds: Some(vec![Kind::Type { spec: env, type_: 0 }]), ..plain_grant(agent.id, false) };
+    let g = agreements_act(&mut w, &mut singer, agreements::types::GRANT, grant.to_map(), None);
+    sign(&mut w, &mut agent, &g);
+    let mut s1 = singer.clone();
+    s1.binding = g;
+    s1.sign = key_of(agent.id);
+    s1.seq = vec![];
+    s1.cite = Some((singer.id, vec![g]));
+    let mut strands: Vec<Person> = (0..4).map(|_| s1.clone()).collect();
+    let mut post = |w: &mut World, i: usize, o: Option<Vec<Object>>| {
+        let mut ob = vec![Object { chain: singer.id, predecessor: g }];
+        ob.extend(o.into_iter().flatten());
+        let a = w.everyday_act(&mut strands[i], env, 0, publication(vec![]), Some(ob), None);
+        w.add(&a)
+    };
+    let cited = post(&mut w, 0, None);
+    let by_grantee = post(&mut w, 1, None);
+    let by_other = post(&mut w, 2, None);
+    let in_deal = post(&mut w, 3, Some(vec![Object { chain: deal, predecessor: deal }]));
+    w.ack(&mut agent, by_grantee);
+    keep(&mut w, &mut keeper, in_deal, singer.id);
+    let sid = singer.id;
+    let r = agreements_act(&mut w, &mut singer, agreements::types::REVOCATION, agreements::Revocation { grant: g }.to_map(), Some(vec![Object { chain: sid, predecessor: cited }]));
+    keep(&mut w, &mut keeper, r, singer.id);
+    w.ack(&mut fan, by_other);
+    let v = view(&w);
+    assert_eq!(v.backing(&cited).unwrap(), Backing::Binds { grant: g });
+    assert!(matches!(v.backing(&by_grantee).unwrap(), Backing::NotBacked { .. }), "the grantee's own acknowledgement rescues nothing");
+    assert!(matches!(v.backing(&by_other).unwrap(), Backing::Disputed { ref reason, .. } if reason.contains("acknowledged")));
+    assert!(matches!(v.backing(&in_deal).unwrap(), Backing::Disputed { ref reason, .. } if reason.contains("keeper")), "{:?}", v.backing(&in_deal));
+    // Disputed confers nothing.
+    assert!(!v.consent(&by_other).unwrap().counts());
+}
+
+/// Text 11, rule 14, and Agreements 17, rules 58 and 73: a text signed with
+/// a holder's member key carries one object, `[collective, version]`, the
+/// founding or clone its binding's signature names; it counts where the
+/// holder's area reaches texts. Naming the signature act itself is invalid.
+#[test]
+fn a_member_keys_text_names_its_version_text_rule_14() {
+    let mut lab = Lab::new(&|t| {
+        let a = t.areas.as_mut().unwrap().iter_mut().find(|a| a.id == 1).unwrap();
+        a.kinds.as_mut().unwrap().push(Kind::Layer(agreements::layers::ENVELOPES_AND_TEXT));
+    });
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let (sa, ka) = lab.key_sign(ANA, &f, "ana");
+    let mut a = lab.member_strand(sa, &ka);
+    let text = |lab: &mut Lab, st: &mut Person, pred: Hash| {
+        let x = lab.w.everyday_act(st, mirs().text, 0, vec![(Value::Uint(0), Value::Text("A text of the label.".into()))], Some(vec![Object { chain: label, predecessor: pred }]), None);
+        lab.w.add(&x)
+    };
+    let good = text(&mut lab, &mut a, f);
+    assert_eq!(lab.w.v.status(&good), Status::Scoped);
+    assert!(lab.counts(&good), "{:?}", lab.consent(&good));
+    let bad = text(&mut lab, &mut a, sa);
+    assert_eq!(lab.w.v.status(&bad), Status::Invalid, "the signature act is not the version");
+}
+
+/// Money 11, rule 7: every Money act of a collective (a receipt, an
+/// obligation, a claim, as a pointer) may be signed with the member key of
+/// a holder of the area reaching Money, judged by Agreements under that
+/// area; Cy, holding no Money area, signs none that counts.
+#[test]
+fn a_member_key_signs_every_money_act_of_its_area_money_rule_7() {
+    use mor_core::money::{Amount, Obligation, Payload as Fin, Payer, Receipt};
+    let mut lab = Lab::new(&|_| {});
+    let f = lab.founding;
+    let label = lab.c[0].id;
+    let (sb, kb) = lab.key_sign(BEN, &f, "ben");
+    let (sc, kc) = lab.key_sign(CY, &f, "cy");
+    let mut b = lab.member_strand(sb, &kb);
+    let mut c = lab.member_strand(sc, &kc);
+    // The label's pointer names the rail, its Money area (Ben) consenting.
+    let ptr = lab.pointer(0, 1, None, &[spec("a rail")]);
+    lab.sign(BEN, &ptr);
+    let amount = Amount { unit: spec("a unit"), value: 10 };
+    let receipt = Fin::Receipt(Receipt { rail: spec("a rail"), proof: vec![], payer: Some(Payer::Identity(spec("a fan"))), payee: label, amount: amount.clone(), fulfils: spec("an offer"), previous: None, forward: None, batch: None, purchase: None });
+    let obligation = Fin::Obligation(Obligation { debtor: label, creditor: spec("a creditor"), amount, pointer: spec("its pointer"), agreement: None });
+    for (what, p, t) in [("a receipt", receipt, 2u64), ("an obligation", obligation, 1u64)] {
+        let x = { let a = lab.w.everyday_act(&mut b, mirs().money, t, p.to_map(), None, None); lab.w.add(&a) };
+        assert_eq!(lab.w.v.status(&x), Status::Scoped, "{what}");
+        assert!(lab.counts(&x), "{what}: {:?}", lab.consent(&x));
+        let y = { let a = lab.w.everyday_act(&mut c, mirs().money, t, p.to_map(), None, None); lab.w.add(&a) };
+        assert!(!lab.counts(&y), "{what} by a key of no Money area");
+    }
+}
+
+/// Agreements 17, rules 38 and 41 (suite: "Several keepers"): each keeper's
+/// record is judged against its own record of the rotation; the agreement's
+/// rule, two of three, counts them.
+#[test]
+fn several_keepers_each_against_its_own_record_of_the_rotation_rule_38() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut k: Vec<Person> = ["k1", "k2", "k3"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+    let ops: Vec<Hash> = k.iter().map(|p| p.id).collect();
+    let deal = kept_deal(&mut w, &mut ana, &mut ben, ops.clone(), Rule::Threshold(2));
+    let live = |w: &mut World, p: &mut Person| agreements_act(w, p, agreements::new_types::LIVENESS, liveness(deal), obj(deal));
+    let x = live(&mut w, &mut ana);
+    let y = live(&mut w, &mut ana);
+    let (r, _) = w.rotate(&ana, Rot { disowned: Some(vec![x, y]), ..Default::default() });
+    // x: k1 and k2 recorded it before their own record of the rotation; k3 after.
+    keep(&mut w, &mut k[0], x, ana.id);
+    keep(&mut w, &mut k[0], r, ana.id);
+    keep(&mut w, &mut k[1], x, ana.id);
+    keep(&mut w, &mut k[1], r, ana.id);
+    keep(&mut w, &mut k[2], r, ana.id);
+    keep(&mut w, &mut k[2], x, ana.id);
+    // y: only k3 recorded it first.
+    keep(&mut w, &mut k[2], y, ana.id);
+    let v = view(&w);
+    assert!(v.keepers_recorded_before(&x, &r), "two of three, each before its own record of the rotation");
+    assert!(!v.keepers_recorded_before(&y, &r), "one of three: the rule is not met");
+}
+
+/// Agreements 17, rule 42 (suite: "A keeper keeps one sequence"): a keeper's
+/// own later rotation, disowning its record, never undoes what the record
+/// placed; the record shows as a dispute.
+#[test]
+fn a_keepers_later_rotation_never_undoes_what_its_records_placed_rule_42() {
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut keeper = w.genesis("the deal's keeper", vec![own_home()], None, None);
+    let deal = kept_deal(&mut w, &mut ana, &mut ben, vec![keeper.id], Rule::All);
+    let x = agreements_act(&mut w, &mut ana, agreements::new_types::LIVENESS, liveness(deal), obj(deal));
+    let (r, _) = w.rotate(&ana, Rot { disowned: Some(vec![x]), ..Default::default() });
+    let rx = keep(&mut w, &mut keeper, x, ana.id);
+    keep(&mut w, &mut keeper, r, ana.id);
+    // The keeper's own rotation disowns its record of x.
+    w.rotate(&keeper, Rot { disowned: Some(vec![rx]), ..Default::default() });
+    assert_eq!(w.v.status(&rx), Status::Void, "the record itself, under Identity");
+    assert_eq!(view(&w).keeper_disputed_acts(), vec![x], "its effect stands");
+}
+
+/// Agreements 17, "Belongs to": a receipt belongs to a deal through what it
+/// fulfils (an obligation arising from the deal) and through the claim it
+/// pays under; an act naming nothing of the deal belongs to none.
+#[test]
+fn a_receipt_belongs_to_a_deal_through_what_it_fulfils() {
+    use mor_core::money::{Amount, Obligation, Payload as Fin, Purchase, Receipt};
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let deal = kept_deal(&mut w, &mut ana, &mut ben, vec![spec("a keeper")], Rule::All);
+    let amount = Amount { unit: spec("a unit"), value: 10 };
+    let ob = Fin::Obligation(Obligation { debtor: ben.id, creditor: ana.id, amount: amount.clone(), pointer: spec("a pointer"), agreement: Some(deal) });
+    let o = { let a = w.everyday_act(&mut ben, mirs().money, 1, ob.to_map(), None, None); w.add(&a) };
+    let aid = ana.id;
+    let rec = |fulfils: Hash, purchase: Option<Purchase>| Fin::Receipt(Receipt { rail: spec("a rail"), proof: vec![], payer: None, payee: aid, amount: amount.clone(), fulfils, previous: None, forward: None, batch: None, purchase });
+    let r1 = { let a = w.everyday_act(&mut ana, mirs().money, 2, rec(o, None).to_map(), None, None); w.add(&a) };
+    let r2 = { let a = w.everyday_act(&mut ana, mirs().money, 2, rec(spec("something else"), Some(Purchase { agreement: deal, line: deal })).to_map(), None, None); w.add(&a) };
+    let r3 = { let a = w.everyday_act(&mut ana, mirs().money, 2, rec(spec("something else"), None).to_map(), None, None); w.add(&a) };
+    let v = view(&w);
+    assert_eq!(v.belongs_to(&o), vec![deal], "an obligation, through the agreement it arises from");
+    assert_eq!(v.belongs_to(&r1), vec![deal], "a receipt, through the obligation it fulfils");
+    assert_eq!(v.belongs_to(&r2), vec![deal], "a receipt, through the claim it pays under");
+    assert!(v.belongs_to(&r3).is_empty(), "naming nothing of the deal");
+}
