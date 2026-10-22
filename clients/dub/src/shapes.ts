@@ -127,7 +127,7 @@ export interface Held {
   grouped: string;
   who: Who;
   active: boolean;
-  kind: 'made' | 'brought';
+  kind: 'made' | 'brought' | 'runner';
 }
 
 export interface State {
@@ -145,7 +145,7 @@ export interface State {
     /** With where it lives (H38): one of its homes, one relay, as `?r=` hints. */
     where: string;
     who: Who;
-    kind: 'made' | 'brought';
+    kind: 'made' | 'brought' | 'runner';
     homes: string[];
     relays: string[];
     /** Whether this app holds the identity's encryption key (the carry Module, draft 2, 2a). */

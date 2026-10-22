@@ -39,7 +39,9 @@ const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 /** The encryption key this identity holds last, public half: the self-sealed copy is sealed to it. Null where none is held. */
 function ownKey(me: TestIdentity): Uint8Array | null {
   const e = me.f.encryption[me.f.encryption.length - 1];
-  return e ? (xwingPublic(unhex(e.secret)) as Uint8Array) : null;
+  if (!e) return null;
+  // An identity held by Kišib's runner: this app holds its encryption key's public half only.
+  return e.secret ? (xwingPublic(unhex(e.secret)) as Uint8Array) : e.public ? unhex(e.public) : null;
 }
 
 /**
@@ -59,7 +61,7 @@ export async function leaveAtHomes(me: TestIdentity, made: { act: Uint8Array; id
   if (key && to.length === 1 && to[0] === me.f.identity) copy = { sealed: sealFor(made.act, made.key, [{ id: me.f.identity, key }]), tags: [] };
   else if (key && !to.length) copy = { sealed: sealFor(made.act, made.key, [{ key }]), tags: [pickupTag(key)] };
   else if (key) {
-    const kd = me.signApart(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.f.identity] });
+    const kd = await me.signApartNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.f.identity] });
     copy = { sealed: sealFor(kd.act, kd.key, [{ id: me.f.identity, key }]), tags: [] };
   }
   const took: string[] = [];

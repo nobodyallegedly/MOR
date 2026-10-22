@@ -28,6 +28,12 @@ const untilOf = (v: unknown): number | null => {
 /** The names of every operation, so a page and a test can be checked against them. */
 export const OPS = [
   'state',
+  'runner',
+  'runner pair',
+  'runner take',
+  'runner asking',
+  'runner drop',
+  'runner unpair',
   'begin',
   'confirm',
   'abandon',
@@ -123,6 +129,21 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.relay(30, Array.isArray(a.layers) ? list(a.layers) : undefined);
     case 'forget':
       await dub.forget(text(a.id));
+      return {};
+    // An identity used through Kišib's runner (the Dubsar runner cMIP): the program on the Mac only.
+    case 'runner':
+      return dub.runnerState();
+    case 'runner pair':
+      return dub.runnerPair();
+    case 'runner take':
+      return dub.runnerTake({ id: text(a.id) });
+    case 'runner asking':
+      return dub.runnerAsking();
+    case 'runner drop':
+      await dub.runnerDrop({ request: text(a.request) });
+      return {};
+    case 'runner unpair':
+      await dub.runnerUnpair();
       return {};
     case 'carry':
       return dub.carry();

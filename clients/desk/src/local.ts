@@ -97,12 +97,25 @@ export async function serveLocal(opts: {
   files?: Record<string, { type: string; body: Buffer }>;
   /** Films played from bytes checked in the page (Dub, the video Module): the policy adds `media-src blob:`; a program asking none keeps its own unchanged. */
   media?: boolean;
+  /**
+   * Origins the page may frame (Dub: Kišib's runner, its panel drawn in the
+   * kit's slot): the policy adds `frame-src` with these and nothing else; a
+   * program naming none keeps its own unchanged (`default-src 'none'`).
+   */
+  frames?: string[];
+  /**
+   * Requests this program answers itself before the page's own (Kišib: the
+   * runner's doors for apps and for its panel, each with its own headers):
+   * true where answered. Called after the host check, before anything else.
+   */
+  routes?: (req: IncomingMessage, res: ServerResponse, url: URL) => Promise<boolean>;
 }): Promise<Local> {
   const { access } = opts;
   const files = opts.files ?? {};
   let csp = HEADERS['content-security-policy'];
   if (Object.values(files).some((f) => f.type.startsWith('font/'))) csp = csp.replace("style-src 'self';", "style-src 'self'; font-src 'self';");
   if (opts.media) csp = csp.replace("img-src 'self' data:;", "img-src 'self' data:; media-src blob:;");
+  if (opts.frames?.length) csp = csp.replace("connect-src 'self';", `connect-src 'self'; frame-src ${opts.frames.join(' ')};`);
   const headers = csp === HEADERS['content-security-policy'] ? HEADERS : { ...HEADERS, 'content-security-policy': csp };
   const reply = (res: ServerResponse, status: number, type: string, body: string | Buffer) => send(res, status, type, body, headers);
   const secret = randomBytes(32).toString('hex');
@@ -114,6 +127,7 @@ export async function serveLocal(opts: {
       const host = req.headers.host ?? '';
       if (host !== `127.0.0.1:${port}` && host !== `localhost:${port}`) return send(res, 421, 'text/plain', 'not this address');
       const url = new URL(req.url ?? '/', `http://${host}`);
+      if (opts.routes && (await opts.routes(req, res, url))) return;
       if (req.method === 'GET') {
         if (url.pathname === '/') return reply(res, 200, 'text/html; charset=utf-8', opts.index);
         if (url.pathname === '/app.js') return reply(res, 200, 'text/javascript; charset=utf-8', opts.script);

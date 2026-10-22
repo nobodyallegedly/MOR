@@ -158,7 +158,7 @@ export interface IdentityFile {
   split?: boolean;
   routes: { version: number; act: string } | null;
   /** Every encryption key published, oldest first; old ones still open old deliveries. */
-  encryption: { version: number; act: string; secret: string }[];
+  encryption: { version: number; act: string; secret: string; /** Its public half, hex, where the secret is not held here (an identity held by Kišib's runner): `secret` is then empty. */ public?: string }[];
   pending: Pending | null;
   /**
    * For a collective (Agreements, F127): the decision its next action cites on its
@@ -228,6 +228,34 @@ export function freshLines(f: IdentityFile): void {
   f.split = true;
 }
 
+/**
+ * What a signer outside this file signs (the Dubsar runner cMIP, section 3):
+ * an everyday act, field by field, the line it goes on and that line's acts
+ * so far. Used where the file holds no signing key: an identity held by
+ * Kišib's runner, which signs for the app.
+ */
+export interface SignRequest {
+  identity: string;
+  binding: string;
+  /** The line (F376): `apart` for an act on a line of its own (`signApart`). */
+  line: 'public' | 'private' | 'apart';
+  sequence: string[];
+  spec: string;
+  type: number;
+  payload: Uint8Array;
+  public: boolean;
+  to?: string[];
+  objects?: [string, string][];
+  refs?: Reference[];
+  acks?: string[];
+}
+
+/** Signs a request elsewhere (the runner) and returns the act made, its ID and content key, as `makeEveryday` does. */
+export type Signer = (r: SignRequest) => Promise<{ act: Uint8Array; id: string; key: Uint8Array }>;
+
+/** Said where an act would be signed here for an identity whose key this app does not hold. */
+export const HELD_ELSEWHERE_SAY = 'This identity’s signing key is not held by this app: it is signed for by Kišib’s runner, and this act cannot be signed that way here. Nothing was signed.';
+
 /** Agreements' record (type 17): a decision, which cites by its kept tips (F127). */
 const AGREEMENTS_RECORD = 17;
 
@@ -244,6 +272,9 @@ export interface Submitted {
 }
 
 export class TestIdentity {
+  /** Where this file holds no signing key: who signs for it (the Dubsar runner cMIP). Never saved with the file. */
+  signer?: Signer;
+
   constructor(
     public f: IdentityFile,
     public via: Via = {},
@@ -362,25 +393,39 @@ export class TestIdentity {
 
   // ------------------------------------------------------------ everyday acts
 
+  /** The objects an everyday act carries: a collective's action cites the decision it acts under, after the entries its type defines (F127). */
+  private everydayObjects(spec: string, type: number, objects: [string, string][] | undefined, acks?: string[]): [string, string][] | undefined {
+    // F110: only Identity, Money and Agreements act types carry acknowledgements;
+    // a text act, a publication or a cMIP's act carrying them is invalid.
+    // To rely on such an act, sign a witness act (see `witness`).
+    if (acks?.length && !ACK_SPECS.includes(spec)) {
+      throw new Error('only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act');
+    }
+    const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
+    if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
+      objects = [...(objects ?? []), ...this.f.cites.map((d): [string, string] => [this.f.identity, d])];
+    }
+    return objects;
+  }
+
+  /** After an act is made: on its line, waiting for the homes if private, a record cited next. */
+  private everydayMade(spec: string, type: number, isPublic: boolean, line: string[], made: { act: Uint8Array; id: string; key: Uint8Array }) {
+    line.push(made.id);
+    // A private act waits to be left at the homes, locked and sealed to this identity (`private.ts`): a member's line, not a collective's.
+    if (!isPublic && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
+    // A record is the collective's latest decision: its next actions cite it.
+    if (this.f.cites && spec === MIRS.agreements && type === AGREEMENTS_RECORD) this.f.cites = [made.id];
+    return made;
+  }
+
   private everyday(
     spec: string,
     type: number,
     payload: Uint8Array,
     opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[] },
   ) {
-    // F110: only Identity, Money and Agreements act types carry acknowledgements;
-    // a text act, a publication or a cMIP's act carrying them is invalid.
-    // To rely on such an act, sign a witness act (see `witness`).
-    if (opts.acks?.length && !ACK_SPECS.includes(spec)) {
-      throw new Error('only Identity, Money and Agreements acts may acknowledge (Envelopes rule 4a, F110): to rely on this act, sign a witness act');
-    }
-    // F127: a collective's action cites, on its chain, the decision it acts
-    // under, after the entries its type defines.
-    const isRecord = spec === MIRS.agreements && type === AGREEMENTS_RECORD;
-    let objects = opts.objects;
-    if (this.f.cites && spec !== SPECS.identity && !isRecord && !objects?.some((o) => o[0] === this.f.identity)) {
-      objects = [...(objects ?? []), ...this.f.cites.map((d): [string, string] => [this.f.identity, d])];
-    }
+    if (!this.f.signingSecret) throw new Error(HELD_ELSEWHERE_SAY);
+    const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
     // F376: a member's public and private acts on two lines; a collective's on its one.
     const line = lineFor(this.f, opts.public);
     const made = makeEveryday({
@@ -397,12 +442,39 @@ export class TestIdentity {
       refs: opts.refs,
       acks: opts.acks,
     }) as { act: Uint8Array; id: string; key: Uint8Array };
-    line.push(made.id);
-    // A private act waits to be left at the homes, locked and sealed to this identity (`private.ts`): a member's line, not a collective's.
-    if (!opts.public && !this.f.cites) (this.f.unsent ??= {})[made.id] = { act: b64(made.act), key: b64(made.key) };
-    // A record is the collective's latest decision: its next actions cite it.
-    if (this.f.cites && isRecord) this.f.cites = [made.id];
-    return made;
+    return this.everydayMade(spec, type, opts.public, line, made);
+  }
+
+  /**
+   * An everyday act signed here, or, where this file holds no signing key,
+   * by its `signer` (Kišib's runner, which may wait for the person's click).
+   * The line is the same either way. One act at a time: the caller keeps
+   * signing serial, as every app does.
+   */
+  private async everydayNow(
+    spec: string,
+    type: number,
+    payload: Uint8Array,
+    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[] },
+  ): Promise<{ act: Uint8Array; id: string; key: Uint8Array }> {
+    if (this.f.signingSecret || !this.signer) return this.everyday(spec, type, payload, opts);
+    const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
+    const line = lineFor(this.f, opts.public);
+    const made = await this.signer({
+      identity: this.f.identity,
+      binding: this.f.binding,
+      line: this.f.cites ? 'public' : opts.public ? 'public' : 'private',
+      sequence: [...line],
+      spec,
+      type,
+      payload,
+      public: opts.public,
+      ...(opts.to ? { to: opts.to } : {}),
+      ...(objects ? { objects } : {}),
+      ...(opts.refs ? { refs: opts.refs } : {}),
+      ...(opts.acks ? { acks: opts.acks } : {}),
+    });
+    return this.everydayMade(spec, type, opts.public, line, made);
   }
 
   /** Send an everyday identity act to every home: its standing depends on it (Envelopes, "How acts reach people"). */
@@ -426,7 +498,7 @@ export class TestIdentity {
   async publishRoutes(routes: RouteIn[]): Promise<{ id: string; sent: Submitted[] }> {
     const version = (this.f.routes?.version ?? 0) + 1;
     const payload = routesPayload({ version, previous: this.f.routes?.act, routes });
-    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
+    const made = await this.everydayNow(SPECS.identity, IDENTITY_TYPES.routes, payload, { public: true });
     this.f.routes = { version, act: made.id };
     return { id: made.id, sent: await this.toHomes(made.act) };
   }
@@ -445,7 +517,7 @@ export class TestIdentity {
     }
     if (!acts.length) throw new Error('a witness act names at least one act');
     if (acts.some((a) => ownIds(this.f).includes(a))) throw new Error("a witness act names other identities' acts, not this one's");
-    const made = this.everyday(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(new Map()), { public: true, acks: acts });
+    const made = await this.everydayNow(SPECS.identity, IDENTITY_TYPES.witness, cborEncode(new Map()), { public: true, acks: acts });
     const sent = await this.toHomes(made.act);
     for (const hint of opts.relays ?? []) await relayAt(hint, this.via).putAct(made.act);
     return { id: made.id, act: made.act, sent };
@@ -462,7 +534,7 @@ export class TestIdentity {
     const version = (last?.version ?? 0) + 1;
     const secret = given ?? newEncryptionSecret();
     const payload = encryptionKeyPayload(version, last?.act, xwingPublic(secret));
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
+    const made = await this.everydayNow(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, payload, { public: true });
     this.f.encryption.push({ version, act: made.id, secret: hex(secret) });
     return { id: made.id, sent: await this.toHomes(made.act) };
   }
@@ -758,7 +830,7 @@ export class TestIdentity {
     const inbox = them.inbox(SPECS.envelopes);
     if (!inbox) throw new Error('that identity declares no inbox');
     const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, {
+    const made = await this.everydayNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, {
       public: false,
       to: [opts.to],
     });
@@ -784,7 +856,7 @@ export class TestIdentity {
     media?: boolean;
   }): Promise<{ delivery: string; sealed: string }> {
     const payload = keyDeliveryPayload(opts.target, opts.key, opts.media ?? false);
-    const made = this.everyday(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, { public: false });
+    const made = await this.everydayNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, payload, { public: false });
     const sealed = sealFor(made.act, made.key, [{ key: opts.bareKey }]);
     for (const hint of opts.relays) await relayAt(hint, this.via).putSealed(sealed, [pickupTag(opts.bareKey)]);
     return { delivery: made.id, sealed: sealedId(sealed) };
@@ -804,6 +876,16 @@ export class TestIdentity {
     return this.everyday(spec, type, payload, opts);
   }
 
+  /** As `sign`, by the runner where this file holds no signing key (the Dubsar runner cMIP). */
+  signNow(
+    spec: string,
+    type: number,
+    payload: Uint8Array,
+    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[] },
+  ): Promise<{ act: Uint8Array; id: string; key: Uint8Array }> {
+    return this.everydayNow(spec, type, payload, opts);
+  }
+
   /**
    * Sign a private act on a line of its own (one act, first in its line),
    * outside this identity's sequence, never left at its homes: for an act
@@ -813,6 +895,7 @@ export class TestIdentity {
    * soon after it is made.
    */
   signApart(spec: string, type: number, payload: Uint8Array, opts: { to?: string[]; refs?: Reference[] } = {}): { act: Uint8Array; id: string; key: Uint8Array } {
+    if (!this.f.signingSecret) throw new Error(HELD_ELSEWHERE_SAY);
     return makeEveryday({
       signingSecret: unhex(this.f.signingSecret),
       signer: this.f.identity,
@@ -827,6 +910,12 @@ export class TestIdentity {
     }) as { act: Uint8Array; id: string; key: Uint8Array };
   }
 
+  /** As `signApart`, by the runner where this file holds no signing key: the act on its line of its own (`apart`). */
+  async signApartNow(spec: string, type: number, payload: Uint8Array, opts: { to?: string[]; refs?: Reference[] } = {}): Promise<{ act: Uint8Array; id: string; key: Uint8Array }> {
+    if (this.f.signingSecret || !this.signer) return this.signApart(spec, type, payload, opts);
+    return this.signer({ identity: this.f.identity, binding: this.f.binding, line: 'apart', sequence: [], spec, type, payload, public: false, ...(opts.to ? { to: opts.to } : {}), ...(opts.refs ? { refs: opts.refs } : {}) });
+  }
+
   /**
    * Publish an act on this identity's own relays, for example a private
    * post whose key it will deliver. Returns the act id and its content key.
@@ -837,7 +926,7 @@ export class TestIdentity {
     payload: Uint8Array,
     opts: { public: boolean; relays: string[]; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[] },
   ) {
-    const made = this.everyday(spec, type, payload, {
+    const made = await this.everydayNow(spec, type, payload, {
       public: opts.public,
       to: opts.to,
       objects: opts.objects,
