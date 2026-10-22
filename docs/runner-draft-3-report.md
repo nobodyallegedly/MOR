@@ -118,7 +118,8 @@ As built in draft 2. The cMIP now says it as decided (8.4), and adds that a memb
 
 ### Releases, and every test
 
-- **Web releases.** Kišib's, Dub's and Damgar's are rebuilt as their READMEs say, on main merged in (section 5 of each README; `npm run release`, with `npm run test:build` green).
+- **Web releases.** Every web release that bundles the core's WebAssembly is rebuilt as its README says, on main merged in after S7b and S7c changed the core (the MOR lead's request, 22 October 2026): the display client (`clients/site`), Edubba, Ummia, Dub, Kišib and Damgar. Each is built with `npm run release` and the tools its `BUILT-WITH.txt` names (rustc 1.97.0, wasm-bindgen 0.2.129). All six share one WebAssembly, each `npm run test:build` is green, and no source changed.
+- **The site's test 15** (`clients/site/test/browser.test.ts`, line 612), *the MOR lead's decision, 22 October 2026*: the refusals it expects on the hostile page now include "inline event handler". GitHub's runner image of 21 October has a newer Chrome, which reports the hostile page's `onload` and `onerror` while the display client parses the page. The older image passed, the new one failed, on this branch and on pull request 96 alike. The test's other assertions still check that nothing ran and that no handler is left. `clients/site/README.md` says so where it lists the refusals.
 - **Every test.** Every existing suite is green locally. The one exception is `clients/assess`'s two quote checks, which fail the same way on main and are not run by CI.
 
 ## 3. For the MOR lead
@@ -127,7 +128,7 @@ As built in draft 2. The cMIP now says it as decided (8.4), and adds that a memb
 - Acts as a collective are the member keys cMIP's acts, unchanged.
 - A lane's record is an ordinary key delivery to oneself (Envelopes type 1).
 - The seal is the Mac program's, not a part of the protocol.
-- Code outside the four apps' own: none (`clients/grants` and `clients/kit` were read, not changed).
+- Code outside the four apps' own: none (`clients/grants` and `clients/kit` were read, not changed). Outside them, only the rebuilt releases of the display client, Edubba and Ummia, and the one line of the site's test 15, both at the MOR lead's request (section 2, Releases).
 
 ## 4. Questions for Nobody, allegedly
 

@@ -609,7 +609,7 @@ test('a page runs no code and loads nothing from elsewhere, whatever it tries; w
   assert.deepEqual(elsewhere, [], 'nothing fetched from elsewhere');
   assert.equal(await page.getAttribute('link[rel="icon"]', 'href'), 'data:,', 'an icon from elsewhere is not the tab icon');
   assert.deepEqual(problems, []);
-  assert.ok(hostileCsp.every((m) => /base URI|inline style/.test(m)), hostileCsp.join('\n'));
+  assert.ok(hostileCsp.every((m) => /base URI|inline style|inline event handler/.test(m)), hostileCsp.join('\n'));
   await ctx.close();
 
   // Files that are not pages: a picture and text, each under the bar.
