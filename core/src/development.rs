@@ -428,31 +428,41 @@ impl Spec {
         hash::spec_hash(encoded)
     }
 
-    /// The text a frozen specification's file holds (Development rule 26):
-    /// the file's content with at most one final line break removed, and
-    /// its header reduced to the text's name: where the first line (`# ` and
-    /// the name) is followed by a blank line and one line in italics (a
-    /// draft's status line, `*…*`) and a blank line, that italic line and
-    /// the blank line before it are dropped. At the freeze no file carries
-    /// such a line, and the text is the file's, less its final line break.
+    /// The text a specification's file holds (Development rule 26): the
+    /// file's content with at most one final line break removed, and
+    /// nothing else. Every other line of the file, its header included, is
+    /// part of the text; at the freeze each header is the text's name alone,
+    /// so the frozen file is the hashed text. Nothing on a verdict's path
+    /// drops a line: a draft's status line is dropped only by a tool that
+    /// says so ([`Self::draft_without_status_line`]).
     pub fn frozen_text(file: &str) -> String {
-        let t = file.strip_suffix('\n').unwrap_or(file);
+        file.strip_suffix('\n').unwrap_or(file).to_string()
+    }
+
+    /// A tool's option, never on a verdict's path: a draft's file read as
+    /// the frozen file would be once its status line is removed, the first
+    /// line (`# ` and the name) followed by a blank line, one line in
+    /// italics beginning `*Draft ` or `*Version ` and a blank line, that
+    /// italic line and the blank line before it dropped. For showing what a
+    /// draft would hash to at the freeze; the hash of the file itself is
+    /// [`Self::mir_file_hash`].
+    pub fn draft_without_status_line(file: &str) -> String {
+        let t = Self::frozen_text(file);
         let mut lines = t.split('\n');
-        let (Some(first), Some(blank), Some(status)) = (lines.next(), lines.next(), lines.next()) else {
-            return t.to_string();
+        let (Some(first), Some(blank), Some(status), after) = (lines.next(), lines.next(), lines.next(), lines.next()) else {
+            return t;
         };
-        let after = lines.next();
-        let italic = status.len() >= 2 && status.starts_with('*') && status.ends_with('*') && !status.starts_with("**");
-        if first.starts_with("# ") && blank.is_empty() && italic && after == Some("") {
+        let draft = (status.starts_with("*Draft ") || status.starts_with("*Version ")) && status.ends_with('*');
+        if first.starts_with("# ") && blank.is_empty() && draft && after == Some("") {
             let head = first.len() + 1 + blank.len() + 1 + status.len() + 1;
             return format!("{first}\n{}", &t[head..]);
         }
-        t.to_string()
+        t
     }
 
     /// The content of a core document's file, as rule 26 hashes it: kind 4
-    /// (a MIR), 6 (the MICS document) or 7 (a test suite), and its frozen
-    /// text ([`Self::frozen_text`]), which must be canonical text: a file
+    /// (a MIR), 6 (the MICS document) or 7 (a test suite), and the text the
+    /// file holds ([`Self::frozen_text`]), which must be canonical text: a file
     /// with two final line breaks, or a trailing space, is refused.
     pub fn file_content(kind: u64, file: &str) -> Result<Vec<u8>, String> {
         let text = Self::frozen_text(file);

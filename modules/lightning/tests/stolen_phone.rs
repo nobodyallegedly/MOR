@@ -185,7 +185,7 @@ impl Held for AgreementsHeld<'_> {
         out
     }
     fn payment_counts(&self, payee: &Hash, at: &PaidAt, amount: &Amount, proof: &[u8], fulfils: &Hash) -> Option<bool> {
-        Some(self.view.payment_counts(payee, at, amount, proof, fulfils))
+        self.view.payment_counts(payee, at, amount, proof, fulfils)
     }
 }
 
@@ -207,6 +207,20 @@ impl Story {
         let mut v = AgreementsView::new(&self.w.v, mirs());
         v.rail_valid = self.rail_valid.clone();
         v.anchored = self.anchors.clone();
+        // What "the same payment" is, the Lightning rail Module says (Money
+        // rule 12, F380): stated for every receipt and claim held.
+        let ln = Lightning;
+        let modules = Modules::new().adopt(&ln);
+        for h in self.w.v.held_acts().filter(|h| h.inside.spec == mirs().money) {
+            let (proof, x) = match Payload::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Payload::Receipt(r)) => (r.proof.clone(), mor_payment::payment(&Record::Receipt(&r), &modules)),
+                Ok(Payload::Claim(c)) => (c.proof.clone(), mor_payment::payment(&Record::Claim(&c, [0; 32], &Citations::default()), &modules)),
+                _ => continue,
+            };
+            if let Some(x) = x {
+                v.payments.insert(proof, x);
+            }
+        }
         v
     }
 
@@ -323,7 +337,7 @@ fn the_stolen_phone() {
     let d3 = s.debt(&mut label, deal, 20_000, v2);
     let (_, claim3) = s.pay(&mut lazy, d3, to_thief, &thief_node, sat(20_000)); // never anchored
     for d in [d1, d2, d3] {
-        assert_eq!(s.view().paid_toward(&d), 20_000, "in the window, everything that followed the published chain counts");
+        assert_eq!(s.view().paid_toward(&d).unwrap(), 20_000, "in the window, everything that followed the published chain counts");
     }
 
     // Ana changes her locks: a rotation disowning the thief's acts. She
@@ -351,7 +365,7 @@ fn the_stolen_phone() {
     assert_eq!(s.w.v.resolve(&aid).position_of(&rot), Some(1), "the majority of her homes holds it: it counts");
     assert_eq!(s.w.v.status(&v2), Status::Void);
     for d in [d1, d2, d3, d4] {
-        assert_eq!(s.view().paid_toward(&d), 20_000, "counting, but not anchored: Ana still bears the window");
+        assert_eq!(s.view().paid_toward(&d).unwrap(), 20_000, "counting, but not anchored: Ana still bears the window");
     }
 
     // Her client obtains the quorum's receipts and anchors them on the main
@@ -363,13 +377,13 @@ fn the_stolen_phone() {
     };
     assert_eq!(mine, receipts);
     s.anchor(receipts[0], "main", 151);
-    assert_eq!(s.view().paid_toward(&d3), 20_000, "one home's receipt is no quorum: no point yet (F180)");
+    assert_eq!(s.view().paid_toward(&d3).unwrap(), 20_000, "one home's receipt is no quorum: no point yet (F180)");
     s.anchor(receipts[1], "main", 160);
     s.anchor(receipts[2], "main", 170);
     assert_eq!(fin::quorum_point(&q, &rot, &s.anchors, &s.main.reference()), Some(160), "the point: the second home's anchored receipt");
 
     // The verdicts, by the core.
-    let paid = |s: &Story, d: &Hash| s.view().paid_toward(d);
+    let paid = |s: &Story, d: &Hash| s.view().paid_toward(d).unwrap();
     assert_eq!(paid(&s, &d1), 20_000, "anchored at 100, before the point: the label does not pay twice");
     assert_eq!(paid(&s, &d2), 0, "the colluding payer anchored on a clock Ana never named (F176)");
     assert_eq!(paid(&s, &d3), 0, "never anchored: the payer bears, by its choice of wallet");

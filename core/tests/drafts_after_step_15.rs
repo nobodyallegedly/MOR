@@ -262,13 +262,40 @@ fn a_bad_position_is_judged_only_when_the_line_is_rebuilt_f292() {
         assert_eq!(w.v.status(&x), Status::Valid, "not judged act by act");
     }
     // The rotation keeps the tip as the client saw it: the line rebuilt from
-    // the acts held does not fit, so the earlier acts cannot be proven kept.
+    // the acts held does not fit. Its only tip does not fit, the line held:
+    // the tip keeps nothing, itself included, and the rotation stands on its
+    // bytes (rotation check 7).
     let (r, _) = w.rotate(&jj, Rot { kept: Some(vec![KeptTip { act: i3, position: 41, summary: sha256(b"no summary either") }]), ..Default::default() });
     w.receipt(&mut h, &j.id, &r, 1);
     assert_eq!(chain(&w, &j), vec![j.id, r]);
-    assert_eq!(w.v.status(&i1), Status::Void);
-    assert_eq!(w.v.status(&ib), Status::Void);
-    assert_eq!(w.v.status(&i3), Status::Valid, "the tip itself, named by the rotation");
+    assert_eq!(w.v.status(&r), Status::Valid);
+    for x in [i1, ib, i3] {
+        assert_eq!(w.v.status(&x), Status::Void);
+    }
+    // Beside a tip that fits, the same tip keeps nothing, itself included,
+    // and the rotation counts (rotation check 7).
+    let mut w = World::new();
+    let mut h = w.operator("home");
+    let j = w.genesis("journalist", vec![home(&h)], None, None);
+    let mut jj = j.clone();
+    let a1 = next(&mut jj, text_spec(), 0, text("one"), None, None, "p1");
+    let i1 = w.add(&a1);
+    let bad = raw(&jj, text_spec(), 0, text("forty"), Some(vec![i1]), Some(40), Some(sha256(b"no summary")), None, None, "bad", None);
+    let ib = w.add(&bad);
+    let a3 = raw(&jj, text_spec(), 0, text("forty-one"), Some(vec![ib]), Some(41), Some(sha256(b"no summary either")), None, None, "p3", None);
+    let i3 = w.add(&a3);
+    let mut other = jj.clone();
+    other.seq = vec![];
+    let o1 = next(&mut other, text_spec(), 0, text("another device"), None, None, "o1");
+    let io = w.add(&o1);
+    let fits = KeptTip { act: io, position: 1, summary: Mmr::from_ids(&[io]).root() };
+    let (r, _) = w.rotate(&jj, Rot { kept: Some(vec![KeptTip { act: i3, position: 41, summary: sha256(b"no summary either") }, fits]), ..Default::default() });
+    w.receipt(&mut h, &j.id, &r, 1);
+    assert_eq!(chain(&w, &j), vec![j.id, r]);
+    assert_eq!(w.v.status(&io), Status::Valid);
+    for x in [i1, ib, i3] {
+        assert_eq!(w.v.status(&x), Status::Void, "a tip that does not fit keeps nothing");
+    }
 }
 
 /// Fable's T3: a verifier that can show an act invalid by any rule it can
@@ -405,7 +432,7 @@ fn a_kept_act_whose_line_is_not_held_is_unknown_5_5c() {
     }
     assert_eq!(reader.status(&first), Status::Unknown, "unknown, never void");
     assert_eq!(reader.status(&stray), Status::Unknown, "void needs the kept line rebuilt");
-    assert_eq!(reader.status(&third), Status::Valid, "the tip, named by the rotation");
+    assert_eq!(reader.status(&third), Status::Valid, "the tip, named by the rotation: check 7 applies where the line is held");
     reader.add(w.v.get(&second).unwrap().act.clone()).unwrap();
     assert_eq!(reader.status(&first), Status::Valid);
     assert_eq!(reader.status(&stray), Status::Void);
@@ -461,7 +488,7 @@ fn an_identity_born_under_a_scheme_the_client_lacks_is_unknown_8_4() {
     };
     let ga = act::make(&inside, &[1; 32], &[2; 24], &Addressing { signer: None, binding: None, public: true, to: None }, |_| sig.clone());
     let gid = w.add(&ga);
-    assert_eq!(w.v.resolve(&gid).stop, Stop::Unknown);
+    assert_eq!(w.v.resolve(&gid).stop, Stop::GenesisUnknown);
     let p = Person { name: "newcomer".into(), id: gid, gen: 0, sign: template.sign.clone(), chain_key, binding: gid, position: 0, tip: gid, scheme: 3, seq: vec![], log: vec![], last_summary: None, cite: None };
     let (r, mut q) = w.rotate(&p, Rot::default());
     assert_eq!(w.v.status(&r), Status::Unknown, "a rotation the client can verify, of a chain it cannot resolve");

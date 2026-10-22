@@ -84,7 +84,7 @@ impl Lab {
     }
 
     fn view(&self) -> AgreementsView<'_> {
-        let mut v = AgreementsView::new(&self.w.v, mirs());
+        let mut v = common::stand_in_payments(AgreementsView::new(&self.w.v, mirs()));
         v.rail_valid = self.rail_valid.clone();
         v.rails = self.rails.clone();
         v
@@ -174,7 +174,7 @@ impl Lab {
     }
 
     fn paid(&self, debt: &Hash) -> u64 {
-        self.view().paid_toward(debt)
+        self.view().paid_toward(debt).unwrap()
     }
 }
 
@@ -457,7 +457,7 @@ fn the_payers_claim_decides_the_purpose_where_the_rail_binds_none() {
     let c = l.claim(&mut debtor, cid, d, 500, "500", at, vec![]);
     let r = l.receipt(&mut creditor, debtor.id, tip_pointer, 500, "500", Some(at));
     assert_eq!(l.paid(&d), 500, "the payer's claim decides");
-    assert!(l.view().disagreements(&cid).contains(&Disagreement::Differs {
+    assert!(l.view().disagreements(&cid).unwrap().contains(&Disagreement::Differs {
         claim: c,
         receipt: r,
         claimed: amount(500),

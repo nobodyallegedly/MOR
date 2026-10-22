@@ -36,7 +36,7 @@ pub use pay::{pay_signers, stakes_paid_less, PaidLess};
 pub use proofs::{delivery_checkers, OfferClass, ProofChecker, ProofVerdict};
 pub use tiers::{changes, judicial_changes, powers_needed, rollback_powers, Change, Tier};
 pub use view::{
-    Deadline, KeeperSequence, Agreement, AreaCount, AreaLimits, Backing, CutCheck, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement,
+    Deadline, KeeperSequence, Agreement, AreaCount, AreaLimits, Backing, CutCheck, CloneState, Closed, ClosingEval, Consent, Current, DebtReleaseEval, Departure, Disagreement, Payment,
     BrokenAct, ChainBreak, DepartureKind, ForkEval, AgreementsView, Mismatch, NegotiationRecord, NextVoices, PointerCheck, RecordEval,
     ReleaseEval, Role, ServiceAccount, SplitEval, PurchaseEval, PurchaseVerdict, Unpaid, Unsplit, DealFork, DealState, ForkAlarm,
     AlarmKind, NumberBreak, OwedBack, SplitNumbers, OfferEval, TransferEval, WorkOwners, SuccessorCheck, SaleState, VowEval, VowSale,

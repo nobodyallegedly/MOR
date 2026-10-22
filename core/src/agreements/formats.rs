@@ -273,6 +273,11 @@ pub enum AgreementsError {
     /// binding rests on them (Identity, the sentence after rule 17, F153).
     /// It is neither valid nor invalid until it no longer rests on them.
     OwnAttempt,
+    /// Unknown: the answer rests on whether two receipts or claims are one
+    /// payment, which is their rail Module's to say (Money rule 12, never
+    /// through the proofs' bytes), and the caller stated no such answer for
+    /// one of them ([`super::AgreementsView::payments`]).
+    PaymentUnstated,
 }
 
 impl fmt::Display for AgreementsError {
@@ -292,6 +297,9 @@ impl fmt::Display for AgreementsError {
             AgreementsError::OwnAttempt => f.write_str(
                 "unknown: it rests on this reader's own failed attempts to reach a home (re-homed without audit), and nothing binding rests on them (F153)",
             ),
+            AgreementsError::PaymentUnstated => f.write_str(
+                "unknown: it rests on whether two receipts or claims are one payment, which their rail Module says, and no such answer was stated",
+            ),
         }
     }
 }
@@ -309,6 +317,7 @@ impl AgreementsError {
             AgreementsError::Missing(_) => "missing",
             AgreementsError::Unsettled(_) => "unsettled",
             AgreementsError::OwnAttempt => "own-attempt",
+            AgreementsError::PaymentUnstated => "payment-unstated",
         }
     }
 }

@@ -129,10 +129,11 @@ pub struct Link {
 pub enum Stop {
     /// The genesis is not held.
     NoGenesis,
-    /// The genesis is signed under a scheme this client does not implement.
-    Unknown,
-    /// The genesis is invalid.
-    Invalid,
+    /// The genesis unknown: signed under a scheme this client does not
+    /// implement (Identity, "What stops a chain").
+    GenesisUnknown,
+    /// The genesis invalid.
+    GenesisInvalid,
     /// No rotation at the next position is held.
     End,
     /// Rotations at the next position are held; none counts yet.
@@ -273,6 +274,12 @@ pub enum Status {
     Invalid,
     /// Signed under a scheme, or of a type, this client does not implement.
     Unknown,
+    /// An identity-chain act that passes the rotation checks but does not
+    /// count at its position, where another counts (Identity, "Which
+    /// rotation counts"): neither invalid nor void, and shown so. An act
+    /// bound to it is judged by the rotation that counts there: its
+    /// binding names no act that counts (everyday check 2).
+    NotCounting,
     /// Signed with a scoped key (F128): its binding names an act of a higher
     /// MIR that installs a key of this identity, such as an Agreements grant's grant
     /// key. Identity checks only that the signature is valid; that MIR
@@ -320,6 +327,10 @@ pub struct Verifier {
     proofs: BTreeMap<(Hash, u64), Vec<Hash>>,
     unreachable: BTreeSet<Hash>,
     recorded: BTreeSet<Hash>,
+    /// Acts whose keepers' records this verifier cannot read in full: an
+    /// agreement the act belongs to lies beyond an act it does not hold
+    /// (Agreements, "Belongs to"). Void would need them read: unknown.
+    keepers_unknown: BTreeSet<Hash>,
     /// What this verifier found at homes (F152, F159): each private link
     /// act (Identity types 6 to 8), in its sealed form, with the operator
     /// of the home it was found at (the signer itself for a self-hosted
@@ -434,6 +445,7 @@ impl Verifier {
             proofs: BTreeMap::new(),
             unreachable: BTreeSet::new(),
             recorded: BTreeSet::new(),
+            keepers_unknown: BTreeSet::new(),
             found: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             without: RefCell::new(None),
@@ -628,6 +640,15 @@ impl Verifier {
         self.changed();
     }
 
+    /// Whether a named keeper recorded this act cannot be told: an
+    /// agreement it belongs to lies beyond an act this verifier does not
+    /// hold (Agreements, "Belongs to"). Left out of its rotation's kept
+    /// ancestry, it is unknown rather than void.
+    pub fn keepers_cannot_tell(&mut self, act: Hash) {
+        self.keepers_unknown.insert(act);
+        self.changed();
+    }
+
     /// This verifier found the act `act` in its sealed form (its outside
     /// and locked bytes, no key) at the home operated by `home`: the
     /// operator's identity hash, or, for a self-hosted home, the identity
@@ -675,6 +696,7 @@ impl Verifier {
             proofs: self.proofs.clone(),
             unreachable: BTreeSet::new(),
             recorded: self.recorded.clone(),
+            keepers_unknown: self.keepers_unknown.clone(),
             found: BTreeSet::new(),
             cache: RefCell::new(BTreeMap::new()),
             without: RefCell::new(None),
@@ -946,7 +968,7 @@ impl Verifier {
         match self.status(publication) {
             Status::Valid => SpecClaim::Claimed,
             Status::Disputed => SpecClaim::Unclaimed { disputed: true },
-            Status::Void | Status::Invalid => SpecClaim::Unclaimed { disputed: false },
+            Status::Void | Status::Invalid | Status::NotCounting => SpecClaim::Unclaimed { disputed: false },
             Status::Unknown | Status::Pending | Status::Scoped => SpecClaim::Unknown,
         }
     }
@@ -1127,7 +1149,7 @@ impl Verifier {
             return res;
         };
         match (&g.verdict, &g.identity) {
-            (Verdict::Unknown, _) => res.stop = Stop::Unknown,
+            (Verdict::Unknown, _) => res.stop = Stop::GenesisUnknown,
             (Verdict::Valid, Some(Ok(Payload::Genesis(gen)))) => {
                 res.links.push(Link {
                     act: *id,
@@ -1135,7 +1157,7 @@ impl Verifier {
                 });
                 res.states.push(ChainState::genesis(*id, gen));
             }
-            _ => res.stop = Stop::Invalid,
+            _ => res.stop = Stop::GenesisInvalid,
         }
         if res.links.is_empty() {
             return res;
@@ -1209,6 +1231,22 @@ impl Verifier {
             });
         }
         out
+    }
+
+    /// Whether `x`, a rotation or chain signature of `id`, passes the
+    /// rotation checks at a position where another act counts ("Which
+    /// rotation counts"): it is not counting.
+    fn lost_at(&self, res: &Resolution, id: &Hash, x: &Held) -> bool {
+        let n = match x.payload() {
+            Some(Payload::Rotation(r)) => r.position,
+            Some(Payload::ChainSignature(c)) => c.position,
+            _ => return false,
+        };
+        let n = n as usize;
+        if n == 0 || n >= res.links.len() || res.links[n].act == x.id {
+            return false;
+        }
+        self.candidates(id, n as u64, &res.links[n - 1].act, &res.states[n - 1]).iter().any(|c| c.id == x.id)
     }
 
     fn step(
@@ -1588,6 +1626,7 @@ impl Verifier {
             // of them; disputed is void but relied on, so it waits too.
             Kept::CannotTell => Judgement::Unknown,
             Kept::No if self.recorded.contains(&x.id) || self.acknowledged(cx, x) => Judgement::Disputed,
+            Kept::No if self.keepers_unknown.contains(&x.id) => Judgement::Unknown,
             Kept::No => Judgement::Void,
         }
     }
@@ -1615,17 +1654,19 @@ impl Verifier {
         false
     }
 
-    /// Whether an act lies in a rotation's kept ancestry: it is a kept tip,
-    /// or an earlier act of the same line, proved by the tip's running
-    /// summary from the act ids the verifier holds. `CannotTell` where a
-    /// line it could lie on cannot be rebuilt (F298).
+    /// Whether an act lies in a rotation's kept ancestry: a kept tip or an
+    /// earlier act of its line, proved by the tip's running summary from
+    /// the act ids the verifier holds (rotation check 7: a tip whose line,
+    /// held, does not fit keeps nothing, itself included; a tip whose line
+    /// is not held is kept by its name, what lies below it unknown).
+    /// `CannotTell` where a line it could lie on cannot be rebuilt (F298).
     fn in_kept_ancestry(&self, x: &Held, r: &Rotation, signer: &Hash) -> Kept {
         let Some(p) = x.inside.position else {
             return Kept::No;
         };
         let mut tell = true;
         for t in &r.kept {
-            if t.act == x.id {
+            if t.act == x.id && !matches!(self.line(signer, t), Line::Mismatch) {
                 return Kept::Yes;
             }
             if p >= 1 && p < t.position {
@@ -2024,8 +2065,10 @@ impl Verifier {
                 Status::Valid
             } else if res.waiting().contains(&x.id) {
                 Status::Pending
+            } else if self.lost_at(&res, &who, x) {
+                Status::NotCounting
             } else if matches!(res.stop, Stop::CannotTell(ref c) if c.contains(&x.id))
-                || (res.links.is_empty() && matches!(res.stop, Stop::NoGenesis | Stop::Unknown))
+                || (res.links.is_empty() && matches!(res.stop, Stop::NoGenesis | Stop::GenesisUnknown))
                 || self.beyond(&res, x)
             {
                 // F298: a chain this verifier cannot resolve this far.
@@ -2038,7 +2081,7 @@ impl Verifier {
             return Status::Invalid;
         };
         let res = self.resolve_cx(cx, signer);
-        if res.links.is_empty() && matches!(res.stop, Stop::NoGenesis | Stop::Unknown) {
+        if res.links.is_empty() && matches!(res.stop, Stop::NoGenesis | Stop::GenesisUnknown) {
             // F298: the signer's genesis is not held, or is signed under a
             // scheme this client lacks: a chain it cannot resolve.
             return Status::Unknown;

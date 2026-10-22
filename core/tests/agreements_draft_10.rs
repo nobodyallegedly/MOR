@@ -63,7 +63,7 @@ fn step_5_3_a_negotiation_record_is_proven_complete_by_agreements_messages() {
     for m in [m1, m2, m3, m4] {
         assert_eq!(w.v.status(&m), Status::Valid);
     }
-    let v = AgreementsView::new(&w.v, mirs());
+    let v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
     let r = v.negotiation(&m1).unwrap();
     assert_eq!(r.sides, vec![buyer.id, journalist.id]);
     assert_eq!(r.messages.len(), 4);
@@ -94,14 +94,14 @@ fn step_5_3_a_negotiation_record_is_proven_complete_by_agreements_messages() {
     let m6 = say(&mut w, &mut journalist, "Agreed, then?", Some((m1, reply)), Some(m4));
     // A third identity's message in the thread is no part of it either.
     let m7 = say(&mut w, &mut stranger, "Thirty!", Some((m1, m4)), Some(m4));
-    let v = AgreementsView::new(&w.v, mirs());
+    let v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
     let r = v.negotiation(&m1).unwrap();
     assert!(!r.messages.contains(&reply) && !r.messages.contains(&m6) && !r.messages.contains(&m7));
     assert_eq!(r.complete_up_to, Some(m3));
 
     // The buyer acknowledges m4: complete up to it.
     let m5 = say(&mut w, &mut buyer, "Forty-five it is.", Some((m1, m4)), Some(m4));
-    let v = AgreementsView::new(&w.v, mirs());
+    let v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
     let r = v.negotiation(&m1).unwrap();
     assert!(r.messages.contains(&m5));
     assert_eq!(r.complete_up_to, Some(m4));
@@ -109,7 +109,7 @@ fn step_5_3_a_negotiation_record_is_proven_complete_by_agreements_messages() {
     assert!(!r.forked);
     // The journalist answers m4 twice, from two devices: a visible fork.
     let _ = say(&mut w, &mut journalist, "Or fifty with prints.", Some((m1, m4)), Some(m3));
-    let v = AgreementsView::new(&w.v, mirs());
+    let v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
     assert!(v.negotiation(&m1).unwrap().forked);
 }
 
@@ -125,7 +125,7 @@ fn negotiation_message_shapes() {
     assert!(NegotiationMessage::decode(&two.open(None).unwrap()).is_err(), "acks name one message");
     // The thread's first message must name no chain.
     let later = say(&mut w, &mut p, "later", Some((h("t"), h("t"))), None);
-    assert!(AgreementsView::new(&w.v, mirs()).negotiation(&later).is_err());
+    assert!(common::stand_in_payments(AgreementsView::new(&w.v, mirs())).negotiation(&later).is_err());
 }
 
 fn sat(n: u64) -> Amount {
@@ -181,7 +181,7 @@ fn step_2_4e_a_split_services_receipt_evidences_a_rail_module_the_owners_publish
     let on_ln2 = service_receipt(&mut w, &mut service, ln2, ptr);
     let on_chain = service_receipt(&mut w, &mut service, onchain, ptr);
 
-    let v = AgreementsView::new(&w.v, mirs());
+    let v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
     let (s, o) = (service.id, owners.id);
     // The service's own receipt evidences the rail Module the owners'
     // pointer names, though the service signed it (F119).
@@ -195,13 +195,13 @@ fn step_2_4e_a_split_services_receipt_evidences_a_rail_module_the_owners_publish
     // For any other role, the service's own act is never evidence (F75).
     assert!(!v.role_evidence(&on_ln, &Role::Other, &s, &o).unwrap());
     let referral = w.post(&mut fan, "I sent them here");
-    let v = AgreementsView::new(&w.v, mirs());
+    let v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
     assert!(v.role_evidence(&referral, &Role::Other, &s, &o).unwrap());
 
     // The owners name both Modules for the one rail: either now earns, the
     // invoice's issuer choosing (cost stated).
     let _ = pointer(&mut w, &mut owners, &[ln, ln2]);
-    let v = AgreementsView::new(&w.v, mirs());
+    let v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
     assert!(v.role_evidence(&on_ln2, &Role::RailModule(ln2), &s, &o).unwrap());
 }
 

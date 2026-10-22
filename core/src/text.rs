@@ -1,9 +1,9 @@
 //! Canonical text (Text MIR, "Canonical text").
 //!
 //! Every text field of every act is canonical text. A verifier checks rules
-//! 1 to 5 exactly, and rule 6 (NFC) with the tables of the pinned Unicode
+//! 7 to 11 exactly, and rule 12 (NFC) with the tables of the pinned Unicode
 //! version, never with whatever version its system happens to have (Text,
-//! validity rule 2). The pinned version is Unicode 17.0 as of Text draft 5;
+//! rule 13). The pinned version is Unicode 17.0 as of Text draft 5;
 //! the tables come from `unicode-normalization`, pinned to a release that
 //! carries exactly that version, and checked at compile time below.
 
@@ -28,19 +28,19 @@ const _: () = {
 /// of the offending character in the UTF-8 string.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TextError {
-    /// Rule 1: U+FEFF appears.
+    /// Rule 7: U+FEFF appears.
     ByteOrderMark { at: usize },
-    /// Rule 2: CR, U+2028 or U+2029 appears.
+    /// Rule 8: CR, U+2028 or U+2029 appears.
     LineBreak { at: usize },
-    /// Rule 3: a control character other than LF (U+0000 to U+001F, U+007F to U+009F).
+    /// Rule 9: a control character other than LF (U+0000 to U+001F, U+007F to U+009F).
     Control { at: usize },
-    /// Rule 4: a line ends with a space character (the fixed list).
+    /// Rule 10: a line ends with a space character (the fixed list).
     TrailingSpace { at: usize },
-    /// Rule 4: the text ends with LF.
+    /// Rule 10: the text ends with LF.
     FinalLineBreak { at: usize },
-    /// Rule 5: one of the 66 noncharacters.
+    /// Rule 11: one of the 66 noncharacters.
     Noncharacter { at: usize },
-    /// Rule 6: the text is not in NFC under the pinned tables.
+    /// Rule 12: the text is not in NFC under the pinned tables.
     NotNfc,
 }
 
@@ -48,12 +48,12 @@ impl TextError {
     /// The rule number in the Text MIR.
     pub fn rule(&self) -> u8 {
         match self {
-            TextError::ByteOrderMark { .. } => 1,
-            TextError::LineBreak { .. } => 2,
-            TextError::Control { .. } => 3,
-            TextError::TrailingSpace { .. } | TextError::FinalLineBreak { .. } => 4,
-            TextError::Noncharacter { .. } => 5,
-            TextError::NotNfc => 6,
+            TextError::ByteOrderMark { .. } => 7,
+            TextError::LineBreak { .. } => 8,
+            TextError::Control { .. } => 9,
+            TextError::TrailingSpace { .. } | TextError::FinalLineBreak { .. } => 10,
+            TextError::Noncharacter { .. } => 11,
+            TextError::NotNfc => 12,
         }
     }
 }
@@ -61,17 +61,17 @@ impl TextError {
 impl fmt::Display for TextError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TextError::ByteOrderMark { at } => write!(f, "rule 1: U+FEFF at byte {at}"),
+            TextError::ByteOrderMark { at } => write!(f, "Text rule 7: U+FEFF at byte {at}"),
             TextError::LineBreak { at } => {
-                write!(f, "rule 2: a line break other than LF at byte {at}")
+                write!(f, "Text rule 8: a line break other than LF at byte {at}")
             }
-            TextError::Control { at } => write!(f, "rule 3: a control character at byte {at}"),
-            TextError::TrailingSpace { at } => write!(f, "rule 4: a trailing space at byte {at}"),
+            TextError::Control { at } => write!(f, "Text rule 9: a control character at byte {at}"),
+            TextError::TrailingSpace { at } => write!(f, "Text rule 10: a trailing space at byte {at}"),
             TextError::FinalLineBreak { at } => {
-                write!(f, "rule 4: a final line break at byte {at}")
+                write!(f, "Text rule 10: a final line break at byte {at}")
             }
-            TextError::Noncharacter { at } => write!(f, "rule 5: a noncharacter at byte {at}"),
-            TextError::NotNfc => write!(f, "rule 6: not in NFC (Unicode 17.0 tables)"),
+            TextError::Noncharacter { at } => write!(f, "Text rule 11: a noncharacter at byte {at}"),
+            TextError::NotNfc => write!(f, "Text rule 12: not in NFC (Unicode 17.0 tables)"),
         }
     }
 }
@@ -98,23 +98,26 @@ pub fn is_noncharacter(c: char) -> bool {
 /// Rules 1 to 5 are checked character by character and the first failure is
 /// reported; rule 6 is checked last, on a text that meets the others.
 pub fn check(s: &str) -> Result<(), TextError> {
+    // Each rule over the whole string before the next: the rule a string
+    // breaks is the first of rules 7 to 12 in the order numbered (Text,
+    // rule 13), whichever character comes first.
+    if let Some((at, _)) = s.char_indices().find(|(_, c)| *c == '\u{FEFF}') {
+        return Err(TextError::ByteOrderMark { at });
+    }
+    if let Some((at, _)) = s.char_indices().find(|(_, c)| matches!(c, '\r' | '\u{2028}' | '\u{2029}')) {
+        return Err(TextError::LineBreak { at });
+    }
+    if let Some((at, _)) = s.char_indices().find(|(_, c)| *c != '\n' && matches!(c, '\u{0000}'..='\u{001F}' | '\u{007F}'..='\u{009F}')) {
+        return Err(TextError::Control { at });
+    }
     let mut last: Option<(usize, char)> = None;
     for (at, c) in s.char_indices() {
-        match c {
-            '\u{FEFF}' => return Err(TextError::ByteOrderMark { at }),
-            '\r' | '\u{2028}' | '\u{2029}' => return Err(TextError::LineBreak { at }),
-            '\n' => {
-                if let Some((p, pc)) = last {
-                    if is_space(pc) {
-                        return Err(TextError::TrailingSpace { at: p });
-                    }
+        if c == '\n' {
+            if let Some((p, pc)) = last {
+                if is_space(pc) {
+                    return Err(TextError::TrailingSpace { at: p });
                 }
             }
-            '\u{0000}'..='\u{001F}' | '\u{007F}'..='\u{009F}' => {
-                return Err(TextError::Control { at })
-            }
-            _ if is_noncharacter(c) => return Err(TextError::Noncharacter { at }),
-            _ => {}
         }
         last = Some((at, c));
     }
@@ -125,6 +128,9 @@ pub fn check(s: &str) -> Result<(), TextError> {
         if is_space(c) {
             return Err(TextError::TrailingSpace { at });
         }
+    }
+    if let Some((at, _)) = s.char_indices().find(|(_, c)| is_noncharacter(*c)) {
+        return Err(TextError::Noncharacter { at });
     }
     if !is_nfc(s) {
         return Err(TextError::NotNfc);

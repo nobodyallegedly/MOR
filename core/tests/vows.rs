@@ -37,7 +37,7 @@ fn spec(s: &str) -> Hash {
 /// The view, with the rail's answer, valid, for every payer's claim in
 /// `claims` (the caller states it: the core reads no rail).
 fn view_with<'a>(w: &'a World, claims: &[Hash]) -> AgreementsView<'a> {
-    let mut v = AgreementsView::new(&w.v, mirs());
+    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
     for c in claims {
         v.rail_valid.insert(*c, PaidAt::Flow(spec("the payee's pointer")));
     }
