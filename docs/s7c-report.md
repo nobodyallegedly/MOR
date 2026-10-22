@@ -123,6 +123,6 @@ A subagent read only the eight texts and the diff.
 
 - Rust workspace: every test passes.
 - The vectors regenerate byte for byte; Python check: all 192 vectors agree.
-- Every client suite: see the pull request.
+- Every client suite passes locally (desk 113, dub 39, collective 44, damgar 33, site 86, and the rest).
 - `scripts/c-box/make-c-box.sh`, run into a scratch folder outside the repository: assembled 8 texts and 12 vector files, refused nothing.
-- CI on the pull request: checked, and recorded in the pull request.
+- CI on the pull request (99): the tests workflow passed on the first run, with no re-run.
