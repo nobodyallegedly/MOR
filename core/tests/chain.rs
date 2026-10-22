@@ -41,7 +41,7 @@ fn genesis_checks() {
         None,
     );
     assert_eq!(w.v.status(&b.id), Status::Invalid);
-    assert_eq!(w.v.resolve(&b.id).stop, Stop::Invalid);
+    assert_eq!(w.v.resolve(&b.id).stop, Stop::GenesisInvalid);
     // A threshold must be more than half the operators, and no more than all.
     let c = w.genesis(
         "carol",

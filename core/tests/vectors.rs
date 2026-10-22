@@ -311,8 +311,8 @@ fn verdict_vectors() {
                     let r = v.resolve(&h(&ask["identity"]));
                     let stop = match r.stop {
                         Stop::NoGenesis => "no genesis",
-                        Stop::Unknown => "unknown",
-                        Stop::Invalid => "invalid genesis",
+                        Stop::GenesisUnknown => "genesis unknown",
+                        Stop::GenesisInvalid => "genesis invalid",
                         Stop::End => "end",
                         Stop::Pending(_) => "pending",
                         Stop::Contested(_) => "contested",

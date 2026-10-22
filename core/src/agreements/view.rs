@@ -132,9 +132,12 @@ pub struct AgreementsView<'a> {
     /// [`Self::disagreements`]). A fact the caller states, like `rail_valid`.
     pub payments: BTreeMap<Vec<u8>, Vec<u8>>,
     /// Set when an answer compared two records whose sameness rests on a
-    /// payment not stated in [`Self::payments`]: that answer is unknown
-    /// ([`Self::unstated_payment_read`]).
+    /// payment not stated in [`Self::payments`] ([`Self::unstated_payment_read`]).
     unstated: std::cell::Cell<bool>,
+    /// What such a comparison answers while an answer is judged
+    /// ([`Self::judged`]): first that the two are not one payment, then that
+    /// they are. An answer the same both ways does not depend on them.
+    assume_same: std::cell::Cell<bool>,
     /// Pairs `(clock Module, rail Module)` where the clock Module reads the
     /// rail's own proof as the payment's anchor (F201, F202: the Bitcoin
     /// clock and the on-chain rail): on such a clock, rule 15 compares the
@@ -603,6 +606,7 @@ impl<'a> AgreementsView<'a> {
             rail_pending: BTreeSet::new(),
             payments: BTreeMap::new(),
             unstated: Default::default(),
+            assume_same: Default::default(),
             rail_clocks: BTreeSet::new(),
             absence_accepted: BTreeSet::new(),
             anchored: Default::default(),
@@ -669,6 +673,7 @@ impl<'a> AgreementsView<'a> {
             rail_pending: self.rail_pending.clone(),
             payments: self.payments.clone(),
             unstated: Default::default(),
+            assume_same: Default::default(),
             rail_clocks: self.rail_clocks.clone(),
             absence_accepted: self.absence_accepted.clone(),
             anchored: self.anchored.clone(),
@@ -7954,11 +7959,9 @@ impl<'a> AgreementsView<'a> {
     /// until the receiver signs a receipt matching it). Notes the answer
     /// unknown where two records could be one payment and one is unstated.
     pub(super) fn one_count(&self, receipts: &[((Hash, Payment), u64)], claims: &[((Hash, Payment), u64)]) -> u64 {
-        let all: Vec<(Hash, Payment)> = receipts.iter().chain(claims).map(|(k, _)| k.clone()).collect();
-        self.note_unstated(&all);
         let mut payments: Vec<((Hash, Payment), u64, u64)> = vec![];
         for (k, v, is_receipt) in receipts.iter().map(|(k, v)| (k, *v, true)).chain(claims.iter().map(|(k, v)| (k, *v, false))) {
-            let at = match payments.iter().position(|(p, _, _)| p == k || matches!((&p.1, &k.1), (Payment::Stated(_), Payment::Stated(_)) if self.same_on_rail(p, k))) {
+            let at = match payments.iter().position(|(p, _, _)| self.same_on_rail(p, k)) {
                 Some(i) => i,
                 None => {
                     payments.push((k.clone(), 0, 0));
@@ -8335,8 +8338,8 @@ impl<'a> AgreementsView<'a> {
 
     /// Whether two payments are one (Money rule 12): both stated and equal,
     /// or one record compared with itself. Where either is unstated, the
-    /// answer is unknown: not shown the same here, and noted, so that a
-    /// verdict resting on it answers unknown ([`Self::unstated_payment_read`]).
+    /// answer is unknown: noted, and answered as the answer being judged
+    /// assumes ([`Self::judged`]): not one payment, unless it assumes so.
     pub fn same_payment_as(&self, a: &Payment, b: &Payment) -> bool {
         match (a, b) {
             (Payment::None, _) | (_, Payment::None) => false,
@@ -8344,7 +8347,7 @@ impl<'a> AgreementsView<'a> {
             _ if a == b => true,
             _ => {
                 self.unstated.set(true);
-                false
+                self.assume_same.get()
             }
         }
     }
@@ -8364,23 +8367,57 @@ impl<'a> AgreementsView<'a> {
         self.unstated.get()
     }
 
-    /// `f`'s answer, or `None` (unknown) where it compared records whose
-    /// sameness rests on a payment not stated.
-    fn judged<T>(&self, f: impl FnOnce() -> T) -> Option<T> {
-        self.unstated.set(false);
-        let r = f();
-        (!self.unstated.get()).then_some(r)
+    /// `f`'s answer, or `None` (unknown) where it depends on whether two
+    /// records whose payment is not stated are one payment (Money rule 12;
+    /// F381): `f` is answered assuming every such pair is not one payment,
+    /// and, where it compared any, again assuming every such pair is; the
+    /// same answer both ways does not depend on them, and stands. Scoped to
+    /// this answer: a caller judging its own answer judges it the same way.
+    fn judged<T: PartialEq>(&self, f: impl Fn() -> T) -> Option<T> {
+        let outer = (self.unstated.replace(false), self.assume_same.replace(false));
+        let first = f();
+        let r = if !self.unstated.get() {
+            Some(first)
+        } else {
+            self.assume_same.set(true);
+            let second = f();
+            (first == second).then_some(first)
+        };
+        self.unstated.set(outer.0);
+        self.assume_same.set(outer.1);
+        r
     }
 
-    /// Records grouped by payment (a creditor's receipts or a payer's
-    /// claims toward one purpose): notes the answer unknown where two of
-    /// them on one rail could be one payment and one is unstated.
-    fn note_unstated(&self, keys: &[(Hash, Payment)]) {
-        for (i, a) in keys.iter().enumerate() {
-            for b in &keys[i + 1..] {
-                self.same_on_rail(a, b);
+    /// [`Self::judged`] for an answer that may fail: unknown is
+    /// [`AgreementsError::PaymentUnstated`].
+    pub(super) fn judged_r<T: PartialEq>(&self, f: impl Fn() -> R<T>) -> R<T> {
+        self.judged(f).unwrap_or(Err(AgreementsError::PaymentUnstated))
+    }
+
+    /// [`Self::judged`] for a list: answered both ways, each entry found
+    /// both ways stands, and each found one way only is given back marked
+    /// (`mark`) as resting on a payment not stated; the order is the first
+    /// answer's, then the second's.
+    pub(super) fn judged_list<T: PartialEq + Clone>(&self, f: impl Fn() -> R<Vec<T>>, mark: impl Fn(T) -> T) -> R<Vec<T>> {
+        let outer = (self.unstated.replace(false), self.assume_same.replace(false));
+        let first = f();
+        let r = if !self.unstated.get() {
+            first
+        } else {
+            self.assume_same.set(true);
+            match (first, f()) {
+                (Ok(a), Ok(b)) => {
+                    let mut out: Vec<T> = a.iter().map(|x| if b.contains(x) { x.clone() } else { mark(x.clone()) }).collect();
+                    out.extend(b.iter().filter(|x| !a.contains(x)).map(|x| mark(x.clone())));
+                    Ok(out)
+                }
+                (Err(e), Err(g)) if e == g => Err(e),
+                _ => Err(AgreementsError::PaymentUnstated),
             }
-        }
+        };
+        self.unstated.set(outer.0);
+        self.assume_same.set(outer.1);
+        r
     }
 
     /// Whether two proofs are of the same payment (F200; rules 10, 12, 15).

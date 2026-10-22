@@ -1442,8 +1442,8 @@ impl Verifier {
         let res = self.inner.resolve(&unhex(identity)?);
         let (stop, waiting) = match &res.stop {
             Stop::NoGenesis => ("no-genesis", vec![]),
-            Stop::Unknown => ("unknown", vec![]),
-            Stop::Invalid => ("invalid", vec![]),
+            Stop::GenesisUnknown => ("genesis-unknown", vec![]),
+            Stop::GenesisInvalid => ("genesis-invalid", vec![]),
             Stop::End => ("end", vec![]),
             Stop::Pending(w) => ("pending", w.clone()),
             Stop::Contested(w) => ("contested", w.clone()),

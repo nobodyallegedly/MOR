@@ -335,8 +335,8 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             let r = w.v.resolve(&h("identity"));
             let stop = match r.stop {
                 Stop::NoGenesis => "no genesis",
-                Stop::Unknown => "unknown",
-                Stop::Invalid => "invalid genesis",
+                Stop::GenesisUnknown => "genesis unknown",
+                Stop::GenesisInvalid => "genesis invalid",
                 Stop::End => "end",
                 Stop::Pending(_) => "pending",
                 Stop::Contested(_) => "contested",
@@ -694,10 +694,17 @@ pub fn identity(out: &mut Out) {
     let mut w = World::new();
     let mut home = w.operator("a home");
     let j = w.genesis("kai", vec![home_of(&home)], None, None);
-    let (jj, _, _, _, wrong, _) = tips(&mut w, &j);
+    let (jj, _, p2, _, wrong, _) = tips(&mut w, &j);
     let (r, _) = w.rotate(&jj, Rot { kept: Some(vec![wrong]), ..Default::default() });
     w.receipt(&mut home, &j.id, &r, 1);
-    out.case(&mut w, "a rotation whose one kept tip does not fit its line, the line held: invalid", "Identity, rotation check 7", "Every tip's line is held and none fits.", Facts::default(), ask_status(&r), json!("invalid"), None);
+    let log = w.log.clone();
+    out.case(&mut w, "a rotation whose one kept tip does not fit its line, the line held: it stands, valid", "Identity, rotation check 7",
+        "A tip that does not fit never makes the rotation invalid: its validity is fixed by its bytes.", Facts::default(), ask_status(&r), json!("valid"), None);
+    let mut w2 = World::new();
+    for (a, _) in &log {
+        w2.add(a);
+    }
+    out.case(&mut w2, "its tip, which does not fit: void, kept by nothing", "Identity, rotation check 7; rule 34", "The tip keeps nothing, itself included.", Facts::default(), ask_status(&p2), json!("void"), None);
 
     // An acknowledgement under a scoped key rescues nothing.
     let mut w = World::new();

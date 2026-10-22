@@ -1457,10 +1457,30 @@
           "question": "status"
         },
         "facts": {},
-        "name": "a rotation whose one kept tip does not fit its line, the line held: invalid",
+        "name": "a rotation whose one kept tip does not fit its line, the line held: it stands, valid",
         "rule": "Identity, rotation check 7",
-        "verdict": "invalid",
-        "why": "Every tip's line is held and none fits."
+        "verdict": "valid",
+        "why": "A tip that does not fit never makes the rotation invalid: its validity is fixed by its bytes."
+      },
+      {
+        "acts": [
+          "b4d0d619be03acb971015d2dabdb21bca4511ac0846866c47de0a948951d131f",
+          "05267945fafb39bff97355330bf11ed85d5d041a594d493159bf959c374afa0a",
+          "098316abdc14405168ca60c72769c39c2787aee612bf7834055829b49ee7f626",
+          "4abf305e769096833526bb4b63ceb0baaac89329c09531771e88deff23203cdc",
+          "3e749028f22efd798db4516f4264b27d9c59345767535c6581dbd0caa50e79e1",
+          "5c50dfa23a525a5d812dcd4175ffd4c93a93c45d714cd43ec14194fe40df6e54",
+          "9b6777649f84eb9a8c094d355257b80f7fc5b3d855a0e20edbaa5608c79c4bfa"
+        ],
+        "ask": {
+          "act": "4abf305e769096833526bb4b63ceb0baaac89329c09531771e88deff23203cdc",
+          "question": "status"
+        },
+        "facts": {},
+        "name": "its tip, which does not fit: void, kept by nothing",
+        "rule": "Identity, rotation check 7; rule 34",
+        "verdict": "void",
+        "why": "The tip keeps nothing, itself included."
       },
       {
         "acts": [

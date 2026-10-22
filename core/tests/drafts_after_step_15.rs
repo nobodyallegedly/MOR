@@ -263,13 +263,14 @@ fn a_bad_position_is_judged_only_when_the_line_is_rebuilt_f292() {
     }
     // The rotation keeps the tip as the client saw it: the line rebuilt from
     // the acts held does not fit. Its only tip does not fit, the line held:
-    // the rotation is invalid (rotation check 7), and nothing is judged.
+    // the tip keeps nothing, itself included, and the rotation stands on its
+    // bytes (rotation check 7).
     let (r, _) = w.rotate(&jj, Rot { kept: Some(vec![KeptTip { act: i3, position: 41, summary: sha256(b"no summary either") }]), ..Default::default() });
     w.receipt(&mut h, &j.id, &r, 1);
-    assert_eq!(chain(&w, &j), vec![j.id]);
-    assert_eq!(w.v.status(&r), Status::Invalid);
+    assert_eq!(chain(&w, &j), vec![j.id, r]);
+    assert_eq!(w.v.status(&r), Status::Valid);
     for x in [i1, ib, i3] {
-        assert_eq!(w.v.status(&x), Status::Valid);
+        assert_eq!(w.v.status(&x), Status::Void);
     }
     // Beside a tip that fits, the same tip keeps nothing, itself included,
     // and the rotation counts (rotation check 7).
@@ -487,7 +488,7 @@ fn an_identity_born_under_a_scheme_the_client_lacks_is_unknown_8_4() {
     };
     let ga = act::make(&inside, &[1; 32], &[2; 24], &Addressing { signer: None, binding: None, public: true, to: None }, |_| sig.clone());
     let gid = w.add(&ga);
-    assert_eq!(w.v.resolve(&gid).stop, Stop::Unknown);
+    assert_eq!(w.v.resolve(&gid).stop, Stop::GenesisUnknown);
     let p = Person { name: "newcomer".into(), id: gid, gen: 0, sign: template.sign.clone(), chain_key, binding: gid, position: 0, tip: gid, scheme: 3, seq: vec![], log: vec![], last_summary: None, cite: None };
     let (r, mut q) = w.rotate(&p, Rot::default());
     assert_eq!(w.v.status(&r), Status::Unknown, "a rotation the client can verify, of a chain it cannot resolve");

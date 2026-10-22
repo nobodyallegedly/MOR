@@ -129,10 +129,11 @@ pub struct Link {
 pub enum Stop {
     /// The genesis is not held.
     NoGenesis,
-    /// The genesis is signed under a scheme this client does not implement.
-    Unknown,
-    /// The genesis is invalid.
-    Invalid,
+    /// The genesis unknown: signed under a scheme this client does not
+    /// implement (Identity, "What stops a chain").
+    GenesisUnknown,
+    /// The genesis invalid.
+    GenesisInvalid,
     /// No rotation at the next position is held.
     End,
     /// Rotations at the next position are held; none counts yet.
@@ -1148,7 +1149,7 @@ impl Verifier {
             return res;
         };
         match (&g.verdict, &g.identity) {
-            (Verdict::Unknown, _) => res.stop = Stop::Unknown,
+            (Verdict::Unknown, _) => res.stop = Stop::GenesisUnknown,
             (Verdict::Valid, Some(Ok(Payload::Genesis(gen)))) => {
                 res.links.push(Link {
                     act: *id,
@@ -1156,7 +1157,7 @@ impl Verifier {
                 });
                 res.states.push(ChainState::genesis(*id, gen));
             }
-            _ => res.stop = Stop::Invalid,
+            _ => res.stop = Stop::GenesisInvalid,
         }
         if res.links.is_empty() {
             return res;
@@ -1197,9 +1198,6 @@ impl Verifier {
             if s.scheme != ps.chain_key.scheme
                 || sig::chain_key_commitment(&s.scheme, &s.key) != ps.chain_key.commit
             {
-                continue;
-            }
-            if !self.kept_tips_fit(id, r) {
                 continue;
             }
             if let Ok(state) = ps.apply(r) {
@@ -1656,18 +1654,6 @@ impl Verifier {
         false
     }
 
-    /// Rotation check 7: each kept tip's running summary is the summary of
-    /// the line it names up to that tip, where the verifier holds that line.
-    /// A rotation whose every tip's line the verifier holds, and none fits,
-    /// is invalid; a tip whose line does not fit keeps nothing
-    /// ([`Self::in_kept_ancestry`]).
-    fn kept_tips_fit(&self, signer: &Hash, r: &Rotation) -> bool {
-        if r.kept.is_empty() {
-            return true;
-        }
-        r.kept.iter().any(|t| !matches!(self.line(signer, t), Line::Mismatch))
-    }
-
     /// Whether an act lies in a rotation's kept ancestry: a kept tip or an
     /// earlier act of its line, proved by the tip's running summary from
     /// the act ids the verifier holds (rotation check 7: a tip whose line,
@@ -2082,7 +2068,7 @@ impl Verifier {
             } else if self.lost_at(&res, &who, x) {
                 Status::NotCounting
             } else if matches!(res.stop, Stop::CannotTell(ref c) if c.contains(&x.id))
-                || (res.links.is_empty() && matches!(res.stop, Stop::NoGenesis | Stop::Unknown))
+                || (res.links.is_empty() && matches!(res.stop, Stop::NoGenesis | Stop::GenesisUnknown))
                 || self.beyond(&res, x)
             {
                 // F298: a chain this verifier cannot resolve this far.
@@ -2095,7 +2081,7 @@ impl Verifier {
             return Status::Invalid;
         };
         let res = self.resolve_cx(cx, signer);
-        if res.links.is_empty() && matches!(res.stop, Stop::NoGenesis | Stop::Unknown) {
+        if res.links.is_empty() && matches!(res.stop, Stop::NoGenesis | Stop::GenesisUnknown) {
             // F298: the signer's genesis is not held, or is signed under a
             // scheme this client lacks: a chain it cannot resolve.
             return Status::Unknown;
