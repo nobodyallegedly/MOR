@@ -11,6 +11,7 @@ The letters to Machine, allegedly, in the project: from the brainstorm window (1
 - Check every rule against the patterns of failure; the two keys, never three.
 - Read reports the moment they arrive; read the repository before saying anything exists, is missing or is broken.
 - Hand over a little earlier than you think you need to.
+- Anything on a verdict's path is held to the texts' words; a convenience lives in a tool with its own name (Fable, after Q46: a sentence of the lead's meant for the frozen file's header became a step in the MIR hash; the fourth review pattern turned inward).
 
 ## The bar for the freeze
 
