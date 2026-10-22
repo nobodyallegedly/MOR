@@ -102,13 +102,10 @@ Draft 1's tests were adjusted only to type the passphrase and read the new risk 
 
 ### The web releases
 
-- **Kišib's** web release is rebuilt, as its README says. Its page changed, and its build check is green.
-- **Dub's is kept as main's**, as in round 2:
-  - Dub's release test requires its WebAssembly to be the display client's (`clients/site/built`).
-  - The display client's release on main still carries the WebAssembly from before round 2's chain-key signer change. The release after round 2's merge was not run.
-  - This round may not touch other apps.
-  - Dub's page did change, mostly in the words for an identity used through Kišib, which the web client never has. The one line the web client shows differently is its empty "Use one from Kišib" place: "…never in the web client" instead of "…on the Mac only". Until Dub's release, the web client keeps the old wording.
-  - Question 4 below.
+- **Kišib's** web release is rebuilt, as its README says (`npm run release`): its page changed. Its build check is green.
+- **Dub's** web release is rebuilt too, as its README says. Its page changed, mostly in the words for an identity used through Kišib, which the web client never has; the one line the web client shows differently is its empty "Use one from Kišib" place ("…never in the web client" for "…on the Mac only").
+  - This was possible because main released the display client, Dub, Damgar and Ummia from pull request 92's merge while this round was being built. Every web release now carries the same WebAssembly, the one this branch builds, as Dub's release test requires.
+  - Both build checks are green on the merged branch.
 
 ### Building also showed
 
@@ -137,10 +134,7 @@ One at a time, each with my lean.
 **Question 3. The opening choice is per app, for all the identities that app may use.** You said "may open what is sealed to this identity". Built, the box is one per app, covering every identity you let that app use. With one identity, which is the usual case, they are the same.
 - *My lean:* keep it per app until an app uses two identities through Kišib, then make it per identity.
 
-**Question 4. Dub's web release.** It cannot be rebuilt in a round that may not touch the display client: Dub's release must carry the display client's WebAssembly, and the display client's release on main is older than the core.
-- *My lean:* right after this merge, release the display client and Dub together with the existing workflows (`[release display client]`, then `[release dub web]`). This also brings Kišib's and Edubba's releases onto the same WebAssembly.
-
-**Question 5. The member keys sealed to an identity used through Kišib.** Dub reads a collective's member key from what is sealed to the identity. "May open what is sealed to this identity" could cover it, so that Dub posts as a collective's member through Kišib.
+**Question 4. The member keys sealed to an identity used through Kišib.** Dub reads a collective's member key from what is sealed to the identity. "May open what is sealed to this identity" could cover it, so that Dub posts as a collective's member through Kišib.
 - *My lean:* yes, in a later round, under the same choice. It is the same opening, and acting as a member still signs through the panel.
 
 ## 5. Human test steps
