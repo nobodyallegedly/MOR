@@ -51,7 +51,7 @@
     }
   ],
   "binding": "b986d50c3bf7f5dfc5716ccd07e024c54125ad1ea8d2af9096067479a9e1fa75",
-  "description": "The three-act running-summary vector (Envelope, Sequences; F78). Three public text acts (Text MIP type 0) in one sequence of one signer. Each act carries prev, its position and the running summary up to and including the previous act; act 1 carries the empty summary. `summary_including_last` is the summary over all three, as a rotation's kept tip carries it. `spec`, `signer` and `binding` are stand-ins (SHA-256 of a label): MIP hashes are fixed only at freeze, and signatures are part 2 of the core library, so no signature is given. The act id does not depend on the signature.",
+  "description": "The three-act running-summary vector (Envelopes, \"Sequences\"). Three public text acts (Text, type 0) in one sequence of one signer. Each act carries prev, its position and the running summary up to and including the previous act; act 1 carries the empty summary. `summary_including_last` is the summary over all three, as a rotation's kept tip carries it. `spec`, `signer` and `binding` are stand-ins (SHA-256 of a label): MIR hashes are fixed only at the freeze, and signatures are part 2 of the core library, so no signature is given. The act id does not depend on the signature.",
   "signer": "ce15cac96cf1b20db139deeae6d2661d7fd9f4d42a6569ccd8dcc4960551f03a",
   "spec": "bcfbc63b45d17e48f1265f1300494bf5f84e576acd293494043425c3011064c1",
   "summary_including_last": "9a137bcbdd8893450fda770a9e9e58e1d56a59ade06e5831fb95fc7e98beca9c"
