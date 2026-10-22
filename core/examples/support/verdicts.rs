@@ -226,7 +226,10 @@ fn text_act(w: &mut World, p: &mut Person, text: &str, objects: Option<Vec<Objec
 /// What a verifier holds beside the acts, for one case.
 #[derive(Default)]
 pub struct Facts {
-    pub proofs: Vec<(Hash, u64, Vec<Hash>)>,
+    /// Inclusion proofs a home served: the log summary, the receipt it
+    /// proves (Identity, "Audit": a proof names the summary, the receipt,
+    /// its index and the path), its index and the path.
+    pub proofs: Vec<(Hash, Hash, u64, Vec<Hash>)>,
     pub failed_to_reach: Vec<Hash>,
     pub anchors: Vec<(Hash, Reference, u64)>,
     pub rail_valid: Vec<(Hash, Hash)>,
@@ -240,7 +243,7 @@ impl Facts {
         if !self.proofs.is_empty() {
             m.insert(
                 "inclusion_proofs".into(),
-                self.proofs.iter().map(|(s, i, p)| json!({ "summary": hx(s), "index": i, "path": p.iter().map(|x| hx(x)).collect::<Vec<_>>() })).collect(),
+                self.proofs.iter().map(|(s, r, i, p)| json!({ "summary": hx(s), "receipt": hx(r), "index": i, "path": p.iter().map(|x| hx(x)).collect::<Vec<_>>() })).collect(),
             );
         }
         if !self.failed_to_reach.is_empty() {
@@ -262,7 +265,7 @@ impl Facts {
     }
 
     fn apply(&self, w: &mut World) {
-        for (s, i, p) in &self.proofs {
+        for (s, _, i, p) in &self.proofs {
             w.v.add_inclusion_proof(*s, *i, p.clone());
         }
         for o in &self.failed_to_reach {
@@ -356,9 +359,11 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             let mut v = view(w);
             facts.apply_view(&mut v);
             let ops: Vec<Hash> = ask["keepers"].as_array().unwrap().iter().map(|x| hex::decode(x.as_str().unwrap()).unwrap().try_into().unwrap()).collect();
-            let rule = match ask["rule"].as_u64() {
-                Some(0) | None => Rule::All,
-                Some(k) => Rule::Threshold(k),
+            // The keepers' rule as the format writes it: [0] every keeper, [1, k] at least k.
+            let rule = match ask["rule"].as_array().map(|r| r.iter().map(|x| x.as_u64().unwrap()).collect::<Vec<_>>()).as_deref() {
+                Some([0]) => Rule::All,
+                Some([1, k]) => Rule::Threshold(*k),
+                r => panic!("a keepers' rule the vectors do not write: {r:?}"),
             };
             let k = Keepers { operators: ops, rule };
             let clock = Reference::decode(&cbor::decode(&hex::decode(ask["clock"].as_str().unwrap()).unwrap()).unwrap()).unwrap();
@@ -564,7 +569,7 @@ pub fn identity(out: &mut Out) {
         let log = h.log.clone();
         let s = w.log_summary(h);
         for i in 0..log.len() {
-            facts.proofs.push((s, i as u64, mor_core::merkle::inclusion_proof(&log, i)));
+            facts.proofs.push((s, log[i], i as u64, mor_core::merkle::inclusion_proof(&log, i)));
         }
         let hid = h.id;
         w.cosign(&mut aud, &s, &hid);
@@ -677,8 +682,7 @@ pub fn envelopes(out: &mut Out) {
 /// The same inside, sealed again and signed by `p`'s signing key.
 fn reseal(w: &mut World, p: &Person, inside: &mor_core::act::Inside) -> mor_core::act::Act {
     let _ = w;
-    let key = sha256(format!("reseal/{}", inside.encode().len()).as_bytes());
-    let nonce: [u8; 24] = sha256(b"reseal nonce")[..24].try_into().unwrap();
+    let (key, nonce) = content_key_for(inside);
     mor_core::act::make(inside, &key, &nonce, &mor_core::act::Addressing { signer: Some(p.id), binding: Some(p.binding), public: true, to: None }, |id| p.sign.sign(id, &[0; 32]))
 }
 
@@ -775,18 +779,18 @@ pub fn money(out: &mut Out) {
         w2.add(a);
     }
     out.case(&mut w2, "the same signed with the member key of a member holding no Money area: does not count", "Money rule 7; Agreements rule 73", "Cy's key reaches no area that reaches Money.", Facts::default(), ask("consent counts", &by_cy), json!(false), None);
-    // A transfer to one's vault: fulfils nothing in Money's sense.
+    // A payment to oneself naming one's genesis: fulfils nothing in Money's sense.
     let mut w = World::new();
-    let mut payee = w.genesis("a vault's owner", vec![own_home()], None, None);
+    let mut payee = w.genesis("a payee paying itself", vec![own_home()], None, None);
     let mut debtor = w.genesis("a debtor", vec![own_home()], None, None);
     let pointer = pointer_act(&mut w, &mut payee, b"an address");
     let ob = Fin::Obligation(money::Obligation { debtor: debtor.id, creditor: payee.id, amount: Amount { unit, value: 50 }, pointer, agreement: None });
     let oid = { let a = w.everyday_act(&mut debtor, mirs().money, 1, ob.to_map(), None, None); w.add(&a) };
-    let r = Fin::Receipt(Receipt { rail, proof: b"to my vault".to_vec(), payer: Some(Payer::Identity(payee.id)), payee: payee.id, amount: Amount { unit, value: 50 }, fulfils: payee.id, previous: None, forward: None, batch: None, purchase: None });
+    let r = Fin::Receipt(Receipt { rail, proof: b"a payment to myself".to_vec(), payer: Some(Payer::Identity(payee.id)), payee: payee.id, amount: Amount { unit, value: 50 }, fulfils: payee.id, previous: None, forward: None, batch: None, purchase: None });
     let rid = { let a = w.everyday_act(&mut payee, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
     let facts = Facts { rail_valid: vec![(rid, pointer)], ..Default::default() };
     assert_eq!(w.v.status(&rid), Status::Valid);
-    out.case(&mut w, "a transfer to one's vault naming the vault's declaration: valid, and it pays no obligation", "Money, \"What a payment fulfils\"", "Field 5 names the identity's genesis, which declares its vault: an act Money reads for another purpose, so the payment fulfils nothing in Money's sense; the debtor's obligation of the same amount stays unpaid.",
+    out.case(&mut w, "a payment to oneself naming one's own genesis: valid, and it pays no obligation", "Money, \"What a payment fulfils\"", "Field 5 names the identity's genesis, an act to which no rule of Money or Agreements gives a payment following it a meaning, so the payment fulfils nothing in Money's sense; the debtor's obligation of the same amount stays unpaid.",
         facts, ask("paid toward", &oid), json!(0), None);
 }
 
@@ -936,7 +940,7 @@ pub fn agreements(out: &mut Out) {
     let s2 = keep(&mut w, &mut k2, ana.id, ana.id);
     let log = w.log.clone();
     let ops = json!([hx(&k1.id), hx(&k2.id)]);
-    let dl = |act: &Hash| json!({ "question": "deadline", "act": hx(act), "keepers": ops, "rule": 0, "clock": clock_hex, "point": 100 });
+    let dl = |act: &Hash| json!({ "question": "deadline", "act": hx(act), "keepers": ops, "rule": [0], "clock": clock_hex, "point": 100 });
     let cases: Vec<(&str, &str, Facts, J, &str)> = vec![
         ("a deadline met by an anchor of the act", "An anchor of the act at or before the point shows it made in time.", Facts { anchors: vec![(delivery, clock.clone(), 90)], ..Default::default() }, dl(&delivery), "met, by an anchor of the act"),
         ("a deadline met by both keepers' records lying before their records anchored by the point", "Each keeper's record of the act lies before a record of its anchored at or before the point; the rule is all.", Facts { anchors: vec![(r1, clock.clone(), 95), (r2, clock.clone(), 99)], ..Default::default() }, dl(&delivery), "met, by the keepers' anchored records"),

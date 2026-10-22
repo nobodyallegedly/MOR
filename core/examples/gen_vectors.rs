@@ -79,6 +79,7 @@ fn cbor_vectors() -> J {
         ("f6", "null"),
         ("f93c00", "1.0 as a half"),
         ("f97e00", "NaN as a half"),
+        ("fa7fc00001", "a NaN whose payload needs single width, as a single: the shortest width that keeps its payload"),
         ("fa47c35000", "100000.0 as a single"),
         ("fb3ff199999999999a", "1.1 as a double"),
         ("c11a514b67b0", "1(1363896240): a tag"),
@@ -125,6 +126,7 @@ fn cbor_vectors() -> J {
         ("fa3f800000", "1.0 as a single, fits in a half"),
         ("fb3ff0000000000000", "1.0 as a double"),
         ("fb7ff8000000000000", "NaN as a double"),
+        ("fb7ff8000020000000", "the same single-width NaN as a double: longer than the shortest width keeping its payload"),
         ("62c328", "text string not valid UTF-8"),
         ("63eda080", "text string holding an encoded surrogate"),
         ("f818", "two-byte simple value below 32"),
@@ -173,27 +175,29 @@ fn text_vectors() -> J {
         ("a\u{1AD0}\u{1ADD}", "the same two marks out of canonical order: not NFC under the pinned Unicode 17.0 tables; a verifier using 16.0 tables would wrongly accept it"),
         ("a\u{10FFFD}", "a private use character: canonical"),
         ("a\u{E0001}", "U+E0001 LANGUAGE TAG, a deprecated format character: canonical (clients may warn)"),
-        ("a\u{FEFF}b", "rule 1: U+FEFF inside the text"),
-        ("\u{FEFF}Hello", "rule 1: a byte order mark at the start"),
-        ("a\r\nb", "rule 2: CR"),
-        ("a\u{2028}b", "rule 2: LINE SEPARATOR"),
-        ("a\u{2029}b", "rule 2: PARAGRAPH SEPARATOR"),
-        ("a\tb", "rule 3: TAB"),
-        ("a\u{0}b", "rule 3: NUL"),
-        ("a\u{7F}b", "rule 3: DELETE"),
-        ("a\u{85}b", "rule 3: NEXT LINE (C1 control)"),
-        ("a\u{9F}b", "rule 3: last C1 control"),
-        ("a \nb", "rule 4: a line ending with a space"),
-        ("a\u{A0}", "rule 4: ending with NO-BREAK SPACE"),
-        ("a\u{3000}\nb", "rule 4: a line ending with IDEOGRAPHIC SPACE"),
+        ("a\u{FEFF}b", "rule 7: U+FEFF inside the text"),
+        ("\u{FEFF}Hello", "rule 7: a byte order mark at the start"),
+        ("a\r\nb", "rule 8: CR"),
+        ("a\u{2028}b", "rule 8: LINE SEPARATOR"),
+        ("a\u{2029}b", "rule 8: PARAGRAPH SEPARATOR"),
+        ("a\tb", "rule 9: TAB"),
+        ("a\u{0}b", "rule 9: NUL"),
+        ("a\u{7F}b", "rule 9: DELETE"),
+        ("a\u{85}b", "rule 9: NEXT LINE (C1 control)"),
+        ("a\u{9F}b", "rule 9: last C1 control"),
+        ("a \nb", "rule 10: a line ending with a space"),
+        ("a\u{A0}", "rule 10: ending with NO-BREAK SPACE"),
+        ("a\u{3000}\nb", "rule 10: a line ending with IDEOGRAPHIC SPACE"),
         ("a\u{200B}", "U+200B ZERO WIDTH SPACE is not on the space list: canonical (clients may warn)"),
         ("a\u{2800}", "U+2800 BRAILLE PATTERN BLANK is not on the space list: canonical"),
-        ("a\n", "rule 4: a final line break"),
-        ("\n", "rule 4: only a line break"),
-        (" ", "rule 4: only a space"),
-        ("a\u{FDD0}", "rule 5: noncharacter U+FDD0"),
-        ("a\u{FFFE}", "rule 5: noncharacter U+FFFE"),
-        ("a\u{10FFFF}", "rule 5: noncharacter U+10FFFF"),
+        ("a\n", "rule 10: a final line break"),
+        ("\n", "rule 10: only a line break"),
+        (" ", "rule 10: only a space"),
+        ("a\u{FDD0}", "rule 11: noncharacter U+FDD0"),
+        ("a\u{FFFE}", "rule 11: noncharacter U+FFFE"),
+        ("a\u{10FFFF}", "rule 11: noncharacter U+10FFFF"),
+        ("a\u{85}b\u{FEFF}", "rules 9 and 7 both broken, the control character first: the rule named is 7, the first in the order numbered (rule 13)"),
+        ("a \nb\u{FDD0}\r", "rules 10, 11 and 8 broken, in that order along the string: the rule named is 8"),
         ("a\u{202E}b\u{202C}", "bidirectional controls are canonical (shown visibly before signing terms)"),
         ("\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}", "an emoji sequence with ZERO WIDTH JOINER: canonical"),
     ];
@@ -211,7 +215,7 @@ fn text_vectors() -> J {
         })
         .collect();
     json!({
-        "description": "Canonical text (Text). `rule` is the first rule broken, checking rules 1 to 5 in text order and rule 6 (NFC, Unicode 17.0 tables) last; null if canonical.",
+        "description": "Canonical text (Text rules 7 to 13). `rule` is the rule broken, numbered as Text numbers it: where several are broken, the first of rules 7 to 12 in the order numbered, each checked over the whole string before the next, rule 12 (NFC, Unicode 17.0 tables) last; null if canonical.",
         "unicode_version": "17.0.0",
         "vectors": v,
     })
@@ -328,8 +332,9 @@ fn three_acts() -> J {
 /// Sealed acts that opening must reject, each for one reason.
 fn invalid_acts() -> J {
     let spec = fixed("mor-core vector: stand-in for the TEXT spec hash, fixed at freeze");
-    let key: [u8; 32] = fixed("mor-core vector: invalid content key");
-    let nonce: [u8; 24] = fixed_n("mor-core vector: invalid nonce");
+    // A new content key and nonce for every object sealed (Envelopes rule 9).
+    let key_of = |case: &str| -> ([u8; 32], [u8; 24]) { (fixed(&format!("mor-core vector: content key, {case}")), fixed_n(&format!("mor-core vector: nonce, {case}"))) };
+    let (key, nonce) = key_of("the valid inside");
     let addr = Addressing {
         public: true,
         ..Default::default()
@@ -387,7 +392,8 @@ fn invalid_acts() -> J {
         payload: text_payload("Trailing space. "),
         ..good.clone()
     };
-    let (o4, l4) = act::seal(&bad_text, &key, &nonce, &addr);
+    let (k, n) = key_of("a text not canonical");
+    let (o4, l4) = act::seal(&bad_text, &k, &n, &addr);
     cases.push((
         "a text field that is not canonical (trailing space)".into(),
         o4,
@@ -399,7 +405,8 @@ fn invalid_acts() -> J {
     if let Value::Map(m) = &mut bad_key {
         m.push((Value::Uint(11), Value::Uint(0)));
     }
-    let (o5, l5) = act::seal_encoded(&cbor::encode(&bad_key), &key, &nonce, &addr);
+    let (k, n) = key_of("an unknown inside key");
+    let (o5, l5) = act::seal_encoded(&cbor::encode(&bad_key), &k, &n, &addr);
     cases.push(("an unknown inside key (11)".into(), o5, l5, "shape"));
 
     let no_salt = {
@@ -409,7 +416,8 @@ fn invalid_acts() -> J {
         }
         v
     };
-    let (o6, l6) = act::seal_encoded(&cbor::encode(&no_salt), &key, &nonce, &addr);
+    let (k, n) = key_of("no salt");
+    let (o6, l6) = act::seal_encoded(&cbor::encode(&no_salt), &k, &n, &addr);
     cases.push(("no salt".into(), o6, l6, "shape"));
 
     // Keys 0 and 1 swapped: well-formed CBOR, not deterministic.
@@ -421,7 +429,8 @@ fn invalid_acts() -> J {
     swapped.extend_from_slice(spec_entry);
     swapped.extend_from_slice(&enc[1 + 35 + 2..]);
     assert!(cbor::decode(&swapped).is_err());
-    let (o7, l7) = act::seal_encoded(&swapped, &key, &nonce, &addr);
+    let (k, n) = key_of("map keys out of order");
+    let (o7, l7) = act::seal_encoded(&swapped, &k, &n, &addr);
     cases.push((
         "an inside that is not deterministic CBOR (map keys out of order)".into(),
         o7,

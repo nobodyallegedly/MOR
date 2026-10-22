@@ -236,26 +236,24 @@ SPACES = {0x20, 0xA0, 0x1680, *range(0x2000, 0x200B), 0x202F, 0x205F, 0x3000}
 
 
 def text_rule(s):
-    """The first rule of canonical text that s breaks (1 to 5 in text order,
-    then 6), or None."""
+    """The rule of canonical text that s breaks, numbered as Text numbers
+    them: the first of rules 7 to 12 in that order, each checked over the
+    whole string (Text, rule 13); or None."""
     cps = [ord(c) for c in s]
-    for i, c in enumerate(cps):
-        if c == 0xFEFF:
-            return 1
-        if c in (0x0D, 0x2028, 0x2029):
-            return 2
-        if c == 0x0A:
-            if i > 0 and cps[i - 1] in SPACES:
-                return 4
-            continue
-        if c <= 0x1F or 0x7F <= c <= 0x9F:
-            return 3
-        if 0xFDD0 <= c <= 0xFDEF or (c & 0xFFFE) == 0xFFFE:
-            return 5
+    if 0xFEFF in cps:
+        return 7
+    if any(c in (0x0D, 0x2028, 0x2029) for c in cps):
+        return 8
+    if any((c <= 0x1F and c != 0x0A) or 0x7F <= c <= 0x9F for c in cps):
+        return 9
+    if any(c == 0x0A and i > 0 and cps[i - 1] in SPACES for i, c in enumerate(cps)):
+        return 10
     if cps and (cps[-1] == 0x0A or cps[-1] in SPACES):
-        return 4
+        return 10
+    if any(0xFDD0 <= c <= 0xFDEF or (c & 0xFFFE) == 0xFFFE for c in cps):
+        return 11
     if unicodedata2.normalize("NFC", s) != s:
-        return 6
+        return 12
     return None
 
 
@@ -724,6 +722,15 @@ def main():
     # Verdict vectors: those this implementation judges (README, "verdicts.json").
     f = load("verdicts.json")
     mirs, pool = f["mirs"], f["pool"]
+    # A new content key, and a new nonce, for every act (Envelopes rule 9):
+    # no two acts of the pool share either.
+    keys, nonces = {}, {}
+    for i, b in pool.items():
+        o = decode(bytes.fromhex(b))[0]
+        k, nc = o.get(5), o.get(4)
+        assert keys.setdefault(k, i) == i, ("a content key locks two acts", i, keys[k])
+        assert nonces.setdefault(nc, i) == i, ("a nonce locks two acts", i, nonces[nc])
+    n += 1
     judged = 0
     for layer in ("identity", "text", "envelopes", "money", "agreements"):
         for c in f["cases"][layer]:

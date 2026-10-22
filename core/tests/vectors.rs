@@ -282,6 +282,9 @@ fn verdict_vectors() {
             }
             let facts = &c["facts"];
             for p in facts["inclusion_proofs"].as_array().into_iter().flatten() {
+                // The proof names the receipt it proves (Identity, "Audit"):
+                // the receipt is held, and is the one the verifier proves.
+                assert!(c["acts"].as_array().unwrap().iter().any(|a| a == &p["receipt"]), "{what}: the receipt a proof names is held");
                 v.add_inclusion_proof(h(&p["summary"]), p["index"].as_u64().unwrap(), p["path"].as_array().unwrap().iter().map(h).collect());
             }
             for o in facts["failed_to_reach"].as_array().into_iter().flatten() {
@@ -352,9 +355,10 @@ fn verdict_vectors() {
                 "deadline" => {
                     let k = Keepers {
                         operators: ask["keepers"].as_array().unwrap().iter().map(h).collect(),
-                        rule: match ask["rule"].as_u64().unwrap() {
-                            0 => Rule::All,
-                            k => Rule::Threshold(k),
+                        rule: match ask["rule"].as_array().unwrap().iter().map(|x| x.as_u64().unwrap()).collect::<Vec<_>>().as_slice() {
+                            [0] => Rule::All,
+                            [1, k] => Rule::Threshold(*k),
+                            r => panic!("{what}: a keepers' rule the format does not write: {r:?}"),
                         },
                     };
                     let clock = Reference::decode(&cbor::decode(&b(&ask["clock"])).unwrap()).unwrap();

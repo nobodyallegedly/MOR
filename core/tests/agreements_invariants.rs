@@ -3712,7 +3712,8 @@ fn it2b_a_stale_line_is_a_stated_cost() {
     let d = cw.debts[0];
     // The collective's next act cites the debt (its sequence's previous act).
     cw.apply(1, &Op::Publish { dev: 0, seal: Seal::Public });
-    let citing = *cw.info.iter().find(|(_, f)| f.kind == K::Publication).unwrap().0;
+    let citing = *cw.c[0].seq.last().unwrap();
+    assert_eq!(cw.info[&citing].kind, K::Publication);
     assert_eq!(cw.view().obligation_binds(&d).unwrap(), Some(true));
     cw.apply(2, &fork_op(2, DebtsMode::Honest));
     let lv = cw.view();
