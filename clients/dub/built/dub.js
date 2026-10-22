@@ -597,7 +597,10 @@ var Verifier = class {
   /**
    * What is paid toward an obligation, as a binding answer: an error
    * coded `agreements/own-attempt` where it rests on this client's own failed
-   * attempts to reach homes, shown as unknown (F153).
+   * attempts to reach homes, shown as unknown (F153); an error coded
+   * `law/payment-unstated` where it rests on whether two receipts
+   * or claims are one payment and `specs.railPayments` does not say
+   * (Money rule 12, F380), shown as unknown.
    * @param {any} specs
    * @param {string} id
    * @returns {bigint}
@@ -15060,6 +15063,7 @@ async function vowSales(identity, relays, via2 = {}) {
   }
   const accepted = ACCEPTABLE.flatMap((x) => x.hashes);
   const railValid = [];
+  const railPayments = [];
   const limits = [];
   const amounts = /* @__PURE__ */ new Map();
   for (const a of claims) {
@@ -15069,6 +15073,7 @@ async function vowSales(identity, relays, via2 = {}) {
       if (j.rail.answer !== "valid") continue;
       const c = moneyRead(CLAIM, d.payload).act;
       amounts.set(d.id, c.amount);
+      if (j.payment) railPayments.push([hex(new Uint8Array(c.proof)), j.payment]);
       const p = readPaymentProof(new Uint8Array(c.proof));
       const to = paidToOf(p.paidTo);
       if (to) railValid.push([d.id, to[0], to[1]]);
@@ -15077,7 +15082,7 @@ async function vowSales(identity, relays, via2 = {}) {
     } catch {
     }
   }
-  const specs = withGrantLimits({ ...AGREEMENTS_SPECS, railValid }, limits);
+  const specs = withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits);
   const out = [];
   for (const x of vows) {
     try {

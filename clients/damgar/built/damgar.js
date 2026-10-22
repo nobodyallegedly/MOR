@@ -597,7 +597,10 @@ var Verifier = class {
   /**
    * What is paid toward an obligation, as a binding answer: an error
    * coded `agreements/own-attempt` where it rests on this client's own failed
-   * attempts to reach homes, shown as unknown (F153).
+   * attempts to reach homes, shown as unknown (F153); an error coded
+   * `law/payment-unstated` where it rests on whether two receipts
+   * or claims are one payment and `specs.railPayments` does not say
+   * (Money rule 12, F380), shown as unknown.
    * @param {any} specs
    * @param {string} id
    * @returns {bigint}

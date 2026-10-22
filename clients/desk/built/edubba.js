@@ -900,7 +900,10 @@ var Verifier = class {
   /**
    * What is paid toward an obligation, as a binding answer: an error
    * coded `agreements/own-attempt` where it rests on this client's own failed
-   * attempts to reach homes, shown as unknown (F153).
+   * attempts to reach homes, shown as unknown (F153); an error coded
+   * `law/payment-unstated` where it rests on whether two receipts
+   * or claims are one payment and `specs.railPayments` does not say
+   * (Money rule 12, F380), shown as unknown.
    * @param {any} specs
    * @param {string} id
    * @returns {bigint}
@@ -10660,6 +10663,7 @@ async function vowSales(identity2, relays, via = {}) {
   }
   const accepted = ACCEPTABLE.flatMap((x) => x.hashes);
   const railValid = [];
+  const railPayments = [];
   const limits = [];
   const amounts = /* @__PURE__ */ new Map();
   for (const a of claims) {
@@ -10669,6 +10673,7 @@ async function vowSales(identity2, relays, via = {}) {
       if (j.rail.answer !== "valid") continue;
       const c2 = moneyRead(CLAIM, d.payload).act;
       amounts.set(d.id, c2.amount);
+      if (j.payment) railPayments.push([hex(new Uint8Array(c2.proof)), j.payment]);
       const p = readPaymentProof(new Uint8Array(c2.proof));
       const to = paidToOf(p.paidTo);
       if (to) railValid.push([d.id, to[0], to[1]]);
@@ -10677,7 +10682,7 @@ async function vowSales(identity2, relays, via = {}) {
     } catch {
     }
   }
-  const specs = withGrantLimits({ ...AGREEMENTS_SPECS, railValid }, limits);
+  const specs = withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits);
   const out = [];
   for (const x of vows) {
     try {
@@ -23425,7 +23430,7 @@ var LINE_SAY = "Damgar keeps its own line of acts for this identity (its money a
 var SPENT_SAY = "This identity\u2019s signing key was changed elsewhere, with its chain key, so the signing key\u2019s words Damgar holds no longer count. Nothing was signed. To go on here, give Damgar the new signing key\u2019s words.";
 var RUNNER_OLD_KEY_SAY = "This identity\u2019s keys were changed with its chain key, and Ki\u0161ib\u2019s runner still holds the old signing key: nothing was signed. Give the runner the new signing key\u2019s words, in Ki\u0161ib (Runner, Identities held here). Damgar then goes on, in new lines.";
 var RUNNER_HOLDS_SAY = "Ki\u0161ib\u2019s runner holds this identity\u2019s signing key, on this Mac; Damgar holds none of its keys. Its words are given and changed in Ki\u0161ib, never here.";
-var RUNNER_NO_OPEN_SAY = "Ki\u0161ib does not let Damgar open what is sealed to this identity: drafts, requests and payments sealed to it are not read here. To allow it, in Ki\u0161ib: Runner, Apps, Damgar, \u201Cmay open what is sealed to this identity\u201D.";
+var RUNNER_NO_OPEN_SAY = "Ki\u0161ib does not let Damgar open what is sealed to this identity: drafts, requests and payments sealed to it are not read here. To allow it, in Ki\u0161ib: Runner, Apps, Damgar, \u201Cmay open what is sealed to\u201D this identity.";
 var NO_KEY_SAY = "Damgar holds no encryption key for this identity, so nothing sealed to it opens here: no draft, no request, no payment. Its encryption key was not made from its signing key\u2019s words.";
 var REQUEST_KEY_SAY = [
   "Damgar makes an on-chain request key and keeps it here, beside the signing key. It signs, for each payment, the request that binds a fresh address to that payment alone. It answers address requests by itself when they arrive through MOR.",
@@ -23521,7 +23526,7 @@ var Damgar = class {
       return { open: null, problem: message4(e3).replace(/ Nothing was signed\.$/, "") };
     }
     if (!p || p.state !== "approved" || !p.identities.some((x) => x.id === me.id)) return { open: null, problem: "Damgar is not paired with Ki\u0161ib for this identity any more: nothing sealed to it opens here." };
-    if (!p.open) return { open: null, problem: RUNNER_NO_OPEN_SAY };
+    if (!p.opens.includes(me.id)) return { open: null, problem: RUNNER_NO_OPEN_SAY };
     const open = async (sealed) => (await r.open(me.id, sealed)).map((o) => o ? { ...o, described: o.key ? openWithKey(o.act, o.key) : describeAct(o.act) } : null);
     return { open, problem: null };
   }
@@ -23586,7 +23591,7 @@ var Damgar = class {
       return {
         lines: [
           { text: `Damgar uses ${k.name ?? short9(k.id)} through Ki\u0161ib\u2019s runner: Ki\u0161ib holds its signing key, Damgar none. Every money act is shown by Ki\u0161ib, in its panel here, before it is signed: money always asks.`, tone: "ok" },
-          p.open ? { text: "Ki\u0161ib opens for Damgar what is sealed to this identity: drafts, requests and payments are read here, Damgar holding no key.", tone: "ok" } : { text: RUNNER_NO_OPEN_SAY, tone: "warn" },
+          p.opens.includes(k.id) ? { text: "Ki\u0161ib opens for Damgar what is sealed to this identity: drafts, requests and payments are read here, Damgar holding no key.", tone: "ok" } : { text: RUNNER_NO_OPEN_SAY, tone: "warn" },
           { text: LINE_SAY, tone: "warn" }
         ]
       };
@@ -24916,6 +24921,68 @@ var Damgar = class {
     const d = { what: "pay", other, amount: { unit: a.unit, value: readValue(a.value) }, whatFor: a.whatFor.trim() ? a.whatFor.trim().slice(0, 280) : null, app: "Damgar", anchor: null };
     return this.paste(base64(draftPayload(d)));
   }
+  // ------------------------------------------------------------ the act menu: Rely on it, Anchor it (decided by Nobody, allegedly: "Agreed")
+  /**
+   * Rely on an act (a receipt, a claim, any act shown): the witness act
+   * (Identity type 15) signed once RELY is typed, as everywhere, its key
+   * checked first (H80); through Kišib's panel where the identity is used
+   * through it. It keeps that act visible as disputed should its author ever
+   * disown it.
+   */
+  rely(a) {
+    return this.serial(async () => {
+      const { me, s, book } = await this.ctx();
+      if (a.typed.trim() !== "RELY") throw new Error("Type RELY to sign the witness act. Nothing was signed.");
+      const id = readActId(a.id);
+      if (book.acts[id]?.from === me.id || me.f.sequence.includes(id)) throw new Error("It is this identity\u2019s own act: a witness act names other identities\u2019 acts. Nothing was signed.");
+      await this.current(me);
+      let made;
+      try {
+        made = await me.witness([id], { shown: WITNESS_EXPLANATION, relays: s.relays });
+      } finally {
+        await this.store.saveIdentity(me);
+      }
+      if (!made.sent.some((x) => x.result)) throw new Error(`No home took the witness act: ${made.sent.map((x) => `${x.home}: ${x.error}`).join("; ")}. It is signed here, not published.`);
+      return { lines: [{ text: `You rely on ${short9(id)}: witness act ${short9(made.id)}, public at this identity\u2019s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: "ok" }] };
+    });
+  }
+  /** An anchoring service's standing offers (the anchoring cMIP), read from its public acts. */
+  anchorOffers(a) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const service = readId(a.service);
+      const acc = this.acceptedSet(await this.accepted(me));
+      const found2 = await offers(service, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via);
+      return { offers: found2.map((o) => ({ act: o.act, unit: o.unit, words: o.words, tiers: o.tiers.map((t, i) => ({ tier: i, words: `within ${t.blocks} block${t.blocks === 1 ? "" : "s"}, ${say({ unit: o.unit, value: t.price }, acc)}` })) })) };
+    });
+  }
+  /**
+   * Anchor an act (a receipt, a claim, any act shown), in one step here:
+   * the service's standing offer followed, a tier chosen; the payment
+   * prepared and its invoice request signed at once, as a pasted draft is;
+   * the blind kept here. The service answers with an invoice and a ticket,
+   * paid in To pay; it shows in Account › Anchors.
+   */
+  async anchor(a) {
+    const id = readActId(a.id);
+    const service = readId(a.service);
+    const { me, s } = await this.serial(() => this.ctx());
+    const offer = (await offers(service, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via)).find((o) => o.act === a.offer);
+    if (!offer) throw new Error("That offer was not found at the service\u2019s places. Nothing was signed.");
+    const tier = offer.tiers[a.tier];
+    if (!tier) throw new Error("The offer has no such tier. Nothing was signed.");
+    const blind = new Uint8Array(randomBytes(32));
+    const leaf = anchoringLeaf(id, blind);
+    const d = { what: "anchor", other: service, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${short9(id)}`, app: "Damgar", anchor: { offer: offer.act, tier: a.tier, leaf } };
+    const pasted = await this.paste(base64(draftPayload(d)));
+    await this.serial(async () => {
+      const { book } = await this.ctx();
+      (book.anchored ??= {})[pasted.id] = { act: id, blind: hex(blind), leaf, service, offer: offer.act, tier: a.tier, at: now4() };
+      await this.saveBook(me.id, book);
+    });
+    const signed = await this.signDraft(pasted.id);
+    return { lines: [{ text: `An anchor of ${short9(id)} asked of ${short9(service)}, tier ${a.tier} (within ${tier.blocks} blocks): the invoice request signed and sent. When the service answers with its invoice and ticket, pay it in To pay; it shows in Account \u203A Anchors. The blind is kept here.`, tone: "ok" }, ...signed.lines.slice(1)] };
+  }
   /** Sign a draft (the money messages cMIP, 2.2): an invoice request, or a request to be paid. */
   signDraft(id) {
     return this.serial(async () => {
@@ -26166,10 +26233,31 @@ var Damgar = class {
       } catch {
       }
     }
+    const throughKisib = how.by === "lane" && !!this.opts.app && !me.f.signingSecret && !!this.opts.runner;
     await leaveAtHomes(me, made, { via: s.via, lockedOnly: how.by === "lane" && !(this.opts.app && me.f.signingSecret) });
+    if (throughKisib) await this.laneRecordThroughKisib(me, s, made).catch(() => void 0);
     await this.store.saveIdentity(me);
     if (!left) throw new Error(`${short9(to)}\u2019s inbox (${inbox.join(", ")}) took nothing. It was signed and kept here; try again later.`);
     return made.id;
+  }
+  /**
+   * The record of a payment made under the lane, for an identity used
+   * through Kišib (the Dubsar runner cMIP, draft 3, 7.5): its key delivered
+   * to the identity itself, signed by Kišib without a panel, sealed to the
+   * identity's own encryption key and left at its homes, where Damgar reads
+   * it. Where Kišib does not sign it, the payment stays sealed, not counted.
+   */
+  async laneRecordThroughKisib(me, s, made) {
+    const own = me.f.encryption.at(-1);
+    const key = own?.secret ? xwingPublic(unhex(own.secret)) : own?.public ? unhex(own.public) : null;
+    if (!key) return;
+    try {
+      const kd = await me.signApartNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.id] });
+      const sealed = sealFor(kd.act, kd.key, [{ id: me.id, key }]);
+      for (const h of me.f.homes) await relayAt(h.hint, s.via).putSealed(sealed).catch(() => void 0);
+    } finally {
+      await this.store.saveIdentity(me);
+    }
   }
   /**
    * How a payer's act is signed here: inside another app (Dub), only under
@@ -26323,7 +26411,7 @@ var list6 = (xs) => [...new Set(xs.filter(Boolean))];
 var DubMoney = class {
   constructor(store, opts) {
     this.store = store;
-    this.engine = new Damgar(new DamgarKeepInDub(store), { web: opts.web, app: opts.app });
+    this.engine = new Damgar(new DamgarKeepInDub(store), { web: opts.web, app: opts.app, runner: opts.runner });
   }
   engine;
   async keys(id) {
@@ -26694,7 +26782,8 @@ var LINE_SAY2 = "This app keeps its own line of acts for this identity. If the s
 var SPENT_SAY2 = "This identity\u2019s signing key was changed elsewhere, with its chain key, so the signing key\u2019s words this app holds no longer count. Nothing was signed. Changing keys is Ki\u0161ib\u2019s work, not Dub\u2019s. To go on here, give this app the new signing key\u2019s words.";
 var RUNNER_OLD_KEY_SAY2 = "This identity\u2019s keys were changed with its chain key, and Ki\u0161ib\u2019s runner still holds the old signing key: nothing was signed. Give the runner the new signing key\u2019s words, in Ki\u0161ib (Runner, Identities held here). Dub then goes on, in new lines.";
 var RUNNER_HOLDS_SAY2 = "Ki\u0161ib\u2019s runner holds this identity\u2019s signing key, on this Mac; Dub holds none of its keys. Its words are given and changed in Ki\u0161ib, never here.";
-var RUNNER_NO_OPEN_SAY2 = "Ki\u0161ib does not let Dub open what is sealed to this identity: Dub sends its private messages, but cannot read the answers, nor keep its contacts list sealed to it. To allow it, in Ki\u0161ib: Runner, Apps, Dub, \u201Cmay open what is sealed to this identity\u201D.";
+var RUNNER_NO_OPEN_SAY2 = "Ki\u0161ib does not let Dub open what is sealed to this identity: Dub sends its private messages, but cannot read the answers, nor keep its contacts list sealed to it. To allow it, in Ki\u0161ib: Runner, Apps, Dub, \u201Cmay open what is sealed to\u201D this identity.";
+var RUNNER_MEMBER_ASKED_SAY = "Ki\u0161ib holds this identity\u2019s keys, so it holds its key for this collective too: Dub asked Ki\u0161ib to add it. Approve it in Ki\u0161ib (Identities, Held here, or Runner, Waiting), then choose the collective here again. The key never comes to Dub.";
 var RUNNER_OPENS_SAY = "Ki\u0161ib opens for Dub what is sealed to this identity: its private messages and its sealed contacts list are read here, Dub holding no key. Each opening is listed in Ki\u0161ib (Runner, Signed).";
 var NO_KEY_SAY2 = "This app holds no encryption key for this identity, so its private messages cannot be opened here: its encryption key was not made from its signing key\u2019s words. Messages can still be sent from here.";
 var READER = "https://reader.dubsar.org/";
@@ -26716,7 +26805,7 @@ var Dub = class _Dub {
   constructor(store, opts = {}) {
     this.store = store;
     this.opts = opts;
-    this.money = new DubMoney(store, { web: !!opts.web, app: opts.web ? "Dub on the web" : "Dub on this computer" });
+    this.money = new DubMoney(store, { web: !!opts.web, app: opts.web ? "Dub on the web" : "Dub on this computer", runner: opts.runner });
   }
   /** This app's line as the homes hold it, for its card (H80's question 2). */
   line = lineReader("Dub");
@@ -26769,7 +26858,7 @@ var Dub = class _Dub {
       return { open: null, problem: message6(e3).replace(/ Nothing was signed\.$/, "") };
     }
     if (!p || p.state !== "approved" || !p.identities.some((x) => x.id === me.id)) return { open: null, problem: "Dub is not paired with Ki\u0161ib for this identity any more: its private messages are not opened here." };
-    if (!p.open) return { open: null, problem: RUNNER_NO_OPEN_SAY2 };
+    if (!p.opens.includes(me.id)) return { open: null, problem: RUNNER_NO_OPEN_SAY2 };
     const open = async (sealed) => (await r.open(me.id, sealed)).map((o) => o ? { ...o, described: o.key ? openWithKey(o.act, o.key) : describeAct(o.act) } : null);
     return { open, problem: null };
   }
@@ -27191,7 +27280,7 @@ var Dub = class _Dub {
       return {
         lines: [
           { text: `Dub uses ${k.name ?? fingerprint2(k.id)} through Ki\u0161ib\u2019s runner: Ki\u0161ib holds its signing key, Dub none. Each act is shown by Ki\u0161ib, in its panel here, before it is signed, unless you gave Dub a standing yes for that kind in Ki\u0161ib.`, tone: "ok" },
-          p.open ? { text: RUNNER_OPENS_SAY, tone: "ok" } : { text: RUNNER_NO_OPEN_SAY2, tone: "warn" },
+          p.opens.includes(k.id) ? { text: RUNNER_OPENS_SAY, tone: "ok" } : { text: RUNNER_NO_OPEN_SAY2, tone: "warn" },
           { text: LINE_SAY2, tone: "warn" }
         ]
       };
@@ -27408,7 +27497,10 @@ var Dub = class _Dub {
     await this.current(me);
     const refs = a.reply ? [[readId(a.reply.id), readId(a.reply.signer)]] : [];
     const at2 = await chainFor(collective, k.key, k.places, s.via);
-    const made = signAsMember(collective, k.key, at2, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text4), public: true, ...refs.length ? { refs } : {} });
+    const made = !me.f.signingSecret && this.opts.runner ? (
+      // Through Kišib (draft 3, 9.2): the act asked of Kišib, its panel shown here, signed there with the member key it holds.
+      await this.opts.runner.request({ identity: me.id, as: collective, line: "member", binding: k.key.signature, sequence: at2.strand, spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text4), public: true, objects: [[collective, k.key.terms]], ...refs.length ? { refs } : {} })
+    ) : signAsMember(collective, k.key, at2, { spec: POST_SPECS.text, type: TEXT_ACT, payload: textPayload(text4), public: true, ...refs.length ? { refs } : {} });
     const took = await publishAt([made.act], [.../* @__PURE__ */ new Set([...s.relays, ...k.places])], s.via);
     if (!took.length) throw new Error("No relay took the post. Nothing counts yet: try again.");
     const lines4 = [{ text: `Posted as the collective, with your own member key, at ${took.join(", ")}.`, tone: "ok" }];
@@ -28564,19 +28656,47 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
     return this.serial(async () => {
       const { me, s } = await this.ctx();
       if (a.id) {
-        const c2 = (s.collectives ?? []).find((x) => x.id === a.id);
+        let c2 = (s.collectives ?? []).find((x) => x.id === a.id);
         if (!c2) throw new Error("That collective is not under this identity here.");
+        if (!c2.available && !me.f.signingSecret && this.opts.runner) {
+          const r = await this.memberKeyHere(me, s, c2.id, me.f.homes.map((h) => h.hint));
+          c2 = { id: c2.id, available: !r.why, why: r.why };
+          s.collectives = [...(s.collectives ?? []).filter((x) => x.id !== c2.id), c2];
+          await this.store.saveSettings(me.id, s);
+        }
         if (!c2.available) throw new Error(`Dub cannot act as it: ${c2.why ?? "its member key is not here"}`);
       }
       await this.store.saveSettings(me.id, { ...s, acting: a.id });
       return { lines: [] };
     });
   }
-  /** The member key this identity holds for a collective, and the area reaching public posts; `why` where it cannot act. */
+  /**
+   * The member key this identity holds for a collective, and the area
+   * reaching public posts; `why` where it cannot act. For an identity used
+   * through Kišib (the Dubsar runner cMIP, draft 3, section 9), Kišib holds
+   * the key: Dub reads its public parts from Kišib, and, where Kišib holds
+   * none yet, asks Kišib to add it, approved there. Its secret never comes
+   * here (`secret` empty).
+   */
   async memberKeyHere(me, s, collective, hints) {
     const places = [.../* @__PURE__ */ new Set([...await collectivePlaces(collective, hints, s.via).catch(() => []), ...hints])];
-    const keys = await readMemberKeys(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
-    const key = keys.length ? await memberKeyFor(keys, collective, places, s.via).catch(() => null) : null;
+    let key;
+    if (!me.f.signingSecret && this.opts.runner) {
+      const r = this.opts.runner;
+      const p = await r.paired().catch((e3) => {
+        throw new Error(message6(e3).replace(/ Nothing was signed\.$/, ""));
+      });
+      const held = p?.identities.find((x) => x.id === me.id)?.members?.find((m) => m.collective === collective);
+      if (!held) {
+        if (p?.state !== "approved") return { key: null, places, why: "Dub is not paired with Ki\u0161ib for this identity any more.", number: 0 };
+        await r.memberAsk(me.id, collective, places);
+        return { key: null, places, why: RUNNER_MEMBER_ASKED_SAY, number: 0 };
+      }
+      key = { act: "", terms: held.terms, signature: held.signature, public: [0, new Uint8Array()], secret: new Uint8Array(), position: held.position };
+    } else {
+      const keys = await readMemberKeys(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), s.via).catch(() => []);
+      key = keys.length ? await memberKeyFor(keys, collective, places, s.via).catch(() => null) : null;
+    }
     if (!key) return { key: null, places, why: "no member key of this identity for it was found at its homes (one is made when you sign its founding, in Edubba).", number: 0 };
     const reach = await areaReaching(collective, places, { spec: POST_SPECS.text, type: TEXT_ACT }, s.via).catch(() => ({ agreement: null, area: null }));
     if (!reach.area) return { key, places, why: "its agreement in force gives no area reaching public posts.", number: 0 };
