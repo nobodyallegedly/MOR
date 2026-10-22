@@ -9819,7 +9819,11 @@ function signAsMember(collective, k, at2, a) {
     sequence: at2.strand,
     public: a.public,
     to: a.to?.length ? a.to : void 0,
-    objects: [...a.objects ?? [], [collective, at2.decision]],
+    // A text act carries exactly one object (Text rule 14): for a member
+    // key, the founding or clone that named the key, the version that is
+    // its grant, which Agreements reads as the decision it acts under
+    // (Agreements rules 58 and 73). Every other act cites the latest decision.
+    objects: a.spec === MIRS.text && a.type === 0 ? [[collective, k.terms]] : [...a.objects ?? [], [collective, at2.decision]],
     refs: a.refs?.length ? a.refs : void 0
   });
   at2.strand.push(made.id);
