@@ -4,6 +4,8 @@
 
 *Last updated: 19 October 2026, after pull request 80 (round 3) and the server session.*
 
+**22 October 2026, evening (later):** S7c merged (pull request 99, F383); the second box sealed in `MOR-CBOX` from MOR commit `a68e7b1`; the C verifier carried to it (`claude/c-verifier-2`). S7c's five small questions with Fable meanwhile.
+
 **22 October 2026, evening:** the fixes after Fable merged (pull request 98, S7 and S7b; F380, F381): both of Fable's conditions met, nine sentences written into the texts, check 7 deciding what is kept and never validity, and the heavy rules shown by vectors (a collective's closing and fork, an agreement as a party, a chain of judgment): 108 verdict vectors. S7b's four questions go to Fable. Next: a second box, the C verifier against it, the rehearsal, the freeze.
 
 **22 October 2026, afternoon:** Fable's review of the C verifier's questions (`docs/reviews/fable-c-verifier-review.md`): the texts found wrong nowhere; the core "freezable, with two conditions": the MIR hash computed from the file's bytes alone (Q46) and "same payment" judged by the rail, never by the proof's bytes (Q27). Next: the fixes (S7).
