@@ -48,9 +48,9 @@ export async function dub(homes: string[], relays: string[], o: { damgar?: strin
 }
 
 /** A person: an identity made in Dub, brought into a Damgar by its signing words, everything accepted but what is given. */
-export async function person(homes: string[], relays: string[], o: { accept?: string[] | null; chain?: ChainSource | null; link?: (c: LinkConfig) => Promise<InvoiceLink> } = {}) {
+export async function person(homes: string[], relays: string[], o: { accept?: string[] | null; chain?: ChainSource | null; link?: (c: LinkConfig) => Promise<InvoiceLink>; /** Dub wakes this Damgar for Ask Damgar (2A); otherwise the payment only waits in Damgar. */ wake?: boolean } = {}) {
   const g = await damgar(o.chain, o.link);
-  const d = await dub(homes, relays, { damgar: g.dir });
+  const d = await dub(homes, relays, o.wake ? { damgar: g.dir } : {});
   await g.c.ask('bring', { id: d.id, words: d.words, address: homes[0] });
   if (o.accept !== null) await g.c.ask('accept', { keys: o.accept ?? ACCEPTABLE.map((a) => a.key) });
   return { dub: d, damgar: g, id: d.id };

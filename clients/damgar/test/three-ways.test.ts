@@ -35,7 +35,7 @@ const R = SPEC.units.regtest;
 async function people() {
   const H = homes.map((h) => h.base);
   const node = new TestNode();
-  const alice = await person(H, [relay.base]);
+  const alice = await person(H, [relay.base], { wake: true });
   const bob = await person(H, [relay.base]);
   const rv = await bob.damgar.c.ask<{ digest: string }>('rails review', { lightning: node.key, network: 3 });
   await bob.damgar.c.ask('rails publish', { lightning: node.key, network: 3, digest: rv.digest });
