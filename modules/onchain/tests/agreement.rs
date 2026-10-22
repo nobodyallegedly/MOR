@@ -189,8 +189,10 @@ impl Story {
         Offer::read(self.offer_id, self.service.id, &o).expect("an anchoring offer")
     }
 
-    /// Sign and hold a claim; where the Lightning rail answers valid, state
-    /// it to the Agreements view as an Agreements client does. Its act id and the answer.
+    /// Sign and hold a claim; state to the Agreements view, as an
+    /// Agreements client does, which payment the rail says its proof is,
+    /// and, where the Lightning rail answers valid, that it is. Its act id
+    /// and the answer.
     fn claim(&mut self, payer: &mut Person, c: &Claim) -> (Hash, Answer) {
         let a = self.w.everyday_act(payer, mirs().money, fin::types::CLAIM, Payload::Claim(c.clone()).to_map(), None, None);
         let id = self.w.add(&a);
@@ -198,11 +200,11 @@ impl Story {
         let ln = Lightning;
         let modules = Modules::new().adopt(&ln);
         let answer = verify(rec.clone(), &AgreementsHeld { view: self.view() }, &modules).answer;
+        if let Some(p) = mor_payment::payment(&rec, &modules) {
+            self.payments.insert(c.proof.clone(), p);
+        }
         if answer == Answer::Valid {
             self.rail_valid.insert(id, paid_at(&rec).unwrap());
-            if let Some(p) = mor_payment::payment(&rec, &modules) {
-                self.payments.insert(c.proof.clone(), p);
-            }
         }
         (id, answer)
     }

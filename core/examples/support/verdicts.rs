@@ -1020,12 +1020,10 @@ pub fn money(out: &mut Out) {
     for (a, _) in &log3 {
         w4.add(a);
     }
-    let mut sales4 = vec![(c2, "confirmed"), (c1, "unknown")];
-    sales4.sort();
-    out.case(&mut w4, "the same without the rail's answer: the acknowledging claim's sale stands, confirmed; whether the first claim is another sale, and where the receipt belongs, unknown", "Money rule 12; Envelopes, \"Vows\"",
-        "The acknowledging claim signs the fan on and confirms, whichever payment it is: that stands. Whether the first claim and the receipt are of the same payment is the rail's to say: what depends on it is unknown, nothing else.",
+    out.case(&mut w4, "the same without the rail's answer: three records whose payment is not stated, so three pairs the vow depends on: unknown", "Money rule 12; Envelopes, \"Vows\"",
+        "With one pair whose payment is not stated, an answer is judged both ways; the receipt and the two claims make three pairs, each of which the vow's sales depend on: with two or more, the answer is unknown.",
         Facts { rail_valid: vec![(c1, offer), (c2, offer)], ..Default::default() }, ask_vow,
-        json!({ "sales": sales4.iter().map(|(a, st)| json!({ "act": hx(a), "buyer": hx(&fan.id), "state": st })).collect::<Vec<_>>(), "unsigned": [], "unknown": [hx(&rec)] }), None);
+        json!("unknown"), None);
     // A refund repaid: the fan's own receipt of money back, naming the fan's claim of the payment.
     let mut w5 = World::new();
     for (a, _) in &base {
