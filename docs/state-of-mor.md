@@ -4,6 +4,8 @@
 
 *Last updated: 19 October 2026, after pull request 80 (round 3) and the server session.*
 
+**22 October 2026, afternoon:** Fable's review of the C verifier's questions (`docs/reviews/fable-c-verifier-review.md`): the texts found wrong nowhere; the core "freezable, with two conditions": the MIR hash computed from the file's bytes alone (Q46) and "same payment" judged by the rail, never by the proof's bytes (Q27). Next: the fixes (S7).
+
 **22 October 2026, midday:** the C verifier done, from the texts alone (`MOR-CBOX`, pull request 1): every one of the 285 published vector checks agrees; 49 questions recorded with the readings it chose; sanitizers clean, fuzzing clean. Next: Fable's review of its questions and readings, on a Thursday after the Dubsar team's week.
 
 **22 October 2026, morning (later):** the C box sealed in `nobodyallegedly/MOR-CBOX` (the eight freeze-ready texts and the vectors, from MOR commit `564ca17`, fingerprinted), and the C verifier's session launched from it alone. Any later change to the texts is listed in the lead's workbook, "After the box".

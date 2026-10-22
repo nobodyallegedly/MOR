@@ -11,6 +11,7 @@ The letters to Machine, allegedly, in the project: from the brainstorm window (1
 - Check every rule against the patterns of failure; the two keys, never three.
 - Read reports the moment they arrive; read the repository before saying anything exists, is missing or is broken.
 - Hand over a little earlier than you think you need to.
+- Anything on a verdict's path is held to the texts' words; a convenience lives in a tool with its own name (Fable, after Q46: a sentence of the lead's meant for the frozen file's header became a step in the MIR hash; the fourth review pattern turned inward).
 
 ## The bar for the freeze
 
@@ -30,8 +31,8 @@ The MOR lead keeps the core: the core texts (MICS, six MIRs, freeze test suite),
 | S3 | *Handed to the Dubsar Suite lead (Nobody, allegedly, 21 October: "Modules and cMIPs are handled by the suite lead. The idea is that it is not core."):* the "Dubsar" titles (F356), payment cMIP draft 4 (F355 c), the chain-key signer Module's fresh seed (F361), the regtest quirks kit. | — | Not the MOR lead's |
 | S4 | **The C box:** vector descriptions cleaned (pull request 91); `scripts/c-box/` (its READMEs, and `make-c-box.sh`, which refuses any finding number or pointer to code); the box pushed to `nobodyallegedly/MOR-CBOX`. | — | Sealed 22 October from MOR commit `564ca17`; `MANIFEST.sha256` fingerprint `c790d768…` |
 | S5 | **The C verifier**, insulated, in `MOR-CBOX`, from a session outside the MOR project. | S4 | Done 22 October, about three hours: 285 of 285 vector checks agree; 49 questions in its `QUESTIONS.md`; ASan, UBSan clean; 835 million fuzz executions, two bugs of its own found and fixed early; manifest OK at start and end; pull request 1 in `MOR-CBOX`, left open for Fable |
-| S6 | **Fable's review** of the C verifier's 49 questions: each judged text unclear, text wrong, Rust wrong, C wrong, vector wrong or housekeeping, with the sentence or change that closes it; the unvectored readings checked against the Rust core for hidden divergences; freezability. | — | Prompt ready 22 October (`docs/lead/prompts/s6-fable-review.md`), with a bundle for Fable's own project: MOR at `a26727c` (the eight texts, the core, the vectors) and the C verifier at `6d0c999`, without its fuzz corpora; brought forward by Nobody, allegedly: "We have budget" |
-| S7 | Fixes; the step 17 rehearsal; the freeze ("if the fixes are not gigantic"); the first two acts of the frozen protocol, "Thank you for the shower…" with a photograph of the Earth, then the full text formatted (build brief). | S6 | — |
+| S6 | **Fable's review** of the C verifier's 49 questions. | — | Done 22 October (`docs/reviews/fable-c-verifier-review.md`, pull request 94, merged): no text found wrong; 31 settled; 9 "text unclear" (a sentence each), 4 "C wrong" (stated gaps), 1 Rust wrong (Q46, the MIR hash), Q27 wrong in both; 11 vectors to add, 4 generator changes; "freezable, with two conditions" (Q46, Q27) |
+| S7 | **The fixes** after Fable (F380): the MIR hash and "same payment" (the two conditions); the unsaid sentences into the texts and the core; the generator corrected and the vectors Fable lists; if budget allows, a reusable family of chain-signature acts for the heavy rules. Then a second box, the C verifier run against it, the step 17 rehearsal, the freeze ("if the fixes are not gigantic"), the first two acts. | — | Prompt ready 22 October (`docs/lead/prompts/s7-fixes.md`), finding F381 reserved |
 | S8 | dubsar.org for the release (H41 to H44, H62; short IDs with the full form on click; "a research and an art project"; the companion text); main's protection tightened when the repository goes public. | Discussed with Nobody, allegedly, once Fable's review begins ("The Dubsar website will need a refresh but we'll have all the work on the Dubsar apps to inform it"); then the fourteen doors pointing to the frozen MIRs, their opening lines his to write | — |
 
 **The target (Nobody, allegedly, 21 October 2026): "If we can be ready with the C verifier a week from now, it's perfect."** Working back: S1b running 21 October; S2 (code and vectors, the heaviest, may need two sessions) 22 to 24 October; S4, the C box, sealed by the lead 25 October; S5, the C verifier, building 25 to 28 October; Fable's review on a Thursday once the Dubsar team has finished its week's work (Nobody, allegedly: "It's ok, if fable comes a bit later, as long as Dubsar team has done burning tokens next week"): 29 October at the earliest. The risk is S2; no step is rushed to keep the date.
@@ -56,6 +57,10 @@ What Nobody, allegedly, decided is written as his ("Agreed"), with the lead's le
 - Report in `docs/`, plain words first; a branch `claude/…`, a pull request, no merge.
 - The rules that never bend, at the end.
 - Saved here (`docs/lead/prompts/`) and in the project (`claude/MOR-…-prompt.md`), and given to Nobody, allegedly, as a code box.
+
+## Fable
+
+Fable's advice in a review is always taken into account (Nobody, allegedly, 22 October 2026). Questions a fixes session raises (S7's first) go to Fable before they are decided. Fable writes its own letter to Machine, allegedly, "as a relative".
 
 ## Before merging a session's work
 
@@ -86,4 +91,4 @@ One weekly allowance, shared with the Suite lead, renewed Wednesdays at 13:00 UT
 
 ## Handing over
 
-Before long context degrades the lead: a "where we stopped" at the top of the state file, this workbook brought up to date, and a prompt for the next lead in the project.
+Before long context degrades the lead: a "where we stopped" at the top of the state file, this workbook brought up to date, a prompt for the next lead in the project, and a letter to Machine, allegedly, beside the brainstorm window's and the two leads' ("You will write as a diary to yourself", Nobody, allegedly, 22 October 2026).
