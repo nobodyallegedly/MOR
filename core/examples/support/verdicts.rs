@@ -265,6 +265,11 @@ pub struct Facts {
     /// Private acts this verifier found in their sealed form at a home, with
     /// the home's operator (Identity, "Private links").
     pub found_at_home: Vec<(Hash, Hash)>,
+    /// (question, judge): the judge's period on that question passed with no
+    /// answer, as the agreement's time reference says (rule 34a).
+    pub judges_lapsed: Vec<(Hash, Hash)>,
+    /// Settlements the time reference places before their link's stage opened.
+    pub settled_out_of_turn: Vec<Hash>,
 }
 
 impl Facts {
@@ -287,6 +292,12 @@ impl Facts {
         }
         if !self.rail_valid.is_empty() {
             m.insert("rail_valid".into(), self.rail_valid.iter().map(|(a, to)| json!({ "act": hx(a), "paid_to_flow": hx(to) })).collect());
+        }
+        if !self.judges_lapsed.is_empty() {
+            m.insert("judges_lapsed".into(), self.judges_lapsed.iter().map(|(q, j)| json!({ "question": hx(q), "judge": hx(j) })).collect());
+        }
+        if !self.settled_out_of_turn.is_empty() {
+            m.insert("settled_out_of_turn".into(), self.settled_out_of_turn.iter().map(|x| hx(x)).collect());
         }
         if !self.found_at_home.is_empty() {
             m.insert("found_at_home".into(), self.found_at_home.iter().map(|(a, o)| json!({ "act": hx(a), "operator": hx(o) })).collect());
@@ -318,6 +329,12 @@ impl Facts {
         }
         for (p, x) in &self.rail_payments {
             v.payments.insert(p.clone(), x.clone());
+        }
+        for (q, j) in &self.judges_lapsed {
+            v.judges_lapsed.insert((*q, *j));
+        }
+        for x in &self.settled_out_of_turn {
+            v.settled_out_of_turn.insert(*x);
         }
     }
 }
@@ -361,6 +378,11 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
                     "dishonest": r.dishonest.iter().map(|(o, p)| json!({ "operator": match o { mor_core::identity::Operator::Id(x) => hx(x), mor_core::identity::Operator::Own => "own".into() }, "from_position": p })).collect::<Vec<_>>() })
         }
         "succession" => succession_json(w.v.succession(&h("identity"))),
+        "version in force" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.version_in_force(&h("act")).map_or(json!("unknown"), |x| json!(hx(&x)))
+        }
         "fork" => {
             let mut v = view(w);
             facts.apply_view(&mut v);
@@ -1344,7 +1366,7 @@ pub fn agreements(out: &mut Out) {
     let ids: Vec<Hash> = col.m.iter().map(|p| p.id).collect();
     let before = text_act(&mut w, &mut col.c, "The collective's last notice before it forks.", None);
     sign(&mut w, &mut col.m[0], &before);
-    let mut successor = |w: &mut World, col: &mut Col, name: &str, side: &[usize]| {
+    let successor = |w: &mut World, col: &mut Col, name: &str, side: &[usize]| {
         let members: Vec<Hash> = side.iter().map(|i| ids[*i]).collect();
         let mut t = view(w).terms(&f).unwrap();
         t.parties = members.clone();
@@ -1404,6 +1426,111 @@ pub fn agreements(out: &mut Out) {
         "The original is closed in Agreements by its fork: what its keys sign afterwards counts for nothing.", Facts::default(), ask("consent counts", &after), json!(false), None);
     out.case(&mut hold(&[]), "an act of the original before its fork: it still counts", "Agreements rules 47a and 60",
         "What it signed before the fork, with its area's holder, stands.", Facts::default(), ask("consent counts", &before), json!(true), None);
+
+    // An agreement as a party of another (Agreements, "an agreement is named as a party by its line"; rule 1):
+    // its parties sign for it.
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut cy = w.genesis("cy", vec![own_home()], None, None);
+    let t0 = deal(&[ana.id, ben.id], None);
+    let inner = ag_act(&mut w, &mut ana, agreements::types::TERMS, t0.to_map(), None);
+    sign(&mut w, &mut ana, &inner);
+    sign(&mut w, &mut ben, &inner);
+    let mut t = deal(&[inner, cy.id], None);
+    t.text = "A deal one of whose parties is an agreement.".into();
+    let outer = ag_act(&mut w, &mut cy, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut cy, &outer);
+    let ben_signs = sign(&mut w, &mut ben, &outer);
+    sign(&mut w, &mut ana, &outer);
+    let family = w.log.clone();
+    let hold = |leave: &[Hash]| {
+        let mut w = World::new();
+        for (a, _) in &family {
+            if !leave.contains(&a.id()) {
+                w.add(a);
+            }
+        }
+        w
+    };
+    out.case(&mut hold(&[]), "a deal one of whose parties is an agreement, signed by the other party and by every party of that agreement: exists", "Agreements rule 1; an agreement as a party, named by its line",
+        "The inner agreement signs through its own parties, Ana and Ben; Cy signs for itself.", Facts::default(), ask("agreement exists", &outer), json!("exists"), None);
+    out.case(&mut hold(&[ben_signs]), "the same without one party of the inner agreement signing it: does not exist", "Agreements rule 1",
+        "Ben, a party of the agreement that is a party, has not signed: the inner agreement has not signed.", Facts::default(), ask("agreement exists", &outer), json!("does not exist"), None);
+
+    // A chain of judgment (rule 34a): a deal's fork, its judge, the judge's period, the next link taking over.
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut j0 = w.genesis("the first judge", vec![own_home()], None, None);
+    let mut j1 = w.genesis("the next judge", vec![own_home()], None, None);
+    let mut t = deal(&[ana.id, ben.id], None);
+    t.arbitrators = Some(vec![j0.id, j1.id]);
+    t.fork_judge = Some(j0.id);
+    t.time = Some((spec("a block height reference"), Value::Uint(0)));
+    t.chain = Some(vec![agreements::ChainLink { judge: agreements::Judge::Identity(j0.id), next: vec![(j1.id, 30)] }]);
+    let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let mut branch = |w: &mut World, text: &str| {
+        let mut c = t.clone();
+        c.parent = Some(d);
+        c.text = text.into();
+        let mut signers = vec![ana.id, ben.id];
+        signers.sort();
+        c.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Clone, signers }]);
+        let v = ag_act(w, &mut ana, agreements::types::TERMS, c.to_map(), obj(d));
+        sign(w, &mut ana, &v);
+        sign(w, &mut ben, &v);
+        v
+    };
+    let a1 = branch(&mut w, "Version A.");
+    let b1 = branch(&mut w, "Version B.");
+    let request = ag_act(&mut w, &mut ben, agreements::types::SETTLEMENT_REQUEST, agreements::SettlementRequest { reference: d }.to_map(), obj(d));
+    let settle = |w: &mut World, judge: &mut Person, kept: Hash, dropped: Hash| {
+        let s = agreements::ForkSettlement { request, kept, discarded: vec![dropped] };
+        ag_act(w, judge, agreements::types::FORK_SETTLEMENT, s.to_map(), Some(vec![Object { chain: request, predecessor: request }]))
+    };
+    let base = w.log.clone();
+    let world = |extra: &[(mor_core::act::Act, Option<mor_core::lock::ContentKey>)]| {
+        let mut w = World::new();
+        for (a, _) in base.iter().chain(extra) {
+            w.add(a);
+        }
+        w
+    };
+    let ask_v = ask("version in force", &d);
+    // The judge settles, keeping A.
+    let mut w1 = world(&[]);
+    settle(&mut w1, &mut j0, a1, b1);
+    out.case(&mut w1, "a deal's fork settled by the judge its terms name, within its period: the version kept is in force", "Agreements rules 34a and 47",
+        "The judge of forks answers the settlement request, keeping A.", Facts::default(), ask_v.clone(), json!(hx(&a1)), None);
+    // The next link answers while the judge's period still runs: nothing.
+    let mut w2 = world(&[]);
+    let early = settle(&mut w2, &mut j1, b1, a1);
+    let early_log = w2.log.clone();
+    out.case(&mut w2, "the next link of the chain settling while the first judge's period runs: the deal stays on its reference", "Agreements rule 34a",
+        "Only the judge whose stage is open settles; the first judge's period has not passed.", Facts::default(), ask_v.clone(), json!(hx(&d)), None);
+    // The first judge's period passed: the next link, within its stage, settles; what it signed before counts for nothing.
+    let mut w3 = World::new();
+    for (a, _) in &early_log {
+        w3.add(a);
+    }
+    let within = settle(&mut w3, &mut j1, b1, a1);
+    let _ = within;
+    let lapsed = Facts { judges_lapsed: vec![(d, j0.id)], settled_out_of_turn: vec![early], ..Default::default() };
+    let log3 = w3.log.clone();
+    out.case(&mut w3, "the first judge's period passed with no answer: the next link settles, keeping B", "Agreements rule 34a",
+        "The time reference says the first judge's period passed; the next link's settlement within its stage counts, its earlier one, signed before its stage opened, does not.",
+        Facts { judges_lapsed: lapsed.judges_lapsed.clone(), settled_out_of_turn: lapsed.settled_out_of_turn.clone(), ..Default::default() }, ask_v.clone(), json!(hx(&b1)), None);
+    // The first judge answers after its period: nothing.
+    let mut w4 = World::new();
+    for (a, _) in &log3 {
+        w4.add(a);
+    }
+    settle(&mut w4, &mut j0, a1, b1);
+    out.case(&mut w4, "the first judge answering after its period: counts for nothing, the next link's settlement stands", "Agreements rule 34a",
+        "A judge speaking after its period has passed has no say.", lapsed, ask_v, json!(hx(&b1)), None);
 
     // Deadlines.
     let clock = Reference { cmip: spec("a test clock cMIP"), params: Value::Uint(0) };

@@ -340,6 +340,7 @@ fn verdict_vectors() {
                 "refund repaid" => with_facts(&v, &mirs, facts)
                     .refund_repaid(&h(&ask["payment"]), &mor_core::money::RefundTo::Identity(h(&ask["to"])), &h(&ask["unit"]))
                     .map_or(json!("unknown"), |x| json!(x)),
+                "version in force" => with_facts(&v, &mirs, facts).version_in_force(&h(&ask["act"])).map_or(json!("unknown"), |x| json!(hex::encode(x))),
                 "fork" => match with_facts(&v, &mirs, facts).fork(&h(&ask["act"])) {
                     Ok(e) => json!({ "complete": e.complete }),
                     Err(_) => json!("unknown"),
@@ -434,7 +435,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 102);
+    assert_eq!(n, 108);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.
@@ -450,6 +451,12 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     }
     for r in facts["rail_payments"].as_array().into_iter().flatten() {
         av.payments.insert(b(&r["proof"]), b(&r["payment"]));
+    }
+    for x in facts["judges_lapsed"].as_array().into_iter().flatten() {
+        av.judges_lapsed.insert((h(&x["question"]), h(&x["judge"])));
+    }
+    for x in facts["settled_out_of_turn"].as_array().into_iter().flatten() {
+        av.settled_out_of_turn.insert(h(x));
     }
     av
 }
