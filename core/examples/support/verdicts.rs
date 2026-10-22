@@ -229,6 +229,8 @@ pub struct Facts {
     pub failed_to_reach: Vec<Hash>,
     pub anchors: Vec<(Hash, Reference, u64)>,
     pub rail_valid: Vec<(Hash, Hash)>,
+    /// The rail Module's answer of which payment a proof is (Money rule 12).
+    pub rail_payments: Vec<(Vec<u8>, Vec<u8>)>,
 }
 
 impl Facts {
@@ -252,6 +254,9 @@ impl Facts {
         if !self.rail_valid.is_empty() {
             m.insert("rail_valid".into(), self.rail_valid.iter().map(|(a, to)| json!({ "act": hx(a), "paid_to_flow": hx(to) })).collect());
         }
+        if !self.rail_payments.is_empty() {
+            m.insert("rail_payments".into(), self.rail_payments.iter().map(|(p, x)| json!({ "proof": hx(p), "payment": hx(x) })).collect());
+        }
         J::Object(m)
     }
 
@@ -270,6 +275,9 @@ impl Facts {
         }
         for (a, to) in &self.rail_valid {
             v.rail_valid.insert(*a, money::PaidAt::Flow(*to));
+        }
+        for (p, x) in &self.rail_payments {
+            v.payments.insert(p.clone(), x.clone());
         }
     }
 }
@@ -360,12 +368,12 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
         "paid toward" => {
             let mut v = view(w);
             facts.apply_view(&mut v);
-            json!(v.paid_toward(&h("act")))
+            v.paid_toward(&h("act")).map_or(json!("unknown"), |x| json!(x))
         }
         "disagreements" => {
             let mut v = view(w);
             facts.apply_view(&mut v);
-            json!(v.disagreements(&h("receiver")).len())
+            v.disagreements(&h("receiver")).map_or(json!("unknown"), |x| json!(x.len()))
         }
         q => panic!("no such question: {q}"),
     }
@@ -682,11 +690,55 @@ pub fn money(out: &mut Out) {
         let proof = b"one payment's proof".to_vec();
         let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(payer.id)), payee: payee.id, amount: Amount { unit, value: if agree { 100 } else { 60 } }, fulfils: pointer, previous: None, forward: None, batch: None, purchase: None });
         let rid = { let a = w.everyday_act(&mut payee, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
-        let c = Fin::Claim(Claim { rail, proof, payee: payee.id, amount: Amount { unit, value: 100 }, fulfils: pointer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: payee.id, amount: Amount { unit, value: 100 }, fulfils: pointer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
         let cid = { let a = w.everyday_act(&mut payer, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
-        let facts = Facts { rail_valid: vec![(rid, pointer), (cid, pointer)], ..Default::default() };
-        out.case(&mut w, name, "Money rule 11", "The rail's answer is stated as a fact (the core reads no rail): both valid, paid to the payee's flow. Where they disagree in amount, the greater counts and the question is shown on the receiver.",
+        let facts = Facts { rail_valid: vec![(rid, pointer), (cid, pointer)], rail_payments: vec![(proof.clone(), b"payment 1".to_vec())], ..Default::default() };
+        out.case(&mut w, name, "Money rule 11", "The rail's answers are stated as facts (the core reads no rail): both valid, paid to the payee's flow, the proof one payment. Where they disagree in amount, the greater counts and the question is shown on the receiver.",
             facts, json!({ "question": "disagreements", "receiver": hx(&payee.id) }), json!(if agree { 0 } else { 1 }), None);
+    }
+    // "The same payment" is the rail Module's answer, handed as a fact;
+    // without it, unknown, whether the proofs' bytes match or not.
+    let mut w = World::new();
+    let mut payee = w.genesis("a creditor", vec![own_home()], None, None);
+    let mut debtor = w.genesis("a debtor", vec![own_home()], None, None);
+    let pointer = pointer_act(&mut w, &mut payee, b"an address");
+    let ob = Fin::Obligation(money::Obligation { debtor: debtor.id, creditor: payee.id, amount: Amount { unit, value: 100 }, pointer, agreement: None });
+    let oid = { let a = w.everyday_act(&mut debtor, mirs().money, 1, ob.to_map(), None, None); w.add(&a) };
+    // The creditor acknowledges the debt by a witness act of its own, whose history holds its pointer (Money rule 14).
+    w.ack(&mut payee, oid);
+    let receipt = |w: &mut World, payee: &mut Person, proof: &[u8]| {
+        let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(Payer::Identity(debtor.id)), payee: payee.id, amount: Amount { unit, value: 60 }, fulfils: oid, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(payee, mirs().money, 2, r.to_map(), None, None);
+        w.add(&a)
+    };
+    let (p1, p2) = (b"a proof of the payment, as one witness wrote it".to_vec(), b"a proof of the payment, as another witness wrote it".to_vec());
+    let r1 = receipt(&mut w, &mut payee, &p1);
+    let r2 = receipt(&mut w, &mut payee, &p2);
+    let r3 = receipt(&mut w, &mut payee, &p1);
+    let log = w.log.clone();
+    let both = |a: Hash, b: Hash| vec![(a, pointer), (b, pointer)];
+    let cases: Vec<(&str, &str, Vec<Hash>, Facts, J)> = vec![
+        ("two receipts whose proofs differ in bytes, the rail saying one payment: counted once", "Two proofs of one payment are one payment, counted once; the second receipt is a duplicate, never a second payment.",
+            vec![r1, r2], Facts { rail_valid: both(r1, r2), rail_payments: vec![(p1.clone(), b"payment A".to_vec()), (p2.clone(), b"payment A".to_vec())], ..Default::default() }, json!(60)),
+        ("the same two receipts, the rail saying two payments: both count", "What is one payment, the rail Module says; here it names two.",
+            vec![r1, r2], Facts { rail_valid: both(r1, r2), rail_payments: vec![(p1.clone(), b"payment A".to_vec()), (p2.clone(), b"payment B".to_vec())], ..Default::default() }, json!(120)),
+        ("the same two receipts, no rail answer saying which payment each is: unknown", "Never through the proofs' bytes: without the rail's answer, whether they are one payment is unknown.",
+            vec![r1, r2], Facts { rail_valid: both(r1, r2), ..Default::default() }, json!("unknown")),
+        ("two receipts carrying byte-identical proofs, no rail answer saying which payment: unknown", "Identical bytes do not make one payment either; only the rail's answer does.",
+            vec![r1, r3], Facts { rail_valid: both(r1, r3), ..Default::default() }, json!("unknown")),
+        ("the same, the rail saying the proof is one payment: counted once", "The rail's answer for the proof: one payment.",
+            vec![r1, r3], Facts { rail_valid: both(r1, r3), rail_payments: vec![(p1.clone(), b"payment A".to_vec())], ..Default::default() }, json!(60)),
+    ];
+    for (name, why, keep, facts, v) in cases {
+        let mut w = World::new();
+        for (x, _) in &log {
+            let id = x.id();
+            if [r1, r2, r3].contains(&id) && !keep.contains(&id) {
+                continue;
+            }
+            w.add(x);
+        }
+        out.case(&mut w, name, "Money rule 12; rules 10 and 11", why, facts, ask("paid toward", &oid), v, None);
     }
     // A receipt signed with a person's grant key reaching receipts: backed.
     let mut w = World::new();

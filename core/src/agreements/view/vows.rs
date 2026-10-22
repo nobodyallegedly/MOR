@@ -209,7 +209,7 @@ impl<'a> AgreementsView<'a> {
             .collect();
         let mut sales: Vec<VowSale> = vec![];
         let mut unsigned: Vec<Hash> = vec![];
-        let mut seen_payments: Vec<Vec<u8>> = vec![];
+        let mut seen_payments: Vec<(Hash, Payment)> = vec![];
         for o in &offers {
             let Ok(oe) = self.offer(o) else { continue };
             if !oe.counts {
@@ -225,8 +225,8 @@ impl<'a> AgreementsView<'a> {
                 if &fulfils != o {
                     continue;
                 }
-                let payment = self.payment_of(&proof);
-                if seen_payments.contains(&payment) {
+                let payment = (x.id, self.record_payment(&x.id, &proof));
+                if seen_payments.iter().any(|(_, p)| self.same_payment_as(p, &payment.1)) {
                     continue;
                 }
                 if !matches!(self.purchase(&x.id), Ok(Some(PurchaseEval { verdict: PurchaseVerdict::Purchase, .. }))) {

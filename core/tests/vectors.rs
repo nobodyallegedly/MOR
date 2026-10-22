@@ -358,8 +358,8 @@ fn verdict_vectors() {
                         Deadline::Undetermined => "undetermined",
                     })
                 }
-                "paid toward" => json!(with_facts(&v, &mirs, facts).paid_toward(&h(&ask["act"]))),
-                "disagreements" => json!(with_facts(&v, &mirs, facts).disagreements(&h(&ask["receiver"])).len()),
+                "paid toward" => with_facts(&v, &mirs, facts).paid_toward(&h(&ask["act"])).map_or(json!("unknown"), |x| json!(x)),
+                "disagreements" => with_facts(&v, &mirs, facts).disagreements(&h(&ask["receiver"])).map_or(json!("unknown"), |x| json!(x.len())),
                 q => panic!("{what}: a question this check does not know: {q}"),
             };
             assert_eq!(got, c["verdict"], "{layer}: {what}");
@@ -385,7 +385,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 63);
+    assert_eq!(n, 69);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.
@@ -398,6 +398,9 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     }
     for r in facts["rail_valid"].as_array().into_iter().flatten() {
         av.rail_valid.insert(h(&r["act"]), mor_core::money::PaidAt::Flow(h(&r["paid_to_flow"])));
+    }
+    for r in facts["rail_payments"].as_array().into_iter().flatten() {
+        av.payments.insert(b(&r["proof"]), b(&r["payment"]));
     }
     av
 }

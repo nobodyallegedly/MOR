@@ -415,7 +415,7 @@ fn on_a_clock_that_is_not_bitcoin_the_earliest_claim_of_the_same_payment_counts_
     t.s.anchor(pending1, 100);
     let (pending2, _) = t.s.claim(&mut t.label, d2, to_thief, p2.salt, sat(20_000), &p2.unconfirmed());
     t.s.anchor(pending2, 100);
-    assert_eq!(t.s.view().paid_toward(&d1), 0, "pending: nothing counts yet (Money rule 4)");
+    assert_eq!(t.s.view().paid_toward(&d1).unwrap(), 0, "pending: nothing counts yet (Money rule 4)");
 
     let proof2 = p2.confirmed(&mut t.s.chain);
     let (confirmed2, a) = t.s.claim(&mut t.label, d2, to_thief, p2.salt, sat(20_000), &proof2);
@@ -432,13 +432,13 @@ fn on_a_clock_that_is_not_bitcoin_the_earliest_claim_of_the_same_payment_counts_
     assert_eq!(a, Answer::Valid);
     t.s.anchor(confirmed1, 170);
 
-    assert_eq!(t.s.view().paid_toward(&d2), 20_000);
-    assert_eq!(t.s.view().paid_toward(&d1), 20_000, "F203: the claim anchored at payment, 100, counts once the same payment is valid");
+    assert_eq!(t.s.view().paid_toward(&d2).unwrap(), 20_000);
+    assert_eq!(t.s.view().paid_toward(&d1).unwrap(), 20_000, "F203: the claim anchored at payment, 100, counts once the same payment is valid");
     // Without its pending claim's anchor, the payment confirmed after the
     // point would count for nothing.
     let mut v = t.s.view();
     v.rail_pending.clear();
-    assert_eq!(v.paid_toward(&d1), 0);
+    assert_eq!(v.paid_toward(&d1).unwrap(), 0);
 }
 
 // ---------------------------------------------------------------- one payment, two proofs
@@ -474,7 +474,7 @@ fn one_payment_mined_again_after_a_reorganisation_counts_once() {
     let first = p.confirmed(&mut s.chain);
     let (_, a) = s.receipt(&mut bob, label.id, debt, to_bob, p.salt, sat(1_000), &first);
     assert_eq!(a, Answer::Valid);
-    assert_eq!(s.view().paid_toward(&debt), 1_000);
+    assert_eq!(s.view().paid_toward(&debt).unwrap(), 1_000);
     let old_chain = std::mem::replace(&mut s.chain, fork_point);
     support::grow(&mut s.chain, 1);
     let again = p.mined_in(&mut s.chain, N + 2);
@@ -484,12 +484,13 @@ fn one_payment_mined_again_after_a_reorganisation_counts_once() {
     assert_eq!(first.payment(), again.payment(), "one payment: the same output");
     let (_, a) = s.claim(&mut label, debt, to_bob, p.salt, sat(1_000), &again);
     assert_eq!(a, Answer::Valid, "the second proof, valid on the chain now followed");
-    assert_eq!(s.view().paid_toward(&debt), 1_000, "F200: one payment of 1,000, counted once");
-    // A verifier that states no payments compares proofs' bytes, as draft
-    // 1 did, and counts it twice: the caller must state them.
+    assert_eq!(s.view().paid_toward(&debt).unwrap(), 1_000, "F200: one payment of 1,000, counted once");
+    // A verifier handed no rail answer for which payment each proof is
+    // cannot tell one payment from two: unknown, never counted from the
+    // proofs' bytes (Money rule 12, F380).
     let mut v = s.view();
     v.payments.clear();
-    assert_eq!(v.paid_toward(&debt), 2_000);
+    assert_eq!(v.paid_toward(&debt), None);
     drop(v);
     // The first proof, checked again on the chain now followed, is no
     // longer valid: its block is off the chain (F204). See the build
@@ -576,13 +577,13 @@ fn on_the_bitcoin_clock_the_payments_block_is_its_anchor() {
         assert_eq!((anchor.reference.clone(), anchor.point), (reference.clone(), block), "the point is the block");
         t.s.anchors.add(&anchor);
     }
-    assert_eq!(t.s.view().paid_toward(&d1), 20_000, "F201: mined before the lock change's block, it counts");
-    assert_eq!(t.s.view().paid_toward(&d2), 0, "F201: mined after it, it does not; the pending claim anchored before counts for nothing on the Bitcoin clock");
+    assert_eq!(t.s.view().paid_toward(&d1).unwrap(), 20_000, "F201: mined before the lock change's block, it counts");
+    assert_eq!(t.s.view().paid_toward(&d2).unwrap(), 0, "F201: mined after it, it does not; the pending claim anchored before counts for nothing on the Bitcoin clock");
     // Read as on a clock that cannot see the rail (F203), the claim
     // anchored before the point would protect it.
     let mut v = t.s.view();
     v.rail_clocks.clear();
-    assert_eq!(v.paid_toward(&d2), 20_000);
+    assert_eq!(v.paid_toward(&d2).unwrap(), 20_000);
     drop(v);
     // The clock Module refuses a proof its chain does not hold, and one
     // short of the depth (F205).
@@ -680,13 +681,13 @@ fn on_the_bitcoin_clock_a_lock_changes_point_is_its_home_receipts_batch_anchor()
             t.s.anchors.add(&pa);
         }
         assert!(block1 <= point);
-        assert_eq!(t.s.view().paid_toward(&d1), 20_000, "mined before the batch's block: it counts");
+        assert_eq!(t.s.view().paid_toward(&d1).unwrap(), 20_000, "mined before the batch's block: it counts");
         if delay == 0 {
             assert!(block2 > point);
-            assert_eq!(t.s.view().paid_toward(&d2), 0, "mined after the batch's block: it does not");
+            assert_eq!(t.s.view().paid_toward(&d2).unwrap(), 0, "mined after the batch's block: it does not");
         } else {
             assert!(block2 <= point);
-            assert_eq!(t.s.view().paid_toward(&d2), 20_000, "held back {delay} blocks, the receipt's point lets a payment to the thief count: the stated cost of selective delay within a tier");
+            assert_eq!(t.s.view().paid_toward(&d2).unwrap(), 20_000, "held back {delay} blocks, the receipt's point lets a payment to the thief count: the stated cost of selective delay within a tier");
         }
     }
 }
@@ -751,6 +752,6 @@ fn f226_the_earliest_of_two_services_anchors_closes_one_services_delay() {
         let pa = BitcoinClock { chain: &bitcoin_chain }.payment_anchor(&id, &Record::Claim(&c, t.label.id, &Citations::default()), &held).unwrap();
         t.s.anchors.add(&pa);
     }
-    assert_eq!(t.s.view().paid_toward(&d1), 20_000, "mined before both anchors: it counts");
-    assert_eq!(t.s.view().paid_toward(&d2), 0, "mined after the earliest anchor: the first service's delay no longer lets it count");
+    assert_eq!(t.s.view().paid_toward(&d1).unwrap(), 20_000, "mined before both anchors: it counts");
+    assert_eq!(t.s.view().paid_toward(&d2).unwrap(), 0, "mined after the earliest anchor: the first service's delay no longer lets it count");
 }

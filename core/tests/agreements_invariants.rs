@@ -280,7 +280,7 @@ fn binds(b: &Backing) -> bool {
 type Rails = (BTreeSet<Hash>, BTreeSet<Hash>);
 
 fn verdicts(v: &Verifier, rails: &Rails) -> BTreeMap<Hash, String> {
-    let mut lv = AgreementsView::new(v, mirs());
+    let mut lv = common::stand_in_payments(AgreementsView::new(v, mirs()));
     lv.rails = rails.0.iter().map(|r| (*r, push_rail_spec())).collect();
     lv.rail_invalid = rails.1.clone();
     let mut out = BTreeMap::new();
@@ -325,7 +325,7 @@ fn replay(log: &[(Act, Option<ContentKey>)], seed: u64, probe: bool, push: &Rail
         let (a, k) = &log[*i];
         v.add_with_key(a.clone(), k.as_ref()).unwrap();
         if probe && r.below(4) == 0 {
-            let lv = AgreementsView::new(&v, mirs());
+            let lv = common::stand_in_payments(AgreementsView::new(&v, mirs()));
             let held: Vec<Hash> = v.held_acts().map(|h| h.id).collect();
             for _ in 0..3 {
                 let x = held[r.below(held.len())];
@@ -723,7 +723,7 @@ impl ColWorld {
     }
 
     fn view(&self) -> AgreementsView<'_> {
-        let mut lv = AgreementsView::new(&self.w.v, mirs());
+        let mut lv = common::stand_in_payments(AgreementsView::new(&self.w.v, mirs()));
         for (x, payee) in &self.paid {
             lv.rail_valid.insert(*x, mor_core::money::PaidAt::VaultEntry(*payee, 0));
         }
@@ -2393,7 +2393,7 @@ impl DealWorld {
     }
 
     fn view(&self) -> AgreementsView<'_> {
-        let mut lv = AgreementsView::new(&self.w.v, mirs());
+        let mut lv = common::stand_in_payments(AgreementsView::new(&self.w.v, mirs()));
         lv.rails.insert(push_rail(), push_rail_spec());
         lv.rail_invalid = self.wrong.clone();
         lv
@@ -2771,7 +2771,7 @@ impl DealWorld {
             Some(Ok(Fin::Receipt(r))) => r.purchase.map(|p| p.line),
             _ => None,
         };
-        let mut bare = AgreementsView::new(&self.w.v, mirs());
+        let mut bare = common::stand_in_payments(AgreementsView::new(&self.w.v, mirs()));
         bare.rails.insert(push_rail(), push_rail_spec());
         for (answers, lv) in [(true, &lv), (false, &bare)] {
             let mut groups: BTreeMap<(Hash, u8), Vec<String>> = BTreeMap::new();
@@ -3136,7 +3136,7 @@ fn stake_check(c: &StakeCase) -> Result<(), String> {
         a
     };
     let rec = w.add(&a);
-    let lv = AgreementsView::new(&w.v, mirs());
+    let lv = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
     let puts = lv.record(&c0.id, &rec).map_err(|e| format!("{e:?}"))?.puts;
     let fell: Vec<Hash> = holders
         .iter()
@@ -3755,7 +3755,7 @@ fn it3_the_payments_claim_decides() {
             assert_eq!(got, agreements::PurchaseVerdict::Purchase);
         }
     }
-    let mut bare = AgreementsView::new(&d.w.v, mirs());
+    let mut bare = common::stand_in_payments(AgreementsView::new(&d.w.v, mirs()));
     bare.rails.insert(push_rail(), push_rail_spec());
     for (x, _) in &d.push {
         assert_eq!(bare.purchase(x).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Unrecorded, "no rail answer yet");

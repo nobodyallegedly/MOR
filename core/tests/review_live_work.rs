@@ -54,7 +54,7 @@ fn spec(s: &str) -> Hash {
 }
 
 fn view(w: &World) -> AgreementsView<'_> {
-    AgreementsView::new(&w.v, mirs())
+    common::stand_in_payments(AgreementsView::new(&w.v, mirs()))
 }
 
 fn agreements_act(w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, objects: Option<Vec<Object>>) -> Hash {

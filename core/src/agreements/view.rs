@@ -118,16 +118,23 @@ pub struct AgreementsView<'a> {
     /// that cannot see the rail's own proof (F203): such a claim's anchor
     /// counts once a claim of the same payment is valid. It pays nothing.
     pub rail_pending: BTreeSet<Hash>,
-    /// What "the same payment" is (F200): for each receipt's or claim's
-    /// proof (field 1, the payment cMIP's bytes) whose rail answer the
-    /// caller stated (valid, or pending), the payment its rail Module says
-    /// it is (`mor_payment::payment`: on-chain the output the transaction
-    /// created, on Lightning the payment hash). Money's rules that tell
-    /// payments apart (8a, 10, 15) compare these, so two proofs of one
-    /// payment (a payment mined again after a reorganisation) are one
-    /// payment. A proof not listed is its own payment, as before: its
-    /// bytes. A fact the caller states, like `rail_valid`.
+    /// What "the same payment" is (Money rule 12; F200, F380): for each
+    /// receipt's or claim's proof (field 1, the payment cMIP's bytes), the
+    /// payment its rail Module says it is (`mor_payment::payment`: on-chain
+    /// the output the transaction created, on Lightning the payment hash).
+    /// Money's rules that tell payments apart (10, 11, 12, 15, 29) compare
+    /// these, never the proofs' bytes, so two proofs of one payment (a
+    /// payment mined again after a reorganisation) are one payment. A proof
+    /// not listed has no stated payment ([`Payment::Unstated`]): whether it
+    /// is the same payment as another record is unknown, whether the bytes
+    /// match or not, and an answer resting on it says so
+    /// ([`AgreementsError::PaymentUnstated`], [`Self::paid_toward`],
+    /// [`Self::disagreements`]). A fact the caller states, like `rail_valid`.
     pub payments: BTreeMap<Vec<u8>, Vec<u8>>,
+    /// Set when an answer compared two records whose sameness rests on a
+    /// payment not stated in [`Self::payments`]: that answer is unknown
+    /// ([`Self::unstated_payment_read`]).
+    unstated: std::cell::Cell<bool>,
     /// Pairs `(clock Module, rail Module)` where the clock Module reads the
     /// rail's own proof as the payment's anchor (F201, F202: the Bitcoin
     /// clock and the on-chain rail): on such a clock, rule 15 compares the
@@ -595,6 +602,7 @@ impl<'a> AgreementsView<'a> {
             rail_valid: BTreeMap::new(),
             rail_pending: BTreeSet::new(),
             payments: BTreeMap::new(),
+            unstated: Default::default(),
             rail_clocks: BTreeSet::new(),
             absence_accepted: BTreeSet::new(),
             anchored: Default::default(),
@@ -660,6 +668,7 @@ impl<'a> AgreementsView<'a> {
             rail_valid: self.rail_valid.clone(),
             rail_pending: self.rail_pending.clone(),
             payments: self.payments.clone(),
+            unstated: Default::default(),
             rail_clocks: self.rail_clocks.clone(),
             absence_accepted: self.absence_accepted.clone(),
             anchored: self.anchored.clone(),
@@ -6075,7 +6084,7 @@ impl<'a> AgreementsView<'a> {
         }
         let mut claims: Vec<&Held> = vec![p];
         claims.extend(self.same_payment(payment).into_iter().filter_map(|(x, _)| self.v.get(&x)));
-        let acknowledging = |c: &Held| -> Option<Vec<u8>> {
+        let acknowledging = |c: &Held| -> Option<(Hash, Payment)> {
             let Ok(Fin::Claim(cl)) = Fin::decode(c.inside.type_, &c.inside.payload) else { return None };
             (c.inside.spec == self.mirs.money
                 && self.payers_claim(c)
@@ -6083,7 +6092,7 @@ impl<'a> AgreementsView<'a> {
                 && !self.rail_invalid.contains(&c.id)
                 && self.rail_binds(&cl.rail, crate::development::Bound::Purpose)
                 && (c.inside.acks.iter().flatten().any(|a| a == evidence) || cl.referral.as_ref().is_some_and(|r| &r.evidence == evidence)))
-            .then(|| self.payment_of(&cl.proof))
+            .then(|| (cl.rail, self.record_payment(&c.id, &cl.proof)))
         };
         claims.into_iter().any(|c| {
             let Some(this) = acknowledging(c) else { return false };
@@ -6094,7 +6103,7 @@ impl<'a> AgreementsView<'a> {
             let pos = c.inside.position.unwrap_or(0);
             let spent = c.act.outside.signer.is_some_and(|payer| {
                 self.v.signed_by(&payer).any(|o| {
-                    o.id != c.id && acknowledging(o).is_some_and(|other| other != this) && o.inside.position.unwrap_or(0) <= pos
+                    o.id != c.id && acknowledging(o).is_some_and(|other| !self.same_on_rail(&other, &this)) && o.inside.position.unwrap_or(0) <= pos
                 })
             });
             !spent
@@ -6593,6 +6602,21 @@ pub enum Disagreement {
         payee: bool,
         fulfils: bool,
     },
+}
+
+/// What payment a receipt or claim is (Money rule 12; F200, F380), as
+/// Money's rules that tell payments apart compare it: never by the proof's
+/// bytes.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Payment {
+    /// An empty proof: no payment.
+    None,
+    /// The payment its rail Module says, stated by the caller
+    /// ([`AgreementsView::payments`]).
+    Stated(Vec<u8>),
+    /// Not stated: the record alone (its act id), or a bare proof alone.
+    /// Whether it is the same payment as any other record is unknown.
+    Unstated(Vec<u8>),
 }
 
 /// A payment for a work, judged (F126).
@@ -7852,7 +7876,11 @@ impl<'a> AgreementsView<'a> {
     /// Where the creditor signed no receipt for its rail proof, the claim
     /// alone shows the money arrived; where its receipt shows less, the
     /// greater amount counts. Either is shown as a disagreement on the
-    /// receiver ([`Self::disagreements`]). Where a claim and a receipt
+    /// receiver ([`Self::disagreements`]). Records of one payment are one
+    /// count (rule 12): the creditor's receipts of one payment count once,
+    /// at the greatest, and what is one payment is the rail Module's answer
+    /// ([`Self::payments`]): `None` (unknown) where two records could be one
+    /// payment and the answer for one of them is not stated. Where a claim and a receipt
     /// sharing a rail proof disagree in payee or in what the payment
     /// fulfils (F151, replacing F141's "neither counts"): on a rail binding
     /// payee and purpose, the payment's own commitment decides, so only the
@@ -7861,8 +7889,8 @@ impl<'a> AgreementsView<'a> {
     /// binding neither (field 13 of its specification, [`Self::rails`]), the payer's claim decides
     /// what the payment fulfils, and the receiver's contrary receipt counts
     /// for nothing, shown as a dispute on the receiver.
-    pub fn paid_toward(&self, obligation: &Hash) -> u64 {
-        self.paid_toward_if(obligation, &|_| true, false)
+    pub fn paid_toward(&self, obligation: &Hash) -> Option<u64> {
+        self.judged(|| self.paid_toward_if(obligation, &|_| true, false))
     }
 
     /// [`Self::paid_toward`], counting only the receipts and claims `relied`
@@ -7885,8 +7913,8 @@ impl<'a> AgreementsView<'a> {
                     .get(id)
                     .is_some_and(|at| self.paid_where_it_counts(at, amount, proof, obligation, &o))
         };
-        let mut receipts: Vec<(Vec<u8>, u64)> = vec![];
-        let mut claims: BTreeMap<Vec<u8>, u64> = BTreeMap::new();
+        let mut receipts: Vec<((Hash, Payment), u64)> = vec![];
+        let mut claims: Vec<((Hash, Payment), u64)> = vec![];
         for r in self.v.held_acts() {
             if r.inside.spec != self.mirs.money {
                 continue;
@@ -7901,7 +7929,7 @@ impl<'a> AgreementsView<'a> {
                         && counts(&r.id, &rc.amount, &rc.proof)
                         && !self.receipt_overruled(&rc) =>
                 {
-                    receipts.push((self.payment_of(&rc.proof), rc.amount.value));
+                    receipts.push(((rc.rail, self.record_payment(&r.id, &rc.proof)), rc.amount.value));
                 }
                 Ok(Fin::Claim(c))
                     if &c.fulfils == obligation
@@ -7911,22 +7939,36 @@ impl<'a> AgreementsView<'a> {
                         && counts(&r.id, &c.amount, &c.proof)
                         && !self.claim_overruled(&c) =>
                 {
-                    let m = claims.entry(self.payment_of(&c.proof)).or_default();
-                    *m = (*m).max(c.amount.value);
+                    claims.push(((c.rail, self.record_payment(&r.id, &c.proof)), c.amount.value));
                 }
                 _ => {}
             }
         }
-        let mut sum = receipts.iter().map(|(_, v)| *v).fold(0u64, u64::saturating_add);
-        for (proof, claimed) in claims {
-            let receipted = receipts
-                .iter()
-                .filter(|(p, _)| p == &proof)
-                .map(|(_, v)| *v)
-                .fold(0u64, u64::saturating_add);
-            sum = sum.saturating_add(claimed.saturating_sub(receipted));
+        self.one_count(&receipts, &claims)
+    }
+
+    /// Money rules 10 to 12 over the records counted toward one purpose:
+    /// receipts and claims grouped by payment (one rail, one payment as its
+    /// rail Module says), each payment counting once: its greatest receipt,
+    /// or its greatest claim where that is more (the greater amount counts
+    /// until the receiver signs a receipt matching it). Notes the answer
+    /// unknown where two records could be one payment and one is unstated.
+    pub(super) fn one_count(&self, receipts: &[((Hash, Payment), u64)], claims: &[((Hash, Payment), u64)]) -> u64 {
+        let all: Vec<(Hash, Payment)> = receipts.iter().chain(claims).map(|(k, _)| k.clone()).collect();
+        self.note_unstated(&all);
+        let mut payments: Vec<((Hash, Payment), u64, u64)> = vec![];
+        for (k, v, is_receipt) in receipts.iter().map(|(k, v)| (k, *v, true)).chain(claims.iter().map(|(k, v)| (k, *v, false))) {
+            let at = match payments.iter().position(|(p, _, _)| p == k || matches!((&p.1, &k.1), (Payment::Stated(_), Payment::Stated(_)) if self.same_on_rail(p, k))) {
+                Some(i) => i,
+                None => {
+                    payments.push((k.clone(), 0, 0));
+                    payments.len() - 1
+                }
+            };
+            let slot = if is_receipt { &mut payments[at].1 } else { &mut payments[at].2 };
+            *slot = (*slot).max(v);
         }
-        sum
+        payments.iter().map(|(_, r, c)| (*r).max(*c)).fold(0u64, u64::saturating_add)
     }
 
     /// Whether a payment its rail shows paid at `at`, with rail proof
@@ -8273,23 +8315,84 @@ impl<'a> AgreementsView<'a> {
         out
     }
 
-    /// The payment a receipt's or claim's proof is (F200), as one key:
-    /// the payment its rail Module says ([`Self::payments`]) where the
-    /// caller stated it, otherwise the proof's own bytes, each tagged so
-    /// the two never meet. Empty for an empty proof, which is no payment.
-    pub fn payment_of(&self, proof: &[u8]) -> Vec<u8> {
-        if proof.is_empty() {
-            return vec![];
-        }
-        match self.payments.get(proof) {
-            Some(p) => [&[1u8][..], p].concat(),
-            None => [&[0u8][..], proof].concat(),
+    /// The payment a bare rail proof is (Money rule 12; F200, F380): the
+    /// payment its rail Module says ([`Self::payments`]) where the caller
+    /// stated it, otherwise unstated. [`Payment::None`] for an empty proof,
+    /// which is no payment.
+    pub fn payment_of(&self, proof: &[u8]) -> Payment {
+        match (proof.is_empty(), self.payments.get(proof)) {
+            (true, _) => Payment::None,
+            (false, Some(p)) => Payment::Stated(p.clone()),
+            (false, None) => Payment::Unstated([&[0u8][..], proof].concat()),
         }
     }
 
-    /// Whether two proofs are of the same payment (F200; rules 8a, 10, 15).
-    fn same_payment_of(&self, a: &[u8], b: &[u8]) -> bool {
-        !a.is_empty() && (a == b || self.payment_of(a) == self.payment_of(b))
+    /// The payment a receipt or claim `id` carrying `proof` is: as
+    /// [`Self::payment_of`], an unstated one standing for that record alone.
+    pub fn record_payment(&self, id: &Hash, proof: &[u8]) -> Payment {
+        match self.payment_of(proof) {
+            Payment::Unstated(_) => Payment::Unstated([&[1u8][..], id].concat()),
+            p => p,
+        }
+    }
+
+    /// Whether two payments are one (Money rule 12): both stated and equal,
+    /// or one record compared with itself. Where either is unstated, the
+    /// answer is unknown: not shown the same here, and noted, so that a
+    /// verdict resting on it answers unknown ([`Self::unstated_payment_read`]).
+    pub fn same_payment_as(&self, a: &Payment, b: &Payment) -> bool {
+        match (a, b) {
+            (Payment::None, _) | (_, Payment::None) => false,
+            (Payment::Stated(x), Payment::Stated(y)) => x == y,
+            _ if a == b => true,
+            _ => {
+                self.unstated.set(true);
+                false
+            }
+        }
+    }
+
+    /// [`Self::same_payment_as`] for payments on rails: one payment only on
+    /// one rail.
+    fn same_on_rail(&self, a: &(Hash, Payment), b: &(Hash, Payment)) -> bool {
+        a.0 == b.0 && self.same_payment_as(&a.1, &b.1)
+    }
+
+    /// Whether an answer given since the view was made, or since the last
+    /// [`Self::paid_toward`] or [`Self::disagreements`], compared two
+    /// records whose sameness rests on a payment the caller did not state
+    /// ([`Self::payments`]): an answer of a function that returns no
+    /// unknown of its own is then unknown, and a caller shows it so.
+    pub fn unstated_payment_read(&self) -> bool {
+        self.unstated.get()
+    }
+
+    /// `f`'s answer, or `None` (unknown) where it compared records whose
+    /// sameness rests on a payment not stated.
+    fn judged<T>(&self, f: impl FnOnce() -> T) -> Option<T> {
+        self.unstated.set(false);
+        let r = f();
+        (!self.unstated.get()).then_some(r)
+    }
+
+    /// Records grouped by payment (a creditor's receipts or a payer's
+    /// claims toward one purpose): notes the answer unknown where two of
+    /// them on one rail could be one payment and one is unstated.
+    fn note_unstated(&self, keys: &[(Hash, Payment)]) {
+        for (i, a) in keys.iter().enumerate() {
+            for b in &keys[i + 1..] {
+                self.same_on_rail(a, b);
+            }
+        }
+    }
+
+    /// Whether two proofs are of the same payment (F200; rules 10, 12, 15).
+    fn same_payment_of(&self, a: (Option<&Hash>, &[u8]), b: (Option<&Hash>, &[u8])) -> bool {
+        let key = |(id, proof): (Option<&Hash>, &[u8])| match id {
+            Some(id) => self.record_payment(id, proof),
+            None => self.payment_of(proof),
+        };
+        self.same_payment_as(&key(a), &key(b))
     }
 
     /// The payer's claims of one payment, the payment proof `proof` is
@@ -8316,7 +8419,7 @@ impl<'a> AgreementsView<'a> {
         self.v
             .held_acts()
             .filter(|h| h.inside.spec == self.mirs.money && answered(&h.id) && self.payers_claim(h))
-            .filter(|h| matches!(Fin::decode(h.inside.type_, &h.inside.payload), Ok(Fin::Claim(c)) if self.same_payment_of(&c.proof, proof)))
+            .filter(|h| matches!(Fin::decode(h.inside.type_, &h.inside.payload), Ok(Fin::Claim(c)) if self.same_payment_of((Some(&h.id), &c.proof), (None, proof))))
             .map(|h| h.id)
             .collect()
     }
@@ -8355,7 +8458,7 @@ impl<'a> AgreementsView<'a> {
                         && r.act.outside.signer.is_some_and(|s| fin::check_signer(&p, &s, &fin::Citations::of(&r.inside)).is_ok()) =>
                 {
                     match p {
-                        Fin::Receipt(rc) if self.same_payment_of(&rc.proof, proof) => Some((r.id, rc)),
+                        Fin::Receipt(rc) if self.same_payment_of((Some(&r.id), &rc.proof), (None, proof)) => Some((r.id, rc)),
                         _ => None,
                     }
                 }
@@ -8414,7 +8517,7 @@ impl<'a> AgreementsView<'a> {
             h.inside.spec == self.mirs.money
                 && self.rail_valid.contains_key(&h.id)
                 && matches!(Fin::decode(h.inside.type_, &h.inside.payload),
-                    Ok(Fin::Claim(c)) if self.same_payment_of(&c.proof, &rc.proof) && (c.payee != rc.payee || c.fulfils != rc.fulfils))
+                    Ok(Fin::Claim(c)) if self.same_payment_of((Some(&h.id), &c.proof), (None, &rc.proof)) && (c.payee != rc.payee || c.fulfils != rc.fulfils))
                 && self.payers_claim(h)
         })
     }
@@ -8426,8 +8529,14 @@ impl<'a> AgreementsView<'a> {
     /// receipt at all (the claim alone shows the money arrived), or receipts
     /// naming the same proof that disagree with it. Until the receiver signs
     /// a receipt matching the proof, the greater amount counts as received
-    /// ([`Self::paid_toward`]).
-    pub fn disagreements(&self, receiver: &Hash) -> Vec<Disagreement> {
+    /// ([`Self::paid_toward`]). `None` (unknown) where whether a receipt
+    /// and a claim are one payment rests on a payment the caller did not
+    /// state ([`Self::payments`]).
+    pub fn disagreements(&self, receiver: &Hash) -> Option<Vec<Disagreement>> {
+        self.judged(|| self.disagreements_shown(receiver))
+    }
+
+    fn disagreements_shown(&self, receiver: &Hash) -> Vec<Disagreement> {
         use crate::money::Payload as Fin;
         let mut out = vec![];
         for h in self.v.held_acts() {
@@ -8544,7 +8653,9 @@ impl<'a> AgreementsView<'a> {
                 v.still_owed_for_closing(&col, chain_act, tips, obligation, amount)
             });
         }
-        let paid = self.paid_toward_if(obligation, &|r| self.relied_by_line(col, chain_act, tips, r), true);
+        let paid = self
+            .judged(|| self.paid_toward_if(obligation, &|r| self.relied_by_line(col, chain_act, tips, r), true))
+            .ok_or(AgreementsError::PaymentUnstated)?;
         if paid >= amount {
             return Ok(false);
         }
@@ -8580,7 +8691,7 @@ impl<'a> AgreementsView<'a> {
         if self.own_attempts_open() {
             return self.binding(|v| v.paid(obligation));
         }
-        Ok(self.paid_toward(obligation))
+        self.paid_toward(obligation).ok_or(AgreementsError::PaymentUnstated)
     }
 
     /// What a collective owes (F125, D5): its own obligations that bind,
@@ -9511,8 +9622,8 @@ impl<'a> AgreementsView<'a> {
             return Ok(None);
         }
         let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.record_payment(&h.id, &r.proof))),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.record_payment(&h.id, &r.proof))),
             _ => None,
         };
         let mine = self.v.get(id).and_then(proof);
@@ -9522,7 +9633,7 @@ impl<'a> AgreementsView<'a> {
                 || h.inside.type_ != crate::money::types::RECEIPT
                 || !self.valid(&h.id)
                 || self.rail_invalid.contains(&h.id)
-                || !(h.id == *id || mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m)))
+                || !(h.id == *id || mine.as_ref().is_some_and(|m| proof(h).is_some_and(|x| self.same_on_rail(m, &x))))
             {
                 continue;
             }
@@ -9568,15 +9679,15 @@ impl<'a> AgreementsView<'a> {
         let col = self.col(collective);
         let still_broken = self.broken(collective)?.is_some();
         let mut out = vec![];
-        let mut seen: Vec<(Hash, Vec<u8>)> = vec![];
+        let mut seen: Vec<(Hash, Payment)> = vec![];
         let held: Vec<&Held> = self.v.held_acts().filter(|h| h.inside.spec == self.mirs.money).collect();
         for h in held {
             let (payee, amount, key) = match Fin::decode(h.inside.type_, &h.inside.payload) {
-                Ok(Fin::Receipt(r)) => (r.payee, r.amount, (r.rail, self.payment_of(&r.proof))),
-                Ok(Fin::Claim(r)) => (r.payee, r.amount, (r.rail, self.payment_of(&r.proof))),
+                Ok(Fin::Receipt(r)) => (r.payee, r.amount, (r.rail, self.record_payment(&h.id, &r.proof))),
+                Ok(Fin::Claim(r)) => (r.payee, r.amount, (r.rail, self.record_payment(&h.id, &r.proof))),
                 _ => continue,
             };
-            if payee != col.id || (!key.1.is_empty() && seen.contains(&key)) {
+            if payee != col.id || seen.iter().any(|k| self.same_on_rail(k, &key)) {
                 continue;
             }
             let Some(e) = self.purchase(&h.id)? else { continue };
@@ -9706,8 +9817,8 @@ impl<'a> AgreementsView<'a> {
             (PaidAt::Flow(_), Some(w)) => self.payment_counts(&w, at, amount, proof, &owed[0]),
             _ => false,
         };
-        let mut receipts: Vec<(Vec<u8>, u64)> = vec![];
-        let mut claims: BTreeMap<Vec<u8>, u64> = BTreeMap::new();
+        let mut receipts: Vec<((Hash, Payment), u64)> = vec![];
+        let mut claims: Vec<((Hash, Payment), u64)> = vec![];
         for r in self.v.held_acts() {
             if r.inside.spec != self.mirs.money || !self.rail_valid.contains_key(&r.id) {
                 continue;
@@ -9720,7 +9831,7 @@ impl<'a> AgreementsView<'a> {
                         && self.valid(&r.id)
                         && !self.receipt_overruled(&rc) =>
                 {
-                    receipts.push((self.payment_of(&rc.proof), rc.amount.value));
+                    receipts.push(((rc.rail, self.record_payment(&r.id, &rc.proof)), rc.amount.value));
                 }
                 Ok(Fin::Claim(c))
                     if owed.contains(&c.fulfils)
@@ -9730,18 +9841,12 @@ impl<'a> AgreementsView<'a> {
                         && self.rail_valid.get(&r.id).is_some_and(|at| counts(at, &c.amount, &c.proof))
                         && !self.claim_overruled(&c) =>
                 {
-                    let m = claims.entry(self.payment_of(&c.proof)).or_default();
-                    *m = (*m).max(c.amount.value);
+                    claims.push(((c.rail, self.record_payment(&r.id, &c.proof)), c.amount.value));
                 }
                 _ => {}
             }
         }
-        let mut sum = receipts.iter().map(|(_, v)| *v).fold(0u64, u64::saturating_add);
-        for (proof, claimed) in claims {
-            let receipted = receipts.iter().filter(|(p, _)| p == &proof).map(|(_, v)| *v).fold(0u64, u64::saturating_add);
-            sum = sum.saturating_add(claimed.saturating_sub(receipted));
-        }
-        sum
+        self.one_count(&receipts, &claims)
     }
 
     /// The other receipts and claims of the same rail payment as `id` (one
@@ -9750,12 +9855,12 @@ impl<'a> AgreementsView<'a> {
     fn same_payment(&self, id: &Hash) -> Vec<(Hash, Option<crate::money::Purchase>)> {
         use crate::money::Payload as Fin;
         let of = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some(((r.rail, self.payment_of(&r.proof)), r.purchase)),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some(((r.rail, self.payment_of(&r.proof)), r.purchase)),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some(((r.rail, self.record_payment(&h.id, &r.proof)), r.purchase)),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some(((r.rail, self.record_payment(&h.id, &r.proof)), r.purchase)),
             _ => None,
         };
         let Some(Some((mine, _))) = self.v.get(id).map(of) else { return vec![] };
-        if mine.1.is_empty() {
+        if mine.1 == Payment::None {
             return vec![];
         }
         let mut out = vec![];
@@ -9764,7 +9869,7 @@ impl<'a> AgreementsView<'a> {
                 continue;
             }
             if let Some((k, q)) = of(h) {
-                if k == mine {
+                if self.same_on_rail(&k, &mine) {
                     out.push((h.id, q));
                 }
             }
@@ -9813,8 +9918,8 @@ impl<'a> AgreementsView<'a> {
     fn holder_receipts(&self, id: &Hash, holder: &Hash) -> Vec<&'a Held> {
         use crate::money::Payload as Fin;
         let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.record_payment(&h.id, &r.proof))),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.record_payment(&h.id, &r.proof))),
             _ => None,
         };
         let Some(x) = self.v.get(id) else { return vec![] };
@@ -9826,7 +9931,7 @@ impl<'a> AgreementsView<'a> {
                     && h.inside.type_ == crate::money::types::RECEIPT
                     && self.valid(&h.id)
                     && !self.rail_invalid.contains(&h.id)
-                    && (h.id == *id || mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m)))
+                    && (h.id == *id || mine.as_ref().is_some_and(|m| proof(h).is_some_and(|x| self.same_on_rail(m, &x))))
             })
             .collect()
     }
@@ -9953,8 +10058,8 @@ impl<'a> AgreementsView<'a> {
         use crate::money::Payload as Fin;
         let x = self.held(id)?;
         let proof = |h: &Held| match Fin::decode(h.inside.type_, &h.inside.payload) {
-            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
-            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.payment_of(&r.proof))),
+            Ok(Fin::Receipt(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.record_payment(&h.id, &r.proof))),
+            Ok(Fin::Claim(r)) if h.inside.spec == self.mirs.money => Some((r.rail, self.record_payment(&h.id, &r.proof))),
             _ => None,
         };
         let mine = proof(x);
@@ -9968,7 +10073,7 @@ impl<'a> AgreementsView<'a> {
             if h.id != *id
                 && h.inside.spec == self.mirs.money
                 && h.inside.type_ == crate::money::types::RECEIPT
-                && mine.as_ref().is_some_and(|m| !m.1.is_empty() && proof(h).as_ref() == Some(m))
+                && mine.as_ref().is_some_and(|m| proof(h).is_some_and(|x| self.same_on_rail(m, &x)))
             {
                 candidates.push(h);
                 candidates.extend(self.v.acknowledgements(&h.id));

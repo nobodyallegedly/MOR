@@ -662,3 +662,27 @@ pub fn publication(mut fields: Vec<(Value, Value)>) -> Vec<(Value, Value)> {
     fields.sort_by(|a, b| mor_core::cbor::encode(&a.0).cmp(&mor_core::cbor::encode(&b.0)));
     fields
 }
+
+/// The stand-in rails these tests use answer that a proof is its own
+/// payment. What "the same payment" is, each rail Module says, and a
+/// verifier is handed that answer, never reading it from the proofs' bytes
+/// (Money rule 12; F380): this states the stand-in rails' answer for every
+/// receipt and claim `v`'s verifier holds, beside any answer already stated.
+pub fn stand_in_payments(mut v: mor_core::agreements::AgreementsView<'_>) -> mor_core::agreements::AgreementsView<'_> {
+    use mor_core::money::Payload;
+    let money = v.mirs.money;
+    for h in v.v.held_acts() {
+        if h.inside.spec != money {
+            continue;
+        }
+        let proof = match Payload::decode(h.inside.type_, &h.inside.payload) {
+            Ok(Payload::Receipt(r)) => r.proof,
+            Ok(Payload::Claim(c)) => c.proof,
+            _ => continue,
+        };
+        if !proof.is_empty() {
+            v.payments.entry(proof.clone()).or_insert(proof);
+        }
+    }
+    v
+}

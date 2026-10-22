@@ -1724,6 +1724,15 @@ struct SpecsIn {
     /// are read from the buyers' claims with it (rule 13).
     #[serde(default)]
     rail_valid: Vec<(String, String, Option<u64>)>,
+    /// What "the same payment" is (Money rule 12, F380): pairs `[proof,
+    /// payment]`, a receipt's or claim's proof (field 1) and the payment
+    /// its rail Module says it is (the payment cMIP's `payment`), as the
+    /// client read them. Two records are one payment only where both are
+    /// listed with one payment; where an answer rests on a record not
+    /// listed, it is unknown (an error coded `law/payment-unstated`),
+    /// whether the proofs' bytes match or not.
+    #[serde(default)]
+    rail_payments: Vec<(String, String)>,
     /// Absence proof (Agreements rule 51, F172): pairs `[declaration, act]`, an
     /// abandonment declaration and the record or clone using it, that the
     /// absence-proof cMIP its clause names (key 3) accepted, as the client
@@ -1808,6 +1817,9 @@ impl SpecsIn {
                 Some(i) => money::PaidAt::VaultEntry(at, *i),
                 None => money::PaidAt::Flow(at),
             });
+        }
+        for (proof, payment) in &self.rail_payments {
+            view.payments.insert(hex::decode(proof).map_err(err)?, hex::decode(payment).map_err(err)?);
         }
         for (d, by) in &self.absence_accepted {
             view.absence_accepted.insert((unhex(d)?, unhex(by)?));
@@ -3574,7 +3586,10 @@ impl Verifier {
 
     /// What is paid toward an obligation, as a binding answer: an error
     /// coded `agreements/own-attempt` where it rests on this client's own failed
-    /// attempts to reach homes, shown as unknown (F153).
+    /// attempts to reach homes, shown as unknown (F153); an error coded
+    /// `law/payment-unstated` where it rests on whether two receipts
+    /// or claims are one payment and `specs.railPayments` does not say
+    /// (Money rule 12, F380), shown as unknown.
     #[wasm_bindgen(js_name = agreementsPaid)]
     pub fn agreements_paid(&self, specs: JsValue, id: &str) -> R<u64> {
         let s = specs_of(specs)?;
