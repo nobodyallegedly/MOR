@@ -1,0 +1,23 @@
+The follow-up to S7, in the MOR repository (`nobodyallegedly/MOR`): three decided changes to the texts and the core, then the vectors for the heavy rules. After you, a second box is sealed and the C verifier runs again against it.
+
+**Read first, yourself:** `CLAUDE.md`; `docs/state-of-mor.md`; `docs/lead/workbook.md` (above all "After the box"); F380 and F381 at the top of `docs/findings/MOR-findings-log-round-2.md`, in full; `docs/s7-report.md` and `docs/s7-progress.md` (S7's plan for Part 4); `docs/reviews/fable-c-verifier-review.md`, "Is the core freezable" and "Vectors to add"; `core/vectors/README.md`, `core/examples/gen_vectors.rs`, `core/examples/support/verdicts.rs`; then each passage of the freeze-ready texts you change, never through a summary.
+
+**Part 1. F381, in the texts, the core and the vectors** (the finding decides; this list only points):
+- **Check 7's second clause dropped** (decided by Nobody, allegedly): a kept tip whose summary does not fit keeps nothing; a rotation is never made invalid by it, whatever the verifier holds. Identity's check 7 and its commentary; `kept_tips_fit` and its callers; the vector "a rotation whose one kept tip does not fit its line" (now: the rotation stands, the tip keeps nothing) and the tests that pinned the clause.
+- **The two stop reasons renamed:** "the genesis unknown" and "the genesis invalid", in Identity's "What stops a chain", the core's names where they surface, and the vectors' wording.
+- **Unknown "same payment" carried through, scoped:** every answer of Money and Agreements that depends on whether an unstated pair of receipts or claims is one payment answers unknown (rule 15's lists, purchases, refunds, issuance take-ups, vows' sales, and any other S7 lists under its question 4); an answer that does not depend on the pair keeps its answer. Unknown never spreads to the whole view. A vector for at least two of these.
+List every text change under "After the box" in the workbook, one line each. A stranger's reading by a subagent limited to the eight texts over what you changed.
+
+**Part 2. The heavy rules, shown rather than argued** (F380, 4; S7's plan): build once, in a shared prefix of the vector pool, one collective with SLH-DSA-SHA2-128f chain signatures: its founding, its members' chain signatures, one closing and one fork side; then name every case on it by act id so the signatures are paid once. Cases, in this order, as far as the budget allows: a collective's closing; a collective's fork and its sides; an agreement as a party of another; a chain of judgment (a judge's answer, its period, the next link taking over); a record putting an operational clone in force (if not already). Each with the verdict the texts give and the rule. State the file's size in both vector READMEs (the repository's and `scripts/c-box/vectors-README.md`, which carries no code path or finding number), and add each new case to their "What changed since the previous edition".
+
+**When the code shows a text cannot be written as decided**, or a new vector finds the core and a text apart in a way no finding settles: stop on that point, write the question in plain words, then precisely, with options, your lean and the cost, and go on with the rest. Questions go to Fable before they are decided.
+
+**Finding number.** If this session records a finding of its own, it is **F383**; do not take another.
+
+**The apps share this core** (the Dubsar Suite's sessions run on other branches): where you change what the core's WebAssembly interface offers the clients, keep the existing functions working beside the new ones, or list each change in the report under "For the Dubsar Suite".
+
+**Report:** `docs/s7b-report.md`: plain words first, then precisely; the questions; the stranger's reading; `scripts/c-box/make-c-box.sh` run at the end into a scratch folder, refusing nothing. Check CI yourself before saying it is green; a job that fails where the commit changed nothing near it may be flaky: rerun it once and say so. Keep a progress file (`docs/s7b-progress.md`).
+
+**Do not:** change a rule beyond F380 and F381; write any finding number, review label or history into the eight texts; rename cMIPs or Modules (the Dubsar Suite's).
+
+**Rules that never bend:** never write the author's personal name or nicknames in anything that enters the repository; write "Nobody, allegedly". No server addresses, onion addresses or keys (test keys from fixed seeds in the vectors are test data, labelled so). Test identities only; regtest or signet only. Work on a branch `claude/s7b-follow-up` from main (after S7's pull request 96 is merged); open a pull request; do not merge.
