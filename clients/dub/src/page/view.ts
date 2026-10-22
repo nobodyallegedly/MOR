@@ -71,6 +71,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .dub-first h2{font-size:24px;margin:8px 0 4px}
 .dub-first form{margin:6px 0}
 .dub-picked{font-size:12.5px;color:var(--k-soft)}
+.dub-code{font-size:22px;letter-spacing:.14em;color:var(--k-text);margin:6px 0}
 .dub-film{display:flex;align-items:center;gap:10px;border:1px solid var(--k-line);border-radius:12px;padding:10px 12px;margin:6px 0;font-size:14px;color:var(--k-soft)}
 .dub-sealed{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:6px 0}
 .dub-sealed img{margin:6px 0}
@@ -292,7 +293,7 @@ export function topBar(s: State, part: Part | null): string {
 export function firstScreen(web: boolean, suggested: Suggested): string {
   return `${top({ left: appMark(NAME, 'icon.png'), right: '' })}<div class="k-body"><section class="dub-first" id="first"><div id="status-here"></div>
 <h2>Identity</h2><p class="k-soft">Dub opens once an identity is here.</p>
-${makeForm(web, suggested)}${bringForm(web)}
+${makeForm(web, suggested)}${bringForm(web)}${web ? '' : `<div class="k-box" id="from-kishib"><h4>Use one from Kišib</h4><p class="k-small k-soft">Through Kišib’s runner, on this Mac: Kišib keeps the signing key and shows each act before it signs it; Dub holds no key.</p><div class="k-row"><button type="button" class="k-btn" data-k-add="kishib">Use one from Kišib</button></div></div>`}
 ${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`])}</section></div>`;
 }
 
@@ -615,4 +616,40 @@ ${say(i.list === 'published' ? 'Published: anyone reads the IDs; your names for 
 /** The spent key, said plainly, and the new signing key's words taken. */
 export function spent(said: string): string {
   return `<div class="k-alarmbox" id="spent-box"><p>${e(said)}</p><form id="renew"><label>The new signing key’s 24 words</label><textarea name="words" autocomplete="off" spellcheck="false" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form></div>`;
+}
+
+// ---------------------------------------------------------------- an identity used through Kišib (the Dubsar runner cMIP)
+
+/** Where Dub's pairing with Kišib stands, as the program says it. */
+export interface RunnerState {
+  available: boolean;
+  origin: string | null;
+  state: string | null;
+  code: string | null;
+  identities: { id: string; form: string; name: string | null; held: boolean }[];
+  problem: string | null;
+}
+
+/** + Add, Use one from Kišib: pair, then choose an identity Kišib lets Dub use. */
+export function runnerForm(r: RunnerState): string {
+  const intro = '<p class="k-small k-soft">Kišib’s runner keeps the identity’s signing key on this Mac; Dub holds none of its keys. Each act Dub would sign is shown by Kišib, in its own panel inside this window, before Kišib signs it (unless you give Dub a standing yes for that kind, in Kišib). Money, agreements and keys always ask.</p>';
+  if (!r.available) return `${intro}<p>Kišib’s runner is on the Mac only.</p>`;
+  const problem = r.problem ? `<div class="k-note k-error">${e(r.problem)}</div>` : '';
+  if (r.state === 'approved') {
+    const ids = r.identities.map((x) => `<div class="k-idline"><span class="k-dot k-alt">${e((x.name ?? 'M')[0].toUpperCase())}</span><span class="k-grow"><span class="k-n">${e(x.name ?? 'No name')}</span><br><span class="k-s k-mono">${e(shortForm(x.form))}</span></span>${x.held ? '<span class="k-small k-faint">used here</span>' : `<button type="button" class="k-btn k-p" data-action="runner-take" data-id="${e(x.id)}">Use it</button>`}</div>`).join('');
+    return `${intro}<p class="k-small">Dub is paired with Kišib’s runner. The identities Kišib lets Dub use:</p><div class="k-list">${ids || '<p class="k-small k-soft">None: choose some for Dub in Kišib (Runner, Apps).</p>'}</div><div class="k-row"><button type="button" class="k-btn k-q" data-action="runner-look">Look again</button></div>`;
+  }
+  if (r.state === 'waiting') return `${intro}<p>Dub asked Kišib to pair. Approve it in Kišib (Runner, Apps), only if Kišib shows the same code:</p><p class="k-mono dub-code" id="runner-code">${e(r.code ?? '')}</p><div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-look">I approved it in Kišib</button><button type="button" class="k-btn k-q" data-action="runner-pair">Ask again</button></div>`;
+  const was = r.state === 'revoked' ? '<p class="k-small k-soft">Kišib no longer knows Dub: its pairing was revoked, or the runner was turned off.</p>' : r.state === 'refused' ? '<p class="k-small k-soft">Kišib refused Dub’s pairing.</p>' : '';
+  return `${intro}${problem}${was}<p class="k-small k-soft">First, Kišib’s runner must be on, and hold the identity (Kišib: Runner; Identities, Held here). Then Dub asks to pair; you approve in Kišib.</p><div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-pair">Ask Kišib to pair</button></div>`;
+}
+
+/** Remove, said plainly first, for an identity used through Kišib: only unlinked here. */
+export function runnerRemoveSaid(name: string): string {
+  return `<div class="k-box" data-k-remove><h4>Remove ${e(name)} from Dub?</h4><p class="k-small k-soft">Dub stops using ${e(name)} through Kišib, and forgets what it kept about it on this device. Dub holds no key of it. Kišib’s runner keeps its key until you remove it there, or turn the runner off; ${e(name)} itself, its acts and its homes are not touched.</p><div class="k-row"><button type="button" class="k-btn k-p" data-k-remove-yes>Remove it</button><button type="button" class="k-btn k-q" data-k-remove-no>Keep it</button></div></div>`;
+}
+
+/** The signing key's words, for an identity used through Kišib: not here. */
+export function runnerWords(): string {
+  return '<p>Kišib’s runner holds this identity’s signing key, on this Mac; Dub holds none of its keys. Its words are given and changed in Kišib (Runner; Identities, Held here), never here.</p>';
 }

@@ -503,7 +503,7 @@ export class Runner {
       refs: req.refs,
       acks: req.acks,
     }) as { act: Uint8Array; id: string; key: Uint8Array };
-    const entry: Signed = { at: Math.floor(this.now() / 1000), app: p.id, appName: p.name, identity: h.id, kind, words, act: made.id, line: req.line, position: req.sequence.length, ...(o.standing ? { standing: true } : {}), ...(o.of ? { of: o.of } : {}) };
+    const entry: Signed = { at: Math.floor(this.now() / 1000), app: p.id, appName: p.name, identity: h.id, kind, words, act: made.id, line: req.line, position: req.sequence.length + 1, ...(o.standing ? { standing: true } : {}), ...(o.of ? { of: o.of } : {}) };
     if (!req.public && req.line !== 'apart') entry.companion = sha256(keyDeliveryPayload(made.id, made.key, false));
     f.log.push(entry);
     if (req.line !== 'apart') {
@@ -649,11 +649,12 @@ export class Runner {
     try {
       const look = await lookUp(a.identity, hints, this.via);
       let bytes: Uint8Array | null = null;
-      for (const hint of hints) {
+      // At its homes, and at the relays its routes name, where its posts are published.
+      for (const hint of [...new Set([...hints, ...look.routes.routes.flatMap((r) => r.hints)])]) {
         bytes = await relayAt(hint, this.via).getAct(a.act).catch(() => null);
         if (bytes) break;
       }
-      if (!bytes) return { lines: [{ text: 'Its homes do not hold this act (yet): the app sends it, and a private act waits there locked.', tone: 'warn' }] };
+      if (!bytes) return { lines: [{ text: 'Neither its homes nor its relays hold this act (yet): the app that asked sends it.', tone: 'warn' }] };
       look.verifier.add(bytes);
       const st = look.verifier.status(a.act) as string;
       return { lines: [{ text: st === 'valid' ? 'Valid: signed with the identity’s signing key in force, on a line its chain keeps.' : `Judged ${st} by the core library, as any reader of its homes would.`, tone: st === 'valid' ? 'ok' : 'bad' }] };

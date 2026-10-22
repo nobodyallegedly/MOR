@@ -159,8 +159,12 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
     },
   });
 
-  attachColumn(app, (key) => {
+  attachColumn(app, async (key) => {
     part = key;
+    // The runner's parts are read fresh: what waits, what was signed.
+    if (tab === 'runner' && !b.web) runner = (await b.ask<v.RunnerView>('runner state').catch(() => null)) ?? runner;
+    if (part !== key) return;
+    if (tab === 'runner') return draw();
     const pane = $('pane');
     if (pane && tab) pane.innerHTML = v.part(tab, key, b.web, b.web ? null : runner);
     const st = $('status');
@@ -359,7 +363,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         return done('The runner is off: every key, pairing and record it held is forgotten, its file overwritten and removed.');
       }
       case 'approve': {
-        const box = t.closest<HTMLElement>('[data-pairing]')!;
+        const box = t.closest<HTMLElement>('.kishib-app')!;
         const identities = [...box.querySelectorAll<HTMLInputElement>('input[name="allow"]:checked')].map((x) => x.value);
         const r = await act(() => b.ask<v.RunnerView>('runner approve', { pairing: d.pairing, identities }));
         if (r) {

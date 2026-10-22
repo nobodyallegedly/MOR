@@ -172,6 +172,6 @@ export function wordsOf(r: SignRequest, app: string): string[] {
   const to = (r.to ?? []).filter((t) => t !== r.identity);
   if (to.length) out.push(`${r.public ? 'Addressed to' : 'Sealed to'} ${to.map(who).join(', ')}.`);
   if (!r.public && r.to?.length === 1 && r.to[0] === r.identity) out.push('Sealed to the identity itself, for its own apps.');
-  out.push(r.line === 'apart' ? `On a line of its own, outside ${app}’s lines.` : `On ${app}’s ${r.line} line, at position ${r.sequence.length}.`);
+  out.push(r.line === 'apart' ? `On a line of its own, outside ${app}’s lines.` : `On ${app}’s ${r.line} line, at position ${r.sequence.length + 1}.`);
   return out;
 }

@@ -17,6 +17,7 @@ import {
   namedIn,
   note,
   openPanel,
+  openSlot,
   panelOpen,
   popAt,
   Popup,
@@ -64,6 +65,61 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
   app.classList.add('k-page', 'k-dub');
   let state: State | null = null;
+
+  // ---------------------------------------------------------------- Kišib's runner: its panel in Dub's slot (the Dubsar runner cMIP, section 4)
+
+  /** The panel shown now, if any, and the request it is for. */
+  let slot: { close(): void; request: string } | null = null;
+  /** A request whose panel the person closed: it still waits, in Kišib too. */
+  let closedAsk: { request: string; panel: string; title: string; origin: string } | null = null;
+  const raw = b.ask.bind(b);
+  const NOT_WATCHED = new Set(['runner asking', 'runner', 'state', 'runner drop']);
+  function showPanel(a: { request: string; panel: string; title: string }, origin: string) {
+    slot?.close();
+    closedAsk = null;
+    // Only Kišib's origin, as Dub's program knows it, is framed; any other is refused and nothing drawn (the slot's rule 1).
+    let s: ReturnType<typeof openSlot>;
+    try {
+      s = openSlot(app, {
+      app: 'kishib',
+      by: 'Kišib',
+      host: 'Dub',
+      src: a.panel,
+      allowed: [origin, origin.replace('127.0.0.1', 'localhost')],
+      closed: () => {
+        slot = null;
+        closedAsk = { ...a, origin };
+        say('', `${v.e(a.title)}: Kišib waits for your answer. It waits in Kišib too (Runner, Waiting), for ten minutes. <button type="button" class="k-btn k-small" data-action="runner-again">Show the panel again</button> <button type="button" class="k-btn k-q k-small" data-action="runner-drop">Do not sign</button>`);
+      },
+      });
+    } catch (e) {
+      closedAsk = { ...a, origin };
+      return say('error', v.e(errorOf(e)));
+    }
+    slot = { close: () => s.close(), request: a.request };
+  }
+  /** Each request to Dub's program, for an identity used through Kišib: while it waits, Kišib's panel is drawn when one is asked for. */
+  b.ask = async <T>(op: string, a?: Record<string, unknown>): Promise<T> => {
+    if (b.web || NOT_WATCHED.has(op) || state?.identity?.kind !== 'runner') return raw<T>(op, a);
+    let over = false;
+    const watch = (async () => {
+      while (!over) {
+        await new Promise((r) => setTimeout(r, 300));
+        if (over) break;
+        const w = await raw<{ asking: { request: string; panel: string; title: string } | null; origin: string | null }>('runner asking').catch(() => null);
+        if (!over && w?.asking && w.origin && slot?.request !== w.asking.request && closedAsk?.request !== w.asking.request) showPanel(w.asking, w.origin);
+      }
+    })();
+    try {
+      return await raw<T>(op, a);
+    } finally {
+      over = true;
+      await watch;
+      slot?.close();
+      slot = null;
+      closedAsk = null;
+    }
+  };
   /** Decided: Dub always opens on Public. */
   let part: v.Part = 'public';
   let lens: v.Lens = 'following';
@@ -450,7 +506,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     if (body) body.outerHTML = html;
     else app.insertAdjacentHTML('beforeend', html);
     const notes = [
-      ...(inbox && !inbox.encryption ? ['No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.'] : []),
+      ...(inbox && !inbox.encryption
+        ? [state?.identity?.kind === 'runner' ? 'Kišib’s runner holds this identity’s keys, and Dub none: its private messages are sent from here, but not opened here (the runner signs; it opens nothing yet).' : 'No encryption key for this identity is here, so its private messages cannot be opened here: it was brought by words that do not carry the one it publishes.']
+        : []),
       ...(inbox?.hidden ? [`${inbox.hidden} from muted identities, not shown.`] : []),
       ...(state?.proposalsWaiting ? [`${state.proposalsWaiting === 1 ? 'A proposal to sign waits' : `${state.proposalsWaiting} proposals to sign wait`} in this identity’s inbox: sign them in Edubba, Collectives › To sign.`] : []),
       ...(inbox?.problems ?? []),
@@ -696,7 +754,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   const ADD = [
     { key: 'make', label: 'Make one', say: 'its chain key’s words shown once' },
     { key: 'bring', label: 'Bring one', say: 'its ID and its signing key’s words' },
-    { key: 'kishib', label: 'Use one from Kišib', say: 'through Kišib’s runner, on a Mac: a later round', empty: true },
+    b.web
+      ? { key: 'kishib', label: 'Use one from Kišib', say: 'through Kišib’s runner, on the Mac only: not in the web client', empty: true }
+      : { key: 'kishib', label: 'Use one from Kišib', say: 'through Kišib’s runner, on this Mac: Dub holds no key' },
   ];
 
   function identityHtml(adding = false, inside = '') {
@@ -737,13 +797,21 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     );
   }
 
+  /** + Add, Use one from Kišib: where the pairing stands, and the identities Kišib lets Dub use. */
+  async function runnerPopup() {
+    const body = popup.show('Use one from Kišib', '<p class="k-small k-soft">Asking Kišib, on this Mac…</p>');
+    const r = await raw<v.RunnerState>('runner').catch((e) => ({ available: true, origin: null, state: null, code: null, identities: [], problem: errorOf(e) }) as v.RunnerState);
+    if (body.isConnected) popup.replace(v.runnerForm(r));
+  }
+
   async function identityChoice(key: string, id: string, name: string) {
     const s = state!;
+    const runnerKind = s.held.find((x) => x.id === id)?.kind === 'runner';
     switch (key) {
       case 'use':
         return use(id, null);
       case 'remove':
-        redrawPanel(identityHtml(false, removeSaid('Dub', name)));
+        redrawPanel(identityHtml(false, runnerKind ? v.runnerRemoveSaid(name) : removeSaid('Dub', name)));
         app.querySelector<HTMLElement>('[data-k-remove-yes]')!.dataset.id = id;
         return;
       case 'name':
@@ -756,6 +824,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         return;
       case 'words': {
         closePanel();
+        if (runnerKind) return void popup.show('The signing key’s words', v.runnerWords());
         const r = await busy('Reading the identity…', () => b.ask<{ grouped: string; words: string[]; say: string[] }>('carry'));
         if (r) popup.show('The signing key’s words', v.carry(r));
         return;
@@ -882,6 +951,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       closePanel();
       if (k === 'make') popup.show('Make a new identity', v.makeForm(b.web, b.suggested?.() ?? {}));
       if (k === 'bring') popup.show('Bring an identity you have', v.bringForm(b.web));
+      if (k === 'kishib') await runnerPopup();
       return;
     }
     if (t.closest('[data-k-remove-no]')) return void redrawPanel(identityHtml(false));
@@ -941,6 +1011,28 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     switch (d.action) {
       case 'unsay':
         return say('', '');
+      case 'runner-again':
+        if (closedAsk) showPanel(closedAsk, closedAsk.origin);
+        return say('', '');
+      case 'runner-drop':
+        if (closedAsk) await raw('runner drop', { request: closedAsk.request }).catch(() => undefined);
+        closedAsk = null;
+        return say('', '');
+      case 'runner-pair': {
+        const r = await busy('Asking Kišib…', () => raw<{ code: string }>('runner pair'));
+        if (r) await runnerPopup();
+        return;
+      }
+      case 'runner-look':
+        return runnerPopup();
+      case 'runner-take': {
+        const r = await busy('Reading the identity from its homes…', () => raw<Lines>('runner take', { id: d.id }));
+        if (!r) return;
+        popup.close();
+        await b.start();
+        say('done', v.lines(r.lines));
+        return;
+      }
       case 'written':
         // H3: the words go before three are asked back.
         app.innerHTML = v.typeBack(shown!.positions);
