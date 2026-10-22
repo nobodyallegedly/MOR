@@ -28,6 +28,17 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F375. S2's questions: a member key's decision, a stolen keeper key, a payment cMIP without field 2 (22 October 2026)
+
+**From** `docs/s2-report.md` (pull request 88, merged). **Taken by the project lead under delegation** ("you'll decide the rest"), each as S2 leaned:
+
+1. **A member key's action and Agreements rule 58:** S2's sentence stands: for an action signed with a holder's member key, the founding or clone that named the key, its grant (rule 73), stands as the decision it acts under. Without it, F371.7 would have made such a text never count.
+2. **A keeper whose key is stolen:** as decided (round 2's G2, F364.2), a stated cost. A stolen keeper key makes a dishonest keeper, the trust rule 42 already states; "cannot un-witness" adds only that the keeper cannot clean up after it. The thief writes only from the theft onward: what the sequence held before its last anchor cannot be rewritten, and a second sequence orders nothing against the first (F364.4). One sentence added to rule 42's stated trust. *Checked by the project lead before taking it:* a false "met" deadline needs a record of an act before an anchored point, which only a keeper colluding with the act's signer can make (an act's id does not depend on its signature), the trust already stated.
+3. **A payment cMIP published without field 2:** as is. Its rail Modules' kind and binding are unknown where Money needs them, and Money answers unknown there; the stated cost of F371.4. A careless author's cMIP costs its own rails, nobody else.
+4. **The older gaps S2's stranger listed** (its points 10, 11, 13, 22): not chased, as F371 says; the C session may find them.
+
+**S2's readings where the texts leave a choice** stand as the core takes them (the keepers of the version an act names, for an act belonging to a collective's agreement without being in its name; `belongs_to` following at most five acts; a verifier of the six MIRs alone answering unknown for any other specification no rule shows invalid). None decides a vector's verdict.
+
 ## F374. A collective appended to a message: a text format, binding nothing, shown only where the membership checks (21 October 2026; Dubsar Suite)
 
 **Decided by Nobody, allegedly** (the redesign, 20–21 October 2026, `docs/design/suite-redesign.md`, "Private mail and collectives"): a member writing for a collective "signs in their own name, and append their collective". **Built** in the session that rebuilt Dub on the kit (`docs/kit-dub-report.md`): `cmips/cmip-appended-collective-draft-1.md`, a Dubsar cMIP (the Suite lead's, not core), and `clients/dub/src/appended.ts`.
