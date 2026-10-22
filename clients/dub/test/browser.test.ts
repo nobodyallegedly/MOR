@@ -32,6 +32,7 @@ import { TestIdentity } from '../../genesis/src/identity.ts';
 import { describeAct, unhex } from '../../genesis/src/core.ts';
 import { actForm, idForm } from '../../genesis/src/forms.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
+import { readCards } from '../../genesis/src/lines.ts';
 import { groupId, toWords } from '../../../modules/carry/src/carry.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -274,7 +275,8 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await modal.locator('form#rely input').fill('RELY');
   await modal.getByRole('button', { name: 'Sign the witness act' }).click();
   await done(page, /You rely on/);
-  const witness = (await app.dub.state()).identity!.line.latest!;
+  // The witness act is public: the latest act of Dub's public line (F376), as its card names it.
+  const witness = readCards((await app.dub.state()).identity!.line.card ?? '').find((c) => c.line === 'public')!.act;
   assert.deepEqual((describeAct((await relayAt(relay.base).getAct(witness))!) as { acks?: string[] }).acks, [theirPost.post.id]);
 
   // Correct one's own post: a correction, the original kept as signed (H74).
