@@ -325,6 +325,21 @@ fn verdict_vectors() {
                         .collect();
                     json!({ "counting": r.links.iter().map(|l| hex::encode(l.act)).collect::<Vec<_>>(), "next": stop, "dishonest": dishonest })
                 }
+                "vow" => {
+                    use mor_core::agreements::SaleState as S;
+                    match with_facts(&v, &mirs, facts).vow(&h(&ask["vow"])) {
+                        Err(_) => json!("unknown"),
+                        Ok(e) => json!({
+                            "sales": e.sales.iter().map(|x| json!({ "act": hex::encode(x.act), "buyer": hex::encode(x.buyer), "state": match &x.state {
+                                S::Pending => "pending", S::Confirmed { .. } => "confirmed", S::Contested { .. } => "contested", S::Unknown => "unknown" } })).collect::<Vec<_>>(),
+                            "unsigned": e.unsigned.iter().map(hex::encode).collect::<Vec<_>>(),
+                            "unknown": e.unknown.iter().map(hex::encode).collect::<Vec<_>>(),
+                        }),
+                    }
+                }
+                "refund repaid" => with_facts(&v, &mirs, facts)
+                    .refund_repaid(&h(&ask["payment"]), &mor_core::money::RefundTo::Identity(h(&ask["to"])), &h(&ask["unit"]))
+                    .map_or(json!("unknown"), |x| json!(x)),
                 "succession" => {
                     use mor_core::chain::SuccessionSeen as S;
                     match v.succession(&h(&ask["identity"])) {
@@ -411,7 +426,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 87);
+    assert_eq!(n, 94);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.

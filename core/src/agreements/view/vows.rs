@@ -31,6 +31,10 @@ pub enum SaleState {
     /// F253). A contest prevails over a confirmation, and voids nothing
     /// (mechanic, the build's).
     Contested { by: Vec<Hash> },
+    /// Whether this is a sale, or what state it is in, rests on whether two
+    /// records whose payment is not stated are one payment (Money rule 12):
+    /// unknown until the rail's answer is given.
+    Unknown,
 }
 
 /// One sale of a vow: someone signed onto it (F240).
@@ -84,6 +88,10 @@ pub struct VowEval {
     /// a payer committed only as a bare key): money moved, nobody signed
     /// on, no state (F240, F193's stated cost).
     pub unsigned: Vec<Hash>,
+    /// Payments whose place among the sales or the unsigned rests on
+    /// whether two records whose payment is not stated are one payment
+    /// (Money rule 12): unknown until the rail's answer is given.
+    pub unknown: Vec<Hash>,
 }
 
 impl<'a> AgreementsView<'a> {
@@ -163,8 +171,47 @@ impl<'a> AgreementsView<'a> {
     }
 
     /// A vow, read (F237, F240): its chain, the offers naming it, and each
-    /// sale with its state.
+    /// sale with its state. A sale that depends on whether two records
+    /// whose payment is not stated are one payment is marked
+    /// [`SaleState::Unknown`], and such an unsigned payment is listed in
+    /// `unknown`; every other sale and payment stands (Money rule 12; F381).
     pub fn vow(&self, name: &Hash) -> R<VowEval> {
+        let outer = (self.unstated.replace(false), self.assume_same.replace(false));
+        let first = self.vow_unjudged(name);
+        let r = if !self.unstated.get() {
+            first
+        } else {
+            self.assume_same.set(true);
+            match (first, self.vow_unjudged(name)) {
+                (Ok(mut a), Ok(b)) => {
+                    let mut sales: Vec<VowSale> = vec![];
+                    for x in a.sales.iter().chain(b.sales.iter()) {
+                        if sales.iter().any(|y| y.act == x.act) {
+                            continue;
+                        }
+                        let both = a.sales.contains(x) && b.sales.contains(x);
+                        sales.push(if both { x.clone() } else { VowSale { state: SaleState::Unknown, ..x.clone() } });
+                    }
+                    sales.sort_by(|p, q| p.act.cmp(&q.act));
+                    let unsigned: Vec<Hash> = a.unsigned.iter().filter(|x| b.unsigned.contains(x)).copied().collect();
+                    let mut unknown: Vec<Hash> = a.unsigned.iter().chain(b.unsigned.iter()).filter(|x| !unsigned.contains(x)).copied().collect();
+                    unknown.sort();
+                    unknown.dedup();
+                    a.sales = sales;
+                    a.unsigned = unsigned;
+                    a.unknown = unknown;
+                    Ok(a)
+                }
+                (Err(e), Err(f)) if e == f => Err(e),
+                _ => Err(AgreementsError::PaymentUnstated),
+            }
+        };
+        self.unstated.set(outer.0);
+        self.assume_same.set(outer.1);
+        r
+    }
+
+    fn vow_unjudged(&self, name: &Hash) -> R<VowEval> {
         let (g, ga) = self.vow_held(name).ok_or(AgreementsError::Check("not a vow held"))?;
         let void = !self.valid(name);
         if ga.follows.is_some() {
@@ -271,7 +318,7 @@ impl<'a> AgreementsView<'a> {
         }
         sales.sort_by(|a, b| a.act.cmp(&b.act));
         unsigned.sort();
-        Ok(VowEval { name: *name, signer, void, versions, latest, words, offers, sales, unsigned })
+        Ok(VowEval { name: *name, signer, void, versions, latest, words, offers, sales, unsigned, unknown: vec![] })
     }
 
     /// The payer a payment's own commitment names, as F193 reads it: the

@@ -6747,6 +6747,9 @@ pub struct OwedBack {
     pub amount: crate::money::Amount,
     /// Whether the collective is still broken (no rollback yet).
     pub still_broken: bool,
+    /// Whether it rests on whether two records whose payment is not stated
+    /// are one payment (Money rule 12): whether it is owed is then unknown.
+    pub unknown: bool,
 }
 
 /// A rule by head, counted among the voices that remain (rule 44d), met
@@ -7426,6 +7429,13 @@ impl<'a> AgreementsView<'a> {
 
     /// A closing act, judged (N9).
     pub fn closing(&self, id: &Hash) -> R<ClosingEval> {
+        self.judged_r(|| self.closing_unjudged(id))
+    }
+
+    /// Judged as [`Self::judged`] says: unknown ([`AgreementsError::PaymentUnstated`])
+    /// only where it depends on whether two records whose payment is not
+    /// stated are one payment (Money rule 12).
+    fn closing_unjudged(&self, id: &Hash) -> R<ClosingEval> {
         if self.own_attempts_open() {
             return self.binding(|v| v.closing(id));
         }
@@ -7957,7 +7967,8 @@ impl<'a> AgreementsView<'a> {
     /// rail Module says), each payment counting once: its greatest receipt,
     /// or its greatest claim where that is more (the greater amount counts
     /// until the receiver signs a receipt matching it). Notes the answer
-    /// unknown where two records could be one payment and one is unstated.
+    /// unknown, under [`Self::judged`], where it depends on whether two
+    /// records whose payment is not stated are one payment.
     pub(super) fn one_count(&self, receipts: &[((Hash, Payment), u64)], claims: &[((Hash, Payment), u64)]) -> u64 {
         let mut payments: Vec<((Hash, Payment), u64, u64)> = vec![];
         for (k, v, is_receipt) in receipts.iter().map(|(k, v)| (k, *v, true)).chain(claims.iter().map(|(k, v)| (k, *v, false))) {
@@ -8001,8 +8012,11 @@ impl<'a> AgreementsView<'a> {
     /// those it voided included (F178); now, an act a rotation did not keep
     /// holds no pointer and selects no version (rule 15, F178), and its
     /// receipt is no receipt.
-    pub fn payment_counts(&self, payee: &Hash, at: &crate::money::PaidAt, amount: &crate::money::Amount, proof: &[u8], fulfils: &Hash) -> bool {
-        self.payment_counts_rec(payee, at, amount, (None, proof), fulfils)
+    ///
+    /// `None` (unknown) only where it depends on whether two records whose
+    /// payment is not stated are one payment (Money rule 12; [`Self::judged`]).
+    pub fn payment_counts(&self, payee: &Hash, at: &crate::money::PaidAt, amount: &crate::money::Amount, proof: &[u8], fulfils: &Hash) -> Option<bool> {
+        self.judged(|| self.payment_counts_rec(payee, at, amount, (None, proof), fulfils))
     }
 
     /// [`Self::payment_counts`] for a payment that a held receipt or claim
@@ -9391,6 +9405,13 @@ impl<'a> AgreementsView<'a> {
     /// request committed to; on a push rail, each holder's own chain
     /// settles it. `None` where the payment is not for a work.
     pub fn purchase(&self, id: &Hash) -> R<Option<PurchaseEval>> {
+        self.judged_r(|| self.purchase_unjudged(id))
+    }
+
+    /// Judged as [`Self::judged`] says: unknown ([`AgreementsError::PaymentUnstated`])
+    /// only where it depends on whether two records whose payment is not
+    /// stated are one payment (Money rule 12).
+    fn purchase_unjudged(&self, id: &Hash) -> R<Option<PurchaseEval>> {
         use crate::money::{self as fin, Payer, Payload as Fin};
         let x = self.held(id)?;
         if x.inside.spec != self.mirs.money {
@@ -9723,7 +9744,15 @@ impl<'a> AgreementsView<'a> {
     /// visible open obligation, one entry per payment (its first receipt or
     /// claim held). The network records and shows the debt; it cannot force
     /// a payment back.
+    ///
+    /// An entry that depends on whether two records whose payment is not
+    /// stated are one payment is given back marked `unknown`; the others
+    /// stand ([`Self::judged_list`]).
     pub fn owed_back(&self, collective: &Hash) -> R<Vec<OwedBack>> {
+        self.judged_list(|| self.owed_back_unjudged(collective), |o| OwedBack { unknown: true, ..o })
+    }
+
+    fn owed_back_unjudged(&self, collective: &Hash) -> R<Vec<OwedBack>> {
         use crate::money::Payload as Fin;
         let col = self.col(collective);
         let still_broken = self.broken(collective)?.is_some();
@@ -9754,7 +9783,7 @@ impl<'a> AgreementsView<'a> {
                     }
                     let back = self.repaid(&names, &e.refund_to, &amount.unit);
                     if back < amount.value {
-                        out.push(OwedBack { payment: h.id, to: e.refund_to.clone(), amount, still_broken });
+                        out.push(OwedBack { payment: h.id, to: e.refund_to.clone(), amount, still_broken, unknown: false });
                     }
                 }
             }
@@ -9771,10 +9800,14 @@ impl<'a> AgreementsView<'a> {
     /// (F225, decided 10 October 2026: Agreements say what is owed, Money
     /// carries its payment): the caller judges what is owed; this says what
     /// Money shows repaid.
-    pub fn refund_repaid(&self, payment: &Hash, to: &crate::money::RefundTo, unit: &Hash) -> u64 {
-        let mut names = vec![*payment];
-        names.extend(self.same_payment(payment).into_iter().map(|(x, _)| x));
-        self.repaid(&names, to, unit)
+    /// `None` (unknown) only where it depends on whether two records whose
+    /// payment is not stated are one payment (Money rule 12; [`Self::judged`]).
+    pub fn refund_repaid(&self, payment: &Hash, to: &crate::money::RefundTo, unit: &Hash) -> Option<u64> {
+        self.judged(|| {
+            let mut names = vec![*payment];
+            names.extend(self.same_payment(payment).into_iter().map(|(x, _)| x));
+            self.repaid(&names, to, unit)
+        })
     }
 
     /// Whether a refund owed on a payment (`names`, its receipts and
@@ -10409,6 +10442,13 @@ impl<'a> AgreementsView<'a> {
     /// of what the split pays that stake, within one smallest unit of
     /// rounding per payout, so every fee falls alike on every stake.
     pub fn split(&self, id: &Hash) -> R<SplitEval> {
+        self.judged_r(|| self.split_unjudged(id))
+    }
+
+    /// Judged as [`Self::judged`] says: unknown ([`AgreementsError::PaymentUnstated`])
+    /// only where it depends on whether two records whose payment is not
+    /// stated are one payment (Money rule 12).
+    fn split_unjudged(&self, id: &Hash) -> R<SplitEval> {
         use crate::money::Payload as Fin;
         let h = self.held(id)?;
         if !self.is_agreements(h, types::SPLIT) {
@@ -11186,6 +11226,13 @@ impl<'a> AgreementsView<'a> {
     /// collective signs by its own rules. Each names one receiver and one
     /// agreement (rule 55).
     pub fn service_account(&self, service: &Hash) -> R<ServiceAccount> {
+        self.judged_r(|| self.service_account_unjudged(service))
+    }
+
+    /// Judged as [`Self::judged`] says: unknown ([`AgreementsError::PaymentUnstated`])
+    /// only where it depends on whether two records whose payment is not
+    /// stated are one payment (Money rule 12).
+    fn service_account_unjudged(&self, service: &Hash) -> R<ServiceAccount> {
         use crate::money::Payload as Fin;
         let splits = self.splits_of(service);
         let split_names = |payment: &Hash| splits.iter().any(|(_, s)| &s.receipt == payment);

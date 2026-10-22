@@ -1882,6 +1882,9 @@ struct VowOut {
     offers: Vec<String>,
     sales: Vec<VowSaleOut>,
     unsigned: Vec<String>,
+    /// Payments whose place among the sales rests on whether two records
+    /// whose payment is not stated are one payment (Money rule 12).
+    unknown: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -3333,6 +3336,7 @@ impl Verifier {
                 unit: hx(&o.amount.unit),
                 value: o.amount.value,
                 still_broken: o.still_broken,
+                unknown: o.unknown,
             })
             .collect();
         to_js(&out)
@@ -3717,11 +3721,13 @@ impl Verifier {
                         agreements::SaleState::Pending => ("pending", vec![]),
                         agreements::SaleState::Confirmed { by } => ("confirmed", by.iter().map(hx).collect()),
                         agreements::SaleState::Contested { by } => ("contested", by.iter().map(hx).collect()),
+                        agreements::SaleState::Unknown => ("unknown", vec![]),
                     };
                     VowSaleOut { act: hx(&x.act), offer: hx(&x.offer), buyer: hx(&x.buyer), state: state.into(), by, evidence: x.evidence.iter().map(hx).collect() }
                 })
                 .collect(),
             unsigned: e.unsigned.iter().map(hx).collect(),
+            unknown: e.unknown.iter().map(hx).collect(),
         })
     }
 
@@ -3952,6 +3958,9 @@ struct OwedBackOut {
     unit: String,
     value: u64,
     still_broken: bool,
+    /// Whether it rests on whether two records whose payment is not stated
+    /// are one payment (Money rule 12): whether it is owed is unknown.
+    unknown: bool,
 }
 
 #[derive(Serialize)]

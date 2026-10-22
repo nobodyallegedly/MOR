@@ -185,7 +185,7 @@ impl Held for AgreementsHeld<'_> {
         out
     }
     fn payment_counts(&self, payee: &Hash, at: &PaidAt, amount: &Amount, proof: &[u8], fulfils: &Hash) -> Option<bool> {
-        Some(self.view.payment_counts(payee, at, amount, proof, fulfils))
+        self.view.payment_counts(payee, at, amount, proof, fulfils)
     }
 }
 

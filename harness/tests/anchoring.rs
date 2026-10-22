@@ -603,7 +603,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
             let mut v = AgreementsView::new(&rd.v, mirs());
             v.rail_valid = rv.clone();
             v.payments = pm.clone();
-            v.refund_repaid(&b.claim.id(), &r.to, &r.amount.unit)
+            v.refund_repaid(&b.claim.id(), &r.to, &r.amount.unit).unwrap()
         };
         assert_eq!(service::standing(r, shown(&rail_valid, &payments, &eve), &bitcoin), Standing::Owed { left: r.amount.value });
         // The service pays the price back to the payer's own pointer,
@@ -623,7 +623,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
     v.rail_valid = rail_valid.clone();
     v.payments = payments.clone();
     for (_, b, r) in &refund_claims {
-        let repaid = v.refund_repaid(&b.claim.id(), &r.to, &r.amount.unit);
+        let repaid = v.refund_repaid(&b.claim.id(), &r.to, &r.amount.unit).unwrap();
         assert_eq!(service::standing(r, repaid, &bitcoin), Standing::Repaid, "{}", b.name);
         eprintln!("{}: {} satoshis paid back over Lightning to {}'s own pointer; the service's claim names the payment refunded, with the rail's proof: shown repaid", b.name, repaid, b.name);
     }
@@ -656,7 +656,7 @@ async fn test_identities_buy_anchors_under_a_standing_offer_and_defaults_are_ref
         .map(|t| {
             let (id, r) = receipts.iter().find(|(_, r)| commitment_of(r).hash() == t.commitment).expect("a receipt of each ticket's payment");
             let b = buyers.iter().find(|b| b.ticket == *t).unwrap();
-            Sold { ticket: t.clone(), payment: Payment { commitment: commitment_of(r), answer: verify(Record::Receipt(r), &held, &both).answer }, shown_by: *id, repaid: v.refund_repaid(&b.claim.id(), &RefundTo::Identity(b.p.id), &unit) }
+            Sold { ticket: t.clone(), payment: Payment { commitment: commitment_of(r), answer: verify(Record::Receipt(r), &held, &both).answer }, shown_by: *id, repaid: v.refund_repaid(&b.claim.id(), &RefundTo::Identity(b.p.id), &unit).unwrap() }
         })
         .collect();
     let pool_coins: Vec<(Hash, OnchainProof, u64)> = receipts

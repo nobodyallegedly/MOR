@@ -160,7 +160,14 @@ impl<'a> AgreementsView<'a> {
     /// together at least its exact proportion of the price (mechanic, the
     /// build's: no holder pays less than its exact part).
     #[allow(clippy::too_many_arguments)]
+    /// Judged as [`Self::judged`] says: unknown only where it depends on
+    /// whether two records whose payment is not stated are one payment.
     fn took_up(&self, col: &Col, at: Line<'a>, x: &Held, offer: &IssuanceOffer, h: &Hash, share: u64, lapsed: bool) -> R<bool> {
+        self.judged_r(|| self.took_up_unjudged(col, at, x, offer, h, share, lapsed))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn took_up_unjudged(&self, col: &Col, at: Line<'a>, x: &Held, offer: &IssuanceOffer, h: &Hash, share: u64, lapsed: bool) -> R<bool> {
         for s in self.v.signed_by(h) {
             if !self.is_agreements(s, types::SIGNATURE) || decode_signature(&s.inside).ok() != Some(x.id) {
                 continue;

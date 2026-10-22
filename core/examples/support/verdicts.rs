@@ -85,6 +85,21 @@ fn status_name(s: Status) -> &'static str {
     }
 }
 
+/// A vow as a verifier reads it: each sale's buyer and state, the payments
+/// signed by nobody, and those whose place is unknown.
+pub fn vow_json(e: Result<agreements::VowEval, agreements::AgreementsError>) -> J {
+    use agreements::SaleState as S;
+    match e {
+        Err(_) => json!("unknown"),
+        Ok(e) => json!({
+            "sales": e.sales.iter().map(|x| json!({ "act": hx(&x.act), "buyer": hx(&x.buyer), "state": match &x.state {
+                S::Pending => "pending", S::Confirmed { .. } => "confirmed", S::Contested { .. } => "contested", S::Unknown => "unknown" } })).collect::<Vec<_>>(),
+            "unsigned": e.unsigned.iter().map(|x| hx(x)).collect::<Vec<_>>(),
+            "unknown": e.unknown.iter().map(|x| hx(x)).collect::<Vec<_>>(),
+        }),
+    }
+}
+
 /// A succession as a verifier sees it (Identity, "Succession").
 pub fn succession_json(s: mor_core::chain::SuccessionSeen) -> J {
     use mor_core::chain::SuccessionSeen as S;
@@ -346,6 +361,17 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
                     "dishonest": r.dishonest.iter().map(|(o, p)| json!({ "operator": match o { mor_core::identity::Operator::Id(x) => hx(x), mor_core::identity::Operator::Own => "own".into() }, "from_position": p })).collect::<Vec<_>>() })
         }
         "succession" => succession_json(w.v.succession(&h("identity"))),
+        "vow" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            vow_json(v.vow(&h("vow")))
+        }
+        "refund repaid" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            let to = money::RefundTo::Identity(h("to"));
+            v.refund_repaid(&h("payment"), &to, &h("unit")).map_or(json!("unknown"), |x| json!(x))
+        }
         "status after keepers" => {
             let (rescued, unknown) = { let v = view(w); (v.keeper_disputed_acts(), v.keeper_unknown_acts()) };
             for a in rescued {
@@ -906,6 +932,83 @@ pub fn money(out: &mut Out) {
         }
         out.case(&mut w, name, "Money rule 12; rules 10 and 11", why, facts, ask("paid toward", &oid), v, None);
     }
+    // An answer that depends on whether two unstated records are one payment is unknown; one that does not, stands.
+    // A vow sold by a lone seller's offer: the club's receipt and the fan's claim of one payment.
+    let mut w = World::new();
+    let mut club = w.genesis("the club", vec![own_home()], None, None);
+    let mut fan = w.genesis("a fan", vec![own_home()], None, None);
+    let name = { let v = mor_core::envelopes::vow::Vow { words: "A concert in the hall, 12 December".into(), cmip: None };
+        let a = w.everyday_act(&mut club, mirs().envelopes, mor_core::envelopes::types::VOW, v.to_map(), None, None); w.add(&a) };
+    let o = agreements::Offer { under: None, sold: vec![agreements::Sold::Vow(name)], price: Amount { unit, value: 300 }, paid: None, words: Some("One seat.".into()), until: None, time: None, refund: None };
+    let offer = ag_act(&mut w, &mut club, agreements::types::STANDING_OFFER, o.to_map(), None);
+    let seat = b"the fan pays for a seat".to_vec();
+    let rec = { let r = Fin::Receipt(Receipt { rail, proof: seat.clone(), payer: Some(Payer::Identity(fan.id)), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(&mut club, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
+    let claim = |w: &mut World, fan: &mut Person, acks: Option<Vec<Hash>>| {
+        let c = Fin::Claim(Claim { rail, proof: seat.clone(), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let a = w.everyday_act(fan, mirs().money, 3, c.to_map(), None, acks); w.add(&a)
+    };
+    let c1 = claim(&mut w, &mut fan, None);
+    let base = w.log.clone();
+    let ask_vow = json!({ "question": "vow", "vow": hx(&name) });
+    let stated = vec![(seat.clone(), b"one seat's payment".to_vec())];
+    out.case(&mut w, "a vow's sale, the rail's answer stated: one sale, pending", "Money rule 12; Envelopes, \"Vows\"; Agreements rule 13",
+        "The club's receipt and the fan's claim are one payment, as the rail says: one sale, by the fan's claim.",
+        Facts { rail_valid: vec![(c1, offer)], rail_payments: stated.clone(), ..Default::default() }, ask_vow.clone(),
+        json!({ "sales": [{ "act": hx(&c1), "buyer": hx(&fan.id), "state": "pending" }], "unsigned": [], "unknown": [] }), None);
+    let mut w2 = World::new();
+    for (a, _) in &base {
+        w2.add(a);
+    }
+    out.case(&mut w2, "the same without the rail's answer: the sale stands, the receipt's place unknown", "Money rule 12; Envelopes, \"Vows\"",
+        "The fan's sale does not depend on whether the receipt and the claim are one payment; whether the receipt is another payment signed by nobody does: unknown.",
+        Facts { rail_valid: vec![(c1, offer)], ..Default::default() }, ask_vow.clone(),
+        json!({ "sales": [{ "act": hx(&c1), "buyer": hx(&fan.id), "state": "pending" }], "unsigned": [], "unknown": [hx(&rec)] }), None);
+    // The fan confirms by a later claim of the payment acknowledging the door's record of the vow.
+    let mut w3 = World::new();
+    for (a, _) in &base {
+        w3.add(a);
+    }
+    let mut door = w3.genesis("the door", vec![own_home()], None, None);
+    let scanned = { let a = w3.everyday_act_refs(&mut door, spec("a ticketing Module"), 0, vec![(Value::Uint(0), Value::Text("seat 14, scanned at the door".into()))], None, None, Some(vec![mor_core::act::Ref::Act(name)])); w3.add(&a) };
+    let mut fan2 = fan.clone();
+    let c2 = claim(&mut w3, &mut fan2, Some(vec![scanned]));
+    let log3 = w3.log.clone();
+    out.case(&mut w3, "a sale confirmed by the buyer's later claim acknowledging the door's record, the rail's answer stated: confirmed", "Money rule 12; Envelopes, \"Vows\"",
+        "The later claim is of the same payment, as the rail says, and acknowledges an act about the vow.",
+        Facts { rail_valid: vec![(c1, offer), (c2, offer)], rail_payments: stated.clone(), ..Default::default() }, ask_vow.clone(),
+        json!({ "sales": [{ "act": hx(&c1.min(c2)), "buyer": hx(&fan.id), "state": "confirmed" }], "unsigned": [], "unknown": [] }), None);
+    let mut w4 = World::new();
+    for (a, _) in &log3 {
+        w4.add(a);
+    }
+    let mut sales4 = vec![(c2, "confirmed"), (c1, "unknown")];
+    sales4.sort();
+    out.case(&mut w4, "the same without the rail's answer: the acknowledging claim's sale stands, confirmed; whether the first claim is another sale, and where the receipt belongs, unknown", "Money rule 12; Envelopes, \"Vows\"",
+        "The acknowledging claim signs the fan on and confirms, whichever payment it is: that stands. Whether the first claim and the receipt are of the same payment is the rail's to say: what depends on it is unknown, nothing else.",
+        Facts { rail_valid: vec![(c1, offer), (c2, offer)], ..Default::default() }, ask_vow,
+        json!({ "sales": sales4.iter().map(|(a, st)| json!({ "act": hx(a), "buyer": hx(&fan.id), "state": st })).collect::<Vec<_>>(), "unsigned": [], "unknown": [hx(&rec)] }), None);
+    // A refund repaid: the fan's own receipt of money back, naming the fan's claim of the payment.
+    let mut w5 = World::new();
+    for (a, _) in &base {
+        w5.add(a);
+    }
+    let back = b"the club pays the fan back".to_vec();
+    let rr = { let r = Fin::Receipt(Receipt { rail, proof: back.clone(), payer: Some(Payer::Identity(club.id)), payee: fan.id, amount: Amount { unit, value: 300 }, fulfils: c1, previous: None, forward: None, batch: None, purchase: None });
+        let a = w5.everyday_act(&mut fan, mirs().money, 2, r.to_map(), None, None); w5.add(&a) };
+    let log5 = w5.log.clone();
+    let ask_back = json!({ "question": "refund repaid", "payment": hx(&rec), "to": hx(&fan.id), "unit": hx(&unit) });
+    out.case(&mut w5, "a refund owed on a payment, repaid by the payer's receipt naming its claim of that payment, the rail's answer stated: repaid", "Money rules 10a and 12; Agreements, refunds",
+        "The receipt asked about and the claim the repayment names are one payment, as the rail says: the payer's own receipt of the money back repays it.",
+        Facts { rail_valid: vec![(rr, fan.id)], rail_payments: stated.clone(), ..Default::default() }, ask_back.clone(), json!(300), None);
+    let mut w6 = World::new();
+    for (a, _) in &log5 {
+        w6.add(a);
+    }
+    out.case(&mut w6, "the same without the rail's answer: unknown", "Money rules 10a and 12",
+        "Whether the repayment names the same payment rests on the rail's answer: what is repaid depends on it.",
+        Facts { rail_valid: vec![(rr, fan.id)], ..Default::default() }, ask_back, json!("unknown"), None);
+
     // A receipt signed with a person's grant key reaching receipts: backed.
     let mut w = World::new();
     let mut payee = w.genesis("a payee", vec![own_home()], None, None);

@@ -94,6 +94,10 @@ S7 (branch `claude/s7-fixes`, F380), one line each:
 - After a stranger's reading (a subagent limited to the eight texts), the wording above was tightened: check 7 reads a tip's sequence up to and including it, and applies only to a rotation naming at least one tip; acts bound to a rotation not counting fail everyday check 2 and are invalid; rule 34's sentence is for that rule only, and names the signing key; rule 42 waits until the contest ends (by the escape at a self-hosted identity); Text rule 14's sentence is client conformance; Envelopes' order of checks names rules 1, 2, 3, 5 and 7 and leaves rules 4 and 30 as they are; "belongs to" is followed step by step, what is found through acts held standing.
 - Development, rule 26: unchanged; the core's MIR hash now follows it (Q46). Money, rule 12: unchanged; the core now follows it (Q27).
 
+S7b (branch `claude/s7b-follow-up`, F381), one line each:
+- Identity, "The rotation checks", check 7: the clause making a rotation invalid when every tip's sequence is held and none fits is dropped; "a tip that does not fit never makes the rotation invalid, whatever the verifier holds" added, and the commentary says why (a home receipts without the private lines; validity is fixed by the bytes).
+- Identity, "What stops a chain": two reasons renamed, "the genesis unknown" and "the genesis invalid".
+
 ## Text edits waiting for the freeze-ready branch
 
 Small decided changes that arrive while a session holds the branch; the lead makes them, or hands them to the next session, once the branch is free.
