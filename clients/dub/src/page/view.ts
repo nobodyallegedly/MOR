@@ -540,7 +540,7 @@ export function lineFacts(s: State): string {
   const i = s.identity!;
   return `<dl class="k-facts"><dt>Its ID</dt><dd class="k-mono">${e(i.form)}</dd><dt>Made</dt><dd>${i.kind === 'made' ? 'Here. Its chain key was shown once as words, and is kept nowhere here.' : 'Elsewhere, brought here by its signing key’s words. Its chain key is not here.'}</dd>
 ${i.oldChainKey ? '<dt>Old chain key</dt><dd>Made by Dub before 16 October 2026: its chain key is still in this app’s folder, unused and untouched.</dd>' : ''}
-<dt>Private messages</dt><dd>${i.encryption ? 'Its encryption key is here: its private messages open here.' : 'No encryption key here: its private messages cannot be opened here.'}</dd>
+<dt>Private messages</dt><dd>${i.kind === 'runner' ? e(i.encryption ? 'Opened here through Kišib, which holds its key: each opening is listed in Kišib.' : (i.opening ?? 'Not opened here.')) : i.encryption ? 'Its encryption key is here: its private messages open here.' : 'No encryption key here: its private messages cannot be opened here.'}</dd>
 <dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd><dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd>
 <dt>This app’s line</dt><dd>${cardWords(i.line, 'Dub', e)}</dd></dl>
 ${say('A change of keys must keep this line.', ['If the signing key is ever changed (in Kišib, with the chain key’s words), that change must keep this line, or the posts made here become void: take the line above to it.'])}`;
@@ -607,7 +607,9 @@ ${i.muted.length ? `<details class="k-say"><summary>Muted (${i.muted.length})<sp
 ${say(i.list === 'published' ? 'Published: anyone reads the IDs; your names for them stay sealed.' : 'Your names for them stay sealed to you. The same list in Public and Private.', [
   i.encryption
     ? `Whom it follows, with the names you gave, is a private act sealed to this identity and kept at its homes${i.sealed ? ` (version ${i.sealed.version})` : ''}: any app holding this identity reads it; nobody else can. Its homes and relays see only that a private act exists, and roughly how big it is; whoever holds the signing key’s words reads it.`
-    : 'This app holds no encryption key of this identity, so the list stays in this app only.',
+    : i.kind === 'runner'
+      ? `The list stays in this app only, not sealed to this identity: ${i.opening ?? 'Kišib does not open for Dub.'}`
+      : 'This app holds no encryption key of this identity, so the list stays in this app only.',
   'Muting stays in this app, always.',
   ...(i.sealed?.forked ? ['The list was forked: two apps changed it at once. The longer branch is shown.'] : []),
 ])}`;
@@ -632,8 +634,8 @@ export interface RunnerState {
 
 /** + Add, Use one from Kišib: pair, then choose an identity Kišib lets Dub use. */
 export function runnerForm(r: RunnerState): string {
-  const intro = '<p class="k-small k-soft">Kišib’s runner keeps the identity’s signing key on this Mac; Dub holds none of its keys. Each act Dub would sign is shown by Kišib, in its own panel inside this window, before Kišib signs it (unless you give Dub a standing yes for that kind, in Kišib). Money, agreements and keys always ask.</p>';
-  if (!r.available) return `${intro}<p>Kišib’s runner is on the Mac only.</p>`;
+  const intro = '<p class="k-small k-soft">Kišib’s runner keeps the identity’s signing key on this Mac; Dub holds none of its keys. Each act Dub would sign is shown by Kišib, in its own panel inside this window, before Kišib signs it (unless you give Dub a standing yes for that kind, in Kišib). Money, agreements, relying on another’s act, and keys always ask. Where you let Dub, in Kišib, Kišib also opens what is sealed to the identity, so that Dub reads its private messages.</p>';
+  if (!r.available) return `${intro}<p>Kišib’s runner is in the computer’s program only, never in the web client.</p>`;
   const problem = r.problem ? `<div class="k-note k-error">${e(r.problem)}</div>` : '';
   if (r.state === 'approved') {
     const ids = r.identities.map((x) => `<div class="k-idline"><span class="k-dot k-alt">${e((x.name ?? 'M')[0].toUpperCase())}</span><span class="k-grow"><span class="k-n">${e(x.name ?? 'No name')}</span><br><span class="k-s k-mono">${e(shortForm(x.form))}</span></span>${x.held ? '<span class="k-small k-faint">used here</span>' : `<button type="button" class="k-btn k-p" data-action="runner-take" data-id="${e(x.id)}">Use it</button>`}</div>`).join('');

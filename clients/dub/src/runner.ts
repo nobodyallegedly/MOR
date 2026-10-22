@@ -1,4 +1,4 @@
-// Dub's side of the Dubsar runner (`cmips/cmip-runner-draft-1.md`): an
+// Dub's side of the Dubsar runner (`cmips/cmip-runner-draft-2.md`): an
 // identity used through Kišib, on this Mac, Dub holding none of its keys.
 // Pairing is started here and approved in Kišib (section 2); each act is a
 // request Kišib reads, shows in its panel inside Dub's window, and signs
@@ -6,9 +6,12 @@
 // act Dub signs. The one exception to the working rule that apps talk
 // through MOR (decided by Nobody, allegedly): Dub holds no key, so it
 // cannot put a draft on MOR; it asks Kišib's program directly, on this
-// computer only.
+// computer only. Where Kišib lets Dub open what is sealed to the identity
+// (draft 2, section 8), Dub sends the sealed containers it finds to Kišib,
+// which returns the acts inside: never the identity's key.
 //
-// The program on the Mac only: Dub's web client neither pairs nor asks.
+// The computer's program only (the Mac and Linux): Dub's web client neither
+// pairs nor asks (decided: never on the web).
 
 import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -23,6 +26,9 @@ export const NO_KISHIB_SAY = 'Kišib is not running on this Mac: open Kišib, an
 
 /** Kišib's folder, where its running program names its port (`run.json`). */
 export const KISHIB_DIR = join(homedir(), 'mor-kishib');
+/** At most this many sealed containers in one request to Kišib (its `OPEN_MAX`). */
+const OPEN_BATCH = 100;
+
 /** The port Kišib's program listens on unless told otherwise. */
 export const KISHIB_PORT = 8474;
 
@@ -106,15 +112,33 @@ export class RunnerLink {
   }
 
   /** Where the pairing stands (2.4), with the identities Kišib lets Dub use once approved. Null: never paired here. */
-  async paired(): Promise<{ state: string; code: string; identities: { id: string; name: string | null; binding: string; key: string; spent: boolean; homes: string[] }[] } | null> {
+  async paired(): Promise<{ state: string; code: string; open: boolean; identities: { id: string; name: string | null; binding: string; key: string; spent: boolean; homes: string[] }[] } | null> {
     const k = this.kept();
     if (!k) return null;
     try {
       return await this.call('/runner/paired', {}, k.token);
     } catch (e) {
-      if (/no longer knows this app/.test(message(e))) return { state: 'revoked', code: k.code, identities: [] };
+      if (/no longer knows this app/.test(message(e))) return { state: 'revoked', code: k.code, open: false, identities: [] };
       throw e;
     }
+  }
+
+  /**
+   * Open what is sealed to an identity, through Kišib (draft 2, section 8):
+   * each container's act and its content key, or null where it does not open
+   * with the identity's key. Refused, said plainly, where Kišib does not let
+   * Dub open, is locked, or does not run.
+   */
+  async open(identity: string, sealed: Uint8Array[]): Promise<({ act: Uint8Array; key?: Uint8Array } | null)[]> {
+    const k = this.kept();
+    if (!k) throw new Error('Dub is not paired with Kišib’s runner: + Add, Use one from Kišib. Nothing was opened.');
+    const out: ({ act: Uint8Array; key?: Uint8Array } | null)[] = [];
+    for (let i = 0; i < sealed.length; i += OPEN_BATCH) {
+      const part = sealed.slice(i, i + OPEN_BATCH);
+      const r = await this.call<{ opened: ({ act: string; key: string | null } | null)[] }>('/runner/open', { identity, sealed: part.map((b) => Buffer.from(b).toString('base64')) }, k.token);
+      out.push(...r.opened.map((o) => (o ? { act: unb64(o.act), ...(o.key ? { key: unb64(o.key) } : {}) } : null)));
+    }
+    return out;
   }
 
   /** The code shown while a pairing waits, without asking Kišib. */

@@ -149,7 +149,10 @@ export interface State {
     homes: string[];
     relays: string[];
     /** Whether this app holds the identity's encryption key (the carry Module, draft 2, 2a). */
+    /** Whether what is sealed to it opens here: with a key held here, or through Kišib's runner (draft 2). */
     encryption: boolean;
+    /** Why it does not, in plain words; null where it does. */
+    opening?: string | null;
     /** An identity made by Dub on the Mac before 16 October 2026 keeps its chain key in the app's folder, unused. */
     oldChainKey: boolean;
     /** This app's line; its card for Kišib names only an act the homes hold (H80's question 2). */

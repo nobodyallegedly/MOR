@@ -44,6 +44,8 @@ export interface Kept {
   /** When this app first found it, in seconds since 1970: this app's time, not a signed one. */
   found: number;
   problem?: string;
+  /** A sealed container kept unopened only because nothing here could open it then: read again once something can (the Dubsar runner cMIP, draft 2). */
+  retry?: boolean;
   /** A text act's format, where it names one (the appended collective cMIP's, a correction's…). */
   format?: string | null;
   /** An Agreements negotiation message (H18: a proposal to sign, or an answer in its thread): its thread, the message it follows, what it acknowledges. */
@@ -199,10 +201,33 @@ export interface SealedList {
   problems: string[];
 }
 
-interface Opened {
+export interface Opened {
   act: Uint8Array;
   key?: Uint8Array;
   described: Described;
+}
+
+/**
+ * How an app opens what is sealed to an identity, a page of containers at a
+ * time: each one's act, or null where it does not open. With the encryption
+ * keys the app holds (`openerOf`), or through Kišib's runner (the Dubsar
+ * runner cMIP, draft 2, section 8).
+ */
+export type Opener = (sealed: Uint8Array[]) => Promise<(Opened | null)[]>;
+
+/** The opener of the encryption keys an app holds, newest first. */
+export function openerOf(identity: string, secrets: Uint8Array[]): Opener {
+  return async (sealed) =>
+    sealed.map((bytes) => {
+      for (const s of secrets) {
+        try {
+          return openSealed(bytes, identity, s) as Opened;
+        } catch {
+          // the next key
+        }
+      }
+      return null;
+    });
 }
 
 /**
@@ -213,9 +238,10 @@ interface Opened {
  * highest version, then the smaller act id (3.5). Its names are read too: no
  * one but the identity can open them.
  */
-export async function readSealedList(identity: string, secrets: Uint8Array[], homes: string[], via: Via = {}): Promise<SealedList> {
+export async function readSealedList(identity: string, keys: Uint8Array[] | Opener, homes: string[], via: Via = {}): Promise<SealedList> {
   const out: SealedList = { act: null, version: 0, follows: [], forked: false, problems: [] };
-  if (!secrets.length) return out;
+  if (Array.isArray(keys) && !keys.length) return out;
+  const open = Array.isArray(keys) ? openerOf(identity, keys) : keys;
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   let l: Awaited<ReturnType<typeof lookUp>>;
   try {
@@ -231,17 +257,9 @@ export async function readSealedList(identity: string, secrets: Uint8Array[], ho
     try {
       for (;;) {
         const page = await relayAt(h, via).feed({ to: identity, after });
-        for (const it of page.items) {
-          if (it.kind !== 'sealed') continue;
-          let o: Opened | null = null;
-          for (const s of secrets) {
-            try {
-              o = openSealed(it.item, identity, s) as Opened;
-              break;
-            } catch {
-              // the next key
-            }
-          }
+        const sealed = page.items.filter((it) => it.kind === 'sealed');
+        const opened = sealed.length ? await open(sealed.map((it) => it.item)) : [];
+        for (const o of opened) {
           const d = o?.described;
           if (!o || !d || acts.has(d.id) || d.public || d.signer !== identity || d.spec !== PEOPLE_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
           if (o.key) l.verifier.addWithKey(o.act, o.key);

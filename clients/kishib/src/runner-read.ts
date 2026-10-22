@@ -23,7 +23,7 @@ export type Kind = 'posts' | 'messages' | 'names' | 'contacts' | 'money' | 'agre
 
 export const KINDS: Kind[] = ['posts', 'messages', 'names', 'contacts', 'money', 'agreements', 'keys', 'other'];
 
-/** Money, agreements and keys always ask, and what the runner cannot read (5.3). */
+/** Money, agreements (relying on another’s act among them, draft 2: decided) and keys always ask, and what the runner cannot read (5.3). */
 export const ALWAYS_ASKS: readonly Kind[] = ['money', 'agreements', 'keys', 'other'];
 
 /** A kind as a standing yes names it: "Dub · posts and replies". */

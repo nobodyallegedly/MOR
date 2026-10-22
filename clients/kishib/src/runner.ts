@@ -1,31 +1,39 @@
-// The Dubsar runner (the Dubsar runner cMIP, draft 1, `cmips/cmip-runner-draft-1.md`):
+// The Dubsar runner (the Dubsar runner cMIP, draft 2, `cmips/cmip-runner-draft-2.md`):
 // Kišib signs for the apps paired with it, on this computer only, from the
 // signing keys of the identities given to it. Decided by Nobody, allegedly
-// (`docs/design/suite-redesign.md`, "The Dubsar runner cMIP"): Mac only;
+// (`docs/design/suite-redesign.md`, "The Dubsar runner cMIP"): the computer's
+// program only, never the web client ("not on web", draft 2);
 // off by default, no key stored while off; turned on with the risk stated
 // first; the chain key never kept; pairing started in the app and approved
 // here; the approval panel drawn inside the asking app's window, in a frame
 // it cannot read or change; standing yeses per app and kind, money,
-// agreements and keys always asking.
+// agreements, relying and keys always asking.
 //
-// What it keeps, while on only, in Kišib's folder (`runner.json`, owner
-// only): the identities given (their signing keys), the pairings (a hash of
-// each app's token, never the token), and what it signed. Requests waiting
-// for an answer live in memory. Turned off, the file is overwritten and
-// removed: nothing of the runner remains.
+// Draft 2 (decided by Nobody, allegedly, 22 October 2026): what it keeps is
+// encrypted at rest under a passphrase chosen when it is turned on and asked
+// each time Kišib starts (a key derived with scrypt, the file sealed with
+// AES-256-GCM); locked and off are two states (closed, it is locked and
+// keeps everything, encrypted; off, it erases everything); an app approved
+// for it may have what is sealed to an identity opened, each opening listed.
+//
+// What it keeps, while on, in Kišib's folder (`runner.json`, owner only,
+// never in the clear): the identities given (their signing keys), the
+// pairings (a hash of each app's token, never the token), and what it signed
+// and opened. Requests waiting for an answer live in memory. Turned off, the
+// file is overwritten and removed: nothing of the runner remains.
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
 import { closeSync, existsSync, openSync, readFileSync, renameSync, rmSync, statSync, writeSync, writeFileSync } from 'node:fs';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { createCipheriv, createDecipheriv, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { join } from 'node:path';
-import { base64, cborEncode, hex, keyDeliveryPayload, makeEveryday, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
+import { base64, cborEncode, hex, keyDeliveryPayload, makeEveryday, openSealed, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { cardText, ownLine } from '../../genesis/src/lines.ts';
 import type { Home, SignRequest } from '../../genesis/src/identity.ts';
-import { relayAt, type Via } from '../../genesis/src/transport.ts';
+import { relayAt, sealedId, type Via } from '../../genesis/src/transport.ts';
 import { idForm, readId } from '../../genesis/src/forms.ts';
-import { Refused as WordsRefused, fromWords } from '../../../modules/carry/src/carry.ts';
+import { Refused as WordsRefused, encryptionSecret, fromWords } from '../../../modules/carry/src/carry.ts';
 import { lookCurrent, NOT_CURRENT } from '../../dub/src/carryin.ts';
 import { namesOf } from '../../dub/src/names.ts';
 import { ALWAYS_ASKS, KIND_NAME, KIND_ONE, KINDS, deliveredToItself, kindOf, refusedOutright, wordsOf, type Kind } from './runner-read.ts';
@@ -33,17 +41,37 @@ import { ALWAYS_ASKS, KIND_NAME, KIND_ONE, KINDS, deliveredToItself, kindOf, ref
 export type { Kind };
 export { KIND_NAME, KINDS, ALWAYS_ASKS };
 
-/** Said before the runner is turned on, and read (6.2). */
+/** Said before the runner is turned on, and read (6.2; draft 2: the passphrase). */
 export const RISK_SAY = [
-  'Kišib keeps the signing keys of the identities you give it, on this Mac, in its folder, while the runner is on. The chain key: never.',
-  'Whoever gets into this Mac can sign as those identities: through Kišib, within what you allowed; and anything at all, by reading Kišib’s folder.',
+  'Kišib keeps the signing keys of the identities you give it on this Mac, in its folder, encrypted under a passphrase you choose now. The chain key: never.',
+  'Whoever gets into this Mac while Kišib is open and unlocked can sign as those identities through Kišib, within what you allowed. Kišib’s folder alone gives them nothing without the passphrase.',
+  'Still at risk: someone who saw your passphrase typed, or who guesses it; a Mac taken, or a program running as you, while Kišib is open and unlocked.',
+  'Forget the passphrase, and the runner cannot be opened again: turn it off, which erases everything, and give the signing words again.',
+  'Quitting Kišib, or restarting the Mac, locks the runner, and so does Lock it now: its keys, apps and log stay, encrypted, until the passphrase is given again. Closing Kišib’s window alone does not: its program keeps running, unlocked.',
   'Its panel is drawn by Kišib inside the asking app’s window. A malicious app could cover it or trick a click: a gap you accept.',
-  'Money, agreements and keys always ask, even with a standing yes.',
-  'Turning the runner off forgets every key it holds, every app paired with it and what it signed.',
+  'Money, agreements, relying on another’s act, and keys always ask, even with a standing yes.',
+  'An app you let open what is sealed to an identity reads its private messages through Kišib without asking each time; each opening is listed.',
+  'Turning the runner off erases every key it holds, every app paired with it and what it signed and opened.',
 ];
 
 /** Said where the runner refuses because it is off (6.1). */
 export const OFF_SAY = 'Kišib’s runner is off: it signs for no app. Turn it on in Kišib (Runner), knowing the risk, or sign with the identity’s own words. Nothing was signed.';
+
+/** Said where the runner refuses because it is locked (draft 2, 6.2). Its first words are how an app knows it. */
+export const LOCKED_SAY = 'Kišib is locked: its runner signs and opens nothing until its passphrase is given in Kišib (Runner). Open Kišib and give it; nothing has to be paired again. Nothing was signed.';
+
+/** Said where a passphrase does not open the runner (draft 2, 6.2). */
+export const WRONG_SAY = 'That passphrase does not open Kišib’s runner: nothing was opened. Forgotten, it cannot be found again: turn the runner off (it erases everything) and give the signing words again.';
+
+/** Said where an app may not open what is sealed to an identity (draft 2, section 8). Its first words are how an app knows it. */
+export const NO_OPEN_SAY = 'Kišib does not open what is sealed to this identity for this app: it may send, not read. To allow it, in Kišib: Runner, Apps, “may open what is sealed to this identity”. Nothing was opened.';
+
+/** The passphrase's shortest length (draft 2, 6.2). */
+export const PASSPHRASE_MIN = 8;
+
+/** The key derivation (draft 2, 6.3): scrypt, RFC 7914, 128 MiB of memory. */
+const KDF = { name: 'scrypt', N: 1 << 17, r: 8, p: 1 } as const;
+const CIPHER = 'aes-256-gcm';
 
 /** Said where the key the runner holds no longer counts (3.5; H80). Its first words are how an app knows it. */
 export const RUNNER_SPENT_SAY =
@@ -53,7 +81,9 @@ export const RUNNER_SPENT_SAY =
 export const WAIT_LIFE = 10 * 60 * 1000;
 
 const FILE = 'runner.json';
-const LABEL = 'MOR Kišib runner: signing keys, kept while the runner is on. TEST IDENTITIES ONLY.';
+/** Draft 1's file, in the clear: read once, to be sealed under a passphrase. */
+const LABEL_1 = 'MOR Kišib runner: signing keys, kept while the runner is on. TEST IDENTITIES ONLY.';
+const LABEL = 'MOR Kišib runner, draft 2: signing keys, pairings and log, encrypted under a passphrase. TEST IDENTITIES ONLY.';
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -81,6 +111,8 @@ interface Pairing {
   state: 'waiting' | 'approved' | 'refused';
   identities: string[];
   yes: Kind[];
+  /** Draft 2: may have what is sealed to its identities opened (off unless chosen). */
+  open?: boolean;
   asked: number;
   approved?: number;
 }
@@ -102,6 +134,11 @@ interface Signed {
   of?: string;
   /** Signed without a panel: under a standing yes, or as an act's companion. */
   standing?: boolean;
+  /** Draft 2: an opening, not a signature: what was sealed to the identity, opened for the app. */
+  opened?: boolean;
+  /** For an opening: the sealed container's ID, and how many times the app had it opened. */
+  sealed?: string;
+  times?: number;
 }
 
 /** The latest act of an app's line, as signed here (7.2): the line's IDs, for its card. */
@@ -122,6 +159,26 @@ interface RunnerFile {
   log: Signed[];
   lines: LineKept[];
 }
+
+/** The runner's file on disk (draft 2, 6.3): everything sealed under the passphrase's key. */
+interface Envelope {
+  label: string;
+  kdf: { name: 'scrypt'; N: number; r: number; p: number; salt: string };
+  cipher: typeof CIPHER;
+  nonce: string;
+  /** The ciphertext and its 16-byte tag, base64. */
+  sealed: string;
+}
+
+/** The key from a passphrase (draft 2, 6.3). */
+function derive(passphrase: string, k: Envelope['kdf']): Promise<Buffer> {
+  return new Promise((resolve, reject) =>
+    scrypt(passphrase.normalize('NFC'), Buffer.from(k.salt, 'base64'), 32, { N: k.N, r: k.r, p: k.p, maxmem: 256 * k.N * k.r }, (e, key) => (e ? reject(e) : resolve(key))),
+  );
+}
+
+/** What the envelope's tag also covers: its label and how its key is derived, so neither can be changed unseen. */
+const aad = (e: Pick<Envelope, 'label' | 'kdf' | 'cipher'>) => Buffer.from(JSON.stringify([e.label, e.kdf, e.cipher]));
 
 /** A request waiting for the person (4.5), in memory only. */
 interface Waiting {
@@ -147,15 +204,22 @@ export type Answer =
   | { waiting: true }
   | { expired: true };
 
+/** The runner's state (draft 2): off (nothing kept), locked (kept, encrypted, its passphrase not given since Kišib started), or on. */
+export type RunnerState = 'off' | 'locked' | 'on';
+
 /** What Kišib's page shows of the runner. */
 export interface RunnerView {
+  /** On and unlocked: signing for its apps. */
   on: boolean;
+  state: RunnerState;
+  /** Locked, with draft 1's file in the clear: a passphrase is chosen to seal it. */
+  upgrade: boolean;
   since: number | null;
   risk: string[];
   held: { id: string; form: string; name: string | null; spent: boolean; apps: string[]; homes: string[] }[];
-  apps: { id: string; name: string; origin: string; code: string; state: Pairing['state']; identities: string[]; yes: Kind[]; asked: number; approved: number | null }[];
+  apps: { id: string; name: string; origin: string; code: string; state: Pairing['state']; identities: string[]; yes: Kind[]; open: boolean; asked: number; approved: number | null }[];
   waiting: { request: string; app: string; identity: string; name: string | null; kind: Kind; title: string; words: string[]; at: number; always: boolean }[];
-  signed: { at: number; app: string; identity: string; name: string | null; kind: Kind; words: string[]; act: string; standing: boolean; line: string; position: number }[];
+  signed: { at: number; app: string; identity: string; name: string | null; kind: Kind; words: string[]; act: string; standing: boolean; line: string; position: number; opened: boolean; sealed: string | null; times: number }[];
   kinds: { kind: Kind; name: string; always: boolean }[];
 }
 
@@ -202,7 +266,15 @@ export function readOrigin(o: string): string {
 export const originsOf = (o: string) => [o, o.replace('127.0.0.1', 'localhost')];
 
 export class Runner {
+  /** What the runner keeps, in memory while on (unlocked) only. */
   private f: RunnerFile | null = null;
+  /** The key derived from the passphrase, in memory while on only; and how it was derived. */
+  private key: Buffer | null = null;
+  private kdf: Envelope['kdf'] | null = null;
+  /** Locked: the file as read from disk, encrypted. */
+  private env: Envelope | null = null;
+  /** Locked, with draft 1's file in the clear: read, to be sealed under a passphrase chosen now. */
+  private legacy: RunnerFile | null = null;
   private waiting = new Map<string, Waiting>();
 
   constructor(
@@ -212,8 +284,10 @@ export class Runner {
     const p = join(dir, FILE);
     if (existsSync(p)) {
       try {
-        const f = JSON.parse(readFileSync(p, 'utf8')) as RunnerFile;
-        if (f.label === LABEL) this.f = f;
+        const f = JSON.parse(readFileSync(p, 'utf8')) as Envelope & RunnerFile;
+        // Kišib started with the runner on: it is locked until its passphrase is given (draft 2, 6.2).
+        if (f.label === LABEL && f.kdf?.name === 'scrypt' && f.cipher === CIPHER) this.env = f;
+        else if (f.label === LABEL_1 && Array.isArray(f.held)) this.legacy = f;
       } catch {
         // a damaged file: the runner is off until turned on again
       }
@@ -229,50 +303,126 @@ export class Runner {
     return !!this.f;
   }
 
+  /** Off, locked or on (draft 2). */
+  get state(): RunnerState {
+    return this.f ? 'on' : this.env || this.legacy ? 'locked' : 'off';
+  }
+
+  /** Everything kept, sealed under the passphrase's key with a fresh nonce, and written: never in the clear (draft 2, 6.3). */
   private save() {
-    if (!this.f) return;
+    if (!this.f || !this.key || !this.kdf) return;
     const p = join(this.dir, FILE);
-    writeFileSync(`${p}.tmp`, JSON.stringify(this.f, null, 2) + '\n', { mode: 0o600 });
+    const head = { label: LABEL, kdf: this.kdf, cipher: CIPHER } as const;
+    const nonce = randomBytes(12);
+    const c = createCipheriv(CIPHER, this.key, nonce);
+    c.setAAD(aad(head));
+    const body = Buffer.concat([c.update(JSON.stringify(this.f), 'utf8'), c.final(), c.getAuthTag()]);
+    const env: Envelope = { ...head, nonce: nonce.toString('base64'), sealed: body.toString('base64') };
+    writeFileSync(`${p}.tmp`, JSON.stringify(env) + '\n', { mode: 0o600 });
     renameSync(`${p}.tmp`, p);
   }
 
   private file(): RunnerFile {
-    if (!this.f) throw new RunnerRefusal(403, OFF_SAY);
+    if (!this.f) throw new RunnerRefusal(this.state === 'locked' ? 423 : 403, this.state === 'locked' ? LOCKED_SAY : OFF_SAY);
     return this.f;
   }
 
-  // ------------------------------------------------------------ on and off (section 6)
+  /** A passphrase chosen: typed twice, long enough (draft 2, 6.2). */
+  private static chosen(a: { passphrase?: string; again?: string }): string {
+    const pass = a.passphrase ?? '';
+    if ([...pass].length < PASSPHRASE_MIN) throw new Error(`Choose a passphrase of at least ${PASSPHRASE_MIN} characters. The runner stays as it was.`);
+    if (pass !== a.again) throw new Error('The passphrase typed twice differs: type it again, the same both times. The runner stays as it was.');
+    return pass;
+  }
 
-  /** Turn the runner on, once its risk was read (6.2). Nothing is kept yet. */
-  turnOn(a: { read: boolean }): RunnerView {
+  /** A fresh key from a passphrase chosen now, with its own salt. */
+  private async newKey(pass: string): Promise<void> {
+    const kdf = { ...KDF, salt: randomBytes(16).toString('base64') };
+    this.key = await derive(pass, kdf);
+    this.kdf = kdf;
+  }
+
+  // ------------------------------------------------------------ on, locked and off (section 6)
+
+  /** Turn the runner on, once its risk was read, with a passphrase chosen, typed twice (6.2). Nothing is kept yet. */
+  async turnOn(a: { read: boolean; passphrase?: string; again?: string }): Promise<RunnerView> {
+    if (this.f) return this.view();
+    if (this.state === 'locked') throw new Error('Kišib’s runner is locked, not off: give its passphrase to open it, or turn it off to start from nothing.');
     if (!a.read) throw new Error('Read the risk, and say so, before the runner is turned on. It stays off.');
-    if (!this.f) {
-      this.f = { label: LABEL, since: Math.floor(this.now() / 1000), held: [], apps: [], log: [], lines: [] };
-      this.save();
-    }
+    const pass = Runner.chosen(a);
+    await this.newKey(pass);
+    this.f = { label: LABEL, since: Math.floor(this.now() / 1000), held: [], apps: [], log: [], lines: [] };
+    this.save();
     return this.view();
   }
 
-  /** Turn it off (6.5): every key, pairing and record forgotten; the file overwritten, then removed. */
+  /**
+   * Unlock the runner with its passphrase (6.2): everything back as it was
+   * when Kišib closed, no app paired again. A wrong passphrase opens nothing.
+   * Draft 1's file, in the clear, is sealed under the passphrase chosen now
+   * (typed twice), and the clear one overwritten.
+   */
+  async unlock(a: { passphrase?: string; again?: string }): Promise<RunnerView> {
+    if (this.f) return this.view();
+    if (this.legacy) {
+      const pass = Runner.chosen(a);
+      await this.newKey(pass);
+      this.f = { ...this.legacy, label: LABEL };
+      this.legacy = null;
+      erase(join(this.dir, FILE));
+      this.save();
+      return this.view();
+    }
+    const env = this.env;
+    if (!env) throw new Error('Kišib’s runner is off: there is nothing to unlock. Turn it on to start.');
+    const key = await derive(a.passphrase ?? '', env.kdf);
+    let f: RunnerFile;
+    try {
+      const body = Buffer.from(env.sealed, 'base64');
+      const d = createDecipheriv(CIPHER, key, Buffer.from(env.nonce, 'base64'));
+      d.setAAD(aad(env));
+      d.setAuthTag(body.subarray(body.length - 16));
+      f = JSON.parse(Buffer.concat([d.update(body.subarray(0, body.length - 16)), d.final()]).toString('utf8')) as RunnerFile;
+    } catch {
+      key.fill(0);
+      throw new RunnerRefusal(403, WRONG_SAY);
+    }
+    this.f = f;
+    this.key = key;
+    this.kdf = env.kdf;
+    this.env = null;
+    return this.view();
+  }
+
+  /**
+   * Lock it now, without quitting Kišib (6.4): the key derived from the
+   * passphrase and everything opened forgotten from memory; the file on disk
+   * stays, encrypted; the passphrase is asked again. Requests waiting are
+   * dropped, nothing signed.
+   */
+  lock(): RunnerView {
+    if (!this.f) return this.view();
+    this.save();
+    const p = join(this.dir, FILE);
+    const env = JSON.parse(readFileSync(p, 'utf8')) as Envelope;
+    for (const w of this.waiting.values()) this.settle(w, { declined: true });
+    this.waiting.clear();
+    for (const h of this.f.held) h.secret = '0'.repeat(h.secret.length);
+    this.key?.fill(0);
+    this.f = this.key = this.kdf = null;
+    this.env = env;
+    return this.view();
+  }
+
+  /** Turn it off (6.5), from on or locked: every key, pairing and record erased; the file overwritten, then removed. */
   turnOff(): RunnerView {
     const p = join(this.dir, FILE);
     for (const w of this.waiting.values()) this.settle(w, { declined: true });
     this.waiting.clear();
-    for (const h of this.f?.held ?? []) h.secret = '0'.repeat(h.secret.length);
-    this.f = null;
-    for (const x of [p, `${p}.tmp`]) {
-      if (!existsSync(x)) continue;
-      try {
-        // Overwritten first, as far as software can: a copy the system made elsewhere is out of reach.
-        const n = statSync(x).size;
-        const fd = openSync(x, 'r+');
-        writeSync(fd, Buffer.alloc(n));
-        closeSync(fd);
-      } catch {
-        // removed below all the same
-      }
-      rmSync(x, { force: true });
-    }
+    for (const h of [...(this.f?.held ?? []), ...(this.legacy?.held ?? [])]) h.secret = '0'.repeat(h.secret.length);
+    this.key?.fill(0);
+    this.f = this.key = this.kdf = this.env = this.legacy = null;
+    for (const x of [p, `${p}.tmp`]) erase(x);
     return this.view();
   }
 
@@ -364,13 +514,14 @@ export class Runner {
   }
 
   /** What an app learns of its pairing (2.4). */
-  paired(token: string | undefined): { state: Pairing['state']; name: string; code: string; identities: { id: string; name: string | null; binding: string; key: string; spent: boolean; homes: string[] }[] } {
+  paired(token: string | undefined): { state: Pairing['state']; name: string; code: string; open: boolean; identities: { id: string; name: string | null; binding: string; key: string; spent: boolean; homes: string[] }[] } {
     const p = this.pairingOf(token, false);
     const f = this.file();
     return {
       state: p.state,
       name: p.name,
       code: p.code,
+      open: p.state === 'approved' && !!p.open,
       identities:
         p.state === 'approved'
           ? f.held.filter((h) => p.identities.includes(h.id)).map((h) => ({ id: h.id, name: h.name, binding: h.binding, key: hex(signingPublic(unhex(h.secret))), spent: !!h.spent, homes: h.homes.map((x) => x.hint) }))
@@ -378,8 +529,8 @@ export class Runner {
     };
   }
 
-  /** Approve a pairing (2.2), with the identities the app may use. */
-  approve(a: { pairing: string; identities: string[] }): RunnerView {
+  /** Approve a pairing (2.2), with the identities the app may use, and whether it may have what is sealed to them opened (draft 2, 8.1). */
+  approve(a: { pairing: string; identities: string[]; open?: boolean }): RunnerView {
     const f = this.file();
     const p = f.apps.find((x) => x.id === a.pairing);
     if (!p) throw new Error('No such pairing waits here.');
@@ -387,6 +538,7 @@ export class Runner {
     if (!ids.length) throw new Error('Choose at least one identity the app may use: give one to the runner first (Identities held here).');
     p.state = 'approved';
     p.identities = ids;
+    if (a.open !== undefined) p.open = a.open;
     p.approved = Math.floor(this.now() / 1000);
     this.save();
     return this.view();
@@ -397,6 +549,15 @@ export class Runner {
     const p = this.file().apps.find((x) => x.id === a.pairing && x.state === 'approved');
     if (!p) throw new Error('No such app is paired here.');
     return this.approve(a);
+  }
+
+  /** Let an approved app have what is sealed to its identities opened, or no more (draft 2, 8.1). */
+  setOpen(a: { pairing: string; on: boolean }): RunnerView {
+    const p = this.file().apps.find((x) => x.id === a.pairing && x.state === 'approved');
+    if (!p) throw new Error('No such app is paired here.');
+    p.open = a.on;
+    this.save();
+    return this.view();
   }
 
   /** Refuse a pairing waiting, or revoke one approved (2.5): its token stops working at once. */
@@ -423,7 +584,7 @@ export class Runner {
     if (!p) throw new Error('No such app is paired here.');
     const k = a.kind as Kind;
     if (!KINDS.includes(k)) throw new Error('No such kind of act.');
-    if (ALWAYS_ASKS.includes(k)) throw new Error('Money, agreements and keys always ask: no standing yes is given for them.');
+    if (ALWAYS_ASKS.includes(k)) throw new Error('Money, agreements, relying on another’s act, and keys always ask: no standing yes is given for them.');
     p.yes = a.on ? [...new Set([...p.yes, k])] : p.yes.filter((x) => x !== k);
     this.save();
     return this.view();
@@ -577,6 +738,54 @@ export class Runner {
     }
   }
 
+  // ------------------------------------------------------------ opening (draft 2, section 8)
+
+  /**
+   * Open what is sealed to an identity, for an app allowed to (8.1): each
+   * container opened with the encryption key the identity's signing words
+   * carry (the carry Module), the act inside and its content key returned;
+   * never the identity's encryption key. No panel: an opening signs nothing.
+   * Each container opened is listed in Signed, once, with how many times.
+   */
+  open(token: string | undefined, a: { identity: string; sealed: Uint8Array[] }): { opened: ({ act: string; key: string | null } | null)[] } {
+    const p = this.pairingOf(token);
+    const f = this.file();
+    if (!p.open) throw new RunnerRefusal(403, NO_OPEN_SAY);
+    if (!p.identities.includes(a.identity)) throw new RunnerRefusal(403, `Kišib’s runner does not open for ${p.name} as ${idForm(a.identity)}: approve it for this app in Kišib (Runner, Apps). Nothing was opened.`);
+    const h = f.held.find((x) => x.id === a.identity);
+    if (!h) throw new RunnerRefusal(403, 'Kišib’s runner does not hold this identity any more. Nothing was opened.');
+    if (a.sealed.length > OPEN_MAX) throw new RunnerRefusal(400, `At most ${OPEN_MAX} sealed containers at once. Nothing was opened.`);
+    const seed = unhex(h.secret);
+    const secret = encryptionSecret(seed);
+    seed.fill(0);
+    const at = Math.floor(this.now() / 1000);
+    let changed = false;
+    const opened = a.sealed.map((bytes) => {
+      let o: { act: Uint8Array; key?: Uint8Array; described: { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array; public?: boolean; to?: string[] } };
+      try {
+        o = openSealed(bytes, h.id, secret) as typeof o;
+      } catch {
+        return null;
+      }
+      const sealed = sealedId(bytes);
+      const was = f.log.find((x) => x.opened && x.app === p.id && x.identity === h.id && x.sealed === sealed);
+      if (was) {
+        was.times = (was.times ?? 1) + 1;
+        was.at = at;
+      } else {
+        const d = o.described;
+        const kind = kindOf({ identity: h.id, binding: '', line: 'private', sequence: [], spec: d.spec ?? '', type: d.type ?? 0, payload: d.payload ?? new Uint8Array(), public: false, to: d.to });
+        const from = !d.signer ? '' : d.signer === h.id ? ', its own' : `, from ${short(idForm(d.signer))}`;
+        f.log.push({ at, app: p.id, appName: p.name, identity: h.id, kind, words: [`Opened for ${p.name}: ${KIND_ONE[kind]}${from}. Nothing was signed.`], act: d.id, line: 'private', position: 0, opened: true, sealed, times: 1 });
+      }
+      changed = true;
+      return { act: base64(o.act), key: o.key ? base64(o.key) : null };
+    });
+    secret.fill(0);
+    if (changed) this.save();
+    return { opened };
+  }
+
   /** Answered in Kišib's own page (Runner, Waiting). */
   pageAnswer(a: { request: string; yes: boolean; always?: boolean }): RunnerView {
     this.sweep();
@@ -671,10 +880,12 @@ export class Runner {
     const name = (id: string) => f?.held.find((h) => h.id === id)?.name ?? null;
     return {
       on: !!f,
+      state: this.state,
+      upgrade: !!this.legacy,
       since: f?.since ?? null,
       risk: RISK_SAY,
       held: (f?.held ?? []).map((h) => ({ id: h.id, form: idForm(h.id), name: h.name, spent: !!h.spent, homes: h.homes.map((x) => x.hint), apps: (f?.apps ?? []).filter((p) => p.state === 'approved' && p.identities.includes(h.id)).map((p) => p.name) })),
-      apps: (f?.apps ?? []).map((p) => ({ id: p.id, name: p.name, origin: p.origin, code: p.code, state: p.state, identities: p.identities, yes: p.yes, asked: p.asked, approved: p.approved ?? null })),
+      apps: (f?.apps ?? []).map((p) => ({ id: p.id, name: p.name, origin: p.origin, code: p.code, state: p.state, identities: p.identities, yes: p.yes, open: !!p.open, asked: p.asked, approved: p.approved ?? null })),
       waiting: [...this.waiting.values()]
         .filter((w) => !w.made && !w.declined)
         .map((w) => {
@@ -684,11 +895,28 @@ export class Runner {
       signed: (f?.log ?? [])
         .slice()
         .reverse()
-        .map((s) => ({ at: s.at, app: s.appName, identity: s.identity, name: name(s.identity), kind: s.kind, words: s.words, act: s.act, standing: !!s.standing, line: s.line, position: s.position })),
+        .map((s) => ({ at: s.at, app: s.appName, identity: s.identity, name: name(s.identity), kind: s.kind, words: s.words, act: s.act, standing: !!s.standing, line: s.line, position: s.position, opened: !!s.opened, sealed: s.sealed ?? null, times: s.times ?? 1 })),
       kinds: KINDS.map((k) => ({ kind: k, name: KIND_NAME[k], always: ALWAYS_ASKS.includes(k) })),
     };
   }
 }
+
+/** A file overwritten, as far as software can (a copy the system made elsewhere is out of reach), then removed. */
+function erase(x: string) {
+  if (!existsSync(x)) return;
+  try {
+    const n = statSync(x).size;
+    const fd = openSync(x, 'r+');
+    writeSync(fd, Buffer.alloc(n));
+    closeSync(fd);
+  } catch {
+    // removed below all the same
+  }
+  rmSync(x, { force: true });
+}
+
+/** At most this many sealed containers opened in one request. */
+export const OPEN_MAX = 100;
 
 const short = (form: string) => {
   const one = form.indexOf('1');
