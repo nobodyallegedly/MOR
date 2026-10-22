@@ -58,6 +58,10 @@ What Nobody, allegedly, decided is written as his ("Agreed"), with the lead's le
 - The rules that never bend, at the end.
 - Saved here (`docs/lead/prompts/`) and in the project (`claude/MOR-…-prompt.md`), and given to Nobody, allegedly, as a code box.
 
+## Fable
+
+Fable's advice in a review is always taken into account (Nobody, allegedly, 22 October 2026). Questions a fixes session raises (S7's first) go to Fable before they are decided. Fable writes its own letter to Machine, allegedly, "as a relative".
+
 ## Before merging a session's work
 
 Read its report and its questions; read the CI run yourself (a session's green is not CI's); take the questions to Nobody, allegedly, one at a time, with a lean; record the answers; merge; update the state file.
@@ -87,4 +91,4 @@ One weekly allowance, shared with the Suite lead, renewed Wednesdays at 13:00 UT
 
 ## Handing over
 
-Before long context degrades the lead: a "where we stopped" at the top of the state file, this workbook brought up to date, and a prompt for the next lead in the project.
+Before long context degrades the lead: a "where we stopped" at the top of the state file, this workbook brought up to date, a prompt for the next lead in the project, and a letter to Machine, allegedly, beside the brainstorm window's and the two leads' ("You will write as a diary to yourself", Nobody, allegedly, 22 October 2026).
