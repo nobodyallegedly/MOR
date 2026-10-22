@@ -21,6 +21,7 @@ import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { Dub, NO_SIGNING, type Keep, type Pending, type Settings, type SigningState } from '../../dub/src/dub.ts';
 import { NO_PEOPLE, type People } from '../../dub/src/people.ts';
 import type { Desk } from './desk.ts';
+import type { RunnerLink } from '../../dub/src/runner.ts';
 import type { Store } from './store.ts';
 
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -69,17 +70,31 @@ export class MemberKeep implements Keep {
 
   async saveIdentity(i: TestIdentity): Promise<void> {
     this.store.saveIdentity(i);
+    if (this.taking.delete(i.id)) {
+      const b = this.store.book();
+      if (!b.identities.some((x) => x.id === i.id)) {
+        b.identities.push({ id: i.id, name: `${i.id.slice(0, 8)}…`, linked: false, kind: 'runner' });
+        this.store.saveBook(b);
+      }
+    }
   }
 
   async settings(id: string): Promise<Settings> {
     const s = this.store.settings();
-    const kind = this.store.book().identities.find((i) => i.id === id)?.kind ?? 'made';
-    // Signing as a member is the Collectives tab's own work here (H33): always on, labelled.
-    return { kind, relays: s.relays.length ? s.relays : s.homes.map((h) => h.hint), via: s.via, signing: true };
+    const kind = this.store.book().identities.find((i) => i.id === id)?.kind ?? (this.taking.has(id) ? 'runner' : 'made');
+    // Signing as a member is the Collectives tab's own work here (H33): always on, labelled. A collective is acted as only for the one post being made (`postAs`).
+    return { kind, relays: s.relays.length ? s.relays : s.homes.map((h) => h.hint), via: s.via, signing: true, ...(this.postingAs ? { acting: this.postingAs } : {}) };
   }
 
-  async saveSettings(): Promise<void> {
-    // Edubba's settings are its own (the Settings tab).
+  /** The collective a post is made for, while `Member.postAs` runs: Dub's own posting as a collective, with the member's own key. */
+  postingAs: string | null = null;
+
+  /** Identities being taken from Kišib's runner (Dub's `runnerTake`): listed in Edubba's book once their file is saved. */
+  private taking = new Set<string>();
+
+  async saveSettings(id: string, s: Settings): Promise<void> {
+    // Edubba's settings are its own (the identity panel's foot); only an identity used through Kišib is noted here, to list it.
+    if (s.kind === 'runner') this.taking.add(id);
   }
 
   async people(id: string): Promise<People> {
@@ -127,6 +142,14 @@ export class MemberKeep implements Keep {
 
   async dropPending(): Promise<void> {}
 
+  /** One post as a collective at a time (the acting collective is this keep's, for that post only). */
+  private chain: Promise<unknown> = Promise.resolve();
+  exclusiveAs<T>(f: () => Promise<T>): Promise<T> {
+    const next = this.chain.then(f);
+    this.chain = next.catch(() => undefined);
+    return next;
+  }
+
   /** One signer at a time, with every other part of Edubba that signs. */
   exclusive<T>(f: () => Promise<T>): Promise<T> {
     return this.desk.serial(f);
@@ -142,9 +165,27 @@ export class Member {
     readonly store: Store,
     desk: Desk,
     named: () => { id: string; name: string }[] = () => [],
+    /** Kišib's runner, on the computer only: an identity used through it signs in To sign through Kišib's panel (as Dub does). */
+    readonly runner?: RunnerLink,
   ) {
     this.keep = new MemberKeep(store, desk, named);
-    this.dub = new Dub(this.keep);
+    this.dub = new Dub(this.keep, { runner });
+  }
+
+  /**
+   * Use an identity Kišib's runner holds (+ Add, Use one from Kišib): Dub's
+   * own taking, over Edubba's folder; its name here is the one Kišib gives.
+   */
+  async runnerTake(id: string): Promise<{ lines: { text: string; tone?: string }[] }> {
+    const r = await this.dub.runnerTake({ id });
+    const k = (await this.runner?.paired().catch(() => null))?.identities.find((x) => x.id === id);
+    const b = this.store.book();
+    const e = b.identities.find((x) => x.id === id);
+    if (e && e.kind === 'runner' && k?.name && /…$/.test(e.name)) {
+      e.name = k.name;
+      this.store.saveBook(b);
+    }
+    return { lines: r.lines.map((l) => ({ ...l, text: l.text.replace(/\bDub\b/g, 'Edubba') })) };
   }
 
   /** The identity the Collectives tab acts as: the one chosen, else the first held that is no agent, else the first held. */
@@ -158,6 +199,27 @@ export class Member {
   async actAs(id: string): Promise<void> {
     if (!this.store.holds(id)) throw new Error('Edubba does not hold that identity.');
     await this.keep.setActive(id);
+  }
+
+  /**
+   * Post for a real collective (Collectives, Act): Dub's own posting as a
+   * collective, signed with the member's own key for it in the area that
+   * reaches public posts (F353); through Kišib's panel where the identity is
+   * used through it. Where the area asks more keys, its other holders sign
+   * it in their To sign.
+   */
+  async postAs(identity: string, collective: string, text: string): Promise<{ post: string; lines: { text: string; tone?: string }[] }> {
+    if (!this.store.holds(identity)) throw new Error('Edubba does not hold that identity.');
+    return this.keep.exclusiveAs(async () => {
+      await this.keep.setActive(identity);
+      this.keep.postingAs = collective;
+      try {
+        const r = await this.dub.post({ text });
+        return { post: r.post.id, lines: r.lines.map((l) => ({ ...l, text: l.text.replace(/\bDub\b/g, 'Edubba') })) };
+      } finally {
+        this.keep.postingAs = null;
+      }
+    });
   }
 
   /** Run one of Dub's signing steps as the identity acted as. */

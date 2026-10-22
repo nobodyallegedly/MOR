@@ -26,6 +26,8 @@ import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT } from './specs.ts';
 import { textPayload } from './post.ts';
 import { strip } from '../../../modules/jpeg/src/jpeg.ts';
+import { read as readFilm, strip as stripFilm, MAX_BYTES as FILM_MAX_BYTES, CARRIED_WORDS as FILM_CARRIED } from '../../../modules/video/src/video.ts';
+import { read as readSound, strip as stripSound, MAX_BYTES as SOUND_MAX_BYTES, CARRIED_WORDS as SOUND_CARRIED } from '../../../modules/audio/src/audio.ts';
 
 /** The media spec of a sealed text: the Text MIR itself (its bytes canonical text, UTF-8). Confirmed by Nobody, allegedly (F352). */
 export const SEALED_TEXT = POST_SPECS.text;
@@ -33,10 +35,23 @@ export const SEALED_TEXT = POST_SPECS.text;
 /** The media spec of a sealed picture: the JPEG Module (round 3, Edubba's Publishing tab: the media modules the apps carry, decided by Nobody, allegedly, 19 October 2026: "Keep it to the modules supported by the app"). */
 export const SEALED_PICTURE = POST_SPECS.jpeg;
 
-/** What a sealed work may be: the media modules Edubba and Dub carry (text, and JPEG pictures). */
-export type SealedMedia = 'text' | 'picture';
-export const MEDIA_SPEC: Record<SealedMedia, string> = { text: SEALED_TEXT, picture: SEALED_PICTURE };
-export const mediaOf = (spec: string): SealedMedia | null => (spec === SEALED_TEXT ? 'text' : spec === SEALED_PICTURE ? 'picture' : null);
+/** The media spec of a sealed film and of a sealed recording: the video Module and the audio Module (Edubba's Publishing, decided by Nobody, allegedly, 21 October 2026: video and audio added). */
+export const SEALED_VIDEO = POST_SPECS.video;
+export const SEALED_AUDIO = POST_SPECS.audio;
+
+/** What a sealed work may be: the media modules Edubba and Dub carry (text, JPEG pictures, MP4 films, M4A recordings). */
+export type SealedMedia = 'text' | 'picture' | 'video' | 'audio';
+export const MEDIA_SPEC: Record<SealedMedia, string> = { text: SEALED_TEXT, picture: SEALED_PICTURE, video: SEALED_VIDEO, audio: SEALED_AUDIO };
+export const mediaOf = (spec: string): SealedMedia | null => (Object.entries(MEDIA_SPEC).find(([, x]) => x === spec)?.[0] as SealedMedia | undefined) ?? null;
+
+/** Each kind in words: "a sealed film". */
+export const MEDIA_WORDS: Record<SealedMedia, string> = { text: 'text', picture: 'picture', video: 'film', audio: 'recording' };
+
+/** Rules 2 to 9 of the video or audio Module, on bytes opened by a buyer, before anything plays: throws, saying why, for what the Module refuses. */
+export function checkPlayable(media: SealedMedia, bytes: Uint8Array): void {
+  if (media === 'video') readFilm(bytes);
+  else if (media === 'audio') readSound(bytes);
+}
 
 /**
  * A work locked for sale (Envelopes, "Media": the publication public, its
@@ -53,6 +68,19 @@ export function lockWork(a: { media: SealedMedia; bytes: Uint8Array; price: Amou
     const s = strip(a.bytes);
     bytes = s.bytes;
     removed = s.removed;
+  } else if (a.media === 'video' || a.media === 'audio') {
+    // Rule 10 of each Module: stripped to the film or the sound alone before locking; the work hash, locked hash and size are the stripped file's.
+    const max = a.media === 'video' ? FILM_MAX_BYTES : SOUND_MAX_BYTES;
+    if (a.bytes.length > max) throw new Error(`the file is ${a.bytes.length.toLocaleString('en')} bytes; the ${a.media === 'video' ? 'video' : 'audio'} Module takes at most ${max.toLocaleString('en')}`);
+    if (a.media === 'video') {
+      const s = stripFilm(a.bytes);
+      bytes = s.bytes;
+      removed = s.removed.map((c) => FILM_CARRIED[c]);
+    } else {
+      const s = stripSound(a.bytes);
+      bytes = s.bytes;
+      removed = s.removed.map((c) => SOUND_CARRIED[c]);
+    }
   } else {
     bytes = new TextEncoder().encode(new TextDecoder('utf-8', { fatal: true }).decode(a.bytes));
   }

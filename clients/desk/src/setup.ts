@@ -67,7 +67,7 @@ export interface RecordLine {
 
 export interface IdentityRecord {
   id: string;
-  kind: 'made' | 'brought';
+  kind: 'made' | 'brought' | 'runner';
   sections: RecordSection[];
   lines: RecordLine[];
   problems: string[];

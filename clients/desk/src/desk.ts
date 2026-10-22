@@ -106,6 +106,10 @@ async function keyChangedAt(id: string, secret: string, hints: string[], via: Vi
   return r.signingKey && hex(r.signingKey) !== hex(signingPublic(unhex(secret))) ? say : null;
 }
 
+/** Said where an act would be signed with the key of an identity used through Kišib, outside To sign. */
+export const RUNNER_HERE_SAY =
+  'Kišib’s runner holds this identity’s signing key, on this Mac; Edubba holds none of its keys. Edubba signs for it only in Collectives, To sign, through Kišib’s panel (as Dub does): bring it with its signing key’s words for everything else. Nothing was signed.';
+
 export class Desk {
   /** This desk's line of each identity as the homes hold it, for its card (H80's question 2). */
   private readonly line = lineReader('Edubba');
@@ -216,6 +220,24 @@ export class Desk {
     else b.names[id] = name.trim();
     this.store.saveBook(b);
     this.writeLinked();
+  }
+
+  /**
+   * Remove an identity from Edubba (the identity panel, said plainly first):
+   * its file and its entry here are forgotten; the identity itself, its acts
+   * and its homes are not touched. Refused for an agent, or an agent's owner.
+   */
+  forget(id: string): { lines: Line[] } {
+    if (!this.store.holds(id)) throw new Error('Edubba does not hold that identity.');
+    if (this.store.isAgent(id)) throw new Error('This identity is an agent: it stays while it is one. Nothing was removed.');
+    const owns = this.store.agentIds().filter((a) => this.store.agent<{ owner?: string | null }>(a, () => ({})).owner === id);
+    if (owns.length) throw new Error('This identity owns an agent here: it stays while it does. Nothing was removed.');
+    const b = this.store.book();
+    const name = b.identities.find((x) => x.id === id)?.name ?? id.slice(0, 8);
+    b.identities = b.identities.filter((x) => x.id !== id);
+    this.store.saveBook(b);
+    this.store.forgetIdentity(id);
+    return { lines: [{ text: `Edubba forgot ${name}’s signing words, and what it kept about it, on this device. ${name} itself is not touched: its acts, its homes and the other apps keep it.`, tone: 'ok' }] };
   }
 
   link(id: string, on: boolean): void {
@@ -494,7 +516,7 @@ export class Desk {
    */
   async signAndSend(
     signer: string,
-    a: { spec: string; type: number; payload: Uint8Array; public: boolean; to: string[]; refs: Reference[]; objects?: [string, string][] },
+    a: { spec: string; type: number; payload: Uint8Array; public: boolean; to: string[]; refs: Reference[]; objects?: [string, string][]; /** Where a public act goes besides the relays in Settings (the signer's own homes, for the diary's act). */ also?: string[] },
   ): Promise<{ id: string; act: Uint8Array; key: Uint8Array; sent: NonNullable<Answer['sent']> }> {
     return this.serial(async () => {
       if (!this.store.holds(signer)) throw new Error(`This desk does not hold the identity ${signer}.`);
@@ -508,7 +530,7 @@ export class Desk {
       // The sequence is saved before anything leaves, so no later act can fork from this one.
       this.store.saveIdentity(me);
       this.store.keepAct(made.id, made.act, a.public ? undefined : made.key);
-      const rec = await this.record(made.id, made, a.public, a.to, a.public ? this.store.settings().relays : [], recipient);
+      const rec = await this.record(made.id, made, a.public, a.to, a.public ? [...new Set([...this.store.settings().relays, ...(a.also ?? [])])] : [], recipient);
       this.store.saveSigned(rec);
       const sent = await this.send(rec, me);
       return { id: made.id, act: made.act, key: made.key, sent };
@@ -566,6 +588,8 @@ export class Desk {
    */
   async keyChanged(identity: string): Promise<string | null> {
     const me = this.store.identity(identity);
+    // Used through Kišib's runner: its key is Kišib's, and so is following its change (the runner cMIP, 3.5).
+    if (!me.f.signingSecret) return null;
     return keyChangedAt(me.id, me.f.signingSecret, [...me.f.homes.map((h) => h.hint), ...this.hints()], this.via, KEY_CHANGED_SAY);
   }
 
@@ -575,6 +599,8 @@ export class Desk {
    * an identity's own key calls it first (H80: the reliance once did not).
    */
   async keyCurrent(identity: string): Promise<void> {
+    // Used through Kišib's runner: Edubba holds no key of it, and signs for it only in To sign, through Kišib's panel (as Dub does).
+    if (this.store.holds(identity) && !this.store.identity(identity).f.signingSecret) throw new Error(RUNNER_HERE_SAY);
     const w = await this.keyChanged(identity);
     if (w) throw new Error(`${w} Nothing was signed.`);
   }

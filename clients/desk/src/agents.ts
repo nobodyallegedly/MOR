@@ -18,7 +18,7 @@
 // browser beyond the moment it is typed, and the page is shown its last four
 // characters only.
 
-import { SPECS, cborEncode } from '../../genesis/src/core.ts';
+import { SPECS, cborEncode, sha256 } from '../../genesis/src/core.ts';
 import { readFeed } from '../../site/src/feed.ts';
 import { compose } from '../../longform/src/text.ts';
 import { escapeControls } from '../../connector/src/words.ts';
@@ -45,6 +45,14 @@ export const PROMPT_SAY =
 /** Said where the key is plugged in. */
 export const KEY_SAY =
   'The key goes from this page to the program once, and is kept in a file on this Mac that only your account can read (~/.config/mor). This page never holds it again: it is shown by its last four characters only.';
+
+/** The words of the public act signed before an agent's diary opens: "I have read Machine, allegedly’s diary, on 22 October 2026." */
+export function diaryActText(name: string, at: Date): string {
+  return `I have read ${name}’s diary, on ${at.getDate()} ${at.toLocaleString('en', { month: 'long' })} ${at.getFullYear()}.`;
+}
+
+/** The stated limit, in one line with its "?" (decided): the rule is the app's, not the cryptography's. */
+export const DIARY_RULE_SAY = 'Whoever holds the agent’s signing key’s words can read its diary without signing anything: Edubba opens it only after this act, by its own rule. The rule is the app’s, not the cryptography’s.';
 
 export interface Seen {
   id: string;
@@ -344,16 +352,39 @@ export class Agents {
   }
 
   /**
-   * "Read Machine's diary" (H22, 6): the one deliberate action that shows
-   * it. Asked with `reading: true` only after the page said plainly that the
-   * owner is about to read what the agent wrote for itself.
+   * The public act before the diary opens (decided by Nobody, allegedly, 21
+   * October 2026: "I can open it and read it only on one condition. I need to
+   * first sign a public act that states that I have done so"; addressed to
+   * the agent and public: "Yes, both, everyone should see it"). An ordinary
+   * public post of the owner's (Text), naming the agent among its recipients
+   * (`to`), as any addressed post: no new format. Shown here, nothing signed.
    */
-  async diary(agent: string, reading: boolean): Promise<{ say: string; entries: { day: string; striking: string; reflection: string; why: string; act: string }[] }> {
+  diaryAct(agent: string, at = new Date()): { owner: string; ownerName: string; to: string; text: string; digest: string; say: string; rule: string } {
     if (!this.store.isAgent(agent)) throw new Error('Not an agent of this desk.');
-    const say = diarySay(this.plainName(agent));
-    if (!reading) throw new Error(say);
+    const st = this.for(agent).state();
+    if (!st.owner) throw new Error('Sign its terms first: its owner reads its diary.');
+    const text = diaryActText(this.plainName(agent), at);
+    return { owner: st.owner, ownerName: this.plainName(st.owner), to: agent, text, digest: sha256(new TextEncoder().encode(text)), say: diarySay(this.plainName(agent)), rule: DIARY_RULE_SAY };
+  }
+
+  /**
+   * Sign the act shown (its digest), with the owner's key checked first
+   * (H80), publish it at the relays and the owner's own homes, a copy in the
+   * agent's inbox; open the diary only once one of the owner's homes has
+   * accepted it. Otherwise nothing of the diary is read.
+   */
+  async diary(agent: string, digest: string): Promise<{ say: string; act: string; accepted: string[]; entries: { day: string; striking: string; reflection: string; why: string; act: string }[] }> {
+    const shown = this.diaryAct(agent);
+    if (digest !== shown.digest) throw new Error('This is not the act shown (the day may have changed): read it again. Nothing was signed, and the diary stays closed.');
+    const me = this.store.identity(shown.owner);
+    const homes = me.f.homes.map((h) => h.hint);
+    const s = await this.desk.signAndSend(shown.owner, { spec: SPECS.text, type: 0, payload: cborEncode(new Map([[0, shown.text]])) as Uint8Array, public: true, to: [agent], refs: [], also: homes });
+    const names = this.store.names();
+    this.store.record({ time: now(), draft: '', verdict: 'diary read', agent, signer: shown.owner, title: `${names(shown.owner)} signed that it read ${names(agent)}’s diary`, note: '', act: s.id, text: shown.text });
+    const accepted = s.sent.filter((x) => x.accepted && homes.includes(x.to)).map((x) => x.to);
+    if (!accepted.length) throw new Error(`The act was signed (${short(s.id)}), but none of ${names(shown.owner)}’s homes accepted it yet: the diary stays closed. ${s.sent.map((x) => `${x.to}: ${x.answer}`).join('; ')}`);
     const r = await this.for(agent).memory.read(agent);
-    return { say, entries: r.diary.map((e) => ({ day: e.day, striking: escapeControls(e.striking), reflection: escapeControls(e.reflection), why: escapeControls(e.why), act: e.id })) };
+    return { say: shown.say, act: s.id, accepted, entries: r.diary.map((e) => ({ day: e.day, striking: escapeControls(e.striking), reflection: escapeControls(e.reflection), why: escapeControls(e.why), act: e.id })) };
   }
 
   // ------------------------------------------------------------ a grant from its owner (film 2)

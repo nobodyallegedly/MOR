@@ -113,7 +113,7 @@ export interface SealedShown {
   words: string | null;
   state: 'for sale' | 'paying' | 'opened' | 'yours';
   /** Text, or a JPEG picture (round 3: a protected file from Edubba's Publishing tab). */
-  media: 'text' | 'picture';
+  media: 'text' | 'picture' | 'video' | 'audio';
   text: string | null;
   /** A picture, opened: a data link the page shows. */
   picture: string | null;

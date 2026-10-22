@@ -92,7 +92,7 @@ export interface Item {
   /** A sealed post (pay-per-view, round 2): its price, its state, its text once opened. */
   /** A vow the post names (round 3), with its offer. */
   vow?: { vow: string; offer: string | null; seller: string; words: string; price: string; state: 'for sale' | 'paying' | 'bought' | 'yours'; problem: string | null } | null;
-  sealed?: { publication: string; offer: string | null; seller: string; price: string; words: string | null; state: 'for sale' | 'paying' | 'opened' | 'yours'; media: 'text' | 'picture'; text: string | null; picture: string | null; problem: string | null } | null;
+  sealed?: { publication: string; offer: string | null; seller: string; price: string; words: string | null; state: 'for sale' | 'paying' | 'opened' | 'yours'; media: 'text' | 'picture' | 'video' | 'audio'; text: string | null; picture: string | null; problem: string | null } | null;
   /** A repost of a sealed post: who reposted it, whose it is. */
   repost?: { by: Who; of: Who } | null;
   /** In the relay view, an act that is not a post: what it is, in a few words. */
