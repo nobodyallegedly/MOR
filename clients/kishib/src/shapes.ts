@@ -32,7 +32,7 @@ export interface Review {
 
 /** Where a sitting stands: what Kišib holds now, in memory only, and what comes next. */
 export interface Sitting {
-  kind: 'identity' | 'escape' | 'collective' | 'confirm';
+  kind: 'identity' | 'escape' | 'collective' | 'confirm' | 'make';
   /** The identity or collective. */
   id: string;
   /** The act signed, if any: the rotation (or escape, or confirmation). */

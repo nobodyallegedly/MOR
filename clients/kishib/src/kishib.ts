@@ -25,20 +25,20 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { MIRS, SPECS, IDENTITY_TYPES, actId, cborDecode, cborEncode, describeAct, hex, lightningAddress, makeRotation, newSigningSecret, onchainAddress, randomBytes, readLightningAddress, readOnchainAddress, sha256, signingPublic, unhex, vaultDeclaration } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, IDENTITY_TYPES, ENVELOPES_TYPES, encryptionKeyPayload, makeGenesis, routesPayload, xwingPublic, actId, cborDecode, cborEncode, describeAct, hex, lightningAddress, makeRotation, newSigningSecret, onchainAddress, randomBytes, readLightningAddress, readOnchainAddress, sha256, signingPublic, unhex, vaultDeclaration } from '../../genesis/src/core.ts';
 import { SPEC as MONEY_SPECS } from '../../damgar/src/specs.ts';
 import { UNITS_MODULES, say as sayAmount, unitOf } from '../../damgar/src/units.ts';
 import type { Home } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { CODE, RelayError, relayAt, type Via } from '../../genesis/src/transport.ts';
 import { checkWarned, planLines, readCards, type LinePlan } from '../../genesis/src/lines.ts';
-import { threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { encryptionSecret, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { readId } from '../../genesis/src/forms.ts';
 import { lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { bindingOf, homesWords, linesUnder, placing, readIdentity, recordWords, served, type Read, type Served } from './read.ts';
 import { chainKeyAt, freshSeed, indexOf, seedOf, spentPaper, wipe, Refused } from './words.ts';
 import { fingerprint, grouped, type Line, type Review, type Section, type Sitting, type State } from './shapes.ts';
-import { CollectiveSitting, EXPIRY, type CollectiveDeps } from './collective.ts';
+import { CollectiveSitting, EXPIRY, checkShare, type CollectiveDeps } from './collective.ts';
 import { addresses, holding, put, FORGOTTEN_SAY, NEW_CHAIN_WORDS_SAY, NEW_WORDS_SAY } from './common.ts';
 
 export { addresses, holding, put, FORGOTTEN_SAY, NEW_CHAIN_WORDS_SAY, NEW_WORDS_SAY };
@@ -68,6 +68,20 @@ const b64 = (b: Uint8Array) => {
   for (const x of b) s += String.fromCharCode(x);
   return btoa(s);
 };
+
+/** Said where a new identity's chain key's words are shown (H48): its first paper. */
+export const MADE_CHAIN_WORDS_SAY = [
+  'These are the chain key’s words of a new identity: its first paper, made now on this device. They are the only way ever to change its keys, here in Kišib.',
+  'Write them on paper, in order, and keep it apart from everything that goes online. Never type them into Dub, Edubba, Damgar or a wallet: only Kišib takes them.',
+  'They are shown once. When you say they are written, they are hidden, three are asked back, and Kišib forgets them; only then is the identity signed and sent to its homes. Closed before, nothing was made, and this paper is worthless.',
+];
+
+/** Said where a new identity's signing key's words are shown (H48). */
+export const MADE_WORDS_SAY = [
+  'These are the new identity’s signing key’s words: whoever holds them can sign as it and read its private messages. They are not the chain key’s words.',
+  'Write them on paper, in order. Bring the identity into Dub, Edubba, Damgar or Ummia with its ID and these words; or give them to Kišib’s runner (Runner, Identities held here), on this Mac.',
+  'They are shown once. When you say they are written, they are hidden, three are asked back, and Kišib forgets them: it keeps nothing of the identity.',
+];
 
 /** How long a review waits for its confirmation, its words with it. */
 const PLAN_LIFE = 15 * 60 * 1000;
@@ -522,11 +536,11 @@ export class Kishib {
     // The new paper first, before anything is signed.
     if (h.chain) {
       h.stage = 'paper';
-      return { words: toWords(h.chain), say: NEW_CHAIN_WORDS_SAY, which: 'chain' };
+      return { words: toWords(h.chain), say: h.kind === 'make' ? MADE_CHAIN_WORDS_SAY : NEW_CHAIN_WORDS_SAY, which: 'chain' };
     }
     if (h.stage === 'sent') throw new Error('Not yet: the new signing key’s words are shown once the homes’ receipts are in, so they are never words of a key that does not count.');
     h.stage = 'counts';
-    return { words: toWords(h.signing!), say: NEW_WORDS_SAY, which: 'signing' };
+    return { words: toWords(h.signing!), say: h.kind === 'make' ? MADE_WORDS_SAY : NEW_WORDS_SAY, which: 'signing' };
   }
 
   /** Hide the words; three positions to type back. */
@@ -566,7 +580,12 @@ export class Kishib {
       await sign!();
       h.stage = 'sent';
       await this.send();
-      h.lines = [{ text: 'The new chain key’s words are written and forgotten here; then the change was signed and sent. Once the homes accept it, the new paper is the one that counts and the old one is spent: destroy it then.', tone: 'ok' }, ...h.lines];
+      h.lines = [
+        h.kind === 'make'
+          ? { text: 'The chain key’s words are written and forgotten here; then the identity was signed and sent to its homes. Its signing key’s words come once their receipts are in.', tone: 'ok' }
+          : { text: 'The new chain key’s words are written and forgotten here; then the change was signed and sent. Once the homes accept it, the new paper is the one that counts and the old one is spent: destroy it then.', tone: 'ok' },
+        ...h.lines,
+      ];
       return this.state();
     }
     wipe(h.signing);
@@ -576,6 +595,102 @@ export class Kishib {
     h.stage = 'done';
     h.lines = [...h.lines, { text: 'The new signing key is forgotten here. Kišib holds nothing of this identity now: only your two new papers do, the chain key’s and the signing key’s.', tone: 'ok' }];
     return this.state();
+  }
+
+  // ------------------------------------------------------------ make an identity (H48)
+
+  /**
+   * Review a new identity (H48: "Kišib is an ID hub and should allow to
+   * create new identities"): its homes, its relays, a chain key from a new
+   * paper and a signing key, made as Dub makes one. Confirmed, the paper's
+   * words come first, written and three typed back before anything is
+   * signed; then its genesis, routes and encryption key (the one its signing
+   * words carry, so every app bringing it opens its messages) are signed and
+   * sent; once the homes' receipts are in, its signing key's words are shown
+   * once. Kišib keeps nothing of it.
+   */
+  async makePlan(a: { homes: string; relays: string; via?: Via }): Promise<Review> {
+    this.busy();
+    const via = a.via ?? {};
+    const hints = addresses(a.homes);
+    const relays = a.relays.trim() ? addresses(a.relays) : hints;
+    const homes: Home[] = [];
+    for (const hint of hints) {
+      let info: Map<number, unknown>;
+      try {
+        info = (await relayAt(hint, via).info()) as Map<number, unknown>;
+      } catch (e) {
+        throw new Error(`${hint} did not answer: ${message(e)}. Nothing was made.`);
+      }
+      const op = info.get(0);
+      if (!(op instanceof Uint8Array)) throw new Error(`${hint} is not a home: it declares no operator. Nothing was made.`);
+      homes.push({ operator: hex(op), hint });
+    }
+    const sections: Section[] = [
+      {
+        heading: 'What is made',
+        lines: [
+          { text: `A new identity, living at ${hints.join(', ')}: its homes keep its chain and sign their receipts.` },
+          { text: `Its relays, where its posts are published and its inbox is: ${relays.join(', ')}.` },
+          { text: 'A chain key, from a new paper made now on this device (key 0 of its words). Its 24 words are shown first: you write them down and type three back, and only then is the identity signed and sent.', tone: 'warn' },
+          { text: 'A signing key, made now. Its words are shown once the homes’ receipts are in: bring the identity into the apps with them, or give them to Kišib’s runner.', tone: 'warn' },
+          { text: 'Its encryption key, the one its signing words carry: every app bringing it opens its private messages.' },
+          { text: 'Kišib keeps nothing of it: once both papers are written, it forgets them.', tone: 'ok' },
+        ],
+      },
+    ];
+    const signs = ['Once the paper’s three words are typed back, Kišib signs the identity’s genesis with its new signing key, committing the paper’s chain key, and its routes and encryption key; then sends them to its homes and relays.'];
+    const digest = sha256(cborEncode(['MOR Kišib new identity, version 1', homes.map((h) => [h.operator, h.hint]), relays]));
+    return this.plan(
+      { digest, title: 'Make an identity', summary: ['A test identity, made as Dub makes one: its chain key on paper, its signing key’s words for the apps.', FORGOTTEN_SAY], sections, signs, warning: null, blocking: [] },
+      {
+        wipe: () => undefined,
+        run: async () => {
+          const fresh = freshSeed();
+          const signing = newSigningSecret();
+          const h: Held = {
+            kind: 'make',
+            id: '',
+            bytes: null,
+            act: null,
+            homes,
+            before: [],
+            with: [],
+            places: [...hints, ...relays],
+            signing,
+            chain: fresh,
+            stage: 'paper',
+            title: 'A new identity: first, its paper',
+            lines: [{ text: 'Nothing is signed yet. First, the chain key’s words: write them down, then type three back. Only then does Kišib sign the identity and send it.', tone: 'warn' }],
+            sign: async () => {
+              const key = chainKeyAt(fresh, 3, 0);
+              const genesis = makeGenesis({ identitySpec: SPECS.identity, signingSecret: signing, chainKeyScheme: key.scheme, chainKeyCommit: key.commit, homes });
+              wipe(key.seeds);
+              const id = actId(genesis);
+              const t = holding(id, id, signing, [genesis], homes);
+              const routes = t.sign(SPECS.identity, IDENTITY_TYPES.routes, routesPayload({ version: 1, routes: [{ scope: null, hints: relays, kind: 0 }, { scope: null, hints: relays, kind: 1 }] }), { public: true });
+              const enc = t.sign(SPECS.envelopes, ENVELOPES_TYPES.encryptionKey, encryptionKeyPayload(1, undefined, xwingPublic(encryptionSecret(signing))), { public: true });
+              h.id = id;
+              h.act = id;
+              h.bytes = genesis;
+              h.with = [
+                { bytes: genesis, to: relays },
+                { bytes: routes.act, to: [...hints, ...relays] },
+                { bytes: enc.act, to: [...hints, ...relays] },
+              ];
+              h.title = `A new identity, ${short(id)}`;
+            },
+          };
+          this.held = h;
+          return this.sitting()!;
+        },
+      },
+    );
+  }
+
+  /** A collective's paper share checked (accepted, new): its words, its number among the holders, and, with enough papers, the key they rebuild. Nothing is signed. */
+  async checkShare(a: { collective: string; address: string; papers: { number: string; words: string }[]; via?: Via }): Promise<{ title: string; lines: Line[] }> {
+    return checkShare({ ...a, via: a.via ?? {} });
   }
 
   // ------------------------------------------------------------ must: escape a contested position (F299)

@@ -125,9 +125,10 @@ export function signerMenu(app: string, w: KitWho, own: MenuItem[]): string {
  * what every app offers: Rely on it, Anchor it, and Correct it on one's own
  * acts.
  */
-export function actMenu(app: string, a: KitAct, own: { before: MenuItem[]; after: MenuItem[] }): string {
+export function actMenu(app: string, a: KitAct, own: { before: MenuItem[]; after: MenuItem[] }, signs = true): string {
   const opens = a.corrects ? 'Open what it corrects' : 'Open what it answers';
-  const every: MenuItem[] = [{ key: 'rely', label: 'Rely on it' }, { key: 'anchor', label: 'Anchor it' }, ...(a.own ? [{ key: 'correct', label: 'Correct it' }] : [])];
+  // An app that signs nothing everyday (Kišib, which only lists what its runner signed) offers no Rely, Anchor or Correct.
+  const every: MenuItem[] = signs ? [{ key: 'rely', label: 'Rely on it' }, { key: 'anchor', label: 'Anchor it' }, ...(a.own ? [{ key: 'correct', label: 'Correct it' }] : [])] : [];
   return menu(shortForm(a.form), [
     { key: 'copy-act', label: 'Copy act ID' },
     { key: 'open', label: opens, disabled: !a.answers && !a.corrects, hint: !a.answers && !a.corrects ? 'nothing' : undefined },

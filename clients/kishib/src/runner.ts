@@ -23,7 +23,7 @@ import { base64, cborEncode, hex, keyDeliveryPayload, makeEveryday, sha256, sign
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { cardText, ownLine } from '../../genesis/src/lines.ts';
 import type { Home, SignRequest } from '../../genesis/src/identity.ts';
-import type { Via } from '../../genesis/src/transport.ts';
+import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { idForm, readId } from '../../genesis/src/forms.ts';
 import { Refused as WordsRefused, fromWords } from '../../../modules/carry/src/carry.ts';
 import { lookCurrent, NOT_CURRENT } from '../../dub/src/carryin.ts';
@@ -152,7 +152,7 @@ export interface RunnerView {
   on: boolean;
   since: number | null;
   risk: string[];
-  held: { id: string; form: string; name: string | null; spent: boolean; apps: string[] }[];
+  held: { id: string; form: string; name: string | null; spent: boolean; apps: string[]; homes: string[] }[];
   apps: { id: string; name: string; origin: string; code: string; state: Pairing['state']; identities: string[]; yes: Kind[]; asked: number; approved: number | null }[];
   waiting: { request: string; app: string; identity: string; name: string | null; kind: Kind; title: string; words: string[]; at: number; always: boolean }[];
   signed: { at: number; app: string; identity: string; name: string | null; kind: Kind; words: string[]; act: string; standing: boolean; line: string; position: number }[];
@@ -641,6 +641,27 @@ export class Runner {
       .join('; ');
   }
 
+  /** An act the runner signed, as any reader of its signer's homes judges it now (for its card's "Why it's valid"). */
+  async standing(a: { act: string; identity: string }): Promise<{ lines: { text: string; tone?: 'ok' | 'warn' | 'bad' }[] }> {
+    const h = this.f?.held.find((x) => x.id === a.identity);
+    const hints = h?.homes.map((x) => x.hint) ?? [];
+    if (!hints.length) return { lines: [{ text: 'The runner no longer holds this identity: its homes are not known here.', tone: 'warn' }] };
+    try {
+      const look = await lookUp(a.identity, hints, this.via);
+      let bytes: Uint8Array | null = null;
+      for (const hint of hints) {
+        bytes = await relayAt(hint, this.via).getAct(a.act).catch(() => null);
+        if (bytes) break;
+      }
+      if (!bytes) return { lines: [{ text: 'Its homes do not hold this act (yet): the app sends it, and a private act waits there locked.', tone: 'warn' }] };
+      look.verifier.add(bytes);
+      const st = look.verifier.status(a.act) as string;
+      return { lines: [{ text: st === 'valid' ? 'Valid: signed with the identity’s signing key in force, on a line its chain keeps.' : `Judged ${st} by the core library, as any reader of its homes would.`, tone: st === 'valid' ? 'ok' : 'bad' }] };
+    } catch (e) {
+      return { lines: [{ text: `Its homes could not be read: ${message(e)}`, tone: 'warn' }] };
+    }
+  }
+
   // ------------------------------------------------------------ what Kišib's page shows
 
   view(): RunnerView {
@@ -651,7 +672,7 @@ export class Runner {
       on: !!f,
       since: f?.since ?? null,
       risk: RISK_SAY,
-      held: (f?.held ?? []).map((h) => ({ id: h.id, form: idForm(h.id), name: h.name, spent: !!h.spent, apps: (f?.apps ?? []).filter((p) => p.state === 'approved' && p.identities.includes(h.id)).map((p) => p.name) })),
+      held: (f?.held ?? []).map((h) => ({ id: h.id, form: idForm(h.id), name: h.name, spent: !!h.spent, homes: h.homes.map((x) => x.hint), apps: (f?.apps ?? []).filter((p) => p.state === 'approved' && p.identities.includes(h.id)).map((p) => p.name) })),
       apps: (f?.apps ?? []).map((p) => ({ id: p.id, name: p.name, origin: p.origin, code: p.code, state: p.state, identities: p.identities, yes: p.yes, asked: p.asked, approved: p.approved ?? null })),
       waiting: [...this.waiting.values()]
         .filter((w) => !w.made && !w.declined)

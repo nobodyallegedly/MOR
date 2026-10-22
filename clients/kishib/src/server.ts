@@ -109,13 +109,17 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
         return runner.pageAnswer({ request: text(a.request), yes: a.yes === true, always: a.always === true });
       case 'runner cards':
         return { cards: runner.cards(text(a.id)) };
+      case 'runner standing':
+        return runner.standing({ act: text(a.act), identity: text(a.identity) });
       default:
         if (!(OPS as readonly string[]).includes(op)) throw new Refusal(400, `unknown operation ${op}`);
         return run(kishib, op, a);
     }
   };
   // Inter and its licence, Dub's files, served beside the page from the program's own origin (F332).
-  const files = Object.fromEntries(Object.entries(FONT_FILES).map(([name, type]) => [`/${name}`, { type, body: readFileSync(here(`../dub/${FONTS_DIR}/${name}`)) }]));
+  const files: Record<string, { type: string; body: Buffer }> = Object.fromEntries(Object.entries(FONT_FILES).map(([name, type]) => [`/${name}`, { type, body: readFileSync(here(`../dub/${FONTS_DIR}/${name}`)) }]));
+  // Kišib's icon, beside its name at the top (the kit's app mark), as the web client serves it.
+  files['/icon.png'] = { type: 'image/png', body: readFileSync(here('static/icon/kishib.png')) };
   let base = '';
   const routes = async (req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> => {
     if (!url.pathname.startsWith('/runner/')) return false;
