@@ -463,18 +463,18 @@ export function payChooser(o: { title: string; sub: string; kind: 'tip' | 'buy' 
   const way = (key: 'lane' | 'damgar' | 'hand', label: string, open: boolean, said: string) =>
     `<label class="${open ? '' : 'dub-closed'}"><input type="radio" name="how" value="${key}"${open ? '' : ' disabled'}${key === first ? ' checked' : ''}><span><span>${e(label)}</span><span class="k-small k-soft">${e(said)}</span></span></label>`;
   const laneSaid = w.lane.open
-    ? `Dub signs it now, with its lane’s key. Per payment: at most ${w.lane.perPayment}${w.lane.until ? ` · until ${new Date(w.lane.until * 1000).toISOString().slice(0, 10)}` : ''} · paid under it so far: ${w.lane.spent} (Dub’s own count).`
+    ? `Dub signs it now, with its lane’s key. Per payment: at most ${w.lane.perPayment}${w.lane.total ? ` · In all: ${w.lane.left} left of ${w.lane.total}` : ''}${w.lane.until ? ` · until ${new Date(w.lane.until * 1000).toISOString().slice(0, 10)}` : ''} · paid under it so far: ${w.lane.spent} (Dub’s own count${w.lane.total ? '; the cap in all is kept by Dub and counted in Damgar, not judged by verifiers' : ''}).`
     : (w.lane.why ?? '');
   const amount = o.kind === 'tip' || o.kind === 'pay';
   return `<form class="dub-modal-form" id="pay" data-kind="${e(o.kind)}"><p class="k-small k-soft">${e(o.sub)}</p>
 ${amount ? `<div class="k-row"><input name="value" inputmode="numeric" placeholder="Amount" required class="k-grow"><select name="unit">${unitOptions(o.units)}</select></div><input name="whatFor" placeholder="What for (optional)" maxlength="280">` : `<p>${e(o.price ?? '')}</p>`}
-<div class="dub-ways">${way('lane', 'Under Dub’s lane', w.lane.open, laneSaid)}${way('damgar', 'Ask Damgar', w.damgar.open, w.damgar.open ? 'Dub sends it to Damgar as a money message sealed to you; Damgar queues it in Waiting, reads it to you and signs it there.' : (w.damgar.why ?? ''))}${way('hand', 'By hand', w.hand.open, w.hand.open ? 'Dub shows the payment to copy into Damgar; nothing is signed or sent from here.' : (w.hand.why ?? ''))}</div>
+<div class="dub-ways">${way('lane', 'Under Dub’s lane', w.lane.open, laneSaid)}${way('damgar', 'Ask Damgar', w.damgar.open, w.damgar.open ? (w.damgar.wakes ? 'Dub leaves it on MOR, sealed to you, and wakes Damgar: Damgar pops up here, reads it to you, and you authorise it in its panel. It waits in Damgar’s Waiting too.' : 'Dub leaves it on MOR, sealed to you; Damgar queues it in Waiting, reads it to you and signs it there.') : (w.damgar.why ?? ''))}${way('hand', 'By hand', w.hand.open, w.hand.open ? 'Dub shows the payment to copy into Damgar; nothing is signed or sent from here.' : (w.hand.why ?? ''))}</div>
 <div class="k-row"><button type="submit" class="k-btn k-p"${first ? '' : ' disabled'}>${o.kind === 'tip' ? 'Tip' : o.kind === 'pay' ? 'Pay' : 'Buy it'}</button><span class="k-grow"></span><span class="k-small k-faint">the record goes to Damgar’s account</span></div><div id="pay-said"></div></form>`;
 }
 
 /** The payment by hand, shown to copy (the money messages cMIP's draft, section 2.1). */
 export function byHand(h: { text: string; said: string[] }): string {
-  return `<div class="k-box">${lines(h.said.map((text) => ({ text })))}<label>The draft, as the money messages cMIP writes it (section 2.1), in base64: copy it into Damgar</label><textarea class="dub-hand" readonly>${e(h.text)}</textarea><div class="k-row"><button type="button" class="k-btn" data-copy-text="${e(h.text)}">Copy it</button></div>${say('Damgar’s place to paste it is its own next round.', ['Until Damgar takes a pasted draft, the payment’s words above are what to give it by hand.'])}</div>`;
+  return `<div class="k-box">${lines(h.said.map((text) => ({ text })))}<label>The draft, as the money messages cMIP writes it (section 2.1), in base64: copy it into Damgar</label><textarea class="dub-hand" readonly>${e(h.text)}</textarea><div class="k-row"><button type="button" class="k-btn" data-copy-text="${e(h.text)}">Copy it</button></div>${say('In Damgar: Waiting, + Paste an act to sign.', ['Damgar reads it to you in plain words, and you sign it or decline it there. Nothing is signed or sent from Dub.'])}</div>`;
 }
 
 /** Rely on an act, read back first, RELY typed (as Edubba asks). */
@@ -551,14 +551,15 @@ export function laneForm(s: State, web: boolean, said: string[]): string {
   return `${say('A lane lets Dub pay by itself, within a cap Damgar grants.', said)}<div id="lanes"><p class="k-small k-soft">Reading the lanes…</p></div>
 <form id="lane" class="dub-modal-form"><input name="label" value="${web ? 'Dub on the web' : 'Dub on this computer'}" maxlength="80" autocomplete="off">
 <div class="k-row"><input name="cap" inputmode="numeric" placeholder="At most, per payment" required class="k-grow"><select name="unit">${unitOptions(s.units)}</select></div>
+<div class="k-row"><input name="total" inputmode="numeric" placeholder="In all, for the whole lane (optional)" class="k-grow"></div>
 <label>Until (optional), judged on a timestamp clock: its ID</label><div class="k-row"><input name="until" type="datetime-local"><input name="clock" class="k-grow" placeholder="the clock’s ID" spellcheck="false" value="${e(s.identity!.clock?.form ?? '')}"></div>
 <div class="k-row"><button type="submit" class="k-btn k-p">Ask Damgar for this lane</button></div></form>
 <h4>Payments under the lane</h4><div id="payments"><p class="k-small k-soft">Reading…</p></div>`;
 }
 
 /** The lanes asked here, and where each stands. */
-export function lanesHere(ls: { label: string; state: string; cap: string; until: number | null }[]): string {
-  return ls.length ? `<ul class="k-small">${ls.map((l) => `<li>${e(l.label)} · ${e(l.state)} · at most ${e(l.cap)} a payment${l.until ? ` · until ${e(new Date(l.until * 1000).toISOString().slice(0, 16).replace('T', ' '))} UTC` : ''}</li>`).join('')}</ul>` : '<p class="k-small k-soft">No lane yet: Dub pays nothing by itself.</p>';
+export function lanesHere(ls: { label: string; state: string; cap: string; total?: string | null; until: number | null }[]): string {
+  return ls.length ? `<ul class="k-small">${ls.map((l) => `<li>${e(l.label)} · ${e(l.state)} · at most ${e(l.cap)} a payment${l.total ? ` · in all ${e(l.total)}` : ''}${l.until ? ` · until ${e(new Date(l.until * 1000).toISOString().slice(0, 16).replace('T', ' '))} UTC` : ''}</li>`).join('')}</ul>` : '<p class="k-small k-soft">No lane yet: Dub pays nothing by itself.</p>';
 }
 
 /** A payment as Damgar's code shows it, the part Dub draws. */

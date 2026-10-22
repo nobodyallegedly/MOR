@@ -63,6 +63,7 @@ import { DubMoney, LANE_SAY, type LaneShownHere, type SealedShown } from './mone
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 import { isLongForm } from '../../barebone/src/corrections.ts';
 import type { RunnerLink } from './runner.ts';
+import type { DamgarLink, Woken } from './damgar-link.ts';
 
 export type { Line, State } from './shapes.ts';
 
@@ -261,7 +262,7 @@ export class Dub {
 
   constructor(
     readonly store: Keep,
-    readonly opts: { web?: boolean; reader?: string; runner?: RunnerLink } = {},
+    readonly opts: { web?: boolean; reader?: string; runner?: RunnerLink; /** Damgar on this computer, to wake for a payment (the program only). */ damgar?: DamgarLink } = {},
   ) {
     this.money = new DubMoney(store, { web: !!opts.web, app: opts.web ? 'Dub on the web' : 'Dub on this computer' });
   }
@@ -2334,6 +2335,15 @@ export class Dub {
       const purchase = a.kind === 'buy' || a.kind === 'vow';
       const noDraft = 'A purchase names the seller’s offer, which a money message to Damgar cannot carry yet: buy it under Dub’s lane.';
       let spent: string | null = null;
+      let left: string | null = null;
+      let total: string | null = null;
+      const held = lane?.grant ? ((await this.store.money<{ lanes?: { grant: string; total?: { unit: string; value: number } | null }[] }>(me.id, 'keys'))?.lanes ?? []).find((x) => x.grant === lane.grant) : undefined;
+      if (lane?.grant && held?.total) {
+        // The cap in all (the grant limits cMIP, draft 3): Dub's own count, the one it refuses by.
+        const used = await this.money.engine.laneSpent(me.id, lane.grant, held.total.unit);
+        total = say(held.total, new Set([held.total.unit]));
+        left = say({ unit: held.total.unit, value: Math.max(0, held.total.value - used) }, new Set([held.total.unit]));
+      }
       if (lane?.grant) {
         const book = (await this.store.money<{ payments?: Record<string, { side: string; amount: { unit: string; value: number }; how?: { by: string; grant?: string }; stage: string }> }>(me.id, 'book')) ?? {};
         const by = new Map<string, number>();
@@ -2342,9 +2352,9 @@ export class Dub {
       }
       return {
         lane: lane
-          ? { open: true, why: null, label: lane.label, perPayment: lane.cap, until: lane.until, spent }
-          : { open: false, why: lanes.some((l) => l.state === 'asked') ? 'Dub’s lane is asked, not yet granted in Damgar.' : 'Dub has no lane from Damgar: ask for one in the identity’s menu (A lane from Damgar).', label: null, perPayment: null, until: null, spent: null },
-        damgar: purchase ? { open: false, why: noDraft } : { open: true, why: null },
+          ? { open: true, why: null, label: lane.label, perPayment: lane.cap, until: lane.until, spent, total, left }
+          : { open: false, why: lanes.some((l) => l.state === 'asked') ? 'Dub’s lane is asked, not yet granted in Damgar.' : 'Dub has no lane from Damgar: ask for one in the identity’s menu (A lane from Damgar).', label: null, perPayment: null, until: null, spent: null, total: null, left: null },
+        damgar: purchase ? { open: false, why: noDraft } : { open: true, why: null, wakes: !!this.opts.damgar },
         hand: purchase ? { open: false, why: noDraft } : { open: true, why: null },
       };
     });
@@ -2357,14 +2367,41 @@ export class Dub {
    * to copy, signed and sent by nothing here). Tip a post, pay an identity
    * (from its profile), buy a file or a vow.
    */
-  pay(a: { how: 'lane' | 'damgar' | 'hand'; kind: 'tip' | 'buy' | 'vow' | 'pay'; signer: string; post?: string; publication?: string; vow?: string; repost?: string; reposter?: string; value?: string; unit?: string; whatFor?: string }): Promise<{ lines: Line[]; hand?: { text: string; said: string[] } }> {
+  pay(a: { how: 'lane' | 'damgar' | 'hand'; kind: 'tip' | 'buy' | 'vow' | 'pay'; signer: string; post?: string; publication?: string; vow?: string; repost?: string; reposter?: string; value?: string; unit?: string; whatFor?: string }): Promise<{ lines: Line[]; hand?: { text: string; said: string[] }; woken?: Woken }> {
     if (a.kind === 'buy' && a.how === 'lane') return this.buy({ publication: a.publication ?? '', seller: a.signer, post: a.post, repost: a.repost, reposter: a.reposter });
     if (a.kind === 'vow' && a.how === 'lane') return this.buyVow({ vow: a.vow ?? '', seller: a.signer, post: a.post ?? '' });
     if (a.kind === 'buy' || a.kind === 'vow') return Promise.reject(new Error('A purchase is made under Dub’s lane: a money message to Damgar cannot carry its offer yet. Nothing was signed.'));
     if (a.how === 'lane' && a.kind === 'tip') return this.tipNow({ post: a.post ?? '', signer: a.signer, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor });
     if (a.how === 'lane') return this.payNow({ signer: a.signer, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor ?? '' });
-    if (a.how === 'damgar') return this.moneyDraft({ what: 'pay', other: a.signer, post: a.post, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor });
+    if (a.how === 'damgar') return this.askDamgar({ other: a.signer, post: a.post, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor });
     return this.byHand({ signer: a.signer, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor ?? '' });
+  }
+
+  /**
+   * The second way, Ask Damgar: the payment left on MOR as a draft sealed to
+   * this identity, which Damgar queues in Waiting (2); on this computer,
+   * Damgar is then woken and draws its panel inside Dub's window, where the
+   * person authorises it (2A). Not running, or the web client: it waits in
+   * Damgar, said.
+   */
+  private async askDamgar(a: { other: string; post?: string; value: string; unit: string; whatFor?: string }): Promise<{ lines: Line[]; woken?: Woken }> {
+    const r = await this.moneyDraft({ what: 'pay', ...a });
+    const d = this.opts.damgar;
+    if (!d || !r.draft) return { lines: r.lines };
+    try {
+      const { me } = await this.ctx();
+      const woken = await d.wake({ identity: me.id, draft: r.draft });
+      return { lines: [{ text: 'Damgar found the payment on MOR: authorise it in Damgar’s panel, here.', tone: 'ok' }], woken };
+    } catch (e) {
+      return { lines: [...r.lines, { text: message(e), tone: 'warn' }] };
+    }
+  }
+
+  /** Where Damgar's panel stands (2A): waiting, signed, declined or expired. */
+  async damgarAnswer(request: string): Promise<{ answer: string; lines: Line[] }> {
+    if (!this.opts.damgar) return { answer: 'expired', lines: [] };
+    const r = await this.opts.damgar.answer(request);
+    return { answer: r.answer, lines: r.lines.map((l) => ({ text: l.text, tone: l.tone === 'warn' ? 'warn' : l.tone === 'ok' ? 'ok' : undefined })) };
   }
 
   /** Pay an identity now, under the lane (from its profile): the invoice request signed with the lane's key. */
@@ -2413,7 +2450,7 @@ export class Dub {
    * homes, where Damgar, holding the same identity, picks it up, reads it in
    * plain words, and signs or declines it. Dub signs only the draft.
    */
-  moneyDraft(a: { what: 'pay' | 'ask'; other: string; value: string; unit: string; whatFor?: string; post?: string }): Promise<{ lines: Line[] }> {
+  moneyDraft(a: { what: 'pay' | 'ask'; other: string; value: string; unit: string; whatFor?: string; post?: string }): Promise<{ lines: Line[]; draft?: string }> {
     return this.serial(async () => {
       const { me, s, hints } = await this.ctx();
       let other: string;
@@ -2437,8 +2474,9 @@ export class Dub {
       return {
         lines: [
           { text: `Prepared, not signed: ${a.what === 'pay' ? 'a tip' : 'a request to be paid'}, sealed to this identity and left at its homes (${r.left.join(', ')}).`, tone: 'ok' },
-          { text: 'Open Damgar with this identity: the draft waits there, in To sign, to be read and signed or declined. Dub signs no money act.' },
+          { text: 'Open Damgar with this identity: the draft waits there, in Waiting, to be read and signed or declined. Dub signs no money act.' },
         ],
+        draft: r.id,
       };
     });
   }
@@ -2502,12 +2540,12 @@ export class Dub {
   // ------------------------------------------------------------ money under a lane, round 2 (F338, F351)
 
   /** Ask Damgar for a lane (sealed to oneself); nothing is paid until it is granted there. */
-  laneAsk(a: { label: string; cap: string; unit: string; until: number | null; clock: string }): Promise<{ lines: Line[] }> {
+  laneAsk(a: { label: string; cap: string; total?: string; unit: string; until: number | null; clock: string }): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
       await this.current(me);
       if (!UNITS_MODULES.some((m) => m.units.some((u) => u.hash === a.unit))) throw new Error('Choose a unit. Nothing was asked.');
-      const lines = await this.money.askLane(me, s, { label: a.label, cap: readValue(a.cap), unit: a.unit, until: a.until, clock: a.clock.trim().toLowerCase() || null, app: this.money.engine.opts.app! });
+      const lines = await this.money.askLane(me, s, { label: a.label, cap: readValue(a.cap), total: a.total?.trim() ? readValue(a.total) : null, unit: a.unit, until: a.until, clock: a.clock.trim().toLowerCase() || null, app: this.money.engine.opts.app! });
       return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
     });
   }

@@ -100,6 +100,7 @@ export const OPS = [
   'purchases',
   'pay ways',
   'pay',
+  'damgar answer',
 ] as const;
 
 const payKind = (v: unknown): 'tip' | 'buy' | 'vow' | 'pay' => (v === 'tip' || v === 'buy' || v === 'vow' || v === 'pay' ? v : 'pay');
@@ -209,7 +210,7 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
     case 'relays publish':
       return dub.relaysPublish(list(a.relays), text(a.digest));
     case 'lane ask':
-      return dub.laneAsk({ label: text(a.label), cap: text(a.cap), unit: text(a.unit), until: untilOf(a.until), clock: text(a.clock) });
+      return dub.laneAsk({ label: text(a.label), cap: text(a.cap), total: text(a.total), unit: text(a.unit), until: untilOf(a.until), clock: text(a.clock) });
     case 'lanes':
       return dub.lanes();
     case 'tip now':
@@ -264,6 +265,8 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.actAs({ id: text(a.id) || null });
     case 'purchases':
       return dub.purchases();
+    case 'damgar answer':
+      return dub.damgarAnswer(text(a.request));
     case 'pay ways':
       return dub.payWays({ kind: payKind(a.kind) });
     case 'pay':

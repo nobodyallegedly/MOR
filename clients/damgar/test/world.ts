@@ -23,9 +23,9 @@ export async function closeAll() {
 }
 
 /** A Damgar program in a folder of its own, paired. */
-export async function damgar(chain?: ChainSource | null, link?: (c: LinkConfig) => Promise<InvoiceLink>): Promise<{ app: Running; c: Client; dir: string }> {
+export async function damgar(chain?: ChainSource | null, link?: (c: LinkConfig) => Promise<InvoiceLink>, o: { kishib?: string } = {}): Promise<{ app: Running; c: Client; dir: string }> {
   const dir = join(mkdtempSync(join(tmpdir(), 'damgar-')), 'mor-damgar');
-  const app = await serve({ dir, port: 0, chain, link });
+  const app = await serve({ dir, port: 0, chain, link, kishib: o.kishib ?? join(dir, '..', 'no-kishib') });
   apps.push(app);
   const c = await Client.open(await newKey(), app.base, DOMAIN);
   await c.ask('pair', { code: app.access.newCode(), label: 'test' });
@@ -33,9 +33,10 @@ export async function damgar(chain?: ChainSource | null, link?: (c: LinkConfig) 
 }
 
 /** A Dub with a new identity made in it. */
-export async function dub(homes: string[], relays: string[]): Promise<{ app: DubRunning; c: Client; dir: string; id: string; words: string; chainWords: string[] }> {
+export async function dub(homes: string[], relays: string[], o: { damgar?: string } = {}): Promise<{ app: DubRunning; c: Client; dir: string; id: string; words: string; chainWords: string[] }> {
   const dir = mkdtempSync(join(tmpdir(), 'damgar-dub-'));
-  const app = await serveDub({ dir, port: 0 });
+  // Its Damgar on this computer (Ask Damgar, 2A): the test's own, never one running in the home folder.
+  const app = await serveDub({ dir, port: 0, damgar: o.damgar ?? join(dir, 'no-damgar'), kishib: join(dir, 'no-kishib') });
   apps.push(app);
   const c = await Client.open(await newKey(), app.base, DUB_DOMAIN);
   await c.ask('pair', { code: app.access.newCode(), label: 'test' });
@@ -47,9 +48,9 @@ export async function dub(homes: string[], relays: string[]): Promise<{ app: Dub
 }
 
 /** A person: an identity made in Dub, brought into a Damgar by its signing words, everything accepted but what is given. */
-export async function person(homes: string[], relays: string[], o: { accept?: string[] | null; chain?: ChainSource | null; link?: (c: LinkConfig) => Promise<InvoiceLink> } = {}) {
-  const d = await dub(homes, relays);
+export async function person(homes: string[], relays: string[], o: { accept?: string[] | null; chain?: ChainSource | null; link?: (c: LinkConfig) => Promise<InvoiceLink>; /** Dub wakes this Damgar for Ask Damgar (2A); otherwise the payment only waits in Damgar. */ wake?: boolean } = {}) {
   const g = await damgar(o.chain, o.link);
+  const d = await dub(homes, relays, o.wake ? { damgar: g.dir } : {});
   await g.c.ask('bring', { id: d.id, words: d.words, address: homes[0] });
   if (o.accept !== null) await g.c.ask('accept', { keys: o.accept ?? ACCEPTABLE.map((a) => a.key) });
   return { dub: d, damgar: g, id: d.id };
@@ -106,6 +107,36 @@ export async function founded(H: string[], R: string[], e: Awaited<ReturnType<ty
   await e.c.ask('real gather', { act: terms });
   const fd = await e.c.ask<any>('real found', { act: terms, read: true });
   return { f, ana, bo, col: fd.acts[0] as string };
+}
+
+/** A collective founded from Edubba's grid whose Money area its founder A holds (one key; above 10 000 an act, two), as the collective test founds one. */
+export async function moneyCollective(H: string[], R: string[], e: Awaited<ReturnType<typeof edubba>>) {
+  const A = await dub(H, R);
+  const iPa = await dub(H, R);
+  const iPh = await dub(H, R);
+  await e.c.ask('bring', { name: 'A', id: A.id, words: A.words, address: H[0], linked: false });
+  const grid = {
+    members: [A.id, iPa.id, iPh.id],
+    constitution: { holders: [A.id, iPa.id, iPh.id], number: 3 },
+    chainKey: 2,
+    absence: 2,
+    areas: [
+      { name: 'Publishing', layer: 1, holders: [A.id, iPa.id, iPh.id], number: 1 },
+      { name: 'Money', layer: 2, holders: [A.id, iPa.id], number: 1, cap: 10_000 },
+      { name: 'Development', layer: 4, holders: [iPh.id], number: 1 },
+    ],
+    clone: 2,
+  };
+  const rv = await e.c.ask<any>('real found prepare', { name: 'Collective Y', founder: A.id, members: [iPa.id, iPh.id], grid });
+  const terms = (await e.c.ask<any>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
+  for (const m of [iPa, iPh]) {
+    await m.c.ask('signing', { on: true });
+    const p = (await m.c.ask<any>('proposals')).proposals.find((x: any) => x.act === terms);
+    await m.c.ask('accept', { thread: p.thread });
+  }
+  await e.c.ask('real gather', { act: terms });
+  const col = (await e.c.ask<any>('real found', { act: terms, read: true })).acts[0] as string;
+  return { A, iPa, iPh, col };
 }
 
 /** A Kišib program, paired. */

@@ -43,6 +43,18 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Where:** S7, the fixes, then a second box and the C verifier run again against it.
 
+## F379. Damgar on the kit, the three ways to pay from other apps, the cap in all, and the vault transfer under draft 4 (22 October 2026; Dubsar Suite)
+
+**From** the redesign's answers (`docs/design/suite-redesign.md`, "Answered on the mockups", item 27 of `docs/design/mockups-report.md`), decided by Nobody, allegedly, 21 October 2026: "Dub has no money signing by default, everything has to be done in Damgar… That was the experiment, now we're looking at using more to do something closer to a prototype"; "Damgar remains the money hub. It grants other apps rights. The rights are requested by the apps, and approved in Damgar. When moving info from app to app simply use private messages. If a new format is needed we create a new cMIP"; "Damgar should act as Kišib for money acts, it should pop up and authorise"; the cap in all, "Yes, add it". And the payment cMIP's draft 4 (F355 (c)), step 4a: "invalid, not an ordinary payment that fulfils nothing".
+
+**Built** (round 3 of the redesign; report `docs/damgar-r3-report.md`):
+1. **Damgar on the kit**: four tiles with their danger marks (Waiting 3, Account 1, Lanes 2, Settings 2), each column as the brief names it; the identity top right, the collectives under each identity (acting as one is the panel's gesture, no longer a tab); + Add: Make (new: every app stands alone), Bring, Use one from Kišib (Damgar signing through Kišib's runner, money always asking in Kišib's panel inside Damgar's window; opening through it where Kišib lets Damgar).
+2. **The three ways**: by hand (Damgar's "+ Paste an act to sign" reads a draft another app showed, and queues it); Ask Damgar, and on the Mac Damgar woken by the app and drawing its panel in the app's window (a page with no script, framed only by the waking origin, a single-use value in its form; nothing but the wake-up outside MOR); a lane with a cap per act and a cap in all.
+3. **The grant limits cMIP, draft 3** (`cmips/cmip-grant-limits-draft-3.md`): the cap in all as limits key 2, in the lane's request and the money app's record, **never in the grant**; kept by the apps, never judged by verifiers; the app refuses past it; the money app counts it from the acts under the lane whose keys the app delivered to the identity itself, and shows any overspend. Its costs stated. No verdict changes.
+4. **Step 4a** in `cmips/payment` (`transfer_to_oneself`), and Damgar's Transfer to vault naming the vault declaration (draft 4); draft 3's form still read.
+
+**Nothing for the MOR lead**: step 4a is the payment cMIP's (the Dubsar team's), decided in draft 4; the cap in all changes no verdict. The core library's WebAssembly changes with step 4a (it carries `cmips/payment`), so the display client's, Dub's and Damgar's web releases are rebuilt together.
+
 ## F378. The Dubsar runner, draft 2: the keys encrypted at rest, locked and off, opening what is sealed (22 October 2026; F377's five questions; Dubsar Suite)
 
 **The questions (F377, `docs/kishib-runner-report.md`, section 5). Decided by Nobody, allegedly, 22 October 2026:**

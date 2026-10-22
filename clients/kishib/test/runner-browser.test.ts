@@ -103,9 +103,11 @@ test('the runner by clicks: Kišib and Dub, the panel inside Dub’s window', as
 
   // Dub, holding no identity: its first screen, Use one from Kišib.
   const d = await dubBeside(k.dir);
-  // Dub's policy frames Kišib's origin, and nothing else.
+  // Dub's policy frames Kišib's origin, then Damgar's (its money panel, since Damgar's round 3), and nothing else.
   const policy = (await fetch(`${d.app.base}/`)).headers.get('content-security-policy') ?? '';
-  assert.equal(/frame-src ([^;]*);/.exec(policy)?.[1], `${k.app.base} ${k.app.base.replace('127.0.0.1', 'localhost')}`);
+  const framed = (/frame-src ([^;]*);/.exec(policy)?.[1] ?? '').split(' ');
+  assert.deepEqual(framed.slice(0, 2), [k.app.base, k.app.base.replace('127.0.0.1', 'localhost')]);
+  assert.deepEqual(framed.slice(2).map((o) => o.replace(/:\d+$/, '')), ['http://127.0.0.1', 'http://localhost'], 'Damgar’s origin, on this computer, and nothing else');
   const D = await open(`${d.app.base}/#pair=${d.app.access.newCode()}`);
   const dp = D.page;
   await dp.waitForSelector('#from-kishib');

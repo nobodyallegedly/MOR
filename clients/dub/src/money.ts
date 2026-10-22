@@ -20,7 +20,8 @@ import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { followRef, lookUp } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { makeGrantKey } from '../../grants/src/grant.ts';
-import { encodeLimits, limitsValue, type Limits } from '../../grants/src/limits.ts';
+import { encodeLimits, type Cap, type Limits } from '../../grants/src/limits.ts';
+import { askedValue } from '../../damgar/src/total.ts';
 import { grantsForKey, revocationsOf } from '../../grants/src/lanes.ts';
 import { Damgar, type Keep as DamgarKeep, type Keys } from '../../damgar/src/damgar.ts';
 import { TYPES, laneRequestPayload, sendToSelf, type LaneKind } from '../../damgar/src/messages.ts';
@@ -53,12 +54,14 @@ export interface LaneShownHere {
   label: string;
   state: 'asked' | 'in force' | 'revoked' | 'past its expiry';
   cap: string;
+  /** The cap in all (the grant limits cMIP, draft 3), said, or null where none was asked. */
+  total: string | null;
   until: number | null;
   grant: string | null;
 }
 
 /** What Dub keeps of the lanes it asked for (inside Damgar's `keys`). */
-type KeysHere = Keys & { asked?: { key: string; secret: string; label: string; limits: Limits; request: string; at: number }[] };
+type KeysHere = Keys & { asked?: { key: string; secret: string; label: string; limits: Limits; total?: Cap | null; request: string; at: number }[] };
 
 /** Damgar's keep, inside Dub's own place: the identity Dub holds, its relays, and Damgar's settings, book and keys as `money-*`. */
 class DamgarKeepInDub implements DamgarKeep {
@@ -177,8 +180,11 @@ export class DubMoney {
    * identity at its homes, where Damgar finds it. Nothing is signed for
    * money; the request itself is signed with the identity's key.
    */
-  async askLane(me: TestIdentity, s: Settings, a: { label: string; cap: number; unit: string; until: number | null; clock: string | null; app: string }): Promise<string[]> {
+  async askLane(me: TestIdentity, s: Settings, a: { label: string; cap: number; total?: number | null; unit: string; until: number | null; clock: string | null; app: string }): Promise<string[]> {
     if (!Number.isSafeInteger(a.cap) || a.cap <= 0) throw new Error('A lane needs a cap per payment: a whole amount above zero. Nothing was asked.');
+    // The cap in all (the grant limits cMIP, draft 3, 8): optional; kept by Dub and counted by Damgar, never judged by verifiers.
+    const total: Cap | null = a.total === null || a.total === undefined ? null : { unit: a.unit, value: a.total };
+    if (total && (!Number.isSafeInteger(total.value) || total.value < a.cap)) throw new Error('The cap in all is a whole amount, at least the cap per payment. Nothing was asked.');
     const limits: Limits = { cap: { unit: a.unit, value: a.cap } };
     if (a.until !== null) {
       if (!a.clock || !/^[0-9a-f]{64}$/.test(a.clock)) throw new Error('An expiry is judged on a timestamp clock: give its ID, or leave Until empty. Nothing was asked.');
@@ -189,10 +195,10 @@ export class DubMoney {
     const keys = await this.keys(me.id);
     const label = a.label.trim().slice(0, 80) || a.app;
     // Kept before anything leaves: the key whose grant Damgar will sign.
-    const asked = { key: hex(k.public[1]), secret: hex(k.secret), label, limits, request: '', at: now() };
+    const asked = { key: hex(k.public[1]), secret: hex(k.secret), label, limits, total, request: '', at: now() };
     keys.asked = [...(keys.asked ?? []), asked];
     await this.store.saveMoney(me.id, 'keys', keys);
-    const r = await sendToSelf(me, TYPES.laneRequest, laneRequestPayload({ key: asked.key, label, kinds: LANE_KINDS, limits: limitsValue(limits), app: a.app }), { via: s.via, save: () => this.store.saveIdentity(me) });
+    const r = await sendToSelf(me, TYPES.laneRequest, laneRequestPayload({ key: asked.key, label, kinds: LANE_KINDS, limits: askedValue(limits, total, encodeLimits), app: a.app }), { via: s.via, save: () => this.store.saveIdentity(me) });
     asked.request = r.id;
     await this.store.saveMoney(me.id, 'keys', keys);
     return [`Asked, not granted: the lane “${label}”, sealed to this identity and left at its homes (${r.left.join(', ')}).`, 'Open Damgar with this identity: the lane waits in To sign, read in plain words, to be granted or declined. Until then Dub pays nothing by itself.'];
@@ -205,15 +211,16 @@ export class DubMoney {
     for (const a of [...(keys.asked ?? [])]) {
       const found = (await grantsForKey(me.id, a.key, hints, s.via).catch(() => []))[0];
       if (!found) continue;
-      keys.lanes = [...(keys.lanes ?? []), { grant: found.id, label: a.label, secret: a.secret, strand: [], kinds: LANE_KINDS, limits: found.grant.limits ?? a.limits, role: 'app' }];
+      keys.lanes = [...(keys.lanes ?? []), { grant: found.id, label: a.label, secret: a.secret, strand: [], kinds: LANE_KINDS, limits: found.grant.limits ?? a.limits, role: 'app', total: a.total ?? null }];
       keys.asked = (keys.asked ?? []).filter((x) => x !== a);
       changed = true;
     }
     if (changed) await this.store.saveMoney(me.id, 'keys', keys);
-    const shown = (l: { label: string; limits: Limits | null }, state: LaneShownHere['state'], grant: string | null): LaneShownHere => ({
+    const shown = (l: { label: string; limits: Limits | null; total?: Cap | null }, state: LaneShownHere['state'], grant: string | null): LaneShownHere => ({
       label: l.label,
       state,
       cap: l.limits?.cap ? say({ unit: l.limits.cap.unit, value: l.limits.cap.value }, new Set([l.limits.cap.unit])) : 'no cap',
+      total: l.total ? say(l.total, new Set([l.total.unit])) : null,
       until: l.limits?.expiry?.clock === 'timestamp' ? l.limits.expiry.time : null,
       grant,
     });

@@ -18,6 +18,8 @@ import { OPS, run } from './ops.ts';
 import { STYLE } from './page/view.ts';
 import { Store } from './store.ts';
 import { version } from './version.ts';
+import { wakeRoutes } from './wake.ts';
+import { KISHIB_DIR, RunnerLink } from '../../dub/src/runner.ts';
 
 /** What the browser's key signs, before the request body. */
 export const DOMAIN = 'MOR Damgar, version 1\n';
@@ -40,11 +42,14 @@ const text = (v: unknown): string => (typeof v === 'string' ? v : '');
 const expand = (p: string) => p.trim().replace(/^['"]|['"]$/g, '').replace(/\\ /g, ' ').replace(/^~(?=\/|$)/, process.env.HOME ?? '~');
 
 /** Start the program on 127.0.0.1 at `port` (0: any free port), with its folder at `dir`, following `chain` for the on-chain rail. */
-export async function serve(opts: { dir: string; port: number; chain?: ChainSource | null; link?: (c: LinkConfig) => Promise<InvoiceLink> }): Promise<Running> {
+export async function serve(opts: { dir: string; port: number; chain?: ChainSource | null; link?: (c: LinkConfig) => Promise<InvoiceLink>; /** Kišib's folder, where its program names its port (the runner); default ~/mor-kishib. */ kishib?: string }): Promise<Running> {
   mkdirSync(opts.dir, { recursive: true, mode: 0o700 });
   const access = new Access(opts.dir, { domain: DOMAIN, label: CODE_LABEL });
   const store = new Store(opts.dir);
-  const damgar = new Damgar(store, { chain: opts.chain ?? null, link: opts.link ?? lndLink });
+  let base = '';
+  // Kišib's runner (the Dubsar runner cMIP): an identity used through it, Damgar holding no key; money always asks, in Kišib's panel here.
+  const runner = new RunnerLink(opts.dir, { kishib: opts.kishib ?? KISHIB_DIR, origin: () => base, name: 'Damgar' });
+  const damgar = new Damgar(store, { chain: opts.chain ?? null, link: opts.link ?? lndLink, runner });
   const script = await pageScript(here('src/page/app.ts'));
   const index = readFileSync(here('static/index.html'), 'utf8');
   const built = await version();
@@ -73,6 +78,11 @@ export async function serve(opts: { dir: string; port: number; chain?: ChainSour
     ...Object.fromEntries(Object.entries(FONT_FILES).map(([name, type]) => [`/${name}`, { type, body: readFileSync(here(`../dub/${FONTS_DIR}/${name}`)) }])),
     '/icon.png': { type: 'image/png', body: readFileSync(here('static/icon/damgar.png')) },
   };
-  const local = await serveLocal({ dir: opts.dir, port: opts.port, access, index, script, style: STYLE, version: built, api, files });
+  // Woken by an app on this computer (the second way to pay, 2A): its panel drawn in that app's window.
+  const routes = wakeRoutes(damgar, () => base, files);
+  // The policy frames Kišib's origin, its runner's panel in the kit's slot, and nothing else.
+  const kishib = runner.origin();
+  const local = await serveLocal({ dir: opts.dir, port: opts.port, access, index, script, style: STYLE, version: built, api, files, routes, frames: [kishib, kishib.replace('127.0.0.1', 'localhost')] });
+  base = local.base;
   return { server: local.server, port: local.port, base: local.base, access, damgar, store, close: () => local.close() };
 }
