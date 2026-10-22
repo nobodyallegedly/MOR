@@ -1,0 +1,63 @@
+# Kišib's seal in the macOS menu bar (the Dubsar runner cMIP, draft 3,
+# section 10), on GitHub's macOS machines: the Swift helper
+# (clients/kishib/seal/main.swift) compiled with Apple's own compiler, as
+# scripts/make-app.sh compiles it on a Mac; then run against Kišib's own
+# program in its command-line modes, the same calls its menu makes (the
+# states, Lock now, Turn off, Quit Kišib locking the runner). What needs a
+# person on a Mac (the seal seen in the menu bar, its menu clicked) is listed
+# in docs/runner-draft-3-report.md, section 5.
+name: kishib seal (macOS)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - clients/kishib/**
+      - .github/workflows/kishib-seal-macos.yml
+  pull_request:
+    paths:
+      - clients/kishib/**
+      - .github/workflows/kishib-seal-macos.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seal:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: The seal, compiled
+        run: |
+          swiftc --version
+          mkdir -p clients/kishib/build
+          swiftc -O -o clients/kishib/build/kishib-seal clients/kishib/seal/main.swift
+      - name: The seal, without Kišib's program running, says so
+        run: |
+          set +e
+          out=$(clients/kishib/build/kishib-seal --dir "$RUNNER_TEMP/no-kishib" --state); code=$?
+          set -e
+          echo "$out"
+          test "$code" = 1
+          test "$out" = '{"state":"not running"}'
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.129
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Core library for the clients (WebAssembly)
+        run: cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
+      - name: Kišib's program and what it shares
+        run: for p in kit desk dub damgar collective barebone grants repo kishib; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done
+      - name: The seal talking with Kišib's program
+        run: cd clients/kishib && MOR_SEAL="$PWD/build/kishib-seal" node --import tsx --test test/mac/seal.test.ts
+      - name: The seal's door, from the program's side, on the Mac too
+        run: cd clients/kishib && node --import tsx --test test/seal-door.test.ts

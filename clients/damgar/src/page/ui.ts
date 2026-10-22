@@ -234,16 +234,18 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
 
   // ---------------------------------------------------------------- cards: each with the kit's two menus
 
-  const drawn = new Map<string, { act: KitAct; who: Who; lines: v.Line[] }>();
-  let cards: { act: KitAct; who: Who; lines: v.Line[] }[] = [];
+  const drawn = new Map<string, { act: KitAct; who: Who; lines: v.Line[]; acts: v.CardAct[] }>();
+  let cards: { act: KitAct; who: Who; lines: v.Line[]; acts: v.CardAct[] }[] = [];
+  /** The acts of the card whose Anchor it is open: kept while the service's offer is read. */
+  let anchoring: v.CardAct[] = [];
   const meId = () => state?.identity?.id ?? '';
   const kitWho = (w: Who): KitWho => {
     const form = v.formOf(w.id, 'mid');
     return { id: w.id, form, link: form, name: w.me ? (state?.identity?.name ?? null) : null, me: w.me };
   };
-  const cardOf = (x: { id: string; who: Who; kind?: string | null; text: string; html?: string; labels?: { text: string; tone?: 'warn' | 'bad' }[]; verified?: boolean; alarm?: string | null; lines: v.Line[] }): string => {
+  const cardOf = (x: { id: string; who: Who; kind?: string | null; text: string; html?: string; labels?: { text: string; tone?: 'warn' | 'bad' }[]; verified?: boolean; alarm?: string | null; lines: v.Line[]; acts?: v.CardAct[] }): string => {
     const a: KitAct = { id: x.id, form: v.formOf(x.id), signer: kitWho(x.who), kind: x.kind ?? null, text: x.text, html: x.html, labels: x.labels, verified: !!x.verified, alarm: x.alarm ?? null };
-    cards.push({ act: a, who: x.who, lines: x.lines });
+    cards.push({ act: a, who: x.who, lines: x.lines, acts: x.acts ?? [] });
     return card(a);
   };
   function drawCards() {
@@ -253,7 +255,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   }
 
   const itemCard = (t: ToSign) =>
-    cardOf({ id: t.id, who: t.from, kind: `${t.kind === 'draft' ? (t.byHand ? 'pasted by hand' : t.app ? `from ${t.app}` : 'a draft') : t.kind === 'lane' ? `lane · from ${t.app ?? 'an app'}` : t.kind}`, text: t.title, html: `<div class="k-box">${v.itemActs(t)}</div>`, labels: t.unknown ? [{ text: 'unknown here: nothing can be signed for it', tone: 'warn' }] : [], verified: !t.unknown, lines: t.lines });
+    cardOf({ id: t.id, who: t.from, kind: `${t.kind === 'draft' ? (t.byHand ? 'pasted by hand' : t.app ? `from ${t.app}` : 'a draft') : t.kind === 'lane' ? `lane · from ${t.app ?? 'an app'}` : t.kind}`, text: t.title, html: `<div class="k-box">${v.itemActs(t)}</div>`, labels: t.unknown ? [{ text: 'unknown here: nothing can be signed for it', tone: 'warn' }] : [], verified: !t.unknown, lines: t.lines, acts: [] });
 
   /** An identity in words on a card: its `mid1…` short form (Damgar keeps no contacts). */
   const shortOf = (w: Who) => shortForm(v.formOf(w.id, 'mid'));
@@ -261,7 +263,14 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     const bad = p.proofs.some((x) => x.rail.answer === 'invalid');
     // Its act: the first claim or receipt, else the invoice request that began it; signed by the payer (you, paying out) or the payee.
     const first = p.proofs[0];
+    // What Rely on it and Anchor it offer: its receipts first, then its claims, then the invoice request that began it (decided: "receipts and claims first of all").
+    const acts: v.CardAct[] = [
+      ...p.proofs.filter((x) => x.kind === 'receipt').map((x) => ({ id: x.act, said: `The receipt, by ${x.by.me ? 'you' : shortOf(x.by)}` })),
+      ...p.proofs.filter((x) => x.kind === 'claim').map((x) => ({ id: x.act, said: `The claim, by ${x.by.me ? 'you' : shortOf(x.by)}` })),
+      ...(p.request ? [{ id: p.request, said: 'The invoice request that began it' }] : []),
+    ];
     return cardOf({
+      acts,
       id: first?.act ?? p.request ?? p.key,
       who: first ? first.by : p.side === 'out' ? { id: meId(), short: '', me: true } : p.other,
       kind: p.to === 'vault' && p.other.me ? 'to your vault' : p.side === 'out' ? 'you pay' : 'paid to you',
@@ -276,8 +285,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
 
   attachCards(app, {
     app: 'Damgar',
-    // Damgar signs no everyday act: Rely on it and Anchor it are Dub's and Edubba's (an Identity act; an anchor prepared there, paid here).
-    signs: false,
+    // Rely on it and Anchor it, below the line, on every act (decided by Nobody, allegedly: "Agreed"; Damgar's round 3, question 3): a witness act signed here, an anchor prepared and paid here.
+    signs: true,
     act: (id) => drawn.get(id)?.act,
     signerItems: (a) => (a.signer.me ? [] : [{ key: 'tip', label: 'Tip' }]),
     actItems: () => ({ before: [], after: [] }),
@@ -288,6 +297,12 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       if (key === 'profile') return void popup.show(a.signer.me ? 'You' : shortForm(a.signer.form), `<dl class="k-facts"><dt>ID</dt><dd class="k-mono">${v.e(a.signer.form)}</dd></dl><div class="k-row"><button type="button" class="k-btn k-small" data-action="copy" data-text="${v.e(a.signer.form)}">Copy ID</button></div><p class="k-small k-soft">Full record in Kišib. Their posts and profile are in Dub.</p>`);
       if (key === 'follow' || key === 'mute' || key === 'unfollow' || key === 'unmute') return void popup.show('Contacts are Dub’s', '<p class="k-soft">Damgar keeps no contacts: follow and mute in Dub, from their card or profile. Damgar shows who paid and whom you paid by their IDs.</p>');
       if (key === 'tip') return void popup.show(`Tip ${shortForm(a.signer.form)}`, tipForm(a.signer.id));
+      if (key === 'rely') return void popup.show('Rely on it', v.relyForm(c.acts));
+      if (key === 'anchor') {
+        anchoring = c.acts;
+        return void popup.show('Anchor it', v.anchorForm(c.acts, null));
+      }
+      if (key === 'correct') return void popup.show('Correct it', '<p class="k-soft">Corrections are Dub’s: Damgar signs no text.</p>');
     },
   });
 
@@ -337,7 +352,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         const apps = l.lanes.filter((x) => !x.here);
         return `<h2>Under the lanes</h2>${v.say('What other apps paid under their lanes: they finish those payments themselves; the record is kept here.', ['Read from the acts under each lane whose keys the app delivered to this identity. An act whose key was not delivered (an identity used through Kišib’s runner in that app) is counted as sealed, and said.'])}${
           apps
-            .map((x) => `<h3>${v.e(x.label)} <span class="k-small k-soft">${v.e(x.state)}</span></h3><dl class="k-facts">${v.laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: '', me: true }, kind: `under “${x.label}”`, text: `To ${shortOf(p.to)} · ${p.amount.said}${p.whatFor ? ` · for “${p.whatFor}”` : ''}`, labels: [{ text: p.stage === 'paid' ? 'paid: its claim signed under the lane' : p.stage === 'refused' ? 'refused by the payee: not counted' : 'asked: its invoice request signed under the lane' }], verified: p.stage === 'paid', lines: [{ text: `Signed by ${x.app} under the lane “${x.label}”, not with your own key.` }] })).join('') || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? '' : 's'} sealed: not counted.</p>` : ''}</div>`)
+            .map((x) => `<h3>${v.e(x.label)} <span class="k-small k-soft">${v.e(x.state)}</span></h3><dl class="k-facts">${v.laneTotal(x)}</dl><div class="k-feed">${(x.payments ?? []).map((p) => cardOf({ id: p.claims[0] ?? p.request ?? p.key, who: { id: meId(), short: '', me: true }, kind: `under “${x.label}”`, text: `To ${shortOf(p.to)} · ${p.amount.said}${p.whatFor ? ` · for “${p.whatFor}”` : ''}`, labels: [{ text: p.stage === 'paid' ? 'paid: its claim signed under the lane' : p.stage === 'refused' ? 'refused by the payee: not counted' : 'asked: its invoice request signed under the lane' }], verified: p.stage === 'paid', lines: [{ text: `Signed by ${x.app} under the lane “${x.label}”, not with your own key.` }], acts: [...p.claims.map((c) => ({ id: c, said: 'Its claim, signed under the lane' })), ...(p.request ? [{ id: p.request, said: 'Its invoice request, signed under the lane' }] : [])] })).join('') || '<p class="k-empty">No payment under it read yet.</p>'}${x.sealed ? `<p class="k-small k-soft">${x.sealed} act${x.sealed === 1 ? '' : 's'} sealed: not counted.</p>` : ''}</div>`)
             .join('') || '<p class="k-empty">No app holds a lane of this identity.</p>'
         }`;
       }
@@ -702,6 +717,30 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           part = 'to-pay';
           await draw();
           done({ lines: r.lines.slice(0, 1) });
+        }
+        return;
+      }
+      case 'rely': {
+        const r = await act(() => b.ask<Lines>('rely', { id: str(fd, 'act'), typed: str(fd, 'typed') }));
+        if (r) (popup.close(), done(r));
+        return;
+      }
+      case 'anchor-offers': {
+        const service = str(fd, 'service');
+        const chosen = str(fd, 'act');
+        const r = await act(() => b.ask<{ offers: Parameters<typeof v.anchorForm>[1] }>('anchor offers', { service }));
+        if (r) popup.replace(v.anchorForm(anchoring, r.offers, service, chosen));
+        return;
+      }
+      case 'anchor': {
+        const [offer, tier] = str(fd, 'tier').split(':');
+        const r = await act(() => b.ask<Lines>('anchor', { id: f.dataset.act, service: f.dataset.service, offer, tier: Number(tier) }));
+        if (r) {
+          popup.close();
+          state = await b.ask<State>('state');
+          [tab, part] = ['account', 'anchors'];
+          await draw();
+          done(r);
         }
         return;
       }

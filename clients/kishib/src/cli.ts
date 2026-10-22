@@ -62,7 +62,8 @@ async function main() {
   const port = Number(o.port ?? 8474);
   switch (cmd) {
     case 'run': {
-      const r = await serve({ dir, port });
+      // Quit Kišib (its page, or its seal in the menu bar): the runner locked, then the program ends (the Dubsar runner cMIP, draft 3).
+      const r = await serve({ dir, port, quit: () => stop() });
       console.log(`mor-kishib: ${r.base}/ (folder ${dir})`);
       const stop = () => void r.close().then(() => process.exit(0));
       process.on('SIGTERM', stop);

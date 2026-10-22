@@ -426,7 +426,8 @@ test('Damgar on the kit, the program’s page by clicks at a Mac’s size and a 
   await go(gp, 'account', 'payments');
   const paidCard = gp.locator('#pane .k-act').first();
   await paidCard.locator('.k-actid').click();
-  assert.deepEqual((await gp.locator('.k-pop [data-k-item]').allInnerTexts()).map((x) => x.split('\n')[0]), ['Copy act ID', 'Open what it answers', 'Why it’s valid']);
+  // Below the line, Rely on it and Anchor it, on every act (the runner's draft 3; test/act-menu.test.ts).
+  assert.deepEqual((await gp.locator('.k-pop [data-k-item]').allInnerTexts()).map((x) => x.split('\n')[0]), ['Copy act ID', 'Open what it answers', 'Why it’s valid', 'Rely on it', 'Anchor it']);
   await shot(gp, 'mac-24-act-menu');
   await gp.keyboard.press('Escape');
   await paidCard.locator('.k-signer').click();
@@ -565,7 +566,7 @@ test('Use one from Kišib: Damgar paired with Kišib’s runner; a payment signe
   const st = await k.c.ask<{ apps: { id: string; code: string; name: string }[] }>('runner state');
   const app = st.apps.find((x) => x.code === code)!;
   assert.equal(app.name, 'Damgar');
-  await k.c.ask('runner approve', { pairing: app.id, identities: [max.id], open: true });
+  await k.c.ask('runner approve', { pairing: app.id, identities: [max.id], opens: [max.id] });
   await gp.locator('[data-action="runner-look"]').click();
   await gp.locator(`[data-runner-take="${max.id}"]`).click();
   // What Max accepts is sealed to Max: signed through Kišib too, its panel in Damgar's window.

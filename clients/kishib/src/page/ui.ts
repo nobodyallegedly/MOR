@@ -4,7 +4,7 @@
 // browser). It keeps nothing in the browser's storage, not even which
 // screen was open: a reload opens on the four tiles.
 
-import { attachCards, attachClosing, attachColumn, card, Popup, type KitAct } from '../../../kit/src/index.ts';
+import { attachCards, attachClosing, attachColumn, card, Popup, shortForm, type KitAct } from '../../../kit/src/index.ts';
 import { actFormOf } from '../../../dub/src/page/view.ts';
 import * as v from './view.ts';
 
@@ -128,7 +128,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
           signer: { id: s.identity, form, link: form, name: s.name, me: true },
           kind: s.opened ? `${s.app} · opened · ${kind}` : `${s.app} · ${kind}`,
           text: s.words.join(' '),
-          labels: [{ text: s.opened ? `opened, nothing signed · ${s.times === 1 ? 'once' : `${s.times} times`} · last ${at}` : `${s.standing ? 'signed without asking' : 'asked, and signed'} · ${s.line === 'apart' ? 'on a line of its own' : `${s.app}’s ${s.line} line, position ${s.position}`} · ${at}` }],
+          labels: [{ text: s.opened ? `opened, nothing signed · ${s.times === 1 ? 'once' : `${s.times} times`} · last ${at}` : `${s.lane ? 'signed without asking: a lane’s record, to the identity itself' : s.standing ? 'signed without asking' : 'asked, and signed'} · ${s.as ? `as the collective ${shortForm(actFormOf(s.as, 'mid'))}, with its member key` : s.line === 'apart' ? 'on a line of its own' : `${s.app}’s ${s.line} line, position ${s.position}`} · ${at}` }],
           verified: false,
         };
         drawn.set(a.id, { act: a, s });
@@ -373,6 +373,13 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         draw();
         return done('The runner is on, its file encrypted under your passphrase. Give it an identity (Identities, Held here), then pair an app: in Dub, the identity panel, + Add, Use one from Kišib.');
       }
+      case 'quit': {
+        if (!confirm('Quit Kišib? Its program ends, and the runner, if on, is locked: the apps sign through it no more until Kišib is opened again and its passphrase given. Nothing is erased.')) return;
+        const r = await act(() => b.ask<{ quit: boolean }>('quit'));
+        if (!r) return;
+        app.innerHTML = `<div class="k-body"><div class="k-box" id="quit-done"><h2>Kišib has quit</h2><p class="k-soft">Its program has ended${runner?.state === 'off' ? '' : ', and the runner is locked'}. Open Kišib again from your Applications (or its seal in the menu bar).</p></div></div>`;
+        return;
+      }
       case 'runner-lock': {
         const r = await act(() => b.ask<v.RunnerView>('runner lock'));
         if (!r) return;
@@ -393,8 +400,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
       case 'approve': {
         const box = t.closest<HTMLElement>('.kishib-app')!;
         const identities = [...box.querySelectorAll<HTMLInputElement>('input[name="allow"]:checked')].map((x) => x.value);
-        const open = !!box.querySelector<HTMLInputElement>('input[name="open"]')?.checked;
-        const r = await act(() => b.ask<v.RunnerView>('runner approve', { pairing: d.pairing, identities, open }));
+        const opens = [...box.querySelectorAll<HTMLInputElement>('input[name="open"]:checked')].map((x) => x.value).filter((x) => identities.includes(x));
+        const r = await act(() => b.ask<v.RunnerView>('runner approve', { pairing: d.pairing, identities, opens }));
         if (r) {
           runner = r;
           draw();
@@ -420,8 +427,26 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         }
         return;
       }
+      case 'member-answer': {
+        const r = await act(() => b.ask<v.RunnerView>('runner member answer', { ask: d.ask, yes: d.yes === '1' }));
+        if (r) {
+          runner = r;
+          draw();
+          if (d.yes === '1') done('Kept: Kišib holds this identity’s key for the collective, encrypted. The app acts as the collective through Kišib’s panel.');
+        }
+        return;
+      }
+      case 'member-remove': {
+        if (!confirm('Forget this collective’s key here? The app using the identity through Kišib can no longer act as the collective. The key itself stays sealed to the identity at its homes.')) return;
+        const r = await act(() => b.ask<v.RunnerView>('runner member remove', { identity: d.id, collective: d.collective }));
+        if (r) {
+          runner = r;
+          draw();
+        }
+        return;
+      }
       case 'opening': {
-        const r = await act(() => b.ask<v.RunnerView>('runner opening', { pairing: d.pairing, on: d.on === '1' }));
+        const r = await act(() => b.ask<v.RunnerView>('runner opening', { pairing: d.pairing, identity: d.identity, on: d.on === '1' }));
         if (r) {
           runner = r;
           draw();
@@ -476,7 +501,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
       } catch {
         return;
       }
-      const changed = JSON.stringify([r.apps, r.waiting, r.signed.length, r.held]) !== JSON.stringify([runner.apps, runner.waiting, runner.signed.length, runner.held]);
+      const changed = JSON.stringify([r.apps, r.waiting, r.signed.length, r.held, r.memberAsks]) !== JSON.stringify([runner.apps, runner.waiting, runner.signed.length, runner.held, runner.memberAsks]);
       runner = r;
       if (!changed) return;
       // Only the runner's own lists are drawn again: never a form being typed.

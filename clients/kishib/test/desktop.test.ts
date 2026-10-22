@@ -63,4 +63,9 @@ test('make-app.sh: Kishib.app carries its own icon, named in its Info.plist', ()
   assert.equal(icns.subarray(0, 4).toString('ascii'), 'icns');
   assert.equal(icns.readUInt32BE(4), icns.length);
   for (const t of ['ic07', 'ic08', 'ic09', 'ic10']) assert.ok(icns.includes(Buffer.from(t, 'ascii')), t);
+  // Kišib's seal in the menu bar (the Dubsar runner cMIP, draft 3): started by the launcher once built; built only where Apple's tools are, said plainly where not.
+  const seal = join(app, 'Contents', 'MacOS', 'kishib-seal');
+  assert.match(readFileSync(join(app, 'Contents', 'MacOS', 'kishib'), 'utf8'), new RegExp(`nohup "${seal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`));
+  if (/made Kišib's seal in the menu bar/.test(out)) assert.ok(existsSync(seal));
+  else assert.match(out, /Apple's command-line tools are not installed .* Kišib works without it|Kišib's seal did not build/);
 });

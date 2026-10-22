@@ -39,6 +39,23 @@ Before any question is put: "Is this core business? Or has core defined how the 
 
 **Where:** S7c, then a second box.
 
+## F382. The Dubsar runner, draft 3: opening per identity, member keys in Kišib, a lane's record without a panel; Kišib's seal in the macOS menu bar; Rely and Anchor in Damgar (22 October 2026; F378's and F379's questions; Dubsar Suite)
+
+**The questions** (`docs/runner-draft-2-report.md`, section 4; `docs/damgar-r3-report.md`, section 5). **Decided by Nobody, allegedly, 22 October 2026:**
+1. Opening, "since an app can run multiple identities, per identity, per app".
+2. Opening returns only the act and its content key, never the identity's keys: "Understood and agreed".
+3. Member keys: "kišib should be able to hold your key and the keys you hold for your collectives".
+4. Lanes through Kišib: "Yes, if establishing lanes it has to be setup this way".
+5. The seal in the menu bar: "can it be shown in the top bar on macOS, so one knows it is active?"; "Yes, I do want it"; Lock now and Quit Kišib "accessible from both"; "Closing a Mac window never ends its program. To end it one must close the app".
+6. Rely and Anchor in Damgar: "Nothing in Damgar is worth relying on or anchor? Receipts?"; "Agreed".
+
+**Built:** the runner's cMIP, draft 3 (`cmips/cmip-runner-draft-3.md`; drafts 1 and 2 kept), each change marked.
+- **Kišib:** opening chosen per identity, per app; an identity's member keys added from an app's ask, approved in Kišib, opened from its homes with the member keys cMIP and kept with it, encrypted; acts as a collective always through the panel, signed with the member key, which never leaves Kišib; a key delivered to the identity itself, for an act read at its homes as signed under a lane, signed without a panel and listed; Lock now and Quit Kišib on its page and in the seal; the seal, a Swift helper built by `make-app.sh` where Apple's tools are present, its door a token in Kišib's folder; a macOS job on GitHub compiling it and running its talk with Kišib's program.
+- **Dub:** asks Kišib for a collective's key and posts as the collective through it; its lane payments' records reach Damgar through Kišib.
+- **Damgar:** Rely on it (RELY typed, the key check) and Anchor it (prepared and its request signed in one step, shown in Account › Anchors) below the line on every act, receipts and claims first.
+
+**No rule of the core changed**; nothing for the MOR lead. Report: `docs/runner-draft-3-report.md`, with its questions for Nobody, allegedly.
+
 ## F381. S7's four questions, judged by Fable: check 7's "invalid" clause dropped (22 October 2026)
 
 **From** `docs/s7-report.md` (pull request 96), sent to Fable before deciding (the working rule since 22 October), Fable's judgment received the same afternoon.

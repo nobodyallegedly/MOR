@@ -58,6 +58,9 @@ export const OPS = [
   'make confirm',
   'paste',
   'tip',
+  'rely',
+  'anchor offers',
+  'anchor',
   'runner',
   'runner pair',
   'runner take',
@@ -178,6 +181,12 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
       return d.make({ homes: list(a.homes), relays: list(a.relays) });
     case 'make confirm':
       return d.makeConfirm(list(a.typed));
+    case 'rely':
+      return d.rely({ id: text(a.id), typed: text(a.typed) });
+    case 'anchor offers':
+      return d.anchorOffers({ service: text(a.service) });
+    case 'anchor':
+      return d.anchor({ id: text(a.id), service: text(a.service), offer: text(a.offer), tier: Number(a.tier) });
     case 'tip':
       return d.tip({ to: text(a.to), value: text(a.value), unit: text(a.unit), whatFor: text(a.whatFor) });
     case 'paste':
