@@ -8075,39 +8075,37 @@ impl<'a> AgreementsView<'a> {
     /// is the rail's answer ([`Self::same_payment_of`]).
     fn shared_unresolved(&self, id: &Hash, rail: &Hash, proof: &[u8], payee: &Hash, fulfils: &Hash, batch: Option<&Hash>) -> bool {
         use crate::money::Payload as Fin;
-        let mut others = false;
-        let mut receipts_agree = true;
-        let mut receiver_signed = false;
+        // (record, its payment proof, a receipt by its payee, same purpose and payee, overruled, batch)
+        let mut records: Vec<(Hash, Vec<u8>, bool, bool, bool, Option<Hash>)> = vec![];
         for h in self.v.held_acts() {
             if h.inside.spec != self.mirs.money || &h.id == id {
                 continue;
             }
             // A receipt rule 11 overrules still speaks for its receiver in
             // resolving; it puts no purpose of its own against `id`.
-            let (r_rail, r_proof, r_payee, r_fulfils, r_batch, is_receipt, overruled) = match Fin::decode(h.inside.type_, &h.inside.payload) {
-                Ok(Fin::Receipt(rc)) if h.act.outside.signer == Some(rc.payee) && self.money_counts(h) => {
+            match Fin::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Fin::Receipt(rc)) if &rc.rail == rail && h.act.outside.signer == Some(rc.payee) && self.money_counts(h) => {
                     let o = self.receipt_overruled(&rc);
-                    (rc.rail, rc.proof, rc.payee, rc.fulfils, rc.batch, true, o)
+                    records.push((h.id, rc.proof, true, &rc.payee == payee && &rc.fulfils == fulfils, o, rc.batch));
                 }
-                Ok(Fin::Claim(c)) if self.payers_claim(h) => {
+                Ok(Fin::Claim(c)) if &c.rail == rail && self.payers_claim(h) => {
                     let o = self.claim_overruled(&c);
-                    (c.rail, c.proof, c.payee, c.fulfils, None, false, o)
+                    records.push((h.id, c.proof, false, &c.payee == payee && &c.fulfils == fulfils, o, None));
                 }
-                _ => continue,
-            };
-            if &r_rail != rail || !self.same_payment_of((Some(&h.id), &r_proof), (Some(id), proof)) {
-                continue;
-            }
-            let same_purpose = &r_payee == payee && &r_fulfils == fulfils;
-            if is_receipt {
-                receiver_signed |= &r_payee == payee;
-                receipts_agree &= same_purpose;
-            }
-            if !same_purpose && !overruled && !(batch.is_some() && batch == r_batch.as_ref()) {
-                others = true;
+                _ => {}
             }
         }
-        others && !(receiver_signed && receipts_agree)
+        // Only the pairs the answer depends on are asked (rule 12): first
+        // whether a record naming another purpose is this payment; only
+        // then whether the receiver's receipts of it resolve the conflict.
+        let one = |x: &Hash, p: &[u8]| self.same_payment_of((Some(x), p), (Some(id), proof));
+        let conflict = records.iter().any(|(x, p, _, same, o, b)| !same && !o && !(batch.is_some() && batch == b.as_ref()) && one(x, p));
+        if !conflict {
+            return false;
+        }
+        let receipts: Vec<bool> = records.iter().filter(|(x, p, r, _, _, _)| *r && one(x, p)).map(|(_, _, _, same, _, _)| *same).collect();
+        let receiver_signed = receipts.iter().any(|s| *s);
+        !(receiver_signed && receipts.iter().all(|s| *s))
     }
 
     /// Money rules 10 to 12 over the records counted toward one purpose:
