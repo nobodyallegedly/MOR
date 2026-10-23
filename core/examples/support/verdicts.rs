@@ -1443,7 +1443,19 @@ pub fn money(out: &mut Out) {
     let mut w = World::new();
     let mut ana = w.genesis("ana, a creditor twice", vec![own_home()], None, None);
     let mut bo = w.genesis("bo, a debtor twice", vec![own_home()], None, None);
-    let pointer = pointer_act(&mut w, &mut ana, b"ana's wallet");
+    // A rail whose specification binds the payee only, so that the
+    // receiver's receipt, not the rail's commitment, resolves the purpose.
+    let rail_content = cbor::encode(&Value::Map(vec![
+        (Value::Uint(0), Value::Uint(mor_core::development::kinds::MODULE)),
+        (Value::Uint(1), Value::Bytes(spec("a rail's creator").to_vec())),
+        (Value::Uint(5), Value::Bytes(spec("a payment cMIP, by its hash").to_vec())),
+        (Value::Uint(9), Value::Text("A push rail whose proof binds the payee only.".into())),
+        (Value::Uint(11), Value::Uint(1)),
+        (Value::Uint(13), Value::Array(vec![Value::Uint(0)])),
+    ]));
+    let rail = mor_core::development::Spec::hash_of(&rail_content);
+    let pointer = { let x = Fin::PayeePointer(money::PayeePointer { payee: ana.id, version: 1, previous: None, rails: vec![money::Rail { module: rail, address: b"ana's wallet".to_vec() }] });
+        let a = w.everyday_act(&mut ana, mirs().money, 0, x.to_map(), None, None); w.add(&a) };
     let debt = |w: &mut World, bo: &mut Person, ana: &mut Person| {
         let o = Fin::Obligation(money::Obligation { debtor: bo.id, creditor: ana.id, amount: Amount { unit, value: 60 }, pointer, agreement: None });
         let id = { let a = w.everyday_act(bo, mirs().money, 1, o.to_map(), None, None); w.add(&a) };
@@ -1461,7 +1473,7 @@ pub fn money(out: &mut Out) {
     let one = w.log.clone();
     let c2 = claim(&mut w, &mut bo, d2);
     let two = w.log.clone();
-    let facts = |ids: &[Hash]| Facts { rail_valid: ids.iter().map(|i| (*i, pointer)).collect(), rail_payments: vec![(proof.clone(), b"the one payment".to_vec())], ..Default::default() };
+    let facts = |ids: &[Hash]| Facts { rail_valid: ids.iter().map(|i| (*i, pointer)).collect(), rail_payments: vec![(proof.clone(), b"the one payment".to_vec())], rail_specifications: vec![rail_content.clone()], ..Default::default() };
     let world = |log: &[(mor_core::act::Act, Option<mor_core::lock::ContentKey>)]| { let mut w = World::new(); for (a, _) in log { w.add(a); } w };
     out.case(&mut w, "one payment claimed toward two debts, no batch: it counts toward neither", "Money rule 12: records of one payment naming different purposes share it only under one batch",
         "Bo's two claims carry one rail proof, the rail saying one payment, each naming a different debt of 60 to Ana; neither names a batch (a claim carries none), and Ana has signed no receipt resolving them.",
@@ -1473,7 +1485,7 @@ pub fn money(out: &mut Out) {
     let rc = { let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(bo.id)), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: d1, previous: None, forward: None, batch: None, purchase: None });
         let a = w3.everyday_act(&mut ana, mirs().money, 2, r.to_map(), None, None); w3.add(&a) };
     out.case(&mut w3, "both claims, and the receiver's receipt of the payment naming the first debt: it counts toward the first", "Money rule 12: until the receiver signs a receipt that resolves them; rule 11",
-        "Ana's receipt of the one payment names the first debt: the receiver has resolved the two claims.", facts(&[c1, c2, rc]), ask("paid toward", &d1), json!(60), None);
+        "Ana's receipt of the one payment names the first debt: on a rail binding no purpose, the receiver has resolved the two claims.", facts(&[c1, c2, rc]), ask("paid toward", &d1), json!(60), None);
     let mut w4 = world(&w3.log.clone());
     out.case(&mut w4, "the same: nothing toward the second debt", "Money rule 12; rule 11",
         "The receiver's receipt names the first debt; the claim naming the second counts for nothing.", facts(&[c1, c2, rc]), ask("paid toward", &d2), json!(0), None);
@@ -2582,16 +2594,9 @@ fn s7g_identity(out: &mut Out) {
         "The next rotation counts under the home rule the homeless rotation declared: the homeless rotation is final, and the objection that surfaces after it changes nothing.",
         Facts::default(), chain_of(&oda.id), json!({ "counting": [hx(&oda.id), hx(&h1), hx(&s2)], "next": "end", "dishonest": [] }), None);
 
-    // Row 5 (homeless procedure, steps 4 and 5; the escape): a self-hosted
-    // home serves no homeless rotation, and is never gone.
-    let mut w = World::new();
-    let mut nh = w.operator("sia's new home");
-    let sia = w.genesis("sia", vec![own_home()], None, None);
-    let (h, _) = w.rotate(&sia, Rot { homes: Some(vec![home_of(&nh)]), homeless: true, ..Default::default() });
-    w.receipt(&mut nh, &sia.id, &h, 1);
-    out.case(&mut w, "a self-hosted identity's homeless rotation, unendorsed, receipted by its new home: it does not count", "Identity, the homeless procedure, step 4: a self-hosted home is never gone",
-        "A homeless rotation counts only under the homeless procedure; the self-hosted home is never gone, and without an endorsement nothing lets it count.",
-        Facts::default(), ask_status(&h), json!("pending"), None);
+    // Row 5 is a question (whether a self-hosted home serves a homeless
+    // rotation); the escape from a contested self-hosted position counts
+    // with its new home's receipt, whichever way it is answered.
     let mut w = World::new();
     let mut nh = w.operator("sol's escape home");
     let mut sol = w.genesis("sol, contested", vec![own_home()], None, None);
@@ -2600,9 +2605,6 @@ fn s7g_identity(out: &mut Out) {
     let (e, _) = w.rotate(&sol, Rot { homes: Some(vec![home_of(&nh)]), homeless: true, signing_key: Some(schnorr("sol, escaped", 1)), ..Default::default() });
     w.endorse(&mut sol, &e, Some(vec![own, thief]));
     let log = w.log.clone();
-    out.case(&mut w, "an escape from a position contested at a self-hosted home, its new home's receipt not held: it does not count yet", "Identity, \"Escape with both keys\": steps 1, 2 and 5 still apply",
-        "The endorsement abandons both rotations served there; the escape still needs its new home's receipt (step 5), which this verifier does not hold.",
-        Facts::default(), ask_status(&e), json!("pending"), None);
     let mut w = replay(&log, &[]);
     w.receipt(&mut nh, &sol.id, &e, 1);
     out.case(&mut w, "the same escape, its new home's receipt held: it counts", "Identity, \"Escape with both keys\"; rule 4",

@@ -1310,7 +1310,6 @@ impl Verifier {
             &pool,
             &|c| !abandoned.contains(c),
             dishonest,
-            true,
         );
         if let Some(w) = t.winner {
             let c = cands.iter().find(|c| c.id == w).unwrap();
@@ -1404,11 +1403,6 @@ impl Verifier {
 
     /// Count the receipts of the homes of `st` for the rotations at `n`
     /// ("Which rotation counts", steps 2 and 3; conflicting receipts).
-    /// Under the old rule (`old`), a self-hosted home serves no homeless
-    /// rotation: one counts only by the homeless procedure, whose step 5
-    /// needs its new homes, and a self-hosted home is never gone (homeless
-    /// procedure, steps 4 and 5; the escape, "Steps 1, 2 and 5 still
-    /// apply").
     #[allow(clippy::too_many_arguments)]
     fn tally(
         &self,
@@ -1420,7 +1414,6 @@ impl Verifier {
         pool: &[&Cand],
         eligible: &dyn Fn(&Hash) -> bool,
         dishonest: &[(Operator, u64)],
-        old: bool,
     ) -> Tally {
         let eff = st.effective();
         let voters = match eff {
@@ -1436,14 +1429,11 @@ impl Verifier {
         };
         for op in voters {
             match op {
-                Operator::Own => {
-                    let served: Vec<&&Cand> = pool.iter().filter(|c| !(old && c.homeless)).collect();
-                    match served.len() {
-                        1 if eligible(&served[0].id) => *votes.entry(served[0].id).or_default() += 1,
-                        0 | 1 => {}
-                        _ => t.contested = true,
-                    }
-                }
+                Operator::Own => match pool.len() {
+                    1 if eligible(&pool[0].id) => *votes.entry(pool[0].id).or_default() += 1,
+                    0 | 1 => {}
+                    _ => t.contested = true,
+                },
                 Operator::Id(o) => {
                     if dishonest.iter().any(|(d, p)| *d == op && *p < n) {
                         continue;
@@ -1844,7 +1834,7 @@ impl Verifier {
     ) -> Hb {
         // Step 5: receipts from the new homes meet the new rule, under the
         // audit requirement it declares or inherits (F60, F86).
-        let t = self.tally(cx, id, n, &h.state, cands, pool, &|c| *c == h.id, dishonest, false);
+        let t = self.tally(cx, id, n, &h.state, cands, pool, &|c| *c == h.id, dishonest);
         if t.winner != Some(h.id) {
             return Hb::No;
         }
