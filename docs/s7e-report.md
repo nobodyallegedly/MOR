@@ -157,12 +157,21 @@ A subagent read only the eight texts and the diff. It found no finding number, r
 
 ## The releases rebuilt
 
-*(to be filled in)*
+After merging main (round 4, pull request 101, merged meanwhile, which changed no core or WebAssembly), I rebuilt all six releases in this branch, as their READMEs say:
+- `cd clients/genesis && npm run wasm`;
+- then `npm run release` in `clients/site` (the display client), `clients/dub`, `clients/kishib`, `clients/damgar`, `clients/ummia` and `clients/desk` (Edubba).
+
+Each one's `npm run test:build` passed: it builds the release again and finds the same bytes. The tools were rustc 1.97.0, wasm-bindgen 0.2.129 and each client's pinned esbuild. All six carry the same WebAssembly: work hash `11db2f3c9551e453…` (as `BUILT-WITH.txt` records it), SHA-256 `47af51a75c7eef57…`, 5,226,019 bytes.
 
 ## The box
 
-*(to be filled in)*
+I ran `scripts/c-box/make-c-box.sh` into a scratch folder after the final text and vector edits. It refused nothing: 8 texts, 12 vector files.
 
 ## Checks run
 
-*(to be filled in)*
+- `cargo test --workspace --locked`: all green (88 test binaries).
+- `gen_vectors`: the same bytes again, as written.
+- `python3 core/vectors/check.py`: "all 192 vectors agree".
+- Every client suite CI runs, run here on this core: barebone, collective, connector, desk (Edubba, which drives Dub, Damgar, Kišib, Ummia, the wallet and the services), genesis, grants, longform, manage, kit, dub, kishib, damgar, ummia, anchoring-service, testwallet, reader, repo, reports and site. All passed, and the eleven apps round 4 touched passed again after the merge.
+- Not run here: the regtest job (btcd and lnd). CI runs it.
+- CI on GitHub: see the pull request; read by me before handing over.

@@ -579,7 +579,10 @@ var Verifier = class {
   /**
    * The payments a collective received during a broken stretch and owes
    * back, the sale not signed anew after the rollback (rule 37d, RB2):
-   * open obligations, each `{ payment, to, unit, value, stillBroken }`.
+   * open obligations, each `{ payment, to, unit, value, stillBroken,
+   * unknown }`. An entry is marked `unknown` where it rests on a record
+   * whose payment `specs.railPayments` does not state, or on one whose
+   * rail answer `specs.railValid` does not give (Money rules 8 and 12).
    * @param {any} specs
    * @param {string} collective
    * @returns {any}
@@ -739,7 +742,12 @@ var Verifier = class {
    * offer at no price): the buyer's own contests of it, ascending. A
    * contest by anyone else shows nothing; for an act that is no
    * purchase, none shows. `specs.railValid` names the claims whose rail
-   * the client checked. Errs where it is unknown (Money rule 12).
+   * the client checked. Errs where it is unknown: `law/payment-unstated`
+   * where it rests on two or more records whose payment
+   * `specs.railPayments` does not state (Money rule 12);
+   * `law/rail-unanswered` where it rests on a claim neither
+   * `specs.railValid` nor `specs.railInvalid` names (Money rule 8: a
+   * record counts toward a purchase only with a valid answer).
    * @param {any} specs
    * @param {string} purchase
    * @returns {string[]}
@@ -764,7 +772,10 @@ var Verifier = class {
    * claims and the rail has not shown which the payment committed to),
    * or "wrong-receipt" (F131 IT3: a receipt `specs.railInvalid` names,
    * whose claim the payment did not commit to; it counts for nothing);
-   * null where the payment is not for a work.
+   * or "unknown" (Money rule 8: the receipt or claim `id`, or a receipt
+   * it is judged with, is named neither in `specs.railValid` nor in
+   * `specs.railInvalid`, and the answer rests on it); null where the
+   * payment is not for a work.
    * @param {any} specs
    * @param {string} id
    * @returns {any}
@@ -1012,8 +1023,12 @@ var Verifier = class {
    * it, and each sale with its state, "pending", "confirmed" (with the
    * acknowledging acts) or "contested" (with the contests), and the
    * evidence beside it; and the payments with no buyer signed on.
-   * `specs.railValid` names the claims whose rail the client checked:
-   * a sale is read only from a buyer's own claim with the rail's answer.
+   * `specs.railValid` names the receipts and claims whose rail the
+   * client checked: a payment is a sale only by a record with the rail's
+   * answer, valid, and read only from a buyer's own claim with it. A
+   * sale or payment resting on a record neither `specs.railValid` nor
+   * `specs.railInvalid` names is marked "unknown" (a sale's state, or
+   * the `unknown` list; Money rule 8).
    * @param {any} specs
    * @param {string} name
    * @returns {any}
