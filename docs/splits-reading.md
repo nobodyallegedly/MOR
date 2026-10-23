@@ -126,6 +126,8 @@ The rest of this reading is written for the first way, and says where the second
 
 *My lean:* **(a)** Money rule 4 extended by one clause: "or, where the payment follows an agreement or offer whose terms list, in field 14 or 29, a grant of the payee's, the pointer of that grant's grantee, the agreement's designated pointer (Agreements rules 15 and 17)", judged by Agreements as rule 7 judges a collective's pointer (a Money-only client shows it unknown); then the payment cMIP's step 3 follows (the suite's draft 5), and F358 (2)'s path and rule 17's backups both verify, and no deal needs its own payee. **(b)** Otherwise, the texts as they stand: a deal's payee points its whole flow at the service; the suite keeps building the deal's own payee (this round) and F358 (2)'s path is rebuilt the same way (the lone seller's own pointer stays theirs only if the deal has its own payee). Until you decide, this round builds (b) for deals between people, leaves F358 (2)'s one-party path as it is on main (not this round's to change), and builds nothing on (a).
 
+**A second point, found while building (the collective's case of question 6): a collective's sale is no purchase for the core.** The core reads a payment for a collective's work, under its offer and agreement, as no purchase: "the agreement it names carries no stake in the work it pays for" (`core/src/agreements/view.rs`, `purchase_unjudged`), since a collective's money terms stake the collective itself (object null) and never each work. The glossary says such a stake "is a share of all that collective's income, whoever earns it and whenever". So every collective sale is, for the core, owed back, and its buyer's contest shows beside nothing. *My lean:* the core counts the collective's own stake as a stake in every work it sells under its agreement (a vector for it). Built meanwhile: the claim reaches every member, and Edubba shows the core's words beside the sale.
+
 *No other point.* The tip (5) fits as written, with one reading to confirm in commentary if you wish; the contest line (6) is yours, already decided, and the cMIP follows it.
 
 ## Verdicts, one line each
@@ -140,3 +142,4 @@ The rest of this reading is written for the first way, and says where the second
 | 6 | Contest: the claim readable by every party or member | cMIP draft (money messages draft 5, 9), following the MOR lead's line |
 | 7 | Costs | Stated above |
 | — | Which pointer a direct payment under a deal is paid to | **MIR change, the MOR lead's** (Money rule 4); built meanwhile on the texts as they stand |
+| — | A collective's sale, no purchase for the core (no stake on the work) | **The MOR lead's** (the core's verdict, or the texts); the claim built, the core's words shown |

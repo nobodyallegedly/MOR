@@ -55,8 +55,6 @@ export interface Draft {
   anchor: { offer: string; tier: number; leaf: string } | null;
   /** Confirm a purchase (draft 4, F357): the identity's own public claim of the payment, and the acts to acknowledge (a vow). */
   confirm?: { claim: string; acks: string[] } | null;
-  /** What a payment follows, where it is not the payee's pointer (draft 5, 2.1, field 7): a deal's version, for a tip to a work shared under it ("the target is the agreement not the act"). */
-  follows?: string | null;
 }
 
 export function draftPayload(d: Draft): Uint8Array {
@@ -75,16 +73,12 @@ export function draftPayload(d: Draft): Uint8Array {
     if (!d.confirm?.acks.length) throw new Error('A draft confirming a purchase names the claim and what it acknowledges.');
     m.set(6, [unhex(d.confirm.claim), d.confirm.acks.map(unhex)]);
   }
-  if (d.follows) {
-    if (d.what !== 'pay') throw new Error('Only a payment follows an act (draft 5, field 7).');
-    m.set(7, unhex(d.follows));
-  }
   return cborEncode(m);
 }
 
 export function readDraft(payload: Uint8Array): Draft {
   const m = asMap(payload, 'a draft');
-  closed(m, [0, 1, 2, 3, 4, 5, 6, 7], 'a draft');
+  closed(m, [0, 1, 2, 3, 4, 5, 6], 'a draft');
   const w = m.get(0);
   const what = w === 0 ? 'pay' : w === 1 ? 'ask' : w === 2 ? 'anchor' : w === 3 ? 'confirm' : null;
   if (!what) throw new Error('a draft: an unknown what');
@@ -100,8 +94,6 @@ export function readDraft(payload: Uint8Array): Draft {
     if (!Array.isArray(c) || c.length !== 2 || !Array.isArray(c[1]) || !c[1].length) throw new Error('a draft confirming a purchase: its claim and what it acknowledges');
     confirm = { claim: h32(c[0], 'the claim'), acks: (c[1] as unknown[]).map((x) => h32(x, 'an act acknowledged')) };
   } else if (m.has(6)) throw new Error('a draft: a confirmation on a draft that confirms nothing');
-  if (m.has(7) && m.get(0) !== 0) throw new Error('a draft: what it follows, on a draft that pays nothing');
-  const follows = m.has(7) ? h32(m.get(7), 'what it follows') : null;
   return {
     what,
     other: h32(m.get(1), 'the other party'),
@@ -110,7 +102,6 @@ export function readDraft(payload: Uint8Array): Draft {
     app: text(m.get(4), 'the app'),
     anchor,
     confirm,
-    ...(follows ? { follows } : {}),
   };
 }
 

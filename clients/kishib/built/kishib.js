@@ -2955,10 +2955,10 @@ var ACCEPTABLE = [
     key: "messages",
     name: "Money messages",
     kind: "cMIP",
-    text: "cmips/cmip-money-messages-draft-4.md",
-    draft: 4,
+    text: "cmips/cmip-money-messages-draft-5.md",
+    draft: 5,
     hashes: [MESSAGES_SPEC, MESSAGES_SPEC_3, MESSAGES_SPEC_2, MESSAGES_SPEC_1],
-    does: "The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2); the amount in an answer, so a lane\u2019s cap is judged on it (draft 3); an invoice request sent to a collective\u2019s split service, and a purchase confirmed from Edubba (draft 4). Written by Damgar\u2019s builds, awaiting approval.",
+    does: "The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2); the amount in an answer, so a lane\u2019s cap is judged on it (draft 3); an invoice request sent to a collective\u2019s split service, and a purchase confirmed from Edubba (draft 4); a deal between separate people, its tips to the deal, and a purchase\u2019s claim readable by every party or member (draft 5, no format change). Written by Damgar\u2019s builds, awaiting approval.",
     here: "Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.",
     built: true,
     needs: ["payment"]

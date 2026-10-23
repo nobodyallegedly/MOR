@@ -85,9 +85,9 @@ import type { InvoiceLink, LinkConfig } from './link.ts';
 import { LINK_SAY } from './link-say.ts';
 import { promiseDigest, promisePayload, promiseSay, readCollective, signPromise, standing, type CollectiveHere } from './collective.ts';
 import { collectiveNow, collectivePlaces, collectivePointer, splitServiceOf, termsAt, type ConsentRead } from '../../grants/src/member.ts';
-import { readDeal, sharedLine, type DealRead } from '../../grants/src/deal.ts';
+import { dealOfPost, readDeal, sharedLine, type DealRead } from '../../grants/src/deal.ts';
 import { TestIdentity, TEST_LABEL, freshLines, sealFor, type IdentityFile } from '../../genesis/src/identity.ts';
-import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
+import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { newChainKey } from '../../dub/src/chainwords.ts';
@@ -1266,6 +1266,34 @@ export class Damgar {
     }
   }
 
+  /**
+   * What a drafted payment follows, where it is not the payee's pointer
+   * (the money messages cMIP, draft 5, 8): a tip whose draft names, in its
+   * `refs`, a post under a deal between separate people, its payee the
+   * deal's own payee, follows the deal itself ("the target is the agreement
+   * not the act"). Null otherwise: the payee's pointer, as before.
+   */
+  private async followsOf(me: TestIdentity, s: Settings, book: Book, id: string, dr: Draft): Promise<string | null> {
+    if (dr.what !== 'pay' || book.pasted?.[id]) return null;
+    let d: Described;
+    try {
+      d = this.opened(book, id).d;
+    } catch {
+      return null;
+    }
+    const places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
+    for (const [i, ref] of (d.refs ?? []).entries()) {
+      try {
+        const post = (await followRef(d.refSigners?.[i] ? [ref, d.refSigners[i]!] : ref, places, s.via)).act;
+        const deal = await dealOfPost(post, places, s.via);
+        if (deal?.payee === dr.other) return deal.version;
+      } catch {
+        // not found: the payee's pointer, as before
+      }
+    }
+    return null;
+  }
+
   /** A kept Money act, read: null where it is not kept or not read. */
   private moneyOf(book: Book, id: string): { amount?: Amount } | null {
     try {
@@ -1870,10 +1898,11 @@ export class Damgar {
       lines.push({ text: 'Signing sends them a request to be paid, sealed to them, naming your payee pointer in force. It binds nobody: they may pay it, accept it as a debt, or decline.' });
     } else {
       lines.unshift({ text: `Prepared in ${dr.app}, not signed there: ${dr.what === 'anchor' ? 'pay an anchoring service' : 'pay'} ${short(dr.other)} ${say(dr.amount, acc)}${dr.whatFor ? `, for “${dr.whatFor}”` : ''}${about.length ? ` (about ${about.join(', ')})` : ''}.` });
-      // Draft 5: a tip to a work shared under a deal follows the deal, paid to its payee, through its split service.
-      if (dr.follows) {
-        const deal = await readDeal(dr.follows, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via).catch(() => null);
-        lines.push(deal ? { text: `${sharedLine(deal, (x) => (x === me.id ? `you (${short(x)})` : short(x)))} The payment follows the deal (${short(dr.follows)}): a tip, divided like a sale, no purchase.`, tone: 'ok' } : { text: `It follows ${short(dr.follows)}, which was not read as a deal here: unknown.`, tone: 'warn' });
+      // Draft 5 (8): a tip to a work shared under a deal follows the deal, paid to its own payee, through its split service.
+      const follows = dr.what === 'pay' ? await this.followsOf(me, s, book, id, dr) : null;
+      if (follows) {
+        const deal = await readDeal(follows, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via).catch(() => null);
+        if (deal) lines.push({ text: `${sharedLine(deal, (x) => (x === me.id ? `you (${short(x)})` : short(x)))} The payment follows the deal (${short(follows)}): a tip, divided like a sale, no purchase.`, tone: 'ok' });
       }
       if (!unknown) {
         try {
@@ -2045,7 +2074,7 @@ export class Damgar {
       const p = await this.bind(me, s, book, {
         payee: dr.other,
         amount: dr.amount,
-        fulfils: dr.what === 'anchor' ? dr.anchor!.offer : (dr.follows ?? null),
+        fulfils: dr.what === 'anchor' ? dr.anchor!.offer : await this.followsOf(me, s, book, id, dr),
         whatFor: dr.whatFor,
         answers: null,
         draft: id,

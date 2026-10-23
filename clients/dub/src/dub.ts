@@ -2495,19 +2495,19 @@ export class Dub {
   private byHand(a: { signer: string; post?: string; value: string; unit: string; whatFor: string }): Promise<{ lines: Line[]; hand: { text: string; said: string[] } }> {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
-      let other = readId(a.signer);
+      const other = readId(a.signer);
       if (other === me.id) throw new Error('That is this identity itself. Nothing was prepared.');
       if (!UNITS_MODULES.some((m) => m.units.some((u) => u.hash === a.unit))) throw new Error('Choose a unit. Nothing was prepared.');
       const amount = { unit: a.unit, value: readValue(a.value) };
-      // A tip to a work shared under a deal: to its own payee, following the deal (draft 5, field 7).
+      // A tip to a work shared under a deal: a draft copied by hand carries no post, so it could not follow the deal (the money messages cMIP, draft 5, 8): refused, saying so.
       const deal = a.post ? await this.money.dealOf(readId(a.post), other, [...hints, ...this.inboxPlaces(p)], s.via) : null;
-      if (deal?.payee) other = deal.payee;
-      const d: Draft = { what: 'pay', other, amount, whatFor: a.whatFor.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : null, app: 'Dub', anchor: null, ...(deal?.payee ? { follows: deal.version } : {}) };
+      if (deal?.payee) throw new Error('A tip to a shared work is paid under Dub’s lane or through Damgar (Ask Damgar): a draft copied by hand carries no post, so it could not go to the deal. Nothing was prepared.');
+      const d: Draft = { what: 'pay', other, amount, whatFor: a.whatFor.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : null, app: 'Dub', anchor: null };
       return {
         lines: [{ text: 'Shown, not signed and not sent: copy it into Damgar, which reads it to you and signs it there.' }],
         hand: {
           text: base64(draftPayload(d)),
-          said: [...(deal ? [sharedLine(deal, (x) => this.nameOf(x, me.id, p))] : []), `To ${deal ? 'the deal’s own payee' : this.nameOf(other, me.id, p)} (${idForm(other)})`, `Amount: ${say(amount, new Set([amount.unit]))}`, ...(d.whatFor ? [`What for: ${d.whatFor}`] : []), 'From: this identity, paid in your own wallet'],
+          said: [`To ${this.nameOf(other, me.id, p)} (${idForm(other)})`, `Amount: ${say(amount, new Set([amount.unit]))}`, ...(d.whatFor ? [`What for: ${d.whatFor}`] : []), 'From: this identity, paid in your own wallet'],
         },
       };
     });
@@ -2537,21 +2537,17 @@ export class Dub {
       const value = readValue(a.value);
       const whatFor = a.whatFor?.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : null;
       let refs: [string, string][] | undefined;
-      let follows: string | null = null;
       if (a.post) {
         const places = [...hints, ...this.inboxPlaces(await this.store.people(me.id))];
         const d = describeAct((await followRef([readId(a.post), other], places, s.via)).act) as Described;
         if (d.signer !== other) throw new Error('The post tipped is not signed by the identity tipped. Nothing was prepared.');
         refs = [[d.id, other]];
-        // A post under a deal between separate people: the tip follows the deal and pays its own payee (the money messages cMIP, draft 5, 2.1, field 7).
+        // A post under a deal between separate people: the tip pays the deal's own payee; Damgar reads the deal from the post the draft names, and the payment follows it (the money messages cMIP, draft 5, 8).
         const deal = a.what === 'pay' ? await this.money.dealOf(d.id, other, places, s.via) : null;
-        if (deal?.payee) {
-          other = deal.payee;
-          follows = deal.version;
-        }
+        if (deal?.payee) other = deal.payee;
       }
       await this.current(me);
-      const r = await sendDraft(me, { what: a.what, other, amount: { unit: a.unit, value }, whatFor, app: 'Dub', anchor: null, follows }, { refs, via: s.via, save: () => this.store.saveIdentity(me) });
+      const r = await sendDraft(me, { what: a.what, other, amount: { unit: a.unit, value }, whatFor, app: 'Dub', anchor: null }, { refs, via: s.via, save: () => this.store.saveIdentity(me) });
       return {
         lines: [
           { text: `Prepared, not signed: ${a.what === 'pay' ? 'a tip' : 'a request to be paid'}, sealed to this identity and left at its homes (${r.left.join(', ')}).`, tone: 'ok' },

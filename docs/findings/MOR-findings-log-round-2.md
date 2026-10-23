@@ -28,6 +28,19 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F388. Splits between separate people: a deal in Edubba, its own payee, a tip to the agreement; two points for the MOR lead (23 October 2026; Dubsar Suite)
+
+**Asked by Nobody, allegedly (22 October 2026):** "the capacity to setup a split on a vow or a protected file, or even unprotected files for tips"; decided: "Edubba is the place", and "with a tip IF there is a split the target is the agreement not the act".
+
+**Read first** (`docs/splits-reading.md`): a deal between solo identities, its split service, a work, vow or post under it, buying, tipping and contest **fit as written**, with a suite cMIP draft for how apps find the deal, the tip, and the claim sealed to every party (the money messages cMIP, draft 5). Two points found, for the MOR lead:
+
+1. **A person has one payee pointer**, and Agreements rule 16 makes a deal's payee's pointer lead to the service, while Money rule 4 counts a payment only at the payee's own pointer: as written, a payee of a deal points its whole flow at the service, its personal tips arriving where nobody can receipt them. Agreements rules 15 and 17 read as if a direct payer paid the service's own pointer in the payee's name, which Money rule 4 and the payment cMIP's step 3 refuse; round 3 built that path for a lone seller (F358, 2), and **its buyer's claim does not verify** (unknown in Dub, invalid once the service's pointer is held). *Built meanwhile, on the texts as they stand:* **the deal's own payee**, an identity Edubba makes for the deal (a party holding no stake, its pointer the service's rails, its grant the one field 14 lists), so nobody's own wallet changes. *Lean:* Money rule 4 extended to the agreement's designated pointer, judged by Agreements.
+2. **The core reads a collective's sale under its agreement as no purchase** where the agreement stakes the collective itself (all its income) and not the work ("the agreement it names carries no stake in the work it pays for"), while the glossary says such a stake is "a share of all that collective's income, whoever earns it". So a collective's buyer's contest shows beside nothing, and every collective sale of round 3 is, for the core, owed back. *Lean:* the core counts the collective's own stake (null) as a stake in every work it sells under its agreement.
+
+**Found and fixed in the suite's code:** the one-party deal of a judged referral (round 3) wrote its stake on the publication's ID; the core reads a purchase's work by its work hash: now the work hash. A payee's grant naming "this agreement" was judged without the deal it counts through: `authorityOf` now holds every deal its grantor signed listing it, with every party's signature.
+
+**Where:** `docs/splits-report.md`; Edubba (Who shares in it, To sign, Shared deals, Sales), Dub (Buy and Tip on a shared work), Damgar (Account › Shared deals, the claim sealed to every party), the test split service, `clients/grants/src/deal.ts`; the money messages cMIP draft 5. Nothing in the core changed.
+
 ## F386. A buyer may contest a purchase, as a vow's buyer contests a sale: a protection forgotten (22 October 2026)
 
 **Asked by Nobody, allegedly:** "Is it possible to contest a purchase? Or only a vow? I pay to see a specific content, but the person sends a file with something else for example, how is it handled at the moment?"

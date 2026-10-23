@@ -418,6 +418,19 @@ test('a vow under a deal between separate people, bought from Dub and confirmed;
     const d = a.shared?.find((x) => x.payments.some((y) => y.kind === 'a tip'));
     assert.ok(d?.payouts.some((x) => x.amount.value === value && x.paid), `${m.name}: ${JSON.stringify(a.shared)}`);
   }
+  // The second way, Ask Damgar: the draft names the post; Damgar reads the deal from it and pays the deal, through its service.
+  const asked = await b.dub.c.ask<{ lines: { text: string }[] }>('pay', { how: 'damgar', kind: 'tip', signer: river.id, post: post.post, value: '100', unit: R });
+  assert.ok(asked.lines.some((l) => /Prepared, not signed/.test(l.text)), JSON.stringify(asked.lines));
+  await b.damgar.c.ask('look');
+  const item = (await b.damgar.c.ask<{ items: ToSign[] }>('to sign')).items.find((i) => i.kind === 'draft' && i.amount?.value === 100)!;
+  assert.ok(item.lines.some((l) => /^This work is shared: .*The payment follows the deal/.test(l.text)), JSON.stringify(item.lines));
+  await b.damgar.c.ask('sign draft', { id: item.id });
+  assert.ok((await svc.tick()).some((x) => /An invoice of its node sent/.test(x)), 'the service answers the tip asked of Damgar');
+  await b.damgar.c.ask('look');
+  const named = (await b.damgar.c.ask<Account>('account')).payments.find((x) => x.amount.value === 100);
+  assert.equal(named?.deal, 'Our first song is out. Tips are shared.', 'Damgar shows the payment with the deal’s name');
+  // By hand, a draft carries no post: refused for a shared work, saying so.
+  await assert.rejects(b.dub.c.ask('pay', { how: 'hand', kind: 'tip', signer: river.id, post: post.post, value: '100', unit: R }), /a draft copied by hand carries no post/);
 });
 
 test('a collective’s work bought: its claim opened by every member’s Edubba from MOR, and beside the sale in each member’s Sales what the core reads of the buyer’s contest (no purchase, for the MOR lead)', async () => {

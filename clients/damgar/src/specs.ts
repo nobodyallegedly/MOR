@@ -15,7 +15,7 @@ import { GRANT_LIMITS_SPEC, MESSAGES } from '../../grants/src/limits.ts';
 
 export const MONEY = MIRS.money;
 
-/** The money messages cMIP, draft 4 (`cmips/cmip-money-messages-draft-4.md`, F357: invoice requests to a split service; a purchase confirmed from another app): a test value until publication. Every message is written under it. */
+/** The money messages cMIP, draft 4 (`cmips/cmip-money-messages-draft-4.md`, F357: invoice requests to a split service; a purchase confirmed from another app): a test value until publication. Every message is written under it. Draft 5 (`cmips/cmip-money-messages-draft-5.md`: deals between separate people, a purchase's claim readable by every party) changes no format and keeps this value (its header). */
 export const MESSAGES_SPEC = sha256('Money messages cMIP, draft 4, test value until publication');
 
 /** Draft 3 (`cmips/cmip-money-messages-draft-3.md`, F352: the amount in an answer), still read: its types are draft 4's. */
@@ -174,10 +174,10 @@ export const ACCEPTABLE: Acceptable[] = [
     key: 'messages',
     name: 'Money messages',
     kind: 'cMIP',
-    text: 'cmips/cmip-money-messages-draft-4.md',
-    draft: 4,
+    text: 'cmips/cmip-money-messages-draft-5.md',
+    draft: 5,
     hashes: [MESSAGES_SPEC, MESSAGES_SPEC_3, MESSAGES_SPEC_2, MESSAGES_SPEC_1],
-    does: 'The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2); the amount in an answer, so a lane’s cap is judged on it (draft 3); an invoice request sent to a collective’s split service, and a purchase confirmed from Edubba (draft 4). Written by Damgar’s builds, awaiting approval.',
+    does: 'The messages between apps and people: a draft sealed to yourself by Dub or Edubba, a request to be paid, an invoice request and its answer (draft 1); a lane asked by an app, and a sale told to your own Dub (draft 2); the amount in an answer, so a lane’s cap is judged on it (draft 3); an invoice request sent to a collective’s split service, and a purchase confirmed from Edubba (draft 4); a deal between separate people, its tips to the deal, and a purchase’s claim readable by every party or member (draft 5, no format change). Written by Damgar’s builds, awaiting approval.',
     here: 'Needed to receive drafts from Dub and Edubba, requests from others, and to pay or be paid at all: without it, nothing arrives here.',
     built: true,
     needs: ['payment'],

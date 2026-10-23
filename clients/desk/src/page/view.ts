@@ -74,6 +74,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .edubba-chips .k-chip.k-on{background:var(--k-p);color:var(--k-ink)}
 .edubba-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
 .edubba-grid .k-box{margin:0}
+.edubba-wrap{overflow-wrap:anywhere;word-break:break-all}
 .edubba-card-acts{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0 2px}
 .edubba-diary{background:var(--k-wash);border-radius:16px;padding:16px 18px}
 .edubba-diary .edubba-act{border:1px solid var(--k-edge);border-radius:12px;padding:10px 12px;margin:10px 0;background:var(--k-bg)}
@@ -461,7 +462,7 @@ export function sharesFields(o: { names: string[]; payee: string | null; say: st
 ${row(0)}${row(1)}
 <div class="edubba-grid"><div><label>Your share, %</label><input name="mine" inputmode="decimal" autocomplete="off"></div><div><label>Referral share off the top, % (optional)</label><input name="dealReferral" inputmode="decimal" autocomplete="off"></div></div>
 <label>The split service that divides each payment: its ID</label><input name="dealService" type="text" autocomplete="off" spellcheck="false">
-<p class="k-small k-soft">The deal’s own payee, made here for this ${e(o.kind)}: <code class="k-mono">${e(o.payee ?? '…')}</code>. Ask the service for a key for it (<code>mor-split-service key ${e(o.payee ?? 'ID')}</code>), and give that key below.</p>
+<p class="k-small k-soft">The deal’s own payee, made here for this ${e(o.kind)}: <code class="k-mono edubba-wrap">${e(o.payee ?? '…')}</code>. Ask the service for a key for it (<code class="edubba-wrap">mor-split-service key ${e(o.payee ?? 'ID')}</code>), and give that key below.</p>
 <label>The key the service made for the deal’s payee (64 hexadecimal characters)</label><input name="dealKey" type="text" autocomplete="off" spellcheck="false"></div></details>`;
 }
 

@@ -15,8 +15,10 @@ On first start it makes its own test identity and says where it is paid (its Lig
 
 Its Lightning connection is the anchoring service's (`../anchoring-service/src/lnd.ts`), which pays invoices too.
 
+**A deal between separate people** (23 October 2026; the money messages cMIP, draft 5): the service makes one key for **the deal's own payee** (`key PAYEE`, the ID Edubba shows under "Who shares in it"); a buyer's invoice request names that payee and an offer under the deal, or, for **a tip, the deal itself** (it follows the agreement, not the act); the service receipts in the payee's name, splits the stake among all its holders (every person, by their shares, the referral role off the top where the buyer's claim names a repost, else to the owners), tells every party of the deal of a sale (a vow's too, field 3 naming the vow), and pays each one. A tip sells nothing: no sale is told; the split, delivered to every holder it pays, says what came in.
+
 A payment that waits for its buyer's claim is split without one after three rounds: the referral share, if nobody is named, goes to the stake. This wait is the build's own, a reading to confirm (`docs/round-3-report.md`).
 
 ## Tests
 
-It is tested where it is used, in `clients/desk`: `split.test.ts` (with a test node) and `round-3.test.ts`. `npm test` here type-checks it.
+It is tested where it is used, in `clients/desk`: `split.test.ts` (with a test node), `round-3.test.ts` and `shared-deal.test.ts` (a deal between separate people: a file, a vow and a tip). `npm test` here type-checks it.
