@@ -7973,7 +7973,8 @@ impl<'a> AgreementsView<'a> {
                         && relied(r)
                         && standing(r)
                         && counts(&r.id, &rc.amount, &rc.proof)
-                        && !self.receipt_overruled(&rc) =>
+                        && !self.receipt_overruled(&rc)
+                        && !self.shared_unresolved(&r.id, &rc.rail, &rc.proof, &rc.payee, &rc.fulfils, rc.batch.as_ref()) =>
                 {
                     receipts.push(((rc.rail, self.record_payment(&r.id, &rc.proof)), rc.amount.value));
                 }
@@ -7983,7 +7984,8 @@ impl<'a> AgreementsView<'a> {
                         && self.payers_claim(r)
                         && relied(r)
                         && counts(&r.id, &c.amount, &c.proof)
-                        && !self.claim_overruled(&c) =>
+                        && !self.claim_overruled(&c)
+                        && !self.shared_unresolved(&r.id, &c.rail, &c.proof, &c.payee, &c.fulfils, None) =>
                 {
                     claims.push(((c.rail, self.record_payment(&r.id, &c.proof)), c.amount.value));
                 }
@@ -7991,6 +7993,56 @@ impl<'a> AgreementsView<'a> {
             }
         }
         self.one_count(&receipts, &claims)
+    }
+
+    /// Money rule 12: receipts or claims of one payment that name different
+    /// purposes or payees share it only under one batch they both name
+    /// (receipt field 8; a claim names none); otherwise a verifier holding
+    /// both counts neither, until the receiver signs a receipt that resolves
+    /// them. Whether the record `id` (on `rail`, carrying `proof`, paying
+    /// `payee` toward `fulfils`, under `batch`) is so held back: another
+    /// standing record of its payment (a receipt signed by its payee, or a
+    /// payer's claim) names another purpose or payee, is not already
+    /// overruled under rule 11, and shares no batch with it; and the
+    /// conflict is not resolved, as it is where the receiver of `id`'s
+    /// payment has signed receipts of it, every receipt of the payment
+    /// naming this purpose and payee. Whether two records are one payment
+    /// is the rail's answer ([`Self::same_payment_of`]).
+    fn shared_unresolved(&self, id: &Hash, rail: &Hash, proof: &[u8], payee: &Hash, fulfils: &Hash, batch: Option<&Hash>) -> bool {
+        use crate::money::Payload as Fin;
+        let mut others = false;
+        let mut receipts_agree = true;
+        let mut receiver_signed = false;
+        for h in self.v.held_acts() {
+            if h.inside.spec != self.mirs.money || &h.id == id {
+                continue;
+            }
+            // A receipt rule 11 overrules still speaks for its receiver in
+            // resolving; it puts no purpose of its own against `id`.
+            let (r_rail, r_proof, r_payee, r_fulfils, r_batch, is_receipt, overruled) = match Fin::decode(h.inside.type_, &h.inside.payload) {
+                Ok(Fin::Receipt(rc)) if h.act.outside.signer == Some(rc.payee) && self.money_counts(h) => {
+                    let o = self.receipt_overruled(&rc);
+                    (rc.rail, rc.proof, rc.payee, rc.fulfils, rc.batch, true, o)
+                }
+                Ok(Fin::Claim(c)) if self.payers_claim(h) => {
+                    let o = self.claim_overruled(&c);
+                    (c.rail, c.proof, c.payee, c.fulfils, None, false, o)
+                }
+                _ => continue,
+            };
+            if &r_rail != rail || !self.same_payment_of((Some(&h.id), &r_proof), (Some(id), proof)) {
+                continue;
+            }
+            let same_purpose = &r_payee == payee && &r_fulfils == fulfils;
+            if is_receipt {
+                receiver_signed |= &r_payee == payee;
+                receipts_agree &= same_purpose;
+            }
+            if !same_purpose && !overruled && !(batch.is_some() && batch == r_batch.as_ref()) {
+                others = true;
+            }
+        }
+        others && !(receiver_signed && receipts_agree)
     }
 
     /// Money rules 10 to 12 over the records counted toward one purpose:
@@ -9036,12 +9088,35 @@ impl<'a> AgreementsView<'a> {
         })
     }
 
-    /// Whether some agreement held carries a stake in `work`.
-    fn claimed(&self, work: &Hash) -> bool {
-        self.v.held_acts().any(|x| {
-            self.is_agreements(x, types::TERMS)
-                && self.terms(&x.id).is_ok_and(|t| t.stake_on(&Who::Id(*work)).is_some())
-        })
+    /// Whether some agreement carries a stake in `work` (rule 12, "a work
+    /// some agreement claims"): only an agreement that exists (rule 1)
+    /// claims, a deal's version every party signed, or a collective's
+    /// clone a record or rotation put in force; terms nobody signed claim
+    /// nothing. `None` (unknown) where terms staking the work are held but
+    /// whether they exist rests on an act this verifier does not hold, and
+    /// no agreement held is known to claim it.
+    fn claimed(&self, work: &Hash) -> Option<bool> {
+        let mut unknown = false;
+        for x in self.v.held_acts() {
+            if !self.is_agreements(x, types::TERMS) || !self.terms(&x.id).is_ok_and(|t| t.stake_on(&Who::Id(*work)).is_some()) {
+                continue;
+            }
+            match self.agreement(&x.id).map(|a| a.exists) {
+                Ok(Some(true)) => return Some(true),
+                Ok(Some(false)) => {}
+                // A collective's clone: it exists where it is, or was, in
+                // force, a version of the lineage of the agreement in force.
+                Ok(None) => match self.latest_version(&x.id).and_then(|v| self.lineage(&v)) {
+                    Ok(l) if l.iter().any(|(i, _)| i == &x.id) => return Some(true),
+                    Ok(_) => {}
+                    Err(AgreementsError::Missing(_)) => unknown = true,
+                    Err(_) => {}
+                },
+                Err(AgreementsError::Missing(_)) => unknown = true,
+                Err(_) => {}
+            }
+        }
+        (!unknown).then_some(false)
     }
 
     /// The version in force of an agreement, against which a split of it
@@ -9700,12 +9775,16 @@ impl<'a> AgreementsView<'a> {
         }
         let work = self.work_of(&fulfils);
         let for_offer = self.v.get(&fulfils).is_some_and(|f| self.is_agreements(f, types::STANDING_OFFER));
-        let for_work = for_offer || work.is_some_and(|w| self.claimed(&w));
+        let claimed = match work {
+            Some(w) if !for_offer => self.claimed(&w),
+            _ => Some(false),
+        };
+        let for_work = for_offer || claimed != Some(false);
         if purchase.is_none() && !for_work {
             return Ok(None);
         }
         let mut e = PurchaseEval { id: *id, purchase: purchase.clone(), verdict: PurchaseVerdict::Purchase, refund_to };
-        if unanswered {
+        if unanswered || (purchase.is_none() && claimed.is_none()) {
             e.verdict = PurchaseVerdict::Unknown;
             return Ok(Some(e));
         }

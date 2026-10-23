@@ -1926,6 +1926,84 @@ impl Verifier {
         }
     }
 
+    /// Everyday check 2 and rule 28: whether `b`, a rotation or chain
+    /// signature of `res`'s identity past its counting links, is built on
+    /// one this verifier waits on (pending or contested, rule 42), each act
+    /// between passing the rotation checks on the state the one before it
+    /// would leave. Such a rotation does not count yet, so it, and every act
+    /// bound to it, is pending, never invalid: it may count once the
+    /// receipts it waits on arrive. A homeless rotation a valid objection
+    /// voids is waited on by nothing: rotations built on it are left as
+    /// they were (rule 55: void with it).
+    fn on_waiting(&self, cx: &mut Cx, res: &Resolution, b: &Held) -> bool {
+        let n = res.links.len();
+        if n == 0 || res.waiting().is_empty() {
+            return false;
+        }
+        // Back from `b` to an act the resolution waits on.
+        let mut path = vec![b.id];
+        let mut cur = b;
+        loop {
+            let prev = match cur.payload() {
+                Some(Payload::Rotation(r)) => r.prev,
+                Some(Payload::ChainSignature(c)) => c.prev,
+                _ => return false,
+            };
+            if cur.signer() != Some(&res.identity) || res.position_of(&prev).is_some() || path.len() > self.acts.len() {
+                return false;
+            }
+            let Some(p) = self.acts.get(&prev) else { return false };
+            path.push(prev);
+            if res.waiting().contains(&prev) {
+                if self.objected(cx, res, p) {
+                    return false;
+                }
+                break;
+            }
+            cur = p;
+        }
+        // Forward again: each act a candidate on the state the one before
+        // it would leave, at the next position.
+        let mut prev = res.links[n - 1].act;
+        let mut state = res.states[n - 1].clone();
+        for (i, id) in path.iter().rev().enumerate() {
+            let Some(c) = self.candidates(&res.identity, (n + i) as u64, &prev, &state).into_iter().find(|c| &c.id == id) else {
+                return false;
+            };
+            prev = c.id;
+            state = c.state;
+        }
+        true
+    }
+
+    /// Whether a homeless rotation `h` waited on at `res`'s next position
+    /// is voided by a valid objection from a home of the old set (rule 49,
+    /// step 3), as [`Self::homeless_basis`] reads one.
+    fn objected(&self, cx: &mut Cx, res: &Resolution, h: &Held) -> bool {
+        let n = res.links.len();
+        if !matches!(h.payload(), Some(Payload::Rotation(r)) if r.homeless) || n == 0 {
+            return false;
+        }
+        let id = res.identity;
+        let old = res.states[n - 1].operators();
+        for oid in self.by_type.get(&types::OBJECTION).into_iter().flatten() {
+            let o = &self.acts[oid];
+            let (Some(Payload::Objection(ob)), Some(s)) = (o.payload(), o.signer()) else {
+                continue;
+            };
+            if ob.identity != id || !names(&o.inside, &id, &h.id) || !old.contains(&Operator::Id(*s)) {
+                continue;
+            }
+            if res.dishonest.iter().any(|(d, p)| *d == Operator::Id(*s) && (*p as usize) < n) || self.closed(cx, s) {
+                continue;
+            }
+            if self.status_cx(cx, o) == Status::Valid {
+                return true;
+            }
+        }
+        false
+    }
+
     /// For an Envelopes withdrawal (type 3), whether its signer is the
     /// publication's signer or the identity the publication's `for` (field
     /// 8) names; `None` while the publication is not held. `Some(true)` for
@@ -2063,7 +2141,7 @@ impl Verifier {
             let res = self.resolve_cx(cx, &who);
             return if res.position_of(&x.id).is_some() {
                 Status::Valid
-            } else if res.waiting().contains(&x.id) {
+            } else if res.waiting().contains(&x.id) || self.on_waiting(cx, &res, x) {
                 Status::Pending
             } else if self.lost_at(&res, &who, x) {
                 Status::NotCounting
@@ -2090,7 +2168,7 @@ impl Verifier {
             if matches!(res.stop, Stop::CannotTell(ref c) if c.contains(binding)) {
                 return Status::Unknown;
             }
-            if res.waiting().contains(binding) {
+            if res.waiting().contains(binding) || self.acts.get(binding).is_some_and(|b| self.on_waiting(cx, &res, b)) {
                 return Status::Pending;
             }
             // F128: a scoped key, installed by an act of a higher MIR. A

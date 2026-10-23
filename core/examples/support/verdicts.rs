@@ -933,6 +933,46 @@ pub fn identity(out: &mut Out) {
     w2.rotate(&sh, Rot { signing_key: Some(schnorr("sol, a second line", 1)), ..Default::default() });
     out.case(&mut w2, "a self-hosted identity serving two rotations at one position: contested", "Identity rule 44; \"What stops a chain\"",
         "Two rotations at position 1, both served by the identity itself.", Facts::default(), json!({ "question": "chain", "identity": hx(&sh.id) }), json!({ "counting": [hx(&sh.id)], "next": "contested", "dishonest": [] }), None);
+
+    // A rotation built on a pending rotation, and an act bound to it:
+    // pending, never invalid (everyday check 2; rule 28).
+    let mut w = World::new();
+    let mut home = w.operator("a slow home");
+    let j = w.genesis("pia", vec![home_of(&home)], None, None);
+    let (r1, j1) = w.rotate(&j, Rot::default());
+    let (r2, mut j2) = w.rotate(&j1, Rot::default());
+    let post = w.post(&mut j2, "bound to a rotation built on a pending rotation");
+    let log = w.log.clone();
+    out.case(&mut w, "a rotation built on a rotation not yet receipted: pending", "Identity rule 28; everyday check 2",
+        "The first rotation waits on its home's receipt; the second, on the first, does not count yet either, and may once the receipts arrive: never invalid.", Facts::default(), ask_status(&r2), json!("pending"), None);
+    let mut w2 = World::new();
+    for (a, _) in &log {
+        w2.add(a);
+    }
+    out.case(&mut w2, "an act bound to that second rotation: pending", "Identity rule 28; everyday check 2",
+        "Signed with the key the second rotation installs; its binding does not count yet.", Facts::default(), ask_status(&post), json!("pending"), None);
+    let mut w3 = World::new();
+    for (a, _) in &log {
+        w3.add(a);
+    }
+    w3.receipt(&mut home, &j.id, &r1, 1);
+    w3.receipt(&mut home, &j.id, &r2, 2);
+    out.case(&mut w3, "the same once the home has receipted both rotations: the act valid", "Identity, \"Which rotation counts\"; everyday check 2",
+        "Both rotations now count; the act bound to the second is valid.", Facts::default(), ask_status(&post), json!("valid"), None);
+    // The case that stays: a rotation built on one that lost its position.
+    let mut w = World::new();
+    let mut h1 = w.operator("home-a");
+    let mut h2 = w.operator("home-b");
+    let mut h3 = w.operator("home-c");
+    let j = w.genesis("quin", vec![home_of(&h1), home_of(&h2), home_of(&h3)], None, None);
+    let (r, _) = w.rotate(&j, Rot::default());
+    let (rival, jr) = w.rotate(&j, Rot { signing_key: Some(schnorr("quin's thief", 3)), ..Default::default() });
+    w.receipt(&mut h1, &j.id, &r, 1);
+    w.receipt(&mut h2, &j.id, &r, 1);
+    w.receipt(&mut h3, &j.id, &rival, 1);
+    let (on_rival, _) = w.rotate(&jr, Rot::default());
+    out.case(&mut w, "a rotation built on a rotation that does not count: invalid", "Identity, \"Which rotation counts\", a rotation that does not count; everyday check 2",
+        "The rotation it builds on lost its position for good; nothing it waits on can make it count.", Facts::default(), ask_status(&on_rival), json!("invalid"), None);
 }
 
 pub fn text(out: &mut Out) {
@@ -1361,6 +1401,46 @@ pub fn money(out: &mut Out) {
     for (a, _) in &log { w3.add(a); }
     out.case(&mut w3, "an obligation signed by its creditor: invalid", "Money, \"Obligation\": signed by the debtor",
         "Cy writes a debt Ana would owe him.", Facts::default(), ask_status(&owed), json!("invalid"), None);
+
+    // One payment's records naming different debts, no batch: neither
+    // counts until the receiver resolves them (Money rule 12).
+    let mut w = World::new();
+    let mut ana = w.genesis("ana, a creditor twice", vec![own_home()], None, None);
+    let mut bo = w.genesis("bo, a debtor twice", vec![own_home()], None, None);
+    let pointer = pointer_act(&mut w, &mut ana, b"ana's wallet");
+    let debt = |w: &mut World, bo: &mut Person, ana: &mut Person| {
+        let o = Fin::Obligation(money::Obligation { debtor: bo.id, creditor: ana.id, amount: Amount { unit, value: 60 }, pointer, agreement: None });
+        let id = { let a = w.everyday_act(bo, mirs().money, 1, o.to_map(), None, None); w.add(&a) };
+        w.ack(ana, id);
+        id
+    };
+    let (d1, d2) = (debt(&mut w, &mut bo, &mut ana), debt(&mut w, &mut bo, &mut ana));
+    let proof = b"one payment of 60, claimed twice".to_vec();
+    let claim = |w: &mut World, bo: &mut Person, fulfils: Hash| {
+        let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let a = w.everyday_act(bo, mirs().money, 3, c.to_map(), None, None);
+        w.add(&a)
+    };
+    let c1 = claim(&mut w, &mut bo, d1);
+    let one = w.log.clone();
+    let c2 = claim(&mut w, &mut bo, d2);
+    let two = w.log.clone();
+    let facts = |ids: &[Hash]| Facts { rail_valid: ids.iter().map(|i| (*i, pointer)).collect(), rail_payments: vec![(proof.clone(), b"the one payment".to_vec())], ..Default::default() };
+    let world = |log: &[(mor_core::act::Act, Option<mor_core::lock::ContentKey>)]| { let mut w = World::new(); for (a, _) in log { w.add(a); } w };
+    out.case(&mut w, "one payment claimed toward two debts, no batch: it counts toward neither", "Money rule 12: records of one payment naming different purposes share it only under one batch",
+        "Bo's two claims carry one rail proof, the rail saying one payment, each naming a different debt of 60 to Ana; neither names a batch (a claim carries none), and Ana has signed no receipt resolving them.",
+        facts(&[c1, c2]), ask("paid toward", &d1), json!(0), None);
+    let mut w2 = world(&one);
+    out.case(&mut w2, "the same payment claimed toward one debt only: it counts", "Money rule 12; rule 10",
+        "Only the claim naming the first debt is held: one payment, one purpose.", facts(&[c1]), ask("paid toward", &d1), json!(60), None);
+    let mut w3 = world(&two);
+    let rc = { let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(bo.id)), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: d1, previous: None, forward: None, batch: None, purchase: None });
+        let a = w3.everyday_act(&mut ana, mirs().money, 2, r.to_map(), None, None); w3.add(&a) };
+    out.case(&mut w3, "both claims, and the receiver's receipt of the payment naming the first debt: it counts toward the first", "Money rule 12: until the receiver signs a receipt that resolves them; rule 11",
+        "Ana's receipt of the one payment names the first debt: the receiver has resolved the two claims.", facts(&[c1, c2, rc]), ask("paid toward", &d1), json!(60), None);
+    let mut w4 = world(&w3.log.clone());
+    out.case(&mut w4, "the same: nothing toward the second debt", "Money rule 12; rule 11",
+        "The receiver's receipt names the first debt; the claim naming the second counts for nothing.", facts(&[c1, c2, rc]), ask("paid toward", &d2), json!(0), None);
 }
 
 pub fn agreements(out: &mut Out) {
@@ -2324,6 +2404,37 @@ pub fn agreements(out: &mut Out) {
     out.case(&mut w, "a payment following a lone seller's offer, naming no claim: a purchase", "Agreements rule 12: the offer itself is the agreement it pays under (rule 11; Money rule 18)",
         "The offer names no agreement (field 0); a payment following it names no claim and is a purchase under the offer's terms.",
         Facts { rail_valid: vec![(r, offer)], rail_payments: vec![(b"the buyer pays the lone seller".to_vec(), b"the talk's payment".to_vec())], ..Default::default() }, json!({ "question": "purchase", "act": hx(&r) }), json!("purchase"), None);
+
+    // Only an agreement that exists claims a work (rule 12 with rule 1):
+    // terms nobody signed, or one party alone, claim nothing.
+    let mut w = World::new();
+    let mut eve = w.genesis("eve, a filmmaker", vec![own_home()], None, None);
+    let mut mal = w.genesis("mal, who drafts over her film", vec![own_home()], None, None);
+    let fan = w.genesis("a fan of eve's film", vec![own_home()], None, None);
+    let film = spec("eve's own film");
+    let mut t = deal(&[mal.id, eve.id], None);
+    t.text = "Terms Mal drafts staking Eve's film.".into();
+    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(film), holders: vec![(agreements::Who::Id(mal.id), 1_000_000)] }]);
+    let drafted = ag_act(&mut w, &mut mal, agreements::types::TERMS, t.to_map(), None);
+    let publ = { let a = w.everyday_act(&mut eve, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(film.to_vec()))]), None, None); w.add(&a) };
+    let proof = b"the fan pays eve for her film".to_vec();
+    let r = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fan.id)), payee: eve.id, amount: Amount { unit, value: 400 }, fulfils: publ, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(&mut eve, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
+    let facts = || Facts { rail_valid: vec![(r, publ)], rail_payments: vec![(proof.clone(), b"the fan's payment".to_vec())], ..Default::default() };
+    let log = w.log.clone();
+    out.case(&mut w, "a Money-only payment for a work only terms nobody signed stake: not a payment for a claimed work", "Agreements rule 12 (\"a work some agreement claims\") with rule 1",
+        "Mal publishes terms staking Eve's film, signed by nobody: no agreement exists, so nothing claims the film, and Eve's receipt needs no claim.",
+        facts(), json!({ "question": "purchase", "act": hx(&r) }), json!("not a payment for a work"), None);
+    let mut w2 = World::new();
+    for (a, _) in &log { w2.add(a); }
+    sign(&mut w2, &mut mal, &drafted);
+    out.case(&mut w2, "the same terms signed by their drafter alone: still nothing claims the work", "Agreements rule 12 with rule 1: an agreement exists once every party signed",
+        "Mal signs his own draft; Eve, its other party, never does.", facts(), json!({ "question": "purchase", "act": hx(&r) }), json!("not a payment for a work"), None);
+    let mut w3 = World::new();
+    for (a, _) in &w2.log.clone() { w3.add(a); }
+    sign(&mut w3, &mut eve, &drafted);
+    out.case(&mut w3, "the same terms once every party signed: the work is claimed, and the payment naming no claim is no purchase", "Agreements rule 12 with rule 1",
+        "Eve signs too: the agreement exists and claims the film; a payment for it naming no claim is no purchase, owed back.", facts(), json!({ "question": "purchase", "act": hx(&r) }), json!("no purchase"), None);
 }
 
 pub fn development(out: &mut Vec<J>) {
