@@ -42,6 +42,15 @@ const browserCore: Plugin = {
   },
 };
 
+/** Kišib's half of the air-gapped Module (the ways with Nakišib): in a browser, fetched beside the page. */
+const browserAirgap: Plugin = {
+  name: 'browser-airgap',
+  setup(b) {
+    const nodeAirgap = here('src/airgap.ts');
+    b.onResolve({ filter: /airgap\.ts$/ }, (a) => (resolve(dirname(a.importer), a.path) === nodeAirgap ? { path: here('src/web/airgap.ts') } : undefined));
+  },
+};
+
 /**
  * The only imports from Node allowed, each for the files that make it, put
  * in place by a browser shim (`src/web/node-*.ts`). Anything else from Node
@@ -85,7 +94,7 @@ await build({
   format: 'esm',
   target: 'es2022',
   platform: 'browser',
-  plugins: [browserCore, nodeShims, ownPackages],
+  plugins: [browserCore, browserAirgap, nodeShims, ownPackages],
   nodePaths: [here('node_modules')],
   legalComments: 'inline',
   logLevel: 'warning',
@@ -95,6 +104,8 @@ const page = readFileSync(here('static/web.html'), 'utf8');
 if (!page.includes('<!-- kishib banner -->')) throw new Error('static/web.html has lost its banner mark');
 writeFileSync(`${out}/index.html`, page.replace('<!-- kishib banner -->', WEB_BANNER));
 copyFileSync(here('../genesis/wasm/mor_wasm_bg.wasm'), `${out}/mor_wasm_bg.wasm`);
+// Kišib's own, for the ways with Nakišib (scripts/build-airgap-wasm.sh): the Module's online side.
+copyFileSync(here('airgap/pkg/kishib_airgap_bg.wasm'), `${out}/kishib_airgap_bg.wasm`);
 // Inter and its licence, copied byte for byte (F332, "Inter bundled").
 for (const f of Object.keys(FONT_FILES)) copyFileSync(here(`../dub/${FONTS_DIR}/${f}`), `${out}/${f}`);
 
@@ -110,7 +121,7 @@ if (release) {
   const file = (f: string) => new Uint8Array(readFileSync(`${out}/${f}`));
   const lines = [
     'Kišib’s web client, as published in the release (testing only; to be served at kishib.dubsar.org).',
-    'Rebuild: cd clients/genesis && npm run wasm; cd ../kishib && npm run release.',
+    'Rebuild: cd clients/genesis && npm run wasm; cd ../kishib && npm run release (which builds Kišib’s own WebAssembly first).',
     'The same tools give the same bytes (test/web-build.test.ts):',
     '',
     `rustc: ${version('rustc', ['-V'])}`,

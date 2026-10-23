@@ -1,0 +1,25 @@
+{
+  "name": "mor-nakisib",
+  "version": "0.1.0",
+  "description": "Nakišib (stone seal): Kišib's offline companion, for a Mac that never connects. The air-gapped chain-key signer Module given a face: Kišib's pending rotation read and summarised from its exact bytes, the paper typed, a fresh paper drawn and three parts asked back, signed on SIGN; a new identity's first paper and its commitment. Keeps nothing secret. No network. Never a web client. Test identities only, until MOR is frozen.",
+  "license": "MIT OR Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node --import tsx scripts/build.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "esbuild": "^0.25",
+    "tsx": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "playwright-core": "1.56",
+    "typescript": "^5"
+  }
+}

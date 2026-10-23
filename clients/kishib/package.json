@@ -9,7 +9,12 @@
     "mor-kishib": "./src/cli.ts"
   },
   "scripts": {
-    "wasm": "sh ../genesis/scripts/build-wasm.sh",
+    "wasm": "sh ../genesis/scripts/build-wasm.sh && sh scripts/build-airgap-wasm.sh",
+    "airgap": "sh scripts/build-airgap-wasm.sh",
+    "prebuild": "sh scripts/build-airgap-wasm.sh",
+    "prerelease": "sh scripts/build-airgap-wasm.sh",
+    "pretest": "sh scripts/build-airgap-wasm.sh",
+    "pretest:build": "sh scripts/build-airgap-wasm.sh",
     "build": "node --import tsx scripts/build-web.ts",
     "release": "node --import tsx scripts/build-web.ts --release",
     "typecheck": "tsc --noEmit",

@@ -286,14 +286,14 @@ test('the web client: a personal rotation of an identity made in Dub’s web cli
   assert.match((await page.locator('.kishib-holds').textContent()) ?? '', /Holds nothing/);
   // Each tile's column; Paper behind the quiet door.
   await page.click('[data-k-tile="identities"]');
-  assert.deepEqual(await page.locator('.k-col [data-k-col]').evaluateAll((xs) => xs.map((x) => (x as HTMLElement).dataset.kCol)), ['make', 'record', 'confirm']);
+  assert.deepEqual(await page.locator('.k-col [data-k-col]').evaluateAll((xs) => xs.map((x) => (x as HTMLElement).dataset.kCol)), ['make', 'make-nakisib', 'record', 'confirm']);
   assert.equal(await page.locator('[data-tab="runner"]').count(), 0, 'no Runner tab on the web');
   await page.click('[data-tab="paper"]');
   await page.locator('#door', { hasText: 'Have your paper ready. Kišib uses the words for one act and forgets them.' }).waitFor();
   assert.equal(await page.locator('form').count(), 0, 'nothing else on the screen');
   await shot(page, '01b-door');
   await page.click('[data-action="open-door"]');
-  assert.deepEqual(await page.locator('.k-col [data-k-col]').evaluateAll((xs) => xs.map((x) => (x as HTMLElement).dataset.kCol)), ['check', 'rotate', 'vault', 'successor', 'escape']);
+  assert.deepEqual(await page.locator('.k-col [data-k-col]').evaluateAll((xs) => xs.map((x) => (x as HTMLElement).dataset.kCol)), ['check', 'rotate', 'nakisib', 'vault', 'successor', 'escape']);
   await page.click('[data-tab="collectives"]');
   await page.click('[data-action="open-door"]');
   assert.deepEqual(await page.locator('.k-col [data-k-col]').evaluateAll((xs) => xs.map((x) => (x as HTMLElement).dataset.kCol)), ['give', 'start', 'room', 'checkshare']);
@@ -595,7 +595,7 @@ test('the program’s page: Make an identity (H48), its chain key’s words once
   ]);
   assert.match((await page.locator('.kishib-holds').textContent()) ?? '', /Holds nothing\s*runner off/);
   await go(page, 'identities', 'make');
-  assert.deepEqual(await page.locator('.k-col [data-k-col]').evaluateAll((xs) => xs.map((x) => (x as HTMLElement).dataset.kCol)), ['make', 'record', 'confirm', 'held']);
+  assert.deepEqual(await page.locator('.k-col [data-k-col]').evaluateAll((xs) => xs.map((x) => (x as HTMLElement).dataset.kCol)), ['make', 'make-nakisib', 'record', 'confirm', 'held']);
   await fill(page, '#form-make', { homes: H.join('\n'), relays: relay.base });
   await shot(page, '50-make-form');
   await page.getByRole('button', { name: 'Read it back' }).click();
