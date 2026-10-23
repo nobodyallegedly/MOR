@@ -75,10 +75,10 @@ var Verifier = class {
    * @param {string} id
    * @returns {any}
    */
-  agreementsAgreement(specs2, id) {
+  agreementsAgreement(specs, id) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsAgreement(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsAgreement(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -90,10 +90,10 @@ var Verifier = class {
    * @param {string} act
    * @returns {any}
    */
-  agreementsBacking(specs2, act) {
+  agreementsBacking(specs, act) {
     const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsBacking(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsBacking(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -107,12 +107,12 @@ var Verifier = class {
    * @param {string} line
    * @returns {boolean}
    */
-  agreementsBefore(specs2, x, line) {
+  agreementsBefore(specs, x, line) {
     const ptr0 = passStringToWasm0(x, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(line, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsBefore(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1);
+    const ret = wasm.verifier_agreementsBefore(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -127,10 +127,10 @@ var Verifier = class {
    * @param {string} collective
    * @returns {any}
    */
-  agreementsBrokenAct(specs2, collective) {
+  agreementsBrokenAct(specs, collective) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsBrokenAct(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsBrokenAct(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -144,10 +144,10 @@ var Verifier = class {
    * @param {string} collective
    * @returns {string | undefined}
    */
-  agreementsBroken(specs2, collective) {
+  agreementsBroken(specs, collective) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsBroken(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsBroken(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -169,12 +169,12 @@ var Verifier = class {
    * @param {string[]} accepted
    * @returns {any}
    */
-  agreementsChoose(specs2, payee, amount, accepted2) {
+  agreementsChoose(specs, payee, amount, accepted) {
     const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passArrayJsValueToWasm0(accepted2, wasm.__wbindgen_malloc);
+    const ptr1 = passArrayJsValueToWasm0(accepted, wasm.__wbindgen_malloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsChoose(this.__wbg_ptr, specs2, ptr0, len0, amount, ptr1, len1);
+    const ret = wasm.verifier_agreementsChoose(this.__wbg_ptr, specs, ptr0, len0, amount, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -188,12 +188,12 @@ var Verifier = class {
    * @param {string} work
    * @returns {string | undefined}
    */
-  agreementsClaimAfterRelease(specs2, claim, work) {
+  agreementsClaimAfterRelease(specs, claim, work) {
     const ptr0 = passStringToWasm0(claim, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(work, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsClaimAfterRelease(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1);
+    const ret = wasm.verifier_agreementsClaimAfterRelease(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -210,10 +210,10 @@ var Verifier = class {
    * @param {string} id
    * @returns {any}
    */
-  agreementsClosing(specs2, id) {
+  agreementsClosing(specs, id) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsClosing(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsClosing(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -226,10 +226,10 @@ var Verifier = class {
    * @param {string} agreement
    * @returns {string | undefined}
    */
-  agreementsCollectiveOf(specs2, agreement) {
+  agreementsCollectiveOf(specs, agreement) {
     const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsCollectiveOf(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsCollectiveOf(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -247,10 +247,10 @@ var Verifier = class {
    * @param {string} act
    * @returns {any}
    */
-  agreementsConsent(specs2, act) {
+  agreementsConsent(specs, act) {
     const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsConsent(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsConsent(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -264,10 +264,10 @@ var Verifier = class {
    * @param {string} collective
    * @returns {any}
    */
-  agreementsCurrent(specs2, collective) {
+  agreementsCurrent(specs, collective) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsCurrent(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsCurrent(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -278,10 +278,10 @@ var Verifier = class {
    * @param {string} agreement
    * @returns {any}
    */
-  agreementsDealFork(specs2, agreement) {
+  agreementsDealFork(specs, agreement) {
     const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsDealFork(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsDealFork(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -295,10 +295,10 @@ var Verifier = class {
    * @param {string} id
    * @returns {any}
    */
-  agreementsDebtRelease(specs2, id) {
+  agreementsDebtRelease(specs, id) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsDebtRelease(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsDebtRelease(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -312,10 +312,10 @@ var Verifier = class {
    * @param {string} id
    * @returns {string[] | undefined}
    */
-  agreementsDebtors(specs2, id) {
+  agreementsDebtors(specs, id) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsDebtors(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsDebtors(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -331,10 +331,10 @@ var Verifier = class {
    * @param {string} party
    * @returns {any}
    */
-  agreementsDeclarationsNaming(specs2, party) {
+  agreementsDeclarationsNaming(specs, party) {
     const ptr0 = passStringToWasm0(party, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsDeclarationsNaming(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsDeclarationsNaming(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -348,12 +348,12 @@ var Verifier = class {
    * @param {string} binding
    * @returns {string | undefined}
    */
-  agreementsDeclared(specs2, identity, binding) {
+  agreementsDeclared(specs, identity, binding) {
     const ptr0 = passStringToWasm0(identity, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(binding, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsDeclared(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1);
+    const ret = wasm.verifier_agreementsDeclared(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -372,10 +372,10 @@ var Verifier = class {
    * @param {string} act
    * @returns {any}
    */
-  agreementsDone(specs2, act) {
+  agreementsDone(specs, act) {
     const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsDone(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsDone(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -389,10 +389,10 @@ var Verifier = class {
    * @param {string} collective
    * @returns {string[]}
    */
-  agreementsEndingActs(specs2, collective) {
+  agreementsEndingActs(specs, collective) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsEndingActs(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsEndingActs(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -412,12 +412,12 @@ var Verifier = class {
    * @param {string} held
    * @returns {any}
    */
-  agreementsForkAlarm(specs2, payment, held) {
+  agreementsForkAlarm(specs, payment, held) {
     const ptr0 = passStringToWasm0(payment, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(held, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsForkAlarm(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1);
+    const ret = wasm.verifier_agreementsForkAlarm(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -435,10 +435,10 @@ var Verifier = class {
    * @param {string} id
    * @returns {any}
    */
-  agreementsFork(specs2, id) {
+  agreementsFork(specs, id) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsFork(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsFork(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -457,14 +457,14 @@ var Verifier = class {
    * @param {any} tips
    * @returns {string[] | undefined}
    */
-  agreementsHandOut(specs2, collective, agreement, chain_act, tips) {
+  agreementsHandOut(specs, collective, agreement, chain_act, tips) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ptr2 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len2 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1, ptr2, len2, tips);
+    const ret = wasm.verifier_agreementsHandOut(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, ptr2, len2, tips);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -482,10 +482,10 @@ var Verifier = class {
    * @param {string} act
    * @returns {string | undefined}
    */
-  agreementsInForce(specs2, act) {
+  agreementsInForce(specs, act) {
     const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsInForce(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsInForce(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -506,12 +506,12 @@ var Verifier = class {
    * @param {any} tips
    * @returns {string[]}
    */
-  agreementsLineUnheld(specs2, collective, chain_act, tips) {
+  agreementsLineUnheld(specs, collective, chain_act, tips) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(chain_act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1, tips);
+    const ret = wasm.verifier_agreementsLineUnheld(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, tips);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -531,12 +531,12 @@ var Verifier = class {
    * @param {string[]} leaving
    * @returns {any}
    */
-  agreementsNextVoices(specs2, collective, power, leaving) {
+  agreementsNextVoices(specs, collective, power, leaving) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passArrayJsValueToWasm0(leaving, wasm.__wbindgen_malloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsNextVoices(this.__wbg_ptr, specs2, ptr0, len0, power, ptr1, len1);
+    const ret = wasm.verifier_agreementsNextVoices(this.__wbg_ptr, specs, ptr0, len0, power, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -549,10 +549,10 @@ var Verifier = class {
    * @param {string} id
    * @returns {boolean | undefined}
    */
-  agreementsObligationBinds(specs2, id) {
+  agreementsObligationBinds(specs, id) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsObligationBinds(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsObligationBinds(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -569,10 +569,10 @@ var Verifier = class {
    * @param {string} collective
    * @returns {any}
    */
-  agreementsOwedBack(specs2, collective) {
+  agreementsOwedBack(specs, collective) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsOwedBack(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsOwedBack(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -586,10 +586,10 @@ var Verifier = class {
    * @param {string} collective
    * @returns {string[]}
    */
-  agreementsOwes(specs2, collective) {
+  agreementsOwes(specs, collective) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsOwes(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsOwes(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -608,10 +608,10 @@ var Verifier = class {
    * @param {string} id
    * @returns {bigint}
    */
-  agreementsPaid(specs2, id) {
+  agreementsPaid(specs, id) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPaid(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsPaid(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -630,12 +630,12 @@ var Verifier = class {
    * @param {bigint} amount
    * @returns {any}
    */
-  agreementsPayerSplit(specs2, agreement, object, amount) {
+  agreementsPayerSplit(specs, agreement, object, amount) {
     const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     var ptr1 = isLikeNone(object) ? 0 : passStringToWasm0(object, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPayerSplit(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1, amount);
+    const ret = wasm.verifier_agreementsPayerSplit(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, amount);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -651,12 +651,12 @@ var Verifier = class {
    * @param {string} agreement
    * @returns {any}
    */
-  agreementsPointerCheck(specs2, owners, agreement) {
+  agreementsPointerCheck(specs, owners, agreement) {
     const ptr0 = passStringToWasm0(owners, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPointerCheck(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1);
+    const ret = wasm.verifier_agreementsPointerCheck(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -672,12 +672,12 @@ var Verifier = class {
    * @param {string} payee
    * @returns {any}
    */
-  agreementsPointerHolding(specs2, fulfils, payee) {
+  agreementsPointerHolding(specs, fulfils, payee) {
     const ptr0 = passStringToWasm0(fulfils, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPointerHolding(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1);
+    const ret = wasm.verifier_agreementsPointerHolding(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -690,10 +690,10 @@ var Verifier = class {
    * @param {string} payee
    * @returns {any}
    */
-  agreementsPointer(specs2, payee) {
+  agreementsPointer(specs, payee) {
     const ptr0 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPointer(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsPointer(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -708,10 +708,10 @@ var Verifier = class {
    * @param {string} collective
    * @returns {any}
    */
-  agreementsPublishedResignations(specs2, collective) {
+  agreementsPublishedResignations(specs, collective) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPublishedResignations(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsPublishedResignations(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -734,10 +734,10 @@ var Verifier = class {
    * @param {string} purchase
    * @returns {string[]}
    */
-  agreementsPurchaseContests(specs2, purchase) {
+  agreementsPurchaseContests(specs, purchase) {
     const ptr0 = passStringToWasm0(purchase, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPurchaseContests(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsPurchaseContests(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -762,10 +762,10 @@ var Verifier = class {
    * @param {string} id
    * @returns {any}
    */
-  agreementsPurchase(specs2, id) {
+  agreementsPurchase(specs, id) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsPurchase(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsPurchase(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -779,12 +779,12 @@ var Verifier = class {
    * @param {string} record
    * @returns {any}
    */
-  agreementsRecord(specs2, collective, record2) {
+  agreementsRecord(specs, collective, record2) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(record2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsRecord(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1);
+    const ret = wasm.verifier_agreementsRecord(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -796,10 +796,10 @@ var Verifier = class {
    * @param {string} id
    * @returns {any}
    */
-  agreementsRelease(specs2, id) {
+  agreementsRelease(specs, id) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsRelease(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsRelease(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -812,10 +812,10 @@ var Verifier = class {
    * @param {string} id
    * @returns {any}
    */
-  agreementsRollbackAgreement(specs2, id) {
+  agreementsRollbackAgreement(specs, id) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsRollbackAgreement(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsRollbackAgreement(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -832,12 +832,12 @@ var Verifier = class {
    * @param {string[]} registers
    * @returns {any}
    */
-  agreementsRollbackRegisters(specs2, collective, registers) {
+  agreementsRollbackRegisters(specs, collective, registers) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passArrayJsValueToWasm0(registers, wasm.__wbindgen_malloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsRollbackRegisters(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1);
+    const ret = wasm.verifier_agreementsRollbackRegisters(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -855,12 +855,12 @@ var Verifier = class {
    * @param {string[]} leaving
    * @returns {any}
    */
-  agreementsRollbackVoices(specs2, collective, power, leaving) {
+  agreementsRollbackVoices(specs, collective, power, leaving) {
     const ptr0 = passStringToWasm0(collective, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passArrayJsValueToWasm0(leaving, wasm.__wbindgen_malloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsRollbackVoices(this.__wbg_ptr, specs2, ptr0, len0, power, ptr1, len1);
+    const ret = wasm.verifier_agreementsRollbackVoices(this.__wbg_ptr, specs, ptr0, len0, power, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -874,10 +874,10 @@ var Verifier = class {
    * @param {string} service
    * @returns {any}
    */
-  agreementsServiceAccount(specs2, service) {
+  agreementsServiceAccount(specs, service) {
     const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsServiceAccount(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsServiceAccount(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -896,12 +896,12 @@ var Verifier = class {
    * @param {string} agreement
    * @returns {any}
    */
-  agreementsSplitNumbers(specs2, service, agreement) {
+  agreementsSplitNumbers(specs, service, agreement) {
     const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsSplitNumbers(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1);
+    const ret = wasm.verifier_agreementsSplitNumbers(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -924,7 +924,7 @@ var Verifier = class {
    * @param {string | null} [previous]
    * @returns {Float64Array | undefined}
    */
-  agreementsSplitTurns(specs2, service, agreement, stake, holders, previous) {
+  agreementsSplitTurns(specs, service, agreement, stake, holders, previous) {
     const ptr0 = passStringToWasm0(service, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -933,7 +933,7 @@ var Verifier = class {
     const len2 = WASM_VECTOR_LEN;
     var ptr3 = isLikeNone(previous) ? 0 : passStringToWasm0(previous, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     var len3 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs2, ptr0, len0, ptr1, len1, stake, ptr2, len2, ptr3, len3);
+    const ret = wasm.verifier_agreementsSplitTurns(this.__wbg_ptr, specs, ptr0, len0, ptr1, len1, stake, ptr2, len2, ptr3, len3);
     if (ret[3]) {
       throw takeFromExternrefTable0(ret[2]);
     }
@@ -953,10 +953,10 @@ var Verifier = class {
    * @param {string} id
    * @returns {any}
    */
-  agreementsSplit(specs2, id) {
+  agreementsSplit(specs, id) {
     const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsSplit(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsSplit(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -978,13 +978,13 @@ var Verifier = class {
    * @param {string} agreement
    * @returns {string}
    */
-  agreementsVersionInForce(specs2, agreement) {
+  agreementsVersionInForce(specs, agreement) {
     let deferred3_0;
     let deferred3_1;
     try {
       const ptr0 = passStringToWasm0(agreement, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
       const len0 = WASM_VECTOR_LEN;
-      const ret = wasm.verifier_agreementsVersionInForce(this.__wbg_ptr, specs2, ptr0, len0);
+      const ret = wasm.verifier_agreementsVersionInForce(this.__wbg_ptr, specs, ptr0, len0);
       var ptr2 = ret[0];
       var len2 = ret[1];
       if (ret[3]) {
@@ -1015,10 +1015,10 @@ var Verifier = class {
    * @param {string} name
    * @returns {any}
    */
-  agreementsVow(specs2, name) {
+  agreementsVow(specs, name) {
     const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ret = wasm.verifier_agreementsVow(this.__wbg_ptr, specs2, ptr0, len0);
+    const ret = wasm.verifier_agreementsVow(this.__wbg_ptr, specs, ptr0, len0);
     if (ret[2]) {
       throw takeFromExternrefTable0(ret[1]);
     }
@@ -1079,10 +1079,10 @@ var Verifier = class {
    * @param {string} act
    * @param {string} home
    */
-  foundAtHome(act, home) {
+  foundAtHome(act, home2) {
     const ptr0 = passStringToWasm0(act, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
-    const ptr1 = passStringToWasm0(home, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const ptr1 = passStringToWasm0(home2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_foundAtHome(this.__wbg_ptr, ptr0, len0, ptr1, len1);
     if (ret[1]) {
@@ -1166,12 +1166,12 @@ var Verifier = class {
    * @param {string[]} accepted
    * @returns {any}
    */
-  moneyChoose(money_spec, payee, amount, accepted2) {
+  moneyChoose(money_spec, payee, amount, accepted) {
     const ptr0 = passStringToWasm0(money_spec, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passStringToWasm0(payee, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passArrayJsValueToWasm0(accepted2, wasm.__wbindgen_malloc);
+    const ptr2 = passArrayJsValueToWasm0(accepted, wasm.__wbindgen_malloc);
     const len2 = WASM_VECTOR_LEN;
     const ret = wasm.verifier_moneyChoose(this.__wbg_ptr, ptr0, len0, ptr1, len1, amount, ptr2, len2);
     if (ret[2]) {
@@ -1536,6 +1536,29 @@ function encryptionKeyPayload(version2, previous, _public) {
   wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
   return v3;
 }
+function formEncode(label, data) {
+  let deferred4_0;
+  let deferred4_1;
+  try {
+    const ptr0 = passStringToWasm0(label, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.formEncode(ptr0, len0, ptr1, len1);
+    var ptr3 = ret[0];
+    var len3 = ret[1];
+    if (ret[3]) {
+      ptr3 = 0;
+      len3 = 0;
+      throw takeFromExternrefTable0(ret[2]);
+    }
+    deferred4_0 = ptr3;
+    deferred4_1 = len3;
+    return getStringFromWasm0(ptr3, len3);
+  } finally {
+    wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+  }
+}
 function formRead(s, want) {
   const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
   const len0 = WASM_VECTOR_LEN;
@@ -1697,10 +1720,10 @@ function readKeyDelivery(payload) {
   }
   return takeFromExternrefTable0(ret[0]);
 }
-function readTerms(payload, specs2) {
+function readTerms(payload, specs) {
   const ptr0 = passArray8ToWasm0(payload, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
-  const ret = wasm.readTerms(ptr0, len0, specs2);
+  const ret = wasm.readTerms(ptr0, len0, specs);
   if (ret[2]) {
     throw takeFromExternrefTable0(ret[1]);
   }
@@ -2797,7 +2820,7 @@ var MIRS = {
 var ACK_SPECS = [MIRS.identity, MIRS.money, MIRS.agreements];
 var IDENTITY_TYPES = { genesis: 0, rotation: 1, receipt: 2, routes: 3, witness: 15, chainSignature: 16 };
 var ENVELOPES_TYPES = { publication: 0, keyDelivery: 1, encryptionKey: 4 };
-var withGrantLimits = (specs2, verdicts) => ({ ...specs2, grantLimits: verdicts });
+var withGrantLimits = (specs, verdicts) => ({ ...specs, grantLimits: verdicts });
 
 // ../reader/src/web/core.ts
 await __wbg_init({ module_or_path: new URL("mor_wasm_bg.wasm", document.baseURI) });
@@ -3063,10 +3086,10 @@ var AGREEMENTS_WORDS = {
   19: "a fork",
   20: "a closing"
 };
-function whatIs(d, specs2 = MIRS) {
+function whatIs(d, specs = MIRS) {
   if (d.spec === void 0 || d.type === void 0) return "a private act: only those it was meant for can read what it is";
-  const words = d.spec === specs2.identity ? IDENTITY_WORDS[d.type] : d.spec === specs2.envelopes ? ENVELOPES_WORDS[d.type] : d.spec === specs2.text ? d.type === 0 ? "a text, such as a post or a message" : void 0 : d.spec === specs2.money ? MONEY_WORDS[d.type] : d.spec === specs2.agreements ? AGREEMENTS_WORDS[d.type] : void 0;
-  const w = words ?? `an act of type ${d.type} under ${d.spec === specs2.identity ? "Identity" : d.spec === specs2.envelopes ? "Envelopes" : d.spec === specs2.money ? "Money" : d.spec === specs2.agreements ? "Agreements" : "another specification"}`;
+  const words = d.spec === specs.identity ? IDENTITY_WORDS[d.type] : d.spec === specs.envelopes ? ENVELOPES_WORDS[d.type] : d.spec === specs.text ? d.type === 0 ? "a text, such as a post or a message" : void 0 : d.spec === specs.money ? MONEY_WORDS[d.type] : d.spec === specs.agreements ? AGREEMENTS_WORDS[d.type] : void 0;
+  const w = words ?? `an act of type ${d.type} under ${d.spec === specs.identity ? "Identity" : d.spec === specs.envelopes ? "Envelopes" : d.spec === specs.money ? "Money" : d.spec === specs.agreements ? "Agreements" : "another specification"}`;
   return d.public ? w : `${w}, private`;
 }
 function ownLine(sequence) {
@@ -3097,7 +3120,7 @@ async function actsBy(signer, hints, via = {}) {
   return [...out.values()];
 }
 function linesOf(o) {
-  const specs2 = o.specs ?? MIRS;
+  const specs = o.specs ?? MIRS;
   const owns = (o.own.length && Array.isArray(o.own[0]) ? o.own : [o.own]).filter((l) => l.length);
   const held = /* @__PURE__ */ new Map();
   for (const a of o.acts) {
@@ -3108,7 +3131,7 @@ function linesOf(o) {
       continue;
     }
     if (d.signer !== o.identity) continue;
-    if (d.spec === specs2.identity && (d.type === IDENTITY_TYPES.genesis || d.type === IDENTITY_TYPES.rotation || d.type === IDENTITY_TYPES.chainSignature)) continue;
+    if (d.spec === specs.identity && (d.type === IDENTITY_TYPES.genesis || d.type === IDENTITY_TYPES.rotation || d.type === IDENTITY_TYPES.chainSignature)) continue;
     held.set(d.id, d);
   }
   const ownPrev = new Map(owns.flatMap((line) => line.map((id, i) => [id, i ? line[i - 1] : null])));
@@ -3119,18 +3142,18 @@ function linesOf(o) {
     if (!d || d.spec === void 0) return { known: false, prev: null };
     return { known: true, prev: d.prev ?? null };
   };
-  const named = /* @__PURE__ */ new Set();
+  const named2 = /* @__PURE__ */ new Set();
   for (const id of [...held.keys(), ...ownPrev.keys()]) {
     const p = prevOf(id);
-    if (p.prev) named.add(p.prev);
+    if (p.prev) named2.add(p.prev);
   }
   const ownTips = new Set(owns.map((line) => line[line.length - 1]));
-  const tips = [...held.values()].filter((d) => !named.has(d.id) && d.binding === o.binding).map((d) => d.id);
-  for (const t of ownTips) if (!tips.includes(t) && !named.has(t)) tips.push(t);
+  const tips = [...held.values()].filter((d) => !named2.has(d.id) && d.binding === o.binding).map((d) => d.id);
+  for (const t of ownTips) if (!tips.includes(t) && !named2.has(t)) tips.push(t);
   const out = [];
   for (const tip of tips) {
     const d = held.get(tip);
-    const latest = d ? whatIs(d, specs2) : "an act made on this device";
+    const latest = d ? whatIs(d, specs) : "an act made on this device";
     const ids = [];
     let at = tip;
     let why;
@@ -3163,7 +3186,7 @@ function linesOf(o) {
   return out.sort((a, b) => Number(b.own) - Number(a.own) || (a.tip < b.tip ? -1 : 1));
 }
 function unplaced(o) {
-  const specs2 = o.specs ?? MIRS;
+  const specs = o.specs ?? MIRS;
   const placed = new Set(linesOf({ ...o, own: [] }).filter((l) => l.readable).flatMap((l) => l.walked));
   const out = /* @__PURE__ */ new Set();
   for (const a of o.acts) {
@@ -3174,7 +3197,7 @@ function unplaced(o) {
       continue;
     }
     if (d.signer !== o.identity || d.binding !== o.binding || placed.has(d.id)) continue;
-    if (d.spec === specs2.identity && (d.type === IDENTITY_TYPES.genesis || d.type === IDENTITY_TYPES.rotation || d.type === IDENTITY_TYPES.chainSignature)) continue;
+    if (d.spec === specs.identity && (d.type === IDENTITY_TYPES.genesis || d.type === IDENTITY_TYPES.rotation || d.type === IDENTITY_TYPES.chainSignature)) continue;
     out.add(d.id);
   }
   return [...out];
@@ -3185,17 +3208,17 @@ var APP_LINES = {
   Damgar: "the accepted list, payment claims, receipts, requests and answers, sales, a vault transfer, asks for a collective\u2019s promise",
   Ummia: "the accepted list, payments prepared for an anchor, asks for a collective\u2019s release, MIP discussions"
 };
-function lineOf(app3, kind) {
+function lineOf(app2, kind) {
   const k = kind === "earlier" ? "line from before (public and private acts together)" : kind ? `${kind} line` : "line";
-  return app3 ? `${app3}\u2019s ${k}` : `a ${k}`;
+  return app2 ? `${app2}\u2019s ${k}` : `a ${k}`;
 }
 var capital = (t) => t[0].toUpperCase() + t.slice(1);
-function livesOn(app3, kind) {
-  if (kind === "public") return `${app3 ? `${app3}\u2019s` : "its app\u2019s"} public acts: posts, names, routes, signatures on a collective\u2019s agreement, releases`;
-  return (app3 && APP_LINES[app3]) ?? "whatever its app signed there: possibly a member key for a collective, notes, a list";
+function livesOn(app2, kind) {
+  if (kind === "public") return `${app2 ? `${app2}\u2019s` : "its app\u2019s"} public acts: posts, names, routes, signatures on a collective\u2019s agreement, releases`;
+  return (app2 && APP_LINES[app2]) ?? "whatever its app signed there: possibly a member key for a collective, notes, a list";
 }
-function cardText(c, app3) {
-  return `${c.act} ${c.position} ${c.summary}${c.hidden === void 0 ? "" : ` ${c.hidden}`} ${app3}${c.line ? ` ${c.line}` : ""}${c.missing ? ` missing ${c.missing}` : ""}`;
+function cardText(c, app2) {
+  return `${c.act} ${c.position} ${c.summary}${c.hidden === void 0 ? "" : ` ${c.hidden}`} ${app2}${c.line ? ` ${c.line}` : ""}${c.missing ? ` missing ${c.missing}` : ""}`;
 }
 function lineWords(l) {
   const whose = l.own ? "This device\u2019s line" : "A line made elsewhere";
@@ -3418,13 +3441,13 @@ async function lookUp(identity, hints, via = {}, into) {
     const homes = inForce();
     let fresh = homes.filter((h) => !asked.has(h.hint));
     if (!fresh.length) {
-      const named = homelessHomes();
-      fresh = named.filter((h) => !asked.has(h.hint));
+      const named2 = homelessHomes();
+      fresh = named2.filter((h) => !asked.has(h.hint));
       if (!fresh.length) break;
       for (const h of fresh) asked.add(h.hint);
       await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record2(h).catch(() => failed(h.hint))));
-      const ops2 = [...new Set(named.map((h) => h.operator).filter((o) => !!o && o !== identity && !operatorActs.has(o)))];
-      await Promise.all(ops2.map((op) => operatorChain(op, named.filter((h) => h.operator === op).map((h) => h.hint))));
+      const ops2 = [...new Set(named2.map((h) => h.operator).filter((o) => !!o && o !== identity && !operatorActs.has(o)))];
+      await Promise.all(ops2.map((op) => operatorChain(op, named2.filter((h) => h.operator === op).map((h) => h.hint))));
       continue;
     }
     for (const h of fresh) asked.add(h.hint);
@@ -3479,6 +3502,19 @@ async function lookUp(identity, hints, via = {}, into) {
 function referenceTo(act) {
   const d = describeAct(act);
   return d.public ? [d.id, d.signer ?? d.id] : d.id;
+}
+async function referTo(id, hints, via = {}) {
+  const act = await firstOf(hints.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getAct(id));
+  if (!act) throw new Error(`the act ${id} was not found at ${hints.join(", ")}: a reference is written only to an act this client holds`);
+  const d = describeAct(act);
+  const signer = d.signer ?? d.id;
+  const out = { ref: referenceTo(act), act, public: d.public, signer, chain: [] };
+  if (!d.public) return out;
+  try {
+    return { ...out, chain: await chainOf(signer, hints, via) };
+  } catch (e3) {
+    return { ...out, chainProblem: `the identity chain of ${signer} was not found: ${e3 instanceof Error ? e3.message : e3}` };
+  }
 }
 async function chainOf(identity, hints, via = {}) {
   const l = await lookUp(identity, hints, via);
@@ -4136,18 +4172,18 @@ var TestIdentity = class _TestIdentity {
    */
   async readInbox(opts) {
     const out = [];
-    const secrets = [...this.f.encryption].reverse().map((e3) => unhex(e3.secret));
+    const secrets2 = [...this.f.encryption].reverse().map((e3) => unhex(e3.secret));
     for (const hint of opts.inbox) {
       const page = await relayAt(hint, this.via).feed({ to: this.f.identity });
       for (const it of page.items) {
         if (it.kind !== "sealed") continue;
-        out.push(await receive(it.item, this.f.identity, secrets, opts.senderHints, this.via));
+        out.push(await receive(it.item, this.f.identity, secrets2, opts.senderHints, this.via));
       }
     }
     return out;
   }
 };
-async function receive(sealed, me, secrets, senderHints, via = {}) {
+async function receive(sealed, me, secrets2, senderHints, via = {}) {
   const id = sealedId(sealed);
   let parts;
   try {
@@ -4158,7 +4194,7 @@ async function receive(sealed, me, secrets, senderHints, via = {}) {
   const index = me === null ? 0 : parts.to.indexOf(me);
   if (index < 0) return { sealed: id, opened: false, error: "not addressed to this identity" };
   let lastError = "no key";
-  for (const secret of secrets) {
+  for (const secret of secrets2) {
     record({ kind: "decapsulate", secret, ct: parts.capsules[index] });
     let o;
     try {
@@ -4206,9 +4242,9 @@ function sealFor(act, key, recipients) {
   recipients.forEach((r, i) => record({ kind: "encapsulate", publicKey: r.key, eseed: eseeds[i], ct: parts.capsules[i] }));
   return sealed;
 }
-function failure(home, e3) {
-  if (e3 instanceof RelayError) return { home, error: e3.reason, code: e3.code };
-  return { home, error: String(e3) };
+function failure(home2, e3) {
+  if (e3 instanceof RelayError) return { home: home2, error: e3.reason, code: e3.code };
+  return { home: home2, error: String(e3) };
 }
 
 // ../genesis/src/private.ts
@@ -4222,23 +4258,23 @@ async function leaveAtHomes(me, made, o = {}) {
   const via = o.via ?? me.via;
   const key = o.sealed || o.lockedOnly ? null : ownKey(me);
   const to = describeAct(made.act).to ?? [];
-  let copy = null;
-  if (key && to.length === 1 && to[0] === me.f.identity) copy = { sealed: sealFor(made.act, made.key, [{ id: me.f.identity, key }]), tags: [] };
-  else if (key && !to.length) copy = { sealed: sealFor(made.act, made.key, [{ key }]), tags: [pickupTag(key)] };
+  let copy2 = null;
+  if (key && to.length === 1 && to[0] === me.f.identity) copy2 = { sealed: sealFor(made.act, made.key, [{ id: me.f.identity, key }]), tags: [] };
+  else if (key && !to.length) copy2 = { sealed: sealFor(made.act, made.key, [{ key }]), tags: [pickupTag(key)] };
   else if (key) {
     const kd = await me.signApartNow(SPECS.envelopes, ENVELOPES_TYPES.keyDelivery, keyDeliveryPayload(made.id, made.key, false), { to: [me.f.identity] });
-    copy = { sealed: sealFor(kd.act, kd.key, [{ id: me.f.identity, key }]), tags: [] };
+    copy2 = { sealed: sealFor(kd.act, kd.key, [{ id: me.f.identity, key }]), tags: [] };
   }
   const took = [];
   for (const h of me.f.homes) {
     try {
       await relayAt(h.hint, via).putAct(made.act);
-      if (copy) await relayAt(h.hint, via).putSealed(copy.sealed, copy.tags);
+      if (copy2) await relayAt(h.hint, via).putSealed(copy2.sealed, copy2.tags);
       took.push(h.hint);
     } catch {
     }
   }
-  if (took.length && (o.sealed || o.lockedOnly || copy) && me.f.unsent?.[made.id]) delete me.f.unsent[made.id];
+  if (took.length && (o.sealed || o.lockedOnly || copy2) && me.f.unsent?.[made.id]) delete me.f.unsent[made.id];
   return took;
 }
 async function sendWaiting(me, via = me.via) {
@@ -4251,7 +4287,7 @@ function linesHeld(f) {
   if (!f.split) return f.sequence.length ? [{ ids: f.sequence }] : [];
   return [["public", f.sequence], ["private", f.private ?? []], ["earlier", f.earlier ?? []]].filter(([, ids]) => ids.length).map(([kind, ids]) => ({ kind, ids }));
 }
-async function lineAtHomes(me, app3, via = me.via) {
+async function lineAtHomes(me, app2, via = me.via) {
   const lines2 = linesHeld(me.f).map((l) => ({ ...l, card: ownLine(l.ids).card }));
   const acts2 = lines2.reduce((n, l) => n + l.ids.length, 0);
   const shown = (l) => ({ acts: acts2, latest: l?.card.act ?? null, summary: l?.card.summary ?? null });
@@ -4260,8 +4296,8 @@ async function lineAtHomes(me, app3, via = me.via) {
   const homes = me.f.homes.map((h) => h.hint);
   let places = homes;
   try {
-    const look = await lookUp(me.f.identity, homes, via);
-    places = [.../* @__PURE__ */ new Set([...homes, ...look.resolution.homes.map((h) => h.hint), ...look.routes.routes.flatMap((x) => x.hints)])];
+    const look2 = await lookUp(me.f.identity, homes, via);
+    places = [.../* @__PURE__ */ new Set([...homes, ...look2.resolution.homes.map((h) => h.hint), ...look2.routes.routes.flatMap((x) => x.hints)])];
   } catch {
   }
   const found = await actsBy(me.f.identity, places, via);
@@ -4279,10 +4315,10 @@ async function lineAtHomes(me, app3, via = me.via) {
     atHomes: !away,
     missing: cards.reduce((n, c) => n + c.missing, 0),
     hidden: cards.reduce((n, c) => n + c.card.hidden, 0),
-    card: away ? null : cards.map((c) => cardText(c.card, app3)).join("; ")
+    card: away ? null : cards.map((c) => cardText(c.card, app2)).join("; ")
   };
 }
-async function ownActs(identity, secrets, places, via = {}) {
+async function ownActs(identity, secrets2, places, via = {}) {
   const out = /* @__PURE__ */ new Map();
   const locked = /* @__PURE__ */ new Map();
   for (const a of await actsBy(identity, places, via)) {
@@ -4291,8 +4327,8 @@ async function ownActs(identity, secrets, places, via = {}) {
     else locked.set(d.id, a);
   }
   const delivered = /* @__PURE__ */ new Map();
-  if (!secrets.length) return [...out.values()];
-  const queries = [{ q: { to: identity }, me: identity }, ...secrets.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
+  if (!secrets2.length) return [...out.values()];
+  const queries = [{ q: { to: identity }, me: identity }, ...secrets2.map((s) => ({ q: { pickup: pickupTag(xwingPublic(s)) } }))];
   for (const h of places) {
     for (const { q, me } of queries) {
       let after;
@@ -4301,7 +4337,7 @@ async function ownActs(identity, secrets, places, via = {}) {
           const page = await relayAt(h, via).feed({ ...q, after });
           for (const it of page.items) {
             if (it.kind !== "sealed") continue;
-            for (const s of secrets) {
+            for (const s of secrets2) {
               try {
                 const o = openSealed(it.item, me, s);
                 const d = o.described;
@@ -4325,14 +4361,14 @@ async function ownActs(identity, secrets, places, via = {}) {
   for (const [id, key] of delivered) if (!out.has(id) && locked.has(id)) out.set(id, { act: locked.get(id), key });
   return [...out.values()];
 }
-function lineReader(app3) {
+function lineReader(app2) {
   const seen = /* @__PURE__ */ new Map();
   return async (me, via = me.via) => {
     const latest = linesHeld(me.f).map((l) => l.ids[l.ids.length - 1]).join(" ") || null;
     const was = seen.get(me.f.identity);
     const waiting = Object.keys(me.f.unsent ?? {}).length > 0;
     if (was && was.latest === latest && !waiting && was.line.atHomes && Date.now() - was.at < 6e4) return was.line;
-    const line = await lineAtHomes(me, app3, via);
+    const line = await lineAtHomes(me, app2, via);
     seen.set(me.f.identity, { latest, at: Date.now(), line });
     return line;
   };
@@ -4416,6 +4452,82 @@ async function negotiate(by, to, o) {
 
 // ../../modules/timestamp/src/stamp.ts
 var TIMESTAMP_SPEC = sha2562("timestamp clock Module, draft 1, test value until publication");
+var STAMP_TYPE = 1;
+var MOST_PER_STAMP = 256;
+var NotAStamp = class extends Error {
+};
+function decodeStamp(payload) {
+  let m;
+  try {
+    m = cborDecode(payload);
+  } catch (e3) {
+    throw new NotAStamp(`not CBOR (${e3 instanceof Error ? e3.message : e3})`);
+  }
+  if (!(m instanceof Map)) throw new NotAStamp("not a map");
+  for (const k of m.keys()) if (k !== 0 && k !== 1) throw new NotAStamp(`${String(k)} is not one of its fields`);
+  const time = m.get(0);
+  if (typeof time !== "number" || !Number.isSafeInteger(time) || time < 0) throw new NotAStamp("its time (field 0) is not a whole number of seconds");
+  const list3 = m.get(1);
+  if (!Array.isArray(list3) || !list3.length) throw new NotAStamp("its acts (field 1) are not a list of at least one");
+  if (list3.length > MOST_PER_STAMP) throw new NotAStamp(`it names more than ${MOST_PER_STAMP} acts`);
+  const acts2 = list3.map((x, i) => {
+    if (!(x instanceof Uint8Array) || x.length !== 32) throw new NotAStamp(`its act ${i + 1} is not an act id`);
+    return hex(x);
+  });
+  if (new Set(acts2).size !== acts2.length) throw new NotAStamp("it names an act twice");
+  return { time, acts: acts2 };
+}
+
+// ../../modules/timestamp/src/read.ts
+function asStamp(d, clock) {
+  if (!d.public || d.signer !== clock || d.spec !== TIMESTAMP_SPEC || d.type !== STAMP_TYPE || !d.payload) return null;
+  try {
+    const s = decodeStamp(d.payload);
+    return { stamp: d.id, time: s.time, acts: s.acts };
+  } catch (e3) {
+    if (e3 instanceof NotAStamp) return null;
+    throw e3;
+  }
+}
+function earliest(stamps2) {
+  const out = /* @__PURE__ */ new Map();
+  for (const s of stamps2) for (const a of s.acts) if (!out.has(a) || s.time < out.get(a)) out.set(a, s.time);
+  return out;
+}
+async function readStamps(clock, places, judge2, via = {}) {
+  const seen = /* @__PURE__ */ new Map();
+  for (const h of places) {
+    let after;
+    for (; ; ) {
+      let page;
+      try {
+        page = await relayAt(h, via).feed({ signer: clock, after });
+      } catch {
+        break;
+      }
+      for (const it of page.items) {
+        if (it.kind !== "act") continue;
+        let s = null;
+        try {
+          s = asStamp(describeAct(it.item), clock);
+        } catch {
+          continue;
+        }
+        if (s && !seen.has(s.stamp)) seen.set(s.stamp, { s, act: it.item });
+      }
+      if (!page.items.length || page.next === after) break;
+      after = page.next;
+    }
+  }
+  const verified = [];
+  for (const { s, act } of seen.values()) {
+    try {
+      if (await judge2.standing(act, s.stamp, clock) === "valid") verified.push(s);
+    } catch {
+    }
+  }
+  return { found: seen.size, verified, earliest: earliest(verified) };
+}
 
 // ../grants/src/limits.ts
 var GRANT_LIMITS_SPEC = sha2562("Grant limits cMIP, draft 1, test value until publication");
@@ -4459,9 +4571,9 @@ function readPayload(p) {
     return null;
   }
 }
-async function readMemberKeys(identity, secrets, homes, via = {}) {
+async function readMemberKeys(identity, secrets2, homes, via = {}) {
   const out = /* @__PURE__ */ new Map();
-  if (!secrets.length) return [];
+  if (!secrets2.length) return [];
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   let l;
   try {
@@ -4470,7 +4582,7 @@ async function readMemberKeys(identity, secrets, homes, via = {}) {
     return [];
   }
   const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
-  for (const x of await ownActs(identity, secrets, [.../* @__PURE__ */ new Set([...at, ...l.routes.routes.flatMap((r) => r.hints)])], via)) {
+  for (const x of await ownActs(identity, secrets2, [.../* @__PURE__ */ new Set([...at, ...l.routes.routes.flatMap((r) => r.hints)])], via)) {
     try {
       if (x.key) l.verifier.addWithKey(x.act, x.key);
       else l.verifier.add(x.act);
@@ -4485,7 +4597,7 @@ async function readMemberKeys(identity, secrets, homes, via = {}) {
         for (const it of page.items) {
           if (it.kind !== "sealed") continue;
           let o = null;
-          for (const s of secrets) {
+          for (const s of secrets2) {
             try {
               o = openSealed(it.item, identity, s);
               break;
@@ -6766,6 +6878,10 @@ function encryptionSecret(signingSeed) {
 var groupId = (id) => id.match(/.{1,4}/g).join(" ");
 
 // ../genesis/src/forms.ts
+var form = (label, hex3) => formEncode(label, unhex(hex3));
+var idForm = (id) => form("mid", id);
+var actForm = (id) => form("mact", id);
+var specForm = (hash) => form("mspec", hash);
 function readForm(typed, want) {
   const t = typed.trim();
   const squeezed = t.replace(/\s+/g, "");
@@ -6780,6 +6896,7 @@ function readForm(typed, want) {
 }
 var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
 var readId = (typed) => readForm(typed, "mid").hex;
+var readActId = (typed) => readForm(typed, "mact").hex;
 
 // ../dub/src/carryin.ts
 var message = (e3) => e3 instanceof Error ? e3.message : String(e3);
@@ -6791,18 +6908,18 @@ async function lookCurrent(id, seed, hints, via) {
   } catch {
     throw new Error("The words do not hold a signing key. Nothing was kept.");
   }
-  let look;
+  let look2;
   try {
-    look = await lookUp(id, hints, via);
+    look2 = await lookUp(id, hints, via);
   } catch (e3) {
     throw new Error(`This identity was not found at ${hints.join(", ")}: ${message(e3)}`);
   }
-  const r = look.resolution;
+  const r = look2.resolution;
   if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing can be signed for it until they agree.");
   if (r.stop === "pending" || r.waiting.length) throw new Error("A change of its keys is waiting for its homes: bring it once that change counts, with the new words.");
   if (!r.signingKey || !r.links.length) throw new Error(`Its chain could not be read (${r.stop}).`);
   if (hex(r.signingKey) !== hex(pub)) throw new Error(NOT_CURRENT);
-  return look;
+  return look2;
 }
 async function servedChain(id, homes, via) {
   for (const h of homes) {
@@ -6814,20 +6931,30 @@ async function servedChain(id, homes, via) {
   }
   throw new Error("None of its homes served its chain.");
 }
-function carriedKey(look, seed) {
+function carriedKey(look2, seed) {
   const secret = encryptionSecret(seed);
-  if (!look.encryptionKey || !look.encryptionKeyAct || hex(xwingPublic(secret)) !== hex(look.encryptionKey)) return null;
-  const e3 = look.verifier.latest(look.resolution.identity, SPECS.envelopes, 4);
+  if (!look2.encryptionKey || !look2.encryptionKeyAct || hex(xwingPublic(secret)) !== hex(look2.encryptionKey)) return null;
+  const e3 = look2.verifier.latest(look2.resolution.identity, SPECS.envelopes, 4);
   const version2 = e3.payload ? Number(cborDecode(e3.payload).get(0)) : 1;
-  return { version: version2, act: look.encryptionKeyAct, secret: hex(secret) };
+  return { version: version2, act: look2.encryptionKeyAct, secret: hex(secret) };
 }
 
 // ../dub/src/people.ts
 var PEOPLE_SPEC = sha2562("People cMIP, draft 2, test value until publication");
 var PEOPLE_SPEC_1 = sha2562("People cMIP, draft 1, test value until publication");
-function openerOf(identity, secrets) {
+var SEALED_LIST = 1;
+function sealedListPayload(a) {
+  const m = /* @__PURE__ */ new Map([[0, a.version]]);
+  if (a.previous) m.set(1, unhex(a.previous));
+  m.set(
+    2,
+    a.follows.map((f) => f.name ? [unhex(f.id), f.name] : [unhex(f.id)])
+  );
+  return cborEncode(m);
+}
+function openerOf(identity, secrets2) {
   return async (sealed) => sealed.map((bytes) => {
-    for (const s of secrets) {
+    for (const s of secrets2) {
       try {
         return openSealed(bytes, identity, s);
       } catch {
@@ -6835,6 +6962,73 @@ function openerOf(identity, secrets) {
     }
     return null;
   });
+}
+async function readSealedList(identity, keys, homes, via = {}) {
+  const out = { act: null, version: 0, follows: [], forked: false, problems: [] };
+  if (Array.isArray(keys) && !keys.length) return out;
+  const open = Array.isArray(keys) ? openerOf(identity, keys) : keys;
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  let l;
+  try {
+    l = await lookUp(identity, homes, via, v);
+  } catch (e3) {
+    out.problems.push(`its homes did not answer (${e3 instanceof Error ? e3.message : String(e3)})`);
+    return out;
+  }
+  const at = [.../* @__PURE__ */ new Set([...homes, ...l.resolution.homes.map((h) => h.hint)])];
+  const acts2 = /* @__PURE__ */ new Map();
+  for (const h of at) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via).feed({ to: identity, after });
+        const sealed = page.items.filter((it) => it.kind === "sealed");
+        const opened2 = sealed.length ? await open(sealed.map((it) => it.item)) : [];
+        for (const o of opened2) {
+          const d = o?.described;
+          if (!o || !d || acts2.has(d.id) || d.public || d.signer !== identity || d.spec !== PEOPLE_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
+          if (o.key) l.verifier.addWithKey(o.act, o.key);
+          else l.verifier.add(o.act);
+          if (l.verifier.status(d.id) !== "valid") continue;
+          try {
+            const m = cborDecode(d.payload);
+            const prev = m.get(1);
+            const follows2 = [];
+            for (const x of m.get(2)) {
+              if (!Array.isArray(x) || !(x[0] instanceof Uint8Array) || x[0].length !== 32) continue;
+              const id = hex(x[0]);
+              if (follows2.some((f) => f.id === id)) continue;
+              follows2.push({ id, name: typeof x[1] === "string" && x[1].trim() ? x[1].slice(0, 64) : null });
+            }
+            acts2.set(d.id, { version: Number(m.get(0)), previous: prev instanceof Uint8Array ? hex(prev) : null, follows: follows2 });
+          } catch {
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch (e3) {
+      out.problems.push(`${h}: ${e3 instanceof Error ? e3.message : String(e3)}`);
+    }
+  }
+  const best = (from, version2) => {
+    const next = [...acts2.entries()].filter(([, a]) => a.previous === from && a.version === version2 + 1);
+    if (next.length > 1) out.forked = true;
+    let pick = null;
+    for (const [id] of next) {
+      const below = best(id, version2 + 1);
+      const depth = below ? below.depth : version2 + 1;
+      const tip2 = below ? below.id : id;
+      if (!pick || depth > pick.depth || depth === pick.depth && tip2 < pick.tip) pick = { id: tip2, depth, tip: tip2 };
+    }
+    return pick ? { id: pick.tip, depth: pick.depth } : null;
+  };
+  const tip = best(null, 0);
+  if (tip) {
+    const a = acts2.get(tip.id);
+    Object.assign(out, { act: tip.id, version: a.version, follows: a.follows });
+  }
+  return out;
 }
 
 // ../damgar/src/units.ts
@@ -6861,9 +7055,9 @@ var unitOf = (hash) => {
   return null;
 };
 var grouped = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-function say(a, accepted2) {
+function say(a, accepted) {
   const k = unitOf(a.unit);
-  if (!k || !accepted2.has(a.unit)) return `${grouped(a.value)} of unit ${a.unit.slice(0, 8)}\u2026 (${k ? `${k.module.name}, not accepted here` : "a units Module Damgar does not know"})`;
+  if (!k || !accepted.has(a.unit)) return `${grouped(a.value)} of unit ${a.unit.slice(0, 8)}\u2026 (${k ? `${k.module.name}, not accepted here` : "a units Module Damgar does not know"})`;
   return `${grouped(a.value)} ${a.value === 1 ? k.unit.one : k.unit.many}`;
 }
 
@@ -7010,7 +7204,7 @@ var labelOf = (hash) => {
 };
 
 // ../damgar/src/accepted.ts
-var SEALED_LIST = 1;
+var SEALED_LIST2 = 1;
 var PUBLISHED_LIST = 0;
 function listPayload(a, withdrawn = false) {
   const m = /* @__PURE__ */ new Map([[0, a.version]]);
@@ -7064,10 +7258,10 @@ async function readActs(identity, keys, homes, via) {
       for (; ; ) {
         const page = await relayAt(h, via).feed({ to: identity, after });
         const sealed = page.items.filter((it) => it.kind === "sealed").map((it) => it.item);
-        const opened = sealed.length ? await open(sealed) : [];
-        for (const o of opened) {
+        const opened2 = sealed.length ? await open(sealed) : [];
+        for (const o of opened2) {
           const d = o?.described;
-          if (!o || !d || acts2.has(d.id) || d.public || d.signer !== identity || d.spec !== ACCEPTED_SPEC || d.type !== SEALED_LIST || !d.payload) continue;
+          if (!o || !d || acts2.has(d.id) || d.public || d.signer !== identity || d.spec !== ACCEPTED_SPEC || d.type !== SEALED_LIST2 || !d.payload) continue;
           if (o.key) l.verifier.addWithKey(o.act, o.key);
           else l.verifier.add(o.act);
           if (l.verifier.status(d.id) !== "valid") continue;
@@ -7133,31 +7327,31 @@ async function changeAccepted(me, change, opts) {
   const via = opts.via ?? {};
   const homes = me.f.homes.map((h) => h.hint);
   const held = [...me.f.encryption].reverse().filter((e3) => e3.secret).map((e3) => unhex(e3.secret));
-  const secrets = held.length ? held : opts.open ?? [];
-  if (Array.isArray(secrets) && !secrets.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
+  const secrets2 = held.length ? held : opts.open ?? [];
+  if (Array.isArray(secrets2) && !secrets2.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
   for (let round = 0; round < 5; round++) {
-    const read4 = await readAccepted(me.id, secrets, homes, via);
+    const read4 = await readAccepted(me.id, secrets2, homes, via);
     if (read4.problems.length >= homes.length && !read4.tips.length) throw new Error(`The identity\u2019s homes did not answer (${read4.problems.join("; ")}): the accepted list was not changed.`);
     const next = new Map(read4.entries);
     change(next);
     const same = read4.tips.length === 1 && JSON.stringify([...next].sort()) === JSON.stringify([...read4.entries].sort());
     if (same || !read4.tips.length && !next.size) return { written: null, list: read4 };
-    const again = await readAccepted(me.id, secrets, homes, via);
+    const again = await readAccepted(me.id, secrets2, homes, via);
     if (!sameTips(again.tips, read4.tips)) continue;
     await opts.check();
-    const look = await lookUp(me.id, homes, via);
-    if (!look.encryptionKey || !me.f.encryption.some((e3) => (e3.secret ? hex(xwingPublic(unhex(e3.secret))) : e3.public) === hex(look.encryptionKey))) {
+    const look2 = await lookUp(me.id, homes, via);
+    if (!look2.encryptionKey || !me.f.encryption.some((e3) => (e3.secret ? hex(xwingPublic(unhex(e3.secret))) : e3.public) === hex(look2.encryptionKey))) {
       throw new Error("The encryption key this identity publishes is not one this app holds: the accepted list cannot be sealed. Nothing was changed.");
     }
     const [first, ...others] = read4.tips;
     const payload = listPayload({ version: read4.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
     let made;
     try {
-      made = await me.signNow(ACCEPTED_SPEC, SEALED_LIST, payload, { public: false, to: [me.id] });
+      made = await me.signNow(ACCEPTED_SPEC, SEALED_LIST2, payload, { public: false, to: [me.id] });
     } finally {
       await opts.save();
     }
-    const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
+    const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look2.encryptionKey }]);
     let left = 0;
     for (const h of homes) {
       try {
@@ -7191,899 +7385,6 @@ async function publishAccepted(me, list3, relays, previous, withdrawn, save) {
   }
   if (!left) throw new Error("No relay took the published list.");
   return made.id;
-}
-
-// src/acting.ts
-var COLLECTIVES_LATER = "A collective you belong to acts here with your own key for it, made as you signed its founding and sealed to you at your homes (F353): its act counts as your signature in the areas you hold; where an area asks more keys, its other holders are asked, and sign in their own apps (Dub\u2019s Signing tab, Edubba). Add a collective by its ID.";
-var short = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
-function actors(held, collectives = []) {
-  return [
-    ...held.map((id) => ({ id, short: short(id), kind: "self", available: true, why: null })),
-    ...collectives.map((c) => ({ id: c.id, short: short(c.id), kind: "collective", available: c.available, why: c.why }))
-  ];
-}
-function chosen(all, wanted) {
-  return all.find((a) => a.id === wanted && a.available) ?? all.find((a) => a.available) ?? null;
-}
-var esc = (s) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-function chooserHtml(all, now2, o = {}) {
-  const rows = all.map(
-    (a) => `<label class="check"><input type="radio" name="actor" value="${esc(a.id)}"${a.id === now2 ? " checked" : ""}${a.available ? "" : " disabled"}> <span class="fp" title="${esc(a.id)}">${esc(a.short)}</span> <span class="small">${a.kind === "self" ? "yourself" : "a collective"}${a.why ? `: ${esc(a.why)}` : ""}</span></label>`
-  ).join("");
-  return `<section class="card acting"><h3>${esc(o.title ?? "Who acts")}</h3><form id="acting">${rows || '<p class="small">No identity held here.</p>'}</form><p class="small">${esc(COLLECTIVES_LATER)}</p>
-<form id="collective-add" class="row"><input name="collective" type="text" class="grow" placeholder="A collective\u2019s ID (mid1\u2026 or hex)" autocomplete="off" spellcheck="false" required><button type="submit">Act for it</button></form></section>`;
-}
-
-// ../damgar/src/messages.ts
-var TYPES = { draft: 1, request: 2, invoiceRequest: 3, answer: 4, laneRequest: 5, sale: 6 };
-var WHAT2 = { pay: 0, ask: 1, anchor: 2, confirm: 3 };
-var amountValue = (a) => [unhex(a.unit), a.value];
-var text = (v, what) => {
-  if (typeof v !== "string" || v.length > 280 || /[\u0000-\u0009\u000b-\u001f]/.test(v)) throw new Error(`${what}: not a short text`);
-  return v;
-};
-function draftPayload(d) {
-  const m = /* @__PURE__ */ new Map([
-    [0, WHAT2[d.what]],
-    [1, unhex(d.other)],
-    [2, amountValue(d.amount)]
-  ]);
-  if (d.whatFor) m.set(3, text(d.whatFor, "what for"));
-  m.set(4, text(d.app, "the app"));
-  if (d.what === "anchor") {
-    if (!d.anchor) throw new Error("A draft paying for an anchor names the offer, the tier and the leaf.");
-    m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf)]);
-  }
-  if (d.what === "confirm") {
-    if (!d.confirm?.acks.length) throw new Error("A draft confirming a purchase names the claim and what it acknowledges.");
-    m.set(6, [unhex(d.confirm.claim), d.confirm.acks.map(unhex)]);
-  }
-  return cborEncode(m);
-}
-async function sendDraft(me, d, opts) {
-  return sendToSelf(me, TYPES.draft, draftPayload(d), opts);
-}
-async function sendToSelf(me, type, payload, opts) {
-  const homes = me.f.homes.map((h) => h.hint);
-  const look = await lookUp(me.id, homes, opts.via ?? {});
-  if (!look.encryptionKey) throw new Error("This identity publishes no encryption key, so nothing can be sealed to it: the draft cannot travel to Damgar. Nothing was signed.");
-  if (!me.f.encryption.some((e3) => (e3.secret ? hex(xwingPublic(unhex(e3.secret))) : e3.public ?? "") === hex(look.encryptionKey))) {
-    throw new Error("The encryption key this identity publishes is not one this app holds: Damgar, holding the same words, could not open the draft either. Nothing was signed.");
-  }
-  let made;
-  try {
-    made = await me.signNow(MESSAGES_SPEC, type, payload, { public: false, to: [me.id], refs: opts.refs });
-  } finally {
-    await opts.save();
-  }
-  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look.encryptionKey }]);
-  const left = [];
-  for (const h of homes) {
-    try {
-      await relayAt(h, opts.via ?? {}).putSealed(sealed);
-      left.push(h);
-    } catch {
-    }
-  }
-  await leaveAtHomes(me, made, { via: opts.via ?? {}, sealed: left.length > 0 });
-  await opts.save();
-  if (!left.length) throw new Error(`No home took the draft (${homes.join(", ")}). It was signed but went nowhere: prepare it again later.`);
-  return { id: made.id, left };
-}
-
-// src/anchor.ts
-var short2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
-var message2 = (e3) => e3 instanceof Error ? e3.message : String(e3);
-var ANCHOR_SAY = [
-  "Optional. An anchor puts this release\u2019s fingerprint on the Bitcoin chain through a pooled anchoring service, so anyone can later see it existed by a given block.",
-  "The service is sent a leaf: the release\u2019s id mixed with a random secret (the blind) Ummia keeps. It never learns the release. A lost blind loses the anchor\u2019s use.",
-  "You pay the service\u2019s price in Damgar, following its standing offer: Ummia prepares the payment, sealed to you, and signs no money act. The service\u2019s ticket promises a batch and a deadline (a block).",
-  "Round 1 runs on regtest, with a test anchoring service of ours, labelled: its coins are worth nothing."
-];
-async function placesOf(service, hints, via) {
-  const l = await lookUp(service, hints, via);
-  const places = [.../* @__PURE__ */ new Set([...l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints), ...l.resolution.homes.map((h) => h.hint), ...hints])];
-  return { l, places };
-}
-async function offers(service, hints, via = {}) {
-  const { l, places } = await placesOf(service, hints, via);
-  const out = /* @__PURE__ */ new Map();
-  for (const h of places) {
-    try {
-      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.agreements })).items) {
-        if (it.kind !== "act") continue;
-        try {
-          const o = anchoringReadOffer(it.item);
-          l.verifier.add(it.item);
-          if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words });
-        } catch {
-        }
-      }
-    } catch {
-    }
-  }
-  return [...out.values()];
-}
-async function ask(me, a) {
-  const tier = a.offer.tiers[a.tier];
-  if (!tier) throw new Error("The offer has no such tier.");
-  const blind = new Uint8Array(randomBytes(32));
-  const leaf = anchoringLeaf(a.act, blind);
-  const r = await sendDraft(me, { what: "anchor", other: a.service, amount: { unit: a.offer.unit, value: tier.price }, whatFor: `an anchor of ${a.label}`, app: "Ummia", anchor: { offer: a.offer.act, tier: a.tier, leaf } }, { via: a.via, save: a.save });
-  const asked = { act: a.act, label: a.label, blind: hex(blind), leaf, service: a.service, offer: a.offer.act, tier: a.tier, draft: r.id, at: Math.floor(Date.now() / 1e3) };
-  return {
-    asked,
-    lines: [
-      { text: `Asked: an anchor of ${a.label} (${a.act.slice(0, 8)}\u2026), by ${short2(a.service)}, tier ${a.tier} (within ${tier.blocks} blocks), for ${say({ unit: a.offer.unit, value: tier.price }, /* @__PURE__ */ new Set([a.offer.unit]))}.`, tone: "ok" },
-      { text: `The payment is prepared, not signed: sealed to you at your homes (${r.left.join(", ")}), it waits in Damgar, in To sign. The blind is kept here.` }
-    ]
-  };
-}
-async function publication(x, hints, via) {
-  const { l, places } = await placesOf(x.service, hints, via);
-  for (const h of places) {
-    try {
-      for (const it of (await relayAt(h, via).feed({ signer: x.service, spec: SPEC.anchoring, type: 3 })).items) {
-        if (it.kind !== "act") continue;
-        const d = describeAct(it.item);
-        if (d.spec !== SPEC.anchoring || d.type !== 3 || !d.payload) continue;
-        l.verifier.add(it.item);
-        if (l.verifier.status(d.id) !== "valid") continue;
-        const p = anchoringReadPublication(d.payload);
-        if (p && p.offer === x.offer && p.leaves.includes(x.leaf)) return p;
-      }
-    } catch {
-    }
-  }
-  return null;
-}
-async function standing(x, hints, via, chain) {
-  const shown = { act: x.act, label: x.label, service: x.service, tier: x.tier, state: "asked", lines: [] };
-  try {
-    const pub = await publication(x, hints, via);
-    if (!pub) {
-      shown.lines.push({ text: "Not in a published batch yet: paid in Damgar? The service publishes each batch it anchors." });
-      return shown;
-    }
-    shown.state = "published";
-    shown.lines.push({ text: `In the service\u2019s batch ${pub.batch}, published, its transaction ${pub.tx.slice(0, 12)}\u2026 (output ${pub.output}).`, tone: "ok" });
-    if (!pub.key) {
-      shown.state = "unknown";
-      shown.lines.push({ text: "The publication does not name the key its output is tweaked from (F341): the anchor cannot be checked from the service\u2019s acts alone.", tone: "warn" });
-      return shown;
-    }
-    if (!chain) {
-      shown.state = "unknown";
-      shown.lines.push({ text: "Ummia follows no chain here: the anchor cannot be checked against Bitcoin. On a computer, open Ummia with --regtest.", tone: "warn" });
-      return shown;
-    }
-    const t = await chain.tx(hex(unhex(pub.tx).reverse()));
-    const headers = await chain.headers();
-    const batch = anchoringBatch(pub.leaves);
-    const index = pub.leaves.indexOf(x.leaf);
-    let block;
-    if (t.block) block = { index: t.block.index, branch: merkleBranch(t.block.txids, t.block.index), headers: headers.headers.slice(t.block.height - headers.start, t.block.height - headers.start + 6) };
-    const proof = batchAnchor({ blind: unhex(x.blind), index, count: batch.count, branch: batch.branches[index], key: pub.key, tx: t.raw, output: pub.output, block });
-    const v = batchAnchorCheck(x.act, proof, headers);
-    shown.state = v.answer === "valid" ? "anchored" : v.answer;
-    shown.lines.push(v.answer === "valid" ? { text: `Anchored at block ${v.point}, on the chain followed (${chain.said}): checked by the Bitcoin clock Module\u2019s rule.`, tone: "ok" } : { text: `Not yet anchored: ${v.answer}, ${v.why}.`, tone: v.answer === "invalid" ? "bad" : "warn" });
-  } catch (e3) {
-    shown.state = "unknown";
-    shown.lines.push({ text: message2(e3), tone: "warn" });
-  }
-  return shown;
-}
-
-// ../longform/src/specs.ts
-var test2 = (s) => sha2562(s);
-var LONGFORM_SPECS = {
-  /** The Text MIR (`TEXT`). */
-  text: SPECS.text,
-  /** The long-form text format cMIP (cmips/cmip-long-form-draft-1.md). */
-  longform: test2("long-form text format cMIP, draft 1, test value until publication")
-};
-var TEXT_ACT = 0;
-
-// ../longform/src/act.ts
-function textPayload(text3, format = LONGFORM_SPECS.longform) {
-  const m = /* @__PURE__ */ new Map([[0, text3]]);
-  if (format) m.set(1, unhex(format));
-  return cborEncode(m);
-}
-async function publishDocument(by, text3, relays) {
-  for (const hint of relays) {
-    for (const a of by.chainActs()) {
-      try {
-        await relayAt(hint, by.via).putAct(a);
-      } catch {
-      }
-    }
-  }
-  const made = await by.publish(LONGFORM_SPECS.text, TEXT_ACT, textPayload(text3), { public: true, relays });
-  return { id: made.id };
-}
-
-// ../site/src/settings.ts
-function relayAddress(s) {
-  if (typeof s !== "string") return null;
-  let u2;
-  try {
-    u2 = new URL(s);
-  } catch {
-    return null;
-  }
-  const local = u2.hostname === "127.0.0.1" || u2.hostname === "localhost" || u2.hostname === "[::1]";
-  if (u2.protocol !== "https:" && !(u2.protocol === "http:" && local)) return null;
-  if (u2.username || u2.password || u2.search || u2.hash) return null;
-  return s.replace(/\/$/, "");
-}
-
-// ../site/src/specs.ts
-var test3 = (s) => sha2562(s);
-var SITE_SPECS = {
-  identity: SPECS.identity,
-  /** The Envelopes MIR (`ENVELOPES`): a version is a publication. */
-  envelopes: SPECS.envelopes,
-  /** The Agreements MIR (`AGREEMENTS`): only to tell that a signer is a collective. */
-  agreements: test3("LAW, test value until the freeze"),
-  /** The website cMIP (cmips/cmip-website-draft-4.md). Draft 3 adds the icon
-   * (rule 16a), draft 4 films (rules 4, 6a, 12a); both leave the manifest's
-   * format as it was, so the test value stays draft 2's: versions already
-   * published still verify. */
-  site: test3("website cMIP, draft 2, test value until publication")
-};
-var SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreements };
-var PUBLICATION = 0;
-var NUDGE = test3("nudge cMIP, draft 2, test value until publication");
-var RELEASE_MANIFEST = test3("release manifest cMIP, draft 1, test value until publication");
-var PAYMENT_CMIP = test3("payment cMIP, draft 2, test value until publication");
-
-// ../site/src/listing.ts
-var AGREEMENTS_TERMS = 0;
-var AGREEMENTS_SIGNATURE = 1;
-var KINDS = ["cMIP", "Module", "unit", "media type", "MIR", "signature scheme", "MICS document", "test suite", "MIP"];
-var MIR = 4;
-var MICS = 6;
-var MIP = 8;
-var LAYERS = {
-  [MIRS.identity]: "Identity",
-  [MIRS.text]: "Text",
-  [MIRS.envelopes]: "Envelopes",
-  [MIRS.money]: "Money",
-  [MIRS.agreements]: "Agreements",
-  [MIRS.development]: "Development"
-};
-var EXTENSION_LAYERS = ["Identity", "Envelopes and Text", "Money", "Agreements"];
-var TASKS = {
-  1: ["Identity", "Identity proofs and credentials"],
-  2: ["Identity", "Naming"],
-  3: ["Identity", "Outside link proofs"],
-  4: ["Text", "Text format"],
-  5: ["Envelopes", "Media interpretation"],
-  6: ["Money", "Payment"],
-  7: ["Money", "Conversion"],
-  8: ["Agreements", "Split"],
-  9: ["Agreements", "Condition evaluation"],
-  10: ["Agreements", "Time reference"],
-  11: ["Envelopes", "Anchoring"],
-  12: ["Agreements", "Grant limits"],
-  13: ["Agreements", "Work claims"],
-  14: ["Agreements", "Absence proof"]
-};
-var LISTING_READ = 5e3;
-var message3 = (err) => err instanceof Error ? err.message : String(err);
-var bytes32 = (x) => x instanceof Uint8Array && x.length === 32;
-function concat(...parts) {
-  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
-  let at = 0;
-  for (const p of parts) {
-    out.set(p, at);
-    at += p.length;
-  }
-  return out;
-}
-function specHash(content) {
-  const tag = sha256(new TextEncoder().encode("MOR/spec"));
-  return hex(sha256(concat(tag, tag, content)));
-}
-function decodeSpec2(content) {
-  let d;
-  try {
-    d = decodeSpec(content, PAYMENT_CMIP);
-  } catch (e3) {
-    throw new Error(message3(e3));
-  }
-  return {
-    kind: d.kind,
-    creator: d.creator ?? null,
-    tasks: d.tasks,
-    types: d.types.map(([type, name]) => ({ type, name })),
-    dependencies: d.dependencies,
-    implements: d.implements ?? null,
-    rules: d.rules,
-    fee: d.fee,
-    predecessor: d.predecessor ?? null,
-    text: d.text,
-    layers: d.layers.length ? d.layers : null,
-    rail: d.railKind ? { kind: d.railKind, binds: d.railBinds ?? [] } : null,
-    checker: d.checksDelivery
-  };
-}
-var isXtype = (s) => s.types.length > 0 && s.tasks.length === 0;
-function nameOf(text3) {
-  const line = text3.split("\n").map((l) => l.replace(/^#+\s*/, "").trim()).find((l) => /\p{L}/u.test(l)) ?? "(no name)";
-  return line.length > 100 ? `${line.slice(0, 99)}\u2026` : line;
-}
-function mediaOf(d) {
-  if (!d.public || !d.payload || d.type !== PUBLICATION || d.spec !== SPECS.envelopes) return null;
-  let m;
-  try {
-    m = cborDecode(d.payload);
-  } catch {
-    return null;
-  }
-  if (!(m instanceof Map)) return null;
-  const [spec, work, locked, size, nonce, key, places] = [0, 1, 2, 3, 4, 5, 6].map((k) => m.get(k));
-  if (!bytes32(spec) || !(work instanceof Uint8Array) || !(locked instanceof Uint8Array) || typeof size !== "number" || !(nonce instanceof Uint8Array)) return null;
-  return {
-    spec: hex(spec),
-    work,
-    locked,
-    size,
-    nonce,
-    key: key instanceof Uint8Array ? key : null,
-    places: Array.isArray(places) ? places.filter((p) => typeof p === "string") : []
-  };
-}
-var Judge = class {
-  constructor(places, via) {
-    this.places = places;
-    this.via = via;
-  }
-  v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
-  looked = /* @__PURE__ */ new Map();
-  lookUp(identity) {
-    let l = this.looked.get(identity);
-    if (!l) {
-      l = lookUp(identity, this.places, this.via, this.v);
-      this.looked.set(identity, l);
-    }
-    return l;
-  }
-  /** Why the act is not valid for its signer's chain, or null when it is. */
-  async problem(act, id, signer) {
-    try {
-      await holdSequence(this.v, signer, await this.lookUp(signer), this.places, this.via);
-    } catch (e3) {
-      return `its signer's identity chain could not be looked up: ${message3(e3)}`;
-    }
-    try {
-      this.v.add(act);
-    } catch (e3) {
-      return `the act is not valid: ${message3(e3)}`;
-    }
-    const s = this.v.status(id);
-    return s === "valid" ? null : `its standing is \u201C${s}\u201D, not valid, for its signer's identity chain`;
-  }
-};
-async function openAt(m, places, via) {
-  if (!m.key) return null;
-  for (const h of places) {
-    try {
-      const locked = await relayAt(h, via).getMedia(hex(m.locked));
-      if (!locked) continue;
-      const plain = openMedia(locked, m.key, m.nonce);
-      if (plain.length === m.size && workHash(plain) === hex(m.work)) return plain;
-    } catch {
-    }
-  }
-  return null;
-}
-function queriesOf(f) {
-  return [{ spec: SPECS.envelopes, type: PUBLICATION, signer: f.signer }, { spec: MIRS.agreements, type: AGREEMENTS_TERMS }, { spec: MIRS.agreements, type: AGREEMENTS_SIGNATURE }];
-}
-async function readRelay(line, via, into, queries = [{}]) {
-  for (const q of queries) {
-    await readQuery(line, via, into, q);
-    if (line.stopped || line.problem) return;
-  }
-}
-async function readQuery(line, via, into, q) {
-  let after;
-  try {
-    for (; ; ) {
-      const page = await relayAt(line.address, via).feed({ ...q, after });
-      for (const it of page.items) {
-        if (line.read >= LISTING_READ) {
-          line.stopped = true;
-          return;
-        }
-        line.read++;
-        if (it.kind !== "act") {
-          line.private++;
-          continue;
-        }
-        let d;
-        try {
-          d = describeAct(it.item);
-        } catch {
-          continue;
-        }
-        if (!d.public) line.private++;
-        else if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TERMS) line.terms++;
-        if (!into.has(d.id)) into.set(d.id, { d, act: it.item });
-      }
-      if (!page.items.length || page.next === after) break;
-      after = page.next;
-    }
-  } catch (e3) {
-    line.problem = message3(e3);
-  }
-}
-async function readListing(relays, gatewayRelays, via = {}, filtered) {
-  const lines2 = relays.map((r) => ({ ...r, asked: relayAddress(r.address) !== null, problem: null, read: 0, specs: 0, stopped: false, private: 0, terms: 0 }));
-  const asked = lines2.filter((l) => l.asked).map((l) => relayAddress(l.address));
-  for (const l of lines2) if (l.asked) l.address = relayAddress(l.address);
-  const found = /* @__PURE__ */ new Map();
-  const at = /* @__PURE__ */ new Map();
-  for (const l of lines2.filter((x) => x.asked)) {
-    const before = new Set(found.keys());
-    await readRelay(l, via, found, filtered ? queriesOf(filtered) : void 0);
-    for (const id of found.keys()) if (!before.has(id)) at.set(id, l.address);
-  }
-  const places = [.../* @__PURE__ */ new Set([...asked, ...gatewayRelays])];
-  const judge2 = new Judge(places, via);
-  const pubs = [];
-  const releases2 = [];
-  for (const { d, act } of found.values()) {
-    const m = mediaOf(d);
-    if (!m) continue;
-    if (m.spec === RELEASE_MANIFEST) {
-      releases2.push({ d, act, m });
-      continue;
-    }
-    if (m.spec !== MIRS.development) continue;
-    const l = lines2.find((x) => x.address === at.get(d.id));
-    if (l) l.specs++;
-    pubs.push({ id: d.id, signer: d.signer ?? "", problem: null, hash: null, spec: null, content: null });
-  }
-  await Promise.all(
-    pubs.map(async (p) => {
-      const { d, act } = found.get(p.id);
-      const m = mediaOf(d);
-      if (!d.signer) return void (p.problem = "it names no signer");
-      const bad = await judge2.problem(act, d.id, d.signer);
-      if (bad) return void (p.problem = bad);
-      if (!m.key) return void (p.problem = "its content is locked: its key is not public");
-      const content = await openAt(m, [...places, ...m.places.map(relayAddress).filter((x) => !!x)], via);
-      if (!content) return void (p.problem = "its content was not found, or does not match its work hash and size");
-      try {
-        p.spec = decodeSpec2(content);
-      } catch (e3) {
-        return void (p.problem = `no specification (Development draft 10, F323): ${message3(e3)}`);
-      }
-      p.hash = specHash(content);
-      p.content = content;
-    })
-  );
-  const byHash = /* @__PURE__ */ new Map();
-  for (const p of pubs.filter((x) => !x.problem)) {
-    let l = byHash.get(p.hash);
-    if (!l) {
-      l = { hash: p.hash, spec: p.spec, name: nameOf(p.spec.text), publications: [], claimed: false, releases: [], use: null };
-      byHash.set(p.hash, l);
-    }
-    l.publications.push(p);
-  }
-  for (const l of byHash.values()) {
-    l.claimed = l.spec.creator !== null && l.publications.some((p) => p.signer === l.spec.creator);
-    l.publications.sort((a, b) => Number(b.signer === l.spec.creator) - Number(a.signer === l.spec.creator) || (a.id < b.id ? -1 : 1));
-  }
-  const pubOf = /* @__PURE__ */ new Map();
-  for (const l of byHash.values()) for (const p of l.publications) pubOf.set(p.id, l);
-  const listedBy = (ids) => [...new Set(ids.map((r) => pubOf.get(r)).filter((x) => !!x))];
-  await Promise.all(
-    releases2.map(async ({ d, act, m }) => {
-      if (!d.signer || !byHash.size) return;
-      const bad = await judge2.problem(act, d.id, d.signer);
-      const plain = bad ? null : await openAt(m, [...places, ...m.places.map(relayAddress).filter((x) => !!x)], via);
-      let man = null;
-      try {
-        const x = plain ? cborDecode(plain) : null;
-        man = x instanceof Map && typeof x.get(0) === "string" && typeof x.get(1) === "string" ? x : null;
-      } catch {
-        man = null;
-      }
-      const field6 = implementsOf(man);
-      let named;
-      let problem = bad;
-      if (field6 === null) named = listedBy(d.refs ?? []);
-      else if ("specs" in field6) named = [...new Set(field6.specs.map((h) => byHash.get(h)).filter((x) => !!x))];
-      else {
-        named = listedBy(field6.publications);
-        problem ??= field6.problem;
-      }
-      if (!named.length) return;
-      const r = { id: d.id, signer: d.signer, name: null, version: null, problem, by: field6 ? "implements" : "reference" };
-      if (!r.problem) {
-        if (man) {
-          r.name = man.get(0);
-          r.version = man.get(1);
-        } else r.problem = plain ? "its manifest does not read as one" : "its manifest was not found, or does not read as one";
-      }
-      for (const l of named) l.releases.push(r);
-    })
-  );
-  for (const l of byHash.values()) l.releases.sort((a, b) => Number(!!a.problem) - Number(!!b.problem) || (a.id < b.id ? -1 : 1));
-  const { extensions, agreements } = await readExtensions(found, byHash, judge2, lines2.reduce((n, l) => n + l.private, 0));
-  if (filtered) for (const x of [...byHash.values()].filter((l) => isXtype(l.spec))) for (const l of lines2.filter((y) => y.asked && !y.problem)) await readQuery(l, via, found, { spec: x.hash });
-  const xtypes = await countUse(found, byHash, judge2);
-  const all = [...byHash.values()];
-  return {
-    relays: lines2,
-    extensions,
-    agreements,
-    // A MIP's predecessor is what it forks, shown in the MIPs' part, never as a line of drafts (draft 11, F325).
-    lines: linesOf2(all.filter((l) => l.spec.kind !== MIP)),
-    unverified: pubs.filter((p) => p.problem).sort((a, b) => a.id < b.id ? -1 : 1),
-    xtypes,
-    mips: mipsOf(all),
-    versions: versionsOf(all)
-  };
-}
-function implementsOf(man) {
-  if (!man || !man.has(6)) return null;
-  const v = man.get(6);
-  const wrong = { publications: [], problem: "its manifest's \u201Cimplements\u201D (field 6) is not as release manifest cMIP draft 4 gives it: [spec, ? hint] entries, sorted by spec hash" };
-  if (!Array.isArray(v) || !v.length) return wrong;
-  if (v.every(bytes32)) {
-    return { publications: v.map((h) => hex(h)), problem: "its manifest names publications in \u201Cimplements\u201D (field 6), as release manifest cMIP draft 3 did; under draft 4 it names spec hashes, so it is not a valid manifest" };
-  }
-  const specs2 = [];
-  for (const e3 of v) {
-    if (!Array.isArray(e3) || e3.length < 1 || e3.length > 2 || !e3.every(bytes32)) return wrong;
-    const h = hex(e3[0]);
-    if (specs2.length && specs2[specs2.length - 1] >= h) return wrong;
-    specs2.push(h);
-  }
-  return { specs: specs2 };
-}
-function mipsOf(all) {
-  const byHash = new Map(all.map((l) => [l.hash, l]));
-  const mips2 = all.filter((l) => l.spec.kind === MIP);
-  const children2 = /* @__PURE__ */ new Map();
-  for (const l of mips2) {
-    const p = l.spec.predecessor;
-    if (p !== l.hash) children2.set(p, [...children2.get(p) ?? [], l]);
-  }
-  const order = (a, b) => b.total - a.total || b.direct - a.direct || (a.listed.name < b.listed.name ? -1 : a.listed.name > b.listed.name ? 1 : a.listed.hash < b.listed.hash ? -1 : 1);
-  const placed = /* @__PURE__ */ new Set();
-  const tree = (l) => {
-    placed.add(l.hash);
-    const forks = (children2.get(l.hash) ?? []).filter((c) => !placed.has(c.hash)).map(tree).sort(order);
-    return { listed: l, direct: forks.length, total: forks.reduce((n, f) => n + 1 + f.total, 0), forks };
-  };
-  const byName = (a, b) => a.listed.name < b.listed.name ? -1 : a.listed.name > b.listed.name ? 1 : a.listed.hash < b.listed.hash ? -1 : 1;
-  const roots = all.filter((l) => l.spec.kind === MIR || l.spec.kind === MICS).map(tree).sort(byName);
-  const unrooted = /* @__PURE__ */ new Map();
-  const top3 = (l) => {
-    const seen = /* @__PURE__ */ new Set();
-    let x = l;
-    for (; ; ) {
-      seen.add(x.hash);
-      const p = byHash.get(x.spec.predecessor);
-      if (!p || p.spec.kind !== MIP || seen.has(p.hash)) return x.hash;
-      x = p;
-    }
-  };
-  for (const l of mips2.filter((x) => !placed.has(x.hash)).sort((a, b) => a.hash < b.hash ? -1 : 1)) {
-    if (placed.has(l.hash)) continue;
-    const head = byHash.get(top3(l));
-    const leads = head.spec.predecessor;
-    const u2 = unrooted.get(leads) ?? { hash: leads, kind: byHash.get(leads)?.spec.kind ?? null, forks: [] };
-    u2.forks.push(tree(head));
-    u2.forks.sort(order);
-    unrooted.set(leads, u2);
-  }
-  return { roots, unrooted: [...unrooted.values()].sort((a, b) => a.hash < b.hash ? -1 : 1), count: mips2.length };
-}
-function versionsOf(all) {
-  const byText = /* @__PURE__ */ new Map();
-  for (const l of all) byText.set(l.spec.text, [...byText.get(l.spec.text) ?? [], l]);
-  const out = [];
-  for (const group of byText.values()) {
-    if (group.length < 2) continue;
-    const fields = group.map((l) => {
-      const c = l.publications.find((p) => p.content)?.content;
-      const m = c ? cborDecode(c) : /* @__PURE__ */ new Map();
-      return new Map([...m].map(([k, v]) => [k, hex(cborEncode(v))]));
-    });
-    const keys = [...new Set(fields.flatMap((f) => [...f.keys()]))].filter((k) => k !== 9).sort((a, b) => a - b);
-    const versions = group.map((listed, i) => ({
-      listed,
-      differs: keys.filter((k) => fields.some((f, j) => j !== i && f.get(k) !== fields[i].get(k)))
-    }));
-    versions.sort((a, b) => a.listed.hash < b.listed.hash ? -1 : 1);
-    out.push({ name: group[0].name, versions });
-  }
-  return out.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
-}
-async function countUse(found, byHash, judge2) {
-  const xtypes = [...byHash.values()].filter((l) => isXtype(l.spec));
-  for (const l of xtypes) l.use = { acts: 0, byType: l.spec.types.map((t) => ({ type: t.type, name: t.name, acts: 0 })), notValid: 0 };
-  const of = new Map(xtypes.map((l) => [l.hash, l]));
-  for (const { d, act } of found.values()) {
-    const l = d.public && d.spec ? of.get(d.spec) : void 0;
-    const t = l?.use.byType.find((x) => x.type === d.type);
-    if (!l || !t) continue;
-    if (!d.signer || await judge2.problem(act, d.id, d.signer)) {
-      l.use.notValid++;
-      continue;
-    }
-    t.acts++;
-    l.use.acts++;
-  }
-  return xtypes.sort((a, b) => b.use.acts - a.use.acts || (a.name < b.name ? -1 : a.name > b.name ? 1 : a.hash < b.hash ? -1 : 1));
-}
-function linesOf2(all) {
-  const byHash = new Map(all.map((l) => [l.hash, l]));
-  const after = (l) => l.spec.predecessor && l.spec.predecessor !== l.hash ? byHash.get(l.spec.predecessor) ?? null : null;
-  const children2 = /* @__PURE__ */ new Map();
-  for (const l of all) {
-    const p = after(l);
-    if (p) children2.set(p.hash, [...children2.get(p.hash) ?? [], l]);
-  }
-  const order = (a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : a.hash < b.hash ? -1 : 1;
-  for (const c of children2.values()) c.sort(order);
-  const placed = /* @__PURE__ */ new Set();
-  const out = [];
-  const walk = (l, n, drafts) => {
-    if (placed.has(l.hash)) return;
-    placed.add(l.hash);
-    const p = after(l);
-    const siblings = p ? (children2.get(p.hash) ?? []).filter((x) => x !== l).map((x) => x.hash) : [];
-    drafts.push({
-      listed: l,
-      number: n,
-      after: p,
-      afterMissing: !p && l.spec.predecessor ? l.spec.predecessor : null,
-      otherCreator: !!p && p.spec.creator !== l.spec.creator,
-      siblings
-    });
-    for (const c of children2.get(l.hash) ?? []) walk(c, n + 1, drafts);
-  };
-  const roots = all.filter((l) => !after(l)).sort(order);
-  for (const r of roots) {
-    const drafts = [];
-    walk(r, 1, drafts);
-    out.push({ drafts, newest: drafts[drafts.length - 1].listed });
-  }
-  for (const l of all.filter((x) => !placed.has(x.hash)).sort(order)) {
-    const drafts = [];
-    walk(l, 1, drafts);
-    out.push({ drafts, newest: drafts[drafts.length - 1].listed });
-  }
-  return out.sort((a, b) => order(a.newest, b.newest));
-}
-function roleWords(l, all) {
-  const s = l.spec;
-  const kind = KINDS[s.kind];
-  const role = [];
-  const layers = /* @__PURE__ */ new Set();
-  for (const [mir, n] of s.tasks) {
-    const layer = LAYERS[mir];
-    const known = TASKS[n];
-    if (layer) layers.add(layer);
-    if (known && layer === known[0]) role.push(`fills task ${n}, ${known[1]}`);
-    else role.push(`fills task ${n}${layer ? ` of ${layer}` : ", of a MIR this listing does not know"}`);
-  }
-  if (s.implements && LAYERS[s.implements]) {
-    role.push(`works under the ${LAYERS[s.implements]} MIR`);
-    if (!s.tasks.length) layers.add(LAYERS[s.implements]);
-  } else if (s.implements) {
-    const under = all.get(s.implements);
-    if (under && under.spec.kind === MIR) {
-      role.push(`works under the MIR \u201C${under.name}\u201D`);
-    } else if (under) {
-      role.push(`works under the cMIP \u201C${under.name}\u201D`);
-      if (!s.tasks.length) {
-        for (const [mir] of under.spec.tasks) if (LAYERS[mir]) layers.add(LAYERS[mir]);
-      }
-    } else role.push(`works under a cMIP not found here (${s.implements.slice(0, 12)}\u2026)`);
-  }
-  if (s.types.length) {
-    role.push(
-      !s.tasks.length ? `an xtype: defines ${s.types.length === 1 ? "an act type" : `${s.types.length} act types`} (${s.types.map((t) => t.name).join(", ")}), filling no task` : `defines ${s.types.length === 1 ? "an act type" : `${s.types.length} act types`} (${s.types.map((t) => t.name).join(", ")})`
-    );
-  }
-  if (s.layers) role.push(`declares, for use as an extension, the layers it acts on beyond Development: ${s.layers.map((n) => EXTENSION_LAYERS[n]).join(", ")}`);
-  if (s.rail) role.push(`a rail Module: a ${s.rail.kind} rail, its proof binding ${s.rail.binds.length ? s.rail.binds.join(", ") : "nothing"}`);
-  if (s.checker) role.push("checks proofs of delivery of proven offers (field 12)");
-  if (s.kind === MIP) role.push(`a MIP: a proposal toward a successor protocol, not a rule of MOR; it forks ${all.get(s.predecessor) ? `\u201C${all.get(s.predecessor).name}\u201D` : `a specification not found here (${s.predecessor.slice(0, 12)}\u2026)`}`);
-  if (!role.length) role.push(s.kind === 0 ? "names no task, defines no act type" : "declares nothing more");
-  if (!layers.size && (s.types.length || s.layers || s.kind === 0 && !s.tasks.length)) layers.add("Development");
-  return { kind, layer: [...layers].join(", ") || "not said", role };
-}
-async function readExtensions(found, byHash, judge2, privateActs) {
-  const read4 = { terms: 0, counted: 0, proposed: 0, notCounted: [], private: privateActs };
-  const terms = /* @__PURE__ */ new Map();
-  const signatures = [];
-  for (const { d, act } of found.values()) {
-    if (!d.public || d.spec !== MIRS.agreements || !d.payload || !d.signer) continue;
-    if (d.type === AGREEMENTS_SIGNATURE) signatures.push({ act, d });
-    if (d.type !== AGREEMENTS_TERMS) continue;
-    try {
-      const fields = cborDecode(d.payload);
-      if (fields instanceof Map) terms.set(d.id, { act, signer: d.signer, fields });
-    } catch {
-      read4.notCounted.push({ id: d.id, why: "its terms do not decode" });
-    }
-  }
-  const parties = /* @__PURE__ */ new Set();
-  for (const t of terms.values()) {
-    parties.add(t.signer);
-    for (const p of Array.isArray(t.fields.get(0)) ? t.fields.get(0) : []) if (bytes32(p)) parties.add(hex(p));
-  }
-  for (const s of signatures) parties.add(s.d.signer);
-  await Promise.all([...parties].map((p) => judge2.lookUp(p).catch(() => null)));
-  const valid = /* @__PURE__ */ new Set();
-  for (const [id, t] of terms) {
-    const bad = await judge2.problem(t.act, id, t.signer);
-    if (bad) read4.notCounted.push({ id, why: bad });
-    else valid.add(id);
-  }
-  for (const s of signatures) {
-    try {
-      judge2.v.add(s.act);
-    } catch {
-    }
-  }
-  read4.terms = valid.size;
-  const named = (t) => Array.isArray(t.get(15)) ? t.get(15).filter(bytes32).map((h) => hex(h)) : [];
-  const extLayers = {};
-  for (const id of valid) for (const h of named(terms.get(id).fields)) extLayers[h] = byHash.get(h)?.spec.layers ?? [];
-  const specs2 = { ...MIRS, extLayers };
-  const counts = /* @__PURE__ */ new Set();
-  for (const id of valid) {
-    try {
-      const a = judge2.v.agreementsAgreement(specs2, id);
-      if (a.invalid) read4.notCounted.push({ id, why: `the core library finds these terms invalid: ${a.invalid}` });
-      else if (a.exists === true || a.exists === null && a.ready) counts.add(id);
-      else read4.proposed++;
-    } catch (e3) {
-      read4.notCounted.push({ id, why: `the core library could not judge it: ${message3(e3)}` });
-    }
-  }
-  const first = (id) => {
-    const seen = /* @__PURE__ */ new Set();
-    let x = id;
-    for (; ; ) {
-      seen.add(x);
-      const p = terms.get(x)?.fields.get(11);
-      const ph = bytes32(p) ? hex(p) : null;
-      if (!ph || !terms.has(ph) || seen.has(ph)) return x;
-      x = ph;
-    }
-  };
-  const byExt = /* @__PURE__ */ new Map();
-  const agreementsCounted = /* @__PURE__ */ new Set();
-  for (const id of [...counts].sort()) {
-    const ag = first(id);
-    agreementsCounted.add(ag);
-    for (const h of new Set(named(terms.get(id).fields))) {
-      const m = byExt.get(h) ?? /* @__PURE__ */ new Map();
-      m.set(ag, [...m.get(ag) ?? [], id]);
-      byExt.set(h, m);
-    }
-  }
-  read4.counted = agreementsCounted.size;
-  read4.notCounted.sort((a, b) => a.id < b.id ? -1 : 1);
-  const extensions = [...byExt].map(([hash, m]) => {
-    const listed = byHash.get(hash) ?? null;
-    return {
-      hash,
-      listed,
-      agreements: [...m].map(([agreement, ids]) => ({ agreement, terms: ids })).sort((a, b) => a.agreement < b.agreement ? -1 : 1),
-      layers: listed ? ["Development", ...(listed.spec.layers ?? []).map((n) => EXTENSION_LAYERS[n])] : null
-    };
-  });
-  const name = (x) => x.listed?.name ?? `~${x.hash}`;
-  extensions.sort((a, b) => b.agreements.length - a.agreements.length || (name(a) < name(b) ? -1 : name(a) > name(b) ? 1 : 0));
-  return { extensions, agreements: read4 };
-}
-
-// src/mips.ts
-var FORKABLE = [
-  { key: "identity", name: "Identity MIR", hash: MIRS.identity },
-  { key: "envelopes", name: "Envelopes MIR", hash: MIRS.envelopes },
-  { key: "text", name: "Text MIR", hash: MIRS.text },
-  { key: "money", name: "Money MIR", hash: MIRS.money },
-  { key: "agreements", name: "Agreements MIR", hash: MIRS.agreements },
-  { key: "development", name: "Development MIR", hash: MIRS.development }
-];
-var SHAPE = ["Purpose", "What it changes", "Dependencies", "Words used in this MIP", "Rules", "Reasoning", "Freeze scenarios"];
-var MIP_SAY = [
-  "A MIP is a proposal toward MOR 2: a fork of one MIR (or of another MIP), or, for a new layer, of the MICS document. Anyone may fork a MIP; adoption, not authority, sorts the forks.",
-  "Drafts are published for discussion as signed long-form documents, readable in the reader and answerable from Dub. They are not specifications: nothing names them by a spec hash.",
-  "Only when you are ready is it published as a specification (a MIP, kind 8), naming you as its creator and what it would replace. That act is for good: a changed MIP is a new one, with a new hash."
-];
-function template(a) {
-  const title = a.title.trim() || "A proposal";
-  return [
-    `# MIP: ${title}`,
-    "",
-    `*Draft 1, a proposal toward MOR 2, by ${a.creator}. It forks ${a.forks}.*`,
-    "",
-    ...SHAPE.flatMap((h) => [`## ${h}`, "", h === "Purpose" ? "What this proposal is for, in plain words." : h === "What it changes" ? "Each rule it adds, changes or removes, against the text it forks." : h === "Rules" ? "#### Rule 1. A name\n\nThe rule, as it would read." : "\u2026", ""])
-  ].join("\n").trimEnd();
-}
-function shapeOf(text3) {
-  const out = [];
-  const first = text3.split("\n")[0] ?? "";
-  out.push(/^# MIP: \S/.test(first) ? { text: `Its title: \u201C${first.slice(7)}\u201D.`, tone: "ok" } : { text: "Its first line should be its title, \u201C# MIP: \u2026\u201D, as a MIR\u2019s is \u201C# MIR: \u2026\u201D.", tone: "warn" });
-  const heads = new Set(text3.split("\n").filter((l) => l.startsWith("## ")).map((l) => l.slice(3).trim()));
-  const missing = SHAPE.filter((h) => !heads.has(h));
-  out.push(missing.length ? { text: `Headings of the MIP shape not found: ${missing.join(", ")}.`, tone: "warn" } : { text: "Every heading of the MIP shape is there.", tone: "ok" });
-  return out;
-}
-async function publishDraft(me, text3, relays) {
-  return publishDocument(me, text3, relays);
-}
-async function replies(me, drafts, relays, via = {}) {
-  const want = new Set(drafts);
-  const out = /* @__PURE__ */ new Map();
-  const lines2 = [];
-  if (!want.size) return { replies: out, lines: lines2 };
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
-  const mine = await lookUp(me.id, me.f.homes.map((h) => h.hint), via, v);
-  const inbox = mine.inbox(SPECS.text) ?? [];
-  const seen = /* @__PURE__ */ new Set();
-  const take = async (act, d, key, sealed) => {
-    if (!d.signer || seen.has(d.id) || d.spec !== LONGFORM_SPECS.text || d.type !== TEXT_ACT || !d.payload) return;
-    const named = (d.refs ?? []).filter((r) => want.has(r));
-    if (!named.length) return;
-    seen.add(d.id);
-    let standing2 = "unknown";
-    try {
-      await lookUp(d.signer, [...relays, ...inbox], via, v);
-      if (key) v.addWithKey(act, key);
-      else v.add(act);
-      standing2 = v.status(d.id);
-    } catch (e3) {
-      standing2 = `not checked: ${e3 instanceof Error ? e3.message : String(e3)}`;
-    }
-    const t = cborDecode(d.payload).get(0);
-    for (const r of named) out.set(r, [...out.get(r) ?? [], { id: d.id, signer: d.signer, text: typeof t === "string" ? t : "", standing: standing2, sealed }]);
-  };
-  const secrets = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
-  for (const h of [.../* @__PURE__ */ new Set([...inbox, ...relays])]) {
-    let after;
-    try {
-      for (; ; ) {
-        const page = await relayAt(h, via).feed(inbox.includes(h) ? { to: me.id, after } : { spec: SPECS.text, type: TEXT_ACT, after });
-        for (const it of page.items) {
-          if (it.kind === "act") {
-            const d = describeAct(it.item);
-            if (d.public) await take(it.item, d, void 0, false);
-            continue;
-          }
-          for (const s of secrets) {
-            try {
-              const o = openSealed(it.item, me.id, s);
-              await take(o.act, o.described, o.key, true);
-              break;
-            } catch {
-            }
-          }
-        }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
-      }
-    } catch (e3) {
-      lines2.push({ text: `${h}: ${e3 instanceof Error ? e3.message : String(e3)}`, tone: "warn" });
-    }
-  }
-  return { replies: out, lines: lines2 };
 }
 
 // ../../modules/jpeg/src/jpeg.ts
@@ -8364,7 +7665,7 @@ function strip(b) {
     parts.push(b.subarray(s.start, s.end));
   }
   parts.push(Uint8Array.from([255, EOI]));
-  const bytes = concat2(parts);
+  const bytes = concat(parts);
   const after = read(bytes);
   if (after.carries.length) throw new Error(`stripping left ${after.carries.join(", ")}`);
   return { bytes, removed: p.carries, picture: after };
@@ -8378,7 +7679,7 @@ function segment(marker, body) {
   out.set(body, 4);
   return out;
 }
-function concat2(parts) {
+function concat(parts) {
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let o = 0;
   for (const p of parts) {
@@ -8714,7 +8015,7 @@ function readTrack(r, trak, carried) {
   if (handler !== "vide" && handler !== "soun") {
     throw new NotFilm("refused", `a track of kind ${JSON.stringify(handler)} (text, subtitles, timecode, metadata or hints): a film holds pictures and sound only`);
   }
-  const named = hdlr.end - (hdlr.body + 24) > 1 || hdlr.end > hdlr.body + 24 && r.b[hdlr.body + 24] !== 0;
+  const named2 = hdlr.end - (hdlr.body + 24) > 1 || hdlr.end > hdlr.body + 24 && r.b[hdlr.body + 24] !== 0;
   const minf = one(mk, "minf", "a track");
   const nk = children(r, minf, ["vmhd", "smhd", "dinf", "stbl", "hdlr"], carried, "a track");
   one(nk, handler === "vide" ? "vmhd" : "smhd", "a track");
@@ -8734,7 +8035,7 @@ function readTrack(r, trak, carried) {
   const descs = r.boxes(sd.o, stsd.end);
   if (sd.n !== 1 || descs.length !== 1) throw new NotFilm("refused", "a track with more than one sample description");
   const entry = descs[0];
-  const t = { handler, timescale, mediaDuration: 0, samples: 0, chunks: [], rotation, names: named };
+  const t = { handler, timescale, mediaDuration: 0, samples: 0, chunks: [], rotation, names: named2 };
   if (handler === "vide") {
     if (entry.type !== "avc1") {
       const what = entry.type === "encv" ? "encrypted pictures" : entry.type === "avc3" ? "H.264 with its parameter sets in the stream (avc3)" : `pictures coded as ${JSON.stringify(entry.type)}, not H.264`;
@@ -8816,9 +8117,9 @@ function parse(bytes) {
   if (bytes.length > MAX_BYTES) throw new NotFilm("limits", `${bytes.length} bytes, above ${MAX_BYTES} (one media object of 64 MiB, locked)`);
   const r = new Reader(bytes);
   if (bytes.length < 8 || ascii2(bytes, 4, 4) !== "ftyp") throw new NotFilm("structure", "it does not begin with a file type box (ftyp)");
-  const top3 = r.boxes(0, bytes.length, true);
+  const top2 = r.boxes(0, bytes.length, true);
   const carried = /* @__PURE__ */ new Set();
-  const ftyp = top3[0];
+  const ftyp = top2[0];
   r.need(ftyp.body, 8, ftyp.end, "the file type");
   if ((ftyp.end - ftyp.body) % 4) throw new NotFilm("structure", "the file type box is not whole brands");
   const major = ascii2(bytes, ftyp.body, 4);
@@ -8829,7 +8130,7 @@ function parse(bytes) {
   const mdats = [];
   let moov = null;
   let indexFirst = false;
-  for (const b of top3.slice(1)) {
+  for (const b of top2.slice(1)) {
     if (b.type === "moov") {
       if (moov) throw new NotFilm("structure", "more than one movie box (moov)");
       moov = b;
@@ -8876,8 +8177,8 @@ function parse(bytes) {
   const turned = v.rotation === 90 || v.rotation === 270;
   const vv = v.video;
   const long = Math.max(vv.width, vv.height);
-  const short4 = Math.min(vv.width, vv.height);
-  if (long > MAX_LONG_SIDE || short4 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
+  const short5 = Math.min(vv.width, vv.height);
+  if (long > MAX_LONG_SIDE || short5 > MAX_SHORT_SIDE) throw new NotFilm("limits", `pictures of ${vv.width} x ${vv.height}, beyond ${MAX_LONG_SIDE} x ${MAX_SHORT_SIDE}`);
   if (vv.level > MAX_LEVEL) throw new NotFilm("limits", `H.264 level ${vv.level / 10}, above ${MAX_LEVEL / 10}`);
   const seconds = Math.max(mDur / mScale, ...tracks.map((t) => t.mediaDuration / t.timescale));
   if (seconds > MAX_SECONDS) throw new NotFilm("limits", `${Math.round(seconds)} seconds long, beyond ${MAX_SECONDS}`);
@@ -8929,7 +8230,7 @@ function box(type, ...parts) {
   }
   return out;
 }
-function concat3(parts) {
+function concat2(parts) {
   const out = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
   let o = 0;
   for (const p of parts) {
@@ -9024,7 +8325,7 @@ function stripped(bytes, p) {
   const moov = rebuild(mdatBody);
   const media = new Uint8Array(at);
   for (const c of all) media.set(bytes.subarray(c.offset, c.offset + c.size), placed.get(c));
-  return concat3([ftyp, moov, box("mdat", media)]);
+  return concat2([ftyp, moov, box("mdat", media)]);
 }
 
 // ../../modules/audio/src/audio.ts
@@ -9066,9 +8367,9 @@ function parse2(bytes) {
   const ascii3 = (o, n) => String.fromCharCode(...bytes.subarray(o, o + n));
   const r = new Reader(bytes);
   if (bytes.length < 8 || ascii3(4, 4) !== "ftyp") throw new NotSound("structure", "it does not begin with a file type box (ftyp)");
-  const top3 = r.boxes(0, bytes.length, true);
+  const top2 = r.boxes(0, bytes.length, true);
   const carried = /* @__PURE__ */ new Set();
-  const ftyp = top3[0];
+  const ftyp = top2[0];
   r.need(ftyp.body, 8, ftyp.end, "the file type");
   if ((ftyp.end - ftyp.body) % 4) throw new NotSound("structure", "the file type box is not whole brands");
   const major = ascii3(ftyp.body, 4);
@@ -9079,7 +8380,7 @@ function parse2(bytes) {
   const mdats = [];
   let moov = null;
   let indexFirst = false;
-  for (const b of top3.slice(1)) {
+  for (const b of top2.slice(1)) {
     if (b.type === "moov") {
       if (moov) throw new NotSound("structure", "more than one movie box (moov)");
       moov = b;
@@ -9158,8 +8459,18 @@ function strip3(bytes) {
   });
 }
 
+// ../longform/src/specs.ts
+var test2 = (s) => sha2562(s);
+var LONGFORM_SPECS = {
+  /** The Text MIR (`TEXT`). */
+  text: SPECS.text,
+  /** The long-form text format cMIP (cmips/cmip-long-form-draft-1.md). */
+  longform: test2("long-form text format cMIP, draft 1, test value until publication")
+};
+var TEXT_ACT = 0;
+
 // ../barebone/src/specs.ts
-var test4 = (s) => sha2562(s);
+var test3 = (s) => sha2562(s);
 var POST_SPECS = {
   /** The Text MIR (`TEXT`). */
   text: LONGFORM_SPECS.text,
@@ -9168,14 +8479,14 @@ var POST_SPECS = {
   /** The long-form text format cMIP: a post naming it is rendered with it. */
   longform: LONGFORM_SPECS.longform,
   /** The JPEG Module (modules/module-jpeg-draft-1.md). */
-  jpeg: test4("JPEG Module, draft 1, test value until publication"),
+  jpeg: test3("JPEG Module, draft 1, test value until publication"),
   /** The video Module (modules/module-video-draft-1.md): a film, named by its test value until publication, as the JPEG Module is. */
-  video: test4("video Module, draft 1, test value until publication"),
+  video: test3("video Module, draft 1, test value until publication"),
   /** The audio Module (modules/module-audio-draft-1.md): a recording, named by its test value until publication, as the video Module is. */
-  audio: test4("audio Module, draft 1, test value until publication")
+  audio: test3("audio Module, draft 1, test value until publication")
 };
 var TEXT_ACT2 = 0;
-var PUBLICATION2 = 0;
+var PUBLICATION = 0;
 
 // ../barebone/src/corrections.ts
 var CORRECTIONS_SPEC = sha2562("Corrections cMIP, draft 2, test value until publication");
@@ -9218,11 +8529,11 @@ async function publishPicture(by, jpeg, relays) {
     ])
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION2, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, picture: s.picture, work: l.workHash, size: s.bytes.length };
 }
-function textPayload2(text3, format = null) {
+function textPayload(text3, format = null) {
   const m = /* @__PURE__ */ new Map([[0, text3]]);
   if (format) m.set(1, unhex(format));
   return cborEncode(m);
@@ -9251,7 +8562,7 @@ async function publishVideo(by, mp4, relays) {
     ])
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION2, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, film, work: l.workHash, size: s.bytes.length };
 }
@@ -9279,7 +8590,7 @@ async function publishAudio(by, m4a, relays) {
     ])
   );
   await carryChain(by, relays);
-  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION2, payload, { public: true, relays });
+  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, sound, work: l.workHash, size: s.bytes.length };
 }
@@ -9291,7 +8602,7 @@ async function post(by, opts) {
   const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...film ? [referenceTo(film.act)] : [], ...recording ? [referenceTo(recording.act)] : [], ...opts.refs ?? []];
   const corrected = opts.corrects && opts.format === void 0 ? await fetchAct(typeof opts.corrects === "string" ? opts.corrects : opts.corrects[0], opts.relays, {}) : null;
   const format = opts.format !== void 0 ? opts.format : opts.corrects ? correctionFormatFor(corrected ? formatOfPayload(describeAct(corrected).payload) : null) : null;
-  const made = await by.publish(POST_SPECS.text, TEXT_ACT2, textPayload2(opts.text, format), {
+  const made = await by.publish(POST_SPECS.text, TEXT_ACT2, textPayload(opts.text, format), {
     public: true,
     relays: opts.relays,
     refs: refs.length ? refs : void 0,
@@ -9315,6 +8626,1662 @@ async function leaveInInbox(by, act, inbox) {
 }
 async function fetchAct(id, hints, via) {
   return firstOf(hints.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getAct(id));
+}
+var Judge = class {
+  constructor(hints, via) {
+    this.hints = hints;
+    this.via = via;
+    this.v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  }
+  v;
+  /** Addresses not tried by any lookup, each with why. */
+  notTried = [];
+  looked = /* @__PURE__ */ new Map();
+  async standing(act, id, signer) {
+    let l = this.looked.get(signer);
+    if (!l) {
+      l = lookUp(signer, this.hints, this.via, this.v).then(async (x) => {
+        for (const n of x.notTried) if (!this.notTried.some((y) => y.hint === n.hint)) this.notTried.push(n);
+        await holdSequence(this.v, signer, x, this.hints, this.via);
+      });
+      this.looked.set(signer, l);
+    }
+    await l;
+    this.v.add(act);
+    return this.v.status(id);
+  }
+};
+
+// ../barebone/src/clock.ts
+var DUBSAR_CLOCK_ID = "1c743854ba1884b470f02221395d18d1abe977631bf86f0f221e32e6d83cf453";
+var DUBSAR_CLOCK_NAME = "the Dubsar clock";
+var named = DUBSAR_CLOCK_ID;
+function dubsarClock() {
+  return named ? { identity: named, name: DUBSAR_CLOCK_NAME } : null;
+}
+function timeWords(t) {
+  const d = new Date(t * 1e3);
+  const m = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getUTCMonth()];
+  return `${d.getUTCDate()} ${m} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
+}
+function byClock(t) {
+  return `${timeWords(t)} \xB7 by the Dubsar clock`;
+}
+var stamps = /* @__PURE__ */ new Map();
+var now = () => Math.floor(Date.now() / 1e3);
+async function clockTimes(hints, via) {
+  const c = dubsarClock();
+  if (!c) return /* @__PURE__ */ new Map();
+  const kept = stamps.get(c.identity);
+  if (kept && kept.at + 60 > now()) return kept.earliest;
+  try {
+    let places = hints;
+    try {
+      const l = await lookUp(c.identity, hints, via);
+      places = [.../* @__PURE__ */ new Set([...l.resolution.homes.map((h) => h.hint), ...l.routes.routes.flatMap((r2) => r2.hints), ...hints])];
+    } catch {
+    }
+    const r = await readStamps(c.identity, places, new Judge(places, via), via);
+    stamps.set(c.identity, { at: now(), earliest: r.earliest });
+    return r.earliest;
+  } catch {
+    return /* @__PURE__ */ new Map();
+  }
+}
+async function clockWords(ids, hints, via) {
+  const t = await clockTimes(hints, via);
+  const out = {};
+  for (const id of ids) if (t.has(id)) out[id] = byClock(t.get(id));
+  return out;
+}
+
+// src/cards.ts
+var CARD_HEAD = "Dubsar Specification Card";
+var LIMITS = { title: 120, summary: 600, releases: 16, vectors: 8 };
+var CARDS_READ = 2e3;
+var CARD_SAY = [
+  "A specification card is a signed post saying what a specification is for and where its releases, test vectors and discussion are (the Dubsar Specification Card cMIP). Every app shows it, as the plain post it is.",
+  "Only its creator\u2019s latest card speaks for the specification; anyone else\u2019s is shown as their own word. A card changes nothing in the specification, which stays as it was published.",
+  "Cards are found by asking the relays you name: one on a relay not asked stays unseen."
+];
+var HEX64 = /^[0-9a-f]{64}$/;
+var oneLine = (s) => s.replace(/\s+/g, " ").trim();
+function readHex(typed, label, what) {
+  const t = typed.trim();
+  if (HEX64.test(t.toLowerCase())) return t.toLowerCase();
+  try {
+    return readForm(t, label).hex;
+  } catch (e3) {
+    throw new Error(`${what}: ${e3 instanceof Error ? e3.message : String(e3)}.`);
+  }
+}
+function cardText2(c) {
+  const title = oneLine(c.title);
+  const summary = c.summary ? oneLine(c.summary) : "";
+  if (!title) throw new Error("A card needs a title. Nothing was signed.");
+  if (title.length > LIMITS.title) throw new Error(`A card\u2019s title is at most ${LIMITS.title} characters. Nothing was signed.`);
+  if (summary.length > LIMITS.summary) throw new Error(`A card\u2019s summary is at most ${LIMITS.summary} characters. Nothing was signed.`);
+  if (c.releases.length > LIMITS.releases) throw new Error(`A card names at most ${LIMITS.releases} releases. Nothing was signed.`);
+  if (c.vectors.length > LIMITS.vectors) throw new Error(`A card names at most ${LIMITS.vectors} places for test vectors. Nothing was signed.`);
+  const lines2 = [CARD_HEAD, `Specification: ${specForm(c.spec)}`, `Title: ${title}`];
+  if (summary) lines2.push(`Summary: ${summary}`);
+  for (const r of c.releases) lines2.push(`Release: ${actForm(r)}`);
+  for (const v of c.vectors) lines2.push(`Vectors: ${HEX64.test(v) ? actForm(v) : v}`);
+  if (c.discussion) lines2.push(`Discussion: ${actForm(c.discussion)}`);
+  return lines2.join("\n");
+}
+function readCardText(text3) {
+  const lines2 = text3.split("\n");
+  if (lines2[0] !== CARD_HEAD) return null;
+  const c = { spec: "", title: "", summary: null, releases: [], vectors: [], discussion: null };
+  let specs = 0;
+  let titles = 0;
+  for (const l of lines2.slice(1)) {
+    const m = /^([A-Za-z]+): (.+)$/.exec(l);
+    if (!m) return null;
+    const [, key, value] = m;
+    try {
+      if (key === "Specification") {
+        c.spec = readHex(value, "mspec", "Specification");
+        specs++;
+      } else if (key === "Title") {
+        c.title = value.slice(0, LIMITS.title);
+        titles++;
+      } else if (key === "Summary") c.summary = value.slice(0, LIMITS.summary);
+      else if (key === "Release" && c.releases.length < LIMITS.releases) c.releases.push(readHex(value, "mact", "Release"));
+      else if (key === "Vectors" && c.vectors.length < LIMITS.vectors) c.vectors.push(/^https:\/\//.test(value) ? value : readHex(value, "mact", "Vectors"));
+      else if (key === "Discussion") c.discussion = readHex(value, "mact", "Discussion");
+    } catch {
+    }
+  }
+  return specs === 1 && titles === 1 ? c : null;
+}
+var discussionText = (title, spec) => `Discussion of ${oneLine(title)}
+${specForm(spec)}`;
+async function publishCard(me, c, o) {
+  const text3 = cardText2(c);
+  const refs = await cardRefs([...o.publication ? [o.publication] : [], ...c.releases, ...c.discussion ? [c.discussion] : []], [.../* @__PURE__ */ new Set([...o.relays, ...o.find ?? []])], o.via);
+  const made = await post(me, { text: text3, relays: o.relays, refs });
+  return { id: made.id, text: text3 };
+}
+async function cardRefs(ids, relays, via) {
+  const out = [];
+  for (const id of [...new Set(ids)]) {
+    try {
+      out.push((await referTo(id, relays, via)).ref);
+    } catch {
+      throw new Error(`The act ${actForm(id)} was not found on your relays: a card names only acts held, with their signers. Nothing was signed.`);
+    }
+  }
+  return out;
+}
+async function publishDiscussion(me, a) {
+  const refs = a.publication ? await cardRefs([a.publication], [.../* @__PURE__ */ new Set([...a.relays, ...a.find ?? []])], a.via) : [];
+  const made = await post(me, { text: discussionText(a.title, a.spec), relays: a.relays, refs });
+  return { id: made.id };
+}
+async function readCards(relays, via, signer) {
+  const out = /* @__PURE__ */ new Map();
+  for (const r of relays) {
+    let after;
+    let read4 = 0;
+    try {
+      for (; ; ) {
+        const page = await relayAt(r, via).feed({ spec: POST_SPECS.text, type: TEXT_ACT2, signer, after });
+        for (const it of page.items) {
+          if (it.kind !== "act" || read4 >= CARDS_READ) continue;
+          read4++;
+          let d;
+          try {
+            d = describeAct(it.item);
+          } catch {
+            continue;
+          }
+          if (!d.public || !d.signer || !d.payload || out.has(d.id)) continue;
+          const t = cborDecode(d.payload).get(0);
+          const card2 = typeof t === "string" ? readCardText(t) : null;
+          if (card2) out.set(d.id, { act: it.item, d, card: card2 });
+        }
+        if (!page.items.length || page.next === after || read4 >= CARDS_READ) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  return [...out.values()];
+}
+async function prevLinks(signer, relays, via) {
+  const links = /* @__PURE__ */ new Map();
+  for (const r of relays) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(r, via).feed({ signer, after });
+        for (const it of page.items) {
+          if (it.kind !== "act") continue;
+          try {
+            const d = describeAct(it.item);
+            if (d.signer === signer && !links.has(d.id)) links.set(d.id, d.prev ?? null);
+          } catch {
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  return links;
+}
+function follows(links, later, earlier) {
+  let at = links.get(later);
+  for (let i = 0; at && i < 1e5; i++) {
+    if (at === earlier) return true;
+    at = links.get(at);
+  }
+  return false;
+}
+async function cardsFor(spec, creator, relays, via, times = /* @__PURE__ */ new Map(), o = {}) {
+  const all = /* @__PURE__ */ new Map();
+  const read4 = o.pre ?? [...creator ? await readCards(relays, via, creator) : [], ...o.onlyCreator ? [] : await readCards(relays, via)];
+  for (const x of read4) if (x.card.spec === spec && (!o.onlyCreator || x.d.signer === creator)) all.set(x.d.id, x);
+  const judge2 = new Judge(relays, via);
+  const lines2 = [];
+  const found = [];
+  for (const { act, d, card: card2 } of all.values()) {
+    let standing2 = "unknown";
+    try {
+      standing2 = await judge2.standing(act, d.id, d.signer);
+    } catch (e3) {
+      standing2 = `not checked: ${e3 instanceof Error ? e3.message : String(e3)}`;
+    }
+    if (standing2 !== "valid") {
+      lines2.push({ text: `A card by ${d.signer.slice(0, 8)}\u2026 is ${standing2}, not valid for its signer\u2019s chain: not shown.`, tone: "warn" });
+      continue;
+    }
+    found.push({ id: d.id, signer: d.signer, fields: card2, creators: creator !== null && d.signer === creator, superseded: false, standing: standing2, hint: d.hint ?? null });
+  }
+  const bySigner = /* @__PURE__ */ new Map();
+  for (const c of found) bySigner.set(c.signer, [...bySigner.get(c.signer) ?? [], c]);
+  for (const [signer, cs] of bySigner) {
+    if (cs.length < 2) continue;
+    const links = await prevLinks(signer, relays, via);
+    for (const c of cs) if (cs.some((o2) => o2 !== c && follows(links, o2.id, c.id))) c.superseded = true;
+    const tops = cs.filter((c) => !c.superseded);
+    if (tops.length > 1) {
+      const stamped = tops.filter((c) => times.has(c.id));
+      if (stamped.length === tops.length) {
+        const last = stamped.reduce((a, b) => times.get(b.id) > times.get(a.id) ? b : a);
+        for (const c of tops) if (c !== last) c.superseded = true;
+      } else lines2.push({ text: `${signer.slice(0, 8)}\u2026 signed cards for it on ${tops.length} lines, and no clock stamped them all: each line\u2019s latest is shown, and which is newer cannot be told.`, tone: "warn" });
+    }
+  }
+  found.sort((a, b) => Number(b.creators) - Number(a.creators) || Number(a.superseded) - Number(b.superseded) || (times.get(b.id) ?? 0) - (times.get(a.id) ?? 0) || (a.id < b.id ? -1 : 1));
+  return { cards: found, lines: lines2 };
+}
+var ownCard = (cards) => cards.find((c) => c.creators && !c.superseded) ?? null;
+var MICS_HASH = "647c5fcef155bde9878c5378dc57733006e2938d3b42b2cef2c9356eb9634439";
+var SUITE_HASH = "e0599d7d3588998ac4dcac0b159f7165ad101eeb81d605236db448a81fdc014b";
+var BUILT_IN = [
+  { hash: MIRS.identity, title: "MIR: Identity", kind: "MIR", summary: "Who signs: identities, their keys, homes, rotations, receipts and succession." },
+  { hash: MIRS.text, title: "MIR: Text", kind: "MIR", summary: "What a text act is, and canonical text: the words every act is written in." },
+  { hash: MIRS.envelopes, title: "MIR: Envelopes", kind: "MIR", summary: "The shape of every act: public and private acts, sequences, references, media, relays." },
+  { hash: MIRS.money, title: "MIR: Money", kind: "MIR", summary: "Payments, claims and receipts, rails and units: how a payment is proven." },
+  { hash: MIRS.agreements, title: "MIR: Agreements", kind: "MIR", summary: "Agreements, collectives, vows and offers, splits, keepers and judgments." },
+  { hash: MIRS.development, title: "MIR: Development", kind: "MIR", summary: "cMIPs and Modules: named by hash, frozen at publication, adopted by choice." },
+  { hash: MICS_HASH, title: "The MICS: MOR Inscribed Core Spec", kind: "MICS document", summary: "The core in one document: what MOR is, its layers and the six MIRs it names." },
+  { hash: SUITE_HASH, title: "MOR Freeze Test Suite", kind: "test suite", summary: "What must be tested before the freeze: every step, and what it shows." }
+];
+var BUILT_IN_SAY = "One of the core\u2019s texts: it names no creator, so no card speaks for it. Its title is its own first heading; these words are Ummia\u2019s. The front door to the frozen texts is dubsar.org\u2019s.";
+var builtIn = (hash) => BUILT_IN.find((b) => b.hash === hash) ?? null;
+
+// src/follows.ts
+var FOLLOW_SAY = "One follow list for every app: sealed to you at your homes, read by Dub, Edubba and Ummia. Here it points Look at the people you follow; muting is Dub\u2019s.";
+var secrets = (me) => [...me.f.encryption].reverse().filter((e3) => e3.secret).map((e3) => unhex(e3.secret));
+async function contacts(me, via) {
+  const keys = secrets(me);
+  if (!keys.length) return { follows: [], problem: "Ummia holds no encryption key of this identity: its follow list cannot be opened here." };
+  const l = await readSealedList(me.id, keys, me.f.homes.map((h) => h.hint), via);
+  return { follows: l.follows, problem: !l.act && l.problems.length ? `its homes did not answer (${l.problems.join("; ")})` : null };
+}
+async function follow(me, who, via) {
+  const keys = secrets(me);
+  if (!keys.length) throw new Error("Ummia holds no encryption key of this identity, so its follow list cannot be sealed to it. Follow in Dub instead. Nothing was signed.");
+  if (who.id === me.id) throw new Error("That is this identity itself. Nothing was signed.");
+  const homes = me.f.homes.map((h) => h.hint);
+  const found = await readSealedList(me.id, keys, homes, via);
+  if (!found.act && found.problems.length >= homes.length) throw new Error(`The follow list could not be read: its homes did not answer (${found.problems.join("; ")}). Nothing was signed.`);
+  const follows2 = found.follows.map((f) => ({ ...f }));
+  const had = follows2.find((f) => f.id === who.id);
+  if (had && (!who.name || had.name === who.name)) return [{ text: "Already in your contacts: nothing to change.", tone: "ok" }];
+  if (had) had.name = who.name;
+  else follows2.push({ id: who.id, name: who.name });
+  const look2 = await lookUp(me.id, homes, via);
+  const held = me.f.encryption.find((e3) => look2.encryptionKey && e3.secret && hex(xwingPublic(unhex(e3.secret))) === hex(look2.encryptionKey));
+  if (!held || !look2.encryptionKey) throw new Error("The encryption key this identity publishes is not one Ummia holds: the follow list cannot be sealed from here. Nothing was signed.");
+  const made = await me.signNow(PEOPLE_SPEC, SEALED_LIST, sealedListPayload({ version: found.version + 1, previous: found.act, follows: follows2 }), { public: false, to: [me.id] });
+  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look2.encryptionKey }]);
+  let left = 0;
+  for (const h of homes) {
+    try {
+      await relayAt(h, via).putSealed(sealed);
+      left++;
+    } catch {
+    }
+  }
+  await leaveAtHomes(me, made, { via, sealed: left > 0 });
+  const lines2 = [];
+  if (found.forked) lines2.push({ text: "The follow list at your homes was forked: two apps changed it at once. The longer branch was continued.", tone: "warn" });
+  lines2.push(left ? { text: `Added to your contacts: the follow list is sealed to you and kept at your homes (version ${found.version + 1}); Dub and Edubba read it too.`, tone: "ok" } : { text: "No home took the follow list: nothing changed there. Try again.", tone: "warn" });
+  return lines2;
+}
+
+// ../repo/src/manifest.ts
+function validPath(p) {
+  if (!p || p.startsWith("/") || p !== p.normalize("NFC")) return false;
+  if (/[\\\u0000-\u001f\u007f]/.test(p)) return false;
+  return p.split("/").every((s) => s !== "" && s !== "." && s !== "..");
+}
+var enc = new TextEncoder();
+function byBytes(a, b) {
+  const x = enc.encode(a);
+  const y = enc.encode(b);
+  for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return x.length - y.length;
+}
+function decodeManifest(bytes) {
+  const m = cborDecode(bytes);
+  if (!(m instanceof Map)) throw new Error("a manifest is a map");
+  for (const k of m.keys()) if (typeof k !== "number" || k < 0 || k > 6) throw new Error(`manifest: unknown field ${k}`);
+  const text3 = (v, w) => {
+    if (typeof v !== "string") throw new Error(`manifest: ${w}`);
+    return v;
+  };
+  const bytesOf = (v, n, w) => {
+    if (!(v instanceof Uint8Array) || v.length !== n) throw new Error(`manifest: ${w}`);
+    return v;
+  };
+  const list3 = (v, w) => {
+    if (!Array.isArray(v)) throw new Error(`manifest: ${w}`);
+    return v;
+  };
+  const prev = m.get(2);
+  const files = list3(m.get(3), "files").map((x) => {
+    const a = list3(x, "file");
+    if (a.length !== 6) throw new Error("manifest: a file has six fields");
+    const size = a[2];
+    if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 0) throw new Error("manifest: file size");
+    return {
+      path: text3(a[0], "file path"),
+      work: hex(bytesOf(a[1], 32, "work hash")),
+      size,
+      locked: hex(bytesOf(a[3], 32, "locked hash")),
+      nonce: bytesOf(a[4], 24, "nonce"),
+      key: bytesOf(a[5], 32, "key")
+    };
+  });
+  if (!files.length) throw new Error("manifest: no files");
+  files.forEach((f, i) => {
+    if (!validPath(f.path)) throw new Error(`manifest: not a valid path: ${JSON.stringify(f.path)}`);
+    if (i && byBytes(files[i - 1].path, f.path) >= 0) throw new Error("manifest: paths sorted and unique");
+  });
+  const dependencies = list3(m.get(4), "dependencies").map((x) => {
+    const a = list3(x, "dependency");
+    if (a.length !== 4) throw new Error("manifest: a dependency has four fields");
+    return {
+      registry: text3(a[0], "registry"),
+      name: text3(a[1], "dependency name"),
+      version: text3(a[2], "dependency version"),
+      checksum: text3(a[3], "dependency checksum")
+    };
+  });
+  let impl;
+  if (m.has(6)) {
+    const entries = list3(m.get(6), "implements").map((e3) => {
+      if (!Array.isArray(e3) || e3.length < 1 || e3.length > 2) throw new Error("manifest: an implemented specification is [spec, ? hint]");
+      const spec = hex(bytesOf(e3[0], 32, "an implemented specification"));
+      return e3.length === 2 ? { spec, hint: hex(bytesOf(e3[1], 32, "a publication hint")) } : { spec };
+    });
+    if (!entries.length) throw new Error("manifest: implements names at least one specification");
+    entries.forEach((x, i) => {
+      if (i && entries[i - 1].spec >= x.spec) throw new Error("manifest: implements sorted by spec hash and unique");
+    });
+    impl = entries;
+  }
+  return {
+    name: text3(m.get(0), "name"),
+    version: text3(m.get(1), "version"),
+    previous: prev === null ? null : hex(bytesOf(prev, 32, "previous")),
+    files,
+    dependencies,
+    source: m.has(5) ? text3(m.get(5), "source") : void 0,
+    implements: impl
+  };
+}
+
+// ../site/src/settings.ts
+function relayAddress(s) {
+  if (typeof s !== "string") return null;
+  let u2;
+  try {
+    u2 = new URL(s);
+  } catch {
+    return null;
+  }
+  const local = u2.hostname === "127.0.0.1" || u2.hostname === "localhost" || u2.hostname === "[::1]";
+  if (u2.protocol !== "https:" && !(u2.protocol === "http:" && local)) return null;
+  if (u2.username || u2.password || u2.search || u2.hash) return null;
+  return s.replace(/\/$/, "");
+}
+
+// ../site/src/specs.ts
+var test4 = (s) => sha2562(s);
+var SITE_SPECS = {
+  identity: SPECS.identity,
+  /** The Envelopes MIR (`ENVELOPES`): a version is a publication. */
+  envelopes: SPECS.envelopes,
+  /** The Agreements MIR (`AGREEMENTS`): only to tell that a signer is a collective. */
+  agreements: test4("LAW, test value until the freeze"),
+  /** The website cMIP (cmips/cmip-website-draft-4.md). Draft 3 adds the icon
+   * (rule 16a), draft 4 films (rules 4, 6a, 12a); both leave the manifest's
+   * format as it was, so the test value stays draft 2's: versions already
+   * published still verify. */
+  site: test4("website cMIP, draft 2, test value until publication")
+};
+var SITE_AGREEMENTS_SPECS = { ...MIRS, agreements: SITE_SPECS.agreements };
+var PUBLICATION2 = 0;
+var NUDGE = test4("nudge cMIP, draft 2, test value until publication");
+var RELEASE_MANIFEST = test4("release manifest cMIP, draft 1, test value until publication");
+var PAYMENT_CMIP = test4("payment cMIP, draft 2, test value until publication");
+
+// ../site/src/listing.ts
+var AGREEMENTS_TERMS = 0;
+var AGREEMENTS_SIGNATURE = 1;
+var KINDS = ["cMIP", "Module", "unit", "media type", "MIR", "signature scheme", "MICS document", "test suite", "MIP"];
+var MIR = 4;
+var MICS = 6;
+var MIP = 8;
+var LAYERS = {
+  [MIRS.identity]: "Identity",
+  [MIRS.text]: "Text",
+  [MIRS.envelopes]: "Envelopes",
+  [MIRS.money]: "Money",
+  [MIRS.agreements]: "Agreements",
+  [MIRS.development]: "Development"
+};
+var EXTENSION_LAYERS = ["Identity", "Envelopes and Text", "Money", "Agreements"];
+var TASKS = {
+  1: ["Identity", "Identity proofs and credentials"],
+  2: ["Identity", "Naming"],
+  3: ["Identity", "Outside link proofs"],
+  4: ["Text", "Text format"],
+  5: ["Envelopes", "Media interpretation"],
+  6: ["Money", "Payment"],
+  7: ["Money", "Conversion"],
+  8: ["Agreements", "Split"],
+  9: ["Agreements", "Condition evaluation"],
+  10: ["Agreements", "Time reference"],
+  11: ["Envelopes", "Anchoring"],
+  12: ["Agreements", "Grant limits"],
+  13: ["Agreements", "Work claims"],
+  14: ["Agreements", "Absence proof"]
+};
+var LISTING_READ = 5e3;
+var message2 = (err) => err instanceof Error ? err.message : String(err);
+var bytes32 = (x) => x instanceof Uint8Array && x.length === 32;
+function concat3(...parts) {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let at = 0;
+  for (const p of parts) {
+    out.set(p, at);
+    at += p.length;
+  }
+  return out;
+}
+function specHash(content) {
+  const tag = sha256(new TextEncoder().encode("MOR/spec"));
+  return hex(sha256(concat3(tag, tag, content)));
+}
+function decodeSpec2(content) {
+  let d;
+  try {
+    d = decodeSpec(content, PAYMENT_CMIP);
+  } catch (e3) {
+    throw new Error(message2(e3));
+  }
+  return {
+    kind: d.kind,
+    creator: d.creator ?? null,
+    tasks: d.tasks,
+    types: d.types.map(([type, name]) => ({ type, name })),
+    dependencies: d.dependencies,
+    implements: d.implements ?? null,
+    rules: d.rules,
+    fee: d.fee,
+    predecessor: d.predecessor ?? null,
+    text: d.text,
+    layers: d.layers.length ? d.layers : null,
+    rail: d.railKind ? { kind: d.railKind, binds: d.railBinds ?? [] } : null,
+    checker: d.checksDelivery
+  };
+}
+var isXtype = (s) => s.types.length > 0 && s.tasks.length === 0;
+function nameOf(text3) {
+  const line = text3.split("\n").map((l) => l.replace(/^#+\s*/, "").trim()).find((l) => /\p{L}/u.test(l)) ?? "(no name)";
+  return line.length > 100 ? `${line.slice(0, 99)}\u2026` : line;
+}
+function mediaOf(d) {
+  if (!d.public || !d.payload || d.type !== PUBLICATION2 || d.spec !== SPECS.envelopes) return null;
+  let m;
+  try {
+    m = cborDecode(d.payload);
+  } catch {
+    return null;
+  }
+  if (!(m instanceof Map)) return null;
+  const [spec, work, locked, size, nonce, key, places] = [0, 1, 2, 3, 4, 5, 6].map((k) => m.get(k));
+  if (!bytes32(spec) || !(work instanceof Uint8Array) || !(locked instanceof Uint8Array) || typeof size !== "number" || !(nonce instanceof Uint8Array)) return null;
+  return {
+    spec: hex(spec),
+    work,
+    locked,
+    size,
+    nonce,
+    key: key instanceof Uint8Array ? key : null,
+    places: Array.isArray(places) ? places.filter((p) => typeof p === "string") : []
+  };
+}
+var Judge2 = class {
+  constructor(places, via) {
+    this.places = places;
+    this.via = via;
+  }
+  v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  looked = /* @__PURE__ */ new Map();
+  lookUp(identity) {
+    let l = this.looked.get(identity);
+    if (!l) {
+      l = lookUp(identity, this.places, this.via, this.v);
+      this.looked.set(identity, l);
+    }
+    return l;
+  }
+  /** Why the act is not valid for its signer's chain, or null when it is. */
+  async problem(act, id, signer) {
+    try {
+      await holdSequence(this.v, signer, await this.lookUp(signer), this.places, this.via);
+    } catch (e3) {
+      return `its signer's identity chain could not be looked up: ${message2(e3)}`;
+    }
+    try {
+      this.v.add(act);
+    } catch (e3) {
+      return `the act is not valid: ${message2(e3)}`;
+    }
+    const s = this.v.status(id);
+    return s === "valid" ? null : `its standing is \u201C${s}\u201D, not valid, for its signer's identity chain`;
+  }
+};
+async function openAt(m, places, via) {
+  if (!m.key) return null;
+  for (const h of places) {
+    try {
+      const locked = await relayAt(h, via).getMedia(hex(m.locked));
+      if (!locked) continue;
+      const plain = openMedia(locked, m.key, m.nonce);
+      if (plain.length === m.size && workHash(plain) === hex(m.work)) return plain;
+    } catch {
+    }
+  }
+  return null;
+}
+function queriesOf(f) {
+  return [{ spec: SPECS.envelopes, type: PUBLICATION2, signer: f.signer }, { spec: MIRS.agreements, type: AGREEMENTS_TERMS }, { spec: MIRS.agreements, type: AGREEMENTS_SIGNATURE }];
+}
+async function readRelay(line, via, into, queries = [{}]) {
+  for (const q of queries) {
+    await readQuery(line, via, into, q);
+    if (line.stopped || line.problem) return;
+  }
+}
+async function readQuery(line, via, into, q) {
+  let after;
+  try {
+    for (; ; ) {
+      const page = await relayAt(line.address, via).feed({ ...q, after });
+      for (const it of page.items) {
+        if (line.read >= LISTING_READ) {
+          line.stopped = true;
+          return;
+        }
+        line.read++;
+        if (it.kind !== "act") {
+          line.private++;
+          continue;
+        }
+        let d;
+        try {
+          d = describeAct(it.item);
+        } catch {
+          continue;
+        }
+        if (!d.public) line.private++;
+        else if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TERMS) line.terms++;
+        if (!into.has(d.id)) into.set(d.id, { d, act: it.item });
+      }
+      if (!page.items.length || page.next === after) break;
+      after = page.next;
+    }
+  } catch (e3) {
+    line.problem = message2(e3);
+  }
+}
+async function readListing(relays, gatewayRelays, via = {}, filtered) {
+  const lines2 = relays.map((r) => ({ ...r, asked: relayAddress(r.address) !== null, problem: null, read: 0, specs: 0, stopped: false, private: 0, terms: 0 }));
+  const asked = lines2.filter((l) => l.asked).map((l) => relayAddress(l.address));
+  for (const l of lines2) if (l.asked) l.address = relayAddress(l.address);
+  const found = /* @__PURE__ */ new Map();
+  const at = /* @__PURE__ */ new Map();
+  for (const l of lines2.filter((x) => x.asked)) {
+    const before = new Set(found.keys());
+    await readRelay(l, via, found, filtered ? queriesOf(filtered) : void 0);
+    for (const id of found.keys()) if (!before.has(id)) at.set(id, l.address);
+  }
+  const places = [.../* @__PURE__ */ new Set([...asked, ...gatewayRelays])];
+  const judge2 = new Judge2(places, via);
+  const pubs = [];
+  const releases = [];
+  for (const { d, act } of found.values()) {
+    const m = mediaOf(d);
+    if (!m) continue;
+    if (m.spec === RELEASE_MANIFEST) {
+      releases.push({ d, act, m });
+      continue;
+    }
+    if (m.spec !== MIRS.development) continue;
+    const l = lines2.find((x) => x.address === at.get(d.id));
+    if (l) l.specs++;
+    pubs.push({ id: d.id, signer: d.signer ?? "", problem: null, hash: null, spec: null, content: null });
+  }
+  await Promise.all(
+    pubs.map(async (p) => {
+      const { d, act } = found.get(p.id);
+      const m = mediaOf(d);
+      if (!d.signer) return void (p.problem = "it names no signer");
+      const bad = await judge2.problem(act, d.id, d.signer);
+      if (bad) return void (p.problem = bad);
+      if (!m.key) return void (p.problem = "its content is locked: its key is not public");
+      const content = await openAt(m, [...places, ...m.places.map(relayAddress).filter((x) => !!x)], via);
+      if (!content) return void (p.problem = "its content was not found, or does not match its work hash and size");
+      try {
+        p.spec = decodeSpec2(content);
+      } catch (e3) {
+        return void (p.problem = `no specification (Development draft 10, F323): ${message2(e3)}`);
+      }
+      p.hash = specHash(content);
+      p.content = content;
+    })
+  );
+  const byHash = /* @__PURE__ */ new Map();
+  for (const p of pubs.filter((x) => !x.problem)) {
+    let l = byHash.get(p.hash);
+    if (!l) {
+      l = { hash: p.hash, spec: p.spec, name: nameOf(p.spec.text), publications: [], claimed: false, releases: [], use: null };
+      byHash.set(p.hash, l);
+    }
+    l.publications.push(p);
+  }
+  for (const l of byHash.values()) {
+    l.claimed = l.spec.creator !== null && l.publications.some((p) => p.signer === l.spec.creator);
+    l.publications.sort((a, b) => Number(b.signer === l.spec.creator) - Number(a.signer === l.spec.creator) || (a.id < b.id ? -1 : 1));
+  }
+  const pubOf = /* @__PURE__ */ new Map();
+  for (const l of byHash.values()) for (const p of l.publications) pubOf.set(p.id, l);
+  const listedBy = (ids) => [...new Set(ids.map((r) => pubOf.get(r)).filter((x) => !!x))];
+  await Promise.all(
+    releases.map(async ({ d, act, m }) => {
+      if (!d.signer || !byHash.size) return;
+      const bad = await judge2.problem(act, d.id, d.signer);
+      const plain = bad ? null : await openAt(m, [...places, ...m.places.map(relayAddress).filter((x) => !!x)], via);
+      let man = null;
+      try {
+        const x = plain ? cborDecode(plain) : null;
+        man = x instanceof Map && typeof x.get(0) === "string" && typeof x.get(1) === "string" ? x : null;
+      } catch {
+        man = null;
+      }
+      const field6 = implementsOf(man);
+      let named2;
+      let problem = bad;
+      if (field6 === null) named2 = listedBy(d.refs ?? []);
+      else if ("specs" in field6) named2 = [...new Set(field6.specs.map((h) => byHash.get(h)).filter((x) => !!x))];
+      else {
+        named2 = listedBy(field6.publications);
+        problem ??= field6.problem;
+      }
+      if (!named2.length) return;
+      const r = { id: d.id, signer: d.signer, name: null, version: null, problem, by: field6 ? "implements" : "reference" };
+      if (!r.problem) {
+        if (man) {
+          r.name = man.get(0);
+          r.version = man.get(1);
+        } else r.problem = plain ? "its manifest does not read as one" : "its manifest was not found, or does not read as one";
+      }
+      for (const l of named2) l.releases.push(r);
+    })
+  );
+  for (const l of byHash.values()) l.releases.sort((a, b) => Number(!!a.problem) - Number(!!b.problem) || (a.id < b.id ? -1 : 1));
+  const { extensions, agreements } = await readExtensions(found, byHash, judge2, lines2.reduce((n, l) => n + l.private, 0));
+  if (filtered) for (const x of [...byHash.values()].filter((l) => isXtype(l.spec))) for (const l of lines2.filter((y) => y.asked && !y.problem)) await readQuery(l, via, found, { spec: x.hash });
+  const xtypes = await countUse(found, byHash, judge2);
+  const all = [...byHash.values()];
+  return {
+    relays: lines2,
+    extensions,
+    agreements,
+    // A MIP's predecessor is what it forks, shown in the MIPs' part, never as a line of drafts (draft 11, F325).
+    lines: linesOf2(all.filter((l) => l.spec.kind !== MIP)),
+    unverified: pubs.filter((p) => p.problem).sort((a, b) => a.id < b.id ? -1 : 1),
+    xtypes,
+    mips: mipsOf(all),
+    versions: versionsOf(all)
+  };
+}
+function implementsOf(man) {
+  if (!man || !man.has(6)) return null;
+  const v = man.get(6);
+  const wrong = { publications: [], problem: "its manifest's \u201Cimplements\u201D (field 6) is not as release manifest cMIP draft 4 gives it: [spec, ? hint] entries, sorted by spec hash" };
+  if (!Array.isArray(v) || !v.length) return wrong;
+  if (v.every(bytes32)) {
+    return { publications: v.map((h) => hex(h)), problem: "its manifest names publications in \u201Cimplements\u201D (field 6), as release manifest cMIP draft 3 did; under draft 4 it names spec hashes, so it is not a valid manifest" };
+  }
+  const specs = [];
+  for (const e3 of v) {
+    if (!Array.isArray(e3) || e3.length < 1 || e3.length > 2 || !e3.every(bytes32)) return wrong;
+    const h = hex(e3[0]);
+    if (specs.length && specs[specs.length - 1] >= h) return wrong;
+    specs.push(h);
+  }
+  return { specs };
+}
+function mipsOf(all) {
+  const byHash = new Map(all.map((l) => [l.hash, l]));
+  const mips = all.filter((l) => l.spec.kind === MIP);
+  const children2 = /* @__PURE__ */ new Map();
+  for (const l of mips) {
+    const p = l.spec.predecessor;
+    if (p !== l.hash) children2.set(p, [...children2.get(p) ?? [], l]);
+  }
+  const order = (a, b) => b.total - a.total || b.direct - a.direct || (a.listed.name < b.listed.name ? -1 : a.listed.name > b.listed.name ? 1 : a.listed.hash < b.listed.hash ? -1 : 1);
+  const placed = /* @__PURE__ */ new Set();
+  const tree = (l) => {
+    placed.add(l.hash);
+    const forks = (children2.get(l.hash) ?? []).filter((c) => !placed.has(c.hash)).map(tree).sort(order);
+    return { listed: l, direct: forks.length, total: forks.reduce((n, f) => n + 1 + f.total, 0), forks };
+  };
+  const byName = (a, b) => a.listed.name < b.listed.name ? -1 : a.listed.name > b.listed.name ? 1 : a.listed.hash < b.listed.hash ? -1 : 1;
+  const roots = all.filter((l) => l.spec.kind === MIR || l.spec.kind === MICS).map(tree).sort(byName);
+  const unrooted = /* @__PURE__ */ new Map();
+  const top2 = (l) => {
+    const seen = /* @__PURE__ */ new Set();
+    let x = l;
+    for (; ; ) {
+      seen.add(x.hash);
+      const p = byHash.get(x.spec.predecessor);
+      if (!p || p.spec.kind !== MIP || seen.has(p.hash)) return x.hash;
+      x = p;
+    }
+  };
+  for (const l of mips.filter((x) => !placed.has(x.hash)).sort((a, b) => a.hash < b.hash ? -1 : 1)) {
+    if (placed.has(l.hash)) continue;
+    const head = byHash.get(top2(l));
+    const leads = head.spec.predecessor;
+    const u2 = unrooted.get(leads) ?? { hash: leads, kind: byHash.get(leads)?.spec.kind ?? null, forks: [] };
+    u2.forks.push(tree(head));
+    u2.forks.sort(order);
+    unrooted.set(leads, u2);
+  }
+  return { roots, unrooted: [...unrooted.values()].sort((a, b) => a.hash < b.hash ? -1 : 1), count: mips.length };
+}
+function versionsOf(all) {
+  const byText = /* @__PURE__ */ new Map();
+  for (const l of all) byText.set(l.spec.text, [...byText.get(l.spec.text) ?? [], l]);
+  const out = [];
+  for (const group of byText.values()) {
+    if (group.length < 2) continue;
+    const fields = group.map((l) => {
+      const c = l.publications.find((p) => p.content)?.content;
+      const m = c ? cborDecode(c) : /* @__PURE__ */ new Map();
+      return new Map([...m].map(([k, v]) => [k, hex(cborEncode(v))]));
+    });
+    const keys = [...new Set(fields.flatMap((f) => [...f.keys()]))].filter((k) => k !== 9).sort((a, b) => a - b);
+    const versions = group.map((listed, i) => ({
+      listed,
+      differs: keys.filter((k) => fields.some((f, j) => j !== i && f.get(k) !== fields[i].get(k)))
+    }));
+    versions.sort((a, b) => a.listed.hash < b.listed.hash ? -1 : 1);
+    out.push({ name: group[0].name, versions });
+  }
+  return out.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+}
+async function countUse(found, byHash, judge2) {
+  const xtypes = [...byHash.values()].filter((l) => isXtype(l.spec));
+  for (const l of xtypes) l.use = { acts: 0, byType: l.spec.types.map((t) => ({ type: t.type, name: t.name, acts: 0 })), notValid: 0 };
+  const of = new Map(xtypes.map((l) => [l.hash, l]));
+  for (const { d, act } of found.values()) {
+    const l = d.public && d.spec ? of.get(d.spec) : void 0;
+    const t = l?.use.byType.find((x) => x.type === d.type);
+    if (!l || !t) continue;
+    if (!d.signer || await judge2.problem(act, d.id, d.signer)) {
+      l.use.notValid++;
+      continue;
+    }
+    t.acts++;
+    l.use.acts++;
+  }
+  return xtypes.sort((a, b) => b.use.acts - a.use.acts || (a.name < b.name ? -1 : a.name > b.name ? 1 : a.hash < b.hash ? -1 : 1));
+}
+function linesOf2(all) {
+  const byHash = new Map(all.map((l) => [l.hash, l]));
+  const after = (l) => l.spec.predecessor && l.spec.predecessor !== l.hash ? byHash.get(l.spec.predecessor) ?? null : null;
+  const children2 = /* @__PURE__ */ new Map();
+  for (const l of all) {
+    const p = after(l);
+    if (p) children2.set(p.hash, [...children2.get(p.hash) ?? [], l]);
+  }
+  const order = (a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : a.hash < b.hash ? -1 : 1;
+  for (const c of children2.values()) c.sort(order);
+  const placed = /* @__PURE__ */ new Set();
+  const out = [];
+  const walk = (l, n, drafts) => {
+    if (placed.has(l.hash)) return;
+    placed.add(l.hash);
+    const p = after(l);
+    const siblings = p ? (children2.get(p.hash) ?? []).filter((x) => x !== l).map((x) => x.hash) : [];
+    drafts.push({
+      listed: l,
+      number: n,
+      after: p,
+      afterMissing: !p && l.spec.predecessor ? l.spec.predecessor : null,
+      otherCreator: !!p && p.spec.creator !== l.spec.creator,
+      siblings
+    });
+    for (const c of children2.get(l.hash) ?? []) walk(c, n + 1, drafts);
+  };
+  const roots = all.filter((l) => !after(l)).sort(order);
+  for (const r of roots) {
+    const drafts = [];
+    walk(r, 1, drafts);
+    out.push({ drafts, newest: drafts[drafts.length - 1].listed });
+  }
+  for (const l of all.filter((x) => !placed.has(x.hash)).sort(order)) {
+    const drafts = [];
+    walk(l, 1, drafts);
+    out.push({ drafts, newest: drafts[drafts.length - 1].listed });
+  }
+  return out.sort((a, b) => order(a.newest, b.newest));
+}
+function roleWords(l, all) {
+  const s = l.spec;
+  const kind = KINDS[s.kind];
+  const role = [];
+  const layers = /* @__PURE__ */ new Set();
+  for (const [mir, n] of s.tasks) {
+    const layer = LAYERS[mir];
+    const known = TASKS[n];
+    if (layer) layers.add(layer);
+    if (known && layer === known[0]) role.push(`fills task ${n}, ${known[1]}`);
+    else role.push(`fills task ${n}${layer ? ` of ${layer}` : ", of a MIR this listing does not know"}`);
+  }
+  if (s.implements && LAYERS[s.implements]) {
+    role.push(`works under the ${LAYERS[s.implements]} MIR`);
+    if (!s.tasks.length) layers.add(LAYERS[s.implements]);
+  } else if (s.implements) {
+    const under = all.get(s.implements);
+    if (under && under.spec.kind === MIR) {
+      role.push(`works under the MIR \u201C${under.name}\u201D`);
+    } else if (under) {
+      role.push(`works under the cMIP \u201C${under.name}\u201D`);
+      if (!s.tasks.length) {
+        for (const [mir] of under.spec.tasks) if (LAYERS[mir]) layers.add(LAYERS[mir]);
+      }
+    } else role.push(`works under a cMIP not found here (${s.implements.slice(0, 12)}\u2026)`);
+  }
+  if (s.types.length) {
+    role.push(
+      !s.tasks.length ? `an xtype: defines ${s.types.length === 1 ? "an act type" : `${s.types.length} act types`} (${s.types.map((t) => t.name).join(", ")}), filling no task` : `defines ${s.types.length === 1 ? "an act type" : `${s.types.length} act types`} (${s.types.map((t) => t.name).join(", ")})`
+    );
+  }
+  if (s.layers) role.push(`declares, for use as an extension, the layers it acts on beyond Development: ${s.layers.map((n) => EXTENSION_LAYERS[n]).join(", ")}`);
+  if (s.rail) role.push(`a rail Module: a ${s.rail.kind} rail, its proof binding ${s.rail.binds.length ? s.rail.binds.join(", ") : "nothing"}`);
+  if (s.checker) role.push("checks proofs of delivery of proven offers (field 12)");
+  if (s.kind === MIP) role.push(`a MIP: a proposal toward a successor protocol, not a rule of MOR; it forks ${all.get(s.predecessor) ? `\u201C${all.get(s.predecessor).name}\u201D` : `a specification not found here (${s.predecessor.slice(0, 12)}\u2026)`}`);
+  if (!role.length) role.push(s.kind === 0 ? "names no task, defines no act type" : "declares nothing more");
+  if (!layers.size && (s.types.length || s.layers || s.kind === 0 && !s.tasks.length)) layers.add("Development");
+  return { kind, layer: [...layers].join(", ") || "not said", role };
+}
+async function readExtensions(found, byHash, judge2, privateActs) {
+  const read4 = { terms: 0, counted: 0, proposed: 0, notCounted: [], private: privateActs };
+  const terms = /* @__PURE__ */ new Map();
+  const signatures = [];
+  for (const { d, act } of found.values()) {
+    if (!d.public || d.spec !== MIRS.agreements || !d.payload || !d.signer) continue;
+    if (d.type === AGREEMENTS_SIGNATURE) signatures.push({ act, d });
+    if (d.type !== AGREEMENTS_TERMS) continue;
+    try {
+      const fields = cborDecode(d.payload);
+      if (fields instanceof Map) terms.set(d.id, { act, signer: d.signer, fields });
+    } catch {
+      read4.notCounted.push({ id: d.id, why: "its terms do not decode" });
+    }
+  }
+  const parties = /* @__PURE__ */ new Set();
+  for (const t of terms.values()) {
+    parties.add(t.signer);
+    for (const p of Array.isArray(t.fields.get(0)) ? t.fields.get(0) : []) if (bytes32(p)) parties.add(hex(p));
+  }
+  for (const s of signatures) parties.add(s.d.signer);
+  await Promise.all([...parties].map((p) => judge2.lookUp(p).catch(() => null)));
+  const valid = /* @__PURE__ */ new Set();
+  for (const [id, t] of terms) {
+    const bad = await judge2.problem(t.act, id, t.signer);
+    if (bad) read4.notCounted.push({ id, why: bad });
+    else valid.add(id);
+  }
+  for (const s of signatures) {
+    try {
+      judge2.v.add(s.act);
+    } catch {
+    }
+  }
+  read4.terms = valid.size;
+  const named2 = (t) => Array.isArray(t.get(15)) ? t.get(15).filter(bytes32).map((h) => hex(h)) : [];
+  const extLayers = {};
+  for (const id of valid) for (const h of named2(terms.get(id).fields)) extLayers[h] = byHash.get(h)?.spec.layers ?? [];
+  const specs = { ...MIRS, extLayers };
+  const counts = /* @__PURE__ */ new Set();
+  for (const id of valid) {
+    try {
+      const a = judge2.v.agreementsAgreement(specs, id);
+      if (a.invalid) read4.notCounted.push({ id, why: `the core library finds these terms invalid: ${a.invalid}` });
+      else if (a.exists === true || a.exists === null && a.ready) counts.add(id);
+      else read4.proposed++;
+    } catch (e3) {
+      read4.notCounted.push({ id, why: `the core library could not judge it: ${message2(e3)}` });
+    }
+  }
+  const first = (id) => {
+    const seen = /* @__PURE__ */ new Set();
+    let x = id;
+    for (; ; ) {
+      seen.add(x);
+      const p = terms.get(x)?.fields.get(11);
+      const ph = bytes32(p) ? hex(p) : null;
+      if (!ph || !terms.has(ph) || seen.has(ph)) return x;
+      x = ph;
+    }
+  };
+  const byExt = /* @__PURE__ */ new Map();
+  const agreementsCounted = /* @__PURE__ */ new Set();
+  for (const id of [...counts].sort()) {
+    const ag = first(id);
+    agreementsCounted.add(ag);
+    for (const h of new Set(named2(terms.get(id).fields))) {
+      const m = byExt.get(h) ?? /* @__PURE__ */ new Map();
+      m.set(ag, [...m.get(ag) ?? [], id]);
+      byExt.set(h, m);
+    }
+  }
+  read4.counted = agreementsCounted.size;
+  read4.notCounted.sort((a, b) => a.id < b.id ? -1 : 1);
+  const extensions = [...byExt].map(([hash, m]) => {
+    const listed = byHash.get(hash) ?? null;
+    return {
+      hash,
+      listed,
+      agreements: [...m].map(([agreement, ids]) => ({ agreement, terms: ids })).sort((a, b) => a.agreement < b.agreement ? -1 : 1),
+      layers: listed ? ["Development", ...(listed.spec.layers ?? []).map((n) => EXTENSION_LAYERS[n])] : null
+    };
+  });
+  const name = (x) => x.listed?.name ?? `~${x.hash}`;
+  extensions.sort((a, b) => b.agreements.length - a.agreements.length || (name(a) < name(b) ? -1 : name(a) > name(b) ? 1 : 0));
+  return { extensions, agreements: read4 };
+}
+
+// src/track.ts
+var LIMIT_SAY = [
+  "Ummia sees public agreements only. A sealed agreement\u2019s use of a cMIP stays invisible unless someone publishes it.",
+  "It is a plain look-up of the relays you name, asked with the filters relays already have (spec, type, signer). Nothing is indexed or kept: ask again to see what changed. Other relays may hold what these do not.",
+  "The listing on dubsar.org reads the relays its page names: one source among any, never a registry. Name those relays here, or any others."
+];
+var flatten = (f) => f.flatMap((x) => [{ hash: x.listed.hash, name: x.listed.name, creator: x.listed.spec.creator, total: x.total }, ...flatten(x.forks)]);
+async function track(relays, o = {}) {
+  const listing = await readListing(
+    relays.map((address) => ({ address, name: null })),
+    [],
+    o.via ?? {},
+    { signer: o.signer || void 0 }
+  );
+  const all = /* @__PURE__ */ new Map();
+  for (const l of listing.lines) for (const d of l.drafts) all.set(d.listed.hash, d.listed);
+  for (const x of listing.xtypes) all.set(x.hash, x);
+  const inAll = (f) => f.forEach((x) => (all.set(x.listed.hash, x.listed), inAll(x.forks)));
+  for (const r of listing.mips.roots) all.set(r.listed.hash, r.listed), inAll(r.forks);
+  for (const u2 of listing.mips.unrooted) inAll(u2.forks);
+  const shown = (l, d) => {
+    const w = roleWords(l, all);
+    return {
+      hash: l.hash,
+      name: l.name,
+      kind: KINDS[l.spec.kind] ?? `kind ${l.spec.kind}`,
+      layer: w.layer,
+      role: w.role,
+      creator: l.spec.creator,
+      claimed: l.claimed,
+      publishers: [...new Set(l.publications.map((p) => p.signer))],
+      publications: l.publications.map((p) => ({ id: p.id, signer: p.signer })),
+      text: l.spec.text,
+      agreements: listing.extensions.find((x) => x.hash === l.hash)?.agreements.length ?? 0,
+      draft: d?.number ?? 1,
+      after: d ? d.after?.hash ?? d.afterMissing : l.spec.predecessor,
+      otherCreator: d?.otherCreator ?? false,
+      releases: l.releases.map((r) => ({ id: r.id, name: r.name, version: r.version, problem: r.problem })),
+      use: l.use
+    };
+  };
+  const every = /* @__PURE__ */ new Map();
+  for (const l of listing.lines) for (const d of l.drafts) every.set(d.listed.hash, shown(d.listed, d));
+  for (const x of listing.xtypes) if (!every.has(x.hash)) every.set(x.hash, shown(x));
+  const walk = (f) => {
+    for (const x of f) {
+      if (!every.has(x.listed.hash)) every.set(x.listed.hash, shown(x.listed));
+      walk(x.forks);
+    }
+  };
+  for (const r of listing.mips.roots) {
+    if (!every.has(r.listed.hash)) every.set(r.listed.hash, shown(r.listed));
+    walk(r.forks);
+  }
+  for (const u2 of listing.mips.unrooted) walk(u2.forks);
+  return {
+    specs: [...every.values()],
+    relays: listing.relays.map((r) => ({ address: r.address, read: r.read, specs: r.specs, problem: r.asked ? r.problem : "not asked: an address a browser cannot reach", stopped: r.stopped })),
+    lines: listing.lines.map((l) => l.drafts.map((d) => shown(d.listed, d))),
+    xtypes: listing.xtypes.map((x) => shown(x)),
+    extensions: listing.extensions.map((x) => ({ hash: x.hash, name: x.listed?.name ?? null, agreements: x.agreements.length, terms: x.agreements.flatMap((a) => a.terms), layers: x.layers })),
+    agreements: { terms: listing.agreements.terms, counted: listing.agreements.counted, proposed: listing.agreements.proposed, notCounted: listing.agreements.notCounted.length, private: listing.agreements.private },
+    mips: [
+      ...listing.mips.roots.map((r) => ({ root: r.listed.hash, name: r.listed.name, forks: flatten(r.forks) })),
+      ...listing.mips.unrooted.map((u2) => ({ root: u2.hash, name: u2.kind === null ? "not found on these relays" : `a ${KINDS[u2.kind] ?? "specification"}, which no MIP forks`, forks: flatten(u2.forks) }))
+    ].filter((m) => m.forks.length || m.root),
+    unverified: listing.unverified.map((u2) => ({ id: u2.id, signer: u2.signer, problem: u2.problem ?? "" })),
+    limit: LIMIT_SAY
+  };
+}
+async function actsOf(relays, q) {
+  const via = q.via ?? {};
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const looked = /* @__PURE__ */ new Map();
+  const acts2 = /* @__PURE__ */ new Map();
+  const lines2 = [];
+  for (const r of relays) {
+    let after;
+    let read4 = 0;
+    try {
+      for (; ; ) {
+        const page = await relayAt(r, via).feed({ spec: q.spec, type: q.type, signer: q.signer || void 0, after });
+        for (const it of page.items) {
+          if (it.kind !== "act" || read4 >= 2e3) continue;
+          read4++;
+          const d = describeAct(it.item);
+          if (!d.signer || acts2.has(d.id)) continue;
+          let standing2 = "unknown";
+          try {
+            let l = looked.get(d.signer);
+            if (!l) looked.set(d.signer, l = lookUp(d.signer, relays, via, v));
+            await holdSequence(v, d.signer, await l, relays, via);
+            v.add(it.item);
+            standing2 = v.status(d.id);
+          } catch (e3) {
+            standing2 = `not checked: ${e3 instanceof Error ? e3.message : String(e3)}`;
+          }
+          acts2.set(d.id, { id: d.id, signer: d.signer, type: d.type ?? 0, standing: standing2, at: r });
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+      lines2.push({ text: `${r}: ${read4} act${read4 === 1 ? "" : "s"} read.` });
+    } catch (e3) {
+      lines2.push({ text: `${r}: ${e3 instanceof Error ? e3.message : String(e3)}`, tone: "warn" });
+    }
+  }
+  return { acts: [...acts2.values()], lines: lines2 };
+}
+
+// src/look.ts
+var FILTERS = ["releases", "cmips", "modules", "xtypes", "extensions", "mips"];
+async function manifestOf(d, places, via) {
+  if (!d.payload) return null;
+  const m = cborDecode(d.payload);
+  if (!(m.get(0) instanceof Uint8Array) || hex(m.get(0)) !== REPO_SPECS.manifest || !(m.get(5) instanceof Uint8Array)) return null;
+  for (const at of places) {
+    try {
+      const locked = await relayAt(at, via).getMedia(hex(m.get(2)));
+      if (!locked) continue;
+      const plain = openMedia(locked, m.get(5), m.get(4));
+      if (workHash(plain) !== hex(m.get(1))) continue;
+      return decodeManifest(plain);
+    } catch {
+    }
+  }
+  return null;
+}
+async function releasesAt(relays, via, judge2, signer) {
+  const out = /* @__PURE__ */ new Map();
+  for (const r of relays) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(r, via).feed({ spec: SPECS.envelopes, type: 0, signer, after });
+        for (const it of page.items) {
+          if (it.kind !== "act") continue;
+          const d = describeAct(it.item);
+          if (!d.public || !d.signer || out.has(d.id)) continue;
+          const manifest = await manifestOf(d, [r, ...relays], via);
+          if (!manifest) continue;
+          let standing2 = "unknown";
+          try {
+            standing2 = await judge2.standing(it.item, d.id, d.signer);
+          } catch (e3) {
+            standing2 = `not checked: ${e3 instanceof Error ? e3.message : String(e3)}`;
+          }
+          out.set(d.id, { id: d.id, signer: d.signer, manifest, standing: standing2, hint: d.hint ?? null });
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+    }
+  }
+  return [...out.values()];
+}
+async function releaseById(id, relays, via, judge2) {
+  for (const r of relays) {
+    try {
+      const act = await relayAt(r, via).getAct(id);
+      if (!act) continue;
+      const d = describeAct(act);
+      const manifest = d.signer ? await manifestOf(d, [r, ...relays], via) : null;
+      if (!manifest) return null;
+      return { id, signer: d.signer, manifest, standing: await judge2.standing(act, id, d.signer).catch(() => "unknown"), hint: d.hint ?? null };
+    } catch {
+    }
+  }
+  return null;
+}
+var plural = (n, one2, many = `${one2}s`) => `${n} ${n === 1 ? one2 : many}`;
+var short = (form2) => `${form2.slice(0, form2.indexOf("1") + 4)}\u2026${form2.slice(-3)}`;
+function changedSince(m, before) {
+  if (!m.previous) return null;
+  if (!before) return "The release before it is not found on these relays: what changed cannot be said.";
+  const was = new Map(before.files.map((f) => [f.path, f.work]));
+  const now3 = new Map(m.files.map((f) => [f.path, f.work]));
+  const changed = [...now3].filter(([p, w]) => was.has(p) && was.get(p) !== w).length;
+  const added = [...now3.keys()].filter((p) => !was.has(p)).length;
+  const removed = [...was.keys()].filter((p) => !now3.has(p)).length;
+  const parts = [changed ? `${plural(changed, "file")} changed` : "", added ? `${added} added` : "", removed ? `${removed} removed` : ""].filter(Boolean);
+  const impl = (m.implements ?? []).filter((i) => !(before.implements ?? []).some((b) => b.spec === i.spec)).map((i) => specForm(i.spec));
+  const libs = m.dependencies.length !== before.dependencies.length || m.dependencies.some((d, i) => before.dependencies[i]?.version !== d.version || before.dependencies[i]?.name !== d.name);
+  const said2 = [parts.length ? parts.join(", ") : "no file changed", ...libs ? ["its libraries changed"] : [], ...impl.length ? [`now implements ${impl.join(", ")}`] : []];
+  return `What changed since ${before.version}: ${said2.join("; ")}.`;
+}
+function releaseItem(r, before) {
+  const m = r.manifest;
+  const changed = changedSince(m, before);
+  return {
+    id: r.id,
+    signer: r.signer,
+    kind: "release",
+    filter: "releases",
+    title: `${m.name} ${m.version}`,
+    text: `${m.name} ${m.version} \xB7 ${plural(m.files.length, "file")}${changed ? `
+${changed}` : ""}${m.implements?.length ? `
+Implements ${m.implements.map((i) => specForm(i.spec)).join(", ")}.` : ""}`,
+    hash: null,
+    layer: null,
+    labels: [],
+    verified: r.standing === "valid",
+    alarm: r.standing === "valid" ? null : `not valid for its signer\u2019s chain: ${r.standing}`,
+    when: null,
+    hint: r.hint,
+    release: { name: m.name, version: m.version, files: m.files.length, previous: m.previous, changed, implements: (m.implements ?? []).map((i) => i.spec) }
+  };
+}
+async function withBefore(rs, relays, via, judge2) {
+  const byId = new Map(rs.map((r) => [r.id, r]));
+  const out = [];
+  for (const r of rs) {
+    const p = r.manifest.previous;
+    let before = p ? byId.get(p)?.manifest ?? null : null;
+    if (p && !before) {
+      const got = await releaseById(p, relays, via, judge2);
+      if (got) byId.set(p, got);
+      before = got?.manifest ?? null;
+    }
+    out.push(releaseItem(r, before));
+  }
+  return out;
+}
+var filterOf = (s) => s.kind === "MIP" ? "mips" : s.kind === "Module" ? "modules" : s.role.some((r) => r.startsWith("an xtype")) ? "xtypes" : "cmips";
+function specItem(s, card2) {
+  const pub = s.publications.find((p) => p.signer === s.creator) ?? s.publications[0];
+  if (!pub) return null;
+  const f = filterOf(s);
+  const title = card2?.fields.title ?? s.name;
+  const use = s.use ? `
+Used: ${plural(s.use.acts, "public act")} of its types${s.use.notValid ? ` (${s.use.notValid} not valid, not counted)` : ""}.` : "";
+  return {
+    id: pub.id,
+    signer: pub.signer,
+    kind: f === "xtypes" ? "xtype" : s.kind,
+    filter: f,
+    title,
+    text: `${title}${s.draft > 1 ? `, draft ${s.draft} in its line` : ""} \xB7 ${short(specForm(s.hash))}${card2?.fields.summary ? `
+${card2.fields.summary}` : `
+${s.role[0] ?? ""}`}${use}`,
+    hash: s.hash,
+    layer: s.layer,
+    labels: [
+      ...card2 ? [{ text: "its creator\u2019s card" }] : [],
+      ...s.creator && !s.claimed ? [{ text: "unclaimed: its named creator never published it", tone: "warn" }] : [],
+      ...s.otherCreator ? [{ text: "its creator is not its predecessor\u2019s", tone: "warn" }] : [],
+      ...s.agreements ? [{ text: `named by ${plural(s.agreements, "public agreement")} as an extension` }] : []
+    ],
+    verified: true,
+    alarm: null,
+    when: null,
+    hint: null
+  };
+}
+function extensionItem(s, card2) {
+  const base = specItem(s, card2);
+  if (!base) return null;
+  return { ...base, kind: "extension", filter: "extensions", text: `${base.title} \xB7 ${short(specForm(s.hash))}
+Named as an extension by ${plural(s.agreements, "public agreement")}.` };
+}
+async function look(relays, q) {
+  const via = q.via;
+  const judge2 = new Judge(relays, via);
+  const want = new Set(q.filters);
+  const lines2 = [];
+  const counts = [];
+  let items = [];
+  if (q.release) {
+    const line = [];
+    let at = q.release;
+    for (let i = 0; at && i < 50; i++) {
+      const r = await releaseById(at, relays, via, judge2);
+      if (!r) {
+        if (!line.length) lines2.push({ text: `The release ${actForm(at)} was not found on ${relays.join(", ")}.`, tone: "warn" });
+        break;
+      }
+      line.push(r);
+      at = r.manifest.previous;
+    }
+    items = await withBefore(line, relays, via, judge2);
+  } else {
+    const signers = q.signers?.length ? q.signers : [void 0];
+    if (q.signers && !q.signers.length) lines2.push({ text: "Nobody to point at: your contacts are empty.", tone: "warn" });
+    const tracked = [];
+    for (const s of q.signers && !q.signers.length ? [] : signers) {
+      const specsWanted = [...want].some((f) => f !== "releases");
+      if (specsWanted) tracked.push(await track(relays, { signer: s, via }));
+      if (want.has("releases")) items.push(...await withBefore(await releasesAt(relays, via, judge2, s), relays, via, judge2));
+    }
+    const seen = /* @__PURE__ */ new Set();
+    const pre = tracked.length ? await readCards(relays, via) : [];
+    for (const t of tracked) {
+      for (const s of t.specs) {
+        if (seen.has(s.hash)) continue;
+        seen.add(s.hash);
+        const pub = s.publications.find((p) => p.signer === s.creator);
+        const cards = s.creator && pub ? (await cardsFor(s.hash, s.creator, relays, via, /* @__PURE__ */ new Map(), { pre, onlyCreator: true })).cards : [];
+        const card2 = ownCard(cards);
+        const item = specItem(s, card2);
+        if (item) items.push(item);
+        if (s.agreements && want.has("extensions")) {
+          const x = extensionItem(s, card2);
+          if (x) items.push({ ...x, id: x.id });
+        }
+      }
+      for (const r of t.relays) counts.push({ text: `${r.address}: ${r.problem ? r.problem : `${r.read} acts read, ${plural(r.specs, "specification")}${r.stopped ? " (stopped: more than a look reads)" : ""}`}`, tone: r.problem ? "warn" : void 0 });
+      counts.push({ text: `Public agreements counted: ${t.agreements.counted} (${t.agreements.proposed} proposed, not signed by every party; ${t.agreements.notCounted} not verified; ${t.agreements.private} private items unread).` });
+      for (const x of t.extensions.filter((e3) => !e3.name)) counts.push({ text: `An extension not found on these relays, ${specForm(x.hash)}, named by ${plural(x.agreements, "public agreement")}.` });
+      for (const u2 of t.unverified) lines2.push({ text: `Not verified: ${actForm(u2.id)}: ${u2.problem}`, tone: "warn" });
+    }
+    items = items.filter((x, i) => x.filter !== "extensions" || !items.some((y, j) => j !== i && y.id === x.id && y.filter !== "extensions" && want.has(y.filter)));
+  }
+  items = items.filter((x) => want.has(x.filter) && (!q.layer || (x.layer ?? "").split(", ").includes(q.layer)));
+  const times = await clockTimes([...relays, ...q.hints ?? []], via);
+  let placed = 0;
+  for (const x of items) {
+    const t = times.get(x.id);
+    if (t !== void 0) {
+      x.when = byClock(t);
+      placed++;
+    }
+  }
+  items.sort((a, b) => (times.get(b.id) ?? -1) - (times.get(a.id) ?? -1));
+  return { items, lines: lines2, counts, ordered: { placed, shown: items.length } };
+}
+async function specPage(hash, relays, via, hints = []) {
+  const t = await track(relays, { via });
+  const s = t.specs.find((x) => x.hash === hash) ?? null;
+  const b = builtIn(hash);
+  const times = await clockTimes([...relays, ...hints], via);
+  const { cards, lines: lines2 } = await cardsFor(hash, s?.creator ?? null, relays, via, times);
+  const own = ownCard(cards);
+  const ownAlso = cards.filter((c) => c.creators && !c.superseded && c !== own);
+  const others = cards.filter((c) => !c.creators && !c.superseded);
+  const judge2 = new Judge(relays, via);
+  const releases = (s?.releases ?? []).map((r) => ({ id: r.id, name: r.name, version: r.version, signer: null, problem: r.problem, from: "manifest" }));
+  for (const id of own?.fields.releases ?? []) {
+    if (releases.some((r2) => r2.id === id)) continue;
+    const r = await releaseById(id, relays, via, judge2);
+    releases.push({ id, name: r?.manifest.name ?? null, version: r?.manifest.version ?? null, signer: r?.signer ?? null, problem: r ? r.standing === "valid" ? null : r.standing : "not found on these relays", from: "card" });
+  }
+  let discussion = null;
+  const did = own?.fields.discussion ?? null;
+  if (did) {
+    discussion = { id: did, text: null, signer: null };
+    for (const r of relays) {
+      try {
+        const a = await relayAt(r, via).getAct(did);
+        if (!a) continue;
+        const d = describeAct(a);
+        const x = d.payload ? cborDecode(d.payload).get(0) : null;
+        discussion = { id: did, text: typeof x === "string" ? x : null, signer: d.signer ?? null };
+        break;
+      } catch {
+      }
+    }
+  }
+  const pred = s?.after ? { hash: s.after, name: t.specs.find((x) => x.hash === s.after)?.name ?? builtIn(s.after)?.title ?? null, otherCreator: s.otherCreator } : null;
+  const successors = t.specs.filter((x) => x.after === hash).map((x) => ({ hash: x.hash, name: x.name, otherCreator: !!s && x.creator !== s.creator }));
+  const pub = s ? s.publications.find((p) => p.signer === s.creator) ?? s.publications[0] ?? null : null;
+  if (!s && !b) lines2.unshift({ text: `No specification with this hash was found on ${relays.join(", ")}: what is shown below is only what others say of it. Other relays may hold it.`, tone: "warn" });
+  return {
+    hash,
+    found: !!s || !!b,
+    title: own?.fields.title ?? s?.name ?? b?.title ?? `A specification not found (${specForm(hash).slice(0, 12)}\u2026)`,
+    name: s?.name ?? b?.title ?? null,
+    kind: s?.kind ?? b?.kind ?? null,
+    layer: s?.layer ?? null,
+    role: s?.role ?? [],
+    text: s?.text ?? null,
+    creator: s?.creator ?? null,
+    claimed: s?.claimed ?? false,
+    publication: pub,
+    builtIn: b ? { summary: b.summary, say: BUILT_IN_SAY } : null,
+    own,
+    ownAlso,
+    superseded: cards.filter((c) => c.superseded).length,
+    others,
+    releases,
+    vectors: own?.fields.vectors ?? [],
+    discussion,
+    agreements: s?.agreements ?? 0,
+    predecessor: pred,
+    successors,
+    use: s?.use ?? null,
+    lines: lines2
+  };
+}
+
+// ../longform/src/act.ts
+function textPayload2(text3, format = LONGFORM_SPECS.longform) {
+  const m = /* @__PURE__ */ new Map([[0, text3]]);
+  if (format) m.set(1, unhex(format));
+  return cborEncode(m);
+}
+async function publishDocument(by, text3, relays) {
+  for (const hint of relays) {
+    for (const a of by.chainActs()) {
+      try {
+        await relayAt(hint, by.via).putAct(a);
+      } catch {
+      }
+    }
+  }
+  const made = await by.publish(LONGFORM_SPECS.text, TEXT_ACT, textPayload2(text3), { public: true, relays });
+  return { id: made.id };
+}
+
+// src/acting.ts
+var short2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+function actors(held, collectives = []) {
+  return [
+    ...held.map((id) => ({ id, short: short2(id), kind: "self", available: true, why: null })),
+    ...collectives.map((c) => ({ id: c.id, short: short2(c.id), kind: "collective", available: c.available, why: c.why }))
+  ];
+}
+function chosen(all, wanted) {
+  return all.find((a) => a.id === wanted && a.available) ?? all.find((a) => a.available) ?? null;
+}
+
+// ../damgar/src/messages.ts
+var TYPES = { draft: 1, request: 2, invoiceRequest: 3, answer: 4, laneRequest: 5, sale: 6 };
+var WHAT2 = { pay: 0, ask: 1, anchor: 2, confirm: 3 };
+var amountValue = (a) => [unhex(a.unit), a.value];
+var text = (v, what) => {
+  if (typeof v !== "string" || v.length > 280 || /[\u0000-\u0009\u000b-\u001f]/.test(v)) throw new Error(`${what}: not a short text`);
+  return v;
+};
+function draftPayload(d) {
+  const m = /* @__PURE__ */ new Map([
+    [0, WHAT2[d.what]],
+    [1, unhex(d.other)],
+    [2, amountValue(d.amount)]
+  ]);
+  if (d.whatFor) m.set(3, text(d.whatFor, "what for"));
+  m.set(4, text(d.app, "the app"));
+  if (d.what === "anchor") {
+    if (!d.anchor) throw new Error("A draft paying for an anchor names the offer, the tier and the leaf.");
+    m.set(5, [unhex(d.anchor.offer), d.anchor.tier, unhex(d.anchor.leaf)]);
+  }
+  if (d.what === "confirm") {
+    if (!d.confirm?.acks.length) throw new Error("A draft confirming a purchase names the claim and what it acknowledges.");
+    m.set(6, [unhex(d.confirm.claim), d.confirm.acks.map(unhex)]);
+  }
+  return cborEncode(m);
+}
+async function sendDraft(me, d, opts) {
+  return sendToSelf(me, TYPES.draft, draftPayload(d), opts);
+}
+async function sendToSelf(me, type, payload, opts) {
+  const homes = me.f.homes.map((h) => h.hint);
+  const look2 = await lookUp(me.id, homes, opts.via ?? {});
+  if (!look2.encryptionKey) throw new Error("This identity publishes no encryption key, so nothing can be sealed to it: the draft cannot travel to Damgar. Nothing was signed.");
+  if (!me.f.encryption.some((e3) => (e3.secret ? hex(xwingPublic(unhex(e3.secret))) : e3.public ?? "") === hex(look2.encryptionKey))) {
+    throw new Error("The encryption key this identity publishes is not one this app holds: Damgar, holding the same words, could not open the draft either. Nothing was signed.");
+  }
+  let made;
+  try {
+    made = await me.signNow(MESSAGES_SPEC, type, payload, { public: false, to: [me.id], refs: opts.refs });
+  } finally {
+    await opts.save();
+  }
+  const sealed = sealFor(made.act, made.key, [{ id: me.id, key: look2.encryptionKey }]);
+  const left = [];
+  for (const h of homes) {
+    try {
+      await relayAt(h, opts.via ?? {}).putSealed(sealed);
+      left.push(h);
+    } catch {
+    }
+  }
+  await leaveAtHomes(me, made, { via: opts.via ?? {}, sealed: left.length > 0 });
+  await opts.save();
+  if (!left.length) throw new Error(`No home took the draft (${homes.join(", ")}). It was signed but went nowhere: prepare it again later.`);
+  return { id: made.id, left };
+}
+
+// src/anchor.ts
+var short3 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var message3 = (e3) => e3 instanceof Error ? e3.message : String(e3);
+var ANCHOR_SAY = [
+  "Optional. An anchor puts this release\u2019s fingerprint on the Bitcoin chain through a pooled anchoring service, so anyone can later see it existed by a given block.",
+  "The service is sent a leaf: the release\u2019s id mixed with a random secret (the blind) Ummia keeps. It never learns the release. A lost blind loses the anchor\u2019s use.",
+  "You pay the service\u2019s price in Damgar, following its standing offer: Ummia prepares the payment, sealed to you, and signs no money act. The service\u2019s ticket promises a batch and a deadline (a block).",
+  "Round 1 runs on regtest, with a test anchoring service of ours, labelled: its coins are worth nothing."
+];
+async function placesOf(service, hints, via) {
+  const l = await lookUp(service, hints, via);
+  const places = [.../* @__PURE__ */ new Set([...l.routes.routes.filter((r) => (r.kind ?? 0) === 0).flatMap((r) => r.hints), ...l.resolution.homes.map((h) => h.hint), ...hints])];
+  return { l, places };
+}
+async function offers(service, hints, via = {}) {
+  const { l, places } = await placesOf(service, hints, via);
+  const out = /* @__PURE__ */ new Map();
+  for (const h of places) {
+    try {
+      for (const it of (await relayAt(h, via).feed({ signer: service, spec: MIRS.agreements })).items) {
+        if (it.kind !== "act") continue;
+        try {
+          const o = anchoringReadOffer(it.item);
+          l.verifier.add(it.item);
+          if (l.verifier.status(o.id) === "valid") out.set(o.id, { act: o.id, tiers: o.tiers, unit: o.unit, network: o.network, words: o.words });
+        } catch {
+        }
+      }
+    } catch {
+    }
+  }
+  return [...out.values()];
+}
+async function ask(me, a) {
+  const tier = a.offer.tiers[a.tier];
+  if (!tier) throw new Error("The offer has no such tier.");
+  const blind = new Uint8Array(randomBytes(32));
+  const leaf = anchoringLeaf(a.act, blind);
+  const r = await sendDraft(me, { what: "anchor", other: a.service, amount: { unit: a.offer.unit, value: tier.price }, whatFor: `an anchor of ${a.label}`, app: "Ummia", anchor: { offer: a.offer.act, tier: a.tier, leaf } }, { via: a.via, save: a.save });
+  const asked = { act: a.act, label: a.label, blind: hex(blind), leaf, service: a.service, offer: a.offer.act, tier: a.tier, draft: r.id, at: Math.floor(Date.now() / 1e3) };
+  return {
+    asked,
+    lines: [
+      { text: `Asked: an anchor of ${a.label} (${a.act.slice(0, 8)}\u2026), by ${short3(a.service)}, tier ${a.tier} (within ${tier.blocks} blocks), for ${say({ unit: a.offer.unit, value: tier.price }, /* @__PURE__ */ new Set([a.offer.unit]))}.`, tone: "ok" },
+      { text: `The payment is prepared, not signed: sealed to you at your homes (${r.left.join(", ")}), it waits in Damgar, in To sign. The blind is kept here.` }
+    ]
+  };
+}
+async function publication(x, hints, via) {
+  const { l, places } = await placesOf(x.service, hints, via);
+  for (const h of places) {
+    try {
+      for (const it of (await relayAt(h, via).feed({ signer: x.service, spec: SPEC.anchoring, type: 3 })).items) {
+        if (it.kind !== "act") continue;
+        const d = describeAct(it.item);
+        if (d.spec !== SPEC.anchoring || d.type !== 3 || !d.payload) continue;
+        l.verifier.add(it.item);
+        if (l.verifier.status(d.id) !== "valid") continue;
+        const p = anchoringReadPublication(d.payload);
+        if (p && p.offer === x.offer && p.leaves.includes(x.leaf)) return p;
+      }
+    } catch {
+    }
+  }
+  return null;
+}
+async function standing(x, hints, via, chain) {
+  const shown = { act: x.act, label: x.label, service: x.service, tier: x.tier, state: "asked", lines: [] };
+  try {
+    const pub = await publication(x, hints, via);
+    if (!pub) {
+      shown.lines.push({ text: "Not in a published batch yet: paid in Damgar? The service publishes each batch it anchors." });
+      return shown;
+    }
+    shown.state = "published";
+    shown.lines.push({ text: `In the service\u2019s batch ${pub.batch}, published, its transaction ${pub.tx.slice(0, 12)}\u2026 (output ${pub.output}).`, tone: "ok" });
+    if (!pub.key) {
+      shown.state = "unknown";
+      shown.lines.push({ text: "The publication does not name the key its output is tweaked from (F341): the anchor cannot be checked from the service\u2019s acts alone.", tone: "warn" });
+      return shown;
+    }
+    if (!chain) {
+      shown.state = "unknown";
+      shown.lines.push({ text: "Ummia follows no chain here: the anchor cannot be checked against Bitcoin. On a computer, open Ummia with --regtest.", tone: "warn" });
+      return shown;
+    }
+    const t = await chain.tx(hex(unhex(pub.tx).reverse()));
+    const headers = await chain.headers();
+    const batch = anchoringBatch(pub.leaves);
+    const index = pub.leaves.indexOf(x.leaf);
+    let block;
+    if (t.block) block = { index: t.block.index, branch: merkleBranch(t.block.txids, t.block.index), headers: headers.headers.slice(t.block.height - headers.start, t.block.height - headers.start + 6) };
+    const proof = batchAnchor({ blind: unhex(x.blind), index, count: batch.count, branch: batch.branches[index], key: pub.key, tx: t.raw, output: pub.output, block });
+    const v = batchAnchorCheck(x.act, proof, headers);
+    shown.state = v.answer === "valid" ? "anchored" : v.answer;
+    shown.lines.push(v.answer === "valid" ? { text: `Anchored at block ${v.point}, on the chain followed (${chain.said}): checked by the Bitcoin clock Module\u2019s rule.`, tone: "ok" } : { text: `Not yet anchored: ${v.answer}, ${v.why}.`, tone: v.answer === "invalid" ? "bad" : "warn" });
+  } catch (e3) {
+    shown.state = "unknown";
+    shown.lines.push({ text: message3(e3), tone: "warn" });
+  }
+  return shown;
+}
+
+// src/mips.ts
+var FORKABLE = [
+  { key: "identity", name: "Identity MIR", hash: MIRS.identity },
+  { key: "envelopes", name: "Envelopes MIR", hash: MIRS.envelopes },
+  { key: "text", name: "Text MIR", hash: MIRS.text },
+  { key: "money", name: "Money MIR", hash: MIRS.money },
+  { key: "agreements", name: "Agreements MIR", hash: MIRS.agreements },
+  { key: "development", name: "Development MIR", hash: MIRS.development }
+];
+var SHAPE = ["Purpose", "What it changes", "Dependencies", "Words used in this MIP", "Rules", "Reasoning", "Freeze scenarios"];
+var MIP_SAY = [
+  "A MIP is a proposal toward MOR 2: a fork of one MIR (or of another MIP), or, for a new layer, of the MICS document. Anyone may fork a MIP; adoption, not authority, sorts the forks.",
+  "Drafts are published for discussion as signed long-form documents, readable in the reader and answerable from Dub. They are not specifications: nothing names them by a spec hash.",
+  "Only when you are ready is it published as a specification (a MIP, kind 8), naming you as its creator and what it would replace. That act is for good: a changed MIP is a new one, with a new hash."
+];
+function template(a) {
+  const title = a.title.trim() || "A proposal";
+  return [
+    `# MIP: ${title}`,
+    "",
+    `*Draft 1, a proposal toward MOR 2, by ${a.creator}. It forks ${a.forks}.*`,
+    "",
+    ...SHAPE.flatMap((h) => [`## ${h}`, "", h === "Purpose" ? "What this proposal is for, in plain words." : h === "What it changes" ? "Each rule it adds, changes or removes, against the text it forks." : h === "Rules" ? "#### Rule 1. A name\n\nThe rule, as it would read." : "\u2026", ""])
+  ].join("\n").trimEnd();
+}
+function shapeOf(text3) {
+  const out = [];
+  const first = text3.split("\n")[0] ?? "";
+  out.push(/^# MIP: \S/.test(first) ? { text: `Its title: \u201C${first.slice(7)}\u201D.`, tone: "ok" } : { text: "Its first line should be its title, \u201C# MIP: \u2026\u201D, as a MIR\u2019s is \u201C# MIR: \u2026\u201D.", tone: "warn" });
+  const heads = new Set(text3.split("\n").filter((l) => l.startsWith("## ")).map((l) => l.slice(3).trim()));
+  const missing = SHAPE.filter((h) => !heads.has(h));
+  out.push(missing.length ? { text: `Headings of the MIP shape not found: ${missing.join(", ")}.`, tone: "warn" } : { text: "Every heading of the MIP shape is there.", tone: "ok" });
+  return out;
+}
+async function publishDraft(me, text3, relays) {
+  return publishDocument(me, text3, relays);
+}
+async function replies(me, drafts, relays, via = {}) {
+  const want = new Set(drafts);
+  const out = /* @__PURE__ */ new Map();
+  const lines2 = [];
+  if (!want.size) return { replies: out, lines: lines2 };
+  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
+  const mine = await lookUp(me.id, me.f.homes.map((h) => h.hint), via, v);
+  const inbox = mine.inbox(SPECS.text) ?? [];
+  const seen = /* @__PURE__ */ new Set();
+  const take = async (act, d, key, sealed) => {
+    if (!d.signer || seen.has(d.id) || d.spec !== LONGFORM_SPECS.text || d.type !== TEXT_ACT || !d.payload) return;
+    const named2 = (d.refs ?? []).filter((r) => want.has(r));
+    if (!named2.length) return;
+    seen.add(d.id);
+    let standing2 = "unknown";
+    try {
+      await lookUp(d.signer, [...relays, ...inbox], via, v);
+      if (key) v.addWithKey(act, key);
+      else v.add(act);
+      standing2 = v.status(d.id);
+    } catch (e3) {
+      standing2 = `not checked: ${e3 instanceof Error ? e3.message : String(e3)}`;
+    }
+    const t = cborDecode(d.payload).get(0);
+    for (const r of named2) out.set(r, [...out.get(r) ?? [], { id: d.id, signer: d.signer, text: typeof t === "string" ? t : "", standing: standing2, sealed }]);
+  };
+  const secrets2 = [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
+  const asks = [...inbox.map((h) => ({ h, toMe: true })), ...relays.map((h) => ({ h, toMe: false }))];
+  for (const { h, toMe } of asks) {
+    let after;
+    try {
+      for (; ; ) {
+        const page = await relayAt(h, via).feed(toMe ? { to: me.id, after } : { spec: SPECS.text, type: TEXT_ACT, after });
+        for (const it of page.items) {
+          if (it.kind === "act") {
+            const d = describeAct(it.item);
+            if (d.public) await take(it.item, d, void 0, false);
+            continue;
+          }
+          for (const s of secrets2) {
+            try {
+              const o = openSealed(it.item, me.id, s);
+              await take(o.act, o.described, o.key, true);
+              break;
+            } catch {
+            }
+          }
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch (e3) {
+      lines2.push({ text: `${h}: ${e3 instanceof Error ? e3.message : String(e3)}`, tone: "warn" });
+    }
+  }
+  return { replies: out, lines: lines2 };
 }
 
 // src/reports.ts
@@ -9343,8 +10310,8 @@ async function send(me, a) {
     ]
   };
 }
-async function answers(to, reports2, places, via = {}) {
-  const want = new Set(reports2);
+async function answers(to, reports, places, via = {}) {
+  const want = new Set(reports);
   const lines2 = [];
   const out = /* @__PURE__ */ new Map();
   if (!want.size) return { answers: [], lines: lines2 };
@@ -9367,11 +10334,11 @@ async function answers(to, reports2, places, via = {}) {
           if (it.kind !== "act") continue;
           const d = describeAct(it.item);
           if (!d.public || d.signer !== to || !d.payload || out.has(d.id)) continue;
-          const named = (d.refs ?? []).find((r) => want.has(r));
-          if (!named) continue;
+          const named2 = (d.refs ?? []).find((r) => want.has(r));
+          if (!named2) continue;
           v.add(it.item);
           const t = cborDecode(d.payload).get(0);
-          out.set(d.id, { id: d.id, report: named, text: typeof t === "string" ? t : "", standing: v.status(d.id) });
+          out.set(d.id, { id: d.id, report: named2, text: typeof t === "string" ? t : "", standing: v.status(d.id) });
         }
         if (!page.items.length || page.next === after) break;
         after = page.next;
@@ -9385,10 +10352,10 @@ async function answers(to, reports2, places, via = {}) {
 
 // src/spec.ts
 var MIR_OF_LAYER = Object.fromEntries(Object.entries(LAYERS).map(([hash, name]) => [name, hash]));
-var HEX64 = /^[0-9a-f]{64}$/;
+var HEX642 = /^[0-9a-f]{64}$/;
 function readHash(s, what) {
   const h = s.replace(/\s+/g, "").toLowerCase();
-  if (HEX64.test(h)) return h;
+  if (HEX642.test(h)) return h;
   try {
     return readForm(s, "mspec").hex;
   } catch (e3) {
@@ -9478,98 +10445,11 @@ async function publishSpec(by, content, relays) {
   return { id: made.id, act: made.act, refused };
 }
 
-// src/track.ts
-var LIMIT_SAY = [
-  "Ummia sees public agreements only. A sealed agreement\u2019s use of a cMIP stays invisible unless someone publishes it.",
-  "It is a plain look-up of the relays you name, asked with the filters relays already have (spec, type, signer). Nothing is indexed or kept: ask again to see what changed. Other relays may hold what these do not.",
-  "The listing on dubsar.org reads the relays its page names: one source among any, never a registry. Name those relays here, or any others."
-];
-var flatten = (f) => f.flatMap((x) => [{ hash: x.listed.hash, name: x.listed.name, creator: x.listed.spec.creator, total: x.total }, ...flatten(x.forks)]);
-async function track(relays, o = {}) {
-  const listing = await readListing(
-    relays.map((address) => ({ address, name: null })),
-    [],
-    o.via ?? {},
-    { signer: o.signer || void 0 }
-  );
-  const all = /* @__PURE__ */ new Map();
-  for (const l of listing.lines) for (const d of l.drafts) all.set(d.listed.hash, d.listed);
-  for (const x of listing.xtypes) all.set(x.hash, x);
-  const shown = (l, d) => {
-    const w = roleWords(l, all);
-    return {
-      hash: l.hash,
-      name: l.name,
-      kind: KINDS[l.spec.kind] ?? `kind ${l.spec.kind}`,
-      layer: w.layer,
-      role: w.role,
-      creator: l.spec.creator,
-      claimed: l.claimed,
-      publishers: [...new Set(l.publications.map((p) => p.signer))],
-      draft: d?.number ?? 1,
-      after: d ? d.after?.hash ?? d.afterMissing : l.spec.predecessor,
-      otherCreator: d?.otherCreator ?? false,
-      releases: l.releases.map((r) => ({ id: r.id, name: r.name, version: r.version, problem: r.problem })),
-      use: l.use
-    };
-  };
-  return {
-    relays: listing.relays.map((r) => ({ address: r.address, read: r.read, specs: r.specs, problem: r.asked ? r.problem : "not asked: an address a browser cannot reach", stopped: r.stopped })),
-    lines: listing.lines.map((l) => l.drafts.map((d) => shown(d.listed, d))),
-    xtypes: listing.xtypes.map((x) => shown(x)),
-    extensions: listing.extensions.map((x) => ({ hash: x.hash, name: x.listed?.name ?? null, agreements: x.agreements.length, terms: x.agreements.flatMap((a) => a.terms), layers: x.layers })),
-    agreements: { terms: listing.agreements.terms, counted: listing.agreements.counted, proposed: listing.agreements.proposed, notCounted: listing.agreements.notCounted.length, private: listing.agreements.private },
-    mips: [
-      ...listing.mips.roots.map((r) => ({ root: r.listed.hash, name: r.listed.name, forks: flatten(r.forks) })),
-      ...listing.mips.unrooted.map((u2) => ({ root: u2.hash, name: u2.kind === null ? "not found on these relays" : `a ${KINDS[u2.kind] ?? "specification"}, which no MIP forks`, forks: flatten(u2.forks) }))
-    ].filter((m) => m.forks.length || m.root),
-    unverified: listing.unverified.map((u2) => ({ id: u2.id, signer: u2.signer, problem: u2.problem ?? "" })),
-    limit: LIMIT_SAY
-  };
-}
-async function actsOf(relays, q) {
-  const via = q.via ?? {};
-  const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
-  const looked = /* @__PURE__ */ new Map();
-  const acts2 = /* @__PURE__ */ new Map();
-  const lines2 = [];
-  for (const r of relays) {
-    let after;
-    let read4 = 0;
-    try {
-      for (; ; ) {
-        const page = await relayAt(r, via).feed({ spec: q.spec, type: q.type, signer: q.signer || void 0, after });
-        for (const it of page.items) {
-          if (it.kind !== "act" || read4 >= 2e3) continue;
-          read4++;
-          const d = describeAct(it.item);
-          if (!d.signer || acts2.has(d.id)) continue;
-          let standing2 = "unknown";
-          try {
-            let l = looked.get(d.signer);
-            if (!l) looked.set(d.signer, l = lookUp(d.signer, relays, via, v));
-            await holdSequence(v, d.signer, await l, relays, via);
-            v.add(it.item);
-            standing2 = v.status(d.id);
-          } catch (e3) {
-            standing2 = `not checked: ${e3 instanceof Error ? e3.message : String(e3)}`;
-          }
-          acts2.set(d.id, { id: d.id, signer: d.signer, type: d.type ?? 0, standing: standing2, at: r });
-        }
-        if (!page.items.length || page.next === after) break;
-        after = page.next;
-      }
-      lines2.push({ text: `${r}: ${read4} act${read4 === 1 ? "" : "s"} read.` });
-    } catch (e3) {
-      lines2.push({ text: `${r}: ${e3 instanceof Error ? e3.message : String(e3)}`, tone: "warn" });
-    }
-  }
-  return { acts: [...acts2.values()], lines: lines2 };
-}
-
 // src/ummia.ts
 var LINE_SAY = "Ummia keeps its own line of acts for this identity (its specifications, releases, drafts, reports, and the sealed acts it sends to itself). If the signing key is ever changed with the chain key, in Ki\u0161ib, that change must keep this line, or every act signed here becomes void. Some of its acts are sealed, so give Ki\u0161ib this line\u2019s card, shown in the identity window.";
 var SPENT_SAY = "This identity\u2019s signing key was changed elsewhere, with its chain key, so the signing key\u2019s words Ummia holds no longer count. Nothing was signed. To go on here, give Ummia the new signing key\u2019s words.";
+var RUNNER_OLD_KEY_SAY = "This identity\u2019s keys were changed with its chain key, and Ki\u0161ib\u2019s runner still holds the old signing key: nothing was signed. Give the runner the new signing key\u2019s words, in Ki\u0161ib (Runner, Identities held here). Ummia then goes on, in new lines.";
+var RUNNER_HOLDS_SAY = "Ki\u0161ib\u2019s runner holds this identity\u2019s signing key, on this Mac; Ummia holds none of its keys. Every act Ummia would sign for it is shown first in Ki\u0161ib\u2019s panel, inside Ummia\u2019s window. What is sealed to it (the accepted list, the follow list) does not open here.";
 var NO_KEY_SAY = "Ummia holds no encryption key for this identity, so nothing sealed to it opens here and nothing can be sealed to it from here: the accepted list cannot be read or changed, and an anchor\u2019s payment cannot be prepared for Damgar.";
 var ACCEPTED_SAY = [
   "One list of the cMIPs and Modules you accept, sealed to your identity and kept at its homes: every app holding the identity reads the same list, each the part it understands (Damgar the payment specifications, Edubba the agreements\u2019 and splits\u2019, Dub the formats it shows). Here it is shown whole.",
@@ -9579,14 +10459,14 @@ var ACCEPTED_SAY = [
 var NO_BOOK = () => ({ releases: [], specs: [], mips: [], reports: [], anchors: [], listPublished: null });
 var list = (xs) => [...new Set(xs.map((s) => s.trim().replace(/\/$/, "")).filter(Boolean))];
 var message4 = (e3) => e3 instanceof Error ? e3.message : String(e3);
-var short3 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
-var now = () => Math.floor(Date.now() / 1e3);
+var short4 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var now2 = () => Math.floor(Date.now() / 1e3);
 var PLAN_FOR = 15 * 60 * 1e3;
 async function releaseArea(collective, places, via) {
-  const now2 = await collectiveNow(collective, places, via);
-  if (!now2.agreement) return null;
+  const now3 = await collectiveNow(collective, places, via);
+  if (!now3.agreement) return null;
   for (const h of places) {
-    const a = await relayAt(h, via).getAct(now2.agreement).catch(() => null);
+    const a = await relayAt(h, via).getAct(now3.agreement).catch(() => null);
     if (!a) continue;
     const d = describeAct(a);
     if (!d.payload) return null;
@@ -9625,9 +10505,15 @@ var Ummia = class {
     this.queue = next.catch(() => void 0);
     return next;
   }
+  /** An identity held here; one used through Kišib's runner signs by it, Ummia holding no key (the Dubsar runner cMIP). */
+  async load(id) {
+    const me = await this.store.identity(id);
+    if (me && !me.f.signingSecret && this.opts.runner) me.signer = this.opts.runner.signer();
+    return me;
+  }
   async ctx() {
     const active = await this.store.active();
-    const me = active ? await this.store.identity(active) : null;
+    const me = active ? await this.load(active) : null;
     if (!me) throw new Error("No identity in use: bring one by its signing key\u2019s words.");
     const s = { relays: [], track: [], reports: null, via: {}, ...await this.store.read(me.id, "settings") ?? {} };
     const book = { ...NO_BOOK(), ...await this.store.read(me.id, "book") ?? {} };
@@ -9678,7 +10564,7 @@ var Ummia = class {
       if (why) throw new Error(`${why} Nothing was kept.`);
       s.collectives = [...(s.collectives ?? []).filter((c) => c.id !== id), { id, available: true, why: null }];
       await this.store.write(me.id, "settings", s);
-      return { lines: [{ text: `Ummia acts for ${short3(id)} with your own key for it: its releases go through its area \u201C${area.name}\u201D, ${area.number} key${area.number === 1 ? "" : "s"} of ${area.holders.length}.`, tone: "ok" }] };
+      return { lines: [{ text: `Ummia acts for ${short4(id)} with your own key for it: its releases go through its area \u201C${area.name}\u201D, ${area.number} key${area.number === 1 ? "" : "s"} of ${area.holders.length}.`, tone: "ok" }] };
     });
   }
   // ------------------------------------------------------------ the identity
@@ -9703,14 +10589,14 @@ var Ummia = class {
       if ((await this.store.held()).includes(id)) return this.renewHeld(id, seed);
       const address = a.address.trim();
       if (!/^https?:\/\//.test(address)) throw new Error("Give an address where this identity is found (one of its homes), starting with https://.");
-      const look = await lookCurrent(id, seed, [address], via);
-      const r = look.resolution;
+      const look2 = await lookCurrent(id, seed, [address], via);
+      const r = look2.resolution;
       const binding = r.links[r.links.length - 1];
       const chain = await servedChain(id, r.homes, via);
-      const named = list(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
-      const relays = named.length ? named : list(a.relays ?? []);
+      const named2 = list(look2.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
+      const relays = named2.length ? named2 : list(a.relays ?? []);
       if (!relays.length) throw new Error("This identity names no relays. Give one or more relay addresses, and bring it again.");
-      const enc = carriedKey(look, seed);
+      const enc2 = carriedKey(look2, seed);
       const f = {
         label: TEST_LABEL,
         identity: id,
@@ -9723,7 +10609,7 @@ var Ummia = class {
         rule: r.rule ?? null,
         sequence: [],
         routes: null,
-        encryption: enc ? [enc] : [],
+        encryption: enc2 ? [enc2] : [],
         pending: null
       };
       await this.store.write(id, "settings", { relays, track: relays, reports: null, via, acting: id });
@@ -9732,7 +10618,7 @@ var Ummia = class {
       return {
         lines: [
           { text: "Its current signing key matches the words.", tone: "ok" },
-          enc ? { text: "Its encryption key is the one the words carry: its accepted list opens here.", tone: "ok" } : { text: NO_KEY_SAY, tone: "warn" },
+          enc2 ? { text: "Its encryption key is the one the words carry: its accepted list opens here.", tone: "ok" } : { text: NO_KEY_SAY, tone: "warn" },
           { text: LINE_SAY, tone: "warn" }
         ]
       };
@@ -9757,8 +10643,8 @@ var Ummia = class {
     const me = await this.store.identity(id);
     const s = await this.store.read(id, "settings") ?? { relays: [], track: [], reports: null, via: {} };
     if (hex(seed) === me.f.signingSecret) throw new Error("These are the signing key\u2019s words Ummia already holds, and they still count: nothing to change.");
-    const look = await lookCurrent(id, seed, [.../* @__PURE__ */ new Set([...me.f.homes.map((h) => h.hint), ...s.relays])], s.via);
-    const r = look.resolution;
+    const look2 = await lookCurrent(id, seed, [.../* @__PURE__ */ new Set([...me.f.homes.map((h) => h.hint), ...s.relays])], s.via);
+    const r = look2.resolution;
     const binding = r.links[r.links.length - 1];
     me.f.chain = (await servedChain(id, r.homes, s.via)).map(base64);
     me.f.position = binding.position;
@@ -9769,7 +10655,7 @@ var Ummia = class {
     me.f.pending = null;
     freshLines(me.f);
     me.f.routes = null;
-    const carried = carriedKey(look, seed);
+    const carried = carriedKey(look2, seed);
     if (carried && !me.f.encryption.some((e3) => e3.act === carried.act)) me.f.encryption.push(carried);
     await this.store.saveIdentity(me);
     return {
@@ -9813,9 +10699,25 @@ var Ummia = class {
     }
   }
   async current(me) {
-    const look = await lookUp(me.id, me.f.homes.map((h) => h.hint), me.via);
-    const r = look.resolution;
+    const look2 = await lookUp(me.id, me.f.homes.map((h) => h.hint), me.via);
+    const r = look2.resolution;
     if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): nothing was signed.");
+    if (!me.f.signingSecret) {
+      const binding = r.links[r.links.length - 1];
+      if (!binding || binding.act === me.f.binding) return;
+      const p = await this.opts.runner?.paired().catch(() => null);
+      const k = p?.identities.find((x) => x.id === me.id);
+      if (!k || k.binding !== binding.act || !r.signingKey || hex(r.signingKey) !== k.key) throw new Error(RUNNER_OLD_KEY_SAY);
+      me.f.chain = (await servedChain(me.id, r.homes, me.via)).map(base64);
+      me.f.position = binding.position;
+      me.f.binding = binding.act;
+      me.f.homes = r.homes;
+      me.f.rule = r.rule ?? null;
+      freshLines(me.f);
+      me.f.routes = null;
+      await this.store.saveIdentity(me);
+      return;
+    }
     if (!r.signingKey || hex(r.signingKey) !== hex(signingPublic(unhex(me.f.signingSecret)))) throw new Error(SPENT_SAY);
   }
   /** Who acts: chosen with the chooser. */
@@ -9856,8 +10758,8 @@ var Ummia = class {
   async state() {
     const active = await this.store.active();
     const heldIds = await this.store.held();
-    const held = heldIds.map((id) => ({ id, grouped: groupId(id), short: short3(id), active: id === active }));
-    const me = active ? await this.store.identity(active) : null;
+    const held = await Promise.all(heldIds.map(async (id) => ({ id, grouped: groupId(id), short: short4(id), active: id === active, runner: !(await this.store.identity(id))?.f.signingSecret })));
+    const me = active ? await this.load(active) : null;
     const out = {
       web: !!this.opts.web,
       stage: "identity",
@@ -9866,8 +10768,9 @@ var Ummia = class {
       actors: actors(heldIds),
       acting: null,
       settings: { relays: [], track: [], reports: null },
+      saved: [],
       releases: !!this.opts.releases,
-      counts: { specs: 0, releases: 0, mips: 0, reports: 0 }
+      counts: { specs: 0, releases: 0, mips: 0, reports: 0, cards: 0, anchors: 0 }
     };
     if (!me) return out;
     const s = { relays: [], track: [], reports: null, via: {}, ...await this.store.read(me.id, "settings") ?? {} };
@@ -9877,16 +10780,18 @@ var Ummia = class {
     out.identity = {
       id: me.id,
       grouped: groupId(me.id),
-      short: short3(me.id),
+      short: short4(me.id),
       homes: me.f.homes.map((h) => h.hint),
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
-      line: line ?? noLine(me.f)
+      line: line ?? noLine(me.f),
+      runner: !me.f.signingSecret
     };
     out.actors = actors(heldIds, s.collectives ?? []);
     out.acting = chosen(out.actors, s.acting ?? me.id)?.id ?? null;
     out.settings = { relays: s.relays, track: s.track, reports: s.reports };
-    out.counts = { specs: book.specs.length, releases: book.releases.length, mips: book.mips.length, reports: book.reports.length };
+    out.saved = s.saved ?? [];
+    out.counts = { specs: book.specs.length, releases: book.releases.length + (book.collectiveReleases?.length ?? 0), mips: book.mips.length, reports: book.reports.length, cards: (book.cards?.length ?? 0) + (book.discussions?.length ?? 0), anchors: book.anchors.length };
     return out;
   }
   // ------------------------------------------------------------ reviews
@@ -9929,18 +10834,18 @@ var Ummia = class {
     const { me, s } = await this.ctx();
     if ((await this.acting(me, s)).kind === "collective") throw new Error("A specification is published as yourself: choose yourself under Who acts. A collective acts here for its releases.");
     const actor = me;
-    const form = {
+    const form2 = {
       ...f,
       implements: f.implements ? readHash(f.implements, "What it implements") : null,
       predecessor: f.predecessor ? readHash(f.predecessor, "Its predecessor") : null,
       dependencies: (f.dependencies ?? []).map((d) => readHash(d, "A dependency"))
     };
-    const p = prepareSpec(form, actor.id);
+    const p = prepareSpec(form2, actor.id);
     const blocking = [...p.blocking];
     if (!s.relays.length) blocking.push("Name at least one relay its acts go to, under Settings.");
     const sp = p.spec;
     const fields = sp ? [
-      { text: `Kind: ${KINDS[sp.kind]}. Its creator: you, ${short3(actor.id)} (field 1): its hash covers your identity, so it is \u201Cthis specification, by this identity\u201D.` },
+      { text: `Kind: ${KINDS[sp.kind]}. Its creator: you, ${short4(actor.id)} (field 1): its hash covers your identity, so it is \u201Cthis specification, by this identity\u201D.` },
       ...sp.tasks.map(([, n]) => ({ text: `Fills task ${n}: ${TASKS[n][1]} (${TASKS[n][0]}).` })),
       ...sp.types.map((t) => ({ text: `Defines act type ${t.type}, \u201C${t.name}\u201D (field 3, for discovery).` })),
       ...sp.types.length && !sp.tasks.length ? [{ text: "Act types and no task: an xtype (Development rule 18)." }] : [],
@@ -9966,9 +10871,9 @@ ${s.relays.join("\n")}`));
           await this.store.saveIdentity(me);
         }
         const book = { ...NO_BOOK(), ...await this.store.read(me.id, "book") ?? {} };
-        book.specs.push({ id: out.id, hash: p.hash, name: p.name, kind: KINDS[form.kind], at: now() });
-        if (form.kind === 8) {
-          const m = book.mips.find((x) => x.text === form.text && !x.published);
+        book.specs.push({ id: out.id, hash: p.hash, name: p.name, kind: KINDS[form2.kind], at: now2() });
+        if (form2.kind === 8) {
+          const m = book.mips.find((x) => x.text === form2.text && !x.published);
           if (m) m.published = { id: out.id, hash: p.hash };
         }
         await this.saveBook(me.id, book);
@@ -9988,7 +10893,7 @@ ${s.relays.join("\n")}`));
       plan,
       digest,
       hash: p.hash,
-      title: `Publish ${form.kind === 8 ? "the MIP" : `the ${KINDS[form.kind] ?? "specification"}`} \u201C${p.name}\u201D`,
+      title: `Publish ${form2.kind === 8 ? "the MIP" : `the ${KINDS[form2.kind] ?? "specification"}`} \u201C${p.name}\u201D`,
       summary: [
         `Its spec hash will be ${p.hash || "(none: it is not yet in the format)"}. The hash covers its content (the fields below and its text), never the act that publishes it.`,
         "Published for good: a changed specification is a new one, with a new hash, naming this one as its predecessor if you wish (Development rule 4).",
@@ -10029,11 +10934,26 @@ ${s.relays.join("\n")}`));
   secrets(me) {
     return [...me.f.encryption].reverse().map((e3) => unhex(e3.secret));
   }
+  layerCache = null;
+  /** Each specification's layer, as tracking reads it from its own fields, on the relays tracking asks: read again at most once a minute. */
+  async layersOf(hashes) {
+    if (!hashes.length) return /* @__PURE__ */ new Map();
+    if (this.layerCache && this.layerCache.at + 60 > now2() && hashes.every((h) => this.layerCache.layers.has(h))) return this.layerCache.layers;
+    try {
+      const { s } = await this.ctx();
+      const t = await track(this.lookRelays(s), { via: s.via });
+      this.layerCache = { at: now2(), layers: new Map(t.specs.map((x) => [x.hash, x.layer])) };
+      return this.layerCache.layers;
+    } catch {
+      return /* @__PURE__ */ new Map();
+    }
+  }
   /** The whole list, as every app reads it: each entry, its label, and whose part it is where known. */
   async accepted() {
     const { me, book } = await this.ctx();
     const l = await readAccepted(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), me.via);
-    const entries = [...l.entries.entries()].map(([hash, label]) => ({ hash, label: label ?? labelOf(hash) ?? null, part: OURS.has(hash) ? "Money: Damgar\u2019s part" : "Read by the apps that know it" })).sort((a, b) => a.part < b.part ? -1 : a.part > b.part ? 1 : (a.label ?? a.hash) < (b.label ?? b.hash) ? -1 : 1);
+    const layers = await this.layersOf([...l.entries.keys()].filter((h) => !OURS.has(h) && !builtIn(h)));
+    const entries = [...l.entries.entries()].map(([hash, label]) => ({ hash, label: label ?? labelOf(hash) ?? builtIn(hash)?.title ?? null, part: OURS.has(hash) ? "Money: Damgar\u2019s part" : "Read by the apps that know it", layer: OURS.has(hash) ? "Money" : builtIn(hash)?.title.replace(/^MIR: /, "") ?? layers.get(hash) ?? null })).sort((a, b) => a.part < b.part ? -1 : a.part > b.part ? 1 : (a.label ?? a.hash) < (b.label ?? b.hash) ? -1 : 1);
     return {
       entries,
       version: l.version,
@@ -10087,10 +11007,10 @@ ${s.relays.join("\n")}`));
   newMip(a) {
     return this.serial(async () => {
       const { me, book } = await this.ctx();
-      const named = FORKABLE.find((f) => f.key === a.forks);
-      const forks = named ? named.hash : readHash(a.forks, "What it forks");
-      const forksName = named ? named.name : `the specification ${short3(forks)}`;
-      const text3 = template({ title: a.title, forks: `${forksName} (${forks})`, creator: short3(me.id) });
+      const named2 = FORKABLE.find((f) => f.key === a.forks);
+      const forks = named2 ? named2.hash : readHash(a.forks, "What it forks");
+      const forksName = named2 ? named2.name : `the specification ${short4(forks)}`;
+      const text3 = template({ title: a.title, forks: `${forksName} (${forks})`, creator: short4(me.id) });
       const key = sha2562(`${me.id}${a.title}${Date.now()}${Math.random()}`).slice(0, 16);
       book.mips.push({ key, title: a.title.trim() || "A proposal", forks, forksName, drafts: [], text: text3, published: null });
       await this.saveBook(me.id, book);
@@ -10124,7 +11044,7 @@ ${s.relays.join("\n")}`));
       } finally {
         await this.store.saveIdentity(me);
       }
-      m.drafts.push({ id, at: now(), name: m.text.split("\n")[0].replace(/^#+\s*/, "").slice(0, 120) });
+      m.drafts.push({ id, at: now2(), name: m.text.split("\n")[0].replace(/^#+\s*/, "").slice(0, 120) });
       await this.saveBook(me.id, book);
       return {
         title: `Draft ${m.drafts.length} is published for discussion`,
@@ -10263,14 +11183,14 @@ ${s.relays.join("\n")}`));
           const l = await lookUp(h, who.places, s.via);
           const inbox = l.inbox(REPO_SPECS.agreements) ?? l.routes.routes.flatMap((x) => x.hints);
           if (!l.encryptionKey || !inbox?.length) throw new Error("no inbox");
-          await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: `A release of the collective ${short3(who.id)}, ${r.release.name} ${r.release.version}: its area \u201C${area.name}\u201D asks ${area.number} keys. Read it in your Signing tab, check its files, then sign it with your own key for the collective.`, refs: [[r.release.id, who.id], [who.id, who.id]] });
+          await negotiate(me, { id: h, key: l.encryptionKey, inbox }, { text: `A release of the collective ${short4(who.id)}, ${r.release.name} ${r.release.version}: its area \u201C${area.name}\u201D asks ${area.number} keys. Read it in your Signing tab, check its files, then sign it with your own key for the collective.`, refs: [[r.release.id, who.id], [who.id, who.id]] });
           asked.push(h);
         } catch {
-          lines2.push({ text: `${short3(h)} could not be reached to sign it (no inbox or encryption key found).`, tone: "warn" });
+          lines2.push({ text: `${short4(h)} could not be reached to sign it (no inbox or encryption key found).`, tone: "warn" });
         }
       }
       await this.store.saveIdentity(me);
-      if (asked.length) lines2.push({ text: `Asked for their key: ${asked.map(short3).join(", ")}.` });
+      if (asked.length) lines2.push({ text: `Asked for their key: ${asked.map(short4).join(", ")}.` });
     }
     const st = (await judgeCollective(who.id, [r.release.id], who.places, s.via)).get(r.release.id);
     lines2.push(st?.met ? { text: "It counts as the collective\u2019s release: its area is met.", tone: "ok" } : { text: `It does not count yet: ${st?.areas.map((x) => `${x.signers.length} of ${x.needed} keys`).join("; ") ?? "not read"}.`, tone: "warn" });
@@ -10304,16 +11224,370 @@ ${s.relays.join("\n")}`));
     return this.serial(async () => {
       const { me, s, book, hints } = await this.ctx();
       await this.current(me);
-      const rel = [...await this.ownReleases(me, book, hints, s.via), ...book.collectiveReleases ?? []].find((x) => x.id === a.release);
-      if (!rel) throw new Error("That is not one of your releases published from here.");
+      const own = [...await this.ownReleases(me, book, hints, s.via).catch(() => book.releases), ...book.collectiveReleases ?? []].find((x) => x.id === a.release);
+      if (!own) {
+        const id = readActId(a.release);
+        const held = await referTo(id, [.../* @__PURE__ */ new Set([...hints, ...s.relays, ...s.track])], s.via).catch(() => null);
+        if (!held?.public) throw new Error("That is neither one of your releases nor a public act found on your relays. Nothing was prepared.");
+      }
+      const rel = own ?? { id: readActId(a.release), name: "the act", version: short4(readActId(a.release)) };
       const service = readId(a.service);
       const offer = (await offers(service, [...hints, ...s.track], s.via)).find((o) => o.act === a.offer);
       if (!offer) throw new Error("No such standing offer of that service was found under the anchoring cMIP.");
-      const r = await ask(me, { act: rel.id, label: `the release ${rel.name} ${rel.version}`, service, offer, tier: a.tier, hints, via: s.via, save: () => this.store.saveIdentity(me) });
+      const r = await ask(me, { act: rel.id, label: own ? `the release ${rel.name} ${rel.version}` : `the act ${rel.version}`, service, offer, tier: a.tier, hints, via: s.via, save: () => this.store.saveIdentity(me) });
       book.anchors.push(r.asked);
       await this.saveBook(me.id, book);
       return { title: "An anchor asked", acts: [r.asked.draft], lines: r.lines };
     });
+  }
+  // ------------------------------------------------------------ Look: one feed (decided), and a page per specification
+  /** The relays Look asks: those named for tracking, else this identity's own. */
+  lookRelays(s, typed) {
+    const r = typed?.trim() ? list([typed]) : s.track.length ? s.track : s.relays;
+    if (!r.length) throw new Error("Name the public relays to ask: in the identity panel, Relays, or point at one here.");
+    return r;
+  }
+  /**
+   * The feed, pointed at a relay, a single ID, your contacts or a release,
+   * filtered by kind and layer (decided). Nothing is kept: ask again to see
+   * what changed.
+   */
+  async look(a) {
+    const { me, s, hints } = await this.ctx();
+    const kind = ["relay", "id", "contacts", "release"].find((k) => k === a.point?.kind) ?? "relay";
+    const value = (a.point?.value ?? "").trim();
+    const filters = (a.filters ?? [...FILTERS].filter((f) => f !== "mips")).filter((f) => FILTERS.includes(f));
+    const layer = a.layer || null;
+    let out;
+    let said2;
+    if (kind === "relay") {
+      const relays = this.lookRelays(s, value);
+      said2 = relays.join(", ");
+      out = await look(relays, { filters, layer, via: s.via, hints });
+    } else if (kind === "id") {
+      if (!value) throw new Error("Point at an identity by its ID (mid1\u2026, or hexadecimal).");
+      const id = readId(value);
+      said2 = idForm(id);
+      out = await look(this.lookRelays(s), { signers: [id], filters, layer, via: s.via, hints });
+    } else if (kind === "contacts") {
+      const c = await contacts(me, s.via);
+      said2 = `your contacts (${c.follows.length})`;
+      out = await look(this.lookRelays(s), { signers: c.follows.map((f) => f.id), filters, layer, via: s.via, hints });
+      if (c.problem) out.lines.unshift({ text: `Your contacts could not be read: ${c.problem}.`, tone: "warn" });
+    } else {
+      if (!value) throw new Error("Point at a release by its act ID (mact1\u2026, or hexadecimal).");
+      const id = readActId(value);
+      said2 = `the release ${short4(id)} and its line`;
+      out = await look(this.lookRelays(s), { release: id, filters: ["releases"], via: s.via, hints });
+    }
+    return { ...out, point: { kind, value, said: said2 }, limit: LIMIT_SAY };
+  }
+  /** A specification's page: everything that can be tied to it, from the relays named (decided 23 October 2026). */
+  async specPage(a) {
+    const { me, s, hints } = await this.ctx();
+    const hash = readHash(a.hash, "The specification");
+    const p = await specPage(hash, this.lookRelays(s), s.via, hints);
+    return { ...p, mine: p.creator === me.id, say: CARD_SAY };
+  }
+  /** The Dubsar clock's time on each act it stamped, in words (decided 23 October 2026). */
+  async clockWords(ids) {
+    const { s, hints } = await this.ctx();
+    return clockWords(ids.slice(0, 500), [.../* @__PURE__ */ new Set([...s.relays, ...s.track, ...hints])], s.via);
+  }
+  // ------------------------------------------------------------ saved points and contacts (the same follow list, here it filters)
+  savedAdd(a) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const kind = ["relay", "id", "contacts", "release"].find((k) => k === a.point.kind);
+      if (!kind) throw new Error("A saved point points at a relay, an ID, your contacts or a release.");
+      const label = a.label.trim().slice(0, 60) || a.point.value.slice(0, 24) || "A point";
+      const filters = a.filters.filter((f) => FILTERS.includes(f));
+      const key = sha2562(`${kind} ${a.point.value} ${filters.join(",")}`).slice(0, 12);
+      s.saved = [...(s.saved ?? []).filter((x) => x.key !== key), { key, label, point: { kind, value: a.point.value.trim() }, filters }];
+      await this.store.write(me.id, "settings", s);
+      return { lines: [{ text: `Saved in Look: \u201C${label}\u201D. Kept in this app only, never published.`, tone: "ok" }] };
+    });
+  }
+  savedRemove(key) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      s.saved = (s.saved ?? []).filter((x) => x.key !== key);
+      await this.store.write(me.id, "settings", s);
+      return { lines: [{ text: "Removed from Look\u2019s saved points.", tone: "ok" }] };
+    });
+  }
+  /** The follow list sealed to this identity: Look's "my contacts". */
+  async contactsList() {
+    const { me, s } = await this.ctx();
+    const c = await contacts(me, s.via);
+    return { follows: c.follows.map((f) => ({ ...f, form: idForm(f.id) })), problem: c.problem, say: FOLLOW_SAY };
+  }
+  /** Follow: add to contacts (the same follow list as Dub's). */
+  follow(a) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      try {
+        return { lines: await follow(me, { id: readId(a.id), name: a.name?.trim().slice(0, 64) || null }, s.via) };
+      } finally {
+        await this.store.saveIdentity(me);
+      }
+    });
+  }
+  /** Follow their releases (decided: "the same follow list, but here it filters"): added to contacts, and a saved point of Look showing their releases. */
+  async followReleases(a) {
+    const id = readId(a.id);
+    const f = await this.follow({ id, name: a.name });
+    const label = `${a.name?.trim() || short4(id)}\u2019s releases`;
+    const saved = await this.savedAdd({ label, point: { kind: "id", value: id }, filters: ["releases"] });
+    return { lines: [...f.lines, ...saved.lines] };
+  }
+  // ------------------------------------------------------------ specification cards (the Dubsar Specification Card cMIP)
+  /** The specification a card would name: its creator's publication where one is found, or one of the core's texts. */
+  async specFound(hash, s, book) {
+    const here = book.specs.find((x2) => x2.hash === hash);
+    if (here) return { publication: here.id, creator: null, name: here.name };
+    const b = builtIn(hash);
+    if (b) return { publication: null, creator: null, name: b.title };
+    const t = await track(this.lookRelays(s), { via: s.via });
+    const x = t.specs.find((y) => y.hash === hash);
+    if (!x) throw new Error("No specification with this hash was found on your relays: a card names one Ummia can find. Nothing was signed.");
+    const pub = x.publications.find((p) => p.signer === x.creator) ?? x.publications[0];
+    return { publication: pub?.id ?? null, creator: x.creator, name: x.name };
+  }
+  /**
+   * A card (and, where asked, a discussion thread naming the specification),
+   * read back exactly as it would be signed; nothing signed until confirmed.
+   * As yourself only: a card speaks for its signer.
+   */
+  async prepareCard(a) {
+    const { me, s, book } = await this.ctx();
+    if ((await this.acting(me, s)).kind === "collective") throw new Error("A card is signed as yourself: choose yourself in the identity panel.");
+    const hash = readHash(a.spec, "The specification");
+    const found = await this.specFound(hash, s, book);
+    const newThread = a.discussion === "new";
+    const fields = {
+      spec: hash,
+      title: a.title,
+      summary: a.summary?.trim() || null,
+      releases: (a.releases ?? []).map((r) => readActId(r.trim())),
+      vectors: (a.vectors ?? []).map((v) => /^https:\/\//.test(v.trim()) ? v.trim() : readActId(v.trim())),
+      discussion: newThread || !a.discussion?.trim() ? null : readActId(a.discussion.trim())
+    };
+    const blocking = [];
+    let text3 = "";
+    try {
+      text3 = cardText2({ ...fields, discussion: newThread ? "0".repeat(64) : fields.discussion });
+    } catch (e3) {
+      blocking.push(message4(e3).replace(/ Nothing was signed\.$/, ""));
+    }
+    if (!s.relays.length) blocking.push("Name at least one relay its acts go to, in the identity panel, Relays.");
+    const core = !!builtIn(hash);
+    const creators = !core && (found.creator === me.id || found.creator === null && book.specs.some((x) => x.hash === hash));
+    const shown = newThread ? text3.replace(`Discussion: ${actForm("0".repeat(64))}`, "Discussion: (the thread signed just before it)") : text3;
+    const digest = sha2562(new TextEncoder().encode(`MOR Ummia specification card, version 1
+${me.id}
+${newThread ? "with a new thread\n" : ""}${text3}
+${s.relays.join("\n")}`));
+    const plan = this.plan(me.id, {
+      digest,
+      blocking,
+      run: async () => {
+        const acts2 = [];
+        const lines2 = [];
+        try {
+          if (newThread) {
+            const d = await publishDiscussion(me, { title: fields.title, spec: hash, publication: found.publication, relays: s.relays, find: s.track, via: s.via });
+            fields.discussion = d.id;
+            acts2.push(d.id);
+            lines2.push({ text: `A discussion thread is published, naming it: ${actForm(d.id)}. Replies to it come from Dub, or from Discuss here.`, tone: "ok" });
+          }
+          const c = await publishCard(me, fields, { publication: found.publication, relays: s.relays, find: s.track, via: s.via });
+          acts2.push(c.id);
+          lines2.push({ text: `Its card is published: ${actForm(c.id)}, a plain post every app shows.`, tone: "ok" });
+          const b = { ...NO_BOOK(), ...await this.store.read(me.id, "book") ?? {} };
+          b.cards = [...b.cards ?? [], { id: c.id, spec: hash, title: fields.title, at: now2() }];
+          if (newThread) b.discussions = [...b.discussions ?? [], { id: fields.discussion, spec: hash, title: fields.title, at: now2() }];
+          await this.saveBook(me.id, b);
+        } finally {
+          await this.store.saveIdentity(me);
+        }
+        lines2.push(creators ? { text: "Signed by its creator: the latest card in your own sequence is the one that counts; a later card replaces this one.", tone: "ok" } : { text: "You are not its creator: your card is shown as your word, never as the specification\u2019s own.", tone: "warn" });
+        return { title: `The card of \u201C${fields.title}\u201D is published`, acts: acts2, hash, lines: lines2 };
+      }
+    });
+    return {
+      plan,
+      digest,
+      hash,
+      title: `Sign the card of \u201C${found.name}\u201D`,
+      summary: [
+        creators ? "You are its creator: this card speaks for it until you sign a later one." : core ? "One of the core\u2019s texts: it names no creator, so your card is shown as your word, never as the text\u2019s own." : "You are not its creator: this card is shown as your word, beside its creator\u2019s.",
+        "A plain post, public, signed by you, readable by every app (Dub shows it as a post). It changes nothing in the specification.",
+        "Nothing is signed until you press Sign and publish."
+      ],
+      sections: [
+        { heading: "The card, exactly as it is signed", lines: shown.split("\n").map((t) => ({ text: t })) },
+        ...newThread ? [{ heading: "Signed just before it", lines: [{ text: `A discussion thread: \u201CDiscussion of ${fields.title.trim()}\u201D, naming the specification${found.publication ? " (its publication, with its signer)" : ""}.` }] }] : [],
+        { heading: "Where it goes", lines: [{ text: s.relays.join(", ") || "(no relay yet)" }] }
+      ],
+      blocking
+    };
+  }
+  /** The cards and threads signed here, newest first (Publish › Published here). */
+  async publishedHere() {
+    const { book } = await this.ctx();
+    return { specs: [...book.specs].reverse(), cards: [...book.cards ?? []].reverse(), discussions: [...book.discussions ?? []].reverse(), limits: LIMITS };
+  }
+  // ------------------------------------------------------------ Discuss: discussions, a reply as a signed document
+  /** The discussion threads started here, and the MIP drafts published, each with its replies. */
+  async discussions() {
+    const { me, s, book } = await this.ctx();
+    const threads = [
+      ...(book.discussions ?? []).map((d) => ({ id: d.id, title: `Discussion of ${d.title}`, spec: d.spec, kind: "thread" })),
+      ...book.mips.flatMap((m) => m.drafts.map((d, i) => ({ id: d.id, title: `${m.title}, draft ${i + 1}`, spec: null, kind: "draft" })))
+    ];
+    if (!threads.length) return { threads: [], lines: [] };
+    const r = await replies(me, threads.map((t) => t.id), [.../* @__PURE__ */ new Set([...s.relays, ...s.track])], s.via);
+    return { threads: threads.map((t) => ({ ...t, replies: (r.replies.get(t.id) ?? []).filter((x) => !readCardText(x.text)).map((x) => ({ ...x, mine: x.signer === me.id })) })), lines: r.lines };
+  }
+  /** A reply as a signed document (decided on the mockups: "Reply, as a signed document"): a long-form text act naming the act it answers. */
+  reply(a) {
+    return this.serial(async () => {
+      const { me, s, book } = await this.ctx();
+      await this.current(me);
+      if ((await this.acting(me, s)).kind === "collective") throw new Error("A reply is signed as yourself: choose yourself in the identity panel.");
+      const text3 = a.text.trim();
+      if (!text3) throw new Error("Write the reply first. Nothing was signed.");
+      if (!s.relays.length) throw new Error("Name at least one relay its acts go to, in the identity panel, Relays. Nothing was signed.");
+      const to = readActId(a.to);
+      let ref;
+      let author;
+      try {
+        const r = await referTo(to, [.../* @__PURE__ */ new Set([...s.relays, ...s.track])], s.via);
+        ref = r.ref;
+        author = r.signer;
+      } catch {
+        throw new Error("The act it answers was not found on your relays: a reply names only an act held. Nothing was signed.");
+      }
+      let id;
+      try {
+        for (const hint of s.relays) for (const c of me.chainActs()) await relayAt(hint, s.via).putAct(c).catch(() => void 0);
+        const made = await me.publish(LONGFORM_SPECS.text, TEXT_ACT, textPayload2(text3), { public: true, relays: s.relays, refs: [ref] });
+        id = made.id;
+        if (author !== me.id) {
+          const l = await lookUp(author, [...s.relays, ...s.track], s.via).catch(() => null);
+          const inbox = l?.inbox(SPECS.text) ?? [];
+          if (inbox.length) await leaveInInbox(me, made.act, inbox).catch(() => void 0);
+        }
+      } finally {
+        await this.store.saveIdentity(me);
+      }
+      book.replies = [...book.replies ?? [], { id, to, at: now2() }];
+      await this.saveBook(me.id, book);
+      return { title: "Your reply is published", acts: [id], lines: [{ text: `A signed document, public, answering ${actForm(to)}: ${actForm(id)}.`, tone: "ok" }] };
+    });
+  }
+  // ------------------------------------------------------------ the act menu: Rely on it (in every app, decided)
+  /**
+   * Rely on an act shown: the witness act (Identity type 15) signed once
+   * RELY is typed, as everywhere, its key checked first (H80); through
+   * Kišib's panel where the identity is used through it. It keeps that act
+   * visible as disputed should its author ever disown it.
+   */
+  rely(a) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      if (a.typed.trim() !== "RELY") throw new Error("Type RELY to sign the witness act. Nothing was signed.");
+      const id = readActId(a.id);
+      if (me.f.sequence.includes(id)) throw new Error("It is this identity\u2019s own act: a witness act names other identities\u2019 acts. Nothing was signed.");
+      await this.current(me);
+      let made;
+      try {
+        made = await me.witness([id], { shown: WITNESS_EXPLANATION, relays: s.relays });
+      } finally {
+        await this.store.saveIdentity(me);
+      }
+      if (!made.sent.some((x) => x.result)) throw new Error(`No home took the witness act: ${made.sent.map((x) => `${x.home}: ${x.error}`).join("; ")}. It is signed here, not published.`);
+      return { lines: [{ text: `You rely on ${short4(id)}: witness act ${short4(made.id)}, public at this identity\u2019s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: "ok" }] };
+    });
+  }
+  // ------------------------------------------------------------ an identity used through Kišib (the Dubsar runner cMIP)
+  runner() {
+    if (!this.opts.runner) throw new Error("Ki\u0161ib\u2019s runner is in the computer\u2019s program only, never the web client: bring the identity with its signing key\u2019s words instead.");
+    return this.opts.runner;
+  }
+  /** Where the pairing with Kišib stands, and the identities it lets Ummia use. */
+  async runnerState() {
+    if (!this.opts.runner) return { available: false, origin: null, state: null, code: null, identities: [], problem: null };
+    const held = await this.store.held();
+    try {
+      const p = await this.opts.runner.paired();
+      return { available: true, origin: this.opts.runner.origin(), state: p?.state ?? null, code: p?.code ?? null, identities: (p?.identities ?? []).map((x) => ({ id: x.id, form: idForm(x.id), name: x.name, held: held.includes(x.id) })), problem: null };
+    } catch (e3) {
+      return { available: true, origin: this.opts.runner.origin(), state: null, code: this.opts.runner.code(), identities: [], problem: message4(e3) };
+    }
+  }
+  runnerPair() {
+    return this.runner().pair();
+  }
+  /** Use an identity Kišib's runner holds and lets Ummia use: no key of it kept here; every act shows Kišib's panel inside Ummia's window. */
+  runnerTake(a) {
+    return this.serial(async () => {
+      const p = await this.runner().paired();
+      if (!p || p.state !== "approved") throw new Error(p?.state === "waiting" ? "Ki\u0161ib has not approved Ummia yet: approve it in Ki\u0161ib (Runner, Apps), comparing the code." : "Ummia is not paired with Ki\u0161ib\u2019s runner: pair it first.");
+      const k = p.identities.find((x) => x.id === a.id);
+      if (!k) throw new Error("Ki\u0161ib does not let Ummia use this identity: choose it for Ummia in Ki\u0161ib (Runner, Apps).");
+      if ((await this.store.held()).includes(k.id)) {
+        await this.store.setActive(k.id);
+        return { lines: [{ text: "Ummia already uses this identity: it is the one in use now.", tone: "ok" }] };
+      }
+      const look2 = await lookUp(k.id, k.homes, {});
+      const r = look2.resolution;
+      if (r.stop === "contested") throw new Error("Its homes disagree about its keys (contested): Ummia cannot use it until they agree.");
+      const binding = r.links[r.links.length - 1];
+      if (!r.signingKey || hex(r.signingKey) !== k.key) throw new Error(RUNNER_OLD_KEY_SAY);
+      const chain = await servedChain(k.id, r.homes, {});
+      const named2 = list(look2.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
+      const relays = named2.length ? named2 : r.homes.map((h) => h.hint);
+      const f = {
+        label: TEST_LABEL,
+        identity: k.id,
+        position: binding.position,
+        binding: binding.act,
+        // No key of it is held here: Kišib's runner signs (the Dubsar runner cMIP, 3.2).
+        signingSecret: "",
+        safety: { scheme: 0, seeds: "" },
+        chain: chain.map(base64),
+        homes: r.homes,
+        rule: r.rule ?? null,
+        sequence: [],
+        routes: null,
+        encryption: [],
+        pending: null
+      };
+      await this.store.write(k.id, "settings", { relays, track: relays, reports: null, via: {}, acting: k.id });
+      await this.store.saveIdentity(new TestIdentity(f, {}));
+      await this.store.setActive(k.id);
+      return {
+        lines: [
+          { text: `Ummia uses ${k.name ?? short4(k.id)} through Ki\u0161ib\u2019s runner: Ki\u0161ib holds its signing key, Ummia none. Every act is shown by Ki\u0161ib, in its panel here, before it is signed.`, tone: "ok" },
+          { text: RUNNER_HOLDS_SAY, tone: "warn" },
+          { text: LINE_SAY, tone: "warn" }
+        ]
+      };
+    });
+  }
+  /** The request waiting for the person now, for the page to draw Kišib's panel. Not serial: it is asked while an act waits. */
+  async runnerAsking() {
+    const r = this.opts.runner;
+    return { asking: r?.asking ?? null, origin: r?.origin() ?? null };
+  }
+  async runnerDrop(a) {
+    this.opts.runner?.drop(a.request);
+  }
+  async runnerUnpair() {
+    await this.runner().unpair();
   }
 };
 
@@ -10420,60 +11694,48 @@ async function run(u2, op, a) {
       return u2.anchorOffers(text2(a.service));
     case "anchor ask":
       return u2.anchorRelease({ release: text2(a.release), service: text2(a.service), offer: text2(a.offer), tier: Number(a.tier ?? 0) });
+    case "look":
+      return u2.look({ point: a.point ?? {}, filters: a.filters === void 0 ? void 0 : list2(a.filters), layer: text2(a.layer) || null });
+    case "spec page":
+      return u2.specPage({ hash: text2(a.hash) });
+    case "clock words":
+      return u2.clockWords(list2(a.ids));
+    case "saved add":
+      return u2.savedAdd({ label: text2(a.label), point: { kind: text2(a.point?.kind), value: text2(a.point?.value) }, filters: list2(a.filters) });
+    case "saved remove":
+      return u2.savedRemove(text2(a.key));
+    case "contacts":
+      return u2.contactsList();
+    case "follow":
+      return u2.follow({ id: text2(a.id), name: text2(a.name) || null });
+    case "follow releases":
+      return u2.followReleases({ id: text2(a.id), name: text2(a.name) || null });
+    case "card prepare":
+      return u2.prepareCard({ spec: text2(a.spec), title: text2(a.title), summary: text2(a.summary), releases: list2(a.releases), vectors: list2(a.vectors), discussion: text2(a.discussion) });
+    case "published here":
+      return u2.publishedHere();
+    case "discussions":
+      return u2.discussions();
+    case "reply":
+      return u2.reply({ to: text2(a.to), text: text2(a.text) });
+    case "rely":
+      return u2.rely({ id: text2(a.id), typed: text2(a.typed) });
+    case "runner":
+      return u2.runnerState();
+    case "runner pair":
+      return u2.runnerPair();
+    case "runner take":
+      return u2.runnerTake({ id: text2(a.id) });
+    case "runner asking":
+      return u2.runnerAsking();
+    case "runner drop":
+      return u2.runnerDrop({ request: text2(a.request) });
+    case "runner unpair":
+      return u2.runnerUnpair();
     default:
       throw new Error(`unknown operation ${op}`);
   }
 }
-
-// ../manage/src/view.ts
-function e(s) {
-  return String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-}
-
-// ../genesis/src/card-words.ts
-function cardWords(l, app3, e3) {
-  const n = `${l.acts} act${l.acts === 1 ? "" : "s"}`;
-  if (!l.latest) return n;
-  const missing = l.missing ? ` ${l.missing === 1 ? "One act" : `${l.missing} acts`} of this line ${l.missing === 1 ? "is" : "are"} not at your homes, and ${app3} no longer holds ${l.missing === 1 ? "it" : "them"}: no reader can follow this line past ${l.missing === 1 ? "it" : "them"}, so a change of keys may lose what lives on it (a member key, notes, a list). Ki\u0161ib says so in red.` : "";
-  if (l.card) return `${n}: ${l.card.includes(";") ? "its cards" : "its card"}, for Ki\u0161ib, <code class="card-line">${e3(l.card)}</code>${missing ? `<br>${e3(missing)}` : ""}`;
-  if (l.atHomes === false) return `${n}: its latest act (<code>${e3(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e3(app3)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e3(missing)}` : ""}`;
-  return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e3(l.latest)}</code>). Look again before changing your keys.`;
-}
-
-// ../genesis/src/shown.ts
-var CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-function polymod(values) {
-  const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
-  let chk = 1;
-  for (const v of values) {
-    const b = chk >>> 25;
-    chk = (chk & 33554431) << 5 ^ v;
-    for (let i = 0; i < 5; i++) if (b >>> i & 1) chk ^= G[i];
-  }
-  return chk >>> 0;
-}
-function shownForm(label, hex3) {
-  if (!/^([0-9a-f]{2})+$/i.test(hex3)) return hex3;
-  const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
-  const five = [];
-  let acc = 0;
-  let bits = 0;
-  for (const b of bytes) {
-    acc = (acc << 8 | b) & 65535;
-    bits += 8;
-    while (bits >= 5) {
-      bits -= 5;
-      five.push(acc >> bits & 31);
-    }
-  }
-  if (bits > 0) five.push(acc << 5 - bits & 31);
-  const hrp = [...label].map((c) => c.charCodeAt(0));
-  const values = [...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...five, 0, 0, 0, 0, 0, 0];
-  const pm = polymod(values) ^ 734539939;
-  const check = [0, 1, 2, 3, 4, 5].map((i) => pm >>> 5 * (5 - i) & 31);
-  return `${label}1${[...five, ...check].map((v) => CHARSET[v]).join("")}`;
-}
-var shownSpec = (hex3) => shownForm("mspec", hex3);
 
 // ../kit/src/style.ts
 var APPS = {
@@ -10731,6 +11993,83 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 `;
 
 // ../kit/src/html.ts
+var e = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+function shortForm(form2) {
+  const one2 = form2.indexOf("1");
+  if (one2 < 0 || form2.length < one2 + 10) return form2;
+  return `${form2.slice(0, one2 + 4)}\u2026${form2.slice(-3)}`;
+}
+var initial = (name, id) => (name?.trim()?.[0] ?? id.replace(/^m\w*1/, "")[0] ?? "?").toUpperCase();
+function card(a, o = {}) {
+  const s = a.signer;
+  const name = s.name ?? (s.collective ? "a collective" : "");
+  const signer = `<button type="button" class="k-signer" data-k-menu="signer" aria-haspopup="menu"><span class="k-sid">${e(shortForm(s.form))}</span>${name ? `<span class="k-nm" dir="auto">${e(name)}</span>` : ""}${s.ownName && s.ownName !== s.name ? `<span class="k-dn" dir="auto">\u201C${e(s.ownName)}\u201D</span>` : ""}${a.of ? `<span class="k-of" dir="auto">of ${e(a.of)}</span>` : ""}${s.me ? '<span class="k-dn">you</span>' : ""}</button>`;
+  const labels = (a.labels ?? []).map((l) => `<div class="k-label${l.tone === "bad" ? " k-bad" : l.tone === "warn" ? " k-warn" : ""}">${e(l.text)}</div>`).join("");
+  const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : "";
+  const text3 = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? "")}</div>` : "";
+  const foot = `<div class="k-foot">${a.verified && !a.alarm ? '<span class="k-v" title="verified">\u2713</span>' : ""}${a.alarm ? `<span class="k-alarmline">${e(a.alarm)}</span>` : ""}<button type="button" class="k-actid" data-k-menu="act" aria-haspopup="menu">${e(shortForm(a.form))}</button></div>`;
+  const hint = !a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer\u2019s own hint: ${e(a.hint)}</div>` : "";
+  return `<article class="k-act${o.selected ? " k-sel" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${labels}${text3}${a.html ?? ""}${hint}${foot}</article>`;
+}
+function signerMenu(app2, w, own) {
+  const below = w.me ? own : [w.followed ? { key: "unfollow", label: "Following: remove from contacts" } : { key: "follow", label: "Follow: add to contacts" }, ...own, w.muted ? { key: "unmute", label: "Unmute" } : { key: "mute", label: "Mute" }];
+  return menu(`${w.name ? `${w.name} \xB7 ` : ""}${shortForm(w.form)}`, [
+    { key: "copy-id", label: "Copy ID" },
+    { key: "copy-link", label: "Copy ID link" },
+    { key: "profile", label: "Open profile" }
+  ], app2, below);
+}
+function actMenu(app2, a, own, signs = true) {
+  const opens = a.corrects ? "Open what it corrects" : "Open what it answers";
+  const every = signs ? [{ key: "rely", label: "Rely on it" }, { key: "anchor", label: "Anchor it" }, ...a.own ? [{ key: "correct", label: "Correct it" }] : []] : [];
+  return menu(shortForm(a.form), [
+    { key: "copy-act", label: "Copy act ID" },
+    { key: "open", label: opens, disabled: !a.answers && !a.corrects, hint: !a.answers && !a.corrects ? "nothing" : void 0 },
+    { key: "why", label: "Why it\u2019s valid" }
+  ], app2, [...own.before, ...every, ...own.after]);
+}
+function menu(title, take, app2, below) {
+  const item = (m) => `${m.line ? "<hr>" : ""}<button type="button" role="menuitem" data-k-item="${e(m.key)}"${m.disabled ? " disabled" : ""}>${e(m.label)}${m.hint ? `<span class="k-k">${e(m.hint)}</span>` : ""}</button>`;
+  return `<div class="k-pop" role="menu"><div class="k-t">${e(title)}</div>${take.map(item).join("")}${below.length ? `<hr><div class="k-own">${e(app2)}\u2019s own</div>${below.map(item).join("")}` : ""}</div>`;
+}
+function top(o) {
+  return `<header class="k-top">${o.left}<span class="k-grow"></span>${o.center ?? ""}<span class="k-grow"></span>${o.right}</header>`;
+}
+function appMark(name, icon) {
+  return `<div class="k-app">${icon ? `<img src="${e(icon)}" alt="">` : ""}<span class="k-nm">${e(name)}</span></div>`;
+}
+function meButton(o) {
+  const shown = o.as ?? o;
+  return `<button type="button" class="k-me" data-k-open="identity" aria-haspopup="dialog" title="Identities"><span class="k-n">${e(shown.name ?? "No name")}</span><span class="k-s">${e(shortForm(shown.form))}</span>${o.as ? `<span class="k-dot k-c k-alt">${e(initial(o.as.name, o.as.form))}</span>` : ""}<span class="k-dot">${e(initial(o.name, o.form))}</span></button>`;
+}
+var danger = (l) => `<span class="k-dm k-l${l}" title="danger ${l} of 3" aria-label="danger ${l} of 3"><i></i><i></i><i></i></span>`;
+function tiles(ts) {
+  return `<div class="k-home">${ts.map((t) => `<button type="button" class="k-tile k-d${t.danger}${t.alert ? " k-alarm" : ""}" data-k-tile="${e(t.key)}">${ICONS[t.icon]}${danger(t.danger)}<h2>${e(t.name)}</h2><p>${e(t.say)}</p>${t.alert ? `<span class="k-alert">${e(t.alert)}</span>` : ""}</button>`).join("")}</div>`;
+}
+function opened(column2, on, pane) {
+  const col = column2.map((c) => c === "-" ? '<div class="k-sep"></div>' : typeof c === "string" ? `<h3>${e(c)}</h3>` : `<button type="button" data-k-col="${e(c.key)}" class="${c.key === on ? "k-on" : ""}">${e(c.label)}${c.k != null ? `<span class="k-k">${e(c.k)}</span>` : ""}</button>`).join("");
+  return `<div class="k-body k-opened${on ? " k-chosen" : ""}"><aside class="k-col">${col}</aside><section class="k-pane"><button type="button" class="k-back" data-k-back="column">\u2190 Back</button>${pane}</section></div>`;
+}
+function pointRow(label, chips, name = "point") {
+  return `<div class="k-point"><span class="k-lbl">${e(label)}</span>${chips.map((c) => `<button type="button" class="k-chip${c.on ? " k-on" : ""}" data-k-${name}="${e(c.key)}" aria-pressed="${!!c.on}">${e(c.label)}</button>`).join("")}</div>`;
+}
+function feedBox(o) {
+  return `${o.above ?? ""}<div class="k-feedwrap"><div class="k-feed" id="${e(o.id)}" tabindex="0">${o.cards || `<p class="k-empty">${e(o.empty ?? "Nothing yet.")}</p>`}</div>${o.below ?? ""}</div>`;
+}
+function say2(line, more) {
+  const rest = Array.isArray(more) ? more.map((m) => `<p>${e(m)}</p>`).join("") : more;
+  return `<details class="k-say"><summary>${e(line)}<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text">${rest}</div></details>`;
+}
+var note = (kind, html) => `<div class="k-note${kind ? ` k-${kind}` : ""}" role="status">${html}</div>`;
+function identityPanel(o) {
+  const row = (x, sub, owner, why) => `<div class="k-idline"><button type="button" class="k-idrow${x.on ? " k-on" : ""}${sub ? " k-sub" : ""}" data-k-use="${e(x.id)}"${sub ? ` data-k-under="${e(owner)}"` : ""}${x.on ? ' aria-current="true"' : ""}${why ? " disabled" : ""}><span class="k-dot${sub ? " k-c" : ""}${x.on ? "" : " k-alt"}">${e(initial(x.name, x.form))}</span><span><span class="k-n" dir="auto">${e(x.name ?? "No name")}${sub ? '<span class="k-tagc">collective</span>' : ""}</span><br><span class="k-s">${e(shortForm(x.form))}</span>${why ? `<br><span class="k-small k-faint">${e(why)}</span>` : ""}</span></button>${sub ? "" : `<button type="button" class="k-more" data-k-idmenu="${e(x.id)}" aria-haspopup="menu" title="Its menu">\u22EF</button>`}</div>`;
+  const ids = o.ids.map((x) => row(x, false, x.id) + x.collectives.map((c) => row(c, true, x.id, c.why)).join("")).join("");
+  const add = `<button type="button" class="k-idrow${o.adding ? " k-on" : ""}" data-k-add="toggle"><span class="k-soft">+ Add</span></button>${o.adding ? `<div class="k-pane-in">${o.add.map((a) => `<button type="button" class="k-idrow" data-k-add="${e(a.key)}"${a.empty ? " disabled" : ""}><span><span class="k-n">${e(a.label)}</span><br><span class="k-small k-soft">${e(a.say)}</span></span></button>`).join("")}</div>` : ""}`;
+  return `<div class="k-panel" role="dialog" aria-label="Identities" data-k-panel="identity">${ids || '<p class="k-small k-soft">No identity here yet.</p>'}${add}<div class="k-sepline"></div><div class="k-foot-note">${o.foot}</div>${o.inside ? `<div class="k-pane-in" data-k-inside>${o.inside}</div>` : ""}</div>`;
+}
+function removeSaid(app2, name) {
+  return `<div class="k-box" data-k-remove><h4>Remove ${e(name)} from ${e(app2)}?</h4><p class="k-small k-soft">${e(app2)} forgets ${e(name)}\u2019s signing words, and what it kept about it, on this device. ${e(name)} itself is not touched: its acts, its homes and the other apps keep it. To use it here again, bring it with its words.</p><div class="k-row"><button type="button" class="k-btn k-p" data-k-remove-yes>Remove it</button><button type="button" class="k-btn k-q" data-k-remove-no>Keep it</button></div></div>`;
+}
 var SVG = (d) => `<svg class="k-ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 var ICONS = {
   identities: SVG('<circle cx="24" cy="17" r="8"/><path d="M9 41c2-9 8-13 15-13s13 4 15 13"/>'),
@@ -10749,6 +12088,315 @@ var ICONS = {
   publish: SVG('<path d="M10 40h28M24 32V8M15 17l9-9 9 9"/>'),
   choose: SVG('<path d="M8 12l3 3 6-6M8 24l3 3 6-6M8 36l3 3 6-6M22 12h18M22 24h18M22 36h18"/>')
 };
+function slotWords(by, host) {
+  return `Drawn by ${by} \xB7 ${host} cannot read or change this frame`;
+}
+
+// ../kit/src/dom.ts
+async function copy(text3) {
+  try {
+    await navigator.clipboard.writeText(text3);
+    return true;
+  } catch {
+    try {
+      const t = document.createElement("textarea");
+      t.value = text3;
+      t.setAttribute("readonly", "");
+      t.className = "k-offscreen";
+      document.body.append(t);
+      t.select();
+      const ok = document.execCommand("copy");
+      t.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+var openMenu = null;
+function closeMenu() {
+  if (!openMenu) return;
+  openMenu.pop.remove();
+  openMenu.button.classList.remove("k-open");
+  openMenu.button.setAttribute("aria-expanded", "false");
+  openMenu.done?.();
+  openMenu = null;
+}
+function place(pop, button, prefer) {
+  const r = button.getBoundingClientRect();
+  const w = pop.offsetWidth;
+  const h = pop.offsetHeight;
+  const vw = document.documentElement.clientWidth;
+  const vh = document.documentElement.clientHeight;
+  let left = prefer === "above" ? r.right - w : r.left;
+  left = Math.max(8, Math.min(left, vw - w - 8));
+  let topAt = prefer === "below" ? r.bottom + 6 : r.top - h - 6;
+  if (topAt + h > vh - 8) topAt = r.top - h - 6;
+  if (topAt < 8) topAt = Math.min(r.bottom + 6, vh - h - 8);
+  pop.style.left = `${Math.round(left)}px`;
+  pop.style.top = `${Math.round(Math.max(8, topAt))}px`;
+}
+function popAt(button, html, prefer, pick, done) {
+  closeMenu();
+  const holder = document.createElement("div");
+  holder.innerHTML = html;
+  const pop = holder.firstElementChild;
+  (button.closest(".k-page") ?? document.body).append(pop);
+  place(pop, button, prefer);
+  button.classList.add("k-open");
+  button.setAttribute("aria-expanded", "true");
+  openMenu = { pop, button, done };
+  pop.addEventListener("click", (ev) => {
+    const item = ev.target.closest("button[data-k-item]");
+    if (!item || item.disabled) return;
+    ev.stopPropagation();
+    pick(item.dataset.kItem, item);
+  });
+  pop.querySelector("button:not([disabled])")?.focus({ preventScroll: true });
+  return pop;
+}
+async function copied(item, text3) {
+  const ok = await copy(text3);
+  const k = document.createElement("span");
+  k.className = "k-k";
+  k.textContent = ok ? "copied" : "select it: copying refused";
+  item.querySelector(".k-k")?.remove();
+  item.append(k);
+  item.dataset.kCopied = ok ? "yes" : "no";
+  setTimeout(closeMenu, ok ? 450 : 2400);
+}
+function attachCards(root, host) {
+  root.addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-k-menu]");
+    if (!b) return;
+    const card2 = b.closest("[data-k-act]");
+    if (!card2) return;
+    ev.stopPropagation();
+    if (openMenu?.button === b) return closeMenu();
+    const a = host.act(card2.dataset.kAct);
+    if (!a) return;
+    const which = b.dataset.kMenu;
+    card2.classList.add("k-sel");
+    const html = which === "signer" ? signerMenu(host.app, a.signer, host.signerItems(a)) : actMenu(host.app, a, host.actItems(a), host.signs !== false);
+    popAt(
+      b,
+      html,
+      which === "signer" ? "below" : "above",
+      (key, item) => {
+        if (key === "copy-id") return void copied(item, a.signer.form);
+        if (key === "copy-link") return void copied(item, a.signer.link);
+        if (key === "copy-act") return void copied(item, a.form);
+        closeMenu();
+        host.choose(key, a, card2);
+      },
+      () => card2.classList.remove("k-sel")
+    );
+  });
+}
+function attachClosing(doc = document) {
+  doc.addEventListener("click", (ev) => {
+    if (!openMenu) return;
+    const t = ev.target;
+    if (openMenu.pop.contains(t) || openMenu.button.contains(t)) return;
+    closeMenu();
+  });
+  doc.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape") return;
+    if (openMenu) return closeMenu();
+    if (panel) return closePanel();
+    popup?.close();
+  });
+}
+var panel = null;
+function openPanel(page, html, done) {
+  closePanel();
+  const shade = document.createElement("div");
+  shade.className = "k-shade k-light";
+  const holder = document.createElement("div");
+  holder.innerHTML = html;
+  const el = holder.firstElementChild;
+  page.append(shade, el);
+  shade.addEventListener("click", () => closePanel());
+  panel = { el, shade, done };
+  const find = el.querySelector("[data-k-find]");
+  find?.addEventListener("input", () => {
+    const q = find.value.trim().toLowerCase();
+    el.querySelectorAll("[data-k-contact]").forEach((r) => r.hidden = !!q && !r.dataset.kName.includes(q));
+  });
+  return el;
+}
+function redrawPanel(html) {
+  if (!panel) return null;
+  const holder = document.createElement("div");
+  holder.innerHTML = html;
+  const el = holder.firstElementChild;
+  panel.el.replaceWith(el);
+  panel.el = el;
+  return el;
+}
+function closePanel() {
+  if (!panel) return;
+  closeMenu();
+  panel.el.remove();
+  panel.shade.remove();
+  panel.done?.();
+  panel = null;
+}
+var panelOpen = () => panel?.el ?? null;
+var Popup = class {
+  constructor(page, drawn = () => void 0) {
+    this.page = page;
+    this.drawn = drawn;
+  }
+  stack = [];
+  shade = null;
+  box = null;
+  scroll = [];
+  get open() {
+    return !!this.box;
+  }
+  /** Open with this content, or, when open, put it in place of what is shown (Back returns). */
+  show(title, html) {
+    if (!this.box) {
+      for (const st of this.page.querySelectorAll(".k-status")) if (st.querySelector(".k-done")) st.innerHTML = "";
+      this.scroll = [...this.page.querySelectorAll(".k-feed")].map((el) => ({ el, top: el.scrollTop }));
+      this.shade = document.createElement("div");
+      this.shade.className = "k-shade";
+      this.shade.addEventListener("click", () => this.close());
+      this.box = document.createElement("div");
+      this.box.className = "k-modal";
+      this.box.setAttribute("role", "dialog");
+      this.box.setAttribute("aria-modal", "true");
+      this.box.addEventListener("click", (ev) => {
+        const t = ev.target;
+        if (t.closest('[data-k-popup="back"]')) this.back();
+        else if (t.closest('[data-k-popup="close"]')) this.close();
+      });
+      this.page.append(this.shade, this.box);
+      popup = this;
+    }
+    this.stack.push({ title, html });
+    return this.draw();
+  }
+  /** Replace what is shown now, without a new step (content read late). */
+  replace(html) {
+    if (!this.box || !this.stack.length) return null;
+    this.stack[this.stack.length - 1].html = html;
+    return this.draw();
+  }
+  back() {
+    if (this.stack.length <= 1) return this.close();
+    this.stack.pop();
+    this.draw();
+  }
+  close() {
+    closeMenu();
+    this.box?.remove();
+    this.shade?.remove();
+    this.box = this.shade = null;
+    this.stack = [];
+    for (const s of this.scroll) s.el.scrollTop = s.top;
+    if (popup === this) popup = null;
+  }
+  draw() {
+    const now3 = this.stack[this.stack.length - 1];
+    const back = this.stack.length > 1 ? '<button type="button" class="k-round" data-k-popup="back" aria-label="Back">\u2190</button>' : "";
+    this.box.innerHTML = `<div class="k-mh">${back}<h3 dir="auto">${escapeText(now3.title)}</h3><button type="button" class="k-round" data-k-popup="close" aria-label="Close">\xD7</button></div><div class="k-mbody">${now3.html}</div>`;
+    const body = this.box.querySelector(".k-mbody");
+    this.drawn(body);
+    return body;
+  }
+};
+var popup = null;
+var escapeText = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+function cardsUntimed(root) {
+  return [...root.querySelectorAll("article.k-act[data-k-act]")].filter((a) => !a.querySelector(".k-when")).map((a) => a.dataset.kAct);
+}
+function stampCards(root, words) {
+  for (const a of root.querySelectorAll("article.k-act[data-k-act]")) {
+    const w = words[a.dataset.kAct ?? ""];
+    if (!w || a.querySelector(".k-when")) continue;
+    const s = document.createElement("span");
+    s.className = "k-when";
+    s.textContent = w;
+    a.prepend(s);
+    a.querySelector(".k-hint")?.remove();
+  }
+}
+function attachColumn(root, chose) {
+  root.addEventListener("click", (ev) => {
+    const t = ev.target;
+    const c = t.closest("[data-k-col]");
+    const opened2 = t.closest(".k-opened");
+    if (c && opened2) {
+      opened2.querySelectorAll("[data-k-col]").forEach((x) => x.classList.toggle("k-on", x === c));
+      opened2.classList.add("k-chosen");
+      chose(c.dataset.kCol);
+      return;
+    }
+    if (t.closest('[data-k-back="column"]') && opened2) opened2.classList.remove("k-chosen");
+  });
+}
+function openSlot(page, o) {
+  let url;
+  try {
+    url = new URL(o.src);
+  } catch {
+    throw new Error(`Not an address: ${o.src}. Nothing was opened.`);
+  }
+  if (!o.allowed.includes(url.origin)) throw new Error(`${url.origin} is not ${o.by}\u2019s, as this app knows it. Nothing was opened.`);
+  const shade = document.createElement("div");
+  shade.className = "k-shade";
+  const box2 = document.createElement("div");
+  box2.className = `k-frame k-${o.app}`;
+  box2.setAttribute("role", "dialog");
+  const by = document.createElement("div");
+  by.className = "k-by";
+  by.textContent = slotWords(o.by, o.host);
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "k-round";
+  close.setAttribute("aria-label", "Close");
+  close.textContent = "\xD7";
+  const grow = document.createElement("span");
+  grow.className = "k-grow";
+  by.append(grow, close);
+  const frame = document.createElement("iframe");
+  frame.setAttribute("sandbox", "allow-scripts allow-forms");
+  frame.setAttribute("referrerpolicy", "no-referrer");
+  frame.setAttribute("allow", "");
+  frame.setAttribute("title", `${o.by}\u2019s panel`);
+  frame.src = url.href;
+  box2.append(by, frame);
+  page.append(shade, box2);
+  const listen = (ev) => {
+    if (ev.source === frame.contentWindow) o.message?.(ev.data);
+  };
+  window.addEventListener("message", listen);
+  const slot = {
+    frame,
+    close() {
+      window.removeEventListener("message", listen);
+      box2.remove();
+      shade.remove();
+    }
+  };
+  close.addEventListener("click", () => {
+    slot.close();
+    o.closed?.();
+  });
+  return slot;
+}
+
+// ../genesis/src/card-words.ts
+function cardWords(l, app2, e3) {
+  const n = `${l.acts} act${l.acts === 1 ? "" : "s"}`;
+  if (!l.latest) return n;
+  const missing = l.missing ? ` ${l.missing === 1 ? "One act" : `${l.missing} acts`} of this line ${l.missing === 1 ? "is" : "are"} not at your homes, and ${app2} no longer holds ${l.missing === 1 ? "it" : "them"}: no reader can follow this line past ${l.missing === 1 ? "it" : "them"}, so a change of keys may lose what lives on it (a member key, notes, a list). Ki\u0161ib says so in red.` : "";
+  if (l.card) return `${n}: ${l.card.includes(";") ? "its cards" : "its card"}, for Ki\u0161ib, <code class="card-line">${e3(l.card)}</code>${missing ? `<br>${e3(missing)}` : ""}`;
+  if (l.atHomes === false) return `${n}: its latest act (<code>${e3(l.latest)}</code>) is not at your homes yet, so there is no card for Ki\u0161ib: ${e3(app2)} sends it again each time this window is read. Do not change your keys until the card shows.${missing ? `<br>${e3(missing)}` : ""}`;
+  return `${n}: your homes did not answer, so there is no card for Ki\u0161ib now (latest <code>${e3(l.latest)}</code>). Look again before changing your keys.`;
+}
 
 // ../dub/src/page/family.ts
 var TEST_ONLY = "Test identities only, until MOR is frozen";
@@ -10943,463 +12591,972 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 }
 .dub-film .k-btn{white-space:nowrap}
 @media (min-width:601px){.dub-private .k-back{display:none}}`;
+function actFormOf(hex3, label = "mact") {
+  if (!/^[0-9a-f]{64}$/.test(hex3)) return hex3;
+  const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
+  const data = [];
+  let acc = 0;
+  let bits = 0;
+  for (const b of bytes) {
+    acc = acc << 8 | b;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      data.push(acc >> bits & 31);
+    }
+  }
+  if (bits) data.push(acc << 5 - bits & 31);
+  const polymod = (v) => {
+    const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
+    let chk = 1;
+    for (const x of v) {
+      const top2 = chk >> 25;
+      chk = (chk & 33554431) << 5 ^ x;
+      for (let i = 0; i < 5; i++) if (top2 >> i & 1) chk ^= G[i];
+    }
+    return chk;
+  };
+  const hrp = [...label].map((c) => c.charCodeAt(0));
+  const pm = polymod([...hrp.map((c) => c >> 5), 0, ...hrp.map((c) => c & 31), ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const check = [0, 1, 2, 3, 4, 5].map((i) => pm >> 5 * (5 - i) & 31);
+  return `${label}1${[...data, ...check].map((d) => CHARSET[d]).join("")}`;
+}
 
 // src/page/view.ts
 var NAME = "Ummia";
 var TEST_ONLY3 = "Test identities only, until MOR is frozen";
-var WEB_BANNER3 = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY3}. The risks, in plain words:</p>
+var TINT3 = { layer: APPS.ummia.colour, pastel: APPS.ummia.pastel };
+var WEB_BANNER3 = `<details class="k-say ummia-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY3}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>Whoever serves this page\u2019s code at the moment you bring an identity here could copy its signing key: with it, publish specifications, MIP drafts and reports as you, and read your accepted list.</li>
 <li>This browser\u2019s storage, where that key is kept, can be lost, or read by what runs in this page.</li>
 <li>What you publish here is public and for good: a specification is never updated, only succeeded. This page reads no folder, so it makes no release, and follows no chain, so it checks no anchor: use Ummia on a computer for those.</li></ol>
-<p>Never bring a real identity here.</p></div>`;
-var TINT3 = { layer: "#ee8b74", line: "#392523", edge: "#4c2f2b", accent: "#91574a" };
-var STYLE2 = `${STYLE}
-:root{--line:${TINT3.line};--edge:${TINT3.edge};--tint:${TINT3.accent}}
-button:hover,.door:hover{border-color:var(--tint)}
-input:focus,textarea:focus,select:focus{border-color:var(--tint)}
-details>summary::before{color:var(--tint)}
-.bar{border-bottom-color:var(--edge)}
-.count{background:var(--edge)}
-.card{background:var(--raise)}
-.tabs{flex-wrap:wrap;min-width:0}
-.bar .me{flex-shrink:0}
-.item{border:1px solid var(--edge);border-radius:12px;padding:12px 14px;margin:12px 0;background:var(--raise)}
-.item h3{margin:0 0 4px;font-weight:400;font-size:15px}
-.item .meta{font-size:12px;color:var(--soft);overflow-wrap:anywhere}
-.item ul{margin:6px 0;padding-left:1.1em;font-size:14px}
-.item li{margin:3px 0}
-li.bad{color:var(--bad)}
-li.warn{color:var(--soft)}
-.hash{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--text);overflow-wrap:anywhere;border:1px solid var(--edge);border-radius:10px;padding:8px 10px;background:var(--bg);margin:6px 0}
-.v{font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding:1px 8px;border-radius:999px;border:1px solid var(--edge);color:var(--soft)}
-.v.valid{color:var(--text);border-color:var(--tint)}
-.v.bad{color:var(--bad);border-color:var(--bad)}
-.limit{border:1px solid var(--edge);border-radius:12px;padding:10px 14px;margin:12px 0;font-size:13px;color:var(--soft)}
-.files{max-height:320px;overflow:auto;border-top:1px solid var(--line);margin-top:6px;font-size:12px}
-.files div{display:flex;gap:10px;justify-content:space-between;border-bottom:1px solid var(--line);padding:3px 0}
-.files code{overflow-wrap:anywhere}
-.ticks{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px 12px}
-.ticks label{font-size:13px;color:var(--soft)}
-textarea.spec{min-height:220px;font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace}
-.picker{border:1px solid var(--edge);border-radius:12px;padding:8px 12px;margin:8px 0}
-.picker button{margin:2px 4px 2px 0}
-.blocking{border:1px solid var(--bad);border-radius:12px;padding:10px 14px;margin:12px 0}`;
-var note2 = (kind, html) => `<div class="note ${kind}">${html}</div>`;
-var lines = (ls) => ls.length ? `<ul>${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>` : "";
-var says = (xs) => xs.map((x) => `<p class="small">${e(x)}</p>`).join("");
-var fp = (id) => `<span class="fp" title="${e(id)}">${e(id.slice(0, 8))}\u2026${e(id.slice(-4))}</span>`;
-function testNotice(web) {
-  return web ? "" : `<div class="banner" id="test-only">${TEST_ONLY3}. The signing key is held in software in this program\u2019s folder: a prototype, never for a real identity.</div>`;
+<p>Never bring a real identity here.</p></div></details>`;
+var STYLE2 = `${KIT_STYLE}
+body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
+#app.k-page{flex:1;min-height:0;height:auto}
+.ummia-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.ummia-banner strong{font-weight:400;color:var(--k-text)}
+.ummia-banner ol{margin:4px 0;padding-left:1.4em}
+.ummia-foot{flex:none;padding:0 28px 10px}
+.ummia-first{max-width:640px;margin:0 auto;width:100%;overflow:auto;padding:24px 20px 40px}
+.ummia-first h2{font-size:24px;margin:8px 0 4px}
+.ummia-pane{max-width:900px;width:100%}
+.ummia-pane h2{font-size:24px;margin:2px 0 4px}
+.ummia-pane h3{font-size:16px;margin:16px 0 4px;font-weight:400}
+.ummia-pane .k-feed{flex:none;max-height:none}
+.ummia-look{display:flex;flex-direction:column;min-height:0;flex:1}
+.ummia-look .k-feedwrap{min-height:240px}
+.ummia-pane textarea{min-height:76px}
+.ummia-pane textarea.ummia-code{min-height:220px;font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace}
+.ummia-lines{margin:4px 0;padding-left:1.1em;font-size:14px}
+.ummia-lines li{margin:3px 0}
+li.bad{color:var(--k-bad)}
+li.warn{color:var(--k-soft)}
+.ummia-hash{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0}
+.ummia-hash .k-mono{color:var(--k-p);overflow-wrap:anywhere}
+.ummia-hash .ummia-big{font-size:15px}
+.ummia-files{max-height:320px;overflow:auto;border-top:1px solid var(--k-line);margin-top:6px;font-size:12px}
+.ummia-files div{display:flex;gap:10px;justify-content:space-between;border-bottom:1px solid var(--k-line);padding:3px 0}
+.ummia-files code{overflow-wrap:anywhere}
+.ummia-ticks{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px 12px}
+.ummia-ticks label{font-size:13px;color:var(--k-soft);display:flex;gap:6px;align-items:center}
+.ummia-picker{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:8px 0}
+.ummia-picker button{margin:2px 4px 2px 0}
+.ummia-blocking{border:1px solid var(--k-bad);border-radius:14px;padding:10px 16px;margin:10px 0}
+.ummia-v{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:1px 8px;border-radius:999px;border:1px solid var(--k-edge);color:var(--k-soft)}
+.ummia-v.valid{color:var(--k-text);border-color:var(--k-p)}
+.ummia-v.bad{color:var(--k-bad);border-color:var(--k-bad)}
+.ummia-who{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 10px}
+.ummia-list{list-style:none;padding:0;margin:0}
+.ummia-list>li{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--k-line);padding:9px 2px}
+.ummia-list>li .k-grow{min-width:180px}
+.ummia-tick{color:var(--k-p)}
+.ummia-cardsay{border-left:2px solid var(--k-p);padding:2px 0 2px 12px;margin:8px 0}
+.ummia-word{border-left:2px solid var(--k-edge);padding:2px 0 2px 12px;margin:8px 0}
+.k-act .ummia-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 2px}
+@media (max-width:600px){
+  .k-top .k-tabs{display:none}
+  .ummia-foot{padding:0 12px 8px}
+}`;
+var lines = (ls) => ls.length ? `<ul class="ummia-lines">${ls.map((l) => `<li class="${e(l.tone ?? "")}">${e(l.text)}</li>`).join("")}</ul>` : "";
+var says = (xs) => xs.map((x) => `<p class="k-small k-soft">${e(x)}</p>`).join("");
+var formOf2 = actFormOf;
+var specFormOf = (hex3) => /^[0-9a-f]{64}$/.test(hex3) ? specBech(hex3) : hex3;
+function specBech(hex3) {
+  const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const bytes = hex3.match(/../g).map((b) => parseInt(b, 16));
+  const data = [];
+  let acc = 0;
+  let bits = 0;
+  for (const b of bytes) {
+    acc = acc << 8 | b;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      data.push(acc >> bits & 31);
+    }
+  }
+  if (bits) data.push(acc << 5 - bits & 31);
+  const hrp = "mspec";
+  const polymod = (v) => {
+    const G = [996825010, 642813549, 513874426, 1027748829, 705979059];
+    let chk = 1;
+    for (const x of v) {
+      const top2 = chk >> 25;
+      chk = (chk & 33554431) << 5 ^ x;
+      for (let i = 0; i < 5; i++) if (top2 >> i & 1) chk ^= G[i];
+    }
+    return chk;
+  };
+  const expand = [...[...hrp].map((c) => c.charCodeAt(0) >> 5), 0, ...[...hrp].map((c) => c.charCodeAt(0) & 31)];
+  const mod = polymod([...expand, ...data, 0, 0, 0, 0, 0, 0]) ^ 734539939;
+  const check = [0, 1, 2, 3, 4, 5].map((i) => mod >> 5 * (5 - i) & 31);
+  return `${hrp}1${[...data, ...check].map((d) => CHARSET[d]).join("")}`;
 }
-function top2(web = false, back = false) {
-  return `<header class="bar"><h1 class="mark">${NAME}</h1><span class="grow"></span>${back ? '<button class="quiet" data-action="back">Back to Ummia</button>' : `<span class="small">${web ? "web client, for testing only" : "this machine only"}</span>`}</header>
-${testNotice(web)}`;
+var hashCopy = (hex3, big = false, label = "") => `<span class="ummia-hash">${label ? `<span class="k-small k-soft">${e(label)}</span>` : ""}<span class="k-mono${big ? " ummia-big" : ""}" title="${e(specFormOf(hex3))}">${e(big ? specFormOf(hex3) : shortForm(specFormOf(hex3)))}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(specFormOf(hex3))}">Copy</button></span>`;
+var actCopy = (hex3, label = "") => `<span class="ummia-hash">${label ? `<span class="k-small k-soft">${e(label)}</span>` : ""}<span class="k-mono" title="${e(formOf2(hex3))}">${e(shortForm(formOf2(hex3)))}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(formOf2(hex3))}">Copy</button></span>`;
+var idCopy = (hex3) => `<span class="ummia-hash"><span class="k-mono" title="${e(formOf2(hex3, "mid"))}">${e(shortForm(formOf2(hex3, "mid")))}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(formOf2(hex3, "mid"))}">Copy</button></span>`;
+var TILES = [
+  { key: "look", name: "Look", say: "One feed: point at a relay, an ID, your contacts or a release; filter by releases, cMIPs, Modules, xtypes, extensions.", icon: "look", danger: 1 },
+  { key: "discuss", name: "Discuss", say: "MIP drafts, their discussion, bug reports and answers.", icon: "discuss", danger: 1 },
+  { key: "publish", name: "Publish", say: "Releases of code, cMIPs and Modules, the hash first, and their cards; anchoring, paid in Damgar.", icon: "publish", danger: 2 },
+  { key: "choose", name: "Choose", say: "The accepted list, by layer: what every app may use.", icon: "choose", danger: 2 }
+];
+function actingOf(s) {
+  return s.actors.find((a) => a.id === s.acting && a.kind === "collective") ?? null;
+}
+function topBar(s, tab) {
+  const i = s.identity;
+  const tabs = tab ? `<nav class="k-tabs" aria-label="Ummia">${TILES.map((t) => `<button type="button" class="k-tab${t.key === tab ? " k-on" : ""}" data-tab="${t.key}"${t.key === tab ? ' aria-current="page"' : ""}>${e(t.name)}</button>`).join("")}</nav>` : "";
+  const c = actingOf(s);
+  const me = i ? meButton({ name: i.runner ? "via Ki\u0161ib" : shortForm(formOf2(i.id, "mid")), form: formOf2(i.id, "mid"), as: c ? { name: `Collective ${shortForm(formOf2(c.id, "mid"))}`, form: formOf2(c.id, "mid") } : null }) : "";
+  return top({ left: `<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME, "icon.png")}</button>${tabs}`, right: me });
+}
+function home(s, web) {
+  return `${topBar(s, null)}<div id="spent-at"></div><div class="k-body k-col-flex">${tiles(TILES)}</div>
+<div class="ummia-foot">${say2(TEST_ONLY3, [web ? "The web client is for testing only: the banner above says its risks." : "The signing key is held in software in this program\u2019s folder: a prototype, never for a real identity."])}</div>`;
+}
+function column(tab, s, k) {
+  switch (tab) {
+    case "look":
+      return [
+        { key: "feed", label: "The feed" },
+        { key: "page", label: "A specification\u2019s page" },
+        { key: "acts", label: "One specification\u2019s acts" },
+        "-",
+        "Saved",
+        ...s.saved.map((x) => ({ key: `saved:${x.key}`, label: x.label })),
+        ...s.saved.length ? [] : [{ key: "saved-none", label: "None yet" }]
+      ];
+    case "discuss":
+      return [{ key: "mips", label: "MIP drafts", k: k.mips }, { key: "threads", label: "Discussions", k: k.threads }, { key: "reports", label: "Bug reports", k: k.reports }, "-", { key: "mip-new", label: "+ Start a MIP" }];
+    case "publish":
+      return [{ key: "release", label: "A release" }, { key: "spec", label: "A cMIP or Module" }, { key: "anchoring", label: "Anchoring", k: k.anchors }, "-", { key: "published", label: "Published here", k: k.published }];
+    case "choose":
+      return [{ key: "every", label: "Every layer" }, ...LAYERS2.map((l) => ({ key: `layer:${l}`, label: l })), "-", { key: "accept-hash", label: "+ Accept by hash" }];
+  }
+}
+var LAYERS2 = ["Identity", "Text", "Envelopes", "Money", "Agreements", "Development"];
+var firstPart = (tab) => ({ look: "feed", discuss: "mips", publish: "release", choose: "every" })[tab];
+function tabPage(s, tab, part, k) {
+  return `${topBar(s, tab)}<div id="spent-at"></div>${opened(column(tab, s, k), part, `<div class="ummia-pane${tab === "look" && part !== "page" && part !== "acts" ? " ummia-look" : ""}" id="pane"><p class="k-empty">Reading\u2026</p></div><div id="status" class="k-status"></div>`)}`;
 }
 function pairing() {
-  return `${top2()}
-<h2>Pair this browser</h2>
-<p class="small">This page acts for the Ummia program running on this machine, which holds the keys. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
-<form id="pair" class="row"><input id="pair-code" class="grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
-<button type="submit">Pair</button></form>
-<div id="pair-status"></div>`;
+  return `<div class="ummia-first">${appMark(NAME, "icon.png")}<h2>Pair this browser</h2>
+<p class="k-small k-soft">This page acts for the Ummia program running on this machine, which holds the keys. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
+<form id="pair" class="k-row"><input id="pair-code" class="k-grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
+<button type="submit" class="k-btn k-p">Pair</button></form><div id="pair-status"></div></div>`;
 }
-function identityWindow(s, web) {
-  const held = s.held.length ? `<h2>Identities held here</h2><div class="held"><ul>${s.held.map((h) => `<li><span class="fp" title="${e(h.id)}">${e(h.short)}</span>${h.active ? '<span class="small">in use</span>' : `<button data-action="use" data-id="${e(h.id)}">Use this one</button>`}<button class="quiet" data-action="forget" data-id="${e(h.id)}">Forget it here</button></li>`).join("")}</ul></div>` : "";
-  const i = s.identity;
-  const mine = i ? `<section class="card"><h3>In use</h3><p class="id">${e(i.grouped)}</p>
-<dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(", "))}</dd><dt>Relays</dt><dd>${e(i.relays.join(", "))}</dd><dt>Ummia\u2019s line</dt><dd>${cardWords(i.line, "Ummia", e)}</dd></dl>
-<p class="small">Some of Ummia\u2019s acts are sealed (your accepted list, an anchor\u2019s payment for Damgar), so Ki\u0161ib cannot read its line from the homes: when the signing key is changed there, give Ki\u0161ib this card (latest act, position, summary), or every act signed here becomes void (Identity rule 35).</p>
-${i.encryption ? "" : note2("warn", "Ummia holds no encryption key for this identity: its accepted list cannot be read or changed here.")}
-<div class="row"><button data-action="carry">Show the signing key\u2019s words</button><button data-action="leave" class="quiet">Leave it</button><button data-action="back" class="primary">Back to Ummia</button></div>
-<details><summary>Its signing key was changed elsewhere (in Ki\u0161ib): take the new words</summary><form id="renew"><label>The new signing key\u2019s 24 words</label><textarea name="words" required></textarea><div class="row"><button type="submit">Use the new words</button></div></form></details></section>` : "";
-  return `${top2(web, !!i)}
-<h2>${i ? "The identity" : "First, an identity"}</h2>
-<p class="small">Ummia never makes an identity and never holds a chain key. Bring one you have, by its ID and its signing key\u2019s words, as in Dub: Dub\u2019s identity window shows them (\u201CShow the signing key\u2019s words\u201D).</p>
-${mine}
-${held}
-<section class="card"><h3>Bring an identity you have</h3>
-<form id="bring"><label>Its ID</label><input name="id" autocomplete="off" spellcheck="false" required>
-<label>Its signing key\u2019s 24 words (never the chain key\u2019s)</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
-<label>An address where it is found (one of its homes)</label><input name="address" placeholder="https://" required>
-<details><summary>Relays, if it names none</summary><label>One per line</label><textarea name="relays"></textarea></details>
-<div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>
-<div id="status"></div>`;
-}
-function carry(c, web) {
-  return `${top2(web, true)}<h2>The signing key\u2019s words</h2>
-<p class="small">With the ID, they bring this identity into Ummia, Dub, Damgar or Edubba on another device. Whoever holds them can publish as this identity and open what is sealed to it. They are not the chain key\u2019s words.</p>
-<p class="id">${e(c.grouped)}</p><div class="words">${c.words.map((w, i) => `<span><b>${i + 1}</b>${e(w)}</span>`).join("")}</div>
-<div class="row"><button data-action="back" class="primary">Back to Ummia</button></div>`;
-}
-var TABS = [
-  ["releases", "Releases"],
-  ["specs", "Specifications"],
-  ["track", "Tracking"],
-  ["mips", "MIPs"],
-  ["reports", "Reports"],
-  ["accepted", "Accepted"],
-  ["settings", "Settings"]
+var alone = (html) => `<div class="ummia-first">${appMark(NAME, "icon.png")}${html}</div>`;
+var top0 = (web = false) => alone(web ? '<p class="k-small k-soft">The web client, for testing only.</p>' : "");
+var runnerSay = (web) => web ? "through Ki\u0161ib\u2019s runner, in the computer\u2019s program only: never in the web client" : "through Ki\u0161ib\u2019s runner, on this Mac: Ummia holds no key, and Ki\u0161ib\u2019s panel asks for every act";
+var ADD = (web) => [
+  { key: "bring", label: "Bring one", say: "its ID and its signing key\u2019s words (Ummia never makes one)" },
+  { key: "kishib", label: "Use one from Ki\u0161ib", say: runnerSay(web), empty: web }
 ];
-function app(s, web, on) {
+function firstScreen(web, part = "bring") {
+  return `<div class="ummia-first">${appMark(NAME, "icon.png")}<h2>First, an identity</h2>
+<p class="k-soft">Ummia never makes an identity and never holds a chain key. Bring one you have, by its ID and its signing key\u2019s words, as Dub, Edubba or Ki\u0161ib show them; or, on the Mac, use one Ki\u0161ib holds.</p>
+<div class="k-row">${ADD(web).map((a) => `<button type="button" class="k-btn${a.key === part ? " k-p" : ""}" data-add="${a.key}"${a.empty ? " disabled" : ""}>${e(a.label)}</button>`).join("")}</div>
+<div id="first-part">${part === "kishib" ? '<p class="k-small k-soft">Reading Ki\u0161ib\u2019s runner\u2026</p>' : bringForm()}</div>
+<div id="status" class="k-status"></div></div>`;
+}
+function bringForm() {
+  return `<form id="bring"><p class="k-small k-soft">By its ID and its signing key\u2019s words (never the chain key\u2019s).</p>
+<label>Its ID (mid1\u2026, or its hexadecimal)</label><input name="id" autocomplete="off" spellcheck="false" required>
+<label>Its signing key\u2019s 24 words</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
+<label>An address where it is found (one of its homes)</label><input name="address" placeholder="https://" required>
+<label>Relays, one per line, if it names none</label><textarea name="relays"></textarea>
+<div class="k-row"><button type="submit" class="k-btn k-p">Bring it</button></div></form>`;
+}
+function runnerForm(r) {
+  if (!r.available) return `<p class="k-small k-soft">Ki\u0161ib\u2019s runner is in the computer\u2019s program only, on the Mac: never in the web client. Bring the identity here by its words instead.</p>`;
+  const ids = r.identities.length ? `<div class="k-list">${r.identities.map((x) => `<div><span>${e(x.name ?? shortForm(x.form))} <span class="k-mono k-faint">${e(shortForm(x.form))}</span></span><button type="button" class="k-btn k-small k-r" data-runner-take="${e(x.id)}">${x.held ? "Use it" : "Use it here"}</button></div>`).join("")}</div>` : "";
+  return `${r.problem ? note("error", e(r.problem)) : ""}
+${say2("Ki\u0161ib keeps the identity\u2019s signing key on this Mac; Ummia holds none.", ["Pairing starts here and is approved in Ki\u0161ib (Runner, Apps), comparing the code. Then every act Ummia would sign is a request to Ki\u0161ib, and Ki\u0161ib\u2019s panel appears inside Ummia\u2019s window. What is sealed to the identity (the accepted list, the follow list) does not open in Ummia."])}
+${r.state === "approved" ? `<p class="k-small">Ki\u0161ib approved Ummia (code ${e(r.code ?? "")}). The identities it lets Ummia use:</p>${ids || '<p class="k-small k-soft">None yet: choose some for Ummia in Ki\u0161ib.</p>'}` : r.state === "waiting" ? `<p>Approve Ummia in Ki\u0161ib (Runner, Apps), comparing this code: <span class="k-mono">${e(r.code ?? "")}</span></p><div class="k-row"><button type="button" class="k-btn" data-action="runner-look">I approved it in Ki\u0161ib</button></div>` : `<div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-pair">Ask Ki\u0161ib to pair</button></div>`}`;
+}
+var IDENTITY_MENU = [
+  ["words", "Words", ""],
+  ["line", "Line and homes", ""],
+  ["renew", "New words from Ki\u0161ib", "after a change of keys"],
+  ["collective", "A collective under it", ""],
+  ["remove", "Remove from Ummia\u2026", ""]
+];
+function wordsShown(c) {
+  return `<p class="k-small k-soft">With the ID, they bring this identity into Ummia, Dub, Damgar or Edubba on another device. Whoever holds them can publish as this identity and open what is sealed to it. They are not the chain key\u2019s words.</p>
+<p class="k-mono">${e(c.grouped)}</p><div class="k-words">${c.words.map((w, i) => `<span><b>${i + 1}</b>${e(w)}</span>`).join("")}</div>`;
+}
+function lineShown(s) {
   const i = s.identity;
-  return `<header class="bar"><h1 class="mark">${NAME}</h1>
-<nav class="tabs">${TABS.map(([k, label]) => `<button class="tab${k === on ? " on" : ""}" data-tab="${k}">${label}</button>`).join("")}</nav>
-<button class="me" data-action="window" title="The identity"><span class="who"><span class="fp" title="${e(i.id)}">${e(i.short)}</span><span class="you">you</span></span></button></header>
-${testNotice(web)}
-<div id="spent"></div>
-${chooserHtml(s.actors, s.acting)}
-<div id="status"></div>
-${TABS.map(([k]) => `<section id="${k}"${k === on ? "" : " hidden"}><div id="${k}-body"><p class="empty">Reading\u2026</p></div></section>`).join("\n")}`;
+  return `<dl class="k-facts"><dt>ID</dt><dd>${idCopy(i.id)}</dd><dt>Homes</dt><dd>${e(i.homes.join(", "))}</dd><dt>Relays</dt><dd>${e(i.relays.join(", "))}</dd><dt>Ummia\u2019s line</dt><dd>${cardWords(i.line, "Ummia", e)}</dd></dl>
+${say2("Give Ki\u0161ib this card at a change of keys.", ["Some of Ummia\u2019s acts are sealed (your accepted list, the follow list, an anchor\u2019s payment for Damgar), so Ki\u0161ib cannot read its line from the homes: when the signing key is changed there, give Ki\u0161ib this card (latest act, position, summary), or every act signed here becomes void."])}
+${i.encryption || i.runner ? "" : note("error", "Ummia holds no encryption key for this identity: its accepted list cannot be read or changed here.")}`;
+}
+function renewForm() {
+  return `<form id="renew"><p class="k-small k-soft">Its signing key was changed elsewhere (in Ki\u0161ib): give the new signing key\u2019s words, and Ummia signs with them, in a new line.</p><label>The new signing key\u2019s 24 words</label><textarea name="words" required autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
+}
+function collectiveForm(s) {
+  const cs = s.actors.filter((a) => a.kind === "collective");
+  return `<p class="k-small k-soft">A collective whose area reaching its releases you hold a box in: Ummia acts for it with your own key for it, sealed to you when you signed its founding or a member change. Then choose it under this identity in the panel: Publish signs its releases.</p>
+${cs.length ? `<div class="k-list">${cs.map((c) => `<div><span class="k-mono">${e(shortForm(formOf2(c.id, "mid")))}</span><span class="k-small k-soft">${c.available ? "can act" : e(c.why ?? "")}</span></div>`).join("")}</div>` : ""}
+<form id="collective-add" class="k-row"><input name="collective" class="k-grow" placeholder="A collective\u2019s ID (mid1\u2026 or hex)" autocomplete="off" spellcheck="false" required><button type="submit" class="k-btn k-p">Act for it</button></form>`;
+}
+function relaysForm(s) {
+  return `<form id="relays"><label>Relays your acts go to (specifications, releases, cards, drafts, reports), one per line</label><textarea name="relays" spellcheck="false">${e(s.settings.relays.join("\n"))}</textarea>
+<label>Public relays Look asks, one per line</label><textarea name="track" spellcheck="false">${e(s.settings.track.join("\n"))}</textarea>
+<div class="k-row"><button type="submit" class="k-btn k-p">Save</button></div></form>
+<dl class="k-facts"><dt>Homes</dt><dd>${e(s.identity?.homes.join(", ") ?? "")} (the identity\u2019s chain names them; changed in Ki\u0161ib)</dd></dl>`;
+}
+function spent(sayIt) {
+  return `<div class="k-alarmbox" id="spent">${e(sayIt)}</div><div class="k-box" id="spent-words">${renewForm()}</div>`;
 }
 function review(r, confirmAction = "confirm") {
-  const files = r.files ? `<details class="fold" open><summary>Its files (${r.files.length}), each with its size and fingerprint</summary><div class="files">${r.files.map((f) => `<div><span>${e(f.path)}</span><span>${f.size} bytes</span><code>${e(f.fingerprint)}</code></div>`).join("")}</div></details>${r.skipped?.length ? `<p class="small">Left out: ${e(r.skipped.join("; "))}</p>` : ""}
-<details class="fold"><summary>The libraries it depends on (${r.dependencies?.length ?? 0})</summary>${r.dependencies?.length ? `<div class="files">${r.dependencies.map((d) => `<div><span>${e(d.registry)}</span><span>${e(d.name)}</span><span>${e(d.version)}</span></div>`).join("")}</div>` : '<p class="small">None: it names no lock file (Cargo.lock, package-lock.json).</p>'}</details>` : "";
-  return `<div class="item review" data-plan="${e(r.plan)}"><h3>${e(r.title)}</h3>
-${r.hash ? `<label>Its spec hash</label><div class="hash" id="review-hash" title="${e(r.hash)}">${e(shownSpec(r.hash))}</div><p class="small">In hexadecimal: ${e(r.hash)}</p>` : ""}
+  const files = r.files ? `<details open><summary>Its files (${r.files.length}), each with its size and fingerprint</summary><div class="ummia-files">${r.files.map((f) => `<div><span>${e(f.path)}</span><span>${f.size} bytes</span><code>${e(f.fingerprint)}</code></div>`).join("")}</div></details>${r.skipped?.length ? `<p class="k-small k-soft">Left out: ${e(r.skipped.join("; "))}</p>` : ""}
+<details><summary>The libraries it depends on (${r.dependencies?.length ?? 0})</summary>${r.dependencies?.length ? `<div class="ummia-files">${r.dependencies.map((d) => `<div><span>${e(d.registry)}</span><span>${e(d.name)}</span><span>${e(d.version)}</span></div>`).join("")}</div>` : '<p class="k-small k-soft">None: it names no lock file (Cargo.lock, package-lock.json).</p>'}</details>` : "";
+  return `<div class="k-box k-fill review" data-plan="${e(r.plan)}"><h3>${e(r.title)}</h3>
+${r.hash ? `<p class="k-small k-soft">Its hash, first</p><div id="review-hash">${hashCopy(r.hash, true)}</div><p class="k-small k-faint">In hexadecimal: ${e(r.hash)}</p>` : ""}
 ${says(r.summary)}
-${r.sections.map((x) => `<p class="small"><b>${e(x.heading)}</b></p>${lines(x.lines)}`).join("")}
+${r.sections.map((x) => `<p class="k-small"><b>${e(x.heading)}</b></p>${lines(x.lines)}`).join("")}
 ${files}
-${r.blocking.length ? `<div class="blocking"><b>It cannot be signed as it is</b>${lines(r.blocking.map((t) => ({ text: t, tone: "bad" })))}</div>` : ""}
-<p class="small">The digest of exactly what is signed: <code>${e(r.digest)}</code></p>
-<div class="row">${r.blocking.length ? "" : `<button class="primary" data-action="${e(confirmAction)}" data-plan="${e(r.plan)}" data-digest="${e(r.digest)}">Sign and publish</button>`}<button class="quiet" data-action="cancel" data-plan="${e(r.plan)}">Leave it</button></div></div>`;
+${r.blocking.length ? `<div class="ummia-blocking"><b>It cannot be signed as it is</b>${lines(r.blocking.map((t) => ({ text: t, tone: "bad" })))}</div>` : ""}
+<p class="k-small k-faint">The digest of exactly what is signed: <code>${e(r.digest)}</code></p>
+<div class="k-row">${r.blocking.length ? "" : `<button type="button" class="k-btn k-p" data-action="${e(confirmAction)}" data-plan="${e(r.plan)}" data-digest="${e(r.digest)}">Sign and publish</button>`}<button type="button" class="k-btn k-q" data-action="cancel" data-plan="${e(r.plan)}">Leave it</button></div></div>`;
 }
-function releases(s, r) {
-  if (!s.releases) {
-    return `<h2>Releases of code</h2>${note2("warn", "Releases are made from a folder on a computer: in Ummia on the Mac or Linux. This web client reads no folder, so it makes no release.")}`;
-  }
+var POINT_KINDS = [
+  { key: "relay", label: "a relay" },
+  { key: "id", label: "a single ID" },
+  { key: "contacts", label: "my contacts" },
+  { key: "release", label: "a release" }
+];
+var FILTER_CHIPS = [
+  { key: "releases", label: "releases" },
+  { key: "cmips", label: "cMIPs" },
+  { key: "modules", label: "Modules" },
+  { key: "xtypes", label: "xtypes" },
+  { key: "extensions", label: "extensions" },
+  { key: "mips", label: "MIPs" }
+];
+function lookHead(at, s, saved) {
+  const relays = s.settings.track.length ? s.settings.track : s.settings.relays;
+  const field = at.point.kind === "relay" ? `<select name="value" class="k-grow">${relays.map((r) => `<option${r === at.point.value ? " selected" : ""}>${e(r)}</option>`).join("")}<option value="">every relay Look asks</option></select>` : at.point.kind === "contacts" ? '<span class="k-small k-soft k-grow">the people you follow (the same follow list as Dub\u2019s)</span>' : `<input name="value" class="k-grow" value="${e(at.point.value)}" placeholder="${at.point.kind === "id" ? "Their ID: mid1\u2026" : "The release\u2019s act ID: mact1\u2026"}" autocomplete="off" spellcheck="false">`;
+  return `${saved ? `<div class="k-row"><h2 class="k-grow">${e(saved.label)}</h2><button type="button" class="k-btn k-q k-small" data-saved-remove="${e(saved.key)}">Remove this point</button></div>` : ""}
+${pointRow("Point at", POINT_KINDS.map((p) => ({ key: p.key, label: p.key === "relay" && at.point.kind === "relay" && (at.point.value || relays.length === 1) ? (at.point.value || relays[0]).replace(/^https?:\/\//, "") : p.label, on: p.key === at.point.kind })), "point")}
+${pointRow("Filter by", FILTER_CHIPS.map((f) => ({ key: f.key, label: f.label, on: at.filters.includes(f.key) })), "filter")}
+${pointRow("Layer", [{ key: "", label: "any", on: !at.layer }, ...LAYERS2.map((l) => ({ key: l, label: l, on: at.layer === l }))], "layer")}
+<form id="look" class="k-row">${field}<button type="submit" class="k-btn k-p">Look</button>${saved ? "" : '<button type="button" class="k-btn k-q" data-action="save-point">Save this point</button>'}</form>`;
+}
+function lookFoot(limit, counts, placed) {
+  return `${placed ? `<p class="k-clock">${placed.placed ? `Ordered by the Dubsar clock${placed.placed < placed.shown ? `; ${placed.shown - placed.placed} not stamped, kept after` : ""}.` : "The Dubsar clock stamped none of these: in each signer\u2019s own order, not a time."}</p>` : ""}${say2("Public agreements only, as the relays answer", [...limit.map((x) => `<p>${e(x)}</p>`), counts.length ? `<p><b>What the relays answered</b></p>${lines(counts)}` : ""].join(""))}`;
+}
+function specPagePane(p, nameOf2) {
+  const card2 = (c, own2) => `<div class="${own2 ? "ummia-cardsay" : "ummia-word"}" data-card="${e(c.id)}"><p class="k-small k-soft">${own2 ? "Its creator\u2019s card" : `${e(nameOf2(c.signer))}\u2019s card: their word, not the specification\u2019s`}</p><h3>${e(c.fields.title)}</h3>${c.fields.summary ? `<p>${e(c.fields.summary)}</p>` : ""}${actCopy(c.id, "the card")}</div>`;
+  const head = `<div class="k-row"><button type="button" class="k-btn k-q k-small" data-action="look-back">\u2190 The feed</button></div>
+<h2 id="spec-title">${e(p.title)}</h2>
+${hashCopy(p.hash, true)}
+<p class="k-small k-soft">${[p.kind, p.layer, p.creator ? `by ${nameOf2(p.creator)}${p.claimed ? "" : " (unclaimed: its creator never published it)"}` : p.builtIn ? "no creator: one of the core\u2019s texts" : ""].filter(Boolean).map(e).join(" \xB7 ")}</p>
+${lines(p.lines)}`;
+  const own = p.own ? card2(p.own, true) : p.builtIn ? `<div class="ummia-cardsay" data-builtin><p class="k-small k-soft">Ummia\u2019s own words, built in</p><h3>${e(p.title)}</h3><p>${e(p.builtIn.summary)}</p><p class="k-small k-faint">${e(p.builtIn.say)}</p></div>` : p.found ? '<p class="k-small k-soft">Its creator has signed no card for it yet: its title is its own first line.</p>' : "";
+  const also = p.ownAlso.length ? `<p class="k-small k-soft">Its creator also signed, on another line:</p>${p.ownAlso.map((c) => card2(c, true)).join("")}` : "";
+  const sect = (h, body) => `<h3>${e(h)}</h3>${body}`;
+  return `${head}${own}${also}${p.superseded ? `<p class="k-small k-faint">${p.superseded} earlier card${p.superseded === 1 ? "" : "s"}, superseded by a later one in its signer\u2019s own sequence.</p>` : ""}
+${p.mine || !p.creator && p.found || !p.found ? "" : ""}<div class="k-row">${p.found ? `<button type="button" class="k-btn${p.mine ? " k-p" : ""}" data-action="card-new" data-hash="${e(p.hash)}" data-title="${e(p.own?.fields.title ?? p.name ?? "")}">${p.mine ? "Sign a later card" : "Write a card of your own"}</button>` : ""}<button type="button" class="k-btn k-q" data-action="accept-hash" data-hash="${e(p.hash)}" data-label="${e((p.name ?? p.title).slice(0, 120))}">Add to accepted list</button></div>
+${sect("Its text", p.text ? `<details><summary>${e(p.name ?? "")}</summary><pre class="k-small">${e(p.text)}</pre></details>${lines(p.role.map((t) => ({ text: t })))}` : p.builtIn ? '<p class="k-small k-soft">The frozen texts are dubsar.org\u2019s front door.</p>' : '<p class="k-empty">Not found on the relays asked.</p>')}
+${sect("Releases implementing it", p.releases.length ? `<ul class="ummia-list">${p.releases.map((r) => `<li><span class="k-grow">${e(r.name ?? "a release")} ${e(r.version ?? "")}${r.problem ? ` <span class="k-small k-soft">(${e(r.problem)})</span>` : ""}${r.from === "card" ? ' <span class="k-small k-faint">named by its card</span>' : ""}</span>${actCopy(r.id)}<button type="button" class="k-btn k-q k-small" data-point-release="${e(r.id)}">Its line</button></li>`).join("")}</ul>` : '<p class="k-empty">None found.</p>')}
+${sect("Its test vectors", p.vectors.length ? `<ul class="ummia-list">${p.vectors.map((v) => `<li>${/^https:\/\//.test(v) ? `<span class="k-mono k-grow">${e(v)}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(v)}">Copy</button>` : actCopy(v)}</li>`).join("")}</ul>` : '<p class="k-empty">None named by its card.</p>')}
+${sect("Its discussion", p.discussion ? `<p>${e(p.discussion.text?.split("\n")[0] ?? "Its thread")}</p>${actCopy(p.discussion.id, "the thread")} <button type="button" class="k-btn k-q k-small" data-action="reply-open" data-to="${e(p.discussion.id)}">Reply, as a signed document</button>` : '<p class="k-empty">No thread named by its card.</p>')}
+${sect("Public agreements naming it", `<p class="k-small">${p.agreements ? `${p.agreements} public agreement${p.agreements === 1 ? "" : "s"} name${p.agreements === 1 ? "s" : ""} it as an extension.` : "None found."}</p>`)}
+${p.use ? sect("Its use", `<p class="k-small">${p.use.acts} public act${p.use.acts === 1 ? "" : "s"} of its types (${p.use.byType.map((t) => `${e(t.name)} ${t.acts}`).join(", ")})${p.use.notValid ? `; ${p.use.notValid} not valid, not counted` : ""}.</p>`) : ""}
+${sect("Its drafts", `${p.predecessor ? `<p class="k-small">After ${e(p.predecessor.name ?? "a specification not found here")}${p.predecessor.otherCreator ? ' <span class="k-small">(its creator is not its predecessor\u2019s)</span>' : ""}</p>${hashCopy(p.predecessor.hash)} <button type="button" class="k-btn k-q k-small" data-spec="${e(p.predecessor.hash)}">Its page</button>` : '<p class="k-small k-soft">It names no predecessor.</p>'}${p.successors.map((x) => `<p class="k-small">Followed by ${e(x.name)}${x.otherCreator ? " \u2014 by another creator than this one\u2019s" : ""}</p>${hashCopy(x.hash)} <button type="button" class="k-btn k-q k-small" data-spec="${e(x.hash)}">Its page</button>`).join("")}`)}
+${p.others.length ? sect("Others\u2019 cards", p.others.map((c) => card2(c, false)).join("")) : ""}
+${say2("What a card is", p.say)}`;
+}
+function pageForm() {
+  return `<h2>A specification\u2019s page</h2><p class="k-small k-soft">Everything that can be tied to one specification, from the relays Look asks: its text, its creator\u2019s card, others\u2019 cards as their word, its releases, vectors, discussion, the agreements naming it, its drafts.</p>
+<form id="page" class="k-row"><input name="hash" class="k-grow" placeholder="Its hash: mspec1\u2026, or hexadecimal" spellcheck="false" autocomplete="off" required><button type="submit" class="k-btn k-p">Open its page</button></form><div id="page-out"></div>`;
+}
+function actsForm() {
+  return `<h2>One specification\u2019s acts</h2><p class="k-small k-soft">The public acts of one specification on the relays Look asks, by the filters relays already have: its spec hash, and an act type and a signer where given. Each judged through its signer\u2019s chain.</p>
+<form id="acts"><label>Its spec hash</label><input name="spec" spellcheck="false" required><label>An act type (optional)</label><input name="type" inputmode="numeric"><label>A signer (optional)</label><input name="signer" spellcheck="false">
+<div class="k-row"><button type="submit" class="k-btn k-p">Look</button></div></form><div id="acts-out"></div>`;
+}
+function acts(r) {
+  return `${lines(r.lines)}${r.acts.length ? `<ul class="ummia-list">${r.acts.map((a) => `<li><span class="k-grow">type ${a.type} \xB7 by ${e(shortForm(formOf2(a.signer, "mid")))} \xB7 <span class="ummia-v${a.standing === "valid" ? " valid" : ""}">${e(a.standing)}</span></span>${actCopy(a.id)}</li>`).join("")}</ul>` : '<p class="k-empty">No public act of it found.</p>'}`;
+}
+function mipsPane(m, open) {
+  const one2 = (d) => `<div class="k-box mip" data-key="${e(d.key)}"><div class="k-row"><h3 class="k-grow">${e(d.title)}</h3><span class="k-chip">${d.published ? "published as a MIP" : d.drafts.length ? "draft \xB7 discussed" : "draft \xB7 kept here"}</span></div>
+<p class="k-small k-soft">Forks ${e(d.forksName)} \xB7 ${d.drafts.length} draft${d.drafts.length === 1 ? "" : "s"} published for discussion${d.published ? "" : " \xB7 kept here until you publish it"}</p>
+${d.drafts.map((x, i) => `<div>${actCopy(x.id, `draft ${i + 1}`)}</div>`).join("")}
+${d.published ? hashCopy(d.published.hash, false, "its hash") : `<details${open === d.key ? " open" : ""}><summary>Write it</summary><form class="mip-text" data-key="${e(d.key)}"><textarea class="ummia-code" name="text" spellcheck="false">${e(d.text)}</textarea><div class="k-row"><button type="submit" class="k-btn">Keep it here (nothing is sent)</button></div></form></details>
+<div class="k-row"><button type="button" class="k-btn" data-action="mip draft" data-key="${e(d.key)}">Publish this draft for discussion</button><button type="button" class="k-btn k-q" data-action="mip replies" data-key="${e(d.key)}">Replies</button><button type="button" class="k-btn k-q" data-action="mip prepare" data-key="${e(d.key)}">I am ready: publish it as a MIP\u2026</button></div>`}
+<div id="mip-out-${e(d.key)}"></div></div>`;
+  return `<h2>MIP drafts</h2>${say2("A MIP is a proposal toward MOR 2, drafted and discussed before it is published.", m.say)}${m.drafts.length ? m.drafts.map(one2).join("") : '<p class="k-empty">No MIP drafted here yet: + Start a MIP.</p>'}`;
+}
+function mipNew(forkable) {
+  return `<h2>Start a MIP</h2><form id="mip-new"><label>Its title</label><input name="title" required><label>What it forks</label><select name="forks">${forkable.map((f) => `<option value="${e(f.key)}">${e(f.name)}</option>`).join("")}<option value="">A MIP, or the MICS document (for a new layer), by its spec hash:</option></select><input name="hash" spellcheck="false" placeholder="a spec hash, where chosen above">
+<div class="k-row"><button type="submit" class="k-btn k-p">Start it in the MIP shape</button></div></form>`;
+}
+function reportsPane(r) {
+  const sent = r.sent.length ? r.sent.map((s) => {
+    const as = r.answers.filter((a) => a.report === s.id);
+    return `<div class="k-box"><h3>${e(s.title)}</h3>${actCopy(s.id)}${as.length ? as.map((a) => `<p class="k-small">Answered (<span class="ummia-v${a.standing === "valid" ? " valid" : ""}">${e(a.standing)}</span>): ${e(a.text)}</p>`).join("") : '<p class="k-small k-soft">No answer yet.</p>'}</div>`;
+  }).join("") : '<p class="k-empty">No report sent from here.</p>';
+  return `<h2>Bug reports</h2>${say2("A report is public, signed by you, left in the reporting identity\u2019s inbox.", r.say)}
+<form id="reporting" class="k-row"><label class="k-grow">The reporting identity<input name="reports" spellcheck="false" value="${e(r.to ? formOf2(r.to, "mid") : "")}" placeholder="Its ID: mid1\u2026"></label><button type="submit" class="k-btn">Save</button></form>
+${r.to ? `<form id="report"><label>The report: its first line is its title</label><textarea name="text" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Sign and send it</button></div></form>` : note("", "Give the reporting identity\u2019s ID first.")}
+${lines(r.lines)}<h3>Sent from here</h3>${sent}`;
+}
+function replyForm(to, title) {
+  return `<form id="reply" data-to="${e(to)}"><p class="k-small k-soft">Answering ${e(title)}: a long-form document, public, signed by you, naming it.</p><textarea name="text" required placeholder="Reply, as a signed document\u2026"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Sign and send</button></div></form>`;
+}
+function whoActs(s) {
+  if (s.actors.length < 2) return "";
+  return `<div class="ummia-who"><span class="k-small k-soft">Who acts</span>${s.actors.map((a) => `<button type="button" class="k-chip${a.id === s.acting ? " k-on" : ""}" data-acting="${e(a.id)}"${a.available ? "" : " disabled"} aria-pressed="${a.id === s.acting}">${a.kind === "self" ? "You" : `Collective ${e(shortForm(formOf2(a.id, "mid")))}`}</button>`).join("")}</div>`;
+}
+function releasePane(s, r) {
+  if (!s.releases) return `<h2>A release</h2>${note("", "Releases are made from a folder on a computer: in Ummia on the Mac or Linux. This web client reads no folder, so it makes no release.")}`;
   const list3 = r?.releases ?? [];
-  const opts = list3.map((x) => `<option value="${e(x.id)}">${e(x.name)} ${e(x.version)} (${e(x.id.slice(0, 8))}\u2026)</option>`).join("");
+  const opts = list3.map((x) => `<option value="${e(x.id)}">${e(x.name)} ${e(x.version)} (${e(shortForm(formOf2(x.id)))})</option>`).join("");
+  const forCollective = !!actingOf(s);
   const rows = list3.length ? list3.map(
-    (x) => `<div class="item" data-release="${e(x.id)}"><h3>${e(x.name)} ${e(x.version)}</h3><div class="meta">${fp(x.id)} \xB7 from ${e(x.folder)}</div>
-<div class="row"><button data-action="release check" data-id="${e(x.id)}">Check it as anyone would</button>${x.collective ? `<button data-action="release standing" data-id="${e(x.id)}">Does it count for the collective?</button>` : ""}<button class="quiet" data-action="anchor open" data-id="${e(x.id)}">Anchor it on Bitcoin (optional)</button></div><div class="check-out" id="check-${e(x.id)}"></div><div id="anchor-${e(x.id)}"></div></div>`
-  ).join("") : '<p class="empty">No release from here yet.</p>';
-  const anchors = r?.anchors.length ? `<h2>Anchors asked</h2>${r.anchors.map((a) => `<div class="item"><h3>${e(a.label)}</h3><div class="meta">${fp(a.act)} \xB7 tier ${a.tier} \xB7 by ${fp(a.service)} \xB7 <span class="v${a.state === "anchored" ? " valid" : a.state === "invalid" ? " bad" : ""}">${e(a.state)}</span></div>${lines(a.lines)}</div>`).join("")}` : "";
-  const forCollective = s.actors.find((a) => a.id === s.acting)?.kind === "collective";
-  return `<h2>${forCollective ? "A release of the collective" : "A release under your own name"}</h2>
-<p class="small">${forCollective ? "Signed with your own key for the collective (F353): it counts once the area reaching its releases is met; where it asks more keys, its other holders are asked, and sign in their own app. A collective\u2019s releases moved here from Edubba (F339)." : "A collective\u2019s releases are made here too: choose it under Who acts, or add it by its ID."}</p>
-<form id="release"><label>The folder (a git folder gives what git tracks; a plain folder every file but hidden ones)</label>
-<div class="row"><input name="folder" class="grow" autocomplete="off" spellcheck="false" placeholder="~/code/my-module"><button type="button" data-action="folders">Choose a folder\u2026</button></div>
-<div id="picker"></div><p class="small" id="folder-said"></p>
+    (x) => `<div class="k-box" data-release="${e(x.id)}"><div class="k-row"><h3 class="k-grow">${e(x.name)} ${e(x.version)}</h3>${actCopy(x.id)}</div><p class="k-small k-soft">from ${e(x.folder)}</p>
+<div class="k-row"><button type="button" class="k-btn" data-action="release check" data-id="${e(x.id)}">Check it as anyone would</button>${x.collective ? `<button type="button" class="k-btn" data-action="release standing" data-id="${e(x.id)}">Does it count for the collective?</button>` : ""}<button type="button" class="k-btn k-q" data-action="anchor open" data-id="${e(x.id)}">Anchor it on Bitcoin (optional)</button></div><div id="check-${e(x.id)}"></div><div id="anchor-${e(x.id)}"></div></div>`
+  ).join("") : '<p class="k-empty">No release from here yet.</p>';
+  return `<h2>A release</h2>${whoActs(s)}
+${say2(forCollective ? "Signed with your own key for the collective: it counts once the area reaching its releases is met." : "A release of code under your own name, from a folder, checked as anyone would.", [forCollective ? "Where its area asks more keys, its other holders are asked, and sign in their own app." : "A collective\u2019s releases are made here too: choose it in the identity panel, under your identity.", "A git folder gives what git tracks; a plain folder every file but hidden ones; links are never followed. Every file is listed with its size and fingerprint before anything is signed."])}
+<form id="release"><label>The folder</label>
+<div class="k-row"><input name="folder" class="k-grow" autocomplete="off" spellcheck="false" placeholder="~/code/my-module"><button type="button" class="k-btn" data-action="folders">Choose a folder\u2026</button></div>
+<div id="picker"></div><p class="k-small k-soft" id="folder-said"></p>
 <label>Its name (the folder\u2019s, by default)</label><input name="name" autocomplete="off">
 <label>Its version</label><input name="version" autocomplete="off" placeholder="1.0">
 <label>The release before it</label><select name="previous"><option value="">None: a new release line</option>${opts}</select>
 <label>Specifications it implements (optional): their publications\u2019 act ids, one per line</label><textarea name="implements" spellcheck="false"></textarea>
-<div class="row"><button type="submit">Read it back</button></div></form>
+<div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form>
 <div id="release-review"></div>
-<h2>Your releases</h2>${rows}${anchors}`;
+<h3>${forCollective ? "The collective\u2019s releases" : "Your releases"}</h3>${rows}`;
 }
 function picker(l) {
-  return `<div class="picker"><p class="small">${e(l.path)}</p>
-<div>${l.places.map((p) => `<button type="button" class="quiet" data-action="folders" data-path="${e(p.path)}">${e(p.name)}</button>`).join("")}${l.parent ? `<button type="button" class="quiet" data-action="folders" data-path="${e(l.parent)}">Up</button>` : ""}<button type="button" class="primary" data-action="folder use" data-path="${e(l.path)}">Use this folder</button></div>
-${l.problem ? note2("warn", e(l.problem)) : ""}
-<div>${l.folders.map((f) => `<button type="button" data-action="folders" data-path="${e(f.path)}">${e(f.name)}${f.git ? " \xB7 git" : ""}${f.spaced ? ` (${e(f.spaced)})` : ""}</button>`).join("")}</div>${l.hidden ? `<p class="small">${l.hidden} hidden folder${l.hidden === 1 ? "" : "s"} not shown.</p>` : ""}</div>`;
+  return `<div class="ummia-picker"><p class="k-small">${e(l.path)}</p>
+<div>${l.places.map((p) => `<button type="button" class="k-btn k-q k-small" data-action="folders" data-path="${e(p.path)}">${e(p.name)}</button>`).join("")}${l.parent ? `<button type="button" class="k-btn k-q k-small" data-action="folders" data-path="${e(l.parent)}">Up</button>` : ""}<button type="button" class="k-btn k-p k-small" data-action="folder use" data-path="${e(l.path)}">Use this folder</button></div>
+${l.problem ? note("", e(l.problem)) : ""}
+<div>${l.folders.map((f) => `<button type="button" class="k-btn k-small" data-action="folders" data-path="${e(f.path)}">${e(f.name)}${f.git ? " \xB7 git" : ""}${f.spaced ? ` (${e(f.spaced)})` : ""}</button>`).join("")}</div>${l.hidden ? `<p class="k-small k-soft">${l.hidden} hidden folder${l.hidden === 1 ? "" : "s"} not shown.</p>` : ""}</div>`;
 }
 function checked2(c) {
-  return `<div class="${c.ok ? "" : "blocking"}">${lines(c.lines)}</div>`;
+  return `<div class="${c.ok ? "" : "ummia-blocking"}">${lines(c.lines)}</div>`;
 }
-function anchorForm(release, offers2, say3) {
-  const choose = offers2 ? offers2.length ? `<label>Its standing offer, and a tier</label><select name="choice">${offers2.flatMap((o) => o.tiers.map((t, i) => `<option value="${e(o.act)} ${i}">offer ${e(o.act.slice(0, 8))}\u2026, tier ${i}: within ${t.blocks} blocks, ${t.price} (its unit)</option>`)).join("")}</select><div class="row"><button type="submit" class="primary">Prepare the payment for Damgar</button></div>` : note2("warn", "No standing offer of that service was found under the anchoring cMIP.") : '<div class="row"><button type="submit">Read its offer</button></div>';
-  return `<form class="anchor" data-release="${e(release)}">${says(say3)}<label>The anchoring service\u2019s ID</label><input name="service" autocomplete="off" spellcheck="false" required>${choose}</form>`;
+function anchorForm(release, offers2, sayIt) {
+  const choose = offers2 ? offers2.length ? `<label>Its standing offer, and a tier</label><select name="choice">${offers2.flatMap((o) => o.tiers.map((t, i) => `<option value="${e(o.act)} ${i}">offer ${e(shortForm(formOf2(o.act)))}, tier ${i}: within ${t.blocks} blocks, ${t.price} (its unit)</option>`)).join("")}</select><div class="k-row"><button type="submit" class="k-btn k-p">Prepare the payment for Damgar</button></div>` : note("", "No standing offer of that service was found under the anchoring cMIP.") : '<div class="k-row"><button type="submit" class="k-btn">Read its offer</button></div>';
+  return `<form class="anchor" data-release="${e(release)}">${say2("Anchoring is optional: offered by a service, its tier chosen here, prepared for Damgar and paid there.", sayIt)}<label>The anchoring service\u2019s ID</label><input name="service" autocomplete="off" spellcheck="false" required>${choose}</form>`;
 }
-var TASK_TICKS = (tasks) => `<div class="ticks">${tasks.map((t) => `<label class="check"><input type="checkbox" name="tasks" value="${t.n}"> ${t.n}. ${e(t.name)} (${e(t.layer)})</label>`).join("")}</div>`;
-function specs(choices, published) {
-  return `<h2>Publish a specification</h2>
-<p class="small">A cMIP or a Module, published as its act and named by its spec hash, shown before anything is signed. Published for good: a changed specification is a new one. A MIP is drafted under MIPs.</p>
+var TASK_TICKS = (tasks) => `<div class="ummia-ticks">${tasks.map((t) => `<label><input type="checkbox" name="tasks" value="${t.n}"> ${t.n}. ${e(t.name)} (${e(t.layer)})</label>`).join("")}</div>`;
+function specPane(s, choices) {
+  return `<h2>A cMIP or Module</h2>${whoActs(s)}
+${say2("Its hash first: read back before anything is signed. Published for good.", ["A cMIP or a Module, published as its act and named by its spec hash. A changed specification is a new one. A MIP is drafted under Discuss. A specification is published as yourself: a collective acts here for its releases.", "Right after it is signed, Ummia offers its card (title, summary, links) and a discussion thread naming it, so there is somewhere to go from day one."])}
 <form id="spec"><label>Its kind</label><select name="kind"><option value="0">cMIP: a specification for a task, an extension, or new act types (an xtype)</option><option value="1">Module: an implementation or extension under a cMIP, or under a MIR</option></select>
-<label>Its text (canonical text: no space at the end of a line, no final line break)</label><textarea class="spec" name="text" spellcheck="false" placeholder="# cMIP: \u2026"></textarea>
-<input type="file" id="spec-file" accept=".md,.txt,text/plain,text/markdown"><span class="small"> or load it from a file</span>
-<p class="small">Fill below only what your text says.</p>
-<details class="fold"><summary>A cMIP: the tasks it fills (field 2)</summary>${TASK_TICKS(choices.tasks)}</details>
-<details class="fold"><summary>Act types it defines (field 3): one per line, \u201Cnumber name schema\u201D</summary><textarea name="types" spellcheck="false" placeholder="0 note note = tstr"></textarea></details>
-<details class="fold"><summary>A Module: the cMIP it implements, or the MIR it works under (field 5)</summary><input name="implements" spellcheck="false" placeholder="a spec hash"></details>
-<details class="fold"><summary>A rail Module: its kind and what its proof binds (fields 11 and 13)</summary><select name="railKind"><option value="">Not a rail</option><option value="0">a request rail</option><option value="1">a push rail</option></select>
-<div class="ticks"><label class="check"><input type="checkbox" name="railBinds" value="0"> the payee</label><label class="check"><input type="checkbox" name="railBinds" value="1"> the purpose</label><label class="check"><input type="checkbox" name="railBinds" value="2"> the previous hop</label></div></details>
-<details class="fold"><summary>As an extension, the layers it acts on (field 10)</summary><div class="ticks">${["Identity", "Envelopes and Text", "Money", "Agreements"].map((l, i) => `<label class="check"><input type="checkbox" name="layers" value="${i}"> ${l}</label>`).join("")}</div></details>
-<details class="fold"><summary>Its predecessor (field 8), dependencies (field 4), a proof-of-delivery checker (field 12)</summary><label>The specification it replaces, for its users</label><input name="predecessor" spellcheck="false" placeholder="a spec hash">
+<label>Its text (canonical text: no space at the end of a line, no final line break)</label><textarea class="ummia-code" name="text" spellcheck="false" placeholder="# cMIP: \u2026"></textarea>
+<input type="file" id="spec-file" accept=".md,.txt,text/plain,text/markdown"><span class="k-small k-soft"> or load it from a file</span>
+<p class="k-small k-soft">Fill below only what your text says.</p>
+<details><summary>A cMIP: the tasks it fills (field 2)</summary>${TASK_TICKS(choices.tasks)}</details>
+<details><summary>Act types it defines (field 3): one per line, \u201Cnumber name schema\u201D</summary><textarea name="types" spellcheck="false" placeholder="0 note note = tstr"></textarea></details>
+<details><summary>A Module: the cMIP it implements, or the MIR it works under (field 5)</summary><input name="implements" spellcheck="false" placeholder="a spec hash"></details>
+<details><summary>A rail Module: its kind and what its proof binds (fields 11 and 13)</summary><select name="railKind"><option value="">Not a rail</option><option value="0">a request rail</option><option value="1">a push rail</option></select>
+<div class="ummia-ticks"><label><input type="checkbox" name="railBinds" value="0"> the payee</label><label><input type="checkbox" name="railBinds" value="1"> the purpose</label><label><input type="checkbox" name="railBinds" value="2"> the previous hop</label></div></details>
+<details><summary>As an extension, the layers it acts on (field 10)</summary><div class="ummia-ticks">${["Identity", "Envelopes and Text", "Money", "Agreements"].map((l, i) => `<label><input type="checkbox" name="layers" value="${i}"> ${l}</label>`).join("")}</div></details>
+<details><summary>Its predecessor (field 8), dependencies (field 4), a proof-of-delivery checker (field 12)</summary><label>The specification it replaces, for its users</label><input name="predecessor" spellcheck="false" placeholder="a spec hash">
 <label>Specifications it depends on, one per line</label><textarea name="dependencies" spellcheck="false"></textarea>
-<label class="check"><input type="checkbox" name="checker"> It checks proofs of delivery of proven offers</label></details>
-<div class="row"><button type="submit">Read it back, with its hash</button></div></form>
-<div id="spec-review"></div>
-<h2>Published from here</h2>${published.length ? published.map((p) => `<div class="item"><h3>${e(p.name)}</h3><div class="meta">${e(p.kind)} \xB7 publication ${fp(p.id)}</div><div class="hash" title="${e(p.hash)}">${e(shownSpec(p.hash))}</div></div>`).join("") : '<p class="empty">None yet.</p>'}`;
+<label><input type="checkbox" name="checker"> It checks proofs of delivery of proven offers</label></details>
+<div class="k-row"><button type="submit" class="k-btn k-p">Read it back, with its hash</button></div></form>
+<div id="spec-review"></div>`;
 }
-function specCard(x, accepted2) {
-  const release = x.releases.length ? `<p class="small">Code released: ${x.releases.map((r) => `${e(r.name ?? "a release")} ${e(r.version ?? "")}${r.problem ? ` (not verified: ${e(r.problem)})` : ""}`).join(", ")}.</p>` : "";
-  const use = x.use ? `<p class="small">Used: ${x.use.acts} public act${x.use.acts === 1 ? "" : "s"} of its types (${x.use.byType.map((t) => `${e(t.name)} ${t.acts}`).join(", ")})${x.use.notValid ? `; ${x.use.notValid} not valid, not counted` : ""}.</p>` : "";
-  return `<div class="item spec-card" data-hash="${e(x.hash)}"><h3>${e(x.name)}</h3>
-<div class="meta">${e(x.kind)} \xB7 ${e(x.layer)}${x.draft > 1 ? ` \xB7 draft ${x.draft} in its line` : ""} \xB7 by ${x.creator ? fp(x.creator) : "no creator"}${x.creator ? x.claimed ? "" : " (unclaimed: its creator never published it)" : ""}</div>
-${lines(x.role.map((t) => ({ text: t })))}${x.otherCreator ? note2("warn", "Its creator is not its predecessor\u2019s (Development rule 25).") : ""}${release}${use}
-<div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div>
-<div class="row">${accepted2.has(x.hash) ? '<span class="small">Accepted</span>' : `<button data-action="accept spec" data-hash="${e(x.hash)}" data-label="${e(`${x.name}`.slice(0, 120))}">Accept it</button>`}</div></div>`;
+function cardForm(c) {
+  return `<div class="k-box k-fill" id="card-offer"><h3>${c.later ? "A later card" : "Its card"}</h3>${hashCopy(c.hash, false, "for")}
+${say2("A card says what it is for and where to go next: a plain post, signed by you.", ["Every app shows it as the post it is. The latest card in your own sequence is the one that counts: sign a later one whenever a release, its vectors or its discussion arrive. Read back before it is signed."])}
+<form id="card" data-hash="${e(c.hash)}"><label>Its title</label><input name="title" maxlength="${c.limits.title}" value="${e(c.title)}" required>
+<label>A short summary: what it is for, in plain words</label><textarea name="summary" maxlength="${c.limits.summary}">${e(c.summary ?? "")}</textarea>
+<label>Releases implementing it: their act IDs, one per line (optional)</label><textarea name="releases" spellcheck="false"></textarea>
+<label>Its test vectors: act IDs or https addresses, one per line (optional)</label><textarea name="vectors" spellcheck="false"></textarea>
+${c.discussion ? `<input type="hidden" name="discussion" value="${e(c.discussion)}"><p class="k-small k-soft">Its discussion: the thread already named.</p>` : `<label class="k-row"><input type="checkbox" name="thread" checked> Start a discussion thread naming it, signed just before the card</label>`}
+<div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button><button type="button" class="k-btn k-q" data-action="card-skip">Not now</button></div></form><div id="card-review"></div></div>`;
 }
-function trackForm(s) {
-  return `<h2>Tracking</h2>
-<form id="track"><label>The public relays to ask, one per line</label><textarea name="relays" spellcheck="false">${e(s.settings.track.join("\n"))}</textarea>
-<label>Only the specifications and releases of one signer (optional)</label><input name="signer" spellcheck="false" placeholder="an identity's ID">
-<div class="row"><button type="submit" class="primary">Look</button></div></form>
-<div id="track-out"></div>
-<h2>The acts of one specification</h2>
-<form id="acts"><label>Its spec hash</label><input name="spec" spellcheck="false" required><label>An act type (optional)</label><input name="type" inputmode="numeric"><label>A signer (optional)</label><input name="signer" spellcheck="false">
-<div class="row"><button type="submit">Look</button></div></form><div id="acts-out"></div>`;
+function anchoringPane(anchors, sayIt, web) {
+  return `<h2>Anchoring</h2>${say2("Optional: a release\u2019s fingerprint on Bitcoin, through a pooled anchoring service, paid in Damgar.", sayIt)}
+<p class="k-small k-soft">Ask from a release (A release \u203A Anchor it on Bitcoin), or from any card\u2019s act menu (Anchor it).${web ? " The web client follows no chain: anchors are shown asked, never checked here." : ""}</p>
+<h3>Anchors asked</h3>${anchors.length ? anchors.map((a) => `<div class="k-box"><div class="k-row"><h3 class="k-grow">${e(a.label)}</h3><span class="ummia-v${a.state === "anchored" ? " valid" : a.state === "invalid" ? " bad" : ""}">${e(a.state)}</span></div>${actCopy(a.act)}<p class="k-small k-soft">tier ${a.tier} \xB7 by ${e(shortForm(formOf2(a.service, "mid")))}</p>${lines(a.lines)}</div>`).join("") : '<p class="k-empty">None asked yet.</p>'}`;
 }
-function tracked(t, accepted2) {
-  const relays = `<p class="small">${t.relays.map((r) => `${e(r.address)}: ${r.problem ? e(r.problem) : `${r.read} acts read, ${r.specs} specification${r.specs === 1 ? "" : "s"}${r.stopped ? " (stopped: more than a look reads)" : ""}`}`).join("<br>")}</p>`;
-  const ext = t.extensions.length ? t.extensions.map((x) => `<div class="item"><h3>${e(x.name ?? `A cMIP not found on these relays`)}</h3><div class="meta">named by ${x.agreements} public agreement${x.agreements === 1 ? "" : "s"}${x.layers ? ` \xB7 touches ${e(x.layers.join(", "))}` : ""}</div><div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div></div>`).join("") : '<p class="empty">No public agreement found naming an extension.</p>';
-  const mips2 = t.mips.length ? t.mips.map((m) => `<div class="item"><h3>${e(m.name)}</h3><div class="meta">${fp(m.root)}</div>${m.forks.length ? lines(m.forks.map((f) => ({ text: `${f.name}, by ${f.creator ? `${f.creator.slice(0, 8)}\u2026` : "no creator"} (${f.total} fork${f.total === 1 ? "" : "s"} under it)` }))) : '<p class="small">No MIP forks it here.</p>'}</div>`).join("") : '<p class="empty">No MIP found.</p>';
-  return `<div class="limit">${says(t.limit)}</div>${relays}
-<h2>Extensions public agreements name</h2><p class="small">Each marks work the core did not foresee: the raw material of MOR 2. Agreements counted: ${t.agreements.counted} (${t.agreements.proposed} proposed, not signed by every party; ${t.agreements.notCounted} not verified; ${t.agreements.private} private items unread).</p>${ext}
-<h2>Xtypes: new act types from core pieces</h2>${t.xtypes.length ? t.xtypes.map((x) => specCard(x, accepted2)).join("") : '<p class="empty">None found.</p>'}
-<h2>cMIPs and Modules</h2>${t.lines.length ? t.lines.map((l) => l.map((x) => specCard(x, accepted2)).join("")).join("") : '<p class="empty">None found.</p>'}
-<h2>MIPs, by what they fork</h2>${mips2}
-${t.unverified.length ? `<h2>Not verified</h2>${lines(t.unverified.map((u2) => ({ text: `${u2.id.slice(0, 12)}\u2026: ${u2.problem}`, tone: "warn" })))}` : ""}`;
+function choosePane(a, layer) {
+  const shown = layer ? a.entries.filter((x) => (x.layer ?? "").split(", ").includes(layer)) : a.entries;
+  return `<h2>What you accept${layer ? ` \xB7 ${e(layer)}` : ""}</h2>${say2("Sealed to you, read by every app", a.say)}
+${a.problems.length ? note("", lines(a.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}
+${a.forked ? note("", `Two apps changed it at once. Shown merged, nothing dropped: ${lines(a.merged.map((t) => ({ text: t })))} Your next change writes the merge.`) : ""}
+<p class="k-small k-soft">${a.version ? `Version ${a.version}.` : "Nothing accepted yet: the default, under which no app signs anything under any specification."}</p>
+${shown.length ? `<ul class="ummia-list" id="accepted">${shown.map((x) => `<li data-hash="${e(x.hash)}"><span class="ummia-tick">\u2713</span><span class="k-grow"><span>${e(x.label ?? "A specification with no label")}</span><br><span class="k-small k-soft">${e(x.layer ?? "layer not found on your relays")} \xB7 ${e(x.part)}</span></span>${hashCopy(x.hash)}<button type="button" class="k-btn k-q k-small" data-action="accepted remove" data-hash="${e(x.hash)}">Remove</button><button type="button" class="k-btn k-q k-small" data-spec="${e(x.hash)}">Its page</button></li>`).join("")}</ul>` : `<p class="k-empty">${layer ? `Nothing accepted in ${e(layer)}.` : "Nothing accepted."}</p>`}
+<div class="k-row"><button type="button" class="k-btn" data-action="accept-hash-open">+ Accept by hash</button><span class="k-grow"></span><span class="k-small k-soft">${a.published ? "Published: anyone can read it." : "Private: sealed to yourself (the default)."}</span><button type="button" class="k-btn k-q" data-action="accepted publish" data-on="${a.published ? "false" : "true"}">${a.published ? "Make it private again" : "Publish it"}</button></div>`;
 }
-function acts(r) {
-  return `${lines(r.lines)}${r.acts.length ? r.acts.map((a) => `<div class="item"><div class="meta">${fp(a.id)} \xB7 type ${a.type} \xB7 by ${fp(a.signer)} \xB7 <span class="v${a.standing === "valid" ? " valid" : ""}">${e(a.standing)}</span></div></div>`).join("") : '<p class="empty">No public act of it found.</p>'}`;
+function acceptForm(hash = "", label = "") {
+  return `<form id="accept-add"><label>Its spec hash</label><input name="hash" spellcheck="false" required value="${e(hash)}"><label>Its label (its name and draft)</label><input name="label" maxlength="120" value="${e(label)}">
+<div class="k-row"><button type="submit" class="k-btn k-p">Accept it</button></div></form>`;
 }
-function mips(m, open) {
-  const drafts = m.drafts.length ? m.drafts.map(
-    (d) => `<div class="item mip" data-key="${e(d.key)}"><h3>${e(d.title)}</h3><div class="meta">forks ${e(d.forksName)} \xB7 ${d.drafts.length} draft${d.drafts.length === 1 ? "" : "s"} published${d.published ? ` \xB7 published as a MIP, its hash ${e(d.published.hash.slice(0, 12))}\u2026` : ""}</div>
-${d.drafts.length ? lines(d.drafts.map((x, i) => ({ text: `Draft ${i + 1}: ${x.id}` }))) : ""}
-${d.published ? `<div class="hash">${e(d.published.hash)}</div>` : `<details class="fold"${open === d.key ? " open" : ""}><summary>Write it</summary><form class="mip-text" data-key="${e(d.key)}"><textarea class="spec" name="text" spellcheck="false">${e(d.text)}</textarea><div class="row"><button type="submit">Keep it here (nothing is sent)</button></div></form></details>
-<div class="row"><button data-action="mip draft" data-key="${e(d.key)}">Publish this draft for discussion</button><button class="quiet" data-action="mip replies" data-key="${e(d.key)}">Replies</button><button class="primary" data-action="mip prepare" data-key="${e(d.key)}">I am ready: publish it as a MIP\u2026</button></div>`}
-<div id="mip-out-${e(d.key)}"></div></div>`
-  ).join("") : '<p class="empty">No MIP drafted here yet.</p>';
-  return `<h2>A path to drafting MIPs</h2>${says(m.say)}
-<form id="mip-new"><label>Its title</label><input name="title" required><label>What it forks</label><select name="forks">${m.forkable.map((f) => `<option value="${e(f.key)}">${e(f.name)}</option>`).join("")}<option value="">A MIP, or the MICS document (for a new layer), by its spec hash:</option></select><input name="hash" spellcheck="false" placeholder="a spec hash, where chosen above">
-<div class="row"><button type="submit">Start it in the MIP shape</button></div></form>
-<h2>Your MIPs</h2>${drafts}`;
-}
-function replies2(r) {
-  const all = Object.entries(r.replies);
-  return `${lines(r.lines)}${all.length ? all.map(([draft, rs]) => `<p class="small">To draft ${e(draft.slice(0, 12))}\u2026</p>${rs.map((x) => `<div class="item"><div class="meta">${fp(x.signer)} \xB7 <span class="v${x.standing === "valid" ? " valid" : ""}">${e(x.standing)}</span>${x.sealed ? " \xB7 sent to you" : ""}</div><p>${e(x.text)}</p></div>`).join("")}`).join("") : '<p class="empty">No reply found yet.</p>'}`;
-}
-function reports(r) {
-  const sent = r.sent.length ? r.sent.map((s) => {
-    const as = r.answers.filter((a) => a.report === s.id);
-    return `<div class="item"><h3>${e(s.title)}</h3><div class="meta">${fp(s.id)}</div>${as.length ? as.map((a) => `<p class="small">Answered (<span class="v${a.standing === "valid" ? " valid" : ""}">${e(a.standing)}</span>): ${e(a.text)}</p>`).join("") : '<p class="small">No answer yet.</p>'}</div>`;
-  }).join("") : '<p class="empty">No report sent from here.</p>';
-  return `<h2>Report a bug</h2>${says(r.say)}
-${r.to ? `<p class="small">To the reporting identity ${fp(r.to)}.</p><form id="report"><label>The report: its first line is its title</label><textarea name="text" required></textarea><div class="row"><button type="submit" class="primary">Sign and send it</button></div></form>` : note2("warn", "Give the reporting identity\u2019s ID under Settings first.")}
-${lines(r.lines)}
-<h2>Sent from here</h2>${sent}`;
-}
-function accepted(a) {
-  return `<h2>What you accept</h2>${says(a.say)}
-${a.problems.length ? note2("warn", lines(a.problems.map((t) => ({ text: t, tone: "warn" })))) : ""}
-${a.forked ? note2("warn", `Two apps changed it at once. Shown merged, nothing dropped: ${lines(a.merged.map((t) => ({ text: t })))} Your next change writes the merge.`) : ""}
-<p class="small">${a.version ? `Version ${a.version}.` : "Nothing accepted yet: the default, under which no app signs anything under any specification."}</p>
-${a.entries.length ? a.entries.map((x) => `<div class="item"><h3>${e(x.label ?? "A specification with no label")}</h3><div class="meta">${e(x.part)}</div><div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div><div class="row"><button class="quiet" data-action="accepted remove" data-hash="${e(x.hash)}">Remove it</button></div></div>`).join("") : ""}
-<form id="accept-add"><label>Accept a specification by its spec hash (or press \u201CAccept it\u201D on one found under Tracking)</label><input name="hash" spellcheck="false" required><label>Its label (its name and draft)</label><input name="label" maxlength="120">
-<div class="row"><button type="submit">Accept it</button></div></form>
-<div class="row"><span class="grow small">${a.published ? "Published: anyone can read which specifications you accept." : "Private: sealed to yourself (the default)."}</span><button data-action="accepted publish" data-on="${a.published ? "false" : "true"}">${a.published ? "Make it private again" : "Publish it"}</button></div>`;
-}
-function settings(s) {
-  return `<h2>Settings</h2>
-<form id="settings"><label>Relays your acts go to (specifications, releases, drafts, reports), one per line</label><textarea name="relays" spellcheck="false">${e(s.settings.relays.join("\n"))}</textarea>
-<label>Public relays tracking asks, one per line</label><textarea name="track" spellcheck="false">${e(s.settings.track.join("\n"))}</textarea>
-<label>The reporting identity\u2019s ID</label><input name="reports" spellcheck="false" value="${e(s.settings.reports ?? "")}">
-<div class="row"><button type="submit" class="primary">Save</button></div></form>
-<dl class="facts"><dt>Homes</dt><dd>${e(s.identity.homes.join(", "))} (the identity\u2019s chain names them; changed in Ki\u0161ib)</dd></dl>`;
-}
-function spent(say3) {
-  return note2("spent", `${e(say3)} <button data-action="window">Give the new words</button>`);
+function relyForm(id) {
+  return `<form id="rely" data-id="${e(id)}">${say2("Relying on an act keeps it visible as disputed should its author ever disown it.", ["A witness act (Identity type 15), public at your homes and relays, naming the act: it relies on it, it pays nothing. Signed with your key, checked first; through Ki\u0161ib\u2019s panel where Ki\u0161ib holds this identity."])}${actCopy(id)}<label>Type RELY to sign the witness act</label><input name="typed" autocomplete="off" autocapitalize="characters" spellcheck="false" required><div class="k-row"><button type="submit" class="k-btn k-p">Sign the witness act</button></div></form>`;
 }
 
 // src/page/ui.ts
-var TABS2 = TABS.map(([k]) => k);
-function mount(app3, b) {
+var errorOf = (err) => err instanceof Error ? err.message : String(err);
+var TABS = ["look", "discuss", "publish", "choose"];
+var EVERY = ["releases", "cmips", "modules", "xtypes", "extensions"];
+function mount(app2, b) {
   const $ = (id) => document.getElementById(id);
+  app2.classList.add("k-page", "k-ummia");
   let state = null;
-  let screen = "app";
-  let tab = "releases";
-  let acceptedNow = /* @__PURE__ */ new Set();
+  let tab = null;
+  let part = "";
+  let at = { point: { kind: "relay", value: "" }, filters: [...EVERY], layer: null };
+  let page = null;
   let openMip = null;
+  let counts = { mips: 0, threads: 0, reports: 0, anchors: 0, published: 0 };
+  let reviewing = null;
+  const popup2 = new Popup(app2);
+  attachClosing();
   try {
-    const t = sessionStorage.getItem("ummia:tab");
-    if (t && TABS2.includes(t)) tab = t;
+    const kept = JSON.parse(sessionStorage.getItem("ummia:at") ?? "null");
+    if (kept && TABS.includes(kept.tab)) [tab, part] = [kept.tab, kept.part];
   } catch {
   }
-  const say3 = (kind, html) => {
-    const s = $("status");
-    if (s) {
-      s.innerHTML = note2(kind, html);
-      s.scrollIntoView({ block: "nearest" });
-    } else app3.insertAdjacentHTML("beforeend", note2(kind, html));
+  const keepAt = () => {
+    try {
+      sessionStorage.setItem("ummia:at", JSON.stringify(tab ? { tab, part } : null));
+    } catch {
+    }
+  };
+  function say3(kind, html) {
+    let s = $("status");
+    if (!s) {
+      app2.insertAdjacentHTML("beforeend", '<div id="status" class="k-status"></div>');
+      s = $("status");
+    }
+    s.innerHTML = `${note(kind, html)}<button type="button" class="k-round k-close" data-action="status-close" aria-label="Close">\xD7</button>`;
+  }
+  const spentShown = (m) => {
+    if ($("spent")) return;
+    const where = $("spent-at") ?? app2.querySelector(".k-top");
+    where?.insertAdjacentHTML(where.id === "spent-at" ? "afterbegin" : "afterend", spent(m));
   };
   const fail = (err) => {
     if (b.unpaired?.(err)) {
-      app3.innerHTML = pairing();
+      app2.innerHTML = pairing();
       return;
     }
-    const m = err instanceof Error ? err.message : String(err);
-    if (/^This identity’s signing key was changed elsewhere/.test(m)) {
-      const sp = $("spent");
-      if (sp) sp.innerHTML = spent(m);
-    }
+    const m = errorOf(err);
+    if (/^This identity’s signing key was changed elsewhere/.test(m)) spentShown(m);
     say3("error", e(m));
   };
   const done = (r) => {
     if (r?.lines?.length) say3("done", `${r.title ? `<b>${e(r.title)}</b>` : ""}${lines(r.lines)}`);
   };
   async function act(f) {
-    app3.querySelectorAll("button").forEach((x) => x.disabled = true);
+    const was = [...app2.querySelectorAll("button")].map((x) => [x, x.disabled]);
+    app2.querySelectorAll("button").forEach((x) => x.disabled = true);
     try {
       return await f();
     } catch (err) {
       fail(err);
       return void 0;
     } finally {
-      app3.querySelectorAll("button").forEach((x) => x.disabled = false);
+      for (const [x, d] of was) if (x.isConnected) x.disabled = d;
     }
   }
+  let slot = null;
+  const raw = b.ask.bind(b);
+  const NOT_WATCHED = /* @__PURE__ */ new Set(["runner asking", "runner", "state", "runner drop", "look", "spec page", "clock words", "check", "accepted", "published here", "discussions", "releases", "mips", "reports", "contacts"]);
+  b.ask = async (op, a) => {
+    if (b.web || NOT_WATCHED.has(op) || !state?.identity?.runner) return raw(op, a);
+    let over = false;
+    const watch = (async () => {
+      while (!over) {
+        await new Promise((r) => setTimeout(r, 300));
+        if (over) break;
+        const w = await raw("runner asking").catch(() => null);
+        if (over || !w?.asking || !w.origin || slot?.request === w.asking.request) continue;
+        const asked = w.asking;
+        slot?.close();
+        try {
+          const s = openSlot(app2, {
+            app: "kishib",
+            by: "Ki\u0161ib",
+            host: "Ummia",
+            src: asked.panel,
+            allowed: [w.origin, w.origin.replace("127.0.0.1", "localhost")],
+            closed: () => {
+              slot = null;
+              void raw("runner drop", { request: asked.request }).catch(() => void 0);
+            }
+          });
+          slot = { close: () => s.close(), request: asked.request };
+        } catch (e3) {
+          say3("error", e(errorOf(e3)));
+        }
+      }
+    })();
+    try {
+      return await raw(op, a);
+    } finally {
+      over = true;
+      await watch;
+      slot?.close();
+      slot = null;
+    }
+  };
   async function show(s) {
     state = s;
-    if (s.stage === "identity" || screen === "window") {
-      app3.innerHTML = identityWindow(s, b.web);
+    closePanel();
+    if (s.stage === "identity") {
+      app2.innerHTML = firstScreen(b.web);
       return;
     }
-    app3.innerHTML = app(s, b.web, tab);
+    await draw();
     void b.ask("check").then((c) => {
-      const sp = $("spent");
-      if (sp && !c.current && c.say) sp.innerHTML = spent(c.say);
+      if (!c.current && c.say) spentShown(c.say);
     }).catch(() => void 0);
-    await open(tab);
+    void readCounts();
   }
-  const body = (t) => $(`${t}-body`);
-  async function open(t) {
-    tab = t;
+  async function draw() {
+    keepAt();
+    if (!tab) {
+      app2.innerHTML = home(state, b.web);
+      return;
+    }
+    app2.innerHTML = tabPage(state, tab, part, counts);
+    await fill();
+  }
+  async function readCounts() {
+    const s = state;
+    if (!s?.identity) return;
+    const m = await b.ask("mips").catch(() => null);
+    counts = {
+      mips: m?.drafts.length ?? s.counts.mips,
+      threads: s.counts.cards ? (await b.ask("published here").catch(() => ({ discussions: [] }))).discussions.length + (m?.drafts.reduce((n2, d) => n2 + d.drafts.length, 0) ?? 0) : m?.drafts.reduce((n2, d) => n2 + d.drafts.length, 0) ?? 0,
+      reports: s.counts.reports,
+      anchors: s.counts.anchors,
+      published: s.counts.specs + s.counts.releases
+    };
+    const col = app2.querySelector(".k-col");
+    if (!col) return;
+    const n = { mips: counts.mips, threads: counts.threads, reports: counts.reports, anchoring: counts.anchors, published: counts.published };
+    for (const [k, x] of Object.entries(n)) {
+      const el = col.querySelector(`[data-k-col="${k}"] .k-k`);
+      if (el) el.textContent = String(x);
+    }
+  }
+  const pane = () => $("pane");
+  let filling = 0;
+  async function fill() {
+    const p = pane();
+    if (!p) return;
+    const mine = ++filling;
     try {
-      sessionStorage.setItem("ummia:tab", t);
-    } catch {
+      const html = await partHtml();
+      if (mine !== filling || !p.isConnected) return void (cards = []);
+      p.innerHTML = html;
+      drawCards();
+      const ids = cardsUntimed(p);
+      if (ids.length)
+        void b.ask("clock words", { ids }).then((w) => p.isConnected && stampCards(p, w)).catch(() => void 0);
+    } catch (err) {
+      if (mine !== filling) return;
+      p.innerHTML = "";
+      fail(err);
     }
-    for (const x of TABS2) {
-      const sec = $(x);
-      if (sec) sec.hidden = x !== t;
-    }
-    app3.querySelectorAll(".tabs .tab").forEach((x) => x.classList.toggle("on", x.dataset.tab === t));
-    const into = body(t);
-    if (!into || !state) return;
-    switch (t) {
-      case "releases": {
-        const r = state.releases ? await act(() => b.ask("releases")) : null;
-        into.innerHTML = releases(state, r ?? null);
-        return;
-      }
-      case "specs": {
-        const [c, p] = await Promise.all([b.ask("spec choices"), b.ask("specs")]).catch((err) => {
-          fail(err);
-          return [null, null];
-        });
-        if (c && p) into.innerHTML = specs(c, p);
-        return;
-      }
-      case "track":
-        into.innerHTML = trackForm(state);
-        await readAccepted2();
-        return;
-      case "mips": {
-        const m = await act(() => b.ask("mips"));
-        if (m) into.innerHTML = mips(m, openMip);
-        return;
-      }
-      case "reports": {
-        const r = await act(() => b.ask("reports"));
-        if (r) into.innerHTML = reports(r);
-        return;
-      }
-      case "accepted": {
-        const a = await act(() => b.ask("accepted"));
-        if (a) {
-          acceptedNow = new Set(a.entries.map((x) => x.hash));
-          into.innerHTML = accepted(a);
+  }
+  const drawn = /* @__PURE__ */ new Map();
+  let cards = [];
+  const meId = () => state?.identity?.id ?? "";
+  const nameOf2 = (id) => id === meId() ? "you" : shortForm(formOf2(id, "mid"));
+  const who = (id) => {
+    const form2 = formOf2(id, "mid");
+    return { id, form: form2, link: form2, name: null, me: id === meId() };
+  };
+  const cardOf = (a, item = null) => {
+    cards.push({ act: a, item });
+    return card(a);
+  };
+  function drawCards() {
+    drawn.clear();
+    for (const c of cards) drawn.set(c.act.id, c);
+    cards = [];
+  }
+  const itemCard = (x) => cardOf(
+    {
+      id: x.id,
+      form: formOf2(x.id),
+      signer: who(x.signer),
+      kind: x.kind,
+      text: x.text,
+      html: `<div class="ummia-acts">${x.hash ? `${hashCopy(x.hash)}<button type="button" class="k-btn k-q k-small" data-spec="${e(x.hash)}">Its page</button>` : ""}${x.release ? `<button type="button" class="k-btn k-q k-small" data-point-release="${e(x.id)}">Its line</button>` : ""}</div>`,
+      labels: x.labels,
+      verified: x.verified,
+      alarm: x.alarm,
+      when: x.when,
+      hint: x.hint,
+      own: x.signer === meId()
+    },
+    x
+  );
+  attachCards(app2, {
+    app: "Ummia",
+    act: (id) => drawn.get(id)?.act,
+    signerItems: (a) => a.signer.me ? [] : [{ key: "follow-releases", label: "Follow their releases" }],
+    // "Add to accepted list" in the act menu, below the line (decided).
+    actItems: (a) => ({ before: [{ key: "accept", label: "Add to accepted list", disabled: !drawn.get(a.id)?.item?.hash, hint: drawn.get(a.id)?.item?.hash ? void 0 : "not a specification" }], after: [] }),
+    async choose(key, a) {
+      const c = drawn.get(a.id);
+      const item = c?.item ?? null;
+      switch (key) {
+        case "profile":
+          return void popup2.show(a.signer.me ? "You" : shortForm(a.signer.form), `<dl class="k-facts"><dt>ID</dt><dd>${idCopy(a.signer.id)}</dd></dl><div class="k-row"><button type="button" class="k-btn k-p" data-point-id="${e(a.signer.id)}">Point Look at them</button>${a.signer.me ? "" : `<button type="button" class="k-btn" data-follow-releases="${e(a.signer.id)}">Follow their releases</button>`}</div><p class="k-small k-soft">Full record in Ki\u0161ib. Their posts and profile are in Dub.</p>`);
+        case "follow":
+          return void popup2.show("Follow: add to contacts", followForm(a.signer.id, false));
+        case "follow-releases":
+          return void popup2.show("Follow their releases", followForm(a.signer.id, true));
+        case "unfollow":
+        case "mute":
+        case "unmute":
+          return void popup2.show("Contacts are Dub\u2019s", '<p class="k-soft">Ummia adds to the follow list, the same one Dub reads; removing and muting are done in Dub, from their card or profile.</p>');
+        case "why":
+          return void popup2.show("Why it\u2019s valid", `${lines([{ text: a.verified ? "Its signature and its place in its signer\u2019s sequence hold, judged through its signer\u2019s chain by the core library." : a.alarm ?? "Not shown as valid.", tone: a.verified ? "ok" : "bad" }, ...item?.hash ? [{ text: "Its content decodes as a specification (Development, Part three), and its hash is computed from that content." }] : [], ...item?.release ? [{ text: "Its manifest was found and matches its fingerprint. \u201CCheck it as anyone would\u201D (Publish) fetches every file." }] : []])}`);
+        case "open":
+          return void popup2.show("What it answers", '<p class="k-soft">It answers nothing.</p>');
+        case "accept":
+          if (item?.hash) popup2.show("Add to accepted list", acceptForm(item.hash, item.title));
+          return;
+        case "rely":
+          return void popup2.show("Rely on it", relyForm(a.id));
+        case "anchor": {
+          const x = await act(() => b.ask("releases"));
+          return void popup2.show("Anchor it", anchorForm(a.id, null, x?.anchorSay ?? []));
         }
-        return;
+        case "correct":
+          return void popup2.show("Correct it", `<p class="k-soft">${item?.hash ? "A specification is never corrected: a changed one is a new one, with a new hash (Development rule 4). What can be said again is its card: sign a later one." : "A release is never corrected: publish the next one, naming this one as the one before it."}</p>${item?.hash ? `<div class="k-row"><button type="button" class="k-btn k-p" data-action="card-new" data-hash="${e(item.hash)}" data-title="${e(item.title)}">Sign a later card</button></div>` : ""}`);
       }
-      case "settings":
-        into.innerHTML = settings(state);
-        return;
-    }
-  }
-  async function readAccepted2() {
-    try {
-      acceptedNow = new Set((await b.ask("accepted")).entries.map((x) => x.hash));
-    } catch {
-    }
-  }
-  async function useFolder(path) {
-    const f = $("release");
-    const s = await act(() => b.ask("release suggest", { folder: path }));
-    if (f && s) {
-      f.elements.namedItem("folder").value = s.folder;
-      f.elements.namedItem("name").value = s.name;
-      f.elements.namedItem("previous").value = s.previous ?? "";
-      $("picker").innerHTML = "";
-      $("folder-said").textContent = `${s.folder}: ${s.how === "git" ? "a git folder: the files git tracks there." : "a plain folder: every file but hidden ones."}`;
-    }
-  }
-  const str = (fd, k) => String(fd.get(k) ?? "");
-  const all = (fd, k) => fd.getAll(k).map(String);
-  let reviewOp = "confirm";
-  app3.addEventListener("change", async (ev) => {
-    const el = ev.target;
-    if (el.name === "actor" && el.closest("#acting")) {
-      const r = await act(() => b.ask("acting", { id: el.value }));
-      if (r) {
-        state = await b.ask("state");
-        await show(state);
-        done(r);
-      }
-      return;
-    }
-    if (el.name === "folder" && el.closest("form#release") && el.value.trim()) {
-      await useFolder(el.value);
-      return;
-    }
-    if (el.id === "spec-file" && el.files?.[0]) {
-      const t = await el.files[0].text();
-      const area = (el.form ?? app3).querySelector("textarea[name=text]");
-      if (area) area.value = t.replace(/\r\n/g, "\n");
     }
   });
-  app3.addEventListener("click", async (ev) => {
-    const el = ev.target.closest("[data-action],[data-tab]");
-    if (!el) return;
-    if (el.dataset.tab) {
-      await open(el.dataset.tab);
+  const followForm = (id, releases) => `<form id="${releases ? "follow-releases" : "follow"}" data-id="${e(id)}">${say2(releases ? "Their releases, in Look\u2019s saved points: the same follow list as Dub\u2019s, here it filters." : "Added to the follow list Dub, Edubba and Ummia read.", ["The follow list is sealed to you at your homes: nobody else can read it, nor the name you give."])}<p>${idCopy(id)}</p><label>Their name here (optional, never published)</label><input name="name" maxlength="64" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">${releases ? "Follow their releases" : "Add to contacts"}</button></div></form>`;
+  async function partHtml() {
+    const s = state;
+    if (tab === "look") {
+      if (part === "page") return pageForm();
+      if (part === "acts") return actsForm();
+      if (part === "saved-none") return `<h2>Saved points</h2><p class="k-soft">None yet. Point Look somewhere and press \u201CSave this point\u201D, or choose \u201CFollow their releases\u201D in a signer\u2019s menu: a developer\u2019s releases, from the same follow list Dub reads.</p>`;
+      if (page) {
+        const p = await b.ask("spec page", { hash: page });
+        return specPagePane(p, nameOf2);
+      }
+      const saved = part.startsWith("saved:") ? s.saved.find((x) => `saved:${x.key}` === part) ?? null : null;
+      const here = saved ? { point: { kind: saved.point.kind, value: saved.point.value }, filters: saved.filters, layer: null } : at;
+      const head = lookHead(here, s, saved);
+      if (here.point.kind === "release" && !here.point.value) return `${head}${feedBox({ id: "look-feed", cards: "", empty: "Name a release by its act ID, then Look." })}`;
+      if (here.point.kind === "id" && !here.point.value) return `${head}${feedBox({ id: "look-feed", cards: "", empty: "Name an identity by its ID, then Look." })}`;
+      const l = await b.ask("look", { point: here.point, filters: here.filters, layer: here.layer ?? "" });
+      return `${head}${l.lines.length ? lines(l.lines) : ""}${feedBox({ id: "look-feed", cards: l.items.map(itemCard).join(""), empty: "Nothing found there with these filters." })}${lookFoot(l.limit, l.counts, l.ordered)}`;
+    }
+    if (tab === "discuss") {
+      if (part === "mip-new") return mipNew((await b.ask("mips")).forkable);
+      if (part === "reports") return reportsPane(await b.ask("reports"));
+      if (part === "threads") {
+        const t = await b.ask("discussions");
+        return `<h2>Discussions</h2>${say2("The threads started here and the MIP drafts published for discussion, each with its replies.", ["A reply comes from any app: Dub\u2019s replies are plain posts; here, a reply is a signed document. Replies are found in your inbox and on the relays you name."])}${lines(t.lines)}${t.threads.map(
+          (x) => `<div class="k-box" data-thread="${e(x.id)}"><div class="k-row"><h3 class="k-grow">${e(x.title)}</h3>${actCopy(x.id)}</div>${x.spec ? `<div class="k-row">${hashCopy(x.spec, false, "about")}<button type="button" class="k-btn k-q k-small" data-spec="${e(x.spec)}">Its page</button></div>` : ""}<div class="k-feed">${x.replies.map((r) => cardOf({ id: r.id, form: formOf2(r.id), signer: who(r.signer), kind: r.sealed ? "sent to you" : null, text: r.text, verified: r.standing === "valid", alarm: r.standing === "valid" ? null : r.standing, own: r.mine })).join("") || '<p class="k-empty">No reply found yet.</p>'}</div><div class="k-row"><button type="button" class="k-btn" data-action="reply-open" data-to="${e(x.id)}" data-title="${e(x.title)}">Reply, as a signed document</button></div></div>`
+        ).join("") || '<p class="k-empty">No discussion yet: a thread is started with a specification\u2019s card (Publish), and a MIP draft is published for discussion here.</p>'}`;
+      }
+      return mipsPane(await b.ask("mips"), openMip);
+    }
+    if (tab === "publish") {
+      if (part === "spec") return specPane(s, await b.ask("spec choices"));
+      if (part === "anchoring") {
+        const r2 = await b.ask("releases");
+        return anchoringPane(r2.anchors, r2.anchorSay, b.web);
+      }
+      if (part === "published") {
+        const p = await b.ask("published here");
+        const r2 = s.releases ? await b.ask("releases").catch(() => ({ releases: [] })) : { releases: [] };
+        return `<h2>Published here</h2>${say2("What this identity published from Ummia: specifications with their cards, releases.", ["A specification stays as published; its card can be signed again whenever something new arrives, and the latest counts."])}
+<h3>Specifications</h3><div class="k-feed">${p.specs.map((x) => {
+          const cs = p.cards.filter((c) => c.spec === x.hash);
+          const th = p.discussions.find((d) => d.spec === x.hash);
+          return cardOf({ id: x.id, form: formOf2(x.id), signer: who(meId()), kind: x.kind, text: `${cs[cs.length - 1]?.title ?? x.name}${cs.length ? `
+Its card, signed ${cs.length} time${cs.length === 1 ? "" : "s"}` : "\nNo card yet"}`, html: `<div class="ummia-acts">${hashCopy(x.hash)}<button type="button" class="k-btn k-q k-small" data-spec="${e(x.hash)}">Its page</button><button type="button" class="k-btn k-small${cs.length ? "" : " k-p"}" data-action="card-new" data-hash="${e(x.hash)}" data-title="${e(cs[cs.length - 1]?.title ?? x.name)}" data-discussion="${e(th?.id ?? "")}">${cs.length ? "A later card" : "Its card"}</button></div>`, verified: true, own: true });
+        }).join("") || '<p class="k-empty">None yet.</p>'}</div>
+<h3>Releases</h3>${r2.releases.length ? `<ul class="ummia-list">${r2.releases.map((x) => `<li><span class="k-grow">${e(x.name)} ${e(x.version)}</span>${actCopy(x.id)}</li>`).join("")}</ul>` : '<p class="k-empty">None from here.</p>'}`;
+      }
+      const r = s.releases ? await b.ask("releases") : null;
+      return releasePane(s, r);
+    }
+    if (tab === "choose") {
+      if (part === "accept-hash") return `<h2>Accept by hash</h2>${acceptForm()}`;
+      const a = await b.ask("accepted");
+      return choosePane(a, part.startsWith("layer:") ? part.slice(6) : null);
+    }
+    return "";
+  }
+  let adding = false;
+  function panelHtml(inside) {
+    const s = state;
+    const ids = s.held.map((h) => ({
+      id: h.id,
+      form: formOf2(h.id, "mid"),
+      name: h.runner ? "via Ki\u0161ib" : shortForm(formOf2(h.id, "mid")),
+      on: h.active && !actingOf(s),
+      collectives: h.active ? s.actors.filter((c) => c.kind === "collective").map((c) => ({ id: c.id, form: formOf2(c.id, "mid"), name: `Collective ${shortForm(formOf2(c.id, "mid"))}`, on: s.acting === c.id, why: c.available ? null : c.why })) : []
+    }));
+    return identityPanel({ ids, adding, add: ADD(b.web), foot: `<button type="button" class="k-btn k-q k-small" data-action="relays-open">Relays</button> <span class="k-small k-soft">${b.web ? "This browser: the web client, for testing only." : "This app: Ummia on this computer."}</span>`, inside });
+  }
+  function openIdentityPanel(inside) {
+    if (panelOpen()) redrawPanel(panelHtml(inside));
+    else openPanel(app2, panelHtml(inside));
+  }
+  async function identityMenu(button, id) {
+    const runner = state?.held.find((h) => h.id === id)?.runner;
+    const items = IDENTITY_MENU.filter(([k]) => runner ? k !== "renew" && k !== "words" : true).map(([key, label, hint], i, all2) => ({ key, label, hint: hint || void 0, line: i === all2.length - 1 }));
+    popAt(button, `<div class="k-pop" role="menu"><div class="k-t">${e(shortForm(formOf2(id, "mid")))}</div>${items.map((m) => `${m.line ? "<hr>" : ""}<button type="button" role="menuitem" data-k-item="${m.key}">${e(m.label)}${m.hint ? `<span class="k-k">${e(m.hint)}</span>` : ""}</button>`).join("")}</div>`, "below", async (key) => {
+      if (id !== state?.identity?.id && key !== "remove") {
+        await act(() => b.ask("use", { id }));
+        state = await b.ask("state");
+      }
+      if (key === "remove") return void redrawPanel(panelHtml(removeSaid("Ummia", shortForm(formOf2(id, "mid"))).replace("data-k-remove>", `data-k-remove data-id="${e(id)}">`)));
+      closePanel();
+      if (key === "words") {
+        const c = await act(() => b.ask("carry"));
+        if (c) popup2.show("The signing key\u2019s words", wordsShown(c));
+      } else if (key === "line") popup2.show("Line and homes", lineShown(state));
+      else if (key === "renew") popup2.show("New words from Ki\u0161ib", renewForm());
+      else if (key === "collective") popup2.show("A collective under it", collectiveForm(state));
+    });
+  }
+  async function addPart(k) {
+    if (state?.stage === "identity") {
+      app2.innerHTML = firstScreen(b.web, k);
+      if (k === "kishib") await runnerPart($("first-part"));
       return;
     }
+    closePanel();
+    const body = popup2.show(k === "bring" ? "Bring an identity" : "Use one from Ki\u0161ib", k === "bring" ? bringForm() : '<p class="k-small k-soft">Reading Ki\u0161ib\u2019s runner\u2026</p>');
+    if (k === "kishib") await runnerPart(body);
+  }
+  async function runnerPart(into) {
+    const r = await raw("runner").catch((e3) => ({ available: true, origin: null, state: null, code: null, identities: [], problem: errorOf(e3) }));
+    if (into.isConnected) into.innerHTML = runnerForm(r);
+  }
+  async function go(t, p) {
+    [tab, part] = [t, p];
+    if (t !== "look" || p !== "feed") page = null;
+    await draw();
+  }
+  async function openPage(hash) {
+    popup2.close();
+    page = hash;
+    [tab, part] = ["look", "feed"];
+    await draw();
+  }
+  async function lookAgain() {
+    page = null;
+    if (part !== "feed" && !part.startsWith("saved:")) part = "feed";
+    await draw();
+  }
+  attachColumn(app2, async (key) => {
+    part = key;
+    page = null;
+    keepAt();
+    const p = pane();
+    if (p) p.innerHTML = '<p class="k-empty">Reading\u2026</p>';
+    await fill();
+  });
+  app2.addEventListener("click", async (ev) => {
+    const t = ev.target;
+    const tile = t.closest("[data-k-tile]");
+    if (tile) return void await go(tile.dataset.kTile, firstPart(tile.dataset.kTile));
+    const tb = t.closest("[data-tab]");
+    if (tb) return void await go(tb.dataset.tab, firstPart(tb.dataset.tab));
+    const cp = t.closest("[data-copy]");
+    if (cp) {
+      const ok = await copy(cp.dataset.copy ?? "");
+      cp.textContent = ok ? "Copied" : "Select it and copy it";
+      cp.dataset.copied = ok ? "yes" : "no";
+      return;
+    }
+    const sp = t.closest("[data-spec]");
+    if (sp) return void await openPage(sp.dataset.spec);
+    const pr = t.closest("[data-point-release]");
+    if (pr) {
+      popup2.close();
+      at = { point: { kind: "release", value: formOf2(pr.dataset.pointRelease) }, filters: ["releases"], layer: null };
+      return void await go("look", "feed");
+    }
+    const pid = t.closest("[data-point-id]");
+    if (pid) {
+      popup2.close();
+      at = { ...at, point: { kind: "id", value: formOf2(pid.dataset.pointId, "mid") } };
+      return void await go("look", "feed");
+    }
+    const fr = t.closest("[data-follow-releases]");
+    if (fr) return void popup2.show("Follow their releases", followForm(fr.dataset.followReleases, true));
+    const pt = t.closest("[data-k-point]");
+    if (pt && tab === "look") {
+      const kind = pt.dataset.kPoint;
+      at = { ...at, point: { kind, value: kind === at.point.kind ? at.point.value : kind === "relay" ? "" : "" }, filters: kind === "release" ? ["releases"] : at.point.kind === "release" ? [...EVERY] : at.filters };
+      if (part.startsWith("saved:")) part = "feed";
+      return void await lookAgain();
+    }
+    const fl = t.closest("[data-k-filter]");
+    if (fl && tab === "look") {
+      const f = fl.dataset.kFilter;
+      at = { ...at, filters: at.filters.includes(f) ? at.filters.filter((x) => x !== f) : [...at.filters, f] };
+      if (part.startsWith("saved:")) part = "feed";
+      return void await lookAgain();
+    }
+    const ly = t.closest("[data-k-layer]");
+    if (ly && tab === "look") {
+      at = { ...at, layer: ly.dataset.kLayer || null };
+      if (part.startsWith("saved:")) part = "feed";
+      return void await lookAgain();
+    }
+    const sr = t.closest("[data-saved-remove]");
+    if (sr) {
+      const r = await act(() => b.ask("saved remove", { key: sr.dataset.savedRemove }));
+      if (r) state = await b.ask("state"), part = "feed", await draw(), done(r);
+      return;
+    }
+    const ac = t.closest("[data-acting]");
+    if (ac) {
+      const r = await act(() => b.ask("acting", { id: ac.dataset.acting }));
+      if (r) state = await b.ask("state"), await draw(), done(r);
+      return;
+    }
+    if (t.closest('[data-k-open="identity"]')) {
+      adding = false;
+      return openIdentityPanel();
+    }
+    const add = t.closest("[data-k-add]");
+    if (add) {
+      if (add.dataset.kAdd === "toggle") {
+        adding = !adding;
+        return void redrawPanel(panelHtml());
+      }
+      return void await addPart(add.dataset.kAdd);
+    }
+    const first = t.closest("[data-add]");
+    if (first) return void await addPart(first.dataset.add);
+    const use = t.closest("[data-k-use]");
+    if (use) {
+      const id2 = use.dataset.kUse;
+      closePanel();
+      if (use.dataset.kUnder) {
+        const r = await act(() => b.ask("acting", { id: state?.acting === id2 ? meId() : id2 }));
+        if (r) state = await b.ask("state"), await draw(), done(r);
+        return;
+      }
+      if (id2 === meId()) {
+        if (state?.acting !== id2) await act(() => b.ask("acting", { id: id2 }));
+      } else await act(() => b.ask("use", { id: id2 }));
+      return void await show(await b.ask("state"));
+    }
+    const menu2 = t.closest("[data-k-idmenu]");
+    if (menu2) return void await identityMenu(menu2, menu2.dataset.kIdmenu);
+    if (t.closest("[data-k-remove-no]")) return void redrawPanel(panelHtml());
+    const yes = t.closest("[data-k-remove-yes]");
+    if (yes) {
+      const id2 = yes.closest("[data-k-remove]")?.dataset.id ?? meId();
+      closePanel();
+      await act(() => b.ask("forget", { id: id2 }));
+      return void await show(await b.ask("state"));
+    }
+    const take = t.closest("[data-runner-take]");
+    if (take) {
+      const r = await act(() => raw("runner take", { id: take.dataset.runnerTake }));
+      if (r) popup2.close(), await show(await b.ask("state")), done(r);
+      return;
+    }
+    const el = t.closest("[data-action]");
+    if (!el) return;
     const a = el.dataset.action;
     const id = el.dataset.id ?? "";
     switch (a) {
-      case "window":
-        screen = "window";
-        await show(await b.ask("state"));
+      case "status-close":
+        $("status").innerHTML = "";
         return;
-      case "back":
-        screen = "app";
-        await show(await b.ask("state"));
-        return;
-      case "carry": {
-        const c = await act(() => b.ask("carry"));
-        if (c) app3.innerHTML = carry(c, b.web);
-        return;
-      }
-      case "use":
-      case "forget":
-      case "leave": {
-        if (a === "forget" && !confirm("Forget this identity here? Its key and its book go from this app. What it signed stays where it was sent.")) return;
-        await act(() => b.ask(a, { id }));
-        screen = a === "use" ? "app" : "window";
-        await show(await b.ask("state"));
+      case "home-tiles":
+        tab = null;
+        page = null;
+        return void await draw();
+      case "look-back":
+        page = null;
+        return void await fill();
+      case "relays-open":
+        closePanel();
+        return void popup2.show("Relays", relaysForm(state));
+      case "runner-pair": {
+        const r = await act(() => raw("runner pair"));
+        if (r) await runnerPart(el.closest("#first-part, .k-mbody"));
         return;
       }
+      case "runner-look":
+        return void await runnerPart(el.closest("#first-part, .k-mbody"));
+      case "save-point": {
+        const label = at.point.kind === "contacts" ? "My contacts" : at.point.kind === "relay" ? (at.point.value || "Every relay").replace(/^https?:\/\//, "") : `${at.point.kind === "release" ? "Release line" : "ID"} ${shortForm(/^[0-9a-f]{64}$/.test(at.point.value) ? formOf2(at.point.value, at.point.kind === "id" ? "mid" : "mact") : at.point.value)}`;
+        const r = await act(() => b.ask("saved add", { label, point: at.point, filters: at.filters }));
+        if (r) state = await b.ask("state"), await draw(), done(r);
+        return;
+      }
+      case "card-new":
+        return void popup2.show(el.dataset.discussion !== void 0 || el.textContent?.includes("later") ? "A later card" : "Its card", cardForm({ hash: el.dataset.hash, title: el.dataset.title ?? "", discussion: el.dataset.discussion || null, later: /later/i.test(el.textContent ?? ""), limits: { title: 120, summary: 600 } }));
+      case "card-skip":
+        el.closest("#card-offer")?.remove();
+        popup2.close();
+        return;
+      case "reply-open":
+        return void popup2.show("Reply", replyForm(el.dataset.to, el.dataset.title ?? "its thread"));
+      case "accept-hash":
+        return void popup2.show("Add to accepted list", acceptForm(el.dataset.hash, el.dataset.label));
+      case "accept-hash-open":
+        return void popup2.show("Accept by hash", acceptForm());
       case "confirm":
       case "release confirm": {
         const r = await act(() => b.ask(a, { plan: el.dataset.plan, digest: el.dataset.digest }));
-        if (r) {
-          state = await b.ask("state");
-          await open(tab);
-          done(r);
+        if (!r) return;
+        state = await b.ask("state");
+        const was = reviewing;
+        reviewing = null;
+        if (was?.kind === "spec" && r.hash) {
+          const into = el.closest("#spec-review");
+          if (into) {
+            into.innerHTML = `${note("done", `<b>${e(r.title)}</b>${lines(r.lines)}`)}${cardForm({ hash: r.hash, title: was.title, later: false, limits: { title: 120, summary: 600 } })}`;
+            void readCounts();
+            return;
+          }
         }
+        if (popup2.open) popup2.close();
+        await fill();
+        void readCounts();
+        done(r);
         return;
       }
       case "cancel":
@@ -11412,8 +13569,7 @@ function mount(app3, b) {
         return;
       }
       case "folder use":
-        await useFolder(el.dataset.path ?? "");
-        return;
+        return void await useFolder(el.dataset.path ?? "");
       case "release standing": {
         const c = await act(() => b.ask("collective release standing", { id }));
         if (c) $(`check-${id}`).innerHTML = lines(c.lines);
@@ -11429,156 +13585,236 @@ function mount(app3, b) {
         if (x) $(`anchor-${id}`).innerHTML = anchorForm(id, null, x.anchorSay);
         return;
       }
-      case "accept spec": {
-        const r = await act(() => b.ask("accepted change", { add: [{ hash: el.dataset.hash, label: el.dataset.label }] }));
-        if (r) {
-          acceptedNow.add(el.dataset.hash);
-          el.replaceWith(Object.assign(document.createElement("span"), { className: "small", textContent: "Accepted" }));
-          done(r);
-        }
-        return;
-      }
       case "accepted remove": {
         const r = await act(() => b.ask("accepted change", { remove: [el.dataset.hash] }));
-        if (r) {
-          await open("accepted");
-          done(r);
-        }
+        if (r) await fill(), done(r);
         return;
       }
       case "accepted publish": {
         const r = await act(() => b.ask("accepted publish", { on: el.dataset.on === "true" }));
-        if (r) {
-          await open("accepted");
-          done(r);
-        }
+        if (r) await fill(), done(r);
         return;
       }
       case "mip draft": {
         const r = await act(() => b.ask("mip draft", { key: el.dataset.key }));
-        if (r) {
-          await open("mips");
-          done(r);
-        }
+        if (r) await fill(), void readCounts(), done(r);
         return;
       }
       case "mip replies": {
         const r = await act(() => b.ask("mip replies", { key: el.dataset.key }));
-        if (r) $(`mip-out-${el.dataset.key}`).innerHTML = replies2(r);
+        const box2 = $(`mip-out-${el.dataset.key}`);
+        if (r && box2) {
+          const all2 = Object.values(r.replies).flat();
+          box2.innerHTML = `${lines(r.lines)}<div class="k-feed">${all2.map((x) => cardOf({ id: x.id, form: formOf2(x.id), signer: who(x.signer), kind: x.sealed ? "sent to you" : null, text: x.text, verified: x.standing === "valid", alarm: x.standing === "valid" ? null : x.standing })).join("") || '<p class="k-empty">No reply found yet.</p>'}</div>`;
+          for (const c of cards) drawn.set(c.act.id, c);
+          cards = [];
+        }
         return;
       }
       case "mip prepare": {
         const r = await act(() => b.ask("mip prepare", { key: el.dataset.key }));
-        if (r) $(`mip-out-${el.dataset.key}`).innerHTML = review(r);
+        if (r) {
+          reviewing = { kind: "mip", title: r.title };
+          $(`mip-out-${el.dataset.key}`).innerHTML = review(r);
+        }
         return;
       }
     }
   });
-  app3.addEventListener("submit", async (ev) => {
+  async function useFolder(path) {
+    const f = $("release");
+    const s = await act(() => b.ask("release suggest", { folder: path }));
+    if (f && s) {
+      f.elements.namedItem("folder").value = s.folder;
+      f.elements.namedItem("name").value = s.name;
+      f.elements.namedItem("previous").value = s.previous ?? "";
+      $("picker").innerHTML = "";
+      $("folder-said").textContent = `${s.folder}: ${s.how === "git" ? "a git folder: the files git tracks there." : "a plain folder: every file but hidden ones."}`;
+    }
+  }
+  app2.addEventListener("change", async (ev) => {
+    const el = ev.target;
+    if (el.name === "folder" && el.closest("form#release") && el.value.trim()) return void await useFolder(el.value);
+    if (el.id === "spec-file" && el.files?.[0]) {
+      const text3 = await el.files[0].text();
+      const area = (el.form ?? app2).querySelector("textarea[name=text]");
+      if (area) area.value = text3.replace(/\r\n/g, "\n");
+    }
+  });
+  const str = (fd, k) => String(fd.get(k) ?? "");
+  const all = (fd, k) => fd.getAll(k).map(String);
+  const rows = (fd, k) => str(fd, k).split("\n").map((x) => x.trim()).filter(Boolean);
+  app2.addEventListener("submit", async (ev) => {
     const f = ev.target;
     const fid = f.getAttribute("id");
     if (fid === "pair") return;
     ev.preventDefault();
     const fd = new FormData(f);
-    if (fid === "collective-add") {
-      const r = await act(() => b.ask("collective add", { id: str(fd, "collective") }));
-      if (r) {
-        state = await b.ask("state");
-        await show(state);
-        done(r);
+    switch (fid) {
+      case "bring": {
+        const r = await act(() => b.ask("bring", { id: str(fd, "id"), words: str(fd, "words"), address: str(fd, "address"), relays: str(fd, "relays") }));
+        if (r) popup2.close(), await show(await b.ask("state")), done(r);
+        return;
       }
-      return;
+      case "renew": {
+        const r = await act(() => b.ask("renew", { words: str(fd, "words") }));
+        if (r) popup2.close(), app2.querySelector("#spent")?.remove(), app2.querySelector("#spent-words")?.remove(), await show(await b.ask("state")), done(r);
+        return;
+      }
+      case "collective-add": {
+        const r = await act(() => b.ask("collective add", { id: str(fd, "collective") }));
+        if (r) {
+          state = await b.ask("state");
+          popup2.replace(collectiveForm(state))?.insertAdjacentHTML("afterbegin", note("done", lines(r.lines)));
+        }
+        return;
+      }
+      case "relays": {
+        const r = await act(() => b.ask("settings", { relays: str(fd, "relays"), track: str(fd, "track") }));
+        if (r) state = await b.ask("state"), popup2.close(), done(r);
+        return;
+      }
+      case "reporting": {
+        const r = await act(() => b.ask("settings", { reports: str(fd, "reports") }));
+        if (r) state = await b.ask("state"), await fill(), done(r);
+        return;
+      }
+      case "look": {
+        at = { ...at, point: { kind: at.point.kind, value: str(fd, "value") } };
+        page = null;
+        if (part.startsWith("saved:")) part = "feed";
+        return void await act(() => fill());
+      }
+      case "page": {
+        const box2 = $("page-out");
+        const p = await act(() => b.ask("spec page", { hash: str(fd, "hash") }));
+        if (p && box2) {
+          page = p.hash;
+          [tab, part] = ["look", "feed"];
+          await draw();
+        }
+        return;
+      }
+      case "acts": {
+        const r = await act(() => b.ask("acts of", { spec: str(fd, "spec"), type: str(fd, "type"), signer: str(fd, "signer") }));
+        if (r) $("acts-out").innerHTML = acts(r);
+        return;
+      }
+      case "follow":
+      case "follow-releases": {
+        const r = await act(() => b.ask(fid === "follow" ? "follow" : "follow releases", { id: f.dataset.id, name: str(fd, "name") }));
+        if (r) {
+          popup2.close();
+          state = await b.ask("state");
+          if (tab) await draw();
+          done(r);
+        }
+        return;
+      }
+      case "accept-add": {
+        const r = await act(() => b.ask("accepted change", { add: [{ hash: str(fd, "hash"), label: str(fd, "label") }] }));
+        if (r) {
+          if (popup2.open) popup2.close();
+          if (tab === "choose") {
+            part = "every";
+            await draw();
+          }
+          done(r);
+        }
+        return;
+      }
+      case "rely": {
+        const r = await act(() => b.ask("rely", { id: f.dataset.id, typed: str(fd, "typed") }));
+        if (r) popup2.close(), done(r);
+        return;
+      }
+      case "release": {
+        const r = await act(() => b.ask("release prepare", { folder: str(fd, "folder"), name: str(fd, "name"), version: str(fd, "version"), previous: str(fd, "previous"), implements: str(fd, "implements") }));
+        if (r) {
+          reviewing = { kind: "release", title: r.title };
+          $("release-review").innerHTML = review(r, "release confirm");
+        }
+        return;
+      }
+      case "spec": {
+        const r = await act(
+          () => b.ask("spec prepare", {
+            kind: Number(str(fd, "kind")),
+            text: str(fd, "text"),
+            tasks: all(fd, "tasks"),
+            types: str(fd, "types"),
+            implements: str(fd, "implements"),
+            predecessor: str(fd, "predecessor"),
+            dependencies: str(fd, "dependencies"),
+            layers: all(fd, "layers"),
+            railKind: str(fd, "railKind"),
+            railBinds: all(fd, "railBinds"),
+            checker: fd.get("checker") === "on"
+          })
+        );
+        if (r) {
+          const first = str(fd, "text").split("\n").find((l) => /\p{L}/u.test(l)) ?? "";
+          reviewing = { kind: "spec", title: first.replace(/^#+\s*/, "").replace(/^(cMIP|Module):\s*/, "").trim().slice(0, 120) };
+          $("spec-review").innerHTML = review(r);
+        }
+        return;
+      }
+      case "card": {
+        const r = await act(() => b.ask("card prepare", { spec: f.dataset.hash, title: str(fd, "title"), summary: str(fd, "summary"), releases: rows(fd, "releases"), vectors: rows(fd, "vectors"), discussion: fd.get("thread") === "on" ? "new" : str(fd, "discussion") }));
+        if (r) {
+          reviewing = { kind: "card", title: r.title };
+          const box2 = f.parentElement?.querySelector("#card-review") ?? $("card-review");
+          if (box2) box2.innerHTML = review(r);
+        }
+        return;
+      }
+      case "reply": {
+        const r = await act(() => b.ask("reply", { to: f.dataset.to, text: str(fd, "text") }));
+        if (r) popup2.close(), tab === "discuss" && await fill(), done(r);
+        return;
+      }
+      case "mip-new": {
+        const forks = str(fd, "forks") || str(fd, "hash");
+        const r = await act(() => b.ask("mip new", { title: str(fd, "title"), forks }));
+        if (r) {
+          openMip = r.key;
+          await go("discuss", "mips");
+          void readCounts();
+        }
+        return;
+      }
+      case "report": {
+        const r = await act(() => b.ask("report send", { text: str(fd, "text") }));
+        if (r) await fill(), done(r);
+        return;
+      }
     }
-    if (fid === "bring") {
-      const r = await act(() => b.ask("bring", { id: str(fd, "id"), words: str(fd, "words"), address: str(fd, "address"), relays: str(fd, "relays") }));
+    if (f.classList.contains("mip-text")) {
+      const r = await act(() => b.ask("mip save", { key: f.dataset.key, text: str(fd, "text") }));
       if (r) {
-        screen = "app";
-        await show(await b.ask("state"));
-        done(r);
+        openMip = f.dataset.key;
+        $(`mip-out-${f.dataset.key}`).innerHTML = lines(r.lines);
       }
-    } else if (fid === "renew") {
-      const r = await act(() => b.ask("renew", { words: str(fd, "words") }));
-      if (r) {
-        screen = "app";
-        await show(await b.ask("state"));
-        done(r);
-      }
-    } else if (fid === "release") {
-      reviewOp = "release confirm";
-      const r = await act(() => b.ask("release prepare", { folder: str(fd, "folder"), name: str(fd, "name"), version: str(fd, "version"), previous: str(fd, "previous"), implements: str(fd, "implements") }));
-      if (r) $("release-review").innerHTML = review(r, reviewOp);
     } else if (f.classList.contains("anchor")) {
       const release = f.dataset.release;
       const choice = str(fd, "choice");
+      const into = f.parentElement;
       if (!choice) {
         const offers2 = await act(() => b.ask("anchor offers", { service: str(fd, "service") }));
         const x = await b.ask("releases");
         if (offers2) {
-          $(`anchor-${release}`).innerHTML = anchorForm(release, offers2, x.anchorSay);
-          $(`anchor-${release}`).querySelector("input[name=service]").value = str(fd, "service");
+          into.innerHTML = anchorForm(release, offers2, x.anchorSay);
+          into.querySelector("input[name=service]").value = str(fd, "service");
         }
         return;
       }
       const [offer, tier] = choice.split(" ");
       const r = await act(() => b.ask("anchor ask", { release, service: str(fd, "service"), offer, tier: Number(tier) }));
       if (r) {
-        await open("releases");
-        done(r);
-      }
-    } else if (fid === "spec") {
-      const r = await act(
-        () => b.ask("spec prepare", {
-          kind: Number(str(fd, "kind")),
-          text: str(fd, "text"),
-          tasks: all(fd, "tasks"),
-          types: str(fd, "types"),
-          implements: str(fd, "implements"),
-          predecessor: str(fd, "predecessor"),
-          dependencies: str(fd, "dependencies"),
-          layers: all(fd, "layers"),
-          railKind: str(fd, "railKind"),
-          railBinds: all(fd, "railBinds"),
-          checker: fd.get("checker") === "on"
-        })
-      );
-      if (r) $("spec-review").innerHTML = review(r);
-    } else if (fid === "track") {
-      const out = $("track-out");
-      out.innerHTML = '<p class="empty">Asking the relays\u2026</p>';
-      const t = await act(() => b.ask("track", { relays: str(fd, "relays"), signer: str(fd, "signer") }));
-      out.innerHTML = t ? tracked(t, acceptedNow) : "";
-    } else if (fid === "acts") {
-      const r = await act(() => b.ask("acts of", { spec: str(fd, "spec"), type: str(fd, "type"), signer: str(fd, "signer") }));
-      if (r) $("acts-out").innerHTML = acts(r);
-    } else if (fid === "mip-new") {
-      const forks = str(fd, "forks") || str(fd, "hash");
-      const r = await act(() => b.ask("mip new", { title: str(fd, "title"), forks }));
-      if (r) {
-        openMip = r.key;
-        await open("mips");
-      }
-    } else if (f.classList.contains("mip-text")) {
-      const r = await act(() => b.ask("mip save", { key: f.dataset.key, text: str(fd, "text") }));
-      if (r) {
-        openMip = f.dataset.key;
-        $(`mip-out-${f.dataset.key}`).innerHTML = lines(r.lines);
-      }
-    } else if (fid === "report") {
-      const r = await act(() => b.ask("report send", { text: str(fd, "text") }));
-      if (r) {
-        await open("reports");
-        done(r);
-      }
-    } else if (fid === "accept-add") {
-      const r = await act(() => b.ask("accepted change", { add: [{ hash: str(fd, "hash"), label: str(fd, "label") }] }));
-      if (r) {
-        await open("accepted");
-        done(r);
-      }
-    } else if (fid === "settings") {
-      const r = await act(() => b.ask("settings", { relays: str(fd, "relays"), track: str(fd, "track"), reports: str(fd, "reports") }));
-      if (r) {
+        if (popup2.open) popup2.close();
         state = await b.ask("state");
+        void readCounts();
+        if (tab === "publish") await fill();
         done(r);
       }
     }
@@ -11659,25 +13895,25 @@ var WebKeep = class _WebKeep {
 };
 
 // src/web/app.ts
-var app2 = document.getElementById("app");
+var app = document.getElementById("app");
 var ummia;
 var ask2 = (op, a = {}) => run(ummia, op, a);
-var ui = mount(app2, { web: true, ask: ask2, start });
+var ui = mount(app, { web: true, ask: ask2, start });
 async function start() {
   if (!window.isSecureContext || !crypto?.getRandomValues || !window.indexedDB) {
-    app2.innerHTML = `${top2(true)}${note2("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.")}`;
+    app.innerHTML = `${top0(true)}${note("error", "This page keeps a key in the browser, which browsers allow only over https (or on the machine itself), and only where their storage is open to it.")}`;
     return;
   }
   try {
     ummia ??= new Ummia(await WebKeep.open(), { web: true, releases: null, chain: null });
   } catch (err) {
-    app2.innerHTML = `${top2(true)}${note2("error", `This browser does not let the page keep anything (${e(err instanceof Error ? err.message : String(err))}).`)}`;
+    app.innerHTML = `${top0(true)}${note("error", `This browser does not let the page keep anything (${e(err instanceof Error ? err.message : String(err))}).`)}`;
     return;
   }
   try {
     await ui.show(await ummia.state());
   } catch (err) {
-    app2.innerHTML = `${top2(true)}${note2("error", e(err instanceof Error ? err.message : String(err)))}`;
+    app.innerHTML = `${top0(true)}${note("error", e(err instanceof Error ? err.message : String(err)))}`;
   }
 }
 void start();

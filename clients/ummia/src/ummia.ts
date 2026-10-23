@@ -29,21 +29,30 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { SPECS, base64, describeAct, hex, readTerms, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
+import { SPECS, WITNESS_EXPLANATION, base64, describeAct, hex, readTerms, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
 import { lineReader, noLine, sendWaiting, type LineAtHomes } from '../../genesis/src/private.ts';
 import { TestIdentity, TEST_LABEL, freshLines, type IdentityFile } from '../../genesis/src/identity.ts';
-import { lookUp } from '../../genesis/src/lookup.ts';
+import { lookUp, referTo } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { AGREEMENTS_SPECS } from '../../repo/src/agreements.ts';
 import { REPO_SPECS } from '../../repo/src/specs.ts';
 import { negotiate } from '../../repo/src/proposals.ts';
 import { chainFor, collectiveNow, judgeCollective, memberKeyFor, publishAt, readMemberKeys, signAsMember, type MemberKey } from '../../grants/src/member.ts';
 import { Refused, fromWords, groupId, toWords } from '../../../modules/carry/src/carry.ts';
-import { readId } from '../../genesis/src/forms.ts';
+import { actForm, readId } from '../../genesis/src/forms.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { changeAccepted, publishAccepted, readAccepted } from '../../damgar/src/accepted.ts';
 import { OURS as DAMGAR_PART, labelOf as damgarLabel } from '../../damgar/src/specs.ts';
 import type { ChainSource } from '../../damgar/src/chain.ts';
+import type { RunnerLink } from '../../dub/src/runner.ts';
+import { clockWords } from '../../barebone/src/clock.ts';
+import { idForm } from '../../genesis/src/forms.ts';
+import { CARD_SAY, LIMITS, builtIn, cardText, readCardText, publishCard, publishDiscussion, readActId, type CardFields } from './cards.ts';
+import { contacts as readContacts, follow as followIn, FOLLOW_SAY } from './follows.ts';
+import { FILTERS, look as lookAt, specPage, type Filter, type Looked, type PointKind, type SpecPage } from './look.ts';
+import { textPayload as longformPayload } from '../../longform/src/act.ts';
+import { leaveInInbox } from '../../barebone/src/post.ts';
+import { LONGFORM_SPECS, TEXT_ACT as LONGFORM_TEXT_ACT } from '../../longform/src/specs.ts';
 import { actors, chosen } from './acting.ts';
 import { ANCHOR_SAY, ask as askAnchor, offers as anchorOffers, standing as anchorStanding, type Asked, type AnchorShown, type Offer } from './anchor.ts';
 import { FORKABLE, MIP_SAY, publishDraft, replies as mipReplies, shapeOf, template, type MipDraft, type Reply } from './mips.ts';
@@ -64,6 +73,12 @@ export const LINE_SAY =
 /** Said when a rotation made elsewhere counts. Its first words are how the page knows it. */
 export const SPENT_SAY =
   'This identity’s signing key was changed elsewhere, with its chain key, so the signing key’s words Ummia holds no longer count. Nothing was signed. To go on here, give Ummia the new signing key’s words.';
+
+/** Said where Kišib's runner still holds the old signing key after a change of keys (the Dubsar runner cMIP, 3.5 and 7.4). */
+export const RUNNER_OLD_KEY_SAY = 'This identity’s keys were changed with its chain key, and Kišib’s runner still holds the old signing key: nothing was signed. Give the runner the new signing key’s words, in Kišib (Runner, Identities held here). Ummia then goes on, in new lines.';
+
+/** Said where an identity is used through Kišib's runner. */
+export const RUNNER_HOLDS_SAY = 'Kišib’s runner holds this identity’s signing key, on this Mac; Ummia holds none of its keys. Every act Ummia would sign for it is shown first in Kišib’s panel, inside Ummia’s window. What is sealed to it (the accepted list, the follow list) does not open here.';
 
 /** Said where an encryption key is not held. */
 export const NO_KEY_SAY =
@@ -88,6 +103,16 @@ export interface Settings {
   acting?: string | null;
   /** The collectives this identity acts for here, with its own key (round 2, F353). */
   collectives?: { id: string; available: boolean; why: string | null }[];
+  /** Look's saved points (decided: a release line, a developer's releases; "the same follow list, but here it filters"). */
+  saved?: Saved[];
+}
+
+/** A saved point of Look: what it points at, and what it shows. */
+export interface Saved {
+  key: string;
+  label: string;
+  point: { kind: PointKind; value: string };
+  filters: Filter[];
 }
 
 /** A specification published from here. */
@@ -109,6 +134,12 @@ export interface Book {
   anchors: Asked[];
   /** The published accepted list's chain, where published. */
   listPublished: { act: string; version: number; withdrawn: boolean } | null;
+  /** Specification cards signed here (the Dubsar Specification Card cMIP), newest last. */
+  cards?: { id: string; spec: string; title: string; at: number }[];
+  /** Discussion threads started here, each naming a specification. */
+  discussions?: { id: string; spec: string; title: string; at: number }[];
+  /** Replies signed here as documents, by the act they answer. */
+  replies?: { id: string; to: string; at: number }[];
 }
 
 export const NO_BOOK = (): Book => ({ releases: [], specs: [], mips: [], reports: [], anchors: [], listPublished: null });
@@ -182,7 +213,7 @@ export class Ummia {
   /** `web`: the web client. `releases`: the program's (a folder). `chain`: the chain followed (program only). */
   constructor(
     readonly store: Keep,
-    readonly opts: { web?: boolean; releases?: Releases | null; chain?: ChainSource | null } = {},
+    readonly opts: { web?: boolean; releases?: Releases | null; chain?: ChainSource | null; runner?: RunnerLink } = {},
   ) {}
 
   private serial<T>(f: () => Promise<T>): Promise<T> {
@@ -191,9 +222,16 @@ export class Ummia {
     return next;
   }
 
+  /** An identity held here; one used through Kišib's runner signs by it, Ummia holding no key (the Dubsar runner cMIP). */
+  private async load(id: string): Promise<TestIdentity | null> {
+    const me = await this.store.identity(id);
+    if (me && !me.f.signingSecret && this.opts.runner) me.signer = this.opts.runner.signer();
+    return me;
+  }
+
   private async ctx(): Promise<{ me: TestIdentity; s: Settings; book: Book; hints: string[] }> {
     const active = await this.store.active();
-    const me = active ? await this.store.identity(active) : null;
+    const me = active ? await this.load(active) : null;
     if (!me) throw new Error('No identity in use: bring one by its signing key’s words.');
     const s: Settings = { relays: [], track: [], reports: null, via: {}, ...((await this.store.read<Settings>(me.id, 'settings')) ?? {}) };
     const book: Book = { ...NO_BOOK(), ...((await this.store.read<Book>(me.id, 'book')) ?? {}) };
@@ -396,6 +434,23 @@ export class Ummia {
     const look = await lookUp(me.id, me.f.homes.map((h) => h.hint), me.via);
     const r = look.resolution;
     if (r.stop === 'contested') throw new Error('Its homes disagree about its keys (contested): nothing was signed.');
+    if (!me.f.signingSecret) {
+      // Through Kišib's runner (the Dubsar runner cMIP, 3.5 and 7.4): a change of keys made since is followed once the runner holds the new key; otherwise nothing is signed.
+      const binding = r.links[r.links.length - 1];
+      if (!binding || binding.act === me.f.binding) return;
+      const p = await this.opts.runner?.paired().catch(() => null);
+      const k = p?.identities.find((x) => x.id === me.id);
+      if (!k || k.binding !== binding.act || !r.signingKey || hex(r.signingKey) !== k.key) throw new Error(RUNNER_OLD_KEY_SAY);
+      me.f.chain = (await servedChain(me.id, r.homes, me.via)).map(base64);
+      me.f.position = binding.position;
+      me.f.binding = binding.act;
+      me.f.homes = r.homes;
+      me.f.rule = r.rule ?? null;
+      freshLines(me.f);
+      me.f.routes = null;
+      await this.store.saveIdentity(me);
+      return;
+    }
     if (!r.signingKey || hex(r.signingKey) !== hex(signingPublic(unhex(me.f.signingSecret)))) throw new Error(SPENT_SAY);
   }
 
@@ -440,8 +495,8 @@ export class Ummia {
   async state(): Promise<State> {
     const active = await this.store.active();
     const heldIds = await this.store.held();
-    const held = heldIds.map((id) => ({ id, grouped: groupId(id), short: short(id), active: id === active }));
-    const me = active ? await this.store.identity(active) : null;
+    const held = await Promise.all(heldIds.map(async (id) => ({ id, grouped: groupId(id), short: short(id), active: id === active, runner: !(await this.store.identity(id))?.f.signingSecret })));
+    const me = active ? await this.load(active) : null;
     const out: State = {
       web: !!this.opts.web,
       stage: 'identity',
@@ -450,8 +505,9 @@ export class Ummia {
       actors: actors(heldIds),
       acting: null,
       settings: { relays: [], track: [], reports: null },
+      saved: [],
       releases: !!this.opts.releases,
-      counts: { specs: 0, releases: 0, mips: 0, reports: 0 },
+      counts: { specs: 0, releases: 0, mips: 0, reports: 0, cards: 0, anchors: 0 },
     };
     if (!me) return out;
     const s: Settings = { relays: [], track: [], reports: null, via: {}, ...((await this.store.read<Settings>(me.id, 'settings')) ?? {}) };
@@ -467,11 +523,13 @@ export class Ummia {
       relays: s.relays,
       encryption: me.f.encryption.length > 0,
       line: line ?? noLine(me.f),
+      runner: !me.f.signingSecret,
     };
     out.actors = actors(heldIds, s.collectives ?? []);
     out.acting = chosen(out.actors, s.acting ?? me.id)?.id ?? null;
     out.settings = { relays: s.relays, track: s.track, reports: s.reports };
-    out.counts = { specs: book.specs.length, releases: book.releases.length, mips: book.mips.length, reports: book.reports.length };
+    out.saved = s.saved ?? [];
+    out.counts = { specs: book.specs.length, releases: book.releases.length + (book.collectiveReleases?.length ?? 0), mips: book.mips.length, reports: book.reports.length, cards: (book.cards?.length ?? 0) + (book.discussions?.length ?? 0), anchors: book.anchors.length };
     return out;
   }
 
@@ -629,12 +687,29 @@ export class Ummia {
     return [...me.f.encryption].reverse().map((e) => unhex(e.secret));
   }
 
+  private layerCache: { at: number; layers: Map<string, string> } | null = null;
+
+  /** Each specification's layer, as tracking reads it from its own fields, on the relays tracking asks: read again at most once a minute. */
+  private async layersOf(hashes: string[]): Promise<Map<string, string>> {
+    if (!hashes.length) return new Map();
+    if (this.layerCache && this.layerCache.at + 60 > now() && hashes.every((h) => this.layerCache!.layers.has(h))) return this.layerCache.layers;
+    try {
+      const { s } = await this.ctx();
+      const t = await track(this.lookRelays(s), { via: s.via });
+      this.layerCache = { at: now(), layers: new Map(t.specs.map((x) => [x.hash, x.layer])) };
+      return this.layerCache.layers;
+    } catch {
+      return new Map();
+    }
+  }
+
   /** The whole list, as every app reads it: each entry, its label, and whose part it is where known. */
   async accepted(): Promise<{ entries: AcceptedEntry[]; version: number; forked: boolean; merged: string[]; published: boolean; problems: string[]; say: string[] }> {
     const { me, book } = await this.ctx();
     const l = await readAccepted(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), me.via);
+    const layers = await this.layersOf([...l.entries.keys()].filter((h) => !DAMGAR_PART.has(h) && !builtIn(h)));
     const entries: AcceptedEntry[] = [...l.entries.entries()]
-      .map(([hash, label]) => ({ hash, label: label ?? damgarLabel(hash) ?? null, part: DAMGAR_PART.has(hash) ? 'Money: Damgar’s part' : 'Read by the apps that know it' }))
+      .map(([hash, label]) => ({ hash, label: label ?? damgarLabel(hash) ?? builtIn(hash)?.title ?? null, part: DAMGAR_PART.has(hash) ? 'Money: Damgar’s part' : 'Read by the apps that know it', layer: DAMGAR_PART.has(hash) ? 'Money' : (builtIn(hash)?.title.replace(/^MIR: /, '') ?? layers.get(hash) ?? null) }))
       .sort((a, b) => (a.part < b.part ? -1 : a.part > b.part ? 1 : (a.label ?? a.hash) < (b.label ?? b.hash) ? -1 : 1));
     return {
       entries,
@@ -934,15 +1009,397 @@ export class Ummia {
     return this.serial(async () => {
       const { me, s, book, hints } = await this.ctx();
       await this.current(me);
-      const rel = [...(await this.ownReleases(me, book, hints, s.via)), ...(book.collectiveReleases ?? [])].find((x) => x.id === a.release);
-      if (!rel) throw new Error('That is not one of your releases published from here.');
+      // A release of yours, or any act shown (the act menu's Anchor it, in every app: decided).
+      const own = [...(await this.ownReleases(me, book, hints, s.via).catch(() => book.releases)), ...(book.collectiveReleases ?? [])].find((x) => x.id === a.release);
+      if (!own) {
+        const id = readActId(a.release);
+        const held = await referTo(id, [...new Set([...hints, ...s.relays, ...s.track])], s.via).catch(() => null);
+        if (!held?.public) throw new Error('That is neither one of your releases nor a public act found on your relays. Nothing was prepared.');
+      }
+      const rel = own ?? { id: readActId(a.release), name: 'the act', version: short(readActId(a.release)) };
       const service = readId(a.service);
       const offer = (await anchorOffers(service, [...hints, ...s.track], s.via)).find((o) => o.act === a.offer);
       if (!offer) throw new Error('No such standing offer of that service was found under the anchoring cMIP.');
-      const r = await askAnchor(me, { act: rel.id, label: `the release ${rel.name} ${rel.version}`, service, offer, tier: a.tier, hints, via: s.via, save: () => this.store.saveIdentity(me) });
+      const r = await askAnchor(me, { act: rel.id, label: own ? `the release ${rel.name} ${rel.version}` : `the act ${rel.version}`, service, offer, tier: a.tier, hints, via: s.via, save: () => this.store.saveIdentity(me) });
       book.anchors.push(r.asked);
       await this.saveBook(me.id, book);
       return { title: 'An anchor asked', acts: [r.asked.draft], lines: r.lines };
     });
+  }
+
+  // ------------------------------------------------------------ Look: one feed (decided), and a page per specification
+
+  /** The relays Look asks: those named for tracking, else this identity's own. */
+  private lookRelays(s: Settings, typed?: string): string[] {
+    const r = typed?.trim() ? list([typed]) : s.track.length ? s.track : s.relays;
+    if (!r.length) throw new Error('Name the public relays to ask: in the identity panel, Relays, or point at one here.');
+    return r;
+  }
+
+  /**
+   * The feed, pointed at a relay, a single ID, your contacts or a release,
+   * filtered by kind and layer (decided). Nothing is kept: ask again to see
+   * what changed.
+   */
+  async look(a: { point?: { kind?: string; value?: string }; filters?: string[]; layer?: string | null }): Promise<Looked & { point: { kind: PointKind; value: string; said: string }; limit: string[] }> {
+    const { me, s, hints } = await this.ctx();
+    const kind = (['relay', 'id', 'contacts', 'release'] as const).find((k) => k === a.point?.kind) ?? 'relay';
+    const value = (a.point?.value ?? '').trim();
+    const filters = (a.filters ?? [...FILTERS].filter((f) => f !== 'mips')).filter((f): f is Filter => (FILTERS as readonly string[]).includes(f));
+    const layer = a.layer || null;
+    let out: Looked;
+    let said: string;
+    if (kind === 'relay') {
+      const relays = this.lookRelays(s, value);
+      said = relays.join(', ');
+      out = await lookAt(relays, { filters, layer, via: s.via, hints });
+    } else if (kind === 'id') {
+      if (!value) throw new Error('Point at an identity by its ID (mid1…, or hexadecimal).');
+      const id = readId(value);
+      said = idForm(id);
+      out = await lookAt(this.lookRelays(s), { signers: [id], filters, layer, via: s.via, hints });
+    } else if (kind === 'contacts') {
+      const c = await readContacts(me, s.via);
+      said = `your contacts (${c.follows.length})`;
+      out = await lookAt(this.lookRelays(s), { signers: c.follows.map((f) => f.id), filters, layer, via: s.via, hints });
+      if (c.problem) out.lines.unshift({ text: `Your contacts could not be read: ${c.problem}.`, tone: 'warn' });
+    } else {
+      if (!value) throw new Error('Point at a release by its act ID (mact1…, or hexadecimal).');
+      const id = readActId(value);
+      said = `the release ${short(id)} and its line`;
+      out = await lookAt(this.lookRelays(s), { release: id, filters: ['releases'], via: s.via, hints });
+    }
+    return { ...out, point: { kind, value, said }, limit: LIMIT_SAY };
+  }
+
+  /** A specification's page: everything that can be tied to it, from the relays named (decided 23 October 2026). */
+  async specPage(a: { hash: string }): Promise<SpecPage & { mine: boolean; say: string[] }> {
+    const { me, s, hints } = await this.ctx();
+    const hash = readHash(a.hash, 'The specification');
+    const p = await specPage(hash, this.lookRelays(s), s.via, hints);
+    return { ...p, mine: p.creator === me.id, say: CARD_SAY };
+  }
+
+  /** The Dubsar clock's time on each act it stamped, in words (decided 23 October 2026). */
+  async clockWords(ids: string[]): Promise<Record<string, string>> {
+    const { s, hints } = await this.ctx();
+    return clockWords(ids.slice(0, 500), [...new Set([...s.relays, ...s.track, ...hints])], s.via);
+  }
+
+  // ------------------------------------------------------------ saved points and contacts (the same follow list, here it filters)
+
+  savedAdd(a: { label: string; point: { kind: string; value: string }; filters: string[] }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const kind = (['relay', 'id', 'contacts', 'release'] as const).find((k) => k === a.point.kind);
+      if (!kind) throw new Error('A saved point points at a relay, an ID, your contacts or a release.');
+      const label = a.label.trim().slice(0, 60) || a.point.value.slice(0, 24) || 'A point';
+      const filters = a.filters.filter((f): f is Filter => (FILTERS as readonly string[]).includes(f));
+      const key = sha256(`${kind} ${a.point.value} ${filters.join(',')}`).slice(0, 12);
+      s.saved = [...(s.saved ?? []).filter((x) => x.key !== key), { key, label, point: { kind, value: a.point.value.trim() }, filters }];
+      await this.store.write(me.id, 'settings', s);
+      return { lines: [{ text: `Saved in Look: “${label}”. Kept in this app only, never published.`, tone: 'ok' }] };
+    });
+  }
+
+  savedRemove(key: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      s.saved = (s.saved ?? []).filter((x) => x.key !== key);
+      await this.store.write(me.id, 'settings', s);
+      return { lines: [{ text: 'Removed from Look’s saved points.', tone: 'ok' }] };
+    });
+  }
+
+  /** The follow list sealed to this identity: Look's "my contacts". */
+  async contactsList(): Promise<{ follows: { id: string; form: string; name: string | null }[]; problem: string | null; say: string }> {
+    const { me, s } = await this.ctx();
+    const c = await readContacts(me, s.via);
+    return { follows: c.follows.map((f) => ({ ...f, form: idForm(f.id) })), problem: c.problem, say: FOLLOW_SAY };
+  }
+
+  /** Follow: add to contacts (the same follow list as Dub's). */
+  follow(a: { id: string; name?: string | null }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      try {
+        return { lines: await followIn(me, { id: readId(a.id), name: a.name?.trim().slice(0, 64) || null }, s.via) };
+      } finally {
+        await this.store.saveIdentity(me);
+      }
+    });
+  }
+
+  /** Follow their releases (decided: "the same follow list, but here it filters"): added to contacts, and a saved point of Look showing their releases. */
+  async followReleases(a: { id: string; name?: string | null }): Promise<{ lines: Line[] }> {
+    const id = readId(a.id);
+    const f = await this.follow({ id, name: a.name });
+    const label = `${a.name?.trim() || short(id)}’s releases`;
+    const saved = await this.savedAdd({ label, point: { kind: 'id', value: id }, filters: ['releases'] });
+    return { lines: [...f.lines, ...saved.lines] };
+  }
+
+  // ------------------------------------------------------------ specification cards (the Dubsar Specification Card cMIP)
+
+  /** The specification a card would name: its creator's publication where one is found, or one of the core's texts. */
+  private async specFound(hash: string, s: Settings, book: Book): Promise<{ publication: string | null; creator: string | null; name: string }> {
+    const here = book.specs.find((x) => x.hash === hash);
+    if (here) return { publication: here.id, creator: null, name: here.name };
+    const b = builtIn(hash);
+    if (b) return { publication: null, creator: null, name: b.title };
+    const t = await track(this.lookRelays(s), { via: s.via });
+    const x = t.specs.find((y) => y.hash === hash);
+    if (!x) throw new Error('No specification with this hash was found on your relays: a card names one Ummia can find. Nothing was signed.');
+    const pub = x.publications.find((p) => p.signer === x.creator) ?? x.publications[0];
+    return { publication: pub?.id ?? null, creator: x.creator, name: x.name };
+  }
+
+  /**
+   * A card (and, where asked, a discussion thread naming the specification),
+   * read back exactly as it would be signed; nothing signed until confirmed.
+   * As yourself only: a card speaks for its signer.
+   */
+  async prepareCard(a: { spec: string; title: string; summary?: string; releases?: string[]; vectors?: string[]; discussion?: string }): Promise<Review> {
+    const { me, s, book } = await this.ctx();
+    if ((await this.acting(me, s)).kind === 'collective') throw new Error('A card is signed as yourself: choose yourself in the identity panel.');
+    const hash = readHash(a.spec, 'The specification');
+    const found = await this.specFound(hash, s, book);
+    const newThread = a.discussion === 'new';
+    const fields: CardFields = {
+      spec: hash,
+      title: a.title,
+      summary: a.summary?.trim() || null,
+      releases: (a.releases ?? []).map((r) => readActId(r.trim())),
+      vectors: (a.vectors ?? []).map((v) => (/^https:\/\//.test(v.trim()) ? v.trim() : readActId(v.trim()))),
+      discussion: newThread || !a.discussion?.trim() ? null : readActId(a.discussion.trim()),
+    };
+    const blocking: string[] = [];
+    let text = '';
+    try {
+      text = cardText({ ...fields, discussion: newThread ? '0'.repeat(64) : fields.discussion });
+    } catch (e) {
+      blocking.push(message(e).replace(/ Nothing was signed\.$/, ''));
+    }
+    if (!s.relays.length) blocking.push('Name at least one relay its acts go to, in the identity panel, Relays.');
+    const core = !!builtIn(hash);
+    const creators = !core && (found.creator === me.id || (found.creator === null && book.specs.some((x) => x.hash === hash)));
+    const shown = newThread ? text.replace(`Discussion: ${actForm('0'.repeat(64))}`, 'Discussion: (the thread signed just before it)') : text;
+    const digest = sha256(new TextEncoder().encode(`MOR Ummia specification card, version 1\n${me.id}\n${newThread ? 'with a new thread\n' : ''}${text}\n${s.relays.join('\n')}`));
+    const plan = this.plan(me.id, {
+      digest,
+      blocking,
+      run: async () => {
+        const acts: string[] = [];
+        const lines: Line[] = [];
+        try {
+          if (newThread) {
+            const d = await publishDiscussion(me, { title: fields.title, spec: hash, publication: found.publication, relays: s.relays, find: s.track, via: s.via });
+            fields.discussion = d.id;
+            acts.push(d.id);
+            lines.push({ text: `A discussion thread is published, naming it: ${actForm(d.id)}. Replies to it come from Dub, or from Discuss here.`, tone: 'ok' });
+          }
+          const c = await publishCard(me, fields, { publication: found.publication, relays: s.relays, find: s.track, via: s.via });
+          acts.push(c.id);
+          lines.push({ text: `Its card is published: ${actForm(c.id)}, a plain post every app shows.`, tone: 'ok' });
+          const b: Book = { ...NO_BOOK(), ...((await this.store.read<Book>(me.id, 'book')) ?? {}) };
+          b.cards = [...(b.cards ?? []), { id: c.id, spec: hash, title: fields.title, at: now() }];
+          if (newThread) b.discussions = [...(b.discussions ?? []), { id: fields.discussion!, spec: hash, title: fields.title, at: now() }];
+          await this.saveBook(me.id, b);
+        } finally {
+          await this.store.saveIdentity(me);
+        }
+        lines.push(creators ? { text: 'Signed by its creator: the latest card in your own sequence is the one that counts; a later card replaces this one.', tone: 'ok' } : { text: 'You are not its creator: your card is shown as your word, never as the specification’s own.', tone: 'warn' });
+        return { title: `The card of “${fields.title}” is published`, acts, hash, lines };
+      },
+    });
+    return {
+      plan,
+      digest,
+      hash,
+      title: `Sign the card of “${found.name}”`,
+      summary: [
+        creators ? 'You are its creator: this card speaks for it until you sign a later one.' : core ? 'One of the core’s texts: it names no creator, so your card is shown as your word, never as the text’s own.' : 'You are not its creator: this card is shown as your word, beside its creator’s.',
+        'A plain post, public, signed by you, readable by every app (Dub shows it as a post). It changes nothing in the specification.',
+        'Nothing is signed until you press Sign and publish.',
+      ],
+      sections: [
+        { heading: 'The card, exactly as it is signed', lines: shown.split('\n').map((t) => ({ text: t })) },
+        ...(newThread ? [{ heading: 'Signed just before it', lines: [{ text: `A discussion thread: “Discussion of ${fields.title.trim()}”, naming the specification${found.publication ? ' (its publication, with its signer)' : ''}.` }] }] : []),
+        { heading: 'Where it goes', lines: [{ text: s.relays.join(', ') || '(no relay yet)' }] },
+      ],
+      blocking,
+    };
+  }
+
+  /** The cards and threads signed here, newest first (Publish › Published here). */
+  async publishedHere(): Promise<{ specs: Published[]; cards: NonNullable<Book['cards']>; discussions: NonNullable<Book['discussions']>; limits: typeof LIMITS }> {
+    const { book } = await this.ctx();
+    return { specs: [...book.specs].reverse(), cards: [...(book.cards ?? [])].reverse(), discussions: [...(book.discussions ?? [])].reverse(), limits: LIMITS };
+  }
+
+  // ------------------------------------------------------------ Discuss: discussions, a reply as a signed document
+
+  /** The discussion threads started here, and the MIP drafts published, each with its replies. */
+  async discussions(): Promise<{ threads: { id: string; title: string; spec: string | null; kind: 'thread' | 'draft'; replies: { id: string; signer: string; text: string; standing: string; mine: boolean }[] }[]; lines: Line[] }> {
+    const { me, s, book } = await this.ctx();
+    const threads = [
+      ...(book.discussions ?? []).map((d) => ({ id: d.id, title: `Discussion of ${d.title}`, spec: d.spec, kind: 'thread' as const })),
+      ...book.mips.flatMap((m) => m.drafts.map((d, i) => ({ id: d.id, title: `${m.title}, draft ${i + 1}`, spec: null, kind: 'draft' as const }))),
+    ];
+    if (!threads.length) return { threads: [], lines: [] };
+    const r = await mipReplies(me, threads.map((t) => t.id), [...new Set([...s.relays, ...s.track])], s.via);
+    // A card naming the thread is not a reply to it: it shows on the specification's page.
+    return { threads: threads.map((t) => ({ ...t, replies: (r.replies.get(t.id) ?? []).filter((x) => !readCardText(x.text)).map((x) => ({ ...x, mine: x.signer === me.id })) })), lines: r.lines };
+  }
+
+  /** A reply as a signed document (decided on the mockups: "Reply, as a signed document"): a long-form text act naming the act it answers. */
+  reply(a: { to: string; text: string }): Promise<Done> {
+    return this.serial(async () => {
+      const { me, s, book } = await this.ctx();
+      await this.current(me);
+      if ((await this.acting(me, s)).kind === 'collective') throw new Error('A reply is signed as yourself: choose yourself in the identity panel.');
+      const text = a.text.trim();
+      if (!text) throw new Error('Write the reply first. Nothing was signed.');
+      if (!s.relays.length) throw new Error('Name at least one relay its acts go to, in the identity panel, Relays. Nothing was signed.');
+      const to = readActId(a.to);
+      let ref;
+      let author: string;
+      try {
+        const r = await referTo(to, [...new Set([...s.relays, ...s.track])], s.via);
+        ref = r.ref;
+        author = r.signer;
+      } catch {
+        throw new Error('The act it answers was not found on your relays: a reply names only an act held. Nothing was signed.');
+      }
+      let id: string;
+      try {
+        for (const hint of s.relays) for (const c of me.chainActs()) await relayAt(hint, s.via).putAct(c).catch(() => undefined);
+        const made = await me.publish(LONGFORM_SPECS.text, LONGFORM_TEXT_ACT, longformPayload(text), { public: true, relays: s.relays, refs: [ref] });
+        id = made.id;
+        // A copy left in the inbox of whoever wrote what it answers, so their app finds it (as Dub's replies are).
+        if (author !== me.id) {
+          const l = await lookUp(author, [...s.relays, ...s.track], s.via).catch(() => null);
+          const inbox = l?.inbox(SPECS.text) ?? [];
+          if (inbox.length) await leaveInInbox(me, made.act, inbox).catch(() => undefined);
+        }
+      } finally {
+        await this.store.saveIdentity(me);
+      }
+      book.replies = [...(book.replies ?? []), { id, to, at: now() }];
+      await this.saveBook(me.id, book);
+      return { title: 'Your reply is published', acts: [id], lines: [{ text: `A signed document, public, answering ${actForm(to)}: ${actForm(id)}.`, tone: 'ok' }] };
+    });
+  }
+
+  // ------------------------------------------------------------ the act menu: Rely on it (in every app, decided)
+
+  /**
+   * Rely on an act shown: the witness act (Identity type 15) signed once
+   * RELY is typed, as everywhere, its key checked first (H80); through
+   * Kišib's panel where the identity is used through it. It keeps that act
+   * visible as disputed should its author ever disown it.
+   */
+  rely(a: { id: string; typed: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      if (a.typed.trim() !== 'RELY') throw new Error('Type RELY to sign the witness act. Nothing was signed.');
+      const id = readActId(a.id);
+      if (me.f.sequence.includes(id)) throw new Error('It is this identity’s own act: a witness act names other identities’ acts. Nothing was signed.');
+      await this.current(me);
+      let made;
+      try {
+        made = await me.witness([id], { shown: WITNESS_EXPLANATION, relays: s.relays });
+      } finally {
+        await this.store.saveIdentity(me);
+      }
+      if (!made.sent.some((x) => x.result)) throw new Error(`No home took the witness act: ${made.sent.map((x) => `${x.home}: ${x.error}`).join('; ')}. It is signed here, not published.`);
+      return { lines: [{ text: `You rely on ${short(id)}: witness act ${short(made.id)}, public at this identity’s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: 'ok' }] };
+    });
+  }
+
+  // ------------------------------------------------------------ an identity used through Kišib (the Dubsar runner cMIP)
+
+  private runner(): RunnerLink {
+    if (!this.opts.runner) throw new Error('Kišib’s runner is in the computer’s program only, never the web client: bring the identity with its signing key’s words instead.');
+    return this.opts.runner;
+  }
+
+  /** Where the pairing with Kišib stands, and the identities it lets Ummia use. */
+  async runnerState(): Promise<{ available: boolean; origin: string | null; state: string | null; code: string | null; identities: { id: string; form: string; name: string | null; held: boolean }[]; problem: string | null }> {
+    if (!this.opts.runner) return { available: false, origin: null, state: null, code: null, identities: [], problem: null };
+    const held = await this.store.held();
+    try {
+      const p = await this.opts.runner.paired();
+      return { available: true, origin: this.opts.runner.origin(), state: p?.state ?? null, code: p?.code ?? null, identities: (p?.identities ?? []).map((x) => ({ id: x.id, form: idForm(x.id), name: x.name, held: held.includes(x.id) })), problem: null };
+    } catch (e) {
+      return { available: true, origin: this.opts.runner.origin(), state: null, code: this.opts.runner.code(), identities: [], problem: message(e) };
+    }
+  }
+
+  runnerPair(): Promise<{ code: string }> {
+    return this.runner().pair();
+  }
+
+  /** Use an identity Kišib's runner holds and lets Ummia use: no key of it kept here; every act shows Kišib's panel inside Ummia's window. */
+  runnerTake(a: { id: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const p = await this.runner().paired();
+      if (!p || p.state !== 'approved') throw new Error(p?.state === 'waiting' ? 'Kišib has not approved Ummia yet: approve it in Kišib (Runner, Apps), comparing the code.' : 'Ummia is not paired with Kišib’s runner: pair it first.');
+      const k = p.identities.find((x) => x.id === a.id);
+      if (!k) throw new Error('Kišib does not let Ummia use this identity: choose it for Ummia in Kišib (Runner, Apps).');
+      if ((await this.store.held()).includes(k.id)) {
+        await this.store.setActive(k.id);
+        return { lines: [{ text: 'Ummia already uses this identity: it is the one in use now.', tone: 'ok' }] };
+      }
+      const look = await lookUp(k.id, k.homes, {});
+      const r = look.resolution;
+      if (r.stop === 'contested') throw new Error('Its homes disagree about its keys (contested): Ummia cannot use it until they agree.');
+      const binding = r.links[r.links.length - 1];
+      if (!r.signingKey || hex(r.signingKey) !== k.key) throw new Error(RUNNER_OLD_KEY_SAY);
+      const chain = await servedChain(k.id, r.homes, {});
+      const named = list(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
+      const relays = named.length ? named : r.homes.map((h) => h.hint);
+      const f: IdentityFile = {
+        label: TEST_LABEL,
+        identity: k.id,
+        position: binding.position,
+        binding: binding.act,
+        // No key of it is held here: Kišib's runner signs (the Dubsar runner cMIP, 3.2).
+        signingSecret: '',
+        safety: { scheme: 0, seeds: '' },
+        chain: chain.map(base64),
+        homes: r.homes,
+        rule: r.rule ?? null,
+        sequence: [],
+        routes: null,
+        encryption: [],
+        pending: null,
+      };
+      await this.store.write(k.id, 'settings', { relays, track: relays, reports: null, via: {}, acting: k.id } satisfies Settings);
+      await this.store.saveIdentity(new TestIdentity(f, {}));
+      await this.store.setActive(k.id);
+      return {
+        lines: [
+          { text: `Ummia uses ${k.name ?? short(k.id)} through Kišib’s runner: Kišib holds its signing key, Ummia none. Every act is shown by Kišib, in its panel here, before it is signed.`, tone: 'ok' },
+          { text: RUNNER_HOLDS_SAY, tone: 'warn' },
+          { text: LINE_SAY, tone: 'warn' },
+        ],
+      };
+    });
+  }
+
+  /** The request waiting for the person now, for the page to draw Kišib's panel. Not serial: it is asked while an act waits. */
+  async runnerAsking(): Promise<{ asking: { request: string; panel: string; title: string } | null; origin: string | null }> {
+    const r = this.opts.runner;
+    return { asking: r?.asking ?? null, origin: r?.origin() ?? null };
+  }
+
+  async runnerDrop(a: { request: string }): Promise<void> {
+    this.opts.runner?.drop(a.request);
+  }
+
+  async runnerUnpair(): Promise<void> {
+    await this.runner().unpair();
   }
 }

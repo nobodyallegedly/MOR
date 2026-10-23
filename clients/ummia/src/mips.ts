@@ -137,11 +137,13 @@ export async function replies(me: TestIdentity, drafts: string[], relays: string
     for (const r of named) out.set(r, [...(out.get(r) ?? []), { id: d.id, signer: d.signer, text: typeof t === 'string' ? t : '', standing, sealed }]);
   };
   const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
-  for (const h of [...new Set([...inbox, ...relays])]) {
+  // The inbox asked for what is addressed to this identity; the relays for the public text acts they hold: both, where a relay is both.
+  const asks = [...inbox.map((h) => ({ h, toMe: true })), ...relays.map((h) => ({ h, toMe: false }))];
+  for (const { h, toMe } of asks) {
     let after: number | undefined;
     try {
       for (;;) {
-        const page = await relayAt(h, via).feed(inbox.includes(h) ? { to: me.id, after } : { spec: SPECS.text, type: TEXT_ACT, after });
+        const page = await relayAt(h, via).feed(toMe ? { to: me.id, after } : { spec: SPECS.text, type: TEXT_ACT, after });
         for (const it of page.items) {
           if (it.kind === 'act') {
             const d = describeAct(it.item) as Described;

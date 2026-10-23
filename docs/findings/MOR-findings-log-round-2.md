@@ -28,6 +28,18 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F395. Specification cards: what can be tied to a specification, so that discovery leads somewhere (23 October 2026; Ummia's round on the kit) (Dubsar Suite)
+
+**Asked by Nobody, allegedly, 23 October 2026:** "what can a person find about a cMIP, module, xtypes or extensions, except its hash or the hash it belongs to … what can be tied to it, so that discoverability leads somewhere." His view: "I think it's cMIP territory." Agreed with the MOR lead the same day: nothing core; a Dubsar cMIP.
+
+**Pattern:** none of the four: a gap in what the apps offer, not in a rule. *A specification is frozen at publication (Development rule 4), so it can never point at what comes after it; its fields 3 and 4 are "discovery only" and say what it defines and relies on, never where its code or discussion is; and discovery "happens through use" (rule 17).*
+
+**Built** (`cmips/cmip-specification-card-draft-1.md`, `docs/ummia-kit-report.md`): **a specification card is a plain public text act** (Text type 0, no format, so every client shows it as a post; not an xtype, which would show as unknown exactly where discovery matters) whose lines give the specification's hash, a title, a short summary, and the acts of its releases, its test vectors and its discussion thread; its references name the specification's publication, with its signer. **Signed again when something new arrives; the creator's latest in its own sequence counts**; a card by anyone else is shown as their word; one naming a specification not found is shown so. **The core's eight texts get no card signed on their behalf** (no creator, rule 3: a signed card would read as authorship); Ummia carries built-in cards for them, keyed by their hashes, its own words, and anyone may sign a card for them as their word. Ummia offers a card and a discussion thread right after a specification is published, and gathers a page per specification in Look.
+
+**Readings taken** (for Nobody, allegedly, to confirm): the card's `refs` name the publication, never the bare spec hash (a hash in `refs` is an act's id); two cards on two lines of one creator are ordered by the Dubsar clock where both are stamped, else both shown, said; the MICS document's and the suite's built-in keys are rule 26's hashes of the current drafts.
+
+**Where:** the suite's alone. No MIR, MICS, freeze test, core code or verdict changed.
+
 ## F392. A deal's payments go where the payee's own grant in the deal sends them; a collective's sale is a purchase (23 October 2026; the splits round, section 4)
 
 **Found by the splits round** (Dubsar Suite, `docs/splits-report.md`, section 4), two core points:

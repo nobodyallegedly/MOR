@@ -75,6 +75,25 @@ export const OPS = [
   'release check',
   'anchor offers',
   'anchor ask',
+  'look',
+  'spec page',
+  'clock words',
+  'saved add',
+  'saved remove',
+  'contacts',
+  'follow',
+  'follow releases',
+  'card prepare',
+  'published here',
+  'discussions',
+  'reply',
+  'rely',
+  'runner',
+  'runner pair',
+  'runner take',
+  'runner asking',
+  'runner drop',
+  'runner unpair',
 ] as const;
 
 export async function run(u: Ummia, op: string, a: Record<string, unknown>): Promise<unknown> {
@@ -156,6 +175,44 @@ export async function run(u: Ummia, op: string, a: Record<string, unknown>): Pro
       return u.anchorOffers(text(a.service));
     case 'anchor ask':
       return u.anchorRelease({ release: text(a.release), service: text(a.service), offer: text(a.offer), tier: Number(a.tier ?? 0) });
+    case 'look':
+      return u.look({ point: (a.point ?? {}) as { kind?: string; value?: string }, filters: a.filters === undefined ? undefined : list(a.filters), layer: text(a.layer) || null });
+    case 'spec page':
+      return u.specPage({ hash: text(a.hash) });
+    case 'clock words':
+      return u.clockWords(list(a.ids));
+    case 'saved add':
+      return u.savedAdd({ label: text(a.label), point: { kind: text((a.point as { kind?: unknown })?.kind), value: text((a.point as { value?: unknown })?.value) }, filters: list(a.filters) });
+    case 'saved remove':
+      return u.savedRemove(text(a.key));
+    case 'contacts':
+      return u.contactsList();
+    case 'follow':
+      return u.follow({ id: text(a.id), name: text(a.name) || null });
+    case 'follow releases':
+      return u.followReleases({ id: text(a.id), name: text(a.name) || null });
+    case 'card prepare':
+      return u.prepareCard({ spec: text(a.spec), title: text(a.title), summary: text(a.summary), releases: list(a.releases), vectors: list(a.vectors), discussion: text(a.discussion) });
+    case 'published here':
+      return u.publishedHere();
+    case 'discussions':
+      return u.discussions();
+    case 'reply':
+      return u.reply({ to: text(a.to), text: text(a.text) });
+    case 'rely':
+      return u.rely({ id: text(a.id), typed: text(a.typed) });
+    case 'runner':
+      return u.runnerState();
+    case 'runner pair':
+      return u.runnerPair();
+    case 'runner take':
+      return u.runnerTake({ id: text(a.id) });
+    case 'runner asking':
+      return u.runnerAsking();
+    case 'runner drop':
+      return u.runnerDrop({ request: text(a.request) });
+    case 'runner unpair':
+      return u.runnerUnpair();
     default:
       throw new Error(`unknown operation ${op}`);
   }

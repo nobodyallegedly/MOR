@@ -39,6 +39,12 @@ export interface TrackedSpec {
   claimed: boolean;
   /** Who published it (the publications found, verified). */
   publishers: string[];
+  /** Its publications found, verified, by act id and signer: the creator's first where there is one. */
+  publications: { id: string; signer: string }[];
+  /** Its text's first line: its own name (Development, Part three, field 9). */
+  text: string;
+  /** Public agreements naming it as an extension, counted. */
+  agreements: number;
   /** Its draft in its line, and the hash of the one before it, where named. */
   draft: number;
   after: string | null;
@@ -56,6 +62,8 @@ export interface Tracked {
   extensions: { hash: string; name: string | null; agreements: number; terms: string[]; layers: string[] | null }[];
   agreements: { terms: number; counted: number; proposed: number; notCounted: number; private: number };
   mips: { root: string; name: string; forks: { hash: string; name: string; creator: string | null; total: number }[] }[];
+  /** Every specification found, MIPs included, each once: what Look's feed shows. */
+  specs: TrackedSpec[];
   unverified: { id: string; signer: string; problem: string }[];
   limit: string[];
 }
@@ -74,6 +82,9 @@ export async function track(relays: string[], o: { signer?: string; via?: Via } 
   const all = new Map<string, Listed>();
   for (const l of listing.lines) for (const d of l.drafts) all.set(d.listed.hash, d.listed);
   for (const x of listing.xtypes) all.set(x.hash, x);
+  const inAll = (f: Listing['mips']['roots'][number]['forks']): void => f.forEach((x) => (all.set(x.listed.hash, x.listed), inAll(x.forks)));
+  for (const r of listing.mips.roots) (all.set(r.listed.hash, r.listed), inAll(r.forks));
+  for (const u of listing.mips.unrooted) inAll(u.forks);
   const shown = (l: Listed, d?: { number: number; after: Listed | null; afterMissing: string | null; otherCreator: boolean }): TrackedSpec => {
     const w = roleWords(l, all);
     return {
@@ -85,6 +96,9 @@ export async function track(relays: string[], o: { signer?: string; via?: Via } 
       creator: l.spec.creator,
       claimed: l.claimed,
       publishers: [...new Set(l.publications.map((p) => p.signer))],
+      publications: l.publications.map((p) => ({ id: p.id, signer: p.signer })),
+      text: l.spec.text,
+      agreements: listing.extensions.find((x) => x.hash === l.hash)?.agreements.length ?? 0,
       draft: d?.number ?? 1,
       after: d ? (d.after?.hash ?? d.afterMissing) : l.spec.predecessor,
       otherCreator: d?.otherCreator ?? false,
@@ -92,7 +106,23 @@ export async function track(relays: string[], o: { signer?: string; via?: Via } 
       use: l.use,
     };
   };
+  // Every specification found, each once: the lines' drafts, the xtypes, the MIPs and what they fork.
+  const every = new Map<string, TrackedSpec>();
+  for (const l of listing.lines) for (const d of l.drafts) every.set(d.listed.hash, shown(d.listed, d));
+  for (const x of listing.xtypes) if (!every.has(x.hash)) every.set(x.hash, shown(x));
+  const walk = (f: Listing['mips']['roots'][number]['forks']) => {
+    for (const x of f) {
+      if (!every.has(x.listed.hash)) every.set(x.listed.hash, shown(x.listed));
+      walk(x.forks);
+    }
+  };
+  for (const r of listing.mips.roots) {
+    if (!every.has(r.listed.hash)) every.set(r.listed.hash, shown(r.listed));
+    walk(r.forks);
+  }
+  for (const u of listing.mips.unrooted) walk(u.forks);
   return {
+    specs: [...every.values()],
     relays: listing.relays.map((r) => ({ address: r.address, read: r.read, specs: r.specs, problem: r.asked ? r.problem : 'not asked: an address a browser cannot reach', stopped: r.stopped })),
     lines: listing.lines.map((l) => l.drafts.map((d) => shown(d.listed, d))),
     xtypes: listing.xtypes.map((x) => shown(x)),

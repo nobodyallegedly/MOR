@@ -19,13 +19,15 @@ export interface AcceptedEntry {
   label: string | null;
   /** Which app's part it is, where known (Damgar's Money part; others unknown). */
   part: string;
+  /** Its layer, by its own fields as tracking reads them (Choose, by layer: decided); null where not found on the relays asked. */
+  layer: string | null;
 }
 
 export interface State {
   web: boolean;
   /** The identity window first; then the app. */
   stage: 'identity' | 'ready';
-  held: { id: string; grouped: string; short: string; active: boolean }[];
+  held: { id: string; grouped: string; short: string; active: boolean; /** Used through Kišib's runner: no key of it here. */ runner?: boolean }[];
   identity: null | {
     id: string;
     grouped: string;
@@ -35,14 +37,18 @@ export interface State {
     encryption: boolean;
     /** Ummia's own line of acts, its card for Kišib (Identity rule 35), naming only an act the homes hold (H80's question 2). */
     line: LineShown;
+    /** Used through Kišib's runner: Ummia holds none of its keys. */
+    runner?: boolean;
   };
   /** Who acts (the shared chooser, `acting.ts`). */
   actors: import('./acting.ts').Actor[];
   acting: string | null;
   settings: { relays: string[]; track: string[]; reports: string | null };
+  /** Look's saved points. */
+  saved: import('./ummia.ts').Saved[];
   /** Releases need a folder on a computer: the web client has none. */
   releases: boolean;
-  counts: { specs: number; releases: number; mips: number; reports: number };
+  counts: { specs: number; releases: number; mips: number; reports: number; cards: number; anchors: number };
 }
 
 /** A review: what would be signed, in plain words, with the digest of exactly that. Nothing is signed until confirmed. */

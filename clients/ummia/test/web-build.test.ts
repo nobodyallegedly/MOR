@@ -94,14 +94,13 @@ test('mor-ummia check: a server serving the release is SAME; one altering the sc
   }
 });
 
-test('Ummia’s tint (H36): coral, by Kišib’s rule, on outlines, separators and quiet accents only; red only for alarms', () => {
-  assert.deepEqual(TINT, { layer: '#ee8b74', line: '#392523', edge: '#4c2f2b', accent: '#91574a' });
+test('Ummia’s colour on the kit: the Development layer’s coral, in pastel fills; red only for alarms; its icon’s tint (H36)', () => {
+  assert.deepEqual(TINT, { layer: '#ee8b74', pastel: '#f7c4b7' });
+  assert.match(STYLE, /\.k-ummia\{--k-c:#ee8b74;--k-p:#f7c4b7;/);
+  // Red stays the alarm's: the kit's --k-bad, never on a tile but an alarm.
+  assert.match(STYLE, /--k-bad:#c4645f/);
+  for (const m of STYLE.matchAll(/\.k-tile\.k-d[23]\{([^}]*)\}/g)) assert.doesNotMatch(m[1], /--k-bad/);
   const over = (share: number, base = '06080c') => '#' + [0, 2, 4].map((i) => Math.round(parseInt(base.slice(i, i + 2), 16) + share * (parseInt(TINT.layer.slice(1 + i, 3 + i), 16) - parseInt(base.slice(i, i + 2), 16))).toString(16).padStart(2, '0')).join('');
-  assert.deepEqual([over(0.22), over(0.3), over(0.6)], [TINT.line, TINT.edge, TINT.accent]);
-  assert.match(STYLE, /:root\{--line:#392523;--edge:#4c2f2b;--tint:#91574a\}/);
-  const textUses = [...STYLE.matchAll(/([^{}]+)\{[^}]*(?<![-a-z])color:var\(--tint\)/g)].map((m) => m[1].trim());
-  assert.deepEqual(textUses, ['details>summary::before']);
-  assert.match(STYLE, /--bad:#b4615f/);
   // The icon's tint, by the same rule: a thick edge at 70% over the dark; the dark moved 6%; the clay, its rim and the carving 12%.
   const svg = readFileSync(join(here, 'static/icon/ummia.svg'), 'utf8');
   assert.equal(over(0.7), '#a86455');
