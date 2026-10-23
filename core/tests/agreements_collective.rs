@@ -9277,7 +9277,19 @@ fn f190_qf2_the_reference_names_the_judge_of_forks() {
     settle(&mut l, &mut arbs[0], r, x, vec![y, z]);
     assert_eq!(l.in_force().unwrap(), x, "every tip named");
     // F192: a judge's settlement naming one of two other tips settles what
-    // it saw; the third, which it did not see, loses.
+    // it saw; the third, which it did not see (made after the request),
+    // loses.
+    let (mut l, mut arbs) = lab(true, 1);
+    let d = l.d;
+    let x = l.version(d, "One.", None);
+    let y = l.version(d, "Two.", None);
+    let r = ask(&mut l);
+    l.version(d, "Three.", None);
+    settle(&mut l, &mut arbs[0], r, x, vec![y]);
+    assert_eq!(l.in_force().unwrap(), x, "Three, not seen, reopens nothing (F192)");
+    // S7e question 2: the request it cites, with its history, is seen too.
+    // The requester signed Three before asking: a settlement leaving it
+    // unnamed settles nothing.
     let (mut l, mut arbs) = lab(true, 1);
     let d = l.d;
     let x = l.version(d, "One.", None);
@@ -9285,7 +9297,7 @@ fn f190_qf2_the_reference_names_the_judge_of_forks() {
     l.version(d, "Three.", None);
     let r = ask(&mut l);
     settle(&mut l, &mut arbs[0], r, x, vec![y]);
-    assert_eq!(l.in_force().unwrap(), x, "Three, not seen, reopens nothing (F192)");
+    assert_eq!(l.in_force().unwrap(), d, "Three, in the request's history, unnamed: nothing settled");
     // Field 27 names one of field 13, in a deal only.
     let mut t = deal_terms(spec("p"), spec("q"));
     t.arbitrators = Some(vec![spec("an arbitrator")]);

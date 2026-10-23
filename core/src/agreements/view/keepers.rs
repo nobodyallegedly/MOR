@@ -306,7 +306,7 @@ impl<'a> AgreementsView<'a> {
 
     /// The acts in `act`'s history, as far as held: what its `prev` and its
     /// `objects` name, followed back.
-    fn act_history(&self, act: &Hash) -> BTreeSet<Hash> {
+    pub(super) fn act_history(&self, act: &Hash) -> BTreeSet<Hash> {
         let mut seen = BTreeSet::new();
         let mut todo = vec![*act];
         while let Some(a) = todo.pop() {

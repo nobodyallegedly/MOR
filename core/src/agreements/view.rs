@@ -8056,6 +8056,23 @@ impl<'a> AgreementsView<'a> {
     pub(super) fn payment_counts_rec(&self, payee: &Hash, at: &crate::money::PaidAt, amount: &crate::money::Amount, rec: (Option<&Hash>, &[u8]), fulfils: &Hash) -> bool {
         use crate::money as fin;
         let proof = rec.1;
+        // Money rule 4 (F392): paid to another identity's pointer, it
+        // counts only where that identity is the grantee of a grant of the
+        // payee's that the agreement or offer the payment follows lists in
+        // field 14 or 29, the agreement's designated pointer (Agreements
+        // rules 15 and 17), and the pointer counts on the grantee's own
+        // chain, within its vault (rules 3 and 12).
+        if let fin::PaidAt::Flow(p) = at {
+            let other = self.v.get(p).filter(|h| h.inside.spec == self.mirs.money).and_then(|h| match fin::Payload::decode(h.inside.type_, &h.inside.payload) {
+                Ok(fin::Payload::PayeePointer(q)) if &q.payee != payee => Some(q.payee),
+                _ => None,
+            });
+            if let Some(g) = other {
+                return self.designated_grantees(payee, fulfils).contains(&g)
+                    && self.pointers_held(&g).is_ok_and(|held| fin::pointer_counts(&held, p))
+                    && fin::flow_followed_vault(Some(self.vault_in_force(&g).as_slice()).filter(|v| !v.is_empty()), amount);
+            }
+        }
         let res = self.v.resolve(payee);
         // F153: not past a link counting only through own attempts.
         let n = res.links.iter().take_while(|l| !self.refuses(&l.act)).count();
@@ -8085,6 +8102,94 @@ impl<'a> AgreementsView<'a> {
         let rail = self.rail_of_proof(proof);
         let sees = |r: &crate::envelopes::anchoring::Reference| rail.is_some_and(|x| self.rail_clocks.contains(&(r.cmip, x)));
         fin::rule_15_by(&changes, receipt, &claims, &self.anchored, &sees)
+    }
+
+    /// Money rule 4's clause (F392, decided by Nobody, allegedly, 23
+    /// October 2026): the identities whose pointer is a designated pointer
+    /// for `payee` on a payment following `fulfils`: where `fulfils` is an
+    /// agreement's terms, an offer made under an agreement, or an obligation
+    /// naming one, the grantee of each grant of the payee's that those terms
+    /// (or their version in force) list in field 14 or 29. The grant is the
+    /// payee's own act (F145): held, signed by the payee, valid, and, for a
+    /// collective, its consent counting (rule 7); in a deal, the deal carries
+    /// its grants ([`Self::deal_services`]: one service per group, every
+    /// grant naming this agreement).
+    pub(super) fn designated_grantees(&self, payee: &Hash, fulfils: &Hash) -> Vec<Hash> {
+        use crate::money::Payload as Fin;
+        let Some(x) = self.v.get(fulfils) else { return vec![] };
+        let named: Option<Hash> = if self.is_agreements(x, types::TERMS) {
+            Some(*fulfils)
+        } else if self.is_agreements(x, types::STANDING_OFFER) {
+            self.offer(fulfils).ok().and_then(|o| o.offer.under)
+        } else if x.inside.spec == self.mirs.money {
+            match Fin::decode(x.inside.type_, &x.inside.payload) {
+                Ok(Fin::Obligation(o)) if o.creditor == *payee => o.agreement,
+                _ => None,
+            }
+        } else {
+            None
+        };
+        let Some(named) = named else { return vec![] };
+        let mut versions = vec![named];
+        if let Ok(v) = self.latest_version(&named) {
+            if v != named {
+                versions.push(v);
+            }
+        }
+        let mut out = vec![];
+        for v in versions {
+            let Ok(t) = self.terms(&v) else { continue };
+            let mut grants: Vec<Hash> = t.split_grant.iter().copied().collect();
+            grants.extend(t.payee_grants.iter().flatten().copied());
+            grants.extend(t.backups.iter().flat_map(Backups::grants));
+            if !t.is_collective() && self.deal_services(&t).is_none() {
+                continue;
+            }
+            // A collective's grant is the collective's own: signed with its
+            // keys, its consent counting, or by a founder for "this
+            // collective" in the founding terms that list it.
+            let ours = !t.is_collective() || self.collective_of(&v).ok().flatten() == Some(*payee);
+            if !ours {
+                continue;
+            }
+            for g in grants {
+                let Some(gh) = self.v.get(&g).filter(|h| self.is_agreements(h, types::GRANT)) else { continue };
+                let Ok(gr) = Grant::decode(&gh.inside.payload) else { continue };
+                if !self.valid(&g) {
+                    continue;
+                }
+                let own = gh.act.outside.signer == Some(*payee) && (!t.is_collective() || self.consent(&g).is_ok_and(|c| c.counts()));
+                let founding = t.is_collective() && t.parent.is_none() && gr.by_this && gh.act.outside.signer.is_some_and(|x| t.parties.contains(&x));
+                if !own && !founding {
+                    continue;
+                }
+                if !out.contains(&gr.grantee) {
+                    out.push(gr.grantee);
+                }
+            }
+        }
+        out
+    }
+
+    /// Whether a held receipt or claim counts for its payee where the rail
+    /// answered it paid (Money rules 4, 12 to 15; [`Self::payment_counts`]),
+    /// read from the record: its payee, amount, proof and what it follows,
+    /// and where the rail's answer says it was paid. `None` where the rail
+    /// has not answered it valid, or where the answer rests on whether two
+    /// records whose payment is not stated are one payment (Money rule 12).
+    pub fn record_counts(&self, id: &Hash) -> Option<bool> {
+        use crate::money::Payload as Fin;
+        let x = self.v.get(id)?;
+        if x.inside.spec != self.mirs.money {
+            return None;
+        }
+        let (payee, amount, proof, fulfils) = match Fin::decode(x.inside.type_, &x.inside.payload).ok()? {
+            Fin::Receipt(r) => (r.payee, r.amount, r.proof, r.fulfils),
+            Fin::Claim(c) => (c.payee, c.amount, c.proof, c.fulfils),
+            _ => return None,
+        };
+        let at = self.rail_valid.get(id)?;
+        self.judged(|| self.payment_counts_rec(&payee, at, &amount, (Some(id), &proof), &fulfils))
     }
 
     /// The lock changes affecting a payment, by rotation (Money rule 15,
@@ -9050,8 +9155,9 @@ impl<'a> AgreementsView<'a> {
     /// replacing QF1 and the build's "clean"): its history, and nothing
     /// else: its own line, each tip it names with that tip's history, and
     /// what it cites, each with its own history ([`Self::fork_histories`]);
-    /// for a judge's settlement, the histories of the version it keeps and
-    /// of the tips it drops. A settlement counts only where it names every
+    /// for a judge's settlement, the request it cites with that request's
+    /// history, and the histories of the version it keeps and of the tips
+    /// it drops. A settlement counts only where it names every
     /// tip it saw (F188): a version of the fork in its history that is
     /// neither on the line it keeps nor at or below a tip it names leaves
     /// it settling nothing, a plain version. A settlement that counts is
@@ -9180,6 +9286,17 @@ impl<'a> AgreementsView<'a> {
                 let mut seen: BTreeSet<Hash> = BTreeSet::from([act]);
                 for y in std::iter::once(&kept).chain(&discarded) {
                     seen.extend(hist.get(y).into_iter().flatten().copied());
+                }
+                // S7e question 2, decided for the text: what a judge's
+                // settlement cites, the request, with its own history (what
+                // its `prev` and its `objects` name, followed back), each
+                // version of the fork found there with that version's.
+                if let Some(rq) = self.v.get(&act).and_then(|h| ForkSettlement::decode(&h.inside).ok()).map(|s| s.request) {
+                    seen.insert(rq);
+                    for y in self.act_history(&rq) {
+                        seen.insert(y);
+                        seen.extend(hist.get(&y).into_iter().flatten().copied());
+                    }
                 }
                 if !names_all(&seen, &[kept], &discarded) {
                     continue;
@@ -9496,6 +9613,15 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
+        // F392: a work the collective sells under its own stake: the
+        // collective's own fork or closing.
+        if let (Some(c), Some(w)) = (this, work) {
+            if sold_under_own_stake(&t, w) {
+                if let Some(e) = self.closed_by(&c)? {
+                    return Ok(e.by);
+                }
+            }
+        }
         Ok(v)
     }
 
@@ -9641,7 +9767,7 @@ impl<'a> AgreementsView<'a> {
             return no(e, "the agreement it names is not held terms");
         };
         if let Some(w) = &work {
-            if t.stake_on(&Who::Id(*w)).is_none() && self.latest_version(&p.agreement).ok().and_then(|v| self.terms(&v).ok()).is_none_or(|v| v.stake_on(&Who::Id(*w)).is_none()) {
+            if work_stake(&t, w).is_none() && self.latest_version(&p.agreement).ok().and_then(|v| self.terms(&v).ok()).is_none_or(|v| work_stake(&v, w).is_none()) {
                 return no(e, "the agreement it names carries no stake in the work it pays for");
             }
         }
@@ -10128,6 +10254,13 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
+        // F392: a work the collective sells under its own stake: the
+        // collective holds it, and settles on its own chain.
+        if let (Some(c), Some(w)) = (this, work) {
+            if sold_under_own_stake(&t, w) && !out.contains(&c) {
+                out.push(c);
+            }
+        }
         Ok(out)
     }
 
@@ -10221,7 +10354,7 @@ impl<'a> AgreementsView<'a> {
         for _ in 0..10_000 {
             let Some(p) = t.parent else { break };
             let Ok(pt) = self.terms(&p) else { break };
-            if pt.stake_on(&Who::Id(*w)).map(|(_, s)| s.clone()) != t.stake_on(&Who::Id(*w)).map(|(_, s)| s.clone()) {
+            if work_stake(&pt, w).map(|(_, s)| s.clone()) != work_stake(&t, w).map(|(_, s)| s.clone()) {
                 break;
             }
             at = p;
@@ -10256,6 +10389,14 @@ impl<'a> AgreementsView<'a> {
                         out.push(c);
                     }
                 }
+            }
+        }
+        // F392: a work the collective sells under its own stake: the
+        // collective sells it.
+        if let (Some(c), Some(w)) = (this, work) {
+            let col = self.col(&c);
+            if sold_under_own_stake(&t, w) && (0..col.res.links.len()).any(|k| self.declares(&col, k)) && !out.contains(&c) {
+                out.push(c);
             }
         }
         Ok(out)
@@ -11851,4 +11992,20 @@ fn divide_first(total: u64, weights: &[u64]) -> Vec<u64> {
 /// A hash written in hexadecimal, for words shown to a person.
 fn hex_of(h: &Hash) -> String {
     h.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// The stake a payment for work `w` is paid under in terms `t` (F392,
+/// decided by the MOR lead under delegation, 23 October 2026; the
+/// glossary's "Stake"): the stake whose object is the work, or, in a
+/// collective's terms with none, the collective's own stake (object null),
+/// a share of all its income, a stake in every work the collective sells
+/// under its agreement.
+fn work_stake<'t>(t: &'t Terms, w: &Hash) -> Option<(usize, &'t Stake)> {
+    t.stake_on(&Who::Id(*w)).or_else(|| if t.is_collective() { t.own_stake() } else { None })
+}
+
+/// Whether work `w` is sold under the collective's own stake in terms `t`:
+/// a collective's terms with no stake in the work and a stake in itself.
+fn sold_under_own_stake(t: &Terms, w: &Hash) -> bool {
+    t.is_collective() && t.stake_on(&Who::Id(*w)).is_none() && t.own_stake().is_some()
 }

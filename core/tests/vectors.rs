@@ -412,6 +412,25 @@ fn verdict_vectors() {
                     })
                 }
                 "paid toward" => with_facts(&v, &mirs, facts).paid_toward(&h(&ask["act"])).map_or(json!("unknown"), |x| json!(x)),
+                "payment counts" => json!(match with_facts(&v, &mirs, facts).record_counts(&h(&ask["act"])) {
+                    Some(true) => "counts",
+                    Some(false) => "does not count",
+                    None => "unknown",
+                }),
+                "purchase" => {
+                    use mor_core::agreements::PurchaseVerdict as P;
+                    json!(match with_facts(&v, &mirs, facts).purchase(&h(&ask["act"])) {
+                        Err(_) => "unknown",
+                        Ok(None) => "not a payment for a work",
+                        Ok(Some(e)) => match e.verdict {
+                            P::Purchase => "purchase",
+                            P::NoPurchase { .. } => "no purchase",
+                            P::Unrecorded => "unrecorded",
+                            P::WrongReceipt { .. } => "wrong receipt",
+                            P::Unknown => "unknown",
+                        },
+                    })
+                }
                 "disagreements" => with_facts(&v, &mirs, facts).disagreements(&h(&ask["receiver"])).map_or(json!("unknown"), |x| json!(x.len())),
                 q => panic!("{what}: a question this check does not know: {q}"),
             };
@@ -438,7 +457,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 124);
+    assert_eq!(n, 131);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.

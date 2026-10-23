@@ -185,7 +185,7 @@ try {
     s
       .replace(/identity="[0-9a-f]{64}">Nobody, allegedly/, `identity="${author.id}">Nobody, allegedly`)
       .replace(/identity="[0-9a-f]{64}">Machine, allegedly/, `identity="${machine.id}">Machine, allegedly`)
-      .replace('identity="CLOCK-IDENTITY"', `identity="${clockId.id}"`),
+      .replace(/identity="(?:[0-9a-f]{64}|CLOCK-IDENTITY)">the dubsar.org clock/, `identity="${clockId.id}">the dubsar.org clock`),
   );
   edit('report.html', (s) => s.replaceAll('REPORTS-IDENTITY', reporting.id));
   edit('listing.html', (s) => s.replace('https://home1.dubsar.org', home1.base).replace('https://home2.dubsar.org', home2.base));
