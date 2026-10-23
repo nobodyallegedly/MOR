@@ -63,7 +63,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 
 - **Work claim.** An act binding a work's hash to its creators.
 - **Stake.** A share in a work or a publication. An agreement defines it, and it is identified by that agreement and its index in the agreement's stakes list. The shares in each always add up to 100%. The current holder of a stake is whoever the transfer chain on the agreement names.
-  A stake whose object is the collective whose agreement defines it is a share of all that collective's income, whoever earns it and whenever. It decides what every holder is paid, member or departed.
+  A stake whose object is the collective whose agreement defines it is a share of all that collective's income, whoever earns it and whenever, and so a stake in every work the collective sells under that agreement. It decides what every holder is paid, member or departed.
   **A stake whose object is a vow is held by the vow's signer: a deal made on a vow has an owner** (rule 14).
 - **Holders' rule.** For a stake of a collective, how its holders consent together to the owners' matters: every holder (the default), or owners holding together at least a stated share of the stake. It reaches only changes that hit every owner of the stake alike, binds only holders who accepted it by signing or buying, and changes only with every holder (rule 94, terms field 30). The release rule (field 24) is its first instance.
 - **Owners' matters.** What a stake's owners consent to by their holders' rule, or each signing: what the stake is paid, an issuance in it, a collective's sale or release of a work, and a fork's successors' founding terms paying a kept holder less (rule 95).
@@ -1212,7 +1212,7 @@ It is signed by the parties of all the branches involved. Besides its mark, whic
 **What a settlement could see.** MOR has no clock, so a settlement could see exactly what its history holds:
 - its own line (its parent and the versions before it);
 - each tip it names, with that tip's history;
-- what it cites, each with its own history;
+- what it cites, a judge's settlement its request, each with its own history (what its `prev` and the predecessors its `objects` name, followed back);
 - for a judge's settlement, the histories of the version it keeps and of the tips it drops.
 
 Nothing else counts as seen.
@@ -3582,6 +3582,8 @@ A contest of a declaration is signed by the party the declaration names, with it
 **A contest of a purchase**: field 0 names **the purchase it contests**: the buyer's payer's claim of the payment that is the purchase (rule 12), any of the buyer's own claims of it, or, for an offer at no price, the signature act by which the buyer signed onto the offer (a sign-on, rule 13: a signature act naming the offer, by anyone but the offer's own side). The buyer is the payer the payment's commitment names, an identity (rule 22), or the signer of that signature act: a purchase whose payer committed only a bare key, or that no claim of the payer's records, has no buyer who can contest it (rule 13's stated cost). Field 1, optional, says what was promised and not kept, in words (a buyer may know only that something went wrong). Its inside names the purchase as both chain and predecessor, `[[purchase, purchase]]`. Signed by the buyer, it is shown beside the purchase while the payment is a purchase (rule 12; a payment still pending, or found to be no purchase, shows none), and voids nothing: it changes no payment, refund or delivery, nor any act's validity, status or selection, nor a sale's state. Signed by anyone else, it shows nothing as the buyer's contest. *Bytes that do not match what was sold are caught by the bytes (Envelopes rule 21, and a key delivery that opens nothing is ignored); words that promised something other than what was delivered are not, and this is where the buyer says so.*
 
 *Client conformance: where the offer the buyer paid or signed onto names a vow, the buyer's client names the vow in the contest, as its inside's chain and predecessor, `[[vow, vow]]`, so that the sale is marked.*
+
+*Client conformance: where the payee of a purchase is a collective, or an agreement with several parties, the buyer's client makes its claim of the purchase readable by every member of the collective's agreement in force, or by every party of the version the purchase names: sealed to each of them, or its key delivered to each (rule 57). Stated cost: every member or party sees who bought.*
 
 **A vow's sale** is a purchase, and its buyer contests it the same way, with one difference: where its inside names the vow by its name (its genesis id) as chain and predecessor, `[[vow, vow]]`, the contest marks that sale contested (rule 13), and field 1 says which of the vow's promises was not kept, in words or in a cMIP's terms. A contest naming the vow whose field 0 is no sale of that vow marks nothing and shows nothing. In the purchase's form, `[[purchase, purchase]]`, it is shown beside the purchase and marks no sale.
 
