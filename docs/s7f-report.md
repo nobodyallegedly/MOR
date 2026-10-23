@@ -118,7 +118,11 @@ A subagent read only the eight texts and the diff. No finding number, review lab
 
 ## The releases rebuilt
 
-*Waiting:* pull request 104 (the splits round) had not merged when the core work was done. Per the prompt, the merge of main and the rebuild of the six web releases wait for the MOR lead to merge it. This section is completed after.
+After the MOR lead merged the splits round (pull request 104; main green at `bc926601`), I merged main into this branch. Its one conflict was a generated file, Edubba's `built/BUILT-WITH.txt`, which the rebuild rewrites. I then rebuilt all six releases in this branch, as their READMEs say:
+- `cd clients/genesis && npm run wasm`;
+- then `npm run release` in `clients/site` (the display client), `clients/dub`, `clients/kishib`, `clients/damgar`, `clients/ummia` and `clients/desk` (Edubba).
+
+Each one's `npm run test:build` passed: it builds the release again and finds the same bytes. The tools were rustc 1.97.0, wasm-bindgen 0.2.129 and each client's pinned esbuild. All six carry the same WebAssembly: SHA-256 `7e59bfcd94243b89…`, 5,246,036 bytes, work hash `4896106160b80cb6…` (as `BUILT-WITH.txt` records it). The JavaScript glue is unchanged: no interface change.
 
 ## The box
 
@@ -126,7 +130,9 @@ A subagent read only the eight texts and the diff. No finding number, review lab
 
 ## Checks run
 
-- `cargo test --workspace --locked`: see below, before the releases.
+- `cargo test --workspace --locked`: all green (88 test binaries).
 - `gen_vectors`: the vectors written as above; every earlier case byte-identical at its place.
 - `python3 core/vectors/check.py`: "all 192 vectors agree".
-- CI on GitHub: read by me on the pull request before handing over.
+- Every client suite CI runs, run here on the merged branch and this core: desk (Edubba, 105, the splits round's shared-deal and collective-sale tests among them), dub, damgar, ummia, kishib, barebone, collective, connector, genesis, grants, longform, manage, kit, anchoring-service, testwallet, reader, repo and reports. All passed.
+- Not run here: the regtest job (btcd and lnd). CI runs it.
+- CI on GitHub, read by me: green on `744e61ef` before the merge (all, regtest, browsers, seal, release: the reproducible display client). After the merge and rebuild, on `9b8eb6ba`: release, regtest and seal green when this line was written; the final head's result is on the pull request, read by me before marking it ready.
