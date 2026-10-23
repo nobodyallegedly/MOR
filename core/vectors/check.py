@@ -728,7 +728,9 @@ def main():
     for i, b in pool.items():
         o = decode(bytes.fromhex(b))[0]
         k, nc = o.get(5), o.get(4)
-        assert keys.setdefault(k, i) == i, ("a content key locks two acts", i, keys[k])
+        # A private act carries no content key on its outside (its
+        # recipient holds it, in the case's facts).
+        assert k is None or keys.setdefault(k, i) == i, ("a content key locks two acts", i, keys[k])
         assert nonces.setdefault(nc, i) == i, ("a nonce locks two acts", i, nonces[nc])
     n += 1
     judged = 0

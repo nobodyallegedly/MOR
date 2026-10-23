@@ -278,6 +278,10 @@ pub enum AgreementsError {
     /// through the proofs' bytes), and the caller stated no such answer for
     /// one of them ([`super::AgreementsView::payments`]).
     PaymentUnstated,
+    /// Unknown: the answer rests on a receipt or claim whose verification
+    /// answer is pending or not held (Money rules 8 and 10): a record whose answer
+    /// is not valid is no purchase and no sale.
+    RailUnanswered,
 }
 
 impl fmt::Display for AgreementsError {
@@ -300,6 +304,9 @@ impl fmt::Display for AgreementsError {
             AgreementsError::PaymentUnstated => f.write_str(
                 "unknown: it rests on whether two receipts or claims are one payment, which their rail Module says, and no such answer was stated",
             ),
+            AgreementsError::RailUnanswered => f.write_str(
+                "unknown: it rests on a receipt or claim whose verification answer is pending or not held, and a record counts toward a purchase or a sale only with a valid answer",
+            ),
         }
     }
 }
@@ -318,6 +325,7 @@ impl AgreementsError {
             AgreementsError::Unsettled(_) => "unsettled",
             AgreementsError::OwnAttempt => "own-attempt",
             AgreementsError::PaymentUnstated => "payment-unstated",
+            AgreementsError::RailUnanswered => "rail-unanswered",
         }
     }
 }

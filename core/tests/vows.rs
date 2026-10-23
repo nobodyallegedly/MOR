@@ -175,6 +175,8 @@ struct Concert {
     name: Hash,
     offer: Hash,
     claims: Vec<Hash>,
+    /// Claims whose rail proof the rail answered invalid (Money rule 8).
+    refused: Vec<Hash>,
 }
 
 const PROOF: &[u8] = b"the fan pays for a seat";
@@ -189,11 +191,13 @@ impl Concert {
         let fid = fan.id;
         receipt(&mut w, &mut club, fid, offer, None, PROOF);
         let c = payers_claim(&mut w, &mut fan, club.id, offer, None, PROOF);
-        Concert { w, club, fan, name, offer, claims: vec![c] }
+        Concert { w, club, fan, name, offer, claims: vec![c], refused: vec![] }
     }
 
     fn state(&self) -> Vec<(Hash, SaleState)> {
-        view_with(&self.w, &self.claims).vow(&self.name).unwrap().sales.into_iter().map(|s| (s.buyer, s.state)).collect()
+        let mut v = view_with(&self.w, &self.claims);
+        v.rail_invalid.extend(self.refused.iter().copied());
+        v.vow(&self.name).unwrap().sales.into_iter().map(|s| (s.buyer, s.state)).collect()
     }
 }
 
@@ -215,10 +219,14 @@ fn a_sale_is_pending_then_confirmed_by_what_the_buyer_acknowledges() {
     let ack = acknowledging_claim(&mut c.w, &mut c.fan, club, offer, PROOF, vec![scanned]);
     c.claims.push(ack);
     assert_eq!(c.state(), vec![(fid, SaleState::Confirmed { by: vec![ack] })], "the buyer acknowledged the door's record");
-    // The acknowledging claim needs the rail's answer: without it, the
-    // payer the payment commits to is not shown (F193).
+    // The acknowledging claim needs the rail's answer: answered invalid, it
+    // acknowledges nothing (F193); not held, whether it confirms the sale
+    // is unknown (Money rules 8 and 10).
+    let mut v = view_with(&c.w, &c.claims[..1]);
+    v.rail_invalid.insert(ack);
+    assert_eq!(v.vow(&name).unwrap().sales[0].state, SaleState::Pending, "a claim the rail answered invalid acknowledges nothing");
     let e = view_with(&c.w, &c.claims[..1]).vow(&name).unwrap();
-    assert_eq!(e.sales[0].state, SaleState::Pending, "a claim without the rail's answer acknowledges nothing");
+    assert_eq!(e.sales[0].state, SaleState::Unknown, "a claim whose answer is not held leaves the sale's state unknown");
 }
 
 /// F240: only someone who signed onto the vow may confirm or contest it.
@@ -234,7 +242,8 @@ fn only_the_buyer_confirms_or_contests_and_a_contest_prevails() {
     // commitment carries the fan, so the rail answers no claim the club
     // signs (F193); it is not the payer's.
     let mut club_p = c.club.clone();
-    acknowledging_claim(&mut c.w, &mut club_p, club, offer, PROOF, vec![delivered]);
+    let own = acknowledging_claim(&mut c.w, &mut club_p, club, offer, PROOF, vec![delivered]);
+    c.refused.push(own);
     c.club = club_p;
     let witnessed = c.w.ack(&mut c.club, delivered);
     let _ = witnessed;
@@ -300,10 +309,15 @@ fn a_payment_nobody_signed_onto_carries_no_state() {
     let name = vow(&mut w, &mut club, "A concert");
     let offer = lone_offer(&mut w, &mut club, name, "One seat.");
     let r = receipt(&mut w, &mut club, fan.id, offer, None, b"paid, no claim");
-    let e = view(&w).vow(&name).unwrap();
+    let e = common::stand_in_answers(view(&w)).vow(&name).unwrap();
     assert!(e.sales.is_empty(), "the payer a receipt names is the seller's word, never the buyer (F193)");
     assert_eq!(e.unsigned, vec![r]);
     assert_eq!(e.offers, vec![offer]);
+    // Without the rail's answer for the receipt, whether the payment is a
+    // purchase at all is unknown (Money rules 8 and 10).
+    let e = view(&w).vow(&name).unwrap();
+    assert!(e.sales.is_empty() && e.unsigned.is_empty());
+    assert_eq!(e.unknown, vec![r]);
 }
 
 /// F237: an offer naming a vow sells it with its words; one naming an act
