@@ -177,31 +177,51 @@ impl<'a> AgreementsView<'a> {
     /// payment is listed in `unknown`; every other sale and payment stands.
     /// Where it depends on two or more such pairs, the vow is unknown
     /// ([`AgreementsError::PaymentUnstated`]; Money rule 12; F381, F383).
+    ///
+    /// Read fail-closed ([`Self::answered`]): a receipt or claim counts
+    /// toward a sale only with the rail's answer, valid; a sale or payment
+    /// that rests on one whose answer is pending or not held is marked so
+    /// in the same way (Money rules 8 and 10).
     pub fn vow(&self, name: &Hash) -> R<VowEval> {
-        match self.two_ways(|| self.vow_unjudged(name)) {
+        match self.two_ways(|| self.vow_answered(name)) {
             Ways::One(a) => a,
-            Ways::Both(Ok(mut a), Ok(b)) => {
-                let mut sales: Vec<VowSale> = vec![];
-                for x in a.sales.iter().chain(b.sales.iter()) {
-                    if sales.iter().any(|y| y.act == x.act) {
-                        continue;
-                    }
-                    let both = a.sales.contains(x) && b.sales.contains(x);
-                    sales.push(if both { x.clone() } else { VowSale { state: SaleState::Unknown, ..x.clone() } });
-                }
-                sales.sort_by(|p, q| p.act.cmp(&q.act));
-                let unsigned: Vec<Hash> = a.unsigned.iter().filter(|x| b.unsigned.contains(x)).copied().collect();
-                let mut unknown: Vec<Hash> = a.unsigned.iter().chain(b.unsigned.iter()).filter(|x| !unsigned.contains(x)).copied().collect();
-                unknown.sort();
-                unknown.dedup();
-                a.sales = sales;
-                a.unsigned = unsigned;
-                a.unknown = unknown;
-                Ok(a)
-            }
+            Ways::Both(Ok(a), Ok(b)) => Ok(Self::vow_both(a, b)),
             Ways::Both(Err(e), Err(f)) if e == f => Err(e),
             _ => Err(AgreementsError::PaymentUnstated),
         }
+    }
+
+    fn vow_answered(&self, name: &Hash) -> R<VowEval> {
+        match self.answered(|| self.vow_unjudged(name)) {
+            (a, None) => a,
+            (Ok(a), Some(Ok(b))) => Ok(Self::vow_both(a, b)),
+            (Err(e), Some(Err(f))) if e == f => Err(e),
+            _ => Err(AgreementsError::RailUnanswered),
+        }
+    }
+
+    /// A vow read two ways: each sale found alike both ways stands, any
+    /// other is marked [`SaleState::Unknown`]; a payment signed by nobody
+    /// both ways stands, one found so only one way is unknown.
+    fn vow_both(mut a: VowEval, b: VowEval) -> VowEval {
+        let mut sales: Vec<VowSale> = vec![];
+        for x in a.sales.iter().chain(b.sales.iter()) {
+            if sales.iter().any(|y| y.act == x.act) {
+                continue;
+            }
+            let both = a.sales.contains(x) && b.sales.contains(x);
+            sales.push(if both { x.clone() } else { VowSale { state: SaleState::Unknown, ..x.clone() } });
+        }
+        sales.sort_by(|p, q| p.act.cmp(&q.act));
+        let unsigned: Vec<Hash> = a.unsigned.iter().filter(|x| b.unsigned.contains(x)).copied().collect();
+        let mut unknown: Vec<Hash> =
+            a.unsigned.iter().chain(b.unsigned.iter()).filter(|x| !unsigned.contains(x)).chain(a.unknown.iter()).chain(b.unknown.iter()).copied().collect();
+        unknown.sort();
+        unknown.dedup();
+        a.sales = sales;
+        a.unsigned = unsigned;
+        a.unknown = unknown;
+        a
     }
 
     fn vow_unjudged(&self, name: &Hash) -> R<VowEval> {
@@ -339,7 +359,7 @@ impl<'a> AgreementsView<'a> {
         }
         if h.inside.spec == self.mirs.money {
             let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return Ok(None) };
-            if self.rail_invalid.contains(act) || !self.rail_binds(&c.rail, crate::development::Bound::Purpose) {
+            if !self.rail_counts(act) || !self.rail_binds(&c.rail, crate::development::Bound::Purpose) {
                 return Ok(None);
             }
             let Payer::Identity(buyer) = c.payer(&signer) else { return Ok(None) };
@@ -370,7 +390,12 @@ impl<'a> AgreementsView<'a> {
     /// is a purchase depends on two or more pairs of records whose payment
     /// is not stated (Money rule 12).
     pub fn purchase_contests(&self, purchase: &Hash) -> R<Vec<Hash>> {
-        let buyer = match self.two_ways(|| self.purchase_buyer(purchase)) {
+        let buyer = match self.two_ways(|| match self.answered(|| self.purchase_buyer(purchase)) {
+            (b, None) => b,
+            (Ok(a), Some(Ok(b))) if a == b => Ok(a),
+            (Err(e), Some(Err(f))) if e == f => Err(e),
+            _ => Err(AgreementsError::RailUnanswered),
+        }) {
             Ways::One(b) => b?,
             Ways::Both(Ok(a), Ok(b)) if a == b => a,
             Ways::Both(Err(e), Err(f)) if e == f => return Err(e),
@@ -398,12 +423,14 @@ impl<'a> AgreementsView<'a> {
     /// only a bare key.
     fn committed_buyer(&self, record: &Hash, proof: &[u8]) -> Option<(Hash, Hash)> {
         use crate::money::{Payer, Payload as Fin};
-        let mut claims = self.payers_claims_for(record, proof);
-        claims.sort();
+        let mut claims = self.claims_of_payment((Some(record), proof), |id| self.rail_counts(id));
+        // A claim with the rail's answer, valid, names the sale first, so
+        // that a claim whose answer is not held moves only the sale's state.
+        claims.sort_by_key(|id| (!self.rail_valid.contains_key(id), *id));
         claims.into_iter().find_map(|id| {
             let h = self.v.get(&id)?;
             let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return None };
-            if self.rail_invalid.contains(&id) || !self.rail_binds(&c.rail, crate::development::Bound::Purpose) {
+            if !self.rail_binds(&c.rail, crate::development::Bound::Purpose) {
                 return None;
             }
             match c.payer(&h.act.outside.signer?) {
@@ -458,12 +485,12 @@ impl<'a> AgreementsView<'a> {
         use crate::money::{Payer, Payload as Fin};
         match proof {
             Some((record, proof)) => self
-                .payers_claims_for(record, proof)
+                .claims_of_payment((Some(record), proof), |id| self.rail_counts(id))
                 .into_iter()
                 .filter(|id| {
                     let Some(h) = self.v.get(id) else { return false };
                     let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return false };
-                    !self.rail_invalid.contains(id) && self.rail_binds(&c.rail, crate::development::Bound::Purpose) && h.act.outside.signer.is_some_and(|s| c.payer(&s) == Payer::Identity(*buyer))
+                    self.rail_binds(&c.rail, crate::development::Bound::Purpose) && h.act.outside.signer.is_some_and(|s| c.payer(&s) == Payer::Identity(*buyer))
                 })
                 .collect(),
             None => vec![*sale],

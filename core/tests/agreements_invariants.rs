@@ -1836,6 +1836,7 @@ impl ColWorld {
                     Some(agreements::PurchaseVerdict::NoPurchase { .. }) => "refund",
                     Some(agreements::PurchaseVerdict::Unrecorded) => "unrecorded",
                     Some(agreements::PurchaseVerdict::WrongReceipt { .. }) => "wrong",
+                    Some(agreements::PurchaseVerdict::Unknown) => "unknown",
                     None => "none",
                 };
                 if tag == "purchase" && !self.counts(&lv, x) && !by_proof.contains_key(&proof) {
@@ -2782,6 +2783,7 @@ impl DealWorld {
                     Some(agreements::PurchaseVerdict::NoPurchase { .. }) => "refund",
                     Some(agreements::PurchaseVerdict::Unrecorded) => "unrecorded",
                     Some(agreements::PurchaseVerdict::WrongReceipt { .. }) => "wrong",
+                    Some(agreements::PurchaseVerdict::Unknown) => "unknown",
                     None => "none",
                 })
             };
@@ -2993,6 +2995,7 @@ fn deal_tally(d: &DealWorld) {
             Some(agreements::PurchaseVerdict::NoPurchase { .. }) => s.hit("refund"),
             Some(agreements::PurchaseVerdict::Unrecorded) => s.hit("unrecorded"),
             Some(agreements::PurchaseVerdict::WrongReceipt { .. }) => s.hit("wrong_receipt"),
+            Some(agreements::PurchaseVerdict::Unknown) => s.hit("purchase_unknown"),
             None => {}
         }
     }
@@ -3278,7 +3281,7 @@ fn ic4_an_acknowledgement_records_the_whole_payment() {
         fork_op(0, DebtsMode::Honest),
     ];
     let cw = run_col(&shape, &ops, 0);
-    let lv = cw.view();
+    let lv = common::stand_in_answers(cw.view());
     let verdicts: Vec<agreements::PurchaseVerdict> = cw.info.iter().filter(|(_, f)| matches!(f.kind, K::Receipt { .. })).map(|(x, _)| lv.purchase(x).unwrap().unwrap().verdict).collect();
     assert_eq!(verdicts.len(), 2);
     assert_eq!(verdicts[0], verdicts[1], "one payment, one verdict");
@@ -3736,7 +3739,8 @@ fn it2b_a_stale_line_is_a_stated_cost() {
 /// is not the payment's): it counts for nothing, and the payment is judged
 /// by the receipts naming its claim. A verifier that has not checked the
 /// rail yet cannot tell which is wrong: it judges none of them a purchase
-/// or a refund until it can.
+/// or a refund until it can (unknown: a receipt counts toward a purchase
+/// only with a valid verification answer).
 #[test]
 fn it3_the_payments_claim_decides() {
     let shape = DealShape { parties: 2, shares: vec![1, 1, 1, 1], service: false, backup: false, all_found: true };
@@ -3747,7 +3751,7 @@ fn it3_the_payments_claim_decides() {
     ];
     let d = run_deal(&shape, &ops, 0);
     assert_eq!(d.wrong.len(), 1, "Ben's old-version receipt");
-    let lv = d.view();
+    let lv = common::stand_in_answers(d.view());
     for (x, _) in &d.push {
         let got = lv.purchase(x).unwrap().unwrap().verdict;
         if d.wrong.contains(x) {
@@ -3759,7 +3763,10 @@ fn it3_the_payments_claim_decides() {
     let mut bare = common::stand_in_payments(AgreementsView::new(&d.w.v, mirs()));
     bare.rails.insert(push_rail(), push_rail_spec());
     for (x, _) in &d.push {
-        assert_eq!(bare.purchase(x).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Unrecorded, "no rail answer yet");
+        // A receipt counts toward a purchase only with a valid verification
+        // answer; with none held, whether it is one is unknown (Money rules
+        // 8 and 10). It was "unrecorded" before.
+        assert_eq!(bare.purchase(x).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Unknown, "no rail answer yet");
     }
 }
 

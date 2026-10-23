@@ -140,6 +140,12 @@ pub struct AgreementsView<'a> {
     /// The one pair the answer being judged takes as one payment, on its
     /// second reading ([`Self::judged`]); every other pair is two.
     assumed: std::cell::RefCell<Option<(Payment, Payment)>>,
+    /// Set when an answer read a receipt or claim whose verification answer
+    /// is neither valid nor invalid: pending, or not held ([`Self::answered`]).
+    unanswered_read: std::cell::Cell<bool>,
+    /// Set while an answer is read a second time, as if every such record's
+    /// answer were valid ([`Self::answered`]).
+    as_if_answered: std::cell::Cell<bool>,
     /// Pairs `(clock Module, rail Module)` where the clock Module reads the
     /// rail's own proof as the payment's anchor (F201, F202: the Bitcoin
     /// clock and the on-chain rail): on such a clock, rule 15 compares the
@@ -610,6 +616,8 @@ impl<'a> AgreementsView<'a> {
             unstated: Default::default(),
             read: Default::default(),
             assumed: Default::default(),
+            unanswered_read: Default::default(),
+            as_if_answered: Default::default(),
             rail_clocks: BTreeSet::new(),
             absence_accepted: BTreeSet::new(),
             anchored: Default::default(),
@@ -678,6 +686,8 @@ impl<'a> AgreementsView<'a> {
             unstated: Default::default(),
             read: Default::default(),
             assumed: Default::default(),
+            unanswered_read: Default::default(),
+            as_if_answered: Default::default(),
             rail_clocks: self.rail_clocks.clone(),
             absence_accepted: self.absence_accepted.clone(),
             anchored: self.anchored.clone(),
@@ -6593,6 +6603,11 @@ pub enum PurchaseVerdict {
     /// neither a sale nor a refund: the payment is judged by the receipts
     /// naming the claim it committed to.
     WrongReceipt { why: String },
+    /// Unknown: the answer rests on a receipt or claim whose verification
+    /// answer is pending or not held (Money rules 8 and 10). A
+    /// record whose answer is not valid is no purchase and no sale; until
+    /// its answer is given, whether the payment is one is unknown.
+    Unknown,
 }
 
 /// An open question on a receiver (Money rule 10, double entry): a valid
@@ -8467,6 +8482,61 @@ impl<'a> AgreementsView<'a> {
         }
     }
 
+    /// Whether the receipt or claim `id` counts toward a purchase or a sale
+    /// (Money rules 8 and 10): only with the rail's answer,
+    /// valid. A record whose answer is pending or not held counts on the
+    /// second reading of [`Self::answered`] alone.
+    pub(super) fn rail_counts(&self, id: &Hash) -> bool {
+        if self.rail_valid.contains_key(id) {
+            return true;
+        }
+        if self.rail_invalid.contains(id) {
+            return false;
+        }
+        self.unanswered_read.set(true);
+        self.as_if_answered.get()
+    }
+
+    /// `f` read fail-closed, a record whose verification answer is not
+    /// valid counting toward no purchase and no sale; and, where it read a
+    /// record whose answer is pending or not held, `f` read again as if that
+    /// answer were valid. Where the two differ, the answer is unknown until
+    /// the rail's answer is given; the caller says how unknown is shown.
+    /// Inside a second reading, `f`'s answer alone.
+    pub(super) fn answered<T>(&self, f: impl Fn() -> T) -> (T, Option<T>) {
+        if self.as_if_answered.get() {
+            return (f(), None);
+        }
+        let outer = self.unanswered_read.replace(false);
+        let closed = f();
+        if !self.unanswered_read.get() {
+            self.unanswered_read.set(outer);
+            return (closed, None);
+        }
+        self.as_if_answered.set(true);
+        let open = f();
+        self.as_if_answered.set(false);
+        self.unanswered_read.set(true);
+        (closed, Some(open))
+    }
+
+    /// [`Self::answered`] for a list: each entry found both ways stands;
+    /// each found one way only is given back marked (`mark`). Unknown
+    /// ([`AgreementsError::RailUnanswered`]) where one reading fails and the
+    /// other does not.
+    pub(super) fn answered_list<T: PartialEq + Clone>(&self, f: impl Fn() -> R<Vec<T>>, mark: impl Fn(T) -> T) -> R<Vec<T>> {
+        match self.answered(f) {
+            (a, None) => a,
+            (Ok(a), Some(Ok(b))) => {
+                let mut out: Vec<T> = a.iter().map(|x| if b.contains(x) { x.clone() } else { mark(x.clone()) }).collect();
+                out.extend(b.iter().filter(|x| !a.contains(x)).map(|x| mark(x.clone())));
+                Ok(out)
+            }
+            (Err(e), Some(Err(g))) if e == g => Err(e),
+            _ => Err(AgreementsError::RailUnanswered),
+        }
+    }
+
     /// Whether two proofs are of the same payment (F200; rules 10, 12, 15).
     fn same_payment_of(&self, a: (Option<&Hash>, &[u8]), b: (Option<&Hash>, &[u8])) -> bool {
         if a.0.is_some() && a.0 == b.0 {
@@ -9444,7 +9514,25 @@ impl<'a> AgreementsView<'a> {
     /// Judged as [`Self::judged`] says: unknown ([`AgreementsError::PaymentUnstated`])
     /// only where it depends on whether two records whose payment is not
     /// stated are one payment (Money rule 12).
-    fn purchase_unjudged(&self, id: &Hash) -> R<Option<PurchaseEval>> {
+    ///
+    /// Read fail-closed ([`Self::answered`]): the receipt or claim `id`, and
+    /// every receipt it is judged with, counts only with the rail's answer,
+    /// valid; where the answer rests on one pending or not held, unknown
+    /// ([`PurchaseVerdict::Unknown`]; Money rules 8 and 10).
+    pub(super) fn purchase_unjudged(&self, id: &Hash) -> R<Option<PurchaseEval>> {
+        match self.answered(|| self.purchase_read(id)) {
+            (closed, None) => closed,
+            (closed, Some(open)) => {
+                let (closed, open) = (closed?, open?);
+                if closed == open {
+                    return Ok(closed);
+                }
+                Ok(closed.or(open).map(|e| PurchaseEval { verdict: PurchaseVerdict::Unknown, ..e }))
+            }
+        }
+    }
+
+    fn purchase_read(&self, id: &Hash) -> R<Option<PurchaseEval>> {
         use crate::money::{self as fin, Payer, Payload as Fin};
         let x = self.held(id)?;
         if x.inside.spec != self.mirs.money {
@@ -9466,8 +9554,17 @@ impl<'a> AgreementsView<'a> {
         // unless the transfer is an over-sale on the seller's own line: then
         // it confers nothing, and the payment is money received for
         // nothing, owed back by the seller (Agreements rule 14; the refund paid by Money rule 10a; F242, M6).
+        // A receipt or claim whose verification answer is not valid is no
+        // purchase and no sale; pending or not held, unknown (Money rules
+        // 8 and 10). One the rail found invalid is judged
+        // below, as a wrong receipt.
+        let unanswered = !self.rail_counts(id) && !self.rail_invalid.contains(id);
         if let Some(t) = self.transfer_paid_by(id, &fulfils) {
             let mut e = PurchaseEval { id: *id, purchase: purchase.clone(), verdict: PurchaseVerdict::Purchase, refund_to };
+            if unanswered {
+                e.verdict = PurchaseVerdict::Unknown;
+                return Ok(Some(e));
+            }
             if self.transfer(&t)?.over_sale {
                 e.verdict = PurchaseVerdict::NoPurchase {
                     why: "it pays for a stake transfer that is an over-sale on the seller's own line: the transfer confers nothing, and the payment is owed back by the seller, paid as a refund (F224; Agreements rule 14; Money rule 10a)".into(),
@@ -9482,6 +9579,10 @@ impl<'a> AgreementsView<'a> {
             return Ok(None);
         }
         let mut e = PurchaseEval { id: *id, purchase: purchase.clone(), verdict: PurchaseVerdict::Purchase, refund_to };
+        if unanswered {
+            e.verdict = PurchaseVerdict::Unknown;
+            return Ok(Some(e));
+        }
         let no = |mut e: PurchaseEval, w: &str| {
             e.verdict = PurchaseVerdict::NoPurchase { why: w.into() };
             Ok(Some(e))
@@ -9527,7 +9628,7 @@ impl<'a> AgreementsView<'a> {
             };
             return Ok(Some(e));
         }
-        if self.same_payment(id).iter().any(|(_, q)| q != &purchase) {
+        if self.same_payment(id).iter().any(|(x, q)| q != &purchase && self.rail_counts(x)) {
             // Receipts of one payment naming different claims, and no rail
             // answer yet saying which one the payment committed to.
             e.verdict = PurchaseVerdict::Unrecorded;
@@ -9735,7 +9836,7 @@ impl<'a> AgreementsView<'a> {
             if h.inside.spec != self.mirs.money
                 || h.inside.type_ != crate::money::types::RECEIPT
                 || !self.valid(&h.id)
-                || self.rail_invalid.contains(&h.id)
+                || !self.rail_counts(&h.id)
                 || !(h.id == *id || mine.as_ref().is_some_and(|m| proof(h).is_some_and(|x| self.same_on_rail(m, &x))))
             {
                 continue;
@@ -9782,7 +9883,8 @@ impl<'a> AgreementsView<'a> {
     /// stated are one payment is given back marked `unknown`; the others
     /// stand ([`Self::judged_list`]).
     pub fn owed_back(&self, collective: &Hash) -> R<Vec<OwedBack>> {
-        self.judged_list(|| self.owed_back_unjudged(collective), |o| OwedBack { unknown: true, ..o })
+        let mark = |o| OwedBack { unknown: true, ..o };
+        self.judged_list(|| self.answered_list(|| self.owed_back_unjudged(collective), mark), mark)
     }
 
     fn owed_back_unjudged(&self, collective: &Hash) -> R<Vec<OwedBack>> {
@@ -9791,7 +9893,10 @@ impl<'a> AgreementsView<'a> {
         let still_broken = self.broken(collective)?.is_some();
         let mut out = vec![];
         let mut seen: Vec<(Hash, Payment)> = vec![];
-        let held: Vec<&Held> = self.v.held_acts().filter(|h| h.inside.spec == self.mirs.money).collect();
+        // Records with the rail's answer, valid, first: a payment is named by
+        // one of them where it has one, whichever reading (`answered`).
+        let mut held: Vec<&Held> = self.v.held_acts().filter(|h| h.inside.spec == self.mirs.money).collect();
+        held.sort_by_key(|h| !self.rail_valid.contains_key(&h.id));
         for h in held {
             let (payee, amount, key) = match Fin::decode(h.inside.type_, &h.inside.payload) {
                 Ok(Fin::Receipt(r)) => (r.payee, r.amount, (r.rail, self.record_payment(&h.id, &r.proof))),
@@ -10045,7 +10150,7 @@ impl<'a> AgreementsView<'a> {
                 h.inside.spec == self.mirs.money
                     && h.inside.type_ == crate::money::types::RECEIPT
                     && self.valid(&h.id)
-                    && !self.rail_invalid.contains(&h.id)
+                    && self.rail_counts(&h.id)
                     && (h.id == *id || mine.as_ref().is_some_and(|m| proof(h).is_some_and(|x| self.same_on_rail(m, &x))))
             })
             .collect()
@@ -10196,7 +10301,7 @@ impl<'a> AgreementsView<'a> {
         }
         let claim_here = self.claim_version(&p.line, work)?;
         for r in candidates {
-            if self.rail_invalid.contains(&r.id) {
+            if !self.rail_counts(&r.id) {
                 continue;
             }
             // Signed with the collective's own key, or with a grant key of

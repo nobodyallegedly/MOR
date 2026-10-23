@@ -266,7 +266,7 @@ pub struct Facts {
     /// the home's operator (Identity, "Private links").
     pub found_at_home: Vec<(Hash, Hash)>,
     /// (question, judge): the judge's period on that question passed with no
-    /// answer, as the agreement's time reference says (rule 34a).
+    /// answer, as the agreement's time reference says (rule 35).
     pub judges_lapsed: Vec<(Hash, Hash)>,
     /// Settlements the time reference places before their link's stage opened.
     pub settled_out_of_turn: Vec<Hash>,
@@ -808,6 +808,52 @@ pub fn identity(out: &mut Out) {
     }
     out.case(&mut w2, "the same found at its signer's own home: valid", "Identity, \"Private links\" (rule 17)", "Ana's genesis names herself as her home; the claim was found there.",
         Facts { found_at_home: vec![(claim, ana.id)], ..Default::default() }, ask_status(&claim), json!("valid"), None);
+
+    // A private link after a move of homes: found at the homes its signer's chain names at its binding.
+    let mut w = World::new();
+    let mut h1 = w.operator("the home at the binding");
+    let h2 = w.operator("the home after the move");
+    let mut ana = w.genesis("ana, who moves homes", vec![home_of(&h1)], None, None);
+    let bea = w.genesis("bea, whom she links to", vec![own_home()], None, None);
+    let claim = w.private_act(&mut ana, mirs().identity, mor_core::identity::types::LINK_CLAIM, vec![(Value::Uint(0), Value::Array(vec![Value::Text("mor".into()), Value::Bytes(bea.id.to_vec())]))], None, vec![bea.id]);
+    let (r, _) = w.rotate(&ana, Rot { homes: Some(vec![home_of(&h2)]), ..Default::default() });
+    w.receipt(&mut h1, &ana.id, &r, 1);
+    let log = w.log.clone();
+    out.case(&mut w, "a private link claim found at the home its signer's chain named at its binding, the signer having moved homes since: valid", "Identity, \"Private links\" (rule 17)",
+        "The claim is bound to Ana's genesis, which names the first home; a later rotation keeping it moves her to another home. A later move of homes does not void a link found where the chain named its homes at the binding.",
+        Facts { found_at_home: vec![(claim, h1.id)], ..Default::default() }, ask_status(&claim), json!("valid"), None);
+    let mut w2 = World::new();
+    for (a, k) in &log {
+        w2.log.push((a.clone(), k.clone()));
+        w2.v.add_with_key(a.clone(), k.as_ref()).unwrap();
+    }
+    out.case(&mut w2, "the same found only at the home the signer moved to: unknown", "Identity, \"Private links\" (rule 17)",
+        "The homes that count are those the chain names at the link act's binding, not the latest: found only at the new home, the claim is not yet found where it counts, so unknown, never invalid.",
+        Facts { found_at_home: vec![(claim, h2.id)], ..Default::default() }, ask_status(&claim), json!("unknown"), None);
+
+    // Two final homeless rotations at one position, and an objection whose status cannot be told there.
+    let mut w = World::new();
+    let mut old = w.operator("a hostile home");
+    let mut n1 = w.operator("a first new home");
+    let mut n2 = w.operator("a second new home");
+    let mut e = w.genesis("eve", vec![home_of(&old)], None, None);
+    let (r1, e1) = w.rotate(&e, Rot { homes: Some(vec![home_of(&n1)]), homeless: true, ..Default::default() });
+    w.endorse(&mut e, &r1, None);
+    w.receipt(&mut n1, &e.id, &r1, 1);
+    let (r2, e2) = w.rotate(&e, Rot { homes: Some(vec![home_of(&n2)]), homeless: true, signing_key: Some(schnorr("eve, the other line", 1)), ..Default::default() });
+    w.endorse(&mut e, &r2, None);
+    w.receipt(&mut n2, &e.id, &r2, 1);
+    let (s1, _) = w.rotate(&e1, Rot::default());
+    w.receipt(&mut n1, &e.id, &s1, 2);
+    let (s2, _) = w.rotate(&e2, Rot::default());
+    w.receipt(&mut n2, &e.id, &s2, 2);
+    // The old home objects, its objection bound to a rotation of its own this verifier does not hold.
+    let (_, mut old2) = w.rotation(&old, Rot::default());
+    w.object(&mut old2, &e.id, &r1);
+    let _ = &mut old;
+    out.case(&mut w, "two homeless rotations at one position, each final, with an objection whose status cannot be told there: contested", "Identity, \"What stops a chain\", the order of the reasons; \"Final\"; the homeless procedure",
+        "Each homeless rotation is an escape receipted by its new home, and each is followed by a rotation counting under the rule it declared: both are final. A contest among final rotations comes before cannot tell, since no objection can undo it; the old home's objection, bound to a rotation not held, cannot be told.",
+        Facts::default(), json!({ "question": "chain", "identity": hx(&e.id) }), json!({ "counting": [hx(&e.id)], "next": "contested", "dishonest": [] }), None);
 }
 
 pub fn text(out: &mut Out) {
@@ -1029,6 +1075,15 @@ pub fn money(out: &mut Out) {
         "With one pair whose payment is not stated, an answer is judged both ways; the receipt and the two claims make three pairs, each of which the vow's sales depend on: with two or more, the answer is unknown.",
         Facts { rail_valid: vec![(c1, offer), (c2, offer)], ..Default::default() }, ask_vow,
         json!("unknown"), None);
+    // A vow's sale whose payer's claim has no verification answer: unknown, never pending.
+    let mut w7 = World::new();
+    for (a, _) in &base {
+        w7.add(a);
+    }
+    out.case(&mut w7, "a vow's sale whose buyer's claim has no verification answer: unknown, not pending", "Money rules 8 and 10; Agreements rule 13; Envelopes, \"Vows\"",
+        "A receipt or claim whose verification answer is not valid is no purchase and no sale; where the answer is pending or not held, whether the payment is a sale is unknown. No rail answer is stated for the club's receipt or the fan's claim, though the rail says they are one payment.",
+        Facts { rail_payments: stated.clone(), ..Default::default() }, json!({ "question": "vow", "vow": hx(&name) }),
+        json!({ "sales": [{ "act": hx(&c1), "buyer": hx(&fan.id), "state": "unknown" }], "unsigned": [], "unknown": [] }), None);
     // A refund repaid: the fan's own receipt of money back, naming the fan's claim of the payment.
     let mut w5 = World::new();
     for (a, _) in &base {
@@ -1039,14 +1094,14 @@ pub fn money(out: &mut Out) {
         let a = w5.everyday_act(&mut fan, mirs().money, 2, r.to_map(), None, None); w5.add(&a) };
     let log5 = w5.log.clone();
     let ask_back = json!({ "question": "refund repaid", "payment": hx(&rec), "to": hx(&fan.id), "unit": hx(&unit) });
-    out.case(&mut w5, "a refund owed on a payment, repaid by the payer's receipt naming its claim of that payment, the rail's answer stated: repaid", "Money rules 10a and 12; Agreements, refunds",
+    out.case(&mut w5, "a refund owed on a payment, repaid by the payer's receipt naming its claim of that payment, the rail's answer stated: repaid", "Money rules 12 and 17; Agreements rule 93",
         "The receipt asked about and the claim the repayment names are one payment, as the rail says: the payer's own receipt of the money back repays it.",
         Facts { rail_valid: vec![(rr, fan.id)], rail_payments: stated.clone(), ..Default::default() }, ask_back.clone(), json!(300), None);
     let mut w6 = World::new();
     for (a, _) in &log5 {
         w6.add(a);
     }
-    out.case(&mut w6, "the same without the rail's answer: unknown", "Money rules 10a and 12",
+    out.case(&mut w6, "the same without the rail's answer: unknown", "Money rules 12 and 17",
         "Whether the repayment names the same payment rests on the rail's answer: what is repaid depends on it.",
         Facts { rail_valid: vec![(rr, fan.id)], ..Default::default() }, ask_back, json!("unknown"), None);
 
@@ -1258,6 +1313,27 @@ pub fn agreements(out: &mut Out) {
     out.case(&mut w2, "the same at a verifier not holding the obligation: unknown", "Agreements, \"Belongs to\": unknown beyond an act not held; Identity, \"A verifier that cannot tell answers unknown\"",
         "Whether the receipt belongs to an agreement whose keepers recorded it lies beyond the obligation, which is not held: void cannot be told.", Facts::default(), ask("status after keepers", &rid), json!("unknown"), None);
 
+    // "Belongs to" through any act named in objects: a party's contest naming an obligation of the deal.
+    let mut w = World::new();
+    let mut home = w.operator("a home");
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut keeper = w.genesis("the deal's keeper", vec![own_home()], None, None);
+    let mut ana = w.genesis("ana", vec![home_of(&home)], None, None);
+    let t0 = deal(&[ana.id, ben.id], Some(Keepers { operators: vec![keeper.id], rule: Rule::All }));
+    let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t0.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let unit = spec("a test unit (regtest satoshi)");
+    let ob = Fin::Obligation(money::Obligation { debtor: ben.id, creditor: ana.id, amount: Amount { unit, value: 10 }, pointer: spec("a pointer"), agreement: Some(d) });
+    let oid = { let a = w.everyday_act(&mut ben, mirs().money, 1, ob.to_map(), None, None); w.add(&a) };
+    let k = ag_act(&mut w, &mut ana, agreements::types::CONTEST, agreements::Contest { act: oid, vow: None, promise: None }.to_map(), obj(oid));
+    keep(&mut w, &mut keeper, k, ana.id);
+    let (r, _) = w.rotate(&ana, Rot { disowned: Some(vec![k]), ..Default::default() });
+    w.receipt(&mut home, &ana.id, &r, 1);
+    keep(&mut w, &mut keeper, r, ana.id);
+    out.case(&mut w, "a party's contest naming an obligation of the deal in objects, recorded by the deal's keeper before the rotation: disputed", "Agreements, \"Belongs to\" (each objects entry one step, whatever the act named is); rules 41, 42 and 54; Identity rule 34",
+        "The contest names the obligation as chain and predecessor; the obligation arises from the deal (its field 4). Each objects entry is one step, whatever the act it names, so the contest belongs to the deal, and the keeper the deal names recorded it before recording the rotation.", Facts::default(), ask("status after keepers", &k), json!("disputed"), None);
+
     // The keepers of the version in force for an act.
     for (by_clone, name, v) in [
         (true, "an act naming the founding, its history holding a clone in force: the clone's keeper recorded it before the rotation: disputed", "disputed"),
@@ -1324,9 +1400,75 @@ pub fn agreements(out: &mut Out) {
     out.case(&mut w2, "the same kind of act signed before the record: does not count", "Agreements, record (type 17); rule 60",
         "Before the record the founding is in force, which names that cMIP for no task: the act falls in no area, and the collective has areas.", Facts::default(), ask("consent counts", &before), json!(false), None);
 
+    // A record whose named signatures fall short of the clone's mark; a record naming a clone whose parent is not in force.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1, 2], 2);
+    let f = col.founding;
+    let second = spec("a second payment cMIP");
+    let mut t1 = view(&w).terms(&f).unwrap();
+    t1.parent = Some(f);
+    t1.cmips = vec![(6, second)];
+    let mut holders = vec![col.m[1].id, col.m[2].id];
+    holders.sort();
+    t1.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Area(2), signers: holders }]);
+    let clone = ag_act(&mut w, &mut col.m[1], agreements::types::TERMS, t1.to_map(), obj(f));
+    let s1 = sign(&mut w, &mut col.m[1], &clone);
+    let s2 = sign(&mut w, &mut col.m[2], &clone);
+    let base = w.log.clone();
+    let record = |w: &mut World, col: &mut Col, clone: Hash, sigs: Vec<Hash>| {
+        let saved = col.c.cite.take();
+        let a = w.everyday_act(&mut col.c, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: Some(clone), signatures: Some(sigs), kept: vec![], registers: None }.to_map(), obj(clone), None);
+        col.c.cite = saved;
+        w.add(&a)
+    };
+    let act_of = |w: &mut World, col: &mut Col, cmip: Hash| {
+        let x = { let a = w.everyday_act(&mut col.c, cmip, 0, vec![(Value::Uint(0), Value::Uint(1))], None, None); w.add(&a) };
+        sign(w, &mut col.m[1], &x);
+        sign(w, &mut col.m[2], &x);
+        x
+    };
+    let (c_saved, m_saved) = (col.c.clone(), col.m.clone());
+    let mut w1 = World::new();
+    for (a, _) in &base {
+        w1.add(a);
+    }
+    record(&mut w1, &mut col, clone, vec![s1, s2]);
+    let x = act_of(&mut w1, &mut col, second);
+    out.case(&mut w1, "a record naming the signatures that meet its clone's mark: the clone in force, a collective's act of the cMIP it names counts", "Agreements, record (type 17); rule 65",
+        "The Money area has two holders at threshold two; the clone is marked by that area's power; the record names both holders' signatures, so the clone is complete at the record and in force from it.", Facts::default(), ask("consent counts", &x), json!(true), None);
+    col.c = c_saved.clone();
+    col.m = m_saved.clone();
+    let mut w2 = World::new();
+    for (a, _) in &base {
+        w2.add(a);
+    }
+    record(&mut w2, &mut col, clone, vec![s1]);
+    let x = act_of(&mut w2, &mut col, second);
+    out.case(&mut w2, "a record naming valid signatures short of its clone's mark: the clone not in force", "Agreements, record (type 17): the clone complete at the record only if the signatures it names meet its mark; rule 65",
+        "The record names one of the two holders' signatures, though both signed: counted at the record, they fall short of the mark, so the clone is not put in force; the act of the cMIP it names falls in no area of the founding.", Facts::default(), ask("consent counts", &x), json!(false), None);
+    col.c = c_saved.clone();
+    col.m = m_saved.clone();
+    let mut w3 = World::new();
+    for (a, _) in &base {
+        w3.add(a);
+    }
+    record(&mut w3, &mut col, clone, vec![s1, s2]);
+    // A second clone of the founding, while the first is in force: its parent is not the agreement in force for its record.
+    let third = spec("a third payment cMIP");
+    let mut t2 = t1.clone();
+    t2.cmips = vec![(6, third)];
+    t2.text = "A second clone of the founding.".into();
+    let clone2 = ag_act(&mut w3, &mut col.m[1], agreements::types::TERMS, t2.to_map(), obj(f));
+    let u1 = sign(&mut w3, &mut col.m[1], &clone2);
+    let u2 = sign(&mut w3, &mut col.m[2], &clone2);
+    record(&mut w3, &mut col, clone2, vec![u1, u2]);
+    let x = act_of(&mut w3, &mut col, third);
+    out.case(&mut w3, "a record naming a clone whose parent is not the agreement in force for it: the clone not in force", "Agreements, record (type 17): the clone's parent is the agreement in force for the record",
+        "A first record put a clone of the founding in force; a second record names another clone of the founding, complete, but its parent is no longer the agreement in force, so it is not put in force; the act of the cMIP it names falls in no area of the clone in force.", Facts::default(), ask("consent counts", &x), json!(false), None);
+
     // The heavy rules, on one collective whose members sign with their chain keys (SLH-DSA-SHA2-128f):
     // every case below holds acts of this one family, so its chain signatures are paid once.
-    // A collective's closing (rule 47a): the closing, signed by every member with a chain signature.
+    // A collective's closing (rule 91): the closing, signed by every member with a chain signature.
     let mut w = World::new();
     let mut col = collective(&mut w, &[1], 1);
     let (f, cid) = (col.founding, col.c.id);
@@ -1353,16 +1495,61 @@ pub fn agreements(out: &mut Out) {
         }
         w
     };
-    out.case(&mut hold(&[]), "a collective's closing signed by every member with a chain signature: complete", "Agreements rule 47a; Identity, chain signatures",
+    out.case(&mut hold(&[]), "a collective's closing signed by every member with a chain signature: complete", "Agreements rule 91; Identity, chain signatures",
         "Every voice of the agreement in force signed it with its chain key; the collective owes nothing and holds no stake.", Facts::default(), ask("closing", &k), json!({ "complete": true }), None);
-    out.case(&mut hold(&[ends[2]]), "the same, one member's chain signature not held: not complete", "Agreements rule 47a",
+    out.case(&mut hold(&[ends[2]]), "the same, one member's chain signature not held: not complete", "Agreements rule 91",
         "A closing needs every voice: the third member's chain signature is not among the acts held.", Facts::default(), ask("closing", &k), json!({ "complete": false }), None);
-    out.case(&mut hold(&[]), "an act of the collective after its closing: it does not count", "Agreements rules 47a and 60",
+    out.case(&mut hold(&[]), "an act of the collective after its closing: it does not count", "Agreements rules 60 and 91",
         "Closed: what the collective's keys sign afterwards counts for nothing, its area's holder signing or not.", Facts::default(), ask("consent counts", &after), json!(false), None);
-    out.case(&mut hold(&[]), "an act of the collective before its closing: it still counts", "Agreements rules 47a and 60",
+    out.case(&mut hold(&[]), "an act of the collective before its closing: it still counts", "Agreements rules 60 and 91",
         "What it signed before the closing, with its area's holder, stands.", Facts::default(), ask("consent counts", &before), json!(true), None);
 
-    // A collective's fork (rule 47a): each side founds its successor first; the fork names them; every member signs it with a chain signature.
+    // A closing signed by every remaining member after one member's registered resignation.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let (f, cid) = (col.founding, col.c.id);
+    let res = ag_act(&mut w, &mut col.m[2], agreements::types::RESIGNATION, agreements::Resignation { agreement: f, area: None, drafts: vec![] }.to_map(), obj(f));
+    {
+        let saved = col.c.cite.take();
+        let a = w.everyday_act(&mut col.c, mirs().agreements, agreements::types::RECORD, agreements::Record { clone: None, signatures: None, kept: vec![], registers: Some(vec![res]) }.to_map(), obj(f), None);
+        col.c.cite = saved;
+        w.add(&a);
+    }
+    let tip = KeptTip { act: *col.c.seq.last().unwrap(), position: col.c.seq.len() as u64, summary: mor_core::mmr::summary(&col.c.seq) };
+    let closing = agreements::Closing { agreement: f, collective: cid, chain_act: col.c.binding, tips: vec![tip], open: vec![] };
+    let k = ag_act(&mut w, &mut col.m[0], agreements::types::CLOSING, closing.to_map(), obj(f));
+    for i in 0..2 {
+        let (_, q) = w.chain_sign(&col.m[i], k);
+        col.m[i] = q;
+    }
+    out.case(&mut w, "a collective's closing signed by every remaining member after a registered resignation: complete", "Agreements rule 91; \"Closing\"; Resignation, registered by a record",
+        "Cy resigned, and the collective's record registered it, so Cy's voice is removed before the closing; Ana and Ben, every remaining voice, signed the closing with their chain keys.", Facts::default(), ask("closing", &k), json!({ "complete": true }), None);
+
+    // A closing under a constitutional rule counted by shares of a stake.
+    let mut w = World::new();
+    let mut m: Vec<Person> = ["ana", "ben", "cy"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+    let authority = w.genesis("an abandonment authority", vec![own_home()], None, None);
+    let keeper = w.genesis("the collective's keeper", vec![own_home()], None, None);
+    let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
+    let mut t = collective_terms(&ids, authority.id, keeper.id, vec![ids[1]], 1);
+    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(spec("the collective's work")), holders: vec![(agreements::Who::Id(ids[0]), 600_000), (agreements::Who::Id(ids[1]), 200_000), (agreements::Who::Id(ids[2]), 200_000)] }]);
+    t.constitutional = Some(Rule::ByShare { stake: 0, share: 500_000 });
+    let f = ag_act(&mut w, &mut m[0], agreements::types::TERMS, t.to_map(), None);
+    for p in m.iter_mut() {
+        sign(&mut w, p, &f);
+    }
+    let mut c = w.genesis_with("a collective", vec![own_home()], None, None, Some(vec![agreements::founding_declaration(&mirs().agreements, &f)]), 3);
+    c.cite = Some((c.id, vec![c.id]));
+    let tip = KeptTip { act: c.id, position: 0, summary: mor_core::mmr::summary(&[]) };
+    let _ = tip;
+    let closing = agreements::Closing { agreement: f, collective: c.id, chain_act: c.binding, tips: vec![], open: vec![] };
+    let k = ag_act(&mut w, &mut m[0], agreements::types::CLOSING, closing.to_map(), obj(f));
+    let (_, q) = w.chain_sign(&m[0], k);
+    m[0] = q;
+    out.case(&mut w, "a collective's closing under a constitutional rule counted by shares, signed by a member holding more than the share: complete", "Agreements rules 65 and 91; \"Closing\"",
+        "The constitutional rule is half of the stake's shares; Ana holds six tenths and signed the closing with her chain key: decided, whatever the others do.", Facts::default(), ask("closing", &k), json!({ "complete": true }), None);
+
+    // A collective's fork (rule 91): each side founds its successor first; the fork names them; every member signs it with a chain signature.
     let mut w = World::new();
     let mut col = collective(&mut w, &[1], 1);
     let (f, cid) = (col.founding, col.c.id);
@@ -1421,13 +1608,13 @@ pub fn agreements(out: &mut Out) {
         }
         w
     };
-    out.case(&mut hold(&[]), "a collective's fork into two sides, each successor founded first, signed by every member with a chain signature: complete", "Agreements rule 47a; Identity, chain signatures",
+    out.case(&mut hold(&[]), "a collective's fork into two sides, each successor founded first, signed by every member with a chain signature: complete", "Agreements rule 91; Identity, chain signatures",
         "Every member on its sides signed it with its chain key, meeting the constitutional rule; each successor's founding names the original and fits its side; there is no debt to hand out.", Facts::default(), ask("fork", &k), json!({ "complete": true }), None);
-    out.case(&mut hold(&[ends[1]]), "the same, one member's chain signature not held: not complete", "Agreements rule 47a",
+    out.case(&mut hold(&[ends[1]]), "the same, one member's chain signature not held: not complete", "Agreements rule 91",
         "The constitutional rule is every party: the second member's chain signature is not among the acts held.", Facts::default(), ask("fork", &k), json!({ "complete": false }), None);
-    out.case(&mut hold(&[]), "an act of the original after its fork: it does not count", "Agreements rules 47a and 60",
+    out.case(&mut hold(&[]), "an act of the original after its fork: it does not count", "Agreements rules 60 and 91",
         "The original is closed in Agreements by its fork: what its keys sign afterwards counts for nothing.", Facts::default(), ask("consent counts", &after), json!(false), None);
-    out.case(&mut hold(&[]), "an act of the original before its fork: it still counts", "Agreements rules 47a and 60",
+    out.case(&mut hold(&[]), "an act of the original before its fork: it still counts", "Agreements rules 60 and 91",
         "What it signed before the fork, with its area's holder, stands.", Facts::default(), ask("consent counts", &before), json!(true), None);
 
     // An agreement as a party of another (Agreements, "an agreement is named as a party by its line"; rule 1):
@@ -1461,7 +1648,36 @@ pub fn agreements(out: &mut Out) {
     out.case(&mut hold(&[ben_signs]), "the same without one party of the inner agreement signing it: does not exist", "Agreements rule 1",
         "Ben, a party of the agreement that is a party, has not signed: the inner agreement has not signed.", Facts::default(), ask("agreement exists", &outer), json!("does not exist"), None);
 
-    // A chain of judgment (rule 34a): a deal's fork, its judge, the judge's period, the next link taking over.
+    // An agreement as a party, forked and unsettled: its reference's parties sign for it.
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut cy = w.genesis("cy", vec![own_home()], None, None);
+    let t0 = deal(&[ana.id, ben.id], None);
+    let inner = ag_act(&mut w, &mut ana, agreements::types::TERMS, t0.to_map(), None);
+    sign(&mut w, &mut ana, &inner);
+    sign(&mut w, &mut ben, &inner);
+    for text in ["Version A of the inner deal.", "Version B of the inner deal."] {
+        let mut c = t0.clone();
+        c.parent = Some(inner);
+        c.text = text.into();
+        let mut signers = vec![ana.id, ben.id];
+        signers.sort();
+        c.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Clone, signers }]);
+        let v = ag_act(&mut w, &mut ana, agreements::types::TERMS, c.to_map(), obj(inner));
+        sign(&mut w, &mut ana, &v);
+        sign(&mut w, &mut ben, &v);
+    }
+    let mut t = deal(&[inner, cy.id], None);
+    t.text = "A deal one of whose parties is a forked agreement.".into();
+    let outer = ag_act(&mut w, &mut cy, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut cy, &outer);
+    sign(&mut w, &mut ben, &outer);
+    sign(&mut w, &mut ana, &outer);
+    out.case(&mut w, "a deal one of whose parties is an agreement standing forked, unsettled, signed by the other party and by every party of the inner agreement's reference: exists", "Agreements rules 1, 46 and 47; an agreement as a party, its version in force signing",
+        "The inner deal has two complete versions of its founding, neither settled: by rule 47 the reference, the founding, stays in force, and its parties, Ana and Ben, sign for it.", Facts::default(), ask("agreement exists", &outer), json!("exists"), None);
+
+    // A chain of judgment (rule 35): a deal's fork, its judge, the judge's period, the next link taking over.
     let mut w = World::new();
     let mut ana = w.genesis("ana", vec![own_home()], None, None);
     let mut ben = w.genesis("ben", vec![own_home()], None, None);
@@ -1506,13 +1722,13 @@ pub fn agreements(out: &mut Out) {
     // The judge settles, keeping A.
     let mut w1 = world(&[]);
     settle(&mut w1, &mut j0, a1, b1);
-    out.case(&mut w1, "a deal's fork settled by the judge its terms name, within its period: the version kept is in force", "Agreements rules 34a and 47",
+    out.case(&mut w1, "a deal's fork settled by the judge its terms name, within its period: the version kept is in force", "Agreements rules 35 and 47",
         "The judge of forks answers the settlement request, keeping A.", Facts::default(), ask_v.clone(), json!(hx(&a1)), None);
     // The next link answers while the judge's period still runs: nothing.
     let mut w2 = world(&[]);
     let early = settle(&mut w2, &mut j1, b1, a1);
     let early_log = w2.log.clone();
-    out.case(&mut w2, "the next link of the chain settling while the first judge's period runs: the deal stays on its reference", "Agreements rule 34a",
+    out.case(&mut w2, "the next link of the chain settling while the first judge's period runs: the deal stays on its reference", "Agreements rule 35",
         "Only the judge whose stage is open settles; the first judge's period has not passed.", Facts::default(), ask_v.clone(), json!(hx(&d)), None);
     // The first judge's period passed: the next link, within its stage, settles; what it signed before counts for nothing.
     let mut w3 = World::new();
@@ -1523,7 +1739,7 @@ pub fn agreements(out: &mut Out) {
     let _ = within;
     let lapsed = Facts { judges_lapsed: vec![(d, j0.id)], settled_out_of_turn: vec![early], ..Default::default() };
     let log3 = w3.log.clone();
-    out.case(&mut w3, "the first judge's period passed with no answer: the next link settles, keeping B", "Agreements rule 34a",
+    out.case(&mut w3, "the first judge's period passed with no answer: the next link settles, keeping B", "Agreements rule 35",
         "The time reference says the first judge's period passed; the next link's settlement within its stage counts, its earlier one, signed before its stage opened, does not.",
         Facts { judges_lapsed: lapsed.judges_lapsed.clone(), settled_out_of_turn: lapsed.settled_out_of_turn.clone(), ..Default::default() }, ask_v.clone(), json!(hx(&b1)), None);
     // The first judge answers after its period: nothing.
@@ -1532,8 +1748,66 @@ pub fn agreements(out: &mut Out) {
         w4.add(a);
     }
     settle(&mut w4, &mut j0, a1, b1);
-    out.case(&mut w4, "the first judge answering after its period: counts for nothing, the next link's settlement stands", "Agreements rule 34a",
+    out.case(&mut w4, "the first judge answering after its period: counts for nothing, the next link's settlement stands", "Agreements rule 35",
         "A judge speaking after its period has passed has no say.", lapsed, ask_v, json!(hx(&b1)), None);
+
+    // A judge contradicting itself: its two first settlements keep different versions; the next link is active at once.
+    let mut w5 = world(&[]);
+    settle(&mut w5, &mut j0, a1, b1);
+    settle(&mut w5, &mut j0, b1, a1);
+    settle(&mut w5, &mut j1, b1, a1);
+    out.case(&mut w5, "a judge's two first settlements keeping different versions: the next link active, its settlement in force", "Agreements rule 35; the chain of judgment",
+        "A judge that contradicts itself has answered unknown: the next link is active with no period to wait, and its settlement, keeping B, counts.", Facts::default(), ask("version in force", &d), json!(hx(&b1)), None);
+
+    // A settlement that omits a tip its history holds counts for nothing.
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut j0 = w.genesis("the judge", vec![own_home()], None, None);
+    let mut t = deal(&[ana.id, ben.id], None);
+    t.arbitrators = Some(vec![j0.id]);
+    t.fork_judge = Some(j0.id);
+    t.time = Some((spec("a block height reference"), Value::Uint(0)));
+    let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    // Version A cites version C after its parent, so A's history holds C (a branch it cites and does not name).
+    let mut version = |w: &mut World, text: &str, cites: Option<Hash>| {
+        let mut c = t.clone();
+        c.parent = Some(d);
+        c.text = text.into();
+        let mut signers = vec![ana.id, ben.id];
+        signers.sort();
+        c.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Clone, signers }]);
+        let mut o = obj(d).unwrap();
+        o.extend(cites.map(|x| Object { chain: x, predecessor: x }));
+        let v = ag_act(w, &mut ana, agreements::types::TERMS, c.to_map(), Some(o));
+        sign(w, &mut ana, &v);
+        sign(w, &mut ben, &v);
+        v
+    };
+    let vc = version(&mut w, "Version C.", None);
+    let va = version(&mut w, "Version A.", Some(vc));
+    let vb = version(&mut w, "Version B.", None);
+    let request = ag_act(&mut w, &mut ben, agreements::types::SETTLEMENT_REQUEST, agreements::SettlementRequest { reference: d }.to_map(), obj(d));
+    let base = w.log.clone();
+    let settle = |w: &mut World, judge: &mut Person, kept: Hash, dropped: Vec<Hash>| {
+        let s = agreements::ForkSettlement { request, kept, discarded: dropped };
+        ag_act(w, judge, agreements::types::FORK_SETTLEMENT, s.to_map(), Some(vec![Object { chain: request, predecessor: request }]))
+    };
+    let mut j0b = j0.clone();
+    let mut dropped = vec![vb, vc];
+    dropped.sort();
+    settle(&mut w, &mut j0, va, dropped);
+    out.case(&mut w, "a judge's settlement naming every tip it saw: the version kept is in force", "Agreements rule 47, \"What a settlement could see\"; \"The judge of forks\"",
+        "The deal has three complete versions of its founding; the judge keeps A and names B and C as the tips it drops.", Facts::default(), ask("version in force", &d), json!(hx(&va)), None);
+    let mut w2 = World::new();
+    for (a, _) in &base {
+        w2.add(a);
+    }
+    settle(&mut w2, &mut j0b, va, vec![vb]);
+    out.case(&mut w2, "a judge's settlement omitting a tip it saw: it counts for nothing", "Agreements rule 47, \"What a settlement could see\": it counts only where it names every tip it saw",
+        "The version kept, A, cites version C, so A's history holds C and the judge's settlement saw C through the history of the version it keeps; it neither keeps nor names C: it settles nothing, and the deal stays on its reference.", Facts::default(), ask("version in force", &d), json!(hx(&d)), None);
 
     // Deadlines.
     let clock = Reference { cmip: spec("a test clock cMIP"), params: Value::Uint(0) };

@@ -95,14 +95,14 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 ### Judges, keepers and time
 
 - **Keeper.** A relay, operated by an identity, that an agreement names to record the acts around a deal as they arrive, and to sign what it recorded: a notary stamping sealed envelopes. A keeper records act ids and signers, never content. A record counts only alongside the act it names, and only for an act that belongs to an agreement naming that keeper (rule 42).
-- **Belongs to.** An act belongs to an agreement when it names, in `objects`, that agreement or an act of its chain; or through the act it answers:
+- **Belongs to.** An act belongs to an agreement when it names, in `objects`, that agreement, an act of its chain or an act that belongs to it; or through the act it answers:
   - a Money receipt or payment claim, through the claim it pays under (its field 9, the claiming agreement), and through what it fulfils or followed (the receipt's field 5, the claim's field 4): the agreement itself, or an obligation, offer or act that belongs to it;
   - an obligation, through the agreement or offer it arises from (its field 4);
   - a standing offer, through the agreement it is made under (its field 0); a lone seller's offer is itself the agreement its payments belong to.
 
-  An act may belong to several agreements. An act that belongs to none (a post, a work claim alone, a rotation) has no keeper of its own: only an anchor places it. A verifier follows "belongs to" from act to act, each `objects` entry or act answered being one step, as far as the acts it holds allow, at no fixed depth. What it finds through acts it holds stands; where a step names an act it does not hold, whether the act belongs to anything beyond that step is unknown to it.
+  An act may belong to several agreements. An act that belongs to none (a post, a work claim alone, a rotation) has no keeper of its own: only an anchor places it. A verifier follows "belongs to" from act to act, as far as the acts it holds allow, at no fixed depth: each act an `objects` entry names, chain and predecessor alike, and each act answered (a Money record's claim and what it fulfils, an obligation's agreement or offer, an offer's agreement) is one step, whatever the act named is, save an Identity act (an identity's genesis, rotations and chain signatures, and its Identity everyday acts), at which the path ends. What it finds through acts it holds stands; where a step names an act it does not hold, whether the act belongs to anything beyond that step is unknown to it.
 
-  **Its keepers are those of the version in force for the act.** For a deal, the latest complete version, on the line of the version the act names, that the act's history holds (what its `prev` and `objects` name, followed back), or the version it names where its history holds none on that line; for a collective, the agreement in force at the act (rule 60). Every action and decision of a collective belongs to the collective's agreement, whatever it names: an act of the collective's own key, of a grant key the collective issued, or of a holder's member key (rule 73). Its genesis, its rotations and its Identity everyday acts belong to none, as every identity's. *A keeper a clone removed no longer speaks for acts under the clone; a keeper a clone added speaks from the version naming it.* *Every party's acts on an agreement, the payer's and the payee's alike, fall under its keepers; a keeper chosen for one deal never speaks for acts outside it.*
+  **Its keepers are those of the version in force for the act.** For a deal, the latest complete version, on the line of the version the act names, that the act's history holds (what its `prev` and the predecessors its `objects` name, followed back), or the version it names where its history holds none on that line; for a collective, the agreement in force at the act (rule 60). Every action and decision of a collective belongs to the collective's agreement, whatever it names: an act of the collective's own key, of a grant key the collective issued, or of a holder's member key (rule 73). Its genesis, its rotations and its Identity everyday acts belong to none, as every identity's. *A keeper a clone removed no longer speaks for acts under the clone; a keeper a clone added speaks from the version naming it.* *Every party's acts on an agreement, the payer's and the payee's alike, fall under its keepers; a keeper chosen for one deal never speaks for acts outside it.*
 - **Arbitrator or verifier.** A third party named by an agreement to judge content (escrow and milestones, arbitration, regulated checks). Unlike a keeper, it receives the keys of the acts it must judge, by ordinary key delivery.
 - **Judge.** Either a specification named for a judicial task (9 condition evaluation, 10 time reference, 11 anchoring, 14 absence proof), or an identity named to judge or testify: a keeper's operator, an arbitrator or verifier, the abandonment authority. *The split service is not a judge: its backups are attempts per payment (rule 17).*
 - **Chain of judgment.** For a judge the terms name: the ones that take over from it, in order, when it answers "unknown" or does not act within its period. The chain is named in the terms and signed by everyone, so that it passes with no new signature. Each link names its period, measured on the agreement's time reference (terms field 6; the chain itself is terms field 21; rule 35).
@@ -463,7 +463,7 @@ Paid access to a live stream, which has no work hash until it ends, is sold by a
 
 *In short: a payment for a standing offer, or for a publication carrying a claimed work, is a purchase only if it names the claim it pays under.*
 
-Buying a work under an Agreements claim is not pure money, since the work's claim and offer are Agreements. So a payment is a purchase only if its receipt or claim names the claim it pays under (Money receipt and claim field 9). This holds for:
+Buying a work under an Agreements claim is not pure money, since the work's claim and offer are Agreements. So a payment is a purchase only if its receipt or claim names the claim it pays under (Money receipt and claim field 9), save a payment following a lone seller's offer, which names no claim: the offer is itself the agreement it pays under (rule 11; Money rule 18). This holds for:
 
 - a payment for a standing offer;
 - a payment for a publication carrying a work some agreement claims.
@@ -475,7 +475,7 @@ The claim named is two things:
 
 The payer's client therefore reads the work's Agreements claim. A Money-only wallet cannot make a valid purchase.
 
-**A payment naming no claim, or a line that carries none of that agreement's claims, is no purchase: money received for nothing, owed back to the payer as a refund** (Money rule 19: the payer named, or whoever signs with the key the payment committed to; with neither, an open, visible debt nobody can claim).
+**A payment naming no claim, or a line that carries none of that agreement's claims, is no purchase: money received for nothing, owed back to the payer as a refund** (Money rule 19: the payer named, or whoever signs with the key the payment committed to; with neither, an open, visible debt nobody can claim), save a payment following a lone seller's offer, as said above.
 
 *The claim a purchase may name is read as the current version of the claiming agreement the payment names. So every agreement holding a stake in the work is a claim a purchase may name, a sale under another shown outside the first by rule 14 (Money rule 18).*
 
@@ -516,7 +516,7 @@ Until the seller's chain records it, the payment is **pending**: a sale once rec
 
 *Wrong receipts.* **The payment decides.** **The claim is the one the payment's commitment names** (the payment cMIP: a purchase names its claim). **A receipt naming another claim is a wrong receipt, shown as such, counting for nothing**: neither a sale nor a refund. Its commitment, recomputed from it, is not the one the rail proof carries, so the rail shows it. The push-rail rule above then applies to the holders' receipts naming the payment's claim, each settled on its own holder's chain.
 
-Until a verifier has the rail's answer, receipts of one payment naming different claims are judged none of them a sale or a refund: the payment is **pending.**
+Until a verifier has the rail's answer, receipts of one payment naming different claims are judged none of them a sale or a refund: the payment is **pending** (Money rule 18), and whether it is a purchase is unknown (Money rule 8).
 
 *One payment shown as both a purchase and a refund cannot arise: of two receipts naming different claims, at most one carries the payment's commitment.*
 
@@ -3169,7 +3169,8 @@ signature-payload = {
   0 => hash,                ; the act signed: terms, a clone, an act of a collective an area reaches, a grant within an area,
                             ; or an abandonment declaration whose authority is a threshold of the other parties;
                             ; an issuance offer, taking up its proportion (type 26); a collective's
-                            ; stake transfer or release of a work, consenting as an owner
+                            ; stake transfer or release of a work, consenting as an owner;
+                            ; or a standing offer, as a party consenting to it (type 6) or signing onto it (rule 13)
   ? 1 => signing-key        ; on a collective's founding or clone, the signer's own key, in
                             ; Identity's form [ scheme, key ], made by its app as it signed (rule 73)
 }
@@ -3579,6 +3580,8 @@ A contest of a declaration is signed by the party the declaration names, with it
 *Client conformance:* the declared member's client lets them sign it, and publishes it.
 
 **A contest of a purchase**: field 0 names **the purchase it contests**: the buyer's payer's claim of the payment that is the purchase (rule 12), any of the buyer's own claims of it, or, for an offer at no price, the signature act by which the buyer signed onto the offer (a sign-on, rule 13: a signature act naming the offer, by anyone but the offer's own side). The buyer is the payer the payment's commitment names, an identity (rule 22), or the signer of that signature act: a purchase whose payer committed only a bare key, or that no claim of the payer's records, has no buyer who can contest it (rule 13's stated cost). Field 1, optional, says what was promised and not kept, in words (a buyer may know only that something went wrong). Its inside names the purchase as both chain and predecessor, `[[purchase, purchase]]`. Signed by the buyer, it is shown beside the purchase while the payment is a purchase (rule 12; a payment still pending, or found to be no purchase, shows none), and voids nothing: it changes no payment, refund or delivery, nor any act's validity, status or selection, nor a sale's state. Signed by anyone else, it shows nothing as the buyer's contest. *Bytes that do not match what was sold are caught by the bytes (Envelopes rule 21, and a key delivery that opens nothing is ignored); words that promised something other than what was delivered are not, and this is where the buyer says so.*
+
+*Client conformance: where the offer the buyer paid or signed onto names a vow, the buyer's client names the vow in the contest, as its inside's chain and predecessor, `[[vow, vow]]`, so that the sale is marked.*
 
 **A vow's sale** is a purchase, and its buyer contests it the same way, with one difference: where its inside names the vow by its name (its genesis id) as chain and predecessor, `[[vow, vow]]`, the contest marks that sale contested (rule 13), and field 1 says which of the vow's promises was not kept, in words or in a cMIP's terms. A contest naming the vow whose field 0 is no sale of that vow marks nothing and shows nothing. In the purchase's form, `[[purchase, purchase]]`, it is shown beside the purchase and marks no sale.
 

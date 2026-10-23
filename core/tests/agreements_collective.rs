@@ -5056,22 +5056,22 @@ fn a_collective_forks() {
         lab.w.add(&a)
     };
     let stray = pay(&mut lab, &mut svc, None);
-    let got = lab.view().purchase(&stray).unwrap().unwrap();
+    let got = common::stand_in_answers(lab.view()).purchase(&stray).unwrap().unwrap();
     assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { .. }), "{got:?}");
     assert_eq!(got.refund_to, mor_core::money::RefundTo::Identity(spec("a fan")));
     // W2 (F127): a payment naming the claim as it stood before the fork,
     // which the original's actions chain never recorded before the fork:
     // no purchase, refunded (3.9k shows a sale it recorded).
     let stale = pay(&mut lab, &mut svc, Some(mor_core::money::Purchase { agreement: f, line: k }));
-    let got = lab.view().purchase(&stale).unwrap().unwrap();
+    let got = common::stand_in_answers(lab.view()).purchase(&stale).unwrap().unwrap();
     assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { ref why } if why.contains("W2")), "{got:?}");
     // Naming the fork, at which the claim now stands: a sale once a
     // successor's actions chain records it; until then, unrecorded.
     let current = pay(&mut lab, &mut svc, Some(mor_core::money::Purchase { agreement: f, line: fa }));
-    assert_eq!(lab.view().purchase(&current).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Unrecorded);
+    assert_eq!(common::stand_in_answers(lab.view()).purchase(&current).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Unrecorded);
     // Naming a line that is none of the agreement's claims: no purchase.
     let wrong = pay(&mut lab, &mut svc, Some(mor_core::money::Purchase { agreement: f, line: d1 }));
-    assert!(matches!(lab.view().purchase(&wrong).unwrap().unwrap().verdict, agreements::PurchaseVerdict::NoPurchase { .. }));
+    assert!(matches!(common::stand_in_answers(lab.view()).purchase(&wrong).unwrap().unwrap().verdict, agreements::PurchaseVerdict::NoPurchase { .. }));
     // 3.9g (F127): d3 surfaces, published by its creditor after the fork.
     // It was handed out, so the fork stands as it was, and side A owes it.
     let v = lab.view();
@@ -6400,7 +6400,7 @@ fn a_sale_is_recorded_on_the_actions_chain() {
     };
     // Ana's payment, recorded by the label's receipt before the fork.
     let ana = receipt(&mut lab, 0, "Ana the fan", b"ana");
-    let v = lab.view();
+    let v = common::stand_in_answers(lab.view());
     assert_eq!(v.purchase(&ana).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
     drop(v);
     // F128 (reading 6): the label's split service records a sale with its
@@ -6427,7 +6427,7 @@ fn a_sale_is_recorded_on_the_actions_chain() {
         lab.w.add(&a)
     };
     assert!(matches!(lab.consent(&by_svc), Consent::Granted { .. }), "{:?}", lab.consent(&by_svc));
-    assert_eq!(lab.view().purchase(&by_svc).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
+    assert_eq!(common::stand_in_answers(lab.view()).purchase(&by_svc).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
     // A receipt on device 1, which no act the fork cites ever joins.
     let off = receipt(&mut lab, 1, "a fan on a device left out", b"off");
     let (mut sa, _) = found_successor(&mut lab, "side A", &[ANA], &[], label);
@@ -6449,7 +6449,7 @@ fn a_sale_is_recorded_on_the_actions_chain() {
     successor_sign(&mut lab.w, &mut sa, &fk);
     successor_sign(&mut lab.w, &mut sb, &fk);
     assert!(lab.view().fork(&fk).unwrap().complete);
-    let v = lab.view();
+    let v = common::stand_in_answers(lab.view());
     // Ana's sale is in the fork's history: still a purchase.
     assert_eq!(v.purchase(&ana).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
     // The receipt off the fork's history is void with it: no sale.
@@ -6458,7 +6458,7 @@ fn a_sale_is_recorded_on_the_actions_chain() {
     // Ben's stale wallet pays after the fork naming the same claim; the
     // label's key, closed in Agreements, records it: that counts for nothing.
     let ben = receipt(&mut lab, 0, "Ben the fan", b"ben");
-    let got = lab.view().purchase(&ben).unwrap().unwrap();
+    let got = common::stand_in_answers(lab.view()).purchase(&ben).unwrap().unwrap();
     assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { ref why } if why.contains("W2")), "{got:?}");
     assert_eq!(got.refund_to, mor_core::money::RefundTo::Identity(spec("Ben the fan")));
 }
@@ -6506,7 +6506,7 @@ fn a_superseded_claim_settles_on_each_holders_chain() {
         w.add(&a)
     };
     fn pview(w: &World, push: Hash) -> AgreementsView<'_> {
-        let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+        let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&w.v, mirs())));
         v.rails.insert(push, push_rail_spec());
         v
     }
@@ -8141,11 +8141,11 @@ fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
     let rot1 = lab.rotate(Some((k1, ks)), &[0]);
     // Under the offer made before the break, received in the stretch: kept.
     let kept = receipt(&mut lab, "Dee the fan", b"dee", f);
-    let got = lab.view().purchase(&kept).unwrap().unwrap();
+    let got = common::stand_in_answers(lab.view()).purchase(&kept).unwrap().unwrap();
     assert!(!matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { .. }), "{got:?}");
     // Under the clone of the stretch: owed back.
     let paid = receipt(&mut lab, "Eve the fan", b"eve", k1);
-    let got = lab.view().purchase(&paid).unwrap().unwrap();
+    let got = common::stand_in_answers(lab.view()).purchase(&paid).unwrap().unwrap();
     assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")), "{got:?}");
     assert_eq!(got.refund_to, RefundTo::Identity(spec("Eve the fan")));
     // BQ3: shown only by the payer's own claim, judged by the offer it names.
@@ -8169,7 +8169,7 @@ fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
     };
     let by_claim = claim(&mut lab.w, &mut fan, k1, b"fay");
     let before_claim = claim(&mut lab.w, &mut fan, f, b"fay2");
-    let v = lab.view();
+    let v = common::stand_in_answers(lab.view());
     assert!(matches!(v.purchase(&by_claim).unwrap().unwrap().verdict, agreements::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")));
     assert!(!matches!(v.purchase(&before_claim).unwrap().unwrap().verdict, agreements::PurchaseVerdict::NoPurchase { .. }));
     let owed: Vec<Hash> = v.owed_back(&label).unwrap().iter().map(|o| o.payment).collect();
@@ -8183,10 +8183,10 @@ fn rb2_bq2_bq3_what_a_broken_collective_keeps_is_judged_by_the_offer_named() {
     assert_eq!(lab.view().broken(&label).unwrap(), None);
     // Adopting the stretch's receipt by an acknowledgement does not sign the sale anew.
     lab.adopt(0, paid);
-    assert!(lab.view().owed_back(&label).unwrap().iter().any(|o| o.payment == paid));
+    assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().iter().any(|o| o.payment == paid));
     // A receipt for the same payment, signed after the rollback: the sale, signed anew.
     receipt(&mut lab, "Eve the fan", b"eve", k1);
-    assert!(lab.view().owed_back(&label).unwrap().iter().all(|o| o.payment != paid));
+    assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().iter().all(|o| o.payment != paid));
 }
 
 /// RB6 (decided 8 and 9 October 2026): a broken collective cannot fork or
@@ -8285,7 +8285,7 @@ fn a_purchase_following_either_branch_counts() {
     };
     let ra = receipt(&mut w, &mut ana);
     receipt(&mut w, &mut ben);
-    let mut v = common::stand_in_payments(AgreementsView::new(&w.v, mirs()));
+    let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&w.v, mirs())));
     v.rails.insert(push, push_rail_spec());
     assert_eq!(v.version_in_force(&deal).unwrap(), deal, "forked: the reference");
     assert_eq!(v.purchase(&ra).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
@@ -8341,9 +8341,9 @@ fn rb2_a_payment_to_the_collective_itself_during_the_stretch_is_owed_back() {
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     let x = lab.w.add(&a);
-    let got = lab.view().purchase(&x).unwrap().unwrap();
+    let got = common::stand_in_answers(lab.view()).purchase(&x).unwrap().unwrap();
     assert!(matches!(got.verdict, agreements::PurchaseVerdict::NoPurchase { ref why } if why.contains("RB2")), "{got:?}");
-    let owed = lab.view().owed_back(&label).unwrap();
+    let owed = common::stand_in_answers(lab.view()).owed_back(&label).unwrap();
     assert_eq!((owed.len(), owed[0].still_broken, owed[0].amount.value), (1, true, 7));
 }
 
@@ -8704,7 +8704,7 @@ fn f188_a_buyer_under_a_tangled_version_stays_protected() {
     };
     let ra = receipt(&mut l, 0);
     receipt(&mut l, 1);
-    let mut v = common::stand_in_payments(AgreementsView::new(&l.w.v, mirs()));
+    let mut v = common::stand_in_answers(common::stand_in_payments(AgreementsView::new(&l.w.v, mirs())));
     v.rails.insert(push, push_rail_spec());
     assert_eq!(v.version_in_force(&d).unwrap(), d, "tangled: the reference");
     assert_eq!(v.purchase(&ra).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
@@ -8835,7 +8835,7 @@ fn f189_7_money_owed_back_from_the_stretch_is_a_debt_before_closing() {
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     lab.w.add(&a);
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1);
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1);
     // The rollback; then every member closes.
     let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
     let r = lab.propose(ANA, &same);
@@ -9367,22 +9367,22 @@ fn f190_qf5_money_owed_back_is_repaid_by_a_payment_naming_it() {
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     let owed = lab.w.add(&a);
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1);
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1);
     let node = pointer_of(&mut lab.w, &mut patron, 1, None, &[b"the patron's node"]);
     let pid = patron.id;
     // Paid back to the patron, but the rail's proof was never checked: nothing.
     let mut payer = lab.c[0].clone();
     payment(&mut lab, &mut payer, true, pid, owed, unit, 7, b"unchecked");
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "a payment its rail does not show repays nothing");
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "a payment its rail does not show repays nothing");
     // Three of seven, by the patron's own receipt naming the payment owed back.
     let part = payment(&mut lab, &mut patron, false, pid, owed, unit, 3, b"refund, part one");
     lab.rail_valid.push((part, PaidAt::Flow(node)));
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "three of seven: still owed");
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "three of seven: still owed");
     // The rest, by the collective's own claim, paid to the patron's pointer.
     let rest = payment(&mut lab, &mut payer, true, pid, owed, unit, 4, b"refund, part two");
     lab.rail_valid.push((rest, PaidAt::Flow(node)));
     lab.c[0] = payer;
-    assert!(lab.view().owed_back(&label).unwrap().is_empty(), "repaid in full, by either side's record");
+    assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().is_empty(), "repaid in full, by either side's record");
     // The rollback; then every member closes: nothing is owed back.
     let same = lab.clone_terms(&f, vec![(Power::Constitutional, vec![ANA, BEN, CY])], &|_| {});
     let r = lab.propose(ANA, &same);
@@ -10479,7 +10479,7 @@ fn owed_back_lab_terms(f: &dyn Fn(&mut Terms), make: impl FnOnce(&mut Lab) -> (O
     });
     let a = lab.w.everyday_act(&mut lab.c[0], mirs().money, 2, r.to_map(), None, None);
     let owed = lab.w.add(&a);
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1);
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1);
     (lab, label, owed, k1, rot1, person)
 }
 
@@ -10530,11 +10530,11 @@ fn qg2_money_owed_back_follows_the_debt_rule() {
     let to_node = payment(&mut lab, &mut payer, true, pid, owed, unit, 7, b"back to the pointer");
     lab.rail_valid.push((to_node, PaidAt::Flow(node)));
     lab.c[0] = payer.clone();
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "the payer's claim names a refund rail: a repayment elsewhere repays nothing");
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "the payer's claim names a refund rail: a repayment elsewhere repays nothing");
     let to_rail = payment(&mut lab, &mut payer, true, pid, owed, unit, 7, b"back to the refund rail");
     lab.rail_valid.push((to_rail, PaidAt::Flow(own)));
     lab.c[0] = payer;
-    assert!(lab.view().owed_back(&label).unwrap().is_empty(), "repaid where the payer's own claim said");
+    assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().is_empty(), "repaid where the payer's own claim said");
 }
 
 /// Freeze suite v21, 7w, "The debt rule" (QG2), with Agreements draft 11,
@@ -10562,12 +10562,12 @@ fn f255_the_vault_limit_protects_a_refund_to_the_refund_rail() {
         let to_rail = payment(&mut lab, &mut payer, true, pid, owed, unit, 7, b"back to the refund rail");
         lab.rail_valid.push((to_rail, PaidAt::Flow(own)));
         lab.c[0] = payer.clone();
-        assert_eq!(lab.view().owed_back(&label).unwrap().is_empty(), rail_repays, "limit {limit}: the refund rail repays 7 only within the vault's limit (F255)");
+        assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().is_empty(), rail_repays, "limit {limit}: the refund rail repays 7 only within the vault's limit (F255)");
         if !rail_repays {
             let to_vault = payment(&mut lab, &mut payer, true, pid, owed, unit, 7, b"back to the vault");
             lab.rail_valid.push((to_vault, PaidAt::VaultEntry(pid, 0)));
             lab.c[0] = payer;
-            assert!(lab.view().owed_back(&label).unwrap().is_empty(), "above the limit, repaid once it reaches the vault");
+            assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().is_empty(), "above the limit, repaid once it reaches the vault");
         }
     }
 }
@@ -10590,11 +10590,11 @@ fn qg2_the_pointer_the_payers_own_acts_hold() {
     let x = payment(&mut lab, &mut payer, true, pid, owed, unit, 7, b"to the newer");
     lab.rail_valid.push((x, PaidAt::Flow(v2)));
     lab.c[0] = payer.clone();
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "a newer pointer than the payer's own act holds: nothing");
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "a newer pointer than the payer's own act holds: nothing");
     let y = payment(&mut lab, &mut payer, true, pid, owed, unit, 7, b"to the one held");
     lab.rail_valid.push((y, PaidAt::Flow(v1)));
     lab.c[0] = payer;
-    assert!(lab.view().owed_back(&label).unwrap().is_empty());
+    assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().is_empty());
 }
 
 /// QG1, decided by Nobody, allegedly, 9 October 2026: a refund owed to a
@@ -10626,15 +10626,15 @@ fn qg1_a_refund_to_a_bare_key_is_repaid_by_the_collectives_claim() {
     c.anonymous = Some(Anonymous { key: bare, sig: key.sign(&c.anonymous_message(&Citations::default()), &[0; 32]).sig });
     let a = lab.w.everyday_act(&mut once, mirs().money, 3, Fin::Claim(c).to_map(), None, None);
     let kc = lab.w.add(&a);
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1);
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1);
     // The collective's claim, naming the payment owed back, the rail's
     // proof showing it reached the refund address the key's claim gave.
     let mut payer = lab.c[0].clone();
     let back = payment(&mut lab, &mut payer, true, once.id, owed, spec("a unit"), 7, b"back to the key");
     lab.c[0] = payer;
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "no rail answer: nothing");
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "no rail answer: nothing");
     lab.rail_valid.push((back, PaidAt::Flow(kc)));
-    assert!(lab.view().owed_back(&label).unwrap().is_empty(), "repaid where the key's claim said");
+    assert!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().is_empty(), "repaid where the key's claim said");
 }
 
 /// The rollback of an `owed_back_lab` collective, then a closing every
@@ -10674,7 +10674,7 @@ fn qg1_money_owed_to_nobody_does_not_block_a_closing_that_names_it() {
     let _ = owed;
     let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed2, notice: None, holder: None }], &[]);
     assert!(!owed_why(&e), "named, owed to nobody: it does not block ({:?})", e.why);
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "and it stays visible");
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "and it stays visible");
 }
 
 /// F197, decided by Nobody, allegedly, 10 October 2026 ("Yes, exactly"):
@@ -10716,7 +10716,7 @@ fn f197_a_notice_with_a_deadline_then_the_collective_may_close() {
     let e = close_with(&mut lab, label, rot1, open, &[n]);
     assert!(!owed_why(&e), "{:?}", e.why);
     assert_eq!(e.closing.open[0].holder, Some(holder), "the holder chosen is shown");
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "the debt stays visible, unpaid");
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "the debt stays visible, unpaid");
     // A notice sealed to someone else only reached nobody: it blocks.
     let (mut lab, label, owed, _, rot1) = owed_back_lab(Some(Payer::Identity(carla)), b"a penny");
     let n = notice(&mut lab, owed, vec![spec("someone else")]);
@@ -10889,7 +10889,7 @@ fn f208_a_one_time_key_is_noticed_and_never_blocks_a_closing_for_good() {
     let n = public_notice(&mut lab, owed);
     let e = close_with(&mut lab, label, rot1, vec![agreements::OpenOwed { payment: owed, notice: Some(n), holder: None }], &[n]);
     assert!(!owed_why(&e), "{:?}", e.why);
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "the debt stays visible, unpaid");
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "the debt stays visible, unpaid");
 }
 
 /// F207, decided by Nobody, allegedly, 10 October 2026 ("Yes. If the
@@ -11205,17 +11205,17 @@ fn f215_a_lone_sellers_offer_is_the_agreement_with_the_buyer() {
     let lone = l.offer(1, None, None);
     let mut ben = l.ben.clone();
     let paid = ServiceDeal::receipt(&mut l.w, &mut ben, bid, fid, lone, None, b"a lone sale");
-    let e = view(&l.w).purchase(&paid).unwrap().unwrap();
+    let e = common::stand_in_answers(view(&l.w)).purchase(&paid).unwrap().unwrap();
     assert_eq!(e.verdict, agreements::PurchaseVerdict::Purchase, "accepted under the offer's terms");
     // Under the deal: a payment naming no claim is no purchase.
     let under = l.offer(0, Some(deal), Some(agreements::Paid::Payee(bid)));
     sign(&mut l.w, &mut l.ben, &under);
     let none = ServiceDeal::receipt(&mut l.w, &mut ben, bid, fid, under, None, b"no claim");
-    assert!(matches!(view(&l.w).purchase(&none).unwrap().unwrap().verdict, agreements::PurchaseVerdict::NoPurchase { .. }));
+    assert!(matches!(common::stand_in_answers(view(&l.w)).purchase(&none).unwrap().unwrap().verdict, agreements::PurchaseVerdict::NoPurchase { .. }));
     // An offer not every party signed sells nothing under the deal.
     let alone = l.offer(1, Some(deal), Some(agreements::Paid::Payee(bid)));
     let x = ServiceDeal::receipt(&mut l.w, &mut ben, bid, fid, alone, Some(deal), b"outside");
-    assert!(matches!(view(&l.w).purchase(&x).unwrap().unwrap().verdict, agreements::PurchaseVerdict::NoPurchase { why } if why.contains("offer")));
+    assert!(matches!(common::stand_in_answers(view(&l.w)).purchase(&x).unwrap().unwrap().verdict, agreements::PurchaseVerdict::NoPurchase { why } if why.contains("offer")));
 }
 
 /// T-1, dissolved by the reading of Money 10c taken under the delegation
@@ -11251,9 +11251,9 @@ fn t1_a_purchase_under_either_agreement_holding_a_stake_in_the_work() {
     };
     let aid = ana.id;
     let paid = ServiceDeal::receipt(&mut w, &mut ana, aid, fan.id, publication, Some(own), b"under her own");
-    assert_eq!(view(&w).purchase(&paid).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "a purchase under the agreement it names");
+    assert_eq!(common::stand_in_answers(view(&w)).purchase(&paid).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase, "a purchase under the agreement it names");
     let paid = ServiceDeal::receipt(&mut w, &mut ana, aid, fan.id, publication, Some(shared), b"under the shared deal");
-    assert_eq!(view(&w).purchase(&paid).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
+    assert_eq!(common::stand_in_answers(view(&w)).purchase(&paid).unwrap().unwrap().verdict, agreements::PurchaseVerdict::Purchase);
 }
 
 /// A plan with these shares, every share paying anyone but a stake taken
@@ -11474,7 +11474,7 @@ fn f219_a_refund_past_its_terms_is_ended() {
     };
     let owed_why = |e: &agreements::ClosingEval| e.why.iter().any(|w| w.contains("owed back"));
     let (mut lab, label, owed, _, rot1, _) = owed_back_lab_terms(&refundable, |_| (Some(Payer::Identity(carla)), None), b"a refund with terms");
-    assert_eq!(lab.view().owed_back(&label).unwrap().len(), 1, "before its point: owed");
+    assert_eq!(common::stand_in_answers(lab.view()).owed_back(&label).unwrap().len(), 1, "before its point: owed");
     let mut v = lab.view();
     v.refunds_past_terms.insert(owed);
     assert!(v.owed_back(&label).unwrap().is_empty(), "past its terms: ended");
@@ -12299,7 +12299,7 @@ fn f224_a_stake_sold_twice_is_settled_on_the_sellers_own_line() {
     };
     let pe = pays(&mut l.w, &mut eve, to_eve, b"eve pays");
     let pc = pays(&mut l.w, &mut carla, to_carla, b"carla pays");
-    let v = view(&l.w);
+    let v = common::stand_in_answers(view(&l.w));
     assert!(matches!(v.purchase(&pe).unwrap().map(|p| p.verdict), Some(agreements::PurchaseVerdict::NoPurchase { why }) if why.contains("F224")), "the over-sale's payment is owed back by the seller");
     assert_eq!(v.purchase(&pc).unwrap().map(|p| p.verdict), Some(agreements::PurchaseVerdict::Purchase));
     assert_eq!(v.transfer(&to_eve).unwrap().owed_back, vec![pe]);
