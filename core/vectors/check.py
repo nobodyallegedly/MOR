@@ -559,7 +559,7 @@ def py_spec(content, money, held):
         3: lambda v: nonempty(v) and all(isinstance(t, list) and len(t) == 3 and is_uint(t[0]) and isinstance(t[1], str) and isinstance(t[2], str) for t in v),
         4: lambda v: nonempty(v) and all(is_hash(x) for x in v),
         6: lambda v: nonempty(v) and all(isinstance(t, list) and len(t) == 4 and is_hash(t[0]) and is_uint(t[1]) and is_uint(t[2]) and is_hash(t[3]) for t in v),
-        7: lambda v: isinstance(v, list) and len(v) in (1, 2) and isinstance(v[0], list) and len(v[0]) == 2 and v[0][0] in (0, 1) and (len(v) == 1 or is_hash(v[1])),
+        7: lambda v: isinstance(v, list) and len(v) in (1, 2) and isinstance(v[0], list) and len(v[0]) == 2 and is_uint(v[0][0]) and v[0][0] in (0, 1) and (v[0][0] == 1 or is_uint(v[0][1])) and (len(v) == 1 or is_hash(v[1])),
         10: lambda v: nonempty(v) and ascending(v, {0, 1, 2, 3}),
         13: lambda v: ascending(v, {0, 1, 2}),
         0: lambda v: is_uint(v) and v <= 8,
@@ -578,13 +578,15 @@ def py_spec(content, money, held):
         return "no specification"
     if f.get(11) == 0 and not {0, 1} <= set(f[13]):
         return "no specification"
-    if kind == 1 and 11 not in f:
+    # The Money MIR, which every verifier holds, is no payment cMIP.
+    if kind == 1 and 11 not in f and f[5] != money:
         target = held.get(f[5].hex())
         if target is None:
             return "unknown: the cMIP %s is not held" % f[5].hex()
         c = decode(bytes.fromhex(target))
         tasks = c.get(2) or []
-        if c.get(0) == 0 and any(t[0] == money and t[1] == 6 for t in tasks):
+        # Content not in the format is no specification, so no payment cMIP.
+        if py_spec(bytes.fromhex(target), money, {}) == "a specification" and c.get(0) == 0 and any(t[0] == money and t[1] == 6 for t in tasks):
             return "no specification"
     return "a specification"
 

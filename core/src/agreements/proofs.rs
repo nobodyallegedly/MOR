@@ -71,8 +71,10 @@ pub trait ProofChecker {
     /// Whether its cMIP's specification declares that it checks proofs of
     /// delivery (Development, the specification format's field 12; F268):
     /// what [`crate::development::checks_delivery`] reads from the
-    /// specification's content. The core asks a checker, and lists it,
-    /// only where its cMIP declares so. *As a rail Module's kind is read
+    /// specification's content. The core lists a checker only where its
+    /// cMIP declares so; it asks the checker of whatever cMIP an offer
+    /// names, declared or not (field 12 serves discovery only, Development
+    /// 11). *As a rail Module's kind is read
     /// from the Module, never set by hand: until a cMIP's specification is
     /// published with its creator (step 17), its code states what its
     /// text declares.*

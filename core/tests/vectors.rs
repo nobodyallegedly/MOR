@@ -450,6 +450,12 @@ fn verdict_vectors() {
                     })
                 }
                 "disagreements" => with_facts(&v, &mirs, facts).disagreements(&h(&ask["receiver"])).map_or(json!("unknown"), |x| json!(x.len())),
+                "specification claim" => json!(match v.specification_claim(&h(&ask["act"]), &h(&ask["creator"])) {
+                    mor_core::chain::SpecClaim::Claimed => "claimed",
+                    mor_core::chain::SpecClaim::Unclaimed { disputed: false } => "unclaimed",
+                    mor_core::chain::SpecClaim::Unclaimed { disputed: true } => "unclaimed, shown as disputed",
+                    mor_core::chain::SpecClaim::Unknown => "unknown",
+                }),
                 q => panic!("{what}: a question this check does not know: {q}"),
             };
             assert_eq!(got, c["verdict"], "{layer}: {what}");
@@ -475,7 +481,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 230);
+    assert_eq!(n, 294);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.
@@ -497,6 +503,14 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     }
     for x in facts["settled_out_of_turn"].as_array().into_iter().flatten() {
         av.settled_out_of_turn.insert(h(x));
+    }
+    // A rail Module's kind and binding, read from its specification (fields
+    // 11 and 13), under the specification's hash.
+    for x in facts["rail_specifications"].as_array().into_iter().flatten() {
+        use mor_core::development::{Known, Spec};
+        if let Ok(Spec { rail: Some(r), .. }) = Spec::decode(&b(x), &Known::default()) {
+            av.rails.insert(Spec::hash_of(&b(x)), r);
+        }
     }
     av
 }

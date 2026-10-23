@@ -286,6 +286,11 @@ pub struct Facts {
     pub judges_lapsed: Vec<(Hash, Hash)>,
     /// Settlements the time reference places before their link's stage opened.
     pub settled_out_of_turn: Vec<Hash>,
+    /// Rail Modules' specifications this verifier holds and adopted, as
+    /// content: each rail's kind and binding is read from them, fields 11
+    /// and 13, under its spec hash (Development, "A rail Module's kind and
+    /// binding").
+    pub rail_specifications: Vec<Vec<u8>>,
 }
 
 impl Facts {
@@ -321,6 +326,9 @@ impl Facts {
         if !self.rail_payments.is_empty() {
             m.insert("rail_payments".into(), self.rail_payments.iter().map(|(p, x)| json!({ "proof": hx(p), "payment": hx(x) })).collect());
         }
+        if !self.rail_specifications.is_empty() {
+            m.insert("rail_specifications".into(), self.rail_specifications.iter().map(|c| json!(hx(c))).collect());
+        }
         J::Object(m)
     }
 
@@ -351,6 +359,11 @@ impl Facts {
         }
         for x in &self.settled_out_of_turn {
             v.settled_out_of_turn.insert(*x);
+        }
+        for c in &self.rail_specifications {
+            if let Ok(Spec { rail: Some(r), .. }) = Spec::decode(c, &mor_core::development::Known::default()) {
+                v.rails.insert(Spec::hash_of(c), r);
+            }
         }
     }
 }
@@ -501,6 +514,12 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             facts.apply_view(&mut v);
             v.paid_toward(&h("act")).map_or(json!("unknown"), |x| json!(x))
         }
+        "specification claim" => json!(match w.v.specification_claim(&h("act"), &h("creator")) {
+            mor_core::chain::SpecClaim::Claimed => "claimed",
+            mor_core::chain::SpecClaim::Unclaimed { disputed: false } => "unclaimed",
+            mor_core::chain::SpecClaim::Unclaimed { disputed: true } => "unclaimed, shown as disputed",
+            mor_core::chain::SpecClaim::Unknown => "unknown",
+        }),
         "disagreements" => {
             let mut v = view(w);
             facts.apply_view(&mut v);
@@ -975,6 +994,7 @@ pub fn identity(out: &mut Out) {
     out.case(&mut w, "a rotation built on a rotation that does not count: invalid", "Identity, \"Which rotation counts\", a rotation that does not count; everyday check 2",
         "The rotation it builds on lost its position for good; nothing it waits on can make it count.", Facts::default(), ask_status(&on_rival), json!("invalid"), None);
     s7g_identity(out);
+    s7g_development_identity(out);
 }
 
 pub fn text(out: &mut Out) {
@@ -1446,6 +1466,7 @@ pub fn money(out: &mut Out) {
     out.case(&mut w4, "the same: nothing toward the second debt", "Money rule 12; rule 11",
         "The receiver's receipt names the first debt; the claim naming the second counts for nothing.", facts(&[c1, c2, rc]), ask("paid toward", &d2), json!(0), None);
     s7g_money(out);
+    s7g_development_rails(out);
 }
 
 pub fn agreements(out: &mut Out) {
@@ -3313,5 +3334,263 @@ fn s7g_agreements_b(out: &mut Out) {
 /// S7g: Agreements' suspected differences, lines 2130 to 4343.
 fn s7g_agreements_c(_out: &mut Out) {}
 
-/// S7g: Development, read for sentences no case exercised.
-fn s7g_development(_out: &mut Vec<J>) {}
+/// S7g: Development, read for sentences no case exercised: the decoding
+/// of a specification's content, step by step (Part three).
+fn s7g_development(out: &mut Vec<J>) {
+    let money = mirs().money;
+    let agreements_mir = mirs().agreements;
+    let enc = |fields: Vec<(u64, Value)>| cbor::encode(&Value::Map(fields.into_iter().map(|(k, v)| (Value::Uint(k), v)).collect()));
+    let b = |x: Hash| Value::Bytes(x.to_vec());
+    let t = |s: &str| Value::Text(s.into());
+    let u = Value::Uint;
+    let arr = Value::Array;
+    let creator = b(spec("a creator"));
+    let payment = enc(vec![(0, u(kinds::CMIP)), (1, creator.clone()), (2, arr(vec![arr(vec![b(money), u(6)])])), (9, t("A payment cMIP."))]);
+    let payment_hash = Spec::hash_of(&payment);
+    let split = enc(vec![(0, u(kinds::CMIP)), (1, creator.clone()), (2, arr(vec![arr(vec![b(agreements_mir), u(8)])])), (9, t("A split cMIP."))]);
+    let split_hash = Spec::hash_of(&split);
+    let a_mir = Spec::file_content(kinds::MIR, "# MIR: Test\n\nA rule.").unwrap();
+    let a_mir_hash = Spec::hash_of(&a_mir);
+    // Content naming task 6 like a payment cMIP, but no specification: a cMIP naming no creator.
+    let lookalike = enc(vec![(0, u(kinds::CMIP)), (2, arr(vec![arr(vec![b(money), u(6)])])), (9, t("A payment cMIP naming no creator."))]);
+    let lookalike_hash = Spec::hash_of(&lookalike);
+    let held_all: Vec<(Hash, Vec<u8>)> = vec![(payment_hash, payment.clone()), (split_hash, split.clone()), (a_mir_hash, a_mir.clone()), (lookalike_hash, lookalike.clone())];
+    let module = |five: Hash, text: &str, rail: Option<(u64, Vec<u64>)>| {
+        let mut f = vec![(0, u(kinds::MODULE)), (1, creator.clone()), (5, b(five)), (9, t(text))];
+        if let Some((k, bs)) = rail {
+            f.push((11, u(k)));
+            f.push((13, arr(bs.into_iter().map(u).collect())));
+        }
+        enc(f)
+    };
+    let cmip = |extra: Vec<(u64, Value)>, text: &str| {
+        let mut f = vec![(0, u(kinds::CMIP)), (1, creator.clone()), (9, t(text))];
+        f.extend(extra);
+        enc(f)
+    };
+    let judge = |c: &[u8], held: &[(Hash, Vec<u8>)]| match Spec::decode_judged(c, &money, &|x| held.iter().find(|(k, _)| k == x).map(|(_, v)| v.clone())) {
+        Judged::Spec(_) => json!("a specification"),
+        Judged::NoSpecification(_) => json!("no specification"),
+        Judged::Unknown(x) => json!(format!("unknown: the cMIP {} is not held", hx(&x))),
+    };
+    let mut push = |name: &str, rule: &str, why: &str, c: &[u8], held: &[Hash], expect: J| {
+        let held: Vec<(Hash, Vec<u8>)> = held_all.iter().filter(|(k, _)| held.contains(k)).cloned().collect();
+        let got = judge(c, &held);
+        assert_eq!(got, expect, "{name}");
+        let held_j: serde_json::Map<String, J> = held.iter().map(|(k, v)| (hx(k), json!(hx(v)))).collect();
+        out.push(json!({ "name": name, "rule": rule, "why": why, "content": hx(c), "spec_hash": hx(&Spec::hash_of(c)), "money": hx(&money), "held_specifications": held_j, "verdict": got, "python": "specification decoding" }));
+    };
+    let spec_ = json!("a specification");
+    let none = json!("no specification");
+    let fmt = "Development, \"How the content is decoded\"";
+    let rail = "Development, \"A rail Module's kind and binding\"";
+    let kinds_ = "Development, \"How the content is decoded\", 6, and \"What each kind must carry\"";
+
+    // Rail Modules: kind and binding (fields 11 and 13), what money reads.
+    push("a push rail under a payment cMIP binding nothing (field 13 empty): a specification", rail,
+        "Field 11 is 1; field 13 may be empty: the proof binds none of payee, purpose and previous hop.", &module(payment_hash, "A push rail binding nothing.", Some((1, vec![]))), &[payment_hash], spec_.clone());
+    push("a rail Module with fields 11 and 13 at a verifier not holding the cMIP it names: a specification", rail,
+        "Only a Module lacking fields 11 and 13 needs the cMIP's bytes to be told.", &module(payment_hash, "A push rail binding payee and purpose.", Some((1, vec![0, 1]))), &[], spec_.clone());
+    push("a Module under a split cMIP carrying fields 11 and 13: a specification", "Development, \"How the content is decoded\", 6",
+        "Fields 11 and 13 are present together, and only on a Module: a Module under any cMIP may carry them.", &module(split_hash, "A split Module declaring a rail.", Some((1, vec![]))), &[split_hash], spec_.clone());
+    push("a push rail binding payee and previous hop: a specification", rail,
+        "Field 13 holds part of the set, ascending: Money rule 11 applies element by element.", &module(payment_hash, "A push rail binding payee and previous hop.", Some((1, vec![0, 2]))), &[payment_hash], spec_.clone());
+    push("a request rail whose field 13 lacks the payee: no specification", rail,
+        "Field 11 is 0: field 13 holds 0 and 1.", &module(payment_hash, "A request rail binding only the purpose.", Some((0, vec![1, 2]))), &[], none.clone());
+    push("a rail Module whose field 13 is out of order: no specification", rail,
+        "Field 13 is ascending, without repeats.", &module(payment_hash, "A push rail, field 13 out of order.", Some((1, vec![1, 0]))), &[], none.clone());
+    push("a rail Module whose field 13 names 3: no specification", rail,
+        "Field 13 holds only 0 the payee, 1 the purpose, 2 the previous hop.", &module(payment_hash, "A push rail, field 13 naming 3.", Some((1, vec![0, 3]))), &[], none.clone());
+    push("a rail Module whose field 11 is 2: no specification", rail,
+        "Field 11 is 0 or 1.", &module(payment_hash, "A rail of kind 2.", Some((2, vec![0, 1]))), &[], none.clone());
+    push("a Module carrying field 11 without field 13: no specification", rail,
+        "Fields 11 and 13 go together.", &enc(vec![(0, u(kinds::MODULE)), (1, creator.clone()), (5, b(payment_hash)), (9, t("A rail with a kind and no binding.")), (11, u(1))]), &[], none.clone());
+    push("a cMIP carrying fields 11 and 13: no specification", rail,
+        "Fields 11 and 13 are a rail Module's.", &cmip(vec![(11, u(1)), (13, arr(vec![]))], "A cMIP declaring a rail's kind."), &[], none.clone());
+    push("a Module under a split cMIP, without fields 11 and 13: a specification", rail,
+        "Its field 5 names a cMIP whose field 2 lists Agreements' task 8, not Money's task 6: no rail fields are required.", &module(split_hash, "A split Module.", None), &[split_hash], spec_.clone());
+    push("a Module naming a held MIR in field 5, without fields 11 and 13: a specification", "Development, \"What each kind must carry\": a Module working under a MIR names that MIR",
+        "A MIR is kind 4, no payment cMIP.", &module(a_mir_hash, "A seed Module under a MIR.", None), &[a_mir_hash], spec_.clone());
+    push("a Module naming the Money MIR in field 5, without fields 11 and 13: a specification", "Development, \"What each kind must carry\"; rule 26",
+        "Every verifier holds the MIRs whose hashes it accepts; the Money MIR is no payment cMIP.", &module(money, "A Module working under Money with no cMIP.", None), &[], spec_.clone());
+    push("a Module naming held content that lists Money's task 6 but is no specification: a specification", rail,
+        "A payment cMIP is a cMIP: the content field 5 names names no creator, so it is no specification and no payment cMIP.", &module(lookalike_hash, "A Module under a malformed cMIP.", None), &[lookalike_hash], spec_.clone());
+
+    // Layers an extension acts on (field 10), and the checker's field 12.
+    push("field 10 out of order: no specification", "Development, \"Layers an extension acts on\"; freeze scenario, Part one",
+        "Field 10 is ascending, without repeats.", &cmip(vec![(10, arr(vec![u(2), u(0)]))], "An extension acting on Money and Identity."), &[], none.clone());
+    push("field 10 naming layer 4: no specification", "Development, \"Layers an extension acts on\"",
+        "The layers are 0 Identity, 1 Envelopes and Text, 2 Money, 3 Agreements.", &cmip(vec![(10, arr(vec![u(4)]))], "An extension acting on a fifth layer."), &[], none.clone());
+    push("field 10 empty: no specification", fmt, "`[+ uint]` holds at least one item.", &cmip(vec![(10, arr(vec![]))], "An extension declaring an empty list."), &[], none.clone());
+    push("field 10 ascending on a cMIP: a specification", "Development, \"Layers an extension acts on\"",
+        "Money and Agreements, ascending.", &cmip(vec![(10, arr(vec![u(2), u(3)]))], "An extension acting on Money and Agreements."), &[], spec_.clone());
+    push("field 12 on a cMIP: a specification", "Development, \"A proof-of-delivery checker\"",
+        "A cMIP declaring itself a checker.", &cmip(vec![(12, Value::Bool(true))], "A proof checker."), &[], spec_.clone());
+    push("field 12 false: no specification", fmt, "Field 12 is the value true alone.", &cmip(vec![(12, Value::Bool(false))], "A cMIP writing false."), &[], none.clone());
+    push("field 12 on a Module: no specification", kinds_, "Field 12 is present only on a cMIP.",
+        &enc(vec![(0, u(kinds::MODULE)), (1, creator.clone()), (5, b(split_hash)), (9, t("A Module declaring a checker.")), (12, Value::Bool(true))]), &[split_hash], none.clone());
+
+    // By kind.
+    push("a MIR: kind 4 and its text, no creator: a specification", "Development rule 26; \"What each kind must carry\"", "The map `{ 0 => 4, 9 => text }`.", &a_mir, &[], spec_.clone());
+    push("a MIR naming a creator: no specification", kinds_, "Field 1 is absent on kinds 4, 6 and 7.",
+        &enc(vec![(0, u(kinds::MIR)), (1, creator.clone()), (9, t("A MIR with a creator."))]), &[], none.clone());
+    push("the MICS document, kind 6, no creator: a specification", kinds_, "Published like the MIRs.", &enc(vec![(0, u(kinds::MICS)), (9, t("The MICS."))]), &[], spec_.clone());
+    push("a test suite naming a creator: no specification", kinds_, "Field 1 is absent on a test suite.",
+        &enc(vec![(0, u(kinds::TEST_SUITE)), (1, creator.clone()), (9, t("A test suite."))]), &[], none.clone());
+    push("a MIP with a creator and the MIR it forks: a specification", kinds_, "Kind 8 carries fields 1 and 8.",
+        &enc(vec![(0, u(kinds::MIP)), (1, creator.clone()), (8, b(a_mir_hash)), (9, t("A MIP."))]), &[], spec_.clone());
+    push("a MIP naming nothing it forks: no specification", kinds_, "Field 8 is present on a MIP.", &enc(vec![(0, u(kinds::MIP)), (1, creator.clone()), (9, t("A MIP forking nothing."))]), &[], none.clone());
+    push("a Module without field 5: no specification", kinds_, "Field 5 is present on a Module.", &enc(vec![(0, u(kinds::MODULE)), (1, creator.clone()), (9, t("A Module naming nothing."))]), &[], none.clone());
+    push("a cMIP carrying field 5: no specification", kinds_, "Field 5 is absent on every kind but a Module.", &cmip(vec![(5, b(split_hash))], "A cMIP naming what it implements."), &[], none.clone());
+    push("a unit naming its creator: a specification", "Development, \"A unit (kind 2)\"", "Fields 0, 1 and 9.", &enc(vec![(0, u(kinds::UNIT)), (1, creator.clone()), (9, t("One smallest part: one test satoshi."))]), &[], spec_.clone());
+    push("a signature scheme naming no creator: no specification", kinds_, "Field 1 is present on kind 5.", &enc(vec![(0, u(kinds::SIGNATURE_SCHEME)), (9, t("A scheme."))]), &[], none.clone());
+    push("a kind of 9: no specification", fmt, "5: field 0 is a kind from 0 to 8.", &enc(vec![(0, u(9)), (1, creator.clone()), (9, t("A kind the format does not define."))]), &[], none.clone());
+    push("no field 9: no specification", fmt, "5: field 9 is present.", &enc(vec![(0, u(kinds::CMIP)), (1, creator.clone())]), &[], none.clone());
+    push("no field 0: no specification", fmt, "Every specification carries field 0.", &enc(vec![(1, creator.clone()), (9, t("A text naming no kind."))]), &[], none.clone());
+
+    // Fields any kind may carry (7), and none forbidden refuses the content.
+    push("a cMIP with no field 2: a specification", "Development, \"How the content is decoded\": a missing field 2 is never no specification",
+        "No decoder can tell that a text fills a task.", &cmip(vec![], "A cMIP filling a task, no field 2 written."), &[], spec_.clone());
+    push("a unit naming a predecessor: a specification", "Development, \"How the content is decoded\", 7", "Field 8 may sit on any kind.",
+        &enc(vec![(0, u(kinds::UNIT)), (1, creator.clone()), (8, b(split_hash)), (9, t("A unit replacing another."))]), &[], spec_.clone());
+    push("a signature scheme with a verification rule: a specification", "Development, \"A signature scheme (kind 5)\"", "Kind 5 MAY carry field 6; a rule-ref is four items.",
+        &enc(vec![(0, u(kinds::SIGNATURE_SCHEME)), (1, creator.clone()), (6, arr(vec![arr(vec![b(spec("a rule's binary")), u(1000), u(1_000_000), b(spec("a machine profile"))])])), (9, t("A scheme with its rule."))]), &[], spec_.clone());
+
+    // Each field's type (step 4).
+    push("a creator of 31 bytes: no specification", fmt, "4: a hash is exactly 32 bytes.", &enc(vec![(0, u(kinds::CMIP)), (1, Value::Bytes(vec![7; 31])), (9, t("A short creator."))]), &[], none.clone());
+    push("field 2 empty: no specification", fmt, "4: `[+ x]` holds at least one item.", &cmip(vec![(2, arr(vec![]))], "A cMIP filling no task, written."), &[], none.clone());
+    push("a task-ref of three items: no specification", fmt, "4: a task-ref is exactly two items.", &cmip(vec![(2, arr(vec![arr(vec![b(money), u(6), u(0)])]))], "A cMIP, a long task-ref."), &[], none.clone());
+    push("a type-def of two items: no specification", fmt, "4: a type-def is exactly three items.", &cmip(vec![(3, arr(vec![arr(vec![u(0), t("a type")])]))], "A cMIP, a short type-def."), &[], none.clone());
+    push("a rule-ref of three items: no specification", fmt, "4: a rule-ref is exactly four items.", &cmip(vec![(6, arr(vec![arr(vec![b(spec("a rule's binary")), u(1000), u(1_000_000)])]))], "A cMIP, a rule naming no profile."), &[], none.clone());
+    push("a fee of a part in millionths: a specification", fmt, "4: a rate `[0, part]`, part an unsigned integer.", &cmip(vec![(7, arr(vec![arr(vec![u(0), u(2_000)])]))], "A cMIP charging 0.2%."), &[], spec_.clone());
+    push("a fee whose part is a text: no specification", fmt, "4: `part` is an unsigned integer counted in millionths.", &cmip(vec![(7, arr(vec![arr(vec![u(0), t("two per mille")])]))], "A cMIP, a fee in words."), &[], none.clone());
+    push("a fee of rate kind 2: no specification", fmt, "4: a rate is `[0, part]` or `[1, amount]`.", &cmip(vec![(7, arr(vec![arr(vec![u(2), u(5)])]))], "A cMIP, a third kind of rate."), &[], none.clone());
+    push("a fee naming who is paid by 31 bytes: no specification", fmt, "4: `paid` is a hash.", &cmip(vec![(7, arr(vec![arr(vec![u(0), u(5)]), Value::Bytes(vec![7; 31])]))], "A cMIP, a short payee."), &[], none.clone());
+    push("a field 9 that is not canonical text: no specification", fmt, "3: every text string is canonical text; a trailing space is not.", &cmip(vec![], "A cMIP. "), &[], none.clone());
+    push("a type-def's name that is not canonical text: no specification", fmt, "3: every text string, every type-def included.", &cmip(vec![(3, arr(vec![arr(vec![u(0), t("a type "), t("{ 0 => uint }")])]))], "A cMIP defining a type."), &[], none.clone());
+    push("a field 4 holding a text: no specification", fmt, "4: field 4 is a list of hashes.", &cmip(vec![(4, arr(vec![t("Money")]))], "A cMIP naming a dependency by name."), &[], none.clone());
+
+    // The encoding (steps 1 and 2).
+    let mir_text = |s: &str| { let mut v = vec![0x60 + s.len() as u8]; v.extend(s.as_bytes()); v };
+    let mut dup = vec![0xa3, 0x00, 0x04, 0x00, 0x04, 0x09];
+    dup.extend(mir_text("A MIR."));
+    push("a map key twice: no specification", fmt, "1: a map key twice.", &dup, &[], none.clone());
+    let mut unsorted = vec![0xa2, 0x09];
+    unsorted.extend(mir_text("A MIR."));
+    unsorted.extend([0x00, 0x04]);
+    push("map keys out of deterministic order: no specification", fmt, "1: bytes that are not deterministic CBOR.", &unsorted, &[], none.clone());
+    let mut trailing = a_mir.clone();
+    trailing.push(0x00);
+    push("a byte after the map: no specification", fmt, "1: the content holds one map, with nothing after it.", &trailing, &[], none.clone());
+    push("an array, not a map: no specification", fmt, "1: the content holds one map.", &cbor::encode(&arr(vec![u(4), t("A MIR.")])), &[], none.clone());
+    push("a text key: no specification", fmt, "2: every key is an unsigned integer from 0 to 13.",
+        &cbor::encode(&Value::Map(vec![(u(0), u(4)), (u(9), t("A MIR.")), (t("note"), t("a note"))])), &[], none.clone());
+}
+
+/// S7g: Development read at the identity layer: rule 3, a specification
+/// claimed by its creator only by a publication the creator signed and its
+/// rotation did not disown; and a signature scheme named by hash, kind 5.
+fn s7g_development_identity(out: &mut Out) {
+    let mut w = World::new();
+    let mut home = w.operator("dev home");
+    let mut reader = w.genesis("dev reader", vec![own_home()], None, None);
+    let mut ida = w.genesis("ida, a creator", vec![home_of(&home)], None, None);
+    let mut kit = w.genesis("kit, not the creator", vec![own_home()], None, None);
+    let content = cbor::encode(&Value::Map(vec![(Value::Uint(0), Value::Uint(kinds::CMIP)), (Value::Uint(1), Value::Bytes(ida.id.to_vec())), (Value::Uint(9), Value::Text("A cMIP by Ida.".into()))]));
+    let media = |c: &[u8]| publication(vec![(Value::Uint(0), Value::Bytes(mirs().development.to_vec())), (Value::Uint(1), Value::Bytes(mor_core::hash::work_hash(c).to_vec()))]);
+    let by_ida = { let a = w.everyday_act(&mut ida, mirs().envelopes, 0, media(&content), None, None); w.add(&a) };
+    let by_kit = { let a = w.everyday_act(&mut kit, mirs().envelopes, 0, media(&content), None, None); w.add(&a) };
+    let ida_id = ida.id;
+    let ask_claim = |p: &Hash| json!({ "question": "specification claim", "act": hx(p), "creator": hx(&ida_id) });
+    let rule = "Development rule 3";
+    let before = w.log.clone();
+    out.case(&mut w, "a specification published by the creator it names: claimed", rule, "Ida's publication carries content naming Ida as creator.", Facts::default(), ask_claim(&by_ida), json!("claimed"), None);
+    let mut w2 = World::new();
+    for (a, _) in &before { w2.add(a); }
+    out.case(&mut w2, "the same specification published by another identity: unclaimed by the creator it names", rule,
+        "Kit publishes Ida's content; only a publication signed by the creator named inside claims it.", Facts::default(), ask_claim(&by_kit), json!("unclaimed"), None);
+    // A thief publishes with Ida's stolen key; Ida's rotation disowns it.
+    let mut w3 = World::new();
+    for (a, _) in &before { w3.add(a); }
+    let stolen = { let a = w3.everyday_act(&mut ida, mirs().envelopes, 0, media(b"another cMIP by Ida, published by a thief"), None, None); w3.add(&a) };
+    let relied = { let a = w3.everyday_act(&mut ida, mirs().envelopes, 0, media(b"a third, published by the thief and relied on"), None, None); w3.add(&a) };
+    w3.ack(&mut reader, relied);
+    let (r, _) = w3.rotate(&ida, Rot { disowned: Some(vec![stolen, relied]), ..Default::default() });
+    w3.receipt(&mut home, &ida.id, &r, 1);
+    let after = w3.log.clone();
+    out.case(&mut w3, "a publication the creator's rotation disowned: unclaimed", "Development rule 3; Identity rule 34",
+        "Signed with Ida's stolen key; Ida's rotation disowns it and nobody relied on it.", Facts::default(), ask_claim(&stolen), json!("unclaimed"), None);
+    let mut w4 = World::new();
+    for (a, _) in &after { w4.add(a); }
+    out.case(&mut w4, "a disowned publication another identity relied on: unclaimed, shown as disputed", "Development rule 3: a special case beside Identity rule 34",
+        "A reader acknowledged it before the rotation: shown as disputed, and it claims nothing for the creator.", Facts::default(), ask_claim(&relied), json!("unclaimed, shown as disputed"), None);
+
+    // A signature scheme named by its specification's hash, not adopted here.
+    let mut w = World::new();
+    let mut home = w.operator("dev scheme home");
+    let lev = w.genesis("lev", vec![home_of(&home)], None, None);
+    let scheme = spec("a post-quantum signing-key scheme specification (kind 5)");
+    let pq = mor_core::identity::SigningKey { scheme: mor_core::act::Scheme::Spec(scheme), key: vec![9; 40] };
+    let (r, mut lev1) = w.rotate(&lev, Rot { raw_signing_key: Some(pq.clone()), ..Default::default() });
+    w.receipt(&mut home, &lev.id, &r, 1);
+    let mut a = w.everyday_act(&mut lev1, mirs().text, 0, vec![(Value::Uint(0), Value::Text("A post under the new scheme.".into()))], None, None);
+    a.signature = mor_core::act::Signature { scheme: mor_core::act::Scheme::Spec(scheme), key: pq.key.clone(), sig: vec![1; 50] };
+    let post = w.add(&a);
+    let log = w.log.clone();
+    out.case(&mut w, "a rotation to a signing key of a scheme named by hash, which this client has not adopted: valid", "Development, \"A signature scheme (kind 5)\"; freeze scenario, Part two",
+        "The rotation is signed under the old key; it installs a key of a scheme the client does not implement.", Facts::default(), ask_status(&r), json!("valid"), None);
+    let mut w2 = World::new();
+    for (x, _) in &log { w2.add(x); }
+    out.case(&mut w2, "a later act signed under that scheme: unknown, never valid or invalid", "Development, \"A signature scheme (kind 5)\"; rule 10",
+        "A client that has not adopted the scheme answers unknown for every act signed under it, whatever the lengths.", Facts::default(), ask_status(&post), json!("unknown"), None);
+}
+
+/// S7g: a rail Module's binding (field 13) read from its specification
+/// by the money layer (Development, "A rail Module's kind and binding";
+/// Money rule 11, element by element).
+fn s7g_development_rails(out: &mut Out) {
+    let unit = spec("a test unit (regtest satoshi)");
+    let enc = |fields: Vec<(u64, Value)>| cbor::encode(&Value::Map(fields.into_iter().map(|(k, v)| (Value::Uint(k), v)).collect()));
+    let payment_cmip = spec("a payment cMIP, by its hash");
+    let rail_spec = |kind: u64, binds: Vec<u64>, text: &str| {
+        enc(vec![(0, Value::Uint(kinds::MODULE)), (1, Value::Bytes(spec("a rail's creator").to_vec())), (5, Value::Bytes(payment_cmip.to_vec())), (9, Value::Text(text.into())), (11, Value::Uint(kind)), (13, Value::Array(binds.into_iter().map(Value::Uint).collect()))])
+    };
+    let payee_only = rail_spec(1, vec![0], "A push rail whose proof binds the payee only.");
+    let both = rail_spec(1, vec![0, 1], "A push rail whose proof binds payee and purpose.");
+    // (content, the records the rail answers valid, names, paid toward each debt)
+    for (content, both_valid, name_d1, name_d2, paid) in [
+        (&payee_only, true, "a payer's claim and the receiver's receipt of one payment naming different debts, on a rail whose specification binds the payee only, both answered valid: the claim decides", "the same: nothing toward the debt the receipt names, shown as a dispute", (60, 0)),
+        (&both, false, "the same records on a rail whose specification binds payee and purpose, the rail answering valid for the receipt only: the receipt's debt", "the same: nothing toward the debt the refused claim names", (0, 60)),
+    ] {
+        let rail = Spec::hash_of(content);
+        let mut w = World::new();
+        let mut ana = w.genesis("dev ana, a creditor", vec![own_home()], None, None);
+        let mut bo = w.genesis("dev bo, a debtor", vec![own_home()], None, None);
+        let pointer = { let x = Fin::PayeePointer(money::PayeePointer { payee: ana.id, version: 1, previous: None, rails: vec![money::Rail { module: rail, address: b"dev ana's wallet".to_vec() }] });
+            let a = w.everyday_act(&mut ana, mirs().money, 0, x.to_map(), None, None); w.add(&a) };
+        let debt = |w: &mut World, bo: &mut Person, ana: &mut Person| {
+            let o = Fin::Obligation(money::Obligation { debtor: bo.id, creditor: ana.id, amount: Amount { unit, value: 60 }, pointer, agreement: None });
+            let id = { let a = w.everyday_act(bo, mirs().money, 1, o.to_map(), None, None); w.add(&a) };
+            w.ack(ana, id);
+            id
+        };
+        let (d1, d2) = (debt(&mut w, &mut bo, &mut ana), debt(&mut w, &mut bo, &mut ana));
+        let proof = b"one payment of 60 on a push rail".to_vec();
+        let c = { let x = Fin::Claim(Claim { rail, proof: proof.clone(), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: d1, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+            let a = w.everyday_act(&mut bo, mirs().money, 3, x.to_map(), None, None); w.add(&a) };
+        let r = { let x = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(bo.id)), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: d2, previous: None, forward: None, batch: None, purchase: None });
+            let a = w.everyday_act(&mut ana, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
+        let valid: Vec<(Hash, Hash)> = if both_valid { vec![(c, pointer), (r, pointer)] } else { vec![(r, pointer)] };
+        let facts = || Facts { rail_valid: valid.clone(), rail_payments: vec![(proof.clone(), b"the one push payment".to_vec())], rail_specifications: vec![content.clone()], ..Default::default() };
+        let log = w.log.clone();
+        let why = if both_valid {
+            "Bo's claim names the first debt, Ana's receipt the second; the rail's specification (held, decoded) binds the payee only, so the rail answers valid for both and the payer's claim decides what the payment fulfils."
+        } else {
+            "Bo's claim names the first debt, Ana's receipt the second; the rail's specification binds the purpose, so the proof's commitment decides: the rail refuses the claim, whose commitment is not the one the proof carries."
+        };
+        out.case(&mut w, name_d1, "Money rule 11, element by element; Development, \"A rail Module's kind and binding\"", why, facts(), ask("paid toward", &d1), json!(paid.0), None);
+        let mut w2 = World::new();
+        for (a, _) in &log { w2.add(a); }
+        out.case(&mut w2, name_d2, "Money rule 11; Development, \"A rail Module's kind and binding\"", why, facts(), ask("paid toward", &d2), json!(paid.1), None);
+    }
+}
