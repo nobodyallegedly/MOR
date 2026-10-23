@@ -457,7 +457,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 153);
+    assert_eq!(n, 180);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.

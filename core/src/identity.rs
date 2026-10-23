@@ -293,14 +293,20 @@ fn scheme(v: &Value, w: &'static str) -> R<Scheme> {
 }
 
 /// Decode `signing-key = [ scheme, key: bstr ]`; Money reads an anonymous
-/// payer's bare key in this form (F113).
+/// payer's bare key in this form (F113). A key of a founding scheme whose
+/// length is not the one in the table makes the act invalid ("Encoding
+/// and conventions", signature schemes).
 pub fn signing_key(v: &Value) -> R<SigningKey> {
     let a = tuple(v, 2, "signing-key")?;
     let Value::Bytes(key) = &a[1] else {
         return Err(IdError::Shape("signing-key key"));
     };
+    let scheme = scheme(&a[0], "signing-key scheme")?;
+    if crate::sig::lengths(&scheme).is_some_and(|(k, _)| k != key.len()) {
+        return Err(IdError::Shape("signing-key key: the length its founding scheme sets"));
+    }
     Ok(SigningKey {
-        scheme: scheme(&a[0], "signing-key scheme")?,
+        scheme,
         key: key.clone(),
     })
 }

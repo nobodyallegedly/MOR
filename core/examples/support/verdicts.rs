@@ -2504,7 +2504,185 @@ pub fn mir_hashes() -> Vec<J> {
 // ------------------------------------------------ S7g: the suspected differences run
 
 /// S7g: Identity's suspected differences (`docs/untested-sentences.md`), each run as a case.
-fn s7g_identity(_out: &mut Out) {}
+fn s7g_identity(out: &mut Out) {
+    use mor_core::act::Scheme;
+    use mor_core::identity::{HomeRule, SigningKey};
+    let replay = |log: &[(mor_core::act::Act, Option<mor_core::lock::ContentKey>)], skip: &[Hash]| {
+        let mut w = World::new();
+        for (a, _) in log {
+            if !skip.contains(&a.id()) {
+                w.add(a);
+            }
+        }
+        w
+    };
+    let chain_of = |id: &Hash| json!({ "question": "chain", "identity": hx(id) });
+
+    // Row 4 (Identity, "Finality"): a homeless rotation is final once the
+    // next rotation counts under the home rule it declared, not once an
+    // escape counts through other homes.
+    let mut w = World::new();
+    let mut a = w.operator("oda's first home, alive");
+    let b = w.operator("oda's second home");
+    let c = w.operator("oda's third home");
+    let mut n1 = w.operator("oda's new home");
+    let mut n2 = w.operator("oda's escape home");
+    let oda = w.genesis("oda", vec![home_of(&a), home_of(&b), home_of(&c)], Some(HomeRule::Threshold(2)), None);
+    w.rotate(&b, Rot { closure: true, ..Default::default() });
+    w.rotate(&c, Rot { closure: true, ..Default::default() });
+    let (h1, mut o1) = w.rotate(&oda, Rot { homes: Some(vec![home_of(&n1)]), rule: Some(None), homeless: true, ..Default::default() });
+    w.receipt(&mut n1, &oda.id, &h1, 1);
+    let base = w.log.clone();
+    let (h2, _) = w.rotate(&o1, Rot { homes: Some(vec![home_of(&n2)]), homeless: true, ..Default::default() });
+    w.endorse(&mut o1, &h2, None);
+    w.receipt(&mut n2, &oda.id, &h2, 2);
+    w.object(&mut a, &oda.id, &h1);
+    out.case(&mut w, "a homeless rotation, its old homes gone by closure but one, followed by an escape through other homes: the living old home's objection still voids it", "Identity, \"Finality\": final once a rotation at n plus one counts under the home rule the homeless rotation declared",
+        "Two of Oda's three homes closed, so her homeless rotation to a new home counts, provisionally. The next rotation is an escape that counts through a home of its own, not through the new home's receipt: it does not make the first final, and the third home's objection voids it, and the escape built on it.",
+        Facts::default(), chain_of(&oda.id), json!({ "counting": [hx(&oda.id)], "next": "pending", "dishonest": [] }), None);
+    let mut w = replay(&base, &[]);
+    let (s2, _) = w.rotate(&o1, Rot::default());
+    w.receipt(&mut n1, &oda.id, &s2, 2);
+    w.object(&mut a, &oda.id, &h1);
+    out.case(&mut w, "the same, followed by a rotation its new home receipts: final, the late objection voids nothing", "Identity, \"Finality\"",
+        "The next rotation counts under the home rule the homeless rotation declared: the homeless rotation is final, and the objection that surfaces after it changes nothing.",
+        Facts::default(), chain_of(&oda.id), json!({ "counting": [hx(&oda.id), hx(&h1), hx(&s2)], "next": "end", "dishonest": [] }), None);
+
+    // Row 5 (homeless procedure, steps 4 and 5; the escape): a self-hosted
+    // home serves no homeless rotation, and is never gone.
+    let mut w = World::new();
+    let mut nh = w.operator("sia's new home");
+    let sia = w.genesis("sia", vec![own_home()], None, None);
+    let (h, _) = w.rotate(&sia, Rot { homes: Some(vec![home_of(&nh)]), homeless: true, ..Default::default() });
+    w.receipt(&mut nh, &sia.id, &h, 1);
+    out.case(&mut w, "a self-hosted identity's homeless rotation, unendorsed, receipted by its new home: it does not count", "Identity, the homeless procedure, step 4: a self-hosted home is never gone",
+        "A homeless rotation counts only under the homeless procedure; the self-hosted home is never gone, and without an endorsement nothing lets it count.",
+        Facts::default(), ask_status(&h), json!("pending"), None);
+    let mut w = World::new();
+    let mut nh = w.operator("sol's escape home");
+    let mut sol = w.genesis("sol, contested", vec![own_home()], None, None);
+    let (own, _) = w.rotate(&sol, Rot::default());
+    let (thief, _) = w.rotate(&sol, Rot { signing_key: Some(schnorr("sol's thief", 1)), ..Default::default() });
+    let (e, _) = w.rotate(&sol, Rot { homes: Some(vec![home_of(&nh)]), homeless: true, signing_key: Some(schnorr("sol, escaped", 1)), ..Default::default() });
+    w.endorse(&mut sol, &e, Some(vec![own, thief]));
+    let log = w.log.clone();
+    out.case(&mut w, "an escape from a position contested at a self-hosted home, its new home's receipt not held: it does not count yet", "Identity, \"Escape with both keys\": steps 1, 2 and 5 still apply",
+        "The endorsement abandons both rotations served there; the escape still needs its new home's receipt (step 5), which this verifier does not hold.",
+        Facts::default(), ask_status(&e), json!("pending"), None);
+    let mut w = replay(&log, &[]);
+    w.receipt(&mut nh, &sol.id, &e, 1);
+    out.case(&mut w, "the same escape, its new home's receipt held: it counts", "Identity, \"Escape with both keys\"; rule 4",
+        "Both keys, and the new home's receipt: the way out of a position contested at a self-hosted home.",
+        Facts::default(), ask_status(&e), json!("valid"), None);
+
+    // Row 7 (section 6, "A verifier that cannot tell answers unknown"): an
+    // acknowledgement whose status cannot be told leaves the act unknown.
+    let mut w = World::new();
+    let mut home = w.operator("lia's home");
+    let mut reader = w.genesis("a reader whose genesis is withheld", vec![own_home()], None, None);
+    let mut lia = w.genesis("lia", vec![home_of(&home)], None, None);
+    let relied = w.post(&mut lia, "a post the reader relied on");
+    w.ack(&mut reader, relied);
+    let (r, _) = w.rotate(&lia, Rot { disowned: Some(vec![relied]), ..Default::default() });
+    w.receipt(&mut home, &lia.id, &r, 1);
+    let log = w.log.clone();
+    let mut w = replay(&log, &[reader.id]);
+    out.case(&mut w, "a disowned act whose only acknowledgement is by an identity whose genesis is not held: unknown", "Identity, section 6: a verifier that cannot tell answers unknown, never valid, void or invalid; disputed waits on void as well",
+        "Whether the acknowledgement counts cannot be told, so neither can whether the act is relied on: unknown, not void.",
+        Facts::default(), ask_status(&relied), json!("unknown"), None);
+    let mut w = replay(&log, &[]);
+    out.case(&mut w, "the same with the acknowledger's genesis held: disputed", "Identity rule 34",
+        "The acknowledgement is valid: the act is relied on.", Facts::default(), ask_status(&relied), json!("disputed"), None);
+
+    // Row 6 ("Encoding and conventions", signature schemes): a key of a
+    // founding scheme of the wrong length makes the act invalid.
+    let mut w = World::new();
+    let mut home = w.operator("kai's home");
+    let kai = w.genesis("kai", vec![home_of(&home)], None, None);
+    let (r, _) = w.rotate(&kai, Rot { raw_signing_key: Some(SigningKey { scheme: Scheme::Founding(1), key: vec![7; 31] }), ..Default::default() });
+    w.receipt(&mut home, &kai.id, &r, 1);
+    out.case(&mut w, "a rotation installing a Schnorr signing key of 31 bytes: invalid", "Identity, \"Encoding and conventions\": a key of a founding scheme whose length is not the one in the table makes the act invalid",
+        "Scheme 1 keys are 32 bytes; its home's receipt changes nothing.", Facts::default(), ask_status(&r), json!("invalid"), None);
+    let mut w = World::new();
+    let mut home = w.operator("kit's home");
+    let kit = w.genesis("kit", vec![home_of(&home)], None, None);
+    let (r, _) = w.rotate(&kit, Rot { raw_signing_key: Some(SigningKey { scheme: Scheme::Spec(spec("a signature scheme, test value")), key: vec![7; 31] }), ..Default::default() });
+    w.receipt(&mut home, &kit.id, &r, 1);
+    out.case(&mut w, "a rotation installing a 31-byte key of a scheme named by hash: valid", "Identity, \"Encoding and conventions\": a scheme named by hash, whatever the lengths",
+        "Lengths are checked only for founding schemes; a rotation's validity never depends on the kind of signing key it installs.", Facts::default(), ask_status(&r), json!("valid"), None);
+
+    // Row 9 (receipt check 6): a voided, acknowledged receipt is shown as
+    // contesting the position, and blocks nothing: the position is pending.
+    let mut w = World::new();
+    let mut hm = w.operator("uma's home, rotating");
+    let mut wit = w.genesis("a witness of uma's home", vec![own_home()], None, None);
+    let uma = w.genesis("uma", vec![home_of(&hm)], None, None);
+    let (t, _) = w.rotate(&uma, Rot::default());
+    let rc = w.receipt(&mut hm, &uma.id, &t, 1);
+    w.ack(&mut wit, rc);
+    w.rotate(&hm, Rot { kept: Some(vec![]), ..Default::default() });
+    out.case(&mut w, "a rotation whose only receipt its home's rotation voided, the receipt acknowledged: pending, not contested", "Identity, receipt check 6: it blocks nothing; \"Definitions\": a contested position comes from rules 40, 44 and 4",
+        "The voided receipt is a visible dispute and never support; no conflict under rules 40, 44 or 4 stands: the rotation waits on a receipt.",
+        Facts::default(), chain_of(&uma.id), json!({ "counting": [hx(&uma.id)], "next": "pending", "dishonest": [] }), None);
+
+    // Row 10 (rule 40): homes split, none meeting the rule: contested.
+    let mut w = World::new();
+    let mut h1 = w.operator("vic's first home");
+    let mut h2 = w.operator("vic's second home");
+    let h3 = w.operator("vic's third home, silent");
+    let vic = w.genesis("vic", vec![home_of(&h1), home_of(&h2), home_of(&h3)], Some(HomeRule::Threshold(2)), None);
+    let (r, _) = w.rotate(&vic, Rot::default());
+    let (r2, _) = w.rotate(&vic, Rot { signing_key: Some(schnorr("vic's thief", 1)), ..Default::default() });
+    w.receipt(&mut h1, &vic.id, &r, 1);
+    let log = w.log.clone();
+    w.receipt(&mut h2, &vic.id, &r2, 1);
+    out.case(&mut w, "two rotations at one position, each receipted by one of three homes under a threshold of two: contested", "Identity rule 40: if none meets the rule, the identity is contested until one does",
+        "The homes disagree and neither rotation meets the rule.", Facts::default(), chain_of(&vic.id), json!({ "counting": [hx(&vic.id)], "next": "contested", "dishonest": [] }), None);
+    let mut w = replay(&log, &[]);
+    out.case(&mut w, "the same with only one home's receipt held: pending", "Identity, \"What stops a chain\": pending",
+        "No home disagrees: the rotation waits on a second home's receipt.", Facts::default(), chain_of(&vic.id), json!({ "counting": [hx(&vic.id)], "next": "pending", "dishonest": [] }), None);
+
+    // Row 11 (the `successor` format): a "mor" identifier of another length
+    // names no MOR identity, and no client follows it.
+    let mut w = World::new();
+    let mut home = w.operator("zed's home");
+    let zed = w.genesis("zed", vec![home_of(&home)], None, None);
+    let (r, _) = w.rotate(&zed, Rot { successor: Some(Some(Successor { protocol: "mor".into(), identifier: vec![9; 31] })), ..Default::default() });
+    w.receipt(&mut home, &zed.id, &r, 1);
+    out.case(&mut w, "a succession to a \"mor\" identifier of 31 bytes: no succession", "Identity, Part three, `successor`: a \"mor\" identifier of another length names no MOR identity, and no client follows it",
+        "Not another protocol's succession, which a cMIP could follow: it names nothing.", Facts::default(), json!({ "question": "succession", "identity": hx(&zed.id) }), json!({ "seen": "none" }), None);
+    let mut w = World::new();
+    let mut home = w.operator("zoe's home");
+    let zoe = w.genesis("zoe", vec![home_of(&home)], None, None);
+    let (r, _) = w.rotate(&zoe, Rot { successor: Some(Some(Successor { protocol: "another protocol, test value".into(), identifier: vec![9; 31] })), ..Default::default() });
+    w.receipt(&mut home, &zoe.id, &r, 1);
+    out.case(&mut w, "a succession to another protocol: that protocol's", "Identity, \"Succession\": confirmed as that protocol's link cMIP says",
+        "Another protocol's identifier, whatever its length.", Facts::default(), json!({ "question": "succession", "identity": hx(&zoe.id) }), json!({ "seen": "another protocol's" }), None);
+
+    // Row 15 ("The escape endorsement"): bound to the act just before the
+    // homeless rotation, not to an older rotation that set the same key.
+    let mut w = World::new();
+    let mut home = w.operator("ivo's home");
+    let mut nh = w.operator("ivo's escape home");
+    let ivo = w.genesis("ivo", vec![home_of(&home)], None, None);
+    let (r1, p1) = w.rotate(&ivo, Rot::default());
+    w.receipt(&mut home, &ivo.id, &r1, 1);
+    let (r2, p2) = w.rotate(&p1, Rot { signing_key: Some(schnorr("ivo", 1)), ..Default::default() });
+    w.receipt(&mut home, &ivo.id, &r2, 2);
+    let (h, _) = w.rotate(&p2, Rot { homes: Some(vec![home_of(&nh)]), homeless: true, ..Default::default() });
+    w.receipt(&mut nh, &ivo.id, &h, 3);
+    let log = w.log.clone();
+    let mut old = p1.clone();
+    w.endorse(&mut old, &h, None);
+    out.case(&mut w, "an escape endorsement bound to an older rotation that set the same key: no escape", "Identity, \"The escape endorsement\": its binding names the act just before the homeless rotation",
+        "The second rotation re-installed the first's key; the endorsement names the first. It is no escape endorsement, and the old home is not gone: the homeless rotation does not count.",
+        Facts::default(), ask_status(&h), json!("pending"), None);
+    let mut w = replay(&log, &[]);
+    let mut cur = p2.clone();
+    w.endorse(&mut cur, &h, None);
+    out.case(&mut w, "the same endorsement bound to the act just before: an escape, it counts", "Identity, \"The escape endorsement\"",
+        "Bound to the rotation just before the homeless one.", Facts::default(), ask_status(&h), json!("valid"), None);
+}
 
 /// S7g: Text, read for sentences no case exercised.
 fn s7g_text(_out: &mut Out) {}

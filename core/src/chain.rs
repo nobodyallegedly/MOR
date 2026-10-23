@@ -243,7 +243,8 @@ pub enum SpecClaim {
 /// A succession as one verifier sees it (Identity draft 13, F300).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SuccessionSeen {
-    /// No succession declared, or the latest declaration ended it.
+    /// No succession declared, or the latest declaration ended it, or
+    /// names no MOR identity: a "mor" identifier not 32 bytes long.
     None,
     /// Declared by `rotation` to the MOR identity `successor`, which has
     /// not confirmed it: shown as declared, never followed.
@@ -412,7 +413,11 @@ struct Cand {
 struct Tally {
     winner: Option<Hash>,
     dishonest: Vec<Operator>,
+    /// A contested position: rules 40, 44 and 4.
     contested: bool,
+    /// A voided receipt another identity acknowledged: shown as
+    /// contesting the position, it blocks nothing (receipt check 6).
+    disputed: bool,
 }
 
 struct StepOut {
@@ -915,11 +920,13 @@ impl Verifier {
         let Some((rotation, Some(successor))) = decided else {
             return SuccessionSeen::None;
         };
-        let mor = (successor.protocol == "mor")
-            .then(|| Hash::try_from(successor.identifier.as_slice()).ok())
-            .flatten();
-        let Some(by) = mor else {
+        if successor.protocol != "mor" {
             return SuccessionSeen::Elsewhere { rotation, successor };
+        }
+        // A "mor" identifier of another length names no MOR identity, and
+        // no client follows it (Part three, the `successor` format).
+        let Ok(by) = Hash::try_from(successor.identifier.as_slice()) else {
+            return SuccessionSeen::None;
         };
         let mut unknown = false;
         for h in self.signed_by(&by) {
@@ -1303,12 +1310,13 @@ impl Verifier {
             &pool,
             &|c| !abandoned.contains(c),
             dishonest,
+            true,
         );
         if let Some(w) = t.winner {
             let c = cands.iter().find(|c| c.id == w).unwrap();
             let mut out = counted(c, How::Homes);
             out.dishonest = t.dishonest;
-            out.contested = t.contested;
+            out.contested = t.contested || t.disputed;
             return out;
         }
 
@@ -1329,7 +1337,10 @@ impl Verifier {
                     },
                 });
                 s2.push(h.state.clone());
-                if self.step(cx, id, &l2, &s2, dishonest, false).result.is_ok() {
+                // Under the rule it declared: a next rotation its new homes
+                // receipt, never one counting by a homeless procedure of
+                // its own (Identity, "Finality").
+                if matches!(self.step(cx, id, &l2, &s2, dishonest, false).result, Ok((Link { how: How::Homes, .. }, _))) {
                     finals.push((*h, b));
                 }
             }
@@ -1346,7 +1357,7 @@ impl Verifier {
                     },
                 );
                 out.dishonest = t.dishonest;
-                out.contested = t.contested;
+                out.contested = t.contested || t.disputed;
                 return out;
             }
             _ => {
@@ -1371,7 +1382,7 @@ impl Verifier {
         if cannot_tell {
             let mut out = StepOut::stop(Stop::CannotTell(ids));
             out.dishonest = t.dishonest;
-            out.contested = t.contested;
+            out.contested = t.contested || t.disputed;
             return out;
         }
         let mut out = match prov.len() {
@@ -1387,12 +1398,17 @@ impl Verifier {
             _ => StepOut::stop(Stop::Contested(ids)),
         };
         out.dishonest = t.dishonest;
-        out.contested = t.contested;
+        out.contested = t.contested || t.disputed;
         out
     }
 
     /// Count the receipts of the homes of `st` for the rotations at `n`
     /// ("Which rotation counts", steps 2 and 3; conflicting receipts).
+    /// Under the old rule (`old`), a self-hosted home serves no homeless
+    /// rotation: one counts only by the homeless procedure, whose step 5
+    /// needs its new homes, and a self-hosted home is never gone (homeless
+    /// procedure, steps 4 and 5; the escape, "Steps 1, 2 and 5 still
+    /// apply").
     #[allow(clippy::too_many_arguments)]
     fn tally(
         &self,
@@ -1404,6 +1420,7 @@ impl Verifier {
         pool: &[&Cand],
         eligible: &dyn Fn(&Hash) -> bool,
         dishonest: &[(Operator, u64)],
+        old: bool,
     ) -> Tally {
         let eff = st.effective();
         let voters = match eff {
@@ -1415,14 +1432,18 @@ impl Verifier {
             winner: None,
             dishonest: vec![],
             contested: false,
+            disputed: false,
         };
         for op in voters {
             match op {
-                Operator::Own => match pool.len() {
-                    1 if eligible(&pool[0].id) => *votes.entry(pool[0].id).or_default() += 1,
-                    0 | 1 => {}
-                    _ => t.contested = true,
-                },
+                Operator::Own => {
+                    let served: Vec<&&Cand> = pool.iter().filter(|c| !(old && c.homeless)).collect();
+                    match served.len() {
+                        1 if eligible(&served[0].id) => *votes.entry(served[0].id).or_default() += 1,
+                        0 | 1 => {}
+                        _ => t.contested = true,
+                    }
+                }
                 Operator::Id(o) => {
                     if dishonest.iter().any(|(d, p)| *d == op && *p < n) {
                         continue;
@@ -1435,7 +1456,7 @@ impl Verifier {
                                 Judged::Support { protected } => {
                                     best = Some(best.unwrap_or(false) || protected)
                                 }
-                                Judged::Disputed => t.contested = true,
+                                Judged::Disputed => t.disputed = true,
                                 Judged::No => {}
                             }
                         }
@@ -1462,6 +1483,11 @@ impl Verifier {
             Effective::Threshold(k) => k,
         };
         t.winner = votes.iter().find(|(_, v)| **v >= need).map(|(c, _)| *c);
+        // Rule 40: where homes disagree and none meets the rule, the
+        // identity is contested until one does.
+        if t.winner.is_none() && votes.len() >= 2 {
+            t.contested = true;
+        }
         t
     }
 
@@ -1625,9 +1651,16 @@ impl Verifier {
             // F298: void needs every kept line rebuilt and the act on none
             // of them; disputed is void but relied on, so it waits too.
             Kept::CannotTell => Judgement::Unknown,
-            Kept::No if self.recorded.contains(&x.id) || self.acknowledged(cx, x) => Judgement::Disputed,
-            Kept::No if self.keepers_unknown.contains(&x.id) => Judgement::Unknown,
-            Kept::No => Judgement::Void,
+            Kept::No if self.recorded.contains(&x.id) => Judgement::Disputed,
+            Kept::No => match self.acknowledged(cx, x) {
+                Some(true) => Judgement::Disputed,
+                // An acknowledgement whose status this verifier cannot
+                // tell: whether the act is relied on cannot be told
+                // either; unknown, never void (section 6, F298).
+                None => Judgement::Unknown,
+                Some(false) if self.keepers_unknown.contains(&x.id) => Judgement::Unknown,
+                Some(false) => Judgement::Void,
+            },
         }
     }
 
@@ -1639,19 +1672,24 @@ impl Verifier {
     /// shape holds (a witness act): [`Self::status_cx`] judges all of it.
     /// An acknowledgement counts only while its signer's chain keeps it
     /// valid: one its signer's rotation voided keeps nothing disputed,
-    /// acknowledged or not (Identity draft 13, F297).
-    fn acknowledged(&self, cx: &mut Cx, x: &Held) -> bool {
+    /// acknowledged or not (Identity draft 13, F297). `None` where none
+    /// is valid and one's status this verifier cannot tell ("A verifier
+    /// that cannot tell answers unknown").
+    fn acknowledged(&self, cx: &mut Cx, x: &Held) -> Option<bool> {
+        let mut unknown = false;
         for a in self.acked_by.get(&x.id).into_iter().flatten() {
             let y = &self.acts[a];
             let Some(s) = y.signer() else { continue };
             if Some(s) == x.signer() {
                 continue;
             }
-            if self.status_cx(cx, y) == Status::Valid {
-                return true;
+            match self.status_cx(cx, y) {
+                Status::Valid => return Some(true),
+                Status::Unknown => unknown = true,
+                _ => {}
             }
         }
-        false
+        (!unknown).then_some(false)
     }
 
     /// Whether an act lies in a rotation's kept ancestry: a kept tip or an
@@ -1761,7 +1799,7 @@ impl Verifier {
                 match x.payload() {
                     Some(Payload::Endorsement(en))
                         if x.signer() == Some(id)
-                            && x.act.outside.binding.as_ref().is_some_and(|b| b == prev || self.sets_key(id, b))
+                            && x.act.outside.binding.as_ref() == Some(&self.key_set_by(prev))
                             && ps.signing_key.made(&x.act.signature)
                             && names(&x.inside, id, h) =>
                     {
@@ -1772,16 +1810,16 @@ impl Verifier {
             })
     }
 
-    /// Whether `b` is a genesis or rotation of `id`, an act that sets a
-    /// signing key: where a chain signature is the act just before a
-    /// homeless rotation, the endorsement is bound to the act that set the
-    /// key in effect (F132).
-    fn sets_key(&self, id: &Hash, b: &Hash) -> bool {
-        self.acts.get(b).is_some_and(|h| match h.payload() {
-            Some(Payload::Genesis(_)) => h.id == *id,
-            Some(Payload::Rotation(_)) => h.signer() == Some(id),
-            _ => false,
-        })
+    /// The identity-chain act an escape endorsement is bound to: the act
+    /// just before the homeless rotation, or, where that act is a chain
+    /// signature (which sets no key), the act that set the key in effect
+    /// (F132; "The escape endorsement").
+    fn key_set_by(&self, prev: &Hash) -> Hash {
+        let mut cur = *prev;
+        while let Some(Payload::ChainSignature(c)) = self.acts.get(&cur).and_then(|h| h.payload()) {
+            cur = c.prev;
+        }
+        cur
     }
 
     /// Whether an operator closed its homes by a counting rotation.
@@ -1806,7 +1844,7 @@ impl Verifier {
     ) -> Hb {
         // Step 5: receipts from the new homes meet the new rule, under the
         // audit requirement it declares or inherits (F60, F86).
-        let t = self.tally(cx, id, n, &h.state, cands, pool, &|c| *c == h.id, dishonest);
+        let t = self.tally(cx, id, n, &h.state, cands, pool, &|c| *c == h.id, dishonest, false);
         if t.winner != Some(h.id) {
             return Hb::No;
         }
