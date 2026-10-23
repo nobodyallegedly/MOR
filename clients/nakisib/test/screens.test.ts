@@ -174,6 +174,7 @@ test('every screen by clicks, nothing secret on disk, and no connection but the 
   // At a phone's size, the column folds away.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.click('[data-action="home"]');
+  await page.locator('.k-tile').first().waitFor();
   await picture(page, 'phone-first-screen');
   await page.setViewportSize({ width: 1280, height: 800 });
 
