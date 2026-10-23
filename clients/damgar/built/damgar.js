@@ -10668,9 +10668,10 @@ var Damgar = class {
         if (d && d.parties.length > 1) payments[i] = { ...x, deal: d.name ?? "a shared work" };
       }
       const shared = /* @__PURE__ */ new Map();
+      const collectives = /* @__PURE__ */ new Set();
       const entry = (d) => {
         let e3 = shared.get(d.version);
-        if (!e3) shared.set(d.version, e3 = { version: d.version, name: d.name ?? "a shared work", payments: [], payouts: [] });
+        if (!e3) shared.set(d.version, e3 = { version: d.version, name: d.name ?? "a shared work", ...collectives.has(d.version) ? { collective: true } : {}, payments: [], payouts: [] });
         return e3;
       };
       const railOf = (receipt, whose) => {
@@ -10687,7 +10688,6 @@ var Damgar = class {
         if (!d || !d.parties.includes(me.id)) continue;
         entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown(x.amount), kind: x.purchase ? "a sale" : "a tip", ...railOf(receipt, "by its split service in the deal\u2019s payee\u2019s name") });
       }
-      const collectives = /* @__PURE__ */ new Set();
       const places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
       for (const [split, x] of Object.entries(book.splits ?? {})) {
         if (!deals.has(x.agreement)) {
@@ -13269,7 +13269,7 @@ function mount(app2, b) {
       if (part === "shared") {
         const ds = a.shared ?? [];
         return `<h2>Shared deals</h2>${say2("The deals you share in with other people: what was paid to each, and what its split service paid you.", ["Each payment to a deal is receipted by its split service in the name of the deal\u2019s own payee, and sealed to every person sharing in it; each split names what it pays each of you. A tip to you personally is under Payments, not here."])}${ds.map((d) => `<h3>\u201C${e(d.name)}\u201D <span class="k-small k-soft k-mono">${e(shortForm(formOf(d.version)))}</span></h3><div class="k-feed">${[
-          ...d.payments.map((x) => cardOf({ id: x.receipt, who: x.payer, kind: x.kind, text: `${x.kind === "a tip" ? "A tip" : "A sale"} to the deal \xB7 ${x.amount.said}`, labels: [{ text: x.standing, ...x.rail.answer === "valid" ? {} : { tone: "warn" } }], verified: x.rail.answer === "valid", lines: [] })),
+          ...d.payments.map((x) => cardOf({ id: x.receipt, who: x.payer, kind: x.kind, text: d.collective ? `${x.kind === "a tip" ? "A tip" : "A sale"} of the collective\u2019s work \xB7 your share ${x.amount.said}` : `${x.kind === "a tip" ? "A tip" : "A sale"} to the deal \xB7 ${x.amount.said}`, labels: [{ text: x.standing, ...x.rail.answer === "valid" ? {} : { tone: "warn" } }], verified: x.rail.answer === "valid", lines: [] })),
           ...d.payouts.map((x) => cardOf({ id: x.split, who: { id: meId(), short: "", me: true }, kind: "your payout", text: `Its split pays you ${x.amount.said}${x.role ? ` (${x.role})` : ""}`, labels: [{ text: x.paid ? "paid to you by its split service, its rail answer valid" : "named in its split; its payment here is not yet shown valid by its rail: unknown" }], verified: x.paid, lines: [] }))
         ].join("") || '<p class="k-empty">Nothing yet.</p>'}</div>`).join("") || '<p class="k-empty">No deal shared with you yet: a deal is set up in Edubba, where you sign it.</p>'}`;
       }

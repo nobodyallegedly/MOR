@@ -99,6 +99,8 @@ export interface PaymentShown {
 export interface SharedShown {
   version: string;
   name: string;
+  /** A collective's money agreement, not a deal: its sales are shown with your share only (its receipts sealed to the collective). */
+  collective?: boolean;
   /** Every payment the service receipted in the deal's payee's name, sealed to every party: a sale or a tip. */
   payments: { receipt: string; payer: Who; amount: Shown; kind: 'a sale' | 'a tip'; standing: string; /** Its rail answer here (S7e): anything but valid is shown unknown, with its reason. */ rail: Verdict }[];
   /** Your payouts, as each split the service sealed to you names them; `paid` where your Damgar holds a payment of that amount from the service. */

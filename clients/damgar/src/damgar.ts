@@ -2661,9 +2661,10 @@ export class Damgar {
         if (d && d.parties.length > 1) payments[i] = { ...x, deal: d.name ?? 'a shared work' };
       }
       const shared = new Map<string, SharedShown>();
+      const collectives = new Set<string>();
       const entry = (d: DealRead): SharedShown => {
         let e = shared.get(d.version);
-        if (!e) shared.set(d.version, (e = { version: d.version, name: d.name ?? 'a shared work', payments: [], payouts: [] }));
+        if (!e) shared.set(d.version, (e = { version: d.version, name: d.name ?? 'a shared work', ...(collectives.has(d.version) ? { collective: true } : {}), payments: [], payouts: [] }));
         return e;
       };
       // Its rail answer, as this Damgar reads it (S7e): a payment whose answer is not given here is unknown, with its reason, never shown verified.
@@ -2682,7 +2683,6 @@ export class Damgar {
         entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown(x.amount), kind: x.purchase ? 'a sale' : 'a tip', ...railOf(receipt, 'by its split service in the deal’s payee’s name') });
       }
       // A collective's money agreement this identity is a member of (its split service's splits name it): shown beside the deals, its payments judged the same way.
-      const collectives = new Set<string>();
       const places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
       for (const [split, x] of Object.entries(book.splits ?? {})) {
         if (!deals.has(x.agreement)) {

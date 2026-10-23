@@ -3625,9 +3625,9 @@ export class Actions {
     const noticeOf = (p: string) => (c.f.notices ?? []).find((n) => n.payment === p);
     const leftOpen: LeftOpen[] = [];
     for (const o of owedBack) {
-      // S7e: an entry the core answers unknown still blocks a closing (it cannot be named as left open).
+      // S7e: an entry the core answers unknown still blocks a closing, beside what the closing would otherwise say of it.
       if (o.unknown) blocking.push(`Whether ${o.value} (unit ${short(o.unit)}) is owed back from the broken stretch is unknown here: it rests on a receipt or claim with no rail answer read here. It blocks the closing until it is known (S7e).`);
-      else if (o.toKind === 'nobody') leftOpen.push({ payment: o.payment, notice: null });
+      if (o.toKind === 'nobody') leftOpen.push({ payment: o.payment, notice: null });
       else if (o.toKind === 'identity' && noticeOf(o.payment)) leftOpen.push({ payment: o.payment, notice: noticeOf(o.payment)!.notice });
       else
         blocking.push(

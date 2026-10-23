@@ -14449,9 +14449,10 @@ var Damgar = class {
         if (d && d.parties.length > 1) payments[i] = { ...x, deal: d.name ?? "a shared work" };
       }
       const shared = /* @__PURE__ */ new Map();
+      const collectives = /* @__PURE__ */ new Set();
       const entry = (d) => {
         let e3 = shared.get(d.version);
-        if (!e3) shared.set(d.version, e3 = { version: d.version, name: d.name ?? "a shared work", payments: [], payouts: [] });
+        if (!e3) shared.set(d.version, e3 = { version: d.version, name: d.name ?? "a shared work", ...collectives.has(d.version) ? { collective: true } : {}, payments: [], payouts: [] });
         return e3;
       };
       const railOf = (receipt, whose) => {
@@ -14468,7 +14469,6 @@ var Damgar = class {
         if (!d || !d.parties.includes(me.id)) continue;
         entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown(x.amount), kind: x.purchase ? "a sale" : "a tip", ...railOf(receipt, "by its split service in the deal\u2019s payee\u2019s name") });
       }
-      const collectives = /* @__PURE__ */ new Set();
       const places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
       for (const [split, x] of Object.entries(book.splits ?? {})) {
         if (!deals.has(x.agreement)) {
