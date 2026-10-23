@@ -114,7 +114,7 @@ test('a release anchored on Bitcoin, as an option: asked in Ummia, paid in Damga
   const rel = (await c.ask<Done>('release confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
   const offers = await c.ask<{ act: string; tiers: { blocks: number }[] }[]>('anchor offers', { service: svc.id });
   assert.equal(offers.length, 1);
-  await refused(c.ask('anchor ask', { release: 'a'.repeat(64), service: svc.id, offer: offers[0].act, tier: 1 }), /not one of your releases/);
+  await refused(c.ask('anchor ask', { release: 'a'.repeat(64), service: svc.id, offer: offers[0].act, tier: 1 }), /neither one of your releases nor a public act found/);
   await c.ask('anchor ask', { release: rel, service: svc.id, offer: offers[0].act, tier: 1 });
   let shown = (await c.ask<{ anchors: AnchorShown[] }>('releases')).anchors;
   assert.equal(shown[0].state, 'asked');

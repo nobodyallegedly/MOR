@@ -23,9 +23,10 @@ export async function closeAll() {
 }
 
 /** An Ummia program in a folder of its own, paired. */
-export async function ummia(chain?: ChainSource | null): Promise<{ app: Running; c: Client; dir: string }> {
+export async function ummia(chain?: ChainSource | null, o: { kishib?: string } = {}): Promise<{ app: Running; c: Client; dir: string }> {
   const dir = join(mkdtempSync(join(tmpdir(), 'ummia-')), 'mor-ummia');
-  const app = await serve({ dir, port: 0, chain });
+  // Kišib's folder: a test's own, never the person's (~/mor-kishib), so no test pairs with a Kišib running here.
+  const app = await serve({ dir, port: 0, chain, kishib: o.kishib ?? join(dir, '..', 'no-kishib') });
   apps.push(app);
   const c = await Client.open(await newKey(), app.base, DOMAIN);
   await c.ask('pair', { code: app.access.newCode(), label: 'test' });
@@ -87,6 +88,45 @@ export async function edubba(homes: string[], relays: string[], chain?: ChainSou
   await c.ask('pair', { code: app.access.newCode(), label: 'test' });
   await c.ask('settings', { homes, relays, via: [], drafts: '' });
   return { app, c, dir };
+}
+
+/**
+ * A collective founded from Edubba's grid (round 2): Publishing held by A
+ * and iPa at two keys, Development by iPh. A, iPa and iPh are Dubs; the
+ * collective's ID is returned.
+ */
+export async function releaseCollective(H: string[], R: string[]) {
+  const e = await edubba(H, R);
+  const A = await dub(H, R);
+  const iPa = await dub(H, R);
+  const iPh = await dub(H, R);
+  await e.c.ask('bring', { name: 'A', id: A.id, words: A.words, address: H[0], linked: false });
+  const grid = {
+    members: [A.id, iPa.id, iPh.id],
+    constitution: { holders: [A.id, iPa.id, iPh.id], number: 3 },
+    chainKey: 2,
+    absence: 2,
+    areas: [
+      { name: 'Publishing', layer: 1, holders: [A.id, iPa.id], number: 2 },
+      { name: 'Development', layer: 4, holders: [iPh.id], number: 1 },
+    ],
+    clone: 2,
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rv = await e.c.ask<any>('real found prepare', { name: 'Three tablets', founder: A.id, members: [iPa.id, iPh.id], grid });
+  assert.deepEqual(rv.reading.blocking, []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const terms = (await e.c.ask<any>('real confirm', { plan: rv.plan, digest: rv.digest })).acts[0];
+  for (const m of [iPa, iPh]) {
+    await m.c.ask('signing', { on: true });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const p = (await m.c.ask<any>('proposals')).proposals.find((x: any) => x.act === terms);
+    await m.c.ask('accept', { thread: p.thread });
+  }
+  await e.c.ask('real gather', { act: terms });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const col = (await e.c.ask<any>('real found', { act: terms, read: true })).acts[0] as string;
+  return { A, iPa, iPh, col, edubba: e };
 }
 
 /** A small folder to release: a plain one, or a git one. */
