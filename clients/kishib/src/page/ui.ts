@@ -201,7 +201,44 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
   /** Clear every field that held words, once they were sent. */
   const clear = (form: HTMLFormElement) => (Array.from(form.elements) as HTMLInputElement[]).forEach((el) => (el.tagName === 'TEXTAREA' || el.type === 'password') && (el.value = ''));
 
-  const PLANS: Record<string, string> = { rotate: 'rotate plan', escape: 'escape plan', confirm: 'confirm plan', start: 'collective start', give: 'collective give', make: 'make plan' };
+  /** A file chosen, read whole, as base64 (Nakišib's files: a commitment, a request, an answer). Nothing is kept. */
+  const fileB64 = async (el: HTMLInputElement): Promise<string> => {
+    const f = el.files?.[0];
+    if (!f) return '';
+    const b = new Uint8Array(await f.arrayBuffer());
+    let t = '';
+    for (const x of b) t += String.fromCharCode(x);
+    return btoa(t);
+  };
+  const withFiles = async (form: HTMLFormElement, a: Record<string, unknown>) => {
+    for (const el of Array.from(form.querySelectorAll<HTMLInputElement>('input[type=file]'))) a[el.name] = await fileB64(el);
+    return a;
+  };
+
+  /** The request for Nakišib, saved where the person chooses (the browser's own save dialog where it has one; else a download). */
+  async function saveFile(name: string, b64: string) {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const w = window as unknown as { showSaveFilePicker?: (o: unknown) => Promise<{ createWritable(): Promise<{ write(b: Uint8Array): Promise<void>; close(): Promise<void> }> }> };
+    if (w.showSaveFilePicker) {
+      try {
+        const h = await w.showSaveFilePicker({ suggestedName: name });
+        const out = await h.createWritable();
+        await out.write(bytes);
+        await out.close();
+        return;
+      } catch {
+        // cancelled, or not allowed here: a download instead
+      }
+    }
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+
+  const PLANS: Record<string, string> = { nakisib: 'nakisib plan', rotate: 'rotate plan', escape: 'escape plan', confirm: 'confirm plan', start: 'collective start', give: 'collective give', make: 'make plan' };
 
   function showReview(r: v.Review, kind: string) {
     current = { review: r, must: kind === 'start' };
@@ -222,6 +259,12 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
       runner = r;
       draw();
       return done('The new signing key’s words are taken: the runner signs for this identity again, with its new key.');
+    }
+    await withFiles(form, a);
+    if (id === 'nakisib-answer' || id === 'nakisib-late') {
+      const s = await act(() => b.ask<v.State>('nakisib answer', a));
+      if (s) await show({ ...s, runner: runner ?? undefined });
+      return;
     }
     const kind = form.dataset.kind ?? '';
     switch (kind) {
@@ -329,6 +372,12 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         const warned = current.review.warning ? ($<HTMLInputElement>('warned')?.checked ? current.review.warning : undefined) : undefined;
         if (current.review.warning && !warned) return fail(new Error('A line of acts would be left out, or cannot be placed: read the warning in red and tick it, or go back and give its card.'));
         return again(await act(() => b.ask<v.State>('confirm', { plan: current!.review.plan, digest: current!.review.digest, ...(warned ? { warned } : {}) })));
+      }
+      case 'nakisib write': {
+        const r = await act(() => b.ask<{ name: string; bytes: string; fingerprint: string }>('nakisib request'));
+        if (!r) return;
+        await saveFile(r.name, r.bytes);
+        return done(`The request is written (${v.e(r.name)}): carry it to the offline Mac, and open it in Nakišib, “Change keys”. Its new signing key’s fingerprint, which Nakišib shows too: ${v.e(r.fingerprint)}.`);
       }
       case 'refresh':
       case 'resend':

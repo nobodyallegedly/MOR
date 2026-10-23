@@ -39,6 +39,7 @@ export interface Sitting {
   act: string | null;
   stage:
     | 'paper' // the new chain key's words to write down and type back: nothing signed yet (H79)
+    | 'request' // with Nakišib: its request written, waiting for its answer; nothing signed yet
     | 'sent' // signed and sent, waiting for the homes' receipts
     | 'counts' // the homes' receipts are in: the new words can be shown
     | 'shown' // the new words shown, hidden now, three asked back
@@ -53,6 +54,8 @@ export interface Sitting {
   shares?: { holder: string; x: number; shown: boolean }[];
   /** Three positions to type back, once the words are hidden. */
   positions?: number[];
+  /** With Nakišib: the new signing key's fingerprint, as both screens show it, while its request is held. */
+  nakisib?: { fingerprint: string };
   /** Which new words are next, while any are held (H79): the new chain key's, then the new signing key's. */
   words?: 'chain' | 'signing';
 }

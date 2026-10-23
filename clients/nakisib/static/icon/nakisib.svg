@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Nakišib (na₄ kišib, "stone seal"; na₄ is a silent determinative in the texts, so the reading is built, not attested: chosen by Nobody, allegedly, knowing it): a stone cylinder seal alone, standing, no clay, in the family's stone and quiet, the Nakišib tint stone (#b9b2a5): a thick edge #8d877c, the dark #0f0f10, the stone #77746e and #8f8b83 (stone moved toward the tint), a line on the seal's top in the tint itself. Its name carved once, down the seal in one column, mirrored, as a seal is cut: 𒎎 (NA4, U+1238E) above 𒈩 (MES, read kišib, U+12229, traced by hand for Kišib's icon from the author's picture). NA4 here is the session's own drawing of the sign's wedges (NI and UD side by side, as it is written), not traced from a source: to confirm against the ePSD or Borger. No glow. -->
+  <defs>
+  <!-- 𒈩 (MES, kišib): as in Kišib's icon (clients/kishib/static/icon/kishib.svg). -->
+  <g id="kisib">
+    <path d="M68 258 Q103 268 138 258 L116 607 L97 607 Z"/>
+    <path d="M130 202 Q144 270 130 338 Q260 282 392 282 L392 258 Q260 252 130 202 Z"/>
+    <path d="M130 377 Q144 445 130 512 Q260 458 395 455 L395 433 Q260 430 130 377 Z"/>
+    <path d="M367 203 Q405 211 442 203 Q418 390 415 578 L397 578 Q395 390 367 203 Z"/>
+    <path d="M405 57 Q420 124 405 190 Q600 150 795 143 L788 117 Q600 112 405 57 Z"/>
+    <path d="M785 115 Q852 126 920 115 Q868 350 862 595 L843 595 Q838 350 785 115 Z"/>
+    <path d="M405 512 Q420 578 405 645 Q630 600 862 598 L862 575 Q630 572 405 512 Z"/>
+    <path d="M448 185 Q484 193 520 185 Q498 360 494 528 L478 528 Q472 360 448 185 Z"/>
+    <path d="M520 185 Q556 193 592 185 Q570 360 566 540 L550 540 Q544 360 520 185 Z"/>
+    <path d="M592 185 Q628 193 664 185 Q642 360 638 552 L622 552 Q616 360 592 185 Z"/>
+    <path d="M662 185 Q698 193 734 185 Q712 360 708 562 L692 562 Q686 360 662 185 Z"/>
+    <path d="M732 185 Q768 193 804 185 Q782 360 778 572 L762 572 Q756 360 732 185 Z"/>
+  </g>
+  <!-- 𒎎 (NA4): NI (three horizontal wedges and a vertical), then UD (two verticals closing two Winkelhaken), in the same 1024 by 731 box and the same wedge shapes. -->
+  <g id="na4">
+    <path d="M68 110 Q82 170 68 230 Q200 182 360 180 L360 158 Q200 156 68 110 Z"/>
+    <path d="M68 300 Q82 360 68 420 Q200 372 360 370 L360 348 Q200 346 68 300 Z"/>
+    <path d="M68 490 Q82 550 68 610 Q200 562 360 560 L360 538 Q200 536 68 490 Z"/>
+    <path d="M372 70 Q410 78 448 70 Q424 360 420 660 L402 660 Q398 360 372 70 Z"/>
+    <path d="M520 70 Q558 78 596 70 Q572 360 568 660 L550 660 Q546 360 520 70 Z"/>
+    <path d="M640 230 L760 170 L740 230 L760 290 Z"/>
+    <path d="M640 450 L760 390 L740 450 L760 510 Z"/>
+    <path d="M820 70 Q858 78 896 70 Q872 360 868 660 L850 660 Q846 360 820 70 Z"/>
+  </g>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="184" fill="#0f0f10"/>
+  <rect x="108" y="108" width="808" height="808" rx="176" fill="none" stroke="#8d877c" stroke-width="16"/>
+  <!-- The seal: a stone cylinder, standing, its top an ellipse with the bore for its cord. -->
+  <path d="M372 262 V770 A140 36 0 0 0 652 770 V262 Z" fill="#77746e"/>
+  <path d="M372 262 V770 A140 36 0 0 0 420 795 V292 Z" fill="#6b6863"/>
+  <ellipse cx="512" cy="262" rx="140" ry="36" fill="#8f8b83"/>
+  <ellipse cx="512" cy="262" rx="22" ry="8" fill="#3c3a37"/>
+  <ellipse cx="512" cy="262" rx="136" ry="32" fill="none" stroke="#b9b2a5" stroke-width="6"/>
+  <!-- Its name, carved once, down the seal, mirrored: NA4 above KIŠIB. -->
+  <g fill="#4a4844">
+    <use href="#na4" transform="translate(632 340) scale(-0.235 0.235) translate(-68 -57)"/>
+    <use href="#kisib" transform="translate(632 545) scale(-0.235 0.235) translate(-68 -57)"/>
+  </g>
+</svg>

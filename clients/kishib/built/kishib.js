@@ -1,3 +1,9 @@
+var __defProp = Object.defineProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
 // ../genesis/wasm/mor_wasm.js
 var Verifier = class {
   __destroy_into_raw() {
@@ -7902,6 +7908,322 @@ async function checkShare(a) {
   }
 }
 
+// airgap/pkg/kishib_airgap.js
+var kishib_airgap_exports = {};
+__export(kishib_airgap_exports, {
+  acceptAnswer: () => acceptAnswer,
+  default: () => __wbg_init2,
+  initSync: () => initSync,
+  pendingFor: () => pendingFor,
+  readCommitment: () => readCommitment2,
+  signingFingerprint: () => signingFingerprint
+});
+function acceptAnswer(identity_spec, pending, signed) {
+  const ptr0 = passArray8ToWasm02(identity_spec, wasm2.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN2;
+  const ptr1 = passArray8ToWasm02(pending, wasm2.__wbindgen_malloc);
+  const len1 = WASM_VECTOR_LEN2;
+  const ptr2 = passArray8ToWasm02(signed, wasm2.__wbindgen_malloc);
+  const len2 = WASM_VECTOR_LEN2;
+  const ret = wasm2.acceptAnswer(ptr0, len0, ptr1, len1, ptr2, len2);
+  if (ret[3]) {
+    throw takeFromExternrefTable02(ret[2]);
+  }
+  var v4 = getArrayU8FromWasm02(ret[0], ret[1]).slice();
+  wasm2.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v4;
+}
+function pendingFor(previous, template, context) {
+  const ptr0 = passArray8ToWasm02(previous, wasm2.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN2;
+  const ptr1 = passArray8ToWasm02(template, wasm2.__wbindgen_malloc);
+  const len1 = WASM_VECTOR_LEN2;
+  const ptr2 = passArrayJsValueToWasm02(context, wasm2.__wbindgen_malloc);
+  const len2 = WASM_VECTOR_LEN2;
+  const ret = wasm2.pendingFor(ptr0, len0, ptr1, len1, ptr2, len2);
+  if (ret[3]) {
+    throw takeFromExternrefTable02(ret[2]);
+  }
+  var v4 = getArrayU8FromWasm02(ret[0], ret[1]).slice();
+  wasm2.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v4;
+}
+function readCommitment2(_export) {
+  let deferred3_0;
+  let deferred3_1;
+  try {
+    const ptr0 = passArray8ToWasm02(_export, wasm2.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN2;
+    const ret = wasm2.readCommitment(ptr0, len0);
+    var ptr2 = ret[0];
+    var len2 = ret[1];
+    if (ret[3]) {
+      ptr2 = 0;
+      len2 = 0;
+      throw takeFromExternrefTable02(ret[2]);
+    }
+    deferred3_0 = ptr2;
+    deferred3_1 = len2;
+    return getStringFromWasm02(ptr2, len2);
+  } finally {
+    wasm2.__wbindgen_free(deferred3_0, deferred3_1, 1);
+  }
+}
+function signingFingerprint(_public) {
+  let deferred2_0;
+  let deferred2_1;
+  try {
+    const ptr0 = passArray8ToWasm02(_public, wasm2.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN2;
+    const ret = wasm2.signingFingerprint(ptr0, len0);
+    deferred2_0 = ret[0];
+    deferred2_1 = ret[1];
+    return getStringFromWasm02(ret[0], ret[1]);
+  } finally {
+    wasm2.__wbindgen_free(deferred2_0, deferred2_1, 1);
+  }
+}
+function __wbg_get_imports2() {
+  const import0 = {
+    __proto__: null,
+    __wbg_Error_30c8987f7c2ed4e2: function(arg0, arg1) {
+      const ret = Error(getStringFromWasm02(arg0, arg1));
+      return ret;
+    },
+    __wbg___wbindgen_string_get_0380ccaa2f57f0d9: function(arg0, arg1) {
+      const obj = arg1;
+      const ret = typeof obj === "string" ? obj : void 0;
+      var ptr1 = isLikeNone2(ret) ? 0 : passStringToWasm02(ret, wasm2.__wbindgen_malloc, wasm2.__wbindgen_realloc);
+      var len1 = WASM_VECTOR_LEN2;
+      getDataViewMemory02().setInt32(arg0 + 4 * 1, len1, true);
+      getDataViewMemory02().setInt32(arg0 + 4 * 0, ptr1, true);
+    },
+    __wbg___wbindgen_throw_41e9ee4f547fc59a: function(arg0, arg1) {
+      throw new Error(getStringFromWasm02(arg0, arg1));
+    },
+    __wbindgen_init_externref_table: function() {
+      const table = wasm2.__wbindgen_externrefs;
+      const offset = table.grow(4);
+      table.set(0, void 0);
+      table.set(offset + 0, void 0);
+      table.set(offset + 1, null);
+      table.set(offset + 2, true);
+      table.set(offset + 3, false);
+    }
+  };
+  return {
+    __proto__: null,
+    "./kishib_airgap_bg.js": import0
+  };
+}
+function addToExternrefTable02(obj) {
+  const idx = wasm2.__externref_table_alloc();
+  wasm2.__wbindgen_externrefs.set(idx, obj);
+  return idx;
+}
+function getArrayU8FromWasm02(ptr, len) {
+  ptr = ptr >>> 0;
+  return getUint8ArrayMemory02().subarray(ptr / 1, ptr / 1 + len);
+}
+var cachedDataViewMemory02 = null;
+function getDataViewMemory02() {
+  if (cachedDataViewMemory02 === null || cachedDataViewMemory02.buffer.detached === true || cachedDataViewMemory02.buffer.detached === void 0 && cachedDataViewMemory02.buffer !== wasm2.memory.buffer) {
+    cachedDataViewMemory02 = new DataView(wasm2.memory.buffer);
+  }
+  return cachedDataViewMemory02;
+}
+function getStringFromWasm02(ptr, len) {
+  return decodeText2(ptr >>> 0, len);
+}
+var cachedUint8ArrayMemory02 = null;
+function getUint8ArrayMemory02() {
+  if (cachedUint8ArrayMemory02 === null || cachedUint8ArrayMemory02.byteLength === 0) {
+    cachedUint8ArrayMemory02 = new Uint8Array(wasm2.memory.buffer);
+  }
+  return cachedUint8ArrayMemory02;
+}
+function isLikeNone2(x) {
+  return x === void 0 || x === null;
+}
+function passArray8ToWasm02(arg, malloc) {
+  const ptr = malloc(arg.length * 1, 1) >>> 0;
+  getUint8ArrayMemory02().set(arg, ptr / 1);
+  WASM_VECTOR_LEN2 = arg.length;
+  return ptr;
+}
+function passArrayJsValueToWasm02(array, malloc) {
+  const ptr = malloc(array.length * 4, 4) >>> 0;
+  for (let i = 0; i < array.length; i++) {
+    const add = addToExternrefTable02(array[i]);
+    getDataViewMemory02().setUint32(ptr + 4 * i, add, true);
+  }
+  WASM_VECTOR_LEN2 = array.length;
+  return ptr;
+}
+function passStringToWasm02(arg, malloc, realloc) {
+  if (realloc === void 0) {
+    const buf = cachedTextEncoder2.encode(arg);
+    const ptr2 = malloc(buf.length, 1) >>> 0;
+    getUint8ArrayMemory02().subarray(ptr2, ptr2 + buf.length).set(buf);
+    WASM_VECTOR_LEN2 = buf.length;
+    return ptr2;
+  }
+  let len = arg.length;
+  let ptr = malloc(len, 1) >>> 0;
+  const mem = getUint8ArrayMemory02();
+  let offset = 0;
+  for (; offset < len; offset++) {
+    const code = arg.charCodeAt(offset);
+    if (code > 127) break;
+    mem[ptr + offset] = code;
+  }
+  if (offset !== len) {
+    if (offset !== 0) {
+      arg = arg.slice(offset);
+    }
+    ptr = realloc(ptr, len, len = offset + arg.length * 3, 1) >>> 0;
+    const view = getUint8ArrayMemory02().subarray(ptr + offset, ptr + len);
+    const ret = cachedTextEncoder2.encodeInto(arg, view);
+    offset += ret.written;
+    ptr = realloc(ptr, len, offset, 1) >>> 0;
+  }
+  WASM_VECTOR_LEN2 = offset;
+  return ptr;
+}
+function takeFromExternrefTable02(idx) {
+  const value = wasm2.__wbindgen_externrefs.get(idx);
+  wasm2.__externref_table_dealloc(idx);
+  return value;
+}
+var cachedTextDecoder2 = new TextDecoder("utf-8", { ignoreBOM: true, fatal: true });
+cachedTextDecoder2.decode();
+var MAX_SAFARI_DECODE_BYTES2 = 2146435072;
+var numBytesDecoded2 = 0;
+function decodeText2(ptr, len) {
+  numBytesDecoded2 += len;
+  if (numBytesDecoded2 >= MAX_SAFARI_DECODE_BYTES2) {
+    cachedTextDecoder2 = new TextDecoder("utf-8", { ignoreBOM: true, fatal: true });
+    cachedTextDecoder2.decode();
+    numBytesDecoded2 = len;
+  }
+  return cachedTextDecoder2.decode(getUint8ArrayMemory02().subarray(ptr, ptr + len));
+}
+var cachedTextEncoder2 = new TextEncoder();
+if (!("encodeInto" in cachedTextEncoder2)) {
+  cachedTextEncoder2.encodeInto = function(arg, view) {
+    const buf = cachedTextEncoder2.encode(arg);
+    view.set(buf);
+    return {
+      read: arg.length,
+      written: buf.length
+    };
+  };
+}
+var WASM_VECTOR_LEN2 = 0;
+var wasmModule2;
+var wasmInstance2;
+var wasm2;
+function __wbg_finalize_init2(instance, module2) {
+  wasmInstance2 = instance;
+  wasm2 = instance.exports;
+  wasmModule2 = module2;
+  cachedDataViewMemory02 = null;
+  cachedUint8ArrayMemory02 = null;
+  wasm2.__wbindgen_start();
+  return wasm2;
+}
+async function __wbg_load2(module2, imports) {
+  if (typeof Response === "function" && module2 instanceof Response) {
+    if (!module2.ok) {
+      throw new Error(`failed to fetch Wasm: ${module2.status} ${module2.statusText} fetching '${module2.url}'`);
+    }
+    if (typeof WebAssembly.instantiateStreaming === "function") {
+      try {
+        return await WebAssembly.instantiateStreaming(module2, imports);
+      } catch (e3) {
+        const validResponse = expectedResponseType(module2.type);
+        if (validResponse && module2.headers.get("Content-Type") !== "application/wasm") {
+          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e3);
+        } else {
+          throw e3;
+        }
+      }
+    }
+    const bytes = await module2.arrayBuffer();
+    return await WebAssembly.instantiate(bytes, imports);
+  } else {
+    const instance = await WebAssembly.instantiate(module2, imports);
+    if (instance instanceof WebAssembly.Instance) {
+      return { instance, module: module2 };
+    } else {
+      return instance;
+    }
+  }
+  function expectedResponseType(type) {
+    switch (type) {
+      case "basic":
+      case "cors":
+      case "default":
+        return true;
+    }
+    return false;
+  }
+}
+function initSync(module2) {
+  if (wasm2 !== void 0) return wasm2;
+  if (module2 !== void 0) {
+    if (Object.getPrototypeOf(module2) === Object.prototype) {
+      ({ module: module2 } = module2);
+    } else {
+      console.warn("using deprecated parameters for `initSync()`; pass a single object instead");
+    }
+  }
+  const imports = __wbg_get_imports2();
+  if (!(module2 instanceof WebAssembly.Module)) {
+    module2 = new WebAssembly.Module(module2);
+  }
+  const instance = new WebAssembly.Instance(module2, imports);
+  return __wbg_finalize_init2(instance, module2);
+}
+async function __wbg_init2(module_or_path) {
+  if (wasm2 !== void 0) return wasm2;
+  if (module_or_path !== void 0) {
+    if (Object.getPrototypeOf(module_or_path) === Object.prototype) {
+      ({ module_or_path } = module_or_path);
+    } else {
+      console.warn("using deprecated parameters for the initialization function; pass a single object instead");
+    }
+  }
+  if (module_or_path === void 0) {
+    module_or_path = new URL("kishib_airgap_bg.wasm", import.meta.url);
+  }
+  const imports = __wbg_get_imports2();
+  if (typeof module_or_path === "string" || typeof Request === "function" && module_or_path instanceof Request || typeof URL === "function" && module_or_path instanceof URL) {
+    module_or_path = fetch(module_or_path);
+  }
+  const { instance, module: module2 } = await __wbg_load2(await module_or_path, imports);
+  return __wbg_finalize_init2(instance, module2);
+}
+
+// src/web/airgap.ts
+var started = null;
+async function airgap() {
+  started ??= __wbg_init2({ module_or_path: new URL("kishib_airgap_bg.wasm", document.baseURI) });
+  await started;
+  return kishib_airgap_exports;
+}
+
+// src/nakisib-say.ts
+var NAKISIB_SAY = [
+  "With Naki\u0161ib, the chain key never touches a connected device: your paper is typed only on an offline Mac that never connects, where Naki\u0161ib reads the request, shows its own summary, draws the new paper and signs. Ki\u0161ib carries the request there and the answer back, by a file on a USB stick, and sends it to the homes.",
+  "Optional: Ki\u0161ib\u2019s own way, the paper typed here, stays as it is. Naki\u0161ib is an extra layer of safety for whoever wants it."
+];
+var NAKISIB_WAIT_SAY = [
+  "Nothing is signed yet. Write the request to the USB stick, carry it to the offline Mac, and open it in Naki\u0161ib (\u201CChange keys\u201D). Naki\u0161ib takes your paper there, draws the new paper, and signs on SIGN; then carry its answer back here: \u201CRead Naki\u0161ib\u2019s answer\u201D.",
+  "Keep Ki\u0161ib open meanwhile: it holds the new signing key it made for this change, and shows its words once the homes accept the change."
+];
+var NAKISIB_LOST_SAY = "Ki\u0161ib was closed after it wrote this request, so the new signing key it made then is gone. Naki\u0161ib signed with your paper for this request alone and signs no other with it: this change is sent as it is, and installs a signing key nobody holds. Once the homes accept it, change the keys again, from the new paper Naki\u0161ib drew: that change installs a key you hold.";
+
 // src/kishib.ts
 var SPENT_PAPER_SAY = (position) => `These are an earlier chain-key paper of this identity: the change of its keys at position ${position + 1} used it and committed a key of a new paper, so it changes these keys no more. Use the newest paper, the chain key\u2019s words Ki\u0161ib showed at the last change. Nothing was signed, and the words are forgotten.`;
 var PAPER_COUNTS_SAY = "This new paper becomes the one that counts once the homes accept the change; until then the old paper still works, but only to send this same change again. If Ki\u0161ib is closed before the change is sent, nothing was signed: the next change starts over with another new paper, and the unused one is worthless.";
@@ -7912,6 +8234,18 @@ var PAPER_LINES = [
 var LAST_OF_OLD_PAPER_SAY = "This paper already made an earlier change of these keys: until 21 October 2026 Ki\u0161ib reused one paper for every change. This change is its last. It commits a key of a new paper, whose words are shown once the homes\u2019 receipts are in; this paper is spent after it.";
 var message5 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var short4 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
+var unb642 = (t) => {
+  try {
+    return Uint8Array.from(atob(t.trim()), (c) => c.charCodeAt(0));
+  } catch {
+    throw new Error("That file could not be read.");
+  }
+};
+var b643 = (b) => {
+  let s = "";
+  for (const x of b) s += String.fromCharCode(x);
+  return btoa(s);
+};
 var MADE_CHAIN_WORDS_SAY = [
   "These are the chain key\u2019s words of a new identity: its first paper, made now on this device. They are the only way ever to change its keys, here in Ki\u0161ib.",
   "Write them on paper, in order, and keep it apart from everything that goes online. Never type them into Dub, Edubba, Damgar or a wallet: only Ki\u0161ib takes them.",
@@ -7944,7 +8278,7 @@ var Kishib = class {
     if (this.col) return this.col.view(this.now());
     const h = this.held;
     if (!h) return null;
-    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...h.positions ? { positions: h.positions } : {}, ...h.chain || h.signing ? { words: h.chain ? "chain" : "signing" } : {} };
+    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...h.positions ? { positions: h.positions } : {}, ...h.chain || h.signing ? { words: h.chain ? "chain" : "signing" } : {}, ...h.request ? { nakisib: { fingerprint: h.fingerprint ?? "" } } : {} };
   }
   /** Drop everything this sitting holds: words, keys, bytes. */
   forget() {
@@ -8204,8 +8538,8 @@ var Kishib = class {
       {
         heading: "A change of keys already signed with this paper, waiting for its homes",
         lines: [
-          { text: `Rotation ${s.id} at position ${s.position}, signed with the chain key these words give (key ${idx}), installing the signing key ${s.signingFingerprint}${s.homeless ? " (homeless)" : ""}.`, tone: "warn" },
-          { text: "This paper still works, but only to send this same change again: Ki\u0161ib never signs a second change with the same key (Identity rule 29)." },
+          { text: `Rotation ${s.id} at position ${s.position}, signed with ${idx === null ? "the chain key this identity committed to" : `the chain key these words give (key ${idx})`}, installing the signing key ${s.signingFingerprint}${s.homeless ? " (homeless)" : ""}.`, tone: "warn" },
+          { text: idx === null ? "Your paper now only answers this same change again (Naki\u0161ib gives the same bytes; Ki\u0161ib never signs a second change with the same key, Identity rule 29). Ki\u0161ib sends it again as the homes and relays serve it." : "This paper still works, but only to send this same change again: Ki\u0161ib never signs a second change with the same key (Identity rule 29)." },
           { text: "Once the homes accept it, the new paper written when it was signed is the one that counts, and this one is spent. If its signing key\u2019s words were never shown, change the keys again from that new paper: it installs a key you hold." },
           { text: "If you did not make this change, someone holds your chain key\u2019s words: do not send it; use \u201CEscape a contested position\u201D.", tone: "bad" }
         ]
@@ -8348,6 +8682,188 @@ var Kishib = class {
     h.lines = [...h.lines, { text: "The new signing key is forgotten here. Ki\u0161ib holds nothing of this identity now: only your two new papers do, the chain key\u2019s and the signing key\u2019s.", tone: "ok" }];
     return this.state();
   }
+  // ------------------------------------------------------------ with Nakišib, Kišib's offline companion (decided 23 October 2026)
+  /**
+   * Change keys with Nakišib: the same reading as `rotatePlan` (every line,
+   * the cards, the vault, the successor, all read back), without the
+   * paper's words, which are typed only on the offline Mac. Confirmed, Kišib
+   * makes the new signing key and writes the request for Nakišib (the
+   * air-gapped Module's pending rotation, made by the Module's own `online`
+   * code); it signs nothing with a chain key.
+   */
+  async nakisibPlan(a) {
+    this.busy();
+    const via = a.via ?? {};
+    const id = readId(a.id);
+    const rd = await readIdentity(id, addresses(a.address), via, SPECS.identity);
+    const r = rd.look.resolution;
+    const latest = r.links[r.links.length - 1];
+    const blocking = [];
+    if (r.stop === "contested") blocking.push("Its homes hold two rotations at one position (contested). A normal rotation cannot settle it: use \u201CEscape a contested position\u201D.");
+    const waiting = rd.next.filter((x) => !r.links.some((l) => l.act === x.id));
+    if (waiting.length > 1) blocking.push(`${waiting.length} rotations with this chain key exist, waiting for their homes. Naki\u0161ib never signs another (Identity rule 29). If you made only one, someone holds your chain key\u2019s words: use \u201CEscape a contested position\u201D.`);
+    if (waiting.length === 1 && rd.chainActs.get(waiting[0].id)) return this.resendPlan(id, rd, waiting[0], null, null);
+    if (r.chainKeyScheme !== 2 && r.chainKeyScheme !== 3) throw new Error("This identity\u2019s chain key is of a scheme Naki\u0161ib does not implement.");
+    let successor = null;
+    if (a.successor?.trim()) {
+      successor = readId(a.successor);
+      if (successor === id) throw new Error("An identity cannot name itself as its successor.");
+    }
+    if (successor && a.endSuccession) throw new Error("Name a successor, or end the succession: not both.");
+    const succNow = rd.look.verifier.succession(id);
+    if (a.endSuccession && succNow.state === "none") throw new Error("No succession is declared: there is none to end.");
+    let plan;
+    try {
+      plan = planLines(rd.lines, { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : void 0, ...placing(rd, rd.binding) });
+    } catch (e3) {
+      throw new Error(message5(e3));
+    }
+    const clock = declaresClock(rd);
+    const vaultNow = rd.look.verifier.moneyVault(MIRS.money, id);
+    const vault = vaultPlan(a.vault, vaultNow?.entries ?? null);
+    const sections2 = [
+      ...recordWords(rd).filter((x) => x.heading !== "Its lines of acts (each app or device keeps one)"),
+      { heading: "Its lines of acts: what this rotation keeps (Identity rule 35)", lines: plan.shown.map((x) => ({ text: x.text.replace(/A line made elsewhere( that this device cannot read)?/, (_m, u2) => u2 ? "A line Ki\u0161ib cannot read" : "A line of acts"), tone: x.tone })) },
+      {
+        heading: "What changes",
+        lines: [
+          { text: "A new signing key, made now on this device. Naki\u0161ib shows its fingerprint, and so does Ki\u0161ib: compare them. Its words are shown here once the homes\u2019 receipts are in. Dub, Edubba and every app holding the old signing key\u2019s words stop signing until given the new ones.", tone: "warn" },
+          { text: `A new chain key, from a new paper Naki\u0161ib draws on the offline Mac (key ${latest.position + 1} of its paper), written and three of its parts typed back there before Naki\u0161ib signs. Your current paper is typed there, never here.`, tone: "warn" },
+          { text: `${homesWords(r.homes, r.effective)} Unchanged.` },
+          successor ? { text: `A succession declared: ${successor} is named as this identity\u2019s successor. Nobody follows it until that identity confirms it, by an act of its own naming this rotation (F300; Ki\u0161ib can make it, \u201CConfirm a succession\u201D). This identity goes on living.`, tone: "warn" } : a.endSuccession ? { text: `The succession to ${succNow.successor ?? "its successor"} is ended.`, tone: "warn" } : { text: succNow.state === "none" ? "No succession." : `The succession stays as it is (${succNow.state}).` },
+          ...clock ? [{ text: "This identity declares a clock (Money rule 15): its client anchors each change of its keys on that clock. Ki\u0161ib does not anchor: anchor it with the genesis client before relying on it.", tone: "warn" }] : []
+        ]
+      },
+      { heading: "The vault (Money: where payments above a limit must go)", lines: vault.lines },
+      { heading: "With Naki\u0161ib, Ki\u0161ib\u2019s offline companion", lines: NAKISIB_SAY.map((text2) => ({ text: text2 })) }
+    ];
+    const signs2 = [
+      `Ki\u0161ib signs nothing with a chain key. It makes the new signing key and writes the request for Naki\u0161ib: this change of ${short4(id)} at position ${latest.position + 1}, everything above but the next chain key, which Naki\u0161ib supplies.`,
+      "Naki\u0161ib, on the offline Mac, reads the request\u2019s exact bytes and shows its own summary, takes your paper, draws the new paper, and signs on SIGN. Ki\u0161ib then reads its answer, checks that it is exactly this change (the air-gapped Module\u2019s rule 3.9), and sends the same bytes to every home, and again, unchanged, if they stall: never a second rotation."
+    ];
+    const digest = sha2562(cborEncode(["MOR Ki\u0161ib rotation with Naki\u0161ib, version 1", id, latest.act, plan.kept.map((k) => [k.act, k.position, k.summary]), successor ?? "", !!a.endSuccession, ...vault.declaration ? [cborEncode([vault.declaration.kind, vault.declaration.cbor ?? null])] : []]));
+    const scheme = r.chainKeyScheme;
+    return this.plan(
+      { digest, title: `Change the keys of ${short4(id)} with Naki\u0161ib`, summary: [`Identity ${id}. Its chain was read from ${rd.places.join(", ")}, and judged by the core library.`, "No paper is typed here: Naki\u0161ib takes it, on the offline Mac."], sections: sections2, signs: signs2, warning: plan.warning, blocking },
+      {
+        wipe: () => void 0,
+        run: async (warned) => {
+          if (blocking.length) throw new Error(`Nothing was written: ${blocking[0]}`);
+          checkWarned(plan, warned);
+          const signing = newSigningSecret();
+          const throwaway = freshSeed();
+          const k = chainKeyAt(throwaway, scheme, latest.position);
+          let template;
+          try {
+            template = makeRotation({
+              identitySpec: SPECS.identity,
+              identity: id,
+              previous: latest.act,
+              position: latest.position + 1,
+              chainKeyScheme: scheme,
+              chainKeySeeds: k.seeds,
+              newSigningPublic: signingPublic(signing),
+              nextChainKeyScheme: scheme,
+              nextChainKeyCommit: "00".repeat(32),
+              kept: plan.kept,
+              ...successor ? { successor } : {},
+              ...a.endSuccession ? { endSuccession: true } : {},
+              ...vault.declaration ? { declarations: [vault.declaration] } : {}
+            });
+          } finally {
+            wipe(k.seeds, throwaway);
+          }
+          const ag = await airgap();
+          const fp = ag.signingFingerprint(signingPublic(signing));
+          const previous = rd.chainActs.get(latest.act);
+          if (!previous) throw new Error("The identity\u2019s latest change of keys could not be read whole. Nothing was written.");
+          const request = ag.pendingFor(previous, template, [`Ki\u0161ib: a change of the keys of ${id}, at position ${latest.position + 1}.`, `Ki\u0161ib: the new signing key it made, fingerprint ${fp}.`]);
+          this.held = {
+            kind: "identity",
+            id,
+            bytes: null,
+            act: null,
+            homes: r.homes,
+            before: chainBefore(rd),
+            with: [],
+            places: rd.places,
+            signing,
+            chain: null,
+            stage: "request",
+            title: `The change of keys of ${short4(id)}, with Naki\u0161ib`,
+            lines: [...NAKISIB_WAIT_SAY.map((text2, i) => ({ text: text2, ...i === 0 ? { tone: "warn" } : {} })), { text: `The new signing key\u2019s fingerprint, as Naki\u0161ib shows it: ${fp}.` }],
+            request,
+            fingerprint: fp
+          };
+          return this.sitting();
+        }
+      }
+    );
+  }
+  /** The request written for Nakišib, to save to a file: the Module's pending rotation (not secret). */
+  nakisibRequest() {
+    const h = this.held;
+    if (!h?.request) throw new Error("No request for Naki\u0161ib is held: start \u201CChange keys with Naki\u0161ib\u201D first.");
+    return { name: `nakisib-request-${h.id.slice(0, 8)}.mor`, bytes: b643(h.request), fingerprint: h.fingerprint ?? "" };
+  }
+  /**
+   * Nakišib's answer, read: checked against the request it answers (the
+   * air-gapped Module's rule 3.9, by the Module's own `online` code), then
+   * sent to every home, then, once it counts, the new signing key's words.
+   * Kišib closed since it wrote the request: give the request's file too,
+   * with the identity and one of its homes (`NAKISIB_LOST_SAY`).
+   */
+  async nakisibAnswer(a) {
+    const answer = unb642(a.answer);
+    const ag = await airgap();
+    const h = this.held;
+    if (h?.stage === "request" && h.request) {
+      let act2;
+      try {
+        act2 = ag.acceptAnswer(unhex(SPECS.identity), h.request, answer);
+      } catch (e3) {
+        throw new Error(`This is not Naki\u0161ib\u2019s answer to the request Ki\u0161ib wrote: ${message5(e3)}. Nothing was sent.`);
+      }
+      h.bytes = act2;
+      h.act = actId(act2);
+      h.stage = "sent";
+      h.title = `The change of keys of ${short4(h.id)}, signed by Naki\u0161ib`;
+      await this.send();
+      h.lines = [{ text: "Naki\u0161ib\u2019s answer is exactly the change Ki\u0161ib asked for, signed with the chain key this identity committed to: sent to every home.", tone: "ok" }, ...h.lines];
+      return this.state();
+    }
+    if (!a.request?.trim()) throw new Error("Ki\u0161ib holds no request for Naki\u0161ib now (it was closed since it wrote one, or none was written). Give the request\u2019s file too, with the identity and one of its homes.");
+    this.busy();
+    const id = readId(a.id ?? "");
+    const request = unb642(a.request);
+    let act;
+    try {
+      act = ag.acceptAnswer(unhex(SPECS.identity), request, answer);
+    } catch (e3) {
+      throw new Error(`This is not Naki\u0161ib\u2019s answer to that request: ${message5(e3)}. Nothing was sent.`);
+    }
+    const d = describeAct(act);
+    if (d.signer !== id) throw new Error("That answer is a change of another identity\u2019s keys. Nothing was sent.");
+    const rd = await readIdentity(id, addresses(a.address ?? ""), a.via ?? {}, SPECS.identity);
+    this.held = {
+      kind: "identity",
+      id,
+      bytes: act,
+      act: actId(act),
+      homes: rd.look.resolution.homes,
+      before: chainBefore(rd),
+      with: [],
+      places: rd.places,
+      signing: null,
+      chain: null,
+      stage: "sent",
+      title: `The change of keys of ${short4(id)}, signed by Naki\u0161ib`,
+      lines: []
+    };
+    await this.send();
+    this.held.lines = [{ text: NAKISIB_LOST_SAY, tone: "warn" }, ...this.held.lines];
+    return this.state();
+  }
   // ------------------------------------------------------------ make an identity (H48)
   /**
    * Review a new identity (H48: "Kišib is an ID hub and should allow to
@@ -8361,6 +8877,17 @@ var Kishib = class {
    */
   async makePlan(a) {
     this.busy();
+    let fromNakisib = null;
+    if (a.commitment?.trim()) {
+      let c;
+      try {
+        c = JSON.parse((await airgap()).readCommitment(unb642(a.commitment)));
+      } catch (e3) {
+        throw new Error(`That file is not Naki\u0161ib\u2019s commitment for a new identity: ${message5(e3)}. Nothing was made.`);
+      }
+      if (c.index !== 0) throw new Error("That commitment is for a change of keys, not a new identity\u2019s first paper (its key index is not 0). Nothing was made.");
+      fromNakisib = { scheme: c.scheme, commit: c.commit };
+    }
     const via = a.via ?? {};
     const hints = addresses(a.homes);
     const relays = a.relays.trim() ? addresses(a.relays) : hints;
@@ -8382,25 +8909,32 @@ var Kishib = class {
         lines: [
           { text: `A new identity, living at ${hints.join(", ")}: its homes keep its chain and sign their receipts.` },
           { text: `Its relays, where its posts are published and its inbox is: ${relays.join(", ")}.` },
-          { text: "A chain key, from a new paper made now on this device (key 0 of its words). Its 24 words are shown first: you write them down and type three back, and only then is the identity signed and sent.", tone: "warn" },
+          fromNakisib ? { text: `A chain key from the paper Naki\u0161ib drew on the offline Mac (key 0 of that paper): only its commitment comes here. Compare it with Naki\u0161ib\u2019s screen: ${grouped2(fromNakisib.commit)}.`, tone: "warn" } : { text: "A chain key, from a new paper made now on this device (key 0 of its words). Its 24 words are shown first: you write them down and type three back, and only then is the identity signed and sent.", tone: "warn" },
           { text: "A signing key, made now. Its words are shown once the homes\u2019 receipts are in: bring the identity into the apps with them, or give them to Ki\u0161ib\u2019s runner.", tone: "warn" },
           { text: "Its encryption key, the one its signing words carry: every app bringing it opens its private messages." },
           { text: "Ki\u0161ib keeps nothing of it: once both papers are written, it forgets them.", tone: "ok" }
         ]
       }
     ];
-    const signs2 = ["Once the paper\u2019s three words are typed back, Ki\u0161ib signs the identity\u2019s genesis with its new signing key, committing the paper\u2019s chain key, and its routes and encryption key; then sends them to its homes and relays."];
-    const digest = sha2562(cborEncode(["MOR Ki\u0161ib new identity, version 1", homes.map((h) => [h.operator, h.hint]), relays]));
+    if (fromNakisib) sections2.push({ heading: "With Naki\u0161ib, Ki\u0161ib\u2019s offline companion", lines: NAKISIB_SAY.map((text2) => ({ text: text2 })) });
+    const signs2 = [
+      fromNakisib ? "Ki\u0161ib signs the identity\u2019s genesis with its new signing key, committing the chain key of Naki\u0161ib\u2019s paper, and its routes and encryption key; then sends them to its homes and relays." : "Once the paper\u2019s three words are typed back, Ki\u0161ib signs the identity\u2019s genesis with its new signing key, committing the paper\u2019s chain key, and its routes and encryption key; then sends them to its homes and relays."
+    ];
+    const digest = sha2562(cborEncode(["MOR Ki\u0161ib new identity, version 1", homes.map((h) => [h.operator, h.hint]), relays, ...fromNakisib ? [fromNakisib.commit] : []]));
     return this.plan(
       { digest, title: "Make an identity", summary: ["A test identity, made as Dub makes one: its chain key on paper, its signing key\u2019s words for the apps.", FORGOTTEN_SAY], sections: sections2, signs: signs2, warning: null, blocking: [] },
       {
         wipe: () => void 0,
         run: async () => {
-          const fresh = freshSeed();
+          const fresh = fromNakisib ? null : freshSeed();
           const signing = newSigningSecret();
-          const key = chainKeyAt(fresh, 3, 0);
-          const commit = { scheme: key.scheme, commit: key.commit };
-          wipe(key.seeds);
+          let commit;
+          if (fromNakisib) commit = fromNakisib;
+          else {
+            const key = chainKeyAt(fresh, 3, 0);
+            commit = { scheme: key.scheme, commit: key.commit };
+            wipe(key.seeds);
+          }
           const h = {
             kind: "make",
             id: "",
@@ -8413,8 +8947,8 @@ var Kishib = class {
             signing,
             chain: fresh,
             stage: "paper",
-            title: "A new identity: first, its paper",
-            lines: [{ text: "Nothing is signed yet. First, the chain key\u2019s words: write them down, then type three back. Only then does Ki\u0161ib sign the identity and send it.", tone: "warn" }],
+            title: fromNakisib ? "A new identity, from Naki\u0161ib\u2019s paper" : "A new identity: first, its paper",
+            lines: fromNakisib ? [] : [{ text: "Nothing is signed yet. First, the chain key\u2019s words: write them down, then type three back. Only then does Ki\u0161ib sign the identity and send it.", tone: "warn" }],
             sign: async () => {
               const genesis = makeGenesis({ identitySpec: SPECS.identity, signingSecret: signing, chainKeyScheme: commit.scheme, chainKeyCommit: commit.commit, homes });
               const id = actId(genesis);
@@ -8433,6 +8967,14 @@ var Kishib = class {
             }
           };
           this.held = h;
+          if (fromNakisib) {
+            const sign = h.sign;
+            h.sign = null;
+            await sign();
+            h.stage = "sent";
+            await this.send();
+            h.lines = [{ text: "The identity was signed with the chain key of Naki\u0161ib\u2019s paper and sent to its homes. Its signing key\u2019s words come once their receipts are in.", tone: "ok" }, ...h.lines];
+          }
           return this.sitting();
         }
       }
@@ -8838,7 +9380,7 @@ async function run(k, op, a) {
     case "record":
       return k.record({ id: text(a.id), address: text(a.address) });
     case "make plan":
-      return k.makePlan({ homes: text(a.homes), relays: text(a.relays) });
+      return k.makePlan({ homes: text(a.homes), relays: text(a.relays), commitment: text(a.commitment) });
     case "check share": {
       const numbers = Array.isArray(a.numbers) ? a.numbers.map(String) : [text(a.number)];
       const words2 = Array.isArray(a.shares) ? a.shares.map(String) : [text(a.shareWords)];
@@ -8846,6 +9388,12 @@ async function run(k, op, a) {
     }
     case "rotate plan":
       return k.rotatePlan({ id: text(a.id), address: text(a.address), words: text(a.words), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list2(a.leaveOut), cards: text(a.cards), vault: vaultOf(a) });
+    case "nakisib plan":
+      return k.nakisibPlan({ id: text(a.id), address: text(a.address), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list2(a.leaveOut), cards: text(a.cards), vault: vaultOf(a) });
+    case "nakisib request":
+      return k.nakisibRequest();
+    case "nakisib answer":
+      return k.nakisibAnswer({ answer: text(a.answer), request: text(a.request), id: text(a.id), address: text(a.address) });
     case "escape plan":
       return k.escapePlan({ id: text(a.id), address: text(a.address), words: text(a.words), signingWords: text(a.signingWords), homes: text(a.homes), leaveOut: list2(a.leaveOut), cards: text(a.cards) });
     case "confirm plan":
@@ -9767,6 +10315,7 @@ function column(tab, web, r) {
         ...r?.on && !web ? [{ key: "held", label: "Held here", k: r.held.length }, "-"] : [],
         ...r?.state === "locked" && !web ? [{ key: "held", label: "Held here", k: "locked" }, "-"] : [],
         { key: "make", label: "Make an identity" },
+        { key: "make-nakisib", label: "Make one with Naki\u0161ib" },
         { key: "record", label: "Read a record" },
         { key: "confirm", label: "Confirm a succession" },
         ...r?.state === "off" && !web ? ["-", { key: "held", label: "Held by the runner", k: "off" }] : []
@@ -9782,6 +10331,7 @@ function column(tab, web, r) {
       return [
         { key: "check", label: "Check the paper" },
         { key: "rotate", label: "Change keys" },
+        { key: "nakisib", label: "Change keys with Naki\u0161ib" },
         { key: "vault", label: "Change the vault" },
         { key: "successor", label: "Name a successor" },
         "-",
@@ -9830,6 +10380,8 @@ var VAULT_SAY = [
   "You need the chain key\u2019s paper, your newest one (written when the identity was made, or shown at its last change of keys). Ki\u0161ib first shows two new sets of 24 words, each once: the new chain key\u2019s (a new paper, for the next change; the old paper is then spent), written down before anything is signed; then it signs a change of keys that keeps every line of acts and declares the vault anew (or removes it), and once the homes accept it shows the new signing key\u2019s, to give to Dub and Damgar.",
   "The old signing key\u2019s words stop counting once the homes receipt the change."
 ];
+var nakisibSaid = `<div class="k-box k-fill" id="nakisib-say">${NAKISIB_SAY.map((t) => `<p class="k-small k-soft">${e(t)}</p>`).join("")}</div>`;
+var nakisibLate = `<details class="k-box"><summary>+ Ki\u0161ib was closed since it wrote the request</summary><form id="nakisib-late" autocomplete="off"><p class="k-small k-soft">Give the request\u2019s file and Naki\u0161ib\u2019s answer, with the identity and one of its homes. The new signing key Ki\u0161ib made with the request is gone: said again before anything is sent.</p>${idField("id", "The identity")}${address}<label>The request Ki\u0161ib wrote</label><input name="request" type="file" required><label>Naki\u0161ib\u2019s answer</label><input name="answer" type="file" required><div class="k-row"><button type="submit" class="k-btn k-p">Check it, and send it</button></div></form></details>`;
 var cardsFold = (runnerOn) => `<details class="k-box"><summary>+ Lines another app made that cannot be read here</summary><label>Their cards, one per line, copied whole from each app\u2019s identity window (Dub, Edubba, Damgar, Ummia): latest act, position, summary, then the app\u2019s count and name</label><textarea name="cards"></textarea>${runnerOn ? '<div class="k-row"><button type="button" class="k-btn" data-action="runner-cards">Add the cards of the lines Ki\u0161ib\u2019s runner signed</button><span class="k-small k-faint">for an identity the runner holds: Dub\u2019s lines, signed here</span></div>' : ""}</details>`;
 var STEPS = ["The words", "Read back", "New chain paper", "Signed", "New signing words"];
 function steps(at) {
@@ -9848,6 +10400,13 @@ function part(tab, key, web, r) {
         "A new identity: its homes, its relays, a chain key on a new paper, a signing key for the apps. Its chain key\u2019s words are shown once and three asked back before anything is signed; its signing key\u2019s words once its homes take it. Ki\u0161ib keeps nothing.",
         `<label>Its homes (one address per line): where it lives, and anyone can check it</label><textarea name="homes" required placeholder="https://"></textarea><label>Its relays, if you like (where its posts are published and its inbox is): its homes otherwise</label><textarea name="relays" placeholder="https://"></textarea>`
       );
+    case "identities/make-nakisib":
+      return `${f(
+        "make",
+        "Make an identity with Naki\u0161ib",
+        "A new identity whose chain-key paper Naki\u0161ib drew on the offline Mac (A new identity): only its commitment comes here, by the file Naki\u0161ib wrote. Ki\u0161ib makes its signing key, signs its genesis committing that paper\u2019s key, and sends it to its homes; its signing key\u2019s words once its homes take it. Ki\u0161ib keeps nothing.",
+        `<label>Naki\u0161ib\u2019s commitment (the file it wrote on the USB stick)</label><input name="commitment" type="file" required><label>Its homes (one address per line): where it lives, and anyone can check it</label><textarea name="homes" required placeholder="https://"></textarea><label>Its relays, if you like (where its posts are published and its inbox is): its homes otherwise</label><textarea name="relays" placeholder="https://"></textarea>`
+      )}${nakisibSaid}`;
     case "identities/record":
       return f("record", "An identity\u2019s record", "Homes, receipts, lines of acts, any contest, any succession, as any reader would see it, judged by the core library. Reading signs nothing.", `${idField("id", "The identity")}${address}`, "Read it", "Reading signs nothing.");
     case "identities/confirm":
@@ -9866,6 +10425,15 @@ function part(tab, key, web, r) {
         "From its chain key\u2019s paper: a new signing key, and a new chain-key paper, every line of its acts kept. Ki\u0161ib reads the identity from its homes and every relay its routes name, finds every line of its acts, and reads it all back in plain words before anything is signed.",
         `${idField("id", "The identity")}${address}${words("words", "The chain key\u2019s 24 words, in order (its newest paper; never the signing key\u2019s words)")}${cardsFold(runnerOn)}${vaultFields(false)}`
       )}`;
+    case "paper/nakisib":
+      return `${f(
+        "nakisib",
+        "Change keys with Naki\u0161ib",
+        "The same change of keys, its chain key used only on the offline Mac: Ki\u0161ib reads the identity, every line of its acts, the cards and the vault, and reads it all back; then writes the request for Naki\u0161ib. No paper is typed here.",
+        `${idField("id", "The identity")}${address}${cardsFold(runnerOn)}${vaultFields(false)}`,
+        "Read it back",
+        "Nothing is written or signed before you read it back."
+      )}${nakisibSaid}${nakisibLate}`;
     case "paper/vault":
       return `<h2>Change the vault</h2><div class="kishib-review" id="vault-say">${lines(VAULT_SAY.map((text2) => ({ text: text2 })))}</div><form id="form-rotate" data-kind="rotate">${idField("id", "The identity")}${address}${words("words", "The chain key\u2019s 24 words, in order (its newest paper)")}${cardsFold(runnerOn)}${vaultFields(true)}${forgotten}${submit("Read it back")}</form><div id="result"></div>`;
     case "paper/successor":
@@ -10038,6 +10606,8 @@ function sitting(s) {
   const req = q ? `<div class="kishib-review" id="request-state">${q.room ? `<p>${q.have} of ${q.need} paper shares are in, typed here.</p>` : `<p>Fingerprint of this rotation</p><p class="kishib-fpr">${e(q.fingerprint)}</p><p class="kishib-full">${e(q.full)}</p><p>${q.have} of ${q.need} shares are in. The one-time key expires at ${e(when2(q.expires))} (this device\u2019s clock).</p>`}</div>` : "";
   const acts = [];
   if (s.stage === "sent") acts.push(btn("refresh", "Look again"), btn("resend", "Send it again (the same bytes)", true));
+  if (s.stage === "request") acts.push(btn("nakisib write", "Write the request for Naki\u0161ib", true));
+  const answer = s.stage === "request" ? `<form id="nakisib-answer" class="k-box k-fill" autocomplete="off"><label>Naki\u0161ib\u2019s answer (the file it wrote on the USB stick)</label><input name="answer" type="file" required><div class="k-row"><button type="submit" class="k-btn k-p">Read Naki\u0161ib\u2019s answer</button><span class="k-small k-faint">checked to be exactly this change before anything is sent</span></div></form>` : "";
   if (s.stage === "paper") acts.push(btn("show words", s.kind === "make" ? "Show the chain key\u2019s words (its paper)" : "Show the new chain key\u2019s words (a new paper)", true));
   if (s.stage === "counts" && s.kind !== "confirm") acts.push(btn("show words", s.kind === "collective" ? "Show the collective\u2019s new signing key\u2019s words" : s.kind === "make" ? "Show its signing key\u2019s words" : "Show the new signing key\u2019s words", true));
   if (s.stage === "shown") acts.push(btn("show words", "Show them again"));
@@ -10050,7 +10620,7 @@ function sitting(s) {
   const done = s.stage === "done" || s.stage === "expired";
   const step = s.kind === "identity" ? { paper: 2, sent: 3, counts: 4, shown: s.words === "signing" ? 4 : 2, done: 5 }[s.stage] : void 0;
   return `${step !== void 0 ? steps(step) : ""}<h2>${e(s.title)}</h2>${req}<div class="kishib-review">${lines(s.lines)}</div>${paper}${shares}
-<div class="k-row">${acts.join("")}${done && !(s.shares ?? []).some((x) => !x.shown) ? btn("forget", "Done", true) : ""}</div>`;
+<div class="k-row">${acts.join("")}${done && !(s.shares ?? []).some((x) => !x.shown) ? btn("forget", "Done", true) : ""}</div>${answer}`;
 }
 var tabOf = (s) => s.kind === "make" || s.kind === "confirm" ? "identities" : s.kind === "collective" ? "collectives" : "paper";
 function pairing() {
@@ -10216,7 +10786,39 @@ function mount(app2, b) {
     return out;
   };
   const clear = (form2) => Array.from(form2.elements).forEach((el) => (el.tagName === "TEXTAREA" || el.type === "password") && (el.value = ""));
-  const PLANS = { rotate: "rotate plan", escape: "escape plan", confirm: "confirm plan", start: "collective start", give: "collective give", make: "make plan" };
+  const fileB64 = async (el) => {
+    const f = el.files?.[0];
+    if (!f) return "";
+    const b2 = new Uint8Array(await f.arrayBuffer());
+    let t = "";
+    for (const x of b2) t += String.fromCharCode(x);
+    return btoa(t);
+  };
+  const withFiles = async (form2, a) => {
+    for (const el of Array.from(form2.querySelectorAll("input[type=file]"))) a[el.name] = await fileB64(el);
+    return a;
+  };
+  async function saveFile(name, b644) {
+    const bytes = Uint8Array.from(atob(b644), (c) => c.charCodeAt(0));
+    const w = window;
+    if (w.showSaveFilePicker) {
+      try {
+        const h = await w.showSaveFilePicker({ suggestedName: name });
+        const out = await h.createWritable();
+        await out.write(bytes);
+        await out.close();
+        return;
+      } catch {
+      }
+    }
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1e4);
+  }
+  const PLANS = { nakisib: "nakisib plan", rotate: "rotate plan", escape: "escape plan", confirm: "confirm plan", start: "collective start", give: "collective give", make: "make plan" };
   function showReview(r, kind) {
     current = { review: r, must: kind === "start" };
     const pane = $("pane");
@@ -10235,6 +10837,12 @@ function mount(app2, b) {
       runner = r;
       draw();
       return done("The new signing key\u2019s words are taken: the runner signs for this identity again, with its new key.");
+    }
+    await withFiles(form2, a);
+    if (id === "nakisib-answer" || id === "nakisib-late") {
+      const s = await act(() => b.ask("nakisib answer", a));
+      if (s) await show({ ...s, runner: runner ?? void 0 });
+      return;
     }
     const kind = form2.dataset.kind ?? "";
     switch (kind) {
@@ -10332,6 +10940,12 @@ function mount(app2, b) {
         const warned = current.review.warning ? $("warned")?.checked ? current.review.warning : void 0 : void 0;
         if (current.review.warning && !warned) return fail(new Error("A line of acts would be left out, or cannot be placed: read the warning in red and tick it, or go back and give its card."));
         return again(await act(() => b.ask("confirm", { plan: current.review.plan, digest: current.review.digest, ...warned ? { warned } : {} })));
+      }
+      case "nakisib write": {
+        const r = await act(() => b.ask("nakisib request"));
+        if (!r) return;
+        await saveFile(r.name, r.bytes);
+        return done(`The request is written (${e(r.name)}): carry it to the offline Mac, and open it in Naki\u0161ib, \u201CChange keys\u201D. Its new signing key\u2019s fingerprint, which Naki\u0161ib shows too: ${e(r.fingerprint)}.`);
       }
       case "refresh":
       case "resend":

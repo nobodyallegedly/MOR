@@ -35,6 +35,9 @@ export const OPS = [
   'make plan',
   'check share',
   'rotate plan',
+  'nakisib plan',
+  'nakisib request',
+  'nakisib answer',
   'escape plan',
   'confirm plan',
   'collective start',
@@ -64,7 +67,7 @@ export async function run(k: Kishib, op: string, a: Record<string, unknown>): Pr
     case 'record':
       return k.record({ id: text(a.id), address: text(a.address) });
     case 'make plan':
-      return k.makePlan({ homes: text(a.homes), relays: text(a.relays) });
+      return k.makePlan({ homes: text(a.homes), relays: text(a.relays), commitment: text(a.commitment) });
     case 'check share': {
       const numbers = Array.isArray(a.numbers) ? a.numbers.map(String) : [text(a.number)];
       const words = Array.isArray(a.shares) ? a.shares.map(String) : [text(a.shareWords)];
@@ -72,6 +75,12 @@ export async function run(k: Kishib, op: string, a: Record<string, unknown>): Pr
     }
     case 'rotate plan':
       return k.rotatePlan({ id: text(a.id), address: text(a.address), words: text(a.words), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list(a.leaveOut), cards: text(a.cards), vault: vaultOf(a) });
+    case 'nakisib plan':
+      return k.nakisibPlan({ id: text(a.id), address: text(a.address), successor: text(a.successor), endSuccession: a.endSuccession === true, leaveOut: list(a.leaveOut), cards: text(a.cards), vault: vaultOf(a) });
+    case 'nakisib request':
+      return k.nakisibRequest();
+    case 'nakisib answer':
+      return k.nakisibAnswer({ answer: text(a.answer), request: text(a.request), id: text(a.id), address: text(a.address) });
     case 'escape plan':
       return k.escapePlan({ id: text(a.id), address: text(a.address), words: text(a.words), signingWords: text(a.signingWords), homes: text(a.homes), leaveOut: list(a.leaveOut), cards: text(a.cards) });
     case 'confirm plan':

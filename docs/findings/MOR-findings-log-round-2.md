@@ -28,6 +28,18 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F394. Nakišib, Kišib's offline companion: the chain key used only on a Mac that never connects (23 October 2026; the Nakišib round) (Dubsar Suite)
+
+**Decided by Nobody, allegedly, 23 October 2026:** "an offline companion to kišib is the right approach, since the rotation begins online." Its name, his choice: **Nakišib** ("stone seal"; *na₄* a silent determinative, the reading built, not attested). The device: an old Mac (M1), wiped and never connected again; transport by USB file, no QR this round; built on the everyday Mac, carried with its fingerprint, checked offline; "Keep nothing"; one's own identity only (a genesis's commitment and rotations), collectives and the clean-device key later; Kišib keeps everything it does, Nakišib optional.
+
+**Pattern:** none of the four: a gap in the apps (step 17 had only the command-line `mor-signer`), not in a rule.
+
+**Built** (`clients/nakisib`, `docs/nakisib-report.md`): a Rust program on the air-gapped Module's library (`modules/airgap`, draft 6, **unchanged**), its page on the kit served on 127.0.0.1 only, its window a web view keeping nothing on disk; it reads Kišib's pending rotation and shows what its bytes say, the dangerous parts first; takes the paper; the Module draws the fresh paper, shown, hidden, three parts asked back; signs on SIGN; keeps only its memory of what it signed (rule 3.4); a new identity's first paper and its commitment. Kišib gains **Change keys with Nakišib** and **Make one with Nakišib**, through the Module's own `online` code in a small WebAssembly of Kišib's own: the suite's shared WebAssembly has no binding for `online`, and was not touched.
+
+**Readings taken** (for Nobody, allegedly, to confirm): the Module's review summarises only once it holds the chain key, so Nakišib shows its own reading of the bytes before the paper (the Module's strict decoding and its own `summary::describe`), the Module's own summary above SIGN; a Kišib closed between request and answer still sends the answer, the lost signing key said; rule 8a's two exceptions left to `mor-signer` in this first version.
+
+**Where:** the suite's alone: `clients/nakisib`, Kišib's two ways, the icon script, a workflow. No MIR, MICS, freeze test, core code, Module code or verdict changed.
+
 ## F395. Specification cards: what can be tied to a specification, so that discovery leads somewhere (23 October 2026; Ummia's round on the kit) (Dubsar Suite)
 
 **Asked by Nobody, allegedly, 23 October 2026:** "what can a person find about a cMIP, module, xtypes or extensions, except its hash or the hash it belongs to … what can be tied to it, so that discoverability leads somewhere." His view: "I think it's cMIP territory." Agreed with the MOR lead the same day: nothing core; a Dubsar cMIP.
