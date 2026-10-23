@@ -11,6 +11,7 @@
 // the program only, so the web client's bundle holds neither.
 
 import { readId } from '../../genesis/src/forms.ts';
+import { clockWords } from '../../barebone/src/clock.ts';
 import type { Access } from '../../collective/src/access.ts';
 import type { Agents } from './agents.ts';
 import type { Collectives } from './collectives.ts';
@@ -52,6 +53,7 @@ export interface Parts {
  * drafts, a release from a folder, pairing) needs Edubba on a computer.
  */
 export const WEB_OPS: readonly string[] = [
+  'clock words',
   'state',
   'publishing',
   'publishing act as',
@@ -164,6 +166,11 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'pair':
         access!.pair(key, text(a.code), text(a.label));
         return {};
+      // The Dubsar clock's time of each act shown (decided 23 October 2026), in words; none where it has not stamped it.
+      case 'clock words': {
+        const st = p.store.settings();
+        return clockWords(list(a.ids).slice(0, 500), list([...st.relays, ...st.homes.map((h) => h.hint)]), st.via);
+      }
       case 'state': {
         const st = p.desk.state();
         const lines = await p.desk.lines();

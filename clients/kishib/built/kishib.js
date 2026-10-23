@@ -9119,7 +9119,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
   .k-panel{left:8px;right:8px;width:auto;top:56px}
   .k-pop:not([data-k-suggest]){left:8px!important;right:8px!important;top:auto!important;bottom:8px!important;max-width:none;width:auto;min-width:0;border-radius:16px}
   .k-modal{padding:12px;width:calc(100% - 16px);max-height:calc(100% - 24px)}
-  .k-act .k-when{display:none}
+  .k-act .k-when{float:none;display:block;margin:0 0 2px}
   .k-feed{padding:4px 10px}
 }
 `;
@@ -9391,6 +9391,20 @@ var Popup = class {
 };
 var popup = null;
 var escapeText = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+function cardsUntimed(root) {
+  return [...root.querySelectorAll("article.k-act[data-k-act]")].filter((a) => !a.querySelector(".k-when")).map((a) => a.dataset.kAct);
+}
+function stampCards(root, words2) {
+  for (const a of root.querySelectorAll("article.k-act[data-k-act]")) {
+    const w = words2[a.dataset.kAct ?? ""];
+    if (!w || a.querySelector(".k-when")) continue;
+    const s = document.createElement("span");
+    s.className = "k-when";
+    s.textContent = w;
+    a.prepend(s);
+    a.querySelector(".k-hint")?.remove();
+  }
+}
 function attachColumn(root, chose) {
   root.addEventListener("click", (ev) => {
     const t = ev.target;
@@ -10134,6 +10148,9 @@ function mount(app2, b) {
       drawn.set(a.id, { act: a, s });
       return card(a);
     }).join("");
+    const ids = cardsUntimed(box);
+    if (ids.length)
+      void b.ask("clock words", { ids }).then((w) => box.isConnected && stampCards(box, w)).catch(() => void 0);
   }
   attachCards(app2, {
     app: "Ki\u0161ib",

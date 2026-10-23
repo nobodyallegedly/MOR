@@ -10,6 +10,7 @@ const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).map((s)
 
 export const OPS = [
   'state',
+  'clock words',
   'bring',
   'renew',
   'use',
@@ -91,6 +92,8 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
   switch (op) {
     case 'state':
       return d.state();
+    case 'clock words':
+      return d.clockWords(list(a.ids));
     case 'bring':
       return d.bring({ id: text(a.id), words: text(a.words), address: text(a.address), relays: list(a.relays) });
     case 'renew':

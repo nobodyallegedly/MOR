@@ -30,6 +30,7 @@
 //
 // TEST IDENTITIES ONLY, and test networks only, until MOR is frozen.
 
+import { clockWords } from '../../barebone/src/clock.ts';
 import {
   ENVELOPES_TYPES,
   keyDeliveryPayload,
@@ -500,6 +501,12 @@ export class Damgar {
 
   private who(id: string, me: string | null): Who {
     return { id, short: short(id), me: id === me };
+  }
+
+  /** The Dubsar clock's time of each act shown (decided 23 October 2026: every app relies on it), in words; none where it has not stamped it. */
+  async clockWords(ids: string[]): Promise<Record<string, string>> {
+    const { s, hints } = await this.ctx();
+    return clockWords(ids.slice(0, 500), hints, s.via);
   }
 
   private async ctx(): Promise<{ me: TestIdentity; s: Settings; book: Book; hints: string[] }> {

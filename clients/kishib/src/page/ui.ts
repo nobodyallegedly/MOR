@@ -4,7 +4,7 @@
 // browser). It keeps nothing in the browser's storage, not even which
 // screen was open: a reload opens on the four tiles.
 
-import { attachCards, attachClosing, attachColumn, card, Popup, shortForm, type KitAct } from '../../../kit/src/index.ts';
+import { attachCards, attachClosing, attachColumn, card, cardsUntimed, Popup, stampCards, shortForm, type KitAct } from '../../../kit/src/index.ts';
 import { actFormOf } from '../../../dub/src/page/view.ts';
 import * as v from './view.ts';
 
@@ -135,6 +135,13 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         return card(a);
       })
       .join('');
+    // The Dubsar clock's time on each card it stamped (decided 23 October 2026), read after drawing.
+    const ids = cardsUntimed(box);
+    if (ids.length)
+      void b
+        .ask<Record<string, string>>('clock words', { ids })
+        .then((w) => box.isConnected && stampCards(box, w))
+        .catch(() => undefined);
   }
 
   attachCards(app, {

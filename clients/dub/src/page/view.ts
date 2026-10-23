@@ -187,7 +187,8 @@ export function messageAct(m: Message): KitAct {
     form: m.form || m.key,
     signer: kitWho(m.who),
     of: m.of?.checked ? (m.of.name ?? shortForm(actFormOf(m.of.id, 'mid'))) : null,
-    when: whenWords(m.at),
+    // A card shows the Dubsar clock's time, or the signer's own hint, or nothing (decided 23 October 2026): a message sealed to you is not one the clock holds; the thread keeps the order this app found them in.
+    when: null,
     hint: m.hint ?? null,
     labels,
     text: m.text,
@@ -624,10 +625,10 @@ ${say('Acting as a collective is the same gesture as switching.', ['It is listed
 
 /** The panel's foot, for the app itself: paired browsers (the Mac), the clock feeds are ordered by, homes and relays. */
 export function appFoot(s: State, web: boolean): string {
-  const c = s.identity?.clock;
+  // Decided 23 October 2026: every app relies on the Dubsar clock; no choice of clock on the screens for now (the form and its operation, `clock`, are kept for when better clocks come).
   return `${web ? '' : `<h4>Browsers paired with this app</h4><div class="k-row"><button type="button" class="k-btn" data-action="code">A code for another browser on this machine</button><button type="button" class="k-btn k-q" data-action="unpair">Unpair this browser</button></div><div id="code"></div>`}
-<h4>The clock feeds are ordered by</h4><form id="clock" class="dub-modal-form"><label>A timestamp clock’s ID (empty: none, each signer’s own order)</label><input name="id" value="${e(c?.form ?? '')}" spellcheck="false" autocomplete="off"><label>Its name here</label><input name="name" value="${e(c?.name ?? '')}" maxlength="48" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn">Save</button></div></form>
-${say('A clock orders what is shown; it never decides what is true.', ['A timestamp clock signs “I held these acts at this time”: its word only. Acts it did not stamp keep their signer’s own order. Order is proven only inside a chain.'])}
+<h4>The clock feeds are ordered by</h4><p class="k-small k-soft">The Dubsar clock, the timestamp clock dubsar.org’s feed names. A choice of clock comes later, when there are better clocks.</p>
+${say('A clock orders what is shown; it never decides what is true.', ['A timestamp clock signs “I held these acts at this time”: its word only. Acts it did not stamp keep their signer’s own order, and show the signer’s own hint where it wrote one. Order is proven only inside a chain. To anchor an act on Bitcoin, Anchor it, paid in Damgar.'])}
 ${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`])}`;
 }
 

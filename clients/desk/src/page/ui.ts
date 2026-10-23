@@ -15,7 +15,7 @@
 import { Client, Refused, type ActRead, type AgentDetails, type AgentView, type Constitution, type Done, type Line, type Permissions, type RealCollective, type ShareHere, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
-import { attachCards, attachClosing, attachColumn, card, closePanel, copy, note, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, shortForm, type CardHost, type KitAct, type KitWho, type MenuItem } from '../../../kit/src/index.ts';
+import { attachCards, attachClosing, attachColumn, card, cardsUntimed, stampCards, closePanel, copy, note, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, shortForm, type CardHost, type KitAct, type KitWho, type MenuItem } from '../../../kit/src/index.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
 import { reading } from '../../../collective/src/page/view.ts';
 import type { Review } from '../../../collective/src/page/api.ts';
@@ -492,11 +492,20 @@ async function fill() {
       }
     }
     await after();
+    void timeCards(p);
   } catch (err) {
     if (mine !== filling) return;
     p.innerHTML = '';
     fail(err);
   }
+}
+
+/** The Dubsar clock's time on the cards drawn in a pane that show none yet (decided 23 October 2026): read after drawing, so a slow clock delays nothing. */
+async function timeCards(root: HTMLElement) {
+  const ids = cardsUntimed(root);
+  if (!ids.length) return;
+  const words = await c.ask<Record<string, string>>('clock words', { ids }).catch(() => ({}) as Record<string, string>);
+  if (root.isConnected) stampCards(root, words);
 }
 
 /** What is filled in once a pane is drawn: grids, the collective client's page, late readings. */
@@ -635,7 +644,7 @@ async function collectivesPart(): Promise<string> {
   if (sub === 'act') {
     const p = await c.ask<Permissions>('collective permissions', { collective: id }).catch((e) => ({ items: [], notes: [{ text: errorOf(e) }] }) as unknown as Permissions);
     const chips = p.items.map((i) => v.chip(i.what, i.state, i.lines.map((l) => l.text).join(' '))).join('');
-    const posts = await c.ask<{ items: { id: string; text: string; standing: string; hint?: string | null; pictures: string[]; corrects: string | null; correctedBy: string[] }[]; problems: string[] }>('collective posts', { collective: id }).catch((e) => ({ items: [], problems: [errorOf(e)] }));
+    const posts = await c.ask<{ items: { id: string; text: string; standing: string; when?: string | null; hint?: string | null; pictures: string[]; corrects: string | null; correctedBy: string[] }[]; problems: string[] }>('collective posts', { collective: id }).catch((e) => ({ items: [], problems: [errorOf(e)] }));
     const test = !col.real && !col.brought;
     const cards = posts.items
       .map((x) =>
@@ -644,6 +653,7 @@ async function collectivesPart(): Promise<string> {
             id: x.id,
             signer: who(id, { name: col.name, collective: true }),
             text: x.text,
+            when: x.when ?? null,
             hint: x.hint ?? null,
             html: x.pictures.map((src) => `<figure><img alt="A picture of the post" src="${v.e(src)}"></figure>`).join(''),
             labels: [...(x.corrects ? [{ text: `correction of ${shortForm(v.formOf(x.corrects))}` }] : []), ...(x.correctedBy.length ? [{ text: `corrected by ${x.correctedBy.map((y) => shortForm(v.formOf(y))).join(', ')}` }] : [])],

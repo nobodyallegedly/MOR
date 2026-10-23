@@ -1394,7 +1394,7 @@ function agreementsClonePlan(parent, clone, specs) {
   }
   return takeFromExternrefTable0(ret[0]);
 }
-function anchoringCheckTicket(offer_act, ticket, commitment, leaf, now4) {
+function anchoringCheckTicket(offer_act, ticket, commitment, leaf, now5) {
   const ptr0 = passArray8ToWasm0(offer_act, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
   const ptr1 = passArray8ToWasm0(ticket, wasm.__wbindgen_malloc);
@@ -1403,7 +1403,7 @@ function anchoringCheckTicket(offer_act, ticket, commitment, leaf, now4) {
   const len2 = WASM_VECTOR_LEN;
   const ptr3 = passStringToWasm0(leaf, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
   const len3 = WASM_VECTOR_LEN;
-  const ret = wasm.anchoringCheckTicket(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, now4);
+  const ret = wasm.anchoringCheckTicket(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, now5);
   if (ret[3]) {
     throw takeFromExternrefTable0(ret[2]);
   }
@@ -3427,14 +3427,14 @@ function linesOf(o) {
     if (!d || d.spec === void 0) return { known: false, prev: null };
     return { known: true, prev: d.prev ?? null };
   };
-  const named = /* @__PURE__ */ new Set();
+  const named2 = /* @__PURE__ */ new Set();
   for (const id of [...held.keys(), ...ownPrev.keys()]) {
     const p = prevOf(id);
-    if (p.prev) named.add(p.prev);
+    if (p.prev) named2.add(p.prev);
   }
   const ownTips = new Set(owns.map((line) => line[line.length - 1]));
-  const tips = [...held.values()].filter((d) => !named.has(d.id) && d.binding === o.binding).map((d) => d.id);
-  for (const t of ownTips) if (!tips.includes(t) && !named.has(t)) tips.push(t);
+  const tips = [...held.values()].filter((d) => !named2.has(d.id) && d.binding === o.binding).map((d) => d.id);
+  for (const t of ownTips) if (!tips.includes(t) && !named2.has(t)) tips.push(t);
   const out = [];
   for (const tip of tips) {
     const d = held.get(tip);
@@ -3726,13 +3726,13 @@ async function lookUp(identity, hints, via2 = {}, into) {
     const homes = inForce();
     let fresh = homes.filter((h) => !asked.has(h.hint));
     if (!fresh.length) {
-      const named = homelessHomes();
-      fresh = named.filter((h) => !asked.has(h.hint));
+      const named2 = homelessHomes();
+      fresh = named2.filter((h) => !asked.has(h.hint));
       if (!fresh.length) break;
       for (const h of fresh) asked.add(h.hint);
       await Promise.all(fresh.filter((h) => tryable(h.hint)).map((h) => record2(h).catch(() => failed(h.hint))));
-      const ops2 = [...new Set(named.map((h) => h.operator).filter((o) => !!o && o !== identity && !operatorActs.has(o)))];
-      await Promise.all(ops2.map((op) => operatorChain(op, named.filter((h) => h.operator === op).map((h) => h.hint))));
+      const ops2 = [...new Set(named2.map((h) => h.operator).filter((o) => !!o && o !== identity && !operatorActs.has(o)))];
+      await Promise.all(ops2.map((op) => operatorChain(op, named2.filter((h) => h.operator === op).map((h) => h.hint))));
       continue;
     }
     for (const h of fresh) asked.add(h.hint);
@@ -3803,13 +3803,13 @@ async function chainOf(identity, hints, via2 = {}) {
 }
 async function followRef(r, hints, via2 = {}) {
   const id = refAct(r);
-  const named = refSigner(r);
+  const named2 = refSigner(r);
   const notTried = [];
   const check = (act) => {
     const d = describeAct(act);
     if (d.id !== id) throw new Error(`the act fetched is ${d.id}, not ${id}`);
     const actual = d.signer ?? d.id;
-    if (named && actual !== named) throw new Error(`the reference names ${named} as the signer of ${id}, but the act shows ${actual}: the reference is wrong`);
+    if (named2 && actual !== named2) throw new Error(`the reference names ${named2} as the signer of ${id}, but the act shows ${actual}: the reference is wrong`);
     return act;
   };
   const tryable = (hint) => {
@@ -3828,15 +3828,15 @@ async function followRef(r, hints, via2 = {}) {
   };
   const here = await fetchFrom(hints);
   if (here) return { ...here, how: "asked", notTried };
-  if (!named) throw new Error(`the act ${id} was not found at ${hints.join(", ")}, and the reference names no signer to look by`);
+  if (!named2) throw new Error(`the act ${id} was not found at ${hints.join(", ")}, and the reference names no signer to look by`);
   let l;
   try {
-    l = await lookUp(named, hints, via2);
+    l = await lookUp(named2, hints, via2);
   } catch (e3) {
-    throw new Error(`the act ${id} was not found at ${hints.join(", ")}, and its signer ${named} could not be looked up there: ${e3 instanceof Error ? e3.message : e3}`);
+    throw new Error(`the act ${id} was not found at ${hints.join(", ")}, and its signer ${named2} could not be looked up there: ${e3 instanceof Error ? e3.message : e3}`);
   }
   for (const n of l.notTried) if (!notTried.some((x) => x.hint === n.hint)) notTried.push(n);
-  const places = l.verifier.places(named).filter((p) => !hints.includes(p));
+  const places = l.verifier.places(named2).filter((p) => !hints.includes(p));
   const outbox = new Set(l.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints.map((h) => h.replace(/\/$/, ""))));
   const there = await fetchFrom(places.filter((p) => outbox.has(p))) ?? await fetchFrom(places.filter((p) => !outbox.has(p)));
   if (there) return { ...there, how: "signer", notTried };
@@ -5336,7 +5336,7 @@ function readTrack(r, trak, carried) {
   if (handler !== "vide" && handler !== "soun") {
     throw new NotFilm("refused", `a track of kind ${JSON.stringify(handler)} (text, subtitles, timecode, metadata or hints): a film holds pictures and sound only`);
   }
-  const named = hdlr.end - (hdlr.body + 24) > 1 || hdlr.end > hdlr.body + 24 && r.b[hdlr.body + 24] !== 0;
+  const named2 = hdlr.end - (hdlr.body + 24) > 1 || hdlr.end > hdlr.body + 24 && r.b[hdlr.body + 24] !== 0;
   const minf = one(mk, "minf", "a track");
   const nk = children(r, minf, ["vmhd", "smhd", "dinf", "stbl", "hdlr"], carried, "a track");
   one(nk, handler === "vide" ? "vmhd" : "smhd", "a track");
@@ -5356,7 +5356,7 @@ function readTrack(r, trak, carried) {
   const descs = r.boxes(sd.o, stsd.end);
   if (sd.n !== 1 || descs.length !== 1) throw new NotFilm("refused", "a track with more than one sample description");
   const entry = descs[0];
-  const t = { handler, timescale, mediaDuration: 0, samples: 0, chunks: [], rotation, names: named };
+  const t = { handler, timescale, mediaDuration: 0, samples: 0, chunks: [], rotation, names: named2 };
   if (handler === "vide") {
     if (entry.type !== "avc1") {
       const what = entry.type === "encv" ? "encrypted pictures" : entry.type === "avc3" ? "H.264 with its parameter sets in the stream (avc3)" : `pictures coded as ${JSON.stringify(entry.type)}, not H.264`;
@@ -6009,8 +6009,8 @@ async function readPost(id, hints, via2 = {}, judging) {
   const f = p.get(1);
   const judge2 = judging ?? new Judge(hints, via2);
   const standing2 = await judge2.standing(act, id, d.signer);
-  const named = (d.refs ?? []).map((r, i) => d.refSigners?.[i] ? [r, d.refSigners[i]] : r);
-  const refs = await Promise.all(named.map((r) => readRef(r, hints, via2, judge2)));
+  const named2 = (d.refs ?? []).map((r, i) => d.refSigners?.[i] ? [r, d.refSigners[i]] : r);
+  const refs = await Promise.all(named2.map((r) => readRef(r, hints, via2, judge2)));
   return { id, signer: d.signer, standing: standing2, text: text3, format: f instanceof Uint8Array ? hex(f) : null, hint: d.hint ?? null, refs, notTried: judge2.notTried ?? [] };
 }
 async function readRef(r, hints, via2, judge2) {
@@ -6100,9 +6100,9 @@ async function mediaBytes(publication, signer, hints, via2, spec, what) {
   const key = m.get(5);
   if (!(key instanceof Uint8Array)) throw new Error(`the ${what} is locked: its key is not public`);
   if (!(work instanceof Uint8Array) || !(lockedHash instanceof Uint8Array) || typeof size !== "number" || !(nonce instanceof Uint8Array)) throw new Error("the publication does not describe its media");
-  const named = Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : [];
+  const named2 = Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : [];
   const media = (places) => firstOf(places.filter((h) => !cannotReach(h, via2)), (h) => relayAt(h, via2).getMedia(hex(lockedHash)));
-  const locked = await media(hints) ?? await media(named.filter((n) => !hints.includes(n)));
+  const locked = await media(hints) ?? await media(named2.filter((n) => !hints.includes(n)));
   if (!locked) throw new Error("its bytes were not found");
   let plain;
   try {
@@ -6142,9 +6142,9 @@ async function readPicture(act, d, hints, via2, judge2) {
   }
   out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via2, judge2);
   if (out.withdrawn) return no("withdrawn by its signer");
-  const named = Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : [];
+  const named2 = Array.isArray(m.get(6)) ? m.get(6).filter((x) => typeof x === "string") : [];
   const media = (places) => firstOf(places.filter((h) => !cannotReach(h, via2)), (h) => relayAt(h, via2).getMedia(hex(lockedHash)));
-  const locked = await media(hints) ?? await media(named.filter((n) => !hints.includes(n)));
+  const locked = await media(hints) ?? await media(named2.filter((n) => !hints.includes(n)));
   if (!locked) return no("its bytes were not found");
   let plain;
   try {
@@ -6268,9 +6268,9 @@ function asStamp(d, clock) {
     throw e3;
   }
 }
-function earliest(stamps) {
+function earliest(stamps2) {
   const out = /* @__PURE__ */ new Map();
-  for (const s of stamps) for (const a of s.acts) if (!out.has(a) || s.time < out.get(a)) out.set(a, s.time);
+  for (const s of stamps2) for (const a of s.acts) if (!out.has(a) || s.time < out.get(a)) out.set(a, s.time);
   return out;
 }
 function earliestByNames(acts, own) {
@@ -6452,7 +6452,7 @@ async function readOne(id, signer, position, places, via2, judge2, lookupProblem
   }
   return p;
 }
-async function causeOf(id, agent, named, places, via2, judge2, found) {
+async function causeOf(id, agent, named2, places, via2, judge2, found) {
   let act = found.get(id)?.act ?? null;
   for (const h of act ? [] : places) {
     try {
@@ -6470,7 +6470,7 @@ async function causeOf(id, agent, named, places, via2, judge2, found) {
   }
   if (d.id !== id || !d.public || !d.payload || !d.signer || d.spec !== NUDGE) return null;
   if (d.type !== NUDGE_TYPES.pick && d.type !== NUDGE_TYPES.nudge) return null;
-  if (!named.has(d.signer)) return null;
+  if (!named2.has(d.signer)) return null;
   let m;
   try {
     m = cborDecode(d.payload);
@@ -6533,21 +6533,21 @@ async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = 
   const all = [...found.values()].map((x) => x.d);
   const placed = times ? all.filter((d) => isPost(d) && times.has(d.id)).length : 0;
   if (clockLine2) clockLine2.placed = placed;
-  const byClock = placed > 0;
-  const order = signedOrder(all, rank, byClock ? times : void 0);
+  const byClock2 = placed > 0;
+  const order = signedOrder(all, rank, byClock2 ? times : void 0);
   const shown = order.slice(0, limit);
   const posts = await Promise.all(
     shown.map(async (id) => {
       const { d } = found.get(id);
       const p = await readOne(id, d.signer, d.position ?? null, placesOf2.get(d.signer), via2, judge2, problems.get(d.signer) ?? null);
-      if (byClock) p.time = times.get(id) ?? null;
+      if (byClock2) p.time = times.get(id) ?? null;
       return p;
     })
   );
   const answered = /* @__PURE__ */ new Map();
   const byId = new Map(posts.map((p) => [p.id, p]));
   const everywhere = [...new Set([...placesOf2.values()].flat())];
-  const named = new Set(authors.map((a) => a.identity));
+  const named2 = new Set(authors.map((a) => a.identity));
   for (const p of posts) {
     if (!p.post || p.problem) continue;
     for (const ref of p.post.refs) {
@@ -6580,11 +6580,11 @@ async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = 
         answered.set(r, { id: r, signer: "", position: null, post: null, problem: "not found at the places asked", answers: [] });
       } else if (!isPost(d) || !d.signer) {
         continue;
-      } else if (!named.has(d.signer) && (d.to ?? []).some((t) => named.has(t))) {
+      } else if (!named2.has(d.signer) && (d.to ?? []).some((t) => named2.has(t))) {
         const n = await readOne(r, d.signer, d.position ?? null, everywhere, via2, judge2, null);
         n.note = true;
         answered.set(r, n);
-      } else if (!named.has(d.signer)) {
+      } else if (!named2.has(d.signer)) {
         answered.set(r, { id: r, signer: d.signer, position: d.position ?? null, post: null, problem: null, answers: [] });
       } else {
         answered.set(r, await readOne(r, d.signer, d.position ?? null, everywhere, via2, judge2, problems.get(d.signer) ?? null));
@@ -6599,7 +6599,7 @@ async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = 
     const causes = p.post.refs.flatMap((x) => x.kind === "act" && !answered.has(x.id) ? [x.id] : []);
     let nudged = false;
     for (const c of causes) {
-      const cause = await causeOf(c, p.signer, named, everywhere, via2, judge2, found);
+      const cause = await causeOf(c, p.signer, named2, everywhere, via2, judge2, found);
       if (cause?.type === NUDGE_TYPES.pick && p.picked.has(cause.picked)) p.picked.set(cause.picked, cause.signer);
       if (cause?.type === NUDGE_TYPES.nudge) nudged = true;
     }
@@ -6620,7 +6620,7 @@ async function readFeed(authors, relays, via2 = {}, limit = FEED_LIMIT, clock = 
     line.found = order.filter((id) => found.get(id).d.signer === line.identity).length;
     line.verified = mine.filter((p) => !p.problem).length;
   }
-  return { authors: lines2, posts, more: order.length - shown.length, answered, clock: clockLine2, order: byClock ? "clock" : "signed" };
+  return { authors: lines2, posts, more: order.length - shown.length, answered, clock: clockLine2, order: byClock2 ? "clock" : "signed" };
 }
 
 // ../reader/src/link.ts
@@ -8858,6 +8858,49 @@ function standingWords(s) {
   }
 }
 
+// ../barebone/src/clock.ts
+var DUBSAR_CLOCK_ID = null;
+var DUBSAR_CLOCK_NAME = "the Dubsar clock";
+var named = DUBSAR_CLOCK_ID;
+function dubsarClock() {
+  return named ? { identity: named, name: DUBSAR_CLOCK_NAME } : null;
+}
+function timeWords(t) {
+  const d = new Date(t * 1e3);
+  const m = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getUTCMonth()];
+  return `${d.getUTCDate()} ${m} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
+}
+function byClock(t) {
+  return `${timeWords(t)} \xB7 by the Dubsar clock`;
+}
+var stamps = /* @__PURE__ */ new Map();
+var now = () => Math.floor(Date.now() / 1e3);
+async function clockTimes(hints, via2) {
+  const c = dubsarClock();
+  if (!c) return /* @__PURE__ */ new Map();
+  const kept = stamps.get(c.identity);
+  if (kept && kept.at + 60 > now()) return kept.earliest;
+  try {
+    let places = hints;
+    try {
+      const l = await lookUp(c.identity, hints, via2);
+      places = [.../* @__PURE__ */ new Set([...l.resolution.homes.map((h) => h.hint), ...l.routes.routes.flatMap((r2) => r2.hints), ...hints])];
+    } catch {
+    }
+    const r = await readStamps(c.identity, places, new Judge(places, via2), via2);
+    stamps.set(c.identity, { at: now(), earliest: r.earliest });
+    return r.earliest;
+  } catch {
+    return /* @__PURE__ */ new Map();
+  }
+}
+async function clockWords(ids, hints, via2) {
+  const t = await clockTimes(hints, via2);
+  const out = {};
+  for (const id of ids) if (t.has(id)) out[id] = byClock(t.get(id));
+  return out;
+}
+
 // ../repo/src/specs.ts
 var test4 = (s) => createHash("sha256").update(s).digest("hex");
 var REPO_SPECS = {
@@ -9247,22 +9290,22 @@ async function authorityOf(act, hints, via2 = {}, opts = {}) {
   for (const a of await allBy(d.signer, hints, via2)) {
     const x = describeAct(a);
     if (x.spec !== MIRS.agreements || x.type !== REVOCATION || !x.payload) continue;
-    const named = cborDecode(x.payload).get(0);
-    if (named instanceof Uint8Array && hex(named) === d.binding) v.add(a);
+    const named2 = cborDecode(x.payload).get(0);
+    if (named2 instanceof Uint8Array && hex(named2) === d.binding) v.add(a);
   }
   if (opts.key) v.addWithKey(act, opts.key);
   else v.add(act);
   let limits = null;
   if (g.limits) {
-    let stamps = opts.stamps;
-    if (g.limits.expiry?.clock === "timestamp" && !stamps?.has(g.limits.expiry.identity)) {
-      stamps = new Map(stamps ?? []);
+    let stamps2 = opts.stamps;
+    if (g.limits.expiry?.clock === "timestamp" && !stamps2?.has(g.limits.expiry.identity)) {
+      stamps2 = new Map(stamps2 ?? []);
       try {
-        stamps.set(g.limits.expiry.identity, await stampsOf(g.limits.expiry.identity, hints, via2));
+        stamps2.set(g.limits.expiry.identity, await stampsOf(g.limits.expiry.identity, hints, via2));
       } catch {
       }
     }
-    limits = judge(g.limits, d, MIRS.money, { stamps });
+    limits = judge(g.limits, d, MIRS.money, { stamps: stamps2 });
   }
   const verdicts = limits && limits.within !== null ? [[d.id, limits.within]] : [];
   const b = v.agreementsBacking(withGrantLimits(AGREEMENTS_SPECS, verdicts), d.id);
@@ -9719,18 +9762,18 @@ async function collectivePlaces(collective, hints, via2 = {}) {
 }
 var LAYER_OF = { [MIRS.text]: 1, [MIRS.envelopes]: 1, [MIRS.money]: 2, [MIRS.agreements]: 3, [MIRS.development]: 4 };
 async function areaReaching(collective, places, kind, via2 = {}) {
-  const now4 = await collectiveNow(collective, places, via2);
-  if (!now4.agreement) return { agreement: null, area: null };
+  const now5 = await collectiveNow(collective, places, via2);
+  if (!now5.agreement) return { agreement: null, area: null };
   for (const h of places) {
-    const a = await relayAt(h, via2).getAct(now4.agreement).catch(() => null);
+    const a = await relayAt(h, via2).getAct(now5.agreement).catch(() => null);
     if (!a) continue;
     const d = describeAct(a);
     if (!d.payload) break;
     const t = readTerms(d.payload, AGREEMENTS_SPECS);
     const x = t.areas.find((r) => r.kinds.some((k) => k.form === "layer" && k.layer === LAYER_OF[kind.spec] || k.spec === kind.spec && k.type === kind.type));
-    return { agreement: now4.agreement, area: x ? { id: x.id, name: x.name, holders: x.holders, number: x.threshold } : null };
+    return { agreement: now5.agreement, area: x ? { id: x.id, name: x.name, holders: x.holders, number: x.threshold } : null };
   }
-  return { agreement: now4.agreement, area: null };
+  return { agreement: now5.agreement, area: null };
 }
 async function termsAt(agreement, places, via2 = {}) {
   for (const h of places) {
@@ -9776,11 +9819,11 @@ var appendedRef = (collective) => collective;
 async function membership(member, collective, hints, via2 = {}) {
   try {
     const places = await collectivePlaces(collective, hints, via2);
-    const now4 = await collectiveNow(collective, places, via2);
-    if (!now4.agreement) return { checked: false, why: "its agreement in force was not found at its places" };
-    const t = await termsAt(now4.agreement, places, via2);
+    const now5 = await collectiveNow(collective, places, via2);
+    if (!now5.agreement) return { checked: false, why: "its agreement in force was not found at its places" };
+    const t = await termsAt(now5.agreement, places, via2);
     if (!t?.parties) return { checked: false, why: "its agreement in force could not be read" };
-    if (now4.departed.includes(member)) return { checked: false, why: "the writer has left it" };
+    if (now5.departed.includes(member)) return { checked: false, why: "the writer has left it" };
     return t.parties.includes(member) ? { checked: true, why: null } : { checked: false, why: "the writer is not one of its members" };
   } catch (e3) {
     return { checked: false, why: `it could not be read (${e3 instanceof Error ? e3.message : String(e3)})` };
@@ -10778,10 +10821,10 @@ function readRelease(m, before) {
   if (!m.previous) files.push({ text: "It is the first release: it names no release before it." });
   if (before) {
     const old = new Map(before.files.map((f) => [f.path, f.work]));
-    const now4 = new Map(m.files.map((f) => [f.path, f.work]));
+    const now5 = new Map(m.files.map((f) => [f.path, f.work]));
     const added = m.files.filter((f) => !old.has(f.path)).map((f) => f.path);
     const changed = m.files.filter((f) => old.has(f.path) && old.get(f.path) !== f.work).map((f) => f.path);
-    const removed = before.files.filter((f) => !now4.has(f.path)).map((f) => f.path);
+    const removed = before.files.filter((f) => !now5.has(f.path)).map((f) => f.path);
     files.push({
       text: `Since ${before.name} ${before.version}: ${count2(added.length, "file")} added, ${changed.length} changed, ${removed.length} removed; ${count2(m.files.length - added.length - changed.length, "file")} the same.`
     });
@@ -11762,8 +11805,8 @@ async function revocationsOf(grantor, grant, hints, via2 = {}) {
   for (const a of await allBy(grantor, hints, via2)) {
     const d = describeAct(a);
     if (d.spec !== MIRS.agreements || d.type !== REVOCATION || !d.payload) continue;
-    const named = cborDecode(d.payload).get(0);
-    if (named instanceof Uint8Array && hex(named) === grant && !out.includes(d.id)) out.push(d.id);
+    const named2 = cborDecode(d.payload).get(0);
+    if (named2 instanceof Uint8Array && hex(named2) === grant && !out.includes(d.id)) out.push(d.id);
   }
   return out;
 }
@@ -11807,9 +11850,9 @@ async function termsOf2(id, hints, via2) {
   return null;
 }
 async function readCollective(me, id, hints, via2) {
-  const now4 = await collectiveNow(id, hints, via2);
-  if (!now4.agreement) return { id, agreement: null, area: null, key: null, why: "Its agreement in force could not be read from its relays and homes." };
-  const t = await termsOf2(now4.agreement, hints, via2);
+  const now5 = await collectiveNow(id, hints, via2);
+  if (!now5.agreement) return { id, agreement: null, area: null, key: null, why: "Its agreement in force could not be read from its relays and homes." };
+  const t = await termsOf2(now5.agreement, hints, via2);
   const a = t?.areas.find((x) => x.kinds.some((k) => k.form === "layer" && k.layer === MONEY_LAYER || k.spec === AGREEMENTS_SPECS.money));
   const area = a ? { id: a.id, name: a.name, holders: a.holders, number: a.threshold, cap: capOf2(a.limits) } : null;
   const keys = await readMemberKeys(me.id, me.f.encryption.map((e3) => unhex(e3.secret)), me.f.homes.map((h) => h.hint), via2).catch(() => []);
@@ -11818,7 +11861,7 @@ async function readCollective(me, id, hints, via2) {
   if (!area) why = "Its constitution draws no Money area: the collective\u2019s money acts count on its own key, held by its founder\u2019s Edubba.";
   else if (!area.holders.includes(me.id)) why = `You hold no box in its Money area (\u201C${area.name}\u201D): your key does not count there.`;
   else if (!key) why = "No key of yours for this collective was found sealed to you at your homes: it is made when you sign its founding or a member change.";
-  return { id, agreement: now4.agreement, area, key, why };
+  return { id, agreement: now5.agreement, area, key, why };
 }
 var withinCap = (area, amount) => !area.cap || area.cap.unit === amount.unit && amount.value <= area.cap.value;
 function promiseSay(c, me, a, names) {
@@ -12066,7 +12109,7 @@ var ACCOUNT_NOTES = [
 var NO_BOOK = () => ({ after: {}, acts: {}, drafts: {}, requestsIn: {}, requestsOut: {}, invoices: {}, payments: {}, pointers: [], published: null });
 var list2 = (xs) => [...new Set(xs.map((s) => s.trim()).filter(Boolean))];
 var message3 = (e3) => e3 instanceof Error ? e3.message : String(e3);
-var now = () => Math.floor(Date.now() / 1e3);
+var now2 = () => Math.floor(Date.now() / 1e3);
 var short2 = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 var b642 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 var railName = (m) => m === SPEC.lightning.hash ? "Lightning" : m === SPEC.onchain.hash ? "on-chain" : `rail Module ${m.slice(0, 8)}\u2026`;
@@ -12102,9 +12145,9 @@ var Damgar = class {
   names = /* @__PURE__ */ new Map();
   async nameOf(id, places, via2) {
     const c = this.names.get(id);
-    if (c && c.at + 300 > now()) return c.name;
+    if (c && c.at + 300 > now2()) return c.name;
     const name = (await namesOf(id, places, via2).catch(() => [])).map((x) => x.name).pop() ?? null;
-    this.names.set(id, { name, at: now() });
+    this.names.set(id, { name, at: now2() });
     return name;
   }
   /** The accepted list as last read, by identity (memory only). */
@@ -12173,7 +12216,7 @@ var Damgar = class {
       const binding = r.links[r.links.length - 1];
       if (!r.signingKey || hex(r.signingKey) !== k.key) throw new Error(RUNNER_OLD_KEY_SAY);
       const chain = await servedChain(k.id, r.homes, {});
-      const named = list2(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
+      const named2 = list2(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
       const f = {
         label: TEST_LABEL,
         identity: k.id,
@@ -12192,7 +12235,7 @@ var Damgar = class {
         encryption: look.encryptionKey && look.encryptionKeyAct ? [{ version: 1, act: look.encryptionKeyAct, secret: "", public: hex(look.encryptionKey) }] : [],
         pending: null
       };
-      await this.store.write(k.id, "settings", { relays: named.length ? named : r.homes.map((h) => h.hint), via: {} });
+      await this.store.write(k.id, "settings", { relays: named2.length ? named2 : r.homes.map((h) => h.hint), via: {} });
       await this.store.saveIdentity(new TestIdentity(f, {}));
       await this.store.setActive(k.id);
       return {
@@ -12225,6 +12268,11 @@ var Damgar = class {
   }
   who(id, me) {
     return { id, short: short2(id), me: id === me };
+  }
+  /** The Dubsar clock's time of each act shown (decided 23 October 2026: every app relies on it), in words; none where it has not stamped it. */
+  async clockWords(ids) {
+    const { s, hints } = await this.ctx();
+    return clockWords(ids.slice(0, 500), hints, s.via);
   }
   async ctx() {
     const active = await this.store.active();
@@ -12263,8 +12311,8 @@ var Damgar = class {
       const r = look.resolution;
       const binding = r.links[r.links.length - 1];
       const chain = await servedChain(id, r.homes, via2);
-      const named = list2(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
-      const relays = named.length ? named : list2(a.relays ?? []);
+      const named2 = list2(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
+      const relays = named2.length ? named2 : list2(a.relays ?? []);
       if (!relays.length) throw new Error("This identity names no relays. Give one or more relay addresses, and bring it again.");
       const enc2 = carriedKey(look, seed);
       const f = {
@@ -12476,10 +12524,10 @@ var Damgar = class {
   // ------------------------------------------------------------ what is accepted (the accepted cMIP, F340)
   async accepted(me, fresh = false) {
     const c = this.lists.get(me.id);
-    if (c && !fresh && c.at + 60 > now()) return c.list;
+    if (c && !fresh && c.at + 60 > now2()) return c.list;
     const { open } = await this.opener(me);
     const l = await readAccepted(me.id, open ?? [], me.f.homes.map((h) => h.hint), me.via);
-    this.lists.set(me.id, { list: l, at: now() });
+    this.lists.set(me.id, { list: l, at: now2() });
     return l;
   }
   acceptedSet(l) {
@@ -12508,7 +12556,7 @@ var Damgar = class {
         },
         { via: s.via, save: () => this.store.saveIdentity(me), check: () => this.current(me), open: (await this.opener(me)).open }
       );
-      this.lists.set(me.id, { list: r.list, at: now() });
+      this.lists.set(me.id, { list: r.list, at: now2() });
       const lines2 = [];
       if (r.list.merged.length) lines2.push({ text: `Two apps had changed the accepted list at once. Both changes were merged: ${r.list.merged.join(" ")}`, tone: "warn" });
       lines2.push(r.written ? { text: `What you accept is sealed to this identity and kept at its homes (version ${r.list.version}): every app holding the identity reads it; nobody else can.`, tone: "ok" } : { text: "Nothing changed." });
@@ -12682,7 +12730,7 @@ var Damgar = class {
       const text3 = `A promise of the collective ${short2(r.c.id)} to pay ${short2(r.to)} ${r.amount.value.toLocaleString("en")}${a.whatFor.trim() ? `, for ${a.whatFor.trim()}` : ""}: ${r.say.above ? "above its Money lane\u2019s cap, it" : "it"} needs your key too. Read it in your Signing tab, then sign it with your own key for the collective.`;
       const made = await signPromise(me, r.c, r.payload, r.say.others, text3, r.places, s.via);
       await this.store.saveIdentity(me);
-      book.collectiveActs = { ...book.collectiveActs ?? {}, [made.act]: { collective: r.c.id, to: r.to, amount: r.amount, whatFor: a.whatFor.trim(), asked: made.asked, at: now() } };
+      book.collectiveActs = { ...book.collectiveActs ?? {}, [made.act]: { collective: r.c.id, to: r.to, amount: r.amount, whatFor: a.whatFor.trim(), asked: made.asked, at: now2() } };
       await this.saveBook(me.id, book);
       const st = await standing(r.c, made.act, r.amount, r.places, s.via).catch(() => null);
       const lines2 = [{ text: `Signed for the collective with your own key: act ${short2(made.act)}, public at ${made.places.join(", ")}.`, tone: "ok" }];
@@ -12822,7 +12870,7 @@ var Damgar = class {
   }
   /** Put one act that arrived where it belongs in the book. Inside `serial`. */
   async file(me, s, book, d, lines2) {
-    const t = now();
+    const t = now2();
     const signer = d.signer;
     if (d.spec && MESSAGES_SPECS.includes(d.spec)) {
       const unread = (why) => {
@@ -12990,7 +13038,7 @@ var Damgar = class {
       request: ir.answers,
       ticket: null,
       stage: "asked",
-      at: now()
+      at: now2()
     };
     book.payments[f.hash] = p;
     inv.payment = f.hash;
@@ -13239,7 +13287,7 @@ var Damgar = class {
       request: a.answers,
       ticket: null,
       stage: "asked",
-      at: now(),
+      at: now2(),
       how,
       referral: a.referral ?? null,
       service,
@@ -13495,7 +13543,7 @@ var Damgar = class {
       const id = sha2562(payload);
       if (book.drafts[id]) throw new Error(book.drafts[id].stage === "new" ? "This payment is already waiting, in Waiting \u203A To pay." : "This payment was already signed or declined here.");
       (book.pasted ??= {})[id] = base64(payload);
-      book.drafts[id] = { found: now(), stage: "new", payment: null };
+      book.drafts[id] = { found: now2(), stage: "new", payment: null };
       book.me = me.id;
       const item = await this.readDraftItem(me, s, book, id, this.acceptedSet(await this.accepted(me)));
       await this.saveBook(me.id, book);
@@ -13584,7 +13632,7 @@ var Damgar = class {
     const pasted = await this.paste(base64(draftPayload(d)));
     await this.serial(async () => {
       const { book } = await this.ctx();
-      (book.anchored ??= {})[pasted.id] = { act: id, blind: hex(blind), leaf, service, offer: offer.act, tier: a.tier, at: now() };
+      (book.anchored ??= {})[pasted.id] = { act: id, blind: hex(blind), leaf, service, offer: offer.act, tier: a.tier, at: now2() };
       await this.saveBook(me.id, book);
     });
     const signed = await this.signDraft(pasted.id);
@@ -13613,7 +13661,7 @@ var Damgar = class {
         const ptr = look.verifier.moneyPointer(MONEY, me.id);
         if (!ptr.act) throw new Error("You have no payee pointer yet: say where you are paid, in Settings, before asking to be paid. Nothing was signed.");
         const req = await this.deliver(me, s, book, MESSAGES_SPEC, TYPES.request, requestPayload({ amount: dr.amount, whatFor: dr.whatFor, pointer: ptr.act }), dr.other);
-        book.requestsOut[req] = { to: dr.other, at: now(), obligation: null, payment: null };
+        book.requestsOut[req] = { to: dr.other, at: now2(), obligation: null, payment: null };
         x.stage = "signed";
         await this.saveBook(me.id, book);
         return { lines: [{ text: `The request was sent to ${short2(dr.other)}, sealed. Their Damgar offers them to pay it, or accept it as a debt.`, tone: "ok" }] };
@@ -14285,7 +14333,7 @@ var Damgar = class {
       const r = readLaneRequest(this.opened(book, id).payload);
       const { limits, total } = readAsked(r.limits);
       const grant = await this.grantLaneActs(me, s, { key: r.key, kinds: r.kinds, limits });
-      (book.lanes ??= {})[grant] = { label: r.label, app: r.app, key: r.key, kinds: r.kinds, limits, at: now(), revoked: null, here: false, role: null, total };
+      (book.lanes ??= {})[grant] = { label: r.label, app: r.app, key: r.key, kinds: r.kinds, limits, at: now2(), revoked: null, here: false, role: null, total };
       x.stage = "granted";
       x.grant = grant;
       await this.saveBook(me.id, book);
@@ -14320,7 +14368,7 @@ var Damgar = class {
       const grant = await this.grantLaneActs(me, s, { key: hex(k.public[1]), kinds: g.kinds, limits });
       keys.lanes = [...keys.lanes ?? [], { grant, label: g.label, secret: hex(k.secret), strand: [], kinds: g.kinds, limits, role: a.role }];
       await this.store.write(me.id, "keys", keys);
-      (book.lanes ??= {})[grant] = { label: g.label, app: "Damgar", key: hex(k.public[1]), kinds: g.kinds, limits, at: now(), revoked: null, here: true, role: a.role };
+      (book.lanes ??= {})[grant] = { label: g.label, app: "Damgar", key: hex(k.public[1]), kinds: g.kinds, limits, at: now2(), revoked: null, here: true, role: a.role };
       await this.saveBook(me.id, book);
       return { lines: [{ text: `\u201C${g.label}\u201D is granted: Damgar signs within it by itself while \u201CFollow every step by hand\u201D is off.`, tone: "ok" }] };
     });
@@ -14392,7 +14440,7 @@ var Damgar = class {
           acts = (await actsUnder(me.id, grant, hints, s.via)).map((a) => ({ id: a.id, said: this.actSaid(book, a) }));
         } catch {
         }
-        const expired = l.limits?.expiry?.clock === "timestamp" && now() > l.limits.expiry.time;
+        const expired = l.limits?.expiry?.clock === "timestamp" && now2() > l.limits.expiry.time;
         const under = l.here ? null : await this.underLane(me, s, book, grant, hints).catch(() => null);
         const unitOfLane = l.total?.unit ?? l.limits?.cap?.unit ?? null;
         const used = under && unitOfLane ? spent(under.payments.map((p) => ({ amount: p.amount, refused: p.stage === "refused" })), unitOfLane) : null;
@@ -14578,7 +14626,7 @@ var Damgar = class {
         request: null,
         ticket: null,
         stage: "asked",
-        at: now(),
+        at: now2(),
         vault: true
       };
       const lines2 = [];
@@ -14668,7 +14716,7 @@ var Damgar = class {
         why = `its lane \u201C${l.label}\u201D does not reach this act`;
         continue;
       }
-      const refused = refuseBeforeSigning(l.limits, { spec, type, payload }, MONEY, now());
+      const refused = refuseBeforeSigning(l.limits, { spec, type, payload }, MONEY, now2());
       if (refused) {
         why = `\u201C${l.label}\u201D: ${refused}`;
         continue;
@@ -15506,7 +15554,7 @@ var DamgarKeepInDub = class {
     return f();
   }
 };
-var now2 = () => Math.floor(Date.now() / 1e3);
+var now3 = () => Math.floor(Date.now() / 1e3);
 var message5 = (e3) => e3 instanceof Error ? e3.message : String(e3);
 var list4 = (xs) => [...new Set(xs.filter(Boolean))];
 var DubMoney = class {
@@ -15538,7 +15586,7 @@ var DubMoney = class {
     const k = makeGrantKey();
     const keys = await this.keys(me.id);
     const label = a.label.trim().slice(0, 80) || a.app;
-    const asked = { key: hex(k.public[1]), secret: hex(k.secret), label, limits, total, request: "", at: now2() };
+    const asked = { key: hex(k.public[1]), secret: hex(k.secret), label, limits, total, request: "", at: now3() };
     keys.asked = [...keys.asked ?? [], asked];
     await this.store.saveMoney(me.id, "keys", keys);
     const r = await sendToSelf(me, TYPES.laneRequest, laneRequestPayload({ key: asked.key, label, kinds: LANE_KINDS, limits: askedValue(limits, total, encodeLimits), app: a.app }), { via: s.via, save: () => this.store.saveIdentity(me) });
@@ -15569,7 +15617,7 @@ var DubMoney = class {
     const out = (keys.asked ?? []).map((a) => shown(a, "asked", null));
     for (const l of keys.lanes ?? []) {
       const revoked = (await revocationsOf(me.id, l.grant, hints, s.via).catch(() => [])).length > 0;
-      const expired = l.limits?.expiry?.clock === "timestamp" && now2() > l.limits.expiry.time;
+      const expired = l.limits?.expiry?.clock === "timestamp" && now3() > l.limits.expiry.time;
       out.push(shown(l, revoked ? "revoked" : expired ? "past its expiry" : "in force", l.grant));
     }
     return out;
@@ -15700,8 +15748,8 @@ var DubMoney = class {
     const offer = readOffer((await followRef([offerId, a.seller], hints, via2)).act, a.seller, a.publication, true);
     let purchase = null;
     if (offer.under) {
-      const now4 = await collectiveNow(a.seller, await collectivePlaces(a.seller, hints, via2), via2).catch(() => null);
-      purchase = [offer.under, now4?.agreement ?? offer.under];
+      const now5 = await collectiveNow(a.seller, await collectivePlaces(a.seller, hints, via2), via2).catch(() => null);
+      purchase = [offer.under, now5?.agreement ?? offer.under];
     }
     const r = await this.engine.payUnderLane({ payee: a.seller, amount: offer.price, whatFor: "a sealed post", fulfils: offer.offer, refs: [[a.publication, a.seller]], referral: a.repost ? { identity: a.repost.by, evidence: a.repost.id } : null, purchase });
     const bought = await this.store.money(me.id, "bought") ?? {};
@@ -15772,11 +15820,11 @@ var DubMoney = class {
   async repost(me, s, hints, a) {
     const postAct = (await followRef([a.post, a.signer], hints, s.via)).act;
     const d = describeAct(postAct);
-    const named = await Promise.all((d.refs ?? []).map(async (id, i) => (await followRef(d.refSigners?.[i] ? [id, d.refSigners[i]] : id, hints, s.via)).act));
-    const pubAct = named.find((x) => readSealed(x));
+    const named2 = await Promise.all((d.refs ?? []).map(async (id, i) => (await followRef(d.refSigners?.[i] ? [id, d.refSigners[i]] : id, hints, s.via)).act));
+    const pubAct = named2.find((x) => readSealed(x));
     if (!pubAct) throw new Error("That post names no sealed post. Nothing was reposted.");
     const p = readSealed(pubAct);
-    const offerAct = named.find((x) => readOffer(x, p.seller, p.publication, true));
+    const offerAct = named2.find((x) => readOffer(x, p.seller, p.publication, true));
     if (!offerAct) throw new Error("That post names no offer selling it. Nothing was reposted.");
     const seller = await lookUp(p.seller, hints, s.via);
     const chain = await servedChain(p.seller, seller.resolution.homes, s.via).catch(() => []);
@@ -15829,8 +15877,8 @@ var DubMoney = class {
     const offer = readVowOffer((await followRef([card2.offer, card2.seller], hints, via2)).act, card2.seller, card2.vow);
     let purchase = null;
     if (offer.under) {
-      const now4 = await collectiveNow(card2.seller, await collectivePlaces(card2.seller, hints, via2), via2).catch(() => null);
-      purchase = [offer.under, now4?.agreement ?? offer.under];
+      const now5 = await collectiveNow(card2.seller, await collectivePlaces(card2.seller, hints, via2), via2).catch(() => null);
+      purchase = [offer.under, now5?.agreement ?? offer.under];
     }
     const r = await this.engine.payUnderLane({ payee: card2.seller, amount: offer.price, whatFor: "a vow", fulfils: offer.offer, refs: [[card2.vow, card2.seller]], visible: true, purchase });
     const vows = await this.store.money(me.id, "vows") ?? {};
@@ -15950,7 +15998,7 @@ var NO_SIGNING = () => ({ answered: {}, waiting: {}, received: {} });
 var MONEY_KEPT = ["settings", "book", "keys", "sold", "bought", "vows", "anchors"];
 var list5 = (xs) => [...new Set(xs.map((s) => s.trim()).filter(Boolean))];
 var message6 = (e3) => e3 instanceof Error ? e3.message : String(e3);
-var now3 = () => Math.floor(Date.now() / 1e3);
+var now4 = () => Math.floor(Date.now() / 1e3);
 var fingerprint = (id) => `${id.slice(0, 8)}\u2026${id.slice(-4)}`;
 function randomBelow(n) {
   const limit = Math.floor(4294967296 / n) * n;
@@ -16048,11 +16096,11 @@ var Dub = class _Dub {
   }
   /** Read the display names of these identities, where not read lately. A name not found is no name: silence proves nothing. */
   async warm(ids, places, via2) {
-    const due = [...new Set(ids)].filter((id) => (this.names.get(id)?.at ?? 0) + NAMES_FOR < now3());
+    const due = [...new Set(ids)].filter((id) => (this.names.get(id)?.at ?? 0) + NAMES_FOR < now4());
     await Promise.all(
       due.map(async (id) => {
         try {
-          this.names.set(id, { names: (await namesOf(id, places, via2)).map((n) => n.name), at: now3() });
+          this.names.set(id, { names: (await namesOf(id, places, via2)).map((n) => n.name), at: now4() });
         } catch {
         }
       })
@@ -16245,8 +16293,8 @@ var Dub = class _Dub {
       const r = look.resolution;
       const binding = r.links[r.links.length - 1];
       const chain = await this.servedChain(id, r.homes, via2);
-      const named = list5(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
-      const relays = named.length ? named : list5(a.relays ?? []);
+      const named2 = list5(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
+      const relays = named2.length ? named2 : list5(a.relays ?? []);
       if (!relays.length) {
         throw new Error("This identity names no relays for its posts. Give one or more relay addresses, and bring it again.");
       }
@@ -16274,7 +16322,7 @@ var Dub = class _Dub {
         lines: [
           { text: "Its current signing key matches the words.", tone: "ok" },
           enc2 ? { text: "Its encryption key is the one the words carry: its private messages open here.", tone: "ok" } : { text: NO_KEY_SAY2, tone: "warn" },
-          { text: named.length ? `Its posts are published at the relays it names: ${relays.join(", ")}.` : `It names no relays: its posts are published at ${relays.join(", ")}.` },
+          { text: named2.length ? `Its posts are published at the relays it names: ${relays.join(", ")}.` : `It names no relays: its posts are published at ${relays.join(", ")}.` },
           { text: LINE_SAY2, tone: "warn" }
         ]
       };
@@ -16414,8 +16462,8 @@ var Dub = class _Dub {
       const binding = r.links[r.links.length - 1];
       if (!r.signingKey || hex(r.signingKey) !== k.key) throw new Error(RUNNER_OLD_KEY_SAY2);
       const chain = await this.servedChain(k.id, r.homes, {});
-      const named = list5(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
-      const relays = named.length ? named : r.homes.map((h) => h.hint);
+      const named2 = list5(look.routes.routes.filter((x) => (x.kind ?? 0) === 0).flatMap((x) => x.hints));
+      const relays = named2.length ? named2 : r.homes.map((h) => h.hint);
       const f = {
         label: TEST_LABEL,
         identity: k.id,
@@ -16561,7 +16609,7 @@ var Dub = class _Dub {
       lines2.push({ text: `\u201C${old.name}\u201D withdrawn: it stays readable as an act, no longer as your name.` });
     }
     const names = (await namesOf(me.id, hints, s.via)).map((n) => n.name);
-    this.names.set(me.id, { names, at: now3() });
+    this.names.set(me.id, { names, at: now4() });
     return { lines: lines2, names };
   }
   // ------------------------------------------------------------ the public side
@@ -16717,7 +16765,7 @@ var Dub = class _Dub {
     const { notes, changed: followsChanged } = await this.refreshFollows(fresh);
     const { me, s, p, hints } = await this.ctx();
     const authors = [me.id, ...s.acting ? [s.acting] : [], ...p.follows.map((f) => f.id).filter((id) => !p.muted.includes(id))].map((identity) => ({ identity, name: null }));
-    const feed = await readFeed(authors, hints, s.via, void 0, s.clock ? { identity: s.clock.id, name: s.clock.name } : null);
+    const feed = await readFeed(authors, hints, s.via, void 0, dubsarClock());
     await this.warm([...feed.posts.map((x) => x.signer), ...[...feed.answered.values()].map((x) => x.signer).filter(Boolean)], hints, s.via);
     const items = [];
     for (const fp of feed.posts) {
@@ -16731,7 +16779,7 @@ var Dub = class _Dub {
       });
       const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
       const it = { ...this.item(fp.post, me.id, p, s, "feed", fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
-      it.when = fp.time ? timeWords(fp.time) : null;
+      it.when = fp.time ? byClock(fp.time) : null;
       it.labels = await this.labelsOf(fp.post, me.id, p, [...hints, ...this.inboxPlaces(p)], s.via);
       if (fp.post.refs.some((r) => r.kind === "picture" && !r.bytes || (r.kind === "film" || r.kind === "recording") && /is locked: its key is not public/.test(r.problem ?? ""))) {
         const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.map((r) => r.kind === "picture" || r.kind === "film" || r.kind === "recording" ? { id: r.publication, signer: r.signer || void 0 } : { id: r.id, signer: r.signer ?? r.actSigner })).catch(() => null);
@@ -16758,8 +16806,8 @@ var Dub = class _Dub {
       it.problem = backed ? null : it.problem;
     }
     const problems = feed.authors.filter((a) => a.problem).map((a) => `${shortId(a.identity)}: ${a.problem}`);
-    if (feed.clock?.problem) problems.push(`${s.clock?.name ?? "The clock"}: ${feed.clock.problem}`);
-    const clock = s.clock ? { name: s.clock.name, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null;
+    if (feed.clock?.problem) problems.push(`The Dubsar clock: ${feed.clock.problem}`);
+    const clock = dubsarClock() ? { name: DUBSAR_CLOCK_NAME, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null;
     return { items, more: feed.more, problems, notes, followsChanged, clock };
   }
   unread(fp, me, p) {
@@ -16821,7 +16869,7 @@ var Dub = class _Dub {
       }
       if (picked.length < max) picked.push({ d, hint: x.hint });
     }
-    const times = await this.clockTimes(s, hints);
+    const times = await clockTimes([.../* @__PURE__ */ new Set([...s.relays, ...hints])], s.via);
     if (times.size) picked.sort((a, b) => (times.get(b.d.id) ?? -1) - (times.get(a.d.id) ?? -1));
     await this.warm(picked.map((x) => x.d.signer ?? x.d.id), hints, s.via);
     const judge2 = new Judge([.../* @__PURE__ */ new Set([...s.relays, ...hints])], s.via);
@@ -16840,8 +16888,8 @@ var Dub = class _Dub {
       }
       items.push({ id: d.id, form: actForm(d.id), who, standing: "unknown", text: "", doc: null, pictures: [], answers: [], toMe: false, via: "relay", problem: null, seen: true, what: whatAct(d) });
     }
-    for (const it of items) it.when = times.has(it.id) ? timeWords(times.get(it.id)) : null;
-    const clock = s.clock ? { name: s.clock.name, placed: items.filter((x) => x.when).length, shown: items.length } : null;
+    for (const it of items) it.when = times.has(it.id) ? byClock(times.get(it.id)) : null;
+    const clock = dubsarClock() ? { name: DUBSAR_CLOCK_NAME, placed: items.filter((x) => x.when).length, shown: items.length } : null;
     return { items, hidden, left, problems, clock };
   }
   // ------------------------------------------------------------ the inbox: "to you", and the private side
@@ -16924,7 +16972,7 @@ var Dub = class _Dub {
           standing: "unknown",
           refs: [],
           to: [],
-          found: now3(),
+          found: now4(),
           problem: cannot ?? "a sealed message that does not open with this identity\u2019s encryption keys",
           ...cannot ? { retry: true } : {}
         };
@@ -16963,7 +17011,7 @@ var Dub = class _Dub {
       refs: (d.refs ?? []).map((id, i) => ({ id, signer: d.refSigners?.[i] ?? null })),
       to: d.to ?? [],
       format,
-      found: now3(),
+      found: now4(),
       problem: d.payload ? void 0 : "a private act whose key was not delivered with it: it cannot be read here"
     };
   }
@@ -17126,7 +17174,7 @@ var Dub = class _Dub {
       if (!left) throw new Error(`No inbox took the message: ${lines2.map((x) => x.text).join("; ")}. It is signed, not delivered.`);
       await this.signed(me, () => leaveAtHomes(me, made, { via: s.via }));
       const cc = ids.filter((x) => x !== to);
-      p.sent.push({ id: made.id, to, text: text3, at: now3(), ...cc.length ? { cc } : {}, ...of ? { of } : {} });
+      p.sent.push({ id: made.id, to, text: text3, at: now4(), ...cc.length ? { cc } : {}, ...of ? { of } : {} });
       await this.store.savePeople(me.id, p);
       lines2.unshift({ text: cc.length ? `Sealed to ${this.nameOf(to, me.id, p)} and, in Cc, ${cc.map((x) => this.nameOf(x, me.id, p)).join(", ")}, and left in each inbox: only they can open it, and each sees who else received it.` : `Sealed to ${this.nameOf(to, me.id, p)} and left in their inbox: only they can open it.`, tone: "ok" });
       if (of) lines2.push({ text: `Written in your own name, with the collective ${this.nameOf(of, me.id, p)} appended: it binds nothing, and the reader\u2019s app shows it only where your membership checks.` });
@@ -17283,10 +17331,10 @@ var Dub = class _Dub {
       if (reading.kind === "founding" || reading.kind === "clone") {
         const k = TestIdentity.newBareKey();
         oneTime = k.public;
-        st.waiting[thread] = { secret: hex(k.secret), since: now3(), act };
+        st.waiting[thread] = { secret: hex(k.secret), since: now4(), act };
         lines2.push({ text: "A one-time key was made for your share of the collective\u2019s chain key: its secret stays in this app only until the share arrives and you have written it down, then it is destroyed." });
       }
-      st.answered[thread] = { act, verdict: "signed", signature: made.id, reply: "", at: now3() };
+      st.answered[thread] = { act, verdict: "signed", signature: made.id, reply: "", at: now4() };
       await this.store.saveSigning(me.id, st);
       const reach = await this.reach(proposer, hints, s.via);
       const reply = await this.signed(me, () => negotiate(me, reach, { text: acceptanceText(made.id, oneTime), thread, previous: this.lastFrom(p, thread, proposer), acks: [this.lastFrom(p, thread, proposer)] }));
@@ -17310,7 +17358,7 @@ var Dub = class _Dub {
       const last = this.lastFrom(p, thread, k.from);
       const reply = await this.signed(me, () => negotiate(me, reach, { text: why.trim() ? `${DECLINED}
 ${compose(why).text}` : DECLINED, thread, previous: last, acks: [last] }));
-      st.answered[thread] = { act: k.refs[0]?.id ?? "", verdict: "declined", reply: reply.id, at: now3() };
+      st.answered[thread] = { act: k.refs[0]?.id ?? "", verdict: "declined", reply: reply.id, at: now4() };
       await this.store.saveSigning(me.id, st);
       return { lines: [{ text: "Declined: nothing was signed, and the proposer was told." }] };
     });
@@ -17333,12 +17381,12 @@ ${compose(why).text}` : DECLINED, thread, previous: last, acks: [last] }));
       const collective = this.collectiveOf(p, thread);
       if (!ans || ans.verdict !== "signed" || !collective) throw new Error("Only a collective this identity signed into, once founded, can be left from here.");
       const places = [.../* @__PURE__ */ new Set([...hints, ...s.relays, ...await this.placesOf(collective, hints, s.via)])];
-      const now4 = await collectiveNow(collective, places, s.via);
-      if (!now4.agreement) throw new Error("The collective\u2019s agreement in force could not be read from its relays and homes: no resignation can name it. Nothing was signed.");
-      if (!now4.parties.includes(me.id) || now4.departed.includes(me.id)) throw new Error("This identity is no member of it now: there is nothing to leave.");
-      if (now4.resignations.some((r) => r.party === me.id && r.kind === "resigned")) throw new Error("This identity already published its resignation: it takes effect once the collective registers it.");
-      const leaving = /* @__PURE__ */ new Set([me.id, ...now4.departed, ...now4.resignations.filter((r) => r.kind === "resigned").map((r) => r.party)]);
-      const others = now4.parties.filter((x) => !leaving.has(x));
+      const now5 = await collectiveNow(collective, places, s.via);
+      if (!now5.agreement) throw new Error("The collective\u2019s agreement in force could not be read from its relays and homes: no resignation can name it. Nothing was signed.");
+      if (!now5.parties.includes(me.id) || now5.departed.includes(me.id)) throw new Error("This identity is no member of it now: there is nothing to leave.");
+      if (now5.resignations.some((r) => r.party === me.id && r.kind === "resigned")) throw new Error("This identity already published its resignation: it takes effect once the collective registers it.");
+      const leaving = /* @__PURE__ */ new Set([me.id, ...now5.departed, ...now5.resignations.filter((r) => r.kind === "resigned").map((r) => r.party)]);
+      const others = now5.parties.filter((x) => !leaving.has(x));
       const lines2 = [
         { text: `You resign from the collective ${shownId(collective)}, alone: nobody else\u2019s signature is needed (Agreements rule 70).`, tone: "warn" },
         { text: "It takes effect at the collective\u2019s line registering it: its founder\u2019s Edubba draws it, then proposes the change of members without you, which waits for Ki\u0161ib." },
@@ -17348,8 +17396,8 @@ ${compose(why).text}` : DECLINED, thread, previous: last, acks: [last] }));
       if (!others.length) {
         lines2.push({ text: "You are the last voice that remains: once you leave, the collective\u2019s works are frozen as they stand, and nobody will be able to change, release or move them (rule 70, F185). Leaving stays yours alone.", tone: "bad" });
       }
-      const payload = resignationPayload(now4.agreement);
-      return { collective, agreement: now4.agreement, lines: lines2, digest: sha2562(payload) };
+      const payload = resignationPayload(now5.agreement);
+      return { collective, agreement: now5.agreement, lines: lines2, digest: sha2562(payload) };
     });
   }
   /** Sign the resignation read back by [`leaveRead`], publish it at the collective's places, and tell the proposer in the founding's thread. */
@@ -17360,10 +17408,10 @@ ${compose(why).text}` : DECLINED, thread, previous: last, acks: [last] }));
       const collective = this.collectiveOf(p, thread);
       if (!collective) throw new Error("No such collective here.");
       const places = [.../* @__PURE__ */ new Set([...hints, ...s.relays, ...await this.placesOf(collective, hints, s.via)])];
-      const now4 = await collectiveNow(collective, places, s.via);
-      if (!now4.agreement || sha2562(resignationPayload(now4.agreement)) !== digest) throw new Error("The collective\u2019s agreement in force changed since it was read back: read it again. Nothing was signed.");
+      const now5 = await collectiveNow(collective, places, s.via);
+      if (!now5.agreement || sha2562(resignationPayload(now5.agreement)) !== digest) throw new Error("The collective\u2019s agreement in force changed since it was read back: read it again. Nothing was signed.");
       await this.current(me);
-      const made = await this.signed(me, () => resign(me, now4.agreement, places));
+      const made = await this.signed(me, () => resign(me, now5.agreement, places));
       const k = p.inbox.items.find((x) => x.key === thread && x.from);
       const lines2 = [{ text: `Your resignation is act ${made.id}, public at ${places.join(", ")}. It takes effect once the collective registers it.`, tone: "ok" }];
       if (k?.from) {
@@ -17451,7 +17499,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
         throw new Error(`Those are not words ${w.shown.join(", ")} of your share as shown. Look at what you wrote down. The one-time key is kept until they are.`);
       }
       delete st.waiting[thread];
-      st.received[thread] = { x: paper.x, fingerprint: paper.fingerprint, collective: this.collectiveOf(p, thread), at: now3() };
+      st.received[thread] = { x: paper.x, fingerprint: paper.fingerprint, collective: this.collectiveOf(p, thread), at: now4() };
       await this.store.saveSigning(me.id, st);
       return { lines: [{ text: `Share ${paper.x} is written down. The one-time key is destroyed: the copy on the relays can never be opened again, by anyone. Keep the paper safe.`, tone: "ok" }] };
     });
@@ -17464,7 +17512,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       const w = st.waiting[thread];
       if (!w) throw new Error("No share is waiting for this proposal here.");
       delete st.waiting[thread];
-      st.received[thread] = { x: 0, fingerprint: "", collective: null, at: now3(), byHand: true };
+      st.received[thread] = { x: 0, fingerprint: "", collective: null, at: now4(), byHand: true };
       await this.store.saveSigning(me.id, st);
       return { lines: [{ text: "The one-time key is destroyed: a share sealed to it later could never be opened." }] };
     });
@@ -17492,26 +17540,10 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
   async member(member, collective, hints, via2) {
     const k = `${member}:${collective}`;
     const c = this.checked.get(k);
-    if (c && c.at + NAMES_FOR > now3()) return c.r;
+    if (c && c.at + NAMES_FOR > now4()) return c.r;
     const r = await membership(member, collective, hints, via2);
-    this.checked.set(k, { at: now3(), r });
+    this.checked.set(k, { at: now4(), r });
     return r;
-  }
-  /** Stamps read lately from the clock named (H54), by clock: this app's memory only, at most once a minute. */
-  stamps = /* @__PURE__ */ new Map();
-  /** When the clock this identity names says it held each act (its earliest stamp); empty where none is named or it cannot be read. */
-  async clockTimes(s, hints) {
-    if (!s.clock) return /* @__PURE__ */ new Map();
-    const c = this.stamps.get(s.clock.id);
-    if (c && c.at + 60 > now3()) return c.earliest;
-    try {
-      const places = [.../* @__PURE__ */ new Set([...await this.placesOf(s.clock.id, hints, s.via), ...hints])];
-      const r = await readStamps(s.clock.id, places, new Judge(places, s.via), s.via);
-      this.stamps.set(s.clock.id, { at: now3(), earliest: r.earliest });
-      return r.earliest;
-    } catch {
-      return /* @__PURE__ */ new Map();
-    }
   }
   /**
    * Name the timestamp clock this identity's feeds are ordered by (H54; the
@@ -17528,8 +17560,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       const id = readId(a.id);
       const name = a.name.trim().slice(0, 48) || `the clock ${shortId(id)}`;
       await this.store.saveSettings(me.id, { ...s, clock: { id, name } });
-      this.stamps.delete(id);
-      return { lines: [{ text: `Feeds are ordered by ${name}\u2019s clock: its word on when it held each act, never a verdict. Acts it did not stamp keep their signer\u2019s own order.`, tone: "ok" }] };
+      return { lines: [{ text: `${name} is kept here. For now every feed is ordered by the Dubsar clock; a choice of clock comes later, when there are better clocks.` }] };
     });
   }
   /** Labels a post carries (H65): an agent's answer to a pick or under a nudge, and who gave it, read from the acts it names first. */
@@ -17664,18 +17695,18 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
         theirs = [...l.resolution.homes.map((h) => h.hint), ...relays];
         lives = `Lives on ${homes.length === 1 ? "one home" : `${homes.length} homes`} (${homes.join(", ")}), reached through ${relays.length === 1 ? "one relay" : `${relays.length} relays`}.`;
         if (l.resolution.stop === "contested") trouble = "Its homes disagree about its keys: this identity is contested. Its acts may not be what they seem.";
-        const t = await this.clockTimes(s, hints);
+        const t = await clockTimes(hints, s.via);
         const since = t.get(id);
-        if (since) lives += ` Since ${timeWords(since)}, by ${s.clock.name}\u2019s clock.`;
+        if (since) lives += ` Since ${timeWords(since)}, by the Dubsar clock.`;
       } catch (e3) {
         trouble = `It could not be looked up: ${message6(e3)}.`;
       }
-      const feed = await readFeed([{ identity: id, name: null }], [.../* @__PURE__ */ new Set([...theirs, ...places])], s.via, void 0, s.clock ? { identity: s.clock.id, name: s.clock.name } : null);
+      const feed = await readFeed([{ identity: id, name: null }], [.../* @__PURE__ */ new Set([...theirs, ...places])], s.via, void 0, dubsarClock());
       const items = [];
       for (const fp of feed.posts) {
         if (!fp.post) continue;
         const it = { ...this.item(fp.post, me.id, p, s, "feed", fp.answers.map((x) => ({ id: x, who: null, snippet: null })), false), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
-        it.when = fp.time ? timeWords(fp.time) : null;
+        it.when = fp.time ? byClock(fp.time) : null;
         items.push(it);
       }
       return {
@@ -17683,7 +17714,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
         lives,
         trouble,
         items,
-        clock: feed.clock ? { name: s.clock?.name ?? feed.clock.name ?? "the clock", placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null,
+        clock: feed.clock ? { name: DUBSAR_CLOCK_NAME, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null,
         problems: feed.authors.filter((x) => x.problem).map((x) => x.problem)
       };
     });
@@ -17751,7 +17782,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       const leaf = anchoringLeaf(id, blind);
       const r = await sendDraft(me, { what: "anchor", other: service.id, amount: { unit: offer.unit, value: tier.price }, whatFor: `an anchor of ${shortAct(id)}`, app: "Dub", anchor: { offer: offer.act, tier: a.tier, leaf } }, { via: s.via, save: () => this.store.saveIdentity(me) });
       const kept = await this.store.money(me.id, "anchors") ?? [];
-      kept.push({ act: id, blind: hex(blind), leaf, service: service.id, offer: offer.act, tier: a.tier, draft: r.id, at: now3() });
+      kept.push({ act: id, blind: hex(blind), leaf, service: service.id, offer: offer.act, tier: a.tier, draft: r.id, at: now4() });
       await this.store.saveMoney(me.id, "anchors", kept);
       return {
         lines: [
@@ -18279,7 +18310,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
     const homes = me.f.homes.map((h) => h.hint);
     const { open, problem: cannot } = await this.opener(me);
     const save = async () => {
-      this.synced.set(me.id, now3());
+      this.synced.set(me.id, now4());
       await this.store.savePeople(me.id, p);
     };
     if (!open) {
@@ -18341,7 +18372,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
   /** Read the sealed follow list again, outside a change (for the feed): at most once a minute, or now when `fresh` (Look again). */
   async refreshFollows(fresh) {
     const active = await this.store.active();
-    if (!active || !fresh && (this.synced.get(active) ?? 0) + 60 > now3()) return { notes: [], changed: false };
+    if (!active || !fresh && (this.synced.get(active) ?? 0) + 60 > now4()) return { notes: [], changed: false };
     try {
       return await this.serial(async () => {
         const { me, s, p } = await this.ctx();
@@ -18499,11 +18530,6 @@ function hostOf(hint) {
   } catch {
     return hint;
   }
-}
-function timeWords(t) {
-  const d = new Date(t * 1e3);
-  const m = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getUTCMonth()];
-  return `${d.getUTCDate()} ${m} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
 }
 function titleOf(text3) {
   const first = text3.split("\n").find((l) => l.trim()) ?? "";
@@ -18971,7 +18997,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
   .k-panel{left:8px;right:8px;width:auto;top:56px}
   .k-pop:not([data-k-suggest]){left:8px!important;right:8px!important;top:auto!important;bottom:8px!important;max-width:none;width:auto;min-width:0;border-radius:16px}
   .k-modal{padding:12px;width:calc(100% - 16px);max-height:calc(100% - 24px)}
-  .k-act .k-when{display:none}
+  .k-act .k-when{float:none;display:block;margin:0 0 2px}
   .k-feed{padding:4px 10px}
 }
 `;
@@ -19043,8 +19069,8 @@ function feedBox(o) {
 }
 function clockLine(c) {
   if (!c) return `<p class="k-clock">Ordered by each signer\u2019s own sequence: no clock is named, so this is not a time.</p>`;
-  if (!c.placed) return `<p class="k-clock">No act shown here was stamped by ${e(c.name)}\u2019s clock: in each signer\u2019s own sequence, not a time.</p>`;
-  return `<p class="k-clock">Ordered by ${e(c.name)}\u2019s clock: its word on when it held each act${c.placed < c.shown ? `; ${c.shown - c.placed} not stamped, kept in their signer\u2019s own order` : ""}.</p>`;
+  if (!c.placed) return `<p class="k-clock">No act shown here was stamped by ${e(c.name)}: in each signer\u2019s own sequence, not a time.</p>`;
+  return `<p class="k-clock">Ordered by ${e(c.name)}: its word on when it held each act${c.placed < c.shown ? `; ${c.shown - c.placed} not stamped, kept in their signer\u2019s own order` : ""}.</p>`;
 }
 function typingBox(o) {
   return `<form class="k-typing" id="${e(o.id)}" autocomplete="off">${o.opts ? `<div class="k-opts">${o.opts}</div>` : ""}${o.extra ?? ""}<div class="k-line"><textarea name="${e(o.name ?? "text")}" rows="1" placeholder="${e(o.placeholder)}" autocomplete="off" autocapitalize="sentences" spellcheck="true"></textarea><div class="k-tools">${o.tools ?? ""}<button type="submit" class="k-btn k-p">${e(o.button)}</button></div></div></form>`;
@@ -19319,9 +19345,9 @@ var Popup = class {
     if (popup === this) popup = null;
   }
   draw() {
-    const now4 = this.stack[this.stack.length - 1];
+    const now5 = this.stack[this.stack.length - 1];
     const back = this.stack.length > 1 ? '<button type="button" class="k-round" data-k-popup="back" aria-label="Back">\u2190</button>' : "";
-    this.box.innerHTML = `<div class="k-mh">${back}<h3 dir="auto">${escapeText(now4.title)}</h3><button type="button" class="k-round" data-k-popup="close" aria-label="Close">\xD7</button></div><div class="k-mbody">${now4.html}</div>`;
+    this.box.innerHTML = `<div class="k-mh">${back}<h3 dir="auto">${escapeText(now5.title)}</h3><button type="button" class="k-round" data-k-popup="close" aria-label="Close">\xD7</button></div><div class="k-mbody">${now5.html}</div>`;
     const body = this.box.querySelector(".k-mbody");
     this.drawn(body);
     return body;
@@ -19712,7 +19738,8 @@ function messageAct(m) {
     form: m.form || m.key,
     signer: kitWho(m.who),
     of: m.of?.checked ? m.of.name ?? shortForm(actFormOf(m.of.id, "mid")) : null,
-    when: whenWords(m.at),
+    // A card shows the Dubsar clock's time, or the signer's own hint, or nothing (decided 23 October 2026): a message sealed to you is not one the clock holds; the thread keeps the order this app found them in.
+    when: null,
     hint: m.hint ?? null,
     labels,
     text: m.text,
@@ -19990,10 +20017,9 @@ function collectiveForm(s) {
 ${say2("Acting as a collective is the same gesture as switching.", ["It is listed under this identity in the identity panel: choose it to post as it, with your own member key (made when you signed its founding). Where its area asks more keys than one, a post counts once another holder signs it, in Edubba."])}`;
 }
 function appFoot(s, web) {
-  const c = s.identity?.clock;
   return `${web ? "" : `<h4>Browsers paired with this app</h4><div class="k-row"><button type="button" class="k-btn" data-action="code">A code for another browser on this machine</button><button type="button" class="k-btn k-q" data-action="unpair">Unpair this browser</button></div><div id="code"></div>`}
-<h4>The clock feeds are ordered by</h4><form id="clock" class="dub-modal-form"><label>A timestamp clock\u2019s ID (empty: none, each signer\u2019s own order)</label><input name="id" value="${e(c?.form ?? "")}" spellcheck="false" autocomplete="off"><label>Its name here</label><input name="name" value="${e(c?.name ?? "")}" maxlength="48" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn">Save</button></div></form>
-${say2("A clock orders what is shown; it never decides what is true.", ["A timestamp clock signs \u201CI held these acts at this time\u201D: its word only. Acts it did not stamp keep their signer\u2019s own order. Order is proven only inside a chain."])}
+<h4>The clock feeds are ordered by</h4><p class="k-small k-soft">The Dubsar clock, the timestamp clock dubsar.org\u2019s feed names. A choice of clock comes later, when there are better clocks.</p>
+${say2("A clock orders what is shown; it never decides what is true.", ["A timestamp clock signs \u201CI held these acts at this time\u201D: its word only. Acts it did not stamp keep their signer\u2019s own order, and show the signer\u2019s own hint where it wrote one. Order is proven only inside a chain. To anchor an act on Bitcoin, Anchor it, paid in Damgar."])}
 ${say2(`${TEST_ONLY2}.`, [`Every key is held in software${web ? " in this browser" : " in this program\u2019s folder"}: a prototype, never for a real identity.`])}`;
 }
 function contactsBelow(s) {

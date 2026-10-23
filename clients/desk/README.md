@@ -47,6 +47,10 @@ Decided: "use it to create simple vows. And to track contests by pointing at peo
 
 Every card has the kit's two menus: the signer's (Copy ID, Copy ID link, Open profile; Follow: add to contacts; Mute is Dub's) and the act's (Copy act ID, Open what it answers or corrects, Why it's valid; **Rely on it**, read back and signed once RELY is typed; **Anchor it**, prepared for Damgar, Dub's own code; **Correct it** on one's own acts).
 
+### The clock (decided 23 October 2026)
+
+Every app of the suite relies on **the Dubsar clock**, the timestamp clock dubsar.org's feed names ("For now, the dubsar suite relies on the dubsar timestamp clock module with optional anchoring to BTC"). A collective's posts are ordered by its stamps, each signer's own sequence kept; each card shows its time, faint, "… · by the Dubsar clock"; where it has not stamped an act, the signer's own hint, labelled as the signer's; with neither, no time. No choice of clock for now. Anchoring to Bitcoin stays optional: Anchor it, paid in Damgar. The clock's identity is not written in this repository yet (`clients/barebone/src/clock.ts`): until it is given, nothing is ordered by it.
+
 ### Use one from Kišib (the Dubsar runner cMIP)
 
 On the Mac, Edubba pairs with Kišib's runner (+ Add › Use one from Kišib › **Pair with Kišib**; the code compared and approved in Kišib, Runner, Apps), then uses an identity Kišib holds, **Edubba holding none of its keys**. **To sign** signs for it through **Kišib's panel, drawn inside Edubba's window** with the identity's own key, as Dub does (Kišib must let Edubba open what is sealed to it, for the proposals to be read). Its own member key for a collective is made as it signs, sealed to it at its homes; member keys are added to Kišib one at a time, on an app's ask, each approved there ("Yes, granularity of control"). Signing with the member key Kišib holds comes in a later round (decided on draft 3's question 1). Every other signing path refuses it in plain words: "Edubba signs for it only in Collectives, To sign, through Kišib's panel". Never on the web.

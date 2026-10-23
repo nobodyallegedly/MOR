@@ -40,7 +40,7 @@ import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
 import { NUDGE_SPECS, NUDGE_TYPES } from '../../nudge/src/specs.ts';
 import { decodeNudge, decodePick } from '../../nudge/src/nudge.ts';
 import { standingWords } from '../../reader/src/read.ts';
-import { readStamps } from '../../../modules/timestamp/src/read.ts';
+import { DUBSAR_CLOCK_NAME, byClock, clockTimes, dubsarClock, timeWords } from '../../barebone/src/clock.ts';
 import { APPENDED_FORMAT, appendedOf, appendedRef, membership } from './appended.ts';
 import { draftPayload, type Draft } from '../../damgar/src/messages.ts';
 import { offers as anchorOffers, type Offer } from '../../ummia/src/anchor.ts';
@@ -1079,7 +1079,8 @@ export class Dub {
     // The collective acted as is in its member's feed too.
     const authors = [me.id, ...(s.acting ? [s.acting] : []), ...p.follows.map((f) => f.id).filter((id) => !p.muted.includes(id))].map((identity) => ({ identity, name: null }));
     // H54: ordered by the timestamp clock this identity names (the timestamp clock Module), each signer's own sequence kept.
-    const feed = await readFeed(authors, hints, s.via, undefined, s.clock ? { identity: s.clock.id, name: s.clock.name } : null);
+    // Decided 23 October 2026: every app relies on the Dubsar clock by default; a clock named here earlier is kept, not read, until a choice of clocks comes.
+    const feed = await readFeed(authors, hints, s.via, undefined, dubsarClock());
     await this.warm([...feed.posts.map((x) => x.signer), ...[...feed.answered.values()].map((x) => x.signer).filter(Boolean)], hints, s.via);
     const items: Item[] = [];
     for (const fp of feed.posts) {
@@ -1093,7 +1094,7 @@ export class Dub {
       });
       const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
       const it: Item = { ...this.item(fp.post, me.id, p, s, 'feed', fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
-      it.when = fp.time ? timeWords(fp.time) : null;
+      it.when = fp.time ? byClock(fp.time) : null;
       it.labels = await this.labelsOf(fp.post, me.id, p, [...hints, ...this.inboxPlaces(p)], s.via);
       // A sealed post (round 2): its publication has no key; read with its offer, and opened where its key is here.
       // A sealed film or recording (sold from Edubba's Publishing) is read the same way: a locked publication, never played as a public one.
@@ -1125,8 +1126,8 @@ export class Dub {
       it.problem = backed ? null : it.problem;
     }
     const problems = feed.authors.filter((a) => a.problem).map((a) => `${shortId(a.identity)}: ${a.problem}`);
-    if (feed.clock?.problem) problems.push(`${s.clock?.name ?? 'The clock'}: ${feed.clock.problem}`);
-    const clock = s.clock ? { name: s.clock.name, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null;
+    if (feed.clock?.problem) problems.push(`The Dubsar clock: ${feed.clock.problem}`);
+    const clock = dubsarClock() ? { name: DUBSAR_CLOCK_NAME, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null;
     return { items, more: feed.more, problems, notes, followsChanged, clock };
   }
 
@@ -1195,7 +1196,7 @@ export class Dub {
       if (picked.length < max) picked.push({ d, hint: x.hint });
     }
     // H54: where a clock is named, the acts it stamped by its word, newest first; the others keep the relay's order after them.
-    const times = await this.clockTimes(s, hints);
+    const times = await clockTimes([...new Set([...s.relays, ...hints])], s.via);
     if (times.size) picked.sort((a, b) => (times.get(b.d.id) ?? -1) - (times.get(a.d.id) ?? -1));
     await this.warm(picked.map((x) => x.d.signer ?? x.d.id), hints, s.via);
     const judge = new Judge([...new Set([...s.relays, ...hints])], s.via);
@@ -1215,8 +1216,8 @@ export class Dub {
       }
       items.push({ id: d.id, form: actForm(d.id), who, standing: 'unknown', text: '', doc: null, pictures: [], answers: [], toMe: false, via: 'relay', problem: null, seen: true, what: whatAct(d) });
     }
-    for (const it of items) it.when = times.has(it.id) ? timeWords(times.get(it.id)!) : null;
-    const clock = s.clock ? { name: s.clock.name, placed: items.filter((x) => x.when).length, shown: items.length } : null;
+    for (const it of items) it.when = times.has(it.id) ? byClock(times.get(it.id)!) : null;
+    const clock = dubsarClock() ? { name: DUBSAR_CLOCK_NAME, placed: items.filter((x) => x.when).length, shown: items.length } : null;
     return { items, hidden, left, problems, clock };
   }
 
@@ -1922,24 +1923,6 @@ export class Dub {
     return r;
   }
 
-  /** Stamps read lately from the clock named (H54), by clock: this app's memory only, at most once a minute. */
-  private stamps = new Map<string, { at: number; earliest: Map<string, number> }>();
-
-  /** When the clock this identity names says it held each act (its earliest stamp); empty where none is named or it cannot be read. */
-  private async clockTimes(s: Settings, hints: string[]): Promise<Map<string, number>> {
-    if (!s.clock) return new Map();
-    const c = this.stamps.get(s.clock.id);
-    if (c && c.at + 60 > now()) return c.earliest;
-    try {
-      const places = [...new Set([...(await this.placesOf(s.clock.id, hints, s.via)), ...hints])];
-      const r = await readStamps(s.clock.id, places, new Judge(places, s.via), s.via);
-      this.stamps.set(s.clock.id, { at: now(), earliest: r.earliest });
-      return r.earliest;
-    } catch {
-      return new Map();
-    }
-  }
-
   /**
    * Name the timestamp clock this identity's feeds are ordered by (H54; the
    * timestamp clock Module, draft 2): its ID, and a name for it here. Empty:
@@ -1955,8 +1938,8 @@ export class Dub {
       const id = readId(a.id);
       const name = a.name.trim().slice(0, 48) || `the clock ${shortId(id)}`;
       await this.store.saveSettings(me.id, { ...s, clock: { id, name } });
-      this.stamps.delete(id);
-      return { lines: [{ text: `Feeds are ordered by ${name}’s clock: its word on when it held each act, never a verdict. Acts it did not stamp keep their signer’s own order.`, tone: 'ok' }] };
+      // Kept, not read (decided 23 October 2026): every feed is ordered by the Dubsar clock until a choice of clocks comes.
+      return { lines: [{ text: `${name} is kept here. For now every feed is ordered by the Dubsar clock; a choice of clock comes later, when there are better clocks.` }] };
     });
   }
 
@@ -2100,18 +2083,18 @@ export class Dub {
         theirs = [...l.resolution.homes.map((h) => h.hint), ...relays];
         lives = `Lives on ${homes.length === 1 ? 'one home' : `${homes.length} homes`} (${homes.join(', ')}), reached through ${relays.length === 1 ? 'one relay' : `${relays.length} relays`}.`;
         if (l.resolution.stop === 'contested') trouble = 'Its homes disagree about its keys: this identity is contested. Its acts may not be what they seem.';
-        const t = await this.clockTimes(s, hints);
+        const t = await clockTimes(hints, s.via);
         const since = t.get(id);
-        if (since) lives += ` Since ${timeWords(since)}, by ${s.clock!.name}’s clock.`;
+        if (since) lives += ` Since ${timeWords(since)}, by the Dubsar clock.`;
       } catch (e) {
         trouble = `It could not be looked up: ${message(e)}.`;
       }
-      const feed = await readFeed([{ identity: id, name: null }], [...new Set([...theirs, ...places])], s.via, undefined, s.clock ? { identity: s.clock.id, name: s.clock.name } : null);
+      const feed = await readFeed([{ identity: id, name: null }], [...new Set([...theirs, ...places])], s.via, undefined, dubsarClock());
       const items: Item[] = [];
       for (const fp of feed.posts) {
         if (!fp.post) continue;
         const it = { ...this.item(fp.post, me.id, p, s, 'feed', fp.answers.map((x) => ({ id: x, who: null, snippet: null })), false), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
-        it.when = fp.time ? timeWords(fp.time) : null;
+        it.when = fp.time ? byClock(fp.time) : null;
         items.push(it);
       }
       return {
@@ -2119,7 +2102,7 @@ export class Dub {
         lives,
         trouble,
         items,
-        clock: feed.clock ? { name: s.clock?.name ?? feed.clock.name ?? 'the clock', placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null,
+        clock: feed.clock ? { name: DUBSAR_CLOCK_NAME, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null,
         problems: feed.authors.filter((x) => x.problem).map((x) => x.problem!),
       };
     });
@@ -3024,13 +3007,6 @@ function hostOf(hint: string): string {
   }
 }
 
-/** A time, in words, UTC (the display client's words). */
-export function timeWords(t: number): string {
-  const d = new Date(t * 1000);
-  const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()];
-  return `${d.getUTCDate()} ${m} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
-}
-
 /** A document's title: its first line, without the heading's marks. */
 function titleOf(text: string): string {
   const first = text.split('\n').find((l) => l.trim()) ?? '';
@@ -3049,3 +3025,5 @@ async function digestOf(x: string): Promise<string> {
   const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(x));
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+export { timeWords };

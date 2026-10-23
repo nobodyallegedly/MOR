@@ -233,8 +233,8 @@ export function feedBox(o: { id: string; above?: string; cards: string; empty?: 
  */
 export function clockLine(c: { name: string; placed: number; shown: number } | null): string {
   if (!c) return `<p class="k-clock">Ordered by each signer’s own sequence: no clock is named, so this is not a time.</p>`;
-  if (!c.placed) return `<p class="k-clock">No act shown here was stamped by ${e(c.name)}’s clock: in each signer’s own sequence, not a time.</p>`;
-  return `<p class="k-clock">Ordered by ${e(c.name)}’s clock: its word on when it held each act${c.placed < c.shown ? `; ${c.shown - c.placed} not stamped, kept in their signer’s own order` : ''}.</p>`;
+  if (!c.placed) return `<p class="k-clock">No act shown here was stamped by ${e(c.name)}: in each signer’s own sequence, not a time.</p>`;
+  return `<p class="k-clock">Ordered by ${e(c.name)}: its word on when it held each act${c.placed < c.shown ? `; ${c.shown - c.placed} not stamped, kept in their signer’s own order` : ''}.</p>`;
 }
 
 /** The typing box, at the bottom: options above (chips), the text, tools, the main button. */

@@ -320,6 +320,51 @@ Pictures, in `docs/edubba-kit/`:
   - tests (above); README.
 - `built/` of all six web releases.
 
+### The Dubsar clock (decided 23 October 2026)
+
+*Decided by Nobody, allegedly, this morning:* "it is assumed that everyone would [use the dumb clock] unless more precise method is needed"; "For now, the dubsar suite relies on the dubsar timestamp clock module with optional anchoring to BTC"; a choice of clock comes "later when there are better clocks".
+
+**In plain words.**
+- Every app relies on the Dubsar clock: the timestamp clock dubsar.org's feed already names (website cMIP rule 13a; the timestamp clock Module, draft 2).
+- Feeds are ordered by its stamps, each signer's own sequence kept.
+- Each card shows its time, faint, top right: "23 Oct 2026, 10:10 UTC · by the Dubsar clock". On a phone, it is a line of its own: it is no longer hidden there.
+- Where the clock has not stamped an act, the card shows the signer's own hint, labelled as the signer's. With neither, it shows no time.
+- There is no choice of clock on the screens. Dub's This app now names the Dubsar clock in one line, with no form.
+- Anchoring to Bitcoin is unchanged: optional, Anchor it, paid in Damgar.
+
+**Its identity is not in the repository, so I did not add it.**
+- dubsar.org's feed page names its clock by a placeholder (`docs/dubsar.org/feed.html`, `CLOCK-IDENTITY`), which the rehearsal fills only at publishing.
+- The build therefore reads the clock from one place, `clients/barebone/src/clock.ts`, where `DUBSAR_CLOCK_ID` is **null until you give it** (question 9).
+- Until then, no clock orders anything, and cards show the signer's hint or nothing, as today.
+- A test names a test clock in the program's memory (`useDubsarClock`); nothing of it is kept.
+
+**Precisely.**
+- `clients/barebone/src/clock.ts` (new):
+  - the clock's identity and name;
+  - `clockTimes`, the earliest stamp of each act, by the timestamp Module's `readStamps`, each stamp judged through the clock's chain, read again at most once a minute;
+  - `clockWords`, those times in words for the cards;
+  - `timeWords` and `byClock`.
+- **Dub.** The feed, the Relay lens and a profile read the Dubsar clock in place of the clock named in settings. That setting, its form's handler and its `clock` operation are kept but no longer read, and the operation's answer says so. A private message's card no longer shows this app's found time: it shows the signer's hint or nothing. The thread still says it is in the order this app found the messages.
+- **Edubba.**
+  - A collective's posts are read with the clock, ordered by it, each card with its time.
+  - Every other card (Talk, Track, Published here, Vows published here) gets its time after drawing, from a new `clock words` operation, also on the web. Those lists keep their own order: an exchange, a vow and its sales.
+- **Kišib** (only where it reads and shows the clock): the runner's log of what it signed gets each act's time by the clock (`clock words`, asked at the homes of the identities it holds). The log keeps Kišib's own record time.
+- **Damgar** (only where it reads and shows the clock): each card drawn gets its time (`clock words`). Most Money acts are sealed, so the clock rarely holds them, and most show none.
+- **Ummia**: it draws no act card, so nothing changed.
+- **The kit**:
+  - `cardsUntimed` and `stampCards` put the clock's time on cards already drawn, taking the signer's hint away there;
+  - the phone shows `when`;
+  - the clock line reads "Ordered by the Dubsar clock", no longer "…'s clock".
+- **Not changed: Damgar's "clock for lanes" and Dub's "Until… on a clock" in a lane.** They name the clock a grant's expiry is judged on, inside the signed grant (the grant limits cMIP, 3.1). That is not display, so I did not default it (question 10).
+
+**Test**, `clients/desk/test/clock.test.ts` (real homes and relay, a test clock):
+- Two posts by two signers, the one signed second stamped later. In Dub's feed it is above the other, its time "· by the Dubsar clock". Run without the clock, that order fails: the test tells the two apart.
+- A post not stamped, with a hint, shows "the signer's own hint: …" and no time.
+- One with neither shows no time and no hint.
+- Each signer's later, unstamped posts are never above its stamped one.
+- This app names the Dubsar clock, with no form.
+- Edubba's `clock words` gives the stamped act's time and nothing for the other.
+
 ### Questions (after question 6)
 
 **Question 7. Contest it… before payment.** Built: shown once paid, since the contest names your claim of the payment, which exists only then. Before that, Purchases shows the purchase with no Contest it….
@@ -330,16 +375,22 @@ Pictures, in `docs/edubba-kit/`:
 
 **Found while testing, and fixed.** In Dub, a recording the audio Module refuses was said in the card only until the next redraw of the feed. If a redraw landed while the Module checked, the refusal never showed, and Play was offered again: the browser test caught it once in a full run. The refusal is now kept and said again on every redraw, and the recording is never played.
 
+**Question 9 (after question 8). The Dubsar clock's identity.** It is not in the repository's public files: the feed page names it by the placeholder `CLOCK-IDENTITY`. Shall I write its identity hash into `clients/barebone/src/clock.ts` (and the feed page), or keep it out and have the apps learn it another way, such as from dubsar.org's published feed page?
+- *My lean:* write the hash in both. It is a public identity, not a server address, and every reader of dubsar.org's feed already sees it. Until you say, it stays out.
+
+**Question 10 (after question 9). The clock a lane's expiry is judged on.** Damgar's "clock for lanes" and Dub's lane "Until…" still name a clock of your choosing, written in the signed grant. Should they default to the Dubsar clock too?
+- *My lean:* yes, prefilled with the Dubsar clock and still shown in the lane's words, since the grant signs it. That is for the next Damgar session.
+
 ### Every test after S7d
 
-Run locally on the merged branch:
+Run locally on the merged branch, the kit, barebone, Dub, Kišib, Damgar, Edubba, Ummia and the reader again after the clock:
 
 | Suite | Passed |
 | --- | --- |
 | barebone | 14 of 14 |
 | collective client | 44 of 44 |
 | connector | 13 of 13 |
-| Edubba (`clients/desk`) | 100 of 100 |
+| Edubba (`clients/desk`) | 101 of 101 (with the clock test) |
 | genesis | 41 of 41 |
 | grants | 5 of 5 |
 | long-form | 26 of 26 |

@@ -12,6 +12,7 @@
 //   deal-assessment tool's reading (`clients/assess`).
 // - Constitution: everything the collective client does, through its API.
 
+import { byClock, dubsarClock } from '../../barebone/src/clock.ts';
 import { Actions } from '../../collective/src/actions.ts';
 import { Store as CollectiveStore } from '../../collective/src/store.ts';
 import { collectiveApi } from '../../collective/src/server.ts';
@@ -335,7 +336,7 @@ export class Collectives {
   }
 
   /** The collective's own posts, as the site's feed reads them (it shown as an identity). */
-  async posts(collective: string, real?: BroughtCollective): Promise<{ items: { id: string; text: string; standing: string; hint: string | null; pictures: string[]; corrects: string | null; correctedBy: string[] }[]; problems: string[] }> {
+  async posts(collective: string, real?: BroughtCollective): Promise<{ items: { id: string; text: string; standing: string; when: string | null; hint: string | null; pictures: string[]; corrects: string | null; correctedBy: string[] }[]; problems: string[] }> {
     this.places();
     const b = real ?? this.broughtOne(collective);
     const s = this.store.settings();
@@ -344,7 +345,8 @@ export class Collectives {
       return [...new Set([...c.f.relays, ...s.relays, ...s.homes.map((h) => h.hint), ...c.f.identity.homes.map((h) => h.hint)])];
     })();
     try {
-      const f = await readFeed([{ identity: collective, name: null }], places, b ? this.desk.settings().via : s.via);
+      // Ordered by the Dubsar clock's stamps, each signer's own sequence kept (decided 23 October 2026).
+      const f = await readFeed([{ identity: collective, name: null }], places, b ? this.desk.settings().via : s.via, undefined, dubsarClock());
       return {
         items: f.posts.map((x) => ({
           id: x.id,
@@ -352,6 +354,7 @@ export class Collectives {
           standing: x.post?.standing ?? x.problem ?? 'unknown',
           // The signer's own hint (field 9), shown labelled as its own on the card: display only.
           hint: x.post?.hint ?? null,
+          when: x.time ? byClock(x.time) : null,
           pictures: (x.post?.refs ?? []).flatMap((r) => (r.kind === 'picture' && r.bytes ? [`data:image/jpeg;base64,${Buffer.from(r.bytes).toString('base64')}`] : [])),
           // The corrections cMIP (F344): labelled "Correction", or "corrected by".
           corrects: x.corrects ?? null,
