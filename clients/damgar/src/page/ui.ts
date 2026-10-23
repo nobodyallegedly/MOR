@@ -18,7 +18,7 @@ export interface Backend {
 
 type Lines = { lines: v.Line[] };
 type CollectiveRead = Parameters<typeof v.collectivePane>[0] & {};
-type LanesRead = { lanes: LaneShown[]; manual: boolean; link: boolean; linkSay: string[]; clock: string | null };
+type LanesRead = { lanes: LaneShown[]; manual: boolean; link: boolean; linkSay: string[]; clock: string | null; dubsar?: boolean };
 const errorOf = (err: unknown) => (err instanceof Error ? err.message : String(err));
 const TABS: v.Tab[] = ['waiting', 'account', 'lanes', 'settings'];
 /** What waits to be received rather than paid. */
@@ -268,6 +268,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   const shortOf = (w: Who) => shortForm(v.formOf(w.id, 'mid'));
   const paymentCard = (p: PaymentShown, forPay: boolean) => {
     const bad = p.proofs.some((x) => x.rail.answer === 'invalid');
+    // S7e: a payment whose claims and receipts no rail answer here shows valid is unknown, with what the rail said: never shown as paid.
+    const unverified = p.proofs.length > 0 && !bad && !p.proofs.some((x) => x.rail.answer === 'valid');
     // Its act: the first claim or receipt, else the invoice request that began it; signed by the payer (you, paying out) or the payee.
     const first = p.proofs[0];
     // What Rely on it and Anchor it offer: its receipts first, then its claims, then the invoice request that began it (decided: "receipts and claims first of all").
@@ -283,7 +285,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       kind: p.to === 'vault' && p.other.me ? 'to your vault' : p.side === 'out' ? 'you pay' : 'paid to you',
       text: `${p.side === 'out' ? (p.other.me ? 'To your vault' : `To ${shortOf(p.other)}`) : `From ${shortOf(p.other)}`} · ${p.amount.said}`,
       html: `<div class="k-box">${v.payment(p, forPay)}</div>`,
-      labels: [{ text: p.stageSaid }, ...[...new Set(p.proofs.map((x) => `${x.kind === 'claim' ? 'claim' : 'receipt'}: ${x.how}`))].map((text) => ({ text }))],
+      labels: [...(p.deal ? [{ text: `under the deal “${p.deal}”` }] : []), { text: p.stageSaid }, ...[...new Set(p.proofs.map((x) => `${x.kind === 'claim' ? 'claim' : 'receipt'}: ${x.how}`))].map((text) => ({ text })), ...(unverified ? [{ text: v.unverifiedSaid(p), tone: 'warn' as const }] : [])],
       verified: v.confirmed(p),
       alarm: bad ? 'A proof that does not hold' : null,
       lines: [...p.lines, ...p.proofs.map((x) => ({ text: `${x.kind === 'claim' ? 'Claim' : 'Receipt'} by ${x.by.me ? 'you' : x.by.short}: the rail says ${x.rail.answer}${x.rail.why ? ` (${x.rail.why})` : ''}; beside it ${x.beside.answer}${x.beside.why ? ` (${x.beside.why})` : ''}; ${x.how}.`, tone: x.rail.answer === 'invalid' ? ('bad' as const) : undefined }))],
@@ -365,6 +367,18 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       }
       const a = await b.ask<Account>('account');
       if (part === 'payments') return `<h2>Payments</h2>${v.say('Each payment a card: its claim and receipt, how each was signed, and whether each verifies.', ['Paid and confirmed: settled, its receipt and a claim each valid by the rail’s own evidence. Open a card’s ID for why it is valid.'])}<div class="k-feed" id="account-feed">${a.payments.map((p) => paymentCard(p, false)).join('') || '<p class="k-empty">No payment yet.</p>'}</div>`;
+      if (part === 'shared') {
+        // Deals between separate people this identity is a party of (this round): the payments made to each, and the payouts its split service made to you.
+        const ds = a.shared ?? [];
+        return `<h2>Shared deals</h2>${v.say('The deals you share in with other people: what was paid to each, and what its split service paid you.', ['Each payment to a deal is receipted by its split service in the name of the deal’s own payee, and sealed to every person sharing in it; each split names what it pays each of you. A tip to you personally is under Payments, not here.'])}${
+          ds
+            .map((d) => `<h3>“${v.e(d.name)}” <span class="k-small k-soft k-mono">${v.e(shortForm(v.formOf(d.version)))}</span></h3><div class="k-feed">${[
+              ...d.payments.map((x) => cardOf({ id: x.receipt, who: x.payer, kind: x.kind, text: d.collective ? `${x.kind === 'a tip' ? 'A tip' : 'A sale'} of the collective’s work · your share ${x.amount.said}` : `${x.kind === 'a tip' ? 'A tip' : 'A sale'} to the deal · ${x.amount.said}`, labels: [{ text: x.standing, ...(x.rail.answer === 'valid' ? {} : { tone: 'warn' as const }) }], verified: x.rail.answer === 'valid', lines: [] })),
+              ...d.payouts.map((x) => cardOf({ id: x.split, who: { id: meId(), short: '', me: true }, kind: 'your payout', text: `Its split pays you ${x.amount.said}${x.role ? ` (${x.role})` : ''}`, labels: [{ text: x.paid ? 'paid to you by its split service, its rail answer valid' : 'named in its split; its payment here is not yet shown valid by its rail: unknown' }], verified: x.paid, lines: [] })),
+            ].join('') || '<p class="k-empty">Nothing yet.</p>'}</div>`)
+            .join('') || '<p class="k-empty">No deal shared with you yet: a deal is set up in Edubba, where you sign it.</p>'
+        }`;
+      }
       if (part === 'anchors') {
         const an = a.payments.filter((p) => p.ticket);
         return `<h2>Anchors</h2>${v.say('Payments for anchoring an act on Bitcoin: each waiting, anchored at its block, its deadline met or missed.', ['Asked in Edubba for a collective’s act, in Ummia for a release, in Dub for any act; paid here. Kept simple: it shows that anchoring exists.'])}<div class="k-feed">${an.map((p) => paymentCard(p, false)).join('') || '<p class="k-empty">No anchor paid from here.</p>'}</div>`;
@@ -382,7 +396,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       counts = { ...counts, inForce: l.lanes.filter((x) => x.state === 'in force' && !x.here).length, ended: l.lanes.filter((x) => x.state !== 'in force').length };
       if (part === 'own') return v.ownPane(l.lanes.filter((x) => x.here && x.state === 'in force'), units().map((u) => ({ ...u, label: u.label.replace(' satoshis', '') })), l, b.web);
       if (part === 'ended') return `<h2>Ended</h2><p class="k-small k-soft">Revoked, or past their expiry: nothing signed under them after that counts.</p>${l.lanes.filter((x) => x.state !== 'in force').map((x) => v.lane(x, false)).join('') || '<p class="k-empty">No lane ended.</p>'}`;
-      return v.inForcePane(l.lanes.filter((x) => x.state === 'in force' && !x.here), l.clock, l.manual);
+      return v.inForcePane(l.lanes.filter((x) => x.state === 'in force' && !x.here), l.clock, l.manual, !!l.dubsar);
     }
     if (tab === 'settings') {
       if (part === 'accept') return v.acceptPane(s);

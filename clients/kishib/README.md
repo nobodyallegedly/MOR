@@ -51,6 +51,8 @@ What it may do: **check paper words** without signing anything ("these are the r
 - **Lines**: the runner signs on the app's own lines (public and private, F376), which the app keeps as for any identity; at a change of keys, **Change keys › Lines another app made › Add the cards of the lines Kišib's runner signed** writes the cards of the lines it signed (the same as the app shows in its Line and homes).
 - **A draft 1 file** (its keys in the clear, from Kišib before draft 2): Kišib starts with the runner locked and asks a passphrase to be chosen, typed twice; then it is sealed under it.
 
+**Which clock** (decided 23 October 2026): every app of the suite orders its feeds by the stamps of **the Dubsar clock**, identity `1c743854ba1884b470f02221395d18d1abe977631bf86f0f221e32e6d83cf453` (its genesis at home1 and home2; a public identity, not an address), written in `clients/barebone/src/clock.ts`; each card shows its time, "… · by the Dubsar clock", or the signer's own hint, labelled.
+
 ## Precisely
 
 | File | What |

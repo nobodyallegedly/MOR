@@ -48,14 +48,14 @@
 
 <!-- The feed (website cMIP draft 6, rule 13a; F275 in draft 7): the two identities only, newest first, a visitor's
      public note shown only beside a reply of either that names it. Draft 8: ordered by the stamps of the clock named
-     here, where posts carry them; otherwise in signed order. CLOCK-IDENTITY is a placeholder: replace it with the
-     clock's identity hash (64 hex digits) once the clock runs. Until then it names no identity, is dropped, and the
-     feed is in signed order. -->
+     here, where posts carry them; otherwise in signed order. The clock is the Dubsar clock, its identity written
+     here as decided by Nobody, allegedly, 23 October 2026 ("The clocks is a Dubsar feature, so yes in app stored
+     hash works"), the same as the apps' (clients/barebone/src/clock.ts). -->
 <h2>Posts</h2>
 <mor-feed>
   <mor-author identity="1fc19135ea25e19bcd213e7bc610091f8248cef76a4683d582b8d4a69b6ec144">Nobody, allegedly</mor-author>
   <mor-author identity="02a6585ffa967e3c8b7a4bf0b8dadda4890a03ee814b7f9200e2da5c789bc0e3">Machine, allegedly</mor-author>
-  <mor-clock identity="CLOCK-IDENTITY">the dubsar.org clock</mor-clock>
+  <mor-clock identity="1c743854ba1884b470f02221395d18d1abe977631bf86f0f221e32e6d83cf453">the dubsar.org clock</mor-clock>
 </mor-feed>
 </main>
 <footer>

@@ -593,7 +593,14 @@ export interface PublishingShown {
   acting: string | null;
   as: string | null;
   works: { publication: string; offer: string; as: string; member: string; collective: boolean; media: 'text' | 'picture' | 'video' | 'audio'; title: string; price: number; words: string; at: number; delivered: Record<string, string>; toMembers: string | null }[];
-  vows: { vow: string; offer: string; as: string; collective: boolean; words: string; title: string; price: number; at: number }[];
+  vows: { vow: string; offer: string; as: string; collective: boolean; words: string; title: string; price: number; at: number; deal?: string | null; shares?: [string, number][] | null }[];
+  /** Plain posts shared under a deal (this round). */
+  posts?: { post: string; deal: string; as: string; text: string; shares: [string, number][]; at: number }[];
+  /** The deals set up here (this round): waiting for signatures, or announced. */
+  deals?: { id: string; version: string; kind: 'work' | 'vow' | 'post'; title: string; payee: string; service: string; shares: [string, number][]; referral: number; state: 'waiting' | 'announced'; signed: string; post: string | null; offer: string | null; at: number }[];
+  /** The deal's own payee the next deal will take: its ID, to give the split service (`mor-split-service key ID`). */
+  dealPayee?: string | null;
+  sharesSay?: string[];
   held: string[];
   say: string[];
   unit: string;
@@ -601,7 +608,7 @@ export interface PublishingShown {
 
 /** A look-up of one identity's vow sales (round 3): each vow, each sale's state; those bought by an identity held here may be contested here. */
 export interface VowSalesShown {
-  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; promise: string | null; amount: { unit: string; value: number } | null; beside?: { state: 'shown' | 'unknown'; contests: { act: string; promise: string | null }[]; why?: string } }[]; unsigned: number; mine: string[] }[];
+  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; why?: string | null; promise: string | null; amount: { unit: string; value: number } | null; beside?: { state: 'shown' | 'unknown'; contests: { act: string; promise: string | null }[]; why?: string } }[]; unsigned: number; unknown?: number; mine: string[] }[];
   asked: string[];
   problems: string[];
 }
@@ -615,7 +622,7 @@ export function vowSalesShown(r: VowSalesShown, names: (id: string) => string): 
           const sales = v.sales.length
             ? `<ul>${v.sales
                 .map(
-                  (x) => `<li class="${x.state === 'confirmed' ? 'ok' : x.state === 'contested' ? 'bad' : ''}">${e(names(x.buyer))}: <strong>${e(x.state)}</strong>${x.promise ? ` (“${e(x.promise)}”)` : ''}${x.amount ? ` · ${x.amount.value.toLocaleString('en')}` : ''}${
+                  (x) => `<li class="${x.state === 'confirmed' ? 'ok' : x.state === 'contested' ? 'bad' : ''}">${e(names(x.buyer))}: <strong>${e(x.state)}</strong>${x.state === 'unknown' && x.why ? ` (${e(x.why)})` : ''}${x.promise ? ` (“${e(x.promise)}”)` : ''}${x.amount ? ` · ${x.amount.value.toLocaleString('en')}` : ''}${
                     v.mine.includes(x.act) && x.state === 'pending'
                       ? `<form class="pub-contest row" data-vow="${e(v.name)}" data-sale="${e(x.act)}" data-buyer="${e(x.buyer)}"><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><button type="submit">Contest it, as ${e(names(x.buyer))}</button></form>${x.amount ? `<button data-action="pub-confirm-sale" data-vow="${e(v.name)}" data-sale="${e(x.act)}" data-buyer="${e(x.buyer)}" data-seller="${e(v.signer)}" data-unit="${e(x.amount.unit)}" data-value="${x.amount.value}">Confirm: it was kept, as ${e(names(x.buyer))}</button>` : ''}<span class="small">Confirming prepares your claim of the payment, acknowledging the vow, for Damgar to sign (a Money act): it waits in Damgar’s To sign.</span>`
                       : ''
@@ -623,7 +630,7 @@ export function vowSalesShown(r: VowSalesShown, names: (id: string) => string): 
                 )
                 .join('')}</ul>`
             : '<p class="small">No sale seen: nobody signed onto it at the relays asked, so it carries no state (rule 13).</p>';
-          return `<div class="item"><h3>${e(v.words[0] ?? '')}</h3><div class="meta">${v.void ? 'its first act void (its signer’s change of keys): the name stands · ' : ''}${counts.confirmed} confirmed · ${counts.contested} contested · ${counts.pending} pending${v.unsigned ? ` · ${v.unsigned} paid with no buyer signed on` : ''}</div>${sales}</div>`;
+          return `<div class="item"><h3>${e(v.words[0] ?? '')}</h3><div class="meta">${v.void ? 'its first act void (its signer’s change of keys): the name stands · ' : ''}${counts.confirmed} confirmed · ${counts.contested} contested · ${counts.pending} pending${counts.unknown ? ` · ${counts.unknown} unknown` : ''}${v.unsigned ? ` · ${v.unsigned} paid with no buyer signed on` : ''}${v.unknown ? ` · ${v.unknown} payment${v.unknown === 1 ? '' : 's'} unknown (no rail answer here)` : ''}</div>${sales}</div>`;
         })
         .join('')
     : '<p class="empty">No vow of that identity at the relays asked.</p>';

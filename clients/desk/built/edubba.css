@@ -355,6 +355,7 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .edubba-chips .k-chip.k-on{background:var(--k-p);color:var(--k-ink)}
 .edubba-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
 .edubba-grid .k-box{margin:0}
+.edubba-wrap{overflow-wrap:anywhere;word-break:break-all}
 .edubba-card-acts{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0 2px}
 .edubba-diary{background:var(--k-wash);border-radius:16px;padding:16px 18px}
 .edubba-diary .edubba-act{border:1px solid var(--k-edge);border-radius:12px;padding:10px 12px;margin:10px 0;background:var(--k-bg)}

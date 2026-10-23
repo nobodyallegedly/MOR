@@ -448,7 +448,7 @@ async function draw() {
   if (tab === 'publishing' || tab === 'vows') await readPublishing().catch(() => null);
   // Two redraws can overlap: what the first saw typed is kept until a pane is drawn.
   typed = (pane() ? typingNow(pane()!) : null) ?? typed;
-  const k = { here: pubCache?.works.length, mine: pubCache?.vows.length, sales: pubCache ? pubCache.works.reduce((n, w) => n + Object.keys(w.delivered).length, 0) : undefined, toSign: toSignCount };
+  const k = { here: pubCache?.works.length, mine: pubCache?.vows.length, sales: pubCache ? pubCache.works.reduce((n, w) => n + Object.keys(w.delivered).length, 0) : undefined, toSign: toSignCount, deals: pubCache?.deals?.filter((d) => d.state === 'waiting').length || undefined, dealsToSign: dealsToSignCount };
   app.innerHTML = v.tabPage(state, tab, part, k, as, alarms(), counts());
   await fill();
 }
@@ -513,6 +513,7 @@ let after = async () => undefined as void;
 
 let pubCache: v.PublishingShown | null = null;
 let toSignCount = 0;
+let dealsToSignCount = 0;
 
 async function partHtml(): Promise<string> {
   after = async () => undefined;
@@ -607,12 +608,16 @@ async function agentsPart(): Promise<string> {
 
 // ---------------------------------------------------------------- collectives
 
-async function readSign(collective: string | null): Promise<string> {
+/** To sign: proposals sent to the identity in use; a collective's in Collectives, a shared deal's (this round) in Publishing. */
+async function readSign(collective: string | null, deals = false): Promise<string> {
   const r = await c.ask<{ proposals: MemberProposal[]; problems: string[] }>('member proposals').catch((e) => ({ proposals: [], problems: [errorOf(e)] }));
   memberAwaits = r.proposals.some((p) => !p.answer || p.share === 'waiting' || p.share === 'ready');
-  toSignCount = r.proposals.filter((p) => !p.answer).length;
-  const mine = collective ? r.proposals.filter((p) => p.collective === collective) : r.proposals;
-  return v.memberSigning(state, { proposals: mine, problems: r.problems });
+  const isDeal = (p: MemberProposal) => p.reading?.kind === 'deal';
+  toSignCount = r.proposals.filter((p) => !p.answer && !isDeal(p)).length;
+  dealsToSignCount = r.proposals.filter((p) => !p.answer && isDeal(p)).length;
+  const mine = deals ? r.proposals.filter(isDeal) : collective ? r.proposals.filter((p) => p.collective === collective) : r.proposals.filter((p) => !isDeal(p));
+  const html = v.memberSigning(state, { proposals: mine, problems: r.problems });
+  return deals ? html.replace('by a collective’s founder', 'by the person who set up a shared deal').replace('agreements for real collectives: founding one, changing its members, its releases', 'shared deals with other people: a work, a vow or a post whose payments a split service divides') : html;
 }
 
 async function collectivesPart(): Promise<string> {
@@ -768,6 +773,11 @@ async function drawMoney(collective: string) {
 
 // ---------------------------------------------------------------- publishing and vows
 
+/** "Who shares in it" (this round): the contacts' names offered, the deal's own payee to give the split service. */
+const sharesHtml = (p: v.PublishingShown, kind: string) => v.sharesFields({ names: [...state.contacts.map((x) => x.name), ...state.identities.filter((i) => i.id !== state.acting).map((i) => i.name)], payee: p.dealPayee ?? null, say: p.sharesSay ?? [], kind });
+const MEDIA_KIND: Record<string, string> = { text: 'text', picture: 'picture', video: 'film', audio: 'recording' };
+/** What "Who shares in it" holds, as the program takes it. */
+const sharesOf = (d: FormData) => ({ with: [0, 1].map((i) => ({ who: words(d.get(`with${i}`)), share: words(d.get(`share${i}`)) })), mine: words(d.get('mine')), referral: words(d.get('dealReferral')), service: words(d.get('dealService')), serviceKey: words(d.get('dealKey')) });
 const actorsHtml = (p: v.PublishingShown) => v.whoActs(p.actors.filter((x) => x.kind === 'collective' || x.id === state.acting), p.as, (id) => shown(id));
 
 async function readPublishing(): Promise<v.PublishingShown> {
@@ -800,7 +810,31 @@ async function publishingPart(): Promise<string> {
     const rows = sold
       .map((w) => `<div class="k-box"><h4>${v.e(w.title)}</h4><div class="k-list">${Object.entries(w.delivered).map(([buyer, act]) => `<div><span>${v.e(shown(buyer))} <span class="k-mono k-faint">${v.e(shortForm(v.idForm(buyer)))}</span></span><span class="k-r">key delivered · ${v.e(shortForm(v.formOf(act)))}</span></div>${w.collective ? '' : v.contestsBeside(contested.by[w.publication]?.[buyer])}`).join('')}</div></div>`)
       .join('');
-    return v.salesPane(rows, contested.problems);
+    // Shared works (this round): the sales told to you as a party of a deal or a member of a collective, the buyer's contest beside each (decided with the MOR lead, 23 October 2026).
+    type SharedSales = { sales: { kind: 'deal' | 'collective'; title: string; buyer: string; receipt: string; claim: string | null; beside: v.ContestsBeside }[]; problems: string[] };
+    const sh = await c.ask<SharedSales>('publishing shared sales').catch((e) => ({ sales: [], problems: [errorOf(e)] }) as SharedSales);
+    const shared = sh.sales
+      .map((x) => `<div class="k-box"><h4>${v.e(x.title)} <span class="k-small k-soft">${x.kind === 'deal' ? 'a shared deal' : 'a collective'}</span></h4><div class="k-list"><div><span>Bought by ${v.e(shown(x.buyer))} <span class="k-mono k-faint">${v.e(shortForm(v.idForm(x.buyer)))}</span></span><span class="k-r">receipt ${v.e(shortForm(v.formOf(x.receipt)))}${x.claim ? ` · their claim ${v.e(shortForm(v.formOf(x.claim)))}` : ''}</span></div>${v.contestsBeside(x.beside)}</div></div>`)
+      .join('');
+    return v.salesPane(rows, [...contested.problems, ...sh.problems], shared);
+  }
+  if (part === 'post') return v.sharedPostPane({ who: actorsHtml(p), shares: sharesHtml(p, 'post') });
+  if (part === 'sign') return v.inside(`<div id="e-signing-wrap">${await readSign(null, true)}</div>`);
+  if (part === 'deals') {
+    const cards = (p.deals ?? [])
+      .map((d) =>
+        cardOf({
+          id: d.id,
+          signer: who(state.acting ?? ''),
+          kind: `a shared ${d.kind === 'work' ? 'file' : d.kind}`,
+          text: d.title,
+          html: `<div class="k-small k-soft">${d.shares.map(([id, n]) => `${v.e(shown(id))} ${(n / 10_000).toLocaleString('en')}%`).join(' · ')}${d.referral ? ` · ${(d.referral / 10_000).toLocaleString('en')}% off the top to a reposter` : ''}<br>Its own payee ${v.e(shortForm(v.idForm(d.payee)))} · its split service ${v.e(shown(d.service))}<br>${d.state === 'announced' ? 'Every person signed: announced.' : `Waiting: ${v.e(d.signed)}. Nothing is announced yet.`}</div>`,
+          labels: d.state === 'waiting' ? [{ text: 'waiting for signatures', tone: 'warn' as const }] : [{ text: 'announced' }],
+          verified: d.state === 'announced',
+        }),
+      )
+      .join('');
+    return v.dealsPane(cards);
   }
   part = 'file';
   // Keys of sales told of are delivered as the tile opens (as Dub does on its main screen).
@@ -808,7 +842,7 @@ async function publishingPart(): Promise<string> {
     void c.ask<{ lines: Line[] }>('publishing deliver').then((r) => {
       if (r.lines.some((l) => /delivered/.test(l.text))) say('done', v.lines(r.lines));
     }).catch(() => undefined);
-  return v.filePane({ who: actorsHtml(p), media, unit: p.unit, say: p.say, judged: v.JUDGED_SAY });
+  return v.filePane({ who: actorsHtml(p), media, unit: p.unit, say: p.say, judged: v.JUDGED_SAY, shares: sharesHtml(p, MEDIA_KIND[media] ?? 'work') });
 }
 
 interface Point {
@@ -836,7 +870,7 @@ let showing = 'all';
 
 async function vowsPart(): Promise<string> {
   const p = await readPublishing();
-  if (part === 'new') return v.newVowPane({ who: actorsHtml(p), unit: p.unit });
+  if (part === 'new') return v.newVowPane({ who: actorsHtml(p), unit: p.unit, shares: sharesHtml(p, 'vow') });
   if (part === 'mine') {
     const cards = p.vows.map((x) => cardOf({ id: x.vow, signer: who(x.as, { collective: x.collective }), kind: 'vow', text: `${x.title}. ${x.price.toLocaleString('en')} ${p.unit}`, html: `<div class="k-small k-soft">${v.e(x.words)}</div>`, verified: true })).join('');
     return v.minePane(cards);
@@ -868,10 +902,12 @@ async function vowsPart(): Promise<string> {
               answers: { id: vw.name, signer: vw.signer },
               labels: [
                 { text: `↳ answers ${shown(vw.signer)}’s vow · ${shortForm(v.formOf(vw.name))}` },
+                // S7e (Q53): a sale whose answer rests on a rail answer not given here reads unknown, never pending or paid.
+                ...v.saleUnknown(s),
                 // F386: a contest in the purchase's form marks no sale; shown beside it, so it is not lost (and not counted with the vow's own form).
                 ...(s.beside?.state === 'unknown' ? [{ text: `contests beside the purchase: unknown (${s.beside.why ?? 'not read'})`, tone: 'warn' as const }] : (s.beside?.contests ?? []).map((x) => ({ text: `contested beside the purchase, marking no sale${x.promise ? `: “${x.promise}”` : ''}`, tone: 'bad' as const }))),
               ],
-              verified: s.state !== 'contested',
+              verified: s.state !== 'contested' && s.state !== 'unknown',
               alarm: s.state === 'contested' ? 'contested' : null,
             },
             mine ? { sale: { vow: vw.name, sale: s.act, buyer: s.buyer, seller: vw.signer, amount: s.amount } } : {},
@@ -1493,6 +1529,14 @@ app.addEventListener('click', async (ev) => {
       if (r) say(r.ok ? 'done' : 'warn', r.ok ? `It counts as the collective’s release, signed by ${r.signers.length} members.` : `It does not count yet: ${r.problems.map(v.e).join(' ')}`);
       return;
     }
+    case 'pub-deals-gather': {
+      const r = await busy('Looking for each person’s signatures…', () => ask<{ lines: Line[] }>('publishing deals gather'));
+      if (r) {
+        await fill();
+        say('done', v.lines(r.lines));
+      }
+      return;
+    }
     case 'member-look':
       await busy('Reading the inbox for proposals and shares…', readMember);
       return;
@@ -1503,7 +1547,9 @@ app.addEventListener('click', async (ev) => {
         const done = await busy('Sealing, signing and publishing…', () => ask<Done>('publishing confirm', { plan: r.plan, digest: r.digest }));
         if (done) {
           pubReview = null;
-          part = tab === 'vows' ? 'mine' : 'here';
+          // A shared deal waits for every person's signature: shown under Shared deals, in Publishing.
+          if (/sent to each person/.test(done.title)) [tab, part] = ['publishing', 'deals'];
+          else part = tab === 'vows' ? 'mine' : 'here';
           await afterDone(done);
         }
         return;
@@ -1853,7 +1899,7 @@ app.addEventListener('submit', async (ev) => {
       let data = '';
       if (m === 'text') data = toBase64(new TextEncoder().encode(String(d.get('text') ?? '')));
       else if (file instanceof File && file.size) data = toBase64(new Uint8Array(await file.arrayBuffer()));
-      const r = await busy(m === 'video' || m === 'audio' ? 'Checking it with its Module, stripping it, and reading it back…' : 'Reading it back…', () => c.ask<Review>('publishing work read', { media: m, data, title: words(d.get('title')), price: words(d.get('price')), referral: words(d.get('referral')), service: words(d.get('service')), serviceKey: words(d.get('serviceKey')) }));
+      const r = await busy(m === 'video' || m === 'audio' ? 'Checking it with its Module, stripping it, and reading it back…' : 'Reading it back…', () => c.ask<Review>('publishing work read', { media: m, data, title: words(d.get('title')), price: words(d.get('price')), referral: words(d.get('referral')), service: words(d.get('service')), serviceKey: words(d.get('serviceKey')), shares: sharesOf(d) }));
       if (r) {
         pubReview = { plan: r.plan, digest: r.digest };
         reviewIn('e-pub-review', r);
@@ -1861,10 +1907,18 @@ app.addEventListener('submit', async (ev) => {
       return;
     }
     case 'pub-vow': {
-      const r = await busy('Reading it back…', () => c.ask<Review>('publishing vow read', { words: words(d.get('words')), title: words(d.get('title')), price: words(d.get('price')) }));
+      const r = await busy('Reading it back…', () => c.ask<Review>('publishing vow read', { words: words(d.get('words')), title: words(d.get('title')), price: words(d.get('price')), shares: sharesOf(d) }));
       if (r) {
         pubReview = { plan: r.plan, digest: r.digest };
         reviewIn('e-vow-review', r);
+      }
+      return;
+    }
+    case 'pub-post': {
+      const r = await busy('Reading it back…', () => c.ask<Review>('publishing post read', { text: words(d.get('text')), shares: sharesOf(d) }));
+      if (r) {
+        pubReview = { plan: r.plan, digest: r.digest };
+        reviewIn('e-post-review', r);
       }
       return;
     }

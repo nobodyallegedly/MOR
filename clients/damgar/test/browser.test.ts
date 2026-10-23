@@ -162,7 +162,7 @@ async function tilesAre(page: Page) {
 
 const COLUMNS: Record<string, string[]> = {
   waiting: ['To pay', 'To receive', '+ Paste an act to sign', 'To the vault'],
-  account: ['Summary', 'Payments', 'Under the lanes', 'Anchors'],
+  account: ['Summary', 'Payments', 'Shared deals', 'Under the lanes', 'Anchors'],
   lanes: ['Asked', 'In force', 'Damgar’s own', 'Ended'],
   settings: ['Where you are paid', 'What you accept', 'Homes and relays', 'Every step by hand'],
 };

@@ -15,13 +15,12 @@
 // true. Anchoring to Bitcoin stays optional: Anchor it, paid in Damgar.
 //
 // Precisely: the clock is the identity dubsar.org's feed names (website
-// cMIP rule 13a, `mor-clock`). That page names it by a placeholder in this
-// repository (`docs/dubsar.org/feed.html`, CLOCK-IDENTITY), filled only when
-// the site is published, so its identity is not written here either: it is
-// asked of Nobody, allegedly (the Edubba round 4 report, "After S7d").
-// Until it is given, `DUBSAR_CLOCK_ID` is null: no clock orders anything and
-// cards show the signer's hint or nothing. A program or a test may name it
-// in its own memory with `useDubsarClock`; nothing of it is kept.
+// cMIP rule 13a, `mor-clock`), written here and in that page
+// (`docs/dubsar.org/feed.html`) as decided by Nobody, allegedly, 23 October
+// 2026: "The clocks is a Dubsar feature, so yes in app stored hash works."
+// Its genesis is at home1 and home2; it is a public identity, not an
+// address. A program or a test may name another in its own memory with
+// `useDubsarClock`; nothing of it is kept.
 //
 // TEST IDENTITIES ONLY.
 
@@ -30,8 +29,8 @@ import { lookUp } from '../../genesis/src/lookup.ts';
 import type { Via } from '../../genesis/src/transport.ts';
 import { Judge } from './post.ts';
 
-/** The Dubsar clock's identity: not yet given (see above). */
-export const DUBSAR_CLOCK_ID: string | null = null;
+/** The Dubsar clock's identity (its genesis, at home1 and home2). */
+export const DUBSAR_CLOCK_ID: string | null = '1c743854ba1884b470f02221395d18d1abe977631bf86f0f221e32e6d83cf453';
 
 /** Its name on the cards. */
 export const DUBSAR_CLOCK_NAME = 'the Dubsar clock';
@@ -45,7 +44,7 @@ export function useDubsarClock(id: string | null): void {
   stamps.clear();
 }
 
-/** The clock the apps rely on, as the feed reader takes it; null while its identity is not given. */
+/** The clock the apps rely on, as the feed reader takes it. */
 export function dubsarClock(): { identity: string; name: string } | null {
   return named ? { identity: named, name: DUBSAR_CLOCK_NAME } : null;
 }
@@ -69,8 +68,8 @@ const now = () => Math.floor(Date.now() / 1000);
 /**
  * When the Dubsar clock says it held each act: its earliest stamp of it
  * (the timestamp clock Module's `readStamps`, each stamp judged through the
- * clock's own chain). Empty where its identity is not given or it cannot be
- * read: then nothing is ordered by it.
+ * clock's own chain). Empty where it cannot be read: then nothing is ordered
+ * by it.
  */
 export async function clockTimes(hints: string[], via: Via): Promise<Map<string, number>> {
   const c = dubsarClock();

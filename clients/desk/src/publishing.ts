@@ -31,7 +31,7 @@
 // TEST IDENTITIES ONLY.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { MIRS, SPECS, cborEncode, moneyRead, openSealed, sha256, unhex } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, cborDecode, cborEncode, describeAct, hex, moneyRead, openSealed, sha256, unhex, workHash } from '../../genesis/src/core.ts';
 import { sealFor, type TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp, referenceTo } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -56,6 +56,9 @@ import type { Line, Reading } from '../../collective/src/explain.ts';
 import type { Desk, Done } from './desk.ts';
 import type { Real } from './real.ts';
 import type { Store } from './store.ts';
+import { Deals, SHARES_SAY, type DealHere, type SharesIn } from './deals.ts';
+import { pct, readDeal, type DealDraft } from '../../grants/src/deal.ts';
+import { termsAt } from '../../grants/src/member.ts';
 
 const err = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
@@ -92,8 +95,11 @@ export interface WorkHere {
   delivered: Record<string, string>;
   /** As a collective: the key delivery sealed to every member. */
   toMembers: string | null;
-  /** As oneself, a judged referral (F215, F351): the one-party deal its offer is under, paid through its split service. */
+  /** As oneself, a judged referral (F215, F351): the one-party deal its offer is under, paid through its split service; or a deal between separate people (this round). */
   deal?: string | null;
+  /** Under a deal between separate people: its own payee (the receipts are signed in its name), and every person sharing in it. */
+  payee?: string | null;
+  shares?: [string, number][] | null;
 }
 
 interface Book {
@@ -104,6 +110,7 @@ interface Book {
   collectives: Record<string, string[]>;
   works: WorkHere[];
   vows: VowHere[];
+  posts?: PostHere[];
 }
 
 /** A vow published here (round 3). */
@@ -117,6 +124,19 @@ export interface VowHere {
   words: string;
   title: string;
   price: number;
+  at: number;
+  /** Under a deal between separate people: the deal (its version), and every person sharing in it. */
+  deal?: string | null;
+  shares?: [string, number][] | null;
+}
+
+/** A plain post under a deal between separate people: its tips go to the deal (decided: "with a tip IF there is a split the target is the agreement not the act"). */
+export interface PostHere {
+  post: string;
+  deal: string;
+  as: string;
+  text: string;
+  shares: [string, number][];
   at: number;
 }
 
@@ -147,12 +167,15 @@ interface CollectiveHere {
 
 export class Publishing {
   private plans = new Map<string, Plan>();
+  readonly deals: Deals;
 
   constructor(
     private desk: Desk,
     private store: Store,
     private real: Real | null = null,
-  ) {}
+  ) {
+    this.deals = new Deals(desk, store, () => (this.real ? this.real.contacts().map((c) => ({ id: c.id, name: c.name })) : []), () => this.settings());
+  }
 
   // ------------------------------------------------------------ the book
 
@@ -219,7 +242,7 @@ export class Publishing {
   // ------------------------------------------------------------ who acts
 
   /** The tab's state: who acts (the identities held, and the collectives the one acting belongs to), and what was published here. */
-  state(): Promise<{ actors: Actor[]; acting: string | null; as: string | null; works: WorkHere[]; vows: VowHere[]; held: string[]; say: string[]; unit: string }> {
+  state(): Promise<{ actors: Actor[]; acting: string | null; as: string | null; works: WorkHere[]; vows: VowHere[]; posts: PostHere[]; deals: DealShown[]; dealPayee: string | null; sharesSay: string[]; held: string[]; say: string[]; unit: string }> {
     return this.desk.serial(async () => {
       const b = this.book();
       const held = this.held();
@@ -234,7 +257,9 @@ export class Publishing {
       }
       const all = actors(acting ? [acting] : [], cs);
       const as = chosen(all, b.as ?? acting)?.id ?? null;
-      return { actors: all, acting, as, works: b.works.filter((w) => w.member === acting || w.as === acting), vows: b.vows.filter((w) => w.member === acting || w.as === acting), held, say: PUBLISHING_SAY, unit: say({ unit: REGTEST_UNIT, value: 2 }, new Set([REGTEST_UNIT])).replace(/^2 /, '') };
+      const deals = acting ? this.deals.of(acting).map((d) => this.dealShown(d)) : [];
+      const dealPayee = acting ? this.deals.nextPayee(this.me(acting)).id : null;
+      return { actors: all, acting, as, works: b.works.filter((w) => w.member === acting || w.as === acting), vows: b.vows.filter((w) => w.member === acting || w.as === acting), posts: (b.posts ?? []).filter((x) => x.as === acting), deals, dealPayee, sharesSay: SHARES_SAY, held, say: PUBLISHING_SAY, unit: say({ unit: REGTEST_UNIT, value: 2 }, new Set([REGTEST_UNIT])).replace(/^2 /, '') };
     });
   }
 
@@ -302,7 +327,7 @@ export class Publishing {
    * who signs, at what price, what the buyer gets, and the stated costs.
    * `data`: the file's bytes, base64.
    */
-  prepareWork(a: { media: string; data: string; title: string; price: string; referral?: string; service?: string; serviceKey?: string }): Promise<{ plan: string; digest: string; reading: Reading }> {
+  prepareWork(a: { media: string; data: string; title: string; price: string; referral?: string; service?: string; serviceKey?: string; shares?: SharesIn | null }): Promise<{ plan: string; digest: string; reading: Reading }> {
     return this.desk.serial(async () => {
       const b = this.book();
       const acting = b.acting && this.held().includes(b.acting) ? b.acting : this.held()[0];
@@ -363,6 +388,22 @@ export class Publishing {
       }
       const names = this.store.names();
       const priceSaid = Number.isSafeInteger(price) && price > 0 ? say({ unit: REGTEST_UNIT, value: price }, new Set([REGTEST_UNIT])) : '?';
+      // Who shares in it (this round): a deal between separate people, its split service dividing every payment.
+      if (sharing(a.shares)) {
+        if (collective) blocking.push('A collective’s income is shared by its own money terms (Collectives, Money): “Who shares in it” is for yourself with other people.');
+        if (referral !== null || a.service?.trim() || a.serviceKey?.trim()) blocking.push('With “Who shares in it”, the referral share and the split service are the deal’s, given there.');
+        const offerWords = sharedWordsFor(media, priceSaid, a.shares!.referral);
+        const dw = { what: `a protected ${MEDIA_WORDS[media]}`, kind: 'work' as const, title, shares: a.shares!, object: work?.work ?? sha256('a work to come') };
+        return this.dealPlan(me, dw, blocking, [
+          { text: `The ${STRIPPED[media]}, ${work ? `${work.size.toLocaleString('en')} bytes, fingerprint ${work.work.slice(0, 16)}…` : 'not read'}: locked with its own key, made for the deal’s own payee; its locked bytes are uploaded, and its post published, only once every person has signed.` },
+          { text: `Its offer, public, under the deal and paying the deal’s payee: ${priceSaid}. Its words: “${offerWords}”` },
+          { text: 'The key: kept here to deliver to each buyer, and sealed to every person sharing in it once announced.' },
+        ], ['MOR Edubba shared protected file, version 1', media, work?.work ?? '', price, offerWords], (d, payee) => {
+          if (!work) throw new Error('The file was not read. Nothing was signed.');
+          const forPayee = lockWork({ media, bytes, price: { unit: REGTEST_UNIT, value: price }, relays: s.relays, forId: payee });
+          return { work: { media, payload: forPayee.payload, locked: forPayee.locked, key: forPayee.key, price, words: offerWords, work: forPayee.work }, post: title, d };
+        }, `A shared protected ${MEDIA_WORDS[media]}: “${title || '…'}”`);
+      }
       const words = judged ? judgedWordsFor(media, priceSaid, referral!) : offerWordsFor(media, priceSaid, referral);
       const who = collective ? `the collective ${short(as)}, signed with your own key for it (${names(acting)})` : names(acting);
       const reading: Reading = {
@@ -442,7 +483,8 @@ export class Publishing {
         const terms = dealTermsPayload({
           party: me.id,
           text: `A deal of one party for one work, “${a.title}”: its stake held wholly by its seller; ${a.judged.referral}% of each payment to whoever reposted it where the buyer found it, the rest to the seller, divided by the split service named.`,
-          object: publication.id,
+          // The stake is in the work, by its hash (the publication's field 1), as the core reads what a purchase pays for (Agreements rule 12); it named the publication's id until this round, which the core judges no purchase.
+          object: a.work.work,
           plan: { stakes: [[0, 1_000_000]], roles: [['referral', a.judged.referral * 10_000]], cmip: SPLIT_CMIP },
           payeeGrant: grant.id,
         });
@@ -531,13 +573,103 @@ export class Publishing {
     };
   }
 
+  // ------------------------------------------------------------ a deal between separate people (this round)
+
+  /**
+   * The read-back of a work, a vow or a post shared with other people, and
+   * the plan that signs and sends its deal once confirmed with its digest.
+   * Said before anything is signed: the work then belongs to the deal, and
+   * every payment for it goes to the split service.
+   */
+  private dealPlan(
+    me: TestIdentity,
+    dw: { what: string; kind: DealHere['kind']; title: string; shares: SharesIn; object: string },
+    blocking: string[],
+    published: Line[],
+    digestParts: unknown[],
+    build: (d: DealDraft, payee: string) => { work?: { media: SealedMedia; payload: Uint8Array; locked: Uint8Array; key: string; price: number; words: string; work: string }; vow?: { words: string; price: number; offerWords: string }; post: string },
+    title: string,
+  ): { plan: string; digest: string; reading: Reading } {
+    const r = this.deals.reading({ founder: me, title: dw.title, what: dw.what, kind: dw.kind, a: dw.shares, object: dw.object });
+    const all = [...blocking, ...r.blocking];
+    const key = dw.shares.serviceKey.trim().toLowerCase();
+    const names = this.deals.names();
+    const reading: Reading = {
+      title,
+      summary: [
+        `Shared: a deal between ${r.draft ? r.draft.shares.map(([id, n]) => `${names(id)} (${pct(n)})`).join(', ') : 'the people named'}, set up and signed here by you, then by each of them in their own Edubba.`,
+        'Before anything is signed: the work then belongs to the deal, and every payment for it, a tip included, goes to the split service, which divides it and pays each of you.',
+      ],
+      sections: [{ heading: 'What is published', lines: published }, ...r.sections],
+      plain: [{ heading: 'The deal’s words, which everyone signs', text: r.summary }],
+      blocking: all,
+    };
+    const digest = sha256(cborEncode([...digestParts, me.id, dw.title, r.draft?.shares ?? null, r.draft?.referral ?? null, r.payee, r.service, key, this.settings().relays]));
+    const plan = this.plan(digest, async () => {
+      if (all.length || !r.draft || !r.service) throw new Error('This cannot be signed while a reason above stands. Nothing was signed.');
+      const built = build(r.draft, r.payee);
+      const out = await this.deals.start(me, { kind: dw.kind, title: dw.title, what: dw.what, draft: r.draft, service: r.service, key, work: built.work, vow: built.vow, post: built.post });
+      return { title: 'Signed by you, sent to each person', lines: out.lines, acts: out.deal.acts };
+    });
+    return { plan, digest, reading };
+  }
+
+  /**
+   * A plain post under a deal between separate people (this round): its
+   * tips go to the deal, through its split service (decided: "with a tip IF
+   * there is a split the target is the agreement not the act"). The post
+   * names the deal in `refs` (Text rule 14); the deal's stake is in its words.
+   */
+  preparePost(a: { text: string; shares: SharesIn }): Promise<{ plan: string; digest: string; reading: Reading }> {
+    return this.desk.serial(async () => {
+      const b = this.book();
+      const acting = b.acting && this.held().includes(b.acting) ? b.acting : this.held()[0];
+      if (!acting) throw new Error('No identity is held here. Nothing was prepared.');
+      const me = this.me(acting);
+      const blocking: string[] = [];
+      const text = a.text.normalize('NFC').trim();
+      if (!text) blocking.push('Write the post: its words.');
+      if (text.length > 2000) blocking.push('A post: at most 2,000 characters.');
+      if (b.as && b.as !== acting) blocking.push('A collective’s income is shared by its own money terms (Collectives, Money): a shared post is yours with other people.');
+      if (!sharing(a.shares)) blocking.push('Name at least one person it is shared with.');
+      return this.dealPlan(me, { what: 'a post', kind: 'post', title: text.slice(0, 80), shares: a.shares, object: workHash(new TextEncoder().encode(text)) as string }, blocking, [
+        { text: `The post, public once every person has signed, its words: “${text || '…'}”, naming the deal (so a tip on it goes to the deal).` },
+        { text: 'Nothing is sold: a tip is a tip, divided like a sale, and nobody owes it back (the reading, question 5).' },
+      ], ['MOR Edubba shared post, version 1', text], () => ({ post: text }), 'A shared post');
+    });
+  }
+
+  /** A deal as the page shows it: who has signed, what waits, what was announced. */
+  private dealShown(d: DealHere): DealShown {
+    return { id: d.id, version: d.version, kind: d.kind, title: d.title, payee: d.payee, service: d.service, shares: d.shares, referral: d.referral, state: d.state, signed: this.deals.signedWords(d), post: d.post.id, offer: d.offer, at: d.at };
+  }
+
+  /** Look for signatures on the deals waiting, and announce each one every person signed. */
+  gatherDeals(): Promise<{ lines: Line[] }> {
+    return this.desk.serial(() => this.gatherDealsNow());
+  }
+
+  private async gatherDealsNow(): Promise<{ lines: Line[] }> {
+    return this.deals.gather(async (d) => {
+      const me = this.me(d.founder);
+      const r = await this.deals.announce(me, d);
+      const b = this.book();
+      const s = this.settings();
+      if (d.work) b.works.unshift({ publication: d.work.publication, offer: d.offer!, post: r.post, as: me.id, member: me.id, collective: false, media: d.work.media, title: d.title, price: d.work.price, words: d.work.words, relays: s.relays, at: now(), key: d.work.key, delivered: {}, toMembers: null, deal: d.version, payee: d.payee, shares: d.shares });
+      else if (d.vow) b.vows.unshift({ vow: d.vow.vow, offer: d.offer!, post: r.post, as: me.id, member: me.id, collective: false, words: d.vow.words, title: d.title, price: d.vow.price, at: now(), deal: d.version, shares: d.shares });
+      else (b.posts ??= []).unshift({ post: r.post, deal: d.version, as: me.id, text: d.post.text, shares: d.shares, at: now() });
+      this.save(b);
+      return r.lines;
+    });
+  }
+
   // ------------------------------------------------------------ vows (Agreements rule 13)
 
   /**
    * A vow read back before anything is signed: its words, its price, who
    * signs, and what a buyer may do with each sale (confirm or contest it).
    */
-  prepareVow(a: { words: string; title: string; price: string }): Promise<{ plan: string; digest: string; reading: Reading }> {
+  prepareVow(a: { words: string; title: string; price: string; shares?: SharesIn | null }): Promise<{ plan: string; digest: string; reading: Reading }> {
     return this.desk.serial(async () => {
       const b = this.book();
       const acting = b.acting && this.held().includes(b.acting) ? b.acting : this.held()[0];
@@ -564,6 +696,15 @@ export class Publishing {
       const priceSaid = Number.isSafeInteger(price) && price > 0 ? say({ unit: REGTEST_UNIT, value: price }, new Set([REGTEST_UNIT])) : '?';
       const offerWords = vowOfferWords(words, priceSaid);
       const names = this.store.names();
+      // Who shares in it (this round): a vow's deal is two versions, its stake first its signer's (Agreements rule 14), then shared.
+      if (sharing(a.shares)) {
+        if (collective) blocking.push('A collective’s income is shared by its own money terms (Collectives, Money): “Who shares in it” is for yourself with other people.');
+        return this.dealPlan(me, { what: 'a vow', kind: 'vow', title, shares: a.shares!, object: sha256(`a vow to come: ${words}`) }, blocking, [
+          { text: `The vow, public, its first act its name for good: “${words || '…'}”` },
+          { text: `Its offer, public, under the deal’s second version and paying the deal’s payee: ${priceSaid}. Its words: “${offerWords}”` },
+          { text: `A post naming both, “${title || '…'}”, published only once every person has signed.` },
+        ], ['MOR Edubba shared vow, version 1', words, price], () => ({ vow: { words, price, offerWords }, post: title }), `A shared vow: “${title || '…'}”`);
+      }
       const reading: Reading = {
         title: `A vow: “${title || '…'}”`,
         summary: [
@@ -727,6 +868,131 @@ export class Publishing {
     });
   }
 
+  /**
+   * The sales of works shared with others (this round): under a deal between
+   * separate people this identity is a party of, or of a collective it is a
+   * member of, as the split service told each party (the money messages
+   * cMIP, draft 4, 7.2.3; draft 5, for a deal). Beside each, the buyer's
+   * contests (F386), read from the buyer's claim of the payment, which the
+   * buyer's Damgar seals to every party or member (decided with the MOR
+   * lead, 23 October 2026; the money messages cMIP, draft 5, 9), and the
+   * public contests; "unknown" where the core cannot say, never "none".
+   */
+  sharedSales(): Promise<{ sales: SharedSale[]; problems: string[] }> {
+    return this.desk.serial(async () => {
+      const b = this.book();
+      const s = this.settings();
+      const held = this.held();
+      const acting = b.acting && held.includes(b.acting) ? b.acting : (held[0] ?? null);
+      if (!acting) return { sales: [], problems: [] };
+      const me = this.me(acting);
+      const places = list([...s.relays, ...s.homes]);
+      const seen = await this.inboxOf(me);
+      const problems: string[] = [];
+      const sales: SharedSale[] = [];
+      const claims: { id: string; buyer: string; offer: string; act: Uint8Array; key: Uint8Array | null }[] = [];
+      for (const o of seen.values()) {
+        const d = o.d;
+        if (d.spec === MIRS.money && d.type === 3 && d.signer && d.payload) {
+          try {
+            const c = (moneyRead(3, d.payload) as { act: { fulfils?: string } }).act;
+            if (c.fulfils) claims.push({ id: d.id, buyer: d.signer, offer: c.fulfils, act: o.act, key: o.key });
+          } catch {
+            // not a claim this reads
+          }
+        }
+      }
+      for (const o of seen.values()) {
+        const d = o.d;
+        if (!d.spec || !MESSAGES_SPECS.includes(d.spec) || d.type !== TYPES.sale || !d.payload) continue;
+        const sale = readSale(d.payload);
+        if (sales.some((x) => x.receipt === sale.receipt)) continue;
+        const offerAct = await this.fetchAct(sale.offer, places);
+        const od = offerAct ? (describeAct(offerAct) as { signer?: string; payload?: Uint8Array }) : null;
+        const under = od?.payload ? (cborDecode(od.payload) as Map<number, unknown>).get(0) : null;
+        if (!(under instanceof Uint8Array)) continue;
+        const version = hex(under);
+        const deal = await readDeal(version, places, s.via).catch(() => null);
+        let kind: SharedSale['kind'];
+        let title: string;
+        let parties: string[];
+        if (deal) {
+          if (!deal.parties.includes(me.id)) continue;
+          kind = 'deal';
+          title = deal.name ?? 'a shared work';
+          parties = list([...deal.parties, ...(deal.service ? [deal.service] : [])]);
+        } else {
+          const t = (await termsAt(version, places, s.via).catch(() => null)) as { parties?: string[]; grammar?: unknown } | null;
+          if (!t?.grammar || !t.parties?.includes(me.id)) continue;
+          kind = 'collective';
+          title = `a work of the collective ${short(od!.signer ?? '?')}`;
+          parties = list([...t.parties, od!.signer ?? '']);
+        }
+        const mine = claims.filter((c) => c.buyer === sale.buyer && c.offer === sale.offer);
+        let beside: ContestsBeside;
+        if (!mine.length) beside = { state: 'unknown', contests: [], why: 'the buyer’s claim of the payment was not found sealed to you' };
+        else {
+          // The receipt sealed to every party or member is held too: a collective's payment is a sale once its chain records it (Agreements rule 12).
+          const receipt = seen.get(sale.receipt);
+          const r = await purchaseContests({ purchases: [...mine.map((c) => ({ act: c.act, key: c.key })), ...(receipt ? [{ act: receipt.act, key: receipt.key }] : [])], parties: list([...parties, sale.buyer, me.id]), relays: places, via: s.via }).catch((e) => ({ by: {} as Record<string, ContestsBeside>, problems: [err(e)] }));
+          problems.push(...r.problems);
+          const read = mine.map((c) => r.by[c.id]).filter(Boolean);
+          beside = read.some((x) => x.state === 'shown') ? { state: 'shown', contests: read.flatMap((x) => x.contests), noPurchase: read.every((x) => x.noPurchase) ? read[0].noPurchase : null } : (read[0] ?? { state: 'unknown', contests: [] });
+        }
+        sales.push({ kind, title, version, offer: sale.offer, publication: sale.publication, buyer: sale.buyer, receipt: sale.receipt, claim: mine[0]?.id ?? null, beside });
+      }
+      return { sales, problems };
+    });
+  }
+
+  /** Every sealed act in this identity's inbox and homes, opened. */
+  private async inboxOf(me: TestIdentity): Promise<Map<string, { d: Opened; act: Uint8Array; key: Uint8Array | null }>> {
+    const s = this.settings();
+    const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
+    const seen = new Map<string, { d: Opened; act: Uint8Array; key: Uint8Array | null }>();
+    let inbox = list([...me.f.homes.map((h) => h.hint), ...s.relays]);
+    try {
+      const l = await lookUp(me.id, list([...s.homes, ...s.relays, ...me.f.homes.map((h) => h.hint)]), s.via);
+      inbox = list([...l.routes.routes.filter((r) => r.kind === 1).flatMap((r) => r.hints), ...inbox]);
+    } catch {
+      // the places named here
+    }
+    for (const h of inbox) {
+      let after: number | undefined;
+      try {
+        for (;;) {
+          const page = await relayAt(h, s.via).feed({ to: me.id, after });
+          for (const it of page.items) {
+            if (it.kind !== 'sealed') continue;
+            for (const sec of secrets) {
+              try {
+                const o = openSealed(it.item, me.id, sec) as { act: Uint8Array; key?: Uint8Array | null; described: Opened };
+                seen.set(o.described.id, { d: o.described, act: new Uint8Array(o.act), key: o.key ? new Uint8Array(o.key) : null });
+                break;
+              } catch {
+                // the next key
+              }
+            }
+          }
+          if (!page.items.length || page.next === after) break;
+          after = page.next;
+        }
+      } catch {
+        // away
+      }
+    }
+    return seen;
+  }
+
+  private async fetchAct(id: string, places: string[]): Promise<Uint8Array | null> {
+    const s = this.settings();
+    for (const h of places) {
+      const a = await relayAt(h, s.via).getAct(id).catch(() => null);
+      if (a) return a;
+    }
+    return null;
+  }
+
   /** Contest a sale whose buyer is held here (Agreements type 14, F253): public, naming the sale and the vow, the promise not kept in words if given. */
   contestSale(a: { vow: string; sale: string; buyer: string; promise: string }): Promise<Done> {
     return this.desk.serial(async () => {
@@ -816,14 +1082,16 @@ export class Publishing {
       if (!w || w.delivered[sale.buyer] || !w.key) continue;
       const r = seen.get(sale.receipt);
       const rc = r?.payload && r.spec === MIRS.money && r.type === 2 ? (moneyRead(2, r.payload) as { act: { payer?: string; payee: string; fulfils: string } }).act : null;
-      if (!r || r.signer !== w.as || !rc || rc.payer !== sale.buyer || rc.payee !== w.as || rc.fulfils !== w.offer) {
+      // Under a deal between separate people, the receipt is signed in its own payee's name (its grant key).
+      const payee = w.payee ?? w.as;
+      if (!r || r.signer !== payee || !rc || rc.payer !== sale.buyer || rc.payee !== payee || rc.fulfils !== w.offer) {
         lines.push({ text: `A sale told by ${short(d.signer ?? '?')} was set aside: its receipt, signed in the payee’s name, was not found sealed to you.`, tone: 'warn' });
         continue;
       }
       try {
         if (!w.collective) {
           w.delivered[sale.buyer] = await deliverKey(me, sale.buyer, w.publication, w.key, { relays: s.relays, via: s.via, save: () => this.store.saveIdentity(me), current: () => this.desk.keyCurrent(me.id) });
-          lines.push({ text: `The key of “${w.title}” was delivered to ${short(sale.buyer)}, sealed to them: a sale your deal’s split service receipted.`, tone: 'ok' });
+          lines.push({ text: `The key of “${w.title}” was delivered to ${short(sale.buyer)}, sealed to them: a sale your deal’s split service receipted${w.shares ? ', told to every person sharing in it' : ''}.`, tone: 'ok' });
           continue;
         }
         w.delivered[sale.buyer] = await this.collectiveKeyDelivery(me, w, sale.buyer);
@@ -869,9 +1137,10 @@ export class Publishing {
   /** Deliver the keys of what the sellers held here sold, as their Damgar told of each sale (type 6). */
   deliver(): Promise<{ lines: Line[] }> {
     return this.desk.serial(async () => {
+      // Deals between separate people waiting for signatures: looked for first, each one every person signed announced.
+      const lines: Line[] = (await this.gatherDealsNow().catch((e) => ({ lines: [{ text: `The deals’ signatures could not be read: ${err(e)}`, tone: 'warn' as const }] }))).lines.filter((l) => l.tone);
       const b = this.book();
       const s = this.settings();
-      const lines: Line[] = [];
       for (const id of list(b.works.filter((w) => !w.collective && !w.deal && w.key).map((w) => w.as))) {
         if (!this.store.holds(id)) continue;
         const me = this.me(id);
@@ -914,6 +1183,47 @@ const STRIPPED: Record<SealedMedia, string> = {
   video: 'film (an MP4, stripped to the film alone first, every frame byte for byte: the video Module, rule 10)',
   audio: 'recording (an M4A, stripped to the sound alone first, every sample byte for byte: the audio Module, rule 10)',
 };
+
+/** Whether "Who shares in it" names anyone. */
+function sharing(a: SharesIn | null | undefined): a is SharesIn {
+  return !!a && a.with.some((w) => w.who.trim());
+}
+
+/** The offer's words under a deal between separate people: the referral, if any, is the deal's split plan's, paid by its split service. */
+export function sharedWordsFor(media: SealedMedia, price: string, referral: string): string {
+  const r = Number((referral ?? '').trim().replace('%', '')) || 0;
+  return `A sealed ${MEDIA_WORDS[media]}, opened once paid: ${price}. Shared under its deal: its split service divides each payment${r ? `, ${r}% to the repost the buyer names` : ''}.`;
+}
+
+/** A sale of a work shared with others, as a party or member sees it. */
+export interface SharedSale {
+  kind: 'deal' | 'collective';
+  title: string;
+  version: string;
+  offer: string;
+  publication: string;
+  buyer: string;
+  receipt: string;
+  claim: string | null;
+  beside: ContestsBeside;
+}
+
+/** A deal set up here, as the page shows it. */
+export interface DealShown {
+  id: string;
+  version: string;
+  kind: DealHere['kind'];
+  title: string;
+  payee: string;
+  service: string;
+  shares: [string, number][];
+  referral: number;
+  state: DealHere['state'];
+  signed: string;
+  post: string | null;
+  offer: string | null;
+  at: number;
+}
 
 export function judgedWordsFor(media: SealedMedia, price: string, referral: number): string {
   return `A sealed ${MEDIA_WORDS[media]}, opened once paid: ${price}. Under its deal, ${referral}% of each payment goes to the repost the buyer names, paid by its split service.`;
