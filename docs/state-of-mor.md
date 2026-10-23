@@ -4,6 +4,10 @@
 
 *Last updated: 19 October 2026, after pull request 80 (round 3) and the server session.*
 
+**23 October 2026, morning:** S7d done (pull request 100, F386): a buyer may contest their own purchase, shown beside it, moving nothing; the binding writes and reads the signer's hint (field 9), display only; 110 verdict vectors. Round 4 (suite, pull request 101) done, nothing core. Order: these records, the suite's records, S7d merged with its releases, then round 4.
+
+**22 October 2026, late:** the C verifier carried to the second box (`MOR-CBOX` pull request 2): 334 of 334 checks agree, the heavy rules built from the texts alone; 16 new questions. Main green after the suite's #97 and its six releases. Next (23 October, after the leads' meeting): the MOR lead's records in one commit, the suite's records, S7d, round 4.
+
 **22 October 2026, evening (later):** S7c merged (pull request 99, F383); the second box sealed in `MOR-CBOX` from MOR commit `a68e7b1`; the C verifier carried to it (`claude/c-verifier-2`). S7c's five small questions with Fable meanwhile.
 
 **22 October 2026, evening:** the fixes after Fable merged (pull request 98, S7 and S7b; F380, F381): both of Fable's conditions met, nine sentences written into the texts, check 7 deciding what is kept and never validity, and the heavy rules shown by vectors (a collective's closing and fork, an agreement as a party, a chain of judgment): 108 verdict vectors. S7b's four questions go to Fable. Next: a second box, the C verifier against it, the rehearsal, the freeze.
