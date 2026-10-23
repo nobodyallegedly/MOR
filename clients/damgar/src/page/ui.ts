@@ -268,6 +268,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   const shortOf = (w: Who) => shortForm(v.formOf(w.id, 'mid'));
   const paymentCard = (p: PaymentShown, forPay: boolean) => {
     const bad = p.proofs.some((x) => x.rail.answer === 'invalid');
+    // S7e: a payment whose claims and receipts no rail answer here shows valid is unknown, with what the rail said: never shown as paid.
+    const unverified = p.proofs.length > 0 && !bad && !p.proofs.some((x) => x.rail.answer === 'valid');
     // Its act: the first claim or receipt, else the invoice request that began it; signed by the payer (you, paying out) or the payee.
     const first = p.proofs[0];
     // What Rely on it and Anchor it offer: its receipts first, then its claims, then the invoice request that began it (decided: "receipts and claims first of all").
@@ -283,7 +285,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       kind: p.to === 'vault' && p.other.me ? 'to your vault' : p.side === 'out' ? 'you pay' : 'paid to you',
       text: `${p.side === 'out' ? (p.other.me ? 'To your vault' : `To ${shortOf(p.other)}`) : `From ${shortOf(p.other)}`} · ${p.amount.said}`,
       html: `<div class="k-box">${v.payment(p, forPay)}</div>`,
-      labels: [...(p.deal ? [{ text: `under the deal “${p.deal}”` }] : []), { text: p.stageSaid }, ...[...new Set(p.proofs.map((x) => `${x.kind === 'claim' ? 'claim' : 'receipt'}: ${x.how}`))].map((text) => ({ text }))],
+      labels: [...(p.deal ? [{ text: `under the deal “${p.deal}”` }] : []), { text: p.stageSaid }, ...[...new Set(p.proofs.map((x) => `${x.kind === 'claim' ? 'claim' : 'receipt'}: ${x.how}`))].map((text) => ({ text })), ...(unverified ? [{ text: v.unverifiedSaid(p), tone: 'warn' as const }] : [])],
       verified: v.confirmed(p),
       alarm: bad ? 'A proof that does not hold' : null,
       lines: [...p.lines, ...p.proofs.map((x) => ({ text: `${x.kind === 'claim' ? 'Claim' : 'Receipt'} by ${x.by.me ? 'you' : x.by.short}: the rail says ${x.rail.answer}${x.rail.why ? ` (${x.rail.why})` : ''}; beside it ${x.beside.answer}${x.beside.why ? ` (${x.beside.why})` : ''}; ${x.how}.`, tone: x.rail.answer === 'invalid' ? ('bad' as const) : undefined }))],
@@ -371,7 +373,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         return `<h2>Shared deals</h2>${v.say('The deals you share in with other people: what was paid to each, and what its split service paid you.', ['Each payment to a deal is receipted by its split service in the name of the deal’s own payee, and sealed to every person sharing in it; each split names what it pays each of you. A tip to you personally is under Payments, not here.'])}${
           ds
             .map((d) => `<h3>“${v.e(d.name)}” <span class="k-small k-soft k-mono">${v.e(shortForm(v.formOf(d.version)))}</span></h3><div class="k-feed">${[
-              ...d.payments.map((x) => cardOf({ id: x.receipt, who: x.payer, kind: x.kind, text: `${x.kind === 'a tip' ? 'A tip' : 'A sale'} to the deal · ${x.amount.said}`, labels: [{ text: x.standing }], verified: true, lines: [] })),
+              ...d.payments.map((x) => cardOf({ id: x.receipt, who: x.payer, kind: x.kind, text: `${x.kind === 'a tip' ? 'A tip' : 'A sale'} to the deal · ${x.amount.said}`, labels: [{ text: x.standing, ...(x.rail.answer === 'valid' ? {} : { tone: 'warn' as const }) }], verified: x.rail.answer === 'valid', lines: [] })),
               ...d.payouts.map((x) => cardOf({ id: x.split, who: { id: meId(), short: '', me: true }, kind: 'your payout', text: `Its split pays you ${x.amount.said}${x.role ? ` (${x.role})` : ''}`, labels: [{ text: x.paid ? 'paid to you by its split service, its rail answer valid' : 'named in its split; its payment here is not yet shown valid by its rail: unknown' }], verified: x.paid, lines: [] })),
             ].join('') || '<p class="k-empty">Nothing yet.</p>'}</div>`)
             .join('') || '<p class="k-empty">No deal shared with you yet: a deal is set up in Edubba, where you sign it.</p>'

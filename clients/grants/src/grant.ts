@@ -292,6 +292,8 @@ export async function authorityOf(act: Uint8Array, hints: string[], via: Via = {
       ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under ${names(d.signer)}’s grant ${d.binding.slice(0, 8)}…`}: backed (Agreements rule 80).`
       : b.kind === 'not-backed'
         ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…`}, which does not back it: ${b.reason}.`
+        : b.kind === 'disputed'
+          ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…`}: disputed, valid but conferring nothing unless its grantor adopts it (the grant was revoked; a keeper recorded the act first: Agreements rule 76, S7e).`
         : `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…`}: whether it backs it is unknown (${b.reason ?? 'not readable'}).`;
   return { grant: d.binding, grantor: d.signer, grantee: g.grantee, lane, backing: b.kind, reason: b.reason ?? null, limits, words: plain };
 }

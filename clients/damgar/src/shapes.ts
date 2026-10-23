@@ -100,7 +100,7 @@ export interface SharedShown {
   version: string;
   name: string;
   /** Every payment the service receipted in the deal's payee's name, sealed to every party: a sale or a tip. */
-  payments: { receipt: string; payer: Who; amount: Shown; kind: 'a sale' | 'a tip'; standing: string }[];
+  payments: { receipt: string; payer: Who; amount: Shown; kind: 'a sale' | 'a tip'; standing: string; /** Its rail answer here (S7e): anything but valid is shown unknown, with its reason. */ rail: Verdict }[];
   /** Your payouts, as each split the service sealed to you names them; `paid` where your Damgar holds a payment of that amount from the service. */
   payouts: { split: string; amount: Shown; role: string | null; paid: boolean }[];
 }

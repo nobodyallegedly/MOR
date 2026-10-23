@@ -497,6 +497,11 @@ export interface ContestsBeside {
 }
 
 /** The contests beside a sale: each in red, the promise not kept in words where said; "unknown" where the core cannot say; nothing where there is none. */
+/** Track: a vow's sale whose answer rests on a payment not verified here reads unknown, with its reason, never pending or paid (S7e). */
+export function saleUnknown(s: { state: string; why?: string | null }): { text: string; tone: 'warn' }[] {
+  return s.state === 'unknown' ? [{ text: `unknown: ${s.why ?? 'a receipt or claim it rests on has no rail answer here'}`, tone: 'warn' }] : [];
+}
+
 export function contestsBeside(c: ContestsBeside | undefined): string {
   if (!c) return '';
   if (c.state === 'unknown') return `<div class="k-small k-soft edubba-beside">Its buyer’s contests: unknown (${e(c.why ?? 'not read')}).</div>`;

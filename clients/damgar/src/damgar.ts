@@ -1125,7 +1125,7 @@ export class Damgar {
         const underGrant = (st === 'scoped' || st === 'unknown') && !!o.described.binding;
         const a = underGrant ? await this.authority(o, [...places, ...s.relays], s.via) : null;
         if (a) {
-          st = a.backing === 'backed' || a.backing === 'binds' ? 'valid' : `signed under a grant that does not back it: ${a.words}`;
+          st = a.backing === 'backed' || a.backing === 'binds' ? 'valid' : a.backing === 'disputed' ? `disputed: ${a.words}` : `signed under a grant that does not back it: ${a.words}`;
           (book.authorities ??= {})[d.id] = a.words;
         }
         if (st !== 'valid') {
@@ -2598,7 +2598,7 @@ export class Damgar {
       const { me, s, book } = await this.ctx();
       const acc = this.acceptedSet(await this.accepted(me));
       const shown = (a: Amount): Shown => ({ ...a, said: say(a, acc) });
-      const others = [...Object.values(book.payments).map((p) => p.other), ...Object.values(book.requestsIn).map((r) => r.from), ...Object.values(book.requestsOut).map((r) => r.to)];
+      const others = [...Object.values(book.payments).map((p) => p.other), ...Object.values(book.requestsIn).map((r) => r.from), ...Object.values(book.requestsOut).map((r) => r.to), ...Object.values(book.shared ?? {}).map((x) => x.payee)];
       const problems: string[] = [];
       let l: Lookup | null = null;
       try {
@@ -2666,17 +2666,51 @@ export class Damgar {
         if (!e) shared.set(d.version, (e = { version: d.version, name: d.name ?? 'a shared work', payments: [], payouts: [] }));
         return e;
       };
+      // Its rail answer, as this Damgar reads it (S7e): a payment whose answer is not given here is unknown, with its reason, never shown verified.
+      const railOf = (receipt: string, whose: string): { rail: Verdict; standing: string } => {
+        let rail: Verdict = { answer: 'unknown', why: 'its receipt could not be judged here' };
+        try {
+          if (l) rail = (l.verifier.moneyJudge(receipt, opts) as { rail: Verdict }).rail;
+        } catch (e) {
+          rail = { answer: 'unknown', why: message(e) };
+        }
+        return { rail, standing: rail.answer === 'valid' ? `receipted ${whose}; the rail says valid` : `receipted ${whose}; the rail says ${rail.answer}${rail.why ? ` (${rail.why})` : ''}: whether it was paid is unknown here` };
+      };
       for (const [receipt, x] of Object.entries(book.shared ?? {})) {
         const d = await dealOf(x.fulfils, null);
         if (!d || !d.parties.includes(me.id)) continue;
-        entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown(x.amount), kind: x.purchase ? 'a sale' : 'a tip', standing: 'receipted by its split service in the deal’s payee’s name' });
+        entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown(x.amount), kind: x.purchase ? 'a sale' : 'a tip', ...railOf(receipt, 'by its split service in the deal’s payee’s name') });
       }
+      // A collective's money agreement this identity is a member of (its split service's splits name it): shown beside the deals, its payments judged the same way.
+      const collectives = new Set<string>();
+      const places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
       for (const [split, x] of Object.entries(book.splits ?? {})) {
-        if (!deals.has(x.agreement)) deals.set(x.agreement, await readDeal(x.agreement, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via).catch(() => null));
+        if (!deals.has(x.agreement)) {
+          let d = await readDeal(x.agreement, places, s.via).catch(() => null);
+          if (!d) {
+            const t = (await termsAt(x.agreement, places, s.via).catch(() => null)) as { parties?: string[]; grammar?: unknown } | null;
+            if (t?.grammar && t.parties?.includes(me.id)) {
+              d = { version: x.agreement, name: 'a collective’s work', text: '', parties: t.parties, owners: [], payee: null, service: x.service, grant: null, referral: 0 } as unknown as DealRead;
+              collectives.add(x.agreement);
+            }
+          }
+          deals.set(x.agreement, d);
+        }
         const d = deals.get(x.agreement);
         if (!d) continue;
+        // The unit, from the receipt where held, else from the service's payment of this payout.
+        const unitOf = (value: number) => x.unit ?? book.shared?.[x.receipt]?.amount.unit ?? payments.find((p) => p.side === 'in' && p.other.id === x.service && p.amount.value === value)?.amount.unit ?? null;
+        if (collectives.has(x.agreement) && !entry(d).payments.some((y) => y.receipt === x.receipt)) {
+          const r = this.moneyOf(book, x.receipt) as { amount?: Amount; payer?: unknown; purchase?: unknown } | null;
+          const mine = x.mine.reduce((n, m) => n + m.amount, 0);
+          const judged = r
+            ? railOf(x.receipt, 'in the collective’s name')
+            : // Sealed to the collective, whose keys this Damgar (holding your identity alone) does not hold: Edubba opens it, Damgar cannot judge it.
+              { rail: { answer: 'unknown', why: 'its receipt is sealed to the collective, which this Damgar does not open' } as Verdict, standing: 'your share named in its split service’s split; its receipt is sealed to the collective, which this Damgar does not open: whether it was paid is unknown here' };
+          entry(d).payments.push({ receipt: x.receipt, payer: this.who(typeof r?.payer === 'string' ? r.payer : '', me.id), amount: shown(r?.amount ?? { unit: unitOf(mine) ?? '', value: mine }), kind: r && !r.purchase ? 'a tip' : 'a sale', ...judged });
+        }
         for (const m of x.mine) {
-          const unit = x.unit ?? book.shared?.[x.receipt]?.amount.unit ?? null;
+          const unit = unitOf(m.amount);
           // Paid only where the payment's rail answer here is valid (S7e: never "paid" where the answer is not given).
           const paid = payments.some((p) => p.side === 'in' && p.other.id === x.service && p.amount.value === m.amount && (!unit || p.amount.unit === unit) && p.proofs.some((y) => y.rail.answer === 'valid'));
           entry(d).payouts.push({ split, amount: shown({ unit: unit ?? '', value: m.amount }), role: m.role, paid });

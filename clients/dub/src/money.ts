@@ -156,6 +156,8 @@ export interface VowBoughtShown {
   promise: string | null;
   /** Its buyer's contests in the purchase's form (F386), shown beside it: they mark no sale. */
   beside: ContestsBeside | null;
+  /** Why the sale is unknown, in words (S7e): its payment not verified here, as its rail said. */
+  why: string | null;
 }
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -566,14 +568,16 @@ export class DubMoney {
       let sale: VowBoughtShown['sale'] = null;
       let promise: string | null = null;
       let beside: ContestsBeside | null = null;
+      let why: string | null = null;
       if (paid) {
         if (!bySeller.has(b.seller)) bySeller.set(b.seller, await vowSales(b.seller, hints, via).catch(() => ({ vows: [], asked: hints, problems: [] })));
         const x = bySeller.get(b.seller)!.vows.find((y) => y.name === vow)?.sales.find((y) => y.buyer === me.id);
         sale = x?.state ?? null;
         promise = x?.promise ?? null;
         beside = x?.beside ?? null;
+        why = x?.why ?? null;
       }
-      out.push({ vow, seller: b.seller, words: b.words, price: p ? say(p.amount, new Set([p.amount.unit])) : null, paid, sale, promise, beside });
+      out.push({ vow, seller: b.seller, words: b.words, price: p ? say(p.amount, new Set([p.amount.unit])) : null, paid, sale, promise, beside, why });
     }
     return out;
   }

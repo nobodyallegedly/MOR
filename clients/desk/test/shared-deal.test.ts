@@ -433,7 +433,7 @@ test('a vow under a deal between separate people, bought from Dub and confirmed;
   await assert.rejects(b.dub.c.ask('pay', { how: 'hand', kind: 'tip', signer: river.id, post: post.post, value: '100', unit: R }), /a draft copied by hand carries no post/);
 });
 
-test('a collective’s work bought: its claim opened by every member’s Edubba from MOR, and beside the sale in each member’s Sales what the core reads of the buyer’s contest (unknown, its rail answer not stated)', async () => {
+test('a collective’s work bought, a sale whose payment is not verified (S7e): its claim opened by every member’s Edubba from MOR; “unknown”, with its reason, in each member’s Sales and Damgar’s Shared deals, and in the buyer’s Dub Purchases and Payments', async () => {
   const H = homes.map((h) => h.base);
   const RL = [relay.base];
   const { foundCollective } = await import('./cast.ts');
@@ -472,6 +472,7 @@ test('a collective’s work bought: its claim opened by every member’s Edubba 
   await e.c.ask('publishing deliver');
   await b.dub.c.ask('money look');
   await b.dub.c.ask('purchase contest', { publication, promise: 'Not the story told.' });
+  const NOT_HELD = /not verified here: its rail says unknown \(the payee pointer it was paid to is not held\)/;
   for (const m of [A, iPa, iPh]) {
     const s = await m.edubba.c.ask<{ sales: any[]; problems: string[] }>('publishing shared sales');
     const sale = s.sales.find((x) => x.buyer === b.id);
@@ -483,6 +484,42 @@ test('a collective’s work bought: its claim opened by every member’s Edubba 
     // unknown, never "none". Behind it, for the MOR lead (docs/splits-report.md, point 2): with the rail stated, the core reads such a
     // sale as no purchase where the agreement stakes the collective itself and not the work.
     assert.equal(sale.beside.state, 'unknown', `${m.name}: ${JSON.stringify(sale.beside)} ${JSON.stringify(s.problems)}`);
-    assert.match(sale.beside.why ?? '', /no rail answer here/, `${m.name}: ${JSON.stringify(sale.beside)}`);
+    assert.match(sale.beside.why ?? '', /no rail answer here|not verified here/, `${m.name}: ${JSON.stringify(sale.beside)}`);
+    // S7e: the rail's own words, why the payment is not verified here (the collective's pointer is signed under its grant: not held by a Money-only reading).
+    assert.match(sale.beside.why ?? '', NOT_HELD, `${m.name}: ${sale.beside.why}`);
+    // Damgar's Account › Shared deals: the collective's sale beside the deals, unknown, with its reason; the payout to this member, on its own node, valid.
+    await m.damgar.c.ask('look');
+    const a = await m.damgar.c.ask<Account>('account');
+    const c = a.shared?.find((x) => x.name === 'a collective’s work');
+    assert.ok(c?.payments.length, `${m.name}: ${JSON.stringify(a.shared)}`);
+    for (const x of c.payments) {
+      assert.equal(x.rail.answer, 'unknown', JSON.stringify(x));
+      assert.match(x.standing, /its receipt is sealed to the collective, which this Damgar does not open: whether it was paid is unknown here/, x.standing);
+    }
+    assert.ok(c.payouts.length && c.payouts.every((x) => x.paid && x.amount.unit === R), JSON.stringify(c.payouts));
   }
+  // Dub's Purchases: the purchase unknown beside the file, with its reason; Dub's Payments (its Damgar): the claim's rail answer unknown, with its reason.
+  const bought = (await b.dub.c.ask<{ items: any[] }>('purchases')).items.find((x) => x.id === publication);
+  assert.equal(bought?.contests?.state, 'unknown', JSON.stringify(bought));
+  assert.match(bought.contests.why, NOT_HELD, bought.contests.why);
+  const paid = (await b.dub.c.ask<{ done: PaymentShown[] }>('payments')).done.find((x) => x.amount.value === 1000)!;
+  assert.deepEqual(paid.proofs.map((x) => [x.kind, x.rail.answer, x.rail.why]), [['claim', 'unknown', 'the payee pointer it was paid to is not held']]);
+
+  // By clicks: a member's Damgar, Account › Shared deals; a member's Edubba, Publishing › Sales; the buyer's Dub, Purchases.
+  const problems: string[] = [];
+  const pg = await openPage(iPa.damgar.app.base, iPa.damgar.app.access.newCode(), problems);
+  await pg.locator('[data-k-tile=account]').click({ timeout: 60_000 });
+  await pg.locator('.k-col button', { hasText: 'Shared deals' }).click();
+  await pg.locator('.k-act', { hasText: 'whether it was paid is unknown here' }).first().waitFor({ timeout: 60_000 });
+  await shot(pg, 'damgar-shared-deals-unknown.png');
+  const pe = await openPage(iPa.edubba.app.base, iPa.edubba.app.access.newCode(), problems);
+  await pe.locator('[data-k-tile=publishing]').click({ timeout: 60_000 });
+  await pe.locator('.k-col button', { hasText: 'Sales' }).click();
+  await pe.locator('.edubba-beside', { hasText: 'the payee pointer it was paid to is not held' }).first().waitFor({ timeout: 60_000 });
+  await shot(pe, 'edubba-sales-unknown.png');
+  const pd = await openPage(b.dub.app.base, b.dub.app.access.newCode(), problems);
+  await pd.locator('[data-k-part="purchases"]').click({ timeout: 60_000 });
+  await pd.locator('#bought .k-act', { hasText: 'the payee pointer it was paid to is not held' }).first().waitFor({ timeout: 60_000 });
+  await shot(pd, 'dub-purchases-unknown.png');
+  assert.deepEqual(problems, []);
 });

@@ -125,6 +125,8 @@ export interface SaleShown {
   amount: Amount | null;
   /** The buyer's contests of it in the purchase's form (F386): shown beside the sale; they mark no sale. */
   beside: ContestsBeside;
+  /** Why its state is unknown, in words (S7e): the rail's own answer where it gave one. */
+  why: string | null;
 }
 
 /** A vow, read from what the relays asked hold. */
@@ -176,7 +178,7 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
     if (d.signer) await r.hold(d.signer);
     r.add(a);
   }
-  const { specs, amounts } = judged(r, claims.map((act) => ({ act })));
+  const { specs, amounts, unanswered } = judged(r, claims.map((act) => ({ act })));
   const out: VowShown[] = [];
   for (const x of vows) {
     try {
@@ -192,7 +194,9 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
           promise: s.state === 'contested' ? promiseOf(contests, s.by) : null,
           amount: amounts.get(s.act) ?? null,
           // A vow's sale is a purchase (F386): a contest of it in the purchase's form marks no sale, and is shown beside it, so it is not lost.
-          beside: contestsOf(r, specs, s.act, contests),
+          beside: contestsOf(r, specs, s.act, contests, unanswered),
+          // S7e: why it is unknown, in the rail's own words where it said anything.
+          why: s.state === 'unknown' ? `its payment is not verified here: ${unanswered.get(s.act) ?? 'a receipt or claim it rests on has no rail answer here'}; whether it is a sale is unknown` : null,
         })),
         unsigned: e.unsigned.length,
         unknown: e.unknown?.length ?? 0,
@@ -255,9 +259,9 @@ export async function purchaseContests(a: { purchases: { act: Uint8Array; key?: 
     const d = describeAct(x) as { spec?: string; type?: number };
     return d.spec === MIRS.agreements && d.type === CONTEST;
   });
-  const { specs } = judged(r, a.purchases.map((p) => ({ act: p.act, key: p.key ?? undefined })));
+  const { specs, unanswered } = judged(r, a.purchases.map((p) => ({ act: p.act, key: p.key ?? undefined })));
   const by: Record<string, ContestsBeside> = {};
-  for (const id of ids) if (id) by[id] = contestsOf(r, specs, id, [...contests, ...held]);
+  for (const id of ids) if (id) by[id] = contestsOf(r, specs, id, [...contests, ...held], unanswered);
   // Where the core reads a payment as no purchase, said beside it: a contest shows beside a purchase only (F386), never silently "none".
   for (const id of ids) {
     if (!id || by[id]?.state !== 'shown' || by[id].contests.length) continue;
@@ -265,7 +269,7 @@ export async function purchaseContests(a: { purchases: { act: Uint8Array; key?: 
       const p = r.v.agreementsPurchase(specs, id) as { verdict: string; why?: string | null } | null;
       if (p && p.verdict === 'no-purchase') by[id] = { ...by[id], noPurchase: p.why ?? 'no purchase' };
       // S7e (Q53): whether it is a purchase rests on a rail answer not given here: unknown, never "none".
-      else if (p && p.verdict === 'unknown') by[id] = { state: 'unknown', contests: [], why: 'a receipt or claim it rests on has no rail answer here: whether it is a purchase is unknown' };
+      else if (p && p.verdict === 'unknown') by[id] = { state: 'unknown', contests: [], why: `${railSaid(unanswered) ?? 'a receipt or claim it rests on has no rail answer here'}: whether it is a purchase is unknown` };
     } catch {
       // not read: as before
     }
@@ -274,14 +278,20 @@ export async function purchaseContests(a: { purchases: { act: Uint8Array; key?: 
 }
 
 /** The buyer's contests the core shows beside one purchase, each with its promise not kept, in words, where it says. */
-function contestsOf(r: Reader, specs: unknown, purchase: string, contests: Uint8Array[]): ContestsBeside {
+function contestsOf(r: Reader, specs: unknown, purchase: string, contests: Uint8Array[], unanswered: Map<string, string>): ContestsBeside {
   try {
     const shown = r.v.agreementsPurchaseContests(specs, purchase) as string[];
     return { state: 'shown', contests: shown.map((act) => ({ act, promise: promiseOf(contests, [act]) })) };
   } catch (e) {
     const m = e instanceof Error ? e.message : String(e);
-    return { state: 'unknown', contests: [], why: /payment-unstated/.test(m) ? 'its payment is not stated: whether it is a purchase, and whose, is unknown' : /rail-unanswered/.test(m) ? 'its claim has no rail answer here: whether it is a purchase is unknown' : m };
+    return { state: 'unknown', contests: [], why: /payment-unstated/.test(m) ? 'its payment is not stated: whether it is a purchase, and whose, is unknown' : /rail-unanswered/.test(m) ? `its payment is not verified here: ${unanswered.has(purchase) ? `its claim’s ${unanswered.get(purchase)!.replace(/^its /, '')}` : (railSaid(unanswered) ?? 'its claim has no rail answer here')}; whether it is a purchase is unknown` : m };
   }
+}
+
+/** What the rails said of the records not verified, in their own words, or null where every record held was judged valid. */
+function railSaid(unanswered: Map<string, string>): string | null {
+  const said = [...new Set(unanswered.values())];
+  return said.length ? `a receipt or claim it rests on is not verified here: ${said.join('; ')}` : null;
 }
 
 /** What a look-up holds: a verifier, the acts by id, and how to hold an identity's chain and public acts. */
@@ -348,18 +358,23 @@ function reader(relays: string[], via: Via): Reader {
 }
 
 /** Each claim's rail, checked by its rail Module and stated to the core (the core reads no rail); its amount; its lane's cap. */
-function judged(r: Reader, claims: { act: Uint8Array; key?: Uint8Array }[]): { specs: unknown; amounts: Map<string, Amount> } {
+function judged(r: Reader, claims: { act: Uint8Array; key?: Uint8Array }[]): { specs: unknown; amounts: Map<string, Amount>; unanswered: Map<string, string> } {
   const accepted = ACCEPTABLE.flatMap((x) => x.hashes);
   const railValid: [string, string, number | null][] = [];
   // Which payment each proof is, as its rail Module says (Money rule 12): never read from the proofs' bytes.
   const railPayments: [string, string][] = [];
   const limits: [string, boolean][] = [];
   const amounts = new Map<string, Amount>();
+  // What each rail said where it did not say valid, in its own words (S7e): the reason an answer resting on it is unknown.
+  const unanswered = new Map<string, string>();
   for (const { act, key } of claims) {
     const d = (key ? openWithKey(act, key) : describeAct(act)) as { id: string; type?: number; payload?: Uint8Array; binding?: string };
     try {
-      const j = r.v.moneyJudge(d.id, { money: MIRS.money, accepted }) as { rail: { answer: string }; payment?: string | null };
-      if (j.rail.answer !== 'valid') continue;
+      const j = r.v.moneyJudge(d.id, { money: MIRS.money, accepted }) as { rail: { answer: string; why?: string }; payment?: string | null };
+      if (j.rail.answer !== 'valid') {
+        unanswered.set(d.id, `its rail says ${j.rail.answer}${j.rail.why ? ` (${j.rail.why})` : ''}`);
+        continue;
+      }
       // A claim, or (S7e, Q53) a receipt the answer rests on, such as a collective's recording its sale: each stated by its own rail answer.
       const c = (moneyRead(d.type === 2 ? 2 : CLAIM, d.payload!) as { act: { proof: Uint8Array; amount: Amount } }).act;
       amounts.set(d.id, c.amount);
@@ -370,11 +385,12 @@ function judged(r: Reader, claims: { act: Uint8Array; key?: Uint8Array }[]): { s
       // A claim signed under a lane: its cap judged by the grant limits cMIP (the core asks it of the client).
       const w = limitsOf(r.held, d, act, key);
       if (w !== null) limits.push([d.id, w]);
-    } catch {
+    } catch (e) {
       // not judged: it counts for nothing here
+      if (d.id) unanswered.set(d.id, `it could not be judged here (${e instanceof Error ? e.message : String(e)})`);
     }
   }
-  return { specs: withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits), amounts };
+  return { specs: withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits), amounts, unanswered };
 }
 
 /** Where a proof says it was paid, as the core takes it: `[act, vault entry or null]`. */

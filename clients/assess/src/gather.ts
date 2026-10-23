@@ -171,8 +171,14 @@ export async function gather(id: string, hints: string[], via: Via = {}, names: 
     await look(collective);
     const owes = v.agreementsOwes(AGREEMENTS_SPECS, collective) as string[];
     for (const o of owes) found.owed.push({ text: `The collective owes under obligation ${o.slice(0, 8)}…, not yet paid or released by its creditor (Agreements rule 92).`, tone: 'warn' });
-    const back = v.agreementsOwedBack(AGREEMENTS_SPECS, collective) as { payment: string; to: string; value: number }[];
-    for (const b of back) found.owed.push({ text: `The collective owes ${b.value} back for payment ${b.payment.slice(0, 8)}…, to ${names(b.to)} (Agreements rule 93).`, tone: 'warn' });
+    const back = v.agreementsOwedBack(AGREEMENTS_SPECS, collective) as { payment: string; to: string; value: number; unknown?: boolean }[];
+    for (const b of back)
+      found.owed.push({
+        text: b.unknown
+          ? `Whether the collective owes ${b.value} back for payment ${b.payment.slice(0, 8)}… is unknown: it rests on a receipt or claim with no rail answer read here (S7e). It still blocks a closing.`
+          : `The collective owes ${b.value} back for payment ${b.payment.slice(0, 8)}…, to ${names(b.to)} (Agreements rule 93).`,
+        tone: 'warn',
+      });
   }
   return { id, payload, found };
 }

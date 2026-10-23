@@ -5069,7 +5069,7 @@ async function authorityOf(act, hints, via = {}, opts = {}) {
   const b = v.agreementsBacking(withGrantLimits(AGREEMENTS_SPECS, verdicts), d.id);
   const lane2 = g.grantee === d.signer;
   const laneBy = `Signed under a lane of ${names(d.signer)} (a grant to itself, ${d.binding.slice(0, 8)}\u2026, its key held by an app; F351)`;
-  const plain = b.kind === "backed" || b.kind === "binds" ? `${lane2 ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under ${names(d.signer)}\u2019s grant ${d.binding.slice(0, 8)}\u2026`}: backed (Agreements rule 80).` : b.kind === "not-backed" ? `${lane2 ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}, which does not back it: ${b.reason}.` : `${lane2 ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: whether it backs it is unknown (${b.reason ?? "not readable"}).`;
+  const plain = b.kind === "backed" || b.kind === "binds" ? `${lane2 ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under ${names(d.signer)}\u2019s grant ${d.binding.slice(0, 8)}\u2026`}: backed (Agreements rule 80).` : b.kind === "not-backed" ? `${lane2 ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}, which does not back it: ${b.reason}.` : b.kind === "disputed" ? `${lane2 ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: disputed, valid but conferring nothing unless its grantor adopts it (the grant was revoked; a keeper recorded the act first: Agreements rule 76, S7e).` : `${lane2 ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: whether it backs it is unknown (${b.reason ?? "not readable"}).`;
   return { grant: d.binding, grantor: d.signer, grantee: g.grantee, lane: lane2, backing: b.kind, reason: b.reason ?? null, limits, words: plain };
 }
 async function holdDeals(v, grantor, grant, hints, via) {
@@ -9226,7 +9226,7 @@ var Damgar = class {
         const underGrant = (st === "scoped" || st === "unknown") && !!o.described.binding;
         const a = underGrant ? await this.authority(o, [...places, ...s.relays], s.via) : null;
         if (a) {
-          st = a.backing === "backed" || a.backing === "binds" ? "valid" : `signed under a grant that does not back it: ${a.words}`;
+          st = a.backing === "backed" || a.backing === "binds" ? "valid" : a.backing === "disputed" ? `disputed: ${a.words}` : `signed under a grant that does not back it: ${a.words}`;
           (book.authorities ??= {})[d.id] = a.words;
         }
         if (st !== "valid") {
@@ -10608,7 +10608,7 @@ var Damgar = class {
       const { me, s, book } = await this.ctx();
       const acc = this.acceptedSet(await this.accepted(me));
       const shown = (a) => ({ ...a, said: say(a, acc) });
-      const others = [...Object.values(book.payments).map((p) => p.other), ...Object.values(book.requestsIn).map((r) => r.from), ...Object.values(book.requestsOut).map((r) => r.to)];
+      const others = [...Object.values(book.payments).map((p) => p.other), ...Object.values(book.requestsIn).map((r) => r.from), ...Object.values(book.requestsOut).map((r) => r.to), ...Object.values(book.shared ?? {}).map((x) => x.payee)];
       const problems = [];
       let l = null;
       try {
@@ -10642,10 +10642,10 @@ var Damgar = class {
       ];
       const deals = /* @__PURE__ */ new Map();
       const dealOf = async (fulfils, purchase) => {
-        const places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
+        const places2 = [...s.relays, ...me.f.homes.map((h) => h.hint)];
         let version2 = purchase?.[0] ?? null;
         if (!version2) {
-          for (const h of places) {
+          for (const h of places2) {
             const act = await relayAt(h, s.via).getAct(fulfils).catch(() => null);
             if (!act) continue;
             const d = describeAct(act);
@@ -10658,7 +10658,7 @@ var Damgar = class {
           }
         }
         if (!version2) return null;
-        if (!deals.has(version2)) deals.set(version2, await readDeal(version2, places, s.via).catch(() => null));
+        if (!deals.has(version2)) deals.set(version2, await readDeal(version2, places2, s.via).catch(() => null));
         return deals.get(version2) ?? null;
       };
       for (const [i, x] of payments.entries()) {
@@ -10673,17 +10673,48 @@ var Damgar = class {
         if (!e3) shared.set(d.version, e3 = { version: d.version, name: d.name ?? "a shared work", payments: [], payouts: [] });
         return e3;
       };
+      const railOf = (receipt, whose) => {
+        let rail = { answer: "unknown", why: "its receipt could not be judged here" };
+        try {
+          if (l) rail = l.verifier.moneyJudge(receipt, opts).rail;
+        } catch (e3) {
+          rail = { answer: "unknown", why: message2(e3) };
+        }
+        return { rail, standing: rail.answer === "valid" ? `receipted ${whose}; the rail says valid` : `receipted ${whose}; the rail says ${rail.answer}${rail.why ? ` (${rail.why})` : ""}: whether it was paid is unknown here` };
+      };
       for (const [receipt, x] of Object.entries(book.shared ?? {})) {
         const d = await dealOf(x.fulfils, null);
         if (!d || !d.parties.includes(me.id)) continue;
-        entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown(x.amount), kind: x.purchase ? "a sale" : "a tip", standing: "receipted by its split service in the deal\u2019s payee\u2019s name" });
+        entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown(x.amount), kind: x.purchase ? "a sale" : "a tip", ...railOf(receipt, "by its split service in the deal\u2019s payee\u2019s name") });
       }
+      const collectives = /* @__PURE__ */ new Set();
+      const places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
       for (const [split, x] of Object.entries(book.splits ?? {})) {
-        if (!deals.has(x.agreement)) deals.set(x.agreement, await readDeal(x.agreement, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via).catch(() => null));
+        if (!deals.has(x.agreement)) {
+          let d2 = await readDeal(x.agreement, places, s.via).catch(() => null);
+          if (!d2) {
+            const t2 = await termsAt(x.agreement, places, s.via).catch(() => null);
+            if (t2?.grammar && t2.parties?.includes(me.id)) {
+              d2 = { version: x.agreement, name: "a collective\u2019s work", text: "", parties: t2.parties, owners: [], payee: null, service: x.service, grant: null, referral: 0 };
+              collectives.add(x.agreement);
+            }
+          }
+          deals.set(x.agreement, d2);
+        }
         const d = deals.get(x.agreement);
         if (!d) continue;
+        const unitOf2 = (value) => x.unit ?? book.shared?.[x.receipt]?.amount.unit ?? payments.find((p) => p.side === "in" && p.other.id === x.service && p.amount.value === value)?.amount.unit ?? null;
+        if (collectives.has(x.agreement) && !entry(d).payments.some((y) => y.receipt === x.receipt)) {
+          const r = this.moneyOf(book, x.receipt);
+          const mine = x.mine.reduce((n, m) => n + m.amount, 0);
+          const judged = r ? railOf(x.receipt, "in the collective\u2019s name") : (
+            // Sealed to the collective, whose keys this Damgar (holding your identity alone) does not hold: Edubba opens it, Damgar cannot judge it.
+            { rail: { answer: "unknown", why: "its receipt is sealed to the collective, which this Damgar does not open" }, standing: "your share named in its split service\u2019s split; its receipt is sealed to the collective, which this Damgar does not open: whether it was paid is unknown here" }
+          );
+          entry(d).payments.push({ receipt: x.receipt, payer: this.who(typeof r?.payer === "string" ? r.payer : "", me.id), amount: shown(r?.amount ?? { unit: unitOf2(mine) ?? "", value: mine }), kind: r && !r.purchase ? "a tip" : "a sale", ...judged });
+        }
         for (const m of x.mine) {
-          const unit = x.unit ?? book.shared?.[x.receipt]?.amount.unit ?? null;
+          const unit = unitOf2(m.amount);
           const paid = payments.some((p) => p.side === "in" && p.other.id === x.service && p.amount.value === m.amount && (!unit || p.amount.unit === unit) && p.proofs.some((y) => y.rail.answer === "valid"));
           entry(d).payouts.push({ split, amount: shown({ unit: unit ?? "", value: m.amount }), role: m.role, paid });
         }
@@ -12795,6 +12826,7 @@ ${p.stage === "paid" ? `<div class="k-row"><button type="button" data-action="re
   const ticket = p.ticket ? `<p class="k-small k-soft">An anchor\u2019s ticket: batch ${p.ticket.batch}, tier ${p.ticket.tier}, on the chain by block ${p.ticket.deadline}.${p.ticket.checked ? "" : " Not checked here: this Damgar follows no chain, so whether that block is within the tier\u2019s reach of today\u2019s is unknown. Pay only if you trust the service on it, or check it in Damgar on a computer."}</p>` : "";
   return `<p>${e(p.amount.said)} \xB7 ${e(p.railName)}${p.to === "vault" ? ", to the vault" : ""}</p>${p.whatFor ? `<p class="k-small k-soft">For \u201C${e(p.whatFor)}\u201D</p>` : ""}${ticket}${lines(p.lines)}${vaultInvoice}${pay}${proofs}`;
 }
+var unverifiedSaid = (p) => `unknown: this payment is not verified here (${[...new Set(p.proofs.map((x) => `the rail says ${x.rail.answer}${x.rail.why ? `: ${x.rail.why}` : ""}`))].join("; ")})`;
 var confirmed = (p) => p.stage === "settled" && ["claim", "receipt"].every((k) => p.proofs.some((x) => x.kind === k && x.rail.answer === "valid" && x.standing === "valid"));
 function pastePane() {
   return `<h2>Paste an act to sign</h2>
@@ -13151,6 +13183,7 @@ function mount(app2, b) {
   const shortOf = (w) => shortForm(formOf(w.id, "mid"));
   const paymentCard = (p, forPay) => {
     const bad = p.proofs.some((x) => x.rail.answer === "invalid");
+    const unverified = p.proofs.length > 0 && !bad && !p.proofs.some((x) => x.rail.answer === "valid");
     const first = p.proofs[0];
     const acts = [
       ...p.proofs.filter((x) => x.kind === "receipt").map((x) => ({ id: x.act, said: `The receipt, by ${x.by.me ? "you" : shortOf(x.by)}` })),
@@ -13164,7 +13197,7 @@ function mount(app2, b) {
       kind: p.to === "vault" && p.other.me ? "to your vault" : p.side === "out" ? "you pay" : "paid to you",
       text: `${p.side === "out" ? p.other.me ? "To your vault" : `To ${shortOf(p.other)}` : `From ${shortOf(p.other)}`} \xB7 ${p.amount.said}`,
       html: `<div class="k-box">${payment(p, forPay)}</div>`,
-      labels: [...p.deal ? [{ text: `under the deal \u201C${p.deal}\u201D` }] : [], { text: p.stageSaid }, ...[...new Set(p.proofs.map((x) => `${x.kind === "claim" ? "claim" : "receipt"}: ${x.how}`))].map((text3) => ({ text: text3 }))],
+      labels: [...p.deal ? [{ text: `under the deal \u201C${p.deal}\u201D` }] : [], { text: p.stageSaid }, ...[...new Set(p.proofs.map((x) => `${x.kind === "claim" ? "claim" : "receipt"}: ${x.how}`))].map((text3) => ({ text: text3 })), ...unverified ? [{ text: unverifiedSaid(p), tone: "warn" }] : []],
       verified: confirmed(p),
       alarm: bad ? "A proof that does not hold" : null,
       lines: [...p.lines, ...p.proofs.map((x) => ({ text: `${x.kind === "claim" ? "Claim" : "Receipt"} by ${x.by.me ? "you" : x.by.short}: the rail says ${x.rail.answer}${x.rail.why ? ` (${x.rail.why})` : ""}; beside it ${x.beside.answer}${x.beside.why ? ` (${x.beside.why})` : ""}; ${x.how}.`, tone: x.rail.answer === "invalid" ? "bad" : void 0 }))]
@@ -13236,7 +13269,7 @@ function mount(app2, b) {
       if (part === "shared") {
         const ds = a.shared ?? [];
         return `<h2>Shared deals</h2>${say2("The deals you share in with other people: what was paid to each, and what its split service paid you.", ["Each payment to a deal is receipted by its split service in the name of the deal\u2019s own payee, and sealed to every person sharing in it; each split names what it pays each of you. A tip to you personally is under Payments, not here."])}${ds.map((d) => `<h3>\u201C${e(d.name)}\u201D <span class="k-small k-soft k-mono">${e(shortForm(formOf(d.version)))}</span></h3><div class="k-feed">${[
-          ...d.payments.map((x) => cardOf({ id: x.receipt, who: x.payer, kind: x.kind, text: `${x.kind === "a tip" ? "A tip" : "A sale"} to the deal \xB7 ${x.amount.said}`, labels: [{ text: x.standing }], verified: true, lines: [] })),
+          ...d.payments.map((x) => cardOf({ id: x.receipt, who: x.payer, kind: x.kind, text: `${x.kind === "a tip" ? "A tip" : "A sale"} to the deal \xB7 ${x.amount.said}`, labels: [{ text: x.standing, ...x.rail.answer === "valid" ? {} : { tone: "warn" } }], verified: x.rail.answer === "valid", lines: [] })),
           ...d.payouts.map((x) => cardOf({ id: x.split, who: { id: meId(), short: "", me: true }, kind: "your payout", text: `Its split pays you ${x.amount.said}${x.role ? ` (${x.role})` : ""}`, labels: [{ text: x.paid ? "paid to you by its split service, its rail answer valid" : "named in its split; its payment here is not yet shown valid by its rail: unknown" }], verified: x.paid, lines: [] }))
         ].join("") || '<p class="k-empty">Nothing yet.</p>'}</div>`).join("") || '<p class="k-empty">No deal shared with you yet: a deal is set up in Edubba, where you sign it.</p>'}`;
       }

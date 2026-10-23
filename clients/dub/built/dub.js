@@ -9213,7 +9213,7 @@ async function authorityOf(act, hints, via2 = {}, opts = {}) {
   const b = v.agreementsBacking(withGrantLimits(AGREEMENTS_SPECS, verdicts), d.id);
   const lane = g.grantee === d.signer;
   const laneBy = `Signed under a lane of ${names(d.signer)} (a grant to itself, ${d.binding.slice(0, 8)}\u2026, its key held by an app; F351)`;
-  const plain = b.kind === "backed" || b.kind === "binds" ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under ${names(d.signer)}\u2019s grant ${d.binding.slice(0, 8)}\u2026`}: backed (Agreements rule 80).` : b.kind === "not-backed" ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}, which does not back it: ${b.reason}.` : `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: whether it backs it is unknown (${b.reason ?? "not readable"}).`;
+  const plain = b.kind === "backed" || b.kind === "binds" ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under ${names(d.signer)}\u2019s grant ${d.binding.slice(0, 8)}\u2026`}: backed (Agreements rule 80).` : b.kind === "not-backed" ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}, which does not back it: ${b.reason}.` : b.kind === "disputed" ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: disputed, valid but conferring nothing unless its grantor adopts it (the grant was revoked; a keeper recorded the act first: Agreements rule 76, S7e).` : `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}\u2019s name, under the grant ${d.binding.slice(0, 8)}\u2026`}: whether it backs it is unknown (${b.reason ?? "not readable"}).`;
   return { grant: d.binding, grantor: d.signer, grantee: g.grantee, lane, backing: b.kind, reason: b.reason ?? null, limits, words: plain };
 }
 async function holdDeals(v, grantor, grant, hints, via2) {
@@ -13007,7 +13007,7 @@ var Damgar = class {
         const underGrant = (st === "scoped" || st === "unknown") && !!o.described.binding;
         const a = underGrant ? await this.authority(o, [...places, ...s.relays], s.via) : null;
         if (a) {
-          st = a.backing === "backed" || a.backing === "binds" ? "valid" : `signed under a grant that does not back it: ${a.words}`;
+          st = a.backing === "backed" || a.backing === "binds" ? "valid" : a.backing === "disputed" ? `disputed: ${a.words}` : `signed under a grant that does not back it: ${a.words}`;
           (book.authorities ??= {})[d.id] = a.words;
         }
         if (st !== "valid") {
@@ -14389,7 +14389,7 @@ var Damgar = class {
       const { me, s, book } = await this.ctx();
       const acc = this.acceptedSet(await this.accepted(me));
       const shown = (a) => ({ ...a, said: say(a, acc) });
-      const others = [...Object.values(book.payments).map((p) => p.other), ...Object.values(book.requestsIn).map((r) => r.from), ...Object.values(book.requestsOut).map((r) => r.to)];
+      const others = [...Object.values(book.payments).map((p) => p.other), ...Object.values(book.requestsIn).map((r) => r.from), ...Object.values(book.requestsOut).map((r) => r.to), ...Object.values(book.shared ?? {}).map((x) => x.payee)];
       const problems = [];
       let l = null;
       try {
@@ -14423,10 +14423,10 @@ var Damgar = class {
       ];
       const deals = /* @__PURE__ */ new Map();
       const dealOf = async (fulfils, purchase) => {
-        const places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
+        const places2 = [...s.relays, ...me.f.homes.map((h) => h.hint)];
         let version2 = purchase?.[0] ?? null;
         if (!version2) {
-          for (const h of places) {
+          for (const h of places2) {
             const act = await relayAt(h, s.via).getAct(fulfils).catch(() => null);
             if (!act) continue;
             const d = describeAct(act);
@@ -14439,7 +14439,7 @@ var Damgar = class {
           }
         }
         if (!version2) return null;
-        if (!deals.has(version2)) deals.set(version2, await readDeal(version2, places, s.via).catch(() => null));
+        if (!deals.has(version2)) deals.set(version2, await readDeal(version2, places2, s.via).catch(() => null));
         return deals.get(version2) ?? null;
       };
       for (const [i, x] of payments.entries()) {
@@ -14454,17 +14454,48 @@ var Damgar = class {
         if (!e3) shared.set(d.version, e3 = { version: d.version, name: d.name ?? "a shared work", payments: [], payouts: [] });
         return e3;
       };
+      const railOf = (receipt, whose) => {
+        let rail = { answer: "unknown", why: "its receipt could not be judged here" };
+        try {
+          if (l) rail = l.verifier.moneyJudge(receipt, opts).rail;
+        } catch (e3) {
+          rail = { answer: "unknown", why: message3(e3) };
+        }
+        return { rail, standing: rail.answer === "valid" ? `receipted ${whose}; the rail says valid` : `receipted ${whose}; the rail says ${rail.answer}${rail.why ? ` (${rail.why})` : ""}: whether it was paid is unknown here` };
+      };
       for (const [receipt, x] of Object.entries(book.shared ?? {})) {
         const d = await dealOf(x.fulfils, null);
         if (!d || !d.parties.includes(me.id)) continue;
-        entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown(x.amount), kind: x.purchase ? "a sale" : "a tip", standing: "receipted by its split service in the deal\u2019s payee\u2019s name" });
+        entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown(x.amount), kind: x.purchase ? "a sale" : "a tip", ...railOf(receipt, "by its split service in the deal\u2019s payee\u2019s name") });
       }
+      const collectives = /* @__PURE__ */ new Set();
+      const places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
       for (const [split, x] of Object.entries(book.splits ?? {})) {
-        if (!deals.has(x.agreement)) deals.set(x.agreement, await readDeal(x.agreement, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via).catch(() => null));
+        if (!deals.has(x.agreement)) {
+          let d2 = await readDeal(x.agreement, places, s.via).catch(() => null);
+          if (!d2) {
+            const t2 = await termsAt(x.agreement, places, s.via).catch(() => null);
+            if (t2?.grammar && t2.parties?.includes(me.id)) {
+              d2 = { version: x.agreement, name: "a collective\u2019s work", text: "", parties: t2.parties, owners: [], payee: null, service: x.service, grant: null, referral: 0 };
+              collectives.add(x.agreement);
+            }
+          }
+          deals.set(x.agreement, d2);
+        }
         const d = deals.get(x.agreement);
         if (!d) continue;
+        const unitOf2 = (value) => x.unit ?? book.shared?.[x.receipt]?.amount.unit ?? payments.find((p) => p.side === "in" && p.other.id === x.service && p.amount.value === value)?.amount.unit ?? null;
+        if (collectives.has(x.agreement) && !entry(d).payments.some((y) => y.receipt === x.receipt)) {
+          const r = this.moneyOf(book, x.receipt);
+          const mine = x.mine.reduce((n, m) => n + m.amount, 0);
+          const judged2 = r ? railOf(x.receipt, "in the collective\u2019s name") : (
+            // Sealed to the collective, whose keys this Damgar (holding your identity alone) does not hold: Edubba opens it, Damgar cannot judge it.
+            { rail: { answer: "unknown", why: "its receipt is sealed to the collective, which this Damgar does not open" }, standing: "your share named in its split service\u2019s split; its receipt is sealed to the collective, which this Damgar does not open: whether it was paid is unknown here" }
+          );
+          entry(d).payments.push({ receipt: x.receipt, payer: this.who(typeof r?.payer === "string" ? r.payer : "", me.id), amount: shown(r?.amount ?? { unit: unitOf2(mine) ?? "", value: mine }), kind: r && !r.purchase ? "a tip" : "a sale", ...judged2 });
+        }
         for (const m of x.mine) {
-          const unit = x.unit ?? book.shared?.[x.receipt]?.amount.unit ?? null;
+          const unit = unitOf2(m.amount);
           const paid = payments.some((p) => p.side === "in" && p.other.id === x.service && p.amount.value === m.amount && (!unit || p.amount.unit === unit) && p.proofs.some((y) => y.rail.answer === "valid"));
           entry(d).payouts.push({ split, amount: shown({ unit: unit ?? "", value: m.amount }), role: m.role, paid });
         }
@@ -15652,7 +15683,7 @@ async function vowSales(identity, relays, via2 = {}) {
     if (d.signer) await r.hold(d.signer);
     r.add(a);
   }
-  const { specs, amounts } = judged(r, claims.map((act) => ({ act })));
+  const { specs, amounts, unanswered } = judged(r, claims.map((act) => ({ act })));
   const out = [];
   for (const x of vows) {
     try {
@@ -15668,7 +15699,9 @@ async function vowSales(identity, relays, via2 = {}) {
           promise: s.state === "contested" ? promiseOf(contests, s.by) : null,
           amount: amounts.get(s.act) ?? null,
           // A vow's sale is a purchase (F386): a contest of it in the purchase's form marks no sale, and is shown beside it, so it is not lost.
-          beside: contestsOf(r, specs, s.act, contests)
+          beside: contestsOf(r, specs, s.act, contests, unanswered),
+          // S7e: why it is unknown, in the rail's own words where it said anything.
+          why: s.state === "unknown" ? `its payment is not verified here: ${unanswered.get(s.act) ?? "a receipt or claim it rests on has no rail answer here"}; whether it is a sale is unknown` : null
         })),
         unsigned: e3.unsigned.length,
         unknown: e3.unknown?.length ?? 0
@@ -15701,28 +15734,32 @@ async function purchaseContests(a) {
     const d = describeAct(x);
     return d.spec === MIRS.agreements && d.type === CONTEST;
   });
-  const { specs } = judged(r, a.purchases.map((p) => ({ act: p.act, key: p.key ?? void 0 })));
+  const { specs, unanswered } = judged(r, a.purchases.map((p) => ({ act: p.act, key: p.key ?? void 0 })));
   const by = {};
-  for (const id of ids) if (id) by[id] = contestsOf(r, specs, id, [...contests, ...held]);
+  for (const id of ids) if (id) by[id] = contestsOf(r, specs, id, [...contests, ...held], unanswered);
   for (const id of ids) {
     if (!id || by[id]?.state !== "shown" || by[id].contests.length) continue;
     try {
       const p = r.v.agreementsPurchase(specs, id);
       if (p && p.verdict === "no-purchase") by[id] = { ...by[id], noPurchase: p.why ?? "no purchase" };
-      else if (p && p.verdict === "unknown") by[id] = { state: "unknown", contests: [], why: "a receipt or claim it rests on has no rail answer here: whether it is a purchase is unknown" };
+      else if (p && p.verdict === "unknown") by[id] = { state: "unknown", contests: [], why: `${railSaid2(unanswered) ?? "a receipt or claim it rests on has no rail answer here"}: whether it is a purchase is unknown` };
     } catch {
     }
   }
   return { by, problems: r.problems };
 }
-function contestsOf(r, specs, purchase, contests) {
+function contestsOf(r, specs, purchase, contests, unanswered) {
   try {
     const shown = r.v.agreementsPurchaseContests(specs, purchase);
     return { state: "shown", contests: shown.map((act) => ({ act, promise: promiseOf(contests, [act]) })) };
   } catch (e3) {
     const m = e3 instanceof Error ? e3.message : String(e3);
-    return { state: "unknown", contests: [], why: /payment-unstated/.test(m) ? "its payment is not stated: whether it is a purchase, and whose, is unknown" : /rail-unanswered/.test(m) ? "its claim has no rail answer here: whether it is a purchase is unknown" : m };
+    return { state: "unknown", contests: [], why: /payment-unstated/.test(m) ? "its payment is not stated: whether it is a purchase, and whose, is unknown" : /rail-unanswered/.test(m) ? `its payment is not verified here: ${unanswered.has(purchase) ? `its claim\u2019s ${unanswered.get(purchase).replace(/^its /, "")}` : railSaid2(unanswered) ?? "its claim has no rail answer here"}; whether it is a purchase is unknown` : m };
   }
+}
+function railSaid2(unanswered) {
+  const said2 = [...new Set(unanswered.values())];
+  return said2.length ? `a receipt or claim it rests on is not verified here: ${said2.join("; ")}` : null;
 }
 function reader(relays, via2) {
   const problems = [];
@@ -15778,11 +15815,15 @@ function judged(r, claims) {
   const railPayments = [];
   const limits = [];
   const amounts = /* @__PURE__ */ new Map();
+  const unanswered = /* @__PURE__ */ new Map();
   for (const { act, key } of claims) {
     const d = key ? openWithKey(act, key) : describeAct(act);
     try {
       const j = r.v.moneyJudge(d.id, { money: MIRS.money, accepted });
-      if (j.rail.answer !== "valid") continue;
+      if (j.rail.answer !== "valid") {
+        unanswered.set(d.id, `its rail says ${j.rail.answer}${j.rail.why ? ` (${j.rail.why})` : ""}`);
+        continue;
+      }
       const c = moneyRead(d.type === 2 ? 2 : CLAIM, d.payload).act;
       amounts.set(d.id, c.amount);
       if (j.payment) railPayments.push([hex(new Uint8Array(c.proof)), j.payment]);
@@ -15791,10 +15832,11 @@ function judged(r, claims) {
       if (to) railValid.push([d.id, to[0], to[1]]);
       const w = limitsOf(r.held, d, act, key);
       if (w !== null) limits.push([d.id, w]);
-    } catch {
+    } catch (e3) {
+      if (d.id) unanswered.set(d.id, `it could not be judged here (${e3 instanceof Error ? e3.message : String(e3)})`);
     }
   }
-  return { specs: withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits), amounts };
+  return { specs: withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits), amounts, unanswered };
 }
 function paidToOf(p) {
   const x = p;
@@ -16253,14 +16295,16 @@ var DubMoney = class {
       let sale = null;
       let promise = null;
       let beside = null;
+      let why = null;
       if (paid) {
         if (!bySeller.has(b.seller)) bySeller.set(b.seller, await vowSales(b.seller, hints, via2).catch(() => ({ vows: [], asked: hints, problems: [] })));
         const x = bySeller.get(b.seller).vows.find((y) => y.name === vow)?.sales.find((y) => y.buyer === me.id);
         sale = x?.state ?? null;
         promise = x?.promise ?? null;
         beside = x?.beside ?? null;
+        why = x?.why ?? null;
       }
-      out.push({ vow, seller: b.seller, words: b.words, price: p ? say(p.amount, /* @__PURE__ */ new Set([p.amount.unit])) : null, paid, sale, promise, beside });
+      out.push({ vow, seller: b.seller, words: b.words, price: p ? say(p.amount, /* @__PURE__ */ new Set([p.amount.unit])) : null, paid, sale, promise, beside, why });
     }
     return out;
   }
@@ -18331,7 +18375,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
           seller: this.whoFrom(v.seller, me.id, p),
           what: "vow",
           price: v.price,
-          state: !v.paid ? "not paid yet" : v.sale === "confirmed" ? "confirmed: it was kept" : v.sale === "contested" ? `contested${v.promise ? `: \u201C${v.promise}\u201D` : ""}` : v.sale === "unknown" ? "unknown: whether it is a sale rests on a rail answer not read here" : "not yet confirmed: confirm or contest it in its menu",
+          state: !v.paid ? "not paid yet" : v.sale === "confirmed" ? "confirmed: it was kept" : v.sale === "contested" ? `contested${v.promise ? `: \u201C${v.promise}\u201D` : ""}` : v.sale === "unknown" ? `unknown: ${v.why ?? "whether it is a sale rests on a rail answer not read here"}` : "not yet confirmed: confirm or contest it in its menu",
           text: v.words,
           picture: null,
           sale: v.sale,

@@ -903,7 +903,7 @@ async function vowsPart(): Promise<string> {
               labels: [
                 { text: `↳ answers ${shown(vw.signer)}’s vow · ${shortForm(v.formOf(vw.name))}` },
                 // S7e (Q53): a sale whose answer rests on a rail answer not given here reads unknown, never pending or paid.
-                ...(s.state === 'unknown' ? [{ text: 'unknown: a receipt or claim it rests on has no rail answer here', tone: 'warn' as const }] : []),
+                ...v.saleUnknown(s),
                 // F386: a contest in the purchase's form marks no sale; shown beside it, so it is not lost (and not counted with the vow's own form).
                 ...(s.beside?.state === 'unknown' ? [{ text: `contests beside the purchase: unknown (${s.beside.why ?? 'not read'})`, tone: 'warn' as const }] : (s.beside?.contests ?? []).map((x) => ({ text: `contested beside the purchase, marking no sale${x.promise ? `: “${x.promise}”` : ''}`, tone: 'bad' as const }))),
               ],

@@ -330,6 +330,10 @@ ${p.stage === 'paid' ? `<div class="k-row"><button type="button" data-action="re
 }
 
 /** Paid and confirmed: settled, its receipt and a claim each valid by the rail's own evidence, and counting. */
+/** A payment no rail answer here shows valid (S7e): unknown, with what each rail said, never shown as paid. */
+export const unverifiedSaid = (p: PaymentShown): string =>
+  `unknown: this payment is not verified here (${[...new Set(p.proofs.map((x) => `the rail says ${x.rail.answer}${x.rail.why ? `: ${x.rail.why}` : ''}`))].join('; ')})`;
+
 export const confirmed = (p: PaymentShown): boolean =>
   p.stage === 'settled' && (['claim', 'receipt'] as const).every((k) => p.proofs.some((x) => x.kind === k && x.rail.answer === 'valid' && x.standing === 'valid'));
 
