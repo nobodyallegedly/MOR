@@ -285,6 +285,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
   const films = new Map<string, string>();
   /** Recordings checked, by publication, as films are. */
   const recordings = new Map<string, string>();
+  /** Recordings the Module refused, with why: said again on every redraw, never played. */
+  const refusedRecordings = new Map<string, string>();
   function showFilms() {
     for (const box of app.querySelectorAll<HTMLElement>('[data-film]')) {
       const url = films.get(box.dataset.film ?? '');
@@ -298,6 +300,11 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
     // Recordings, as films: played only from bytes the Module checked, on the listener's action (the audio Module, rule 11).
     for (const box of app.querySelectorAll<HTMLElement>('[data-recording]')) {
+      const refused = refusedRecordings.get(box.dataset.recording ?? '');
+      if (refused) {
+        box.innerHTML = refused;
+        continue;
+      }
       const url = recordings.get(box.dataset.recording ?? '');
       if (!url) continue;
       const audio = document.createElement('audio');
@@ -1222,7 +1229,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           recordings.set(box.dataset.recording!, URL.createObjectURL(new Blob([bytes], { type: 'audio/mp4' })));
           showFilms();
         } catch (err) {
-          box.innerHTML = `<span class="k-label k-warn">The recording is not played: ${v.e(errorOf(err))}</span>`;
+          // Kept, so a redraw of the feed (one that lands while the Module checks) says it again rather than offering Play.
+          refusedRecordings.set(box.dataset.recording!, `<span class="k-label k-warn">The recording is not played: ${v.e(errorOf(err))}</span>`);
+          box.innerHTML = refusedRecordings.get(box.dataset.recording!)!;
+          showFilms();
         }
         return;
       }

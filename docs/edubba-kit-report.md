@@ -328,6 +328,33 @@ Pictures, in `docs/edubba-kit/`:
 **Question 8 (after question 7). A collective's sales.** A collective's works are paid to its split service, which receives the buyers' claims. Edubba's Sales does not read contests beside them yet.
 - *My lean:* read them in the split-service round. The service already receives the claims, and could tell the members, as Damgar tells of a sale.
 
+**Found while testing, and fixed.** In Dub, a recording the audio Module refuses was said in the card only until the next redraw of the feed. If a redraw landed while the Module checked, the refusal never showed, and Play was offered again: the browser test caught it once in a full run. The refusal is now kept and said again on every redraw, and the recording is never played.
+
 ### Every test after S7d
 
-(Filled in below once the suites finish.)
+Run locally on the merged branch:
+
+| Suite | Passed |
+| --- | --- |
+| barebone | 14 of 14 |
+| collective client | 44 of 44 |
+| connector | 13 of 13 |
+| Edubba (`clients/desk`) | 100 of 100 |
+| genesis | 41 of 41 |
+| grants | 5 of 5 |
+| long-form | 26 of 26 |
+| manage | 7 of 7 |
+| the kit | 11 of 11 |
+| Dub | 39 of 39 (after the fix above) |
+| Kišib | 36 of 36 |
+| Damgar | 34 (its 4 regtest tests run in CI's regtest job) |
+| Ummia | 25 of 25 |
+| test wallet | 4 of 4 |
+| reader | 22 of 22 |
+| repository client | 21 of 21 |
+| reports | 9 of 9 |
+
+- The jpeg, video, audio, carry and timestamp Modules all pass.
+- The six releases are reproducible.
+- **Two checks of `clients/assess` fail on this machine**, as in the earlier rounds: each quotes rules from `spec/`, which this branch does not change, and CI does not run that suite.
+- The Rust workspace is S7d's, unchanged here: CI runs it.

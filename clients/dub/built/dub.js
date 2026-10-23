@@ -20208,6 +20208,7 @@ function mount(app2, b) {
   }
   const films = /* @__PURE__ */ new Map();
   const recordings = /* @__PURE__ */ new Map();
+  const refusedRecordings = /* @__PURE__ */ new Map();
   function showFilms() {
     for (const box2 of app2.querySelectorAll("[data-film]")) {
       const url = films.get(box2.dataset.film ?? "");
@@ -20220,6 +20221,11 @@ function mount(app2, b) {
       box2.replaceWith(video);
     }
     for (const box2 of app2.querySelectorAll("[data-recording]")) {
+      const refused = refusedRecordings.get(box2.dataset.recording ?? "");
+      if (refused) {
+        box2.innerHTML = refused;
+        continue;
+      }
       const url = recordings.get(box2.dataset.recording ?? "");
       if (!url) continue;
       const audio = document.createElement("audio");
@@ -21062,7 +21068,9 @@ function mount(app2, b) {
           recordings.set(box2.dataset.recording, URL.createObjectURL(new Blob([bytes], { type: "audio/mp4" })));
           showFilms();
         } catch (err) {
-          box2.innerHTML = `<span class="k-label k-warn">The recording is not played: ${e(errorOf(err))}</span>`;
+          refusedRecordings.set(box2.dataset.recording, `<span class="k-label k-warn">The recording is not played: ${e(errorOf(err))}</span>`);
+          box2.innerHTML = refusedRecordings.get(box2.dataset.recording);
+          showFilms();
         }
         return;
       }
