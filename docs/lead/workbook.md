@@ -133,6 +133,12 @@ S7e (branch `claude/s7e-fable-second`, F389), one line each:
 - Agreements, "A contest of a purchase": client conformance, where the offer the buyer paid or signed onto names a vow, the buyer's client names the vow as the contest's chain and predecessor, `[[vow, vow]]` (S7d question 3).
 - Agreements, Signature (type 1)'s field 0 comment: "or a standing offer, as a party consenting to it (type 6) or signing onto it (rule 13)"; rule 12's opening: a payment following a lone seller's offer names no claim, the offer itself the agreement it pays under (rule 11; Money rule 18), and the refund sentence points back to it; the italic line on the buyer's standing left out after the stranger's reading (the older points).
 
+S7f (branch `claude/s7f-last-before-quiet`, F389's S7e question 2, F391, F392), one line each:
+- Agreements, "What a settlement could see": "what it cites, a judge's settlement its request, each with its own history (what its `prev` and the predecessors its `objects` name, followed back)"; the core now reads the request's history (S7e question 2; the words added after a stranger's reading).
+- Agreements, after "A contest of a purchase": client conformance, the buyer's claim readable by every member of the collective's agreement in force or every party of the version the purchase names, sealed to each or its key delivered (rule 57); its stated cost, every member or party sees who bought (F391).
+- Agreements, the glossary's "Stake": a stake in the collective itself is "and so a stake in every work the collective sells under that agreement" (F392, 2).
+- Money, rule 4's second condition: "or, where the payment follows an agreement or offer whose terms list, in field 14 or 29, a grant of the payee's, the pointer of that grant's grantee (field 14's, the agreement's designated pointer; field 29's, a backup: Agreements rules 15 and 17), judged by Agreements as rule 7 judges a collective's pointer, a Money-only client showing it unknown"; and one sentence after the conditions: for such a pointer, the first and third conditions read the grantee's own pointer chain and vault in force, the pointer counting where rule 1 counts it (F392, 1; the appositive and the sentence after a stranger's reading).
+
 ## Text edits waiting for the freeze-ready branch
 
 Small decided changes that arrive while a session holds the branch; the lead makes them, or hands them to the next session, once the branch is free.
