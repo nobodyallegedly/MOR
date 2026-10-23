@@ -884,6 +884,55 @@ pub fn identity(out: &mut Out) {
     out.case(&mut w, "two homeless rotations at one position, each final, with an objection whose status cannot be told there: contested", "Identity, \"What stops a chain\", the order of the reasons; \"Final\"; the homeless procedure",
         "Each homeless rotation is an escape receipted by its new home, and each is followed by a rotation counting under the rule it declared: both are final. A contest among final rotations comes before cannot tell, since no objection can undo it; the old home's objection, bound to a rotation not held, cannot be told.",
         Facts::default(), json!({ "question": "chain", "identity": hx(&e.id) }), json!({ "counting": [hx(&e.id)], "next": "contested", "dishonest": [] }), None);
+
+    // The way out, rotation by rotation: the old homes' own rotation beats an escape at the same position.
+    let mut w = World::new();
+    let mut old = w.operator("a slow home");
+    let mut new = w.operator("an escape's new home");
+    let mut e = w.genesis("eda", vec![home_of(&old)], None, None);
+    let (r, e1) = w.rotate(&e, Rot { homes: Some(vec![home_of(&new)]), homeless: true, ..Default::default() });
+    w.endorse(&mut e, &r, None);
+    w.receipt(&mut new, &e.id, &r, 1);
+    let (s2, _) = w.rotate(&e1, Rot::default());
+    w.receipt(&mut new, &e.id, &s2, 2);
+    let (o, _) = w.rotate(&e, Rot { signing_key: Some(schnorr("eda, the ordinary line", 1)), ..Default::default() });
+    w.receipt(&mut old, &e.id, &o, 1);
+    let log = w.log.clone();
+    out.case(&mut w, "an escape, final, and an ordinary rotation its old home receipts at the same position: the ordinary rotation counts", "Identity, \"The homeless procedure\": a rotation counting under the home rule always beats a homeless one",
+        "Eda escaped to a new home and rotated again there; her old home, still alive, receipts an ordinary rotation at position 1. The rotation counting under the rule in force wins; the escape and what follows it count for nothing.",
+        Facts::default(), json!({ "question": "chain", "identity": hx(&e.id) }), json!({ "counting": [hx(&e.id), hx(&o)], "next": "end", "dishonest": [] }), None);
+    let mut w2 = World::new();
+    for (a, _) in &log {
+        w2.add(a);
+    }
+    out.case(&mut w2, "the escape in that case: not counting", "Identity, \"The homeless procedure\"; \"Which rotation counts\", a rotation that does not count",
+        "It passes its checks and loses at its position.", Facts::default(), ask_status(&r), json!("not counting"), None);
+    // An escape against its old home's objection: the escape stands.
+    let mut w = World::new();
+    let mut old = w.operator("an objecting home");
+    let mut new = w.operator("the escape's new home");
+    let mut e = w.genesis("ezra", vec![home_of(&old)], None, None);
+    let (r, _) = w.rotate(&e, Rot { homes: Some(vec![home_of(&new)]), homeless: true, ..Default::default() });
+    w.endorse(&mut e, &r, None);
+    w.receipt(&mut new, &e.id, &r, 1);
+    w.object(&mut old, &e.id, &r);
+    out.case(&mut w, "an escape, endorsed with the signing key, against its old home's valid objection: it counts", "Identity, \"The homeless procedure\", the escape: both keys need no old home",
+        "The old home objects to the homeless rotation; an escape signed by both keys and receipted by its new home needs no old home's word, and an objection does not undo it.",
+        Facts::default(), ask_status(&r), json!("valid"), None);
+    // A self-hosted identity: its own rotation counts with no receipt; two at one position, contested.
+    let mut w = World::new();
+    let sh = w.genesis("sol", vec![own_home()], None, None);
+    let (r1, _) = w.rotate(&sh, Rot::default());
+    let log = w.log.clone();
+    out.case(&mut w, "a self-hosted identity's rotation: it counts, no receipt needed", "Identity, homes: a self-hosted identity is its own home",
+        "Sol's genesis names itself as its home; the rotation it signs is served by itself.", Facts::default(), ask_status(&r1), json!("valid"), None);
+    let mut w2 = World::new();
+    for (a, _) in &log {
+        w2.add(a);
+    }
+    w2.rotate(&sh, Rot { signing_key: Some(schnorr("sol, a second line", 1)), ..Default::default() });
+    out.case(&mut w2, "a self-hosted identity serving two rotations at one position: contested", "Identity rule 44; \"What stops a chain\"",
+        "Two rotations at position 1, both served by the identity itself.", Facts::default(), json!({ "question": "chain", "identity": hx(&sh.id) }), json!({ "counting": [hx(&sh.id)], "next": "contested", "dishonest": [] }), None);
 }
 
 pub fn text(out: &mut Out) {
@@ -1224,6 +1273,7 @@ pub fn money(out: &mut Out) {
         w
     };
     let (mut a2, mut b2, mut buyer2) = (ana.clone(), ben.clone(), buyer.clone());
+    let (ana_d, ben_d, buyer_d) = (ana.clone(), ben.clone(), buyer.clone());
     let mut w1 = world(&base);
     let d = deal_with(&mut w1, &mut ana, &mut ben, vec![ga, gb], Some(vec![ga2, gb2]));
     let paid = pay(&mut w1, &mut buyer, ana.id, d, b"the buyer pays ana's share of the deal at its split service");
@@ -1242,6 +1292,75 @@ pub fn money(out: &mut Out) {
     out.case(&mut w2, "the same payment under a deal listing no grant of the payee's: counts for nothing", "Money rule 4",
         "The deal lists only Ben's grant to the service; the service's pointer is not Ana's own, and no grant of hers in the deal sends her money there.",
         Facts { rail_valid: vec![(stray, svc_pointer)], ..Default::default() }, ask("payment counts", &stray), json!("does not count"), None);
+
+    // A deal whose payees' grants name different services designates no pointer (Agreements rule 15).
+    let mut w4 = world(&base);
+    let (mut a4, mut b4, mut buyer4) = (ana_d.clone(), ben_d.clone(), buyer_d.clone());
+    let d4 = deal_with(&mut w4, &mut a4, &mut b4, vec![ga, gb2], None);
+    let split = pay(&mut w4, &mut buyer4, a4.id, d4, b"the buyer pays ana where the deal's grants disagree");
+    out.case(&mut w4, "a payment under a deal whose payees' grants name different services: counts for nothing at either service", "Agreements rule 15: every grant field 14 lists names the same service, or the deal carries none of them; Money rule 4",
+        "Ana's grant names the split service, Ben's the backup: the deal carries neither, designates no pointer, and Ana's payment to the split service's pointer is not paid to her.",
+        Facts { rail_valid: vec![(split, svc_pointer)], ..Default::default() }, ask("payment counts", &split), json!("does not count"), None);
+
+    // Which pointer a debt is paid to: the version the payee's own act holds (Money rule 17), never what the debtor drafts.
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut bo = w.genesis("bo", vec![own_home()], None, None);
+    let p1 = pointer_act(&mut w, &mut ana, b"ana's first wallet");
+    let d = { let t = deal(&[ana.id, bo.id], None); ag_act(&mut w, &mut bo, agreements::types::TERMS, t.to_map(), None) };
+    sign(&mut w, &mut bo, &d);
+    sign(&mut w, &mut ana, &d);
+    let p2 = { let x = Fin::PayeePointer(money::PayeePointer { payee: ana.id, version: 2, previous: Some(p1), rails: vec![money::Rail { module: rail, address: b"ana's second wallet".to_vec() }] });
+        let a = w.everyday_act(&mut ana, mirs().money, 0, x.to_map(), None, None); w.add(&a) };
+    let oid = { let o = Fin::Obligation(money::Obligation { debtor: bo.id, creditor: ana.id, amount: Amount { unit, value: 60 }, pointer: p2, agreement: Some(d) });
+        let a = w.everyday_act(&mut bo, mirs().money, 1, o.to_map(), None, None); w.add(&a) };
+    let base = w.log.clone();
+    let people = (ana.clone(), bo.clone());
+    let pay = |w: &mut World, bo: &mut Person, proof: &[u8]| {
+        let c = Fin::Claim(Claim { rail, proof: proof.to_vec(), payee: ana.id, amount: Amount { unit, value: 60 }, fulfils: oid, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let a = w.everyday_act(bo, mirs().money, 3, c.to_map(), None, None);
+        w.add(&a)
+    };
+    let world = |log: &[(mor_core::act::Act, Option<mor_core::lock::ContentKey>)]| { let mut w = World::new(); for (a, _) in log { w.add(a); } w };
+    let mut w1 = world(&base);
+    let c1 = pay(&mut w1, &mut bo, b"bo pays the debt to ana's second wallet");
+    out.case(&mut w1, "a debt under a deal paid to a newer pointer than the payee's own act holds: it counts for nothing", "Money rule 17: the pointer is judged by the payee's own act, never by the payer's",
+        "Ana's signature on the deal holds her first pointer only; the obligation Bo signed names her second, which is informative only. Paid to the second, the debt is not paid.",
+        Facts { rail_valid: vec![(c1, p2)], rail_payments: vec![(b"bo pays the debt to ana's second wallet".to_vec(), b"payment one".to_vec())], ..Default::default() }, ask("paid toward", &oid), json!(0), None);
+    let mut w2 = world(&base);
+    let c2 = pay(&mut w2, &mut bo, b"bo pays the debt to ana's first wallet");
+    out.case(&mut w2, "the same debt paid to the pointer the payee's own act holds: it counts", "Money rule 17",
+        "Paid to the first pointer, the version Ana's own signature act holds.",
+        Facts { rail_valid: vec![(c2, p1)], rail_payments: vec![(b"bo pays the debt to ana's first wallet".to_vec(), b"payment two".to_vec())], ..Default::default() }, ask("paid toward", &oid), json!(60), None);
+    let (mut ana, mut bo) = people;
+    let mut w3 = world(&base);
+    sign(&mut w3, &mut ana, &d);
+    let c3 = pay(&mut w3, &mut bo, b"bo pays the debt to ana's second wallet, after her later act");
+    out.case(&mut w3, "the newer pointer, once a later act of the payee's on the deal holds it: it counts", "Money rule 17",
+        "Ana signs again on the deal after publishing her second pointer, so her own act now holds it.",
+        Facts { rail_valid: vec![(c3, p2)], rail_payments: vec![(b"bo pays the debt to ana's second wallet, after her later act".to_vec(), b"payment three".to_vec())], ..Default::default() }, ask("paid toward", &oid), json!(60), None);
+
+    // Who signs Money's acts (Money rule 7; "Payee pointer"; "Obligation").
+    let mut w = World::new();
+    let ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut cy = w.genesis("cy", vec![own_home()], None, None);
+    let forged = { let x = Fin::PayeePointer(money::PayeePointer { payee: ana.id, version: 1, previous: None, rails: vec![money::Rail { module: rail, address: b"cy's wallet".to_vec() }] });
+        let a = w.everyday_act(&mut cy, mirs().money, 0, x.to_map(), None, None); w.add(&a) };
+    let receipt = { let r = Fin::Receipt(Receipt { rail, proof: b"cy writes ana's receipt".to_vec(), payer: Some(Payer::Identity(cy.id)), payee: ana.id, amount: Amount { unit, value: 5 }, fulfils: ana.id, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(&mut cy, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
+    let owed = { let o = Fin::Obligation(money::Obligation { debtor: ana.id, creditor: cy.id, amount: Amount { unit, value: 5 }, pointer: cy.id, agreement: None });
+        let a = w.everyday_act(&mut cy, mirs().money, 1, o.to_map(), None, None); w.add(&a) };
+    let log = w.log.clone();
+    out.case(&mut w, "a payee pointer for one identity signed by another: invalid", "Money, \"Payee pointer\": valid only if signed by the identity it is for",
+        "Cy signs a pointer naming Ana as its payee.", Facts::default(), ask_status(&forged), json!("invalid"), None);
+    let mut w2 = World::new();
+    for (a, _) in &log { w2.add(a); }
+    out.case(&mut w2, "a receipt signed by someone who is not its payee: invalid", "Money rule 7: a receipt is signed by the receiver of the hop",
+        "Cy signs a receipt naming Ana as payee, with no grant of Ana's.", Facts::default(), ask_status(&receipt), json!("invalid"), None);
+    let mut w3 = World::new();
+    for (a, _) in &log { w3.add(a); }
+    out.case(&mut w3, "an obligation signed by its creditor: invalid", "Money, \"Obligation\": signed by the debtor",
+        "Cy writes a debt Ana would owe him.", Facts::default(), ask_status(&owed), json!("invalid"), None);
 }
 
 pub fn agreements(out: &mut Out) {
@@ -2065,6 +2184,146 @@ pub fn agreements(out: &mut Out) {
     out.case(&mut w2, "the fan's contest of that purchase: shown beside it", "Agreements rule 54; \"Contest (type 14)\"",
         "The sale is a purchase, so the buyer's own contest naming the claim is shown beside it.",
         facts(), json!({ "question": "purchase contests", "purchase": hx(&claim) }), json!([hx(&k)]), None);
+
+    // A deal's fork settled by the parties' own version (rule 47, "The settling version"; "Two settlements of one fork").
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let mut j0 = w.genesis("the judge", vec![own_home()], None, None);
+    let mut t = deal(&[ana.id, ben.id], None);
+    t.text = "A deal its parties settle themselves.".into();
+    t.arbitrators = Some(vec![j0.id]);
+    t.fork_judge = Some(j0.id);
+    t.time = Some((spec("a block height reference"), Value::Uint(0)));
+    let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    // A complete version cloning `parent`, naming in field 26 the tips it drops, cited after its parent.
+    let version = |w: &mut World, ana: &mut Person, ben: &mut Person, parent: Hash, text: &str, mut settles: Vec<Hash>| {
+        let mut c = t.clone();
+        c.parent = Some(parent);
+        c.text = text.into();
+        settles.sort();
+        c.settles = (!settles.is_empty()).then(|| settles.clone());
+        let mut signers = vec![ana.id, ben.id];
+        signers.sort();
+        c.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Clone, signers }]);
+        let mut o = vec![Object { chain: parent, predecessor: parent }];
+        o.extend(settles.iter().map(|x| Object { chain: *x, predecessor: *x }));
+        let v = ag_act(w, ana, agreements::types::TERMS, c.to_map(), Some(o));
+        sign(w, ana, &v);
+        sign(w, ben, &v);
+        v
+    };
+    let va = version(&mut w, &mut ana, &mut ben, d, "Version A.", vec![]);
+    let vb = version(&mut w, &mut ana, &mut ben, d, "Version B.", vec![]);
+    let base = w.log.clone();
+    let people = (ana.clone(), ben.clone(), j0.clone());
+    let world = |log: &[(mor_core::act::Act, Option<mor_core::lock::ContentKey>)], skip: Option<Hash>| {
+        let mut w = World::new();
+        for (a, _) in log {
+            if Some(a.id()) != skip {
+                w.add(a);
+            }
+        }
+        w
+    };
+    let mut w1 = world(&base, None);
+    let s = version(&mut w1, &mut ana, &mut ben, va, "Settled: A, having seen B.", vec![vb]);
+    out.case(&mut w1, "a deal's fork settled by its parties: a complete version on one branch naming the other's tip, the version in force", "Agreements rule 47, \"The settling version\"",
+        "A clone of A, naming B in field 26 and citing it after its parent, signed by both parties: from it on, its line is in force.", Facts::default(), ask("version in force", &d), json!(hx(&s)), None);
+    let (mut ana, mut ben, mut j0) = people.clone();
+    let mut w2 = world(&base, None);
+    version(&mut w2, &mut ana, &mut ben, va, "Settled: A, having seen B.", vec![vb]);
+    version(&mut w2, &mut ana, &mut ben, vb, "Settled: B, having seen A.", vec![va]);
+    out.case(&mut w2, "two settlements of the parties, neither holding the other, keeping different lines: tangled, on the reference", "Agreements rule 47, \"Two settlements of one fork, neither holding the other\"",
+        "Every party signed both settlements, each naming the other branch's tip; neither's history holds the other.", Facts::default(), ask("deal fork", &d),
+        json!({ "reference": hx(&d), "branches": 2, "tangled": true }), None);
+    let mut w3 = world(&base, None);
+    let request = ag_act(&mut w3, &mut ben, agreements::types::SETTLEMENT_REQUEST, agreements::SettlementRequest { reference: d }.to_map(), obj(d));
+    let js = agreements::ForkSettlement { request, kept: va, discarded: vec![vb] };
+    ag_act(&mut w3, &mut j0, agreements::types::FORK_SETTLEMENT, js.to_map(), Some(vec![Object { chain: request, predecessor: request }]));
+    let sb = version(&mut w3, &mut ana, &mut ben, vb, "Settled by us: B, having seen A.", vec![va]);
+    out.case(&mut w3, "the parties' settlement against the judge's, neither holding the other: the parties' holds", "Agreements rule 47, \"Two settlements of one fork, neither holding the other\"",
+        "The judge keeps A; the parties, not citing the judge's settlement, settle on B. A version every party signed is the deal changing by its own rule; the judge's counts for nothing.",
+        Facts::default(), ask("version in force", &d), json!(hx(&sb)), None);
+    let (mut ana, mut ben, _) = people;
+    let mut w4 = world(&base, None);
+    let vb2 = version(&mut w4, &mut ana, &mut ben, vb, "Version B grows.", vec![]);
+    let s4 = version(&mut w4, &mut ana, &mut ben, va, "Settled: A, having seen B grown.", vec![vb2]);
+    let log4 = w4.log.clone();
+    let mut w5 = world(&log4, Some(vb2));
+    out.case(&mut w5, "a settling version naming a tip this verifier does not hold: a plain version, the deal on its reference", "Agreements rule 47, \"A settling version naming a version this verifier does not hold\"",
+        "The verifier holds everything but B's newer version, which the settlement names: it reads the settlement as a plain version on A's branch until it holds it.",
+        Facts::default(), ask("version in force", &d), json!(hx(&d)), None);
+    out.case(&mut w4, "the same once the verifier holds the tip it names: the settlement counts", "Agreements rule 47, \"A settling version naming a version this verifier does not hold\"",
+        "From then on it counts as a settlement.", Facts::default(), ask("version in force", &d), json!(hx(&s4)), None);
+
+    // Several keepers: the deal's rule counts their records (rules 41 and 42).
+    for (rule, name, v) in [(Rule::All, "a deal with two keepers under the rule \"every keeper\", only one recording the act before the rotation: void", "void"),
+                            (Rule::Threshold(1), "the same under the rule \"at least one keeper\": disputed", "disputed")] {
+        let mut w = World::new();
+        let mut home = w.operator("a home");
+        let mut ben = w.genesis("ben", vec![own_home()], None, None);
+        let mut k1 = w.genesis("the deal's first keeper", vec![own_home()], None, None);
+        let mut k2 = w.genesis("the deal's second keeper", vec![own_home()], None, None);
+        let mut ana = w.genesis("ana", vec![home_of(&home)], None, None);
+        let t0 = deal(&[ana.id, ben.id], Some(Keepers { operators: vec![k1.id, k2.id], rule }));
+        let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t0.to_map(), None);
+        sign(&mut w, &mut ana, &d);
+        sign(&mut w, &mut ben, &d);
+        let x = ag_act(&mut w, &mut ana, agreements::new_types::LIVENESS, agreements::Liveness { agreement: d }.to_map(), obj(d));
+        let (r, _) = w.rotate(&ana, Rot { disowned: Some(vec![x]), ..Default::default() });
+        w.receipt(&mut home, &ana.id, &r, 1);
+        keep(&mut w, &mut k1, x, ana.id);
+        keep(&mut w, &mut k1, r, ana.id);
+        keep(&mut w, &mut k2, r, ana.id);
+        keep(&mut w, &mut k2, x, ana.id);
+        out.case(&mut w, name, "Agreements rules 41 and 42; Identity rule 34", "The first keeper recorded the act before the rotation, the second only after it; the keepers' rule decides whether that is enough.", Facts::default(), ask("status after keepers", &x), json!(v), None);
+    }
+
+    // Purchases (rule 12): a payment for a claimed work naming no claim; the same naming it; a lone seller's offer.
+    let unit = spec("a test unit (regtest satoshi)");
+    let rail = spec("a rail Module");
+    let mut w = World::new();
+    let mut ana = w.genesis("ana", vec![own_home()], None, None);
+    let mut ben = w.genesis("ben", vec![own_home()], None, None);
+    let cy = w.genesis("cy", vec![own_home()], None, None);
+    let film = spec("ana and ben's film");
+    let mut t = deal(&[ana.id, ben.id], None);
+    t.text = "A deal over a film.".into();
+    t.stakes = Some(vec![agreements::Stake { object: agreements::Who::Id(film), holders: vec![(agreements::Who::Id(ana.id), 600_000), (agreements::Who::Id(ben.id), 400_000)] }]);
+    let d = ag_act(&mut w, &mut ana, agreements::types::TERMS, t.to_map(), None);
+    sign(&mut w, &mut ana, &d);
+    sign(&mut w, &mut ben, &d);
+    let publ = { let a = w.everyday_act(&mut ana, mirs().envelopes, 0, publication(vec![(Value::Uint(1), Value::Bytes(film.to_vec()))]), None, None); w.add(&a) };
+    let base = w.log.clone();
+    let mut ana2 = ana.clone();
+    let rc = |w: &mut World, ana: &mut Person, purchase: Option<money::Purchase>, proof: &[u8]| {
+        let r = Fin::Receipt(Receipt { rail, proof: proof.to_vec(), payer: Some(Payer::Identity(cy.id)), payee: ana.id, amount: Amount { unit, value: 400 }, fulfils: publ, previous: None, forward: None, batch: None, purchase });
+        let a = w.everyday_act(ana, mirs().money, 2, r.to_map(), None, None);
+        w.add(&a)
+    };
+    let r1 = rc(&mut w, &mut ana, None, b"cy pays for the film, naming no claim");
+    out.case(&mut w, "a payment for a claimed work naming no claim: no purchase, owed back", "Agreements rule 12: a payment naming no claim is no purchase",
+        "The film's stake is written in Ana and Ben's deal; Ana's receipt of Cy's payment names no claim (field 9).",
+        Facts { rail_valid: vec![(r1, publ)], rail_payments: vec![(b"cy pays for the film, naming no claim".to_vec(), b"a payment".to_vec())], ..Default::default() }, json!({ "question": "purchase", "act": hx(&r1) }), json!("no purchase"), None);
+    let mut w2 = World::new();
+    for (a, _) in &base { w2.add(a); }
+    let r2 = rc(&mut w2, &mut ana2, Some(money::Purchase { agreement: d, line: d }), b"cy pays for the film under the deal");
+    out.case(&mut w2, "the same payment naming the deal as the claim it pays under: a purchase", "Agreements rule 12; Money rule 18",
+        "Field 9 names the claiming agreement and the version at which Cy's client read it current.",
+        Facts { rail_valid: vec![(r2, publ)], rail_payments: vec![(b"cy pays for the film under the deal".to_vec(), b"another payment".to_vec())], ..Default::default() }, json!({ "question": "purchase", "act": hx(&r2) }), json!("purchase"), None);
+    let mut w = World::new();
+    let mut sel = w.genesis("a lone seller", vec![own_home()], None, None);
+    let buyer = w.genesis("a buyer of the lone seller", vec![own_home()], None, None);
+    let o = agreements::Offer { under: None, sold: vec![agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("a talk".into())))], price: Amount { unit, value: 90 }, paid: None, words: Some("A recorded talk.".into()), until: None, time: None, refund: None };
+    let offer = ag_act(&mut w, &mut sel, agreements::types::STANDING_OFFER, o.to_map(), None);
+    let r = { let x = Fin::Receipt(Receipt { rail, proof: b"the buyer pays the lone seller".to_vec(), payer: Some(Payer::Identity(buyer.id)), payee: sel.id, amount: Amount { unit, value: 90 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(&mut sel, mirs().money, 2, x.to_map(), None, None); w.add(&a) };
+    out.case(&mut w, "a payment following a lone seller's offer, naming no claim: a purchase", "Agreements rule 12: the offer itself is the agreement it pays under (rule 11; Money rule 18)",
+        "The offer names no agreement (field 0); a payment following it names no claim and is a purchase under the offer's terms.",
+        Facts { rail_valid: vec![(r, offer)], rail_payments: vec![(b"the buyer pays the lone seller".to_vec(), b"the talk's payment".to_vec())], ..Default::default() }, json!({ "question": "purchase", "act": hx(&r) }), json!("purchase"), None);
 }
 
 pub fn development(out: &mut Vec<J>) {
