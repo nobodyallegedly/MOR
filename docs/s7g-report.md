@@ -392,7 +392,7 @@ No text was changed.
 
 ## The releases rebuilt
 
-Main had not moved since S7f's merge (`5fe7f76`), so nothing needed merging. I rebuilt all six releases in this branch, as their READMEs say:
+Main then moved: the Nakišib round (#107) merged, and I merged main into this branch. The one conflict was a generated file, Kišib's `built/BUILT-WITH.txt`, which the rebuild rewrites. Kišib's release now also carries its own air-gap WebAssembly, which is built from `mor-core` and so changes with the core. I rebuilt all six releases in this branch, as their READMEs say:
 - `cd clients/genesis && npm run wasm`;
 - then `npm run release` in `clients/site` (the display client), `clients/dub`, `clients/kishib`, `clients/damgar`, `clients/ummia` and `clients/desk` (Edubba).
 
@@ -411,4 +411,4 @@ Each one's `npm run test:build` passed: it builds the release again and finds th
 - Each fix was checked against main's core, run on the new cases: the old core gives the old answer on the fixed cases, and the same answer on their twins.
 - The six releases' `npm run test:build`: all pass, the same bytes.
 - Client suites: run here, the non-browser ones passed: genesis, barebone, connector, grants, longform. The browser-driven ones cannot run on this machine; CI ran every suite.
-- **CI on GitHub, read by me:** on `e8f1cc1`, green: all, regtest, browsers, seal, release (the reproducible display client).
+- **CI on GitHub, read by me:** green on `e8f1cc1` and `f1c902a` (all, regtest, browsers, seal, release: the reproducible display client). After merging main and rebuilding, Kišib's and the display client's `test:build` passed here; the final head's result is on the pull request.
