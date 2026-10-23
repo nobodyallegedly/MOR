@@ -337,6 +337,12 @@ struct Described {
     acks: Option<Vec<String>>,
     #[serde(with = "serde_bytes")]
     payload: Option<Vec<u8>>,
+    /// The signer's own hint (the inside's field 9), when opened and
+    /// present: a timestamp or other hint, as the signer wrote it. Display
+    /// only, labelled as the signer's own (Envelopes rule 6, "Hints never
+    /// decide"): nothing a verdict reads uses it, and no function of this
+    /// binding takes it as input to a judgment.
+    hint: Option<String>,
 }
 
 fn describe_act(a: &Act, key: Option<&[u8; 32]>) -> Described {
@@ -386,6 +392,7 @@ fn describe_act(a: &Act, key: Option<&[u8; 32]>) -> Described {
         acks: inside
             .as_ref()
             .map(|i| i.acks.iter().flatten().map(hx).collect()),
+        hint: inside.as_ref().and_then(|i| i.hint.clone()),
         payload: inside.map(|i| cbor::encode(&Value::Map(i.payload))),
     }
 }
@@ -959,6 +966,13 @@ struct EverydayIn {
     /// Acts this one acknowledges, by id (Envelopes, `acks`).
     #[serde(default)]
     acks: Option<Vec<String>>,
+    /// The signer's own hint, written into the inside's field 9 (Envelopes,
+    /// the inside, field 9: "a timestamp or other hint, never
+    /// load-bearing"), such as the time the signer's device read when
+    /// signing. Display only (Envelopes rule 6, "Hints never decide"):
+    /// nothing a verdict reads uses it. Canonical text, or refused.
+    #[serde(default)]
+    hint: Option<String>,
 }
 
 /// A reference as the clients give it: an act id, or an act id and its
@@ -985,6 +999,9 @@ struct Made {
 #[wasm_bindgen(js_name = makeEveryday)]
 pub fn make_everyday(input: JsValue) -> R<JsValue> {
     let e: EverydayIn = from_js(input)?;
+    if e.hint.as_deref().is_some_and(|h| !mor_core::text::is_canonical(h)) {
+        return Err(err("a hint is canonical text (Text MIR)"));
+    }
     let key = schnorr(&e.signing_secret)?;
     let seq = e.sequence.iter().map(|s| unhex(s)).collect::<R<Vec<_>>>()?;
     let inside = Inside {
@@ -1027,7 +1044,7 @@ pub fn make_everyday(input: JsValue) -> R<JsValue> {
                     .collect::<R<Vec<_>>>()
             })
             .transpose()?,
-        hint: None,
+        hint: e.hint,
         salt: salt(),
     };
     let content_key = random::<32>();
@@ -2679,6 +2696,20 @@ pub fn vow_contest_payload(vow: &str, sale: &str, promise: Option<String>) -> R<
     Ok(cbor::encode(&Value::Map(agreements::Contest::of_sale(unhex(vow)?, unhex(sale)?, promise).to_map())))
 }
 
+/// A purchase's contest payload (Agreements type 14; rule 54, "Contest
+/// (type 14)", F386): the purchase it contests (the buyer's own payer's
+/// claim of the payment, or its signature act on an offer at no price),
+/// and, optionally, the promise not kept, in words. Signed by the buyer;
+/// the act carries, in `objects`, `[purchase, purchase]`. Shown beside the
+/// purchase; it voids nothing and moves nothing.
+#[wasm_bindgen(js_name = purchaseContestPayload)]
+pub fn purchase_contest_payload(purchase: &str, promise: Option<String>) -> R<Vec<u8>> {
+    if promise.as_deref().is_some_and(|w| !mor_core::text::is_canonical(w)) {
+        return Err(err("the promise not kept is canonical text (Text MIR)"));
+    }
+    Ok(cbor::encode(&Value::Map(agreements::Contest::of_purchase(unhex(purchase)?, promise).to_map())))
+}
+
 /// An abandonment declaration payload (Agreements type 13, B12): the agreement,
 /// the version whose clause it applies (the last the party signed), the
 /// party, and the outcomes, ascending. The act carries, in `objects`,
@@ -3286,6 +3317,20 @@ impl Verifier {
             repeated: n.repeated,
             unnumbered: n.unnumbered.iter().map(hx).collect(),
         })
+    }
+
+    /// The contests shown beside a purchase (Agreements rule 54, "Contest
+    /// (type 14)", F386), by the act that is the purchase (the buyer's
+    /// payer's claim of the payment, or the buyer's signature act on an
+    /// offer at no price): the buyer's own contests of it, ascending. A
+    /// contest by anyone else shows nothing; for an act that is no
+    /// purchase, none shows. `specs.railValid` names the claims whose rail
+    /// the client checked. Errs where it is unknown (Money rule 12).
+    #[wasm_bindgen(js_name = agreementsPurchaseContests)]
+    pub fn agreements_purchase_contests(&self, specs: JsValue, purchase: &str) -> R<Vec<String>> {
+        let s = specs_of(specs)?;
+        let view = s.view(&self.inner)?;
+        Ok(view.purchase_contests(&unhex(purchase)?).map_err(lerr)?.iter().map(hx).collect())
     }
 
     #[wasm_bindgen(js_name = agreementsDeclarationsNaming)]

@@ -404,6 +404,11 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             facts.apply_view(&mut v);
             vow_json(v.vow(&h("vow")))
         }
+        "purchase contests" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            v.purchase_contests(&h("purchase")).map_or(json!("unknown"), |x| json!(x.iter().map(|c| hx(c)).collect::<Vec<_>>()))
+        }
         "refund repaid" => {
             let mut v = view(w);
             facts.apply_view(&mut v);
@@ -1560,6 +1565,38 @@ pub fn agreements(out: &mut Out) {
         }
         out.case(&mut w, name, "Agreements rule 33", why, facts, q, json!(v), None);
     }
+
+    // A buyer's contest of a purchase: shown beside it when the buyer signs it; signed by another identity, nothing.
+    let unit = spec("a test unit (regtest satoshi)");
+    let rail = spec("a rail Module");
+    let mut w = World::new();
+    let mut club = w.genesis("the club", vec![own_home()], None, None);
+    let mut fan = w.genesis("a fan", vec![own_home()], None, None);
+    let mut other = w.genesis("another identity", vec![own_home()], None, None);
+    let sold = agreements::Sold::Access(spec("an access cMIP"), cbor::encode(&Value::Text("the concert's recording".into())));
+    let o = agreements::Offer { under: None, sold: vec![sold], price: Amount { unit, value: 300 }, paid: None, words: Some("The full concert, filmed in the hall.".into()), until: None, time: None, refund: None };
+    let offer = ag_act(&mut w, &mut club, agreements::types::STANDING_OFFER, o.to_map(), None);
+    let proof = b"the fan pays for the recording".to_vec();
+    { let r = Fin::Receipt(Receipt { rail, proof: proof.clone(), payer: Some(Payer::Identity(fan.id)), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, previous: None, forward: None, batch: None, purchase: None });
+        let a = w.everyday_act(&mut club, mirs().money, 2, r.to_map(), None, None); w.add(&a); }
+    let claim = { let c = Fin::Claim(Claim { rail, proof: proof.clone(), payee: club.id, amount: Amount { unit, value: 300 }, fulfils: offer, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+        let a = w.everyday_act(&mut fan, mirs().money, 3, c.to_map(), None, None); w.add(&a) };
+    let base = w.log.clone();
+    let words = agreements::Contest::of_purchase(claim, Some("A slideshow, not the concert.".into()));
+    let facts = || Facts { rail_valid: vec![(claim, offer)], rail_payments: vec![(proof.clone(), b"the recording's payment".to_vec())], ..Default::default() };
+    let ask_c = json!({ "question": "purchase contests", "purchase": hx(&claim) });
+    let k = ag_act(&mut w, &mut fan, agreements::types::CONTEST, words.to_map(), obj(claim));
+    out.case(&mut w, "a buyer's contest of their purchase: shown beside it", "Agreements rule 54; \"Contest (type 14)\"",
+        "The fan's own payer's claim is the purchase; the fan signs a contest naming it, the promise not kept in words. It is shown beside the purchase and voids nothing.",
+        facts(), ask_c.clone(), json!([hx(&k)]), None);
+    let mut w2 = World::new();
+    for (a, _) in &base {
+        w2.add(a);
+    }
+    ag_act(&mut w2, &mut other, agreements::types::CONTEST, words.to_map(), obj(claim));
+    out.case(&mut w2, "the same contest signed by another identity: shows nothing", "Agreements rule 54; \"Contest (type 14)\"",
+        "Only the buyer of a purchase has standing to contest it; signed by anyone else, the contest shows nothing.",
+        facts(), ask_c, json!([]), None);
 }
 
 pub fn development(out: &mut Vec<J>) {

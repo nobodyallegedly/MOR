@@ -327,7 +327,7 @@ Money defines how a simple payment moves: never the rails, and nothing about who
 
 - **Non-performance.** *The core never enforces; it makes default impossible to hide.*
 - **Negotiation.** Two sides negotiate by negotiation messages, an Agreements act carrying text: each names the previous message of its thread and acknowledges the latest one received from the other side, so the record is provably complete up to the last acknowledged message. A text act in the thread is no part of the record: it cannot carry an acknowledgement. Either side may disclose the record by publishing its keys. *Cost, stated: a client without Agreements shows a negotiation message as unknown; negotiating needs an Agreements client, as signing the deal does.*
-- **Contests.** Only parties, affected holders and named keepers, arbitrators or verifiers have standing to contest, and a contest changes nothing about any act's validity: it is shown alongside what it names.
+- **Contests.** Only parties, affected holders and named keepers, arbitrators or verifiers have standing to contest, and the buyer of a purchase has standing to contest that purchase. A contest changes nothing about any act's validity: it is shown alongside what it names.
 - **Tasks:** split; condition evaluation; time reference; absence proof; grant limits; work claims (anchoring is the Envelopes').
 
 ## MIR: Development

@@ -286,18 +286,7 @@ impl<'a> AgreementsView<'a> {
             // naming it, by anyone other than its own side (mechanic, the
             // build's).
             if oe.offer.price.value == 0 && !oe.withdraws {
-                let mut own: Vec<Hash> = vec![oe.signer];
-                if let Some(p) = oe.offer.payee(&oe.signer) {
-                    own.push(p);
-                }
-                if let Some(u) = &oe.offer.under {
-                    if let Ok(t) = self.terms(u) {
-                        own.extend(t.parties.iter().copied());
-                    }
-                    if let Ok(Some(c)) = self.collective_of(u) {
-                        own.push(c);
-                    }
-                }
+                let own = self.offer_side(&oe);
                 for s in self.v.held_acts().filter(|s| self.is_agreements(s, types::SIGNATURE) && self.valid(&s.id)) {
                     let Some(buyer) = s.act.outside.signer else { continue };
                     if own.contains(&buyer) || decode_signature(&s.inside).ok() != Some(*o) || sales.iter().any(|x| x.offer == *o && x.buyer == buyer) {
@@ -312,6 +301,94 @@ impl<'a> AgreementsView<'a> {
         sales.sort_by(|a, b| a.act.cmp(&b.act));
         unsigned.sort();
         Ok(VowEval { name: *name, signer, void, versions, latest, words, offers, sales, unsigned, unknown: vec![] })
+    }
+
+    /// The offer's own side, who cannot sign onto it (rule 13): its signer,
+    /// its payee, the parties of the agreement it names and the collective
+    /// that agreement founds (mechanic, the build's).
+    fn offer_side(&self, oe: &OfferEval) -> Vec<Hash> {
+        let mut own: Vec<Hash> = vec![oe.signer];
+        if let Some(p) = oe.offer.payee(&oe.signer) {
+            own.push(p);
+        }
+        if let Some(u) = &oe.offer.under {
+            if let Ok(t) = self.terms(u) {
+                own.extend(t.parties.iter().copied());
+            }
+            if let Ok(Some(c)) = self.collective_of(u) {
+                own.push(c);
+            }
+        }
+        own
+    }
+
+    /// The buyer of the purchase `act` names, where `act` is one (F386,
+    /// Agreements, "Contest (type 14)"): a payer's claim of a payment that
+    /// is a purchase (rule 12), held, valid, with the rail's answer, on a
+    /// rail binding the payer, its payer an identity (as F193 reads a sale's
+    /// buyer), the buyer being that payer; or a valid signature act naming
+    /// an offer at no price that counts and sells something, by anyone
+    /// other than the offer's own side, the buyer being its signer (rule
+    /// 13's sign-on). `None` for anything else.
+    fn purchase_buyer(&self, act: &Hash) -> R<Option<Hash>> {
+        use crate::money::{Payer, Payload as Fin};
+        let Some(h) = self.v.get(act) else { return Ok(None) };
+        let Some(signer) = h.act.outside.signer else { return Ok(None) };
+        if !self.valid(act) {
+            return Ok(None);
+        }
+        if h.inside.spec == self.mirs.money {
+            let Ok(Fin::Claim(c)) = Fin::decode(h.inside.type_, &h.inside.payload) else { return Ok(None) };
+            if self.rail_invalid.contains(act) || !self.rail_binds(&c.rail, crate::development::Bound::Purpose) {
+                return Ok(None);
+            }
+            let Payer::Identity(buyer) = c.payer(&signer) else { return Ok(None) };
+            return Ok(match self.purchase_unjudged(act)? {
+                Some(PurchaseEval { verdict: PurchaseVerdict::Purchase, .. }) => Some(buyer),
+                _ => None,
+            });
+        }
+        if !self.is_agreements(h, types::SIGNATURE) {
+            return Ok(None);
+        }
+        let Ok(o) = decode_signature(&h.inside) else { return Ok(None) };
+        let Ok(oe) = self.offer(&o) else { return Ok(None) };
+        if !oe.counts || oe.withdraws || oe.offer.price.value != 0 || self.offer_side(&oe).contains(&signer) {
+            return Ok(None);
+        }
+        Ok(Some(signer))
+    }
+
+    /// The contests shown beside the purchase `purchase` names (F386,
+    /// Agreements rule 54, "Contest (type 14)"): valid contests (type 14)
+    /// naming it in field 0 and as chain and predecessor, `[[purchase,
+    /// purchase]]`, whatever promise their field 1 names in words, signed by
+    /// the purchase's buyer, ascending. A contest voids nothing and moves
+    /// nothing: no payment, refund, delivery or verdict. Signed by anyone
+    /// else, it shows nothing; for an act that is no purchase, none shows.
+    /// Unknown ([`AgreementsError::PaymentUnstated`]) only where whether it
+    /// is a purchase depends on two or more pairs of records whose payment
+    /// is not stated (Money rule 12).
+    pub fn purchase_contests(&self, purchase: &Hash) -> R<Vec<Hash>> {
+        let buyer = match self.two_ways(|| self.purchase_buyer(purchase)) {
+            Ways::One(b) => b?,
+            Ways::Both(Ok(a), Ok(b)) if a == b => a,
+            Ways::Both(Err(e), Err(f)) if e == f => return Err(e),
+            _ => return Err(AgreementsError::PaymentUnstated),
+        };
+        let Some(buyer) = buyer else { return Ok(vec![]) };
+        let mut out: Vec<Hash> = self
+            .v
+            .signed_by(&buyer)
+            .filter(|h| {
+                self.is_agreements(h, types::CONTEST)
+                    && self.valid(&h.id)
+                    && Contest::decode(&h.inside).is_ok_and(|c| c.vow.is_none() && &c.act == purchase)
+            })
+            .map(|h| h.id)
+            .collect();
+        out.sort();
+        Ok(out)
     }
 
     /// The payer a payment's own commitment names, as F193 reads it: the
