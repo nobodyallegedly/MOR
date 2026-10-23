@@ -465,8 +465,19 @@ fn invalid_acts() -> J {
             json!({ "why": why, "outside": hx(&o.encode()), "locked": hx(&l), "result": want })
         })
         .collect();
+    // Envelopes rule 1: an unknown key on the outside makes the act invalid,
+    // before anything is opened (S7g, Envelopes).
+    let mut v = v;
+    let (o, l) = act::seal(&good, &key, &nonce, &addr);
+    let mut extra = o.to_value();
+    if let Value::Map(m) = &mut extra {
+        m.push((Value::Uint(7), Value::Uint(0)));
+    }
+    let extra = cbor::encode(&extra);
+    assert!(matches!(act::Outside::from_value(&cbor::decode(&extra).unwrap()), Err(act::ActError::Shape(_))));
+    v.push(json!({ "why": "an unknown outside key (7)", "outside": hx(&extra), "locked": hx(&l), "result": "shape" }));
     json!({
-        "description": "Opening an act (Envelope rules 1, 2, 3, 5): check the locked hash, unlock with the outside's content key (XChaCha20-Poly1305, no associated data), check the inside commitment over the unlocked bytes, then decode the inside as deterministic CBOR in the Envelope's shape with canonical text. Each case gives the first check that fails, in that order, or ok.",
+        "description": "Opening an act (Envelope rules 1, 2, 3, 5): decode the outside in its shape (an unknown key is refused), check the locked hash, unlock with the outside's content key (XChaCha20-Poly1305, no associated data), check the inside commitment over the unlocked bytes, then decode the inside as deterministic CBOR in the Envelope's shape with canonical text. Each case gives the first check that fails, in that order, or ok.",
         "vectors": v,
     })
 }
@@ -516,6 +527,50 @@ fn sealed_container() -> J {
     let sealed = envelopes::seal(&inner, Some(&content_key), &[Recipient::Identity { id: recipient, key: dk.public.clone() }], &rnd).unwrap();
     let opened = envelopes::open(&sealed, Some(&recipient), &dk).unwrap();
     assert_eq!(opened.act, inner);
+    // Envelopes rule 12: a container that fails "Opening" (step 4) or whose
+    // inner act fails "Addressing" (step 5) is invalid and delivers nothing
+    // (S7g, Envelopes). Each sealed to the same recipient, fresh randomness each.
+    let rnd_for = |case: &str| SealRandom {
+        container_key: fixed(&format!("mor-core vector: container key, {case}")),
+        nonce: fixed_n(&format!("mor-core vector: container nonce, {case}")),
+        eseeds: vec![[fixed(&format!("mor-core vector: eseed, first half, {case}")), fixed(&format!("mor-core vector: eseed, second half, {case}"))].concat().try_into().unwrap()],
+    };
+    let inner_as = |case: &str, public: bool, to: Hash| {
+        act::make(
+            &Inside { salt: fixed_n(&format!("mor-core vector: sealed salt, {case}")), ..inside.clone() },
+            &fixed(&format!("mor-core vector: sealed content key, {case}")),
+            &fixed_n(&format!("mor-core vector: sealed inner nonce, {case}")),
+            &Addressing {
+                signer: Some(fixed("mor-core vector: stand-in signer identity")),
+                binding: Some(fixed("mor-core vector: stand-in binding")),
+                public,
+                to: Some(vec![to]),
+            },
+            |id| signer_key.sign(id, &[0; 32]),
+        )
+    };
+    let me = [Recipient::Identity { id: recipient, key: dk.public.clone() }];
+    let mut invalid = vec![];
+    let c = "addressed to another";
+    let other = inner_as(c, false, fixed("mor-core vector: stand-in other identity"));
+    let s1 = envelopes::seal(&other, Some(&fixed(&format!("mor-core vector: sealed content key, {c}"))), &me, &rnd_for(c)).unwrap();
+    assert!(matches!(envelopes::open(&s1, Some(&recipient), &dk), Err(envelopes::EnvError::Addressing(_))));
+    invalid.push(json!({ "why": "the inner act's own to names another identity than the recipient (step 5)", "sealed": hx(&s1.encode()), "result": "addressing" }));
+    let c = "a key for a public act";
+    let public = inner_as(c, true, recipient);
+    let s2 = envelopes::seal(&public, Some(&fixed(&format!("mor-core vector: sealed content key, {c}"))), &me, &rnd_for(c)).unwrap();
+    assert!(matches!(envelopes::open(&s2, Some(&recipient), &dk), Err(envelopes::EnvError::Shape(_))));
+    invalid.push(json!({ "why": "contents carry a key for a public inner act (step 4)", "sealed": hx(&s2.encode()), "result": "shape" }));
+    let mut parts = cbor::decode(&sealed.locked_act).unwrap();
+    if let Value::Array(a) = &mut parts {
+        if let Value::Array(caps) = &mut a[0] {
+            let first = caps[0].clone();
+            caps.push(first);
+        }
+    }
+    let s3 = envelopes::Sealed { to: sealed.to.clone(), locked_act: cbor::encode(&parts) };
+    assert!(matches!(envelopes::open(&s3, Some(&recipient), &dk), Err(envelopes::EnvError::Shape(_))));
+    invalid.push(json!({ "why": "two capsules for one recipient in to (step 1)", "sealed": hx(&s3.encode()), "result": "shape" }));
     json!({
         "description": "A sealed container in the Envelopes MIR's format: sealed = [to, locked-act], no one-time key and no signature, its outside unauthenticated by design. locked-act = [capsules, nonce, locked], one capsule [ct, wrapped] per recipient: ct the X-Wing ciphertext of encapsulating to the recipient's key with eseed, wrapped the container key locked under tagged_hash(\"MOR/sealed/wrap\", shared secret) with a zero nonce; locked opens with the container key and nonce to contents = [act, key], the inner act and its content key. The recipient's public key is X-Wing's from the secret given. Every input is fixed; the spec, signer and binding are stand-ins.",
         "recipient": hx(&recipient),
@@ -528,6 +583,7 @@ fn sealed_container() -> J {
         "nonce": hx(&rnd.nonce),
         "eseed": hx(&rnd.eseeds[0]),
         "sealed": hx(&sealed.encode()),
+        "invalid": invalid,
     })
 }
 

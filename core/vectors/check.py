@@ -671,7 +671,13 @@ def main():
 
     for v in load("open-act.json")["vectors"]:
         o = decode(H(v["outside"]))
-        check_outside_shape(o)
+        try:
+            check_outside_shape(o)
+        except AssertionError:
+            # An outside not in its shape (an unknown key): refused before opening.
+            assert v["result"] == "shape", v["why"]
+            n += 1
+            continue
         assert open_act(o, H(v["locked"])) == v["result"], v["why"]
         n += 1
 

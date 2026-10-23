@@ -7509,6 +7509,7 @@ fn a_payers_claim_counts_and_shows_what_the_receiver_hides() {
         receipted: Amount { unit, value: 10 },
         payee: false,
         fulfils: false,
+        previous: false,
     }));
     assert_eq!(shown.len(), 2);
     drop(v);
@@ -16315,4 +16316,120 @@ fn a_receipt_belongs_to_a_deal_through_what_it_fulfils() {
     assert_eq!(v.belongs_to(&r1), vec![deal], "a receipt, through the obligation it fulfils");
     assert_eq!(v.belongs_to(&r2), vec![deal], "a receipt, through the claim it pays under");
     assert!(v.belongs_to(&r3).is_empty(), "naming nothing of the deal");
+}
+
+// ------------------------------------------------ S7g: Agreements' suspected differences, lines 1 to 1125
+
+/// A payout receipt `by` signs in its own name for `value`, naming `split`.
+fn s7g_payout_receipt(w: &mut World, by: &mut Person, split: Hash, value: u64, proof: &[u8]) -> Hash {
+    use mor_core::money::{Amount, Payer, Payload as Fin, Receipt};
+    let r = Fin::Receipt(Receipt { rail: spec("a rail Module"), proof: proof.to_vec(), payer: Some(Payer::Identity(spec("the service"))), payee: by.id, amount: Amount { unit: spec("a unit"), value }, fulfils: split, previous: None, forward: None, batch: None, purchase: None });
+    let a = w.everyday_act(by, mirs().money, 2, r.to_map(), None, None);
+    w.add(&a)
+}
+
+/// S7g, Agreements rule 14 (`docs/untested-sentences.md`, Agreements row
+/// 14): "an over-sale confers nothing". The seller's payout receipts after
+/// it are no wrong receipts, and nothing is owed to its buyer; the
+/// seller's own receipt discharges the payout. (Before S7g the core read
+/// the over-sale as a sale: Ben's receipt discharged nothing, and its
+/// payout was owed to the over-sale's buyer.)
+#[test]
+fn s7g_an_over_sale_turns_no_payout_receipt_into_a_debt() {
+    let mut l = ServiceDeal::new();
+    let bid = l.ben.id;
+    let mut dan = l.w.genesis("dan, who buys more than ben holds", vec![own_home()], None, None);
+    // Ben holds 400,000 millionths; he sells 500,000.
+    let x = ben_sells(&mut l, &mut dan, 500_000, vec![]);
+    let ben = l.ben.clone();
+    let (_, ben) = l.w.chain_sign(&ben, x);
+    let e = view(&l.w).transfer(&x).unwrap();
+    assert!(e.over_sale && !e.effective, "{:?}", e.problems);
+    let (r, _) = l.sale(b"a sale after the over-sale", vec![]);
+    let split = l.split(r, l.stake_payouts(), vec![]);
+    let (_, mut ben) = l.w.rotate(&ben, Rot::default());
+    s7g_payout_receipt(&mut l.w, &mut ben, split, 320, b"ben's payout");
+    let acct = view(&l.w).service_account(&l.svc.id).unwrap();
+    assert!(acct.owed_to_buyers.is_empty(), "an over-sale's buyer is owed nothing: {:?}", acct.owed_to_buyers);
+    assert!(!acct.unpaid.iter().any(|u| u.split == split && u.receiver == bid), "Ben's own receipt discharges his payout");
+}
+
+/// S7g, Agreements rule 14 ("The transfers name the current holder of
+/// each stake, and a split service MUST follow them") and rule 26 ("the
+/// stakes as currently held"; row 15). A split following Ben's completed
+/// sale to Carla matches; one still paying Ben on field 7 alone does not.
+/// (Before S7g the core judged splits on field 7 only, the other way
+/// round.)
+#[test]
+fn s7g_a_split_follows_the_stakes_transfers() {
+    let mut l = ServiceDeal::new();
+    let (aid, bid) = (l.ana.id, l.ben.id);
+    let mut carla = l.w.genesis("carla, who buys half of ben's stake", vec![own_home()], None, None);
+    let x = ben_sells(&mut l, &mut carla, 200_000, vec![]);
+    let ben = l.ben.clone();
+    let (_, ben) = l.w.chain_sign(&ben, x);
+    l.ben = ben;
+    assert!(view(&l.w).transfer(&x).unwrap().effective);
+    let (r1, _) = l.sale(b"sale one", vec![]);
+    let follows = vec![
+        agreements::Payout { stake: Some(0), ..payout(aid, 480) },
+        agreements::Payout { stake: Some(0), ..payout(bid, 160) },
+        agreements::Payout { stake: Some(0), ..payout(carla.id, 160) },
+    ];
+    let s1 = numbered_split(&mut l, r1, follows, 1, vec![(0, x)]);
+    let e = view(&l.w).split(&s1).unwrap();
+    assert!(e.mismatched.is_empty(), "the split follows the transfer: {:?}", e.mismatched);
+    let (r2, _) = l.sale(b"sale two", vec![]);
+    let p = l.stake_payouts();
+    let s2 = numbered_split(&mut l, r2, p, 2, vec![]);
+    let who: Vec<Hash> = view(&l.w).split(&s2).unwrap().mismatched.iter().map(|m| m.holder).collect();
+    assert!(who.contains(&bid) && who.contains(&carla.id), "still paying the seller what he sold: {who:?}");
+}
+
+/// S7g, Agreements rule 21 ("A split that does not sum exactly is
+/// invalid"; row 48) and rule 30: the receipt it names stays without a
+/// matching split, an open obligation of the service. (Before S7g the
+/// core let a non-summing split match its receipt.)
+#[test]
+fn s7g_a_split_that_does_not_sum_matches_no_receipt() {
+    let mut l = ServiceDeal::new();
+    let (aid, bid) = (l.ana.id, l.ben.id);
+    let unsplit = |l: &ServiceDeal, r: Hash| view(&l.w).service_account(&l.svc.id).unwrap().unsplit.iter().any(|u| u.payment == r);
+    let (r1, _) = l.sale(b"sale one", vec![]);
+    assert!(unsplit(&l, r1), "a receipt with no split");
+    let p = l.stake_payouts();
+    let short = numbered_split(&mut l, r1, p, 1, vec![]);
+    assert_eq!(view(&l.w).split(&short).unwrap().sums, Some(false), "800 of 1,000");
+    assert!(unsplit(&l, r1), "an invalid split matches no receipt");
+    let (r2, _) = l.sale(b"sale two", vec![]);
+    let whole = vec![agreements::Payout { stake: Some(0), ..payout(aid, 600) }, agreements::Payout { stake: Some(0), ..payout(bid, 400) }];
+    numbered_split(&mut l, r2, whole, 2, vec![]);
+    assert!(!unsplit(&l, r2), "a split summing exactly matches it");
+}
+
+/// S7g, Agreements rule 25 and Money rule 21 (row 56): "A payout is
+/// discharged when its receipt shows the amount minus a fee no greater
+/// than that maximum, where the plan states one"; "where it states none,
+/// there is no cap", and a receiver bearing its fee is owed no shortfall;
+/// where the service bears the fee, any shortfall is its obligation.
+/// (Before S7g the core counted every shortfall as unpaid and never read
+/// plan key 6.)
+#[test]
+fn s7g_a_grant_key_signs_no_incoming_share_the_rail_paid_to_the_service() {
+    let mut l = Layers::new();
+    let (ana, svc_w, svc_p) = (l.ana.id, l.svc_w.id, l.svc_p.id);
+    let mut s = l.svc_w.clone();
+    let services_node = pointer_of(&mut l.w, &mut s, 1, None, &[b"the work's service's node"]);
+    l.svc_w = s;
+    let mut a = l.ana.clone();
+    let anas_account = pointer_of(&mut l.w, &mut a, 1, None, &[b"ana's bank account"]);
+    l.ana = a;
+    let ps = l.publication_split(svc_w, 1, b"the fan pays");
+    let on_behalf = l.receipt(Who3::Sa, ana, svc_p, 850, ps, None, b"the share, paid on a rail");
+    let mut v = view(&l.w);
+    v.rail_valid.insert(on_behalf, mor_core::money::PaidAt::Flow(services_node));
+    assert!(matches!(v.consent(&on_behalf).unwrap(), Consent::Ungranted { .. }), "the rail paid the service itself");
+    let mut v = view(&l.w);
+    v.rail_valid.insert(on_behalf, mor_core::money::PaidAt::Flow(anas_account));
+    assert!(v.consent(&on_behalf).unwrap().counts(), "the rail paid an account the owner holds");
 }

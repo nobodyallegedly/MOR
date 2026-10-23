@@ -1,5 +1,5 @@
 {
-  "description": "Opening an act (Envelope rules 1, 2, 3, 5): check the locked hash, unlock with the outside's content key (XChaCha20-Poly1305, no associated data), check the inside commitment over the unlocked bytes, then decode the inside as deterministic CBOR in the Envelope's shape with canonical text. Each case gives the first check that fails, in that order, or ok.",
+  "description": "Opening an act (Envelope rules 1, 2, 3, 5): decode the outside in its shape (an unknown key is refused), check the locked hash, unlock with the outside's content key (XChaCha20-Poly1305, no associated data), check the inside commitment over the unlocked bytes, then decode the inside as deterministic CBOR in the Envelope's shape with canonical text. Each case gives the first check that fails, in that order, or ok.",
   "vectors": [
     {
       "locked": "c7a39727b23d5a78f199f4ba99a0c76c3f1e4d18d8f367bafed39905366414ab97544139f97dec78c96d07d6a5def244c28bab7b783af102710e7d95545c4a6f762029eb07069b1afc1cebc0a6c52e1632da53d2d9a9c0f97a6474f40921fabdc6bcec8e259f4f60c235a45bc757e5087286853e79ee5ece6b27c4de8306b11442ba",
@@ -54,6 +54,12 @@
       "outside": "a3025820523b990ed83499b917ed35bca76609a995c9d33b96182b85ac2658a6a10166d303582026864b6891725d1870f5127239b6205aabc413fafade81c315a82b71a711dd14045818b93b4fb9e193cbbf2e1eca60c519f4b94af66fa82d8ef05c",
       "result": "no_key",
       "why": "a private act, opened with no key"
+    },
+    {
+      "locked": "c7a39727b23d5a78f199f4ba99a0c76c3f1e4d18d8f367bafed39905366414ab97544139f97dec78c96d07d6a5def244c28bab7b783af102710e7d95545c4a6f762029eb07069b1afc1cebc0a6c52e1632da53d2d9a9c0f97a6474f40921fabdc6bcec8e259f4f60c235a45bc757e5087286853e79ee5ece6b27c4de8306b11442ba",
+      "outside": "a5025820523b990ed83499b917ed35bca76609a995c9d33b96182b85ac2658a6a10166d303582026864b6891725d1870f5127239b6205aabc413fafade81c315a82b71a711dd14045818b93b4fb9e193cbbf2e1eca60c519f4b94af66fa82d8ef05c055820bf7a7799e4be493a606d288874f8072d8a2370df25deb063402d9886f3c77dbe0700",
+      "result": "shape",
+      "why": "an unknown outside key (7)"
     }
   ]
 }

@@ -75,6 +75,46 @@ impl<'a> AgreementsView<'a> {
         signed
     }
 
+    /// The layer this verifier cannot follow behind `party`, which has not
+    /// signed `act` by a signature act of its own (draft 17, rule 15: "a
+    /// verifier that cannot follow every layer of it answers unknown"): the
+    /// party itself where it holds neither its identity nor its terms; or,
+    /// where it is an agreement's line, such a layer among the parties of a
+    /// version of that line up to its version in force that did not sign
+    /// either, at most [`NESTING_BOUND`] layers deep. `None` where every
+    /// layer is held (a party that has not signed then has not signed).
+    pub(super) fn unfollowed_layer(&self, act: &Hash, party: &Hash, depth: usize, path: &mut Vec<Hash>) -> Option<Hash> {
+        if self.v.get(party).is_none() {
+            return Some(*party);
+        }
+        if depth >= NESTING_BOUND || !self.names_a_line(party) || path.contains(party) {
+            return None;
+        }
+        path.push(*party);
+        let found = self.version_in_force(party).ok().and_then(|v| self.lineage(&v).ok()).and_then(|versions| {
+            versions.iter().find_map(|(_, t)| {
+                let own: Vec<Hash> = self.valid_sigs(act, &t.parties).into_iter().map(|(p, _)| p).collect();
+                t.parties.iter().filter(|p| !own.contains(p)).find_map(|p| self.unfollowed_layer(act, p, depth + 1, path))
+            })
+        });
+        path.pop();
+        found
+    }
+
+    /// Where every party in `unsigned` (parties that have not signed `act`)
+    /// stands behind a layer this verifier cannot follow
+    /// ([`Self::unfollowed_layer`]): the first such layer, so that whether
+    /// `act` exists is unknown (rule 15), never "does not exist".
+    pub(super) fn unfollowed(&self, act: &Hash, unsigned: &[Hash]) -> Option<Hash> {
+        let mut first = None;
+        for p in unsigned {
+            let mut path = self.line_of(act).into_iter().collect();
+            let x = self.unfollowed_layer(act, p, 0, &mut path)?;
+            first.get_or_insert(x);
+        }
+        first
+    }
+
     /// Whether a version stands refused by [`Self::party_problem`]: terms
     /// that make a loop or pass the nesting bound give no consent.
     fn agreement_refused(&self, id: &Hash) -> bool {

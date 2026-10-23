@@ -160,7 +160,15 @@ fn three_act_sequence() {
 #[test]
 fn open_act_vectors() {
     for v in load("open-act.json")["vectors"].as_array().unwrap() {
-        let outside = Outside::from_value(&cbor::decode(&b(&v["outside"])).unwrap()).unwrap();
+        // An outside not in its shape (an unknown key) is refused before anything is opened.
+        let outside = match Outside::from_value(&cbor::decode(&b(&v["outside"])).unwrap()) {
+            Ok(o) => o,
+            Err(e) => {
+                assert!(matches!(e, ActError::Shape(_)), "{}", v["why"]);
+                assert_eq!(v["result"], "shape", "{}", v["why"]);
+                continue;
+            }
+        };
         let got = match act::open(&outside, &b(&v["locked"]), None) {
             Ok(_) => "ok",
             Err(ActError::LockedHash) => "locked_hash",
@@ -201,6 +209,16 @@ fn sealed_container_vector() {
     let opened = envelopes::open(&Sealed::decode(&b(&f["sealed"])).unwrap(), Some(&recipient), &dk).unwrap();
     assert_eq!(opened.act, inner);
     assert_eq!(opened.key, Some(key));
+    // Envelopes rule 12: each invalid container is refused, for the reason given.
+    for v in f["invalid"].as_array().unwrap() {
+        let got = match envelopes::open(&Sealed::decode(&b(&v["sealed"])).unwrap(), Some(&recipient), &dk) {
+            Ok(_) => "ok",
+            Err(envelopes::EnvError::Addressing(_)) => "addressing",
+            Err(envelopes::EnvError::Shape(_)) => "shape",
+            Err(_) => "other",
+        };
+        assert_eq!(got, v["result"].as_str().unwrap(), "{}", v["why"]);
+    }
 }
 
 /// Part 2: signatures (`signatures.json`): keys from their secrets and
@@ -457,7 +475,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 180);
+    assert_eq!(n, 230);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.

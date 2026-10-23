@@ -337,6 +337,43 @@ impl<'a> AgreementsView<'a> {
         out
     }
 
+    /// A stake's holders as currently held (rule 14: "the transfers name
+    /// the current holder of each stake, and a split service MUST follow
+    /// them"; rule 26): `holders`, field 7 of `version`, with each
+    /// effective transfer of stake `idx` moving its share from its seller
+    /// to its buyer. A transfer counts here only where the version it names
+    /// writes that stake as `version` does (mechanic, the build's: a later
+    /// version restating the stake's holders has counted the transfers
+    /// before it).
+    pub(super) fn holders_as_held(&self, version: &Hash, idx: u64, stake: &Stake, holders: Vec<(Option<Hash>, u64)>) -> Vec<(Option<Hash>, u64)> {
+        let root = |a: &Hash| self.lineage(a).ok().and_then(|l| l.last().map(|x| x.0));
+        let mut out = holders;
+        for h in self.v.held_acts() {
+            if !self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER) {
+                continue;
+            }
+            let Ok(t) = StakeTransfer::decode(&h.inside) else { continue };
+            if t.stake != idx || root(&t.agreement).is_none() || root(&t.agreement) != root(version) {
+                continue;
+            }
+            if self.terms(&t.agreement).ok().and_then(|x| x.stakes?.get(idx as usize).cloned()).as_ref() != Some(stake) {
+                continue;
+            }
+            let Ok(e) = self.transfer(&h.id) else { continue };
+            if !e.effective {
+                continue;
+            }
+            if let Some(x) = out.iter_mut().find(|(w, _)| *w == Some(e.seller)) {
+                x.1 = x.1.saturating_sub(t.share);
+            }
+            match out.iter_mut().find(|(w, _)| *w == Some(t.to)) {
+                Some(x) => x.1 += t.share,
+                None => out.push((Some(t.to), t.share)),
+            }
+        }
+        out
+    }
+
     /// The position on the seller's identity chain of the chain signature
     /// naming the transfer (the earliest that counts), F132.
     fn transfer_place(&self, id: &Hash, seller: &Hash) -> Option<u64> {
@@ -402,6 +439,11 @@ impl<'a> AgreementsView<'a> {
             let Ok(t) = StakeTransfer::decode(&h.inside) else { continue };
             let Some(place) = self.transfer_place(&h.id, &seller) else { continue };
             if pos < place || self.signers(&h.id, &[t.to]).is_empty() || !self.valid(&h.id) {
+                continue;
+            }
+            // An over-sale confers nothing (rule 14, F224): the seller's
+            // receipts after it are no buyer's.
+            if self.held_before(&h.id, &t, &seller, Some(place)).is_none_or(|left| left < t.share) {
                 continue;
             }
             for (split, i) in self.splits_paying_on(&t, &seller) {
