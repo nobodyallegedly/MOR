@@ -274,6 +274,8 @@ interface Described {
   /** The signer each of `refs` names beside it (F272), or nothing. */
   refSigners?: (string | undefined)[];
   payload?: Uint8Array;
+  /** The signer's own hint (the inside's field 9), as written: display only, never load-bearing (Envelopes rule 6). */
+  hint?: string | null;
 }
 
 /** A picture a post refers to, as this client shows it. */
@@ -334,6 +336,8 @@ export interface ShownPost {
   standing: string;
   text: string;
   format: string | null;
+  /** The signer's own hint (field 9), as written, where it wrote one: shown labelled as its own, never as a time anyone checked, never used to order anything. */
+  hint: string | null;
   refs: (ShownPicture | ShownFilm | ShownRecording | OtherRef)[];
   /** Addresses not tried, because this client cannot reach them (an onion address from a browser), each with why. */
   notTried: NotTried[];
@@ -416,7 +420,7 @@ export async function readPost(id: string, hints: string[], via: Via = {}, judgi
   const standing = await judge.standing(act, id, d.signer);
   const named: Reference[] = (d.refs ?? []).map((r, i) => (d.refSigners?.[i] ? [r, d.refSigners[i]!] : r));
   const refs = await Promise.all(named.map((r) => readRef(r, hints, via, judge)));
-  return { id, signer: d.signer, standing, text, format: f instanceof Uint8Array ? hex(f) : null, refs, notTried: judge.notTried ?? [] };
+  return { id, signer: d.signer, standing, text, format: f instanceof Uint8Array ? hex(f) : null, hint: d.hint ?? null, refs, notTried: judge.notTried ?? [] };
 }
 
 /**

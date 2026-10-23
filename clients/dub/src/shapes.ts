@@ -75,6 +75,8 @@ export interface Item {
   form: string;
   /** When, by the clock this feed names (H54), in words; null where not stamped. */
   when?: string | null;
+  /** The signer's own hint (field 9), as written: shown labelled as its own where no clock stamped the act. */
+  hint?: string | null;
   /** Films it shows (H52). */
   films?: FilmShown[];
   /** Recordings it plays (the audio Module). */
@@ -127,6 +129,8 @@ export interface Message {
   dir: 'in' | 'out';
   text: string;
   standing: string;
+  /** The signer's own hint (field 9), as written: shown labelled as its own, never as a time anyone checked. */
+  hint?: string | null;
   /** When this app found or sent it, in seconds since 1970: this app's time, not a signed one. */
   at: number;
   seen: boolean;
@@ -229,6 +233,12 @@ export interface Purchase {
   /** A vow: paid, and its sale as the relays read it; the buyer confirms or contests. */
   sale?: 'pending' | 'confirmed' | 'contested' | null;
   paid?: boolean;
+  /**
+   * The buyer's contests shown beside this purchase (F386): `unknown` where
+   * the core cannot say, never "none". Absent where not paid. For a vow,
+   * those made in the purchase's form, which mark no sale.
+   */
+  contests?: { state: 'shown' | 'unknown'; contests: { act: string; promise: string | null }[]; why?: string } | null;
 }
 
 /** A proposal to sign, in the Signing tab (H18): the act it names, read in plain words from its bytes. */

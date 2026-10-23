@@ -81,6 +81,7 @@ export const OPS = [
   'vows bought',
   'vow confirm',
   'vow contest',
+  'purchase contest',
   'money look',
   'relays review',
   'relays publish',
@@ -234,6 +235,8 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.confirmVow(text(a.vow));
     case 'vow contest':
       return dub.contestVow(text(a.vow), text(a.promise));
+    case 'purchase contest':
+      return dub.contestFile(text(a.publication), text(a.promise));
     case 'repost':
       return dub.repost({ post: text(a.post), signer: text(a.signer) });
     case 'money look':

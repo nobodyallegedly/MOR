@@ -35,7 +35,7 @@
 //
 // TEST IDENTITIES ONLY.
 
-import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, moneyRead, readPaymentProof, vowContestPayload, withGrantLimits } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, Verifier, cborDecode, cborEncode, describeAct, hex, moneyRead, openWithKey, purchaseContestPayload, readPaymentProof, vowContestPayload, withGrantLimits } from '../../genesis/src/core.ts';
 import type { TestIdentity } from '../../genesis/src/identity.ts';
 import { lookUp, referenceTo } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -121,6 +121,8 @@ export interface SaleShown {
   /** What a contest says was not kept, where it says (field 1). */
   promise: string | null;
   amount: Amount | null;
+  /** The buyer's contests of it in the purchase's form (F386): shown beside the sale; they mark no sale. */
+  beside: ContestsBeside;
 }
 
 /** A vow, read from what the relays asked hold. */
@@ -142,16 +144,144 @@ export interface VowShown {
  * person chose. What they do not hold is not seen; no index is kept.
  */
 export async function vowSales(identity: string, relays: string[], via: Via = {}): Promise<{ vows: VowShown[]; asked: string[]; problems: string[] }> {
+  const r = reader(relays, via);
+  await r.hold(identity);
+  // The public claims and contests the relays hold, by the feed's own filters (spec and type).
+  const claims = await r.byKind(MIRS.money, CLAIM);
+  const contests = await r.byKind(MIRS.agreements, CONTEST);
+  const vows: { name: string; words: string }[] = [];
+  for (const a of r.held.values()) {
+    const x = readVow(a);
+    if (x?.genesis && x.signer === identity) vows.push({ name: x.name, words: x.words });
+  }
+  // Each claim's and contest's signer, held with its acts (its chain, its lanes).
+  for (const a of [...claims, ...contests]) {
+    const d = describeAct(a) as { signer?: string };
+    if (d.signer) await r.hold(d.signer);
+    r.add(a);
+  }
+  const { specs, amounts } = judged(r, claims.map((act) => ({ act })));
+  const out: VowShown[] = [];
+  for (const x of vows) {
+    try {
+      const e = r.v.agreementsVow(specs, x.name) as { name: string; signer: string; void: boolean; words: string[]; offers: string[]; sales: { act: string; offer: string; buyer: string; state: SaleShown['state']; by: string[] }[]; unsigned: string[] };
+      out.push({
+        name: e.name,
+        signer: e.signer,
+        void: e.void,
+        words: e.words,
+        offers: e.offers,
+        sales: e.sales.map((s) => ({
+          ...s,
+          promise: s.state === 'contested' ? promiseOf(contests, s.by) : null,
+          amount: amounts.get(s.act) ?? null,
+          // A vow's sale is a purchase (F386): a contest of it in the purchase's form marks no sale, and is shown beside it, so it is not lost.
+          beside: contestsOf(r, specs, s.act, contests),
+        })),
+        unsigned: e.unsigned.length,
+      });
+    } catch (err) {
+      r.problems.push(`The vow ${x.name.slice(0, 8)}… could not be read: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  return { vows: out, asked: relays, problems: r.problems };
+}
+
+/**
+ * A contest of a purchase (Agreements type 14, rule 54, F386): signed by its
+ * buyer, public, naming the purchase (the buyer's own payer's claim of the
+ * payment) as its object, `[[purchase, purchase]]`, and, optionally, the
+ * promise not kept, in words. It undoes nothing: no payment, refund,
+ * delivery or verdict moves. Save the identity after.
+ */
+export async function contestPurchase(by: TestIdentity, a: { purchase: string; promise?: string | null; relays: string[] }): Promise<string> {
+  const made = await by.publish(MIRS.agreements, CONTEST, purchaseContestPayload(a.purchase, a.promise?.trim() || undefined) as Uint8Array, { public: true, relays: a.relays, objects: [[a.purchase, a.purchase]] });
+  return made.id;
+}
+
+/** The contests shown beside one purchase: its buyer's own, as the core reads them; `unknown` where the core cannot say (a payment not stated), never "none". */
+export interface ContestsBeside {
+  state: 'shown' | 'unknown';
+  contests: { act: string; promise: string | null }[];
+  /** Why it is unknown, in words. */
+  why?: string;
+}
+
+/**
+ * The buyer's contests shown beside each purchase (F386,
+ * `agreementsPurchaseContests`). A purchase is the buyer's own payer's claim
+ * of the payment, with its content key where it is private (sealed to the
+ * seller): the buyer's Damgar keeps it, the seller's homes hold it. The
+ * parties' chains and public acts are read from their homes (the offer, the
+ * lanes), the public contests from the relays asked, each claim's rail
+ * checked by its rail Module and stated to the core. A contest signed by
+ * anyone but the buyer shows nothing.
+ */
+export async function purchaseContests(a: { purchases: { act: Uint8Array; key?: Uint8Array | null }[]; parties: string[]; relays: string[]; via?: Via }): Promise<{ by: Record<string, ContestsBeside>; problems: string[] }> {
+  const r = reader(a.relays, a.via ?? {});
+  for (const id of a.parties) await r.hold(id);
+  const ids: string[] = [];
+  for (const p of a.purchases) ids.push(r.add(p.act, p.key ?? undefined));
+  const contests = (await r.byKind(MIRS.agreements, CONTEST)).filter((x) => {
+    const d = describeAct(x) as { objects?: [string, string][] };
+    return (d.objects ?? []).some(([c]) => ids.includes(c));
+  });
+  for (const x of contests) {
+    const d = describeAct(x) as { signer?: string };
+    if (d.signer) await r.hold(d.signer);
+    r.add(x);
+  }
+  // The contests the parties' homes hold are read too (the buyer's own acts).
+  const held = [...r.held.values()].filter((x) => {
+    const d = describeAct(x) as { spec?: string; type?: number };
+    return d.spec === MIRS.agreements && d.type === CONTEST;
+  });
+  const { specs } = judged(r, a.purchases.map((p) => ({ act: p.act, key: p.key ?? undefined })));
+  const by: Record<string, ContestsBeside> = {};
+  for (const id of ids) if (id) by[id] = contestsOf(r, specs, id, [...contests, ...held]);
+  return { by, problems: r.problems };
+}
+
+/** The buyer's contests the core shows beside one purchase, each with its promise not kept, in words, where it says. */
+function contestsOf(r: Reader, specs: unknown, purchase: string, contests: Uint8Array[]): ContestsBeside {
+  try {
+    const shown = r.v.agreementsPurchaseContests(specs, purchase) as string[];
+    return { state: 'shown', contests: shown.map((act) => ({ act, promise: promiseOf(contests, [act]) })) };
+  } catch (e) {
+    const m = e instanceof Error ? e.message : String(e);
+    return { state: 'unknown', contests: [], why: /payment-unstated/.test(m) ? 'its payment is not stated: whether it is a purchase, and whose, is unknown' : m };
+  }
+}
+
+/** What a look-up holds: a verifier, the acts by id, and how to hold an identity's chain and public acts. */
+interface Reader {
+  v: Verifier;
+  held: Map<string, Uint8Array>;
+  /** Content keys of the private acts held, by id: a claim sealed to its payee, opened. */
+  keys: Map<string, Uint8Array>;
+  problems: string[];
+  add(a: Uint8Array, key?: Uint8Array): string;
+  hold(id: string): Promise<void>;
+  byKind(spec: string, type: number): Promise<Uint8Array[]>;
+}
+
+function reader(relays: string[], via: Via): Reader {
   const problems: string[] = [];
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   const held = new Map<string, Uint8Array>();
-  const add = (a: Uint8Array) => {
+  const keys = new Map<string, Uint8Array>();
+  const add = (a: Uint8Array, key?: Uint8Array): string => {
+    const id = (describeAct(a) as { id: string }).id;
     try {
-      v.add(a);
-      held.set((describeAct(a) as { id: string }).id, a);
+      if (key) {
+        v.addWithKey(a, key);
+        keys.set(id, key);
+      } else v.add(a);
+      held.set(id, a);
     } catch {
       // private, or held already
     }
+    return id;
   };
   const chains = new Set<string>();
   const hold = async (id: string) => {
@@ -166,8 +296,6 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
     }
     for (const a of await allBy(id, places, via)) add(a);
   };
-  await hold(identity);
-  // The public claims and contests the relays hold, by the feed's own filters (spec and type).
   const byKind = async (spec: string, type: number): Promise<Uint8Array[]> => {
     const out: Uint8Array[] = [];
     for (const h of relays) {
@@ -185,30 +313,21 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
     }
     return out;
   };
-  const claims = await byKind(MIRS.money, CLAIM);
-  const contests = await byKind(MIRS.agreements, CONTEST);
-  const vows: { name: string; words: string }[] = [];
-  for (const a of held.values()) {
-    const x = readVow(a);
-    if (x?.genesis && x.signer === identity) vows.push({ name: x.name, words: x.words });
-  }
-  // Each claim's and contest's signer, held with its acts (its chain, its lanes).
-  for (const a of [...claims, ...contests]) {
-    const d = describeAct(a) as { signer?: string };
-    if (d.signer) await hold(d.signer);
-    add(a);
-  }
-  // Each claim's rail, checked by its rail Module and stated to the core (the core reads no rail).
+  return { v, held, keys, problems, add, hold, byKind };
+}
+
+/** Each claim's rail, checked by its rail Module and stated to the core (the core reads no rail); its amount; its lane's cap. */
+function judged(r: Reader, claims: { act: Uint8Array; key?: Uint8Array }[]): { specs: unknown; amounts: Map<string, Amount> } {
   const accepted = ACCEPTABLE.flatMap((x) => x.hashes);
   const railValid: [string, string, number | null][] = [];
   // Which payment each proof is, as its rail Module says (Money rule 12): never read from the proofs' bytes.
   const railPayments: [string, string][] = [];
   const limits: [string, boolean][] = [];
   const amounts = new Map<string, Amount>();
-  for (const a of claims) {
-    const d = describeAct(a) as { id: string; payload?: Uint8Array; binding?: string };
+  for (const { act, key } of claims) {
+    const d = (key ? openWithKey(act, key) : describeAct(act)) as { id: string; payload?: Uint8Array; binding?: string };
     try {
-      const j = v.moneyJudge(d.id, { money: MIRS.money, accepted }) as { rail: { answer: string }; payment?: string | null };
+      const j = r.v.moneyJudge(d.id, { money: MIRS.money, accepted }) as { rail: { answer: string }; payment?: string | null };
       if (j.rail.answer !== 'valid') continue;
       const c = (moneyRead(CLAIM, d.payload!) as { act: { proof: Uint8Array; amount: Amount } }).act;
       amounts.set(d.id, c.amount);
@@ -217,31 +336,13 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
       const to = paidToOf(p.paidTo);
       if (to) railValid.push([d.id, to[0], to[1]]);
       // A claim signed under a lane: its cap judged by the grant limits cMIP (the core asks it of the client).
-      const w = limitsOf(held, d, a);
+      const w = limitsOf(r.held, d, act, key);
       if (w !== null) limits.push([d.id, w]);
     } catch {
       // not judged: it counts for nothing here
     }
   }
-  const specs = withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits);
-  const out: VowShown[] = [];
-  for (const x of vows) {
-    try {
-      const e = v.agreementsVow(specs, x.name) as { name: string; signer: string; void: boolean; words: string[]; offers: string[]; sales: { act: string; offer: string; buyer: string; state: SaleShown['state']; by: string[] }[]; unsigned: string[] };
-      out.push({
-        name: e.name,
-        signer: e.signer,
-        void: e.void,
-        words: e.words,
-        offers: e.offers,
-        sales: e.sales.map((s) => ({ ...s, promise: s.state === 'contested' ? promiseOf(contests, s.by) : null, amount: amounts.get(s.act) ?? null })),
-        unsigned: e.unsigned.length,
-      });
-    } catch (err) {
-      problems.push(`The vow ${x.name.slice(0, 8)}… could not be read: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
-  return { vows: out, asked: relays, problems };
+  return { specs: withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits), amounts };
 }
 
 /** Where a proof says it was paid, as the core takes it: `[act, vault entry or null]`. */
@@ -255,7 +356,7 @@ function paidToOf(p: unknown): [string, number | null] | null {
 }
 
 /** A claim signed with a grant key whose grant carries limits: within them or not, as the grant limits cMIP reads its cap; null where it names no such grant. */
-function limitsOf(held: Map<string, Uint8Array>, d: { id: string }, act: Uint8Array): boolean | null {
+function limitsOf(held: Map<string, Uint8Array>, d: { id: string }, act: Uint8Array, key?: Uint8Array): boolean | null {
   const b = (describeAct(act) as { binding?: string }).binding;
   if (!b) return null;
   try {
@@ -264,7 +365,7 @@ function limitsOf(held: Map<string, Uint8Array>, d: { id: string }, act: Uint8Ar
     if (!gd || gd.spec !== MIRS.agreements || gd.type !== 9 || !gd.payload) return null;
     const grant = readGrant(gd.payload);
     if (!grant.limits) return null;
-    const w = judgeLimits(grant.limits, { id: d.id, ...(describeAct(act) as object) }, MIRS.money);
+    const w = judgeLimits(grant.limits, { id: d.id, ...((key ? openWithKey(act, key) : describeAct(act)) as object) }, MIRS.money);
     return w.within === null ? null : w.within;
   } catch {
     return null;

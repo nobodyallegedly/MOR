@@ -47,7 +47,7 @@ import { NotJpeg } from '../../../modules/jpeg/src/jpeg.ts';
 import { areaReaching, chainFor, collectiveNow, collectivePlaces, memberKeyFor, publishAt, readMemberKeys, signAsMember, type AreaHere, type MemberKey } from '../../grants/src/member.ts';
 import { actors, chosen, type Actor } from '../../ummia/src/acting.ts';
 import { deliverKey, deliverSold, type SoldWorks } from '../../dub/src/delivery.ts';
-import { VOW, contestSale, publishVow, vowOfferWords, vowPayload, vowSales, type VowShown } from '../../dub/src/vows.ts';
+import { VOW, contestSale, publishVow, purchaseContests, vowOfferWords, vowPayload, vowSales, type ContestsBeside, type VowShown } from '../../dub/src/vows.ts';
 import { say } from '../../damgar/src/units.ts';
 import { TYPES, readSale, sendDraft } from '../../damgar/src/messages.ts';
 import { MESSAGES_SPECS } from '../../damgar/src/specs.ts';
@@ -649,6 +649,81 @@ export class Publishing {
       const r = await vowSales(readId(a.identity), relays, s.via);
       const held = new Set(this.held());
       return { ...r, vows: r.vows.map((v) => ({ ...v, mine: v.sales.filter((x) => held.has(x.buyer)).map((x) => x.act) })) };
+    });
+  }
+
+  /**
+   * The buyers' contests shown beside each sale of a work published here in
+   * one's own name (F386): each buyer's claim of the payment, sealed to the
+   * seller and left in its inbox, opened here and given to the core with the
+   * parties' chains and the public contests; `unknown` where the core cannot
+   * say, never "none". A collective's works are paid to its split service,
+   * which holds the claims: not read here.
+   */
+  salesContests(): Promise<{ by: Record<string, Record<string, ContestsBeside>>; problems: string[] }> {
+    return this.desk.serial(async () => {
+      const b = this.book();
+      const s = this.settings();
+      const held = this.held();
+      const acting = b.acting && held.includes(b.acting) ? b.acting : (held[0] ?? null);
+      const works = b.works.filter((w) => !w.collective && w.member === acting && Object.keys(w.delivered).length);
+      if (!acting || !works.length) return { by: {}, problems: [] };
+      const me = this.me(acting);
+      const buyers = list(works.flatMap((w) => Object.keys(w.delivered)));
+      const offers = new Map(works.map((w) => [w.offer, w.publication]));
+      const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
+      const found: { publication: string; buyer: string; id: string; act: Uint8Array; key: Uint8Array | null }[] = [];
+      const problems: string[] = [];
+      const l = await lookUp(me.id, list([...s.homes, ...s.relays, ...me.f.homes.map((h) => h.hint)]), s.via).catch(() => null);
+      const inbox = list([...(l?.routes.routes.filter((r) => r.kind === 1).flatMap((r) => r.hints) ?? []), ...me.f.homes.map((h) => h.hint)]);
+      for (const h of inbox) {
+        let after: number | undefined;
+        try {
+          for (;;) {
+            const page = await relayAt(h, s.via).feed({ to: me.id, after });
+            for (const it of page.items) {
+              if (it.kind !== 'sealed') continue;
+              for (const sec of secrets) {
+                let o: { act: Uint8Array; key?: Uint8Array | null; described: { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array } };
+                try {
+                  o = openSealed(it.item, me.id, sec) as typeof o;
+                } catch {
+                  continue;
+                }
+                const d = o.described;
+                // A payer's claim (Money type 3) from a buyer, naming one of the offers published here.
+                if (d.spec === MIRS.money && d.type === 3 && d.signer && buyers.includes(d.signer) && d.payload && !found.some((x) => x.id === d.id)) {
+                  try {
+                    const c = (moneyRead(3, d.payload) as { act: { fulfils?: string } }).act;
+                    const publication = c.fulfils ? offers.get(c.fulfils) : undefined;
+                    if (publication) found.push({ publication, buyer: d.signer, id: d.id, act: new Uint8Array(o.act), key: o.key ? new Uint8Array(o.key) : null });
+                  } catch {
+                    // not a claim this reads
+                  }
+                }
+                break;
+              }
+            }
+            if (!page.items.length || page.next === after) break;
+            after = page.next;
+          }
+        } catch {
+          problems.push(`${h} did not answer.`);
+        }
+      }
+      const r = found.length ? await purchaseContests({ purchases: found, parties: [me.id, ...buyers], relays: list([...s.relays, ...s.homes]), via: s.via }) : { by: {} as Record<string, ContestsBeside>, problems: [] };
+      const by: Record<string, Record<string, ContestsBeside>> = {};
+      for (const w of works)
+        for (const buyer of Object.keys(w.delivered)) {
+          const mine = found.filter((x) => x.publication === w.publication && x.buyer === buyer);
+          const read = mine.map((x) => r.by[x.id]).filter(Boolean);
+          (by[w.publication] ??= {})[buyer] = !mine.length
+            ? { state: 'unknown', contests: [], why: 'the buyer’s claim of the payment was not found in this identity’s inbox' }
+            : read.some((x) => x.state === 'shown')
+              ? { state: 'shown', contests: read.flatMap((x) => x.contests) }
+              : (read[0] ?? { state: 'unknown', contests: [] });
+        }
+      return { by, problems: [...problems, ...r.problems] };
     });
   }
 

@@ -335,7 +335,7 @@ export class Collectives {
   }
 
   /** The collective's own posts, as the site's feed reads them (it shown as an identity). */
-  async posts(collective: string, real?: BroughtCollective): Promise<{ items: { id: string; text: string; standing: string; pictures: string[]; corrects: string | null; correctedBy: string[] }[]; problems: string[] }> {
+  async posts(collective: string, real?: BroughtCollective): Promise<{ items: { id: string; text: string; standing: string; hint: string | null; pictures: string[]; corrects: string | null; correctedBy: string[] }[]; problems: string[] }> {
     this.places();
     const b = real ?? this.broughtOne(collective);
     const s = this.store.settings();
@@ -350,6 +350,8 @@ export class Collectives {
           id: x.id,
           text: escapeControls(x.post?.text ?? ''),
           standing: x.post?.standing ?? x.problem ?? 'unknown',
+          // The signer's own hint (field 9), shown labelled as its own on the card: display only.
+          hint: x.post?.hint ?? null,
           pictures: (x.post?.refs ?? []).flatMap((r) => (r.kind === 'picture' && r.bytes ? [`data:image/jpeg;base64,${Buffer.from(r.bytes).toString('base64')}`] : [])),
           // The corrections cMIP (F344): labelled "Correction", or "corrected by".
           corrects: x.corrects ?? null,

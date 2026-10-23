@@ -629,6 +629,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       // Decided (question 5): confirm or contest only on vows the identity bought.
       const vow = it?.vow?.state === 'bought' ? it.vow.vow : d?.purchase?.kind === 'vow' && d.purchase.paid && d.purchase.sale !== 'confirmed' && d.purchase.sale !== 'contested' ? d.purchase.id : null;
       if (vow) after.push({ key: `confirm:${vow}`, label: 'Confirm: it was kept', line: true }, { key: `contest:${vow}`, label: 'Contest it…' });
+      // F386: any file bought and paid can be contested by its buyer; a vow keeps its own form above, which marks its sale.
+      else if (d?.purchase?.kind === 'file' && d.purchase.paid) after.push({ key: `contest-file:${d.purchase.id}`, label: 'Contest it…', line: true });
       return { before, after };
     },
     choose: (key, a) => void choose(key, a),
@@ -738,6 +740,10 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     if (key.startsWith('contest:')) {
       const body = popup.show('Contest it', v.contestForm());
       body.dataset.vow = key.slice('contest:'.length);
+    }
+    if (key.startsWith('contest-file:')) {
+      const body = popup.show('Contest it', v.contestForm(true));
+      body.dataset.publication = key.slice('contest-file:'.length);
     }
   }
 
@@ -1487,8 +1493,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         return;
       }
       case 'contest': {
-        if (!confirm('Contest this sale? A contest naming it is signed in public. It voids nothing.')) return;
-        const r = await busy('Signing your contest…', () => b.ask<Lines>('vow contest', { vow: body?.dataset.vow, promise: String(d.get('promise') ?? '') }));
+        const file = body?.dataset.publication;
+        if (!confirm(file ? 'Contest this purchase? A contest naming it is signed in public. It undoes nothing.' : 'Contest this sale? A contest naming it is signed in public. It voids nothing.')) return;
+        const r = await busy('Signing your contest…', () => (file ? b.ask<Lines>('purchase contest', { publication: file, promise: String(d.get('promise') ?? '') }) : b.ask<Lines>('vow contest', { vow: body?.dataset.vow, promise: String(d.get('promise') ?? '') })));
         if (r) (popup.close(), say('done', v.lines(r.lines)), await Promise.all([readFeed(), readBought()]));
         return;
       }

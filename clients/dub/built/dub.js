@@ -1878,6 +1878,19 @@ function pickupTag(_public) {
     wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
   }
 }
+function purchaseContestPayload(purchase, promise) {
+  const ptr0 = passStringToWasm0(purchase, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len0 = WASM_VECTOR_LEN;
+  var ptr1 = isLikeNone(promise) ? 0 : passStringToWasm0(promise, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  var len1 = WASM_VECTOR_LEN;
+  const ret = wasm.purchaseContestPayload(ptr0, len0, ptr1, len1);
+  if (ret[3]) {
+    throw takeFromExternrefTable0(ret[2]);
+  }
+  var v3 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+  wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+  return v3;
+}
 function railCheck(module2, commitment, amount, address, rail_proof, chain) {
   const ptr0 = passStringToWasm0(module2, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
   const len0 = WASM_VECTOR_LEN;
@@ -4012,7 +4025,9 @@ var TestIdentity = class _TestIdentity {
       to: opts.to,
       objects,
       refs: opts.refs,
-      acks: opts.acks
+      acks: opts.acks,
+      // The signer's own hint (field 9, display only): no app writes one yet (whether they should is not decided).
+      ...opts.hint !== void 0 ? { hint: opts.hint } : {}
     });
     return this.everydayMade(spec, type, opts.public, line, made);
   }
@@ -4424,7 +4439,8 @@ var TestIdentity = class _TestIdentity {
       to: opts.to,
       objects: opts.objects,
       refs: opts.refs,
-      acks: opts.acks
+      acks: opts.acks,
+      hint: opts.hint
     });
     for (const hint of opts.relays) await relayAt(hint, this.via).putAct(made.act);
     return made;
@@ -5995,7 +6011,7 @@ async function readPost(id, hints, via2 = {}, judging) {
   const standing2 = await judge2.standing(act, id, d.signer);
   const named = (d.refs ?? []).map((r, i) => d.refSigners?.[i] ? [r, d.refSigners[i]] : r);
   const refs = await Promise.all(named.map((r) => readRef(r, hints, via2, judge2)));
-  return { id, signer: d.signer, standing: standing2, text: text3, format: f instanceof Uint8Array ? hex(f) : null, refs, notTried: judge2.notTried ?? [] };
+  return { id, signer: d.signer, standing: standing2, text: text3, format: f instanceof Uint8Array ? hex(f) : null, hint: d.hint ?? null, refs, notTried: judge2.notTried ?? [] };
 }
 async function readRef(r, hints, via2, judge2) {
   const id = typeof r === "string" ? r : r[0];
@@ -13831,6 +13847,22 @@ var Damgar = class {
       return book.payments[key] ?? null;
     });
   }
+  /**
+   * This identity's own claims of one of its payments, with their bytes and
+   * content keys where private (sealed to the payee): what a buyer's contest
+   * names as the purchase (F386), and what the core needs to read it.
+   */
+  ownClaims(key) {
+    return this.serial(async () => {
+      const { book } = await this.ctx();
+      const p = book.payments[key];
+      if (!p || p.side !== "out") return [];
+      return [.../* @__PURE__ */ new Set([...p.claims, ...p.publicClaims ?? []])].flatMap((id) => {
+        const k = book.acts[id];
+        return k ? [{ id, act: b642(k.act), key: k.key ? b642(k.key) : null }] : [];
+      });
+    });
+  }
   /** A claim is signed as its payment's invoice request was: under the same lane, still in force and within it, or by hand. */
   async claimHow(me, s, p, made) {
     if (p.how?.by !== "lane") {
@@ -15239,15 +15271,98 @@ async function contestSale(by, a) {
   return made.id;
 }
 async function vowSales(identity, relays, via2 = {}) {
+  const r = reader(relays, via2);
+  await r.hold(identity);
+  const claims = await r.byKind(MIRS.money, CLAIM);
+  const contests = await r.byKind(MIRS.agreements, CONTEST);
+  const vows = [];
+  for (const a of r.held.values()) {
+    const x = readVow(a);
+    if (x?.genesis && x.signer === identity) vows.push({ name: x.name, words: x.words });
+  }
+  for (const a of [...claims, ...contests]) {
+    const d = describeAct(a);
+    if (d.signer) await r.hold(d.signer);
+    r.add(a);
+  }
+  const { specs, amounts } = judged(r, claims.map((act) => ({ act })));
+  const out = [];
+  for (const x of vows) {
+    try {
+      const e3 = r.v.agreementsVow(specs, x.name);
+      out.push({
+        name: e3.name,
+        signer: e3.signer,
+        void: e3.void,
+        words: e3.words,
+        offers: e3.offers,
+        sales: e3.sales.map((s) => ({
+          ...s,
+          promise: s.state === "contested" ? promiseOf(contests, s.by) : null,
+          amount: amounts.get(s.act) ?? null,
+          // A vow's sale is a purchase (F386): a contest of it in the purchase's form marks no sale, and is shown beside it, so it is not lost.
+          beside: contestsOf(r, specs, s.act, contests)
+        })),
+        unsigned: e3.unsigned.length
+      });
+    } catch (err) {
+      r.problems.push(`The vow ${x.name.slice(0, 8)}\u2026 could not be read: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+  return { vows: out, asked: relays, problems: r.problems };
+}
+async function contestPurchase(by, a) {
+  const made = await by.publish(MIRS.agreements, CONTEST, purchaseContestPayload(a.purchase, a.promise?.trim() || void 0), { public: true, relays: a.relays, objects: [[a.purchase, a.purchase]] });
+  return made.id;
+}
+async function purchaseContests(a) {
+  const r = reader(a.relays, a.via ?? {});
+  for (const id of a.parties) await r.hold(id);
+  const ids = [];
+  for (const p of a.purchases) ids.push(r.add(p.act, p.key ?? void 0));
+  const contests = (await r.byKind(MIRS.agreements, CONTEST)).filter((x) => {
+    const d = describeAct(x);
+    return (d.objects ?? []).some(([c]) => ids.includes(c));
+  });
+  for (const x of contests) {
+    const d = describeAct(x);
+    if (d.signer) await r.hold(d.signer);
+    r.add(x);
+  }
+  const held = [...r.held.values()].filter((x) => {
+    const d = describeAct(x);
+    return d.spec === MIRS.agreements && d.type === CONTEST;
+  });
+  const { specs } = judged(r, a.purchases.map((p) => ({ act: p.act, key: p.key ?? void 0 })));
+  const by = {};
+  for (const id of ids) if (id) by[id] = contestsOf(r, specs, id, [...contests, ...held]);
+  return { by, problems: r.problems };
+}
+function contestsOf(r, specs, purchase, contests) {
+  try {
+    const shown = r.v.agreementsPurchaseContests(specs, purchase);
+    return { state: "shown", contests: shown.map((act) => ({ act, promise: promiseOf(contests, [act]) })) };
+  } catch (e3) {
+    const m = e3 instanceof Error ? e3.message : String(e3);
+    return { state: "unknown", contests: [], why: /payment-unstated/.test(m) ? "its payment is not stated: whether it is a purchase, and whose, is unknown" : m };
+  }
+}
+function reader(relays, via2) {
   const problems = [];
   const v = new Verifier(SPECS.identity, MIRS.money, MIRS.agreements, MIRS.envelopes, MIRS.text);
   const held = /* @__PURE__ */ new Map();
-  const add = (a) => {
+  const keys = /* @__PURE__ */ new Map();
+  const add = (a, key) => {
+    const id = describeAct(a).id;
     try {
-      v.add(a);
-      held.set(describeAct(a).id, a);
+      if (key) {
+        v.addWithKey(a, key);
+        keys.set(id, key);
+      } else v.add(a);
+      held.set(id, a);
     } catch {
     }
+    return id;
   };
   const chains = /* @__PURE__ */ new Set();
   const hold = async (id) => {
@@ -15261,15 +15376,14 @@ async function vowSales(identity, relays, via2 = {}) {
     }
     for (const a of await allBy(id, places, via2)) add(a);
   };
-  await hold(identity);
   const byKind = async (spec, type) => {
-    const out2 = [];
+    const out = [];
     for (const h of relays) {
       let after;
       try {
         for (; ; ) {
           const page = await relayAt(h, via2).feed({ spec, type, after });
-          for (const it of page.items) if (it.kind === "act") out2.push(it.item);
+          for (const it of page.items) if (it.kind === "act") out.push(it.item);
           if (!page.items.length || page.next === after) break;
           after = page.next;
         }
@@ -15277,29 +15391,20 @@ async function vowSales(identity, relays, via2 = {}) {
         problems.push(`${h} did not answer.`);
       }
     }
-    return out2;
+    return out;
   };
-  const claims = await byKind(MIRS.money, CLAIM);
-  const contests = await byKind(MIRS.agreements, CONTEST);
-  const vows = [];
-  for (const a of held.values()) {
-    const x = readVow(a);
-    if (x?.genesis && x.signer === identity) vows.push({ name: x.name, words: x.words });
-  }
-  for (const a of [...claims, ...contests]) {
-    const d = describeAct(a);
-    if (d.signer) await hold(d.signer);
-    add(a);
-  }
+  return { v, held, keys, problems, add, hold, byKind };
+}
+function judged(r, claims) {
   const accepted = ACCEPTABLE.flatMap((x) => x.hashes);
   const railValid = [];
   const railPayments = [];
   const limits = [];
   const amounts = /* @__PURE__ */ new Map();
-  for (const a of claims) {
-    const d = describeAct(a);
+  for (const { act, key } of claims) {
+    const d = key ? openWithKey(act, key) : describeAct(act);
     try {
-      const j = v.moneyJudge(d.id, { money: MIRS.money, accepted });
+      const j = r.v.moneyJudge(d.id, { money: MIRS.money, accepted });
       if (j.rail.answer !== "valid") continue;
       const c = moneyRead(CLAIM, d.payload).act;
       amounts.set(d.id, c.amount);
@@ -15307,30 +15412,12 @@ async function vowSales(identity, relays, via2 = {}) {
       const p = readPaymentProof(new Uint8Array(c.proof));
       const to = paidToOf(p.paidTo);
       if (to) railValid.push([d.id, to[0], to[1]]);
-      const w = limitsOf(held, d, a);
+      const w = limitsOf(r.held, d, act, key);
       if (w !== null) limits.push([d.id, w]);
     } catch {
     }
   }
-  const specs = withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits);
-  const out = [];
-  for (const x of vows) {
-    try {
-      const e3 = v.agreementsVow(specs, x.name);
-      out.push({
-        name: e3.name,
-        signer: e3.signer,
-        void: e3.void,
-        words: e3.words,
-        offers: e3.offers,
-        sales: e3.sales.map((s) => ({ ...s, promise: s.state === "contested" ? promiseOf(contests, s.by) : null, amount: amounts.get(s.act) ?? null })),
-        unsigned: e3.unsigned.length
-      });
-    } catch (err) {
-      problems.push(`The vow ${x.name.slice(0, 8)}\u2026 could not be read: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
-  return { vows: out, asked: relays, problems };
+  return { specs: withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits), amounts };
 }
 function paidToOf(p) {
   const x = p;
@@ -15340,7 +15427,7 @@ function paidToOf(p) {
   if (typeof x.declaredBy === "string") return [x.declaredBy, x.entry ?? 0];
   return null;
 }
-function limitsOf(held, d, act) {
+function limitsOf(held, d, act, key) {
   const b = describeAct(act).binding;
   if (!b) return null;
   try {
@@ -15349,7 +15436,7 @@ function limitsOf(held, d, act) {
     if (!gd || gd.spec !== MIRS.agreements || gd.type !== 9 || !gd.payload) return null;
     const grant = readGrant(gd.payload);
     if (!grant.limits) return null;
-    const w = judge(grant.limits, { id: d.id, ...describeAct(act) }, MIRS.money);
+    const w = judge(grant.limits, { id: d.id, ...key ? openWithKey(act, key) : describeAct(act) }, MIRS.money);
     return w.within === null ? null : w.within;
   } catch {
     return null;
@@ -15761,13 +15848,15 @@ var DubMoney = class {
       const paid = !!p?.publicClaims?.length;
       let sale = null;
       let promise = null;
+      let beside = null;
       if (paid) {
         if (!bySeller.has(b.seller)) bySeller.set(b.seller, await vowSales(b.seller, hints, via2).catch(() => ({ vows: [], asked: hints, problems: [] })));
         const x = bySeller.get(b.seller).vows.find((y) => y.name === vow)?.sales.find((y) => y.buyer === me.id);
         sale = x?.state ?? null;
         promise = x?.promise ?? null;
+        beside = x?.beside ?? null;
       }
-      out.push({ vow, seller: b.seller, words: b.words, price: p ? say(p.amount, /* @__PURE__ */ new Set([p.amount.unit])) : null, paid, sale, promise });
+      out.push({ vow, seller: b.seller, words: b.words, price: p ? say(p.amount, /* @__PURE__ */ new Set([p.amount.unit])) : null, paid, sale, promise, beside });
     }
     return out;
   }
@@ -15794,6 +15883,43 @@ var DubMoney = class {
     b.contests = [...b.contests ?? [], id];
     await this.store.saveMoney(me.id, "vows", vows);
     return ["Your contest of that sale is signed in public: it reads contested for anyone who looks. It voids nothing; the payment stays as it is."];
+  }
+  /**
+   * Contest a file bought (F386): a contest naming the purchase (your own
+   * payer's claim of its payment), the promise not kept in words if given,
+   * signed in public with the identity's own key. It undoes nothing: no
+   * payment, refund or delivery moves. A vow keeps its own form
+   * (`contestVow`): that is what marks its sale.
+   */
+  async contestFile(me, s, publication, promise) {
+    const bought = await this.store.money(me.id, "bought") ?? {};
+    const b = bought[publication];
+    const claims = b?.payment ? await this.engine.ownClaims(b.payment) : [];
+    if (!b) throw new Error("Nothing bought here by that name. Nothing was signed.");
+    if (!claims.length) throw new Error("It is not paid yet: a purchase is contested once paid, naming your claim of its payment. Nothing was signed.");
+    let id;
+    try {
+      id = await contestPurchase(me, { purchase: claims[0].id, promise, relays: list4([...s.relays, ...me.f.homes.map((h) => h.hint)]) });
+    } finally {
+      await this.store.saveIdentity(me);
+    }
+    b.contests = [...b.contests ?? [], id];
+    await this.store.saveMoney(me.id, "bought", bought);
+    return ["Your contest of that purchase is signed in public: it is shown beside the purchase, to you and to the seller. It undoes nothing: the payment, the key and the file stay as they are."];
+  }
+  /** Each file bought and paid, by publication: the buyer's contests the core shows beside it (`unknown` where it cannot say). Unpaid ones are left out. */
+  async filesContested(me, hints, via2) {
+    const bought = await this.store.money(me.id, "bought") ?? {};
+    const purchases = [];
+    for (const [publication, b] of Object.entries(bought)) {
+      const c = b.payment ? (await this.engine.ownClaims(b.payment))[0] : void 0;
+      if (c) purchases.push({ publication, ...c });
+    }
+    if (!purchases.length) return { paid: {}, problems: [] };
+    const r = await purchaseContests({ purchases, parties: list4([me.id, ...purchases.map((p) => bought[p.publication].seller)]), relays: hints, via: via2 });
+    const paid = {};
+    for (const p of purchases) paid[p.publication] = r.by[p.id] ?? { state: "unknown", contests: [], why: "its claim could not be read" };
+    return { paid, problems: r.problems };
   }
 };
 
@@ -16566,6 +16692,7 @@ var Dub = class _Dub {
       form: actForm(sp.id),
       who: this.whoFrom(sp.signer, me, p),
       standing: sp.standing,
+      hint: sp.hint,
       text: doc ? "" : sp.text,
       doc,
       pictures,
@@ -16831,6 +16958,7 @@ var Dub = class _Dub {
       kind: !isText ? "other" : d.public ? "public" : "private",
       from: d.signer,
       text: text3,
+      ...d.hint ? { hint: d.hint } : {},
       standing: await judge2(d.signer, act, d.id, key),
       refs: (d.refs ?? []).map((id, i) => ({ id, signer: d.refSigners?.[i] ?? null })),
       to: d.to ?? [],
@@ -16867,6 +16995,7 @@ var Dub = class _Dub {
             form: actForm(k.key),
             who: this.whoFrom(k.from, me.id, p),
             standing: k.standing,
+            hint: k.hint ?? null,
             text: k.text ?? "",
             doc: null,
             pictures: [],
@@ -16902,6 +17031,7 @@ var Dub = class _Dub {
             dir: "in",
             text: k.text ?? "",
             standing: k.standing,
+            hint: k.hint ?? null,
             at: k.found,
             seen: p.seen.includes(k.key),
             problem: k.problem ?? (k.standing === "valid" ? null : `not verified: ${k.standing}`)
@@ -17768,6 +17898,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       const problems = [];
       const items = [];
       await this.warm(Object.values(bought).map((b) => b.seller), places, s.via);
+      const contested = await this.money.filesContested(me, places, s.via).catch((e3) => (problems.push(message6(e3)), { paid: {} }));
       for (const [publication, b] of Object.entries(bought)) {
         const x = await this.money.read(me, places, s.via, [{ id: publication, signer: b.seller }]).catch((e3) => (problems.push(message6(e3)), null));
         items.push({
@@ -17780,7 +17911,9 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
           price: x?.price ?? null,
           state: x?.state === "opened" ? "opened: its key came with the receipt" : x?.state === "paying" ? "bought: pay it in your wallet; its key comes with the receipt" : x?.problem ?? "bought",
           text: x?.state === "opened" ? x.text : null,
-          picture: x?.state === "opened" ? x.picture : null
+          picture: x?.state === "opened" ? x.picture : null,
+          paid: !!contested.paid[publication],
+          contests: contested.paid[publication] ?? null
         });
       }
       const vows = await this.money.vowsBought(me, places, s.via).catch((e3) => (problems.push(message6(e3)), []));
@@ -17797,7 +17930,8 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
           text: v.words,
           picture: null,
           sale: v.sale,
-          paid: v.paid
+          paid: v.paid,
+          contests: v.beside
         });
       }
       return { items, problems };
@@ -18102,6 +18236,14 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
       const { me, s } = await this.ctx();
       await this.current(me);
       return { lines: (await this.money.contestVow(me, s, readId(vow), promise.trim() || null)).map((text3) => ({ text: text3, tone: "ok" })) };
+    });
+  }
+  /** Contest a file bought (F386): a contest naming the purchase, shown beside it; it undoes nothing. */
+  contestFile(publication, promise) {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      return { lines: (await this.money.contestFile(me, s, readId(publication), promise.trim() || null)).map((text3) => ({ text: text3, tone: "ok" })) };
     });
   }
   /** Repost a sealed post at this identity's relays, holding what it names there too. */
@@ -18514,6 +18656,8 @@ async function run(dub2, op, a, p) {
       return dub2.confirmVow(text2(a.vow));
     case "vow contest":
       return dub2.contestVow(text2(a.vow), text2(a.promise));
+    case "purchase contest":
+      return dub2.contestFile(text2(a.publication), text2(a.promise));
     case "repost":
       return dub2.repost({ post: text2(a.post), signer: text2(a.signer) });
     case "money look":
@@ -18683,10 +18827,12 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
 .k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
 .k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
+.k-act .k-hint{font-size:12px;color:var(--k-faint);margin:4px 0 0}
 .k-act .k-when{float:right;font-size:12px;color:var(--k-faint)}
 .k-act .k-txt{margin:4px 0 6px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .k-act .k-label{font-size:12.5px;color:var(--k-soft);margin:2px 0}
 .k-act .k-label.k-warn{color:var(--k-c)}
+.k-act .k-label.k-bad{color:var(--k-bad)}
 .k-act .k-kind{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--k-soft);border:1px solid var(--k-line);border-radius:5px;padding:1px 6px;margin-right:6px}
 .k-act .k-foot{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--k-faint);flex-wrap:wrap}
 .k-act .k-actid{margin-left:auto;padding:2px 0 2px 8px;border-radius:8px}
@@ -18846,7 +18992,8 @@ function card(a, o = {}) {
   const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : "";
   const text3 = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? "")}</div>` : "";
   const foot = `<div class="k-foot">${a.verified && !a.alarm ? '<span class="k-v" title="verified">\u2713</span>' : ""}${a.alarm ? `<span class="k-alarmline">${e(a.alarm)}</span>` : ""}<button type="button" class="k-actid" data-k-menu="act" aria-haspopup="menu">${e(shortForm(a.form))}</button></div>`;
-  return `<article class="k-act${o.selected ? " k-sel" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${labels}${text3}${a.html ?? ""}${foot}</article>`;
+  const hint = !a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer\u2019s own hint: ${e(a.hint)}</div>` : "";
+  return `<article class="k-act${o.selected ? " k-sel" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${labels}${text3}${a.html ?? ""}${hint}${foot}</article>`;
 }
 function signerMenu(app2, w, own) {
   const below = w.me ? own : [w.followed ? { key: "unfollow", label: "Following: remove from contacts" } : { key: "follow", label: "Follow: add to contacts" }, ...own, w.muted ? { key: "unmute", label: "Unmute" } : { key: "mute", label: "Mute" }];
@@ -19542,6 +19689,7 @@ function itemAct(it, collectives = []) {
     form: it.form,
     signer: kitWho(it.who, collectives.includes(it.who.id)),
     when: it.when ?? null,
+    hint: it.hint ?? null,
     kind: it.what ? it.what : it.vow ? "vow" : it.sealed ? `sealed ${it.sealed.media}` : null,
     labels,
     text: it.repost || it.what ? "" : it.text,
@@ -19565,6 +19713,7 @@ function messageAct(m) {
     signer: kitWho(m.who),
     of: m.of?.checked ? m.of.name ?? shortForm(actFormOf(m.of.id, "mid")) : null,
     when: whenWords(m.at),
+    hint: m.hint ?? null,
     labels,
     text: m.text,
     verified: !alarm && m.standing === "valid",
@@ -19578,11 +19727,17 @@ function purchaseAct(p) {
     form: p.form,
     signer: kitWho(p.seller),
     kind: `${p.what} \xB7 bought`,
-    labels: [{ text: p.state }, ...p.price ? [{ text: p.price }] : []],
+    labels: [{ text: p.state }, ...p.price ? [{ text: p.price }] : [], ...contestLabels(p)],
     text: p.kind === "vow" ? p.text : "",
     html: p.picture ? `<figure><img src="${e(p.picture)}" alt="The picture, opened"></figure>` : p.play ? sealedPlayBox(p.play) : p.kind === "file" && p.text ? `<div class="dub-sealed"><div class="k-txt" dir="auto">${e(p.text)}</div></div>` : "",
     verified: true
   };
+}
+function contestLabels(p) {
+  const c = p.contests;
+  if (!c) return [];
+  if (c.state === "unknown") return [{ text: `Contests beside it: unknown (${c.why ?? "not read"})`, tone: "warn" }];
+  return c.contests.map((x) => ({ text: `Contested by you, shown beside it${x.promise ? `: \u201C${x.promise}\u201D` : ""}`, tone: "bad" }));
 }
 function sealedPlayBox(x) {
   return `<div class="dub-film" data-sealed="${e(x.publication)}" data-sealed-seller="${e(x.seller)}" data-sealed-media="${x.media}"><button type="button" class="k-btn k-p" data-action="play-sealed">\u25B6 Play the ${x.media === "video" ? "film" : "recording"}</button><span>checked before it plays</span></div>`;
@@ -19785,8 +19940,8 @@ function anchorForm(offers2, service = "") {
 function correctForm() {
   return `<form id="correct" class="dub-modal-form">${say2("A correction is a new post naming the old one, labelled \u201CCorrection\u201D.", ["The old post stays as it was signed, shown with \u201Ccorrected by\u201D: nothing on MOR is changed or deleted. Apps that do not know the corrections cMIP show an ordinary post naming the old one."])}<textarea name="text" required placeholder="The correction"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Sign the correction</button></div></form>`;
 }
-function contestForm() {
-  return `<form id="contest" class="dub-modal-form"><p class="k-small k-soft">A contest naming your sale is signed in public. It voids nothing; the payment stays as it is.</p><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><div class="k-row"><button type="submit" class="k-btn k-alarm">Contest it</button></div></form>`;
+function contestForm(file = false) {
+  return `<form id="contest" class="dub-modal-form"><p class="k-small k-soft">${file ? "A contest naming your purchase is signed in public, and shown beside it, to you and to the seller. It undoes nothing: the payment, the key and the file stay as they are." : "A contest naming your sale is signed in public. It voids nothing; the payment stays as it is."}</p><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><div class="k-row"><button type="submit" class="k-btn k-alarm">Contest it</button></div></form>`;
 }
 function askPaidForm(units) {
   return `<form id="askpaid" class="dub-modal-form"><div class="k-row"><input name="value" inputmode="numeric" placeholder="Amount" required class="k-grow"><select name="unit">${unitOptions(units)}</select></div><input name="whatFor" placeholder="What for (optional)" maxlength="280">${say2("Prepared here, signed in Damgar.", ["Dub seals a request to this identity at its homes; Damgar reads it to you and signs it or not. A request is not a debt: they may pay it, accept it as a debt, or decline."])}<div class="k-row"><button type="submit" class="k-btn k-p">Prepare it for Damgar</button></div></form>`;
@@ -20349,6 +20504,7 @@ function mount(app2, b) {
       for (const r of it?.recordings?.filter((x) => x.withdrawable) ?? []) after.push({ key: `withdraw:${r.publication}`, label: "Withdraw the recording" });
       const vow = it?.vow?.state === "bought" ? it.vow.vow : d?.purchase?.kind === "vow" && d.purchase.paid && d.purchase.sale !== "confirmed" && d.purchase.sale !== "contested" ? d.purchase.id : null;
       if (vow) after.push({ key: `confirm:${vow}`, label: "Confirm: it was kept", line: true }, { key: `contest:${vow}`, label: "Contest it\u2026" });
+      else if (d?.purchase?.kind === "file" && d.purchase.paid) after.push({ key: `contest-file:${d.purchase.id}`, label: "Contest it\u2026", line: true });
       return { before, after };
     },
     choose: (key, a) => void choose(key, a)
@@ -20457,6 +20613,10 @@ function mount(app2, b) {
     if (key.startsWith("contest:")) {
       const body = popup2.show("Contest it", contestForm());
       body.dataset.vow = key.slice("contest:".length);
+    }
+    if (key.startsWith("contest-file:")) {
+      const body = popup2.show("Contest it", contestForm(true));
+      body.dataset.publication = key.slice("contest-file:".length);
     }
   }
   async function people(op, id) {
@@ -21162,8 +21322,9 @@ function mount(app2, b) {
         return;
       }
       case "contest": {
-        if (!confirm("Contest this sale? A contest naming it is signed in public. It voids nothing.")) return;
-        const r = await busy("Signing your contest\u2026", () => b.ask("vow contest", { vow: body?.dataset.vow, promise: String(d.get("promise") ?? "") }));
+        const file = body?.dataset.publication;
+        if (!confirm(file ? "Contest this purchase? A contest naming it is signed in public. It undoes nothing." : "Contest this sale? A contest naming it is signed in public. It voids nothing.")) return;
+        const r = await busy("Signing your contest\u2026", () => file ? b.ask("purchase contest", { publication: file, promise: String(d.get("promise") ?? "") }) : b.ask("vow contest", { vow: body?.dataset.vow, promise: String(d.get("promise") ?? "") }));
         if (r) popup2.close(), say3("done", lines(r.lines)), await Promise.all([readFeed2(), readBought()]);
         return;
       }

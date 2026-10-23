@@ -422,7 +422,7 @@ export class TestIdentity {
     spec: string,
     type: number,
     payload: Uint8Array,
-    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[] },
+    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[]; hint?: string },
   ) {
     if (!this.f.signingSecret) throw new Error(HELD_ELSEWHERE_SAY);
     const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
@@ -441,6 +441,8 @@ export class TestIdentity {
       objects,
       refs: opts.refs,
       acks: opts.acks,
+      // The signer's own hint (field 9, display only): no app writes one yet (whether they should is not decided).
+      ...(opts.hint !== undefined ? { hint: opts.hint } : {}),
     }) as { act: Uint8Array; id: string; key: Uint8Array };
     return this.everydayMade(spec, type, opts.public, line, made);
   }
@@ -455,7 +457,7 @@ export class TestIdentity {
     spec: string,
     type: number,
     payload: Uint8Array,
-    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[] },
+    opts: { public: boolean; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[]; hint?: string },
   ): Promise<{ act: Uint8Array; id: string; key: Uint8Array }> {
     if (this.f.signingSecret || !this.signer) return this.everyday(spec, type, payload, opts);
     const objects = this.everydayObjects(spec, type, opts.objects, opts.acks);
@@ -924,7 +926,7 @@ export class TestIdentity {
     spec: string,
     type: number,
     payload: Uint8Array,
-    opts: { public: boolean; relays: string[]; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[] },
+    opts: { public: boolean; relays: string[]; to?: string[]; objects?: [string, string][]; refs?: Reference[]; acks?: string[]; hint?: string },
   ) {
     const made = await this.everydayNow(spec, type, payload, {
       public: opts.public,
@@ -932,6 +934,7 @@ export class TestIdentity {
       objects: opts.objects,
       refs: opts.refs,
       acks: opts.acks,
+      hint: opts.hint,
     });
     for (const hint of opts.relays) await relayAt(hint, this.via).putAct(made.act);
     return made;

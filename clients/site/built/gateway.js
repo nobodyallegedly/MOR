@@ -3962,7 +3962,7 @@ async function readPost(id, hints, via = {}, judging) {
   const standing = await judge.standing(act, id, d.signer);
   const named = (d.refs ?? []).map((r, i) => d.refSigners?.[i] ? [r, d.refSigners[i]] : r);
   const refs = await Promise.all(named.map((r) => readRef(r, hints, via, judge)));
-  return { id, signer: d.signer, standing, text: text2, format: f instanceof Uint8Array ? hex(f) : null, refs, notTried: judge.notTried ?? [] };
+  return { id, signer: d.signer, standing, text: text2, format: f instanceof Uint8Array ? hex(f) : null, hint: d.hint ?? null, refs, notTried: judge.notTried ?? [] };
 }
 async function readRef(r, hints, via, judge) {
   const id = typeof r === "string" ? r : r[0];

@@ -118,8 +118,8 @@ Nothing else was dropped. The functions removed are the three the design note re
 ## 4. For the MOR lead
 
 **Nothing for the MOR lead.** No MIR, MICS, freeze test or verdict of the core changed, and no finding number was taken. S7d's F386 is the next one used.
-- **S7d** (the buyer's contest, and the signer's time hint written and exposed by the WebAssembly binding, Envelopes field 9) **is not on main** as this branch ends (main at `98e7c689`). Its prompt says round 4 shows the time hint in the kit's act card, labelled as the signer's own hint. **That is not built**: there is nothing to show yet. Once S7d is merged, the card gains one line (proposed: "the signer's own hint: …", never presented as a time someone checked), and the six web releases are rebuilt.
-- **The WebAssembly is unchanged** (`mor_wasm_bg.wasm`, same bytes). The web releases are rebuilt because the kit and the sealed media code they bundle changed: **Edubba, Dub, Kišib, Damgar, Ummia and the display client**, each reproducible (`npm run test:build`, all green).
+- **S7d** (the buyer's contest, and the signer's hint written and exposed by the WebAssembly binding, Envelopes field 9) was not on main when this report was first written. It has since been merged (pull request 100, F386), merged into this branch, and built on: see section 8, "After S7d".
+- **The WebAssembly**: in the first part of this round it was unchanged. Since the merge it is S7d's (SHA-256 `ed6825783977961b…`, 5,051,909 bytes), the same bytes in all six releases (section 8).
 - **The agent memory cMIP, draft 2** (a Dubsar cMIP): rule 5.3 now says the diary opens only after a public act from its owner to it, accepted by one of the owner's homes. That is the app's rule, said as such. No verdict changes, and the test value is unchanged.
 - **The audio Module draft 1**: its "not yet used" lines now say Dub and Edubba use it. No rule changed.
 
@@ -139,8 +139,7 @@ One at a time; the next only once the one before is answered.
 **Question 4 (after question 3). Which collectives sit under an identity.** Built: the real collectives it is a member of, and the collectives brought here that name it. Test collectives are not under any identity: their members are all held here, and they have their own column.
 - *My lean:* keep it so.
 
-**Question 5 (after question 4). The time hint, once S7d lands.** Should the act card show the signer's own hint on every card, or only behind the act menu's "Why it's valid"?
-- *My lean:* on the card, in the faint style, labelled "the signer's own hint", as S7d's prompt says.
+**Question 5 (after question 4). The time hint, once S7d lands.** *Settled by the brief's Part 4, since:* on the card, faint, labelled "the signer's own hint", where no clock stamped the act (section 8).
 
 **Question 6 (after question 5). Dub's Purchases play a sealed film or recording.** The brief named only Audio in Dub's typing box and the act card. Without Purchases playing what was bought, the video and audio added to Publishing could not be opened by any buyer, so I built it (Dub's Purchases › ▶ Play, checked by the Module first).
 - *My lean:* keep it; it is the buyer's half of the same function.
@@ -225,4 +224,110 @@ cd ../kishib && npm install && sh scripts/make-app.sh
 
 **Every existing test.** Locally green: Edubba, Dub, Kišib, Damgar, Ummia, the kit, barebone, the repository client, grants. Each web release was rebuilt and is reproducible. CI on the branch is the record.
 
-**The brief, truncated.** The brief's Part 4 ended mid-sentence ("check main before your last merge, and read …"). I took it as: check main for S7d before the last commit and, if it has landed, merge it and show its time hint. Main was checked last at `98e7c689`: S7d had not landed.
+**The brief, truncated.** The brief's Part 4 ended mid-sentence ("check main before your last merge, and read …"). I took it as: check main for S7d before the last commit and, if it has landed, merge it and show its time hint. Main was checked last at `98e7c689`: S7d had not landed. Part 4 came afterwards, in full: section 8.
+
+## 8. After S7d
+
+*23 October 2026. S7d (the MOR lead's pull request 100, F386) is merged into main, and main into this branch. This is Part 4 of the brief.*
+
+### In plain words
+
+- **A buyer can contest any purchase in Dub, not only a vow's.** In Dub's **Purchases**, a file bought and paid has **Contest it…** in its act menu, below the line. You can say what was not kept, in words, if you want. The contest is signed in public with your own key, and is then shown **beside the purchase, in red**: to you in Dub, and to the seller in **Edubba › Publishing › Sales**. **It undoes nothing**: no payment, refund, key or file moves.
+- **A vow keeps its own form.** Its sale is still confirmed (**Confirm: it was kept**) or contested (**Contest it…**) as before, because that is what marks the sale.
+- **The same contest signed by anyone else shows nothing**, in Dub or in Edubba.
+- **Where the core cannot say**, because a payment is not stated, the card says **"unknown"**, never "none".
+- **The signer's own hint.** An act can now carry a hint its signer wrote, such as the time on their device. Where one was written and no clock stamped the act, the card shows it **faint, labelled "the signer's own hint: …"**. It is never a time the app vouches for, and nothing is ordered by it. **No app writes a hint when it signs yet: whether they should is not decided.**
+
+Pictures, in `docs/edubba-kit/`:
+- `dub-purchase-contested.png`: Dub's Purchases, the contest beside the purchase, and the act menu with **Contest it…** below the line.
+- `mac-34-sales-contested.png`: Edubba's Sales, the buyer's contest beside the sale.
+
+### Precisely
+
+**1. The merge and the releases.**
+- Main merged at `d2aebbca`. The only clashes were the six releases' `BUILT-WITH.txt`, which are rebuilt anyway.
+- `npm run wasm` gives SHA-256 `ed6825783977961bde16c1a487f9061a845c16d766afd2ca1ba5c13a8fa07117`, 5,051,909 bytes, as S7d's.
+- All six web releases are rebuilt from the merged branch, as their READMEs say: the display client (`clients/site`), Dub, Kišib, Damgar, Ummia and Edubba. They were rebuilt again after the changes below, since the kit and barebone code they bundle changed.
+- Each carries that WebAssembly, and each `npm run test:build` (built twice, the same bytes) passes.
+
+**2. The contest of a purchase.**
+- **The purchase** is the buyer's own payer's claim of the payment.
+  - For a file, it is sealed to the seller.
+  - The buyer's Damgar keeps it with its content key. Dub reads it through a new `ownClaims(payment)` accessor in `clients/damgar/src/damgar.ts`.
+- **The act** is signed by the buyer, public, at the relays and the buyer's homes:
+  - payload: `purchaseContestPayload(purchase, promise?)`;
+  - objects: `[[purchase, purchase]]`.
+- **The reading** (`purchaseContests` in `clients/dub/src/vows.ts`), shared by Dub and Edubba:
+  - The claim is given to the verifier with its key.
+  - The parties' chains and public acts are held: the offer, the lanes.
+  - The public contests naming the purchase are read from the relays, and the buyer's own from its homes.
+  - Each claim's rail is checked by its rail Module and stated to the core (`railValid`, `railPayments`, and the lane's cap through the grant limits cMIP), exactly as for `agreementsVow`.
+  - Then `Verifier.agreementsPurchaseContests(specs, purchase)`.
+  - `law/payment-unstated` becomes `unknown`, with its reason, never "none".
+  - `vowSales` now uses the same reader; it reads what it did before.
+- **Dub** (`dub/src/money.ts`, `dub.ts`, `ops.ts`, `page/ui.ts`, `page/view.ts`):
+  - A purchase carries `paid` and `contests`. Each contest is a red label beside it, or a warning label for "unknown".
+  - **Contest it…** shows on a file bought once it is paid: a contest names the claim, which exists only then. The operation, `purchase contest`, refuses before that in plain words.
+  - A vow's card keeps Confirm and Contest in the vow's form.
+- **Edubba** (`desk/src/publishing.ts`, `ops.ts`, `page/ui.ts`, `page/view.ts`):
+  - `publishing sales contests` reads each buyer's claim from the seller's inbox, by the offer it fulfils, and opens it with the seller's encryption key.
+  - Sales shows each buyer's contests beside the row.
+  - A buyer whose claim is not found reads "unknown", with why.
+  - A collective's works are paid to its split service, which holds the claims, so they are not read here (question 8).
+- **Nothing counted twice, nothing lost** (the changed format reading):
+  - `agreementsDeclarationsNaming` is read only by the collective client, for abandonment declarations. Leaving out a contest that carries field 1 there removes nothing an app counted.
+  - The core keeps the two forms apart. A purchase's contests are only those with no vow (`c.vow.is_none()`), and a vow's sale is marked only by the vow's form. So a vow-form contest is never also shown beside the purchase. The vow test now checks this: every sale's `beside` is empty while its vow-form contest marks it.
+  - A contest of a vow's sale in the purchase's form (another client may sign one; Dub does not) marks no sale. So it is not lost, Track shows it beside the sale, labelled "contested beside the purchase, marking no sale", and Dub's vow card shows it too. *This path is built but not driven end to end by a test*: no app signs that form, and the core's own tests cover its reading (`core/tests/purchase_contest.rs`).
+
+**3. The signer's hint.**
+- `KitAct.hint` in the kit: drawn faint (`.k-hint`), labelled "the signer’s own hint: …", **only where the card has no `when`**, that is, where no clock stamped the act. It sorts nothing.
+- Carried from `describeAct`:
+  - barebone's shown post (`ShownPost.hint`);
+  - Dub's feed and "to you" items;
+  - Dub's messages (from `openSealed`'s `described`, kept with what was received);
+  - Edubba's posts for a collective.
+- The other apps' cards pass none yet: Edubba's Talk and Track, Damgar's payments, Ummia's releases. The kit draws it for any card that carries one.
+- **No app writes one.** For the test alone, the genesis identity's `publish` passes an optional `hint` through to `makeEveryday`, and no app passes it. The runner's path does not carry it.
+- An unrelated fix found on the way: the kit gave a "bad" label its class but no colour. It is now the alarm red (`--k-bad`), so the new contest labels read red, as an alarm does.
+
+**4. Tests.**
+- New: `clients/desk/test/purchase-contest.test.ts`. Real homes and relay, Damgar's programs, a test Lightning node:
+  - a text published from Edubba, bought from Dub under its lane;
+  - a contest refused while unpaid;
+  - once paid and delivered, "none" beside it in Dub and in Edubba's Sales;
+  - contested from Dub, with its promise: shown beside the purchase in Dub and in Edubba's Sales, the same act, its objects `[[purchase, purchase]]`, signed by the buyer;
+  - by clicks: Dub's Purchases with the red label and **Contest it…** below the line, and Edubba's Sales in red;
+  - **the same contest signed by another identity**: still only the buyer's, in both apps;
+  - **an act with a hint**: Dub's feed carries it, and the card shows "the signer’s own hint: …";
+  - **one without**: nothing; and with a clock's `when`, the hint is not shown.
+- Changed: `clients/desk/test/publishing.test.ts`, the vow test. **A vow's sale is still confirmed and contested by its form**, and nothing of it shows beside the purchase.
+
+### Files changed in this part
+
+- Merged from main: S7d's core, binding, texts and genesis test, untouched.
+- `clients/kit`: `src/html.ts` (`hint`), `src/style.ts` (`.k-hint`, the red of a bad label); README.
+- `clients/barebone/src/post.ts`: the hint in a shown post.
+- `clients/genesis/src/identity.ts`: `publish`'s optional `hint`, passed through (for tests; no app passes it).
+- `clients/damgar/src/damgar.ts`: `ownClaims`.
+- `clients/dub`:
+  - `src/vows.ts` (the shared reader, `purchaseContests`, `contestPurchase`, Track's `beside`);
+  - `src/money.ts` (`contestFile`, `filesContested`);
+  - `src/dub.ts`, `src/ops.ts`, `src/shapes.ts`, `src/people.ts`, `src/page/ui.ts`, `src/page/view.ts`;
+  - README.
+- `clients/desk`:
+  - `src/publishing.ts` (`salesContests`), `src/ops.ts`, `src/collectives.ts` (the hint);
+  - `src/page/ui.ts`, `src/page/view.ts`, `src/page/parts.ts`;
+  - tests (above); README.
+- `built/` of all six web releases.
+
+### Questions (after question 6)
+
+**Question 7. Contest it… before payment.** Built: shown once paid, since the contest names your claim of the payment, which exists only then. Before that, Purchases shows the purchase with no Contest it….
+- *My lean:* keep it so. There is nothing to contest before paying.
+
+**Question 8 (after question 7). A collective's sales.** A collective's works are paid to its split service, which receives the buyers' claims. Edubba's Sales does not read contests beside them yet.
+- *My lean:* read them in the split-service round. The service already receives the claims, and could tell the members, as Damgar tells of a sale.
+
+### Every test after S7d
+
+(Filled in below once the suites finish.)

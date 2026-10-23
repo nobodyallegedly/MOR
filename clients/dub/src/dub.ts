@@ -232,6 +232,7 @@ interface Described {
   refSigners?: (string | undefined)[];
   objects?: [string, string][];
   acks?: string[];
+  hint?: string | null;
 }
 
 /** How long a display name found is trusted before it is read again, in seconds. */
@@ -1050,6 +1051,7 @@ export class Dub {
       form: actForm(sp.id),
       who: this.whoFrom(sp.signer, me, p),
       standing: sp.standing,
+      hint: sp.hint,
       text: doc ? '' : sp.text,
       doc,
       pictures,
@@ -1344,6 +1346,7 @@ export class Dub {
       kind: !isText ? 'other' : d.public ? 'public' : 'private',
       from: d.signer,
       text,
+      ...(d.hint ? { hint: d.hint } : {}),
       standing: await judge(d.signer, act, d.id, key),
       refs: (d.refs ?? []).map((id, i) => ({ id, signer: d.refSigners?.[i] ?? null })),
       to: d.to ?? [],
@@ -1381,6 +1384,7 @@ export class Dub {
             form: actForm(k.key),
             who: this.whoFrom(k.from!, me.id, p),
             standing: k.standing,
+            hint: k.hint ?? null,
             text: k.text ?? '',
             doc: null,
             pictures: [],
@@ -1416,6 +1420,7 @@ export class Dub {
             dir: 'in' as const,
             text: k.text ?? '',
             standing: k.standing,
+            hint: k.hint ?? null,
             at: k.found,
             seen: p.seen.includes(k.key),
             problem: k.problem ?? (k.standing === 'valid' ? null : `not verified: ${k.standing}`),
@@ -2345,6 +2350,8 @@ export class Dub {
       const problems: string[] = [];
       const items: Purchase[] = [];
       await this.warm(Object.values(bought).map((b) => b.seller), places, s.via);
+      // F386: the contests the core shows beside each file bought and paid.
+      const contested = await this.money.filesContested(me, places, s.via).catch((e) => (problems.push(message(e)), { paid: {} as Record<string, NonNullable<Purchase['contests']>> }));
       for (const [publication, b] of Object.entries(bought)) {
         const x = await this.money.read(me, places, s.via, [{ id: publication, signer: b.seller }]).catch((e) => (problems.push(message(e)), null));
         items.push({
@@ -2358,6 +2365,8 @@ export class Dub {
           state: x?.state === 'opened' ? 'opened: its key came with the receipt' : x?.state === 'paying' ? 'bought: pay it in your wallet; its key comes with the receipt' : (x?.problem ?? 'bought'),
           text: x?.state === 'opened' ? x.text : null,
           picture: x?.state === 'opened' ? x.picture : null,
+          paid: !!contested.paid[publication],
+          contests: contested.paid[publication] ?? null,
         });
       }
       const vows = await this.money.vowsBought(me, places, s.via).catch((e) => (problems.push(message(e)), []));
@@ -2375,6 +2384,7 @@ export class Dub {
           picture: null,
           sale: v.sale,
           paid: v.paid,
+          contests: v.beside,
         });
       }
       return { items, problems };
@@ -2710,6 +2720,16 @@ export class Dub {
       // H80: a contest is signed with the identity's own key: checked first.
       await this.current(me);
       return { lines: (await this.money.contestVow(me, s, readId(vow), promise.trim() || null)).map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
+  /** Contest a file bought (F386): a contest naming the purchase, shown beside it; it undoes nothing. */
+  contestFile(publication: string, promise: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      // H80: a contest is signed with the identity's own key: checked first.
+      await this.current(me);
+      return { lines: (await this.money.contestFile(me, s, readId(publication), promise.trim() || null)).map((text) => ({ text, tone: 'ok' as const })) };
     });
   }
 

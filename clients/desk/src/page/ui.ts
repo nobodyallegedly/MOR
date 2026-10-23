@@ -635,7 +635,7 @@ async function collectivesPart(): Promise<string> {
   if (sub === 'act') {
     const p = await c.ask<Permissions>('collective permissions', { collective: id }).catch((e) => ({ items: [], notes: [{ text: errorOf(e) }] }) as unknown as Permissions);
     const chips = p.items.map((i) => v.chip(i.what, i.state, i.lines.map((l) => l.text).join(' '))).join('');
-    const posts = await c.ask<{ items: { id: string; text: string; standing: string; pictures: string[]; corrects: string | null; correctedBy: string[] }[]; problems: string[] }>('collective posts', { collective: id }).catch((e) => ({ items: [], problems: [errorOf(e)] }));
+    const posts = await c.ask<{ items: { id: string; text: string; standing: string; hint?: string | null; pictures: string[]; corrects: string | null; correctedBy: string[] }[]; problems: string[] }>('collective posts', { collective: id }).catch((e) => ({ items: [], problems: [errorOf(e)] }));
     const test = !col.real && !col.brought;
     const cards = posts.items
       .map((x) =>
@@ -644,6 +644,7 @@ async function collectivesPart(): Promise<string> {
             id: x.id,
             signer: who(id, { name: col.name, collective: true }),
             text: x.text,
+            hint: x.hint ?? null,
             html: x.pictures.map((src) => `<figure><img alt="A picture of the post" src="${v.e(src)}"></figure>`).join(''),
             labels: [...(x.corrects ? [{ text: `correction of ${shortForm(v.formOf(x.corrects))}` }] : []), ...(x.correctedBy.length ? [{ text: `corrected by ${x.correctedBy.map((y) => shortForm(v.formOf(y))).join(', ')}` }] : [])],
             corrects: x.corrects ? { id: x.corrects, signer: id } : null,
@@ -782,11 +783,14 @@ async function publishingPart(): Promise<string> {
     return v.herePane(cards);
   }
   if (part === 'sales') {
-    const rows = p.works
-      .filter((w) => Object.keys(w.delivered).length)
-      .map((w) => `<div class="k-box"><h4>${v.e(w.title)}</h4><div class="k-list">${Object.entries(w.delivered).map(([buyer, act]) => `<div><span>${v.e(shown(buyer))} <span class="k-mono k-faint">${v.e(shortForm(v.idForm(buyer)))}</span></span><span class="k-r">key delivered · ${v.e(shortForm(v.formOf(act)))}</span></div>`).join('')}</div></div>`)
+    // F386: each buyer's contests, shown beside the sale; "unknown" where the core cannot say, never "none".
+    const sold = p.works.filter((w) => Object.keys(w.delivered).length);
+    type Contested = { by: Record<string, Record<string, v.ContestsBeside>>; problems: string[] };
+    const contested: Contested = sold.length ? await c.ask<Contested>('publishing sales contests').catch((e) => ({ by: {}, problems: [errorOf(e)] })) : { by: {}, problems: [] };
+    const rows = sold
+      .map((w) => `<div class="k-box"><h4>${v.e(w.title)}</h4><div class="k-list">${Object.entries(w.delivered).map(([buyer, act]) => `<div><span>${v.e(shown(buyer))} <span class="k-mono k-faint">${v.e(shortForm(v.idForm(buyer)))}</span></span><span class="k-r">key delivered · ${v.e(shortForm(v.formOf(act)))}</span></div>${w.collective ? '' : v.contestsBeside(contested.by[w.publication]?.[buyer])}`).join('')}</div></div>`)
       .join('');
-    return v.salesPane(rows);
+    return v.salesPane(rows, contested.problems);
   }
   part = 'file';
   // Keys of sales told of are delivered as the tile opens (as Dub does on its main screen).
@@ -852,7 +856,11 @@ async function vowsPart(): Promise<string> {
               kind: s.state,
               text: s.promise ? `Not kept: ${s.promise}` : s.state === 'confirmed' ? 'It was kept.' : s.amount ? `Bought for ${s.amount.value.toLocaleString('en')}.` : 'Bought.',
               answers: { id: vw.name, signer: vw.signer },
-              labels: [{ text: `↳ answers ${shown(vw.signer)}’s vow · ${shortForm(v.formOf(vw.name))}` }],
+              labels: [
+                { text: `↳ answers ${shown(vw.signer)}’s vow · ${shortForm(v.formOf(vw.name))}` },
+                // F386: a contest in the purchase's form marks no sale; shown beside it, so it is not lost (and not counted with the vow's own form).
+                ...(s.beside?.state === 'unknown' ? [{ text: `contests beside the purchase: unknown (${s.beside.why ?? 'not read'})`, tone: 'warn' as const }] : (s.beside?.contests ?? []).map((x) => ({ text: `contested beside the purchase, marking no sale${x.promise ? `: “${x.promise}”` : ''}`, tone: 'bad' as const }))),
+              ],
               verified: s.state !== 'contested',
               alarm: s.state === 'contested' ? 'contested' : null,
             },

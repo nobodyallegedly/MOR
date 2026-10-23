@@ -277,6 +277,8 @@ test('a vow published from Edubba; four buyers pay in Dub; one confirms and one 
   assert.equal(look.vows.length, 1);
   const states = Object.fromEntries(look.vows[0].sales.map((x: any) => [x.buyer, [x.state, x.promise]]));
   assert.deepEqual(states, { [b1.id]: ['confirmed', null], [b2.id]: ['contested', 'The seat was given to someone else.'], [b3.id]: ['pending', null], [b4.id]: ['pending', null] });
+  // After S7d (F386): a vow's sale keeps its own form. Its contest marks the sale, and is not also shown beside the purchase: nothing is counted twice.
+  for (const x of look.vows[0].sales) assert.deepEqual(x.beside, { state: 'shown', contests: [] }, `nothing beside ${x.buyer}’s purchase`);
   assert.deepEqual(look.vows[0].mine, [], 'no buyer is held in this Edubba');
   await assert.rejects(e.c.ask('publishing vow sales', { identity: seller.id, relays: [] }), /Name at least one relay/);
 

@@ -2242,6 +2242,23 @@ export class Damgar {
     });
   }
 
+  /**
+   * This identity's own claims of one of its payments, with their bytes and
+   * content keys where private (sealed to the payee): what a buyer's contest
+   * names as the purchase (F386), and what the core needs to read it.
+   */
+  ownClaims(key: string): Promise<{ id: string; act: Uint8Array; key: Uint8Array | null }[]> {
+    return this.serial(async () => {
+      const { book } = await this.ctx();
+      const p = book.payments[key];
+      if (!p || p.side !== 'out') return [];
+      return [...new Set([...p.claims, ...(p.publicClaims ?? [])])].flatMap((id) => {
+        const k = book.acts[id];
+        return k ? [{ id, act: b64(k.act), key: k.key ? b64(k.key) : null }] : [];
+      });
+    });
+  }
+
   /** A claim is signed as its payment's invoice request was: under the same lane, still in force and within it, or by hand. */
   private async claimHow(me: TestIdentity, s: Settings, p: Payment, made: { type: number; payload: Uint8Array }): Promise<How> {
     if (p.how?.by !== 'lane') {

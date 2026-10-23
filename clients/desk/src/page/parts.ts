@@ -601,7 +601,7 @@ export interface PublishingShown {
 
 /** A look-up of one identity's vow sales (round 3): each vow, each sale's state; those bought by an identity held here may be contested here. */
 export interface VowSalesShown {
-  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; promise: string | null; amount: { unit: string; value: number } | null }[]; unsigned: number; mine: string[] }[];
+  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; promise: string | null; amount: { unit: string; value: number } | null; beside?: { state: 'shown' | 'unknown'; contests: { act: string; promise: string | null }[]; why?: string } }[]; unsigned: number; mine: string[] }[];
   asked: string[];
   problems: string[];
 }

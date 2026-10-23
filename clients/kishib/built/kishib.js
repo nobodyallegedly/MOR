@@ -6211,7 +6211,9 @@ var TestIdentity = class _TestIdentity {
       to: opts.to,
       objects,
       refs: opts.refs,
-      acks: opts.acks
+      acks: opts.acks,
+      // The signer's own hint (field 9, display only): no app writes one yet (whether they should is not decided).
+      ...opts.hint !== void 0 ? { hint: opts.hint } : {}
     });
     return this.everydayMade(spec, type, opts.public, line, made);
   }
@@ -6623,7 +6625,8 @@ var TestIdentity = class _TestIdentity {
       to: opts.to,
       objects: opts.objects,
       refs: opts.refs,
-      acks: opts.acks
+      acks: opts.acks,
+      hint: opts.hint
     });
     for (const hint of opts.relays) await relayAt(hint, this.via).putAct(made.act);
     return made;
@@ -8972,10 +8975,12 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
 .k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
 .k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
+.k-act .k-hint{font-size:12px;color:var(--k-faint);margin:4px 0 0}
 .k-act .k-when{float:right;font-size:12px;color:var(--k-faint)}
 .k-act .k-txt{margin:4px 0 6px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .k-act .k-label{font-size:12.5px;color:var(--k-soft);margin:2px 0}
 .k-act .k-label.k-warn{color:var(--k-c)}
+.k-act .k-label.k-bad{color:var(--k-bad)}
 .k-act .k-kind{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--k-soft);border:1px solid var(--k-line);border-radius:5px;padding:1px 6px;margin-right:6px}
 .k-act .k-foot{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--k-faint);flex-wrap:wrap}
 .k-act .k-actid{margin-left:auto;padding:2px 0 2px 8px;border-radius:8px}
@@ -9134,7 +9139,8 @@ function card(a, o = {}) {
   const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : "";
   const text2 = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? "")}</div>` : "";
   const foot = `<div class="k-foot">${a.verified && !a.alarm ? '<span class="k-v" title="verified">\u2713</span>' : ""}${a.alarm ? `<span class="k-alarmline">${e(a.alarm)}</span>` : ""}<button type="button" class="k-actid" data-k-menu="act" aria-haspopup="menu">${e(shortForm(a.form))}</button></div>`;
-  return `<article class="k-act${o.selected ? " k-sel" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${labels}${text2}${a.html ?? ""}${foot}</article>`;
+  const hint = !a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer\u2019s own hint: ${e(a.hint)}</div>` : "";
+  return `<article class="k-act${o.selected ? " k-sel" : ""}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ""}${signer}${labels}${text2}${a.html ?? ""}${hint}${foot}</article>`;
 }
 function signerMenu(app2, w, own) {
   const below = w.me ? own : [w.followed ? { key: "unfollow", label: "Following: remove from contacts" } : { key: "follow", label: "Follow: add to contacts" }, ...own, w.muted ? { key: "unmute", label: "Unmute" } : { key: "mute", label: "Mute" }];

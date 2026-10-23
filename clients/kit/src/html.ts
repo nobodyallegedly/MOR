@@ -62,6 +62,13 @@ export interface KitAct {
   of?: string | null;
   /** When, in words, and by whose clock (the app's line says which). */
   when?: string | null;
+  /**
+   * The signer's own hint (Envelopes, the inside's field 9), as it wrote it:
+   * shown faint, labelled as the signer's own, only where no clock stamped
+   * the act (no `when`). Never a time the app vouches for, never used to
+   * order anything (Envelopes rule 6, "Hints never decide").
+   */
+  hint?: string | null;
   /** What it is, in a word or two, where it is not a plain post (a vow, a release, a display name…). */
   kind?: string | null;
   labels?: KitLabel[];
@@ -87,7 +94,8 @@ export function card(a: KitAct, o: { selected?: boolean } = {}): string {
   const kind = a.kind ? `<span class="k-kind">${e(a.kind)}</span>` : '';
   const text = a.text || kind ? `<div class="k-txt" dir="auto">${kind}${e(a.text ?? '')}</div>` : '';
   const foot = `<div class="k-foot">${a.verified && !a.alarm ? '<span class="k-v" title="verified">✓</span>' : ''}${a.alarm ? `<span class="k-alarmline">${e(a.alarm)}</span>` : ''}<button type="button" class="k-actid" data-k-menu="act" aria-haspopup="menu">${e(shortForm(a.form))}</button></div>`;
-  return `<article class="k-act${o.selected ? ' k-sel' : ''}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ''}${signer}${labels}${text}${a.html ?? ''}${foot}</article>`;
+  const hint = !a.when && a.hint ? `<div class="k-hint" title="Written by the signer when signing: not checked by anyone, and not used to order anything" dir="auto">the signer’s own hint: ${e(a.hint)}</div>` : '';
+  return `<article class="k-act${o.selected ? ' k-sel' : ''}" data-k-act="${e(a.id)}" data-k-signer="${e(s.id)}">${a.when ? `<span class="k-when">${e(a.when)}</span>` : ''}${signer}${labels}${text}${a.html ?? ''}${hint}${foot}</article>`;
 }
 
 // ---------------------------------------------------------------- menus

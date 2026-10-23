@@ -451,8 +451,22 @@ export function herePane(cards: string): string {
   return `<h2>Published here</h2><div class="k-row"><button type="button" class="k-btn" data-action="pub-deliver">Deliver keys to buyers</button><span class="k-small k-soft">Delivers the key of each sale your Damgar signed the receipt for.</span></div>${feedBox({ id: 'here-feed', cards, empty: 'Nothing published here yet.' })}`;
 }
 
-export function salesPane(rows: string): string {
-  return `<h2>Sales</h2><p class="k-small k-soft">Each buyer whose key was delivered from here: a sale your Damgar signed the receipt for.</p>${rows || '<p class="k-empty">No sale yet.</p>'}`;
+export function salesPane(rows: string, problems: string[] = []): string {
+  return `<h2>Sales</h2><p class="k-small k-soft">Each buyer whose key was delivered from here: a sale your Damgar signed the receipt for. A buyer’s contest of their purchase is shown beside it: it undoes nothing.</p>${problems.length ? `<p class="k-small k-soft">${problems.map(e).join('<br>')}</p>` : ''}${rows || '<p class="k-empty">No sale yet.</p>'}`;
+}
+
+/** The buyer's contests shown beside one purchase (F386), as the core reads them. */
+export interface ContestsBeside {
+  state: 'shown' | 'unknown';
+  contests: { act: string; promise: string | null }[];
+  why?: string;
+}
+
+/** The contests beside a sale: each in red, the promise not kept in words where said; "unknown" where the core cannot say; nothing where there is none. */
+export function contestsBeside(c: ContestsBeside | undefined): string {
+  if (!c) return '';
+  if (c.state === 'unknown') return `<div class="k-small k-soft edubba-beside">Its buyer’s contests: unknown (${e(c.why ?? 'not read')}).</div>`;
+  return c.contests.map((x) => `<div class="k-label k-bad edubba-beside" data-contest="${e(x.act)}">Contested by its buyer${x.promise ? `: “${e(x.promise)}”` : ''} · ${e(shortForm(formOf(x.act)))}</div>`).join('');
 }
 
 /** Track (decided: "track contests by pointing at people, collectives or relays"): point at, show, one feed. */

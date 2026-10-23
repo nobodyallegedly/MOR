@@ -162,6 +162,7 @@ export function itemAct(it: Item, collectives: string[] = []): KitAct {
     form: it.form,
     signer: kitWho(it.who, collectives.includes(it.who.id)),
     when: it.when ?? null,
+    hint: it.hint ?? null,
     kind: it.what ? it.what : it.vow ? 'vow' : it.sealed ? `sealed ${it.sealed.media}` : null,
     labels,
     text: it.repost || it.what ? '' : it.text,
@@ -187,6 +188,7 @@ export function messageAct(m: Message): KitAct {
     signer: kitWho(m.who),
     of: m.of?.checked ? (m.of.name ?? shortForm(actFormOf(m.of.id, 'mid'))) : null,
     when: whenWords(m.at),
+    hint: m.hint ?? null,
     labels,
     text: m.text,
     verified: !alarm && m.standing === 'valid',
@@ -202,7 +204,7 @@ export function purchaseAct(p: Purchase): KitAct {
     form: p.form,
     signer: kitWho(p.seller),
     kind: `${p.what} · bought`,
-    labels: [{ text: p.state }, ...(p.price ? [{ text: p.price }] : [])],
+    labels: [{ text: p.state }, ...(p.price ? [{ text: p.price }] : []), ...contestLabels(p)],
     text: p.kind === 'vow' ? p.text : '',
     html: p.picture
       ? `<figure><img src="${e(p.picture)}" alt="The picture, opened"></figure>`
@@ -213,6 +215,14 @@ export function purchaseAct(p: Purchase): KitAct {
           : '',
     verified: true,
   };
+}
+
+/** The buyer's contests shown beside a purchase (F386); "unknown" where the core cannot say, never "none". */
+function contestLabels(p: Purchase): KitLabel[] {
+  const c = p.contests;
+  if (!c) return [];
+  if (c.state === 'unknown') return [{ text: `Contests beside it: unknown (${c.why ?? 'not read'})`, tone: 'warn' }];
+  return c.contests.map((x) => ({ text: `Contested by you, shown beside it${x.promise ? `: “${x.promise}”` : ''}`, tone: 'bad' as const }));
 }
 
 /** A sealed film or recording opened: played when asked, checked by its Module first. */
@@ -527,9 +537,9 @@ export function correctForm(): string {
   return `<form id="correct" class="dub-modal-form">${say('A correction is a new post naming the old one, labelled “Correction”.', ['The old post stays as it was signed, shown with “corrected by”: nothing on MOR is changed or deleted. Apps that do not know the corrections cMIP show an ordinary post naming the old one.'])}<textarea name="text" required placeholder="The correction"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Sign the correction</button></div></form>`;
 }
 
-/** Contest a vow bought: what was not kept, in words, if you say it. */
-export function contestForm(): string {
-  return `<form id="contest" class="dub-modal-form"><p class="k-small k-soft">A contest naming your sale is signed in public. It voids nothing; the payment stays as it is.</p><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><div class="k-row"><button type="submit" class="k-btn k-alarm">Contest it</button></div></form>`;
+/** Contest a vow bought, or a file bought (F386): what was not kept, in words, if you say it. */
+export function contestForm(file = false): string {
+  return `<form id="contest" class="dub-modal-form"><p class="k-small k-soft">${file ? 'A contest naming your purchase is signed in public, and shown beside it, to you and to the seller. It undoes nothing: the payment, the key and the file stay as they are.' : 'A contest naming your sale is signed in public. It voids nothing; the payment stays as it is.'}</p><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><div class="k-row"><button type="submit" class="k-btn k-alarm">Contest it</button></div></form>`;
 }
 
 /** Ask to be paid (in the private typing box): a request prepared for Damgar. */
