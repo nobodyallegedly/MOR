@@ -131,7 +131,10 @@ test('QG1 and F197: a closing names money owed back to nobody; a payer with no a
     const cl = await prepare(c, { kind: 'closing', collective: id });
     assert.match(words(cl.reading), /leaves open, visibly, 1 payment owed back to nobody/);
     assert.match(words(cl.reading), /A Patron .*who gave no address: a notice was sent/);
-    assert.ok(cl.reading.blocking.every((b) => !/owed back/.test(b)), words(cl.reading));
+    assert.ok(cl.reading.blocking.every((b) => !/owed back to/.test(b)), words(cl.reading));
+    // S7e: these receipts are on the test rail, which no rail Module answers, so whether each is owed back is unknown, and an
+    // unknown entry still blocks a closing, beside what the closing names as left open.
+    assert.equal(cl.reading.blocking.filter((b) => /is owed back from the broken stretch is unknown here/.test(b)).length, 2, words(cl.reading));
   } finally {
     await relay.close();
   }

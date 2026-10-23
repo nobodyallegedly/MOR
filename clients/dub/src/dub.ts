@@ -36,6 +36,7 @@ import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
 import { CARRIED_WORDS as SOUND_CARRIED_WORDS } from '../../../modules/audio/src/audio.ts';
 import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { actForm, idForm, idWhere, readActId, readId, readIdWhere } from '../../genesis/src/forms.ts';
+import { sharedLine } from '../../grants/src/deal.ts';
 import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
 import { NUDGE_SPECS, NUDGE_TYPES } from '../../nudge/src/specs.ts';
 import { decodeNudge, decodePick } from '../../nudge/src/nudge.ts';
@@ -397,6 +398,7 @@ export class Dub {
         collectives: (s.collectives ?? []).map((c) => ({ id: c.id, form: idForm(c.id), name: this.names.get(c.id)?.names[0] ?? null, available: c.available, why: c.why })),
         acting: s.acting ?? null,
         clock: s.clock ? { id: s.clock.id, form: idForm(s.clock.id), name: s.clock.name } : null,
+        laneClock: dubsarClock() ? { id: dubsarClock()!.identity, name: DUBSAR_CLOCK_NAME } : null,
       };
       // Proposals to sign wait in the inbox as this app read it: signed in Edubba (Dub's Signing tab removed, decided).
       out.proposalsWaiting = p.inbox.items.filter((k) => k.talk && k.talk.thread === k.key && k.from && k.from !== me.id && k.refs.length).length;
@@ -1570,7 +1572,7 @@ export class Dub {
         try {
           const got = await fetchAct(act, places, s.via);
           if (!got) problem = `The act it asks you to sign (${act}) was not found at ${places.join(', ')}.`;
-          else reading = await readProposal(got.act, names, places, s.via);
+          else reading = await readProposal(got.act, names, places, s.via, k.refs.slice(1).map((r) => r.id));
         } catch (e) {
           problem = `It could not be read: ${message(e)}`;
         }
@@ -1593,7 +1595,7 @@ export class Dub {
           text: k.text ?? '',
           later,
           act,
-          collective: this.collectiveOf(p, k.key) ?? reading?.collective ?? null,
+          collective: reading?.kind === 'deal' ? null : (this.collectiveOf(p, k.key) ?? reading?.collective ?? null),
           reading: reading ? { kind: reading.kind, title: reading.title, summary: reading.summary, sections: reading.sections, plain: reading.plain, risks: reading.risks, blocking: reading.blocking } : null,
           problem,
           answer: ans ? { verdict: ans.verdict, signature: ans.signature } : null,
@@ -1632,9 +1634,10 @@ export class Dub {
     const places = [...new Set([...hints, ...(await this.placesOf(k.refs[0].signer ?? k.from!, hints, s.via))])];
     const got = await fetchAct(act, places, s.via);
     if (!got) throw new Error(`The act it asks you to sign (${act}) was not found. Nothing was signed.`);
-    const reading = await readProposal(got.act, this.namer(me.id, p), places, s.via);
-    const collective = k.refs[1]?.id ?? reading.collective;
-    return { k, act, places, reading, collective, proposer: k.from! };
+    const also = k.refs.slice(1).map((r) => r.id);
+    const reading = await readProposal(got.act, this.namer(me.id, p), places, s.via, also);
+    const collective = reading.kind === 'deal' ? null : (k.refs[1]?.id ?? reading.collective);
+    return { k, act, places, reading, collective, proposer: k.from!, also: reading.kind === 'deal' ? also : [] };
   }
 
   /**
@@ -1652,7 +1655,7 @@ export class Dub {
       const { me, s, p, hints } = await this.ctx();
       const st = await this.store.signing(me.id);
       if (st.answered[thread]) throw new Error(`You already ${st.answered[thread].verdict} it. Nothing more was signed.`);
-      const { act, places, reading, collective, proposer } = await this.proposal(me, s, p, hints, thread);
+      const { act, places, reading, collective, proposer, also } = await this.proposal(me, s, p, hints, thread);
       if (reading.blocking.length) throw new Error(`It cannot be signed here: ${reading.blocking.join(' ')} Nothing was signed.`);
       await this.current(me);
       const where = [...new Set([...s.relays, ...places, ...(collective ? await this.placesOf(collective, hints, s.via) : [])])];
@@ -1680,6 +1683,13 @@ export class Dub {
         made = { id: x.id };
       } else made = await this.signed(me, () => signAct(me, act, where, key?.public));
       const lines: Line[] = [{ text: own ? `Signed for the collective with your own key (F353): the signature act ${made.id} is published at ${where.join(', ')}.` : `Signed: your signature act ${made.id} is published at ${where.join(', ')}.`, tone: 'ok' }];
+      // A deal between separate people: every act it names is signed too, each its own signature act (Agreements rule 47; Standing offer: every party).
+      const more: string[] = [];
+      for (const x of also) {
+        const sx = await this.signed(me, () => signAct(me, x, where));
+        more.push(sx.id);
+        lines.push({ text: `Signed too: ${x.slice(0, 12)}…, your signature act ${sx.id}.`, tone: 'ok' });
+      }
       if (key) {
         try {
           await this.signed(me, () => sealMemberKey(me, { terms: act, signature: made.id, public: key.public, secret: key.secret }, () => undefined));
@@ -1698,7 +1708,7 @@ export class Dub {
       st.answered[thread] = { act, verdict: 'signed', signature: made.id, reply: '', at: now() };
       await this.store.saveSigning(me.id, st);
       const reach = await this.reach(proposer, hints, s.via);
-      const reply = await this.signed(me, () => negotiate(me, reach, { text: acceptanceText(made.id, oneTime), thread, previous: this.lastFrom(p, thread, proposer), acks: [this.lastFrom(p, thread, proposer)] }));
+      const reply = await this.signed(me, () => negotiate(me, reach, { text: [acceptanceText(made.id, oneTime), ...more.map((x) => `And act ${x}.`)].join('\n'), thread, previous: this.lastFrom(p, thread, proposer), acks: [this.lastFrom(p, thread, proposer)] }));
       st.answered[thread].reply = reply.id;
       await this.store.saveSigning(me.id, st);
       lines.push({ text: reply.left.length ? `Your answer was left in the proposer’s inbox (${reply.left.join(', ')}).` : `Your answer could not be left in the proposer’s inbox: ${reply.failed.map((f) => `${f.relay}: ${f.reason}`).join('; ')}.`, tone: reply.left.length ? undefined : 'bad' });
@@ -2362,7 +2372,7 @@ export class Dub {
           seller: this.whoFrom(v.seller, me.id, p),
           what: 'vow',
           price: v.price,
-          state: !v.paid ? 'not paid yet' : v.sale === 'confirmed' ? 'confirmed: it was kept' : v.sale === 'contested' ? `contested${v.promise ? `: “${v.promise}”` : ''}` : 'not yet confirmed: confirm or contest it in its menu',
+          state: !v.paid ? 'not paid yet' : v.sale === 'confirmed' ? 'confirmed: it was kept' : v.sale === 'contested' ? `contested${v.promise ? `: “${v.promise}”` : ''}` : v.sale === 'unknown' ? `unknown: ${v.why ?? 'whether it is a sale rests on a rail answer not read here'}` : 'not yet confirmed: confirm or contest it in its menu',
           text: v.words,
           picture: null,
           sale: v.sale,
@@ -2384,9 +2394,11 @@ export class Dub {
    * hand, the draft shown to copy for Damgar. A purchase names its offer,
    * which a money message cannot carry yet: only the lane buys.
    */
-  payWays(a: { kind: 'tip' | 'buy' | 'vow' | 'pay' }): Promise<PayWays> {
+  payWays(a: { kind: 'tip' | 'buy' | 'vow' | 'pay'; post?: string; signer?: string }): Promise<PayWays> {
     return this.serial(async () => {
-      const { me, s, hints } = await this.ctx();
+      const { me, s, p, hints } = await this.ctx();
+      // Under a deal between separate people, said in one line before paying (decided: "This work is shared: X, Y, Z. The split service answers for it.").
+      const deal = a.post && a.signer && a.kind !== 'pay' ? await this.money.dealOf(readId(a.post), readId(a.signer), [...hints, ...this.inboxPlaces(p)], s.via) : null;
       const lanes = await this.money.lanes(me, s, hints).catch(() => []);
       const lane = lanes.find((l) => l.state === 'in force');
       const purchase = a.kind === 'buy' || a.kind === 'vow';
@@ -2413,6 +2425,7 @@ export class Dub {
           : { open: false, why: lanes.some((l) => l.state === 'asked') ? 'Dub’s lane is asked, not yet granted in Damgar.' : 'Dub has no lane from Damgar: ask for one in the identity’s menu (A lane from Damgar).', label: null, perPayment: null, until: null, spent: null, total: null, left: null },
         damgar: purchase ? { open: false, why: noDraft } : { open: true, why: null, wakes: !!this.opts.damgar },
         hand: purchase ? { open: false, why: noDraft } : { open: true, why: null },
+        shared: deal ? sharedLine(deal, (x) => this.nameOf(x, me.id, p)) : null,
       };
     });
   }
@@ -2431,7 +2444,7 @@ export class Dub {
     if (a.how === 'lane' && a.kind === 'tip') return this.tipNow({ post: a.post ?? '', signer: a.signer, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor });
     if (a.how === 'lane') return this.payNow({ signer: a.signer, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor ?? '' });
     if (a.how === 'damgar') return this.askDamgar({ other: a.signer, post: a.post, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor });
-    return this.byHand({ signer: a.signer, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor ?? '' });
+    return this.byHand({ signer: a.signer, post: a.kind === 'tip' ? a.post : undefined, value: a.value ?? '', unit: a.unit ?? '', whatFor: a.whatFor ?? '' });
   }
 
   /**
@@ -2479,13 +2492,16 @@ export class Dub {
    * cMIP (section 2.1), written out to copy into Damgar. Nothing is signed or
    * sent from here. Damgar's "paste an act to sign" is its own round's.
    */
-  private byHand(a: { signer: string; value: string; unit: string; whatFor: string }): Promise<{ lines: Line[]; hand: { text: string; said: string[] } }> {
+  private byHand(a: { signer: string; post?: string; value: string; unit: string; whatFor: string }): Promise<{ lines: Line[]; hand: { text: string; said: string[] } }> {
     return this.serial(async () => {
-      const { me, p } = await this.ctx();
+      const { me, s, p, hints } = await this.ctx();
       const other = readId(a.signer);
       if (other === me.id) throw new Error('That is this identity itself. Nothing was prepared.');
       if (!UNITS_MODULES.some((m) => m.units.some((u) => u.hash === a.unit))) throw new Error('Choose a unit. Nothing was prepared.');
       const amount = { unit: a.unit, value: readValue(a.value) };
+      // A tip to a work shared under a deal: a draft copied by hand carries no post, so it could not follow the deal (the money messages cMIP, draft 5, 8): refused, saying so.
+      const deal = a.post ? await this.money.dealOf(readId(a.post), other, [...hints, ...this.inboxPlaces(p)], s.via) : null;
+      if (deal?.payee) throw new Error('A tip to a shared work is paid under Dub’s lane or through Damgar (Ask Damgar): a draft copied by hand carries no post, so it could not go to the deal. Nothing was prepared.');
       const d: Draft = { what: 'pay', other, amount, whatFor: a.whatFor.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : null, app: 'Dub', anchor: null };
       return {
         lines: [{ text: 'Shown, not signed and not sent: copy it into Damgar, which reads it to you and signs it there.' }],
@@ -2522,9 +2538,13 @@ export class Dub {
       const whatFor = a.whatFor?.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : null;
       let refs: [string, string][] | undefined;
       if (a.post) {
-        const d = describeAct((await followRef([readId(a.post), other], [...hints, ...this.inboxPlaces(await this.store.people(me.id))], s.via)).act) as Described;
+        const places = [...hints, ...this.inboxPlaces(await this.store.people(me.id))];
+        const d = describeAct((await followRef([readId(a.post), other], places, s.via)).act) as Described;
         if (d.signer !== other) throw new Error('The post tipped is not signed by the identity tipped. Nothing was prepared.');
         refs = [[d.id, other]];
+        // A post under a deal between separate people: the tip pays the deal's own payee; Damgar reads the deal from the post the draft names, and the payment follows it (the money messages cMIP, draft 5, 8).
+        const deal = a.what === 'pay' ? await this.money.dealOf(d.id, other, places, s.via) : null;
+        if (deal?.payee) other = deal.payee;
       }
       await this.current(me);
       const r = await sendDraft(me, { what: a.what, other, amount: { unit: a.unit, value }, whatFor, app: 'Dub', anchor: null }, { refs, via: s.via, save: () => this.store.saveIdentity(me) });
@@ -2602,7 +2622,7 @@ export class Dub {
       const { me, s } = await this.ctx();
       await this.current(me);
       if (!UNITS_MODULES.some((m) => m.units.some((u) => u.hash === a.unit))) throw new Error('Choose a unit. Nothing was asked.');
-      const lines = await this.money.askLane(me, s, { label: a.label, cap: readValue(a.cap), total: a.total?.trim() ? readValue(a.total) : null, unit: a.unit, until: a.until, clock: a.clock.trim().toLowerCase() || null, app: this.money.engine.opts.app! });
+      const lines = await this.money.askLane(me, s, { label: a.label, cap: readValue(a.cap), total: a.total?.trim() ? readValue(a.total) : null, unit: a.unit, until: a.until, clock: a.clock.trim() ? readId(a.clock.trim()) : null, app: this.money.engine.opts.app! });
       return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
     });
   }
@@ -2623,7 +2643,9 @@ export class Dub {
       const signer = readId(a.signer);
       if (signer === me.id) throw new Error('That is this identity itself. Nothing was signed.');
       const whatFor = a.whatFor?.trim() ? compose(a.whatFor.trim()).text.slice(0, 280) : 'a tip';
-      const lines = await this.money.tip({ post: readId(a.post), signer, amount: { unit: a.unit, value: readValue(a.value) }, whatFor });
+      const { p } = await this.ctx();
+      const deal = await this.money.dealOf(readId(a.post), signer, [...hints, ...this.inboxPlaces(p)], s.via);
+      const lines = await this.money.tip({ post: readId(a.post), signer, amount: { unit: a.unit, value: readValue(a.value) }, whatFor, deal, names: (x) => this.nameOf(x, me.id, p) });
       return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
     });
   }
@@ -2664,7 +2686,7 @@ export class Dub {
       const { me, s, p, hints } = await this.ctx();
       await this.money.lanes(me, s, hints);
       const repost = a.repost && a.reposter ? { id: readId(a.repost), by: readId(a.reposter) } : null;
-      const lines = await this.money.buy(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readId(a.publication), seller: readId(a.seller), repost, post: a.post ? readId(a.post) : null });
+      const lines = await this.money.buy(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readId(a.publication), seller: readId(a.seller), repost, post: a.post ? readId(a.post) : null, names: (x) => this.nameOf(x, me.id, p) });
       return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
     });
   }
@@ -2674,7 +2696,7 @@ export class Dub {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
       await this.money.lanes(me, s, hints);
-      const lines = await this.money.buyVow(me, [...hints, ...this.inboxPlaces(p)], s.via, { vow: readId(a.vow), seller: readId(a.seller), post: readId(a.post) });
+      const lines = await this.money.buyVow(me, [...hints, ...this.inboxPlaces(p)], s.via, { vow: readId(a.vow), seller: readId(a.seller), post: readId(a.post), names: (x) => this.nameOf(x, me.id, p) });
       return { lines: lines.map((text) => ({ text, tone: 'ok' as const })) };
     });
   }

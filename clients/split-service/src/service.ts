@@ -319,7 +319,12 @@ export class SplitService {
     }
   }
 
-  /** The agreement a payment to `payee` following `fulfils` is under: an offer's field 0, or a collective payee's agreement in force. */
+  /**
+   * The agreement a payment to `payee` following `fulfils` is under: an
+   * offer's field 0; a deal's version itself, for a tip to a work shared
+   * under it (the money messages cMIP, draft 5, 4.4: "the target is the
+   * agreement not the act"); or a collective payee's agreement in force.
+   */
   private async agreementOf(payee: string, fulfils: string, places: string[]): Promise<string | null> {
     for (const h of places) {
       const a = await relayAt(h).getAct(fulfils).catch(() => null);
@@ -329,6 +334,7 @@ export class SplitService {
         const under = (cborDecode(d.payload) as Map<number, unknown>).get(0);
         if (under instanceof Uint8Array) return hex(under);
       }
+      if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.terms) return fulfils;
       break;
     }
     return (await collectiveNow(payee, places).catch(() => null))?.agreement ?? null;
@@ -460,7 +466,8 @@ export class SplitService {
       const d = describeAct(a) as { spec?: string; type?: number; payload?: Uint8Array };
       if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.offer && d.payload) {
         const sold = (cborDecode(d.payload) as Map<number, unknown>).get(1) as unknown[][] | undefined;
-        const pub = sold?.find((s) => s[0] === 0)?.[1];
+        // A publication, or (draft 5, 7.2.3) a vow by its name: what the offer sells.
+        const pub = sold?.find((s) => s[0] === 0 || s[0] === 3)?.[1];
         if (pub instanceof Uint8Array) publication = hex(pub);
       }
       break;
@@ -475,6 +482,7 @@ export class SplitService {
       }
     }
     said.push(`The sale told to ${parties.length} part${parties.length === 1 ? 'y' : 'ies'}.`);
+    // A tip names no offer: nothing is sold, and the split delivered to every holder it pays tells them (rule 20).
   }
 
   /** A payout's invoice request (rule 23: a simple Money payment, its own receipt naming the split): to the holder's pointer, as Money routes it. */

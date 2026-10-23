@@ -794,7 +794,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     const title = kind === 'tip' ? `Tip ${name}` : kind === 'pay' ? `Pay ${name}` : kind === 'vow' ? `Buy ${name}’s vow` : `Buy ${name}’s sealed ${it?.sealed?.media ?? 'file'}`;
     popup.show(title, '<p class="k-empty">Reading the ways open…</p>');
     try {
-      const ways = await b.ask<PayWays>('pay ways', { kind });
+      const ways = await b.ask<PayWays>('pay ways', { kind, post: paying.post ?? (it?.id || undefined), signer: a?.signer.id ?? who.id });
       popup.replace(v.payChooser({ title, sub: `${kind === 'tip' && a ? `For ${shortForm(a.form)} · ` : ''}${name} · ${shortForm(who.form)}`, kind, ways, units: state?.units ?? [], price: it?.vow?.price ?? it?.sealed?.price ?? null }));
     } catch (err) {
       popup.replace(note('error', v.e(errorOf(err))));

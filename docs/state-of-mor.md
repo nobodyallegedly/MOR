@@ -4,6 +4,8 @@
 
 *Last updated: 19 October 2026, after pull request 80 (round 3) and the server session.*
 
+**23 October 2026, afternoon:** S7d, round 4 and S7e merged (pull requests 100, 101, 103), main green after each one's six releases. Fable's second review (F389): the first verdict holds; "belongs to" follows every `objects` entry, sales fail closed on an unverified payment, 124 verdict vectors. Decided: every seller of a several-party purchase can read the buyer's claim (F391); a deal's payments go where the payee's own grant sends them, and a collective's sale is a purchase (F392). Running: S7f (MOR, the last core session before the quiet window) and the splits round (suite, #104). Then the quiet window: the third box, the C verifier's third edition, the rehearsal, the freeze.
+
 **23 October 2026, morning:** S7d done (pull request 100, F386): a buyer may contest their own purchase, shown beside it, moving nothing; the binding writes and reads the signer's hint (field 9), display only; 110 verdict vectors. Round 4 (suite, pull request 101) done, nothing core. Order: these records, the suite's records, S7d merged with its releases, then round 4.
 
 **22 October 2026, late:** the C verifier carried to the second box (`MOR-CBOX` pull request 2): 334 of 334 checks agree, the heavy rules built from the texts alone; 16 new questions. Main green after the suite's #97 and its six releases. Next (23 October, after the leads' meeting): the MOR lead's records in one commit, the suite's records, S7d, round 4.

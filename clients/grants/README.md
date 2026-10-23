@@ -22,6 +22,8 @@ Relays and homes store an act signed under a grant as scoped (relay transport cM
 
 `authorityOf` judges a private act's limits from its inside, opened with its key (round 2: a sealed claim above the cap was read as within it, judged from its outside alone). Its words for a lane: "Signed under a lane of … (a grant to itself, …)".
 
+**A deal between separate people** (`src/deal.ts`, 23 October 2026): its terms and, for a vow, the clone sharing its stake (Agreements rule 14), written for Edubba and checked by the core; a deal read (its parties, its owners and shares, its own payee, its split service); the deal a post is under, found from what it names (the money messages cMIP, draft 5, 8); the one line said before paying. `authorityOf` now holds, for a payee's grant naming "this agreement", every deal its grantor signed listing it, with every party's signature and chain, so the core can say whether the deal exists and the grant backs the receipt.
+
 ## Readings
 
 1. **A person's grant offered to an agent** reaches Text posts, Envelopes publications, or the Money layer (`GRANTABLE`); scope 2.

@@ -257,6 +257,11 @@ export async function authorityOf(act: Uint8Array, hints: string[], via: Via = {
     const x = describeAct(a) as { spec?: string; type?: number; objects?: [string, string][] };
     if (x.spec === MIRS.agreements && x.type === AGREEMENTS_TYPES.signature && x.objects?.some((o) => o[0] === d.binding)) v.add(a);
   }
+  // A payee's grant in a deal, naming "this agreement" by null (field 2): it counts only through a deal its grantor signed that lists it in
+  // field 14 (or 29) and exists, every party having signed it (Agreements, Grant, "A payee's grant in a deal"). The deals its grantor
+  // signed are found by its signature acts; each listing this grant is held with every party's signature on it, and a clone's parent too.
+  const grantMap = cborDecode(gd.payload) as Map<number, unknown>;
+  if (grantMap.has(2) && grantMap.get(2) === null) await holdDeals(v, d.signer, d.binding, hints, via);
   for (const a of await allBy(d.signer, hints, via)) {
     const x = describeAct(a) as { spec?: string; type?: number; payload?: Uint8Array };
     if (x.spec !== MIRS.agreements || x.type !== REVOCATION || !x.payload) continue;
@@ -287,8 +292,56 @@ export async function authorityOf(act: Uint8Array, hints: string[], via: Via = {
       ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under ${names(d.signer)}’s grant ${d.binding.slice(0, 8)}…`}: backed (Agreements rule 80).`
       : b.kind === 'not-backed'
         ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…`}, which does not back it: ${b.reason}.`
+        : b.kind === 'disputed'
+          ? `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…`}: disputed, valid but conferring nothing unless its grantor adopts it (the grant was revoked; a keeper recorded the act first: Agreements rule 76, S7e).`
         : `${lane ? laneBy : `Signed by ${names(g.grantee)} in ${names(d.signer)}’s name, under the grant ${d.binding.slice(0, 8)}…`}: whether it backs it is unknown (${b.reason ?? 'not readable'}).`;
   return { grant: d.binding, grantor: d.signer, grantee: g.grantee, lane, backing: b.kind, reason: b.reason ?? null, limits, words: plain };
+}
+
+/** The deals `grantor` signed whose field 14 (or 29) lists `grant`, held in `v` with every party's signature on each, and each clone's parent with its signatures. */
+async function holdDeals(v: Verifier, grantor: string, grant: string, hints: string[], via: Via): Promise<void> {
+  const held = new Set<string>();
+  const hold = async (terms: string, depth: number): Promise<void> => {
+    if (held.has(terms) || depth > 8) return;
+    const bytes = await fetchAct(terms, hints, via);
+    if (!bytes) return;
+    const t = describeAct(bytes) as { spec?: string; type?: number; payload?: Uint8Array };
+    if (t.spec !== MIRS.agreements || t.type !== AGREEMENTS_TYPES.terms || !t.payload) return;
+    held.add(terms);
+    v.add(bytes);
+    const m = cborDecode(t.payload) as Map<number, unknown>;
+    const parties = ((m.get(0) as Uint8Array[] | undefined) ?? []).map((x) => hex(x));
+    for (const p of parties) {
+      try {
+        await lookUp(p, hints, via, v);
+      } catch {
+        // not found: its signature cannot count
+      }
+      for (const a of await allBy(p, hints, via)) {
+        const x = describeAct(a) as { spec?: string; type?: number; objects?: [string, string][] };
+        if (x.spec === MIRS.agreements && x.type === AGREEMENTS_TYPES.signature && x.objects?.some((o) => o[0] === terms)) {
+          try {
+            v.add(a);
+          } catch {
+            // held already, or not an act the core holds
+          }
+        }
+      }
+    }
+    const parent = m.get(11);
+    if (parent instanceof Uint8Array) await hold(hex(parent), depth + 1);
+  };
+  for (const a of await allBy(grantor, hints, via)) {
+    const x = describeAct(a) as { spec?: string; type?: number; objects?: [string, string][] };
+    if (x.spec !== MIRS.agreements || x.type !== AGREEMENTS_TYPES.signature || !x.objects?.length) continue;
+    const terms = x.objects[0][0];
+    const bytes = await fetchAct(terms, hints, via);
+    const t = bytes ? (describeAct(bytes) as { spec?: string; type?: number; payload?: Uint8Array }) : null;
+    if (!t?.payload || t.spec !== MIRS.agreements || t.type !== AGREEMENTS_TYPES.terms) continue;
+    const m = cborDecode(t.payload) as Map<number, unknown>;
+    const lists = (f: unknown): boolean => (f instanceof Uint8Array ? hex(f) === grant : Array.isArray(f) ? f.some(lists) : f instanceof Map ? [...f.values()].some(lists) : false);
+    if (lists(m.get(14)) || lists(m.get(29))) await hold(terms, 0);
+  }
 }
 
 /** On whose authority an act stands, by its id: fetched where acts are looked for, then read as `authorityOf` does. Null where not found, or not under a grant. */

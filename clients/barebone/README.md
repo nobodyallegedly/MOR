@@ -6,6 +6,8 @@ The barebone client (roadmap step 9): it posts text with a picture, and shows po
 
 A post with a picture is two acts. The picture is published first: stripped to the picture alone (the JPEG Module), locked, and described by a public publication carrying its key. Then the post: a text act whose references name that publication (F27). A reader who knows only the post's id and a relay fetches the post, checks it through its signer's identity chain, then the picture: its publication, its signer, its bytes against their hashes, and that no withdrawal has been published. Only then is the picture shown, turned the right way up, under the name of whoever published it.
 
+**Which clock** (decided 23 October 2026): every app of the suite orders its feeds by the stamps of **the Dubsar clock**, identity `1c743854ba1884b470f02221395d18d1abe977631bf86f0f221e32e6d83cf453` (its genesis at home1 and home2; a public identity, not an address), written in `clients/barebone/src/clock.ts`; each card shows its time, "… · by the Dubsar clock", or the signer's own hint, labelled.
+
 ## What is here
 
 | File | What |

@@ -43,9 +43,9 @@ async function made(): Promise<TestIdentity> {
 }
 
 test('the Dubsar clock in Dub’s feed: a post it stamped shows its time and sorts by it; one not stamped shows the signer’s own hint, labelled; one with neither shows no time', async () => {
-  // Its identity is not in the repository: nothing orders anything until it is given.
-  assert.equal(DUBSAR_CLOCK_ID, null);
-  assert.equal(dubsarClock(), null);
+  // Its identity is written in the apps (decided 23 October 2026); a test names its own test clock in memory.
+  assert.equal(DUBSAR_CLOCK_ID, '1c743854ba1884b470f02221395d18d1abe977631bf86f0f221e32e6d83cf453');
+  assert.deepEqual(dubsarClock(), { identity: DUBSAR_CLOCK_ID, name: 'the Dubsar clock' });
   const clock = await made();
   useDubsarClock(clock.id);
   assert.deepEqual(dubsarClock(), { identity: clock.id, name: 'the Dubsar clock' });

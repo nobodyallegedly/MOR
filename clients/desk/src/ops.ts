@@ -19,6 +19,7 @@ import type { Corrections } from './corrections.ts';
 import type { Desk } from './desk.ts';
 import type { AfterKishib } from './kishib.ts';
 import type { Publishing } from './publishing.ts';
+import type { SharesIn } from './deals.ts';
 import type { Member } from './member.ts';
 import type { EdubbaMoney } from './money.ts';
 import type { Real } from './real.ts';
@@ -59,6 +60,9 @@ export const WEB_OPS: readonly string[] = [
   'publishing act as',
   'publishing collective add',
   'publishing work read',
+  'publishing post read',
+  'publishing deals gather',
+  'publishing shared sales',
   'publishing confirm',
   'publishing deliver',
   'publishing vow read',
@@ -139,6 +143,13 @@ const readIdOr = (k: string): string => {
 
 const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String).map((s) => s.trim()).filter(Boolean) : []);
 const text = (v: unknown): string => (typeof v === 'string' ? v : '');
+/** "Who shares in it", as the page sends it; null where it names nobody. */
+const sharesIn = (v: unknown): SharesIn | null => {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const w = Array.isArray(o.with) ? (o.with as unknown[]).map((x) => ({ who: text((x as Record<string, unknown>)?.who), share: text((x as Record<string, unknown>)?.share) })) : [];
+  return { with: w, mine: text(o.mine), referral: text(o.referral), service: text(o.service), serviceKey: text(o.serviceKey) };
+};
 
 /** Edubba's operations: `web` answers only `WEB_OPS`. */
 export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Record<string, unknown>, key: string) => Promise<unknown> {
@@ -463,13 +474,19 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'publishing collective add':
         return publishing.collectiveAdd(text(a.id));
       case 'publishing work read':
-        return publishing.prepareWork({ media: text(a.media), data: text(a.data), title: text(a.title), price: text(a.price), referral: text(a.referral), service: text(a.service ?? ''), serviceKey: text(a.serviceKey ?? '') });
+        return publishing.prepareWork({ media: text(a.media), data: text(a.data), title: text(a.title), price: text(a.price), referral: text(a.referral), service: text(a.service ?? ''), serviceKey: text(a.serviceKey ?? ''), shares: sharesIn(a.shares) });
+      case 'publishing post read':
+        return publishing.preparePost({ text: text(a.text), shares: sharesIn(a.shares) ?? { with: [], mine: '', referral: '', service: '', serviceKey: '' } });
+      case 'publishing deals gather':
+        return publishing.gatherDeals();
+      case 'publishing shared sales':
+        return publishing.sharedSales();
       case 'publishing confirm':
         return publishing.confirm(text(a.plan), text(a.digest));
       case 'publishing deliver':
         return publishing.deliver();
       case 'publishing vow read':
-        return publishing.prepareVow({ words: text(a.words), title: text(a.title), price: text(a.price) });
+        return publishing.prepareVow({ words: text(a.words), title: text(a.title), price: text(a.price), shares: sharesIn(a.shares) });
       case 'publishing sales contests':
         return publishing.salesContests();
       case 'publishing vow sales':

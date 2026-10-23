@@ -20,6 +20,7 @@ import { decodeManifest } from '../../repo/src/manifest.ts';
 import { AGREEMENTS_TYPES, REPO_SPECS } from '../../repo/src/specs.ts';
 import { escapeControls } from '../../connector/src/words.ts';
 import { labelOf } from '../../damgar/src/specs.ts';
+import { dealName } from '../../grants/src/deal.ts';
 
 /** Said at the top of the Signing tab, and where it is turned on, word for word. */
 export const SIGNING_SAY =
@@ -36,7 +37,7 @@ export const SHARE_SAY = [
   'It is not your own chain key, nor your signing key, nor a Bitcoin wallet.',
 ];
 
-export type ProposalKind = 'founding' | 'clone' | 'release' | 'act' | 'other';
+export type ProposalKind = 'founding' | 'clone' | 'release' | 'act' | 'deal' | 'other';
 
 /** A proposal read in plain words. */
 export interface Reading {
@@ -78,8 +79,8 @@ export async function fetchAct(id: string, hints: string[], via: Via = {}): Prom
   return null;
 }
 
-/** Read the act a proposal names, from its exact bytes (Agreements rule 4: what you sign is what you saw). */
-export async function readProposal(act: Uint8Array, names: Names, hints: string[], via: Via = {}): Promise<Reading> {
+/** Read the act a proposal names, from its exact bytes (Agreements rule 4: what you sign is what you saw). `also`: the other acts a deal's proposal names (its second version, its offer), each read and checked to be the deal's. */
+export async function readProposal(act: Uint8Array, names: Names, hints: string[], via: Via = {}, also: string[] = []): Promise<Reading> {
   const d = describeAct(act) as Described;
   const blocking: string[] = [];
   if (!d.public || !d.payload) {
@@ -99,6 +100,8 @@ export async function readProposal(act: Uint8Array, names: Names, hints: string[
       if (pd?.payload) sections.unshift({ heading: 'What it changes', lines: readChanges(pd.payload, d.payload, names) });
       else blocking.push(`The agreement it changes (${parent}) was not found, so what it changes cannot be shown.`);
     }
+    // A deal between separate people (this round): read with every act it asks to sign.
+    if (!t.grammar && !parent) return readDealProposal(d, a, names, hints, via, also);
     if (!t.grammar) blocking.push('These terms found no collective: Dub signs collectives’ agreements only.');
     if (a.problem) blocking.push(`Agreements refuse these terms: ${a.problem}`);
     return {
@@ -156,6 +159,71 @@ export async function readProposal(act: Uint8Array, names: Names, hints: string[
   const act2 = actOfCollective(d, names);
   if (act2) return act2;
   return { kind: 'other', title: 'An act Dub does not sign', summary: ['Dub signs founding terms, clones of a collective’s agreement, releases, and a collective’s acts waiting for a second key.'], sections: [], plain: [], risks: [], blocking: ['Not something Dub signs.'], collective: null };
+}
+
+/**
+ * A deal between separate people, proposed to you (this round; the reading,
+ * `docs/splits-reading.md`, question 1): its founding terms, read by the
+ * deal-assessment tool, and every other act the proposal names (a vow's
+ * second version sharing its stake, the offer selling the work), each read
+ * from its exact bytes and checked to belong to the deal. Said first: the
+ * work then belongs to the deal, and every payment for it goes to its split
+ * service. Signing signs each of them (Agreements rule 47: every party).
+ */
+async function readDealProposal(d: Described, a: ReturnType<typeof assess>, names: Names, hints: string[], via: Via, also: string[]): Promise<Reading> {
+  const blocking: string[] = [];
+  const sections: Section[] = [];
+  const lines: Line[] = [];
+  let version = d.id;
+  for (const id of also) {
+    const got = await fetchAct(id, hints, via);
+    const x = got ? (describeAct(got.act) as Described) : null;
+    if (!x?.payload) {
+      blocking.push(`An act it asks you to sign (${id}) was not found, so it cannot be read.`);
+      continue;
+    }
+    if (x.spec === REPO_SPECS.agreements && x.type === AGREEMENTS_TYPES.terms) {
+      const c = termsOf(x.payload);
+      if (c.parent !== d.id) {
+        blocking.push(`An act it asks you to sign (${id}) is a version of another agreement.`);
+        continue;
+      }
+      version = x.id;
+      const shared = (c.stakes?.[0]?.[1] ?? []).map(([h, n]) => `${h ? names(h) : 'the collective'} ${(n / 10_000).toLocaleString('en')}%`).join(', ');
+      sections.unshift({ heading: 'Its second version: the stake shared', lines: [{ text: `The first version writes the vow’s stake wholly to its signer (Agreements rule 14); this second one shares it: ${shared}. You sign both.` }, ...readChanges(d.payload!, x.payload, names)] });
+      continue;
+    }
+    if (x.spec === REPO_SPECS.agreements && x.type === AGREEMENTS_TYPES.offer) {
+      const m = cborDecode(x.payload) as Map<number, unknown>;
+      const under = m.get(0);
+      const price = m.get(2) as unknown[] | undefined;
+      const payee = m.get(3);
+      if (!(under instanceof Uint8Array) || (hex(under) !== d.id && hex(under) !== version)) {
+        blocking.push(`An act it asks you to sign (${id}) is an offer under another agreement.`);
+        continue;
+      }
+      lines.push({ text: `Its offer, always public, made under the deal${payee instanceof Uint8Array ? ` and paying ${names(hex(payee))}, the deal’s own payee` : ''}${Array.isArray(price) ? `, at ${String(price[1])} of its unit` : ''}. Every party signs it (Agreements, Standing offer: “under a deal, it is signed by every party”).` });
+      if (typeof m.get(4) === 'string') lines.push({ text: `Its words: “${escapeControls(m.get(4) as string)}”` });
+      continue;
+    }
+    blocking.push(`An act it asks you to sign (${id}) is neither a version of the deal nor its offer.`);
+  }
+  if (lines.length) sections.unshift({ heading: 'What it sells', lines });
+  if (a.problem) blocking.push(`Agreements refuse these terms: ${a.problem}`);
+  return {
+    kind: 'deal',
+    title: `A shared deal: ${dealName(termsOf(d.payload!).text ?? '') ? `“${dealName(termsOf(d.payload!).text ?? '')}”` : a.title}`,
+    summary: [
+      'A deal between separate people (no collective): every party signs it, and every version of it.',
+      'Before you sign: the work then belongs to the deal, and every payment for it, a tip included, goes to its split service, which divides it and pays each owner by their share. A tip to you personally still goes to your own pointer.',
+      ...a.summary,
+    ],
+    sections: [...sections, ...a.sections],
+    plain: a.plain.map((x) => ({ heading: x.heading, text: escapeControls(x.text) })),
+    risks: a.flags.map((f) => ({ text: f.text, rests: f.rests })),
+    blocking,
+    collective: null,
+  };
 }
 
 /** An act of a collective, in plain words, where Dub can read it: a Money act, a post, a publication, an offer. */

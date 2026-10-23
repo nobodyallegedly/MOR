@@ -28,6 +28,60 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F392. A deal's payments go where the payee's own grant in the deal sends them; a collective's sale is a purchase (23 October 2026; the splits round, section 4)
+
+**Found by the splits round** (Dubsar Suite, `docs/splits-report.md`, section 4), two core points:
+
+**1. Which pointer a direct payment under a deal is paid to.** Agreements rule 15 has a deal's money arrive at the one pointer the agreement designates, whoever pays, and rule 17 has a backup paid directly at "the one its own signed pointer carries"; Money rule 4 counts a payment only at the payee's own pointer. A person has one pointer, so each party of a deal would have to point their whole wallet at the split service (their personal tips with it), or the deal's sales do not verify (round 3's judged referral, F358 (2): unknown in Dub, invalid in the payment cMIP once held). The texts contradict each other (rule 17's backups against Money rule 4).
+
+**Decided by Nobody, allegedly, 23 October 2026** ("Agreed"), on the MOR lead's lean, which rests on his F145 ("the pointer is judged by the payee's own act"): Money rule 4 gains one clause: or, where the payment follows an agreement or offer whose terms list, in field 14 or 29, a grant of the payee's, the pointer of that grant's grantee, the agreement's designated pointer (Agreements rules 15 and 17), judged by Agreements as rule 7 judges a collective's pointer, a Money-only client showing it unknown. *Why:* the payee's own signed grant in the deal is the payee's own act sending that deal's money there, and only that deal's; personal payments stay at the personal pointer. It closes the contradiction with rule 17's backups.
+
+**2. A collective's sale is no purchase for the core.** The glossary: a stake whose object is the collective itself is a share of all its income; the core's `purchase_unjudged` reads a stake on the work's hash only, so every sale of a collective's work reads as owed back, and a buyer's contest shows beside nothing. **Decided by the MOR lead under delegation:** a core bug against the text; the core counts the collective's own stake (object null) as a stake in every work it sells under its agreement; a vector.
+
+**Also:** the rehearsal script matches the clock identity the feed page now carries, not the old placeholder.
+
+**Where:** S7f (F393 reserved): Money rule 4, the core, vectors; the payment cMIP's step 3 is the suite's (draft 5), and a small suite round removes each deal's own payee identity afterwards.
+
+## F391. A purchase from several sellers: every seller can read the buyer's claim (23 October 2026; round 4's question 8)
+
+**Found by round 4** (Dubsar Suite, Edubba): a buyer of a collective's work seals its claim to the payee's side (the split service, money messages cMIP draft 4); since F386 the buyer's public contest names that claim, and a member's Edubba, which can read the collective's receipt (rule 57) but not the claim, cannot tell the contest is of its own collective's sale. Nobody, allegedly: "There is an agreement with the collective via the purchase, that is what is being contested"; "Why from the split service and not directly from MOR".
+
+**Separated with Nobody, allegedly:** what is core is *who* reads the claim, and the core already answers it (every member of the collective's agreement in force, rule 57; for a deal with several parties, the parties of the version the act names, as Agreements reads it wherever an act must reach an agreement's parties); *how* it reaches them is transport (the money messages cMIP); how it is shown is the client's.
+
+**Decided by Nobody, allegedly, 23 October 2026** ("Ok, sounds good"), the MOR lead's line: one client conformance sentence after "A contest of a purchase" in Agreements: *where the payee of a purchase is a collective, or an agreement with several parties, the buyer's client makes its claim of the purchase readable by every member of the collective's agreement in force, or by every party of the version the purchase names: sealed to each of them, or its key delivered to each (rule 57).* No verdict moves. **Stated cost:** every member or party sees who bought; they are the seller, all of them, and a collective keeps no secret from its members.
+
+**Not chosen:** the contest naming the collective's receipt instead of the buyer's claim (F386 fixed the claim: a receipt may never be signed, and the claim is the buyer's own evidence).
+
+**Where:** Agreements, in the pass before the rehearsal; the money messages cMIP (the suite's).
+
+## F389. Fable's second review: the 24 questions decided (23 October 2026)
+
+**Found by Fable's second review** (`docs/reviews/fable-second-review.md`, pull request 102): the first verdict holds, stronger; no text wrong in substance. Three things before the rehearsal: a step of "belongs to" (Q55), a sale on an unverified claim (Q53), and vectors for the rules the C build declares unbuilt (Q57, Q58, Q60). The weakness it names: two builders agreeing with each other and with the vectors proves the texts *can* be read alike, not that they *were*; Q53, Q55 and the lone seller's purchase are shared misreadings no vector caught.
+
+**Decided by the MOR lead, under delegation** (Nobody, allegedly, 22 October 2026: "Leave me out, at this stage we're deep in code stuff"), Fable's recommendation taken on each:
+- **Q55, a step of "belongs to": every `objects` entry**, chain and predecessor alike, and each act answered, whatever the act named is, save an identity's genesis, rotations and Identity everyday acts. Fable's sentence at Agreements line 98. The Rust core changes (`belongs_into`); the C reading stands. *Why this reading:* it is the text's own sentence, and it is what F363 decided in Nobody, allegedly's words ("ensure all participants to the agreement can fall under the bracket"): an act about a deal's obligation is an act on the deal. *Checked against F58's guard:* a thief could already name the agreement itself in `objects`, so naming an obligation instead gives a thief nothing new; a keeper still records only for the deal that chose it.
+- **Q53, fail-closed:** a receipt or claim whose verification answer is not valid is no purchase and no sale; pending or not held, unknown (Money's MUST at line 183, which both cores had stepped around for sales). Fable's sentence; the Rust core (`vows.rs`, the purchase path) and a vector.
+- **Q57, Q58, Q60, Q61, Q62, Q64: C wrong**, declared or found; the texts and Rust stand. The vectors Fable describes are added now from the Rust side, so the C verifier's next edition meets them. Q62 (homes at the binding) is a one-line C fix.
+- **Wording, Fable's sentences:** Q52 (a pair is between payments, never records); Q56 ("predecessors" at line 105); S7c question 1 (the principle sentence becomes "what no objection can undo", or italic); S7c question 3 (the suite says its verdict questions are the list of answers); S7d question 3 (client conformance: the buyer's client names the vow where the offer names one); the older points (Signature type 1's field 0 comment lists the offer; rule 12's carve-out for a lone seller's payment, rule 11 and Money rule 18).
+- **Kept as built:** S7c questions 2, 4, 5; S7d questions 1 and 2; Q51, Q54, Q59, Q63, Q65 settled.
+- **Q50:** the generator cites rules as the texts number them.
+- **For the freeze report** (the rehearsal): beside "N of N agree", the list of rules the second implementation does not build, from its own "What is not implemented".
+- **Working rule, from Fable's pattern:** vector families are also grown by reading the texts for MUST sentences no case exercises, not only by reading the code for branches none reaches. Before the rehearsal, one pass of that kind.
+
+**Next:** S7e writes this in (F390 reserved); a third box; the C verifier's third edition against it; the texts-for-untested-sentences pass; the rehearsal.
+## F388. Splits between separate people: a deal in Edubba, its own payee, a tip to the agreement; two points for the MOR lead (23 October 2026; Dubsar Suite)
+
+**Asked by Nobody, allegedly (22 October 2026):** "the capacity to setup a split on a vow or a protected file, or even unprotected files for tips"; decided: "Edubba is the place", and "with a tip IF there is a split the target is the agreement not the act".
+
+**Read first** (`docs/splits-reading.md`): a deal between solo identities, its split service, a work, vow or post under it, buying, tipping and contest **fit as written**, with a suite cMIP draft for how apps find the deal, the tip, and the claim sealed to every party (the money messages cMIP, draft 5). Two points found, for the MOR lead:
+
+1. **A person has one payee pointer**, and Agreements rule 16 makes a deal's payee's pointer lead to the service, while Money rule 4 counts a payment only at the payee's own pointer: as written, a payee of a deal points its whole flow at the service, its personal tips arriving where nobody can receipt them. Agreements rules 15 and 17 read as if a direct payer paid the service's own pointer in the payee's name, which Money rule 4 and the payment cMIP's step 3 refuse; round 3 built that path for a lone seller (F358, 2), and **its buyer's claim does not verify** (unknown in Dub, invalid once the service's pointer is held). *Built meanwhile, on the texts as they stand:* **the deal's own payee**, an identity Edubba makes for the deal (a party holding no stake, its pointer the service's rails, its grant the one field 14 lists), so nobody's own wallet changes. *Lean:* Money rule 4 extended to the agreement's designated pointer, judged by Agreements.
+2. **The core reads a collective's sale under its agreement as no purchase** where the agreement stakes the collective itself (all its income) and not the work ("the agreement it names carries no stake in the work it pays for"), while the glossary says such a stake is "a share of all that collective's income, whoever earns it". So a collective's buyer's contest shows beside nothing, and every collective sale of round 3 is, for the core, owed back. *Lean:* the core counts the collective's own stake (null) as a stake in every work it sells under its agreement.
+
+**Found and fixed in the suite's code:** the one-party deal of a judged referral (round 3) wrote its stake on the publication's ID; the core reads a purchase's work by its work hash: now the work hash. A payee's grant naming "this agreement" was judged without the deal it counts through: `authorityOf` now holds every deal its grantor signed listing it, with every party's signature.
+
+**Where:** `docs/splits-report.md`; Edubba (Who shares in it, To sign, Shared deals, Sales), Dub (Buy and Tip on a shared work), Damgar (Account › Shared deals, the claim sealed to every party), the test split service, `clients/grants/src/deal.ts`; the money messages cMIP draft 5. Nothing in the core changed.
+
 ## F386. A buyer may contest a purchase, as a vow's buyer contests a sale: a protection forgotten (22 October 2026)
 
 **Asked by Nobody, allegedly:** "Is it possible to contest a purchase? Or only a vow? I pay to see a specific content, but the person sends a file with something else for example, how is it handled at the moment?"

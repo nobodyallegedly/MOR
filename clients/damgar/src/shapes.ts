@@ -91,6 +91,20 @@ export interface PaymentShown {
   request?: string | null;
   /** A transfer to one's vault on Lightning (H46, F355): the invoice to make on the vault's node, with this description hash. */
   vaultInvoice?: { node: string; descriptionHash: string } | null;
+  /** A payment under a deal between separate people (this round): the deal's name, shown with it. */
+  deal?: string | null;
+}
+
+/** A deal between separate people this identity is a party of (this round): the payments made to it, and the payouts its split service made to you. */
+export interface SharedShown {
+  version: string;
+  name: string;
+  /** A collective's money agreement, not a deal: its sales are shown with your share only (its receipts sealed to the collective). */
+  collective?: boolean;
+  /** Every payment the service receipted in the deal's payee's name, sealed to every party: a sale or a tip. */
+  payments: { receipt: string; payer: Who; amount: Shown; kind: 'a sale' | 'a tip'; standing: string; /** Its rail answer here (S7e): anything but valid is shown unknown, with its reason. */ rail: Verdict }[];
+  /** Your payouts, as each split the service sealed to you names them; `paid` where your Damgar holds a payment of that amount from the service. */
+  payouts: { split: string; amount: Shown; role: string | null; paid: boolean }[];
 }
 
 export interface Account {
@@ -99,6 +113,8 @@ export interface Account {
   payments: PaymentShown[];
   /** Requests and debts: asked, accepted as a debt, paid. */
   asks: { id: string; side: 'in' | 'out'; other: Who; amount: Shown; whatFor: string | null; state: string; obligation: string | null; lines: Line[] }[];
+  /** The deals between separate people this identity is a party of (this round). */
+  shared?: SharedShown[];
   problems: string[];
   /** Said once, above: what this Money-only app cannot judge. */
   notes: string[];

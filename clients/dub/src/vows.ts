@@ -74,7 +74,7 @@ export function readVow(act: Uint8Array): { name: string; signer: string; words:
 }
 
 /** An offer selling a vow, read: its id, price and words; null where `act` is no offer of `seller` naming `vow`. */
-export function readVowOffer(act: Uint8Array, seller: string, vow: string): { offer: string; price: Amount; words: string | null; under?: string } | null {
+export function readVowOffer(act: Uint8Array, seller: string, vow: string): { offer: string; price: Amount; words: string | null; under?: string; payee?: string } | null {
   const d = describeAct(act) as { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array };
   if (d.spec !== MIRS.agreements || d.type !== OFFER || d.signer !== seller || !d.payload) return null;
   try {
@@ -83,7 +83,8 @@ export function readVowOffer(act: Uint8Array, seller: string, vow: string): { of
     if (!sells) return null;
     const price = m.get(2) as [Uint8Array, number];
     const under = m.get(0);
-    return { offer: d.id, price: { unit: hex(price[0]), value: Number(price[1]) }, words: typeof m.get(4) === 'string' ? (m.get(4) as string) : null, ...(under instanceof Uint8Array ? { under: hex(under) } : {}) };
+    const payee = m.get(3);
+    return { offer: d.id, price: { unit: hex(price[0]), value: Number(price[1]) }, words: typeof m.get(4) === 'string' ? (m.get(4) as string) : null, ...(under instanceof Uint8Array ? { under: hex(under) } : {}), ...(payee instanceof Uint8Array ? { payee: hex(payee) } : {}) };
   } catch {
     return null;
   }
@@ -116,13 +117,16 @@ export interface SaleShown {
   act: string;
   offer: string;
   buyer: string;
-  state: 'pending' | 'confirmed' | 'contested';
+  /** S7e (Q53): unknown where the answer rests on a receipt or claim whose rail answer is not given, never pending. */
+  state: 'pending' | 'confirmed' | 'contested' | 'unknown';
   by: string[];
   /** What a contest says was not kept, where it says (field 1). */
   promise: string | null;
   amount: Amount | null;
   /** The buyer's contests of it in the purchase's form (F386): shown beside the sale; they mark no sale. */
   beside: ContestsBeside;
+  /** Why its state is unknown, in words (S7e): the rail's own answer where it gave one. */
+  why: string | null;
 }
 
 /** A vow, read from what the relays asked hold. */
@@ -135,6 +139,8 @@ export interface VowShown {
   sales: SaleShown[];
   /** Payments following its offers whose buyer signed on to nothing public: no state. */
   unsigned: number;
+  /** Payments whose buyer the core cannot tell without a rail answer (S7e): shown as unknown, never as unsigned. */
+  unknown?: number;
 }
 
 /**
@@ -154,17 +160,29 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
     const x = readVow(a);
     if (x?.genesis && x.signer === identity) vows.push({ name: x.name, words: x.words });
   }
+  // An offer made under a deal between separate people counts only signed by every party (Agreements, Standing offer): each party held too, the deal's payee among them.
+  for (const a of [...r.held.values()]) {
+    const d = describeAct(a) as { spec?: string; type?: number; signer?: string; payload?: Uint8Array };
+    if (d.spec !== MIRS.agreements || d.type !== OFFER || d.signer !== identity || !d.payload) continue;
+    const under = (cborDecode(d.payload) as Map<number, unknown>).get(0);
+    const t = under instanceof Uint8Array ? r.held.get(hex(under)) : undefined;
+    const td = t ? (describeAct(t) as { spec?: string; type?: number; payload?: Uint8Array }) : null;
+    if (!td?.payload || td.type !== 0) continue;
+    const m = cborDecode(td.payload) as Map<number, unknown>;
+    if (m.has(12)) continue;
+    for (const p of ((m.get(0) as Uint8Array[] | undefined) ?? []).map((x) => hex(x))) await r.hold(p);
+  }
   // Each claim's and contest's signer, held with its acts (its chain, its lanes).
   for (const a of [...claims, ...contests]) {
     const d = describeAct(a) as { signer?: string };
     if (d.signer) await r.hold(d.signer);
     r.add(a);
   }
-  const { specs, amounts } = judged(r, claims.map((act) => ({ act })));
+  const { specs, amounts, unanswered } = judged(r, claims.map((act) => ({ act })));
   const out: VowShown[] = [];
   for (const x of vows) {
     try {
-      const e = r.v.agreementsVow(specs, x.name) as { name: string; signer: string; void: boolean; words: string[]; offers: string[]; sales: { act: string; offer: string; buyer: string; state: SaleShown['state']; by: string[] }[]; unsigned: string[] };
+      const e = r.v.agreementsVow(specs, x.name) as { name: string; signer: string; void: boolean; words: string[]; offers: string[]; sales: { act: string; offer: string; buyer: string; state: SaleShown['state']; by: string[] }[]; unsigned: string[]; unknown?: string[] };
       out.push({
         name: e.name,
         signer: e.signer,
@@ -176,9 +194,12 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
           promise: s.state === 'contested' ? promiseOf(contests, s.by) : null,
           amount: amounts.get(s.act) ?? null,
           // A vow's sale is a purchase (F386): a contest of it in the purchase's form marks no sale, and is shown beside it, so it is not lost.
-          beside: contestsOf(r, specs, s.act, contests),
+          beside: contestsOf(r, specs, s.act, contests, unanswered),
+          // S7e: why it is unknown, in the rail's own words where it said anything.
+          why: s.state === 'unknown' ? `its payment is not verified here: ${unanswered.get(s.act) ?? 'a receipt or claim it rests on has no rail answer here'}; whether it is a sale is unknown` : null,
         })),
         unsigned: e.unsigned.length,
+        unknown: e.unknown?.length ?? 0,
       });
     } catch (err) {
       r.problems.push(`The vow ${x.name.slice(0, 8)}… could not be read: ${err instanceof Error ? err.message : String(err)}`);
@@ -205,6 +226,8 @@ export interface ContestsBeside {
   contests: { act: string; promise: string | null }[];
   /** Why it is unknown, in words. */
   why?: string;
+  /** Where the core reads the payment as no purchase (a buyer's contest is then shown beside nothing): its words (this round). */
+  noPurchase?: string | null;
 }
 
 /**
@@ -236,21 +259,39 @@ export async function purchaseContests(a: { purchases: { act: Uint8Array; key?: 
     const d = describeAct(x) as { spec?: string; type?: number };
     return d.spec === MIRS.agreements && d.type === CONTEST;
   });
-  const { specs } = judged(r, a.purchases.map((p) => ({ act: p.act, key: p.key ?? undefined })));
+  const { specs, unanswered } = judged(r, a.purchases.map((p) => ({ act: p.act, key: p.key ?? undefined })));
   const by: Record<string, ContestsBeside> = {};
-  for (const id of ids) if (id) by[id] = contestsOf(r, specs, id, [...contests, ...held]);
+  for (const id of ids) if (id) by[id] = contestsOf(r, specs, id, [...contests, ...held], unanswered);
+  // Where the core reads a payment as no purchase, said beside it: a contest shows beside a purchase only (F386), never silently "none".
+  for (const id of ids) {
+    if (!id || by[id]?.state !== 'shown' || by[id].contests.length) continue;
+    try {
+      const p = r.v.agreementsPurchase(specs, id) as { verdict: string; why?: string | null } | null;
+      if (p && p.verdict === 'no-purchase') by[id] = { ...by[id], noPurchase: p.why ?? 'no purchase' };
+      // S7e (Q53): whether it is a purchase rests on a rail answer not given here: unknown, never "none".
+      else if (p && p.verdict === 'unknown') by[id] = { state: 'unknown', contests: [], why: `${railSaid(unanswered) ?? 'a receipt or claim it rests on has no rail answer here'}: whether it is a purchase is unknown` };
+    } catch {
+      // not read: as before
+    }
+  }
   return { by, problems: r.problems };
 }
 
 /** The buyer's contests the core shows beside one purchase, each with its promise not kept, in words, where it says. */
-function contestsOf(r: Reader, specs: unknown, purchase: string, contests: Uint8Array[]): ContestsBeside {
+function contestsOf(r: Reader, specs: unknown, purchase: string, contests: Uint8Array[], unanswered: Map<string, string>): ContestsBeside {
   try {
     const shown = r.v.agreementsPurchaseContests(specs, purchase) as string[];
     return { state: 'shown', contests: shown.map((act) => ({ act, promise: promiseOf(contests, [act]) })) };
   } catch (e) {
     const m = e instanceof Error ? e.message : String(e);
-    return { state: 'unknown', contests: [], why: /payment-unstated/.test(m) ? 'its payment is not stated: whether it is a purchase, and whose, is unknown' : m };
+    return { state: 'unknown', contests: [], why: /payment-unstated/.test(m) ? 'its payment is not stated: whether it is a purchase, and whose, is unknown' : /rail-unanswered/.test(m) ? `its payment is not verified here: ${unanswered.has(purchase) ? `its claim’s ${unanswered.get(purchase)!.replace(/^its /, '')}` : (railSaid(unanswered) ?? 'its claim has no rail answer here')}; whether it is a purchase is unknown` : m };
   }
+}
+
+/** What the rails said of the records not verified, in their own words, or null where every record held was judged valid. */
+function railSaid(unanswered: Map<string, string>): string | null {
+  const said = [...new Set(unanswered.values())];
+  return said.length ? `a receipt or claim it rests on is not verified here: ${said.join('; ')}` : null;
 }
 
 /** What a look-up holds: a verifier, the acts by id, and how to hold an identity's chain and public acts. */
@@ -317,19 +358,25 @@ function reader(relays: string[], via: Via): Reader {
 }
 
 /** Each claim's rail, checked by its rail Module and stated to the core (the core reads no rail); its amount; its lane's cap. */
-function judged(r: Reader, claims: { act: Uint8Array; key?: Uint8Array }[]): { specs: unknown; amounts: Map<string, Amount> } {
+function judged(r: Reader, claims: { act: Uint8Array; key?: Uint8Array }[]): { specs: unknown; amounts: Map<string, Amount>; unanswered: Map<string, string> } {
   const accepted = ACCEPTABLE.flatMap((x) => x.hashes);
   const railValid: [string, string, number | null][] = [];
   // Which payment each proof is, as its rail Module says (Money rule 12): never read from the proofs' bytes.
   const railPayments: [string, string][] = [];
   const limits: [string, boolean][] = [];
   const amounts = new Map<string, Amount>();
+  // What each rail said where it did not say valid, in its own words (S7e): the reason an answer resting on it is unknown.
+  const unanswered = new Map<string, string>();
   for (const { act, key } of claims) {
-    const d = (key ? openWithKey(act, key) : describeAct(act)) as { id: string; payload?: Uint8Array; binding?: string };
+    const d = (key ? openWithKey(act, key) : describeAct(act)) as { id: string; type?: number; payload?: Uint8Array; binding?: string };
     try {
-      const j = r.v.moneyJudge(d.id, { money: MIRS.money, accepted }) as { rail: { answer: string }; payment?: string | null };
-      if (j.rail.answer !== 'valid') continue;
-      const c = (moneyRead(CLAIM, d.payload!) as { act: { proof: Uint8Array; amount: Amount } }).act;
+      const j = r.v.moneyJudge(d.id, { money: MIRS.money, accepted }) as { rail: { answer: string; why?: string }; payment?: string | null };
+      if (j.rail.answer !== 'valid') {
+        unanswered.set(d.id, `its rail says ${j.rail.answer}${j.rail.why ? ` (${j.rail.why})` : ''}`);
+        continue;
+      }
+      // A claim, or (S7e, Q53) a receipt the answer rests on, such as a collective's recording its sale: each stated by its own rail answer.
+      const c = (moneyRead(d.type === 2 ? 2 : CLAIM, d.payload!) as { act: { proof: Uint8Array; amount: Amount } }).act;
       amounts.set(d.id, c.amount);
       if (j.payment) railPayments.push([hex(new Uint8Array(c.proof)), j.payment]);
       const p = readPaymentProof(new Uint8Array(c.proof)) as { paidTo: { flow?: { pointer: string }; vault?: { declaredBy: string; entry: number } } & Record<string, unknown> };
@@ -338,11 +385,12 @@ function judged(r: Reader, claims: { act: Uint8Array; key?: Uint8Array }[]): { s
       // A claim signed under a lane: its cap judged by the grant limits cMIP (the core asks it of the client).
       const w = limitsOf(r.held, d, act, key);
       if (w !== null) limits.push([d.id, w]);
-    } catch {
+    } catch (e) {
       // not judged: it counts for nothing here
+      if (d.id) unanswered.set(d.id, `it could not be judged here (${e instanceof Error ? e.message : String(e)})`);
     }
   }
-  return { specs: withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits), amounts };
+  return { specs: withGrantLimits({ ...AGREEMENTS_SPECS, railValid, railPayments }, limits), amounts, unanswered };
 }
 
 /** Where a proof says it was paid, as the core takes it: `[act, vault entry or null]`. */

@@ -27,6 +27,8 @@
 
 **Round 2 (F349).** A specification's hash is shown written for people (`mspec1…`), the hexadecimal beside, and taken in either form.
 
+**Which clock** (decided 23 October 2026): every app of the suite orders its feeds by the stamps of **the Dubsar clock**, identity `1c743854ba1884b470f02221395d18d1abe977631bf86f0f221e32e6d83cf453` (its genesis at home1 and home2; a public identity, not an address), written in `clients/barebone/src/clock.ts`; each card shows its time, "… · by the Dubsar clock", or the signer's own hint, labelled.
+
 ## Precisely
 
 | File | What |

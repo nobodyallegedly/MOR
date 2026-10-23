@@ -34,6 +34,7 @@ import { deliverSold } from './delivery.ts';
 import type { RunnerLink } from './runner.ts';
 import { contestPurchase, contestSale, purchaseContests, readVow, readVowOffer, vowSales, type ContestsBeside } from './vows.ts';
 import { collectiveNow, collectivePlaces } from '../../grants/src/member.ts';
+import { dealOfPost, readDeal, sharedLine, type DealRead } from '../../grants/src/deal.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 
 /** What Dub's lane may sign: invoice requests (the money messages cMIP) and payment claims (Money). */
@@ -151,10 +152,12 @@ export interface VowBoughtShown {
   price: string | null;
   /** Paid, and its claim published: a sale anyone can read. */
   paid: boolean;
-  sale: 'pending' | 'confirmed' | 'contested' | null;
+  sale: 'pending' | 'confirmed' | 'contested' | 'unknown' | null;
   promise: string | null;
   /** Its buyer's contests in the purchase's form (F386), shown beside it: they mark no sale. */
   beside: ContestsBeside | null;
+  /** Why the sale is unknown, in words (S7e): its payment not verified here, as its rail said. */
+  why: string | null;
 }
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -239,10 +242,34 @@ export class DubMoney {
 
   // ------------------------------------------------------------ paying, under the lane
 
-  /** A tip on a post, paid now under the lane: the invoice request signed with the lane's key; refused before signing past its cap or expiry, saying why. */
-  async tip(a: { post: string; signer: string; amount: { unit: string; value: number }; whatFor: string | null }): Promise<string[]> {
+  /**
+   * A tip on a post, paid now under the lane: the invoice request signed with
+   * the lane's key; refused before signing past its cap or expiry, saying
+   * why. A post under a deal between separate people (it names the deal, or
+   * an offer under it): the tip goes to the deal, not to the act (decided:
+   * "with a tip IF there is a split the target is the agreement not the
+   * act"): paid to the deal's own payee, following the deal, through its
+   * split service; said in one line before paying. A tip to a person's own
+   * post is unchanged.
+   */
+  async tip(a: { post: string; signer: string; amount: { unit: string; value: number }; whatFor: string | null; deal?: DealRead | null; names?: (id: string) => string }): Promise<string[]> {
+    const d = a.deal;
+    if (d && d.payee) {
+      const r = await this.engine.payUnderLane({ payee: d.payee, amount: a.amount, whatFor: a.whatFor ?? 'a tip to a shared work', fulfils: d.version, refs: [[a.post, a.signer]] });
+      return [sharedLine(d, a.names ?? ((x) => `${x.slice(0, 8)}…`)), 'The tip goes to the deal, not to the one who posted it: divided by its split service like a sale, and no purchase (nothing is owed back).', ...r.lines.map((l) => l.text)];
+    }
     const r = await this.engine.payUnderLane({ payee: a.signer, amount: a.amount, whatFor: a.whatFor, refs: [[a.post, a.signer]] });
     return r.lines.map((l) => l.text);
+  }
+
+  /** The deal a post is under, where it names one: null for a person's own post (the money messages cMIP, draft 5, 8). */
+  async dealOf(post: string, signer: string, hints: string[], via: Via): Promise<DealRead | null> {
+    try {
+      const act = (await followRef([post, signer], hints, via)).act;
+      return await dealOfPost(act, hints, via);
+    } catch {
+      return null;
+    }
   }
 
   /** The payments asked here: answered ones to pay in the wallet, the others waiting, after a look for answers and receipts. */
@@ -365,7 +392,7 @@ export class DubMoney {
   }
 
   /** Buy a sealed post under the lane: an invoice request following the seller's offer, naming the repost followed (Money claim field 6) where it was found through one. */
-  async buy(me: TestIdentity, hints: string[], via: Via, a: { publication: string; seller: string; repost: { id: string; by: string } | null; post?: string | null }): Promise<string[]> {
+  async buy(me: TestIdentity, hints: string[], via: Via, a: { publication: string; seller: string; repost: { id: string; by: string } | null; post?: string | null; names?: (id: string) => string }): Promise<string[]> {
     const pubAct = (await followRef([a.publication, a.seller], hints, via)).act;
     const p = readSealed(pubAct);
     if (!p) throw new Error('That is not a sealed post. Nothing was signed.');
@@ -379,11 +406,14 @@ export class DubMoney {
       const now = await collectiveNow(a.seller, await collectivePlaces(a.seller, hints, via), via).catch(() => null);
       purchase = [offer.under, now?.agreement ?? offer.under];
     }
-    const r = await this.engine.payUnderLane({ payee: a.seller, amount: offer.price, whatFor: 'a sealed post', fulfils: offer.offer, refs: [[a.publication, a.seller]], referral: a.repost ? { identity: a.repost.by, evidence: a.repost.id } : null, purchase });
+    // Under a deal between separate people: its payee is paid (the offer's field 3), through its split service, said in one line first.
+    const deal = offer.under ? await readDeal(offer.under, hints, via).catch(() => null) : null;
+    const said = deal ? [sharedLine(deal, a.names ?? ((x) => `${x.slice(0, 8)}…`))] : [];
+    const r = await this.engine.payUnderLane({ payee: offer.payee ?? a.seller, amount: offer.price, whatFor: 'a sealed post', fulfils: offer.offer, refs: [[a.publication, a.seller]], referral: a.repost ? { identity: a.repost.by, evidence: a.repost.id } : null, purchase });
     const bought = (await this.store.money<Bought>(me.id, 'bought')) ?? {};
     bought[a.publication] = { key: null, payment: r.key, seller: a.seller, offer: offer.offer };
     await this.store.saveMoney(me.id, 'bought', bought);
-    return [...r.lines.map((l) => l.text), ...(a.repost ? [`Your claim will name the repost you followed, by ${a.repost.by.slice(0, 8)}…: it earns the referral share the offer states, if the seller pays it.`] : [])];
+    return [...said, ...r.lines.map((l) => l.text), ...(a.repost ? [`Your claim will name the repost you followed, by ${a.repost.by.slice(0, 8)}…: it earns the referral share the offer states, if the seller pays it.`] : [])];
   }
 
   /** The offer selling a publication, named beside it in the post or repost that names it. */
@@ -507,7 +537,7 @@ export class DubMoney {
   }
 
   /** Buy a vow under the lane: an invoice request following its offer; its claim, once paid, is also published, so its sale is seen (Agreements rule 13). */
-  async buyVow(me: TestIdentity, hints: string[], via: Via, a: { vow: string; seller: string; post: string }): Promise<string[]> {
+  async buyVow(me: TestIdentity, hints: string[], via: Via, a: { vow: string; seller: string; post: string; names?: (id: string) => string }): Promise<string[]> {
     const card = await this.readVowRef(me, hints, via, [{ id: a.post, signer: a.seller }, ...(((describeAct((await followRef([a.post, a.seller], hints, via)).act) as { refs?: string[] }).refs ?? []).map((id) => ({ id, signer: a.seller })))]);
     if (!card || card.vow !== a.vow) throw new Error('That post names no vow. Nothing was signed.');
     if (card.seller === me.id) throw new Error('That vow is your own. Nothing was signed.');
@@ -518,11 +548,13 @@ export class DubMoney {
       const now = await collectiveNow(card.seller, await collectivePlaces(card.seller, hints, via), via).catch(() => null);
       purchase = [offer.under, now?.agreement ?? offer.under];
     }
-    const r = await this.engine.payUnderLane({ payee: card.seller, amount: offer.price, whatFor: 'a vow', fulfils: offer.offer, refs: [[card.vow, card.seller]], visible: true, purchase });
+    const deal = offer.under ? await readDeal(offer.under, hints, via).catch(() => null) : null;
+    const said = deal ? [sharedLine(deal, a.names ?? ((x) => `${x.slice(0, 8)}…`))] : [];
+    const r = await this.engine.payUnderLane({ payee: offer.payee ?? card.seller, amount: offer.price, whatFor: 'a vow', fulfils: offer.offer, refs: [[card.vow, card.seller]], visible: true, purchase });
     const vows = (await this.store.money<VowsBought>(me.id, 'vows')) ?? {};
     vows[card.vow] = { seller: card.seller, offer: offer.offer, payment: r.key, post: a.post, words: card.words };
     await this.store.saveMoney(me.id, 'vows', vows);
-    return [...r.lines.map((l) => l.text), 'Once paid, your claim of the payment is published too: it is the sale, pending until you confirm or contest it, in its menu (Purchases).'];
+    return [...said, ...r.lines.map((l) => l.text), 'Once paid, your claim of the payment is published too: it is the sale, pending until you confirm or contest it, in its menu (Purchases).'];
   }
 
   /** The vows bought here, each with its sale's state as the relays asked read it (the look-up, `vows.ts`). */
@@ -536,14 +568,16 @@ export class DubMoney {
       let sale: VowBoughtShown['sale'] = null;
       let promise: string | null = null;
       let beside: ContestsBeside | null = null;
+      let why: string | null = null;
       if (paid) {
         if (!bySeller.has(b.seller)) bySeller.set(b.seller, await vowSales(b.seller, hints, via).catch(() => ({ vows: [], asked: hints, problems: [] })));
         const x = bySeller.get(b.seller)!.vows.find((y) => y.name === vow)?.sales.find((y) => y.buyer === me.id);
         sale = x?.state ?? null;
         promise = x?.promise ?? null;
         beside = x?.beside ?? null;
+        why = x?.why ?? null;
       }
-      out.push({ vow, seller: b.seller, words: b.words, price: p ? say(p.amount, new Set([p.amount.unit])) : null, paid, sale, promise, beside });
+      out.push({ vow, seller: b.seller, words: b.words, price: p ? say(p.amount, new Set([p.amount.unit])) : null, paid, sale, promise, beside, why });
     }
     return out;
   }
@@ -607,7 +641,19 @@ export class DubMoney {
       if (c) purchases.push({ publication, ...c });
     }
     if (!purchases.length) return { paid: {}, problems: [] };
-    const r = await purchaseContests({ purchases, parties: list([me.id, ...purchases.map((p) => bought[p.publication].seller)]), relays: hints, via });
+    // Under a deal between separate people, every party and its payee are held too: the offer counts only signed by every party (Agreements, Standing offer).
+    const parties: string[] = [];
+    for (const b of Object.values(bought)) {
+      if (!b.offer) continue;
+      try {
+        const o = readOffer((await followRef([b.offer, b.seller], hints, via)).act, b.seller, Object.keys(bought).find((k) => bought[k] === b)!, true);
+        const d = o?.under ? await readDeal(o.under, hints, via) : null;
+        if (d) parties.push(...d.parties, ...(d.service ? [d.service] : []));
+      } catch {
+        // its offer was not found: held as before
+      }
+    }
+    const r = await purchaseContests({ purchases, parties: list([me.id, ...purchases.map((p) => bought[p.publication].seller), ...parties]), relays: hints, via });
     const paid: Record<string, ContestsBeside> = {};
     for (const p of purchases) paid[p.publication] = r.by[p.id] ?? { state: 'unknown', contests: [], why: 'its claim could not be read' };
     return { paid, problems: r.problems };
