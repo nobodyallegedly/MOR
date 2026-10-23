@@ -29,7 +29,7 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { SPECS, base64, describeAct, hex, readTerms, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
+import { SPECS, WITNESS_EXPLANATION, base64, describeAct, hex, readTerms, sha256, signingPublic, unhex } from '../../genesis/src/core.ts';
 import { lineReader, noLine, sendWaiting, type LineAtHomes } from '../../genesis/src/private.ts';
 import { TestIdentity, TEST_LABEL, freshLines, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp, referTo } from '../../genesis/src/lookup.ts';
@@ -47,10 +47,11 @@ import type { ChainSource } from '../../damgar/src/chain.ts';
 import type { RunnerLink } from '../../dub/src/runner.ts';
 import { clockWords } from '../../barebone/src/clock.ts';
 import { idForm } from '../../genesis/src/forms.ts';
-import { CARD_SAY, LIMITS, builtIn, cardText, publishCard, publishDiscussion, readActId, type CardFields } from './cards.ts';
+import { CARD_SAY, LIMITS, builtIn, cardText, readCardText, publishCard, publishDiscussion, readActId, type CardFields } from './cards.ts';
 import { contacts as readContacts, follow as followIn, FOLLOW_SAY } from './follows.ts';
 import { FILTERS, look as lookAt, specPage, type Filter, type Looked, type PointKind, type SpecPage } from './look.ts';
 import { textPayload as longformPayload } from '../../longform/src/act.ts';
+import { leaveInInbox } from '../../barebone/src/post.ts';
 import { LONGFORM_SPECS, TEXT_ACT as LONGFORM_TEXT_ACT } from '../../longform/src/specs.ts';
 import { actors, chosen } from './acting.ts';
 import { ANCHOR_SAY, ask as askAnchor, offers as anchorOffers, standing as anchorStanding, type Asked, type AnchorShown, type Offer } from './anchor.ts';
@@ -686,12 +687,29 @@ export class Ummia {
     return [...me.f.encryption].reverse().map((e) => unhex(e.secret));
   }
 
+  private layerCache: { at: number; layers: Map<string, string> } | null = null;
+
+  /** Each specification's layer, as tracking reads it from its own fields, on the relays tracking asks: read again at most once a minute. */
+  private async layersOf(hashes: string[]): Promise<Map<string, string>> {
+    if (!hashes.length) return new Map();
+    if (this.layerCache && this.layerCache.at + 60 > now() && hashes.every((h) => this.layerCache!.layers.has(h))) return this.layerCache.layers;
+    try {
+      const { s } = await this.ctx();
+      const t = await track(this.lookRelays(s), { via: s.via });
+      this.layerCache = { at: now(), layers: new Map(t.specs.map((x) => [x.hash, x.layer])) };
+      return this.layerCache.layers;
+    } catch {
+      return new Map();
+    }
+  }
+
   /** The whole list, as every app reads it: each entry, its label, and whose part it is where known. */
   async accepted(): Promise<{ entries: AcceptedEntry[]; version: number; forked: boolean; merged: string[]; published: boolean; problems: string[]; say: string[] }> {
     const { me, book } = await this.ctx();
     const l = await readAccepted(me.id, this.secrets(me), me.f.homes.map((h) => h.hint), me.via);
+    const layers = await this.layersOf([...l.entries.keys()].filter((h) => !DAMGAR_PART.has(h) && !builtIn(h)));
     const entries: AcceptedEntry[] = [...l.entries.entries()]
-      .map(([hash, label]) => ({ hash, label: label ?? damgarLabel(hash) ?? null, part: DAMGAR_PART.has(hash) ? 'Money: Damgar’s part' : 'Read by the apps that know it' }))
+      .map(([hash, label]) => ({ hash, label: label ?? damgarLabel(hash) ?? builtIn(hash)?.title ?? null, part: DAMGAR_PART.has(hash) ? 'Money: Damgar’s part' : 'Read by the apps that know it', layer: DAMGAR_PART.has(hash) ? 'Money' : (builtIn(hash)?.title.replace(/^MIR: /, '') ?? layers.get(hash) ?? null) }))
       .sort((a, b) => (a.part < b.part ? -1 : a.part > b.part ? 1 : (a.label ?? a.hash) < (b.label ?? b.hash) ? -1 : 1));
     return {
       entries,
@@ -991,12 +1009,18 @@ export class Ummia {
     return this.serial(async () => {
       const { me, s, book, hints } = await this.ctx();
       await this.current(me);
-      const rel = [...(await this.ownReleases(me, book, hints, s.via)), ...(book.collectiveReleases ?? [])].find((x) => x.id === a.release);
-      if (!rel) throw new Error('That is not one of your releases published from here.');
+      // A release of yours, or any act shown (the act menu's Anchor it, in every app: decided).
+      const own = [...(await this.ownReleases(me, book, hints, s.via).catch(() => book.releases)), ...(book.collectiveReleases ?? [])].find((x) => x.id === a.release);
+      if (!own) {
+        const id = readActId(a.release);
+        const held = await referTo(id, [...new Set([...hints, ...s.relays, ...s.track])], s.via).catch(() => null);
+        if (!held?.public) throw new Error('That is neither one of your releases nor a public act found on your relays. Nothing was prepared.');
+      }
+      const rel = own ?? { id: readActId(a.release), name: 'the act', version: short(readActId(a.release)) };
       const service = readId(a.service);
       const offer = (await anchorOffers(service, [...hints, ...s.track], s.via)).find((o) => o.act === a.offer);
       if (!offer) throw new Error('No such standing offer of that service was found under the anchoring cMIP.');
-      const r = await askAnchor(me, { act: rel.id, label: `the release ${rel.name} ${rel.version}`, service, offer, tier: a.tier, hints, via: s.via, save: () => this.store.saveIdentity(me) });
+      const r = await askAnchor(me, { act: rel.id, label: own ? `the release ${rel.name} ${rel.version}` : `the act ${rel.version}`, service, offer, tier: a.tier, hints, via: s.via, save: () => this.store.saveIdentity(me) });
       book.anchors.push(r.asked);
       await this.saveBook(me.id, book);
       return { title: 'An anchor asked', acts: [r.asked.draft], lines: r.lines };
@@ -1225,7 +1249,8 @@ export class Ummia {
     ];
     if (!threads.length) return { threads: [], lines: [] };
     const r = await mipReplies(me, threads.map((t) => t.id), [...new Set([...s.relays, ...s.track])], s.via);
-    return { threads: threads.map((t) => ({ ...t, replies: (r.replies.get(t.id) ?? []).map((x) => ({ ...x, mine: x.signer === me.id })) })), lines: r.lines };
+    // A card naming the thread is not a reply to it: it shows on the specification's page.
+    return { threads: threads.map((t) => ({ ...t, replies: (r.replies.get(t.id) ?? []).filter((x) => !readCardText(x.text)).map((x) => ({ ...x, mine: x.signer === me.id })) })), lines: r.lines };
   }
 
   /** A reply as a signed document (decided on the mockups: "Reply, as a signed document"): a long-form text act naming the act it answers. */
@@ -1239,21 +1264,57 @@ export class Ummia {
       if (!s.relays.length) throw new Error('Name at least one relay its acts go to, in the identity panel, Relays. Nothing was signed.');
       const to = readActId(a.to);
       let ref;
+      let author: string;
       try {
-        ref = (await referTo(to, [...new Set([...s.relays, ...s.track])], s.via)).ref;
+        const r = await referTo(to, [...new Set([...s.relays, ...s.track])], s.via);
+        ref = r.ref;
+        author = r.signer;
       } catch {
         throw new Error('The act it answers was not found on your relays: a reply names only an act held. Nothing was signed.');
       }
       let id: string;
       try {
         for (const hint of s.relays) for (const c of me.chainActs()) await relayAt(hint, s.via).putAct(c).catch(() => undefined);
-        id = (await me.publish(LONGFORM_SPECS.text, LONGFORM_TEXT_ACT, longformPayload(text), { public: true, relays: s.relays, refs: [ref] })).id;
+        const made = await me.publish(LONGFORM_SPECS.text, LONGFORM_TEXT_ACT, longformPayload(text), { public: true, relays: s.relays, refs: [ref] });
+        id = made.id;
+        // A copy left in the inbox of whoever wrote what it answers, so their app finds it (as Dub's replies are).
+        if (author !== me.id) {
+          const l = await lookUp(author, [...s.relays, ...s.track], s.via).catch(() => null);
+          const inbox = l?.inbox(SPECS.text) ?? [];
+          if (inbox.length) await leaveInInbox(me, made.act, inbox).catch(() => undefined);
+        }
       } finally {
         await this.store.saveIdentity(me);
       }
       book.replies = [...(book.replies ?? []), { id, to, at: now() }];
       await this.saveBook(me.id, book);
       return { title: 'Your reply is published', acts: [id], lines: [{ text: `A signed document, public, answering ${actForm(to)}: ${actForm(id)}.`, tone: 'ok' }] };
+    });
+  }
+
+  // ------------------------------------------------------------ the act menu: Rely on it (in every app, decided)
+
+  /**
+   * Rely on an act shown: the witness act (Identity type 15) signed once
+   * RELY is typed, as everywhere, its key checked first (H80); through
+   * Kišib's panel where the identity is used through it. It keeps that act
+   * visible as disputed should its author ever disown it.
+   */
+  rely(a: { id: string; typed: string }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      if (a.typed.trim() !== 'RELY') throw new Error('Type RELY to sign the witness act. Nothing was signed.');
+      const id = readActId(a.id);
+      if (me.f.sequence.includes(id)) throw new Error('It is this identity’s own act: a witness act names other identities’ acts. Nothing was signed.');
+      await this.current(me);
+      let made;
+      try {
+        made = await me.witness([id], { shown: WITNESS_EXPLANATION, relays: s.relays });
+      } finally {
+        await this.store.saveIdentity(me);
+      }
+      if (!made.sent.some((x) => x.result)) throw new Error(`No home took the witness act: ${made.sent.map((x) => `${x.home}: ${x.error}`).join('; ')}. It is signed here, not published.`);
+      return { lines: [{ text: `You rely on ${short(id)}: witness act ${short(made.id)}, public at this identity’s homes and relays. It keeps that act visible as disputed should its author ever disown it.`, tone: 'ok' }] };
     });
   }
 

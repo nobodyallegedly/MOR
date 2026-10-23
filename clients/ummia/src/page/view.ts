@@ -1,366 +1,560 @@
-// Ummia's page, as HTML strings, for the program and the web client alike
-// (`web` set). Everything from the program, from relays or typed by the
-// person is escaped.
-//
-// The look (H36): Dub's (F332: Inter bundled, low saturation, no glow),
-// tinted with coral, #ee8b74, the Development layer's colour here, by
-// Kišib's rule (`docs/kishib-report.md`): the layer colour laid over the
-// background #06080c at a share, channel by channel, on separators 22%,
-// outlines 30% and quiet accents 60% only, never on text that must be read;
-// red only for an alarm (a check that fails, a key changed elsewhere).
+// Ummia's page, as HTML strings, on the Dubsar Suite's kit (`clients/kit`),
+// for the program on the Mac and Linux and for the web client alike (`web`
+// set). Rebuilt on the kit on 23 October 2026, the last app of the
+// redesign, as it was drawn (`docs/design/suite-redesign.md`, "Ummia" and
+// "Answered on the mockups"; the mockups `ummia-*`): four tiles with their
+// danger marks (Look one, Discuss one, Publish two, Choose two), each
+// opening its column; the identity top right, the collectives under each
+// identity, so acting as a collective is the identity panel's gesture;
+// Look one feed, pointed at a relay, a single ID, your contacts or a
+// release, filtered by kind and layer; hashes easy to copy everywhere.
+// Everything from the program, from relays or typed by the person is
+// escaped.
 
-import { e } from '../../../manage/src/view.ts';
+import { APPS, KIT_STYLE } from '../../../kit/src/style.ts';
+import { appMark, e, meButton, note, opened, pointRow, say, shortForm, tiles, top, type ColumnEntry, type Tile } from '../../../kit/src/html.ts';
 import { cardWords } from '../../../genesis/src/card-words.ts';
-import { shownSpec } from '../../../genesis/src/shown.ts';
-import { STYLE as DUB_STYLE } from '../../../dub/src/page/view.ts';
-import { chooserHtml } from '../acting.ts';
+import { actFormOf } from '../../../dub/src/page/view.ts';
+import type { Actor } from '../acting.ts';
 import type { AcceptedEntry, Line, Review, State } from '../shapes.ts';
-import type { Tracked, TrackedSpec, FoundAct } from '../track.ts';
-import type { MipDraft, Reply } from '../mips.ts';
+import type { FoundAct } from '../track.ts';
+import type { MipDraft } from '../mips.ts';
 import type { AnchorShown, Offer } from '../anchor.ts';
+import type { FoundCard } from '../cards.ts';
+import type { Filter, SpecPage } from '../look.ts';
+import type { Saved } from '../ummia.ts';
 
-export { e };
+export { e, note, say };
 export type { Line, State };
 
 export const NAME = 'Ummia';
 export const TEST_ONLY = 'Test identities only, until MOR is frozen';
 
-/** The web client's banner, on every page it shows: for testing only, and the risks in plain words. In the page's HTML itself (`static/web.html`). */
-export const WEB_BANNER = `<div class="banner" id="for-testing-only" role="note"><p><strong>For testing only.</strong> ${TEST_ONLY}. The risks, in plain words:</p>
+/** Ummia's colour: coral, the Development layer's (H36), in pastel fills (decided, 21 October 2026). */
+export const TINT = { layer: APPS.ummia.colour, pastel: APPS.ummia.pastel } as const;
+
+/**
+ * The web client's banner, on every page it shows, in one line with a "?"
+ * that opens the risks in plain words. In the page's HTML itself
+ * (`static/web.html`, written there by the build), so it shows even when the
+ * script does not run.
+ */
+export const WEB_BANNER = `<details class="k-say ummia-banner" id="for-testing-only" role="note"><summary><strong>For testing only.</strong> ${TEST_ONLY}.<span class="k-help" aria-label="more">?</span></summary><div class="k-more-text"><p>The risks, in plain words:</p>
 <ol><li>Whoever serves this page’s code at the moment you bring an identity here could copy its signing key: with it, publish specifications, MIP drafts and reports as you, and read your accepted list.</li>
 <li>This browser’s storage, where that key is kept, can be lost, or read by what runs in this page.</li>
 <li>What you publish here is public and for good: a specification is never updated, only succeeded. This page reads no folder, so it makes no release, and follows no chain, so it checks no anchor: use Ummia on a computer for those.</li></ol>
-<p>Never bring a real identity here.</p></div>`;
+<p>Never bring a real identity here.</p></div></details>`;
 
-/**
- * Ummia's tint (H36): coral, #ee8b74, laid over #06080c at a share, channel
- * by channel (Kišib's rule): separators 22% (#392523), outlines of cards,
- * fields and buttons 30% (#4c2f2b), quiet accents (a hover or focus
- * outline, a fold's mark, a tab's count) 60% (#91574a).
- */
-export const TINT = { layer: '#ee8b74', line: '#392523', edge: '#4c2f2b', accent: '#91574a' } as const;
+/** The page's style: the kit's, and Ummia's few own pieces. */
+export const STYLE = `${KIT_STYLE}
+body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
+#app.k-page{flex:1;min-height:0;height:auto}
+.ummia-banner{flex:none;margin:0;padding:6px 16px;border-bottom:1px solid var(--k-line);background:var(--k-bg);font:300 12.5px/1.5 Inter,system-ui,sans-serif;color:var(--k-soft)}
+.ummia-banner strong{font-weight:400;color:var(--k-text)}
+.ummia-banner ol{margin:4px 0;padding-left:1.4em}
+.ummia-foot{flex:none;padding:0 28px 10px}
+.ummia-first{max-width:640px;margin:0 auto;width:100%;overflow:auto;padding:24px 20px 40px}
+.ummia-first h2{font-size:24px;margin:8px 0 4px}
+.ummia-pane{max-width:900px;width:100%}
+.ummia-pane h2{font-size:24px;margin:2px 0 4px}
+.ummia-pane h3{font-size:16px;margin:16px 0 4px;font-weight:400}
+.ummia-pane .k-feed{flex:none;max-height:none}
+.ummia-look{display:flex;flex-direction:column;min-height:0;flex:1}
+.ummia-look .k-feedwrap{min-height:240px}
+.ummia-pane textarea{min-height:76px}
+.ummia-pane textarea.ummia-code{min-height:220px;font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace}
+.ummia-lines{margin:4px 0;padding-left:1.1em;font-size:14px}
+.ummia-lines li{margin:3px 0}
+li.bad{color:var(--k-bad)}
+li.warn{color:var(--k-soft)}
+.ummia-hash{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0}
+.ummia-hash .k-mono{color:var(--k-p);overflow-wrap:anywhere}
+.ummia-hash .ummia-big{font-size:15px}
+.ummia-files{max-height:320px;overflow:auto;border-top:1px solid var(--k-line);margin-top:6px;font-size:12px}
+.ummia-files div{display:flex;gap:10px;justify-content:space-between;border-bottom:1px solid var(--k-line);padding:3px 0}
+.ummia-files code{overflow-wrap:anywhere}
+.ummia-ticks{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px 12px}
+.ummia-ticks label{font-size:13px;color:var(--k-soft);display:flex;gap:6px;align-items:center}
+.ummia-picker{border:1px solid var(--k-line);border-radius:12px;padding:8px 12px;margin:8px 0}
+.ummia-picker button{margin:2px 4px 2px 0}
+.ummia-blocking{border:1px solid var(--k-bad);border-radius:14px;padding:10px 16px;margin:10px 0}
+.ummia-v{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:1px 8px;border-radius:999px;border:1px solid var(--k-edge);color:var(--k-soft)}
+.ummia-v.valid{color:var(--k-text);border-color:var(--k-p)}
+.ummia-v.bad{color:var(--k-bad);border-color:var(--k-bad)}
+.ummia-who{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 10px}
+.ummia-list{list-style:none;padding:0;margin:0}
+.ummia-list>li{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--k-line);padding:9px 2px}
+.ummia-list>li .k-grow{min-width:180px}
+.ummia-tick{color:var(--k-p)}
+.ummia-cardsay{border-left:2px solid var(--k-p);padding:2px 0 2px 12px;margin:8px 0}
+.ummia-word{border-left:2px solid var(--k-edge);padding:2px 0 2px 12px;margin:8px 0}
+.k-act .ummia-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 2px}
+@media (max-width:600px){
+  .k-top .k-tabs{display:none}
+  .ummia-foot{padding:0 12px 8px}
+}`;
 
-export const STYLE = `${DUB_STYLE}
-:root{--line:${TINT.line};--edge:${TINT.edge};--tint:${TINT.accent}}
-button:hover,.door:hover{border-color:var(--tint)}
-input:focus,textarea:focus,select:focus{border-color:var(--tint)}
-details>summary::before{color:var(--tint)}
-.bar{border-bottom-color:var(--edge)}
-.count{background:var(--edge)}
-.card{background:var(--raise)}
-.tabs{flex-wrap:wrap;min-width:0}
-.bar .me{flex-shrink:0}
-.item{border:1px solid var(--edge);border-radius:12px;padding:12px 14px;margin:12px 0;background:var(--raise)}
-.item h3{margin:0 0 4px;font-weight:400;font-size:15px}
-.item .meta{font-size:12px;color:var(--soft);overflow-wrap:anywhere}
-.item ul{margin:6px 0;padding-left:1.1em;font-size:14px}
-.item li{margin:3px 0}
-li.bad{color:var(--bad)}
-li.warn{color:var(--soft)}
-.hash{font:12px/1.5 ui-monospace,"SF Mono",Menlo,monospace;color:var(--text);overflow-wrap:anywhere;border:1px solid var(--edge);border-radius:10px;padding:8px 10px;background:var(--bg);margin:6px 0}
-.v{font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding:1px 8px;border-radius:999px;border:1px solid var(--edge);color:var(--soft)}
-.v.valid{color:var(--text);border-color:var(--tint)}
-.v.bad{color:var(--bad);border-color:var(--bad)}
-.limit{border:1px solid var(--edge);border-radius:12px;padding:10px 14px;margin:12px 0;font-size:13px;color:var(--soft)}
-.files{max-height:320px;overflow:auto;border-top:1px solid var(--line);margin-top:6px;font-size:12px}
-.files div{display:flex;gap:10px;justify-content:space-between;border-bottom:1px solid var(--line);padding:3px 0}
-.files code{overflow-wrap:anywhere}
-.ticks{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px 12px}
-.ticks label{font-size:13px;color:var(--soft)}
-textarea.spec{min-height:220px;font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace}
-.picker{border:1px solid var(--edge);border-radius:12px;padding:8px 12px;margin:8px 0}
-.picker button{margin:2px 4px 2px 0}
-.blocking{border:1px solid var(--bad);border-radius:12px;padding:10px 14px;margin:12px 0}`;
+export const lines = (ls: Line[]) => (ls.length ? `<ul class="ummia-lines">${ls.map((l) => `<li class="${e(l.tone ?? '')}">${e(l.text)}</li>`).join('')}</ul>` : '');
+const says = (xs: string[]) => xs.map((x) => `<p class="k-small k-soft">${e(x)}</p>`).join('');
 
-export const note = (kind: 'error' | 'done' | 'warn' | 'spent' | '', html: string) => `<div class="note ${kind}">${html}</div>`;
-export const lines = (ls: Line[]) => (ls.length ? `<ul>${ls.map((l) => `<li class="${e(l.tone ?? '')}">${e(l.text)}</li>`).join('')}</ul>` : '');
-const says = (xs: string[]) => xs.map((x) => `<p class="small">${e(x)}</p>`).join('');
-const fp = (id: string) => `<span class="fp" title="${e(id)}">${e(id.slice(0, 8))}…${e(id.slice(-4))}</span>`;
+/** An ID written for people (`mid1…`, `mact1…`) from its hexadecimal: Dub's, shared. */
+export const formOf = actFormOf;
 
-function testNotice(web: boolean): string {
-  return web ? '' : `<div class="banner" id="test-only">${TEST_ONLY}. The signing key is held in software in this program’s folder: a prototype, never for a real identity.</div>`;
+/** A spec hash written for people (`mspec1…`). */
+export const specFormOf = (hex: string): string => (/^[0-9a-f]{64}$/.test(hex) ? specBech(hex) : hex);
+
+/** bech32m, as the IDs' forms are written (Identity's forms for people), for the label `mspec`. */
+function specBech(hex: string): string {
+  const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+  const bytes = hex.match(/../g)!.map((b) => parseInt(b, 16));
+  const data: number[] = [];
+  let acc = 0;
+  let bits = 0;
+  for (const b of bytes) {
+    acc = (acc << 8) | b;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      data.push((acc >> bits) & 31);
+    }
+  }
+  if (bits) data.push((acc << (5 - bits)) & 31);
+  const hrp = 'mspec';
+  const polymod = (v: number[]) => {
+    const G = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+    let chk = 1;
+    for (const x of v) {
+      const top = chk >> 25;
+      chk = ((chk & 0x1ffffff) << 5) ^ x;
+      for (let i = 0; i < 5; i++) if ((top >> i) & 1) chk ^= G[i];
+    }
+    return chk;
+  };
+  const expand = [...[...hrp].map((c) => c.charCodeAt(0) >> 5), 0, ...[...hrp].map((c) => c.charCodeAt(0) & 31)];
+  const mod = polymod([...expand, ...data, 0, 0, 0, 0, 0, 0]) ^ 0x2bc830a3;
+  const check = [0, 1, 2, 3, 4, 5].map((i) => (mod >> (5 * (5 - i))) & 31);
+  return `${hrp}1${[...data, ...check].map((d) => CHARSET[d]).join('')}`;
 }
 
-export function top(web = false, back = false): string {
-  return `<header class="bar"><h1 class="mark">${NAME}</h1><span class="grow"></span>${back ? '<button class="quiet" data-action="back">Back to Ummia</button>' : `<span class="small">${web ? 'web client, for testing only' : 'this machine only'}</span>`}</header>
-${testNotice(web)}`;
+/** A hash, easy to copy (decided): its short form shown, the whole form copied. */
+export const hashCopy = (hex: string, big = false, label = '') =>
+  `<span class="ummia-hash">${label ? `<span class="k-small k-soft">${e(label)}</span>` : ''}<span class="k-mono${big ? ' ummia-big' : ''}" title="${e(specFormOf(hex))}">${e(big ? specFormOf(hex) : shortForm(specFormOf(hex)))}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(specFormOf(hex))}">Copy</button></span>`;
+export const actCopy = (hex: string, label = '') =>
+  `<span class="ummia-hash">${label ? `<span class="k-small k-soft">${e(label)}</span>` : ''}<span class="k-mono" title="${e(formOf(hex))}">${e(shortForm(formOf(hex)))}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(formOf(hex))}">Copy</button></span>`;
+
+export const idCopy = (hex: string) =>
+  `<span class="ummia-hash"><span class="k-mono" title="${e(formOf(hex, 'mid'))}">${e(shortForm(formOf(hex, 'mid')))}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(formOf(hex, 'mid'))}">Copy</button></span>`;
+
+// ---------------------------------------------------------------- the frame
+
+/** The tabs, by key, in the order of the tiles. */
+export type Tab = 'look' | 'discuss' | 'publish' | 'choose';
+
+export const TILES: (Tile & { key: Tab })[] = [
+  { key: 'look', name: 'Look', say: 'One feed: point at a relay, an ID, your contacts or a release; filter by releases, cMIPs, Modules, xtypes, extensions.', icon: 'look', danger: 1 },
+  { key: 'discuss', name: 'Discuss', say: 'MIP drafts, their discussion, bug reports and answers.', icon: 'discuss', danger: 1 },
+  { key: 'publish', name: 'Publish', say: 'Releases of code, cMIPs and Modules, the hash first, and their cards; anchoring, paid in Damgar.', icon: 'publish', danger: 2 },
+  { key: 'choose', name: 'Choose', say: 'The accepted list, by layer: what every app may use.', icon: 'choose', danger: 2 },
+];
+
+/** Who acts now: the identity in use, or one of its collectives (the identity panel's gesture). */
+export function actingOf(s: State): Actor | null {
+  return s.actors.find((a) => a.id === s.acting && a.kind === 'collective') ?? null;
+}
+
+/** The top of the window: Ummia (back to the tiles), its tabs once a tile is open, the identity (or the collective acted as) top right. */
+export function topBar(s: State, tab: Tab | null): string {
+  const i = s.identity;
+  const tabs = tab ? `<nav class="k-tabs" aria-label="Ummia">${TILES.map((t) => `<button type="button" class="k-tab${t.key === tab ? ' k-on' : ''}" data-tab="${t.key}"${t.key === tab ? ' aria-current="page"' : ''}>${e(t.name)}</button>`).join('')}</nav>` : '';
+  const c = actingOf(s);
+  const me = i ? meButton({ name: i.runner ? 'via Kišib' : shortForm(formOf(i.id, 'mid')), form: formOf(i.id, 'mid'), as: c ? { name: `Collective ${shortForm(formOf(c.id, 'mid'))}`, form: formOf(c.id, 'mid') } : null }) : '';
+  return top({ left: `<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME, 'icon.png')}</button>${tabs}`, right: me });
+}
+
+/** The four tiles and their danger marks. */
+export function home(s: State, web: boolean): string {
+  return `${topBar(s, null)}<div id="spent-at"></div><div class="k-body k-col-flex">${tiles(TILES)}</div>
+<div class="ummia-foot">${say(TEST_ONLY, [web ? 'The web client is for testing only: the banner above says its risks.' : 'The signing key is held in software in this program’s folder: a prototype, never for a real identity.'])}</div>`;
+}
+
+/** Each tab's column. */
+export function column(tab: Tab, s: State, k: { mips: number; threads: number; reports: number; anchors: number; published: number }): ColumnEntry[] {
+  switch (tab) {
+    case 'look':
+      return [
+        { key: 'feed', label: 'The feed' },
+        { key: 'page', label: 'A specification’s page' },
+        { key: 'acts', label: 'One specification’s acts' },
+        '-',
+        'Saved',
+        ...s.saved.map((x) => ({ key: `saved:${x.key}`, label: x.label })),
+        ...(s.saved.length ? [] : [{ key: 'saved-none', label: 'None yet' }]),
+      ];
+    case 'discuss':
+      return [{ key: 'mips', label: 'MIP drafts', k: k.mips }, { key: 'threads', label: 'Discussions', k: k.threads }, { key: 'reports', label: 'Bug reports', k: k.reports }, '-', { key: 'mip-new', label: '+ Start a MIP' }];
+    case 'publish':
+      return [{ key: 'release', label: 'A release' }, { key: 'spec', label: 'A cMIP or Module' }, { key: 'anchoring', label: 'Anchoring', k: k.anchors }, '-', { key: 'published', label: 'Published here', k: k.published }];
+    case 'choose':
+      return [{ key: 'every', label: 'Every layer' }, ...LAYERS.map((l) => ({ key: `layer:${l}`, label: l })), '-', { key: 'accept-hash', label: '+ Accept by hash' }];
+  }
+}
+
+export const LAYERS = ['Identity', 'Text', 'Envelopes', 'Money', 'Agreements', 'Development'] as const;
+
+export const firstPart = (tab: Tab): string => ({ look: 'feed', discuss: 'mips', publish: 'release', choose: 'every' })[tab];
+
+/** A tab opened: its column on the left, the part on the right. */
+export function tabPage(s: State, tab: Tab, part: string, k: Parameters<typeof column>[2]): string {
+  return `${topBar(s, tab)}<div id="spent-at"></div>${opened(column(tab, s, k), part, `<div class="ummia-pane${tab === 'look' && part !== 'page' && part !== 'acts' ? ' ummia-look' : ''}" id="pane"><p class="k-empty">Reading…</p></div><div id="status" class="k-status"></div>`)}`;
 }
 
 export function pairing(): string {
-  return `${top()}
-<h2>Pair this browser</h2>
-<p class="small">This page acts for the Ummia program running on this machine, which holds the keys. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
-<form id="pair" class="row"><input id="pair-code" class="grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
-<button type="submit">Pair</button></form>
-<div id="pair-status"></div>`;
+  return `<div class="ummia-first">${appMark(NAME, 'icon.png')}<h2>Pair this browser</h2>
+<p class="k-small k-soft">This page acts for the Ummia program running on this machine, which holds the keys. Open it with the app (it pairs by itself), or enter a code the program gave.</p>
+<form id="pair" class="k-row"><input id="pair-code" class="k-grow" type="text" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" required>
+<button type="submit" class="k-btn k-p">Pair</button></form><div id="pair-status"></div></div>`;
 }
 
-// ------------------------------------------------------------------ the identity window
+/** A page of the program's start with nothing else: a note alone. */
+export const alone = (html: string) => `<div class="ummia-first">${appMark(NAME, 'icon.png')}${html}</div>`;
+export const top0 = (web = false) => alone(web ? '<p class="k-small k-soft">The web client, for testing only.</p>' : '');
 
-export function identityWindow(s: State, web: boolean): string {
-  const held = s.held.length
-    ? `<h2>Identities held here</h2><div class="held"><ul>${s.held.map((h) => `<li><span class="fp" title="${e(h.id)}">${e(h.short)}</span>${h.active ? '<span class="small">in use</span>' : `<button data-action="use" data-id="${e(h.id)}">Use this one</button>`}<button class="quiet" data-action="forget" data-id="${e(h.id)}">Forget it here</button></li>`).join('')}</ul></div>`
-    : '';
-  const i = s.identity;
-  const mine = i
-    ? `<section class="card"><h3>In use</h3><p class="id">${e(i.grouped)}</p>
-<dl class="facts"><dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd><dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd><dt>Ummia’s line</dt><dd>${cardWords(i.line, 'Ummia', e)}</dd></dl>
-<p class="small">Some of Ummia’s acts are sealed (your accepted list, an anchor’s payment for Damgar), so Kišib cannot read its line from the homes: when the signing key is changed there, give Kišib this card (latest act, position, summary), or every act signed here becomes void (Identity rule 35).</p>
-${i.encryption ? '' : note('warn', 'Ummia holds no encryption key for this identity: its accepted list cannot be read or changed here.')}
-<div class="row"><button data-action="carry">Show the signing key’s words</button><button data-action="leave" class="quiet">Leave it</button><button data-action="back" class="primary">Back to Ummia</button></div>
-<details><summary>Its signing key was changed elsewhere (in Kišib): take the new words</summary><form id="renew"><label>The new signing key’s 24 words</label><textarea name="words" required></textarea><div class="row"><button type="submit">Use the new words</button></div></form></details></section>`
-    : '';
-  return `${top(web, !!i)}
-<h2>${i ? 'The identity' : 'First, an identity'}</h2>
-<p class="small">Ummia never makes an identity and never holds a chain key. Bring one you have, by its ID and its signing key’s words, as in Dub: Dub’s identity window shows them (“Show the signing key’s words”).</p>
-${mine}
-${held}
-<section class="card"><h3>Bring an identity you have</h3>
-<form id="bring"><label>Its ID</label><input name="id" autocomplete="off" spellcheck="false" required>
-<label>Its signing key’s 24 words (never the chain key’s)</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
-<label>An address where it is found (one of its homes)</label><input name="address" placeholder="https://" required>
-<details><summary>Relays, if it names none</summary><label>One per line</label><textarea name="relays"></textarea></details>
-<div class="row"><button type="submit" class="primary">Bring it</button></div></form></section>
-<div id="status"></div>`;
-}
+// ---------------------------------------------------------------- the first screen, and + Add
 
-export function carry(c: { grouped: string; words: string[] }, web: boolean): string {
-  return `${top(web, true)}<h2>The signing key’s words</h2>
-<p class="small">With the ID, they bring this identity into Ummia, Dub, Damgar or Edubba on another device. Whoever holds them can publish as this identity and open what is sealed to it. They are not the chain key’s words.</p>
-<p class="id">${e(c.grouped)}</p><div class="words">${c.words.map((w, i) => `<span><b>${i + 1}</b>${e(w)}</span>`).join('')}</div>
-<div class="row"><button data-action="back" class="primary">Back to Ummia</button></div>`;
-}
+const runnerSay = (web: boolean) => (web ? 'through Kišib’s runner, in the computer’s program only: never in the web client' : 'through Kišib’s runner, on this Mac: Ummia holds no key, and Kišib’s panel asks for every act');
 
-// ------------------------------------------------------------------ the app: tabs
-
-export type Tab = 'releases' | 'specs' | 'track' | 'mips' | 'reports' | 'accepted' | 'settings';
-export const TABS: [Tab, string][] = [
-  ['releases', 'Releases'],
-  ['specs', 'Specifications'],
-  ['track', 'Tracking'],
-  ['mips', 'MIPs'],
-  ['reports', 'Reports'],
-  ['accepted', 'Accepted'],
-  ['settings', 'Settings'],
+/** + Add's ways, as the identity panel lists them: Ummia never makes an identity (as before), so bring one or use one from Kišib. */
+export const ADD = (web: boolean) => [
+  { key: 'bring', label: 'Bring one', say: 'its ID and its signing key’s words (Ummia never makes one)' },
+  { key: 'kishib', label: 'Use one from Kišib', say: runnerSay(web), empty: web },
 ];
 
-export function app(s: State, web: boolean, on: Tab): string {
-  const i = s.identity!;
-  return `<header class="bar"><h1 class="mark">${NAME}</h1>
-<nav class="tabs">${TABS.map(([k, label]) => `<button class="tab${k === on ? ' on' : ''}" data-tab="${k}">${label}</button>`).join('')}</nav>
-<button class="me" data-action="window" title="The identity"><span class="who"><span class="fp" title="${e(i.id)}">${e(i.short)}</span><span class="you">you</span></span></button></header>
-${testNotice(web)}
-<div id="spent"></div>
-${chooserHtml(s.actors, s.acting)}
-<div id="status"></div>
-${TABS.map(([k]) => `<section id="${k}"${k === on ? '' : ' hidden'}><div id="${k}-body"><p class="empty">Reading…</p></div></section>`).join('\n')}`;
+/** No identity yet: bring one, or use one from Kišib. */
+export function firstScreen(web: boolean, part: 'bring' | 'kishib' = 'bring'): string {
+  return `<div class="ummia-first">${appMark(NAME, 'icon.png')}<h2>First, an identity</h2>
+<p class="k-soft">Ummia never makes an identity and never holds a chain key. Bring one you have, by its ID and its signing key’s words, as Dub, Edubba or Kišib show them; or, on the Mac, use one Kišib holds.</p>
+<div class="k-row">${ADD(web).map((a) => `<button type="button" class="k-btn${a.key === part ? ' k-p' : ''}" data-add="${a.key}"${a.empty ? ' disabled' : ''}>${e(a.label)}</button>`).join('')}</div>
+<div id="first-part">${part === 'kishib' ? '<p class="k-small k-soft">Reading Kišib’s runner…</p>' : bringForm()}</div>
+<div id="status" class="k-status"></div></div>`;
 }
 
-// ------------------------------------------------------------------ a review, before anything is signed
+export function bringForm(): string {
+  return `<form id="bring"><p class="k-small k-soft">By its ID and its signing key’s words (never the chain key’s).</p>
+<label>Its ID (mid1…, or its hexadecimal)</label><input name="id" autocomplete="off" spellcheck="false" required>
+<label>Its signing key’s 24 words</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
+<label>An address where it is found (one of its homes)</label><input name="address" placeholder="https://" required>
+<label>Relays, one per line, if it names none</label><textarea name="relays"></textarea>
+<div class="k-row"><button type="submit" class="k-btn k-p">Bring it</button></div></form>`;
+}
+
+/** Use one from Kišib: the pairing, its code, the identities Kišib lets Ummia use. */
+export function runnerForm(r: { available: boolean; state: string | null; code: string | null; identities: { id: string; form: string; name: string | null; held: boolean }[]; problem: string | null }): string {
+  if (!r.available) return `<p class="k-small k-soft">Kišib’s runner is in the computer’s program only, on the Mac: never in the web client. Bring the identity here by its words instead.</p>`;
+  const ids = r.identities.length
+    ? `<div class="k-list">${r.identities.map((x) => `<div><span>${e(x.name ?? shortForm(x.form))} <span class="k-mono k-faint">${e(shortForm(x.form))}</span></span><button type="button" class="k-btn k-small k-r" data-runner-take="${e(x.id)}">${x.held ? 'Use it' : 'Use it here'}</button></div>`).join('')}</div>`
+    : '';
+  return `${r.problem ? note('error', e(r.problem)) : ''}
+${say('Kišib keeps the identity’s signing key on this Mac; Ummia holds none.', ['Pairing starts here and is approved in Kišib (Runner, Apps), comparing the code. Then every act Ummia would sign is a request to Kišib, and Kišib’s panel appears inside Ummia’s window. What is sealed to the identity (the accepted list, the follow list) does not open in Ummia.'])}
+${r.state === 'approved' ? `<p class="k-small">Kišib approved Ummia (code ${e(r.code ?? '')}). The identities it lets Ummia use:</p>${ids || '<p class="k-small k-soft">None yet: choose some for Ummia in Kišib.</p>'}` : r.state === 'waiting' ? `<p>Approve Ummia in Kišib (Runner, Apps), comparing this code: <span class="k-mono">${e(r.code ?? '')}</span></p><div class="k-row"><button type="button" class="k-btn" data-action="runner-look">I approved it in Kišib</button></div>` : `<div class="k-row"><button type="button" class="k-btn k-p" data-action="runner-pair">Ask Kišib to pair</button></div>`}`;
+}
+
+// ---------------------------------------------------------------- the identity's own menu, its parts in the pop-up
+
+export const IDENTITY_MENU = [
+  ['words', 'Words', ''],
+  ['line', 'Line and homes', ''],
+  ['renew', 'New words from Kišib', 'after a change of keys'],
+  ['collective', 'A collective under it', ''],
+  ['remove', 'Remove from Ummia…', ''],
+] as const;
+
+export function wordsShown(c: { grouped: string; words: string[] }): string {
+  return `<p class="k-small k-soft">With the ID, they bring this identity into Ummia, Dub, Damgar or Edubba on another device. Whoever holds them can publish as this identity and open what is sealed to it. They are not the chain key’s words.</p>
+<p class="k-mono">${e(c.grouped)}</p><div class="k-words">${c.words.map((w, i) => `<span><b>${i + 1}</b>${e(w)}</span>`).join('')}</div>`;
+}
+
+export function lineShown(s: State): string {
+  const i = s.identity!;
+  return `<dl class="k-facts"><dt>ID</dt><dd>${idCopy(i.id)}</dd><dt>Homes</dt><dd>${e(i.homes.join(', '))}</dd><dt>Relays</dt><dd>${e(i.relays.join(', '))}</dd><dt>Ummia’s line</dt><dd>${cardWords(i.line, 'Ummia', e)}</dd></dl>
+${say('Give Kišib this card at a change of keys.', ['Some of Ummia’s acts are sealed (your accepted list, the follow list, an anchor’s payment for Damgar), so Kišib cannot read its line from the homes: when the signing key is changed there, give Kišib this card (latest act, position, summary), or every act signed here becomes void.'])}
+${i.encryption || i.runner ? '' : note('error', 'Ummia holds no encryption key for this identity: its accepted list cannot be read or changed here.')}`;
+}
+
+export function renewForm(): string {
+  return `<form id="renew"><p class="k-small k-soft">Its signing key was changed elsewhere (in Kišib): give the new signing key’s words, and Ummia signs with them, in a new line.</p><label>The new signing key’s 24 words</label><textarea name="words" required autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Use the new words</button></div></form>`;
+}
+
+export function collectiveForm(s: State): string {
+  const cs = s.actors.filter((a) => a.kind === 'collective');
+  return `<p class="k-small k-soft">A collective whose area reaching its releases you hold a box in: Ummia acts for it with your own key for it, sealed to you when you signed its founding or a member change. Then choose it under this identity in the panel: Publish signs its releases.</p>
+${cs.length ? `<div class="k-list">${cs.map((c) => `<div><span class="k-mono">${e(shortForm(formOf(c.id, 'mid')))}</span><span class="k-small k-soft">${c.available ? 'can act' : e(c.why ?? '')}</span></div>`).join('')}</div>` : ''}
+<form id="collective-add" class="k-row"><input name="collective" class="k-grow" placeholder="A collective’s ID (mid1… or hex)" autocomplete="off" spellcheck="false" required><button type="submit" class="k-btn k-p">Act for it</button></form>`;
+}
+
+/** Relays, in the panel's foot (as drawn): where this identity's acts go, and the relays Look asks. The reporting identity is in Discuss › Bug reports. */
+export function relaysForm(s: State): string {
+  return `<form id="relays"><label>Relays your acts go to (specifications, releases, cards, drafts, reports), one per line</label><textarea name="relays" spellcheck="false">${e(s.settings.relays.join('\n'))}</textarea>
+<label>Public relays Look asks, one per line</label><textarea name="track" spellcheck="false">${e(s.settings.track.join('\n'))}</textarea>
+<div class="k-row"><button type="submit" class="k-btn k-p">Save</button></div></form>
+<dl class="k-facts"><dt>Homes</dt><dd>${e(s.identity?.homes.join(', ') ?? '')} (the identity’s chain names them; changed in Kišib)</dd></dl>`;
+}
+
+/** A key changed elsewhere: the warning, the box for the new words right under it. */
+export function spent(sayIt: string): string {
+  return `<div class="k-alarmbox" id="spent">${e(sayIt)}</div><div class="k-box" id="spent-words">${renewForm()}</div>`;
+}
+
+// ---------------------------------------------------------------- a review, before anything is signed
 
 export function review(r: Review, confirmAction = 'confirm'): string {
   const files = r.files
-    ? `<details class="fold" open><summary>Its files (${r.files.length}), each with its size and fingerprint</summary><div class="files">${r.files.map((f) => `<div><span>${e(f.path)}</span><span>${f.size} bytes</span><code>${e(f.fingerprint)}</code></div>`).join('')}</div></details>${r.skipped?.length ? `<p class="small">Left out: ${e(r.skipped.join('; '))}</p>` : ''}
-<details class="fold"><summary>The libraries it depends on (${r.dependencies?.length ?? 0})</summary>${r.dependencies?.length ? `<div class="files">${r.dependencies.map((d) => `<div><span>${e(d.registry)}</span><span>${e(d.name)}</span><span>${e(d.version)}</span></div>`).join('')}</div>` : '<p class="small">None: it names no lock file (Cargo.lock, package-lock.json).</p>'}</details>`
+    ? `<details open><summary>Its files (${r.files.length}), each with its size and fingerprint</summary><div class="ummia-files">${r.files.map((f) => `<div><span>${e(f.path)}</span><span>${f.size} bytes</span><code>${e(f.fingerprint)}</code></div>`).join('')}</div></details>${r.skipped?.length ? `<p class="k-small k-soft">Left out: ${e(r.skipped.join('; '))}</p>` : ''}
+<details><summary>The libraries it depends on (${r.dependencies?.length ?? 0})</summary>${r.dependencies?.length ? `<div class="ummia-files">${r.dependencies.map((d) => `<div><span>${e(d.registry)}</span><span>${e(d.name)}</span><span>${e(d.version)}</span></div>`).join('')}</div>` : '<p class="k-small k-soft">None: it names no lock file (Cargo.lock, package-lock.json).</p>'}</details>`
     : '';
-  return `<div class="item review" data-plan="${e(r.plan)}"><h3>${e(r.title)}</h3>
-${r.hash ? `<label>Its spec hash</label><div class="hash" id="review-hash" title="${e(r.hash)}">${e(shownSpec(r.hash))}</div><p class="small">In hexadecimal: ${e(r.hash)}</p>` : ''}
+  return `<div class="k-box k-fill review" data-plan="${e(r.plan)}"><h3>${e(r.title)}</h3>
+${r.hash ? `<p class="k-small k-soft">Its hash, first</p><div id="review-hash">${hashCopy(r.hash, true)}</div><p class="k-small k-faint">In hexadecimal: ${e(r.hash)}</p>` : ''}
 ${says(r.summary)}
-${r.sections.map((x) => `<p class="small"><b>${e(x.heading)}</b></p>${lines(x.lines)}`).join('')}
+${r.sections.map((x) => `<p class="k-small"><b>${e(x.heading)}</b></p>${lines(x.lines)}`).join('')}
 ${files}
-${r.blocking.length ? `<div class="blocking"><b>It cannot be signed as it is</b>${lines(r.blocking.map((t) => ({ text: t, tone: 'bad' })))}</div>` : ''}
-<p class="small">The digest of exactly what is signed: <code>${e(r.digest)}</code></p>
-<div class="row">${r.blocking.length ? '' : `<button class="primary" data-action="${e(confirmAction)}" data-plan="${e(r.plan)}" data-digest="${e(r.digest)}">Sign and publish</button>`}<button class="quiet" data-action="cancel" data-plan="${e(r.plan)}">Leave it</button></div></div>`;
+${r.blocking.length ? `<div class="ummia-blocking"><b>It cannot be signed as it is</b>${lines(r.blocking.map((t) => ({ text: t, tone: 'bad' })))}</div>` : ''}
+<p class="k-small k-faint">The digest of exactly what is signed: <code>${e(r.digest)}</code></p>
+<div class="k-row">${r.blocking.length ? '' : `<button type="button" class="k-btn k-p" data-action="${e(confirmAction)}" data-plan="${e(r.plan)}" data-digest="${e(r.digest)}">Sign and publish</button>`}<button type="button" class="k-btn k-q" data-action="cancel" data-plan="${e(r.plan)}">Leave it</button></div></div>`;
 }
 
-// ------------------------------------------------------------------ releases
+// ---------------------------------------------------------------- Look
 
-export function releases(s: State, r: { releases: { id: string; name: string; version: string; folder: string; collective?: string }[]; anchors: AnchorShown[]; anchorSay: string[] } | null): string {
-  if (!s.releases) {
-    return `<h2>Releases of code</h2>${note('warn', 'Releases are made from a folder on a computer: in Ummia on the Mac or Linux. This web client reads no folder, so it makes no release.')}`;
-  }
-  const list = r?.releases ?? [];
-  const opts = list.map((x) => `<option value="${e(x.id)}">${e(x.name)} ${e(x.version)} (${e(x.id.slice(0, 8))}…)</option>`).join('');
-  const rows = list.length
-    ? list
-        .map(
-          (x) => `<div class="item" data-release="${e(x.id)}"><h3>${e(x.name)} ${e(x.version)}</h3><div class="meta">${fp(x.id)} · from ${e(x.folder)}</div>
-<div class="row"><button data-action="release check" data-id="${e(x.id)}">Check it as anyone would</button>${x.collective ? `<button data-action="release standing" data-id="${e(x.id)}">Does it count for the collective?</button>` : ''}<button class="quiet" data-action="anchor open" data-id="${e(x.id)}">Anchor it on Bitcoin (optional)</button></div><div class="check-out" id="check-${e(x.id)}"></div><div id="anchor-${e(x.id)}"></div></div>`,
-        )
-        .join('')
-    : '<p class="empty">No release from here yet.</p>';
-  const anchors = r?.anchors.length
-    ? `<h2>Anchors asked</h2>${r.anchors.map((a) => `<div class="item"><h3>${e(a.label)}</h3><div class="meta">${fp(a.act)} · tier ${a.tier} · by ${fp(a.service)} · <span class="v${a.state === 'anchored' ? ' valid' : a.state === 'invalid' ? ' bad' : ''}">${e(a.state)}</span></div>${lines(a.lines)}</div>`).join('')}`
-    : '';
-  const forCollective = s.actors.find((a) => a.id === s.acting)?.kind === 'collective';
-  return `<h2>${forCollective ? 'A release of the collective' : 'A release under your own name'}</h2>
-<p class="small">${forCollective ? 'Signed with your own key for the collective (F353): it counts once the area reaching its releases is met; where it asks more keys, its other holders are asked, and sign in their own app. A collective’s releases moved here from Edubba (F339).' : 'A collective’s releases are made here too: choose it under Who acts, or add it by its ID.'}</p>
-<form id="release"><label>The folder (a git folder gives what git tracks; a plain folder every file but hidden ones)</label>
-<div class="row"><input name="folder" class="grow" autocomplete="off" spellcheck="false" placeholder="~/code/my-module"><button type="button" data-action="folders">Choose a folder…</button></div>
-<div id="picker"></div><p class="small" id="folder-said"></p>
-<label>Its name (the folder’s, by default)</label><input name="name" autocomplete="off">
-<label>Its version</label><input name="version" autocomplete="off" placeholder="1.0">
-<label>The release before it</label><select name="previous"><option value="">None: a new release line</option>${opts}</select>
-<label>Specifications it implements (optional): their publications’ act ids, one per line</label><textarea name="implements" spellcheck="false"></textarea>
-<div class="row"><button type="submit">Read it back</button></div></form>
-<div id="release-review"></div>
-<h2>Your releases</h2>${rows}${anchors}`;
+export const POINT_KINDS: { key: 'relay' | 'id' | 'contacts' | 'release'; label: string }[] = [
+  { key: 'relay', label: 'a relay' },
+  { key: 'id', label: 'a single ID' },
+  { key: 'contacts', label: 'my contacts' },
+  { key: 'release', label: 'a release' },
+];
+export const FILTER_CHIPS: { key: Filter; label: string }[] = [
+  { key: 'releases', label: 'releases' },
+  { key: 'cmips', label: 'cMIPs' },
+  { key: 'modules', label: 'Modules' },
+  { key: 'xtypes', label: 'xtypes' },
+  { key: 'extensions', label: 'extensions' },
+  { key: 'mips', label: 'MIPs' },
+];
+
+export interface LookAt {
+  point: { kind: 'relay' | 'id' | 'contacts' | 'release'; value: string };
+  filters: Filter[];
+  layer: string | null;
 }
 
-export function picker(l: { path: string; parent: string | null; places: { name: string; path: string }[]; folders: { name: string; path: string; git: boolean; spaced: string | null }[]; hidden: number; problem: string | null }): string {
-  return `<div class="picker"><p class="small">${e(l.path)}</p>
-<div>${l.places.map((p) => `<button type="button" class="quiet" data-action="folders" data-path="${e(p.path)}">${e(p.name)}</button>`).join('')}${l.parent ? `<button type="button" class="quiet" data-action="folders" data-path="${e(l.parent)}">Up</button>` : ''}<button type="button" class="primary" data-action="folder use" data-path="${e(l.path)}">Use this folder</button></div>
-${l.problem ? note('warn', e(l.problem)) : ''}
-<div>${l.folders.map((f) => `<button type="button" data-action="folders" data-path="${e(f.path)}">${e(f.name)}${f.git ? ' · git' : ''}${f.spaced ? ` (${e(f.spaced)})` : ''}</button>`).join('')}</div>${l.hidden ? `<p class="small">${l.hidden} hidden folder${l.hidden === 1 ? '' : 's'} not shown.</p>` : ''}</div>`;
+/** Point at, filter by, by layer: the rows above the feed (as drawn), and the field for what is pointed at. */
+export function lookHead(at: LookAt, s: State, saved: Saved | null): string {
+  const relays = s.settings.track.length ? s.settings.track : s.settings.relays;
+  const field =
+    at.point.kind === 'relay'
+      ? `<select name="value" class="k-grow">${relays.map((r) => `<option${r === at.point.value ? ' selected' : ''}>${e(r)}</option>`).join('')}<option value="">every relay Look asks</option></select>`
+      : at.point.kind === 'contacts'
+        ? '<span class="k-small k-soft k-grow">the people you follow (the same follow list as Dub’s)</span>'
+        : `<input name="value" class="k-grow" value="${e(at.point.value)}" placeholder="${at.point.kind === 'id' ? 'Their ID: mid1…' : 'The release’s act ID: mact1…'}" autocomplete="off" spellcheck="false">`;
+  return `${saved ? `<div class="k-row"><h2 class="k-grow">${e(saved.label)}</h2><button type="button" class="k-btn k-q k-small" data-saved-remove="${e(saved.key)}">Remove this point</button></div>` : ''}
+${pointRow('Point at', POINT_KINDS.map((p) => ({ key: p.key, label: p.key === 'relay' && at.point.kind === 'relay' && (at.point.value || relays.length === 1) ? (at.point.value || relays[0]).replace(/^https?:\/\//, '') : p.label, on: p.key === at.point.kind })), 'point')}
+${pointRow('Filter by', FILTER_CHIPS.map((f) => ({ key: f.key, label: f.label, on: at.filters.includes(f.key) })), 'filter')}
+${pointRow('Layer', [{ key: '', label: 'any', on: !at.layer }, ...LAYERS.map((l) => ({ key: l, label: l, on: at.layer === l }))], 'layer')}
+<form id="look" class="k-row">${field}<button type="submit" class="k-btn k-p">Look</button>${saved ? '' : '<button type="button" class="k-btn k-q" data-action="save-point">Save this point</button>'}</form>`;
 }
 
-export function checked(c: { ok: boolean; lines: Line[] }): string {
-  return `<div class="${c.ok ? '' : 'blocking'}">${lines(c.lines)}</div>`;
+/** Under the feed: the one line with its "?" (decided), tracking's counts behind it. */
+export function lookFoot(limit: string[], counts: Line[], placed: { placed: number; shown: number } | null): string {
+  return `${placed ? `<p class="k-clock">${placed.placed ? `Ordered by the Dubsar clock${placed.placed < placed.shown ? `; ${placed.shown - placed.placed} not stamped, kept after` : ''}.` : 'The Dubsar clock stamped none of these: in each signer’s own order, not a time.'}</p>` : ''}${say('Public agreements only, as the relays answer', [...limit.map((x) => `<p>${e(x)}</p>`), counts.length ? `<p><b>What the relays answered</b></p>${lines(counts)}` : ''].join(''))}`;
 }
 
-export function anchorForm(release: string, offers: Offer[] | null, say: string[]): string {
-  const choose = offers
-    ? offers.length
-      ? `<label>Its standing offer, and a tier</label><select name="choice">${offers.flatMap((o) => o.tiers.map((t, i) => `<option value="${e(o.act)} ${i}">offer ${e(o.act.slice(0, 8))}…, tier ${i}: within ${t.blocks} blocks, ${t.price} (its unit)</option>`)).join('')}</select><div class="row"><button type="submit" class="primary">Prepare the payment for Damgar</button></div>`
-      : note('warn', 'No standing offer of that service was found under the anchoring cMIP.')
-    : '<div class="row"><button type="submit">Read its offer</button></div>';
-  return `<form class="anchor" data-release="${e(release)}">${says(say)}<label>The anchoring service’s ID</label><input name="service" autocomplete="off" spellcheck="false" required>${choose}</form>`;
+/** A specification's page (decided 23 October 2026): everything that can be tied to it. */
+export function specPagePane(p: SpecPage & { mine: boolean; say: string[] }, nameOf: (id: string) => string): string {
+  const card = (c: FoundCard, own: boolean) => `<div class="${own ? 'ummia-cardsay' : 'ummia-word'}" data-card="${e(c.id)}"><p class="k-small k-soft">${own ? 'Its creator’s card' : `${e(nameOf(c.signer))}’s card: their word, not the specification’s`}</p><h3>${e(c.fields.title)}</h3>${c.fields.summary ? `<p>${e(c.fields.summary)}</p>` : ''}${actCopy(c.id, 'the card')}</div>`;
+  const head = `<div class="k-row"><button type="button" class="k-btn k-q k-small" data-action="look-back">← The feed</button></div>
+<h2 id="spec-title">${e(p.title)}</h2>
+${hashCopy(p.hash, true)}
+<p class="k-small k-soft">${[p.kind, p.layer, p.creator ? `by ${nameOf(p.creator)}${p.claimed ? '' : ' (unclaimed: its creator never published it)'}` : p.builtIn ? 'no creator: one of the core’s texts' : ''].filter(Boolean).map(e).join(' · ')}</p>
+${lines(p.lines)}`;
+  const own = p.own ? card(p.own, true) : p.builtIn ? `<div class="ummia-cardsay" data-builtin><p class="k-small k-soft">Ummia’s own words, built in</p><h3>${e(p.title)}</h3><p>${e(p.builtIn.summary)}</p><p class="k-small k-faint">${e(p.builtIn.say)}</p></div>` : p.found ? '<p class="k-small k-soft">Its creator has signed no card for it yet: its title is its own first line.</p>' : '';
+  const also = p.ownAlso.length ? `<p class="k-small k-soft">Its creator also signed, on another line:</p>${p.ownAlso.map((c) => card(c, true)).join('')}` : '';
+  const sect = (h: string, body: string) => `<h3>${e(h)}</h3>${body}`;
+  return `${head}${own}${also}${p.superseded ? `<p class="k-small k-faint">${p.superseded} earlier card${p.superseded === 1 ? '' : 's'}, superseded by a later one in its signer’s own sequence.</p>` : ''}
+${p.mine || (!p.creator && p.found) || !p.found ? '' : ''}<div class="k-row">${p.found ? `<button type="button" class="k-btn${p.mine ? ' k-p' : ''}" data-action="card-new" data-hash="${e(p.hash)}" data-title="${e(p.own?.fields.title ?? p.name ?? '')}">${p.mine ? 'Sign a later card' : 'Write a card of your own'}</button>` : ''}<button type="button" class="k-btn k-q" data-action="accept-hash" data-hash="${e(p.hash)}" data-label="${e((p.name ?? p.title).slice(0, 120))}">Add to accepted list</button></div>
+${sect('Its text', p.text ? `<details><summary>${e(p.name ?? '')}</summary><pre class="k-small">${e(p.text)}</pre></details>${lines(p.role.map((t) => ({ text: t })))}` : p.builtIn ? '<p class="k-small k-soft">The frozen texts are dubsar.org’s front door.</p>' : '<p class="k-empty">Not found on the relays asked.</p>')}
+${sect('Releases implementing it', p.releases.length ? `<ul class="ummia-list">${p.releases.map((r) => `<li><span class="k-grow">${e(r.name ?? 'a release')} ${e(r.version ?? '')}${r.problem ? ` <span class="k-small k-soft">(${e(r.problem)})</span>` : ''}${r.from === 'card' ? ' <span class="k-small k-faint">named by its card</span>' : ''}</span>${actCopy(r.id)}<button type="button" class="k-btn k-q k-small" data-point-release="${e(r.id)}">Its line</button></li>`).join('')}</ul>` : '<p class="k-empty">None found.</p>')}
+${sect('Its test vectors', p.vectors.length ? `<ul class="ummia-list">${p.vectors.map((v) => `<li>${/^https:\/\//.test(v) ? `<span class="k-mono k-grow">${e(v)}</span><button type="button" class="k-btn k-q k-small" data-copy="${e(v)}">Copy</button>` : actCopy(v)}</li>`).join('')}</ul>` : '<p class="k-empty">None named by its card.</p>')}
+${sect('Its discussion', p.discussion ? `<p>${e(p.discussion.text?.split('\n')[0] ?? 'Its thread')}</p>${actCopy(p.discussion.id, 'the thread')} <button type="button" class="k-btn k-q k-small" data-action="reply-open" data-to="${e(p.discussion.id)}">Reply, as a signed document</button>` : '<p class="k-empty">No thread named by its card.</p>')}
+${sect('Public agreements naming it', `<p class="k-small">${p.agreements ? `${p.agreements} public agreement${p.agreements === 1 ? '' : 's'} name${p.agreements === 1 ? 's' : ''} it as an extension.` : 'None found.'}</p>`)}
+${p.use ? sect('Its use', `<p class="k-small">${p.use.acts} public act${p.use.acts === 1 ? '' : 's'} of its types (${p.use.byType.map((t) => `${e(t.name)} ${t.acts}`).join(', ')})${p.use.notValid ? `; ${p.use.notValid} not valid, not counted` : ''}.</p>`) : ''}
+${sect('Its drafts', `${p.predecessor ? `<p class="k-small">After ${e(p.predecessor.name ?? 'a specification not found here')}${p.predecessor.otherCreator ? ' <span class="k-small">(its creator is not its predecessor’s)</span>' : ''}</p>${hashCopy(p.predecessor.hash)} <button type="button" class="k-btn k-q k-small" data-spec="${e(p.predecessor.hash)}">Its page</button>` : '<p class="k-small k-soft">It names no predecessor.</p>'}${p.successors.map((x) => `<p class="k-small">Followed by ${e(x.name)}${x.otherCreator ? ' — by another creator than this one’s' : ''}</p>${hashCopy(x.hash)} <button type="button" class="k-btn k-q k-small" data-spec="${e(x.hash)}">Its page</button>`).join('')}`)}
+${p.others.length ? sect('Others’ cards', p.others.map((c) => card(c, false)).join('')) : ''}
+${say('What a card is', p.say)}`;
 }
 
-// ------------------------------------------------------------------ specifications
-
-const TASK_TICKS = (tasks: { n: number; layer: string; name: string }[]) => `<div class="ticks">${tasks.map((t) => `<label class="check"><input type="checkbox" name="tasks" value="${t.n}"> ${t.n}. ${e(t.name)} (${e(t.layer)})</label>`).join('')}</div>`;
-
-export function specs(choices: { tasks: { n: number; layer: string; name: string }[] }, published: { id: string; hash: string; name: string; kind: string }[]): string {
-  return `<h2>Publish a specification</h2>
-<p class="small">A cMIP or a Module, published as its act and named by its spec hash, shown before anything is signed. Published for good: a changed specification is a new one. A MIP is drafted under MIPs.</p>
-<form id="spec"><label>Its kind</label><select name="kind"><option value="0">cMIP: a specification for a task, an extension, or new act types (an xtype)</option><option value="1">Module: an implementation or extension under a cMIP, or under a MIR</option></select>
-<label>Its text (canonical text: no space at the end of a line, no final line break)</label><textarea class="spec" name="text" spellcheck="false" placeholder="# cMIP: …"></textarea>
-<input type="file" id="spec-file" accept=".md,.txt,text/plain,text/markdown"><span class="small"> or load it from a file</span>
-<p class="small">Fill below only what your text says.</p>
-<details class="fold"><summary>A cMIP: the tasks it fills (field 2)</summary>${TASK_TICKS(choices.tasks)}</details>
-<details class="fold"><summary>Act types it defines (field 3): one per line, “number name schema”</summary><textarea name="types" spellcheck="false" placeholder="0 note note = tstr"></textarea></details>
-<details class="fold"><summary>A Module: the cMIP it implements, or the MIR it works under (field 5)</summary><input name="implements" spellcheck="false" placeholder="a spec hash"></details>
-<details class="fold"><summary>A rail Module: its kind and what its proof binds (fields 11 and 13)</summary><select name="railKind"><option value="">Not a rail</option><option value="0">a request rail</option><option value="1">a push rail</option></select>
-<div class="ticks"><label class="check"><input type="checkbox" name="railBinds" value="0"> the payee</label><label class="check"><input type="checkbox" name="railBinds" value="1"> the purpose</label><label class="check"><input type="checkbox" name="railBinds" value="2"> the previous hop</label></div></details>
-<details class="fold"><summary>As an extension, the layers it acts on (field 10)</summary><div class="ticks">${['Identity', 'Envelopes and Text', 'Money', 'Agreements'].map((l, i) => `<label class="check"><input type="checkbox" name="layers" value="${i}"> ${l}</label>`).join('')}</div></details>
-<details class="fold"><summary>Its predecessor (field 8), dependencies (field 4), a proof-of-delivery checker (field 12)</summary><label>The specification it replaces, for its users</label><input name="predecessor" spellcheck="false" placeholder="a spec hash">
-<label>Specifications it depends on, one per line</label><textarea name="dependencies" spellcheck="false"></textarea>
-<label class="check"><input type="checkbox" name="checker"> It checks proofs of delivery of proven offers</label></details>
-<div class="row"><button type="submit">Read it back, with its hash</button></div></form>
-<div id="spec-review"></div>
-<h2>Published from here</h2>${published.length ? published.map((p) => `<div class="item"><h3>${e(p.name)}</h3><div class="meta">${e(p.kind)} · publication ${fp(p.id)}</div><div class="hash" title="${e(p.hash)}">${e(shownSpec(p.hash))}</div></div>`).join('') : '<p class="empty">None yet.</p>'}`;
+export function pageForm(): string {
+  return `<h2>A specification’s page</h2><p class="k-small k-soft">Everything that can be tied to one specification, from the relays Look asks: its text, its creator’s card, others’ cards as their word, its releases, vectors, discussion, the agreements naming it, its drafts.</p>
+<form id="page" class="k-row"><input name="hash" class="k-grow" placeholder="Its hash: mspec1…, or hexadecimal" spellcheck="false" autocomplete="off" required><button type="submit" class="k-btn k-p">Open its page</button></form><div id="page-out"></div>`;
 }
 
-// ------------------------------------------------------------------ tracking
-
-function specCard(x: TrackedSpec, accepted: Set<string>): string {
-  const release = x.releases.length ? `<p class="small">Code released: ${x.releases.map((r) => `${e(r.name ?? 'a release')} ${e(r.version ?? '')}${r.problem ? ` (not verified: ${e(r.problem)})` : ''}`).join(', ')}.</p>` : '';
-  const use = x.use ? `<p class="small">Used: ${x.use.acts} public act${x.use.acts === 1 ? '' : 's'} of its types (${x.use.byType.map((t) => `${e(t.name)} ${t.acts}`).join(', ')})${x.use.notValid ? `; ${x.use.notValid} not valid, not counted` : ''}.</p>` : '';
-  return `<div class="item spec-card" data-hash="${e(x.hash)}"><h3>${e(x.name)}</h3>
-<div class="meta">${e(x.kind)} · ${e(x.layer)}${x.draft > 1 ? ` · draft ${x.draft} in its line` : ''} · by ${x.creator ? fp(x.creator) : 'no creator'}${x.creator ? (x.claimed ? '' : ' (unclaimed: its creator never published it)') : ''}</div>
-${lines(x.role.map((t) => ({ text: t })))}${x.otherCreator ? note('warn', 'Its creator is not its predecessor’s (Development rule 25).') : ''}${release}${use}
-<div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div>
-<div class="row">${accepted.has(x.hash) ? '<span class="small">Accepted</span>' : `<button data-action="accept spec" data-hash="${e(x.hash)}" data-label="${e(`${x.name}`.slice(0, 120))}">Accept it</button>`}</div></div>`;
-}
-
-export function trackForm(s: State): string {
-  return `<h2>Tracking</h2>
-<form id="track"><label>The public relays to ask, one per line</label><textarea name="relays" spellcheck="false">${e(s.settings.track.join('\n'))}</textarea>
-<label>Only the specifications and releases of one signer (optional)</label><input name="signer" spellcheck="false" placeholder="an identity's ID">
-<div class="row"><button type="submit" class="primary">Look</button></div></form>
-<div id="track-out"></div>
-<h2>The acts of one specification</h2>
+export function actsForm(): string {
+  return `<h2>One specification’s acts</h2><p class="k-small k-soft">The public acts of one specification on the relays Look asks, by the filters relays already have: its spec hash, and an act type and a signer where given. Each judged through its signer’s chain.</p>
 <form id="acts"><label>Its spec hash</label><input name="spec" spellcheck="false" required><label>An act type (optional)</label><input name="type" inputmode="numeric"><label>A signer (optional)</label><input name="signer" spellcheck="false">
-<div class="row"><button type="submit">Look</button></div></form><div id="acts-out"></div>`;
-}
-
-export function tracked(t: Tracked, accepted: Set<string>): string {
-  const relays = `<p class="small">${t.relays.map((r) => `${e(r.address)}: ${r.problem ? e(r.problem) : `${r.read} acts read, ${r.specs} specification${r.specs === 1 ? '' : 's'}${r.stopped ? ' (stopped: more than a look reads)' : ''}`}`).join('<br>')}</p>`;
-  const ext = t.extensions.length
-    ? t.extensions.map((x) => `<div class="item"><h3>${e(x.name ?? `A cMIP not found on these relays`)}</h3><div class="meta">named by ${x.agreements} public agreement${x.agreements === 1 ? '' : 's'}${x.layers ? ` · touches ${e(x.layers.join(', '))}` : ''}</div><div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div></div>`).join('')
-    : '<p class="empty">No public agreement found naming an extension.</p>';
-  const mips = t.mips.length
-    ? t.mips.map((m) => `<div class="item"><h3>${e(m.name)}</h3><div class="meta">${fp(m.root)}</div>${m.forks.length ? lines(m.forks.map((f) => ({ text: `${f.name}, by ${f.creator ? `${f.creator.slice(0, 8)}…` : 'no creator'} (${f.total} fork${f.total === 1 ? '' : 's'} under it)` }))) : '<p class="small">No MIP forks it here.</p>'}</div>`).join('')
-    : '<p class="empty">No MIP found.</p>';
-  return `<div class="limit">${says(t.limit)}</div>${relays}
-<h2>Extensions public agreements name</h2><p class="small">Each marks work the core did not foresee: the raw material of MOR 2. Agreements counted: ${t.agreements.counted} (${t.agreements.proposed} proposed, not signed by every party; ${t.agreements.notCounted} not verified; ${t.agreements.private} private items unread).</p>${ext}
-<h2>Xtypes: new act types from core pieces</h2>${t.xtypes.length ? t.xtypes.map((x) => specCard(x, accepted)).join('') : '<p class="empty">None found.</p>'}
-<h2>cMIPs and Modules</h2>${t.lines.length ? t.lines.map((l) => l.map((x) => specCard(x, accepted)).join('')).join('') : '<p class="empty">None found.</p>'}
-<h2>MIPs, by what they fork</h2>${mips}
-${t.unverified.length ? `<h2>Not verified</h2>${lines(t.unverified.map((u) => ({ text: `${u.id.slice(0, 12)}…: ${u.problem}`, tone: 'warn' })))}` : ''}`;
+<div class="k-row"><button type="submit" class="k-btn k-p">Look</button></div></form><div id="acts-out"></div>`;
 }
 
 export function acts(r: { acts: FoundAct[]; lines: Line[] }): string {
-  return `${lines(r.lines)}${r.acts.length ? r.acts.map((a) => `<div class="item"><div class="meta">${fp(a.id)} · type ${a.type} · by ${fp(a.signer)} · <span class="v${a.standing === 'valid' ? ' valid' : ''}">${e(a.standing)}</span></div></div>`).join('') : '<p class="empty">No public act of it found.</p>'}`;
+  return `${lines(r.lines)}${r.acts.length ? `<ul class="ummia-list">${r.acts.map((a) => `<li><span class="k-grow">type ${a.type} · by ${e(shortForm(formOf(a.signer, 'mid')))} · <span class="ummia-v${a.standing === 'valid' ? ' valid' : ''}">${e(a.standing)}</span></span>${actCopy(a.id)}</li>`).join('')}</ul>` : '<p class="k-empty">No public act of it found.</p>'}`;
 }
 
-// ------------------------------------------------------------------ MIPs
+// ---------------------------------------------------------------- Discuss
 
-export function mips(m: { drafts: MipDraft[]; say: string[]; forkable: { key: string; name: string }[] }, open: string | null): string {
-  const drafts = m.drafts.length
-    ? m.drafts
-        .map(
-          (d) => `<div class="item mip" data-key="${e(d.key)}"><h3>${e(d.title)}</h3><div class="meta">forks ${e(d.forksName)} · ${d.drafts.length} draft${d.drafts.length === 1 ? '' : 's'} published${d.published ? ` · published as a MIP, its hash ${e(d.published.hash.slice(0, 12))}…` : ''}</div>
-${d.drafts.length ? lines(d.drafts.map((x, i) => ({ text: `Draft ${i + 1}: ${x.id}` }))) : ''}
-${d.published ? `<div class="hash">${e(d.published.hash)}</div>` : `<details class="fold"${open === d.key ? ' open' : ''}><summary>Write it</summary><form class="mip-text" data-key="${e(d.key)}"><textarea class="spec" name="text" spellcheck="false">${e(d.text)}</textarea><div class="row"><button type="submit">Keep it here (nothing is sent)</button></div></form></details>
-<div class="row"><button data-action="mip draft" data-key="${e(d.key)}">Publish this draft for discussion</button><button class="quiet" data-action="mip replies" data-key="${e(d.key)}">Replies</button><button class="primary" data-action="mip prepare" data-key="${e(d.key)}">I am ready: publish it as a MIP…</button></div>`}
-<div id="mip-out-${e(d.key)}"></div></div>`,
-        )
-        .join('')
-    : '<p class="empty">No MIP drafted here yet.</p>';
-  return `<h2>A path to drafting MIPs</h2>${says(m.say)}
-<form id="mip-new"><label>Its title</label><input name="title" required><label>What it forks</label><select name="forks">${m.forkable.map((f) => `<option value="${e(f.key)}">${e(f.name)}</option>`).join('')}<option value="">A MIP, or the MICS document (for a new layer), by its spec hash:</option></select><input name="hash" spellcheck="false" placeholder="a spec hash, where chosen above">
-<div class="row"><button type="submit">Start it in the MIP shape</button></div></form>
-<h2>Your MIPs</h2>${drafts}`;
+export function mipsPane(m: { drafts: MipDraft[]; say: string[] }, open: string | null): string {
+  const one = (d: MipDraft) => `<div class="k-box mip" data-key="${e(d.key)}"><div class="k-row"><h3 class="k-grow">${e(d.title)}</h3><span class="k-chip">${d.published ? 'published as a MIP' : d.drafts.length ? 'draft · discussed' : 'draft · kept here'}</span></div>
+<p class="k-small k-soft">Forks ${e(d.forksName)} · ${d.drafts.length} draft${d.drafts.length === 1 ? '' : 's'} published for discussion${d.published ? '' : ' · kept here until you publish it'}</p>
+${d.drafts.map((x, i) => `<div>${actCopy(x.id, `draft ${i + 1}`)}</div>`).join('')}
+${d.published ? hashCopy(d.published.hash, false, 'its hash') : `<details${open === d.key ? ' open' : ''}><summary>Write it</summary><form class="mip-text" data-key="${e(d.key)}"><textarea class="ummia-code" name="text" spellcheck="false">${e(d.text)}</textarea><div class="k-row"><button type="submit" class="k-btn">Keep it here (nothing is sent)</button></div></form></details>
+<div class="k-row"><button type="button" class="k-btn" data-action="mip draft" data-key="${e(d.key)}">Publish this draft for discussion</button><button type="button" class="k-btn k-q" data-action="mip replies" data-key="${e(d.key)}">Replies</button><button type="button" class="k-btn k-q" data-action="mip prepare" data-key="${e(d.key)}">I am ready: publish it as a MIP…</button></div>`}
+<div id="mip-out-${e(d.key)}"></div></div>`;
+  return `<h2>MIP drafts</h2>${say('A MIP is a proposal toward MOR 2, drafted and discussed before it is published.', m.say)}${m.drafts.length ? m.drafts.map(one).join('') : '<p class="k-empty">No MIP drafted here yet: + Start a MIP.</p>'}`;
 }
 
-export function replies(r: { replies: Record<string, Reply[]>; lines: Line[] }): string {
-  const all = Object.entries(r.replies);
-  return `${lines(r.lines)}${all.length ? all.map(([draft, rs]) => `<p class="small">To draft ${e(draft.slice(0, 12))}…</p>${rs.map((x) => `<div class="item"><div class="meta">${fp(x.signer)} · <span class="v${x.standing === 'valid' ? ' valid' : ''}">${e(x.standing)}</span>${x.sealed ? ' · sent to you' : ''}</div><p>${e(x.text)}</p></div>`).join('')}`).join('') : '<p class="empty">No reply found yet.</p>'}`;
+export function mipNew(forkable: { key: string; name: string }[]): string {
+  return `<h2>Start a MIP</h2><form id="mip-new"><label>Its title</label><input name="title" required><label>What it forks</label><select name="forks">${forkable.map((f) => `<option value="${e(f.key)}">${e(f.name)}</option>`).join('')}<option value="">A MIP, or the MICS document (for a new layer), by its spec hash:</option></select><input name="hash" spellcheck="false" placeholder="a spec hash, where chosen above">
+<div class="k-row"><button type="submit" class="k-btn k-p">Start it in the MIP shape</button></div></form>`;
 }
 
-// ------------------------------------------------------------------ reports
-
-export function reports(r: { sent: { id: string; title: string; at: number }[]; answers: { id: string; report: string; text: string; standing: string }[]; lines: Line[]; say: string[]; to: string | null }): string {
+/** Bug reports: the reporting identity settled here (settled on the mockups), the report, its answers. */
+export function reportsPane(r: { sent: { id: string; title: string; at: number }[]; answers: { id: string; report: string; text: string; standing: string }[]; lines: Line[]; say: string[]; to: string | null }): string {
   const sent = r.sent.length
     ? r.sent
         .map((s) => {
           const as = r.answers.filter((a) => a.report === s.id);
-          return `<div class="item"><h3>${e(s.title)}</h3><div class="meta">${fp(s.id)}</div>${as.length ? as.map((a) => `<p class="small">Answered (<span class="v${a.standing === 'valid' ? ' valid' : ''}">${e(a.standing)}</span>): ${e(a.text)}</p>`).join('') : '<p class="small">No answer yet.</p>'}</div>`;
+          return `<div class="k-box"><h3>${e(s.title)}</h3>${actCopy(s.id)}${as.length ? as.map((a) => `<p class="k-small">Answered (<span class="ummia-v${a.standing === 'valid' ? ' valid' : ''}">${e(a.standing)}</span>): ${e(a.text)}</p>`).join('') : '<p class="k-small k-soft">No answer yet.</p>'}</div>`;
         })
         .join('')
-    : '<p class="empty">No report sent from here.</p>';
-  return `<h2>Report a bug</h2>${says(r.say)}
-${r.to ? `<p class="small">To the reporting identity ${fp(r.to)}.</p><form id="report"><label>The report: its first line is its title</label><textarea name="text" required></textarea><div class="row"><button type="submit" class="primary">Sign and send it</button></div></form>` : note('warn', 'Give the reporting identity’s ID under Settings first.')}
-${lines(r.lines)}
-<h2>Sent from here</h2>${sent}`;
+    : '<p class="k-empty">No report sent from here.</p>';
+  return `<h2>Bug reports</h2>${say('A report is public, signed by you, left in the reporting identity’s inbox.', r.say)}
+<form id="reporting" class="k-row"><label class="k-grow">The reporting identity<input name="reports" spellcheck="false" value="${e(r.to ? formOf(r.to, 'mid') : '')}" placeholder="Its ID: mid1…"></label><button type="submit" class="k-btn">Save</button></form>
+${r.to ? `<form id="report"><label>The report: its first line is its title</label><textarea name="text" required></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Sign and send it</button></div></form>` : note('', 'Give the reporting identity’s ID first.')}
+${lines(r.lines)}<h3>Sent from here</h3>${sent}`;
 }
 
-// ------------------------------------------------------------------ the accepted list
-
-export function accepted(a: { entries: AcceptedEntry[]; version: number; forked: boolean; merged: string[]; published: boolean; problems: string[]; say: string[] }): string {
-  return `<h2>What you accept</h2>${says(a.say)}
-${a.problems.length ? note('warn', lines(a.problems.map((t) => ({ text: t, tone: 'warn' })))) : ''}
-${a.forked ? note('warn', `Two apps changed it at once. Shown merged, nothing dropped: ${lines(a.merged.map((t) => ({ text: t })))} Your next change writes the merge.`) : ''}
-<p class="small">${a.version ? `Version ${a.version}.` : 'Nothing accepted yet: the default, under which no app signs anything under any specification.'}</p>
-${a.entries.length ? a.entries.map((x) => `<div class="item"><h3>${e(x.label ?? 'A specification with no label')}</h3><div class="meta">${e(x.part)}</div><div class="hash" title="${e(x.hash)}">${e(shownSpec(x.hash))}</div><div class="row"><button class="quiet" data-action="accepted remove" data-hash="${e(x.hash)}">Remove it</button></div></div>`).join('') : ''}
-<form id="accept-add"><label>Accept a specification by its spec hash (or press “Accept it” on one found under Tracking)</label><input name="hash" spellcheck="false" required><label>Its label (its name and draft)</label><input name="label" maxlength="120">
-<div class="row"><button type="submit">Accept it</button></div></form>
-<div class="row"><span class="grow small">${a.published ? 'Published: anyone can read which specifications you accept.' : 'Private: sealed to yourself (the default).'}</span><button data-action="accepted publish" data-on="${a.published ? 'false' : 'true'}">${a.published ? 'Make it private again' : 'Publish it'}</button></div>`;
+/** The reply box: a signed document (decided on the mockups). */
+export function replyForm(to: string, title: string): string {
+  return `<form id="reply" data-to="${e(to)}"><p class="k-small k-soft">Answering ${e(title)}: a long-form document, public, signed by you, naming it.</p><textarea name="text" required placeholder="Reply, as a signed document…"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Sign and send</button></div></form>`;
 }
 
-// ------------------------------------------------------------------ settings
+// ---------------------------------------------------------------- Publish
 
-export function settings(s: State): string {
-  return `<h2>Settings</h2>
-<form id="settings"><label>Relays your acts go to (specifications, releases, drafts, reports), one per line</label><textarea name="relays" spellcheck="false">${e(s.settings.relays.join('\n'))}</textarea>
-<label>Public relays tracking asks, one per line</label><textarea name="track" spellcheck="false">${e(s.settings.track.join('\n'))}</textarea>
-<label>The reporting identity’s ID</label><input name="reports" spellcheck="false" value="${e(s.settings.reports ?? '')}">
-<div class="row"><button type="submit" class="primary">Save</button></div></form>
-<dl class="facts"><dt>Homes</dt><dd>${e(s.identity!.homes.join(', '))} (the identity’s chain names them; changed in Kišib)</dd></dl>`;
+/** Who acts, as chips in Publish only (as drawn): yourself, or a collective you act for. */
+export function whoActs(s: State): string {
+  if (s.actors.length < 2) return '';
+  return `<div class="ummia-who"><span class="k-small k-soft">Who acts</span>${s.actors.map((a) => `<button type="button" class="k-chip${a.id === s.acting ? ' k-on' : ''}" data-acting="${e(a.id)}"${a.available ? '' : ' disabled'} aria-pressed="${a.id === s.acting}">${a.kind === 'self' ? 'You' : `Collective ${e(shortForm(formOf(a.id, 'mid')))}`}</button>`).join('')}</div>`;
 }
 
-export function spent(say: string): string {
-  return note('spent', `${e(say)} <button data-action="window">Give the new words</button>`);
+export function releasePane(s: State, r: { releases: { id: string; name: string; version: string; folder: string; collective?: string }[] } | null): string {
+  if (!s.releases) return `<h2>A release</h2>${note('', 'Releases are made from a folder on a computer: in Ummia on the Mac or Linux. This web client reads no folder, so it makes no release.')}`;
+  const list = r?.releases ?? [];
+  const opts = list.map((x) => `<option value="${e(x.id)}">${e(x.name)} ${e(x.version)} (${e(shortForm(formOf(x.id)))})</option>`).join('');
+  const forCollective = !!actingOf(s);
+  const rows = list.length
+    ? list
+        .map(
+          (x) => `<div class="k-box" data-release="${e(x.id)}"><div class="k-row"><h3 class="k-grow">${e(x.name)} ${e(x.version)}</h3>${actCopy(x.id)}</div><p class="k-small k-soft">from ${e(x.folder)}</p>
+<div class="k-row"><button type="button" class="k-btn" data-action="release check" data-id="${e(x.id)}">Check it as anyone would</button>${x.collective ? `<button type="button" class="k-btn" data-action="release standing" data-id="${e(x.id)}">Does it count for the collective?</button>` : ''}<button type="button" class="k-btn k-q" data-action="anchor open" data-id="${e(x.id)}">Anchor it on Bitcoin (optional)</button></div><div id="check-${e(x.id)}"></div><div id="anchor-${e(x.id)}"></div></div>`,
+        )
+        .join('')
+    : '<p class="k-empty">No release from here yet.</p>';
+  return `<h2>A release</h2>${whoActs(s)}
+${say(forCollective ? 'Signed with your own key for the collective: it counts once the area reaching its releases is met.' : 'A release of code under your own name, from a folder, checked as anyone would.', [forCollective ? 'Where its area asks more keys, its other holders are asked, and sign in their own app.' : 'A collective’s releases are made here too: choose it in the identity panel, under your identity.', 'A git folder gives what git tracks; a plain folder every file but hidden ones; links are never followed. Every file is listed with its size and fingerprint before anything is signed.'])}
+<form id="release"><label>The folder</label>
+<div class="k-row"><input name="folder" class="k-grow" autocomplete="off" spellcheck="false" placeholder="~/code/my-module"><button type="button" class="k-btn" data-action="folders">Choose a folder…</button></div>
+<div id="picker"></div><p class="k-small k-soft" id="folder-said"></p>
+<label>Its name (the folder’s, by default)</label><input name="name" autocomplete="off">
+<label>Its version</label><input name="version" autocomplete="off" placeholder="1.0">
+<label>The release before it</label><select name="previous"><option value="">None: a new release line</option>${opts}</select>
+<label>Specifications it implements (optional): their publications’ act ids, one per line</label><textarea name="implements" spellcheck="false"></textarea>
+<div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form>
+<div id="release-review"></div>
+<h3>${forCollective ? 'The collective’s releases' : 'Your releases'}</h3>${rows}`;
+}
+
+export function picker(l: { path: string; parent: string | null; places: { name: string; path: string }[]; folders: { name: string; path: string; git: boolean; spaced: string | null }[]; hidden: number; problem: string | null }): string {
+  return `<div class="ummia-picker"><p class="k-small">${e(l.path)}</p>
+<div>${l.places.map((p) => `<button type="button" class="k-btn k-q k-small" data-action="folders" data-path="${e(p.path)}">${e(p.name)}</button>`).join('')}${l.parent ? `<button type="button" class="k-btn k-q k-small" data-action="folders" data-path="${e(l.parent)}">Up</button>` : ''}<button type="button" class="k-btn k-p k-small" data-action="folder use" data-path="${e(l.path)}">Use this folder</button></div>
+${l.problem ? note('', e(l.problem)) : ''}
+<div>${l.folders.map((f) => `<button type="button" class="k-btn k-small" data-action="folders" data-path="${e(f.path)}">${e(f.name)}${f.git ? ' · git' : ''}${f.spaced ? ` (${e(f.spaced)})` : ''}</button>`).join('')}</div>${l.hidden ? `<p class="k-small k-soft">${l.hidden} hidden folder${l.hidden === 1 ? '' : 's'} not shown.</p>` : ''}</div>`;
+}
+
+export function checked(c: { ok: boolean; lines: Line[] }): string {
+  return `<div class="${c.ok ? '' : 'ummia-blocking'}">${lines(c.lines)}</div>`;
+}
+
+export function anchorForm(release: string, offers: Offer[] | null, sayIt: string[]): string {
+  const choose = offers
+    ? offers.length
+      ? `<label>Its standing offer, and a tier</label><select name="choice">${offers.flatMap((o) => o.tiers.map((t, i) => `<option value="${e(o.act)} ${i}">offer ${e(shortForm(formOf(o.act)))}, tier ${i}: within ${t.blocks} blocks, ${t.price} (its unit)</option>`)).join('')}</select><div class="k-row"><button type="submit" class="k-btn k-p">Prepare the payment for Damgar</button></div>`
+      : note('', 'No standing offer of that service was found under the anchoring cMIP.')
+    : '<div class="k-row"><button type="submit" class="k-btn">Read its offer</button></div>';
+  return `<form class="anchor" data-release="${e(release)}">${say('Anchoring is optional: offered by a service, its tier chosen here, prepared for Damgar and paid there.', sayIt)}<label>The anchoring service’s ID</label><input name="service" autocomplete="off" spellcheck="false" required>${choose}</form>`;
+}
+
+const TASK_TICKS = (tasks: { n: number; layer: string; name: string }[]) => `<div class="ummia-ticks">${tasks.map((t) => `<label><input type="checkbox" name="tasks" value="${t.n}"> ${t.n}. ${e(t.name)} (${e(t.layer)})</label>`).join('')}</div>`;
+
+export function specPane(s: State, choices: { tasks: { n: number; layer: string; name: string }[] }): string {
+  return `<h2>A cMIP or Module</h2>${whoActs(s)}
+${say('Its hash first: read back before anything is signed. Published for good.', ['A cMIP or a Module, published as its act and named by its spec hash. A changed specification is a new one. A MIP is drafted under Discuss. A specification is published as yourself: a collective acts here for its releases.', 'Right after it is signed, Ummia offers its card (title, summary, links) and a discussion thread naming it, so there is somewhere to go from day one.'])}
+<form id="spec"><label>Its kind</label><select name="kind"><option value="0">cMIP: a specification for a task, an extension, or new act types (an xtype)</option><option value="1">Module: an implementation or extension under a cMIP, or under a MIR</option></select>
+<label>Its text (canonical text: no space at the end of a line, no final line break)</label><textarea class="ummia-code" name="text" spellcheck="false" placeholder="# cMIP: …"></textarea>
+<input type="file" id="spec-file" accept=".md,.txt,text/plain,text/markdown"><span class="k-small k-soft"> or load it from a file</span>
+<p class="k-small k-soft">Fill below only what your text says.</p>
+<details><summary>A cMIP: the tasks it fills (field 2)</summary>${TASK_TICKS(choices.tasks)}</details>
+<details><summary>Act types it defines (field 3): one per line, “number name schema”</summary><textarea name="types" spellcheck="false" placeholder="0 note note = tstr"></textarea></details>
+<details><summary>A Module: the cMIP it implements, or the MIR it works under (field 5)</summary><input name="implements" spellcheck="false" placeholder="a spec hash"></details>
+<details><summary>A rail Module: its kind and what its proof binds (fields 11 and 13)</summary><select name="railKind"><option value="">Not a rail</option><option value="0">a request rail</option><option value="1">a push rail</option></select>
+<div class="ummia-ticks"><label><input type="checkbox" name="railBinds" value="0"> the payee</label><label><input type="checkbox" name="railBinds" value="1"> the purpose</label><label><input type="checkbox" name="railBinds" value="2"> the previous hop</label></div></details>
+<details><summary>As an extension, the layers it acts on (field 10)</summary><div class="ummia-ticks">${['Identity', 'Envelopes and Text', 'Money', 'Agreements'].map((l, i) => `<label><input type="checkbox" name="layers" value="${i}"> ${l}</label>`).join('')}</div></details>
+<details><summary>Its predecessor (field 8), dependencies (field 4), a proof-of-delivery checker (field 12)</summary><label>The specification it replaces, for its users</label><input name="predecessor" spellcheck="false" placeholder="a spec hash">
+<label>Specifications it depends on, one per line</label><textarea name="dependencies" spellcheck="false"></textarea>
+<label><input type="checkbox" name="checker"> It checks proofs of delivery of proven offers</label></details>
+<div class="k-row"><button type="submit" class="k-btn k-p">Read it back, with its hash</button></div></form>
+<div id="spec-review"></div>`;
+}
+
+/** Its card (and a thread), offered right after a specification is signed, or later from Published here. */
+export function cardForm(c: { hash: string; title: string; summary?: string; discussion?: string | null; later: boolean; limits: { title: number; summary: number } }): string {
+  return `<div class="k-box k-fill" id="card-offer"><h3>${c.later ? 'A later card' : 'Its card'}</h3>${hashCopy(c.hash, false, 'for')}
+${say('A card says what it is for and where to go next: a plain post, signed by you.', ['Every app shows it as the post it is. The latest card in your own sequence is the one that counts: sign a later one whenever a release, its vectors or its discussion arrive. Read back before it is signed.'])}
+<form id="card" data-hash="${e(c.hash)}"><label>Its title</label><input name="title" maxlength="${c.limits.title}" value="${e(c.title)}" required>
+<label>A short summary: what it is for, in plain words</label><textarea name="summary" maxlength="${c.limits.summary}">${e(c.summary ?? '')}</textarea>
+<label>Releases implementing it: their act IDs, one per line (optional)</label><textarea name="releases" spellcheck="false"></textarea>
+<label>Its test vectors: act IDs or https addresses, one per line (optional)</label><textarea name="vectors" spellcheck="false"></textarea>
+${c.discussion ? `<input type="hidden" name="discussion" value="${e(c.discussion)}"><p class="k-small k-soft">Its discussion: the thread already named.</p>` : `<label class="k-row"><input type="checkbox" name="thread" checked> Start a discussion thread naming it, signed just before the card</label>`}
+<div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button><button type="button" class="k-btn k-q" data-action="card-skip">Not now</button></div></form><div id="card-review"></div></div>`;
+}
+
+/** Anchoring: offered, its tier, prepared and paid in Damgar (as drawn): the anchors asked, and how to ask one. */
+export function anchoringPane(anchors: AnchorShown[], sayIt: string[], web: boolean): string {
+  return `<h2>Anchoring</h2>${say('Optional: a release’s fingerprint on Bitcoin, through a pooled anchoring service, paid in Damgar.', sayIt)}
+<p class="k-small k-soft">Ask from a release (A release › Anchor it on Bitcoin), or from any card’s act menu (Anchor it).${web ? ' The web client follows no chain: anchors are shown asked, never checked here.' : ''}</p>
+<h3>Anchors asked</h3>${anchors.length ? anchors.map((a) => `<div class="k-box"><div class="k-row"><h3 class="k-grow">${e(a.label)}</h3><span class="ummia-v${a.state === 'anchored' ? ' valid' : a.state === 'invalid' ? ' bad' : ''}">${e(a.state)}</span></div>${actCopy(a.act)}<p class="k-small k-soft">tier ${a.tier} · by ${e(shortForm(formOf(a.service, 'mid')))}</p>${lines(a.lines)}</div>`).join('') : '<p class="k-empty">None asked yet.</p>'}`;
+}
+
+// ---------------------------------------------------------------- Choose
+
+export function choosePane(a: { entries: AcceptedEntry[]; version: number; forked: boolean; merged: string[]; published: boolean; problems: string[]; say: string[] }, layer: string | null): string {
+  const shown = layer ? a.entries.filter((x) => (x.layer ?? '').split(', ').includes(layer)) : a.entries;
+  return `<h2>What you accept${layer ? ` · ${e(layer)}` : ''}</h2>${say('Sealed to you, read by every app', a.say)}
+${a.problems.length ? note('', lines(a.problems.map((t) => ({ text: t, tone: 'warn' })))) : ''}
+${a.forked ? note('', `Two apps changed it at once. Shown merged, nothing dropped: ${lines(a.merged.map((t) => ({ text: t })))} Your next change writes the merge.`) : ''}
+<p class="k-small k-soft">${a.version ? `Version ${a.version}.` : 'Nothing accepted yet: the default, under which no app signs anything under any specification.'}</p>
+${shown.length ? `<ul class="ummia-list" id="accepted">${shown.map((x) => `<li data-hash="${e(x.hash)}"><span class="ummia-tick">✓</span><span class="k-grow"><span>${e(x.label ?? 'A specification with no label')}</span><br><span class="k-small k-soft">${e(x.layer ?? 'layer not found on your relays')} · ${e(x.part)}</span></span>${hashCopy(x.hash)}<button type="button" class="k-btn k-q k-small" data-action="accepted remove" data-hash="${e(x.hash)}">Remove</button><button type="button" class="k-btn k-q k-small" data-spec="${e(x.hash)}">Its page</button></li>`).join('')}</ul>` : `<p class="k-empty">${layer ? `Nothing accepted in ${e(layer)}.` : 'Nothing accepted.'}</p>`}
+<div class="k-row"><button type="button" class="k-btn" data-action="accept-hash-open">+ Accept by hash</button><span class="k-grow"></span><span class="k-small k-soft">${a.published ? 'Published: anyone can read it.' : 'Private: sealed to yourself (the default).'}</span><button type="button" class="k-btn k-q" data-action="accepted publish" data-on="${a.published ? 'false' : 'true'}">${a.published ? 'Make it private again' : 'Publish it'}</button></div>`;
+}
+
+export function acceptForm(hash = '', label = ''): string {
+  return `<form id="accept-add"><label>Its spec hash</label><input name="hash" spellcheck="false" required value="${e(hash)}"><label>Its label (its name and draft)</label><input name="label" maxlength="120" value="${e(label)}">
+<div class="k-row"><button type="submit" class="k-btn k-p">Accept it</button></div></form>`;
+}
+
+export function relyForm(id: string): string {
+  return `<form id="rely" data-id="${e(id)}">${say('Relying on an act keeps it visible as disputed should its author ever disown it.', ['A witness act (Identity type 15), public at your homes and relays, naming the act: it relies on it, it pays nothing. Signed with your key, checked first; through Kišib’s panel where Kišib holds this identity.'])}${actCopy(id)}<label>Type RELY to sign the witness act</label><input name="typed" autocomplete="off" autocapitalize="characters" spellcheck="false" required><div class="k-row"><button type="submit" class="k-btn k-p">Sign the witness act</button></div></form>`;
 }

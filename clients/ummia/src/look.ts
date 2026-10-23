@@ -160,6 +160,8 @@ export async function releaseById(id: string, relays: string[], via: Via, judge:
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+/** A form for people, short (`mspec1745…mvq`): the whole is copied from its card. */
+const short = (form: string) => `${form.slice(0, form.indexOf('1') + 4)}…${form.slice(-3)}`;
 
 /**
  * What changed since the version before (accepted): the files changed,
@@ -235,7 +237,7 @@ function specItem(s: TrackedSpec, card: FoundCard | null): LookItem | null {
     kind: f === 'xtypes' ? 'xtype' : s.kind,
     filter: f,
     title,
-    text: `${title}${s.draft > 1 ? `, draft ${s.draft} in its line` : ''} · ${specForm(s.hash)}${card?.fields.summary ? `\n${card.fields.summary}` : `\n${s.role[0] ?? ''}`}${use}`,
+    text: `${title}${s.draft > 1 ? `, draft ${s.draft} in its line` : ''} · ${short(specForm(s.hash))}${card?.fields.summary ? `\n${card.fields.summary}` : `\n${s.role[0] ?? ''}`}${use}`,
     hash: s.hash,
     layer: s.layer,
     labels: [
@@ -254,7 +256,7 @@ function specItem(s: TrackedSpec, card: FoundCard | null): LookItem | null {
 function extensionItem(s: TrackedSpec, card: FoundCard | null): LookItem | null {
   const base = specItem(s, card);
   if (!base) return null;
-  return { ...base, kind: 'extension', filter: 'extensions', text: `${base.title} · ${specForm(s.hash)}\nNamed as an extension by ${plural(s.agreements, 'public agreement')}.` };
+  return { ...base, kind: 'extension', filter: 'extensions', text: `${base.title} · ${short(specForm(s.hash))}\nNamed as an extension by ${plural(s.agreements, 'public agreement')}.` };
 }
 
 // ---------------------------------------------------------------- the feed

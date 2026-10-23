@@ -19,6 +19,8 @@ export interface AcceptedEntry {
   label: string | null;
   /** Which app's part it is, where known (Damgar's Money part; others unknown). */
   part: string;
+  /** Its layer, by its own fields as tracking reads them (Choose, by layer: decided); null where not found on the relays asked. */
+  layer: string | null;
 }
 
 export interface State {

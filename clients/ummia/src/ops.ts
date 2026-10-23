@@ -87,6 +87,7 @@ export const OPS = [
   'published here',
   'discussions',
   'reply',
+  'rely',
   'runner',
   'runner pair',
   'runner take',
@@ -198,6 +199,8 @@ export async function run(u: Ummia, op: string, a: Record<string, unknown>): Pro
       return u.discussions();
     case 'reply':
       return u.reply({ to: text(a.to), text: text(a.text) });
+    case 'rely':
+      return u.rely({ id: text(a.id), typed: text(a.typed) });
     case 'runner':
       return u.runnerState();
     case 'runner pair':

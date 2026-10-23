@@ -113,7 +113,7 @@ test('cards: offered after a cMIP, signed with its thread, found on its page; re
   const rel = await c.ask<Review>('release prepare', { folder: folder(), name: 'mor-slots', version: '0.1', implements: [spec.done.acts[0]] });
   assert.deepEqual(rel.blocking, []);
   await c.ask('release confirm', { plan: rel.plan, digest: rel.digest });
-  let page = await c.ask<SpecPage>('spec page', { hash });
+  let page = await c.ask<SpecPage & { mine: boolean }>('spec page', { hash });
   assert.equal(page.found, true);
   assert.equal(page.title, 'Dubsar Slots, draft 1');
   assert.equal(page.own?.id, first.acts[1]);
@@ -128,7 +128,7 @@ test('cards: offered after a cMIP, signed with its thread, found on its page; re
 
   // A second card from its creator replaces the first.
   const second = await publish(c, 'card prepare', { spec: hash, title: 'Dubsar Slots', summary: 'Seats, slots and tickets: one vow, many sales.', discussion: first.acts[0] });
-  page = await c.ask<SpecPage>('spec page', { hash });
+  page = await c.ask<SpecPage & { mine: boolean }>('spec page', { hash });
   assert.equal(page.own?.id, second.done.acts[0]);
   assert.equal(page.title, 'Dubsar Slots');
   assert.equal(page.superseded, 1);
@@ -137,7 +137,7 @@ test('cards: offered after a cMIP, signed with its thread, found on its page; re
   // Someone else's card: their word, never the creator's.
   const theirs = await publish(b.ummia.c, 'card prepare', { spec: hash, title: 'Slots, as Pa reads them', summary: 'My notes.' });
   assert.match(theirs.review.summary[0], /not its creator/);
-  page = await c.ask<SpecPage>('spec page', { hash });
+  page = await c.ask<SpecPage & { mine: boolean }>('spec page', { hash });
   assert.equal(page.own?.id, second.done.acts[0], 'the creator’s card still counts');
   assert.equal(page.others.length, 1);
   assert.equal(page.others[0].signer, b.id);
