@@ -8,7 +8,7 @@
 2. **Kišib reaches the Module's `online` side through a small WebAssembly of its own.** The brief says Kišib writes the request "via `online`" and checks the answer "as Module 3.9 says". The suite's shared WebAssembly (`mor-wasm`) compiles `modules/airgap` in, but binds only its share functions, not `online`. Adding bindings there would change the shared WebAssembly, which this round must not do. So `clients/kishib/airgap/` binds `online::pending`, `online::accept`, the strict reading of a commitment export, and the key fingerprint. It is built to `kishib_airgap_bg.wasm`, Kišib's alone, loaded only when a way with Nakišib is used. No rule is rewritten in TypeScript.
 3. **The summary before the paper is Nakišib's reading of the bytes.** The Module's `Signer::review` finds the chain key before it builds its summary. So its summary cannot exist before the paper is typed, yet the brief's order puts the summary first. Before the paper, Nakišib shows its own reading of the request's exact bytes, built with the Module's strict decoding and the Module's own `summary::describe`. After the paper, the Module's review checks everything again, and its own summary is the one shown above SIGN. **The Module did not have to change** (the brief: stop before changing it). Question 1 asks about it.
 4. **Kišib's own way is unchanged.** Kišib's tests changed only where they list its columns' parts, which now include the two new ways.
-5. **S7g was not on main** when I last checked (main at `5fe7f76`, the commit this branch started from). My branch's shared WebAssembly is main's, byte for byte. Only Kišib's web release is rebuilt (section 4 of the checks below).
+5. **S7g was not on main** when I last checked, just before the last push (main still at `5fe7f76`, the commit this branch started from). My branch's shared WebAssembly is main's, byte for byte. Only Kišib's web release is rebuilt (section 4 of the checks below).
 
 ## 1. In plain words first
 
@@ -83,7 +83,11 @@ Kišib keeps nothing new: the request and the new signing key live in its memory
   - "Decided while building, 1. … a command-line signer for an offline laptop now; the phone app with the genesis client": decided again on 23 October 2026. The offline device is an old Mac, Nakišib its app; transport by USB file, no QR this round ("QR would have been cool but apps on phones is a much closer environment").
   - The Module text (draft 6, section 1) still says "an old phone kept in flight mode, a laptop never connected": still true as a list of possible devices.
 - **Not run here** (it needs a person or a Mac): the window clicked on a real Mac, the Mac's own file dialogs, Gatekeeper's first-open, the stick carried between two Macs. GitHub's macOS job builds the real app and checks it (section 5 has the steps for a person).
-- **Repeated runs:** no check failed on one run and passed on another. One test of mine waited too briefly for Kišib's page after **Sign it**; I fixed the test to wait for the page's answer, and it has passed on every run since.
+- **On GitHub, after the pull request was opened:** two failures were this round's, both fixed.
+  - Kišib's program bundles its page with esbuild. The bundle reached the new loader of Kišib's own WebAssembly and failed wherever that WebAssembly was not built. The macOS seal job showed it; so would every app's tests that start Kišib's program. Kišib now imports it by a computed address (commit `fdc112f`), checked with the WebAssembly absent.
+  - Nakišib's workflow did not install `clients/site`'s packages, which its typecheck reaches through Dub (`5b9ff78`), checked with only the workflow's packages present.
+  - One test, run alone, depended on a file an earlier test wrote; it now makes its own.
+- **Repeated runs:** one, on the seal job (macOS). It died before any test ran: the shared `clients/genesis/scripts/build-wasm.sh` found no `~/.cargo` on GitHub's machine, after passing on the same job's earlier run. Its re-run passed. Every check is green on the final head. Locally, one test of mine waited too briefly for Kišib's page after **Sign it**; it now waits for the page's answer.
 
 ## 3. For the MOR lead
 
