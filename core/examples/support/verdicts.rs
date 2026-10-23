@@ -1283,8 +1283,8 @@ pub fn money(out: &mut Out) {
         Facts { rail_valid: vec![(paid, svc_pointer)], ..Default::default() }, ask("payment counts", &paid), json!("counts"), None);
     let mut w3 = world(&log1);
     let after = pay(&mut w3, &mut buyer, ana.id, d, b"the buyer pays the backup after the split service's attempt failed");
-    out.case(&mut w3, "a payment under the same deal to its backup's pointer (field 29), after the first attempt failed: counts", "Money rule 4; Agreements rules 15 and 17",
-        "Ana's own grant to the backup service is listed in field 29: its pointer is a pointer Money rule 4 counts for Ana; whether the attempt before it failed is the split cMIP's.",
+    out.case(&mut w3, "a payment under the same deal to its backup's pointer (field 29): counts", "Money rule 4; Agreements rules 15 and 17",
+        "Ana's own grant to the backup service is listed in field 29: its pointer is a pointer Money rule 4 counts for Ana. Whether the attempt before it failed is the split cMIP's answer, which this case does not state and Money rule 4 does not ask.",
         Facts { rail_valid: vec![(after, backup_pointer)], ..Default::default() }, ask("payment counts", &after), json!("counts"), None);
     let mut w2 = world(&base);
     let d2 = deal_with(&mut w2, &mut a2, &mut b2, vec![gb], None);

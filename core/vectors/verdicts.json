@@ -3792,10 +3792,10 @@
             }
           ]
         },
-        "name": "a payment under the same deal to its backup's pointer (field 29), after the first attempt failed: counts",
+        "name": "a payment under the same deal to its backup's pointer (field 29): counts",
         "rule": "Money rule 4; Agreements rules 15 and 17",
         "verdict": "counts",
-        "why": "Ana's own grant to the backup service is listed in field 29: its pointer is a pointer Money rule 4 counts for Ana; whether the attempt before it failed is the split cMIP's."
+        "why": "Ana's own grant to the backup service is listed in field 29: its pointer is a pointer Money rule 4 counts for Ana. Whether the attempt before it failed is the split cMIP's answer, which this case does not state and Money rule 4 does not ask."
       },
       {
         "acts": [

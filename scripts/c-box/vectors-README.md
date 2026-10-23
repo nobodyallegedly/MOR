@@ -24,7 +24,7 @@ All byte strings are lowercase hexadecimal.
 | `signatures.json` | Schnorr over secp256k1 (BIP-340, scheme 1): the key from a fixed secret, the act id signed, signatures with a given and a zero `aux`, and nine signatures that must fail, one reason each. SLH-DSA-SHA2-128s and -128f (FIPS 205, schemes 2 and 3, pure, context `MOR`): keys from fixed seeds, the chain-key commitment, a deterministic and a hedged signature, and eight that must fail. | Identity, "Signature schemes", "Chain-key commitment" |
 | `verdicts.json` | A pool of complete acts by id, and 153 cases, each with the acts a verifier holds, the facts it holds beside them, the question, the verdict and the rule that decides it. Listed below. | Each case names its rule |
 
-**Size.** `verdicts.json` is about 2.41 MB (2,413,315 bytes), most of it SLH-DSA-SHA2-128f chain signatures (17,088 bytes each), each held once in the pool and named by every case that needs it.
+**Size.** `verdicts.json` is about 2.41 MB (2,413,352 bytes), most of it SLH-DSA-SHA2-128f chain signatures (17,088 bytes each), each held once in the pool and named by every case that needs it.
 
 ## The verdict vectors
 

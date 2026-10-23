@@ -30,7 +30,7 @@ python3 core/vectors/check.py
 | `signatures.json` | **Part 2.** Schnorr over secp256k1 (BIP-340, scheme 1): the key from a fixed secret, the act id signed, signatures with a given and a zero `aux`, and nine signatures that must fail, one reason each (a bit of `s` or `r` changed, another act id, another key, a key off the curve, `r` not below `p`, `s` not below `n`, a short signature, a 33-byte key). SLH-DSA-SHA2-128s and -128f (FIPS 205, schemes 2 and 3, pure, context `MOR`): keys from the three fixed seeds, the chain-key commitment, a deterministic and a hedged signature, and eight that must fail (a byte of R, of FORS, of the hypertree changed, another act id, another key with the same public seed, the empty context, one byte short, the root changed). | Identity, "Signature schemes", "Chain-key commitment" | Rust; Python (`sigs.py`, BIP-340 and FIPS 205 from the standards, which also recompute each public key from its secret or seeds) |
 | `verdicts.json` | **Verdict vectors**, every layer: a pool of complete acts by id, and 153 cases, each with the acts a verifier holds, the facts it holds beside them, the question, the verdict and the rule that decides it. Listed below. | Each case names its rule | Rust, all 153; Python, 26 (below) |
 
-**Size.** `verdicts.json` is about 2.41 MB (2,413,315 bytes), most of it SLH-DSA-SHA2-128f chain signatures (17,088 bytes each), each held once in the pool and named by every case that needs it.
+**Size.** `verdicts.json` is about 2.41 MB (2,413,352 bytes), most of it SLH-DSA-SHA2-128f chain signatures (17,088 bytes each), each held once in the pool and named by every case that needs it.
 
 ## The verdict vectors
 
