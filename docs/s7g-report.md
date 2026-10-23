@@ -404,4 +404,11 @@ Each one's `npm run test:build` passed: it builds the release again and finds th
 
 ## Checks run
 
-*(to be completed)*
+- `cargo test --workspace --locked`: green, after the final core change.
+  - On the way it caught one regression of this session's own: the on-chain rail Module's review test found a debt's paid amount unknown. The rule 12 check had asked whether every record on the rail was the same payment, not only the records its answer depends on. It now asks only those.
+- `gen_vectors`: every earlier case byte-identical at its place, with the same act ids (153 checked against main's file).
+- `python3 core/vectors/check.py`: "all 274 vectors agree (96 verdict vectors judged here)".
+- Each fix was checked against main's core, run on the new cases: the old core gives the old answer on the fixed cases, and the same answer on their twins.
+- The six releases' `npm run test:build`: all pass, the same bytes.
+- Client suites: run here, the non-browser ones passed: genesis, barebone, connector, grants, longform. The browser-driven ones cannot run on this machine; CI ran every suite.
+- **CI on GitHub, read by me:** on `e8f1cc1`, green: all, regtest, browsers, seal, release (the reproducible display client).
