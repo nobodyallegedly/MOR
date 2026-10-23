@@ -119,7 +119,7 @@ A receipt or claim counts only if all of these hold:
   - **except that a collective's pointer that a fork or closing of the collective left outside its history still counts for payments made before the ending's line, as the chain stood for each, and for none made after it** (Agreements rule 91);
 - where the payment falls under an agreement, that rail Module implements the payment cMIP the agreement names (Development, field 5).
 
-For a payment to such a grantee's pointer, the first and third conditions read the grantee's own pointer chain and vault in force: the pointer counts where rule 12 counts it on that chain.
+For a payment to such a grantee's pointer, the first and third conditions read the grantee's own pointer chain and vault in force: the pointer counts where rule 1 counts it on that chain.
 
 A receipt or claim naming any other rail Module counts for nothing, whatever its rail's proof shows.
 

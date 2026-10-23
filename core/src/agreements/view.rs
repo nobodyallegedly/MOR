@@ -8061,7 +8061,7 @@ impl<'a> AgreementsView<'a> {
         // payee's that the agreement or offer the payment follows lists in
         // field 14 or 29, the agreement's designated pointer (Agreements
         // rules 15 and 17), and the pointer counts on the grantee's own
-        // chain, within its vault (rules 3 and 12).
+        // chain, within its vault (rules 1 and 3).
         if let fin::PaidAt::Flow(p) = at {
             let other = self.v.get(p).filter(|h| h.inside.spec == self.mirs.money).and_then(|h| match fin::Payload::decode(h.inside.type_, &h.inside.payload) {
                 Ok(fin::Payload::PayeePointer(q)) if &q.payee != payee => Some(q.payee),
