@@ -392,11 +392,15 @@ No text was changed.
 
 ## The releases rebuilt
 
-*(to be completed)*
+Main had not moved since S7f's merge (`5fe7f76`), so nothing needed merging. I rebuilt all six releases in this branch, as their READMEs say:
+- `cd clients/genesis && npm run wasm`;
+- then `npm run release` in `clients/site` (the display client), `clients/dub`, `clients/kishib`, `clients/damgar`, `clients/ummia` and `clients/desk` (Edubba).
+
+Each one's `npm run test:build` passed: it builds the release again and finds the same bytes. The tools were rustc 1.97.0, wasm-bindgen 0.2.129 and each client's pinned esbuild. All six carry the same WebAssembly: SHA-256 `604aa9b5632d0bef…`, 5,290,711 bytes, work hash `e261a633a2edec28…`. The JavaScript glue is unchanged, as there is no interface change.
 
 ## The box
 
-*(to be completed)*
+`scripts/c-box/make-c-box.sh` into a scratch folder, after the final vector and README edits: it refused nothing, 8 texts, 12 vector files. A first run refused the box's vector README for naming the library's test file; it is now reworded.
 
 ## Checks run
 
