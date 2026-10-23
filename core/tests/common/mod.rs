@@ -696,3 +696,25 @@ pub fn stand_in_payments(mut v: mor_core::agreements::AgreementsView<'_>) -> mor
     }
     v
 }
+
+/// The stand-in rails' verification answer, valid, for every receipt and
+/// claim `v`'s verifier holds that has no answer stated (Money rules 8 and
+/// 10): a record counts toward a purchase or a sale only with a valid
+/// answer, and one pending or not held leaves it unknown (Agreements rule
+/// 12). Where it was paid is not said: these tests read no debt by it.
+pub fn stand_in_answers(mut v: mor_core::agreements::AgreementsView<'_>) -> mor_core::agreements::AgreementsView<'_> {
+    use mor_core::money::{PaidAt, Payload};
+    let money = v.mirs.money;
+    let ids: Vec<Hash> = v
+        .v
+        .held_acts()
+        .filter(|h| h.inside.spec == money && matches!(Payload::decode(h.inside.type_, &h.inside.payload), Ok(Payload::Receipt(_)) | Ok(Payload::Claim(_))))
+        .map(|h| h.id)
+        .collect();
+    for id in ids {
+        if !v.rail_invalid.contains(&id) && !v.rail_pending.contains(&id) {
+            v.rail_valid.entry(id).or_insert(PaidAt::Flow(sha256(b"the stand-in rail's answer: paid, where not said")));
+        }
+    }
+    v
+}

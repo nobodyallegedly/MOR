@@ -235,7 +235,7 @@ export interface Purchase {
   /** A film or a recording opened, played when asked (checked by its Module first). */
   play?: { publication: string; seller: string; media: 'video' | 'audio' } | null;
   /** A vow: paid, and its sale as the relays read it; the buyer confirms or contests. */
-  sale?: 'pending' | 'confirmed' | 'contested' | null;
+  sale?: 'pending' | 'confirmed' | 'contested' | 'unknown' | null;
   paid?: boolean;
   /**
    * The buyer's contests shown beside this purchase (F386): `unknown` where

@@ -254,7 +254,7 @@ fn a_vow_is_sold_without_count_each_sale_with_its_own_state() {
         let proof = format!("seat payment {i}");
         let r = receipt(&mut w, &mut club, f.id, offer, None, proof.as_bytes());
         claims.push(payers_claim(&mut w, &mut f, club.id, offer, None, proof.as_bytes()));
-        let p = view(&w).purchase(&r).unwrap().expect("a payment following an offer is judged");
+        let p = common::stand_in_answers(view(&w)).purchase(&r).unwrap().expect("a payment following an offer is judged");
         assert_eq!(p.verdict, PurchaseVerdict::Purchase, "fan {i}: a purchase under the club's own terms (F215), whatever the words say about seats");
     }
     let e = view_with(&w, &claims).vow(&concert).unwrap();
@@ -285,7 +285,7 @@ fn voiding_a_vow_voids_its_signers_acts_never_the_name_others_wrote_down() {
     let offer = lone_offer(&mut w, &mut club, opening, "Live access to Sunday's match.");
     let r = receipt(&mut w, &mut club, fan.id, offer, None, b"the fan paid the club");
     let c = payers_claim(&mut w, &mut fan, club.id, offer, None, b"the fan paid the club");
-    assert_eq!(view(&w).purchase(&r).unwrap().unwrap().verdict, PurchaseVerdict::Purchase);
+    assert_eq!(common::stand_in_answers(view(&w)).purchase(&r).unwrap().unwrap().verdict, PurchaseVerdict::Purchase);
     let (rotation, _dario2) = w.rotate(&dario, Rot { kept: Some(vec![tip_at(&dario.seq, 1)]), ..Default::default() });
     assert_eq!(w.v.status(&rotation), Status::Valid);
     assert_eq!(w.v.status(&before), Status::Valid, "the kept act stands");
@@ -293,7 +293,7 @@ fn voiding_a_vow_voids_its_signers_acts_never_the_name_others_wrote_down() {
     assert_eq!(w.v.status(&thiefs_claim), Status::Void, "and so is the claim made after it on the same line");
     let e = view(&w).offer(&offer).unwrap();
     assert!(e.counts, "the club's offer naming the void vow still counts: {:?}", e.problems);
-    assert_eq!(view(&w).purchase(&r).unwrap().unwrap().verdict, PurchaseVerdict::Purchase, "the fan's purchase under it is still a purchase");
+    assert_eq!(common::stand_in_answers(view(&w)).purchase(&r).unwrap().unwrap().verdict, PurchaseVerdict::Purchase, "the fan's purchase under it is still a purchase");
     let v = view_with(&w, &[c]).vow(&opening).unwrap();
     assert!(v.void, "the vow is shown void: the name points at a void act");
     assert_eq!(v.sales.iter().map(|s| (s.buyer, s.state.clone())).collect::<Vec<_>>(), vec![(fan.id, SaleState::Pending)], "the fan's sale stands");
@@ -422,7 +422,7 @@ fn an_offer_naming_a_vow_under_a_second_agreement_is_shown_outside_the_first() {
     assert_eq!(view(&w).offer(&work_offer).unwrap().outside_claims, vec![song_deal], "a work's offer outside its claiming deal: the same answer");
     let r = receipt(&mut w, &mut dario, fan.id, offer, Some(with_sponsor), b"the fan paid under the sponsor's deal");
     let c = payers_claim(&mut w, &mut fan, dario.id, offer, Some(with_sponsor), b"the fan paid under the sponsor's deal");
-    let p = view(&w).purchase(&r).unwrap().expect("judged");
+    let p = common::stand_in_answers(view(&w)).purchase(&r).unwrap().expect("judged");
     assert_eq!(p.verdict, PurchaseVerdict::Purchase, "a purchase under the sponsor's deal; the club's deal is not in it");
     let v = view_with(&w, &[c]).vow(&stream).unwrap();
     assert_eq!(v.sales.len(), 1, "one sale, under whichever agreement the offer named");

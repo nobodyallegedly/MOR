@@ -608,7 +608,7 @@ export interface PublishingShown {
 
 /** A look-up of one identity's vow sales (round 3): each vow, each sale's state; those bought by an identity held here may be contested here. */
 export interface VowSalesShown {
-  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; promise: string | null; amount: { unit: string; value: number } | null; beside?: { state: 'shown' | 'unknown'; contests: { act: string; promise: string | null }[]; why?: string } }[]; unsigned: number; mine: string[] }[];
+  vows: { name: string; signer: string; void: boolean; words: string[]; sales: { act: string; buyer: string; state: string; promise: string | null; amount: { unit: string; value: number } | null; beside?: { state: 'shown' | 'unknown'; contests: { act: string; promise: string | null }[]; why?: string } }[]; unsigned: number; unknown?: number; mine: string[] }[];
   asked: string[];
   problems: string[];
 }
@@ -630,7 +630,7 @@ export function vowSalesShown(r: VowSalesShown, names: (id: string) => string): 
                 )
                 .join('')}</ul>`
             : '<p class="small">No sale seen: nobody signed onto it at the relays asked, so it carries no state (rule 13).</p>';
-          return `<div class="item"><h3>${e(v.words[0] ?? '')}</h3><div class="meta">${v.void ? 'its first act void (its signer’s change of keys): the name stands · ' : ''}${counts.confirmed} confirmed · ${counts.contested} contested · ${counts.pending} pending${v.unsigned ? ` · ${v.unsigned} paid with no buyer signed on` : ''}</div>${sales}</div>`;
+          return `<div class="item"><h3>${e(v.words[0] ?? '')}</h3><div class="meta">${v.void ? 'its first act void (its signer’s change of keys): the name stands · ' : ''}${counts.confirmed} confirmed · ${counts.contested} contested · ${counts.pending} pending${counts.unknown ? ` · ${counts.unknown} unknown` : ''}${v.unsigned ? ` · ${v.unsigned} paid with no buyer signed on` : ''}${v.unknown ? ` · ${v.unknown} payment${v.unknown === 1 ? '' : 's'} unknown (no rail answer here)` : ''}</div>${sales}</div>`;
         })
         .join('')
     : '<p class="empty">No vow of that identity at the relays asked.</p>';

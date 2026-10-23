@@ -433,7 +433,7 @@ test('a vow under a deal between separate people, bought from Dub and confirmed;
   await assert.rejects(b.dub.c.ask('pay', { how: 'hand', kind: 'tip', signer: river.id, post: post.post, value: '100', unit: R }), /a draft copied by hand carries no post/);
 });
 
-test('a collective’s work bought: its claim opened by every member’s Edubba from MOR, and beside the sale in each member’s Sales what the core reads of the buyer’s contest (no purchase, for the MOR lead)', async () => {
+test('a collective’s work bought: its claim opened by every member’s Edubba from MOR, and beside the sale in each member’s Sales what the core reads of the buyer’s contest (unknown, its rail answer not stated)', async () => {
   const H = homes.map((h) => h.base);
   const RL = [relay.base];
   const { foundCollective } = await import('./cast.ts');
@@ -478,9 +478,11 @@ test('a collective’s work bought: its claim opened by every member’s Edubba 
     assert.ok(sale, `${m.name}’s Edubba lists the collective’s sale: ${JSON.stringify(s)}`);
     assert.equal(sale.kind, 'collective');
     assert.ok(sale.claim, `${m.name} opened the buyer’s claim from MOR`);
-    // Found this round, for the MOR lead (docs/splits-report.md): the core reads a collective's sale under its agreement as no purchase where
-    // the agreement stakes the collective itself (all its income) and not the work; a contest then shows beside nothing. Edubba says so.
-    assert.equal(sale.beside.state, 'shown', `${m.name}: ${JSON.stringify(sale.beside)} ${JSON.stringify(s.problems)}`);
-    assert.match(sale.beside.noPurchase ?? '', /carries no stake in the work it pays for/, `${m.name}: ${JSON.stringify(sale.beside)}`);
+    // Since S7e (Q53) the core answers unknown where a purchase rests on a rail answer not given: a collective's pointer is signed with a
+    // member's key, which a Money-only reading does not hold, so its claim's and receipt's rail answers are not stated here. Edubba says
+    // unknown, never "none". Behind it, for the MOR lead (docs/splits-report.md, point 2): with the rail stated, the core reads such a
+    // sale as no purchase where the agreement stakes the collective itself and not the work.
+    assert.equal(sale.beside.state, 'unknown', `${m.name}: ${JSON.stringify(sale.beside)} ${JSON.stringify(s.problems)}`);
+    assert.match(sale.beside.why ?? '', /no rail answer here/, `${m.name}: ${JSON.stringify(sale.beside)}`);
   }
 });

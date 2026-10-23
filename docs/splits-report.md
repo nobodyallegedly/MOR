@@ -56,6 +56,15 @@ The same works for **a vow** (Vows › A new vow, Details) and for **a plain pos
 - **The collective's contest shown beside its sale**: the core reads a collective's sale as no purchase (point 2 below); the claim reaches every member and Edubba says what the core reads.
 - **The suite's Rust** (`cmips/payment`, `split/`): unchanged, so the WebAssembly is main's.
 
+## After S7e (merged into this branch, 23 October 2026, its "For the Dubsar Suite" applied)
+
+S7e (pull request 103) lets the core answer **unknown** for a sale or a purchase whose answer rests on a receipt or claim with no rail answer, and adds the error `law/rail-unanswered`. Applied, so every screen that shows a sale says "unknown" where the core does, never "paid", "pending" or "none":
+- **Dub**: a vow bought whose sale reads unknown says so in Purchases; a purchase whose contests the core cannot read says "unknown" with the reason; `law/rail-unanswered` has its own words; the reader now states **receipts'** rail answers too, beside claims (S7e: "`specs.railValid` naming the payments' receipts as well as the buyers' claims").
+- **Edubba**: Track shows an unknown sale as unknown (not counted as kept or pending), and a vow's count of payments unknown; Sales says "unknown" with its reason where the core does.
+- **Damgar**: a payout under a deal reads "paid" only where its payment's rail answer here is valid; otherwise unknown.
+- **A collective's sale** now reads **unknown** in each member's Sales, before point 2 below can show: a collective's payee pointer is signed with a member's key, which a Money-only reading does not hold, so its claim's and receipt's rail answers are not stated (a gap of the suite's readers, not of the texts: the Agreements reading of a collective's pointer, `agreementsChoose`, is Damgar's when paying; a reader stating a collective's rail answers through it is for a later round). The test says so.
+- The six web releases rebuilt from the merged branch; the WebAssembly is main's (S7e's).
+
 ## 4. For the MOR lead
 
 **Point 1. Which pointer a direct payment under a deal is paid to, and in whose name.**

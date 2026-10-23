@@ -561,7 +561,10 @@ var Verifier = class {
   /**
    * The payments a collective received during a broken stretch and owes
    * back, the sale not signed anew after the rollback (rule 37d, RB2):
-   * open obligations, each `{ payment, to, unit, value, stillBroken }`.
+   * open obligations, each `{ payment, to, unit, value, stillBroken,
+   * unknown }`. An entry is marked `unknown` where it rests on a record
+   * whose payment `specs.railPayments` does not state, or on one whose
+   * rail answer `specs.railValid` does not give (Money rules 8 and 12).
    * @param {any} specs
    * @param {string} collective
    * @returns {any}
@@ -721,7 +724,12 @@ var Verifier = class {
    * offer at no price): the buyer's own contests of it, ascending. A
    * contest by anyone else shows nothing; for an act that is no
    * purchase, none shows. `specs.railValid` names the claims whose rail
-   * the client checked. Errs where it is unknown (Money rule 12).
+   * the client checked. Errs where it is unknown: `law/payment-unstated`
+   * where it rests on two or more records whose payment
+   * `specs.railPayments` does not state (Money rule 12);
+   * `law/rail-unanswered` where it rests on a claim neither
+   * `specs.railValid` nor `specs.railInvalid` names (Money rule 8: a
+   * record counts toward a purchase only with a valid answer).
    * @param {any} specs
    * @param {string} purchase
    * @returns {string[]}
@@ -746,7 +754,10 @@ var Verifier = class {
    * claims and the rail has not shown which the payment committed to),
    * or "wrong-receipt" (F131 IT3: a receipt `specs.railInvalid` names,
    * whose claim the payment did not commit to; it counts for nothing);
-   * null where the payment is not for a work.
+   * or "unknown" (Money rule 8: the receipt or claim `id`, or a receipt
+   * it is judged with, is named neither in `specs.railValid` nor in
+   * `specs.railInvalid`, and the answer rests on it); null where the
+   * payment is not for a work.
    * @param {any} specs
    * @param {string} id
    * @returns {any}
@@ -994,8 +1005,12 @@ var Verifier = class {
    * it, and each sale with its state, "pending", "confirmed" (with the
    * acknowledging acts) or "contested" (with the contests), and the
    * evidence beside it; and the payments with no buyer signed on.
-   * `specs.railValid` names the claims whose rail the client checked:
-   * a sale is read only from a buyer's own claim with the rail's answer.
+   * `specs.railValid` names the receipts and claims whose rail the
+   * client checked: a payment is a sale only by a record with the rail's
+   * answer, valid, and read only from a buyer's own claim with it. A
+   * sale or payment resting on a record neither `specs.railValid` nor
+   * `specs.railInvalid` names is marked "unknown" (a sale's state, or
+   * the `unknown` list; Money rule 8).
    * @param {any} specs
    * @param {string} name
    * @returns {any}
@@ -14450,7 +14465,7 @@ var Damgar = class {
         if (!d) continue;
         for (const m of x.mine) {
           const unit = x.unit ?? book.shared?.[x.receipt]?.amount.unit ?? null;
-          const paid = Object.values(book.payments).some((p) => p.side === "in" && p.other === x.service && p.amount.value === m.amount && (!unit || p.amount.unit === unit) && (p.claims.length > 0 || p.receipts.length > 0));
+          const paid = payments.some((p) => p.side === "in" && p.other.id === x.service && p.amount.value === m.amount && (!unit || p.amount.unit === unit) && p.proofs.some((y) => y.rail.answer === "valid"));
           entry(d).payouts.push({ split, amount: shown({ unit: unit ?? "", value: m.amount }), role: m.role, paid });
         }
       }
@@ -15655,7 +15670,8 @@ async function vowSales(identity, relays, via2 = {}) {
           // A vow's sale is a purchase (F386): a contest of it in the purchase's form marks no sale, and is shown beside it, so it is not lost.
           beside: contestsOf(r, specs, s.act, contests)
         })),
-        unsigned: e3.unsigned.length
+        unsigned: e3.unsigned.length,
+        unknown: e3.unknown?.length ?? 0
       });
     } catch (err) {
       r.problems.push(`The vow ${x.name.slice(0, 8)}\u2026 could not be read: ${err instanceof Error ? err.message : String(err)}`);
@@ -15693,6 +15709,7 @@ async function purchaseContests(a) {
     try {
       const p = r.v.agreementsPurchase(specs, id);
       if (p && p.verdict === "no-purchase") by[id] = { ...by[id], noPurchase: p.why ?? "no purchase" };
+      else if (p && p.verdict === "unknown") by[id] = { state: "unknown", contests: [], why: "a receipt or claim it rests on has no rail answer here: whether it is a purchase is unknown" };
     } catch {
     }
   }
@@ -15704,7 +15721,7 @@ function contestsOf(r, specs, purchase, contests) {
     return { state: "shown", contests: shown.map((act) => ({ act, promise: promiseOf(contests, [act]) })) };
   } catch (e3) {
     const m = e3 instanceof Error ? e3.message : String(e3);
-    return { state: "unknown", contests: [], why: /payment-unstated/.test(m) ? "its payment is not stated: whether it is a purchase, and whose, is unknown" : m };
+    return { state: "unknown", contests: [], why: /payment-unstated/.test(m) ? "its payment is not stated: whether it is a purchase, and whose, is unknown" : /rail-unanswered/.test(m) ? "its claim has no rail answer here: whether it is a purchase is unknown" : m };
   }
 }
 function reader(relays, via2) {
@@ -15766,7 +15783,7 @@ function judged(r, claims) {
     try {
       const j = r.v.moneyJudge(d.id, { money: MIRS.money, accepted });
       if (j.rail.answer !== "valid") continue;
-      const c = moneyRead(CLAIM, d.payload).act;
+      const c = moneyRead(d.type === 2 ? 2 : CLAIM, d.payload).act;
       amounts.set(d.id, c.amount);
       if (j.payment) railPayments.push([hex(new Uint8Array(c.proof)), j.payment]);
       const p = readPaymentProof(new Uint8Array(c.proof));
@@ -18314,7 +18331,7 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
           seller: this.whoFrom(v.seller, me.id, p),
           what: "vow",
           price: v.price,
-          state: !v.paid ? "not paid yet" : v.sale === "confirmed" ? "confirmed: it was kept" : v.sale === "contested" ? `contested${v.promise ? `: \u201C${v.promise}\u201D` : ""}` : "not yet confirmed: confirm or contest it in its menu",
+          state: !v.paid ? "not paid yet" : v.sale === "confirmed" ? "confirmed: it was kept" : v.sale === "contested" ? `contested${v.promise ? `: \u201C${v.promise}\u201D` : ""}` : v.sale === "unknown" ? "unknown: whether it is a sale rests on a rail answer not read here" : "not yet confirmed: confirm or contest it in its menu",
           text: v.words,
           picture: null,
           sale: v.sale,

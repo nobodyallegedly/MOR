@@ -12,13 +12,14 @@
 //!    the act, the act is valid as an act, and its signer is the one the
 //!    record names. A record of a rotation, a revocation or a line serves
 //!    only as a point in the sequence.
-//! 3. An act belongs to an agreement when it names it, or an act of its
-//!    chain, in `objects`, or through the act it answers (a receipt or claim
-//!    through the claim it pays under and what it fulfils; an obligation
-//!    through its agreement or offer; an offer through the agreement it is
-//!    made under). Every act in a collective's name belongs to the
-//!    collective's agreement. Its keepers are those of the version in force
-//!    for the act.
+//! 3. An act belongs to an agreement when it names it, or an act that
+//!    belongs to it, in `objects` (chain and predecessor alike), or through
+//!    the act it answers (a receipt or claim through the claim it pays
+//!    under and what it fulfils; an obligation through its agreement or
+//!    offer; an offer through the agreement it is made under), whatever the
+//!    act named is, save an Identity act, which is followed no further.
+//!    Every act in a collective's name belongs to the collective's
+//!    agreement. Its keepers are those of the version in force for the act.
 //! 4. A deadline is met by an anchor of the act, or by keepers whose records
 //!    of it lie before records anchored by the deadline; it is missed only
 //!    by keepers' sequences anchored past it that hold no record of the act,
@@ -203,17 +204,10 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
-        // Named in `objects`: the agreement, or an act of its chain.
-        for o in x.inside.objects.iter().flatten() {
-            for c in [o.chain, o.predecessor] {
-                match self.v.get(&c) {
-                    Some(h) if self.is_agreements(h, types::TERMS) => push(c, out),
-                    Some(_) => {}
-                    None => *complete = false,
-                }
-            }
-        }
-        // Through the act it answers.
+        // One step: each `objects` entry, chain and predecessor alike, and
+        // each act answered, whatever the act named is. An agreement's terms
+        // are reached; an Identity act (genesis, a rotation, a chain
+        // signature, an Identity everyday act) is followed no further.
         let mut follow = |h: &Hash, out: &mut Vec<Hash>| {
             let Some(y) = self.v.get(h) else {
                 *complete = false;
@@ -223,10 +217,17 @@ impl<'a> AgreementsView<'a> {
                 if !out.contains(h) {
                     out.push(*h);
                 }
-            } else {
+            } else if y.inside.spec != self.mirs.identity {
                 self.belongs_into(h, seen, out, complete);
             }
         };
+        // Named in `objects`: the agreement, or an act that belongs to it.
+        for o in x.inside.objects.iter().flatten() {
+            for c in [o.chain, o.predecessor] {
+                follow(&c, out);
+            }
+        }
+        // Through the act it answers.
         if x.inside.spec == self.mirs.money {
             match crate::money::Payload::decode(x.inside.type_, &x.inside.payload) {
                 Ok(crate::money::Payload::Receipt(r)) => {

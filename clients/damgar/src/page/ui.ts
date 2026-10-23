@@ -372,7 +372,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           ds
             .map((d) => `<h3>“${v.e(d.name)}” <span class="k-small k-soft k-mono">${v.e(shortForm(v.formOf(d.version)))}</span></h3><div class="k-feed">${[
               ...d.payments.map((x) => cardOf({ id: x.receipt, who: x.payer, kind: x.kind, text: `${x.kind === 'a tip' ? 'A tip' : 'A sale'} to the deal · ${x.amount.said}`, labels: [{ text: x.standing }], verified: true, lines: [] })),
-              ...d.payouts.map((x) => cardOf({ id: x.split, who: { id: meId(), short: '', me: true }, kind: 'your payout', text: `Its split pays you ${x.amount.said}${x.role ? ` (${x.role})` : ''}`, labels: [{ text: x.paid ? 'paid to you by its split service' : 'named in its split, not yet paid here' }], verified: x.paid, lines: [] })),
+              ...d.payouts.map((x) => cardOf({ id: x.split, who: { id: meId(), short: '', me: true }, kind: 'your payout', text: `Its split pays you ${x.amount.said}${x.role ? ` (${x.role})` : ''}`, labels: [{ text: x.paid ? 'paid to you by its split service, its rail answer valid' : 'named in its split; its payment here is not yet shown valid by its rail: unknown' }], verified: x.paid, lines: [] })),
             ].join('') || '<p class="k-empty">Nothing yet.</p>'}</div>`)
             .join('') || '<p class="k-empty">No deal shared with you yet: a deal is set up in Edubba, where you sign it.</p>'
         }`;

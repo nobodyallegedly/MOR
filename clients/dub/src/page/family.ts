@@ -586,7 +586,7 @@ export function vowsBought(vs: { vow: string; seller: string; words: string; pri
   if (!vs.length) return '<p class="empty">No vow bought here. A vow you buy shows here, to confirm or contest once paid.</p>';
   return vs
     .map((x) => {
-      const state = !x.paid ? 'not paid yet' : x.sale === 'confirmed' ? 'confirmed' : x.sale === 'contested' ? `contested${x.promise ? `: “${x.promise}”` : ''}` : x.sale === 'pending' ? 'pending' : 'not seen at the relays yet';
+      const state = !x.paid ? 'not paid yet' : x.sale === 'confirmed' ? 'confirmed' : x.sale === 'contested' ? `contested${x.promise ? `: “${x.promise}”` : ''}` : x.sale === 'pending' ? 'pending' : x.sale === 'unknown' ? 'unknown: its rail answer is not read here' : 'not seen at the relays yet';
       const actions =
         x.paid && x.sale !== 'confirmed' && x.sale !== 'contested'
           ? `<div class="row"><button class="primary" data-action="vow-confirm" data-vow="${e(x.vow)}">Confirm: it was kept</button></div>

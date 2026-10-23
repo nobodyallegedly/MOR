@@ -231,7 +231,7 @@ fn an_offer_naming_a_streams_vow_is_judged_apart_from_any_claim_on_its_name() {
     let e = view(&w).offer(&offer).unwrap();
     assert!(e.counts, "a lone seller's offer naming a vow counts: {:?}", e.problems);
     let r = receipt(&mut w, &mut stranger, fan.id, offer, None, b"the fan paid the stranger");
-    let p = view(&w).purchase(&r).unwrap().expect("a payment following an offer is judged");
+    let p = common::stand_in_answers(view(&w)).purchase(&r).unwrap().expect("a payment following an offer is judged");
     assert_eq!(p.verdict, PurchaseVerdict::Purchase, "a purchase under the stranger's own terms (F215); Dario's claim is nowhere in it");
     let o = view(&w).work_owners(&opening).unwrap();
     assert!(!o.contested && o.default_holder == Some(dario.id));
@@ -281,7 +281,7 @@ fn today_a_bare_claim_does_not_make_a_name_claimed_for_purchases_an_agreement_do
     claim_alone(&mut w, &mut dario, opening);
     let theirs = publication(&mut w, &mut stranger, opening, spec("the stranger's copy, locked"));
     let r1 = receipt(&mut w, &mut stranger, fan.id, theirs, None, b"first payment");
-    assert_eq!(view(&w).purchase(&r1).unwrap(), None, "no agreement claims the name: a plain payment, judged by nobody");
+    assert_eq!(common::stand_in_answers(view(&w)).purchase(&r1).unwrap(), None, "no agreement claims the name: a plain payment, judged by nobody");
     // Dario and the club write a stake in the name: now the name is claimed
     // for purchases, and the stranger's next payment names no claim.
     let t = deal_on([dario.id, club.id], opening);
@@ -290,12 +290,12 @@ fn today_a_bare_claim_does_not_make_a_name_claimed_for_purchases_an_agreement_do
     sign(&mut w, &mut club, &d);
     assert_eq!(view(&w).work_owners(&opening).unwrap().agreements, vec![d]);
     let r2 = receipt(&mut w, &mut stranger, fan.id, theirs, None, b"second payment");
-    let p = view(&w).purchase(&r2).unwrap().expect("a payment for a claimed work is judged");
+    let p = common::stand_in_answers(view(&w)).purchase(&r2).unwrap().expect("a payment for a claimed work is judged");
     assert!(matches!(p.verdict, PurchaseVerdict::NoPurchase { .. }), "{:?}", p.verdict);
     // The first payment is unchanged by the later agreement: judged when
     // asked, against what the verifier holds; today it is "no purchase" too,
     // since nothing dates the payment against the agreement.
-    let p1 = view(&w).purchase(&r1).unwrap().expect("judged now");
+    let p1 = common::stand_in_answers(view(&w)).purchase(&r1).unwrap().expect("judged now");
     assert!(matches!(p1.verdict, PurchaseVerdict::NoPurchase { .. }), "{:?}", p1.verdict);
 }
 
@@ -333,7 +333,7 @@ fn today_a_publication_under_any_name_is_sold_under_the_agreement_claiming_that_
     sign(&mut w, &mut club, &offer);
     assert!(view(&w).offer(&offer).unwrap().counts);
     let r = receipt(&mut w, &mut dario, fan.id, offer, Some(d), b"the fan paid the owners");
-    let p = view(&w).purchase(&r).unwrap().expect("judged");
+    let p = common::stand_in_answers(view(&w)).purchase(&r).unwrap().expect("judged");
     assert_eq!(p.verdict, PurchaseVerdict::Purchase, "a purchase under the claiming agreement, the name being any hash");
 }
 

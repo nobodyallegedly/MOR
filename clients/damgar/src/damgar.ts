@@ -2677,7 +2677,8 @@ export class Damgar {
         if (!d) continue;
         for (const m of x.mine) {
           const unit = x.unit ?? book.shared?.[x.receipt]?.amount.unit ?? null;
-          const paid = Object.values(book.payments).some((p) => p.side === 'in' && p.other === x.service && p.amount.value === m.amount && (!unit || p.amount.unit === unit) && (p.claims.length > 0 || p.receipts.length > 0));
+          // Paid only where the payment's rail answer here is valid (S7e: never "paid" where the answer is not given).
+          const paid = payments.some((p) => p.side === 'in' && p.other.id === x.service && p.amount.value === m.amount && (!unit || p.amount.unit === unit) && p.proofs.some((y) => y.rail.answer === 'valid'));
           entry(d).payouts.push({ split, amount: shown({ unit: unit ?? '', value: m.amount }), role: m.role, paid });
         }
       }

@@ -2372,7 +2372,7 @@ export class Dub {
           seller: this.whoFrom(v.seller, me.id, p),
           what: 'vow',
           price: v.price,
-          state: !v.paid ? 'not paid yet' : v.sale === 'confirmed' ? 'confirmed: it was kept' : v.sale === 'contested' ? `contested${v.promise ? `: “${v.promise}”` : ''}` : 'not yet confirmed: confirm or contest it in its menu',
+          state: !v.paid ? 'not paid yet' : v.sale === 'confirmed' ? 'confirmed: it was kept' : v.sale === 'contested' ? `contested${v.promise ? `: “${v.promise}”` : ''}` : v.sale === 'unknown' ? 'unknown: whether it is a sale rests on a rail answer not read here' : 'not yet confirmed: confirm or contest it in its menu',
           text: v.words,
           picture: null,
           sale: v.sale,

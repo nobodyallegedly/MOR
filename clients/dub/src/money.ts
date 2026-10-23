@@ -152,7 +152,7 @@ export interface VowBoughtShown {
   price: string | null;
   /** Paid, and its claim published: a sale anyone can read. */
   paid: boolean;
-  sale: 'pending' | 'confirmed' | 'contested' | null;
+  sale: 'pending' | 'confirmed' | 'contested' | 'unknown' | null;
   promise: string | null;
   /** Its buyer's contests in the purchase's form (F386), shown beside it: they mark no sale. */
   beside: ContestsBeside | null;

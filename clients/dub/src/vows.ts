@@ -117,7 +117,8 @@ export interface SaleShown {
   act: string;
   offer: string;
   buyer: string;
-  state: 'pending' | 'confirmed' | 'contested';
+  /** S7e (Q53): unknown where the answer rests on a receipt or claim whose rail answer is not given, never pending. */
+  state: 'pending' | 'confirmed' | 'contested' | 'unknown';
   by: string[];
   /** What a contest says was not kept, where it says (field 1). */
   promise: string | null;
@@ -136,6 +137,8 @@ export interface VowShown {
   sales: SaleShown[];
   /** Payments following its offers whose buyer signed on to nothing public: no state. */
   unsigned: number;
+  /** Payments whose buyer the core cannot tell without a rail answer (S7e): shown as unknown, never as unsigned. */
+  unknown?: number;
 }
 
 /**
@@ -177,7 +180,7 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
   const out: VowShown[] = [];
   for (const x of vows) {
     try {
-      const e = r.v.agreementsVow(specs, x.name) as { name: string; signer: string; void: boolean; words: string[]; offers: string[]; sales: { act: string; offer: string; buyer: string; state: SaleShown['state']; by: string[] }[]; unsigned: string[] };
+      const e = r.v.agreementsVow(specs, x.name) as { name: string; signer: string; void: boolean; words: string[]; offers: string[]; sales: { act: string; offer: string; buyer: string; state: SaleShown['state']; by: string[] }[]; unsigned: string[]; unknown?: string[] };
       out.push({
         name: e.name,
         signer: e.signer,
@@ -192,6 +195,7 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
           beside: contestsOf(r, specs, s.act, contests),
         })),
         unsigned: e.unsigned.length,
+        unknown: e.unknown?.length ?? 0,
       });
     } catch (err) {
       r.problems.push(`The vow ${x.name.slice(0, 8)}… could not be read: ${err instanceof Error ? err.message : String(err)}`);
@@ -260,6 +264,8 @@ export async function purchaseContests(a: { purchases: { act: Uint8Array; key?: 
     try {
       const p = r.v.agreementsPurchase(specs, id) as { verdict: string; why?: string | null } | null;
       if (p && p.verdict === 'no-purchase') by[id] = { ...by[id], noPurchase: p.why ?? 'no purchase' };
+      // S7e (Q53): whether it is a purchase rests on a rail answer not given here: unknown, never "none".
+      else if (p && p.verdict === 'unknown') by[id] = { state: 'unknown', contests: [], why: 'a receipt or claim it rests on has no rail answer here: whether it is a purchase is unknown' };
     } catch {
       // not read: as before
     }
@@ -274,7 +280,7 @@ function contestsOf(r: Reader, specs: unknown, purchase: string, contests: Uint8
     return { state: 'shown', contests: shown.map((act) => ({ act, promise: promiseOf(contests, [act]) })) };
   } catch (e) {
     const m = e instanceof Error ? e.message : String(e);
-    return { state: 'unknown', contests: [], why: /payment-unstated/.test(m) ? 'its payment is not stated: whether it is a purchase, and whose, is unknown' : m };
+    return { state: 'unknown', contests: [], why: /payment-unstated/.test(m) ? 'its payment is not stated: whether it is a purchase, and whose, is unknown' : /rail-unanswered/.test(m) ? 'its claim has no rail answer here: whether it is a purchase is unknown' : m };
   }
 }
 
@@ -350,11 +356,12 @@ function judged(r: Reader, claims: { act: Uint8Array; key?: Uint8Array }[]): { s
   const limits: [string, boolean][] = [];
   const amounts = new Map<string, Amount>();
   for (const { act, key } of claims) {
-    const d = (key ? openWithKey(act, key) : describeAct(act)) as { id: string; payload?: Uint8Array; binding?: string };
+    const d = (key ? openWithKey(act, key) : describeAct(act)) as { id: string; type?: number; payload?: Uint8Array; binding?: string };
     try {
       const j = r.v.moneyJudge(d.id, { money: MIRS.money, accepted }) as { rail: { answer: string }; payment?: string | null };
       if (j.rail.answer !== 'valid') continue;
-      const c = (moneyRead(CLAIM, d.payload!) as { act: { proof: Uint8Array; amount: Amount } }).act;
+      // A claim, or (S7e, Q53) a receipt the answer rests on, such as a collective's recording its sale: each stated by its own rail answer.
+      const c = (moneyRead(d.type === 2 ? 2 : CLAIM, d.payload!) as { act: { proof: Uint8Array; amount: Amount } }).act;
       amounts.set(d.id, c.amount);
       if (j.payment) railPayments.push([hex(new Uint8Array(c.proof)), j.payment]);
       const p = readPaymentProof(new Uint8Array(c.proof)) as { paidTo: { flow?: { pointer: string }; vault?: { declaredBy: string; entry: number } } & Record<string, unknown> };
