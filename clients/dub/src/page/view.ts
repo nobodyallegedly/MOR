@@ -501,7 +501,7 @@ export function payChooser(o: { title: string; sub: string; kind: 'tip' | 'buy' 
     ? `Dub signs it now, with its lane’s key. Per payment: at most ${w.lane.perPayment}${w.lane.total ? ` · In all: ${w.lane.left} left of ${w.lane.total}` : ''}${w.lane.until ? ` · until ${new Date(w.lane.until * 1000).toISOString().slice(0, 10)}` : ''} · paid under it so far: ${w.lane.spent} (Dub’s own count${w.lane.total ? '; the cap in all is kept by Dub and counted in Damgar, not judged by verifiers' : ''}).`
     : (w.lane.why ?? '');
   const amount = o.kind === 'tip' || o.kind === 'pay';
-  return `<form class="dub-modal-form" id="pay" data-kind="${e(o.kind)}"><p class="k-small k-soft">${e(o.sub)}</p>
+  return `<form class="dub-modal-form" id="pay" data-kind="${e(o.kind)}"><p class="k-small k-soft">${e(o.sub)}</p>${w.shared ? `<p class="k-label dub-shared">${e(w.shared)}</p>` : ''}
 ${amount ? `<div class="k-row"><input name="value" inputmode="numeric" placeholder="Amount" required class="k-grow"><select name="unit">${unitOptions(o.units)}</select></div><input name="whatFor" placeholder="What for (optional)" maxlength="280">` : `<p>${e(o.price ?? '')}</p>`}
 <div class="dub-ways">${way('lane', 'Under Dub’s lane', w.lane.open, laneSaid)}${way('damgar', 'Ask Damgar', w.damgar.open, w.damgar.open ? (w.damgar.wakes ? 'Dub leaves it on MOR, sealed to you, and wakes Damgar: Damgar pops up here, reads it to you, and you authorise it in its panel. It waits in Damgar’s Waiting too.' : 'Dub leaves it on MOR, sealed to you; Damgar queues it in Waiting, reads it to you and signs it there.') : (w.damgar.why ?? ''))}${way('hand', 'By hand', w.hand.open, w.hand.open ? 'Dub shows the payment to copy into Damgar; nothing is signed or sent from here.' : (w.hand.why ?? ''))}</div>
 <div class="k-row"><button type="submit" class="k-btn k-p"${first ? '' : ' disabled'}>${o.kind === 'tip' ? 'Tip' : o.kind === 'pay' ? 'Pay' : 'Buy it'}</button><span class="k-grow"></span><span class="k-small k-faint">the record goes to Damgar’s account</span></div><div id="pay-said"></div></form>`;
@@ -587,7 +587,8 @@ export function laneForm(s: State, web: boolean, said: string[]): string {
 <form id="lane" class="dub-modal-form"><input name="label" value="${web ? 'Dub on the web' : 'Dub on this computer'}" maxlength="80" autocomplete="off">
 <div class="k-row"><input name="cap" inputmode="numeric" placeholder="At most, per payment" required class="k-grow"><select name="unit">${unitOptions(s.units)}</select></div>
 <div class="k-row"><input name="total" inputmode="numeric" placeholder="In all, for the whole lane (optional)" class="k-grow"></div>
-<label>Until (optional), judged on a timestamp clock: its ID</label><div class="k-row"><input name="until" type="datetime-local"><input name="clock" class="k-grow" placeholder="the clock’s ID" spellcheck="false" value="${e(s.identity!.clock?.form ?? '')}"></div>
+<label>Until (optional), judged on a timestamp clock: its ID${s.identity!.laneClock ? `, prefilled with ${e(s.identity!.laneClock.name)}` : ''}</label><div class="k-row"><input name="until" type="datetime-local"><input name="clock" class="k-grow" placeholder="the clock’s ID" spellcheck="false" value="${e(s.identity!.laneClock?.id ?? '')}"></div>
+<p class="k-small k-soft">The clock is written in the lane’s grant, so the lane’s words name it: change it here before asking, if you wish.</p>
 <div class="k-row"><button type="submit" class="k-btn k-p">Ask Damgar for this lane</button></div></form>
 <h4>Payments under the lane</h4><div id="payments"><p class="k-small k-soft">Reading…</p></div>`;
 }

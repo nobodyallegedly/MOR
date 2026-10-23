@@ -143,7 +143,7 @@ export function home(s: State, as: Acting | null, alarms: string): string {
 }
 
 /** Each tile's column. */
-export function column(tab: Tab, s: State, k: { queue?: Record<string, number>; here?: number; sales?: number; mine?: number; toSign?: number }): ColumnEntry[] {
+export function column(tab: Tab, s: State, k: { queue?: Record<string, number>; here?: number; sales?: number; mine?: number; toSign?: number; deals?: number; dealsToSign?: number }): ColumnEntry[] {
   switch (tab) {
     case 'agents':
       return [
@@ -165,7 +165,7 @@ export function column(tab: Tab, s: State, k: { queue?: Record<string, number>; 
       ];
     }
     case 'publishing':
-      return [{ key: 'file', label: 'A protected file' }, { key: 'here', label: 'Published here', k: k.here }, { key: 'sales', label: 'Sales', k: k.sales }];
+      return [{ key: 'file', label: 'A protected file' }, { key: 'post', label: 'A shared post' }, { key: 'here', label: 'Published here', k: k.here }, { key: 'deals', label: 'Shared deals', k: k.deals }, { key: 'sign', label: 'To sign', k: k.dealsToSign || undefined }, { key: 'sales', label: 'Sales', k: k.sales }];
     case 'vows':
       return [{ key: 'track', label: 'Track' }, { key: 'new', label: 'A new vow' }, { key: 'mine', label: 'Vows published here', k: k.mine }];
   }
@@ -432,7 +432,7 @@ export function whoActs(actors: { id: string; short: string; kind: 'self' | 'col
     .join('')}<details class="k-say"><summary>+ a collective by its ID<span class="k-help">?</span></summary><form id="collective-add" class="k-row"><input name="collective" placeholder="mid1…" autocomplete="off" spellcheck="false"><button type="submit" class="k-btn">Add it</button></form></details></div>`;
 }
 
-export function filePane(o: { who: string; media: string; unit: string; say: string[]; judged: string }): string {
+export function filePane(o: { who: string; media: string; unit: string; say: string[]; judged: string; shares?: string }): string {
   const what = `<div class="edubba-chips"><span class="k-lbl">What</span>${MEDIA.map((m) => `<button type="button" class="k-chip${m.key === o.media ? ' k-on' : ''}" data-media="${m.key}">${e(m.label)}</button>`).join('')}</div>`;
   const input =
     o.media === 'text'
@@ -444,15 +444,46 @@ export function filePane(o: { who: string; media: string; unit: string; say: str
 <details class="k-say"><summary>Details: referral share and split<span class="k-help">?</span></summary><div class="k-more-text"><label>Referral share, % (optional; yourself only)</label><input name="referral" inputmode="numeric" autocomplete="off">
 <p>${e(o.judged)}</p><label>The split service: its ID (optional)</label><input name="service" type="text" autocomplete="off" spellcheck="false">
 <label>The key the service made for you (64 hexadecimal characters)</label><input name="serviceKey" type="text" autocomplete="off" spellcheck="false"></div></details>
+${o.shares ?? ''}
 <div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form><div id="e-pub-review" class="e-in"></div>`;
+}
+
+/**
+ * "Who shares in it" (this round, decided: "Edubba is the place"): the people
+ * by a contact's name, never by hash alone; each one's share, yours
+ * included, adding to 100; the referral off the top; the split service and
+ * the key it made for the deal's own payee, whose ID is shown to give it.
+ */
+export function sharesFields(o: { names: string[]; payee: string | null; say: string[]; kind: string }): string {
+  const list = `<datalist id="e-share-names">${o.names.map((n) => `<option value="${e(n)}"></option>`).join('')}</datalist>`;
+  const row = (i: number) => `<div class="edubba-grid"><div><label>Shared with (a name in your contacts)</label><input name="with${i}" list="e-share-names" autocomplete="off"></div><div><label>Their share, %</label><input name="share${i}" inputmode="decimal" autocomplete="off"></div></div>`;
+  return `<details class="k-say" data-shares><summary>Who shares in it: a split with other people<span class="k-help">?</span></summary><div class="k-more-text">${o.say.map((t) => `<p>${e(t)}</p>`).join('')}${list}
+${row(0)}${row(1)}
+<div class="edubba-grid"><div><label>Your share, %</label><input name="mine" inputmode="decimal" autocomplete="off"></div><div><label>Referral share off the top, % (optional)</label><input name="dealReferral" inputmode="decimal" autocomplete="off"></div></div>
+<label>The split service that divides each payment: its ID</label><input name="dealService" type="text" autocomplete="off" spellcheck="false">
+<p class="k-small k-soft">The deal’s own payee, made here for this ${e(o.kind)}: <code class="k-mono">${e(o.payee ?? '…')}</code>. Ask the service for a key for it (<code>mor-split-service key ${e(o.payee ?? 'ID')}</code>), and give that key below.</p>
+<label>The key the service made for the deal’s payee (64 hexadecimal characters)</label><input name="dealKey" type="text" autocomplete="off" spellcheck="false"></div></details>`;
+}
+
+/** A plain post under a deal (this round): its tips go to the deal, through its split service. */
+export function sharedPostPane(o: { who: string; shares: string }): string {
+  return `<h2>A shared post</h2>${say('A post whose tips go to the people sharing in it', ['A tip on it goes to the deal, not to you alone (decided: “with a tip IF there is a split the target is the agreement not the act”): its split service divides each tip like a sale, and nobody owes it back.'])}${o.who}
+<form id="pub-post"><label>The post’s words</label><textarea name="text" rows="4" maxlength="2000"></textarea>${o.shares.replace('<details class="k-say" data-shares>', '<details class="k-say" data-shares open>')}
+<div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form><div id="e-post-review" class="e-in"></div>`;
+}
+
+/** The deals set up here: who has signed, what waits, what was announced. */
+export function dealsPane(cards: string): string {
+  return `<h2>Shared deals</h2>${say('Deals with other people, set up here', ['Each waits until every person has signed it in their own Edubba; then its work is announced: its post, its locked bytes, its key sealed to each of you.'])}<div class="k-row"><button type="button" class="k-btn" data-action="pub-deals-gather">Look for signatures</button></div>${feedBox({ id: 'deals-feed', cards, empty: 'No deal set up here yet: “Who shares in it”, under Details, when publishing.' })}`;
 }
 
 export function herePane(cards: string): string {
   return `<h2>Published here</h2><div class="k-row"><button type="button" class="k-btn" data-action="pub-deliver">Deliver keys to buyers</button><span class="k-small k-soft">Delivers the key of each sale your Damgar signed the receipt for.</span></div>${feedBox({ id: 'here-feed', cards, empty: 'Nothing published here yet.' })}`;
 }
 
-export function salesPane(rows: string, problems: string[] = []): string {
-  return `<h2>Sales</h2><p class="k-small k-soft">Each buyer whose key was delivered from here: a sale your Damgar signed the receipt for. A buyer’s contest of their purchase is shown beside it: it undoes nothing.</p>${problems.length ? `<p class="k-small k-soft">${problems.map(e).join('<br>')}</p>` : ''}${rows || '<p class="k-empty">No sale yet.</p>'}`;
+export function salesPane(rows: string, problems: string[] = [], shared = ''): string {
+  return `<h2>Sales</h2><p class="k-small k-soft">Each buyer whose key was delivered from here: a sale your Damgar signed the receipt for. A buyer’s contest of their purchase is shown beside it: it undoes nothing.</p>${problems.length ? `<p class="k-small k-soft">${problems.map(e).join('<br>')}</p>` : ''}${rows || '<p class="k-empty">No sale yet.</p>'}
+<h3>Shared works</h3><p class="k-small k-soft">Sales of a work you share with other people, or of a collective you are a member of, as its split service told you: the buyer’s claim is sealed to every one of you, and their contest shows beside it.</p>${shared || '<p class="k-empty">No sale of a shared work told to you yet.</p>'}`;
 }
 
 /** The buyer's contests shown beside one purchase (F386), as the core reads them. */
@@ -460,12 +491,15 @@ export interface ContestsBeside {
   state: 'shown' | 'unknown';
   contests: { act: string; promise: string | null }[];
   why?: string;
+  /** The core reads the payment as no purchase: its words (a contest shows beside a purchase only). */
+  noPurchase?: string | null;
 }
 
 /** The contests beside a sale: each in red, the promise not kept in words where said; "unknown" where the core cannot say; nothing where there is none. */
 export function contestsBeside(c: ContestsBeside | undefined): string {
   if (!c) return '';
   if (c.state === 'unknown') return `<div class="k-small k-soft edubba-beside">Its buyer’s contests: unknown (${e(c.why ?? 'not read')}).</div>`;
+  if (c.noPurchase) return `<div class="k-small k-soft edubba-beside">The core reads this payment as no purchase (${e(c.noPurchase)}): a buyer’s contest shows beside a purchase only.</div>`;
   return c.contests.map((x) => `<div class="k-label k-bad edubba-beside" data-contest="${e(x.act)}">Contested by its buyer${x.promise ? `: “${e(x.promise)}”` : ''} · ${e(shortForm(formOf(x.act)))}</div>`).join('');
 }
 
@@ -477,10 +511,11 @@ export function trackPane(points: { key: string; label: string }[], show: string
 ${problems.length ? `<p class="k-small k-soft">${problems.map(e).join('<br>')}</p>` : ''}${feedBox({ id: 'track-feed', cards, empty: points.length ? 'Nothing of that kind at the places pointed at.' : 'Point at a person, a collective or a relay.' })}<p class="k-clock">Asked of the relays pointed at (or Edubba’s own): only what they hold is seen; nothing is indexed.</p>`;
 }
 
-export function newVowPane(o: { who: string; unit: string }): string {
+export function newVowPane(o: { who: string; unit: string; shares?: string }): string {
   return `<h2>A new vow</h2>${say('Something MOR cannot hash, or not yet', ['A seat, a lesson, a thing to be made. Each purchase is a sale its buyer confirms (kept) or contests (not kept), in their own app: Dub, or here in Track.'])}${o.who}
 <form id="pub-vow"><label>What is vowed, in words: what the buyer gets</label><textarea name="words" rows="3"></textarea>
 <div class="edubba-grid"><div><label>Title</label><input name="title" type="text" maxlength="200" autocomplete="off"></div><div><label>Price (${e(o.unit)})</label><input name="price" inputmode="numeric" autocomplete="off"></div></div>
+${o.shares ?? ''}
 <div class="k-row"><button type="submit" class="k-btn k-p">Read it back</button></div></form><div id="e-vow-review" class="e-in"></div>`;
 }
 

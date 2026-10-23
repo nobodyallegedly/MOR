@@ -185,6 +185,8 @@ export interface State {
     acting: string | null;
     /** The timestamp clock its feeds are ordered by (H54), or null: none named. */
     clock: { id: string; form: string; name: string } | null;
+    /** The clock a lane's Until is prefilled with: the Dubsar clock (decided 23 October 2026: "Yes"), still written in the lane's words, since the grant signs it. */
+    laneClock: { id: string; name: string } | null;
   };
   /** Proposals to sign waiting in this identity's inbox: signed in Edubba, Collectives › To sign (Dub's Signing tab removed, decided). */
   proposalsWaiting?: number;
@@ -211,6 +213,8 @@ export interface PayWays {
   lane: { open: boolean; why: string | null; label: string | null; perPayment: string | null; until: number | null; spent: string | null; /** The cap in all (the grant limits cMIP, draft 3), said, and what is left of it by Dub's own count; null where none was asked. */ total: string | null; left: string | null };
   damgar: { open: boolean; why: string | null; /** On this computer: Damgar is woken, and pops up here to authorise it (2A). */ wakes?: boolean };
   hand: { open: boolean; why: string | null };
+  /** Under a deal between separate people: the one line said before paying ("This work is shared: X, Y, Z. The split service answers for it."); null for a person's own work. */
+  shared?: string | null;
 }
 
 /** A file bought or a vow purchased, for Purchases. */
@@ -253,7 +257,7 @@ export interface Proposal {
   act: string;
   collective: string | null;
   reading: {
-    kind: 'founding' | 'clone' | 'release' | 'act' | 'other';
+    kind: 'founding' | 'clone' | 'release' | 'act' | 'deal' | 'other';
     title: string;
     summary: string[];
     sections: { heading: string; lines: Line[] }[];

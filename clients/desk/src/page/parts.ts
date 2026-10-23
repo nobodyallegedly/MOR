@@ -593,7 +593,14 @@ export interface PublishingShown {
   acting: string | null;
   as: string | null;
   works: { publication: string; offer: string; as: string; member: string; collective: boolean; media: 'text' | 'picture' | 'video' | 'audio'; title: string; price: number; words: string; at: number; delivered: Record<string, string>; toMembers: string | null }[];
-  vows: { vow: string; offer: string; as: string; collective: boolean; words: string; title: string; price: number; at: number }[];
+  vows: { vow: string; offer: string; as: string; collective: boolean; words: string; title: string; price: number; at: number; deal?: string | null; shares?: [string, number][] | null }[];
+  /** Plain posts shared under a deal (this round). */
+  posts?: { post: string; deal: string; as: string; text: string; shares: [string, number][]; at: number }[];
+  /** The deals set up here (this round): waiting for signatures, or announced. */
+  deals?: { id: string; version: string; kind: 'work' | 'vow' | 'post'; title: string; payee: string; service: string; shares: [string, number][]; referral: number; state: 'waiting' | 'announced'; signed: string; post: string | null; offer: string | null; at: number }[];
+  /** The deal's own payee the next deal will take: its ID, to give the split service (`mor-split-service key ID`). */
+  dealPayee?: string | null;
+  sharesSay?: string[];
   held: string[];
   say: string[];
   unit: string;

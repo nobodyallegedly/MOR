@@ -30,7 +30,7 @@
 //
 // TEST IDENTITIES ONLY, and test networks only, until MOR is frozen.
 
-import { clockWords } from '../../barebone/src/clock.ts';
+import { DUBSAR_CLOCK_ID, clockWords } from '../../barebone/src/clock.ts';
 import {
   ENVELOPES_TYPES,
   keyDeliveryPayload,
@@ -84,7 +84,8 @@ import { AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
 import type { InvoiceLink, LinkConfig } from './link.ts';
 import { LINK_SAY } from './link-say.ts';
 import { promiseDigest, promisePayload, promiseSay, readCollective, signPromise, standing, type CollectiveHere } from './collective.ts';
-import { collectiveNow, collectivePlaces, collectivePointer, splitServiceOf, type ConsentRead } from '../../grants/src/member.ts';
+import { collectiveNow, collectivePlaces, collectivePointer, splitServiceOf, termsAt, type ConsentRead } from '../../grants/src/member.ts';
+import { readDeal, sharedLine, type DealRead } from '../../grants/src/deal.ts';
 import { TestIdentity, TEST_LABEL, freshLines, sealFor, type IdentityFile } from '../../genesis/src/identity.ts';
 import { lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
@@ -102,7 +103,7 @@ import type { ChainSource } from './chain.ts';
 import { TYPES, answerPayload, draftPayload, invoiceRequestPayload, readAnswer, readCommitmentFields, readDraft, readInvoiceRequest, readLaneRequest, readRequest, readSale, requestPayload, salePayload, sendToSelf, type Bound, type CommitmentFields, type Draft, type LaneKind, type LaneRequest } from './messages.ts';
 import { ACCEPTABLE, MESSAGES_SPEC, MESSAGES_SPEC_1, MESSAGES_SPEC_3, MESSAGES_SPECS, MONEY, OURS, SPEC, isAccepted, labelOf } from './specs.ts';
 import { readValue, say, totals, unitOf, type Amount } from './units.ts';
-import type { Account, Accept, LaneShown, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from './shapes.ts';
+import type { SharedShown, Account, Accept, LaneShown, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from './shapes.ts';
 
 export type { State } from './shapes.ts';
 
@@ -237,6 +238,10 @@ export interface Book {
   /** Money messages this Damgar cannot read (a type it does not know, a payload not as the cMIP writes it): shown unknown, never guessed (money messages cMIP, 6.1). Absent in books written before. */
   unread?: Record<string, { from: string; found: number; type: number; why: string; stage: 'new' | 'set aside' }>;
   payments: Record<string, Payment>;
+  /** Payments to a deal between separate people this identity is a party of, receipted by its split service in the deal's payee's name and sealed to every party (this round), by receipt. */
+  shared?: Record<string, { payer: string; payee: string; amount: Amount; fulfils: string; purchase: boolean; at: number }>;
+  /** The splits a split service sealed to this identity (Agreements type 8), by act: the agreement and this identity's payouts. */
+  splits?: Record<string, { service: string; agreement: string; receipt: string; mine: { amount: number; role: string | null }[]; unit: string | null; at: number }>;
   /** Promises signed here for a collective with this member's own key (round 3, F353), by act. */
   collectiveActs?: Record<string, { collective: string; to: string; amount: Amount; whatFor: string; asked: string[]; at: number }>;
   /** Anchors asked from Damgar's own act menu (decided: Rely and Anchor on every act), by draft: the act, and its blind, which never leaves this app. */
@@ -1078,7 +1083,7 @@ export class Damgar {
                 continue;
               }
               const d = o.described;
-              if (((d.spec && MESSAGES_SPECS.includes(d.spec)) || d.spec === MONEY) && !book.acts[d.id] && !fresh.some((f) => f.described.id === d.id)) fresh.push(o);
+              if (((d.spec && MESSAGES_SPECS.includes(d.spec)) || d.spec === MONEY || (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.split)) && !book.acts[d.id] && !fresh.some((f) => f.described.id === d.id)) fresh.push(o);
               // A key this identity delivered to itself (another of its apps, for an act it signed under its lane): kept, so the record of that payment lives here.
               else if (d.spec === SPECS.envelopes && d.type === ENVELOPES_TYPES.keyDelivery && d.signer === me.id && d.payload) {
                 try {
@@ -1214,6 +1219,20 @@ export class Damgar {
       }
       return;
     }
+    // A split a split service sealed to this identity (Agreements type 8, rule 20): kept, its payouts to this identity shown in the account.
+    if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.split) {
+      const m = cborDecode(d.payload!) as Map<number, unknown>;
+      const payouts = (m.get(1) as Map<number, unknown>[] | undefined) ?? [];
+      const mine = payouts.filter((x) => x.get(0) instanceof Uint8Array && hex(x.get(0) as Uint8Array) === me.id).map((x) => ({ amount: Number(x.get(1)), role: typeof x.get(3) === 'string' ? (x.get(3) as string) : null }));
+      const receipt = m.get(0);
+      const agreement = m.get(3);
+      if (mine.length && receipt instanceof Uint8Array && agreement instanceof Uint8Array) {
+        const rc = book.acts[hex(receipt)] ? this.moneyOf(book, hex(receipt)) : null;
+        (book.splits ??= {})[d.id] = { service: signer, agreement: hex(agreement), receipt: hex(receipt), mine, unit: rc?.amount?.unit ?? null, at: t };
+        lines.push({ text: `${short(signer)} published a split naming you: ${mine.map((x) => `${x.amount}${x.role ? ` (${x.role})` : ''}`).join(', ')}, in the account.`, tone: 'ok' });
+      }
+      return;
+    }
     // A Money act addressed to this identity.
     const r = moneyRead(d.type!, d.payload!) as { act: { type: string; [k: string]: unknown } };
     const a = r.act as any;
@@ -1236,10 +1255,24 @@ export class Damgar {
       if (!p.receipts.includes(d.id)) p.receipts.push(d.id);
       p.stage = 'settled';
       lines.push({ text: `${short(signer)} signed the receipt for your payment: in the account.`, tone: 'ok' });
+    } else if (a.type === 'receipt' && a.payer !== me.id && a.payee !== me.id && a.payee === signer) {
+      // A payment to a deal this identity is a party of (this round): its split service receipted it in the deal's payee's name and sealed it to every party.
+      (book.shared ??= {})[d.id] = { payer: typeof a.payer === 'string' ? a.payer : '', payee: a.payee, amount: a.amount, fulfils: a.fulfils, purchase: !!a.purchase, at: t };
+      lines.push({ text: `A payment to a deal you share in was receipted in its payee’s name (${short(a.payee)}): in the account.`, tone: 'ok' });
     } else if (a.type === 'obligation' && a.creditor === me.id && a.debtor === signer) {
       const ask = Object.entries(book.requestsOut).find(([id, x]) => x.to === signer && !x.obligation && this.requestOf(book, id)?.pointer === a.pointer);
       if (ask) ask[1].obligation = d.id;
       lines.push({ text: `${short(signer)} accepted a debt to you, signed: in the account. ${DEBT_SAY}`, tone: 'ok' });
+    }
+  }
+
+  /** A kept Money act, read: null where it is not kept or not read. */
+  private moneyOf(book: Book, id: string): { amount?: Amount } | null {
+    try {
+      const { d, payload } = this.opened(book, id);
+      return d.spec === MONEY ? ((moneyRead(d.type!, payload) as { act: { amount?: Amount } }).act ?? null) : null;
+    } catch {
+      return null;
     }
   }
 
@@ -1634,6 +1667,8 @@ export class Damgar {
         const under = (cborDecode(d.payload) as Map<number, unknown>).get(0);
         if (under instanceof Uint8Array) agreement = hex(under);
       }
+      // A tip to a work shared under a deal follows the deal itself (the money messages cMIP, draft 5, 4.4).
+      if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.terms) agreement = fulfils;
       break;
     }
     if (!agreement) agreement = (await collectiveNow(payee, places, s.via).catch(() => null))?.agreement ?? null;
@@ -1835,6 +1870,11 @@ export class Damgar {
       lines.push({ text: 'Signing sends them a request to be paid, sealed to them, naming your payee pointer in force. It binds nobody: they may pay it, accept it as a debt, or decline.' });
     } else {
       lines.unshift({ text: `Prepared in ${dr.app}, not signed there: ${dr.what === 'anchor' ? 'pay an anchoring service' : 'pay'} ${short(dr.other)} ${say(dr.amount, acc)}${dr.whatFor ? `, for “${dr.whatFor}”` : ''}${about.length ? ` (about ${about.join(', ')})` : ''}.` });
+      // Draft 5: a tip to a work shared under a deal follows the deal, paid to its payee, through its split service.
+      if (dr.follows) {
+        const deal = await readDeal(dr.follows, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via).catch(() => null);
+        lines.push(deal ? { text: `${sharedLine(deal, (x) => (x === me.id ? `you (${short(x)})` : short(x)))} The payment follows the deal (${short(dr.follows)}): a tip, divided like a sale, no purchase.`, tone: 'ok' } : { text: `It follows ${short(dr.follows)}, which was not read as a deal here: unknown.`, tone: 'warn' });
+      }
       if (!unknown) {
         try {
           const r = await this.route(me, s, dr.other, dr.amount, acc);
@@ -2005,7 +2045,7 @@ export class Damgar {
       const p = await this.bind(me, s, book, {
         payee: dr.other,
         amount: dr.amount,
-        fulfils: dr.what === 'anchor' ? dr.anchor!.offer : null,
+        fulfils: dr.what === 'anchor' ? dr.anchor!.offer : (dr.follows ?? null),
         whatFor: dr.whatFor,
         answers: null,
         draft: id,
@@ -2122,7 +2162,8 @@ export class Damgar {
       const proofBytes = paymentProof({ paidTo: f.paidTo, salt: f.salt, rail }) as Uint8Array;
       const made = moneyPayload({ type: 'claim', rail: p.rail, proof: proofBytes, payee: p.other, amount: p.amount, fulfils: p.fulfils, referral: p.referral ?? undefined, ...(p.purchase ? { purchase: p.purchase } : {}) }) as { type: number; payload: Uint8Array };
       // Draft 4 (F357): a payment its payee's split service answered for, its claim to the service too.
-      const claim = await this.deliver(me, s, book, MONEY, made.type, made.payload, p.service ?? p.other, undefined, await this.claimHow(me, s, p, made));
+      // Draft 5 (9), following the MOR lead's core line (decided 23 October 2026): a purchase whose payee is a collective or a deal of several parties, its claim sealed to every member or party too.
+      const claim = await this.deliver(me, s, book, MONEY, made.type, made.payload, p.service ?? p.other, undefined, await this.claimHow(me, s, p, made), await this.purchaseReaders(me, s, p));
       p.claims.push(claim);
       p.proof = base64(proofBytes);
       p.stage = 'paid';
@@ -2139,6 +2180,24 @@ export class Damgar {
         ],
       };
     });
+  }
+
+  /**
+   * Who must be able to read a purchase's claim besides its payee or service
+   * (the money messages cMIP, draft 5, 9; decided with the MOR lead, 23
+   * October 2026: "every member of the collective's agreement in force, or
+   * every party of the version the purchase names"): the parties of the
+   * version the purchase names, read as anyone reads it. None for a payment
+   * that is no purchase, or a lone seller's.
+   */
+  private async purchaseReaders(me: TestIdentity, s: Settings, p: Payment): Promise<string[]> {
+    if (!p.purchase) return [];
+    const places = await collectivePlaces(p.other, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via).catch(() => [...s.relays]);
+    for (const v of [p.purchase[1], p.purchase[0]]) {
+      const t = (await termsAt(v, places, s.via).catch(() => null)) as { parties?: string[] } | null;
+      if (t?.parties?.length && t.parties.length > 1) return t.parties;
+    }
+    return [];
   }
 
   /** A transfer to the vault's record (F355): its claim, carrying the commitment and salt, sealed to oneself at one's homes. */
@@ -2544,6 +2603,55 @@ export class Damgar {
           return { id, side: 'out' as const, other: this.who(x.to, me.id), amount: shown(r?.amount ?? { unit: '', value: 0 }), whatFor: r?.whatFor ?? null, state: paid ? (paid.receipts.length ? 'paid, receipt signed' : paid.claims.length ? 'paid, by their claim' : 'being paid') : x.obligation ? 'accepted by them as a debt (signed), not paid' : 'asked, not paid yet', obligation: x.obligation, lines: x.obligation ? [{ text: DEBT_SAY, tone: 'warn' as const }] : [] };
         }),
       ];
+      // Deals between separate people (this round): each payment's deal named, and the deals this identity is a party of.
+      const deals = new Map<string, DealRead | null>();
+      const dealOf = async (fulfils: string, purchase: [string, string] | null): Promise<DealRead | null> => {
+        const places = [...s.relays, ...me.f.homes.map((h) => h.hint)];
+        let version = purchase?.[0] ?? null;
+        if (!version) {
+          for (const h of places) {
+            const act = await relayAt(h, s.via).getAct(fulfils).catch(() => null);
+            if (!act) continue;
+            const d = describeAct(act) as { spec?: string; type?: number; payload?: Uint8Array };
+            if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.terms) version = fulfils;
+            else if (d.spec === MIRS.agreements && d.type === AGREEMENTS_TYPES.offer && d.payload) {
+              const u = (cborDecode(d.payload) as Map<number, unknown>).get(0);
+              if (u instanceof Uint8Array) version = hex(u);
+            }
+            break;
+          }
+        }
+        if (!version) return null;
+        if (!deals.has(version)) deals.set(version, await readDeal(version, places, s.via).catch(() => null));
+        return deals.get(version) ?? null;
+      };
+      for (const [i, x] of payments.entries()) {
+        const p = book.payments[x.key];
+        if (!p) continue;
+        const d = await dealOf(p.fulfils, p.purchase ?? null);
+        if (d && d.parties.length > 1) payments[i] = { ...x, deal: d.name ?? 'a shared work' };
+      }
+      const shared = new Map<string, SharedShown>();
+      const entry = (d: DealRead): SharedShown => {
+        let e = shared.get(d.version);
+        if (!e) shared.set(d.version, (e = { version: d.version, name: d.name ?? 'a shared work', payments: [], payouts: [] }));
+        return e;
+      };
+      for (const [receipt, x] of Object.entries(book.shared ?? {})) {
+        const d = await dealOf(x.fulfils, null);
+        if (!d || !d.parties.includes(me.id)) continue;
+        entry(d).payments.push({ receipt, payer: this.who(x.payer, me.id), amount: shown(x.amount), kind: x.purchase ? 'a sale' : 'a tip', standing: 'receipted by its split service in the deal’s payee’s name' });
+      }
+      for (const [split, x] of Object.entries(book.splits ?? {})) {
+        if (!deals.has(x.agreement)) deals.set(x.agreement, await readDeal(x.agreement, [...s.relays, ...me.f.homes.map((h) => h.hint)], s.via).catch(() => null));
+        const d = deals.get(x.agreement);
+        if (!d) continue;
+        for (const m of x.mine) {
+          const unit = x.unit ?? book.shared?.[x.receipt]?.amount.unit ?? null;
+          const paid = Object.values(book.payments).some((p) => p.side === 'in' && p.other === x.service && p.amount.value === m.amount && (!unit || p.amount.unit === unit) && (p.claims.length > 0 || p.receipts.length > 0));
+          entry(d).payouts.push({ split, amount: shown({ unit: unit ?? '', value: m.amount }), role: m.role, paid });
+        }
+      }
       const valid = (ps: PaymentShown['proofs']) => ps.some((x) => x.rail.answer === 'valid');
       const inn = payments.filter((p) => p.side === 'in' && valid(p.proofs)).map((p) => p.amount);
       const out = payments.filter((p) => p.side === 'out' && valid(p.proofs)).map((p) => p.amount);
@@ -2555,6 +2663,7 @@ export class Damgar {
         totals: [t('Came in (verified)', inn), t('Went out (verified)', out), t('Pending', pending), t('Asked of others, not paid', owedYou), t('Asked of you, not paid', owedBy)],
         payments,
         asks,
+        shared: [...shared.values()],
         problems,
         notes: ACCOUNT_NOTES,
       };
@@ -2681,7 +2790,7 @@ export class Damgar {
     if (!Number.isSafeInteger(cap.value) || cap.value <= 0) throw new Error('A lane needs a cap per act, a whole amount above zero.');
     const l: Limits = { cap: { unit: cap.unit, value: cap.value } };
     if (until !== null) {
-      if (!clock) throw new Error('An expiry is judged on a timestamp clock: name one in Settings (its ID), or leave Until empty.');
+      if (!clock) throw new Error('An expiry is judged on a timestamp clock: name one in Lanes, In force (its ID), or leave Until empty.');
       l.expiry = { clock: 'timestamp', identity: clock, time: until };
     }
     encodeLimits(l);
@@ -2736,7 +2845,7 @@ export class Damgar {
   async ownLaneReview(a: { role: LaneRole; cap: string; unit: string; until?: number | null }): Promise<{ digest: string; lines: Line[] }> {
     const { me, s } = await this.ctx();
     const acc = this.acceptedSet(await this.accepted(me));
-    const limits = this.laneLimits({ unit: a.unit, value: Number(String(a.cap).replace(/[\s_]/g, '')) }, a.until ?? null, s.clock ?? null);
+    const limits = this.laneLimits({ unit: a.unit, value: Number(String(a.cap).replace(/[\s_]/g, '')) }, a.until ?? null, s.clock ?? DUBSAR_CLOCK_ID);
     const g = this.ownLaneShape(a.role, limits);
     return { digest: await digestOf(JSON.stringify({ me: me.id, a })), lines: this.laneWords(me, g, acc).map((text) => ({ text })) };
   }
@@ -2752,7 +2861,7 @@ export class Damgar {
       const { me, s, book } = await this.ctx();
       const { digest: _, ...rest } = a;
       if ((await digestOf(JSON.stringify({ me: me.id, a: rest }))) !== a.digest) throw new Error('This is not what was read back: read it again.');
-      const limits = this.laneLimits({ unit: a.unit, value: Number(String(a.cap).replace(/[\s_]/g, '')) }, a.until ?? null, s.clock ?? null);
+      const limits = this.laneLimits({ unit: a.unit, value: Number(String(a.cap).replace(/[\s_]/g, '')) }, a.until ?? null, s.clock ?? DUBSAR_CLOCK_ID);
       const g = this.ownLaneShape(a.role, limits);
       const k = makeGrantKey();
       const keys = await this.keys(me.id);
@@ -2822,7 +2931,7 @@ export class Damgar {
   }
 
   /** Every lane granted here, in plain words, with every act signed under it that its homes and relays hold. */
-  lanes(): Promise<{ lanes: LaneShown[]; manual: boolean; link: boolean; linkSay: string[]; clock: string | null }> {
+  lanes(): Promise<{ lanes: LaneShown[]; manual: boolean; link: boolean; linkSay: string[]; clock: string | null; dubsar: boolean }> {
     return this.serial(async () => {
       const { me, s, book, hints } = await this.ctx();
       const acc = this.acceptedSet(await this.accepted(me));
@@ -2862,7 +2971,7 @@ export class Damgar {
         });
       }
       void keys;
-      return { lanes: out, manual: !!s.manual, link: !!keys.link, linkSay: LINK_SAY, clock: s.clock ?? null };
+      return { lanes: out, manual: !!s.manual, link: !!keys.link, linkSay: LINK_SAY, clock: s.clock ?? DUBSAR_CLOCK_ID, dubsar: !s.clock && !!DUBSAR_CLOCK_ID };
     });
   }
 
@@ -3301,33 +3410,44 @@ export class Damgar {
    * key is held here (`lane`: signed with the grant key, citing its grant,
    * on the lane's own strand; F343, F350, F351).
    */
-  private async deliver(me: TestIdentity, s: Settings, book: Book, spec: string, type: number, payload: Uint8Array, to: string, refs?: [string, string][], how: How = { by: 'hand' }): Promise<string> {
+  private async deliver(me: TestIdentity, s: Settings, book: Book, spec: string, type: number, payload: Uint8Array, to: string, refs?: [string, string][], how: How = { by: 'hand' }, also: string[] = []): Promise<string> {
     const l = await lookUp(to, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via);
     if (!l.encryptionKey) throw new Error(`${short(to)} publishes no encryption key: nothing can be sealed to it. Nothing was sent.`);
     const inbox = l.inbox(spec) ?? (MESSAGES_SPECS.includes(spec) ? MESSAGES_SPECS.map((x) => l.inbox(x)).find((x) => x) : undefined) ?? [];
     if (!inbox.length) throw new Error(`${short(to)} declares no inbox: nothing can be left for it. Nothing was sent.`);
     await this.current(me);
+    // Readers besides `to` (the money messages cMIP, draft 5, 9): a purchase's claim, readable by every party of the deal or member of the collective it pays.
+    const others: { id: string; key: Uint8Array; inbox: string[] }[] = [];
+    for (const id of [...new Set(also)].filter((x) => x !== to && x !== me.id)) {
+      try {
+        const o = await lookUp(id, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via);
+        const ib = o.inbox(spec) ?? o.routes.routes.filter((r) => r.kind === 1).flatMap((r) => r.hints);
+        if (o.encryptionKey && ib.length) others.push({ id, key: o.encryptionKey, inbox: ib });
+      } catch {
+        // not found where asked: not reached, said by its absence in Edubba's Sales ("unknown")
+      }
+    }
     let made: { act: Uint8Array; id: string; key: Uint8Array };
     if (how.by === 'lane') {
       const keys = await this.keys(me.id);
       const lane = keys.lanes?.find((x) => x.grant === how.grant);
       if (!lane) throw new Error('That lane’s key is not held here. Nothing was signed.');
       try {
-        made = signUnderGrant({ grant: lane.grant, grantor: me.id, secret: lane.secret, strand: lane.strand }, { spec, type, payload, public: false, to: [to], refs });
+        made = signUnderGrant({ grant: lane.grant, grantor: me.id, secret: lane.secret, strand: lane.strand }, { spec, type, payload, public: false, to: [to, ...others.map((x) => x.id)], refs });
       } finally {
         // The lane's strand, kept before anything leaves.
         await this.store.write(me.id, 'keys', keys);
       }
     } else {
       try {
-        made = await this.signAct(me, spec, type, payload, { public: false, to: [to], refs });
+        made = await this.signAct(me, spec, type, payload, { public: false, to: [to, ...others.map((x) => x.id)], refs });
       } finally {
         await this.store.saveIdentity(me);
       }
     }
     book.acts[made.id] = { act: base64(made.act), key: base64(made.key), from: me.id };
     (book.how ??= {})[made.id] = how;
-    const sealed = sealFor(made.act, made.key, [{ id: to, key: l.encryptionKey }]);
+    const sealed = sealFor(made.act, made.key, [{ id: to, key: l.encryptionKey }, ...others.map((x) => ({ id: x.id, key: x.key }))]);
     let left = 0;
     for (const h of inbox) {
       try {
@@ -3337,6 +3457,7 @@ export class Damgar {
         // that relay is away
       }
     }
+    for (const h of [...new Set(others.flatMap((x) => x.inbox))].filter((x) => !inbox.includes(x))) await relayAt(h, s.via).putSealed(sealed).catch(() => undefined);
     // At this identity's homes too, locked, its key delivered to itself (H80's question 2): Kišib places Damgar's line by it.
     // Under a lane, the act is the grant's strand, not this line: its locked act left there, as before. Signed in another app (Dub) holding the
     // identity's own key, its content key is delivered to the identity itself too, so Damgar opens it and keeps the payment's record (decided:

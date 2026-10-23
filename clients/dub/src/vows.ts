@@ -74,7 +74,7 @@ export function readVow(act: Uint8Array): { name: string; signer: string; words:
 }
 
 /** An offer selling a vow, read: its id, price and words; null where `act` is no offer of `seller` naming `vow`. */
-export function readVowOffer(act: Uint8Array, seller: string, vow: string): { offer: string; price: Amount; words: string | null; under?: string } | null {
+export function readVowOffer(act: Uint8Array, seller: string, vow: string): { offer: string; price: Amount; words: string | null; under?: string; payee?: string } | null {
   const d = describeAct(act) as { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array };
   if (d.spec !== MIRS.agreements || d.type !== OFFER || d.signer !== seller || !d.payload) return null;
   try {
@@ -83,7 +83,8 @@ export function readVowOffer(act: Uint8Array, seller: string, vow: string): { of
     if (!sells) return null;
     const price = m.get(2) as [Uint8Array, number];
     const under = m.get(0);
-    return { offer: d.id, price: { unit: hex(price[0]), value: Number(price[1]) }, words: typeof m.get(4) === 'string' ? (m.get(4) as string) : null, ...(under instanceof Uint8Array ? { under: hex(under) } : {}) };
+    const payee = m.get(3);
+    return { offer: d.id, price: { unit: hex(price[0]), value: Number(price[1]) }, words: typeof m.get(4) === 'string' ? (m.get(4) as string) : null, ...(under instanceof Uint8Array ? { under: hex(under) } : {}), ...(payee instanceof Uint8Array ? { payee: hex(payee) } : {}) };
   } catch {
     return null;
   }
@@ -154,6 +155,18 @@ export async function vowSales(identity: string, relays: string[], via: Via = {}
     const x = readVow(a);
     if (x?.genesis && x.signer === identity) vows.push({ name: x.name, words: x.words });
   }
+  // An offer made under a deal between separate people counts only signed by every party (Agreements, Standing offer): each party held too, the deal's payee among them.
+  for (const a of [...r.held.values()]) {
+    const d = describeAct(a) as { spec?: string; type?: number; signer?: string; payload?: Uint8Array };
+    if (d.spec !== MIRS.agreements || d.type !== OFFER || d.signer !== identity || !d.payload) continue;
+    const under = (cborDecode(d.payload) as Map<number, unknown>).get(0);
+    const t = under instanceof Uint8Array ? r.held.get(hex(under)) : undefined;
+    const td = t ? (describeAct(t) as { spec?: string; type?: number; payload?: Uint8Array }) : null;
+    if (!td?.payload || td.type !== 0) continue;
+    const m = cborDecode(td.payload) as Map<number, unknown>;
+    if (m.has(12)) continue;
+    for (const p of ((m.get(0) as Uint8Array[] | undefined) ?? []).map((x) => hex(x))) await r.hold(p);
+  }
   // Each claim's and contest's signer, held with its acts (its chain, its lanes).
   for (const a of [...claims, ...contests]) {
     const d = describeAct(a) as { signer?: string };
@@ -205,6 +218,8 @@ export interface ContestsBeside {
   contests: { act: string; promise: string | null }[];
   /** Why it is unknown, in words. */
   why?: string;
+  /** Where the core reads the payment as no purchase (a buyer's contest is then shown beside nothing): its words (this round). */
+  noPurchase?: string | null;
 }
 
 /**
@@ -239,6 +254,16 @@ export async function purchaseContests(a: { purchases: { act: Uint8Array; key?: 
   const { specs } = judged(r, a.purchases.map((p) => ({ act: p.act, key: p.key ?? undefined })));
   const by: Record<string, ContestsBeside> = {};
   for (const id of ids) if (id) by[id] = contestsOf(r, specs, id, [...contests, ...held]);
+  // Where the core reads a payment as no purchase, said beside it: a contest shows beside a purchase only (F386), never silently "none".
+  for (const id of ids) {
+    if (!id || by[id]?.state !== 'shown' || by[id].contests.length) continue;
+    try {
+      const p = r.v.agreementsPurchase(specs, id) as { verdict: string; why?: string | null } | null;
+      if (p && p.verdict === 'no-purchase') by[id] = { ...by[id], noPurchase: p.why ?? 'no purchase' };
+    } catch {
+      // not read: as before
+    }
+  }
   return { by, problems: r.problems };
 }
 

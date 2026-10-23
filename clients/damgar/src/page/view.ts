@@ -135,7 +135,7 @@ export function column(tab: Tab, s: State, c: { toPay: number; toReceive: number
         { key: 'vault', label: 'To the vault' },
       ];
     case 'account':
-      return [{ key: 'summary', label: 'Summary' }, { key: 'payments', label: 'Payments' }, { key: 'under', label: 'Under the lanes' }, { key: 'anchors', label: 'Anchors' }];
+      return [{ key: 'summary', label: 'Summary' }, { key: 'payments', label: 'Payments' }, { key: 'shared', label: 'Shared deals' }, { key: 'under', label: 'Under the lanes' }, { key: 'anchors', label: 'Anchors' }];
     case 'lanes':
       return [{ key: 'asked', label: 'Asked', k: c.asked }, { key: 'in-force', label: 'In force', k: c.inForce }, { key: 'own', label: 'Damgar’s own' }, '-', { key: 'ended', label: 'Ended', k: c.ended }];
     case 'settings':
@@ -432,12 +432,12 @@ export function laneReview(r: { digest: string; lines: Line[] }): string {
 }
 
 /** In force: each lane, then the clock its expiries are judged on (moved here from Settings, accepted). */
-export function inForcePane(ls: LaneShown[], clock: string | null, manual: boolean): string {
+export function inForcePane(ls: LaneShown[], clock: string | null, manual: boolean, dubsar = false): string {
   return `<h2>In force</h2>
 ${say('What an app may sign and pay without asking you each time.', ['A lane lets an app (Dub, or Damgar itself) sign some of your money acts by itself, within a cap per act and until a date: a grant of your identity to itself, its key held by that app. Every act signed under one is shown so, here and to every reader. One revocation ends it.', '“In all”, a cap for the whole lane, is kept by the apps and counted here: Dub refuses to sign past it; verifiers judge only the cap per payment and the expiry, since a total needs every act of the lane, some of them private.'])}
 ${manual ? note('', 'Every step is followed by hand (Settings): the lanes Damgar holds sign nothing until you turn it off. Lanes other apps hold still sign there.') : ''}
 ${ls.map((l) => lane(l)).join('') || '<p class="k-empty">No lane in force. An app asks for one (in Dub: the identity’s menu, “A lane from Damgar”), and it waits in Asked.</p>'}
-<h3>The clock for lanes</h3><p class="k-small k-soft">A lane’s expiry is judged on a timestamp clock you name (the grant limits cMIP, 3.1): until it stamps an act, whether it came before the expiry is unknown.</p>
+<h3>The clock for lanes</h3><p class="k-small k-soft">A lane’s expiry is judged on a timestamp clock you name (the grant limits cMIP, 3.1): until it stamps an act, whether it came before the expiry is unknown.${dubsar ? ' Prefilled with the Dubsar clock, the one every app of the suite relies on; a lane’s grant names the clock, so its words say which.' : ''}</p>
 <form id="clock" class="k-row"><input name="clock" class="k-grow" placeholder="its ID" value="${e(clock ?? '')}" spellcheck="false"><button type="submit" class="k-btn">Save the clock</button></form>`;
 }
 

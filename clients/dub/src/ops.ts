@@ -278,7 +278,7 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
     case 'damgar answer':
       return dub.damgarAnswer(text(a.request));
     case 'pay ways':
-      return dub.payWays({ kind: payKind(a.kind) });
+      return dub.payWays({ kind: payKind(a.kind), post: text(a.post) || undefined, signer: text(a.signer) || undefined });
     case 'pay':
       return dub.pay({
         how: a.how === 'lane' || a.how === 'damgar' || a.how === 'hand' ? a.how : (() => { throw new Error('Choose a way to pay.'); })(),
