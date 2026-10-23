@@ -973,6 +973,7 @@ pub fn identity(out: &mut Out) {
     let (on_rival, _) = w.rotate(&jr, Rot::default());
     out.case(&mut w, "a rotation built on a rotation that does not count: invalid", "Identity, \"Which rotation counts\", a rotation that does not count; everyday check 2",
         "The rotation it builds on lost its position for good; nothing it waits on can make it count.", Facts::default(), ask_status(&on_rival), json!("invalid"), None);
+    s7g_identity(out);
 }
 
 pub fn text(out: &mut Out) {
@@ -1027,6 +1028,7 @@ pub fn text(out: &mut Out) {
         w2.add(a);
     }
     out.case(&mut w2, "a member key's text naming the signature act itself: invalid", "Text rule 14", "For a member key the object names the version, never the signature act.", Facts::default(), ask_status(&bad), json!("invalid"), None);
+    s7g_text(out);
 }
 
 pub fn envelopes(out: &mut Out) {
@@ -1069,6 +1071,7 @@ pub fn envelopes(out: &mut Out) {
     let resealed = reseal(&mut w, &p, &inside);
     let two = w.add(&resealed);
     out.case(&mut w, "an everyday act with two prev entries: invalid", "Envelopes rule 13", "At most one entry: a sequence never branches inside one act.", Facts::default(), ask_status(&two), json!("invalid"), Some("sequence"));
+    s7g_envelopes(out);
 }
 
 /// The same inside, sealed again and signed by `p`'s signing key.
@@ -1441,6 +1444,7 @@ pub fn money(out: &mut Out) {
     let mut w4 = world(&w3.log.clone());
     out.case(&mut w4, "the same: nothing toward the second debt", "Money rule 12; rule 11",
         "The receiver's receipt names the first debt; the claim naming the second counts for nothing.", facts(&[c1, c2, rc]), ask("paid toward", &d2), json!(0), None);
+    s7g_money(out);
 }
 
 pub fn agreements(out: &mut Out) {
@@ -2435,6 +2439,9 @@ pub fn agreements(out: &mut Out) {
     sign(&mut w3, &mut eve, &drafted);
     out.case(&mut w3, "the same terms once every party signed: the work is claimed, and the payment naming no claim is no purchase", "Agreements rule 12 with rule 1",
         "Eve signs too: the agreement exists and claims the film; a payment for it naming no claim is no purchase, owed back.", facts(), json!({ "question": "purchase", "act": hx(&r) }), json!("no purchase"), None);
+    s7g_agreements_a(out);
+    s7g_agreements_b(out);
+    s7g_agreements_c(out);
 }
 
 pub fn development(out: &mut Vec<J>) {
@@ -2472,6 +2479,7 @@ pub fn development(out: &mut Vec<J>) {
     push("a request rail whose field 13 lacks the purpose: no specification", "Development, \"A rail Module's kind and binding\"", "Field 11 is 0: field 13 holds 0 and 1.", &bad_request, false, json!("no specification"));
     push("a cMIP naming no creator: no specification", "Development, \"What each kind must carry\"", "A cMIP carries field 1.", &no_creator, false, json!("no specification"));
     push("a key the format does not define (14): no specification", "Development, \"How the content is decoded\", 2", "Keys are 0 to 13.", &key14, false, json!("no specification"));
+    s7g_development(out);
 }
 
 pub fn mir_hashes() -> Vec<J> {
@@ -2492,3 +2500,29 @@ pub fn mir_hashes() -> Vec<J> {
     }
     out
 }
+
+// ------------------------------------------------ S7g: the suspected differences run
+
+/// S7g: Identity's suspected differences (`docs/untested-sentences.md`), each run as a case.
+fn s7g_identity(_out: &mut Out) {}
+
+/// S7g: Text, read for sentences no case exercised.
+fn s7g_text(_out: &mut Out) {}
+
+/// S7g: Envelopes, read for sentences no case exercised.
+fn s7g_envelopes(_out: &mut Out) {}
+
+/// S7g: Money's suspected differences.
+fn s7g_money(_out: &mut Out) {}
+
+/// S7g: Agreements' suspected differences, lines 1 to 1125: purchases, splits, the pointer check.
+fn s7g_agreements_a(_out: &mut Out) {}
+
+/// S7g: Agreements' suspected differences, offers, parties, standing, and lines 1126 to 2129.
+fn s7g_agreements_b(_out: &mut Out) {}
+
+/// S7g: Agreements' suspected differences, lines 2130 to 4343.
+fn s7g_agreements_c(_out: &mut Out) {}
+
+/// S7g: Development, read for sentences no case exercised.
+fn s7g_development(_out: &mut Vec<J>) {}
