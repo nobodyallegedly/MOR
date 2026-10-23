@@ -40,6 +40,10 @@ import { chainKeyAt, freshSeed, indexOf, seedOf, spentPaper, wipe, Refused } fro
 import { fingerprint, grouped, type Line, type Review, type Section, type Sitting, type State } from './shapes.ts';
 import { CollectiveSitting, EXPIRY, checkShare, type CollectiveDeps } from './collective.ts';
 import { addresses, holding, put, FORGOTTEN_SAY, NEW_CHAIN_WORDS_SAY, NEW_WORDS_SAY } from './common.ts';
+import { airgap } from './airgap.ts';
+import { NAKISIB_LOST_SAY, NAKISIB_SAY, NAKISIB_WAIT_SAY } from './nakisib-say.ts';
+
+export { NAKISIB_LOST_SAY, NAKISIB_SAY, NAKISIB_WAIT_SAY };
 
 export { addresses, holding, put, FORGOTTEN_SAY, NEW_CHAIN_WORDS_SAY, NEW_WORDS_SAY };
 
@@ -63,6 +67,13 @@ export const LAST_OF_OLD_PAPER_SAY =
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const short = (id: string) => `${id.slice(0, 8)}…${id.slice(-4)}`;
+const unb64 = (t: string): Uint8Array => {
+  try {
+    return Uint8Array.from(atob(t.trim()), (c) => c.charCodeAt(0));
+  } catch {
+    throw new Error('That file could not be read.');
+  }
+};
 const b64 = (b: Uint8Array) => {
   let s = '';
   for (const x of b) s += String.fromCharCode(x);
@@ -123,6 +134,9 @@ interface Held {
   lines: Line[];
   /** For a confirmation: the owner whose succession is confirmed. */
   owner?: string;
+  /** With Nakišib: the request written for it (the Module's pending rotation, not secret), and the new signing key's fingerprint, as both screens show it. */
+  request?: Uint8Array;
+  fingerprint?: string;
 }
 
 export interface Options {
@@ -156,7 +170,7 @@ export class Kishib {
     if (this.col) return this.col.view(this.now());
     const h = this.held;
     if (!h) return null;
-    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...(h.positions ? { positions: h.positions } : {}), ...(h.chain || h.signing ? { words: h.chain ? ('chain' as const) : ('signing' as const) } : {}) };
+    return { kind: h.kind, id: h.id, act: h.act, stage: h.stage, title: h.title, lines: h.lines, ...(h.positions ? { positions: h.positions } : {}), ...(h.chain || h.signing ? { words: h.chain ? ('chain' as const) : ('signing' as const) } : {}), ...(h.request ? { nakisib: { fingerprint: h.fingerprint ?? '' } } : {}) };
   }
 
   /** Drop everything this sitting holds: words, keys, bytes. */
@@ -427,7 +441,7 @@ export class Kishib {
    * written before it was signed; its signing key, if lost, is replaced by
    * the next change, from that new paper).
    */
-  private resendPlan(id: string, rd: Read, s: Served, idx: number, seed: Uint8Array): Review {
+  private resendPlan(id: string, rd: Read, s: Served, idx: number | null, seed: Uint8Array | null): Review {
     wipe(seed);
     const bytes = rd.chainActs.get(s.id)!;
     const r = rd.look.resolution;
@@ -436,8 +450,8 @@ export class Kishib {
       {
         heading: 'A change of keys already signed with this paper, waiting for its homes',
         lines: [
-          { text: `Rotation ${s.id} at position ${s.position}, signed with the chain key these words give (key ${idx}), installing the signing key ${s.signingFingerprint}${s.homeless ? ' (homeless)' : ''}.`, tone: 'warn' },
-          { text: 'This paper still works, but only to send this same change again: Kišib never signs a second change with the same key (Identity rule 29).' },
+          { text: `Rotation ${s.id} at position ${s.position}, signed with ${idx === null ? 'the chain key this identity committed to' : `the chain key these words give (key ${idx})`}, installing the signing key ${s.signingFingerprint}${s.homeless ? ' (homeless)' : ''}.`, tone: 'warn' },
+          { text: idx === null ? 'Your paper now only answers this same change again (Nakišib gives the same bytes; Kišib never signs a second change with the same key, Identity rule 29). Kišib sends it again as the homes and relays serve it.' : 'This paper still works, but only to send this same change again: Kišib never signs a second change with the same key (Identity rule 29).' },
           { text: 'Once the homes accept it, the new paper written when it was signed is the one that counts, and this one is spent. If its signing key’s words were never shown, change the keys again from that new paper: it installs a key you hold.' },
           { text: 'If you did not make this change, someone holds your chain key’s words: do not send it; use “Escape a contested position”.', tone: 'bad' },
         ],
@@ -597,6 +611,199 @@ export class Kishib {
     return this.state();
   }
 
+  // ------------------------------------------------------------ with Nakišib, Kišib's offline companion (decided 23 October 2026)
+
+  /**
+   * Change keys with Nakišib: the same reading as `rotatePlan` (every line,
+   * the cards, the vault, the successor, all read back), without the
+   * paper's words, which are typed only on the offline Mac. Confirmed, Kišib
+   * makes the new signing key and writes the request for Nakišib (the
+   * air-gapped Module's pending rotation, made by the Module's own `online`
+   * code); it signs nothing with a chain key.
+   */
+  async nakisibPlan(a: { id: string; address: string; successor?: string; endSuccession?: boolean; leaveOut?: string[]; cards?: string; vault?: VaultChange; via?: Via }): Promise<Review> {
+    this.busy();
+    const via = a.via ?? {};
+    const id = readId(a.id);
+    const rd = await readIdentity(id, addresses(a.address), via, SPECS.identity);
+    const r = rd.look.resolution;
+    const latest = r.links[r.links.length - 1];
+    const blocking: string[] = [];
+    if (r.stop === 'contested') blocking.push('Its homes hold two rotations at one position (contested). A normal rotation cannot settle it: use “Escape a contested position”.');
+    const waiting = rd.next.filter((x) => !r.links.some((l) => l.act === x.id));
+    if (waiting.length > 1) blocking.push(`${waiting.length} rotations with this chain key exist, waiting for their homes. Nakišib never signs another (Identity rule 29). If you made only one, someone holds your chain key’s words: use “Escape a contested position”.`);
+    // A change already signed with this chain key waits for its homes: only that same change is sent again (Identity rule 29).
+    if (waiting.length === 1 && rd.chainActs.get(waiting[0].id)) return this.resendPlan(id, rd, waiting[0], null, null);
+    if (r.chainKeyScheme !== 2 && r.chainKeyScheme !== 3) throw new Error('This identity’s chain key is of a scheme Nakišib does not implement.');
+    let successor: string | null = null;
+    if (a.successor?.trim()) {
+      successor = readId(a.successor);
+      if (successor === id) throw new Error('An identity cannot name itself as its successor.');
+    }
+    if (successor && a.endSuccession) throw new Error('Name a successor, or end the succession: not both.');
+    const succNow = rd.look.verifier.succession(id) as { state: string; successor?: string };
+    if (a.endSuccession && succNow.state === 'none') throw new Error('No succession is declared: there is none to end.');
+    let plan: LinePlan;
+    try {
+      plan = planLines(rd.lines, { leaveOut: a.leaveOut, cards: a.cards?.trim() ? readCards(a.cards) : undefined, ...placing(rd, rd.binding) });
+    } catch (e) {
+      throw new Error(message(e));
+    }
+    const clock = declaresClock(rd);
+    const vaultNow = rd.look.verifier.moneyVault(MIRS.money, id) as { entries: { unit: string; railModule: string; source: Uint8Array; limit: number }[] } | null;
+    const vault = vaultPlan(a.vault, vaultNow?.entries ?? null);
+    const sections: Section[] = [
+      ...recordWords(rd).filter((x) => x.heading !== 'Its lines of acts (each app or device keeps one)'),
+      { heading: 'Its lines of acts: what this rotation keeps (Identity rule 35)', lines: plan.shown.map((x) => ({ text: x.text.replace(/A line made elsewhere( that this device cannot read)?/, (_m: string, u?: string) => (u ? 'A line Kišib cannot read' : 'A line of acts')), tone: x.tone })) },
+      {
+        heading: 'What changes',
+        lines: [
+          { text: 'A new signing key, made now on this device. Nakišib shows its fingerprint, and so does Kišib: compare them. Its words are shown here once the homes’ receipts are in. Dub, Edubba and every app holding the old signing key’s words stop signing until given the new ones.', tone: 'warn' },
+          { text: `A new chain key, from a new paper Nakišib draws on the offline Mac (key ${latest.position + 1} of its paper), written and three of its parts typed back there before Nakišib signs. Your current paper is typed there, never here.`, tone: 'warn' },
+          { text: `${homesWords(r.homes, r.effective)} Unchanged.` },
+          successor
+            ? { text: `A succession declared: ${successor} is named as this identity’s successor. Nobody follows it until that identity confirms it, by an act of its own naming this rotation (F300; Kišib can make it, “Confirm a succession”). This identity goes on living.`, tone: 'warn' }
+            : a.endSuccession
+              ? { text: `The succession to ${succNow.successor ?? 'its successor'} is ended.`, tone: 'warn' }
+              : { text: succNow.state === 'none' ? 'No succession.' : `The succession stays as it is (${succNow.state}).` },
+          ...(clock ? [{ text: 'This identity declares a clock (Money rule 15): its client anchors each change of its keys on that clock. Kišib does not anchor: anchor it with the genesis client before relying on it.', tone: 'warn' as const }] : []),
+        ],
+      },
+      { heading: 'The vault (Money: where payments above a limit must go)', lines: vault.lines },
+      { heading: 'With Nakišib, Kišib’s offline companion', lines: NAKISIB_SAY.map((text) => ({ text })) },
+    ];
+    const signs = [
+      `Kišib signs nothing with a chain key. It makes the new signing key and writes the request for Nakišib: this change of ${short(id)} at position ${latest.position + 1}, everything above but the next chain key, which Nakišib supplies.`,
+      'Nakišib, on the offline Mac, reads the request’s exact bytes and shows its own summary, takes your paper, draws the new paper, and signs on SIGN. Kišib then reads its answer, checks that it is exactly this change (the air-gapped Module’s rule 3.9), and sends the same bytes to every home, and again, unchanged, if they stall: never a second rotation.',
+    ];
+    const digest = sha256(cborEncode(['MOR Kišib rotation with Nakišib, version 1', id, latest.act, plan.kept.map((k) => [k.act, k.position, k.summary]), successor ?? '', !!a.endSuccession, ...(vault.declaration ? [cborEncode([vault.declaration.kind, vault.declaration.cbor ?? null])] : [])]));
+    const scheme = r.chainKeyScheme;
+    return this.plan(
+      { digest, title: `Change the keys of ${short(id)} with Nakišib`, summary: [`Identity ${id}. Its chain was read from ${rd.places.join(', ')}, and judged by the core library.`, 'No paper is typed here: Nakišib takes it, on the offline Mac.'], sections, signs, warning: plan.warning, blocking },
+      {
+        wipe: () => undefined,
+        run: async (warned) => {
+          if (blocking.length) throw new Error(`Nothing was written: ${blocking[0]}`);
+          checkWarned(plan, warned);
+          const signing = newSigningSecret();
+          // The rotation as Kišib makes it, signed with a throwaway chain key: a template the Module's online side reads the fields from, and nothing else.
+          const throwaway = freshSeed();
+          const k = chainKeyAt(throwaway, scheme, latest.position);
+          let template: Uint8Array;
+          try {
+            template = makeRotation({
+              identitySpec: SPECS.identity,
+              identity: id,
+              previous: latest.act,
+              position: latest.position + 1,
+              chainKeyScheme: scheme,
+              chainKeySeeds: k.seeds,
+              newSigningPublic: signingPublic(signing),
+              nextChainKeyScheme: scheme,
+              nextChainKeyCommit: '00'.repeat(32),
+              kept: plan.kept,
+              ...(successor ? { successor } : {}),
+              ...(a.endSuccession ? { endSuccession: true } : {}),
+              ...(vault.declaration ? { declarations: [vault.declaration] } : {}),
+            });
+          } finally {
+            wipe(k.seeds, throwaway);
+          }
+          const ag = await airgap();
+          const fp = ag.signingFingerprint(signingPublic(signing));
+          const previous = rd.chainActs.get(latest.act);
+          if (!previous) throw new Error('The identity’s latest change of keys could not be read whole. Nothing was written.');
+          const request = ag.pendingFor(previous, template, [`Kišib: a change of the keys of ${id}, at position ${latest.position + 1}.`, `Kišib: the new signing key it made, fingerprint ${fp}.`]);
+          this.held = {
+            kind: 'identity',
+            id,
+            bytes: null,
+            act: null,
+            homes: r.homes,
+            before: chainBefore(rd),
+            with: [],
+            places: rd.places,
+            signing,
+            chain: null,
+            stage: 'request',
+            title: `The change of keys of ${short(id)}, with Nakišib`,
+            lines: [...NAKISIB_WAIT_SAY.map((text, i) => ({ text, ...(i === 0 ? { tone: 'warn' as const } : {}) })), { text: `The new signing key’s fingerprint, as Nakišib shows it: ${fp}.` }],
+            request,
+            fingerprint: fp,
+          };
+          return this.sitting()!;
+        },
+      },
+    );
+  }
+
+  /** The request written for Nakišib, to save to a file: the Module's pending rotation (not secret). */
+  nakisibRequest(): { name: string; bytes: string; fingerprint: string } {
+    const h = this.held;
+    if (!h?.request) throw new Error('No request for Nakišib is held: start “Change keys with Nakišib” first.');
+    return { name: `nakisib-request-${h.id.slice(0, 8)}.mor`, bytes: b64(h.request), fingerprint: h.fingerprint ?? '' };
+  }
+
+  /**
+   * Nakišib's answer, read: checked against the request it answers (the
+   * air-gapped Module's rule 3.9, by the Module's own `online` code), then
+   * sent to every home, then, once it counts, the new signing key's words.
+   * Kišib closed since it wrote the request: give the request's file too,
+   * with the identity and one of its homes (`NAKISIB_LOST_SAY`).
+   */
+  async nakisibAnswer(a: { answer: string; request?: string; id?: string; address?: string; via?: Via }): Promise<State> {
+    const answer = unb64(a.answer);
+    const ag = await airgap();
+    const h = this.held;
+    if (h?.stage === 'request' && h.request) {
+      let act: Uint8Array;
+      try {
+        act = ag.acceptAnswer(unhex(SPECS.identity), h.request, answer);
+      } catch (e) {
+        throw new Error(`This is not Nakišib’s answer to the request Kišib wrote: ${message(e)}. Nothing was sent.`);
+      }
+      h.bytes = act;
+      h.act = actId(act);
+      h.stage = 'sent';
+      h.title = `The change of keys of ${short(h.id)}, signed by Nakišib`;
+      await this.send();
+      h.lines = [{ text: 'Nakišib’s answer is exactly the change Kišib asked for, signed with the chain key this identity committed to: sent to every home.', tone: 'ok' }, ...h.lines];
+      return this.state();
+    }
+    // Kišib was closed since it wrote the request: the request's file is needed, and the identity read again.
+    if (!a.request?.trim()) throw new Error('Kišib holds no request for Nakišib now (it was closed since it wrote one, or none was written). Give the request’s file too, with the identity and one of its homes.');
+    this.busy();
+    const id = readId(a.id ?? '');
+    const request = unb64(a.request);
+    let act: Uint8Array;
+    try {
+      act = ag.acceptAnswer(unhex(SPECS.identity), request, answer);
+    } catch (e) {
+      throw new Error(`This is not Nakišib’s answer to that request: ${message(e)}. Nothing was sent.`);
+    }
+    const d = describeAct(act) as { signer?: string };
+    if (d.signer !== id) throw new Error('That answer is a change of another identity’s keys. Nothing was sent.');
+    const rd = await readIdentity(id, addresses(a.address ?? ''), a.via ?? {}, SPECS.identity);
+    this.held = {
+      kind: 'identity',
+      id,
+      bytes: act,
+      act: actId(act),
+      homes: rd.look.resolution.homes,
+      before: chainBefore(rd),
+      with: [],
+      places: rd.places,
+      signing: null,
+      chain: null,
+      stage: 'sent',
+      title: `The change of keys of ${short(id)}, signed by Nakišib`,
+      lines: [],
+    };
+    await this.send();
+    this.held.lines = [{ text: NAKISIB_LOST_SAY, tone: 'warn' }, ...this.held.lines];
+    return this.state();
+  }
+
   // ------------------------------------------------------------ make an identity (H48)
 
   /**
@@ -609,8 +816,20 @@ export class Kishib {
    * sent; once the homes' receipts are in, its signing key's words are shown
    * once. Kišib keeps nothing of it.
    */
-  async makePlan(a: { homes: string; relays: string; via?: Via }): Promise<Review> {
+  async makePlan(a: { homes: string; relays: string; commitment?: string; via?: Via }): Promise<Review> {
     this.busy();
+    // With Nakišib: its paper drawn on the offline Mac, only its commitment here (the Module's message 2.1, read by the Module's own code).
+    let fromNakisib: { scheme: number; commit: string } | null = null;
+    if (a.commitment?.trim()) {
+      let c: { scheme: number; commit: string; index: number };
+      try {
+        c = JSON.parse((await airgap()).readCommitment(unb64(a.commitment)));
+      } catch (e) {
+        throw new Error(`That file is not Nakišib’s commitment for a new identity: ${message(e)}. Nothing was made.`);
+      }
+      if (c.index !== 0) throw new Error('That commitment is for a change of keys, not a new identity’s first paper (its key index is not 0). Nothing was made.');
+      fromNakisib = { scheme: c.scheme, commit: c.commit };
+    }
     const via = a.via ?? {};
     const hints = addresses(a.homes);
     const relays = a.relays.trim() ? addresses(a.relays) : hints;
@@ -632,26 +851,37 @@ export class Kishib {
         lines: [
           { text: `A new identity, living at ${hints.join(', ')}: its homes keep its chain and sign their receipts.` },
           { text: `Its relays, where its posts are published and its inbox is: ${relays.join(', ')}.` },
-          { text: 'A chain key, from a new paper made now on this device (key 0 of its words). Its 24 words are shown first: you write them down and type three back, and only then is the identity signed and sent.', tone: 'warn' },
+          fromNakisib
+            ? { text: `A chain key from the paper Nakišib drew on the offline Mac (key 0 of that paper): only its commitment comes here. Compare it with Nakišib’s screen: ${grouped(fromNakisib.commit)}.`, tone: 'warn' }
+            : { text: 'A chain key, from a new paper made now on this device (key 0 of its words). Its 24 words are shown first: you write them down and type three back, and only then is the identity signed and sent.', tone: 'warn' },
           { text: 'A signing key, made now. Its words are shown once the homes’ receipts are in: bring the identity into the apps with them, or give them to Kišib’s runner.', tone: 'warn' },
           { text: 'Its encryption key, the one its signing words carry: every app bringing it opens its private messages.' },
           { text: 'Kišib keeps nothing of it: once both papers are written, it forgets them.', tone: 'ok' },
         ],
       },
     ];
-    const signs = ['Once the paper’s three words are typed back, Kišib signs the identity’s genesis with its new signing key, committing the paper’s chain key, and its routes and encryption key; then sends them to its homes and relays.'];
-    const digest = sha256(cborEncode(['MOR Kišib new identity, version 1', homes.map((h) => [h.operator, h.hint]), relays]));
+    if (fromNakisib) sections.push({ heading: 'With Nakišib, Kišib’s offline companion', lines: NAKISIB_SAY.map((text) => ({ text })) });
+    const signs = [
+      fromNakisib
+        ? 'Kišib signs the identity’s genesis with its new signing key, committing the chain key of Nakišib’s paper, and its routes and encryption key; then sends them to its homes and relays.'
+        : 'Once the paper’s three words are typed back, Kišib signs the identity’s genesis with its new signing key, committing the paper’s chain key, and its routes and encryption key; then sends them to its homes and relays.',
+    ];
+    const digest = sha256(cborEncode(['MOR Kišib new identity, version 1', homes.map((h) => [h.operator, h.hint]), relays, ...(fromNakisib ? [fromNakisib.commit] : [])]));
     return this.plan(
       { digest, title: 'Make an identity', summary: ['A test identity, made as Dub makes one: its chain key on paper, its signing key’s words for the apps.', FORGOTTEN_SAY], sections, signs, warning: null, blocking: [] },
       {
         wipe: () => undefined,
         run: async () => {
-          const fresh = freshSeed();
+          const fresh = fromNakisib ? null : freshSeed();
           const signing = newSigningSecret();
-          // Its commitment now: the seed is overwritten once its words are typed back, before the genesis is signed (as a change of keys does).
-          const key = chainKeyAt(fresh, 3, 0);
-          const commit = { scheme: key.scheme, commit: key.commit };
-          wipe(key.seeds);
+          // Its commitment now: the seed is overwritten once its words are typed back, before the genesis is signed (as a change of keys does). With Nakišib, the commitment it wrote.
+          let commit: { scheme: number; commit: string };
+          if (fromNakisib) commit = fromNakisib;
+          else {
+            const key = chainKeyAt(fresh!, 3, 0);
+            commit = { scheme: key.scheme, commit: key.commit };
+            wipe(key.seeds);
+          }
           const h: Held = {
             kind: 'make',
             id: '',
@@ -664,8 +894,8 @@ export class Kishib {
             signing,
             chain: fresh,
             stage: 'paper',
-            title: 'A new identity: first, its paper',
-            lines: [{ text: 'Nothing is signed yet. First, the chain key’s words: write them down, then type three back. Only then does Kišib sign the identity and send it.', tone: 'warn' }],
+            title: fromNakisib ? 'A new identity, from Nakišib’s paper' : 'A new identity: first, its paper',
+            lines: fromNakisib ? [] : [{ text: 'Nothing is signed yet. First, the chain key’s words: write them down, then type three back. Only then does Kišib sign the identity and send it.', tone: 'warn' }],
             sign: async () => {
               const genesis = makeGenesis({ identitySpec: SPECS.identity, signingSecret: signing, chainKeyScheme: commit.scheme, chainKeyCommit: commit.commit, homes });
               const id = actId(genesis);
@@ -684,6 +914,15 @@ export class Kishib {
             },
           };
           this.held = h;
+          if (fromNakisib) {
+            // Its paper was written and typed back on Nakišib: signed and sent now.
+            const sign = h.sign!;
+            h.sign = null;
+            await sign();
+            h.stage = 'sent';
+            await this.send();
+            h.lines = [{ text: 'The identity was signed with the chain key of Nakišib’s paper and sent to its homes. Its signing key’s words come once their receipts are in.', tone: 'ok' }, ...h.lines];
+          }
           return this.sitting()!;
         },
       },

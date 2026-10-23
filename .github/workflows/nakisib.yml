@@ -1,0 +1,115 @@
+# Nakišib, Kišib's offline companion (clients/nakisib): built and tested on
+# GitHub's machines at each change to it, to Kišib, or to the Module it uses.
+#
+# On Linux: its program's own tests (cargo), then the named tests of its
+# round against real homes and a relay, Kišib's program and its web client
+# (test/*.test.ts), the no-network test run under strace.
+# On macOS (Apple silicon, as the offline Mac): the app made by
+# scripts/make-app.sh as the everyday Mac makes it (its window compiled with
+# Apple's compiler), its zip and fingerprint checked, and the program inside
+# it started, its page answered on 127.0.0.1. What needs a person and two
+# Macs is in docs/nakisib-report.md, section 5.
+name: nakisib
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - clients/nakisib/**
+      - clients/kishib/**
+      - clients/kit/**
+      - modules/airgap/**
+      - core/**
+      - .github/workflows/nakisib.yml
+  pull_request:
+    paths:
+      - clients/nakisib/**
+      - clients/kishib/**
+      - clients/kit/**
+      - modules/airgap/**
+      - core/**
+      - .github/workflows/nakisib.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MOR_CHROMIUM: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            clients/nakisib -> target
+            clients/kishib/airgap -> target
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen@0.2.129
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: strace, for the no-network test
+        run: sudo apt-get install -y strace
+      - name: Nakišib's program (its own tests)
+        run: cargo test --locked --manifest-path clients/nakisib/Cargo.toml
+      - name: Core library for the clients, and Kišib's own WebAssembly (the Module's online side)
+        run: |
+          cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
+          cd ../kishib && npm ci --no-audit --no-fund && npm run airgap
+      - name: What the tests share
+        run: for p in kit desk dub barebone repo collective assess site; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done
+      - name: Nakišib, with Kišib and real homes
+        run: cd clients/nakisib && npm ci --no-audit --no-fund && npm run typecheck && npm test
+
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.97.0"
+          targets: aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: clients/nakisib -> target
+      - name: This machine is Apple silicon, as the offline Mac
+        run: test "$(uname -m)" = arm64
+      - name: Nakišib's program (its own tests, on the Mac)
+        run: cargo test --locked --manifest-path clients/nakisib/Cargo.toml
+      - name: Nakisib.app, its zip and fingerprint, made as on the everyday Mac
+        run: |
+          sh clients/nakisib/scripts/make-app.sh | tee make-app.txt
+          grep -q "made Nakišib's window" make-app.txt
+          app="$HOME/Applications/Nakisib.app"
+          test -x "$app/Contents/MacOS/nakisib" && test -x "$app/Contents/MacOS/nakisib-program"
+          file "$app/Contents/MacOS/nakisib" "$app/Contents/MacOS/nakisib-program" | tee arch.txt
+          test "$(grep -c 'arm64' arch.txt)" = 2
+          plutil -lint "$app/Contents/Info.plist"
+          cd "$HOME/Applications" && shasum -a 256 -c Nakisib.zip.sha256
+      - name: The zip unpacked elsewhere, as on the offline Mac; its program answers on 127.0.0.1 only
+        run: |
+          mkdir -p "$RUNNER_TEMP/offline" && cd "$RUNNER_TEMP/offline"
+          ditto -x -k "$HOME/Applications/Nakisib.zip" .
+          prog="$PWD/Nakisib.app/Contents/MacOS/nakisib-program"
+          "$prog" --version
+          "$prog" --dir "$RUNNER_TEMP/mor-nakisib" --port 8475 --no-open > out.txt &
+          for i in $(seq 1 50); do grep -q 'http://127.0.0.1:8475/' out.txt && break; sleep 0.2; done
+          curl -sf http://127.0.0.1:8475/ | grep -q '<title>Nakišib</title>'
+          curl -sf -X POST -H 'x-nakisib: 1' -H 'content-type: application/json' -d '{}' http://127.0.0.1:8475/api/state | grep -q 'This Mac should never connect again.'
+          lsof -nP -p "$(pgrep -f nakisib-program)" -a -i | tee sockets.txt
+          if grep -v '127.0.0.1:8475 (LISTEN)' sockets.txt | grep -q -e TCP -e UDP; then echo "a socket but its own" && exit 1; fi
+          curl -sf -X POST -H 'x-nakisib: 1' -d '{}' http://127.0.0.1:8475/api/quit
+          sleep 1
+          if pgrep -f nakisib-program; then echo "still running after Quit" && exit 1; fi
+          if [ -n "$(ls -A "$RUNNER_TEMP/mor-nakisib" 2>/dev/null)" ]; then echo "it wrote something, having signed nothing" && exit 1; fi

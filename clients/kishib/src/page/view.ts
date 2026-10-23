@@ -12,6 +12,7 @@ import { appMark, danger, e, ICONS, note, opened, say, shortForm, tiles, top, ty
 import { PANEL_STYLE } from './panel.ts';
 import type { Line, Review, Section, Sitting, State } from '../shapes.ts';
 import type { RunnerView } from '../runner.ts';
+import { NAKISIB_SAY } from '../nakisib-say.ts';
 
 export { e, note };
 export type { Line, Review, Section, Sitting, State, RunnerView };
@@ -143,6 +144,7 @@ export function column(tab: Tab, web: boolean, r: RunnerView | null): ColumnEntr
         ...(r?.on && !web ? [{ key: 'held', label: 'Held here', k: r.held.length } as ColumnEntry, '-' as ColumnEntry] : []),
         ...(r?.state === 'locked' && !web ? [{ key: 'held', label: 'Held here', k: 'locked' } as ColumnEntry, '-' as ColumnEntry] : []),
         { key: 'make', label: 'Make an identity' },
+        { key: 'make-nakisib', label: 'Make one with Nakišib' },
         { key: 'record', label: 'Read a record' },
         { key: 'confirm', label: 'Confirm a succession' },
         ...(r?.state === 'off' && !web ? ['-' as ColumnEntry, { key: 'held', label: 'Held by the runner', k: 'off' } as ColumnEntry] : []),
@@ -158,6 +160,7 @@ export function column(tab: Tab, web: boolean, r: RunnerView | null): ColumnEntr
       return [
         { key: 'check', label: 'Check the paper' },
         { key: 'rotate', label: 'Change keys' },
+        { key: 'nakisib', label: 'Change keys with Nakišib' },
         { key: 'vault', label: 'Change the vault' },
         { key: 'successor', label: 'Name a successor' },
         '-',
@@ -222,6 +225,12 @@ export const VAULT_SAY = [
   'The old signing key’s words stop counting once the homes receipt the change.',
 ];
 
+/** Said beside each way with Nakišib: what it protects, and that it is optional. */
+const nakisibSaid = `<div class="k-box k-fill" id="nakisib-say">${NAKISIB_SAY.map((t) => `<p class="k-small k-soft">${e(t)}</p>`).join('')}</div>`;
+
+/** Nakišib's answer, where Kišib was closed since it wrote the request. */
+const nakisibLate = `<details class="k-box"><summary>+ Kišib was closed since it wrote the request</summary><form id="nakisib-late" autocomplete="off"><p class="k-small k-soft">Give the request’s file and Nakišib’s answer, with the identity and one of its homes. The new signing key Kišib made with the request is gone: said again before anything is sent.</p>${idField('id', 'The identity')}${address}<label>The request Kišib wrote</label><input name="request" type="file" required><label>Nakišib’s answer</label><input name="answer" type="file" required><div class="k-row"><button type="submit" class="k-btn k-p">Check it, and send it</button></div></form></details>`;
+
 const cardsFold = (runnerOn: boolean) =>
   `<details class="k-box"><summary>+ Lines another app made that cannot be read here</summary><label>Their cards, one per line, copied whole from each app’s identity window (Dub, Edubba, Damgar, Ummia): latest act, position, summary, then the app’s count and name</label><textarea name="cards"></textarea>${runnerOn ? '<div class="k-row"><button type="button" class="k-btn" data-action="runner-cards">Add the cards of the lines Kišib’s runner signed</button><span class="k-small k-faint">for an identity the runner holds: Dub’s lines, signed here</span></div>' : ''}</details>`;
 
@@ -245,6 +254,13 @@ export function part(tab: Tab, key: string, web: boolean, r: RunnerView | null):
         'A new identity: its homes, its relays, a chain key on a new paper, a signing key for the apps. Its chain key’s words are shown once and three asked back before anything is signed; its signing key’s words once its homes take it. Kišib keeps nothing.',
         `<label>Its homes (one address per line): where it lives, and anyone can check it</label><textarea name="homes" required placeholder="https://"></textarea><label>Its relays, if you like (where its posts are published and its inbox is): its homes otherwise</label><textarea name="relays" placeholder="https://"></textarea>`,
       );
+    case 'identities/make-nakisib':
+      return `${f(
+        'make',
+        'Make an identity with Nakišib',
+        'A new identity whose chain-key paper Nakišib drew on the offline Mac (A new identity): only its commitment comes here, by the file Nakišib wrote. Kišib makes its signing key, signs its genesis committing that paper’s key, and sends it to its homes; its signing key’s words once its homes take it. Kišib keeps nothing.',
+        `<label>Nakišib’s commitment (the file it wrote on the USB stick)</label><input name="commitment" type="file" required><label>Its homes (one address per line): where it lives, and anyone can check it</label><textarea name="homes" required placeholder="https://"></textarea><label>Its relays, if you like (where its posts are published and its inbox is): its homes otherwise</label><textarea name="relays" placeholder="https://"></textarea>`,
+      )}${nakisibSaid}`;
     case 'identities/record':
       return f('record', 'An identity’s record', 'Homes, receipts, lines of acts, any contest, any succession, as any reader would see it, judged by the core library. Reading signs nothing.', `${idField('id', 'The identity')}${address}`, 'Read it', 'Reading signs nothing.');
     case 'identities/confirm':
@@ -263,6 +279,15 @@ export function part(tab: Tab, key: string, web: boolean, r: RunnerView | null):
         'From its chain key’s paper: a new signing key, and a new chain-key paper, every line of its acts kept. Kišib reads the identity from its homes and every relay its routes name, finds every line of its acts, and reads it all back in plain words before anything is signed.',
         `${idField('id', 'The identity')}${address}${words('words', 'The chain key’s 24 words, in order (its newest paper; never the signing key’s words)')}${cardsFold(runnerOn)}${vaultFields(false)}`,
       )}`;
+    case 'paper/nakisib':
+      return `${f(
+        'nakisib',
+        'Change keys with Nakišib',
+        'The same change of keys, its chain key used only on the offline Mac: Kišib reads the identity, every line of its acts, the cards and the vault, and reads it all back; then writes the request for Nakišib. No paper is typed here.',
+        `${idField('id', 'The identity')}${address}${cardsFold(runnerOn)}${vaultFields(false)}`,
+        'Read it back',
+        'Nothing is written or signed before you read it back.',
+      )}${nakisibSaid}${nakisibLate}`;
     case 'paper/vault':
       return `<h2>Change the vault</h2><div class="kishib-review" id="vault-say">${lines(VAULT_SAY.map((text) => ({ text })))}</div><form id="form-rotate" data-kind="rotate">${idField('id', 'The identity')}${address}${words('words', 'The chain key’s 24 words, in order (its newest paper)')}${cardsFold(runnerOn)}${vaultFields(true)}${forgotten}${submit('Read it back')}</form><div id="result"></div>`;
     case 'paper/successor':
@@ -499,6 +524,9 @@ export function sitting(s: Sitting): string {
     : '';
   const acts: string[] = [];
   if (s.stage === 'sent') acts.push(btn('refresh', 'Look again'), btn('resend', 'Send it again (the same bytes)', true));
+  // With Nakišib: the request written to a file, then its answer read.
+  if (s.stage === 'request') acts.push(btn('nakisib write', 'Write the request for Nakišib', true));
+  const answer = s.stage === 'request' ? `<form id="nakisib-answer" class="k-box k-fill" autocomplete="off"><label>Nakišib’s answer (the file it wrote on the USB stick)</label><input name="answer" type="file" required><div class="k-row"><button type="submit" class="k-btn k-p">Read Nakišib’s answer</button><span class="k-small k-faint">checked to be exactly this change before anything is sent</span></div></form>` : '';
   // H79: the new paper first, before anything is signed; the signing key's words once the receipts are in.
   if (s.stage === 'paper') acts.push(btn('show words', s.kind === 'make' ? 'Show the chain key’s words (its paper)' : 'Show the new chain key’s words (a new paper)', true));
   if (s.stage === 'counts' && s.kind !== 'confirm') acts.push(btn('show words', s.kind === 'collective' ? 'Show the collective’s new signing key’s words' : s.kind === 'make' ? 'Show its signing key’s words' : 'Show the new signing key’s words', true));
@@ -517,7 +545,7 @@ export function sitting(s: Sitting): string {
   const done = s.stage === 'done' || s.stage === 'expired';
   const step = s.kind === 'identity' ? ({ paper: 2, sent: 3, counts: 4, shown: s.words === 'signing' ? 4 : 2, done: 5 } as Record<string, number>)[s.stage] : undefined;
   return `${step !== undefined ? steps(step) : ''}<h2>${e(s.title)}</h2>${req}<div class="kishib-review">${lines(s.lines)}</div>${paper}${shares}
-<div class="k-row">${acts.join('')}${done && !(s.shares ?? []).some((x) => !x.shown) ? btn('forget', 'Done', true) : ''}</div>`;
+<div class="k-row">${acts.join('')}${done && !(s.shares ?? []).some((x) => !x.shown) ? btn('forget', 'Done', true) : ''}</div>${answer}`;
 }
 
 /** The tab a sitting belongs to. */
