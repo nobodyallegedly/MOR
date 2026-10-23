@@ -2707,7 +2707,188 @@ fn s7g_identity(out: &mut Out) {
 }
 
 /// S7g: Text, read for sentences no case exercised.
-fn s7g_text(_out: &mut Out) {}
+fn s7g_text(out: &mut Out) {
+    let m = mirs();
+    let tt = Some("text act format and rule 14 at a Text-only verifier");
+    // A Text act of `p`, held where it opens; one that does not open is kept
+    // in the log, as the verifier received it.
+    let tx = |w: &mut World, p: &mut Person, type_: u64, payload: Vec<(Value, Value)>, acks: Option<Vec<Hash>>| -> Hash {
+        let a = w.everyday_act(p, mirs().text, type_, payload, None, acks);
+        let _ = w.v.add(a.clone());
+        w.log.push((a.clone(), None));
+        a.id()
+    };
+    let t0 = |s: &str| (Value::Uint(0), Value::Text(s.into()));
+
+    // Rule 14: acks.
+    let mut w = World::new();
+    let mut p = w.genesis("ida", vec![own_home()], None, None);
+    let x = w.post(&mut p, "A post Ida answers.");
+    let a = tx(&mut w, &mut p, 0, vec![t0("Seen.")], Some(vec![x]));
+    out.case(&mut w, "a text act carrying acks: invalid", "Text rule 14", "A text act carrying `acks` is invalid: no light act carries the weight of an acknowledgement.", Facts::default(), ask_status(&a), json!("invalid"), tt);
+
+    // Part three and rule 4: the payload, decoded strictly; a format nobody here implements.
+    let fmt = (Value::Uint(1), Value::Bytes(spec("a text format cMIP nobody here implements").to_vec()));
+    let shapes: Vec<(&str, &str, u64, Vec<(Value, Value)>, &str)> = vec![
+        ("a text act naming a format this verifier does not implement: valid", "Text rule 4; part three", 0, vec![t0("*Bold*, or plain."), fmt.clone()],
+            "Field 1 a 32-byte hash: the format is the one case where an unknown cMIP does not make an act unknown."),
+        ("a text act with no field 0: invalid", "Text, part three", 0, vec![fmt.clone()], "Field 0, the text, is required."),
+        ("a text act whose field 0 is a byte string: invalid", "Text, part three", 0, vec![(Value::Uint(0), Value::Bytes(b"words".to_vec()))], "Field 0 is a text string."),
+        ("a text act carrying a field 2: invalid", "Text, part three", 0, vec![t0("More."), (Value::Uint(2), Value::Uint(1))], "A closed map: no field but 0 and 1."),
+        ("a text act whose format is 31 bytes: invalid", "Text, part three", 0, vec![t0("Short format."), (Value::Uint(1), Value::Bytes(vec![7; 31]))], "Field 1, if present, is a 32-byte hash."),
+        ("a text act whose format is a text string: invalid", "Text, part three", 0, vec![t0("Named format."), (Value::Uint(1), Value::Text("markdown".into()))], "Field 1, if present, is a 32-byte hash."),
+        ("a Text act of type 7: invalid", "Text, part three; Envelopes rule 30", 7, vec![t0("Type seven.")], "Text defines type 0 only."),
+    ];
+    for (name, rule, type_, payload, why) in shapes {
+        let mut w = World::new();
+        let mut p = w.genesis("ida", vec![own_home()], None, None);
+        let a = tx(&mut w, &mut p, type_, payload, None);
+        out.case(&mut w, name, rule, why, Facts::default(), ask_status(&a), json!(if type_ == 0 && name.ends_with(": valid") { "valid" } else { "invalid" }), tt);
+    }
+
+    // Rule 1: an act of a cMIP this verifier does not implement, its text not canonical.
+    let mut w = World::new();
+    let mut p = w.genesis("ida", vec![own_home()], None, None);
+    let a = w.everyday_act(&mut p, spec("a cMIP nobody here implements"), 0, vec![(Value::Uint(0), Value::Text("A trailing space ".into()))], None, None);
+    assert!(w.v.add(a.clone()).is_err(), "it does not open");
+    w.log.push((a.clone(), None));
+    out.case(&mut w, "an act of a cMIP the verifier does not implement, carrying a text that is not canonical: invalid, not unknown", "Text rule 1; Envelopes rule 30",
+        "Every text field of every act is canonical, whatever specification defines it; a line ending with a space breaks rule 10.", Facts::default(), ask("verdict, implementing the MIRs only", &a.id()), json!("invalid"), Some("invalid beats unknown"));
+
+    // Rule 1: a private act is checked by those who hold its key.
+    {
+        let mut w = World::new();
+        let mut p = w.genesis("ida", vec![own_home()], None, None);
+        let r = w.genesis("rui", vec![own_home()], None, None);
+        let inside = mor_core::act::Inside {
+            spec: m.text,
+            type_: 0,
+            prev: Some(vec![]),
+            objects: None,
+            payload: vec![(Value::Uint(0), Value::Text("Cafe\u{301}, privately.".into()))],
+            position: Some(1),
+            summary: Some(mor_core::hash::ZERO_HASH),
+            acks: None,
+            refs: None,
+            hint: None,
+            salt: sha256(b"s7g text: a private act's salt")[..16].try_into().unwrap(),
+        };
+        let (key, nonce) = content_key_for(&inside, Some(p.id), Some(p.binding));
+        let sk = p.sign.clone();
+        let a = mor_core::act::make(&inside, &key, &nonce, &mor_core::act::Addressing { signer: Some(p.id), binding: Some(p.binding), public: false, to: Some(vec![r.id]) }, |id| sk.sign(id, &[0; 32]));
+        p.seq.push(a.id());
+        assert!(w.v.add_with_key(a.clone(), Some(&key)).is_err(), "it does not open");
+        w.log.push((a.clone(), Some(key)));
+        out.case(&mut w, "a private text act whose text is not in NFC, its key held: invalid", "Text rule 1", "Those who hold its key check its text, and it is not canonical.", Facts::default(), ask_status(&a.id()), json!("invalid"), None);
+    }
+
+    // Rule 14, the first case: a collective's decisions, records included.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let (fd, cid) = (col.founding, col.c.id);
+    let res = ag_act(&mut w, &mut col.m[2], agreements::types::RESIGNATION, agreements::Resignation { agreement: fd, area: None, drafts: vec![] }.to_map(), obj(fd));
+    let rec = {
+        let saved = col.c.cite.take();
+        let a = w.everyday_act(&mut col.c, m.agreements, agreements::types::RECORD, agreements::Record { clone: None, signatures: None, kept: vec![], registers: Some(vec![res]) }.to_map(), obj(fd), None);
+        col.c.cite = saved;
+        w.add(&a)
+    };
+    let on_rec = text_act(&mut w, &mut col.c, "The collective's notice, after its record.", Some(vec![Object { chain: cid, predecessor: rec }]));
+    let on_gen = text_act(&mut w, &mut col.c, "The collective's notice, naming its genesis after a record.", Some(vec![Object { chain: cid, predecessor: cid }]));
+    let on_text = text_act(&mut w, &mut col.c, "The collective's notice, naming its own text.", Some(vec![Object { chain: cid, predecessor: on_rec }]));
+    let on_res = text_act(&mut w, &mut col.c, "The collective's notice, naming a member's resignation.", Some(vec![Object { chain: cid, predecessor: res }]));
+    let log = w.log.clone();
+    out.case(&mut w, "a collective's text naming a record of its own: valid", "Text rule 14, first case; Agreements rule 58", "A record of the collective is one of its decisions.", Facts::default(), ask_status(&on_rec), json!("valid"), Some("at a Text-only verifier: unknown"));
+    out.case(&mut w, "a collective's text naming its genesis though a later record is held: valid", "Text rule 14, first case",
+        "Client conformance names the latest decision; a verifier accepts any of the collective's own records or links of its identity chain.", Facts::default(), ask_status(&on_gen), json!("valid"), Some("at a Text-only verifier: unknown"));
+    out.case(&mut w, "a collective's text naming its own text act: invalid", "Text rule 14", "A predecessor that is no decision of its own: neither case.", Facts::default(), ask_status(&on_text), json!("invalid"), Some("at a Text-only verifier: unknown"));
+    out.case(&mut w, "a collective's text naming a member's act: invalid", "Text rule 14", "The predecessor is not the collective's own: no decision of its own.", Facts::default(), ask_status(&on_res), json!("invalid"), Some("at a Text-only verifier: unknown"));
+    let mut w2 = World::new();
+    for (a, _) in &log {
+        if a.id() != rec {
+            w2.add(a);
+        }
+    }
+    out.case(&mut w2, "a collective's text naming a record this verifier does not hold: unknown", "Text rule 14", "A verifier that does not yet hold the decision named answers unknown.", Facts::default(), ask_status(&on_rec), json!("unknown"), Some("at a Text-only verifier: unknown"));
+
+    // Rule 14: a "record" claiming the collective, signed with another key.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let (fd, cid) = (col.founding, col.c.id);
+    // Ben's resignation, so the forged act differs from any genuine record
+    // another case holds (an act's id leaves its signature out).
+    let res = ag_act(&mut w, &mut col.m[1], agreements::types::RESIGNATION, agreements::Resignation { agreement: fd, area: None, drafts: vec![] }.to_map(), obj(fd));
+    let mut forger = col.c.clone();
+    forger.cite = None;
+    forger.sign = schnorr("a forger of the collective's records", 0);
+    let a = w.everyday_act(&mut forger, m.agreements, agreements::types::RECORD, agreements::Record { clone: None, signatures: None, kept: vec![], registers: Some(vec![res]) }.to_map(), obj(fd), None);
+    let forged = w.add(&a);
+    let t = text_act(&mut w, &mut col.c, "The collective's notice, naming a forged record.", Some(vec![Object { chain: cid, predecessor: forged }]));
+    out.case(&mut w, "a collective's text naming a record that claims the collective but another key signed: invalid", "Text rule 14; Agreements rule 58",
+        "The act named is invalid, so no decision of the collective's own: neither case.", Facts::default(), ask_status(&t), json!("invalid"), Some("at a Text-only verifier: unknown"));
+
+    // Rule 14, the second case: a person's grant key.
+    let mut w = World::new();
+    let mut gus = w.genesis("gus", vec![own_home()], None, None);
+    let mut app = w.genesis("gus's app", vec![own_home()], None, None);
+    let gid = gus.id;
+    let (g, mut s) = grant_key_person(&mut w, &mut gus, &mut app, vec![Kind::Type { spec: m.text, type_: 0 }]);
+    let ok = text_act(&mut w, &mut s, "Posted by Gus's app.", Some(vec![Object { chain: gid, predecessor: g }]));
+    let on_gen = text_act(&mut w, &mut s, "Posted by Gus's app, naming his genesis.", Some(vec![Object { chain: gid, predecessor: gid }]));
+    let log = w.log.clone();
+    out.case(&mut w, "a grant key's text naming its grant: valid under Text, and backed", "Text rule 14, second case; Agreements rules 73 and 80",
+        "Exactly one object, [grantor, the grant its binding names]; Agreements judge the backing: the grant reaches texts and its grantee accepted it.", Facts::default(), ask("backing", &ok), json!("backed"), None);
+    out.case(&mut w, "a grant key's text naming another act of the grantor: invalid", "Text rule 14", "The one object must name the grant its binding names.", Facts::default(), ask_status(&on_gen), json!("invalid"), None);
+    let mut w2 = World::new();
+    for (a, _) in &log {
+        if a.id() != g {
+            w2.add(a);
+        }
+    }
+    out.case(&mut w2, "a grant key's text whose grant this verifier does not hold: unknown", "Text rule 14", "A verifier that does not yet hold the grant its binding names answers unknown.", Facts::default(), ask_status(&ok), json!("unknown"), None);
+
+    // Rule 14: a collective's grant key, the second case decides.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let cid = col.c.id;
+    let mut agent = w.genesis("the collective's agent", vec![own_home()], None, None);
+    let (g, mut s) = grant_key_person(&mut w, &mut col.c, &mut agent, vec![Kind::Type { spec: m.text, type_: 0 }]);
+    let ok = text_act(&mut w, &mut s, "The agent's notice, naming its grant.", Some(vec![Object { chain: cid, predecessor: g }]));
+    let on_gen = text_act(&mut w, &mut s, "The agent's notice, naming the collective's genesis.", Some(vec![Object { chain: cid, predecessor: cid }]));
+    out.case(&mut w, "a collective's grant key's text naming its grant: scoped", "Text rule 14, second case", "Valid under Text; Agreements judge its backing.", Facts::default(), ask_status(&ok), json!("scoped"), None);
+    out.case(&mut w, "a collective's grant key's text naming a decision of the collective: invalid", "Text rule 14",
+        "Signed with a grant key, the second case decides, whoever the signer is: the one object names its grant; the first case is for the collective's own key.", Facts::default(), ask_status(&on_gen), json!("invalid"), None);
+
+    // Rule 14: a holder's member key, its signature act not held.
+    let mut w = World::new();
+    let mut col = collective(&mut w, &[1], 1);
+    let (cid, fd) = (col.c.id, col.founding);
+    let mut ana = member_key(&mut w, &mut col, 0, "ana");
+    let sig = ana.binding;
+    let good = text_act(&mut w, &mut ana, "A text of the collective, by Ana's member key.", Some(vec![Object { chain: cid, predecessor: fd }]));
+    let log = w.log.clone();
+    out.case(&mut w, "a member key's text naming the version that named the key: scoped", "Text rule 14; Agreements rule 73", "Valid under Text, judged by Agreements.", Facts::default(), ask_status(&good), json!("scoped"), None);
+    let mut w2 = World::new();
+    for (a, _) in &log {
+        if a.id() != sig {
+            w2.add(a);
+        }
+    }
+    out.case(&mut w2, "the same, the signature act that named the key not held: unknown", "Text rule 14",
+        "A verifier that does not yet hold, for a member key, the signature act its binding names answers unknown.", Facts::default(), ask_status(&good), json!("unknown"), None);
+
+    // Rule 14 and the freeze scenarios: a text act naming a deal is no fork of it.
+    let mut w = World::new();
+    let mut ada = w.genesis("ada", vec![own_home()], None, None);
+    let mut bram = w.genesis("bram", vec![own_home()], None, None);
+    let terms = deal(&[ada.id, bram.id], None);
+    let d = ag_act(&mut w, &mut ada, agreements::types::TERMS, terms.to_map(), None);
+    sign(&mut w, &mut ada, &d);
+    sign(&mut w, &mut bram, &d);
+    let on_deal = text_act(&mut w, &mut ada, "A party's note on the deal.", Some(vec![Object { chain: d, predecessor: d }]));
+    out.case(&mut w, "a party's text naming its deal's head: invalid", "Text rule 14", "Another chain than its signer's: invalid at every verifier.", Facts::default(), ask_status(&on_deal), json!("invalid"), tt);
+    out.case(&mut w, "the deal that text names: no fork, one version in force", "Text rule 14; Envelopes rule 15", "An invalid text act is never a fork of another MIR's chain.", Facts::default(), ask("deal fork", &d), json!("one version in force"), None);
+}
 
 /// S7g: Envelopes, read for sentences no case exercised.
 /// (`docs/untested-sentences.md`, "Envelopes": what makes every act invalid

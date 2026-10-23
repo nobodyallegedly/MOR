@@ -526,7 +526,7 @@ def py_verdict(case, pool, mirs):
         return "unknown"
     p = ins.get(4)
     keys = p.keys()
-    if ins.get(1) != 0 or ins.get(7) is not None or 0 not in keys or not set(keys) <= {0, 1} or not isinstance(p.get(0), str):
+    if ins.get(1) != 0 or ins.get(7) is not None or 0 not in keys or not set(keys) <= {0, 1} or not isinstance(p.get(0), str) or (1 in keys and not is_hash(p.get(1))):
         return "invalid"
     objs = ins.get(3)
     if objs is None:

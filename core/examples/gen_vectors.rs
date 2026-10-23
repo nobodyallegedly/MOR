@@ -200,6 +200,17 @@ fn text_vectors() -> J {
         ("a \nb\u{FDD0}\r", "rules 10, 11 and 8 broken, in that order along the string: the rule named is 8"),
         ("a\u{202E}b\u{202C}", "bidirectional controls are canonical (shown visibly before signing terms)"),
         ("\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}", "an emoji sequence with ZERO WIDTH JOINER: canonical"),
+        ("a\u{1F}b", "rule 9: the last C0 control, U+001F"),
+        ("a\u{1680}", "rule 10: ending with OGHAM SPACE MARK, on the fixed list"),
+        ("a\u{2000}\nb", "rule 10: a line ending with EN QUAD, the first of U+2000 to U+200A"),
+        ("a\u{200A}", "rule 10: ending with HAIR SPACE, the last of U+2000 to U+200A"),
+        ("a\u{202F}", "rule 10: ending with NARROW NO-BREAK SPACE"),
+        ("a\u{205F}", "rule 10: ending with MEDIUM MATHEMATICAL SPACE"),
+        ("a\u{FDEF}", "rule 11: noncharacter U+FDEF, the last of U+FDD0 to U+FDEF"),
+        ("a\u{FDCF}", "U+FDCF, just below the noncharacter block, assigned: canonical"),
+        ("a\u{1FFFE}", "rule 11: noncharacter U+1FFFE, plane 1"),
+        ("a\u{378}", "U+0378, not assigned in Unicode 17.0: left as it is, canonical (rule 12)"),
+        ("a\u{2066}b\u{2069}", "bidirectional isolates are canonical (rule 6 protects in display)"),
     ];
     let v: Vec<J> = cases
         .iter()

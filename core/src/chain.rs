@@ -2093,6 +2093,10 @@ impl Verifier {
         // on its grantor's chain. A binding that is no link of the signer's
         // identity chain is a scoped key's (Identity rule 8): Agreements
         // judge whether the grant backs it (rules 73 to 80, `backing`).
+        let collective = res
+            .states
+            .iter()
+            .any(|s| s.declarations.iter().any(|d| d.spec == agreements && d.kind == crate::agreements::kinds::FOUNDING_AGREEMENT && d.value.is_some()));
         if let Some(b) = x.act.outside.binding {
             // A holder's member key (Text rule 14; Agreements rule 73): the
             // binding is the holder's signature act on a founding or clone,
@@ -2111,11 +2115,28 @@ impl Verifier {
             if o.predecessor == b && res.position_of(&b).is_none() {
                 return Some(true);
             }
+            if res.position_of(&b).is_none() {
+                match self.acts.get(&b) {
+                    // Text rule 14: signed with a grant key, the second case
+                    // decides, whoever the signer is; a collective's grant
+                    // key naming one of its decisions, not its grant, is
+                    // invalid (the first case is the collective's own key's).
+                    Some(g) if g.inside.spec != self.identity_spec => return Some(false),
+                    // A binding not held may be a holder's signature act: a
+                    // collective's text naming a founding or clone is unknown
+                    // until it holds that signature (Text rule 14).
+                    None if collective
+                        && self
+                            .acts
+                            .get(&o.predecessor)
+                            .is_some_and(|p| p.inside.spec == agreements && p.inside.type_ == crate::agreements::types::TERMS) =>
+                    {
+                        return None
+                    }
+                    _ => {}
+                }
+            }
         }
-        let collective = res
-            .states
-            .iter()
-            .any(|s| s.declarations.iter().any(|d| d.spec == agreements && d.kind == crate::agreements::kinds::FOUNDING_AGREEMENT && d.value.is_some()));
         if !collective {
             return Some(false);
         }
@@ -2123,7 +2144,10 @@ impl Verifier {
             return Some(true);
         }
         let p = self.acts.get(&o.predecessor)?;
-        Some(p.signer() == Some(signer) && p.inside.spec == agreements && p.inside.type_ == crate::agreements::types::RECORD)
+        // One of its records: an act claiming the collective as signer that
+        // is invalid (another key's) is no decision of its own (Text rule 14;
+        // Agreements rule 58).
+        Some(p.signer() == Some(signer) && p.inside.spec == agreements && p.inside.type_ == crate::agreements::types::RECORD && self.status_cx(cx, p) != Status::Invalid)
     }
 
     fn status_cx(&self, cx: &mut Cx, x: &Held) -> Status {
