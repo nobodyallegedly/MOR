@@ -2262,7 +2262,8 @@ impl<'a> AgreementsView<'a> {
     /// The contests of a declaration of absence (type 14, rule 52; BQ4,
     /// decided 9 October 2026): valid contests naming it, each signed by
     /// the party it declares absent, which shows presence. A contest voids
-    /// nothing: it is shown beside the declaration.
+    /// nothing: it is shown beside the declaration. One carrying field 1,
+    /// which only a purchase's contest may (F386), shows nothing.
     pub fn contests(&self, declaration: &Hash) -> R<Vec<Hash>> {
         let Some(dh) = self.v.get(declaration) else { return Ok(vec![]) };
         if !self.is_agreements(dh, types::DECLARATION) {
@@ -2275,7 +2276,7 @@ impl<'a> AgreementsView<'a> {
             .filter(|h| {
                 self.is_agreements(h, types::CONTEST)
                     && self.valid(&h.id)
-                    && Contest::decode(&h.inside).is_ok_and(|c| c.vow.is_none() && &c.act == declaration)
+                    && Contest::decode(&h.inside).is_ok_and(|c| c.vow.is_none() && c.promise.is_none() && &c.act == declaration)
             })
             .map(|h| h.id)
             .collect())

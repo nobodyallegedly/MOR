@@ -108,8 +108,8 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 - **Chain of judgment.** For a judge the terms name: the ones that take over from it, in order, when it answers "unknown" or does not act within its period. The chain is named in the terms and signed by everyone, so that it passes with no new signature. Each link names its period, measured on the agreement's time reference (terms field 6; the chain itself is terms field 21; rule 35).
 - **Time reference.** A source of time an agreement names, such as a block height. For that agreement, only it decides whether an act is before or after a point on its reference, and whether something is past its terms. *Before and after among acts done in a collective's name are judged on the collective's own sequence ("Made before, made after"); the time reference judges deadlines and absence.*
 - **Concurrency rule.** Retired: terms field 10 is withdrawn, never reused. A fork of records is settled by rule 90's default, the parent staying in force until a clone recorded after both lines resolves it.
-- **Contest.** A signed objection to another act, by a party with standing. It changes nothing about any act's validity, status or selection; it makes disagreement visible. *"Dispute" is a different word: it is reserved for the status Identity gives an act after a rotation.*
-- **Standing.** Who may contest an act: a party to its agreement, a holder of a stake it affects, or a keeper, arbitrator or verifier the agreement names.
+- **Contest.** A signed objection to another act, by someone with standing. It changes nothing about any act's validity, status or selection; it makes disagreement visible. *"Dispute" is a different word: it is reserved for the status Identity gives an act after a rotation.*
+- **Standing.** Who may contest an act: a party to its agreement, a holder of a stake it affects, or a keeper, arbitrator or verifier the agreement names; and, for a purchase, its buyer.
 
 ### Collectives
 
@@ -1484,7 +1484,8 @@ A contest counts only when signed by someone with standing:
 
 - a party to the agreement;
 - a holder of a stake the contested act affects;
-- a keeper, arbitrator or verifier the agreement names.
+- a keeper, arbitrator or verifier the agreement names;
+- the buyer of a purchase, for a contest of that purchase ("Contest (type 14)").
 
 A contest never changes any act's validity, status or selection. It is shown alongside what it names.
 
@@ -2831,7 +2832,7 @@ Every Agreements act type may carry acknowledgements (`acks`, Envelopes rules 18
 | 11 | *Retired*: adoption is by acknowledging, citing or paying on (rule 76); never reused | — |
 | 12 | Liveness | a party; counts only public or addressed to the agreement's other parties |
 | 13 | Abandonment declaration | the authority the clause names, always an identity. For a threshold of the other parties (in a collective only): one of them, completed by the others' signature acts, which the recovery rotation names where the declaration takes effect there |
-| 14 | Contest | anyone with standing (rule 54): the party a declaration of absence names, answering it; someone who signed onto a vow, contesting a sale (rule 13); anyone else with standing, contesting another act |
+| 14 | Contest | anyone with standing (rule 54): the party a declaration of absence names, answering it; the buyer of a purchase, contesting it, a vow's sale included (rule 13); anyone else with standing, contesting another act |
 | 15 | *Retired*: a Module states its fee in its own specification (Development field 7); never reused | — |
 | 16 | Resignation | the member giving up their voice, or stepping down from one area, naming the drafts they leave behind |
 | 17 | Record | the collective, with its signing key: its everyday line |
@@ -3562,12 +3563,12 @@ Its text is shown as a text act's is, plain text always available (Text rules 3 
 
 ### Contest (type 14)
 
-*In short: a contest answers an act: a party declared absent answers the declaration, or someone who signed onto a vow contests its sales. It shows the dispute, and voids nothing.*
+*In short: a contest answers an act: a party declared absent answers the declaration, or a buyer contests their purchase, a vow's sale among them. It shows the dispute, and voids nothing.*
 
 ```cddl
 contest-payload = {
-  0 => hash,                ; the act it answers: a declaration of absence (type 13); or, for a vow, the sale it contests
-  ? 1 => tstr / [hash, any] ; for a vow only: the promise not kept, in words (canonical text) or in a cMIP's terms
+  0 => hash,                ; the act it answers: a declaration of absence (type 13); or the purchase it contests, a vow's sale included
+  ? 1 => tstr / [hash, any] ; the promise not kept, shown only in a purchase's contest: in words (canonical text); or, naming a vow, in a cMIP's terms
 }
 ```
 
@@ -3577,9 +3578,15 @@ A contest of a declaration is signed by the party the declaration names, with it
 
 *Client conformance:* the declared member's client lets them sign it, and publishes it.
 
-A contest of a vow: field 0 names **the sale it contests**: the buyer's payer's claim of the payment that is a purchase under an offer naming the vow, or, for an offer at no price, the signature act by which the buyer signed onto it (rule 13). Its inside names the vow by its name (its genesis id) as chain and predecessor, `[[vow, vow]]`. Field 1, optional, says which of the vow's promises was not kept (a buyer may know only that something went wrong). Signed by the buyer of that sale, it marks that sale contested, and voids nothing. Signed by anyone else, it shows nothing.
+**A contest of a purchase**: field 0 names **the purchase it contests**: the buyer's payer's claim of the payment that is the purchase (rule 12), any of the buyer's own claims of it, or, for an offer at no price, the signature act by which the buyer signed onto the offer (a sign-on, rule 13: a signature act naming the offer, by anyone but the offer's own side). The buyer is the payer the payment's commitment names, an identity (rule 22), or the signer of that signature act: a purchase whose payer committed only a bare key, or that no claim of the payer's records, has no buyer who can contest it (rule 13's stated cost). Field 1, optional, says what was promised and not kept, in words (a buyer may know only that something went wrong). Its inside names the purchase as both chain and predecessor, `[[purchase, purchase]]`. Signed by the buyer, it is shown beside the purchase while the payment is a purchase (rule 12; a payment still pending, or found to be no purchase, shows none), and voids nothing: it changes no payment, refund or delivery, nor any act's validity, status or selection, nor a sale's state. Signed by anyone else, it shows nothing as the buyer's contest. *Bytes that do not match what was sold are caught by the bytes (Envelopes rule 21, and a key delivery that opens nothing is ignored); words that promised something other than what was delivered are not, and this is where the buyer says so.*
 
-**A contest of any other act**, other than a declaration of absence or a vow's sale, by anyone with standing (rule 54), is in the same format: field 0 names the act it contests, field 1 is absent (a contest of such an act carrying it is invalid), and its inside names that act as both chain and predecessor, `[[act, act]]`. It is shown beside the act it contests, and changes nothing about any act's validity, status or selection. Signed by anyone without standing, it shows nothing.
+**A vow's sale** is a purchase, and its buyer contests it the same way, with one difference: where its inside names the vow by its name (its genesis id) as chain and predecessor, `[[vow, vow]]`, the contest marks that sale contested (rule 13), and field 1 says which of the vow's promises was not kept, in words or in a cMIP's terms. A contest naming the vow whose field 0 is no sale of that vow marks nothing and shows nothing. In the purchase's form, `[[purchase, purchase]]`, it is shown beside the purchase and marks no sale.
+
+**A contest of any other act**, other than a declaration of absence or a purchase, by anyone with standing (rule 54), is in the same format: field 0 names the act it contests, field 1 is absent, and its inside names that act as both chain and predecessor, `[[act, act]]`. It is shown beside the act it contests, and changes nothing about any act's validity, status or selection. Signed by anyone without standing, it shows nothing.
+
+**Field 1 is read from the bytes alone.** In words, it is in the format of any contest; in a cMIP's terms, only of a contest naming a vow, and a contest carrying it otherwise is invalid. Field 1 is shown only in a contest of a purchase; any other contest carrying it shows nothing.
+
+**"Shows nothing"**: the contest stays a valid act in its signer's sequence, and no client shows it beside the act it names; it changes nothing.
 
 ### Settlement request (type 22) and fork settlement (type 23)
 
