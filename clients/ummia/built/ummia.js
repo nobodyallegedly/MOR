@@ -11225,6 +11225,11 @@ ${s.relays.join("\n")}`));
       const { me, s, book, hints } = await this.ctx();
       await this.current(me);
       const own = [...await this.ownReleases(me, book, hints, s.via).catch(() => book.releases), ...book.collectiveReleases ?? []].find((x) => x.id === a.release);
+      if (!own) {
+        const id = readActId(a.release);
+        const held = await referTo(id, [.../* @__PURE__ */ new Set([...hints, ...s.relays, ...s.track])], s.via).catch(() => null);
+        if (!held?.public) throw new Error("That is neither one of your releases nor a public act found on your relays. Nothing was prepared.");
+      }
       const rel = own ?? { id: readActId(a.release), name: "the act", version: short4(readActId(a.release)) };
       const service = readId(a.service);
       const offer = (await offers(service, [...hints, ...s.track], s.via)).find((o) => o.act === a.offer);

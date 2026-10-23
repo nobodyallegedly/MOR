@@ -151,7 +151,9 @@ async function done(page: Page, button: ReturnType<Page['locator']>, name: strin
   return said;
 }
 
-const settled = (page: Page) => page.waitForFunction(() => ![...document.querySelectorAll('button')].some((b) => b.disabled && !b.closest('.k-panel') && !b.closest('[data-add]') && b.dataset.kAdd === undefined && !b.closest('.k-pop')), undefined, { timeout: 90_000 });
+/** Nothing being done (no button disabled by an act) and the part open read (not "Reading…"). */
+const settled = (page: Page) =>
+  page.waitForFunction(() => ![...document.querySelectorAll('button')].some((b) => b.disabled && !b.closest('.k-panel') && !b.closest('[data-add]') && b.dataset.kAdd === undefined && !b.closest('.k-pop')) && !/^Reading/.test(document.querySelector('#pane')?.textContent?.trim() ?? ''), undefined, { timeout: 90_000 });
 
 async function bring(page: Page, who: { id: string; words: string }, home: string) {
   await sees(page, 'form#bring', 'bring');
