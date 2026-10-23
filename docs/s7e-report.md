@@ -81,6 +81,7 @@
   - *Error:* a new throw, `law/rail-unanswered`, where the purchase's claim has no rail answer and would otherwise be a purchase.
   - *Result shape:* unchanged.
   - *What avoids it:* `specs.railValid` (or `specs.railInvalid`) naming that claim.
+  - *For a caller:* one that words only `law/payment-unstated` will show the new code's own message as is.
 - **`agreementsOwedBack(specs, collective)`**:
   - *Result shape:* unchanged (`unknown` already existed).
   - *When:* an entry is marked `unknown: true` where it rests on a receipt or claim with no rail answer.
