@@ -555,20 +555,23 @@ test('the program’s page on the Mac: a collective rotation from two of three p
   const ep = await context.newPage();
   ep.on('pageerror', (x) => problems.push(x.message));
   await ep.goto(`${e.app.base}/#pair=${e.app.access.newCode()}`);
-  await ep.click('[data-action=tab][data-tab=collectives]');
-  await ep.click(`.entry[data-id="${col}"]`);
-  const box = ep.locator('form#real-renew');
+  // Round 4: Edubba on the kit. The collective in the Collectives column; its member change in the Members tab.
+  await ep.locator('[data-k-tile=collectives]').click();
+  await ep.locator('.k-col button', { hasText: 'The tablet house' }).first().click();
+  await ep.locator('.edubba-tabs button', { hasText: 'Members' }).click();
+  const box = ep.locator('.proposal-status form#real-renew').last();
   await box.waitFor({ timeout: 60_000 });
   assert.match(await ep.locator('.proposal-status').last().innerText(), /Open Kišib and choose “Rotate a collective”/);
   await shot(ep, '42-edubba-waits-for-kishib');
   await box.locator('textarea[name=words]').fill(cw.join(' '));
   await box.locator('button[type=submit]').click();
-  await ep.locator('#e-status .note.done', { hasText: 'The member change is in force' }).waitFor({ timeout: 60_000 }).catch(async (e) => {
+  await ep.locator('#e-status .k-note.k-done', { hasText: 'The member change is in force' }).waitFor({ timeout: 60_000 }).catch(async (e) => {
     throw new Error(`${e}\nEdubba said: ${await ep.locator('#e-status').innerText()}`);
   });
   await ep.locator('.proposal-status', { hasText: 'In force: Kišib’s rotation' }).waitFor({ timeout: 60_000 });
   await shot(ep, '43-edubba-in-force');
   // Edubba reads the collective under the change in force: the joining member's signature, declared by the rotation, is read too.
+  await ep.locator('.edubba-tabs button', { hasText: 'Act' }).click();
   await ep.locator('#e-perms', { hasText: 'is a party of it' }).waitFor({ timeout: 60_000 });
   assert.doesNotMatch(await ep.locator('#e-perms').innerText(), /cannot read/);
   // The program's folder holds no word.

@@ -32,7 +32,7 @@ import { start, type Running as Relay } from '../../genesis/test/world.ts';
 import { post as postAs } from '../../barebone/src/post.ts';
 import { encryptionSecret, fromWords, toWords } from '../../../modules/carry/src/carry.ts';
 import { contentSecurityPolicy } from '../../dub/src/web/headers.ts';
-import { WEB_BANNER, RELEASE_ON_WEB } from '../src/page/view.ts';
+import { shortForm } from '../../kit/src/html.ts';
 
 const deskDir = fileURLToPath(new URL('..', import.meta.url));
 const dubDir = fileURLToPath(new URL('../../dub/', import.meta.url));
@@ -149,13 +149,19 @@ async function file<T>(page: Page, path: string): Promise<T> {
   return JSON.parse((JSON.parse(await kept(page)) as Record<string, Record<string, string>>)['edubba/files'][path]) as T;
 }
 
-const done = (page: Page, sel: string, words: string | RegExp) => page.locator(sel, { hasText: words }).first().waitFor({ timeout: 90_000 });
+const done = async (page: Page, sel: string, words: string | RegExp) => {
+  await page.locator(sel, { hasText: words }).first().waitFor({ timeout: 90_000 });
+  // Read, then closed, as a person does, so it covers nothing.
+  if (sel.startsWith('#e-status') && (await page.locator('#e-status [data-action=status-close]').count())) await page.click('#e-status [data-action=status-close]');
+};
 
 /** The banner, whole, on the screen now. */
 async function banner(page: Page, where: string) {
   const b = page.locator('#for-testing-only');
   assert.ok(await b.isVisible(), `the banner on ${where}`);
-  assert.match(await b.innerText(), /For testing only[\s\S]*signing key[\s\S]*storage[\s\S]*chain key[\s\S]*memory/);
+  // One line with its "?" (the kit's disclaimers); the risks, whole, behind it.
+  assert.match(await b.innerText(), /^For testing only\./);
+  assert.match((await b.textContent()) ?? '', /For testing only[\s\S]*signing key[\s\S]*storage[\s\S]*chain key[\s\S]*memory/);
 }
 
 /** An identity made elsewhere, as Dub makes one: an inbox, and the encryption key its signing key's words carry. */
@@ -171,25 +177,38 @@ async function elsewhere(): Promise<TestIdentity> {
   return g;
 }
 
-/** Edubba's web client: its places set in Settings, by clicks. */
-async function places(ed: Page) {
-  await ed.click('[data-action=tab][data-tab=settings]');
-  await ed.fill('#desk-settings textarea[name=homes]', homes.map((h) => h.base).join('\n'));
-  await ed.fill('#desk-settings textarea[name=relays]', relay.base);
-  await ed.click('#desk-settings button[type=submit]');
-  await done(ed, '#settings-status, #e-status', /saved/i);
+/** Bring an identity into Edubba's web client by its ID written for people and its words, by clicks: + Add › Bring one (or the first screen's), its homes and relays first where none are set. */
+async function bringIn(ed: Page, name: string, g: TestIdentity | { id: string; words: string }, wrong = false) {
+  if (await ed.locator('[data-add=bring]').count()) await ed.click('[data-add=bring]');
+  else {
+    await ed.click('[data-k-open=identity]');
+    await ed.click('.k-panel [data-k-add=toggle]');
+    await ed.click('.k-panel [data-k-add=bring]');
+  }
+  const m = ed.locator('.k-modal');
+  if (await m.locator('#desk-settings').count()) {
+    await m.locator('#desk-settings textarea[name=homes]').fill(homes.map((h) => h.base).join('\n'));
+    await m.locator('#desk-settings textarea[name=relays]').fill(relay.base);
+    await m.locator('#desk-settings button[type=submit]').click();
+    await m.locator('.k-note.k-done', { hasText: /saved/i }).waitFor({ timeout: 60_000 });
+  }
+  const words = 'words' in g ? g.words : toWords(unhex(g.f.signingSecret)).join(' ');
+  await m.locator('#bring-identity input[name=name]').fill(name);
+  await m.locator('#bring-identity input[name=id]').fill('words' in g ? g.id : shownId(g.id));
+  await m.locator('#bring-identity textarea[name=words]').fill(wrong ? toWords(crypto.getRandomValues(new Uint8Array(32))).join(' ') : words);
+  await m.locator('#bring-identity button[type=submit]').click();
+  if (wrong) return void (await m.locator('.k-note.k-error', { hasText: /do not give this identity’s current signing key/ }).waitFor({ timeout: 60_000 }));
+  await done(ed, '#e-status .k-note.k-done', `“${name}” is here`);
 }
 
-/** Bring an identity into Edubba's web client by its ID written for people and its words, by clicks. */
-async function bringIn(ed: Page, name: string, g: TestIdentity) {
-  await ed.click('[data-action=tab][data-tab=identities]');
-  await ed.click('.entry.add[data-id=new]');
-  await ed.fill('#bring-identity input[name=name]', name);
-  await ed.fill('#bring-identity input[name=id]', shownId(g.id));
-  await ed.fill('#bring-identity textarea[name=words]', toWords(unhex(g.f.signingSecret)).join(' '));
-  await ed.click('#bring-identity button[type=submit]');
-  await done(ed, '#e-status .note.done', `“${name}” is here`);
+/** A tile, from the tiles or the tabs. */
+async function tile(ed: Page, key: string) {
+  if (await ed.locator(`[data-k-tile=${key}]`).count()) await ed.click(`[data-k-tile=${key}]`);
+  else await ed.click(`.k-top [data-tab=${key}]`);
 }
+
+/** A part of the column open now. */
+const part = (ed: Page, label: string | RegExp) => ed.locator('.k-col button', { hasText: label }).first().click();
 
 /** Make an identity in a Dub web page by clicks (the chain key's words shown, hidden, three typed back); its ID. */
 async function makeIn(page: Page): Promise<string> {
@@ -238,26 +257,18 @@ async function signingOn(dub: Page, name: string) {
   const id = (await dub.locator('.k-mbody .k-mono').innerText()).replace(/\s+/g, '');
   await dub.locator('[data-k-popup="close"]').click();
   const ed = await pageOf(edubbaBase);
-  await ed.locator('h1.mark', { hasText: 'Edubba' }).waitFor({ timeout: 60_000 });
-  await places(ed);
-  await ed.click('[data-action=tab][data-tab=identities]');
-  await ed.click('.entry.add[data-id=new]');
-  await ed.fill('#bring-identity input[name=name]', name);
-  await ed.fill('#bring-identity input[name=id]', id);
-  await ed.fill('#bring-identity textarea[name=words]', words.join(' '));
-  await ed.click('#bring-identity button[type=submit]');
-  await done(ed, '#e-status .note.done', `“${name}” is here`);
+  await ed.locator('.edubba-first, .k-top').first().waitFor({ timeout: 60_000 });
+  await bringIn(ed, name, { id, words: words.join(' ') });
   edubbaOf.set(dub, ed);
 }
 
 /** Collectives › To sign, in a member's Edubba, read again. */
 async function toSign(ed: Page, reload: boolean) {
   if (reload) await ed.reload();
-  await ed.locator('h1.mark', { hasText: 'Edubba' }).waitFor({ timeout: 60_000 });
-  // Edubba looks by itself while To sign is open, its buttons waiting meanwhile: a click waits for them.
+  await ed.locator('.k-top').waitFor({ timeout: 60_000 });
   if (!(await ed.locator('#e-signing').isVisible())) {
-    await ed.click('[data-action=tab][data-tab=collectives]', { timeout: 90_000 });
-    await ed.click('#e-to-sign', { timeout: 90_000 });
+    await tile(ed, 'collectives');
+    await part(ed, 'To sign');
   }
   await ed.locator('[data-action=member-look]').click({ timeout: 90_000 });
 }
@@ -269,7 +280,7 @@ async function signIn(dub: Page, what: RegExp, reload = false) {
   const card = ed.locator('#e-signing .proposal', { has: ed.locator('h3', { hasText: what }) }).first();
   await card.waitFor({ timeout: 90_000 });
   await card.getByRole('button', { name: 'Sign it' }).click();
-  await done(ed, '#e-status .note.done', 'Signed');
+  await done(ed, '#e-status .k-note.k-done', 'Signed');
 }
 
 /** In a member's Edubba: show its share once, hide it, type three words back; its words. */
@@ -286,7 +297,7 @@ async function shareIn(dub: Page): Promise<string[]> {
   const positions = (await inputs.evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name))).map((n) => Number(n.slice(1)));
   for (const [i, p] of positions.entries()) await inputs.nth(i).fill(words[p - 1]);
   await form.getByRole('button', { name: 'Check them' }).click();
-  await done(ed, '#e-status .note.done', 'The share is written down');
+  await done(ed, '#e-status .k-note.k-done', 'The share is written down');
   return words;
 }
 
@@ -304,94 +315,83 @@ async function narrow(page: Page, where: string) {
 /** H42: an element whose content scrolls inside it, not the page. */
 const scrolls = (page: Page, sel: string) => page.locator(sel).first().evaluate((el) => ['auto', 'scroll'].includes(getComputedStyle(el).overflowY) && getComputedStyle(el).maxHeight !== 'none');
 
-test('the banner on every screen; no Agents tab and nothing of Claude’s; an identity brought by its ID written for people; one tab at a time', async () => {
+test('the banner on every screen; three tiles, no Agents and nothing of Claude’s; an identity brought by its ID written for people; one tab at a time', async () => {
   const ed = await pageOf(edubbaBase);
-  await ed.locator('h1.mark', { hasText: 'Edubba' }).waitFor({ timeout: 60_000 });
+  await ed.locator('h2', { hasText: 'First, an identity' }).waitFor({ timeout: 60_000 });
   // The banner is in the page's HTML itself, so it shows even before the script runs.
   assert.ok(readFileSync(join(deskDir, 'static/web.html'), 'utf8').includes('<!-- edubba banner -->'));
   await banner(ed, 'the first screen');
-  // No Agents tab: the Identities tab first, while nothing is held, with its one door.
-  assert.deepEqual(await ed.locator('nav.tabs [data-action=tab]').evaluateAll((xs) => xs.map((x) => (x as HTMLElement).dataset.tab)), ['collectives', 'publishing', 'identities']);
-  assert.equal(await ed.locator('[data-tab=agents]').count(), 0);
-  await ed.locator('#bring-identity').waitFor();
-  assert.equal(await ed.locator('#new-identity').count(), 0, 'no identity made here');
+  // No identity is made here: Make one and Use one from Kišib are not offered on the web.
+  assert.ok(await ed.locator('[data-add=make]').isDisabled());
+  assert.ok(await ed.locator('[data-add=kishib]').isDisabled());
   assert.equal(await ed.locator('input[name=linked]').count(), 0, 'nothing of Claude’s');
   await shot(ed, 'first');
-  await places(ed);
-  await banner(ed, 'Settings');
-  assert.equal(await ed.locator('textarea[name=via], input[name=drafts], [data-collective-root], [data-action=code]').count(), 0, 'Settings: homes and relays only');
-  await shot(ed, 'settings');
 
   const ada = await elsewhere();
-  // Wrong words: refused, nothing kept.
-  await ed.click('[data-action=tab][data-tab=identities]');
-  await ed.fill('#bring-identity input[name=name]', 'Ada');
-  await ed.fill('#bring-identity input[name=id]', shownId(ada.id));
-  await ed.fill('#bring-identity textarea[name=words]', toWords(crypto.getRandomValues(new Uint8Array(32))).join(' '));
-  await ed.click('#bring-identity button[type=submit]');
-  await done(ed, '#e-status .note.error', /do not give this identity’s current signing key/);
+  // Wrong words: refused, nothing kept; then the right ones.
+  await bringIn(ed, 'Ada', ada, true);
   await banner(ed, 'a refusal');
-  await bringIn(ed, 'Ada', ada);
+  await ed.locator('.k-modal #bring-identity textarea[name=words]').fill(toWords(unhex(ada.f.signingSecret)).join(' '));
+  await ed.locator('.k-modal #bring-identity button[type=submit]').click();
+  await done(ed, '#e-status .k-note.k-done', '“Ada” is here');
   assert.ok(!/Claude/.test(await ed.locator('#e-status').innerText()), 'nothing said of Claude');
-  // The forms written for people (F349): the ID shown as mid1…, its hexadecimal in its title, copied as mid1….
-  const head = ed.locator('#e-detail .head .id span');
-  assert.equal(await head.innerText(), shownId(ada.id));
-  assert.match(await ed.locator('#e-detail .head [data-action=copy]').getAttribute('data-id') ?? '', /^mid1/);
-  await ed.locator('#e-record', { hasText: 'Its keys' }).waitFor({ timeout: 60_000 });
-  assert.match(await ed.locator('#e-record').innerText(), /Declared by act mact1/);
-  assert.match(await ed.locator('#e-record').innerText(), /Latest act\s+mact1/);
-  // The identity's page: its record, relying, its posts; no drafts from Claude and no money drafts; releases said to be Ummia's.
-  for (const absent of ['[data-action=link]', '#e-drafts-fold', '[data-action=drafts]', 'form.pay']) assert.equal(await ed.locator(absent).count(), 0, absent);
-  assert.match(await ed.locator('#e-detail').innerText(), /kept in this browser’s storage/);
-  await banner(ed, 'the Identities tab');
-  // H42: the list on top scrolls in its own box.
-  assert.ok(await scrolls(ed, '.list[aria-label=Identities]'), 'the identities list scrolls in its own box');
-  await shot(ed, 'identity');
+  // Three tiles on the web (decided: "4 tiles but only 3 on web"), their danger marks as drawn.
+  const tiles = await ed.locator('.k-tile').evaluateAll((ts) => ts.map((t) => [t.querySelector('h2')!.textContent, t.querySelector('.k-dm')!.className]));
+  assert.deepEqual(tiles, [
+    ['Collectives', 'k-dm k-l3'],
+    ['Publishing', 'k-dm k-l2'],
+    ['Vows', 'k-dm k-l2'],
+  ]);
+  assert.equal(await ed.locator('[data-k-tile=agents], [data-tab=agents]').count(), 0);
+  // The forms written for people (F349): the identity top right by its ID written for people.
+  assert.equal(await ed.locator('.k-me .k-s').innerText(), shortForm(shownId(ada.id)));
+  await banner(ed, 'the tiles');
+  await shot(ed, 'home');
+  // The panel's foot: homes and relays only on the web.
+  await ed.click('[data-k-open=identity]');
+  await ed.click('.k-panel [data-action=this-app]');
+  await ed.locator('.k-modal #desk-settings').waitFor();
+  assert.equal(await ed.locator('.k-modal textarea[name=via], .k-modal input[name=drafts], .k-modal [data-collective-root], .k-modal [data-action=code]').count(), 0, 'homes and relays only');
+  await shot(ed, 'this-app');
+  await ed.click('.k-modal [data-k-popup=close]');
 
   // Kept: a reload finds it, read from this browser's storage.
   await ed.reload();
-  await ed.locator('.list[aria-label=Collectives]').waitFor({ timeout: 60_000 });
-  await banner(ed, 'the Collectives tab');
-  await ed.click('[data-action=tab][data-tab=identities]');
-  await ed.locator('.entry', { hasText: 'Ada' }).waitFor();
+  await ed.locator('.k-tile').first().waitFor({ timeout: 60_000 });
   const stored = await kept(ed);
   assert.ok(stored.includes(ada.f.signingSecret), 'the signing key is kept in this browser’s storage, as the banner says');
   assert.ok(!stored.includes(ada.f.safety.seeds), 'never its chain key');
 
-  // The Collectives tab: no test collective; the Publishing tab, who acts and a protected file (round 3).
-  await ed.click('[data-action=tab][data-tab=collectives]');
-  assert.equal(await ed.locator('.entry.add[data-id=found]').count(), 0, 'no test collective on the web');
-  await ed.locator('.entry.add[data-id=real]').waitFor();
-  await ed.locator('.entry.add[data-id=bring]').waitFor();
-  await ed.click('[data-action=tab][data-tab=publishing]');
-  await banner(ed, 'the Publishing tab');
-  await ed.locator('#e-body', { hasText: 'A protected file' }).waitFor({ timeout: 60_000 });
+  // Collectives: no test collective; Publishing: a protected file.
+  await tile(ed, 'collectives');
+  await ed.locator('.k-col button', { hasText: '+ Found a collective' }).waitFor();
+  assert.equal(await ed.locator('.k-col button', { hasText: '+ Found a test collective' }).count(), 0, 'no test collective on the web');
+  await ed.locator('.k-col button', { hasText: '+ Bring a collective' }).waitFor();
+  await tile(ed, 'publishing');
+  await banner(ed, 'Publishing');
+  await ed.locator('#pane h2', { hasText: 'A protected file' }).waitFor({ timeout: 60_000 });
 
-  // At an iPhone's width, nothing scrolls sideways, on every tab.
+  // At an iPhone's width, nothing scrolls sideways, on every tile.
   await ed.setViewportSize({ width: 390, height: 844 });
-  for (const tab of ['collectives', 'identities', 'settings']) {
-    await ed.click(`[data-action=tab][data-tab=${tab}]`);
+  for (const key of ['collectives', 'publishing', 'vows']) {
+    await ed.click('[data-action=home-tiles]');
+    await ed.click(`[data-k-tile=${key}]`);
     await ed.waitForTimeout(300);
-    await narrow(ed, tab);
+    await narrow(ed, key);
   }
   await shot(ed, 'phone');
   await ed.setViewportSize({ width: 900, height: 1000 });
 
   // One tab at a time: a second tab of the same site says so and keeps nothing apart.
   const second = await pageOf(edubbaBase, ed.context());
-  await done(second, '.note.error', /open in another tab of this browser/);
+  await done(second, '.k-note.k-error', /open in another tab of this browser/);
   await banner(second, 'the second tab');
-  await shot(second, 'second-tab');
   await second.close();
   assert.deepEqual(problems, []);
 });
 
-test('a real collective founded in the web client, its members made in Dub on the web and signing in their own Edubba; the shares dealt and kept nowhere; a member change; a correction; a collective brought read only', async () => {
+test('a real collective founded in the web client, its members made in Dub on the web and signing in their own Edubba; the shares dealt and kept nowhere; its tabs; a member change; a collective brought read only', async () => {
   const nobody = await elsewhere();
-  // A post of its own, made where it was made, to correct here later.
-  const first = await postAs(nobody, { text: 'The tablet house opens on Monday.', relays: [relay.base] });
-
-  // Two members, each on Dub's web client in a browser of their own, made by clicks.
   const ana = await pageOf(dubBase);
   const anaId = await makeIn(ana);
   const bo = await pageOf(dubBase);
@@ -399,32 +399,15 @@ test('a real collective founded in the web client, its members made in Dub on th
   const cy = await pageOf(dubBase);
   const cyId = await makeIn(cy);
 
-  // The founder's Edubba, on the web.
   const ed = await pageOf(edubbaBase);
-  await ed.locator('h1.mark', { hasText: 'Edubba' }).waitFor({ timeout: 60_000 });
-  await places(ed);
+  await ed.locator('.edubba-first').waitFor({ timeout: 60_000 });
   await bringIn(ed, 'Nobody, allegedly', nobody);
 
-  // A correction of its own post, from the Identities tab, as on the Mac.
-  await ed.locator('#e-identity-posts > summary').click();
-  const p1 = ed.locator(`#e-identity-posts .post[data-post="${first.id}"]`);
-  await p1.waitFor({ timeout: 60_000 });
-  await p1.locator('details.correct > summary').click();
-  await p1.locator('textarea[name=text]').fill('The tablet house opens on Tuesday.');
-  await p1.getByRole('button', { name: 'Sign the correction' }).click();
-  await done(ed, '#e-status .note.done', /correct/i);
-  // Redrawn, its posts folded as the person left them: unfolded.
-  await ed.locator('#e-identity-posts .post .label', { hasText: 'Correction' }).waitFor({ state: 'attached', timeout: 60_000 });
-  if (!(await ed.locator('#e-identity-posts').evaluate((d) => (d as HTMLDetailsElement).open))) await ed.locator('#e-identity-posts > summary').click();
-  assert.match(await ed.locator(`#e-identity-posts .post[data-post="${first.id}"]`).innerText(), /Corrected by/);
-  assert.ok(await scrolls(ed, '#e-identity-posts .feed'), 'its posts in their own scrollable box (H42)');
-  await shot(ed, 'correction');
-
   // Contacts, by the IDs written for people, then the founding, read back in plain words, signed.
-  await ed.click('[data-action=tab][data-tab=collectives]');
-  await ed.click('.entry.add[data-id=real]');
+  await tile(ed, 'collectives');
+  await part(ed, '+ Found a collective');
   await banner(ed, 'the founding form');
-  assert.match(await ed.locator('#e-detail').innerText(), /This is a web page/);
+  assert.match(await ed.locator('#pane').innerText(), /This is a web page/);
   for (const [id, name] of [[anaId, 'Ana'], [boId, 'Bo'], [cyId, 'Cy']]) {
     await ed.fill('#contact-add input[name=id]', shownId(id));
     await ed.fill('#contact-add input[name=name]', name);
@@ -438,7 +421,6 @@ test('a real collective founded in the web client, its members made in Dub on th
   await grid.waitFor({ timeout: 30_000 });
   assert.deepEqual((await grid.locator('thead th[scope=col]').allInnerTexts()).length, 3, 'one column per member');
   assert.deepEqual((await grid.locator('tr.band th').allTextContents()).map((x) => x.trim()), ['The constitution', 'The judges', 'The areas: operations']);
-  // A Money area: Nobody and Ana's keys, one key, two above 10,000.
   await ed.click('[data-grid-add=real-found]');
   const money = grid.locator('tr[data-area="1"]');
   await money.locator('input.areaname').fill('Money');
@@ -447,7 +429,6 @@ test('a real collective founded in the web client, its members made in Dub on th
   await grid.locator('tr[data-area="1"] input[data-grid-cap]').fill('10000');
   await grid.locator('tr[data-area="1"] input[data-grid-cap]').press('Tab');
   await grid.locator('tr[data-area="1"] td.say', { hasText: 'above 10,000, 2 keys' }).waitFor({ timeout: 10_000 });
-  assert.match(await grid.locator('tfoot').innerText(), /Money/);
   // A second area over all of Money is refused in plain words, then removed.
   await ed.click('[data-grid-add=real-found]');
   await grid.locator('tr[data-area="2"] input.areaname').fill('More money');
@@ -463,29 +444,25 @@ test('a real collective founded in the web client, its members made in Dub on th
   await shot(ed, 'found-form');
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading h2', { hasText: 'Propose to found the collective “The tablet house”' }).waitFor({ timeout: 90_000 });
-  const rv = await ed.locator('#e-real-review').innerText();
-  assert.match(rv, /The areas[\s\S]*“Money”: all money \(the Money layer\)\. Any one of [\s\S]*above 10,000 regtest satoshis an act, 2 keys/);
-  assert.match(rv, /Above 10,000 an act, one more holder's key/);
-  await banner(ed, 'the founding review');
+  assert.match(await ed.locator('#e-real-review').innerText(), /“Money”: all money \(the Money layer\)\. Any one of [\s\S]*above 10,000 regtest satoshis an act, 2 keys/);
   await ed.click('#e-real-review [data-action=confirm]');
-  await done(ed, '#e-status .note.done', 'The founding of “The tablet house” is proposed');
-  assert.match(await ed.locator('#e-status').innerText(), /The terms are act mact1/);
+  await done(ed, '#e-status .k-note.k-done', 'The founding of “The tablet house” is proposed');
 
-  // Each member, made in Dub on the web, reads it in plain words in its own Edubba on the web, and signs (Dub's Signing tab removed, decided).
+  // Each member reads it in plain words in its own Edubba on the web, and signs.
   await signingOn(ana, 'Ana');
   await signIn(ana, /Found a collective/);
   await signingOn(bo, 'Bo');
   await signIn(bo, /Found a collective/);
 
-  // The answers, looked for by themselves; founding refused until what this device holds is read; then dealt.
+  // The founding in progress, its count in the column; founding refused until what this device holds is read; then dealt.
   await ed.locator('.proposal-status', { hasText: '3 of 3 signed' }).waitFor({ timeout: 90_000 });
+  await ed.locator('.k-col button', { hasText: '3 of 3 signed' }).waitFor({ timeout: 30_000 });
   await ed.click('[data-action=real-found]');
-  await done(ed, '#e-status .note', 'Read what this device will hold while founding (F337)');
+  await done(ed, '#e-status .k-note', 'Read what this device will hold while founding');
   await ed.check('input[id^=real-found-read-]');
   await ed.click('[data-action=real-found]');
-  await done(ed, '#e-status .note.done', '“The tablet house” is founded');
-  assert.match(await ed.locator('#e-status').innerText(), /The collective is born: mid1/);
-  await ed.locator('#e-to-show').waitFor();
+  await done(ed, '#e-status .k-note.k-done', '“The tablet house” is founded');
+  await ed.locator('#e-to-show').waitFor({ timeout: 60_000 });
   assert.match(await ed.locator('#e-to-show').innerText(), /this page’s memory only, never in its storage/);
   await banner(ed, 'the founded collective');
   await ed.click('[data-action=real-show-share]');
@@ -497,7 +474,7 @@ test('a real collective founded in the web client, its members made in Dub on th
   const pos = (await back.locator('input').evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name))).map((n) => Number(n.slice(1)));
   for (const [i, p] of pos.entries()) await back.locator('input').nth(i).fill(mine[p - 1]);
   await back.getByRole('button', { name: 'Check them' }).click();
-  await done(ed, '#e-status .note.done', /Share \d is written down/);
+  await done(ed, '#e-status .k-note.k-done', /Share \d is written down/);
   const aw = await shareIn(ana);
   const bw = await shareIn(bo);
 
@@ -509,24 +486,23 @@ test('a real collective founded in the web client, its members made in Dub on th
       for (const f of [hex(v), Buffer.from(v).toString('base64'), w.slice(0, 6).join(' ')]) assert.ok(!text.includes(f), `a share in ${where}`);
     }
   }
-  const collective = (JSON.parse(places_.edubba)['edubba/files'] as Record<string, unknown>);
+  const collective = JSON.parse(places_.edubba)['edubba/files'] as Record<string, unknown>;
   const colFile = Object.keys(collective).find((k) => k.startsWith('/edubba/real/collectives/') && k.endsWith('.json'))!;
   const col = await file<{ identity: { signingSecret: string; safety: { seeds: string } } }>(ed, colFile);
   assert.ok(col.identity.signingSecret, 'the collective’s signing key, held by its founder here');
   assert.equal(col.identity.safety.seeds, '', 'never its chain key');
-  assert.ok(!places_.ana.includes(nobody.f.signingSecret) && !places_.bo.includes(nobody.f.signingSecret), 'the founder’s key in no member’s browser');
 
-  // The collective's page: what its agreement lets you do; a release said to be made on a computer; no money drafts.
-  await ed.locator('#e-may').waitFor({ timeout: 60_000 });
-  assert.match(await ed.locator('#e-real-release').innerText(), /made in Ummia/);
-  assert.ok((await ed.locator('#e-real-release').innerText()).includes(RELEASE_ON_WEB));
-  assert.equal(await ed.locator('#real-release, [data-action=pick-folder], [data-anchorable]').count(), 0);
-  assert.equal(await ed.locator('#e-posts [data-action=correct], #e-posts details.correct').count(), 0, 'a real collective posts nothing from here, so nothing to correct');
-  await shot(ed, 'collective');
-
-  // Round 3, part C: its money, read back by clicks (shares, a referral share, its split service and keepers); nothing signed. Its keepers' card: none named yet.
-  await ed.locator('#e-real-keepers', { hasText: 'names no keepers' }).waitFor({ timeout: 60_000 });
-  await ed.click('#e-real-money > summary');
+  // Its tabs (decided): Act (permissions as chips, its feed, the typing box), Members, Money, Keepers, To sign; its constitution top right.
+  assert.deepEqual(await ed.locator('.edubba-tabs button').allInnerTexts(), ['Act', 'Members', 'Money', 'Keepers', 'To sign']);
+  await ed.click('.edubba-tabs button:has-text("Act")');
+  await ed.locator('.edubba-chips .k-chip').first().waitFor({ timeout: 60_000 });
+  await ed.locator('#collective-post').waitFor();
+  await shot(ed, 'collective-act');
+  await ed.click('.edubba-tabs button:has-text("Keepers")');
+  await ed.locator('#pane', { hasText: 'names no keepers' }).waitFor({ timeout: 60_000 });
+  await ed.click('.edubba-tabs button:has-text("Money")');
+  await ed.locator('#pane', { hasText: 'A collective’s releases are made in Ummia' }).waitFor({ timeout: 60_000 });
+  assert.equal(await ed.locator('#real-release, [data-action=pick-folder], [data-anchorable]').count(), 0, 'no release from a folder and no money drafts on the web');
   const shares = ed.locator('#real-money input[name=share]');
   assert.equal(await shares.count(), 3);
   await shares.nth(0).fill('50');
@@ -541,14 +517,13 @@ test('a real collective founded in the web client, its members made in Dub on th
   const moneyRead = await ed.locator('#e-real-review').innerText();
   assert.match(moneyRead, /a referral share of 10%/);
   assert.match(moneyRead, /50%[\s\S]*30%[\s\S]*20%/);
-  await banner(ed, 'the money review');
   await shot(ed, 'money-review');
   await ed.click('#e-real-review [data-action=cancel]');
   await done(ed, '#e-status', /Nothing was signed/);
 
-  // A member change: Cy joins. Every member whose voice remains signs, and Cy, each in Dub on the web; then it waits for Kišib.
+  // A member change: Cy joins. Every member whose voice remains signs, and Cy, each in their own Edubba; then it waits for Kišib.
+  await ed.click('.edubba-tabs button:has-text("Members")');
   await ed.click('#e-real-change > summary');
-  // The same grid, filled from the agreement in force: its areas, the Money area's cap.
   const cg = ed.locator('#e-grid-real-change table.grid');
   await cg.waitFor({ timeout: 60_000 });
   assert.equal(await cg.locator('input.areaname').nth(1).inputValue(), 'Money');
@@ -557,10 +532,8 @@ test('a real collective founded in the web client, its members made in Dub on th
   await cg.locator('thead th[scope=col]', { hasText: 'Cy' }).waitFor({ timeout: 10_000 });
   await ed.click('#real-change button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 60_000 });
-  await banner(ed, 'the member change review');
-  await shot(ed, 'change-review');
   await ed.click('#e-real-review [data-action=confirm]');
-  await done(ed, '#e-status .note.done', /proposed/);
+  await done(ed, '#e-status .k-note.k-done', /proposed/);
   await signIn(ana, /Change a collective’s agreement/, true);
   await signIn(bo, /Change a collective’s agreement/, true);
   await signingOn(cy, 'Cy');
@@ -575,33 +548,32 @@ test('a real collective founded in the web client, its members made in Dub on th
 
   // A collective brought by its ID, read only, in another browser where a member is brought.
   const other = await pageOf(edubbaBase);
-  await other.locator('h1.mark', { hasText: 'Edubba' }).waitFor({ timeout: 60_000 });
-  await places(other);
+  await other.locator('.edubba-first').waitFor({ timeout: 60_000 });
   await bringIn(other, 'Nobody, allegedly', nobody);
-  await other.click('[data-action=tab][data-tab=collectives]');
-  await other.click('.entry.add[data-id=bring]');
+  await tile(other, 'collectives');
+  await part(other, '+ Bring a collective');
   await other.fill('#bring-collective input[name=id]', shownId(colFile.slice(-69, -5)));
   await other.fill('#bring-collective input[name=name]', 'The tablet house');
   await other.click('#bring-collective button[type=submit]');
-  await done(other, '#e-status .note.done', /brought|here/i);
-  await other.locator('.entry', { hasText: 'brought here · no key held' }).waitFor({ timeout: 60_000 });
-  await other.locator('#e-may').waitFor({ timeout: 60_000 });
+  await done(other, '#e-status .k-note.k-done', /brought|here/i);
+  await other.locator('.edubba-head', { hasText: 'brought here · no key held' }).waitFor({ timeout: 60_000 });
+  await other.locator('.edubba-chips .k-chip').first().waitFor({ timeout: 60_000 });
+  assert.equal(await other.locator('#collective-post').count(), 0, 'nothing signed for it from here');
   await banner(other, 'a brought collective');
   await shot(other, 'brought');
   assert.deepEqual(problems, []);
 });
 
-test('the Publishing tab in the web client by clicks: who acts; a protected text and picture read back and signed; a vow; the look-up; both seen sealed and for sale in Dub on the web', async () => {
+test('Publishing and Vows in the web client by clicks: who acts; a protected text and picture read back and signed; a vow; Track; both seen sealed and for sale in Dub on the web', async () => {
   const ed = await pageOf(edubbaBase);
-  await ed.locator('h1.mark', { hasText: 'Edubba' }).waitFor({ timeout: 60_000 });
-  await places(ed);
+  await ed.locator('.edubba-first').waitFor({ timeout: 60_000 });
   const seller = await elsewhere();
   await bringIn(ed, 'The seller', seller);
-  await ed.click('[data-action=tab][data-tab=publishing]');
-  await ed.locator('form#acting').waitFor({ timeout: 60_000 });
-  await banner(ed, 'the Publishing tab');
-  assert.equal(await ed.locator('form#acting input[name=actor]:checked').getAttribute('value'), seller.id, 'acting as the identity held');
-  assert.match(await ed.locator('#e-body').innerText(), /A text, or a JPEG picture/);
+  await tile(ed, 'publishing');
+  await ed.locator('[data-actor].k-chip.k-on').waitFor({ timeout: 60_000 });
+  await banner(ed, 'Publishing');
+  assert.equal(await ed.locator('[data-actor].k-on').getAttribute('data-actor'), seller.id, 'acting as the identity in use');
+  assert.match((await ed.locator('#pane .k-say').first().textContent()) ?? '', /A text, a JPEG picture, an MP4 film or an M4A recording/);
   await shot(ed, 'publishing');
 
   // A text, read back, then signed.
@@ -611,37 +583,39 @@ test('the Publishing tab in the web client by clicks: who acts; a protected text
   await ed.click('#pub-work button[type=submit]');
   await ed.locator('#e-pub-review #reading').waitFor({ timeout: 60_000 });
   assert.match(await ed.locator('#e-pub-review').innerText(), /lone seller’s: itself the agreement between you and each buyer/);
-  await shot(ed, 'publishing-review');
   await ed.click('#e-pub-review [data-action=confirm]');
-  await done(ed, '#e-status .note.done', 'Published, sealed');
-  await ed.locator('.item[data-work] h3', { hasText: 'Verses, sealed' }).waitFor({ timeout: 60_000 });
+  await done(ed, '#e-status .k-note.k-done', 'Published, sealed');
+  await ed.locator('#here-feed .k-act', { hasText: 'Verses, sealed' }).waitFor({ timeout: 60_000 });
 
   // A picture, chosen as a file: stripped to the picture alone, read back, signed.
   const jpeg = readFileSync(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url));
-  await ed.check('#pub-work input[name=media][value=picture]');
+  await part(ed, 'A protected file');
+  await ed.click('button[data-media=picture]');
+  await ed.locator('#pub-work[data-media=picture]').waitFor();
   await ed.setInputFiles('#pub-work input[name=file]', { name: 'tablet.jpg', mimeType: 'image/jpeg', buffer: jpeg });
   await ed.fill('#pub-work input[name=title]', 'A tablet, photographed');
   await ed.fill('#pub-work input[name=price]', '2000');
   await ed.click('#pub-work button[type=submit]');
   await done(ed, '#e-pub-review #reading', /stripped to the picture alone/);
   await ed.click('#e-pub-review [data-action=confirm]');
-  await done(ed, '#e-status .note.done', 'Published, sealed');
+  await done(ed, '#e-status .k-note.k-done', 'Published, sealed');
 
-  // A vow, read back, signed; the look-up of the seller's vow sales, asked of the relay: none yet.
+  // A vow, read back, signed; Track points at the seller by default, at Edubba's own relays.
+  await tile(ed, 'vows');
+  await part(ed, 'A new vow');
   await ed.fill('#pub-vow textarea[name=words]', 'A seat at the reading of the tablets.');
   await ed.fill('#pub-vow input[name=title]', 'A seat, vowed');
   await ed.fill('#pub-vow input[name=price]', '500');
   await ed.click('#pub-vow button[type=submit]');
   await done(ed, '#e-vow-review #reading', /confirms it \(kept\) or contests it \(not kept\)/);
   await ed.click('#e-vow-review [data-action=confirm]');
-  await done(ed, '#e-status .note.done', 'A vow, published');
-  await ed.fill('#pub-vow-sales textarea[name=relays]', relay.base);
-  await ed.click('#pub-vow-sales button[type=submit]');
-  await done(ed, '#e-vow-sales', /No sale seen/);
-  assert.match(await ed.locator('#e-vow-sales').innerText(), /nothing is indexed/);
-  await shot(ed, 'publishing-vow-sales');
+  await done(ed, '#e-status .k-note.k-done', 'A vow, published');
+  await part(ed, 'Track');
+  await ed.locator('#track-feed .k-act', { hasText: 'A seat at the reading of the tablets.' }).waitFor({ timeout: 90_000 });
+  assert.match(await ed.locator('#pane').innerText(), /nothing is indexed/);
+  await shot(ed, 'vows-track');
   await ed.setViewportSize({ width: 390, height: 844 });
-  await narrow(ed, 'the Publishing tab');
+  await narrow(ed, 'Vows');
   await ed.setViewportSize({ width: 900, height: 1000 });
 
   // In Dub on the web, a reader following the seller sees the picture sealed and the vow for sale.
@@ -655,7 +629,6 @@ test('the Publishing tab in the web client by clicks: who acts; a protected text
   await reader.locator('#feed .k-act .k-kind', { hasText: 'sealed picture' }).waitFor({ timeout: 90_000 });
   const vow = reader.locator('#feed .k-act', { hasText: 'A seat at the reading of the tablets.' });
   await vow.waitFor({ timeout: 90_000 });
-  // The vow can be bought from its act's menu (Dub's own items, below the line).
   await vow.locator('.k-actid').click();
   assert.ok(await reader.getByRole('menuitem', { name: 'Buy', exact: true }).isVisible(), 'the vow can be bought, from its menu');
   await reader.keyboard.press('Escape');

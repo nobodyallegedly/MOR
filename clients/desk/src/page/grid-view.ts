@@ -83,7 +83,7 @@ ${band('The constitution')}
 <tr><th class="rowname">Change members and areas</th>${g.members.map((m) => box(c.holders.includes(m), 'const', m, `${name(m)} has a voice in changing the constitution`)).join('')}
 <td>${all ? num('const', c.number, 1, n) : `${c.holders.length} <span class="small">of ${c.holders.length}</span>`}</td><td class="say">${e(constSay)}.</td></tr>
 <tr><th class="rowname">Rebuild the chain key</th>${g.members.map((m) => locked(`${name(m)} holds a share, on paper`)).join('')}
-<td>${num('chain', g.chainKey, 1, n)} <span class="small">of ${n}</span></td><td class="say">One share per member, on paper; any ${g.chainKey} rebuild it. Fewer than every member, so the loss of one never freezes it (F96).</td></tr>
+<td>${num('chain', g.chainKey, 1, n)} <span class="small">of ${n}</span></td><td class="say">One share per member, on paper; any ${g.chainKey} rebuild it. Fewer than every member, so the loss of one never freezes it.</td></tr>
 ${band('The judges')}
 <tr><th class="rowname">Judge absence</th><td ${span} class="span">the other members</td><td>${num('absence', g.absence, 1, Math.max(1, n - 1))}</td><td class="say">Any ${g.absence} of the other members may declare a member absent: that member loses their voice.</td></tr>
 <tr><th class="rowname">Change the judges</th>${g.members.map((m) => locked('Every member, always (rule 67)')).join('')}<td>${n} <span class="small">of ${n}</span></td><td class="say">Always every member: one version of the judges for everyone (rule 67). Keepers and the split service join this band later.</td></tr>
@@ -92,6 +92,6 @@ ${g.areas.map((l, i) => areaRows(g, l, i, name)).join('')}
 <tr><td class="rowname" colspan="${n + 3}"><button type="button" data-grid-add="${e(form)}">+ Add an area</button></td></tr>
 <tr><th class="rowname">Other operations</th><td ${span} class="span">every member</td><td>${num('clone', g.clone, 1, n)} <span class="small">of ${n}</span></td><td class="say">Changes no area reaches: any ${g.clone} of the ${n} members (the clone rule).</td></tr>
 </tbody>
-<tfoot><tr><th class="rowname">Each member holds</th>${g.members.map((m) => `<td>${holds(m)}</td>`).join('')}<td colspan="2" class="say">Each member signs with a key of their own, made as they sign (F353).</td></tr></tfoot>
+<tfoot><tr><th class="rowname">Each member holds</th>${g.members.map((m) => `<td>${holds(m)}</td>`).join('')}<td colspan="2" class="say">Each member signs with a key of their own, made as they sign.</td></tr></tfoot>
 </table></div>`;
 }

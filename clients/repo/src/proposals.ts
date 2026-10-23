@@ -81,7 +81,8 @@ export async function negotiate(
   to: Reach,
   o: { text: string; thread?: string; previous?: string; acks?: string[]; refs?: [string, string][]; home?: boolean },
 ): Promise<Sent> {
-  const made = by.sign(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
+  // Signed here, or by Kišib's runner where this app holds no key of the identity (the Dubsar runner cMIP).
+  const made = await by.signNow(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
     public: false,
     to: [to.id],
     objects: o.thread ? [[o.thread, o.previous ?? o.thread]] : undefined,

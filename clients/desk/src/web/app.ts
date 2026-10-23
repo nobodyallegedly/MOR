@@ -28,7 +28,7 @@ export const DIR = '/edubba';
 export const LOCK = 'edubba-web';
 
 const app = document.getElementById('app')!;
-const stop = (html: string) => (app.innerHTML = `${v.top()}${v.note('error', html)}`);
+const stop = (html: string) => (app.innerHTML = v.alone(`<div class="k-note k-error">${html}</div>`));
 
 /** Hold the lock for as long as this tab is open; false if another tab of this site holds it. */
 function only(): Promise<boolean> {

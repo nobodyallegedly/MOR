@@ -11,6 +11,7 @@
 // the program only, so the web client's bundle holds neither.
 
 import { readId } from '../../genesis/src/forms.ts';
+import { clockWords } from '../../barebone/src/clock.ts';
 import type { Access } from '../../collective/src/access.ts';
 import type { Agents } from './agents.ts';
 import type { Collectives } from './collectives.ts';
@@ -48,10 +49,11 @@ export interface Parts {
 
 /**
  * The operations the web client answers. Everything else (agents, the API
- * key, drafts from Claude, making an identity, test collectives, money
+ * key, making an identity, test collectives, money
  * drafts, a release from a folder, pairing) needs Edubba on a computer.
  */
 export const WEB_OPS: readonly string[] = [
+  'clock words',
   'state',
   'publishing',
   'publishing act as',
@@ -61,6 +63,7 @@ export const WEB_OPS: readonly string[] = [
   'publishing deliver',
   'publishing vow read',
   'publishing vow sales',
+  'publishing sales contests',
   'publishing contest',
   'publishing confirm sale',
   'keys check',
@@ -72,10 +75,7 @@ export const WEB_OPS: readonly string[] = [
   'collective bring',
   'settings',
   'rename',
-  'drafts',
-  'waiting',
   'refresh',
-  'sort',
   'witness',
   'read act',
   'record',
@@ -114,15 +114,19 @@ export const WEB_OPS: readonly string[] = [
   'real money record',
   'real keepers',
   'real keep',
+  'real collective post',
+  'correct',
+  'words',
+  'forget',
 ];
 
 /** Said where a collective's release would be made: the web client chooses no folder (`docs/edubba-web-report.md`, "Releases"). */
 export const RELEASE_ON_WEB =
-  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective (F339, F353). A release proposed there is signed here, in “To sign”, and checked as anyone would.';
+  'A collective’s release is made in Ummia, the developers’ app, on a computer (the Mac, or Linux), by a member holding the area that reaches its releases, with their own key for the collective. A release proposed there is signed here, in “To sign”, and checked as anyone would.';
 
 /** Said for any other operation the web client does not answer. */
 export const ON_A_COMPUTER =
-  'This needs Edubba on a computer: the web client has no agents, no API key, no drafts from Claude’s connector, no test collective and no money drafts, and makes no identity (bring one you have).';
+  'This needs Edubba on a computer: the web client has no agents, no API key, no test collective and no money drafts, and makes no identity (bring one you have).';
 
 /** An ID as the page sent it, read where it can be (`mid1…` or hex). */
 const readIdOr = (k: string): string => {
@@ -162,6 +166,11 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'pair':
         access!.pair(key, text(a.code), text(a.label));
         return {};
+      // The Dubsar clock's time of each act shown (decided 23 October 2026), in words; none where it has not stamped it.
+      case 'clock words': {
+        const st = p.store.settings();
+        return clockWords(list(a.ids).slice(0, 500), list([...st.relays, ...st.homes.map((h) => h.hint)]), st.via);
+      }
       case 'state': {
         const st = p.desk.state();
         const lines = await p.desk.lines();
@@ -176,6 +185,16 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
           proposals: real.proposals().map((x) => ({ ...x, standing: real.standing(x) })),
           contacts: real.contacts(),
           acting: await member.acting(),
+          // The identity panel (decided): each identity held here, with the collectives under it: the real ones it is a member of (founded here), and those brought naming it.
+          under: Object.fromEntries(
+            store.book().identities.map((i) => [
+              i.id,
+              [
+                ...real.collectives().filter((c) => real.collective(c.id).f.members.includes(i.id)).map((c) => ({ id: c.id, name: c.name, real: true })),
+                ...collectives.brought().filter((c) => c.member === i.id).map((c) => ({ id: c.id, name: c.name, real: false })),
+              ],
+            ]),
+          ),
           paired: access ? access.paired().map((x) => ({ ...x, you: x.key === key })) : [],
           web,
         };
@@ -239,6 +258,36 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return agents!.grants.revoke(text(a.agent), text(a.grant));
       case 'agent grants':
         return agents!.grants.list(text(a.agent));
+      // An identity used through Kišib's runner (the Dubsar runner cMIP): the computer's program only, never the web client.
+      case 'runner':
+        return member.dub.runnerState();
+      case 'runner pair':
+        return member.dub.runnerPair();
+      case 'runner take':
+        return member.runnerTake(readIdOr(text(a.id)));
+      case 'runner asking':
+        return member.dub.runnerAsking();
+      case 'runner drop':
+        await member.dub.runnerDrop({ request: text(a.request) });
+        return {};
+      case 'runner unpair':
+        await member.dub.runnerUnpair();
+        return {};
+      // The kit's act menu, in every app (decided): Anchor it and Correct it, with Dub's own code over Edubba's folder, as the identity in use (Rely is Edubba's own `witness`, H80).
+      case 'anchor offers':
+        return member.as((d) => d.anchorOffers({ service: text(a.service) }));
+      case 'anchor':
+        return member.as((d) => d.anchor({ id: readIdOr(text(a.id)), service: text(a.service), offer: text(a.offer), tier: Number(a.tier) }));
+      case 'correct':
+        return member.as((d) => d.correct({ id: readIdOr(text(a.id)), text: text(a.text) }));
+      case 'words':
+        // The identity menu's Words: the signing key's words, on request (the carry Module), for the identity in use.
+        return member.as((d) => d.carry());
+      case 'forget':
+        return desk.forget(readIdOr(text(a.id)));
+      case 'real collective post':
+        // A real collective's post, from its Act tab: Dub's posting as a collective, with the member's own key (F353).
+        return member.postAs(text(a.identity), readIdOr(text(a.collective)), text(a.text));
       case 'keys check': {
         // F335: on opening, every identity held here whose signing key was changed elsewhere, said; a change of keys is Kišib's.
         // H80: also every real collective whose own key is held here, and asked again where a refusal says a key changed, so the page offers the new words right there.
@@ -266,9 +315,12 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return agents!.notes(text(a.agent));
       case 'agent note retire':
         return agents!.retireNote(text(a.agent), text(a.note), text(a.why));
+      case 'agent diary act':
+        // The public act shown before the diary opens (decided): nothing signed.
+        return agents!.diaryAct(text(a.agent));
       case 'agent diary':
-        // H22, 6: shown only by this one deliberate action, `reading` set once the page said what it means.
-        return agents!.diary(text(a.agent), a.reading === true);
+        // Signed, accepted by a home, then opened: never otherwise.
+        return agents!.diary(text(a.agent), text(a.digest));
       case 'collective constitution':
         return collectives.constitution(text(a.collective), realRead(text(a.collective)));
       case 'collective permissions':
@@ -287,25 +339,10 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return {};
       }
       case 'identity':
-        return desk.createIdentity({ name: text(a.name), linked: a.linked === true });
+        return desk.createIdentity({ name: text(a.name), linked: false });
       case 'rename':
         desk.rename(text(a.id), text(a.name));
         return {};
-      case 'link':
-        desk.link(text(a.id), a.on === true);
-        return {};
-      case 'drafts':
-        return desk.drafts();
-      case 'waiting':
-        return desk.waiting();
-      case 'approve':
-        return desk.approve(text(a.digest));
-      case 'decline':
-        return desk.decline(text(a.digest), text(a.note));
-      case 'send back':
-        return desk.sendBack(text(a.digest), text(a.note));
-      case 'resend':
-        return desk.resend(text(a.digest));
       case 'refresh':
         return desk.refresh(text(a.identity));
       case 'witness':
@@ -316,9 +353,9 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
       case 'record':
         return setup.record(text(a.identity));
       case 'bring': {
-        const d = await setup.bring({ name: text(a.name), id: text(a.id), words: text(a.words), address: text(a.address), linked: !web && a.linked === true });
+        const d = await setup.bring({ name: text(a.name), id: text(a.id), words: text(a.words), address: text(a.address), linked: false });
         // On the web, Claude's connector is out of the picture: nothing said of it.
-        return web ? { ...d, lines: d.lines.filter((l) => !/linked to Claude/.test(l.text)) } : d;
+        return d;
       }
       case 'fold':
         // H14, H26, H34: a fold as the person left it; a collective's "What you may do for it" by the collective's ID, every other by its name.
@@ -433,6 +470,8 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return publishing.deliver();
       case 'publishing vow read':
         return publishing.prepareVow({ words: text(a.words), title: text(a.title), price: text(a.price) });
+      case 'publishing sales contests':
+        return publishing.salesContests();
       case 'publishing vow sales':
         return publishing.vowSales({ identity: text(a.identity), relays: list(a.relays) });
       case 'publishing confirm sale':
@@ -453,9 +492,6 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return money!.anchors(text(a.collective));
       case 'collective bring':
         return collectives.bring({ id: text(a.id), name: text(a.name) });
-      case 'sort':
-        desk.sort(text(a.identity), text(a.key), text(a.sorted));
-        return {};
       case 'code':
         return { code: access!.newCode() };
       case 'unpair':

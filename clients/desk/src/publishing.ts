@@ -5,7 +5,7 @@
 // **Protected files.** A work sealed under terms: its bytes locked (the
 // Envelopes "Media" rule: the publication public, its media key absent,
 // delivered to each buyer), its price in the publication, and an offer
-// selling it. The work is a text or a JPEG picture: the media modules Edubba
+// selling it. The work is a text, a JPEG picture, an MP4 film or an M4A recording (video and audio decided by Nobody, allegedly, 21 October 2026): the media modules Edubba
 // and Dub carry (decided by Nobody, allegedly, 19 October 2026: "Keep it to
 // the modules supported by the app, in the future the app will be able to
 // add them as plugins").
@@ -38,14 +38,16 @@ import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { readId } from '../../genesis/src/forms.ts';
 import { SPLIT_CMIP, carryChain, dealGrantPayload, dealTermsPayload, sign } from '../../repo/src/agreements.ts';
 import { AGREEMENTS_TYPES } from '../../repo/src/specs.ts';
-import { KEY_DELIVERY, OFFER, keyDeliveryPayload, lockWork, offerPayload, type SealedMedia } from '../../barebone/src/sealed.ts';
+import { KEY_DELIVERY, MEDIA_WORDS, OFFER, keyDeliveryPayload, lockWork, offerPayload, type SealedMedia } from '../../barebone/src/sealed.ts';
+import { NotFilm } from '../../../modules/video/src/video.ts';
+import { NotSound } from '../../../modules/audio/src/audio.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT } from '../../barebone/src/specs.ts';
 import { textPayload } from '../../barebone/src/post.ts';
 import { NotJpeg } from '../../../modules/jpeg/src/jpeg.ts';
 import { areaReaching, chainFor, collectiveNow, collectivePlaces, memberKeyFor, publishAt, readMemberKeys, signAsMember, type AreaHere, type MemberKey } from '../../grants/src/member.ts';
 import { actors, chosen, type Actor } from '../../ummia/src/acting.ts';
 import { deliverKey, deliverSold, type SoldWorks } from '../../dub/src/delivery.ts';
-import { VOW, contestSale, publishVow, vowOfferWords, vowPayload, vowSales, type VowShown } from '../../dub/src/vows.ts';
+import { VOW, contestSale, publishVow, purchaseContests, vowOfferWords, vowPayload, vowSales, type ContestsBeside, type VowShown } from '../../dub/src/vows.ts';
 import { say } from '../../damgar/src/units.ts';
 import { TYPES, readSale, sendDraft } from '../../damgar/src/messages.ts';
 import { MESSAGES_SPECS } from '../../damgar/src/specs.ts';
@@ -61,11 +63,11 @@ const now = () => Math.floor(Date.now() / 1000);
 const list = (xs: string[]) => [...new Set(xs.filter(Boolean))];
 
 /** The largest file Edubba seals: the relays' media limit is theirs; this keeps a page's upload sensible (a reading, the build's). */
-export const MAX_WORK = 8 * 1024 * 1024;
+export const MAX_WORK = 20 * 1024 * 1024;
 
 /** Said on the Publishing tab, word for word. */
 export const PUBLISHING_SAY = [
-  'A protected file is published locked: anyone sees its offer and its price; its bytes open only with its key, delivered to each buyer once paid. A text, or a JPEG picture: the kinds Edubba and Dub carry. More kinds come later, as the apps learn them.',
+  'A protected file is published locked: anyone sees its offer and its price; its bytes open only with its key, delivered to each buyer once paid. A text, a JPEG picture, an MP4 film or an M4A recording: the kinds Edubba and Dub carry, each checked and stripped by its Module before it is locked.',
   'As yourself, your offer is itself the agreement with the buyer (a lone seller’s offer). The buyer pays from Dub or Damgar; your Damgar signs the receipt, and Edubba delivers the key, sealed to the buyer, when you open this tab.',
   'As a collective you belong to, the publication and its offer are the collective’s, signed with your own key for it, each in the area that reaches it; the offer is made under its agreement in force and pays the collective. The key is sealed at once to every member: a collective keeps no secret from its members.',
 ];
@@ -309,9 +311,9 @@ export class Publishing {
       const me = this.me(acting);
       const s = this.settings();
       const blocking: string[] = [];
-      const media: SealedMedia = a.media === 'picture' ? 'picture' : 'text';
+      const media: SealedMedia = a.media === 'picture' || a.media === 'video' || a.media === 'audio' ? a.media : 'text';
       const bytes = Uint8Array.from(Buffer.from(a.data, 'base64'));
-      if (!bytes.length) blocking.push(media === 'picture' ? 'Choose a JPEG picture.' : 'Write the text to seal.');
+      if (!bytes.length) blocking.push(CHOOSE[media]);
       if (bytes.length > MAX_WORK) blocking.push(`The file is larger than Edubba seals (${MAX_WORK / 1024 / 1024} MB).`);
       const title = a.title.trim();
       if (!title) blocking.push('Give it a title: the public words beside its offer.');
@@ -346,7 +348,17 @@ export class Publishing {
         try {
           work = lockWork({ media, bytes, price: { unit: REGTEST_UNIT, value: price }, relays: s.relays });
         } catch (e) {
-          blocking.push(e instanceof NotJpeg ? `That file is not a JPEG picture: ${e.message}` : media === 'text' ? 'That text is not UTF-8: give a plain text.' : err(e));
+          blocking.push(
+            e instanceof NotJpeg
+              ? `That file is not a JPEG picture: ${e.message}`
+              : e instanceof NotFilm
+                ? `That file is not a film the video Module plays (an MP4): ${e.message}`
+                : e instanceof NotSound
+                  ? `That file is not a recording the audio Module plays (an M4A): ${e.message}`
+                  : media === 'text'
+                    ? 'That text is not UTF-8: give a plain text.'
+                    : err(e),
+          );
         }
       }
       const names = this.store.names();
@@ -354,9 +366,9 @@ export class Publishing {
       const words = judged ? judgedWordsFor(media, priceSaid, referral!) : offerWordsFor(media, priceSaid, referral);
       const who = collective ? `the collective ${short(as)}, signed with your own key for it (${names(acting)})` : names(acting);
       const reading: Reading = {
-        title: `A protected ${media === 'picture' ? 'picture' : 'text'}: “${title || '…'}”`,
+        title: `A protected ${MEDIA_WORDS[media]}: “${title || '…'}”`,
         summary: [
-          `Published by ${who}, locked: anyone sees its title, its offer and its price; its ${media === 'picture' ? 'picture' : 'text'} opens only with its key, delivered to each buyer once paid.`,
+          `Published by ${who}, locked: anyone sees its title, its offer and its price; its ${MEDIA_WORDS[media]} opens only with its key, delivered to each buyer once paid.`,
           collective
             ? `The offer is the collective’s, made under its agreement in force (${c?.agreement ? short(c.agreement) : '?'}) and paying the collective: how its income reaches its members is its split service’s.`
             : judged
@@ -367,8 +379,8 @@ export class Publishing {
           {
             heading: 'What is published',
             lines: [
-              { text: `The ${media === 'picture' ? 'picture (a JPEG, stripped to the picture alone first: the JPEG Module, rule 6)' : 'text'}, ${work ? `${work.size.toLocaleString('en')} bytes, fingerprint ${work.work.slice(0, 16)}…` : 'not read'}: locked with its own key; its locked bytes go to ${s.relays.join(', ')}.` },
-              ...(work?.removed.length ? [{ text: `Stripped from the picture before it is locked: ${work.removed.join(', ')}.`, tone: 'warn' as const }] : []),
+              { text: `The ${STRIPPED[media]}, ${work ? `${work.size.toLocaleString('en')} bytes, fingerprint ${work.work.slice(0, 16)}…` : 'not read'}: locked with its own key; its locked bytes go to ${s.relays.join(', ')}.` },
+              ...(work?.removed.length ? [{ text: `Stripped from the ${MEDIA_WORDS[media]} before it is locked: ${work.removed.join(', ')}.`, tone: 'warn' as const }] : []),
               { text: `Its offer, public: ${priceSaid}. Its words: “${words}”` },
               { text: `A post naming both, its words the title: “${title || '…'}”, so it shows in a feed.` },
             ],
@@ -640,6 +652,81 @@ export class Publishing {
     });
   }
 
+  /**
+   * The buyers' contests shown beside each sale of a work published here in
+   * one's own name (F386): each buyer's claim of the payment, sealed to the
+   * seller and left in its inbox, opened here and given to the core with the
+   * parties' chains and the public contests; `unknown` where the core cannot
+   * say, never "none". A collective's works are paid to its split service,
+   * which holds the claims: not read here.
+   */
+  salesContests(): Promise<{ by: Record<string, Record<string, ContestsBeside>>; problems: string[] }> {
+    return this.desk.serial(async () => {
+      const b = this.book();
+      const s = this.settings();
+      const held = this.held();
+      const acting = b.acting && held.includes(b.acting) ? b.acting : (held[0] ?? null);
+      const works = b.works.filter((w) => !w.collective && w.member === acting && Object.keys(w.delivered).length);
+      if (!acting || !works.length) return { by: {}, problems: [] };
+      const me = this.me(acting);
+      const buyers = list(works.flatMap((w) => Object.keys(w.delivered)));
+      const offers = new Map(works.map((w) => [w.offer, w.publication]));
+      const secrets = [...me.f.encryption].reverse().map((e) => unhex(e.secret));
+      const found: { publication: string; buyer: string; id: string; act: Uint8Array; key: Uint8Array | null }[] = [];
+      const problems: string[] = [];
+      const l = await lookUp(me.id, list([...s.homes, ...s.relays, ...me.f.homes.map((h) => h.hint)]), s.via).catch(() => null);
+      const inbox = list([...(l?.routes.routes.filter((r) => r.kind === 1).flatMap((r) => r.hints) ?? []), ...me.f.homes.map((h) => h.hint)]);
+      for (const h of inbox) {
+        let after: number | undefined;
+        try {
+          for (;;) {
+            const page = await relayAt(h, s.via).feed({ to: me.id, after });
+            for (const it of page.items) {
+              if (it.kind !== 'sealed') continue;
+              for (const sec of secrets) {
+                let o: { act: Uint8Array; key?: Uint8Array | null; described: { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array } };
+                try {
+                  o = openSealed(it.item, me.id, sec) as typeof o;
+                } catch {
+                  continue;
+                }
+                const d = o.described;
+                // A payer's claim (Money type 3) from a buyer, naming one of the offers published here.
+                if (d.spec === MIRS.money && d.type === 3 && d.signer && buyers.includes(d.signer) && d.payload && !found.some((x) => x.id === d.id)) {
+                  try {
+                    const c = (moneyRead(3, d.payload) as { act: { fulfils?: string } }).act;
+                    const publication = c.fulfils ? offers.get(c.fulfils) : undefined;
+                    if (publication) found.push({ publication, buyer: d.signer, id: d.id, act: new Uint8Array(o.act), key: o.key ? new Uint8Array(o.key) : null });
+                  } catch {
+                    // not a claim this reads
+                  }
+                }
+                break;
+              }
+            }
+            if (!page.items.length || page.next === after) break;
+            after = page.next;
+          }
+        } catch {
+          problems.push(`${h} did not answer.`);
+        }
+      }
+      const r = found.length ? await purchaseContests({ purchases: found, parties: [me.id, ...buyers], relays: list([...s.relays, ...s.homes]), via: s.via }) : { by: {} as Record<string, ContestsBeside>, problems: [] };
+      const by: Record<string, Record<string, ContestsBeside>> = {};
+      for (const w of works)
+        for (const buyer of Object.keys(w.delivered)) {
+          const mine = found.filter((x) => x.publication === w.publication && x.buyer === buyer);
+          const read = mine.map((x) => r.by[x.id]).filter(Boolean);
+          (by[w.publication] ??= {})[buyer] = !mine.length
+            ? { state: 'unknown', contests: [], why: 'the buyer’s claim of the payment was not found in this identity’s inbox' }
+            : read.some((x) => x.state === 'shown')
+              ? { state: 'shown', contests: read.flatMap((x) => x.contests) }
+              : (read[0] ?? { state: 'unknown', contests: [] });
+        }
+      return { by, problems: [...problems, ...r.problems] };
+    });
+  }
+
   /** Contest a sale whose buyer is held here (Agreements type 14, F253): public, naming the sale and the vow, the promise not kept in words if given. */
   contestSale(a: { vow: string; sale: string; buyer: string; promise: string }): Promise<Done> {
     return this.desk.serial(async () => {
@@ -817,12 +904,23 @@ export class Publishing {
 type Opened = { id: string; signer?: string; spec?: string; type?: number; payload?: Uint8Array; binding?: string };
 
 /** The offer's words under a one-party deal: the referral is the deal's split plan's, judged, never the sentence Damgar pays from (F215, F351). */
+/** What to choose, said where nothing was. */
+const CHOOSE: Record<SealedMedia, string> = { text: 'Write the text to seal.', picture: 'Choose a JPEG picture.', video: 'Choose a film: an MP4 file.', audio: 'Choose a recording: an M4A file.' };
+
+/** Each kind, as the read-back says it is locked. */
+const STRIPPED: Record<SealedMedia, string> = {
+  text: 'text',
+  picture: 'picture (a JPEG, stripped to the picture alone first: the JPEG Module, rule 6)',
+  video: 'film (an MP4, stripped to the film alone first, every frame byte for byte: the video Module, rule 10)',
+  audio: 'recording (an M4A, stripped to the sound alone first, every sample byte for byte: the audio Module, rule 10)',
+};
+
 export function judgedWordsFor(media: SealedMedia, price: string, referral: number): string {
-  return `A sealed ${media === 'picture' ? 'picture' : 'text'}, opened once paid: ${price}. Under its deal, ${referral}% of each payment goes to the repost the buyer names, paid by its split service.`;
+  return `A sealed ${MEDIA_WORDS[media]}, opened once paid: ${price}. Under its deal, ${referral}% of each payment goes to the repost the buyer names, paid by its split service.`;
 }
 
 /** The offer's words: what it sells and its price, and a lone seller's referral share in the one sentence Damgar reads (F351). */
 export function offerWordsFor(media: SealedMedia, price: string, referral: number | null): string {
-  return `A sealed ${media === 'picture' ? 'picture' : 'text'}, opened once paid: ${price}.${referral ? ` Referral: ${referral}% of the price to the repost the buyer names.` : ''}`;
+  return `A sealed ${MEDIA_WORDS[media]}, opened once paid: ${price}.${referral ? ` Referral: ${referral}% of the price to the repost the buyer names.` : ''}`;
 }
 

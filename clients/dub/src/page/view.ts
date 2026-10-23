@@ -146,6 +146,12 @@ export function itemAct(it: Item, collectives: string[] = []): KitAct {
         ? `<div class="k-label k-warn">A film not shown: ${e(f.problem)}.</div>`
         : `<div class="dub-film" data-film="${e(f.publication)}" data-film-signer="${e(f.signer)}"><button type="button" class="k-btn k-p" data-action="play">▶ Play the film</button><span>${e(sizeWords(f.size))}, checked before it plays</span></div>`,
     ),
+    // A recording, as a film is (the audio Module, rule 13): its bytes fetched and checked only when asked to play.
+    ...(it.recordings ?? []).map((r) =>
+      r.problem
+        ? `<div class="k-label k-warn">A recording not shown: ${e(r.problem)}.</div>`
+        : `<div class="dub-film" data-recording="${e(r.publication)}" data-recording-signer="${e(r.signer)}"><button type="button" class="k-btn k-p" data-action="play-recording">▶ Play the recording</button><span>${e(sizeWords(r.size))}, checked before it plays</span></div>`,
+    ),
     it.doc ? `<a class="k-doc" href="${e(it.doc.link)}" target="_blank" rel="noopener noreferrer"><span dir="auto">${e(it.doc.title)}</span><br><span class="k-small k-soft">A long-form document: open it in the reader</span></a>` : '',
     it.sealed ? sealedBox(it) : '',
     it.vow ? vowBox(it) : '',
@@ -156,6 +162,7 @@ export function itemAct(it: Item, collectives: string[] = []): KitAct {
     form: it.form,
     signer: kitWho(it.who, collectives.includes(it.who.id)),
     when: it.when ?? null,
+    hint: it.hint ?? null,
     kind: it.what ? it.what : it.vow ? 'vow' : it.sealed ? `sealed ${it.sealed.media}` : null,
     labels,
     text: it.repost || it.what ? '' : it.text,
@@ -180,7 +187,9 @@ export function messageAct(m: Message): KitAct {
     form: m.form || m.key,
     signer: kitWho(m.who),
     of: m.of?.checked ? (m.of.name ?? shortForm(actFormOf(m.of.id, 'mid'))) : null,
-    when: whenWords(m.at),
+    // A card shows the Dubsar clock's time, or the signer's own hint, or nothing (decided 23 October 2026): a message sealed to you is not one the clock holds; the thread keeps the order this app found them in.
+    when: null,
+    hint: m.hint ?? null,
     labels,
     text: m.text,
     verified: !alarm && m.standing === 'valid',
@@ -196,20 +205,46 @@ export function purchaseAct(p: Purchase): KitAct {
     form: p.form,
     signer: kitWho(p.seller),
     kind: `${p.what} · bought`,
-    labels: [{ text: p.state }, ...(p.price ? [{ text: p.price }] : [])],
+    labels: [{ text: p.state }, ...(p.price ? [{ text: p.price }] : []), ...contestLabels(p)],
     text: p.kind === 'vow' ? p.text : '',
-    html: p.picture ? `<figure><img src="${e(p.picture)}" alt="The picture, opened"></figure>` : p.kind === 'file' && p.text ? `<div class="dub-sealed"><div class="k-txt" dir="auto">${e(p.text)}</div></div>` : '',
+    html: p.picture
+      ? `<figure><img src="${e(p.picture)}" alt="The picture, opened"></figure>`
+      : p.play
+        ? sealedPlayBox(p.play)
+        : p.kind === 'file' && p.text
+          ? `<div class="dub-sealed"><div class="k-txt" dir="auto">${e(p.text)}</div></div>`
+          : '',
     verified: true,
   };
+}
+
+/** The buyer's contests shown beside a purchase (F386); "unknown" where the core cannot say, never "none". */
+function contestLabels(p: Purchase): KitLabel[] {
+  const c = p.contests;
+  if (!c) return [];
+  if (c.state === 'unknown') return [{ text: `Contests beside it: unknown (${c.why ?? 'not read'})`, tone: 'warn' }];
+  return c.contests.map((x) => ({ text: `Contested by you, shown beside it${x.promise ? `: “${x.promise}”` : ''}`, tone: 'bad' as const }));
+}
+
+/** A sealed film or recording opened: played when asked, checked by its Module first. */
+function sealedPlayBox(x: { publication: string; seller: string; media: 'video' | 'audio' }): string {
+  return `<div class="dub-film" data-sealed="${e(x.publication)}" data-sealed-seller="${e(x.seller)}" data-sealed-media="${x.media}"><button type="button" class="k-btn k-p" data-action="play-sealed">▶ Play the ${x.media === 'video' ? 'film' : 'recording'}</button><span>checked before it plays</span></div>`;
 }
 
 /** A sealed file a post names (round 2 and 3): its price, its state; opened once its key arrived. Bought from the act's menu. */
 function sealedBox(p: Item): string {
   const x = p.sealed!;
-  const what = x.media === 'picture' ? 'picture' : 'text';
+  const what = x.media === 'picture' ? 'picture' : x.media === 'video' ? 'film' : x.media === 'audio' ? 'recording' : 'text';
+  const opened = x.picture
+    ? `<img src="${e(x.picture)}" alt="The picture, opened">`
+    : x.media === 'video' || x.media === 'audio'
+      ? x.problem
+        ? ''
+        : sealedPlayBox({ publication: x.publication, seller: x.seller, media: x.media })
+      : `<div class="k-txt" dir="auto">${e(x.text ?? '')}</div>`;
   const state =
     x.state === 'opened' || x.state === 'yours'
-      ? `${x.picture ? `<img src="${e(x.picture)}" alt="The picture, opened">` : `<div class="k-txt" dir="auto">${e(x.text ?? '')}</div>`}<div class="k-small k-soft">${x.state === 'yours' ? 'Yours, sealed: its key is here, delivered to each buyer once your Damgar signs the receipt.' : `Opened: its key arrived from its seller, and its ${what} matches the fingerprint it was published with.`}</div>`
+      ? `${opened}<div class="k-small k-soft">${x.state === 'yours' ? 'Yours, sealed: its key is here, delivered to each buyer once your Damgar signs the receipt.' : `Opened: its key arrived from its seller, and its ${what} matches the fingerprint it was published with.`}</div>`
       : x.state === 'paying'
         ? '<div class="k-small k-soft">Bought: pay it in your wallet (Payments, in Private). Its key arrives once the seller’s Damgar signs the receipt.</div>'
         : `<div class="k-small k-soft">Sealed: its ${what} opens once paid. Buy it from the act’s menu.</div>`;
@@ -379,7 +414,7 @@ export function publicPart(s: State, lens: Lens, layers: string[]): string {
     ],
     lens,
   )}${lens === 'relay' ? pointRow('Showing', LAYERS.map((l) => ({ key: l.key, label: l.label, on: layers.includes(l.key) })), 'layer') : ''}`;
-  const tools = `<label title="A picture (JPEG)">▣<span class="dub-l"> Picture</span><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"></label><label title="A film (MP4)">▶<span class="dub-l"> Video</span><input name="video" type="file" accept=".mp4,video/mp4"></label><button type="button" data-action="at" title="Mention someone">@</button><button type="button" data-action="address">To…</button>`;
+  const tools = `<label title="A picture (JPEG)">▣<span class="dub-l"> Picture</span><input name="picture" type="file" accept=".jpg,.jpeg,image/jpeg"></label><label title="A film (MP4)">▶<span class="dub-l"> Video</span><input name="video" type="file" accept=".mp4,video/mp4"></label><label title="A recording (M4A)">♪<span class="dub-l"> Audio</span><input name="audio" type="file" accept=".m4a,audio/mp4"></label><button type="button" data-action="at" title="Mention someone">@</button><button type="button" data-action="address">To…</button>`;
   return `<div class="k-body"><section class="k-pane dub-center" id="public">${feedBox({ id: 'feed', above, cards: '', empty: 'Reading the feed…', below: '<div id="feed-foot"></div>' })}
 ${typingBox({ id: 'post', placeholder: acting ? `Write something public, as ${acting.name ?? 'the collective'}…` : 'Write something public…', button: 'Post', tools, opts: '<span id="replying"></span><span id="addressed"></span><span class="dub-picked" id="picked"></span>', extra: '<div class="dub-field" id="to-field" hidden><input id="to" placeholder="To: a contact’s name, or an ID" aria-label="To" spellcheck="false"><button type="button" class="k-btn k-q" data-action="unaddress">Done</button></div>' })}</section></div>`;
 }
@@ -503,9 +538,9 @@ export function correctForm(): string {
   return `<form id="correct" class="dub-modal-form">${say('A correction is a new post naming the old one, labelled “Correction”.', ['The old post stays as it was signed, shown with “corrected by”: nothing on MOR is changed or deleted. Apps that do not know the corrections cMIP show an ordinary post naming the old one.'])}<textarea name="text" required placeholder="The correction"></textarea><div class="k-row"><button type="submit" class="k-btn k-p">Sign the correction</button></div></form>`;
 }
 
-/** Contest a vow bought: what was not kept, in words, if you say it. */
-export function contestForm(): string {
-  return `<form id="contest" class="dub-modal-form"><p class="k-small k-soft">A contest naming your sale is signed in public. It voids nothing; the payment stays as it is.</p><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><div class="k-row"><button type="submit" class="k-btn k-alarm">Contest it</button></div></form>`;
+/** Contest a vow bought, or a file bought (F386): what was not kept, in words, if you say it. */
+export function contestForm(file = false): string {
+  return `<form id="contest" class="dub-modal-form"><p class="k-small k-soft">${file ? 'A contest naming your purchase is signed in public, and shown beside it, to you and to the seller. It undoes nothing: the payment, the key and the file stay as they are.' : 'A contest naming your sale is signed in public. It voids nothing; the payment stays as it is.'}</p><input name="promise" placeholder="What was not kept (optional)" maxlength="280"><div class="k-row"><button type="submit" class="k-btn k-alarm">Contest it</button></div></form>`;
 }
 
 /** Ask to be paid (in the private typing box): a request prepared for Damgar. */
@@ -590,10 +625,10 @@ ${say('Acting as a collective is the same gesture as switching.', ['It is listed
 
 /** The panel's foot, for the app itself: paired browsers (the Mac), the clock feeds are ordered by, homes and relays. */
 export function appFoot(s: State, web: boolean): string {
-  const c = s.identity?.clock;
+  // Decided 23 October 2026: every app relies on the Dubsar clock; no choice of clock on the screens for now (the form and its operation, `clock`, are kept for when better clocks come).
   return `${web ? '' : `<h4>Browsers paired with this app</h4><div class="k-row"><button type="button" class="k-btn" data-action="code">A code for another browser on this machine</button><button type="button" class="k-btn k-q" data-action="unpair">Unpair this browser</button></div><div id="code"></div>`}
-<h4>The clock feeds are ordered by</h4><form id="clock" class="dub-modal-form"><label>A timestamp clock’s ID (empty: none, each signer’s own order)</label><input name="id" value="${e(c?.form ?? '')}" spellcheck="false" autocomplete="off"><label>Its name here</label><input name="name" value="${e(c?.name ?? '')}" maxlength="48" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn">Save</button></div></form>
-${say('A clock orders what is shown; it never decides what is true.', ['A timestamp clock signs “I held these acts at this time”: its word only. Acts it did not stamp keep their signer’s own order. Order is proven only inside a chain.'])}
+<h4>The clock feeds are ordered by</h4><p class="k-small k-soft">The Dubsar clock, the timestamp clock dubsar.org’s feed names. A choice of clock comes later, when there are better clocks.</p>
+${say('A clock orders what is shown; it never decides what is true.', ['A timestamp clock signs “I held these acts at this time”: its word only. Acts it did not stamp keep their signer’s own order, and show the signer’s own hint where it wrote one. Order is proven only inside a chain. To anchor an act on Bitcoin, Anchor it, paid in Damgar.'])}
 ${say(`${TEST_ONLY}.`, [`Every key is held in software${web ? ' in this browser' : ' in this program’s folder'}: a prototype, never for a real identity.`])}`;
 }
 

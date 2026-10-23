@@ -3861,6 +3861,9 @@ function read2(bytes) {
   }
 }
 
+// ../../modules/audio/src/audio.ts
+var MAX_BYTES2 = 64 * 1024 * 1024 - 16;
+
 // ../longform/src/specs.ts
 var test = (s) => sha2562(s);
 var LONGFORM_SPECS = {
@@ -3882,7 +3885,9 @@ var POST_SPECS = {
   /** The JPEG Module (modules/module-jpeg-draft-1.md). */
   jpeg: test2("JPEG Module, draft 1, test value until publication"),
   /** The video Module (modules/module-video-draft-1.md): a film, named by its test value until publication, as the JPEG Module is. */
-  video: test2("video Module, draft 1, test value until publication")
+  video: test2("video Module, draft 1, test value until publication"),
+  /** The audio Module (modules/module-audio-draft-1.md): a recording, named by its test value until publication, as the video Module is. */
+  audio: test2("audio Module, draft 1, test value until publication")
 };
 var TEXT_ACT = 0;
 var PUBLICATION = 0;
@@ -3957,7 +3962,7 @@ async function readPost(id, hints, via = {}, judging) {
   const standing = await judge.standing(act, id, d.signer);
   const named = (d.refs ?? []).map((r, i) => d.refSigners?.[i] ? [r, d.refSigners[i]] : r);
   const refs = await Promise.all(named.map((r) => readRef(r, hints, via, judge)));
-  return { id, signer: d.signer, standing, text: text2, format: f instanceof Uint8Array ? hex(f) : null, refs, notTried: judge.notTried ?? [] };
+  return { id, signer: d.signer, standing, text: text2, format: f instanceof Uint8Array ? hex(f) : null, hint: d.hint ?? null, refs, notTried: judge.notTried ?? [] };
 }
 async function readRef(r, hints, via, judge) {
   const id = typeof r === "string" ? r : r[0];
@@ -3985,6 +3990,7 @@ async function readRef(r, hints, via, judge) {
   if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: "act", id, signer, what: "an act of a specification this client does not implement", actSigner: d.signer };
   const media = cborDecode(d.payload).get(0);
   if (media instanceof Uint8Array && hex(media) === POST_SPECS.video) return readFilmRef(act, d, hints, via, judge);
+  if (media instanceof Uint8Array && hex(media) === POST_SPECS.audio) return readRecordingRef(act, d, hints, via, judge);
   return readPicture(act, d, hints, via, judge);
 }
 async function readFilmRef(act, d, hints, via, judge) {
@@ -3996,6 +4002,19 @@ async function readFilmRef(act, d, hints, via, judge) {
   out.standing = await judge.standing(act, d.id, d.signer);
   if (out.standing !== "valid") return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
   if (!(m.get(5) instanceof Uint8Array)) return no("the film is locked: its key is not public");
+  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge);
+  if (out.withdrawn) return no("withdrawn by its signer");
+  return out;
+}
+async function readRecordingRef(act, d, hints, via, judge) {
+  const m = cborDecode(d.payload);
+  const size = m.get(3);
+  const out = { kind: "recording", publication: d.id, signer: d.signer ?? "", standing: "unknown", problem: null, withdrawn: null, size: typeof size === "number" ? size : 0 };
+  const no = (why) => (out.problem = why, out);
+  if (!d.signer) return no("the publication has no signer");
+  out.standing = await judge.standing(act, d.id, d.signer);
+  if (out.standing !== "valid") return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (!(m.get(5) instanceof Uint8Array)) return no("the recording is locked: its key is not public");
   out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge);
   if (out.withdrawn) return no("withdrawn by its signer");
   return out;
@@ -5652,10 +5671,10 @@ async function readFeed(authors, relays, via = {}, limit = FEED_LIMIT, clock = n
     const { asked, unreachable } = placesFor(l, relays, TIMESTAMP_SPEC);
     clockLine = { ...clock, asked, unreachable, problem, found: 0, verified: 0, placed: 0 };
     if (!problem) {
-      const read3 = await readStamps(clock.identity, asked, judge, via);
-      clockLine.found = read3.found;
-      clockLine.verified = read3.verified.length;
-      times = earliestByNames([...found.values()].map((x) => ({ id: x.d.id, links: linksOf(x.d) })), read3.earliest);
+      const read4 = await readStamps(clock.identity, asked, judge, via);
+      clockLine.found = read4.found;
+      clockLine.verified = read4.verified.length;
+      times = earliestByNames([...found.values()].map((x) => ({ id: x.d.id, links: linksOf(x.d) })), read4.earliest);
     }
   }
   const rank = (s) => authors.findIndex((a) => a.identity === s);
@@ -6619,7 +6638,7 @@ function roleWords(l, all) {
   return { kind, layer: [...layers].join(", ") || "not said", role };
 }
 async function readExtensions(found, byHash, judge, privateActs) {
-  const read3 = { terms: 0, counted: 0, proposed: 0, notCounted: [], private: privateActs };
+  const read4 = { terms: 0, counted: 0, proposed: 0, notCounted: [], private: privateActs };
   const terms = /* @__PURE__ */ new Map();
   const signatures = [];
   for (const { d, act } of found.values()) {
@@ -6630,7 +6649,7 @@ async function readExtensions(found, byHash, judge, privateActs) {
       const fields = cborDecode(d.payload);
       if (fields instanceof Map) terms.set(d.id, { act, signer: d.signer, fields });
     } catch {
-      read3.notCounted.push({ id: d.id, why: "its terms do not decode" });
+      read4.notCounted.push({ id: d.id, why: "its terms do not decode" });
     }
   }
   const parties = /* @__PURE__ */ new Set();
@@ -6643,7 +6662,7 @@ async function readExtensions(found, byHash, judge, privateActs) {
   const valid = /* @__PURE__ */ new Set();
   for (const [id, t] of terms) {
     const bad = await judge.problem(t.act, id, t.signer);
-    if (bad) read3.notCounted.push({ id, why: bad });
+    if (bad) read4.notCounted.push({ id, why: bad });
     else valid.add(id);
   }
   for (const s of signatures) {
@@ -6652,7 +6671,7 @@ async function readExtensions(found, byHash, judge, privateActs) {
     } catch {
     }
   }
-  read3.terms = valid.size;
+  read4.terms = valid.size;
   const named = (t) => Array.isArray(t.get(15)) ? t.get(15).filter(bytes32).map((h) => hex(h)) : [];
   const extLayers = {};
   for (const id of valid) for (const h of named(terms.get(id).fields)) extLayers[h] = byHash.get(h)?.spec.layers ?? [];
@@ -6661,11 +6680,11 @@ async function readExtensions(found, byHash, judge, privateActs) {
   for (const id of valid) {
     try {
       const a = judge.v.agreementsAgreement(specs, id);
-      if (a.invalid) read3.notCounted.push({ id, why: `the core library finds these terms invalid: ${a.invalid}` });
+      if (a.invalid) read4.notCounted.push({ id, why: `the core library finds these terms invalid: ${a.invalid}` });
       else if (a.exists === true || a.exists === null && a.ready) counts.add(id);
-      else read3.proposed++;
+      else read4.proposed++;
     } catch (e) {
-      read3.notCounted.push({ id, why: `the core library could not judge it: ${message2(e)}` });
+      read4.notCounted.push({ id, why: `the core library could not judge it: ${message2(e)}` });
     }
   }
   const first = (id) => {
@@ -6690,8 +6709,8 @@ async function readExtensions(found, byHash, judge, privateActs) {
       byExt.set(h, m);
     }
   }
-  read3.counted = agreementsCounted.size;
-  read3.notCounted.sort((a, b) => a.id < b.id ? -1 : 1);
+  read4.counted = agreementsCounted.size;
+  read4.notCounted.sort((a, b) => a.id < b.id ? -1 : 1);
   const extensions = [...byExt].map(([hash, m]) => {
     const listed = byHash.get(hash) ?? null;
     return {
@@ -6703,7 +6722,7 @@ async function readExtensions(found, byHash, judge, privateActs) {
   });
   const name = (x) => x.listed?.name ?? `~${x.hash}`;
   extensions.sort((a, b) => b.agreements.length - a.agreements.length || (name(a) < name(b) ? -1 : name(a) > name(b) ? 1 : 0));
-  return { extensions, agreements: read3 };
+  return { extensions, agreements: read4 };
 }
 
 // src/shell/listing-view.ts

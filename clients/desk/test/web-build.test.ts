@@ -21,6 +21,7 @@ import { start } from '../../genesis/test/world.ts';
 import { BUILT, WEB_FILES } from '../src/web/released.ts';
 import { contentSecurityPolicy } from '../src/web/headers.ts';
 import { WEB_BANNER, STYLE, TINT, RELEASE_ON_WEB as SAID } from '../src/page/view.ts';
+import { APPS } from '../../kit/src/style.ts';
 import { ON_A_COMPUTER, RELEASE_ON_WEB, WEB_OPS, operations } from '../src/ops.ts';
 import { Store } from '../src/store.ts';
 import { Desk } from '../src/desk.ts';
@@ -59,7 +60,7 @@ test('the release in built/: every file, each with its fingerprints listed, the 
     /can be lost[\s\S]*or read by what runs in this page/,
     /holds the whole chain key, in its memory, never in its storage/,
     /a reload or a closed tab loses them/,
-    /act alone \(F337\)/,
+    /act alone\./,
     /No agents, no API key and nothing from Claude/,
     /Never bring a real identity here/,
   ])
@@ -108,16 +109,16 @@ test('mor-desk check: a server serving the release is SAME; one altering the scr
   }
 });
 
-test('Edubba’s tint (H36), the same as on the Mac: the emerald of the Agreements layer, by Kišib’s rule', () => {
-  assert.deepEqual(TINT, { layer: '#48c08c', line: '#153028', edge: '#1a3f32', accent: '#2e7659' });
-  const over = (share: number) => '#' + [0, 2, 4].map((i) => Math.round(parseInt('06080c'.slice(i, i + 2), 16) + share * (parseInt(TINT.layer.slice(1 + i, 3 + i), 16) - parseInt('06080c'.slice(i, i + 2), 16))).toString(16).padStart(2, '0')).join('');
-  assert.deepEqual([over(0.22), over(0.3), over(0.6)], [TINT.line, TINT.edge, TINT.accent]);
+test('Edubba’s tint (H36), the same as on the Mac: the emerald of the Agreements layer, from the kit', () => {
+  // Round 4: the kit holds each app's colours (`clients/kit`); Edubba keeps the emerald of the Agreements layer.
+  assert.deepEqual(TINT, { layer: APPS.edubba.colour, pastel: APPS.edubba.pastel });
+  assert.equal(TINT.layer, '#48c08c');
   assert.equal(readFileSync(join(BUILT, 'edubba.css'), 'utf8'), `${STYLE}\n`, 'the Mac page’s style, as it is');
   // H42: every list and feed in its own scrollable box.
-  assert.match(STYLE, /\.list,\.feed,\.picks\{max-height:[^;]+;overflow-y:auto/);
+  assert.match(STYLE, /\.e-in \.picks\{[^}]*max-height:[^;]+;overflow:auto/);
 });
 
-test('the web client’s operations: the ones it answers; everything of the agents, Claude, test collectives, money and folders refused in plain words', async () => {
+test('the web client’s operations: the ones it answers; everything of the agents, test collectives, money and folders refused in plain words', async () => {
   const relay = await start('relay');
   const home = await start('home');
   const store = new Store(mkdtempSync(join(tmpdir(), 'edubba-web-ops-')));
@@ -147,9 +148,8 @@ test('the web client’s operations: the ones it answers; everything of the agen
     assert.deepEqual(store.settings().via, {}, 'no other way to reach an address on the web');
     const s = (await run('state', {}, 'web')) as { agents: unknown[]; machine: unknown; web: boolean; collectives: unknown[] };
     assert.deepEqual([s.agents, s.machine, s.web, s.collectives], [[], null, true, []]);
-    assert.deepEqual(await run('drafts', {}, 'web'), []);
-    assert.deepEqual(await run('waiting', {}, 'web'), []);
-    for (const op of ['agent add', 'machine look', 'shared key', 'agent prompt', 'identity', 'link', 'approve', 'resend', 'folders', 'money pay', 'money anchor', 'collective prepare', 'collective confirm', 'pair', 'code'])
+    // Round 4: Claude's drafts and the received piles are gone; the web refuses their names like any other.
+    for (const op of ['drafts', 'waiting', 'agent add', 'machine look', 'shared key', 'agent prompt', 'identity', 'link', 'approve', 'resend', 'folders', 'money pay', 'money anchor', 'collective prepare', 'collective confirm', 'pair', 'code'])
       await assert.rejects(run(op, {}, 'web'), (e: Error) => e.message === ON_A_COMPUTER, op);
     await assert.rejects(run('real release prepare', { collective: 'x', folder: '/' }, 'web'), (e: Error) => e.message === RELEASE_ON_WEB);
     assert.equal(SAID, RELEASE_ON_WEB, 'the page and the operations say the same');

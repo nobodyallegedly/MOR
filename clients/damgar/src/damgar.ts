@@ -30,6 +30,7 @@
 //
 // TEST IDENTITIES ONLY, and test networks only, until MOR is frozen.
 
+import { clockWords } from '../../barebone/src/clock.ts';
 import {
   ENVELOPES_TYPES,
   keyDeliveryPayload,
@@ -500,6 +501,12 @@ export class Damgar {
 
   private who(id: string, me: string | null): Who {
     return { id, short: short(id), me: id === me };
+  }
+
+  /** The Dubsar clock's time of each act shown (decided 23 October 2026: every app relies on it), in words; none where it has not stamped it. */
+  async clockWords(ids: string[]): Promise<Record<string, string>> {
+    const { s, hints } = await this.ctx();
+    return clockWords(ids.slice(0, 500), hints, s.via);
   }
 
   private async ctx(): Promise<{ me: TestIdentity; s: Settings; book: Book; hints: string[] }> {
@@ -2239,6 +2246,23 @@ export class Damgar {
     return this.serial(async () => {
       const { book } = await this.ctx();
       return book.payments[key] ?? null;
+    });
+  }
+
+  /**
+   * This identity's own claims of one of its payments, with their bytes and
+   * content keys where private (sealed to the payee): what a buyer's contest
+   * names as the purchase (F386), and what the core needs to read it.
+   */
+  ownClaims(key: string): Promise<{ id: string; act: Uint8Array; key: Uint8Array | null }[]> {
+    return this.serial(async () => {
+      const { book } = await this.ctx();
+      const p = book.payments[key];
+      if (!p || p.side !== 'out') return [];
+      return [...new Set([...p.claims, ...(p.publicClaims ?? [])])].flatMap((id) => {
+        const k = book.acts[id];
+        return k ? [{ id, act: b64(k.act), key: k.key ? b64(k.key) : null }] : [];
+      });
     });
   }
 

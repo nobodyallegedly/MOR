@@ -5,7 +5,7 @@
 // and part were open (`damgar:at`), and in memory which collective is acted
 // as; nothing of a key or a payment.
 
-import { attachCards, attachClosing, attachColumn, card, closePanel, copy, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, shortForm, type KitAct, type KitWho } from '../../../kit/src/index.ts';
+import { attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, stampCards, copy, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, shortForm, type KitAct, type KitWho } from '../../../kit/src/index.ts';
 import * as v from './view.ts';
 import type { Account, LaneShown, PaymentShown, Rails, State, ToSign, Who } from '../shapes.ts';
 
@@ -199,6 +199,13 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       if (mine !== filling || !p.isConnected) return void (cards = []);
       p.innerHTML = html;
       drawCards();
+      // The Dubsar clock's time on each card it stamped (decided 23 October 2026), read after drawing.
+      const ids = cardsUntimed(p);
+      if (ids.length)
+        void b
+          .ask<Record<string, string>>('clock words', { ids })
+          .then((w) => p.isConnected && stampCards(p, w))
+          .catch(() => undefined);
     } catch (err) {
       if (mine !== filling) return;
       p.innerHTML = '';

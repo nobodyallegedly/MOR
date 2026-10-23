@@ -145,7 +145,24 @@ function everything(dir: string): string {
   return out.join('\n');
 }
 
-const done = (page: Page, sel: string, words: string | RegExp) => page.locator(sel, { hasText: words }).first().waitFor({ timeout: 90_000 });
+const done = async (page: Page, sel: string, words: string | RegExp) => {
+  await page.locator(sel, { hasText: words }).first().waitFor({ timeout: 90_000 });
+  // Read, then closed, as a person does, so it covers nothing.
+  if (sel.startsWith('#e-status') && (await page.locator('#e-status [data-action=status-close]').count())) await page.click('#e-status [data-action=status-close]');
+};
+
+/** A tile, from the tiles or the tabs; a part of its column. */
+async function tile(ed: Page, key: string) {
+  if (await ed.locator(`[data-k-tile=${key}]`).count()) await ed.click(`[data-k-tile=${key}]`);
+  else await ed.click(`.k-top [data-tab=${key}]`);
+}
+const part = (ed: Page, label: string | RegExp) => ed.locator('.k-col button', { hasText: label }).first().click();
+/** The identity (or a collective under it) chosen in the identity panel: the identity in use. */
+async function use(ed: Page, id: string, name: string) {
+  await ed.click('[data-k-open=identity]');
+  await ed.click(`.k-panel [data-k-use="${id}"]`);
+  await ed.locator('.k-me', { hasText: name }).waitFor({ timeout: 60_000 });
+}
 
 /** Make an identity in a Dub page by clicks (the chain key's words shown, hidden, three typed back). */
 async function makeIn(page: Page) {
@@ -187,14 +204,12 @@ async function signingOn(dub: Page, name: string) {
   await c.ask('pair', { code: e.access.newCode(), label: 'setup' });
   await c.ask('settings', { homes: homes.map((h) => h.base), relays: [relay.base], via: [], drafts: '' });
   const page = await pageOf(`${e.base}/#pair=${e.access.newCode()}`);
-  await page.locator('h1.mark', { hasText: 'Edubba' }).waitFor();
-  await page.click('[data-action=tab][data-tab=identities]');
-  await page.click('.entry.add[data-id=new]');
-  await page.fill('#bring-identity input[name=name]', name);
-  await page.fill('#bring-identity input[name=id]', id);
-  await page.fill('#bring-identity textarea[name=words]', words.join(' '));
-  await page.click('#bring-identity button[type=submit]');
-  await done(page, '#e-status .note.done', `“${name}” is here`);
+  await page.click('[data-add=bring]');
+  await page.fill('.k-modal #bring-identity input[name=name]', name);
+  await page.fill('.k-modal #bring-identity input[name=id]', id);
+  await page.fill('.k-modal #bring-identity textarea[name=words]', words.join(' '));
+  await page.click('.k-modal #bring-identity button[type=submit]');
+  await done(page, '#e-status .k-note.k-done', `“${name}” is here`);
   edubbaOf.set(dub, { page, dir });
 }
 
@@ -202,8 +217,8 @@ async function signingOn(dub: Page, name: string) {
 async function toSign(ed: Page) {
   // Edubba looks by itself while To sign is open, its buttons waiting meanwhile: a click waits for them.
   if (!(await ed.locator('#e-signing').isVisible())) {
-    await ed.click('[data-action=tab][data-tab=collectives]', { timeout: 90_000 });
-    await ed.click('#e-to-sign', { timeout: 90_000 });
+    await tile(ed, 'collectives');
+    await part(ed, 'To sign');
   }
   await ed.locator('[data-action=member-look]').click({ timeout: 90_000 });
 }
@@ -229,7 +244,7 @@ async function shareIn(dub: Page, name: string): Promise<{ x: number; words: str
   await shot(page, `${name}-share-type-back`);
   for (const [i, p] of positions.entries()) await inputs.nth(i).fill(words[p - 1]);
   await form.getByRole('button', { name: 'Check them' }).click();
-  await done(page, '#e-status .note.done', 'The share is written down');
+  await done(page, '#e-status .k-note.k-done', 'The share is written down');
   return { x, words };
 }
 
@@ -269,16 +284,16 @@ test('three people, three apps, three browsers: a real collective founded, a rel
 
   // Edubba: contacts, then the founding, reviewed in plain words, signed.
   const ed = await pageOf(`${edubba.base}/#pair=${edubba.access.newCode()}`);
-  await ed.locator('h1.mark', { hasText: 'Edubba' }).waitFor();
-  await ed.click('[data-action=tab][data-tab=collectives]');
-  // H27: what real and test mean, on the buttons and beside them.
-  await ed.locator('.entry.add[data-id=real]', { hasText: 'members on their own devices' }).waitFor();
-  await ed.locator('.entry.add[data-id=found]', { hasText: 'everyone held here, for trying alone' }).waitFor();
-  assert.match(await ed.locator('.list').innerText(), /each member is a person with their own identity, on their own device[\s\S]*every member is held in this Edubba, and their consent is simulated[\s\S]*shares of its chain key are kept in this Edubba’s folder/);
-  // H33: whom the tab acts as, said.
-  assert.equal(await ed.locator('#acting-select').inputValue(), nobody);
+  await ed.locator('.k-tile').first().waitFor();
+  // H33: whom Edubba acts as, top right.
+  await ed.locator('.k-me', { hasText: 'Nobody, allegedly' }).waitFor();
+  await tile(ed, 'collectives');
+  // H27: what real and test mean, on the parts and in them.
+  await part(ed, '+ Found a test collective');
+  await ed.locator('#pane', { hasText: 'every member is held in this Edubba, and their consent is simulated' }).waitFor();
+  await part(ed, '+ Found a collective');
+  await ed.locator('#pane', { hasText: 'each member is a person with their own identity, on their own device' }).waitFor();
   await shot(ed, 'edubba-collectives-list');
-  await ed.click('.entry.add[data-id=real]');
   await ed.locator('#e-contacts').waitFor();
   for (const [id, name] of [[webId, 'Ana (web)'], [macId, 'Bo (Mac)']]) {
     await ed.fill('#contact-add input[name=id]', id);
@@ -297,7 +312,7 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   assert.match(await ed.locator('#e-real-review').innerText(), /How it travels[\s\S]*negotiation message/);
   await shot(ed, 'edubba-found-review');
   await ed.click('#e-real-review [data-action=confirm]');
-  await done(ed, '#e-status .note.done', 'The founding of “The tablet house” is proposed');
+  await done(ed, '#e-status .k-note.k-done', 'The founding of “The tablet house” is proposed');
   await ed.locator('.proposal-status').waitFor();
   assert.match(await ed.locator('.proposal-status').innerText(), /1 of 3 signed/);
   await shot(ed, 'edubba-founding-waiting');
@@ -317,10 +332,10 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await card.locator('h3', { hasText: 'Found a collective' }).waitFor({ timeout: 90_000 });
   const read = await card.innerText();
   for (const h of ['What each party is bound to', 'Who decides what', 'Shares and fees', 'How it ends', 'Risks']) assert.ok(read.includes(h), h);
-  assert.match(await wed.locator('#e-detail .experimental').innerText(), /Even more experimental/);
+  assert.match(await wed.locator('#pane .experimental').innerText(), /Even more experimental/);
   await shot(wed, 'web-proposal');
   await card.getByRole('button', { name: 'Sign it' }).click();
-  await done(wed, '#e-status .note.done', 'Signed');
+  await done(wed, '#e-status .k-note.k-done', 'Signed');
   await wed.locator('#e-signing .proposal .state', { hasText: 'Signed by you' }).waitFor({ timeout: 60_000 });
 
   // The Mac member, the same.
@@ -328,7 +343,7 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   const med = edubbaOf.get(macPage)!.page;
   await toSign(med);
   await med.locator('#e-signing .proposal').first().getByRole('button', { name: 'Sign it' }).click({ timeout: 90_000 });
-  await done(med, '#e-status .note.done', 'Signed');
+  await done(med, '#e-status .k-note.k-done', 'Signed');
 
   // Edubba: the answers, looked for by itself (H32: no click, the button kept), then founding; the founder's own share shown once, typed back.
   await ed.locator('[data-action=real-gather]').waitFor();
@@ -337,10 +352,10 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   // F337: founding refused until what this device will hold is read and ticked.
   assert.match(await ed.locator('.proposal-status').innerText(), /trusted-dealer weakness[\s\S]*one hour at most/);
   await ed.click('[data-action=real-found]');
-  await ed.locator('#e-status .note.warn', { hasText: 'Read what this device will hold while founding (F337)' }).waitFor();
+  await ed.locator('#e-status .k-note', { hasText: 'Read what this device will hold while founding' }).waitFor();
   await ed.check('input[id^=real-found-read-]');
   await ed.click('[data-action=real-found]');
-  await done(ed, '#e-status .note.done', '“The tablet house” is founded');
+  await done(ed, '#e-status .k-note.k-done', '“The tablet house” is founded');
   await ed.locator('#e-to-show').waitFor();
   await shot(ed, 'edubba-founded');
   await ed.click('[data-action=real-show-share]');
@@ -352,7 +367,7 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   const pos = (await back.locator('input').evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name))).map((n) => Number(n.slice(1)));
   for (const [i, p] of pos.entries()) await back.locator('input').nth(i).fill(mine[p - 1]);
   await back.getByRole('button', { name: 'Check them' }).click();
-  await done(ed, '#e-status .note.done', /Share \d is written down/);
+  await done(ed, '#e-status .k-note.k-done', /Share \d is written down/);
 
   // Each member opens its own share once, in its own Edubba.
   const ws = await shareIn(web, 'web');
@@ -374,8 +389,8 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   assert.ok(webKey && !places.edubba.includes(webKey) && !places.mac.includes(webKey), 'the web member’s key in no other app');
 
   // A release of the collective: made in Ummia (round 3, F339), signed by the web member in its Dub, then counting. Edubba's card says where releases are made.
-  await ed.locator('#e-real-release').waitFor({ timeout: 60_000 });
-  assert.match(await ed.locator('#e-real-release').innerText(), /made in Ummia/);
+  await ed.click('.edubba-tabs button:has-text("Money")');
+  await ed.locator('#pane', { hasText: 'A collective’s releases are made in Ummia' }).waitFor({ timeout: 60_000 });
   assert.equal(await ed.locator('#real-release').count(), 0);
   const founderSecret = JSON.parse(readFileSync(join(eDir, 'identities', `${nobody}.json`), 'utf8')).signingSecret as string;
   const realId = ((await ec.ask<any>('state')).collectives as { id: string; real?: boolean }[]).find((x) => x.real)!.id;
@@ -387,13 +402,14 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   assert.match(await rel.innerText(), /clay\.txt: 9 bytes/);
   await shot(wed, 'web-release');
   await rel.getByRole('button', { name: 'Sign it' }).click();
-  await done(wed, '#e-status .note.done', 'Signed');
+  await done(wed, '#e-status .k-note.k-done', 'Signed');
   assert.ok((await um.standing(relId)).met, 'it counts as the collective’s release');
   await shot(ed, 'edubba-collective');
 
   // A member change, reviewed (its signing in members' apps and its rotation are in test/real.test.ts):
   // three to two members no longer fits the absence rule, said plainly, Sign off.
-  // Folded at first (H34): opened to change its members.
+  // Folded at first (H34), in its Members tab: opened to change its members.
+  await ed.click('.edubba-tabs button:has-text("Members")');
   await ed.click('#e-real-change > summary');
   await ed.uncheck(`#real-change input[name=member][value="${macId}"]`);
   await ed.click('#real-change button[type=submit]');
@@ -410,7 +426,7 @@ test('three people, three apps, three browsers: a real collective founded, a rel
   await ed.click('#e-real-review [data-action=cancel]');
 
   // Test mode, labelled.
-  await ed.click('.entry.add[data-id=found]');
+  await part(ed, '+ Found a test collective');
   await ed.locator('.note.warn', { hasText: 'Test mode' }).waitFor();
   await shot(ed, 'edubba-test-mode');
   assert.deepEqual(problems, []);
@@ -423,9 +439,10 @@ test('H33: Edubba acting as a member it holds: the proposal read in plain words,
   const nobody = st0.identities.find((i) => i.name === 'Nobody, allegedly')!.id;
   const dee = (await ec.ask<Done>('identity', { name: 'Dee (held here)', linked: false })).acts[0];
   const ed = await pageOf(`${edubba.base}/#pair=${edubba.access.newCode()}`);
-  await ed.locator('h1.mark', { hasText: 'Edubba' }).waitFor();
-  await ed.click('[data-action=tab][data-tab=collectives]');
-  await ed.click('.entry.add[data-id=real]');
+  await ed.locator('.k-top').waitFor();
+  await use(ed, nobody, 'Nobody, allegedly');
+  await tile(ed, 'collectives');
+  await part(ed, '+ Found a collective');
   await ed.fill('#real-found input[name=name]', 'Two of us');
   await ed.selectOption('#real-found select[name=founder]', nobody);
   await ed.fill('#real-found textarea[name=typed]', dee);
@@ -435,35 +452,31 @@ test('H33: Edubba acting as a member it holds: the proposal read in plain words,
   await ed.click('#real-found button[type=submit]');
   await ed.locator('#e-real-review #reading').waitFor({ timeout: 90_000 });
   await ed.click('#e-real-review [data-action=confirm]');
-  await done(ed, '#e-status .note.done', 'The founding of “Two of us” is proposed');
+  await done(ed, '#e-status .k-note.k-done', 'The founding of “Two of us” is proposed');
 
-  // Acting as Dee: the proposal, read in plain words, signed here.
-  await ed.selectOption('#acting-select', dee);
-  await done(ed, '#e-status .note.done', 'Acting as Dee (held here)');
-  await ed.click('#e-to-sign');
+  // Acting as Dee (the identity panel): the proposal, read in plain words, signed here.
+  await use(ed, dee, 'Dee (held here)');
+  await part(ed, 'To sign');
   const card = ed.locator('#e-signing .proposal').first();
   await card.locator('h3', { hasText: 'Found a collective' }).waitFor({ timeout: 90_000 });
   for (const h of ['What each party is bound to', 'Who decides what', 'Risks']) assert.ok((await card.innerText()).includes(h), h);
-  assert.match(await ed.locator('#e-detail .experimental').innerText(), /Even more experimental/);
+  assert.match(await ed.locator('#pane .experimental').innerText(), /Even more experimental/);
   await shot(ed, 'edubba-member-proposal');
   await card.getByRole('button', { name: 'Sign it' }).click();
-  await done(ed, '#e-status .note.done', 'Signed');
+  await done(ed, '#e-status .k-note.k-done', 'Signed');
   await ed.locator('#e-signing .proposal .state', { hasText: 'Signed by you' }).waitFor({ timeout: 60_000 });
 
   // Back as the founder: every answer in, by itself (H32); founded; Dee's share sealed to its one-time key.
-  await ed.selectOption('#acting-select', nobody);
-  await done(ed, '#e-status .note.done', 'Acting as Nobody, allegedly');
-  const entry = ed.locator('.entry', { hasText: 'Two of us' });
-  await entry.click();
+  await use(ed, nobody, 'Nobody, allegedly');
+  await part(ed, 'Two of us');
   await ed.locator('.proposal-status', { hasText: '2 of 2 signed' }).waitFor({ timeout: 90_000 });
   await ed.check('input[id^=real-found-read-]');
   await ed.click('[data-action=real-found]');
-  await done(ed, '#e-status .note.done', '“Two of us” is founded');
+  await done(ed, '#e-status .k-note.k-done', '“Two of us” is founded');
 
   // As Dee again: its share, shown once, three words typed back, then nothing of it here.
-  await ed.selectOption('#acting-select', dee);
-  await done(ed, '#e-status .note.done', 'Acting as Dee');
-  await ed.click('#e-to-sign');
+  await use(ed, dee, 'Dee (held here)');
+  await part(ed, 'To sign');
   await ed.locator('#e-signing [data-action=share]').waitFor({ timeout: 90_000 });
   await ed.click('#e-signing [data-action=share]');
   await ed.locator('#share-words').waitFor({ timeout: 60_000 });
@@ -474,7 +487,7 @@ test('H33: Edubba acting as a member it holds: the proposal read in plain words,
   const positions = (await form.locator('input').evaluateAll((xs) => xs.map((x) => (x as HTMLInputElement).name))).map((n) => Number(n.slice(1)));
   for (const [i, p] of positions.entries()) await form.locator('input').nth(i).fill(words[p - 1]);
   await form.getByRole('button', { name: 'Check them' }).click();
-  await done(ed, '#e-status .note.done', 'The share is written down');
+  await done(ed, '#e-status .k-note.k-done', 'The share is written down');
   const all = everything(eDir);
   assert.ok(!all.includes(hex(fromWords(words))) && !all.includes(words.slice(0, 6).join(' ')), 'no share in Edubba’s folder');
   assert.ok(!/"waiting":\s*\{\s*"[0-9a-f]{64}"/.test(readFileSync(join(eDir, 'member', `${dee}.signing.json`), 'utf8')), 'the one-time key destroyed');
@@ -485,8 +498,8 @@ test('H33: Edubba acting as a member it holds: the proposal read in plain words,
   const { unhex } = await import('../../genesis/src/core.ts');
   await mac.dub.bring({ id: nobody, words: toWords(unhex(f.signingSecret)).join(' '), address: homes[0].base });
   await mac.dub.follow({ id: 'ab'.repeat(32), name: 'Ezra, met in Dub' });
-  await ed.selectOption('#acting-select', nobody);
-  await ed.click('.entry.add[data-id=real]');
+  await use(ed, nobody, 'Nobody, allegedly');
+  await part(ed, '+ Found a collective');
   await ed.click('#e-contacts [data-action=real-lists]');
   await ed.locator('#e-contacts li', { hasText: 'Ezra, met in Dub' }).waitFor({ timeout: 60_000 });
   assert.match(await ed.locator('#e-contacts li', { hasText: 'Ezra, met in Dub' }).innerText(), /in Nobody, allegedly’s follow list/);

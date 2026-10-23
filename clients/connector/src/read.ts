@@ -334,7 +334,9 @@ async function text(id: string, hints: string[], via: Via): Promise<Told> {
       ? { text: r.problem ? `It shows a picture (${short(r.publication)}) that is not shown: ${r.problem}.` : `It shows a picture (${short(r.publication)}), ${r.picture?.width}×${r.picture?.height}, verified.`, tone: r.problem ? 'warn' : undefined }
       : r.kind === 'film'
         ? { text: r.problem ? `It shows a film (${short(r.publication)}) that is not shown: ${r.problem}.` : `It shows a film (${short(r.publication)}), ${r.size} bytes; its bytes are checked when it is played.`, tone: r.problem ? 'warn' : undefined }
-        : { text: `It refers to act ${short(r.id)}: ${r.what}.` },
+        : r.kind === 'recording'
+          ? { text: r.problem ? `It plays a recording (${short(r.publication)}) that is not shown: ${r.problem}.` : `It plays a recording (${short(r.publication)}), ${r.size} bytes; its bytes are checked when it is played.`, tone: r.problem ? 'warn' : undefined }
+          : { text: `It refers to act ${short(r.id)}: ${r.what}.` },
   );
   return told(id, {
     kind: 'text',

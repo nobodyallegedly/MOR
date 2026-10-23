@@ -4,7 +4,7 @@
 // on the other side. Every screen in turn: the first screen and the chain
 // key's words (hidden before three are asked back, H3); Public, its three
 // lenses (Following · To you · Relay) and the typing box at the bottom, with
-// a picture, a film (H52), @ by names (H57, H78) and To…; the act card's two
+// a picture, a film (H52), a recording (the audio Module), @ by names (H57, H78) and To…; the act card's two
 // menus (H49, H68, H77): a reply, the pop-up thread and its back arrow
 // (H50, H74), why it is valid, relying on it, correcting one's own; a
 // profile; Contacts; Private, a mailbox: someone new, an empty thread, a Cc;
@@ -19,17 +19,18 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Browser, type Locator, type Page } from 'playwright-core';
 import { start, type Running as Relay } from '../../genesis/test/world.ts';
-import { post as barebonePost, readPost, type ShownPicture } from '../../barebone/src/post.ts';
-import { POST_SPECS } from '../../barebone/src/specs.ts';
+import { post as barebonePost, readPost, soundBytes, type ShownPicture, type ShownRecording } from '../../barebone/src/post.ts';
+import { POST_SPECS, PUBLICATION } from '../../barebone/src/specs.ts';
+import { strip as stripSound } from '../../../modules/audio/src/audio.ts';
 import { serve, type Running } from '../src/server.ts';
 import { TestIdentity } from '../../genesis/src/identity.ts';
-import { describeAct, unhex } from '../../genesis/src/core.ts';
+import { cborEncode, describeAct, lockMedia, unhex } from '../../genesis/src/core.ts';
 import { actForm, idForm } from '../../genesis/src/forms.ts';
 import { relayAt } from '../../genesis/src/transport.ts';
 import { readCards } from '../../genesis/src/lines.ts';
@@ -38,6 +39,7 @@ import { groupId, toWords } from '../../../modules/carry/src/carry.ts';
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const PHONE = fileURLToPath(new URL('../../../modules/jpeg/test/fixtures/phone.jpg', import.meta.url));
 const FILM = fileURLToPath(new URL('../../../modules/video/test/fixtures/plain.mp4', import.meta.url));
+const SOUND = (name: string) => fileURLToPath(new URL(`../../../modules/audio/test/fixtures/${name}`, import.meta.url));
 const shots = process.env.MOR_SCREENSHOTS;
 const shot = async (page: Page, name: string, size = 'mac') => {
   if (shots) await page.screenshot({ path: join(shots, `${size}-${name}.png`) });
@@ -169,6 +171,55 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   const video = cardOf(page, withFilm).locator('video[data-checked="yes"]');
   await video.waitFor({ timeout: 60_000 });
   assert.match((await video.getAttribute('src'))!, /^blob:/, 'played from bytes checked in the page');
+  // A recording, as a film is (the audio Module): Audio beside Picture and Video; stripped before it is locked; played after the check.
+  assert.deepEqual((await page.locator('#post .k-tools label .dub-l').allTextContents()).map((t) => t.trim()), ['Picture', 'Video', 'Audio']);
+  assert.equal(await page.locator('#post input[name=audio]').getAttribute('accept'), '.m4a,audio/mp4');
+  await ta.fill('And a recording.');
+  await page.locator('#post input[name=audio]').setInputFiles(SOUND('tagged.m4a'));
+  await page.locator('#picked', { hasText: 'Recording: tagged.m4a' }).waitFor();
+  await page.getByRole('button', { name: 'Post', exact: true }).click();
+  await done(page, /Taken out of the recording before publishing: .*where it was recorded/);
+  const withRecording = (await page.locator('#feed .k-act').first().getAttribute('data-k-act'))!;
+  const published = (await readPost(withRecording, [relay.base])).refs.find((r) => r.kind === 'recording') as ShownRecording;
+  const stripped = stripSound(new Uint8Array(readFileSync(SOUND('tagged.m4a')))).bytes;
+  assert.equal(published.size, stripped.length, 'the size published is the stripped file’s');
+  assert.deepEqual((await soundBytes(published.publication, published.signer, [relay.base])).bytes, stripped, 'its stripped bytes are the ones published');
+  const recordingBox = cardOf(page, withRecording).locator('.dub-film[data-recording]');
+  assert.match(await recordingBox.innerText(), /▶ Play the recording[\s\S]*checked before it plays/);
+  assert.equal(await cardOf(page, withRecording).locator('audio').count(), 0, 'nothing fetched or played before the listener asks');
+  // A browser that says it cannot play AAC in M4A (as this test's Chromium, built without AAC, does): said before anything is fetched (rule 12).
+  if ((await page.evaluate(() => document.createElement('audio').canPlayType('audio/mp4; codecs="mp4a.40.2"'))) === '') {
+    await cardOf(page, withRecording).getByRole('button', { name: /Play the recording/ }).click();
+    await cardOf(page, withRecording).locator('.k-label', { hasText: 'The recording is not played: this browser says it cannot play AAC sound in M4A, so nothing was fetched.' }).waitFor();
+    assert.equal(await cardOf(page, withRecording).locator('audio').count(), 0, 'nothing played');
+    await page.getByRole('button', { name: 'Look again' }).click();
+    await cardOf(page, withRecording).getByRole('button', { name: /Play the recording/ }).waitFor({ timeout: 60_000 });
+  }
+  // From here, the page answers as a browser that plays AAC in M4A does (every phone's and every other browser's).
+  await page.evaluate(() => {
+    const real = HTMLMediaElement.prototype.canPlayType;
+    HTMLMediaElement.prototype.canPlayType = function (t: string) {
+      return t === 'audio/mp4; codecs="mp4a.40.2"' ? 'probably' : real.call(this, t);
+    };
+  });
+  await cardOf(page, withRecording).getByRole('button', { name: /Play the recording/ }).click();
+  const audio = cardOf(page, withRecording).locator('audio[data-checked="yes"]');
+  await audio.waitFor({ timeout: 60_000 });
+  assert.match((await audio.getAttribute('src'))!, /^blob:/, 'played from bytes the Module checked');
+  assert.equal(await audio.evaluate((x) => (x as HTMLAudioElement).controls && !(x as HTMLAudioElement).autoplay), true, 'played on the listener’s action, with its controls');
+  await cardOf(page, withRecording).locator('.k-actid').click();
+  await page.getByRole('menuitem', { name: 'Withdraw the recording', exact: true }).waitFor();
+  await page.keyboard.press('Escape');
+  // One the Module refuses: refused in plain words, nothing published.
+  const postsBefore = (await app.dub.feed()).items.length;
+  await ta.fill('Not a recording.');
+  await page.locator('#post input[name=audio]').setInputFiles(SOUND('with-picture.m4a'));
+  await page.getByRole('button', { name: 'Post', exact: true }).click();
+  await error(page, /not a recording the audio Module plays: a picture track.*Nothing was published/);
+  assert.equal((await app.dub.feed()).items.length, postsBefore, 'nothing published');
+  assert.ok(!(await app.dub.feed()).items.some((x) => x.text === 'Not a recording.'));
+  await page.locator('[data-action=unpick]').click();
+  await ta.fill('');
   await shot(page, '03-public');
 
   // Other people, in their own Dubs, and a long-form writer; one more called Pa as the writer is named here.
@@ -180,6 +231,12 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await writer.publishRoutes([{ scope: null, hints: [relay.base], kind: 0 }]);
   for (const a of writer.chainActs()) await relayAt(relay.base).putAct(a);
   const doc = await barebonePost(writer, { text: '# Running your own relay\n\nThe whole guide.', format: POST_SPECS.longform, relays: [relay.base] });
+  // A damaged recording, published by a client that did not check it: not played, said so.
+  const damagedBytes = new Uint8Array(readFileSync(SOUND('truncated.m4a')));
+  const l = lockMedia(damagedBytes) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
+  const damaged = await writer.publish(POST_SPECS.envelopes, PUBLICATION, cborEncode(new Map<number, unknown>([[0, unhex(POST_SPECS.audio)], [1, unhex(l.workHash)], [2, unhex(l.lockedHash)], [3, damagedBytes.length], [4, l.nonce], [5, l.key], [6, [relay.base]]])), { public: true, relays: [relay.base] });
+  await relayAt(relay.base).putMedia(l.locked);
+  const damagedPost = await barebonePost(writer, { text: 'A recording cut short.', relays: [relay.base], refs: [[damaged.id, writer.id]] });
 
   // Contacts, top left: one list, names first; add by ID with a name sealed to oneself.
   await page.locator('[data-k-open="contacts"]').click();
@@ -204,6 +261,10 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   assert.ok(card.includes(`mid1`), 'its ID written for people beside the name');
   // The long-form document: a link to the reader.
   assert.equal(await cardOf(page, doc.id).locator('a.k-doc').getAttribute('href'), `https://reader.dubsar.org/#${doc.id}`);
+  // The damaged recording: checked by the Module when asked to play, refused in plain words, nothing played.
+  await cardOf(page, damagedPost.id).getByRole('button', { name: /Play the recording/ }).click();
+  await cardOf(page, damagedPost.id).locator('.k-label', { hasText: /^The recording is not played: not a recording the audio Module plays: / }).waitFor({ timeout: 60_000 });
+  assert.equal(await cardOf(page, damagedPost.id).locator('audio').count(), 0, 'nothing of it played');
   // Inter, light and regular, from the program's own origin.
   assert.deepEqual(
     await page.evaluate(async () => {
