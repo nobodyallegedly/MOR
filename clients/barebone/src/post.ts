@@ -23,6 +23,7 @@ import { cannotReach, firstOf, followRef, holdSequence, lookUp, referenceTo, typ
 import { relayAt, type Via } from '../../genesis/src/transport.ts';
 import { NotJpeg, read, strip, type Carried, type Picture } from '../../../modules/jpeg/src/jpeg.ts';
 import { NotFilm, read as readFilm, strip as stripFilm, MAX_BYTES as FILM_MAX_BYTES, type Carried as FilmCarried, type Film } from '../../../modules/video/src/video.ts';
+import { NotSound, read as readSound, strip as stripSound, MAX_BYTES as SOUND_MAX_BYTES, type Carried as SoundCarried, type Sound } from '../../../modules/audio/src/audio.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from './specs.ts';
 import { correctionFormatFor, formatOfPayload } from './corrections.ts';
 
@@ -132,6 +133,54 @@ export async function publishVideo(by: TestIdentity, mp4: Uint8Array, relays: st
   return { id: made.id, act: made.act, removed: s.removed, film, work: l.workHash, size: s.bytes.length };
 }
 
+export interface PublishedRecording {
+  id: string;
+  act: Uint8Array;
+  /** What was stripped out before publishing (the audio Module, rule 10). */
+  removed: SoundCarried[];
+  sound: Sound;
+  work: string;
+  size: number;
+}
+
+/**
+ * Publish a recording (the audio Module, draft 1), public, as a film is:
+ * read first (rules 2 to 9, its limits), stripped to the sound alone (rule
+ * 10: the work hash, the locked hash and the size published are the
+ * stripped file's), locked with its own key, described by a public
+ * publication naming the Module, its locked bytes sent to the relays after
+ * it. Refused, saying why, before anything is signed, if it is not a
+ * recording the Module plays.
+ */
+export async function publishAudio(by: TestIdentity, m4a: Uint8Array, relays: string[]): Promise<PublishedRecording> {
+  if (m4a.length > SOUND_MAX_BYTES) throw new Error(`the recording is ${m4a.length} bytes; the audio Module takes at most ${SOUND_MAX_BYTES}. Nothing was published.`);
+  let s: { bytes: Uint8Array; removed: SoundCarried[] };
+  let sound: Sound;
+  try {
+    s = stripSound(m4a);
+    sound = readSound(s.bytes);
+  } catch (e) {
+    if (e instanceof NotSound) throw new Error(`not a recording the audio Module plays: ${e.message}. Nothing was published.`);
+    throw e;
+  }
+  const l = lockMedia(s.bytes) as { locked: Uint8Array; key: Uint8Array; nonce: Uint8Array; lockedHash: string; workHash: string };
+  const payload = cborEncode(
+    new Map<number, unknown>([
+      [0, unhex(POST_SPECS.audio)],
+      [1, unhex(l.workHash)],
+      [2, unhex(l.lockedHash)],
+      [3, s.bytes.length],
+      [4, l.nonce],
+      [5, l.key],
+      [6, relays],
+    ]),
+  );
+  await carryChain(by, relays);
+  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION, payload, { public: true, relays });
+  for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
+  return { id: made.id, act: made.act, removed: s.removed, sound, work: l.workHash, size: s.bytes.length };
+}
+
 export interface Posted {
   /** The post: the text act's id. */
   id: string;
@@ -139,6 +188,7 @@ export interface Posted {
   act: Uint8Array;
   picture: PublishedPicture | null;
   film?: PublishedFilm | null;
+  recording?: PublishedRecording | null;
 }
 
 /**
@@ -153,15 +203,17 @@ export interface Posted {
  */
 export async function post(
   by: TestIdentity,
-  opts: { text: string; jpeg?: Uint8Array; mp4?: Uint8Array; format?: string | null; relays: string[]; to?: string[]; refs?: Reference[]; corrects?: Reference },
+  opts: { text: string; jpeg?: Uint8Array; mp4?: Uint8Array; m4a?: Uint8Array; format?: string | null; relays: string[]; to?: string[]; refs?: Reference[]; corrects?: Reference },
 ): Promise<Posted> {
   const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
   // A film, by reference as a picture is (the video Module, rule 13).
   const film = opts.mp4 ? await publishVideo(by, opts.mp4, opts.relays) : null;
+  // A recording, by reference as a film is (the audio Module, rule 13).
+  const recording = opts.m4a ? await publishAudio(by, opts.m4a, opts.relays) : null;
   await carryChain(by, opts.relays);
   // `refs`: acts the post answers (a reply, Text MIR), after its picture.
   // A correction names the act it corrects first (the corrections cMIP, 1.2).
-  const refs: Reference[] = [...(opts.corrects ? [opts.corrects] : []), ...(picture ? [referenceTo(picture.act)] : []), ...(film ? [referenceTo(film.act)] : []), ...(opts.refs ?? [])];
+  const refs: Reference[] = [...(opts.corrects ? [opts.corrects] : []), ...(picture ? [referenceTo(picture.act)] : []), ...(film ? [referenceTo(film.act)] : []), ...(recording ? [referenceTo(recording.act)] : []), ...(opts.refs ?? [])];
   // A correction's format follows the act it corrects: long-form where it is long-form (the corrections cMIP, 1.1, F347).
   const corrected = opts.corrects && opts.format === undefined ? await fetchAct(typeof opts.corrects === 'string' ? opts.corrects : opts.corrects[0], opts.relays, {}) : null;
   const format = opts.format !== undefined ? opts.format : opts.corrects ? correctionFormatFor(corrected ? formatOfPayload((describeAct(corrected) as Described).payload) : null) : null;
@@ -171,7 +223,7 @@ export async function post(
     refs: refs.length ? refs : undefined,
     to: opts.to?.length ? opts.to : undefined,
   });
-  return { id: made.id, act: made.act, picture, film };
+  return { id: made.id, act: made.act, picture, film, recording };
 }
 
 /**
@@ -222,6 +274,8 @@ interface Described {
   /** The signer each of `refs` names beside it (F272), or nothing. */
   refSigners?: (string | undefined)[];
   payload?: Uint8Array;
+  /** The signer's own hint (the inside's field 9), as written: display only, never load-bearing (Envelopes rule 6). */
+  hint?: string | null;
 }
 
 /** A picture a post refers to, as this client shows it. */
@@ -253,6 +307,18 @@ export interface ShownFilm {
   size: number;
 }
 
+/** A recording a post plays (the audio Module, rule 13): judged and described here; its bytes fetched only when asked to play (`soundBytes`). */
+export interface ShownRecording {
+  kind: 'recording';
+  publication: string;
+  signer: string;
+  standing: string;
+  problem: string | null;
+  withdrawn: string | null;
+  /** Its size in bytes, as published. */
+  size: number;
+}
+
 export interface OtherRef {
   kind: 'act';
   id: string;
@@ -270,7 +336,9 @@ export interface ShownPost {
   standing: string;
   text: string;
   format: string | null;
-  refs: (ShownPicture | ShownFilm | OtherRef)[];
+  /** The signer's own hint (field 9), as written, where it wrote one: shown labelled as its own, never as a time anyone checked, never used to order anything. */
+  hint: string | null;
+  refs: (ShownPicture | ShownFilm | ShownRecording | OtherRef)[];
   /** Addresses not tried, because this client cannot reach them (an onion address from a browser), each with why. */
   notTried: NotTried[];
 }
@@ -352,7 +420,7 @@ export async function readPost(id: string, hints: string[], via: Via = {}, judgi
   const standing = await judge.standing(act, id, d.signer);
   const named: Reference[] = (d.refs ?? []).map((r, i) => (d.refSigners?.[i] ? [r, d.refSigners[i]!] : r));
   const refs = await Promise.all(named.map((r) => readRef(r, hints, via, judge)));
-  return { id, signer: d.signer, standing, text, format: f instanceof Uint8Array ? hex(f) : null, refs, notTried: judge.notTried ?? [] };
+  return { id, signer: d.signer, standing, text, format: f instanceof Uint8Array ? hex(f) : null, hint: d.hint ?? null, refs, notTried: judge.notTried ?? [] };
 }
 
 /**
@@ -360,7 +428,7 @@ export async function readPost(id: string, hints: string[], via: Via = {}, judgi
  * reference names a signer, by that signer's homes and routes (F272). A
  * reference whose signer is wrong is said, the act fetched showing its own.
  */
-async function readRef(r: Reference, hints: string[], via: Via, judge: Judging): Promise<ShownPicture | ShownFilm | OtherRef> {
+async function readRef(r: Reference, hints: string[], via: Via, judge: Judging): Promise<ShownPicture | ShownFilm | ShownRecording | OtherRef> {
   const id = typeof r === 'string' ? r : r[0];
   const signer = typeof r === 'string' ? undefined : r[1];
   let act: Uint8Array | null = null;
@@ -384,6 +452,7 @@ async function readRef(r: Reference, hints: string[], via: Via, judge: Judging):
   if (d.spec !== POST_SPECS.envelopes || d.type !== PUBLICATION) return { kind: 'act', id, signer, what: 'an act of a specification this client does not implement', actSigner: d.signer };
   const media = (cborDecode(d.payload!) as Map<number, unknown>).get(0);
   if (media instanceof Uint8Array && hex(media) === POST_SPECS.video) return readFilmRef(act, d, hints, via, judge);
+  if (media instanceof Uint8Array && hex(media) === POST_SPECS.audio) return readRecordingRef(act, d, hints, via, judge);
   return readPicture(act, d, hints, via, judge);
 }
 
@@ -402,6 +471,21 @@ async function readFilmRef(act: Uint8Array, d: Described, hints: string[], via: 
   return out;
 }
 
+/** A recording's publication, judged and checked for withdrawal, as a film's is; its bytes are not fetched here. */
+async function readRecordingRef(act: Uint8Array, d: Described, hints: string[], via: Via, judge: Judging): Promise<ShownRecording> {
+  const m = cborDecode(d.payload!) as Map<number, unknown>;
+  const size = m.get(3);
+  const out: ShownRecording = { kind: 'recording', publication: d.id, signer: d.signer ?? '', standing: 'unknown', problem: null, withdrawn: null, size: typeof size === 'number' ? size : 0 };
+  const no = (why: string) => ((out.problem = why), out);
+  if (!d.signer) return no('the publication has no signer');
+  out.standing = await judge.standing(act, d.id, d.signer);
+  if (out.standing !== 'valid') return no(`the publication is ${out.standing}, not valid, for its signer's identity chain`);
+  if (!(m.get(5) instanceof Uint8Array)) return no('the recording is locked: its key is not public');
+  out.withdrawn = await findWithdrawal(d.id, d.signer, m.get(8), hints, via, judge);
+  if (out.withdrawn) return no('withdrawn by its signer');
+  return out;
+}
+
 /**
  * A film's bytes, when the reader asks to play it (the video Module, rule
  * 13): its publication fetched again, its locked bytes from the reader's
@@ -409,18 +493,47 @@ async function readFilmRef(act: Uint8Array, d: Described, hints: string[], via: 
  * the Module (rules 2 to 9) before anything plays. Throws, saying why.
  */
 export async function filmBytes(publication: string, signer: string | null, hints: string[], via: Via = {}): Promise<{ bytes: Uint8Array; film: Film }> {
+  const plain = await mediaBytes(publication, signer, hints, via, POST_SPECS.video, 'film');
+  try {
+    return { bytes: plain, film: readFilm(plain) };
+  } catch (e) {
+    if (e instanceof NotFilm) throw new Error(`not a film the video Module plays: ${e.message}`);
+    throw e;
+  }
+}
+
+/**
+ * A recording's bytes, when the reader asks to play it (the audio Module,
+ * rule 13), as a film's are: its publication fetched again, its locked
+ * bytes from the reader's relays first, opened, checked against the work
+ * hash and size, and read by the Module (rules 2 to 9) before anything
+ * plays. Throws, saying why: nothing of a recording the Module refuses is
+ * given to a player (rule 12).
+ */
+export async function soundBytes(publication: string, signer: string | null, hints: string[], via: Via = {}): Promise<{ bytes: Uint8Array; sound: Sound }> {
+  const plain = await mediaBytes(publication, signer, hints, via, POST_SPECS.audio, 'recording');
+  try {
+    return { bytes: plain, sound: readSound(plain) };
+  } catch (e) {
+    if (e instanceof NotSound) throw new Error(`not a recording the audio Module plays: ${e.message}`);
+    throw e;
+  }
+}
+
+/** A public publication's media, of the Module `spec`, fetched, opened and checked against its work hash and size; not yet read by the Module. */
+async function mediaBytes(publication: string, signer: string | null, hints: string[], via: Via, spec: string, what: 'film' | 'recording'): Promise<Uint8Array> {
   const act = signer ? (await followRef([publication, signer], hints, via)).act : await fetchAct(publication, hints, via);
-  if (!act) throw new Error('the film’s publication was not found');
+  if (!act) throw new Error(`the ${what}’s publication was not found`);
   const d = describeChecked(act, publication);
   const m = cborDecode(d.payload!) as Map<number, unknown>;
-  const spec = m.get(0);
-  if (!(spec instanceof Uint8Array) || hex(spec) !== POST_SPECS.video) throw new Error('not a film');
+  const type = m.get(0);
+  if (!(type instanceof Uint8Array) || hex(type) !== spec) throw new Error(`not a ${what}`);
   const work = m.get(1);
   const lockedHash = m.get(2);
   const size = m.get(3);
   const nonce = m.get(4);
   const key = m.get(5);
-  if (!(key instanceof Uint8Array)) throw new Error('the film is locked: its key is not public');
+  if (!(key instanceof Uint8Array)) throw new Error(`the ${what} is locked: its key is not public`);
   if (!(work instanceof Uint8Array) || !(lockedHash instanceof Uint8Array) || typeof size !== 'number' || !(nonce instanceof Uint8Array)) throw new Error('the publication does not describe its media');
   const named = Array.isArray(m.get(6)) ? (m.get(6) as unknown[]).filter((x): x is string => typeof x === 'string') : [];
   const media = (places: string[]) => firstOf(places.filter((h) => !cannotReach(h, via)), (h) => relayAt(h, via).getMedia(hex(lockedHash)));
@@ -433,12 +546,7 @@ export async function filmBytes(publication: string, signer: string | null, hint
     throw new Error('its key does not open its bytes');
   }
   if (workHash(plain) !== hex(work) || plain.length !== size) throw new Error('its bytes do not match the work hash and size it was published with');
-  try {
-    return { bytes: plain, film: readFilm(plain) };
-  } catch (e) {
-    if (e instanceof NotFilm) throw new Error(`not a film the video Module plays: ${e.message}`);
-    throw e;
-  }
+  return plain;
 }
 
 async function readPicture(act: Uint8Array, d: Described, hints: string[], via: Via, judge: Judging): Promise<ShownPicture> {

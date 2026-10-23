@@ -20,6 +20,7 @@
 // page), and one for its panel, a page framed only by the origin of the
 // pairing that asked, carrying no script.
 
+import { clockWords } from '../../barebone/src/clock.ts';
 import type { Server } from 'node:http';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
@@ -110,6 +111,12 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
       // The runner, from Kišib's own page (section 6 and 2.2): the program only, never the web client.
       case 'runner state':
         return runner.view();
+      // The Dubsar clock's time of each act the runner signed (decided 23 October 2026: every app relies on it), asked at the homes of the identities it holds.
+      case 'clock words': {
+        const ids = Array.isArray(a.ids) ? a.ids.map(String).slice(0, 500) : [];
+        const homes = [...new Set(runner.view().held.flatMap((h) => h.homes))];
+        return clockWords(ids, homes, {});
+      }
       case 'runner on':
         return runner.turnOn({ read: a.read === true, passphrase: text(a.passphrase), again: text(a.again) });
       case 'runner lock':

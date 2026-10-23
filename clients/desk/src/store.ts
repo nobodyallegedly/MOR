@@ -21,7 +21,7 @@
 //
 // TEST IDENTITIES ONLY: every key is in these files, in software.
 
-import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, existsSync, rmSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { TestIdentity, type Home } from '../../genesis/src/identity.ts';
 import type { Via } from '../../genesis/src/transport.ts';
@@ -34,8 +34,8 @@ export interface IdentityEntry {
   name: string;
   /** Linked to Claude: the connector may prepare drafts for it. */
   linked: boolean;
-  /** Made here, or brought here by its signing key's words (H15; the carry Module, draft 2). Absent: made here. */
-  kind?: 'made' | 'brought';
+  /** Made here, brought here by its signing key's words (H15; the carry Module, draft 2), or used through Kišib's runner, Edubba holding none of its keys (the Dubsar runner cMIP). Absent: made here. */
+  kind?: 'made' | 'brought' | 'runner';
   /** Brought here: the acts its homes held, signed with its key, when it was brought (made by the app it came from), so they raise no warning (F152). */
   elsewhere?: string[];
   /** Releases it published under its own name from Edubba (H16), oldest first, each with its manifest, to name as the one before a later release. */
@@ -143,7 +143,7 @@ export interface Answered {
   time: number;
   /** The draft answered; empty for what Machine, allegedly's answering did. */
   draft: string;
-  verdict: 'approved' | 'declined' | 'sent back' | 'terms published' | 'picked' | 'nudged' | 'answered' | 'not answered' | 'prompted' | 'named' | 'released' | 'diary' | 'note retired' | 'granted' | 'accepted' | 'under grant' | 'corrected';
+  verdict: 'approved' | 'declined' | 'sent back' | 'terms published' | 'picked' | 'nudged' | 'answered' | 'not answered' | 'prompted' | 'named' | 'released' | 'diary' | 'note retired' | 'diary read' | 'granted' | 'accepted' | 'under grant' | 'corrected';
   /** The agent it concerns (Edubba, several agents); absent in records made before 16 October 2026, which concern Machine, allegedly. */
   agent?: string;
   signer: string;
@@ -250,6 +250,12 @@ export class Store {
   identity(id: string): TestIdentity {
     if (!this.holds(id)) throw new Error(`this desk does not hold ${id}`);
     return TestIdentity.load(this.identityPath(id), this.settings().via);
+  }
+
+  /** Forget an identity's file here (the identity panel's Remove): its keys and its line on this device; nothing anywhere else. */
+  forgetIdentity(id: string): void {
+    rmSync(this.identityPath(id), { force: true });
+    rmSync(this.path('received', `${id}.json`), { force: true });
   }
 
   saveIdentity(i: TestIdentity): void {

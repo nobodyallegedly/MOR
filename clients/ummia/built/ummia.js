@@ -3659,7 +3659,9 @@ var TestIdentity = class _TestIdentity {
       to: opts.to,
       objects,
       refs: opts.refs,
-      acks: opts.acks
+      acks: opts.acks,
+      // The signer's own hint (field 9, display only): no app writes one yet (whether they should is not decided).
+      ...opts.hint !== void 0 ? { hint: opts.hint } : {}
     });
     return this.everydayMade(spec, type, opts.public, line, made);
   }
@@ -4071,7 +4073,8 @@ var TestIdentity = class _TestIdentity {
       to: opts.to,
       objects: opts.objects,
       refs: opts.refs,
-      acks: opts.acks
+      acks: opts.acks,
+      hint: opts.hint
     });
     for (const hint of opts.relays) await relayAt(hint, this.via).putAct(made.act);
     return made;
@@ -4372,7 +4375,7 @@ var SPLIT_CMIP = sha2562("split cMIP, draft 2, test value until publication");
 var NEGOTIATION = 18;
 var negotiationPayload = (text3) => cborEncode(/* @__PURE__ */ new Map([[0, text3.normalize("NFC")]]));
 async function negotiate(by, to, o) {
-  const made = by.sign(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
+  const made = await by.signNow(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
     public: false,
     to: [to.id],
     objects: o.thread ? [[o.thread, o.previous ?? o.thread]] : void 0,
@@ -7118,21 +7121,21 @@ async function changeAccepted(me, change, opts) {
   const secrets = held.length ? held : opts.open ?? [];
   if (Array.isArray(secrets) && !secrets.length) throw new Error("This app holds no encryption key of this identity, so its accepted list cannot be sealed to it. Nothing was changed.");
   for (let round = 0; round < 5; round++) {
-    const read3 = await readAccepted(me.id, secrets, homes, via);
-    if (read3.problems.length >= homes.length && !read3.tips.length) throw new Error(`The identity\u2019s homes did not answer (${read3.problems.join("; ")}): the accepted list was not changed.`);
-    const next = new Map(read3.entries);
+    const read4 = await readAccepted(me.id, secrets, homes, via);
+    if (read4.problems.length >= homes.length && !read4.tips.length) throw new Error(`The identity\u2019s homes did not answer (${read4.problems.join("; ")}): the accepted list was not changed.`);
+    const next = new Map(read4.entries);
     change(next);
-    const same = read3.tips.length === 1 && JSON.stringify([...next].sort()) === JSON.stringify([...read3.entries].sort());
-    if (same || !read3.tips.length && !next.size) return { written: null, list: read3 };
+    const same = read4.tips.length === 1 && JSON.stringify([...next].sort()) === JSON.stringify([...read4.entries].sort());
+    if (same || !read4.tips.length && !next.size) return { written: null, list: read4 };
     const again = await readAccepted(me.id, secrets, homes, via);
-    if (!sameTips(again.tips, read3.tips)) continue;
+    if (!sameTips(again.tips, read4.tips)) continue;
     await opts.check();
     const look = await lookUp(me.id, homes, via);
     if (!look.encryptionKey || !me.f.encryption.some((e3) => (e3.secret ? hex(xwingPublic(unhex(e3.secret))) : e3.public) === hex(look.encryptionKey))) {
       throw new Error("The encryption key this identity publishes is not one this app holds: the accepted list cannot be sealed. Nothing was changed.");
     }
-    const [first, ...others] = read3.tips;
-    const payload = listPayload({ version: read3.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
+    const [first, ...others] = read4.tips;
+    const payload = listPayload({ version: read4.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next });
     let made;
     try {
       made = await me.signNow(ACCEPTED_SPEC, SEALED_LIST, payload, { public: false, to: [me.id] });
@@ -7151,7 +7154,7 @@ async function changeAccepted(me, change, opts) {
     await leaveAtHomes(me, made, { via, sealed: left > 0 });
     await opts.save();
     if (!left) throw new Error("No home took the accepted list: nothing was changed. Try again.");
-    return { written: made.id, list: { entries: next, tips: [{ id: made.id, version: read3.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next }], merged: read3.merged, version: read3.version + 1, problems: [] } };
+    return { written: made.id, list: { entries: next, tips: [{ id: made.id, version: read4.version + 1, previous: first?.id ?? null, merged: others.map((t) => t.id), entries: next }], merged: read4.merged, version: read4.version + 1, problems: [] } };
   }
   throw new Error("Another app kept changing the accepted list while this one wrote: nothing was changed. Try again.");
 }
@@ -7887,7 +7890,7 @@ function roleWords(l, all) {
   return { kind, layer: [...layers].join(", ") || "not said", role };
 }
 async function readExtensions(found, byHash, judge2, privateActs) {
-  const read3 = { terms: 0, counted: 0, proposed: 0, notCounted: [], private: privateActs };
+  const read4 = { terms: 0, counted: 0, proposed: 0, notCounted: [], private: privateActs };
   const terms = /* @__PURE__ */ new Map();
   const signatures = [];
   for (const { d, act } of found.values()) {
@@ -7898,7 +7901,7 @@ async function readExtensions(found, byHash, judge2, privateActs) {
       const fields = cborDecode(d.payload);
       if (fields instanceof Map) terms.set(d.id, { act, signer: d.signer, fields });
     } catch {
-      read3.notCounted.push({ id: d.id, why: "its terms do not decode" });
+      read4.notCounted.push({ id: d.id, why: "its terms do not decode" });
     }
   }
   const parties = /* @__PURE__ */ new Set();
@@ -7911,7 +7914,7 @@ async function readExtensions(found, byHash, judge2, privateActs) {
   const valid = /* @__PURE__ */ new Set();
   for (const [id, t] of terms) {
     const bad = await judge2.problem(t.act, id, t.signer);
-    if (bad) read3.notCounted.push({ id, why: bad });
+    if (bad) read4.notCounted.push({ id, why: bad });
     else valid.add(id);
   }
   for (const s of signatures) {
@@ -7920,7 +7923,7 @@ async function readExtensions(found, byHash, judge2, privateActs) {
     } catch {
     }
   }
-  read3.terms = valid.size;
+  read4.terms = valid.size;
   const named = (t) => Array.isArray(t.get(15)) ? t.get(15).filter(bytes32).map((h) => hex(h)) : [];
   const extLayers = {};
   for (const id of valid) for (const h of named(terms.get(id).fields)) extLayers[h] = byHash.get(h)?.spec.layers ?? [];
@@ -7929,11 +7932,11 @@ async function readExtensions(found, byHash, judge2, privateActs) {
   for (const id of valid) {
     try {
       const a = judge2.v.agreementsAgreement(specs2, id);
-      if (a.invalid) read3.notCounted.push({ id, why: `the core library finds these terms invalid: ${a.invalid}` });
+      if (a.invalid) read4.notCounted.push({ id, why: `the core library finds these terms invalid: ${a.invalid}` });
       else if (a.exists === true || a.exists === null && a.ready) counts.add(id);
-      else read3.proposed++;
+      else read4.proposed++;
     } catch (e3) {
-      read3.notCounted.push({ id, why: `the core library could not judge it: ${message3(e3)}` });
+      read4.notCounted.push({ id, why: `the core library could not judge it: ${message3(e3)}` });
     }
   }
   const first = (id) => {
@@ -7958,8 +7961,8 @@ async function readExtensions(found, byHash, judge2, privateActs) {
       byExt.set(h, m);
     }
   }
-  read3.counted = agreementsCounted.size;
-  read3.notCounted.sort((a, b) => a.id < b.id ? -1 : 1);
+  read4.counted = agreementsCounted.size;
+  read4.notCounted.sort((a, b) => a.id < b.id ? -1 : 1);
   const extensions = [...byExt].map(([hash, m]) => {
     const listed = byHash.get(hash) ?? null;
     return {
@@ -7971,7 +7974,7 @@ async function readExtensions(found, byHash, judge2, privateActs) {
   });
   const name = (x) => x.listed?.name ?? `~${x.hash}`;
   extensions.sort((a, b) => b.agreements.length - a.agreements.length || (name(a) < name(b) ? -1 : name(a) > name(b) ? 1 : 0));
-  return { extensions, agreements: read3 };
+  return { extensions, agreements: read4 };
 }
 
 // src/mips.ts
@@ -9009,6 +9012,137 @@ function stripped(bytes, p) {
   return concat3([ftyp, moov, box("mdat", media)]);
 }
 
+// ../../modules/audio/src/audio.ts
+var NotSound = class extends Error {
+  constructor(kind, message5) {
+    super(message5);
+    this.kind = kind;
+    this.name = "NotSound";
+  }
+};
+var MAX_BYTES2 = 64 * 1024 * 1024 - 16;
+var MAX_SECONDS2 = 7200;
+var CARRIED_WORDS2 = {
+  metadata: "metadata (titles, the artist, the album, dates, the device, comments, cover pictures)",
+  location: "where it was recorded",
+  dates: "when it was made (the dates in its headers)",
+  names: "names written by the software that made it",
+  free: "free space that can hold anything",
+  unknown: "boxes of a kind no player reads (such as XMP)",
+  "unused-media": "media data no sample uses",
+  descriptor: "an MPEG-4 object descriptor (iods), not needed to play"
+};
+var said = (message5) => message5.replace("which a film may not", "which a recording may not");
+function handlerOf(r, trak) {
+  try {
+    const mdia = r.boxes(trak.body, trak.end).find((b) => b.type === "mdia");
+    const hdlr = mdia && r.boxes(mdia.body, mdia.end).find((b) => b.type === "hdlr");
+    if (!hdlr || hdlr.end - hdlr.body < 12) return null;
+    return String.fromCharCode(...r.b.subarray(hdlr.body + 8, hdlr.body + 12));
+  } catch {
+    return null;
+  }
+}
+var BRANDS2 = ["M4A ", "isom", "iso2", "iso3", "iso4", "iso5", "iso6", "mp41", "mp42"];
+var FRAGMENTS = ["moof", "mfra", "sidx", "styp", "ssix", "emsg", "prft"];
+var PICTURES = ["vide", "pict", "auxv"];
+function parse2(bytes) {
+  if (bytes.length > MAX_BYTES2) throw new NotSound("limits", `${bytes.length} bytes, above ${MAX_BYTES2} (one media object of 64 MiB, locked)`);
+  const ascii3 = (o, n) => String.fromCharCode(...bytes.subarray(o, o + n));
+  const r = new Reader(bytes);
+  if (bytes.length < 8 || ascii3(4, 4) !== "ftyp") throw new NotSound("structure", "it does not begin with a file type box (ftyp)");
+  const top3 = r.boxes(0, bytes.length, true);
+  const carried = /* @__PURE__ */ new Set();
+  const ftyp = top3[0];
+  r.need(ftyp.body, 8, ftyp.end, "the file type");
+  if ((ftyp.end - ftyp.body) % 4) throw new NotSound("structure", "the file type box is not whole brands");
+  const major = ascii3(ftyp.body, 4);
+  const brands = [major];
+  for (let o = ftyp.body + 8; o < ftyp.end; o += 4) brands.push(ascii3(o, 4));
+  if (major === "qt  ") throw new NotSound("refused", "a QuickTime file (.mov), not M4A: remux it as M4A first");
+  if (!brands.some((b) => BRANDS2.includes(b))) throw new NotSound("refused", `brands ${brands.join(", ")}: none is an M4A or MP4 brand`);
+  const mdats = [];
+  let moov = null;
+  let indexFirst = false;
+  for (const b of top3.slice(1)) {
+    if (b.type === "moov") {
+      if (moov) throw new NotSound("structure", "more than one movie box (moov)");
+      moov = b;
+      indexFirst = !mdats.length;
+    } else if (b.type === "mdat") mdats.push(b);
+    else if (b.type === "ftyp") throw new NotSound("structure", "more than one file type box");
+    else if (FRAGMENTS.includes(b.type)) {
+      throw new NotSound("refused", "a fragmented file (as a live stream writes): only a whole recording with one index is played");
+    } else if (b.type in ASIDE) {
+      carried.add(ASIDE[b.type]);
+      if (b.type === "udta" || b.type === "meta") inspectAside(r, b, carried);
+    } else throw new NotSound("refused", `a box of kind ${JSON.stringify(b.type)} at the top of the file, which this Module does not read`);
+  }
+  if (!moov) throw new NotSound("structure", "no movie box (moov): the recording has no index");
+  if (!mdats.length) throw new NotSound("structure", "no media data box (mdat): the recording has no sound");
+  const mk = children(r, moov, ["mvhd", "trak", "iods", "mvex"], carried, "the movie");
+  if (mk.some((b) => b.type === "mvex")) throw new NotSound("refused", "a fragmented file (mvex): only a whole recording with one index is played");
+  if (mk.some((b) => b.type === "iods")) carried.add("descriptor");
+  const mvhd = one(mk, "mvhd", "the movie");
+  const mv = version(r, mvhd, [0, 1]);
+  r.need(mvhd.body, mv ? 112 : 100, mvhd.end, "the movie header");
+  const mScale = r.u32(mvhd.body + (mv ? 20 : 12));
+  const mDur = mv ? r.u64(mvhd.body + 24) : r.u32(mvhd.body + 16);
+  if (!mScale) throw new NotSound("structure", "the movie has no timescale");
+  if (dates(r, mvhd, mv).set) carried.add("dates");
+  if (rotationOf(r, mvhd.body + (mv ? 48 : 36)) !== 0) throw new NotSound("refused", "a movie matrix that is not the identity");
+  const traks = mk.filter((b) => b.type === "trak");
+  const kinds = traks.map((t2) => handlerOf(r, t2));
+  const pictures = kinds.filter((k) => k !== null && PICTURES.includes(k)).length;
+  if (pictures) throw new NotSound("refused", `${pictures === 1 ? "a picture track" : `${pictures} picture tracks`}: an M4A file holds sound only (a film is the video Module's)`);
+  const other = kinds.find((k) => k !== null && k !== "soun");
+  if (other) throw new NotSound("refused", `a track of kind ${JSON.stringify(other)} (text, chapters, timecode, metadata or hints): an M4A file holds one sound track only`);
+  if (traks.length !== 1) throw new NotSound("refused", `${traks.length || "no"} sound tracks: an M4A file holds exactly one`);
+  const tracks = [readTrack(r, traks[0], carried)];
+  const t = tracks[0];
+  if (t.rotation !== 0) throw new NotSound("refused", "a sound track whose header turns pictures (its matrix is not the identity)");
+  if (t.names) carried.add("names");
+  let used = 0;
+  let prevEnd = 0;
+  for (const c of [...t.chunks].sort((a, b) => a.offset - b.offset)) {
+    if (c.offset < prevEnd) throw new NotSound("structure", "two chunks of samples overlap");
+    if (!mdats.some((m) => c.offset >= m.body && c.offset + c.size <= m.end)) throw new NotSound("structure", "a chunk of samples lies outside the media data");
+    prevEnd = c.offset + c.size;
+    used += c.size;
+  }
+  if (used < mdats.reduce((n, m) => n + (m.end - m.body), 0)) carried.add("unused-media");
+  const seconds = Math.max(mDur / mScale, t.mediaDuration / t.timescale);
+  if (seconds > MAX_SECONDS2) throw new NotSound("limits", `${Math.round(seconds)} seconds long, beyond ${MAX_SECONDS2}`);
+  const sound = {
+    brand: major,
+    duration: Math.round(seconds * 1e3) / 1e3,
+    audio: { codec: "mp4a.40.2", channels: t.audio.channels, sampleRate: t.audio.sampleRate, samples: t.samples },
+    type: 'audio/mp4; codecs="mp4a.40.2"',
+    indexFirst,
+    carried: Object.keys(CARRIED_WORDS2).filter((c) => carried.has(c))
+  };
+  return { sound, ftyp, moov, tracks, traks };
+}
+function checked(f) {
+  try {
+    return f();
+  } catch (e3) {
+    if (e3 instanceof NotSound) throw e3;
+    if (e3 instanceof NotFilm) throw new NotSound(e3.kind, said(e3.message));
+    if (e3 instanceof RangeError) throw new NotSound("structure", "a box runs past the end of the file");
+    throw e3;
+  }
+}
+function read3(bytes) {
+  return checked(() => parse2(bytes).sound);
+}
+function strip3(bytes) {
+  return checked(() => {
+    const p = parse2(bytes);
+    return { bytes: stripped(bytes, p), removed: p.sound.carried };
+  });
+}
+
 // ../barebone/src/specs.ts
 var test4 = (s) => sha2562(s);
 var POST_SPECS = {
@@ -9021,7 +9155,9 @@ var POST_SPECS = {
   /** The JPEG Module (modules/module-jpeg-draft-1.md). */
   jpeg: test4("JPEG Module, draft 1, test value until publication"),
   /** The video Module (modules/module-video-draft-1.md): a film, named by its test value until publication, as the JPEG Module is. */
-  video: test4("video Module, draft 1, test value until publication")
+  video: test4("video Module, draft 1, test value until publication"),
+  /** The audio Module (modules/module-audio-draft-1.md): a recording, named by its test value until publication, as the video Module is. */
+  audio: test4("audio Module, draft 1, test value until publication")
 };
 var TEXT_ACT2 = 0;
 var PUBLICATION2 = 0;
@@ -9104,11 +9240,40 @@ async function publishVideo(by, mp4, relays) {
   for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
   return { id: made.id, act: made.act, removed: s.removed, film, work: l.workHash, size: s.bytes.length };
 }
+async function publishAudio(by, m4a, relays) {
+  if (m4a.length > MAX_BYTES2) throw new Error(`the recording is ${m4a.length} bytes; the audio Module takes at most ${MAX_BYTES2}. Nothing was published.`);
+  let s;
+  let sound;
+  try {
+    s = strip3(m4a);
+    sound = read3(s.bytes);
+  } catch (e3) {
+    if (e3 instanceof NotSound) throw new Error(`not a recording the audio Module plays: ${e3.message}. Nothing was published.`);
+    throw e3;
+  }
+  const l = lockMedia(s.bytes);
+  const payload = cborEncode(
+    /* @__PURE__ */ new Map([
+      [0, unhex(POST_SPECS.audio)],
+      [1, unhex(l.workHash)],
+      [2, unhex(l.lockedHash)],
+      [3, s.bytes.length],
+      [4, l.nonce],
+      [5, l.key],
+      [6, relays]
+    ])
+  );
+  await carryChain(by, relays);
+  const made = await by.publish(POST_SPECS.envelopes, PUBLICATION2, payload, { public: true, relays });
+  for (const hint of relays) await relayAt(hint, by.via).putMedia(l.locked);
+  return { id: made.id, act: made.act, removed: s.removed, sound, work: l.workHash, size: s.bytes.length };
+}
 async function post(by, opts) {
   const picture = opts.jpeg ? await publishPicture(by, opts.jpeg, opts.relays) : null;
   const film = opts.mp4 ? await publishVideo(by, opts.mp4, opts.relays) : null;
+  const recording = opts.m4a ? await publishAudio(by, opts.m4a, opts.relays) : null;
   await carryChain(by, opts.relays);
-  const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...film ? [referenceTo(film.act)] : [], ...opts.refs ?? []];
+  const refs = [...opts.corrects ? [opts.corrects] : [], ...picture ? [referenceTo(picture.act)] : [], ...film ? [referenceTo(film.act)] : [], ...recording ? [referenceTo(recording.act)] : [], ...opts.refs ?? []];
   const corrected = opts.corrects && opts.format === void 0 ? await fetchAct(typeof opts.corrects === "string" ? opts.corrects : opts.corrects[0], opts.relays, {}) : null;
   const format = opts.format !== void 0 ? opts.format : opts.corrects ? correctionFormatFor(corrected ? formatOfPayload(describeAct(corrected).payload) : null) : null;
   const made = await by.publish(POST_SPECS.text, TEXT_ACT2, textPayload2(opts.text, format), {
@@ -9117,7 +9282,7 @@ async function post(by, opts) {
     refs: refs.length ? refs : void 0,
     to: opts.to?.length ? opts.to : void 0
   });
-  return { id: made.id, act: made.act, picture, film };
+  return { id: made.id, act: made.act, picture, film, recording };
 }
 async function leaveInInbox(by, act, inbox) {
   const out = { left: [], failed: [] };
@@ -9355,13 +9520,13 @@ async function actsOf(relays, q) {
   const lines2 = [];
   for (const r of relays) {
     let after;
-    let read3 = 0;
+    let read4 = 0;
     try {
       for (; ; ) {
         const page = await relayAt(r, via).feed({ spec: q.spec, type: q.type, signer: q.signer || void 0, after });
         for (const it of page.items) {
-          if (it.kind !== "act" || read3 >= 2e3) continue;
-          read3++;
+          if (it.kind !== "act" || read4 >= 2e3) continue;
+          read4++;
           const d = describeAct(it.item);
           if (!d.signer || acts2.has(d.id)) continue;
           let standing2 = "unknown";
@@ -9379,7 +9544,7 @@ async function actsOf(relays, q) {
         if (!page.items.length || page.next === after) break;
         after = page.next;
       }
-      lines2.push({ text: `${r}: ${read3} act${read3 === 1 ? "" : "s"} read.` });
+      lines2.push({ text: `${r}: ${read4} act${read4 === 1 ? "" : "s"} read.` });
     } catch (e3) {
       lines2.push({ text: `${r}: ${e3 instanceof Error ? e3.message : String(e3)}`, tone: "warn" });
     }
@@ -10401,10 +10566,12 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act .k-nm{font-size:15px;font-weight:400;color:var(--k-text)}
 .k-act .k-dn{font-size:12.5px;color:var(--k-soft)}
 .k-act .k-of{font-size:12.5px;color:var(--k-soft);border:1px solid var(--k-edge);border-radius:999px;padding:0 8px}
+.k-act .k-hint{font-size:12px;color:var(--k-faint);margin:4px 0 0}
 .k-act .k-when{float:right;font-size:12px;color:var(--k-faint)}
 .k-act .k-txt{margin:4px 0 6px;font-size:15px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .k-act .k-label{font-size:12.5px;color:var(--k-soft);margin:2px 0}
 .k-act .k-label.k-warn{color:var(--k-c)}
+.k-act .k-label.k-bad{color:var(--k-bad)}
 .k-act .k-kind{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--k-soft);border:1px solid var(--k-line);border-radius:5px;padding:1px 6px;margin-right:6px}
 .k-act .k-foot{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--k-faint);flex-wrap:wrap}
 .k-act .k-actid{margin-left:auto;padding:2px 0 2px 8px;border-radius:8px}
@@ -10414,6 +10581,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
 .k-act.k-sel{background:var(--k-wash);border-radius:12px;padding-left:10px;padding-right:10px;border-bottom-color:transparent}
 .k-act figure{margin:8px 0 4px}
 .k-act img,.k-act video{display:block;max-width:100%;max-height:60vh;height:auto;border-radius:12px;image-orientation:from-image}
+.k-act audio{display:block;width:100%;margin:6px 0}
 .k-act .k-doc{display:block;border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px;text-decoration:none}
 .k-act .k-box{border:1px solid var(--k-line);border-radius:10px;padding:8px 12px;margin:6px 0}
 
@@ -10542,7 +10710,7 @@ html:has(.k-page),body:has(.k-page){margin:0;height:100%;background:var(--k-bg);
   .k-panel{left:8px;right:8px;width:auto;top:56px}
   .k-pop:not([data-k-suggest]){left:8px!important;right:8px!important;top:auto!important;bottom:8px!important;max-width:none;width:auto;min-width:0;border-radius:16px}
   .k-modal{padding:12px;width:calc(100% - 16px);max-height:calc(100% - 24px)}
-  .k-act .k-when{display:none}
+  .k-act .k-when{float:none;display:block;margin:0 0 2px}
   .k-feed{padding:4px 10px}
 }
 `;
@@ -10911,7 +11079,7 @@ function picker(l) {
 ${l.problem ? note2("warn", e(l.problem)) : ""}
 <div>${l.folders.map((f) => `<button type="button" data-action="folders" data-path="${e(f.path)}">${e(f.name)}${f.git ? " \xB7 git" : ""}${f.spaced ? ` (${e(f.spaced)})` : ""}</button>`).join("")}</div>${l.hidden ? `<p class="small">${l.hidden} hidden folder${l.hidden === 1 ? "" : "s"} not shown.</p>` : ""}</div>`;
 }
-function checked(c) {
+function checked2(c) {
   return `<div class="${c.ok ? "" : "blocking"}">${lines(c.lines)}</div>`;
 }
 function anchorForm(release, offers2, say3) {
@@ -11238,7 +11406,7 @@ function mount(app3, b) {
       }
       case "release check": {
         const c = await act(() => b.ask("release check", { id }));
-        if (c) $(`check-${id}`).innerHTML = checked(c);
+        if (c) $(`check-${id}`).innerHTML = checked2(c);
         return;
       }
       case "anchor open": {

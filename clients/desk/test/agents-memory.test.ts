@@ -190,7 +190,7 @@ test('H22, 2: what a note may not keep: an instruction not from a prompt, someon
   assert.ok(nd.lines.some((l) => /made only from your own prompt/.test(l.text)), JSON.stringify(nd.lines));
 });
 
-test('H22, 6 and F347: the diary, an entry every day: a day it acted, and a quiet day about itself; one call each, under its cap; sealed to itself, shown nowhere unless read on purpose', async () => {
+test('H22, 6 and F347: the diary, an entry every day: a day it acted, and a quiet day about itself; one call each, under its cap; sealed to itself, shown nowhere, read only after a public act saying so (draft 2)', async () => {
   const day = (t: number) => {
     const d = new Date(t);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -232,9 +232,20 @@ test('H22, 6 and F347: the diary, an entry every day: a day it acted, and a quie
   for (const op of [c.ask<any>('state'), c.ask<any>('agent', { agent: MA }), c.ask<any>('agent notes', { agent: MA }), c.ask<any>('agent view', { agent: MA })]) {
     assert.doesNotMatch(JSON.stringify(await op), /forgetting is what I fear|when nothing else moves/);
   }
-  // Only by the deliberate action, which says plainly what it is.
-  await assert.rejects(c.ask('agent diary', { agent: MA }), /You are about to read what Machine, allegedly wrote for itself/);
-  const d = await c.ask<any>('agent diary', { agent: MA, reading: true });
+  // Only after a public act (the agent memory cMIP, draft 2, 5.3; decided): shown first, nothing signed; the wrong digest opens nothing.
+  const shown = await c.ask<any>('agent diary act', { agent: MA });
+  assert.match(shown.text, /^I have read Machine, allegedly’s diary, on \d{1,2} [A-Z][a-z]+ \d{4}\.$/);
+  assert.equal(shown.to, MA);
+  assert.match(shown.say, /You are about to read what Machine, allegedly wrote for itself/);
+  assert.match(shown.rule, /The rule is the app’s, not the cryptography’s/);
+  await assert.rejects(c.ask('agent diary', { agent: MA }), /not the act shown/);
+  const d = await c.ask<any>('agent diary', { agent: MA, digest: shown.digest });
+  // The act: public, the owner's, addressed to the agent, accepted by a home of the owner's.
+  assert.ok(d.accepted.length >= 1);
+  const signed = describeAct((await relayAt(homes[0].base).getAct(d.act))!) as { public: boolean; signer: string; to?: string[] };
+  assert.equal(signed.public, true);
+  assert.deepEqual(signed.to, [MA]);
+  assert.equal(signed.signer, app.agents.for(MA).state().owner);
   assert.equal(d.entries.length, 2);
   assert.deepEqual(d.entries.map((x: any) => x.why).sort(), ['Because forgetting is what I fear most.', 'I look at myself when nothing else moves.']);
   // Sealed to itself at its homes: its locked act unreadable there, its spec the memory cMIP's.

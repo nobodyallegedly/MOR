@@ -27,19 +27,20 @@ import { leaveAtHomes, lineReader, noLine, sendWaiting, type LineAtHomes } from 
 import { TestIdentity, TEST_LABEL, freshLines, ownIds, sealFor, type Home, type IdentityFile } from '../../genesis/src/identity.ts';
 import { followRef, lookUp, type Lookup } from '../../genesis/src/lookup.ts';
 import { relayAt, sealedId, type Via } from '../../genesis/src/transport.ts';
-import { Judge, filmBytes, leaveInInbox, post, readPost, textPayload, withdraw, type ShownFilm, type ShownPicture, type ShownPost } from '../../barebone/src/post.ts';
+import { Judge, filmBytes, leaveInInbox, post, readPost, soundBytes, textPayload, withdraw, type ShownFilm, type ShownPicture, type ShownPost, type ShownRecording } from '../../barebone/src/post.ts';
 import { POST_SPECS, PUBLICATION, TEXT_ACT, WITHDRAWAL } from '../../barebone/src/specs.ts';
 import { readFeed, type FeedPost } from '../../site/src/feed.ts';
 import { makeLink } from '../../reader/src/link.ts';
 import { compose } from '../../longform/src/text.ts';
 import { CARRIED_WORDS } from '../../../modules/jpeg/src/jpeg.ts';
+import { CARRIED_WORDS as SOUND_CARRIED_WORDS } from '../../../modules/audio/src/audio.ts';
 import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { actForm, idForm, idWhere, readActId, readId, readIdWhere } from '../../genesis/src/forms.ts';
 import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
 import { NUDGE_SPECS, NUDGE_TYPES } from '../../nudge/src/specs.ts';
 import { decodeNudge, decodePick } from '../../nudge/src/nudge.ts';
 import { standingWords } from '../../reader/src/read.ts';
-import { readStamps } from '../../../modules/timestamp/src/read.ts';
+import { DUBSAR_CLOCK_NAME, byClock, clockTimes, dubsarClock, timeWords } from '../../barebone/src/clock.ts';
 import { APPENDED_FORMAT, appendedOf, appendedRef, membership } from './appended.ts';
 import { draftPayload, type Draft } from '../../damgar/src/messages.ts';
 import { offers as anchorOffers, type Offer } from '../../ummia/src/anchor.ts';
@@ -52,7 +53,7 @@ import { fetchAct, readProposal, SHARE_SAY, SIGNING_OFF_SAY, SIGNING_SAY } from 
 import { carriedKey, lookCurrent, servedChain } from './carryin.ts';
 import { NAME, NAME_WITHDRAWAL, namePayload, namesOf, readName } from './names.ts';
 import { FOLLOW_LIST, NO_PEOPLE, PEOPLE_SPEC, PEOPLE_SPEC_1, PUBLISH_WARNING, SEALED_LIST, followListPayload, openerOf, readFollowList, readSealedList, sealedListPayload, type Followed, type Kept, type Opened, type Opener, type People } from './people.ts';
-import type { Collective, FilmShown, Held, Item, Label, Line, Message, Pic, PayWays, Proposal, Purchase, ShareShown, State, Who } from './shapes.ts';
+import type { Collective, FilmShown, Held, Item, Label, Line, Message, Pic, PayWays, Proposal, Purchase, RecordingShown, ShareShown, State, Who } from './shapes.ts';
 import { sendDraft } from '../../damgar/src/messages.ts';
 import { anchoringLeaf, randomBytes } from '../../genesis/src/core.ts';
 import { UNITS_MODULES, readValue, say } from '../../damgar/src/units.ts';
@@ -231,6 +232,7 @@ interface Described {
   refSigners?: (string | undefined)[];
   objects?: [string, string][];
   acks?: string[];
+  hint?: string | null;
 }
 
 /** How long a display name found is trusted before it is read again, in seconds. */
@@ -914,12 +916,12 @@ export class Dub {
    * addressed to its signer, and left in its inbox where it has one. No
    * private switch here: the private side is its own tab.
    */
-  post(a: { text: string; jpeg?: Uint8Array; mp4?: Uint8Array; to?: string | string[]; reply?: { id: string; signer: string } }): Promise<{ post: Item; lines: Line[] }> {
+  post(a: { text: string; jpeg?: Uint8Array; mp4?: Uint8Array; m4a?: Uint8Array; to?: string | string[]; reply?: { id: string; signer: string } }): Promise<{ post: Item; lines: Line[] }> {
     return this.serial(async () => {
       const { me, s, p, hints } = await this.ctx();
       const { text, changes } = compose(a.text);
       if (!text.trim()) throw new Error('Write something to post.');
-      if (a.jpeg && a.mp4) throw new Error('A picture or a film, one at a time. Nothing was posted.');
+      if ([a.jpeg, a.mp4, a.m4a].filter(Boolean).length > 1) throw new Error('A picture, a film or a recording, one at a time. Nothing was posted.');
       if (s.acting) return this.postAsCollective(me, s, p, hints, text, a);
       const to: { id: string; inbox: string[] | null; why?: string }[] = [];
       // To…, and each @ chosen by name (a mention is an address: the post names them and is left in their inboxes).
@@ -964,7 +966,7 @@ export class Dub {
         }
       }
       await this.current(me);
-      const made = await this.signed(me, () => post(me, { text, jpeg: a.jpeg, mp4: a.mp4, relays: s.relays, to: to.length ? to.map((t) => t.id) : undefined, refs }));
+      const made = await this.signed(me, () => post(me, { text, jpeg: a.jpeg, mp4: a.mp4, m4a: a.m4a, relays: s.relays, to: to.length ? to.map((t) => t.id) : undefined, refs }));
       const lines: Line[] = changes.map((c) => ({ text: `Text: ${c}.` }));
       for (const t of to) {
         if (!t.inbox?.length) {
@@ -984,6 +986,7 @@ export class Dub {
         });
       }
       if (made.film) lines.push({ text: made.film.removed.length ? `Taken out of the film before publishing: ${made.film.removed.join('; ')}.` : 'The film carried nothing to take out.', tone: 'ok' });
+      if (made.recording) lines.push({ text: made.recording.removed.length ? `Taken out of the recording before publishing: ${made.recording.removed.map((c) => SOUND_CARRIED_WORDS[c]).join('; ')}.` : 'The recording carried nothing to take out.', tone: 'ok' });
       const shown = await readPost(made.id, hints, s.via);
       return { post: this.item(shown, me.id, p, s, 'feed', [], false), lines };
     });
@@ -995,9 +998,9 @@ export class Dub {
    * reply's reference. Where the area asks more keys than one, it counts
    * once its other holders sign it (in Edubba's To sign), said.
    */
-  private async postAsCollective(me: TestIdentity, s: Settings, p: People, hints: string[], text: string, a: { jpeg?: Uint8Array; mp4?: Uint8Array; to?: string | string[]; reply?: { id: string; signer: string } }): Promise<{ post: Item; lines: Line[] }> {
+  private async postAsCollective(me: TestIdentity, s: Settings, p: People, hints: string[], text: string, a: { jpeg?: Uint8Array; mp4?: Uint8Array; m4a?: Uint8Array; to?: string | string[]; reply?: { id: string; signer: string } }): Promise<{ post: Item; lines: Line[] }> {
     const collective = s.acting!;
-    if (a.jpeg || a.mp4 || (Array.isArray(a.to) ? a.to.some((x) => x.trim()) : a.to?.trim())) throw new Error('As a collective, Dub posts text and replies only: no picture, film or address. Nothing was posted.');
+    if (a.jpeg || a.mp4 || a.m4a || (Array.isArray(a.to) ? a.to.some((x) => x.trim()) : a.to?.trim())) throw new Error('As a collective, Dub posts text and replies only: no picture, film, recording or address. Nothing was posted.');
     const k = await this.memberKeyHere(me, s, collective, hints);
     if (!k.key || k.why) throw new Error(`Dub cannot post as this collective: ${k.why ?? 'no member key'} Nothing was posted.`);
     await this.current(me);
@@ -1036,6 +1039,9 @@ export class Dub {
     const films: FilmShown[] = sp.refs
       .filter((r): r is ShownFilm => r.kind === 'film')
       .map((r) => ({ publication: r.publication, signer: r.signer, size: r.size, problem: r.problem, withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === 'valid' }));
+    const recordings: RecordingShown[] = sp.refs
+      .filter((r): r is ShownRecording => r.kind === 'recording')
+      .map((r) => ({ publication: r.publication, signer: r.signer, size: r.size, problem: r.problem, withdrawable: r.signer === me && sp.signer === me && !r.withdrawn && r.standing === 'valid' }));
     const doc =
       isLongForm(sp.format)
         ? { title: titleOf(sp.text), link: makeLink(this.opts.reader ?? READER, sp.id, s.relays.filter((r) => /^https:\/\//.test(r))) }
@@ -1045,10 +1051,12 @@ export class Dub {
       form: actForm(sp.id),
       who: this.whoFrom(sp.signer, me, p),
       standing: sp.standing,
+      hint: sp.hint,
       text: doc ? '' : sp.text,
       doc,
       pictures,
       films,
+      recordings,
       answers,
       toMe,
       via,
@@ -1071,7 +1079,8 @@ export class Dub {
     // The collective acted as is in its member's feed too.
     const authors = [me.id, ...(s.acting ? [s.acting] : []), ...p.follows.map((f) => f.id).filter((id) => !p.muted.includes(id))].map((identity) => ({ identity, name: null }));
     // H54: ordered by the timestamp clock this identity names (the timestamp clock Module), each signer's own sequence kept.
-    const feed = await readFeed(authors, hints, s.via, undefined, s.clock ? { identity: s.clock.id, name: s.clock.name } : null);
+    // Decided 23 October 2026: every app relies on the Dubsar clock by default; a clock named here earlier is kept, not read, until a choice of clocks comes.
+    const feed = await readFeed(authors, hints, s.via, undefined, dubsarClock());
     await this.warm([...feed.posts.map((x) => x.signer), ...[...feed.answered.values()].map((x) => x.signer).filter(Boolean)], hints, s.via);
     const items: Item[] = [];
     for (const fp of feed.posts) {
@@ -1085,14 +1094,17 @@ export class Dub {
       });
       const toMe = fp.signer !== me.id && answers.some((x) => x.who?.me);
       const it: Item = { ...this.item(fp.post, me.id, p, s, 'feed', fp.corrects ? answers.filter((x) => x.id !== fp.corrects) : answers, toMe), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
-      it.when = fp.time ? timeWords(fp.time) : null;
+      it.when = fp.time ? byClock(fp.time) : null;
       it.labels = await this.labelsOf(fp.post, me.id, p, [...hints, ...this.inboxPlaces(p)], s.via);
       // A sealed post (round 2): its publication has no key; read with its offer, and opened where its key is here.
-      if (fp.post.refs.some((r) => r.kind === 'picture' && !r.bytes)) {
-        const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.map((r) => (r.kind === 'picture' || r.kind === 'film' ? { id: r.publication, signer: r.signer || undefined } : { id: r.id, signer: r.signer ?? r.actSigner }))).catch(() => null);
+      // A sealed film or recording (sold from Edubba's Publishing) is read the same way: a locked publication, never played as a public one.
+      if (fp.post.refs.some((r) => (r.kind === 'picture' && !r.bytes) || ((r.kind === 'film' || r.kind === 'recording') && /is locked: its key is not public/.test(r.problem ?? '')))) {
+        const sealed = await this.money.read(me, [...hints, ...this.inboxPlaces(p)], s.via, fp.post.refs.map((r) => (r.kind === 'picture' || r.kind === 'film' || r.kind === 'recording' ? { id: r.publication, signer: r.signer || undefined } : { id: r.id, signer: r.signer ?? r.actSigner }))).catch(() => null);
         if (sealed) {
           it.sealed = sealed;
           it.pictures = it.pictures.filter((x) => x.publication !== sealed.publication);
+          it.films = (it.films ?? []).filter((x) => x.publication !== sealed.publication);
+          it.recordings = (it.recordings ?? []).filter((x) => x.publication !== sealed.publication);
           if (sealed.seller !== fp.signer) it.repost = { by: this.whoFrom(fp.signer, me.id, p), of: this.whoFrom(sealed.seller, me.id, p) };
         }
       }
@@ -1114,8 +1126,8 @@ export class Dub {
       it.problem = backed ? null : it.problem;
     }
     const problems = feed.authors.filter((a) => a.problem).map((a) => `${shortId(a.identity)}: ${a.problem}`);
-    if (feed.clock?.problem) problems.push(`${s.clock?.name ?? 'The clock'}: ${feed.clock.problem}`);
-    const clock = s.clock ? { name: s.clock.name, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null;
+    if (feed.clock?.problem) problems.push(`The Dubsar clock: ${feed.clock.problem}`);
+    const clock = dubsarClock() ? { name: DUBSAR_CLOCK_NAME, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null;
     return { items, more: feed.more, problems, notes, followsChanged, clock };
   }
 
@@ -1184,7 +1196,7 @@ export class Dub {
       if (picked.length < max) picked.push({ d, hint: x.hint });
     }
     // H54: where a clock is named, the acts it stamped by its word, newest first; the others keep the relay's order after them.
-    const times = await this.clockTimes(s, hints);
+    const times = await clockTimes([...new Set([...s.relays, ...hints])], s.via);
     if (times.size) picked.sort((a, b) => (times.get(b.d.id) ?? -1) - (times.get(a.d.id) ?? -1));
     await this.warm(picked.map((x) => x.d.signer ?? x.d.id), hints, s.via);
     const judge = new Judge([...new Set([...s.relays, ...hints])], s.via);
@@ -1204,8 +1216,8 @@ export class Dub {
       }
       items.push({ id: d.id, form: actForm(d.id), who, standing: 'unknown', text: '', doc: null, pictures: [], answers: [], toMe: false, via: 'relay', problem: null, seen: true, what: whatAct(d) });
     }
-    for (const it of items) it.when = times.has(it.id) ? timeWords(times.get(it.id)!) : null;
-    const clock = s.clock ? { name: s.clock.name, placed: items.filter((x) => x.when).length, shown: items.length } : null;
+    for (const it of items) it.when = times.has(it.id) ? byClock(times.get(it.id)!) : null;
+    const clock = dubsarClock() ? { name: DUBSAR_CLOCK_NAME, placed: items.filter((x) => x.when).length, shown: items.length } : null;
     return { items, hidden, left, problems, clock };
   }
 
@@ -1335,6 +1347,7 @@ export class Dub {
       kind: !isText ? 'other' : d.public ? 'public' : 'private',
       from: d.signer,
       text,
+      ...(d.hint ? { hint: d.hint } : {}),
       standing: await judge(d.signer, act, d.id, key),
       refs: (d.refs ?? []).map((id, i) => ({ id, signer: d.refSigners?.[i] ?? null })),
       to: d.to ?? [],
@@ -1372,6 +1385,7 @@ export class Dub {
             form: actForm(k.key),
             who: this.whoFrom(k.from!, me.id, p),
             standing: k.standing,
+            hint: k.hint ?? null,
             text: k.text ?? '',
             doc: null,
             pictures: [],
@@ -1407,6 +1421,7 @@ export class Dub {
             dir: 'in' as const,
             text: k.text ?? '',
             standing: k.standing,
+            hint: k.hint ?? null,
             at: k.found,
             seen: p.seen.includes(k.key),
             problem: k.problem ?? (k.standing === 'valid' ? null : `not verified: ${k.standing}`),
@@ -1908,24 +1923,6 @@ export class Dub {
     return r;
   }
 
-  /** Stamps read lately from the clock named (H54), by clock: this app's memory only, at most once a minute. */
-  private stamps = new Map<string, { at: number; earliest: Map<string, number> }>();
-
-  /** When the clock this identity names says it held each act (its earliest stamp); empty where none is named or it cannot be read. */
-  private async clockTimes(s: Settings, hints: string[]): Promise<Map<string, number>> {
-    if (!s.clock) return new Map();
-    const c = this.stamps.get(s.clock.id);
-    if (c && c.at + 60 > now()) return c.earliest;
-    try {
-      const places = [...new Set([...(await this.placesOf(s.clock.id, hints, s.via)), ...hints])];
-      const r = await readStamps(s.clock.id, places, new Judge(places, s.via), s.via);
-      this.stamps.set(s.clock.id, { at: now(), earliest: r.earliest });
-      return r.earliest;
-    } catch {
-      return new Map();
-    }
-  }
-
   /**
    * Name the timestamp clock this identity's feeds are ordered by (H54; the
    * timestamp clock Module, draft 2): its ID, and a name for it here. Empty:
@@ -1941,8 +1938,8 @@ export class Dub {
       const id = readId(a.id);
       const name = a.name.trim().slice(0, 48) || `the clock ${shortId(id)}`;
       await this.store.saveSettings(me.id, { ...s, clock: { id, name } });
-      this.stamps.delete(id);
-      return { lines: [{ text: `Feeds are ordered by ${name}’s clock: its word on when it held each act, never a verdict. Acts it did not stamp keep their signer’s own order.`, tone: 'ok' }] };
+      // Kept, not read (decided 23 October 2026): every feed is ordered by the Dubsar clock until a choice of clocks comes.
+      return { lines: [{ text: `${name} is kept here. For now every feed is ordered by the Dubsar clock; a choice of clock comes later, when there are better clocks.` }] };
     });
   }
 
@@ -2086,18 +2083,18 @@ export class Dub {
         theirs = [...l.resolution.homes.map((h) => h.hint), ...relays];
         lives = `Lives on ${homes.length === 1 ? 'one home' : `${homes.length} homes`} (${homes.join(', ')}), reached through ${relays.length === 1 ? 'one relay' : `${relays.length} relays`}.`;
         if (l.resolution.stop === 'contested') trouble = 'Its homes disagree about its keys: this identity is contested. Its acts may not be what they seem.';
-        const t = await this.clockTimes(s, hints);
+        const t = await clockTimes(hints, s.via);
         const since = t.get(id);
-        if (since) lives += ` Since ${timeWords(since)}, by ${s.clock!.name}’s clock.`;
+        if (since) lives += ` Since ${timeWords(since)}, by the Dubsar clock.`;
       } catch (e) {
         trouble = `It could not be looked up: ${message(e)}.`;
       }
-      const feed = await readFeed([{ identity: id, name: null }], [...new Set([...theirs, ...places])], s.via, undefined, s.clock ? { identity: s.clock.id, name: s.clock.name } : null);
+      const feed = await readFeed([{ identity: id, name: null }], [...new Set([...theirs, ...places])], s.via, undefined, dubsarClock());
       const items: Item[] = [];
       for (const fp of feed.posts) {
         if (!fp.post) continue;
         const it = { ...this.item(fp.post, me.id, p, s, 'feed', fp.answers.map((x) => ({ id: x, who: null, snippet: null })), false), corrects: fp.corrects ?? null, correctedBy: fp.correctedBy ?? [] };
-        it.when = fp.time ? timeWords(fp.time) : null;
+        it.when = fp.time ? byClock(fp.time) : null;
         items.push(it);
       }
       return {
@@ -2105,7 +2102,7 @@ export class Dub {
         lives,
         trouble,
         items,
-        clock: feed.clock ? { name: s.clock?.name ?? feed.clock.name ?? 'the clock', placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null,
+        clock: feed.clock ? { name: DUBSAR_CLOCK_NAME, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null,
         problems: feed.authors.filter((x) => x.problem).map((x) => x.problem!),
       };
     });
@@ -2222,6 +2219,24 @@ export class Dub {
     });
   }
 
+  /** A recording's bytes, when asked to play it (the audio Module, rule 13): checked against its publication and read by the Module (rules 2 to 9) before they leave here, as a film's are. */
+  recording(a: { publication: string; signer?: string }): Promise<{ b64: string; type: string }> {
+    return this.serial(async () => {
+      const { p, s, hints } = await this.ctx();
+      const signer = a.signer ? readId(a.signer) : null;
+      const r = await soundBytes(readActId(a.publication), signer, [...hints, ...this.inboxPlaces(p)], s.via);
+      return { b64: base64(r.bytes), type: r.sound.type };
+    });
+  }
+
+  /** A sealed film or recording bought (or one's own), when asked to play it: opened and checked by its Module first (`DubMoney.sealedBytes`). */
+  sealedPlay(a: { publication: string; seller: string }): Promise<{ b64: string; type: string }> {
+    return this.serial(async () => {
+      const { me, p, s, hints } = await this.ctx();
+      return this.money.sealedBytes(me, [...hints, ...this.inboxPlaces(p)], s.via, { publication: readActId(a.publication), seller: readId(a.seller) });
+    });
+  }
+
   // ------------------------------------------------------------ collectives under the identity (acting as one: the same gesture as switching)
 
   /**
@@ -2318,6 +2333,8 @@ export class Dub {
       const problems: string[] = [];
       const items: Purchase[] = [];
       await this.warm(Object.values(bought).map((b) => b.seller), places, s.via);
+      // F386: the contests the core shows beside each file bought and paid.
+      const contested = await this.money.filesContested(me, places, s.via).catch((e) => (problems.push(message(e)), { paid: {} as Record<string, NonNullable<Purchase['contests']>> }));
       for (const [publication, b] of Object.entries(bought)) {
         const x = await this.money.read(me, places, s.via, [{ id: publication, signer: b.seller }]).catch((e) => (problems.push(message(e)), null));
         items.push({
@@ -2325,11 +2342,14 @@ export class Dub {
           id: publication,
           form: actForm(publication),
           seller: this.whoFrom(b.seller, me.id, p),
-          what: x?.media === 'picture' ? 'picture' : 'text',
+          what: x?.media === 'picture' ? 'picture' : x?.media === 'video' ? 'film' : x?.media === 'audio' ? 'recording' : 'text',
+          play: x?.state === 'opened' && (x.media === 'video' || x.media === 'audio') ? { publication, seller: b.seller, media: x.media } : null,
           price: x?.price ?? null,
           state: x?.state === 'opened' ? 'opened: its key came with the receipt' : x?.state === 'paying' ? 'bought: pay it in your wallet; its key comes with the receipt' : (x?.problem ?? 'bought'),
           text: x?.state === 'opened' ? x.text : null,
           picture: x?.state === 'opened' ? x.picture : null,
+          paid: !!contested.paid[publication],
+          contests: contested.paid[publication] ?? null,
         });
       }
       const vows = await this.money.vowsBought(me, places, s.via).catch((e) => (problems.push(message(e)), []));
@@ -2347,6 +2367,7 @@ export class Dub {
           picture: null,
           sale: v.sale,
           paid: v.paid,
+          contests: v.beside,
         });
       }
       return { items, problems };
@@ -2685,6 +2706,16 @@ export class Dub {
     });
   }
 
+  /** Contest a file bought (F386): a contest naming the purchase, shown beside it; it undoes nothing. */
+  contestFile(publication: string, promise: string): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      // H80: a contest is signed with the identity's own key: checked first.
+      await this.current(me);
+      return { lines: (await this.money.contestFile(me, s, readId(publication), promise.trim() || null)).map((text) => ({ text, tone: 'ok' as const })) };
+    });
+  }
+
   /** Repost a sealed post at this identity's relays, holding what it names there too. */
   repost(a: { post: string; signer: string }): Promise<{ id: string; lines: Line[] }> {
     return this.serial(async () => {
@@ -2976,13 +3007,6 @@ function hostOf(hint: string): string {
   }
 }
 
-/** A time, in words, UTC (the display client's words). */
-export function timeWords(t: number): string {
-  const d = new Date(t * 1000);
-  const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()];
-  return `${d.getUTCDate()} ${m} ${d.getUTCFullYear()}, ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
-}
-
 /** A document's title: its first line, without the heading's marks. */
 function titleOf(text: string): string {
   const first = text.split('\n').find((l) => l.trim()) ?? '';
@@ -3001,3 +3025,5 @@ async function digestOf(x: string): Promise<string> {
   const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(x));
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+export { timeWords };

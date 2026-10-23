@@ -18,6 +18,8 @@ export const POST_SPECS = {
   jpeg: test('JPEG Module, draft 1, test value until publication'),
   /** The video Module (modules/module-video-draft-1.md): a film, named by its test value until publication, as the JPEG Module is. */
   video: test('video Module, draft 1, test value until publication'),
+  /** The audio Module (modules/module-audio-draft-1.md): a recording, named by its test value until publication, as the video Module is. */
+  audio: test('audio Module, draft 1, test value until publication'),
 };
 
 /** The text act (Text MIR, "Act format"). */

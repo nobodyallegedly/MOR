@@ -20,7 +20,7 @@ import { KEY_DELIVERY, keyDeliveryPayload } from '../../barebone/src/sealed.ts';
 
 /** Works sold by one identity, by publication: the key, and to whom it was delivered (buyer → the key delivery's id). */
 export interface SoldWorks {
-  [publication: string]: { key: string; offer: string; post?: string; media?: 'text' | 'picture'; delivered: Record<string, string> };
+  [publication: string]: { key: string; offer: string; post?: string; media?: 'text' | 'picture' | 'video' | 'audio'; delivered: Record<string, string> };
 }
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));

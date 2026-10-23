@@ -295,6 +295,31 @@ let popup: Popup | null = null;
 
 const escapeText = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
+// ---------------------------------------------------------------- the clock's time on cards drawn
+
+/** The act IDs of the cards drawn in `root` that show no time yet. */
+export function cardsUntimed(root: ParentNode): string[] {
+  return [...root.querySelectorAll<HTMLElement>('article.k-act[data-k-act]')].filter((a) => !a.querySelector('.k-when')).map((a) => a.dataset.kAct!);
+}
+
+/**
+ * The clock's time on cards already drawn, by act ID, as the app read it
+ * ("… · by the Dubsar clock"): put where a card shows it, faint, top right,
+ * and the signer's own hint taken away there (a card shows the clock's time,
+ * or else the signer's hint, or nothing).
+ */
+export function stampCards(root: ParentNode, words: Record<string, string>): void {
+  for (const a of root.querySelectorAll<HTMLElement>('article.k-act[data-k-act]')) {
+    const w = words[a.dataset.kAct ?? ''];
+    if (!w || a.querySelector('.k-when')) continue;
+    const s = document.createElement('span');
+    s.className = 'k-when';
+    s.textContent = w;
+    a.prepend(s);
+    a.querySelector('.k-hint')?.remove();
+  }
+}
+
 // ---------------------------------------------------------------- the column, on a phone
 
 /** A tile opened: choosing a part folds the column away on a phone; the back arrow brings it again. */

@@ -53,6 +53,15 @@ export interface FilmShown {
   withdrawable: boolean;
 }
 
+/** A recording a post plays (the audio Module, rule 13): played only when asked, its bytes checked first, as a film is. */
+export interface RecordingShown {
+  publication: string;
+  signer: string;
+  size: number;
+  problem: string | null;
+  withdrawable: boolean;
+}
+
 /** A quiet label on a card: answers…, correction of…, signed under a grant, a pick or a nudge and who gave it (H65). `bad`: an alarm. */
 export interface Label {
   text: string;
@@ -66,8 +75,12 @@ export interface Item {
   form: string;
   /** When, by the clock this feed names (H54), in words; null where not stamped. */
   when?: string | null;
+  /** The signer's own hint (field 9), as written: shown labelled as its own where no clock stamped the act. */
+  hint?: string | null;
   /** Films it shows (H52). */
   films?: FilmShown[];
+  /** Recordings it plays (the audio Module). */
+  recordings?: RecordingShown[];
   /** Quiet labels (H65): a pick or a nudge and who gave it. */
   labels?: Label[];
   who: Who;
@@ -92,7 +105,7 @@ export interface Item {
   /** A sealed post (pay-per-view, round 2): its price, its state, its text once opened. */
   /** A vow the post names (round 3), with its offer. */
   vow?: { vow: string; offer: string | null; seller: string; words: string; price: string; state: 'for sale' | 'paying' | 'bought' | 'yours'; problem: string | null } | null;
-  sealed?: { publication: string; offer: string | null; seller: string; price: string; words: string | null; state: 'for sale' | 'paying' | 'opened' | 'yours'; media: 'text' | 'picture'; text: string | null; picture: string | null; problem: string | null } | null;
+  sealed?: { publication: string; offer: string | null; seller: string; price: string; words: string | null; state: 'for sale' | 'paying' | 'opened' | 'yours'; media: 'text' | 'picture' | 'video' | 'audio'; text: string | null; picture: string | null; problem: string | null } | null;
   /** A repost of a sealed post: who reposted it, whose it is. */
   repost?: { by: Who; of: Who } | null;
   /** In the relay view, an act that is not a post: what it is, in a few words. */
@@ -116,6 +129,8 @@ export interface Message {
   dir: 'in' | 'out';
   text: string;
   standing: string;
+  /** The signer's own hint (field 9), as written: shown labelled as its own, never as a time anyone checked. */
+  hint?: string | null;
   /** When this app found or sent it, in seconds since 1970: this app's time, not a signed one. */
   at: number;
   seen: boolean;
@@ -213,9 +228,17 @@ export interface Purchase {
   /** A file opened: its text, or its picture as a data link. */
   text: string | null;
   picture: string | null;
+  /** A film or a recording opened, played when asked (checked by its Module first). */
+  play?: { publication: string; seller: string; media: 'video' | 'audio' } | null;
   /** A vow: paid, and its sale as the relays read it; the buyer confirms or contests. */
   sale?: 'pending' | 'confirmed' | 'contested' | null;
   paid?: boolean;
+  /**
+   * The buyer's contests shown beside this purchase (F386): `unknown` where
+   * the core cannot say, never "none". Absent where not paid. For a vow,
+   * those made in the purchase's form, which mark no sale.
+   */
+  contests?: { state: 'shown' | 'unknown'; contests: { act: string; promise: string | null }[]; why?: string } | null;
 }
 
 /** A proposal to sign, in the Signing tab (H18): the act it names, read in plain words from its bytes. */

@@ -81,6 +81,7 @@ export const OPS = [
   'vows bought',
   'vow confirm',
   'vow contest',
+  'purchase contest',
   'money look',
   'relays review',
   'relays publish',
@@ -93,6 +94,8 @@ export const OPS = [
   'anchor',
   'correct',
   'film',
+  'recording',
+  'sealed play',
   'clock',
   'collective add',
   'collective remove',
@@ -158,6 +161,7 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
         text: text(a.text),
         jpeg: text(a.jpeg) ? p.bytes(text(a.jpeg)) : undefined,
         mp4: text(a.mp4) ? p.bytes(text(a.mp4)) : undefined,
+        m4a: text(a.m4a) ? p.bytes(text(a.m4a)) : undefined,
         to: Array.isArray(a.to) ? list(a.to) : text(a.to),
         reply: reply ? { id: text(reply.id), signer: text(reply.signer) } : undefined,
       });
@@ -231,6 +235,8 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.confirmVow(text(a.vow));
     case 'vow contest':
       return dub.contestVow(text(a.vow), text(a.promise));
+    case 'purchase contest':
+      return dub.contestFile(text(a.publication), text(a.promise));
     case 'repost':
       return dub.repost({ post: text(a.post), signer: text(a.signer) });
     case 'money look':
@@ -255,6 +261,10 @@ export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: P
       return dub.correct({ id: text(a.id), text: text(a.text) });
     case 'film':
       return dub.film({ publication: text(a.publication), signer: text(a.signer) || undefined });
+    case 'sealed play':
+      return dub.sealedPlay({ publication: text(a.publication), seller: text(a.seller) });
+    case 'recording':
+      return dub.recording({ publication: text(a.publication), signer: text(a.signer) || undefined });
     case 'clock':
       return dub.setClock({ id: text(a.id), name: text(a.name) });
     case 'collective add':

@@ -28,11 +28,11 @@ import { TYPES, laneRequestPayload, sendToSelf, type LaneKind } from '../../damg
 import { MESSAGES_SPEC, MONEY } from '../../damgar/src/specs.ts';
 import { say } from '../../damgar/src/units.ts';
 import { servedChain } from './carryin.ts';
-import { KEY_DELIVERY, offerWords, openSealedBytes, postSealed, readKeyDelivery, readOffer, readSealed, repost as repostAct } from '../../barebone/src/sealed.ts';
+import { KEY_DELIVERY, checkPlayable, offerWords, openSealedBytes, postSealed, readKeyDelivery, readOffer, readSealed, repost as repostAct } from '../../barebone/src/sealed.ts';
 import type { Keep, Settings } from './dub.ts';
 import { deliverSold } from './delivery.ts';
 import type { RunnerLink } from './runner.ts';
-import { contestSale, readVow, readVowOffer, vowSales } from './vows.ts';
+import { contestPurchase, contestSale, purchaseContests, readVow, readVowOffer, vowSales, type ContestsBeside } from './vows.ts';
 import { collectiveNow, collectivePlaces } from '../../grants/src/member.ts';
 import type { PaymentShown } from '../../damgar/src/shapes.ts';
 
@@ -113,7 +113,7 @@ export interface SealedShown {
   words: string | null;
   state: 'for sale' | 'paying' | 'opened' | 'yours';
   /** Text, or a JPEG picture (round 3: a protected file from Edubba's Publishing tab). */
-  media: 'text' | 'picture';
+  media: 'text' | 'picture' | 'video' | 'audio';
   text: string | null;
   /** A picture, opened: a data link the page shows. */
   picture: string | null;
@@ -124,7 +124,7 @@ interface Sold {
   [publication: string]: { key: string; offer: string; post: string; delivered: Record<string, string> };
 }
 interface Bought {
-  [publication: string]: { key: string | null; payment: string | null; seller: string; offer: string | null };
+  [publication: string]: { key: string | null; payment: string | null; seller: string; offer: string | null; contests?: string[] };
 }
 
 /** Vows bought here (round 3), by the vow's name: its seller and offer, the payment, and where it was found. */
@@ -153,6 +153,8 @@ export interface VowBoughtShown {
   paid: boolean;
   sale: 'pending' | 'confirmed' | 'contested' | null;
   promise: string | null;
+  /** Its buyer's contests in the purchase's form (F386), shown beside it: they mark no sale. */
+  beside: ContestsBeside | null;
 }
 
 const now = () => Math.floor(Date.now() / 1000);
@@ -332,13 +334,34 @@ export class DubMoney {
       try {
         const bytes = await openSealedBytes(p, key, hints, via);
         if (p.media === 'picture') out.picture = `data:image/jpeg;base64,${base64(bytes)}`;
+        // A film or a recording (sold from Edubba's Publishing): checked by its Module now, played only when asked (`sealedBytes`).
+        else if (p.media === 'video' || p.media === 'audio') checkPlayable(p.media, bytes);
         else out.text = new TextDecoder().decode(bytes);
         if (out.state !== 'yours') out.state = 'opened';
       } catch (e) {
-        out.problem = `its key is here, but ${message(e)}`;
+        out.problem = p.media === 'video' || p.media === 'audio' ? `its key is here, but it is not played: ${message(e)}` : `its key is here, but ${message(e)}`;
       }
     }
     return out;
+  }
+
+  /**
+   * A sealed film or recording's bytes, opened with the key that came with
+   * the receipt (or one's own), checked against the work hash and size, then
+   * by the video or audio Module (rules 2 to 9) before they leave here: a
+   * file the Module refuses never reaches the player.
+   */
+  async sealedBytes(me: TestIdentity, hints: string[], via: Via, a: { publication: string; seller: string }): Promise<{ b64: string; type: string }> {
+    const act = (await followRef([a.publication, a.seller], hints, via)).act;
+    const p = readSealed(act);
+    if (!p || (p.media !== 'video' && p.media !== 'audio')) throw new Error('not a sealed film or recording');
+    const sold = (await this.store.money<Sold>(me.id, 'sold')) ?? {};
+    const bought = (await this.store.money<Bought>(me.id, 'bought')) ?? {};
+    const key = p.seller === me.id ? sold[p.publication]?.key : bought[p.publication]?.key;
+    if (!key) throw new Error('its key is not here: it opens once its seller’s Damgar signs the receipt');
+    const bytes = await openSealedBytes(p, key, hints, via);
+    checkPlayable(p.media, bytes);
+    return { b64: base64(bytes), type: p.media === 'video' ? 'video/mp4' : 'audio/mp4' };
   }
 
   /** Buy a sealed post under the lane: an invoice request following the seller's offer, naming the repost followed (Money claim field 6) where it was found through one. */
@@ -512,13 +535,15 @@ export class DubMoney {
       const paid = !!p?.publicClaims?.length;
       let sale: VowBoughtShown['sale'] = null;
       let promise: string | null = null;
+      let beside: ContestsBeside | null = null;
       if (paid) {
         if (!bySeller.has(b.seller)) bySeller.set(b.seller, await vowSales(b.seller, hints, via).catch(() => ({ vows: [], asked: hints, problems: [] })));
         const x = bySeller.get(b.seller)!.vows.find((y) => y.name === vow)?.sales.find((y) => y.buyer === me.id);
         sale = x?.state ?? null;
         promise = x?.promise ?? null;
+        beside = x?.beside ?? null;
       }
-      out.push({ vow, seller: b.seller, words: b.words, price: p ? say(p.amount, new Set([p.amount.unit])) : null, paid, sale, promise });
+      out.push({ vow, seller: b.seller, words: b.words, price: p ? say(p.amount, new Set([p.amount.unit])) : null, paid, sale, promise, beside });
     }
     return out;
   }
@@ -547,6 +572,45 @@ export class DubMoney {
     b.contests = [...(b.contests ?? []), id];
     await this.store.saveMoney(me.id, 'vows', vows);
     return ['Your contest of that sale is signed in public: it reads contested for anyone who looks. It voids nothing; the payment stays as it is.'];
+  }
+
+  /**
+   * Contest a file bought (F386): a contest naming the purchase (your own
+   * payer's claim of its payment), the promise not kept in words if given,
+   * signed in public with the identity's own key. It undoes nothing: no
+   * payment, refund or delivery moves. A vow keeps its own form
+   * (`contestVow`): that is what marks its sale.
+   */
+  async contestFile(me: TestIdentity, s: Settings, publication: string, promise: string | null): Promise<string[]> {
+    const bought = (await this.store.money<Bought>(me.id, 'bought')) ?? {};
+    const b = bought[publication];
+    const claims = b?.payment ? await this.engine.ownClaims(b.payment) : [];
+    if (!b) throw new Error('Nothing bought here by that name. Nothing was signed.');
+    if (!claims.length) throw new Error('It is not paid yet: a purchase is contested once paid, naming your claim of its payment. Nothing was signed.');
+    let id: string;
+    try {
+      id = await contestPurchase(me, { purchase: claims[0].id, promise, relays: list([...s.relays, ...me.f.homes.map((h) => h.hint)]) });
+    } finally {
+      await this.store.saveIdentity(me);
+    }
+    b.contests = [...(b.contests ?? []), id];
+    await this.store.saveMoney(me.id, 'bought', bought);
+    return ['Your contest of that purchase is signed in public: it is shown beside the purchase, to you and to the seller. It undoes nothing: the payment, the key and the file stay as they are.'];
+  }
+
+  /** Each file bought and paid, by publication: the buyer's contests the core shows beside it (`unknown` where it cannot say). Unpaid ones are left out. */
+  async filesContested(me: TestIdentity, hints: string[], via: Via): Promise<{ paid: Record<string, ContestsBeside>; problems: string[] }> {
+    const bought = (await this.store.money<Bought>(me.id, 'bought')) ?? {};
+    const purchases: { publication: string; id: string; act: Uint8Array; key: Uint8Array | null }[] = [];
+    for (const [publication, b] of Object.entries(bought)) {
+      const c = b.payment ? (await this.engine.ownClaims(b.payment))[0] : undefined;
+      if (c) purchases.push({ publication, ...c });
+    }
+    if (!purchases.length) return { paid: {}, problems: [] };
+    const r = await purchaseContests({ purchases, parties: list([me.id, ...purchases.map((p) => bought[p.publication].seller)]), relays: hints, via });
+    const paid: Record<string, ContestsBeside> = {};
+    for (const p of purchases) paid[p.publication] = r.by[p.id] ?? { state: 'unknown', contests: [], why: 'its claim could not be read' };
+    return { paid, problems: r.problems };
   }
 
 }

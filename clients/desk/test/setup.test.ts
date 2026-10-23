@@ -33,7 +33,7 @@ import { encryptionSecret, groupId, toWords } from '../../../modules/carry/src/c
 import { verifyRelease } from '../../repo/src/release.ts';
 import { serve, type Running } from '../src/server.ts';
 import { Client, newKey, type Done } from '../src/page/api.ts';
-import { releaseCard } from '../src/page/view.ts';
+import { lineShown } from '../src/page/view.ts';
 
 let homes: Relay[];
 let relay: Relay;
@@ -184,9 +184,9 @@ test('F339: releases under one’s own name moved to Ummia: the operations gone,
   const me = (await c.ask<Done>('identity', { name: 'Releaser', linked: false })).acts[0];
   for (const op of ['release folder', 'release prepare', 'release confirm', 'release cancel']) await refused(c.ask(op, { identity: me, folder: tmpdir() }), /unknown operation/);
   const held = (await c.ask<any>('state')).identities.find((i: any) => i.id === me);
-  assert.match(releaseCard(held), /made in Ummia, the developers’ app/);
-  assert.match(releaseCard(held), /A collective’s releases stay here, in the Collectives tab, until Ummia’s second round/);
-  assert.match(releaseCard({ ...held, releases: [{ id: 'a'.repeat(64), name: 'site', version: '1.0', folder: '/tmp/site' }] }), /Its releases made here before \(1\)/);
+  // Since round 4, in the identity menu's Line and homes.
+  assert.match(lineShown(held), /Releases under its own name are made in Ummia/);
+  assert.match(lineShown({ ...held, releases: [{ id: 'a'.repeat(64), name: 'site', version: '1.0', folder: '/tmp/site' }] }), /Its releases made here before \(1\)/);
 });
 
 test('H14 and H15 for collectives: “What you may do for it” folded and remembered per collective; a collective brought by its ID, one of your identities among its members', async () => {

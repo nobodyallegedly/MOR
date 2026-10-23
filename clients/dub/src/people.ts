@@ -37,6 +37,8 @@ export interface Kept {
   kind: 'public' | 'private' | 'other';
   from: string | null;
   text: string | null;
+  /** The signer's own hint (field 9), as written: display only. Absent in what was kept before. */
+  hint?: string | null;
   standing: string;
   /** Acts it names (a reply's), each with the signer the reference names. */
   refs: { id: string; signer: string | null }[];

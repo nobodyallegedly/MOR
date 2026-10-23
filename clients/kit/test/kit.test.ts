@@ -148,7 +148,7 @@ for (const size of SIZES) {
     assert.equal(await page.locator('.k-act').nth(0).locator('.k-v').count(), 1);
     assert.equal(await page.locator('.k-act .k-alarmline').evaluate((x) => getComputedStyle(x).color), 'rgb(196, 100, 95)', 'red only for the alarm');
     // The clock the feed is ordered by, said under it.
-    assert.match(await page.locator('.k-clock').innerText(), /Ordered by the test clock’s clock/);
+    assert.match(await page.locator('.k-clock').innerText(), /Ordered by the test clock: its word/);
     // The feed box scrolls inside, never the page.
     assert.equal(await page.evaluate(() => document.scrollingElement!.scrollHeight <= window.innerHeight), true, 'the page itself does not scroll');
     assert.equal(await page.locator('.k-feed').evaluate((f) => getComputedStyle(f).overflowY), 'auto');

@@ -64,7 +64,7 @@ test('a protected text and picture published from Edubba as oneself; a buyer pay
   const st = await e.c.ask<{ actors: { id: string; kind: string; available: boolean }[]; as: string; say: string[] }>('publishing');
   assert.deepEqual(st.actors.map((a) => [a.id, a.kind, a.available]), [[seller.id, 'self', true]]);
   assert.equal(st.as, seller.id);
-  assert.match(st.say.join(' '), /A text, or a JPEG picture/);
+  assert.match(st.say.join(' '), /A text, a JPEG picture, an MP4 film or an M4A recording/);
 
   // A file that is no JPEG: refused in plain words, nothing signed.
   const bad = await e.c.ask<{ reading: { blocking: string[] } }>('publishing work read', { media: 'picture', data: b64(new TextEncoder().encode('not a picture')), title: 'Wrong', price: '100' });
@@ -127,6 +127,41 @@ test('a protected text and picture published from Edubba as oneself; a buyer pay
   const shown = Buffer.from(opened.sealed.picture.split(',')[1], 'base64');
   assert.equal(shown[0], 0xff);
   assert.equal(shown[1], 0xd8, 'a JPEG');
+
+  // Round 4 (decided: "video and audio added"): a recording, an M4A the audio Module refuses refused in plain words;
+  // one it plays stripped to the sound alone before it is sealed, bought in Dub, and played there only after the Module's check.
+  const pictured = await e.c.ask<{ reading: { blocking: string[] } }>('publishing work read', { media: 'audio', data: b64(readFileSync(new URL('../../../modules/audio/test/fixtures/with-picture.m4a', import.meta.url))), title: 'Wrong', price: '10' });
+  assert.ok(pictured.reading.blocking.some((b) => /not a recording the audio Module plays \(an M4A\): a picture track/.test(b)), JSON.stringify(pictured.reading.blocking));
+  const m4a = readFileSync(new URL('../../../modules/audio/test/fixtures/tagged.m4a', import.meta.url));
+  const a = await e.c.ask<{ plan: string; digest: string; reading: { blocking: string[]; sections: { lines: { text: string }[] }[] } }>('publishing work read', { media: 'audio', data: b64(m4a), title: 'The reading, recorded', price: '1500' });
+  assert.deepEqual(a.reading.blocking, []);
+  const said = a.reading.sections[0].lines.map((l) => l.text).join(' | ');
+  assert.match(said, /The recording \(an M4A, stripped to the sound alone first/);
+  assert.match(said, /Stripped from the recording before it is locked: metadata/);
+  const aDone = await e.c.ask<Done>('publishing confirm', { plan: a.plan, digest: a.digest });
+  const [recording, , recPost] = aDone.acts;
+  const feed2 = (await buyer.dub.c.ask<{ items: any[] }>('feed', { fresh: true })).items;
+  const forSale = feed2.find((i) => i.id === recPost)!;
+  assert.ok(forSale, JSON.stringify([aDone.acts, feed2.map((i) => [i.id, i.text, i.sealed?.problem])]));
+  assert.ok(forSale.sealed, JSON.stringify(forSale).slice(0, 1500));
+  assert.equal(forSale.sealed.media, 'audio');
+  await assert.rejects(buyer.dub.c.ask('sealed play', { publication: recording, seller: seller.id }), /its key is not here/);
+  await buyer.dub.c.ask('buy', { publication: recording, seller: seller.id, post: recPost });
+  await seller.damgar.c.ask('look');
+  const pay2 = (await buyer.dub.c.ask<{ payments: PaymentShown[] }>('payments')).payments.find((x) => x.key !== pays[0].key)!;
+  await buyer.dub.c.ask('paid', { key: pay2.key, proof: link.preimages.get(pay2.pay!.invoice!)! });
+  await seller.damgar.c.ask('look');
+  const d2 = await e.c.ask<{ lines: { text: string }[] }>('publishing deliver');
+  assert.ok(d2.lines.some((l) => /delivered/.test(l.text)), JSON.stringify(d2.lines));
+  await buyer.dub.c.ask('money look');
+  const bought = (await buyer.dub.c.ask<{ items: any[] }>('purchases')).items.find((i) => i.id === recording);
+  assert.equal(bought?.what, 'recording');
+  assert.deepEqual(bought?.play, { publication: recording, seller: seller.id, media: 'audio' });
+  const played = await buyer.dub.c.ask<{ b64: string; type: string }>('sealed play', { publication: recording, seller: seller.id });
+  assert.equal(played.type, 'audio/mp4');
+  const bytes = Buffer.from(played.b64, 'base64');
+  assert.ok(bytes.length < m4a.length, 'stripped before it was sealed');
+  assert.ok(!bytes.includes(Buffer.from('ilst')), 'its tags gone');
 });
 
 test('a protected text published by a collective from Edubba, each act signed with the member’s own key in the area reaching it; its key sealed to every member', async () => {
@@ -242,6 +277,8 @@ test('a vow published from Edubba; four buyers pay in Dub; one confirms and one 
   assert.equal(look.vows.length, 1);
   const states = Object.fromEntries(look.vows[0].sales.map((x: any) => [x.buyer, [x.state, x.promise]]));
   assert.deepEqual(states, { [b1.id]: ['confirmed', null], [b2.id]: ['contested', 'The seat was given to someone else.'], [b3.id]: ['pending', null], [b4.id]: ['pending', null] });
+  // After S7d (F386): a vow's sale keeps its own form. Its contest marks the sale, and is not also shown beside the purchase: nothing is counted twice.
+  for (const x of look.vows[0].sales) assert.deepEqual(x.beside, { state: 'shown', contests: [] }, `nothing beside ${x.buyer}’s purchase`);
   assert.deepEqual(look.vows[0].mine, [], 'no buyer is held in this Edubba');
   await assert.rejects(e.c.ask('publishing vow sales', { identity: seller.id, relays: [] }), /Name at least one relay/);
 

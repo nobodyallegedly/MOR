@@ -156,8 +156,8 @@ export interface State {
     id: string;
     name: string;
     linked: boolean;
-    /** Made here, or brought here by its signing key's words (H15). */
-    kind: 'made' | 'brought';
+    /** Made here, brought here by its signing key's words (H15), or used through Kišib's runner, no key held here. */
+    kind: 'made' | 'brought' | 'runner';
     /** This desk's own line of acts for it (F152): how many, the latest, its running summary. */
     line: LineShown;
     received: Item[];
@@ -176,8 +176,12 @@ export interface State {
   proposals: RealProposal[];
   /** The contacts list (H18): added here by ID with a name, those the agents follow, and those in the follow lists sealed to the identities held here (people cMIP draft 2). */
   contacts: { id: string; name: string; from: 'added' | { agent: string } | { list: string } }[];
-  /** The identity the Collectives tab acts as (H33). */
+  /** The identity in use (H33): the one To sign signs as, and the identity panel marks. */
   acting: string | null;
+  /** The collectives under each identity held here, for the identity panel (decided): those it is a member of, founded here, and those brought naming it. */
+  under: Record<string, { id: string; name: string; real: boolean }[]>;
+  /** The web client (for testing only). */
+  web?: boolean;
   /** "What you may do for it", folded (false) or unfolded, per collective (H14). */
   unfolded?: Record<string, boolean>;
   paired: { key: string; label: string; added: number; you: boolean }[];
@@ -258,7 +262,7 @@ export interface MachineState {
 /** An identity's record, in plain words (the Identities tab as a setup page, F333). */
 export interface IdentityRecord {
   id: string;
-  kind: 'made' | 'brought';
+  kind: 'made' | 'brought' | 'runner';
   sections: { heading: string; lines: Line[] }[];
   lines: { own: boolean; readable: boolean; words: string; card: { act: string; position: number; summary: string } | null }[];
   problems: string[];
