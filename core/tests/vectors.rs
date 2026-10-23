@@ -408,6 +408,14 @@ fn verdict_vectors() {
                     Ok(None) => "a clone put in force by a record",
                     Err(_) => "unknown",
                 }),
+                // Whether a liveness act shows presence (rule 50; "Liveness (type 12)").
+                "liveness" => json!(with_facts(&v, &mirs, facts).liveness(&h(&ask["act"])).map_or("unknown", |x| if x { "shows presence" } else { "shows nothing" })),
+                // Whether terms are invalid against their parent and lineage (a false mark...).
+                "agreement invalid" => json!(match with_facts(&v, &mirs, facts).agreement(&h(&ask["act"])).map(|a| a.invalid.is_some()) {
+                    Ok(true) => "invalid",
+                    Ok(false) => "not invalid",
+                    Err(_) => "unknown",
+                }),
                 "deal fork" => match with_facts(&v, &mirs, facts).deal_fork(&h(&ask["act"])).unwrap() {
                     None => json!("one version in force"),
                     Some(d) => json!({ "reference": hex::encode(d.reference), "branches": d.branches.len(), "tangled": d.tangled.is_some() }),
@@ -481,7 +489,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 319);
+    assert_eq!(n, 329);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.

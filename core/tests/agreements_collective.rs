@@ -2897,15 +2897,18 @@ fn a_seat_passes_by_automatic_succession() {
     }
 }
 
-/// Flaw B14's remaining point, refused rather than guessed: where the
-/// successor goes among the parties when not in the party's place. (A seat's
-/// voting weight is out of format since Agreements draft 14, F328, Q15:
-/// `a_seat_weight_is_out_of_format_3_8d`.)
+/// Flaw B14's remaining point, now written (Agreements draft 17, rule 83):
+/// a clone marked with the plan alone that places the successor elsewhere
+/// than in the party's place among the parties changes more than the plan
+/// gives, a false mark: invalid against its parent, never in force. (A
+/// seat's voting weight is out of format since Agreements draft 14, F328,
+/// Q15: `a_seat_weight_is_out_of_format_3_8d`.) The name is kept from when
+/// the point was open, as the audit tables cite it.
 #[test]
 fn what_b14_leaves_open_is_refused() {
     for case in ["placed last"] {
         let mut lab = Lab::new(&|_| {});
-        let mut dee = lab.w.genesis("dee", vec![own_home()], None, None);
+        let dee = lab.w.genesis("dee", vec![own_home()], None, None);
         let ids = lab.ids();
         let plan = SuccessionPlan { party: ids[BEN], stakes: None, seats: Some(vec![dee.id]), entry: Some(0) };
         let f = lab.founding;
@@ -2924,12 +2927,8 @@ fn what_b14_leaves_open_is_refused() {
         });
         t.field4 = Field4::Mark(vec![MarkEntry { power: Power::Plan(ids[BEN]), signers: vec![dee.id] }]);
         let k = lab.propose(ANA, &t);
-        assert_eq!(lab.view().agreement(&k).unwrap().invalid, None, "{case}");
-        let sd = sign(&mut lab.w, &mut dee, &k);
-        lab.rotate(Some((k, vec![sd])), &[0]);
-        let y = lab.publish(0);
-        let got = lab.view().consent(&y);
-        assert!(matches!(&got, Err(AgreementsError::Unsettled(w)) if w.contains("B14")), "{case}: {got:?}");
+        let invalid = lab.view().agreement(&k).unwrap().invalid;
+        assert!(invalid.as_deref().is_some_and(|w| w.contains("false mark")), "{case}: {invalid:?}");
     }
 }
 

@@ -471,6 +471,18 @@ pub fn answer(w: &mut World, facts: &Facts, ask: &J) -> J {
             Ok(None) => "a clone put in force by a record",
             Err(_) => "unknown",
         }),
+        // Whether a liveness act shows presence (rule 50; "Liveness (type 12)").
+        "liveness" => {
+            let mut v = view(w);
+            facts.apply_view(&mut v);
+            json!(v.liveness(&h("act")).map_or("unknown", |x| if x { "shows presence" } else { "shows nothing" }))
+        }
+        // Whether terms are invalid against their parent and lineage (a false mark...).
+        "agreement invalid" => json!(match view(w).agreement(&h("act")).map(|a| a.invalid.is_some()) {
+            Ok(true) => "invalid",
+            Ok(false) => "not invalid",
+            Err(_) => "unknown",
+        }),
         "deal fork" => json!(match view(w).deal_fork(&h("act")) {
             Ok(None) => json!("one version in force"),
             Ok(Some(f)) => json!({ "reference": hx(&f.reference), "branches": f.branches.len(), "tangled": f.tangled.is_some() }),
@@ -3513,7 +3525,171 @@ fn s7g_agreements_b(out: &mut Out) {
 }
 
 /// S7g: Agreements' suspected differences, lines 2130 to 4343.
-fn s7g_agreements_c(_out: &mut Out) {}
+fn s7g_agreements_c(out: &mut Out) {
+    let unit = spec("a test unit (regtest satoshi)");
+    let rail = spec("a rail Module");
+
+    // Row 5 (text 2150): a member key after its holder's rotation disowns the
+    // signature that named it. Placed by an act of the collective
+    // acknowledging it, it stays valid for the collective ("Made before,
+    // made after", 2 and 4); never placed, Identity alone judges it.
+    for (placed, name, v) in [
+        (true, "a member key whose naming signature the collective acknowledged, after the holder's rotation disowns that signature: its receipt still counts", true),
+        (false, "the same, the naming signature never placed by an act of the collective: its receipt does not count", false),
+    ] {
+        let mut w = World::new();
+        let mut col = collective(&mut w, &[1], 1);
+        let cid = col.c.id;
+        let mut ben = member_key(&mut w, &mut col, 1, "ben");
+        let named = ben.binding;
+        let acks = placed.then(|| vec![named]);
+        let ptr = {
+            let x = Fin::PayeePointer(money::PayeePointer { payee: cid, version: 1, previous: None, rails: vec![money::Rail { module: rail, address: b"the collective's address".to_vec() }] });
+            let a = w.everyday_act(&mut col.c, mirs().money, 0, x.to_map(), None, acks);
+            w.add(&a)
+        };
+        sign(&mut w, &mut col.m[1], &ptr);
+        let r = Fin::Receipt(Receipt { rail, proof: b"a payment the member key receipts".to_vec(), payer: None, payee: cid, amount: Amount { unit, value: 7 }, fulfils: ptr, previous: None, forward: None, batch: None, purchase: None });
+        let rec = { let a = w.everyday_act(&mut ben, mirs().money, 2, r.to_map(), None, None); w.add(&a) };
+        let (_, b2) = w.rotate(&col.m[1], Rot { disowned: Some(vec![named]), ..Default::default() });
+        col.m[1] = b2;
+        out.case(&mut w, name, "Agreements rule 73 (\"The holder's own change of keys leaves it as it is\"); \"Made before, made after\", 2 and 4",
+            "Ben's signature of the founding names his member key; his rotation disowns that signature, and no line of the collective registers the rotation. The collective's payee pointer acknowledges the signature (placed) or does not (never placed).",
+            Facts::default(), ask("consent counts", &rec), json!(v), None);
+    }
+
+    // Row 102 (text 3434): a collective's grant after its grantee's rotation
+    // disowns the acceptance. Acknowledged by an act of the collective, the
+    // acceptance keeps its effect for the collective; acknowledged by none,
+    // Identity alone judges it.
+    for (acked, name, v) in [
+        (true, "a collective's grant whose acceptance an act of the collective acknowledged, after the grantee's rotation disowns it: the grant key's act is backed", "backed"),
+        (false, "the same, the acceptance acknowledged by no act of the collective: not backed", "not backed (void)"),
+    ] {
+        let mut w = World::new();
+        let mut col = collective(&mut w, &[1], 1);
+        let cid = col.c.id;
+        let mut app = w.genesis("the collective's publishing app", vec![own_home()], None, None);
+        let k = schnorr("the collective's publishing app/grant key", 0);
+        let g = Grant { grantee: app.id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: Some(1), kinds: Some(vec![Kind::Layer(agreements::layers::ENVELOPES_AND_TEXT)]), reinstates: None, by_this: false, key: signing_key(&k) };
+        let gid = ag_act(&mut w, &mut col.c, agreements::types::GRANT, g.to_map(), None);
+        sign(&mut w, &mut col.m[0], &gid);
+        let acc = sign(&mut w, &mut app, &gid);
+        if acked {
+            // A Money act may carry `acks` (Envelopes rule 18): the collective's payee pointer.
+            let p = Fin::PayeePointer(money::PayeePointer { payee: cid, version: 1, previous: None, rails: vec![money::Rail { module: rail, address: b"the collective's address".to_vec() }] });
+            let a = w.everyday_act(&mut col.c, mirs().money, 0, p.to_map(), None, Some(vec![acc]));
+            w.add(&a);
+        }
+        let mut lane = col.c.clone();
+        lane.binding = gid;
+        lane.sign = k;
+        lane.seq = vec![];
+        lane.cite = Some((cid, vec![gid]));
+        let x = text_act(&mut w, &mut lane, "A note the app publishes for the collective.", None);
+        w.rotate(&app, Rot { disowned: Some(vec![acc]), ..Default::default() });
+        out.case(&mut w, name, "Agreements, \"Grant (type 9)\": \"the grantee's acceptance is placed as a member's signature is\"; \"Made before, made after\", 2 and 4",
+            "Ana, who holds the area the grant issues from, signs the collective's grant; the app accepts it and publishes with its grant key; the app's rotation then disowns its acceptance. The collective's payee pointer, an act of its own key, acknowledges the acceptance, or no act does.",
+            Facts::default(), ask("backing", &x), json!(v), None);
+    }
+
+    // Row 28 (text 2321): a clone marked with Ben's automatic succession plan
+    // alone, placing his seat successor elsewhere than in his own place
+    // among the parties: a false mark, invalid. Its twin, the successor in
+    // Ben's place, is not.
+    for (in_place, name, v) in [
+        (false, "a clone marked with a succession plan alone that places the seat successor after the other parties, not in the party's place: invalid", "invalid"),
+        (true, "the same clone with the seat successor in the party's own place among the parties: not invalid", "not invalid"),
+    ] {
+        let mut w = World::new();
+        let mut m: Vec<Person> = ["ana", "ben", "cy"].iter().map(|n| w.genesis(n, vec![own_home()], None, None)).collect();
+        let authority = w.genesis("an abandonment authority", vec![own_home()], None, None);
+        let keeper = w.genesis("the collective's keeper", vec![own_home()], None, None);
+        let dee = w.genesis("dee, ben's seat successor", vec![own_home()], None, None);
+        let ids: Vec<Hash> = m.iter().map(|p| p.id).collect();
+        let mut t = collective_terms(&ids, authority.id, keeper.id, vec![ids[0]], 1);
+        t.text = "A test collective whose member ben names a seat successor.".into();
+        t.succession = Some(vec![agreements::SuccessionPlan { party: ids[1], stakes: None, seats: Some(vec![dee.id]), entry: Some(0) }]);
+        let founding = ag_act(&mut w, &mut m[0], agreements::types::TERMS, t.to_map(), None);
+        for p in m.iter_mut() {
+            sign(&mut w, p, &founding);
+        }
+        let place = vec![ids[0], dee.id, ids[2]];
+        let mut t1 = t.clone();
+        t1.parent = Some(founding);
+        t1.parties = if in_place { place.clone() } else { vec![ids[0], ids[2], dee.id] };
+        t1.succession = None;
+        let g = t1.grammar.as_mut().unwrap();
+        g.signing = Holding::Shares { threshold: 2, members: place.clone() };
+        g.chain_key = Holding::Shares { threshold: 3, members: place.clone() };
+        t1.field4 = Field4::Mark(vec![agreements::MarkEntry { power: agreements::Power::Plan(ids[1]), signers: vec![dee.id] }]);
+        let k = ag_act(&mut w, &mut m[0], agreements::types::TERMS, t1.to_map(), obj(founding));
+        out.case(&mut w, name, "Agreements rule 83 (\"A clone marked with the plan alone that changes anything more is invalid\"); rule 46",
+            "The founding carries Ben's plan, every member signing it, his seat passing automatically to Dee. The clone takes Ben out, Dee in his place in every holding of the key grammar, and drops the plan; among the parties Dee stands last, or in Ben's place.",
+            Facts::default(), json!({ "question": "agreement invalid", "act": hx(&k) }), json!(v), None);
+    }
+
+    // Row 19 (text 2235): the collective adopts a grant key's act by paying
+    // on it. Its own key's claim paying the obligation the grant key signed
+    // makes it bind, the revocation racing it notwithstanding; with no
+    // payment, the revocation that does not hold it voids it.
+    for (pays, name, v) in [
+        (true, "a grant key's obligation that the collective's own key pays on, its grant revoked by a revocation not holding it: binds", "binds"),
+        (false, "the same obligation the collective never paid on, acknowledged, nor cited: void", "not backed (void)"),
+    ] {
+        let mut w = World::new();
+        let mut col = collective(&mut w, &[1], 1);
+        let cid = col.c.id;
+        let mut supplier = w.genesis("a supplier of the collective", vec![own_home()], None, None);
+        let sptr = pointer_act(&mut w, &mut supplier, b"the supplier's address");
+        let mut app = w.genesis("the collective's buying app", vec![own_home()], None, None);
+        let k = schnorr("the collective's buying app/grant key", 0);
+        let g = Grant { grantee: app.id, scope: 2, agreements: None, this_agreement: false, limits: None, limits_cmip: None, area: Some(2), kinds: Some(vec![Kind::Layer(agreements::layers::MONEY)]), reinstates: None, by_this: false, key: signing_key(&k) };
+        let gid = ag_act(&mut w, &mut col.c, agreements::types::GRANT, g.to_map(), None);
+        sign(&mut w, &mut col.m[1], &gid);
+        sign(&mut w, &mut app, &gid);
+        let mut lane = col.c.clone();
+        lane.binding = gid;
+        lane.sign = k;
+        lane.seq = vec![];
+        lane.cite = Some((cid, vec![gid]));
+        let ob = Fin::Obligation(money::Obligation { debtor: cid, creditor: supplier.id, amount: Amount { unit, value: 30 }, pointer: sptr, agreement: None });
+        let y = { let a = w.everyday_act(&mut lane, mirs().money, 1, ob.to_map(), None, None); w.add(&a) };
+        let rv = ag_act(&mut w, &mut col.c, agreements::types::REVOCATION, agreements::Revocation { grant: gid }.to_map(), None);
+        sign(&mut w, &mut col.m[1], &rv);
+        if pays {
+            let x = Fin::Claim(Claim { rail, proof: b"the collective pays its supplier".to_vec(), payee: supplier.id, amount: Amount { unit, value: 30 }, fulfils: y, disagrees: None, referral: None, refund: None, anonymous: None, purchase: None, previous: None });
+            let a = w.everyday_act(&mut col.c, mirs().money, 3, x.to_map(), None, None);
+            let c = w.add(&a);
+            sign(&mut w, &mut col.m[1], &c);
+        }
+        out.case(&mut w, name, "Agreements rule 76 (\"The grantor may adopt a void or disputed act of a grant key as its own\": \"pays on it\"); \"Made before, made after\", 7",
+            "Ben, who holds the Money area, signs a grant reaching Money; the app signs an obligation of the collective to a supplier with its grant key; the collective revokes the grant, the revocation's history not holding the obligation. The collective's own claim, signed by Ben, pays the obligation (its field fulfils names it), or nothing does.",
+            Facts::default(), ask("backing", &y), json!(v), None);
+    }
+
+    // Row 109 (text 3502): a member's liveness on the collective's
+    // agreement counts only where the collective placed it: an act of the
+    // collective acknowledging it.
+    for (placed, name, v) in [
+        (true, "a member's public liveness on the collective's agreement, acknowledged by an act of the collective: shows presence", "shows presence"),
+        (false, "the same liveness no act of the collective placed: shows nothing", "shows nothing"),
+    ] {
+        let mut w = World::new();
+        let mut col = collective(&mut w, &[1], 1);
+        let cid = col.c.id;
+        let f = col.founding;
+        let l = ag_act(&mut w, &mut col.m[0], agreements::new_types::LIVENESS, agreements::Liveness { agreement: f }.to_map(), obj(f));
+        if placed {
+            let p = Fin::PayeePointer(money::PayeePointer { payee: cid, version: 1, previous: None, rails: vec![money::Rail { module: rail, address: b"the collective's address".to_vec() }] });
+            let a = w.everyday_act(&mut col.c, mirs().money, 0, p.to_map(), None, Some(vec![l]));
+            w.add(&a);
+        }
+        out.case(&mut w, name, "Agreements, \"Liveness (type 12)\": \"In a collective, it counts only where the collective placed it\"; \"Made before, made after\", 2",
+            "Ana publishes a liveness naming the collective's founding. The collective's payee pointer, an act of its own key on its chain, acknowledges it, or no act does.",
+            Facts::default(), json!({ "question": "liveness", "act": hx(&l) }), json!(v), None);
+    }
+}
 
 /// S7g: Development, read for sentences no case exercised: the decoding
 /// of a specification's content, step by step (Part three).

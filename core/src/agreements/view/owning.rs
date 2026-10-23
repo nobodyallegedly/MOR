@@ -503,7 +503,9 @@ impl<'a> AgreementsView<'a> {
     /// Whether a liveness act (type 12, rule 50) shows presence: valid, and
     /// public or addressed to every other party of the agreement it names
     /// (Fable's reading of OF23 a). In a collective it counts only where
-    /// the collective placed it (FR10), which its chain shows.
+    /// the collective placed it (FR10; "Liveness (type 12)"): an act of the
+    /// collective on its chain acknowledging it ("Made before, made
+    /// after", 2).
     pub fn liveness(&self, id: &Hash) -> R<bool> {
         let h = self.held(id)?;
         let l = crate::agreements::open_formats::Liveness::decode(&h.inside)?;
@@ -511,7 +513,13 @@ impl<'a> AgreementsView<'a> {
         let signer = h.act.outside.signer.unwrap_or_default();
         let reaches = h.act.outside.content_key.is_some()
             || t.parties.iter().filter(|p| **p != signer).all(|p| h.act.outside.to.iter().flatten().any(|q| q == p));
-        Ok(self.valid(id) && t.parties.contains(&signer) && reaches)
+        if !(self.valid(id) && t.parties.contains(&signer) && reaches) {
+            return Ok(false);
+        }
+        Ok(match self.collective_of(&l.agreement)? {
+            Some(c) => !self.placements(&self.col(&c), h).is_empty(),
+            None => true,
+        })
     }
 }
 

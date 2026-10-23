@@ -836,27 +836,34 @@ impl<'a> AgreementsView<'a> {
 
     /// Why a member's key does not act for the collective under the
     /// agreement `ag` in force for its act, or nothing (F353): the holder's
-    /// signature naming it must be on a version of `ag`'s lineage, valid,
-    /// and the holder's latest signature naming a key there; the holder
-    /// must hold an area in `ag`. The key counts from the moment the
-    /// founding or clone it was named on is complete: in force, or an
-    /// ancestor of the version in force.
-    fn member_key_problem(&self, holder: &Hash, sig: &Held, terms: &Hash, ag: &Hash) -> R<Option<String>> {
+    /// signature naming it must be on a version of `ag`'s lineage, count
+    /// for the collective ([`Self::sig_counts`]: a rotation disowning it
+    /// leaves it as any member's signature the collective's line placed,
+    /// rule 73, "Made before, made after", 4), and be the holder's latest
+    /// signature naming a key there; the holder must hold an area in `ag`.
+    /// The key counts from the moment the founding or clone it was named
+    /// on is complete: in force, or an ancestor of the version in force.
+    fn member_key_problem(&self, col: &Col, holder: &Hash, sig: &Held, terms: &Hash, ag: &Hash) -> R<Option<String>> {
         let lineage = self.lineage(ag)?;
         if !lineage.iter().any(|(i, _)| i == terms) {
             return Ok(Some("the member's key was named on a version that is not complete, or not on the agreement in force's line: it counts only from the moment its founding or clone is complete (F353)".into()));
         }
-        if self.status(&sig.id) != Status::Valid {
-            return Ok(Some("the holder's signature naming the key does not stand under Identity (F353)".into()));
+        if !self.sig_counts(col, sig)? {
+            return Ok(Some("the holder's signature naming the key does not count for the collective: not valid under Identity, nor placed by the collective before a line registering the rotation that disowned it (F353; \"Made before, made after\", 4)".into()));
         }
         // The holder's latest key: the newest version of the line on which
-        // a valid signature of theirs names a key.
+        // a signature of theirs that counts for the collective names a key.
         for (v, _) in &lineage {
-            let named = self.v.signed_by(holder).any(|h| {
-                self.is_agreements(h, types::SIGNATURE)
-                    && self.status(&h.id) == Status::Valid
+            let mut named = false;
+            for h in self.v.signed_by(holder) {
+                if self.is_agreements(h, types::SIGNATURE)
                     && matches!(decode_signature_key(&h.inside), Ok((x, Some(_))) if x == *v)
-            });
+                    && self.sig_counts(col, h)?
+                {
+                    named = true;
+                    break;
+                }
+            }
             if !named {
                 continue;
             }
@@ -899,8 +906,11 @@ impl<'a> AgreementsView<'a> {
                 let Some(h) = self.v.get(id) else { return false };
                 if let Some((_, sig, _)) = self.member_key(h) {
                     // F353: a member's key stands where the signature
-                    // naming it does; Agreements judge its reach.
-                    return self.status(&sig.id) == Status::Valid;
+                    // naming it counts for the collective (rule 73: its
+                    // holder's rotation leaves it as the collective's line
+                    // placed it); Agreements judge its reach.
+                    let Some(c) = h.act.outside.signer else { return false };
+                    return self.sig_counts(&self.col(&c), sig).unwrap_or(false);
                 }
                 let Some((g, grant)) = self.key_grant(h) else { return false };
                 if self.status(&g.id) != Status::Valid {
@@ -4293,6 +4303,14 @@ impl<'a> AgreementsView<'a> {
         if others != kept || !seats.iter().all(|x| clone.parties.contains(x)) {
             return Err("it changes the parties beyond what the plan gives (rule 48c)".into());
         }
+        // Rule 83: a seat successor placed elsewhere than in the party's own
+        // place among the parties changes more than the plan gives: a false
+        // mark (rule 46). Where the texts leave the place open, the clone is
+        // refused at the line ([`plan_open`]).
+        let placed: Vec<Hash> = parent.parties.iter().flat_map(|x| if x == p { seats.clone() } else { vec![*x] }).collect();
+        if plan_open(parent, plan).is_none() && clone.parties != placed {
+            return Err("it places a seat successor elsewhere than in the party's own place among the parties: a false mark (rules 46, 83)".into());
+        }
         if clone.areas().iter().any(|x| x.holders.contains(p)) {
             return Err("it leaves the party among an area's holders (Q21)".into());
         }
@@ -4402,18 +4420,8 @@ impl<'a> AgreementsView<'a> {
         if let Some(w) = plan_open(parent, plan) {
             return Err(AgreementsError::Unsettled(w));
         }
-        let seats: Vec<Hash> = plan.seats.iter().flatten().copied().collect();
-        let clone = &lineage[0].1;
-        let placed: Vec<Hash> = parent
-            .parties
-            .iter()
-            .flat_map(|x| if x == party { seats.clone() } else { vec![*x] })
-            .collect();
-        if clone.parties != placed {
-            return Err(AgreementsError::Unsettled(
-                "a clone executing a succession plan that puts the seat successors elsewhere than in the party's place among the parties: where they go is not written (Flaw B14, its first remaining point)",
-            ));
-        }
+        // The successors' place among the parties is checked with the
+        // clone's terms ([`Self::plan_static`], rule 83).
         Ok(CloneState::Complete)
     }
 
@@ -4636,7 +4644,7 @@ impl<'a> AgreementsView<'a> {
         }
         let ag = self.in_force_action(&col, x, b, base)?.agreement;
         if let Some((holder, sig, terms)) = member {
-            if let Some(reason) = self.member_key_problem(&holder, sig, &terms, &ag)? {
+            if let Some(reason) = self.member_key_problem(&col, &holder, sig, &terms, &ag)? {
                 return Ok(Consent::Ungranted { grant: sig.id, reason });
             }
         }
@@ -4764,7 +4772,7 @@ impl<'a> AgreementsView<'a> {
         let mut keyed: BTreeMap<Hash, Vec<Hash>> = BTreeMap::new();
         let in_force_key = |h: &Held| -> R<Option<Hash>> {
             let Some((holder, sig, terms)) = self.member_key(h) else { return Ok(None) };
-            Ok(self.member_key_problem(&holder, sig, &terms, &ag)?.is_none().then_some(holder))
+            Ok(self.member_key_problem(col, &holder, sig, &terms, &ag)?.is_none().then_some(holder))
         };
         if let Some(x) = self.v.get(act) {
             if x.act.outside.signer == Some(col.id) {
@@ -4981,13 +4989,26 @@ impl<'a> AgreementsView<'a> {
     }
 
     /// Whether the grantee signed to accept the grant (F128): a valid
-    /// signature act (type 1) of its own identity naming it.
-    fn accepted(&self, gh: &Held, g: &Grant) -> bool {
-        self.v.signed_by(&g.grantee).any(|h| {
-            self.is_agreements(h, types::SIGNATURE)
-                && decode_signature(&h.inside).ok() == Some(gh.id)
-                && self.status(&h.id) == Status::Valid
-        })
+    /// signature act (type 1) of its own identity naming it. For a
+    /// collective, an acceptance an act of the collective acknowledged is
+    /// placed as a member's signature is, and keeps that effect whatever
+    /// the grantee's later rotation disowns ([`Self::sig_counts`];
+    /// "Grant (type 9)", "Made before, made after", 2 and 4); one no act of
+    /// the collective acknowledged is judged by Identity alone.
+    fn accepted(&self, col: &Col, collective: bool, gh: &Held, g: &Grant) -> R<bool> {
+        for h in self.v.signed_by(&g.grantee) {
+            if !self.is_agreements(h, types::SIGNATURE) || decode_signature(&h.inside).ok() != Some(gh.id) {
+                continue;
+            }
+            if self.status(&h.id) == Status::Valid {
+                return Ok(true);
+            }
+            let acked = || self.placements(col, h).iter().any(|(l, _)| !matches!(l, Line::Record(a) if a.id == gh.id));
+            if collective && acked() && self.sig_counts(col, h)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     /// The services a deal's grants name, if they are well formed (F129,
@@ -5258,7 +5279,7 @@ impl<'a> AgreementsView<'a> {
         if !counts {
             return not("the grant does not count");
         }
-        if !self.accepted(gh, &g) {
+        if !self.accepted(&col, collective, gh, &g)? {
             return not("the grantee has not signed to accept the grant (F128)");
         }
         // F128: the grantee's act cites the decision it acts under, its grant.
@@ -5347,8 +5368,9 @@ impl<'a> AgreementsView<'a> {
                 }
             }
         }
-        // An adoption (rule 40): an act of the collective's own key that
-        // counts, acknowledging it or citing it on the collective's chain.
+        // An adoption (rule 40; rule 76): an act of the collective's own key
+        // that counts, acknowledging it, citing it on the collective's
+        // chain, or paying on it.
         // F131 (IT2a): once such an act cites it, the act is adopted, and no
         // ending racing that citation voids it; the tie rule voids only
         // acts the collective never took on. "Cites" as a line does
@@ -5366,8 +5388,18 @@ impl<'a> AgreementsView<'a> {
         } else {
             vec![]
         };
+        // Rule 76's third way: an act of the grantor's own key paying on it,
+        // a Money claim the grantor signs as payer whose `fulfils` names it.
+        let paying: Vec<&Held> = self
+            .v
+            .signed_by(&c)
+            .filter(|a| {
+                a.inside.spec == self.mirs.money
+                    && matches!(crate::money::Payload::decode(a.inside.type_, &a.inside.payload), Ok(crate::money::Payload::Claim(x)) if &x.fulfils == act && x.anonymous.is_none())
+            })
+            .collect();
         let acked = |before: &dyn Fn(&Held) -> bool| -> R<bool> {
-            for a in self.v.acknowledgements(act).into_iter().chain(citing.iter().copied()) {
+            for a in self.v.acknowledgements(act).into_iter().chain(citing.iter().copied()).chain(paying.iter().copied()) {
                 if Self::own_key(&col, a) && on_chain(a) && self.valid(&a.id) && before(a) && self.consent(&a.id)?.counts() {
                     return Ok(true);
                 }
