@@ -1,6 +1,6 @@
 # mor-audio
 
-The audio Module: the founding implementation of `modules/module-audio-draft-1.md`, a media type for task 5 of the Envelopes MIR. **Dub plays and posts recordings with it**: its typing box's Audio strips a recording before it is published, and a card plays one only after this package has checked it (`clients/barebone/src/post.ts`, `publishAudio` and `soundBytes`).
+The audio Module: the founding implementation of `modules/module-audio-draft-1.md`, a media type for task 5 of the Envelopes MIR. **Dub plays and posts recordings with it**: its typing box's Audio strips a recording before it is published, and a card plays one only after this package has checked it (`clients/barebone/src/post.ts`, `publishAudio` and `soundBytes`). **Edubba’s Publishing** strips a recording with it before sealing it in a protected file, and Dub plays the recording bought only after the same check (`clients/barebone/src/sealed.ts`).
 
 ## In plain words
 

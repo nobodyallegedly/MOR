@@ -91,7 +91,11 @@ const done = async (words: string | RegExp) => {
 };
 const col = (label: string | RegExp) => page.locator('.k-col button', { hasText: label }).first().click();
 const tabTo = (name: string) => page.locator('.k-top .k-tab', { hasText: name }).click();
-const subTo = (name: string | RegExp) => page.locator('.edubba-tabs button', { hasText: name }).click();
+const subTo = async (name: string | RegExp) => {
+  await page.locator('.edubba-tabs button', { hasText: name }).click();
+  // The tab drawn open before anything is typed in it.
+  await page.locator('.edubba-tabs button.k-on', { hasText: name }).waitFor();
+};
 const noFinding = async () => assert.doesNotMatch(await page.locator('#app').innerText(), /\bF\d{3}\b/, 'no finding number on screen');
 
 let ME = '';
@@ -121,6 +125,7 @@ test('the first screen, then an identity made from + Add, and the four tiles wit
   ]);
   assert.match(await page.locator('.k-me').innerText(), /Max/);
   await noFinding();
+  if (await page.locator('#e-status [data-action=status-close]').count()) await page.click('#e-status [data-action=status-close]');
   await shot(page, 'mac-03-home');
 });
 
@@ -162,7 +167,12 @@ test('Agents › Talk: the prompt is a sealed act, answered at once, both in the
   api.reply = answering({ text: 'The tablet house opens at ten.', notClaimed: [], memory: { add: [{ kind: 'instruction', about: null, text: 'Keep answers short.' }], retire: [] } });
   await page.fill('#agent-prompt textarea', 'When does the tablet house open?');
   await page.click('#agent-prompt button[type=submit]');
-  await page.locator('#talk-feed .k-act', { hasText: 'The tablet house opens at ten.' }).waitFor({ timeout: 90_000 });
+  await page
+    .locator('#talk-feed .k-act', { hasText: 'The tablet house opens at ten.' })
+    .waitFor({ timeout: 90_000 })
+    .catch(async (e) => {
+      throw new Error(`${e}\nEdubba showed: ${(await page.locator('body').innerText()).slice(-1200)}`);
+    });
   await page.locator('#talk-feed .k-act', { hasText: 'When does the tablet house open?' }).waitFor();
   // The kit's two menus on a card: the act's ID bottom right.
   await page.locator('#talk-feed .k-act .k-actid').first().click();
@@ -250,6 +260,7 @@ test('Collectives: a test collective; Act with its permissions as chips, a post 
   await done('Posted for');
   await page.locator('#collective-feed .k-act', { hasText: 'The tablet house opens on Wednesday.' }).locator('.k-label', { hasText: 'correction of' }).waitFor({ timeout: 60_000 });
   await page.locator('#collective-feed .k-act', { hasText: 'The tablet house opens on Tuesday.' }).locator('.k-label', { hasText: 'corrected by' }).waitFor();
+  assert.equal(await page.inputValue('form#collective-post [name=text]'), '', 'the typing box is empty once the post is signed');
   await shot(page, 'mac-22-collective-act');
   await page.click('[data-action=constitution]');
   await page.locator('.k-modal', { hasText: 'Areas: who decides which acts' }).waitFor({ timeout: 90_000 });

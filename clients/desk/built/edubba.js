@@ -7118,8 +7118,8 @@ function threePositions(random) {
   while (out.size < 3) out.add(1 + random(24));
   return [...out].sort((a, b) => a - b);
 }
-function typedBack(words2, positions, typed) {
-  return positions.length === 3 && typed.length === 3 && positions.every((p, i) => words2[p - 1] === (typed[i] ?? "").trim().toLowerCase());
+function typedBack(words2, positions, typed2) {
+  return positions.length === 3 && typed2.length === 3 && positions.every((p, i) => words2[p - 1] === (typed2[i] ?? "").trim().toLowerCase());
 }
 
 // ../genesis/src/forms.ts
@@ -7127,8 +7127,8 @@ var form = (label, hex3) => formEncode(label, unhex(hex3));
 var idForm = (id) => form("mid", id);
 var actForm = (id) => form("mact", id);
 var idWhere = (id, hints) => formWithHints("mid", unhex(id), hints.filter((h) => /^https?:\/\//.test(h)));
-function readForm(typed, want) {
-  const t = typed.trim();
+function readForm(typed2, want) {
+  const t = typed2.trim();
   const squeezed = t.replace(/\s+/g, "");
   if (want !== "mkey" && /^[0-9a-fA-F]{64}$/.test(squeezed)) return { hex: squeezed.toLowerCase(), hints: [], bare: true };
   if (!/^m[a-z]+1/i.test(t)) throw new Refused(`${WHAT[want]} is 64 characters, 0 to 9 and a to f (spaces do not matter), or its form written for people, ${want}1\u2026`);
@@ -7140,10 +7140,10 @@ function readForm(typed, want) {
   }
 }
 var WHAT = { mid: "an ID", mact: "an act id", mkey: "a key", mspec: "a spec hash", mwork: "a work hash" };
-var readId = (typed) => readForm(typed, "mid").hex;
-var readActId = (typed) => readForm(typed, "mact").hex;
-function readIdWhere(typed) {
-  const t = typed.trim().replace(/^.*#/, "");
+var readId = (typed2) => readForm(typed2, "mid").hex;
+var readActId = (typed2) => readForm(typed2, "mact").hex;
+function readIdWhere(typed2) {
+  const t = typed2.trim().replace(/^.*#/, "");
   const parts = t.split(/\s+/).filter(Boolean);
   const beside = parts.slice(1).filter((p) => /^https?:\/\//.test(p));
   const head2 = beside.length ? parts.filter((p) => !/^https?:\/\//.test(p)).join("") : t;
@@ -10326,8 +10326,8 @@ function totals(xs) {
   for (const x of xs) by.set(x.unit, (by.get(x.unit) ?? 0) + x.value);
   return [...by.entries()].map(([unit, value]) => ({ unit, value }));
 }
-function readValue(typed) {
-  const t = typed.replace(/[\s_]/g, "");
+function readValue(typed2) {
+  const t = typed2.replace(/[\s_]/g, "");
   if (!/^\d{1,15}$/.test(t) || Number(t) === 0) throw new Error("An amount is a whole number above zero, in the unit\u2019s smallest part.");
   return Number(t);
 }
@@ -11238,12 +11238,12 @@ var Publishing = class {
     });
   }
   /** Act for a collective by its ID: kept where the identity acting holds the areas reaching publications and offers, and its own key for it is found. */
-  collectiveAdd(typed) {
+  collectiveAdd(typed2) {
     return this.desk.serial(async () => {
       const b = this.book();
       const acting = b.acting ?? this.held()[0];
       if (!acting) throw new Error("No identity is held here: bring one on the Identities tab.");
-      const id = readId(typed);
+      const id = readId(typed2);
       const c2 = await this.collectiveHere(this.me(acting), id);
       if (c2.why) throw new Error(`The collective ${short2(id)}: ${c2.why}. Nothing was kept.`);
       b.collectives[acting] = list3([...b.collectives[acting] ?? [], id]);
@@ -11977,8 +11977,8 @@ function nameProblem(name) {
   if ([...name].length > MAX_NAME) return `it is longer than ${MAX_NAME} characters`;
   return null;
 }
-function readName(typed) {
-  const name = typed.normalize("NFC").trim();
+function readName(typed2) {
+  const name = typed2.normalize("NFC").trim();
   const why = nameProblem(name);
   if (why) throw new Error(`That name cannot be used: ${why}. Nothing was signed.`);
   return name;
@@ -16132,8 +16132,8 @@ var Desk = class {
    * cMIP, public, at its homes and the relays. Not unique: always shown
    * beside the fingerprint, never instead of it.
    */
-  async publishName(identity2, typed) {
-    const name = readName(typed);
+  async publishName(identity2, typed2) {
+    const name = readName(typed2);
     return this.serial(async () => {
       const me2 = this.store.identity(identity2);
       if (me2.f.pending) throw new Error("A rotation of this identity is waiting to count: nothing is signed with it until it does.");
@@ -16909,8 +16909,8 @@ function refusedSay(path, code) {
 }
 var codeOf = (e3) => e3?.code ?? "";
 var refused = (e3) => ["EPERM", "EACCES"].includes(codeOf(e3));
-function readPath(typed, keepEnd = false) {
-  let t = typed.replace(/[\r\n]+/g, "").replace(/^\s+/, "");
+function readPath(typed2, keepEnd = false) {
+  let t = typed2.replace(/[\r\n]+/g, "").replace(/^\s+/, "");
   if (!keepEnd) t = t.replace(/(?<!\\)\s+$/, "");
   if (/^file:\/\//.test(t)) {
     try {
@@ -16926,14 +16926,14 @@ function readPath(typed, keepEnd = false) {
   if (t.startsWith("~/")) return join(homedir(), t.slice(2));
   return t;
 }
-function difference(name, typed) {
+function difference(name, typed2) {
   const parts = [];
   const end = name.length - name.trimEnd().length;
   const start2 = name.length - name.trimStart().length;
   if (end) parts.push(end === 1 ? "with a space at the end" : `with ${end} spaces at the end`);
   if (start2) parts.push(start2 === 1 ? "with a space at the start" : `with ${start2} spaces at the start`);
-  if (name.trim() !== typed.trim() && name.trim().toLowerCase() === typed.trim().toLowerCase()) parts.push("in other capital letters");
-  if (!parts.length && name.normalize("NFC") === typed.normalize("NFC")) parts.push("its accents written another way");
+  if (name.trim() !== typed2.trim() && name.trim().toLowerCase() === typed2.trim().toLowerCase()) parts.push("in other capital letters");
+  if (!parts.length && name.normalize("NFC") === typed2.normalize("NFC")) parts.push("its accents written another way");
   return parts.join(", ");
 }
 function entries(dir) {
@@ -16963,11 +16963,11 @@ function nearMatch(p) {
   }
   return said2 ? { path: at, said: said2 } : null;
 }
-function folderOf(typed) {
-  if (!typed.trim()) throw new Error("Choose a folder: with \u201CChoose a folder\u2026\u201D, or its path, as Finder or the Terminal shows it (for example ~/Projects/site).");
-  const tries = [.../* @__PURE__ */ new Set([readPath(typed), readPath(typed, true)])];
+function folderOf(typed2) {
+  if (!typed2.trim()) throw new Error("Choose a folder: with \u201CChoose a folder\u2026\u201D, or its path, as Finder or the Terminal shows it (for example ~/Projects/site).");
+  const tries = [.../* @__PURE__ */ new Set([readPath(typed2), readPath(typed2, true)])];
   const shown3 = tries[0];
-  if (!isAbsolute(shown3)) throw new Error(`\u201C${typed.trim()}\u201D: give the whole path, starting with / or ~/, or use \u201CChoose a folder\u2026\u201D.`);
+  if (!isAbsolute(shown3)) throw new Error(`\u201C${typed2.trim()}\u201D: give the whole path, starting with / or ~/, or use \u201CChoose a folder\u2026\u201D.`);
   for (const p of tries) {
     let isDir = false;
     try {
@@ -17272,8 +17272,8 @@ var Setup = class {
    * act back (the genesis client's `witness`, Identity rule 18c). Public, to
    * its homes and the relays.
    */
-  async witness(identity2, act, shown3, typed) {
-    if (typed.trim() !== RELY) throw new Error(`Type ${RELY} to sign the witness act. Nothing was signed.`);
+  async witness(identity2, act, shown3, typed2) {
+    if (typed2.trim() !== RELY) throw new Error(`Type ${RELY} to sign the witness act. Nothing was signed.`);
     const read4 = await this.readAct(identity2, act);
     if (read4.blocking.length) throw new Error(`${read4.blocking.join(" ")} Nothing was signed.`);
     return this.desk.witness(identity2, read4.act, shown3);
@@ -21762,8 +21762,8 @@ var Real = class {
     }
     return { read: read4, problems };
   }
-  addContact(typed, name) {
-    const id = readId(typed);
+  addContact(typed2, name) {
+    const id = readId(typed2);
     if (!name.trim()) throw new Error("Give it a name, so you can tell it apart here. The name stays on this Mac.");
     const list10 = this.ownContacts().filter((c2) => c2.id !== id);
     list10.push({ id, name: name.trim() });
@@ -22177,13 +22177,13 @@ var Real = class {
     return { x: p.x, holders: p.holders, threshold: p.threshold, words: toWords(p.value), fingerprint: p.fingerprint.match(/.{1,4}/g).slice(0, 8).join(" "), positions: w.positions, member };
   }
   /** Three words of a shown share typed back: then it is forgotten here. */
-  confirmShare(collective, member, typed) {
+  confirmShare(collective, member, typed2) {
     const key = `${collective} ${member}`;
     this.expire();
     const w = this.waiting.get(key);
     if (!w?.positions) throw new Error("No share was shown here for that member.");
     const p = shareOnPaper(w.share);
-    if (!typedBack(toWords(p.value), w.positions, typed)) throw new Error(`Those are not words ${w.positions.join(", ")} of the share as shown. Look at what was written down.`);
+    if (!typedBack(toWords(p.value), w.positions, typed2)) throw new Error(`Those are not words ${w.positions.join(", ")} of the share as shown. Look at what was written down.`);
     w.share.fill(0);
     this.waiting.delete(key);
     return { title: `Share ${p.x} is written down`, lines: [{ text: "It is forgotten here: no app holds it now, only the paper.", tone: "ok" }], acts: [] };
@@ -24007,11 +24007,11 @@ var Damgar = class {
     return { words: chain.words, positions };
   }
   /** The three words typed back: then the genesis goes to its homes, its routes and encryption key are published, and it is the identity in use. */
-  makeConfirm(typed) {
+  makeConfirm(typed2) {
     return this.serial(async () => {
       const p = this.pending;
       if (!p) throw new Error("No new identity is waiting: make one first.");
-      if (!typedBack(toWords(p.seed), p.positions, typed)) throw new Error(`Those are not words ${p.positions.join(", ")} as shown. Look at what you wrote down. Nothing has been published.`);
+      if (!typedBack(toWords(p.seed), p.positions, typed2)) throw new Error(`Those are not words ${p.positions.join(", ")} as shown. Look at what you wrote down. Nothing has been published.`);
       const id = new TestIdentity(p.file, p.via);
       const sent = await id.publishGenesis();
       if (!sent.some((x) => x.result?.receipt)) throw new Error(`No home took the identity, so it was not kept: ${sent.map((x) => `${x.home} ${x.error ?? x.code ?? ""}`).join("; ")}`);
@@ -24250,10 +24250,10 @@ var Damgar = class {
     }
   }
   /** Act for a collective, by its ID: kept only if this identity holds a box in its Money area and its own key for it is found. */
-  collectiveAdd(typed) {
+  collectiveAdd(typed2) {
     return this.serial(async () => {
       const { me: me2, s, hints } = await this.ctx();
-      const id = readId(typed);
+      const id = readId(typed2);
       const c2 = await readCollective(me2, id, await this.collectivePlaces(id, hints, s.via), s.via);
       if (c2.why) throw new Error(`${c2.why} Nothing was kept.`);
       s.collectives = [.../* @__PURE__ */ new Set([...s.collectives ?? [], id])];
@@ -27264,11 +27264,11 @@ var Dub = class _Dub {
    * is published, as the desk's identities have theirs at once; and it is the
    * identity in use.
    */
-  confirm(typed) {
+  confirm(typed2) {
     return this.serial(async () => {
       const p = await this.store.pending();
       if (!p) throw new Error("No new identity is waiting.");
-      if (!typedBack(toWords(unhex(p.chainSeed)), p.positions, typed)) {
+      if (!typedBack(toWords(unhex(p.chainSeed)), p.positions, typed2)) {
         throw new Error(`Those are not words ${p.positions.join(", ")} as shown. Look at what you wrote down. Nothing has been published.`);
       }
       const id = new TestIdentity(p.identity, p.via);
@@ -27622,10 +27622,10 @@ var Dub = class _Dub {
    * other name of this identity under that cMIP found counting (1.3). An
    * empty name withdraws them all.
    */
-  setName(typed) {
+  setName(typed2) {
     return this.serial(async () => {
       const { me: me2, s } = await this.ctx();
-      const name = typed.trim() ? readName(typed) : null;
+      const name = typed2.trim() ? readName(typed2) : null;
       await this.current(me2);
       return this.publishName(me2, s, name);
     });
@@ -27674,11 +27674,11 @@ var Dub = class _Dub {
       if ([a.jpeg, a.mp4, a.m4a].filter(Boolean).length > 1) throw new Error("A picture, a film or a recording, one at a time. Nothing was posted.");
       if (s.acting) return this.postAsCollective(me2, s, p, hints, text4, a);
       const to = [];
-      for (const typed of (Array.isArray(a.to) ? a.to : [a.to ?? ""]).map((x) => x.trim()).filter(Boolean)) {
+      for (const typed2 of (Array.isArray(a.to) ? a.to : [a.to ?? ""]).map((x) => x.trim()).filter(Boolean)) {
         let id;
         let where = [];
         try {
-          ({ id, hints: where } = readIdWhere(typed));
+          ({ id, hints: where } = readIdWhere(typed2));
         } catch (e3) {
           throw new Error(`To: ${message6(e3)}. Nothing was posted.`);
         }
@@ -28159,9 +28159,9 @@ var Dub = class _Dub {
     return this.serial(async () => {
       const { me: me2, s, p, hints } = await this.ctx();
       if (s.acting) throw new Error("A collective writes in public only, from Dub: write in your own name, and append the collective to your message. Nothing was sent.");
-      const read4 = (typed, label) => {
+      const read4 = (typed2, label) => {
         try {
-          return readIdWhere(typed);
+          return readIdWhere(typed2);
         } catch (e3) {
           throw new Error(`${label}: ${message6(e3)}. Nothing was sent.`);
         }
@@ -28531,12 +28531,12 @@ ${made.id}`, thread, previous: st.answered[thread]?.reply || last, acks: [last] 
     });
   }
   /** Three words of the share typed back: then the one-time key is destroyed, and the relays' copy can never be opened again. */
-  shareConfirm(thread, typed) {
+  shareConfirm(thread, typed2) {
     return this.serial(async () => {
       const { me: me2, s, p, hints } = await this.ctx();
       const { st, w, paper } = await this.shareFor(me2, s, hints, thread);
       if (!w.shown) throw new Error("The share has not been shown yet.");
-      if (!typedBack(toWords(paper.value), w.shown, typed)) {
+      if (!typedBack(toWords(paper.value), w.shown, typed2)) {
         throw new Error(`Those are not words ${w.shown.join(", ")} of your share as shown. Look at what you wrote down. The one-time key is kept until they are.`);
       }
       delete st.waiting[thread];
@@ -29792,9 +29792,9 @@ var Corrections = class {
     }
   }
   /** Correct one of its own acts: refused where the act is not found, or is someone else's (the cMIP, 1.3). */
-  async correct(identity2, act, typed) {
+  async correct(identity2, act, typed2) {
     if (!this.store.holds(identity2)) throw new Error("This identity is not held here.");
-    const { text: text4 } = compose(typed);
+    const { text: text4 } = compose(typed2);
     if (!text4.trim()) throw new Error("Write the correction first.");
     const id = act.trim().toLowerCase();
     let found2 = null;
@@ -33076,8 +33076,8 @@ function formMembers(fid) {
   if (!form2) return [];
   const founder = form2.elements.namedItem("founder")?.value;
   const picked = [...form2.querySelectorAll("input[name=member]:checked")].map((x) => x.value);
-  const typed = String(form2.elements.namedItem("typed")?.value ?? "").split(/\n+/).map((x) => x.trim()).filter(Boolean);
-  return [.../* @__PURE__ */ new Set([...founder ? [founder] : [], ...picked, ...typed])];
+  const typed2 = String(form2.elements.namedItem("typed")?.value ?? "").split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  return [.../* @__PURE__ */ new Set([...founder ? [founder] : [], ...picked, ...typed2])];
 }
 function drawGrid(fid) {
   const g = grids.get(fid);
@@ -33387,12 +33387,21 @@ async function draw() {
   }
   if (!tabsHere().includes(tab)) tab = "collectives";
   if (tab === "publishing" || tab === "vows") await readPublishing().catch(() => null);
+  typed = (pane() ? typingNow(pane()) : null) ?? typed;
   const k = { here: pubCache?.works.length, mine: pubCache?.vows.length, sales: pubCache ? pubCache.works.reduce((n, w) => n + Object.keys(w.delivered).length, 0) : void 0, toSign: toSignCount };
   app.innerHTML = tabPage(state, tab, part, k, as, alarms(), counts());
   await fill();
 }
 var pane = () => $("pane");
 var filling = 0;
+var sentForm = null;
+var typed = null;
+function typingNow(within) {
+  const t = document.activeElement;
+  const typing = t instanceof HTMLTextAreaElement || t instanceof HTMLInputElement && t.type === "text" ? t : null;
+  const form2 = typing?.form?.getAttribute("id");
+  return typing && form2 && form2 !== sentForm && within.contains(typing) && typing.value ? { form: form2, name: typing.name, value: typing.value, at: typing.selectionStart } : null;
+}
 async function fill() {
   const p = pane();
   if (!p) return;
@@ -33400,7 +33409,17 @@ async function fill() {
   try {
     const html = await partHtml();
     if (mine !== filling || !p.isConnected) return;
+    const kept2 = typed ?? typingNow(p);
+    typed = null;
     p.innerHTML = html;
+    if (kept2) {
+      const again = p.querySelector(`form#${CSS.escape(kept2.form)} [name="${CSS.escape(kept2.name)}"]`);
+      if (again && !again.value) {
+        again.value = kept2.value;
+        again.focus();
+        if (kept2.at !== null) again.setSelectionRange(kept2.at, kept2.at);
+      }
+    }
     await after();
   } catch (err8) {
     if (mine !== filling) return;
@@ -33949,6 +33968,7 @@ app.addEventListener("click", async (ev) => {
   }
   const sb = t.closest("[data-sub]");
   if (sb) {
+    if (sb.classList.contains("k-on")) return;
     say3("", "");
     sub = sb.dataset.sub;
     keepAt();
@@ -34373,6 +34393,9 @@ app.addEventListener("click", async (ev) => {
 });
 var words = (s) => typeof s === "string" ? s.trim() : "";
 var linesOf2 = (s) => words(s).split(/\s+/).filter(Boolean);
+app.addEventListener("input", (ev) => {
+  if (sentForm && ev.target.form?.getAttribute("id") === sentForm) sentForm = null;
+});
 app.addEventListener("submit", async (ev) => {
   const form2 = ev.target;
   if (form2.closest("[data-collective-root]")) return;
@@ -34380,6 +34403,7 @@ app.addEventListener("submit", async (ev) => {
   const d = new FormData(form2);
   const agent = part.startsWith("agent:") ? part.slice(6) : void 0;
   const fid = form2.getAttribute("id");
+  sentForm = fid;
   if (fid === "pair") {
     try {
       await c.ask("pair", { code: $("pair-code").value, label: "this browser" });
@@ -34390,8 +34414,8 @@ app.addEventListener("submit", async (ev) => {
     return;
   }
   if (form2.classList.contains("share-back") && form2.closest("#e-signing")) {
-    const typed = [...form2.querySelectorAll("input")].map((i) => i.value);
-    const r = await busy("Checking the words, then destroying the one-time key\u2026", () => c.ask("member shareback", { thread: form2.dataset.thread, typed }));
+    const typed2 = [...form2.querySelectorAll("input")].map((i) => i.value);
+    const r = await busy("Checking the words, then destroying the one-time key\u2026", () => c.ask("member shareback", { thread: form2.dataset.thread, typed: typed2 }));
     if (r) {
       form2.reset();
       await readMember();
@@ -34612,10 +34636,10 @@ app.addEventListener("submit", async (ev) => {
     case "real-found":
     case "real-change": {
       const members = [...form2.querySelectorAll("input[name=member]:checked")].map((x) => x.value);
-      const typed = words(d.get("typed")).split(/\n+/).map((x) => x.trim()).filter(Boolean);
+      const typed2 = words(d.get("typed")).split(/\n+/).map((x) => x.trim()).filter(Boolean);
       const r = await busy(
         "Making it, and reading it back\u2026",
-        () => fid === "real-found" ? c.ask("real found prepare", { name: words(d.get("name")), founder: words(d.get("founder")), members: [...members, ...typed], grid: grids.get("real-found"), words: words(d.get("words")) }) : c.ask("real change prepare", { collective: form2.dataset.collective, members: [...members, ...typed], grid: grids.get("real-change") })
+        () => fid === "real-found" ? c.ask("real found prepare", { name: words(d.get("name")), founder: words(d.get("founder")), members: [...members, ...typed2], grid: grids.get("real-found"), words: words(d.get("words")) }) : c.ask("real change prepare", { collective: form2.dataset.collective, members: [...members, ...typed2], grid: grids.get("real-change") })
       );
       if (r) {
         realReview = { plan: r.plan, digest: r.digest };
@@ -34624,8 +34648,8 @@ app.addEventListener("submit", async (ev) => {
       return;
     }
     case "real-share-back": {
-      const typed = [...form2.querySelectorAll("input")].map((i) => i.value);
-      const r = await busy("Checking the words\u2026", () => c.ask("real share back", { collective: form2.dataset.collective, member: form2.dataset.member, typed }));
+      const typed2 = [...form2.querySelectorAll("input")].map((i) => i.value);
+      const r = await busy("Checking the words\u2026", () => c.ask("real share back", { collective: form2.dataset.collective, member: form2.dataset.member, typed: typed2 }));
       if (r) await afterDone(r);
       return;
     }

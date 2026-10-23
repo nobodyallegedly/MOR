@@ -446,6 +446,8 @@ async function draw() {
   }
   if (!v.tabsHere().includes(tab)) tab = 'collectives';
   if (tab === 'publishing' || tab === 'vows') await readPublishing().catch(() => null);
+  // Two redraws can overlap: what the first saw typed is kept until a pane is drawn.
+  typed = (pane() ? typingNow(pane()!) : null) ?? typed;
   const k = { here: pubCache?.works.length, mine: pubCache?.vows.length, sales: pubCache ? pubCache.works.reduce((n, w) => n + Object.keys(w.delivered).length, 0) : undefined, toSign: toSignCount };
   app.innerHTML = v.tabPage(state, tab, part, k, as, alarms(), counts());
   await fill();
@@ -453,6 +455,22 @@ async function draw() {
 
 const pane = () => $('pane');
 let filling = 0;
+/** The form last sent: its text is not kept across the redraw that follows. */
+let sentForm: string | null = null;
+type Typed = { form: string; name: string; value: string; at: number | null };
+/** What is typed when the whole page is redrawn, given back once its pane is filled. */
+let typed: Typed | null = null;
+
+/**
+ * What is being typed survives a redraw (H32): a reading that lands late must
+ * not empty the box the person is typing in. A form just sent is not kept.
+ */
+function typingNow(within: HTMLElement): Typed | null {
+  const t = document.activeElement;
+  const typing = t instanceof HTMLTextAreaElement || (t instanceof HTMLInputElement && t.type === 'text') ? t : null;
+  const form = typing?.form?.getAttribute('id');
+  return typing && form && form !== sentForm && within.contains(typing) && typing.value ? { form, name: typing.name, value: typing.value, at: typing.selectionStart } : null;
+}
 
 /** The part open, filled from what Edubba reads. */
 async function fill() {
@@ -462,7 +480,17 @@ async function fill() {
   try {
     const html = await partHtml();
     if (mine !== filling || !p.isConnected) return;
+    const kept = typed ?? typingNow(p);
+    typed = null;
     p.innerHTML = html;
+    if (kept) {
+      const again = p.querySelector<HTMLTextAreaElement | HTMLInputElement>(`form#${CSS.escape(kept.form)} [name="${CSS.escape(kept.name)}"]`);
+      if (again && !again.value) {
+        again.value = kept.value;
+        again.focus();
+        if (kept.at !== null) again.setSelectionRange(kept.at, kept.at);
+      }
+    }
     await after();
   } catch (err) {
     if (mine !== filling) return;
@@ -1090,6 +1118,8 @@ app.addEventListener('click', async (ev) => {
   }
   const sb = t.closest<HTMLElement>('[data-sub]');
   if (sb) {
+    // The tab already open: nothing to redraw (a redraw would only race what is being typed).
+    if (sb.classList.contains('k-on')) return;
     say('', '');
     sub = sb.dataset.sub!;
     keepAt();
@@ -1521,6 +1551,11 @@ app.addEventListener('click', async (ev) => {
 const words = (s: FormDataEntryValue | null) => (typeof s === 'string' ? s.trim() : '');
 const linesOf = (s: FormDataEntryValue | null) => words(s).split(/\s+/).filter(Boolean);
 
+// Typing again in a form sent: what is typed is kept again across a redraw.
+app.addEventListener('input', (ev) => {
+  if (sentForm && (ev.target as HTMLInputElement).form?.getAttribute('id') === sentForm) sentForm = null;
+});
+
 app.addEventListener('submit', async (ev) => {
   const form = ev.target as HTMLFormElement;
   // The collective client's page answers its own forms.
@@ -1530,6 +1565,7 @@ app.addEventListener('submit', async (ev) => {
   const agent = part.startsWith('agent:') ? part.slice(6) : undefined;
   // Not `form.id`: a form's fields shadow its properties (the bring forms have a field named "id").
   const fid = form.getAttribute('id');
+  sentForm = fid;
   if (fid === 'pair') {
     try {
       await c.ask('pair', { code: $<HTMLInputElement>('pair-code')!.value, label: 'this browser' });
