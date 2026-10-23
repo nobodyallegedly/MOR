@@ -63,7 +63,7 @@ No rule of a lower layer depends on Agreements. Where Agreements need a lower la
 
 - **Work claim.** An act binding a work's hash to its creators.
 - **Stake.** A share in a work or a publication. An agreement defines it, and it is identified by that agreement and its index in the agreement's stakes list. The shares in each always add up to 100%. The current holder of a stake is whoever the transfer chain on the agreement names.
-  A stake whose object is the collective whose agreement defines it is a share of all that collective's income, whoever earns it and whenever: a stake in every work the collective sells under that agreement. It decides what every holder is paid, member or departed.
+  A stake whose object is the collective whose agreement defines it is a share of all that collective's income, whoever earns it and whenever, and so a stake in every work the collective sells under that agreement. It decides what every holder is paid, member or departed.
   **A stake whose object is a vow is held by the vow's signer: a deal made on a vow has an owner** (rule 14).
 - **Holders' rule.** For a stake of a collective, how its holders consent together to the owners' matters: every holder (the default), or owners holding together at least a stated share of the stake. It reaches only changes that hit every owner of the stake alike, binds only holders who accepted it by signing or buying, and changes only with every holder (rule 94, terms field 30). The release rule (field 24) is its first instance.
 - **Owners' matters.** What a stake's owners consent to by their holders' rule, or each signing: what the stake is paid, an issuance in it, a collective's sale or release of a work, and a fork's successors' founding terms paying a kept holder less (rule 95).
@@ -1212,7 +1212,7 @@ It is signed by the parties of all the branches involved. Besides its mark, whic
 **What a settlement could see.** MOR has no clock, so a settlement could see exactly what its history holds:
 - its own line (its parent and the versions before it);
 - each tip it names, with that tip's history;
-- what it cites, each with its own history;
+- what it cites, a judge's settlement its request, each with its own history (what its `prev` and the predecessors its `objects` name, followed back);
 - for a judge's settlement, the histories of the version it keeps and of the tips it drops.
 
 Nothing else counts as seen.

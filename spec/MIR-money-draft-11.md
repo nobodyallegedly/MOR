@@ -114,10 +114,12 @@ An agreement names its payment cMIP (Agreements, terms field 2, task 6). The pay
 A receipt or claim counts only if all of these hold:
 
 - the rail Module its field 0 names is the one named by the rail of the payee's pointer, or the entry of the payee's vault, that the payment was paid to;
-- that pointer is the payee's own and counts for that payment by rules 1 and 17, or, where the payment follows an agreement or offer whose terms list, in field 14 or 29, a grant of the payee's, the pointer of that grant's grantee, the agreement's designated pointer (Agreements rules 15 and 17), judged by Agreements as rule 7 judges a collective's pointer, a Money-only client showing it unknown;
+- that pointer is the payee's own and counts for that payment by rules 1 and 17, or, where the payment follows an agreement or offer whose terms list, in field 14 or 29, a grant of the payee's, the pointer of that grant's grantee (field 14's, the agreement's designated pointer; field 29's, a backup: Agreements rules 15 and 17), judged by Agreements as rule 7 judges a collective's pointer, a Money-only client showing it unknown;
 - that pointer and vault are the ones rule 29 selects for that payment, as the chain stood for it (rules 3 and 29);
   - **except that a collective's pointer that a fork or closing of the collective left outside its history still counts for payments made before the ending's line, as the chain stood for each, and for none made after it** (Agreements rule 91);
 - where the payment falls under an agreement, that rail Module implements the payment cMIP the agreement names (Development, field 5).
+
+For a payment to such a grantee's pointer, the first and third conditions read the grantee's own pointer chain and vault in force: the pointer counts where rule 12 counts it on that chain.
 
 A receipt or claim naming any other rail Module counts for nothing, whatever its rail's proof shows.
 
