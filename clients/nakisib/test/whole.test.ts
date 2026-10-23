@@ -216,8 +216,9 @@ test('a genesis: Nakišib’s commitment, Kišib’s identity made from it, read
   await n.ask('write', { path: stick('commitment.mor') });
   assert.ok(!folder(n.dir).size, 'a commitment signs nothing: nothing in its folder');
 
-  // Kišib: a change of keys' request is not a commitment.
-  await refused(k.c.ask('make plan', { homes: H.join('\n'), relays: relay.base, commitment: b64(stick('request-1.mor')) }), /not Nakišib’s commitment/);
+  // Kišib: a file that is not a commitment is refused.
+  writeFileSync(stick('not-a-commitment.mor'), 'not a commitment');
+  await refused(k.c.ask('make plan', { homes: H.join('\n'), relays: relay.base, commitment: b64(stick('not-a-commitment.mor')) }), /not Nakišib’s commitment/);
   const review = await k.c.ask<Review>('make plan', { homes: H.join('\n'), relays: relay.base, commitment: b64(stick('commitment.mor')) });
   assert.ok(review.sections[0].lines.some((l) => l.text.includes(ready.commit)), 'the same commitment as Nakišib’s screen');
   let s = await k.c.ask<State>('confirm', { plan: review.plan, digest: review.digest });
