@@ -67,7 +67,7 @@ jobs:
           cd clients/genesis && npm ci --no-audit --no-fund && npm run wasm
           cd ../kishib && npm ci --no-audit --no-fund && npm run airgap
       - name: What the tests share
-        run: for p in kit desk dub barebone repo collective assess; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done
+        run: for p in kit desk dub barebone repo collective assess site; do (cd clients/$p && npm ci --no-audit --no-fund) || exit 1; done
       - name: Nakišib, with Kišib and real homes
         run: cd clients/nakisib && npm ci --no-audit --no-fund && npm run typecheck && npm test
 
