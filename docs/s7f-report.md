@@ -118,7 +118,7 @@ A subagent read only the eight texts and the diff. No finding number, review lab
 
 ## The releases rebuilt
 
-After the MOR lead merged the splits round (pull request 104; main green at `bc926601`), I merged main into this branch. Its one conflict was a generated file, Edubba's `built/BUILT-WITH.txt`, which the rebuild rewrites. I then rebuilt all six releases in this branch, as their READMEs say:
+After the MOR lead merged the splits round (pull request 104; main green at `bc926601`), I merged main into this branch, and again after Ummia's round (pull request 106, app-only, merged at 16:11 UTC). Each time the one conflict was a generated file (Edubba's, then Ummia's `built/BUILT-WITH.txt`), which the rebuild rewrites. After each merge I rebuilt all six releases in this branch, as their READMEs say:
 - `cd clients/genesis && npm run wasm`;
 - then `npm run release` in `clients/site` (the display client), `clients/dub`, `clients/kishib`, `clients/damgar`, `clients/ummia` and `clients/desk` (Edubba).
 
@@ -133,6 +133,7 @@ Each one's `npm run test:build` passed: it builds the release again and finds th
 - `cargo test --workspace --locked`: all green (88 test binaries).
 - `gen_vectors`: the vectors written as above; every earlier case byte-identical at its place.
 - `python3 core/vectors/check.py`: "all 192 vectors agree".
+- After the second merge, Ummia's suite again: 34 of 34 on three runs; one run before them failed its new by-clicks browser test at a Mac's size (the screens, not the core), which then passed every time; its message was not kept.
 - Every client suite CI runs, run here on the merged branch and this core: desk (Edubba, 105, the splits round's shared-deal and collective-sale tests among them), dub, damgar, ummia, kishib, barebone, collective, connector, genesis, grants, longform, manage, kit, anchoring-service, testwallet, reader, repo and reports. All passed.
 - Not run here: the regtest job (btcd and lnd). CI runs it.
-- CI on GitHub, read by me: green on `744e61ef` before the merge (all, regtest, browsers, seal, release: the reproducible display client). After the merge and rebuild, on `9b8eb6ba`: release, regtest and seal green when this line was written; the final head's result is on the pull request, read by me before marking it ready.
+- CI on GitHub, read by me: green on `744e61ef` before the merge (all, regtest, browsers, seal, release: the reproducible display client). After the first merge and rebuild, on `9b8eb6ba` and `f9ace56f`: read on the pull request. After the second merge and rebuild: the final head's result, read by me before marking it ready, is on the pull request.
