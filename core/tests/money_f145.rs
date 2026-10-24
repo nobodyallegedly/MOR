@@ -464,6 +464,7 @@ fn the_payers_claim_decides_the_purpose_where_the_rail_binds_none() {
         receipted: amount(500),
         payee: false,
         fulfils: true,
+        previous: false,
     }));
     // The receiver's receipt naming another debt counts nothing toward it.
     let other = l.debt(&mut debtor, cid, 300, tip_pointer, None, vec![]);

@@ -160,7 +160,15 @@ fn three_act_sequence() {
 #[test]
 fn open_act_vectors() {
     for v in load("open-act.json")["vectors"].as_array().unwrap() {
-        let outside = Outside::from_value(&cbor::decode(&b(&v["outside"])).unwrap()).unwrap();
+        // An outside not in its shape (an unknown key) is refused before anything is opened.
+        let outside = match Outside::from_value(&cbor::decode(&b(&v["outside"])).unwrap()) {
+            Ok(o) => o,
+            Err(e) => {
+                assert!(matches!(e, ActError::Shape(_)), "{}", v["why"]);
+                assert_eq!(v["result"], "shape", "{}", v["why"]);
+                continue;
+            }
+        };
         let got = match act::open(&outside, &b(&v["locked"]), None) {
             Ok(_) => "ok",
             Err(ActError::LockedHash) => "locked_hash",
@@ -201,6 +209,16 @@ fn sealed_container_vector() {
     let opened = envelopes::open(&Sealed::decode(&b(&f["sealed"])).unwrap(), Some(&recipient), &dk).unwrap();
     assert_eq!(opened.act, inner);
     assert_eq!(opened.key, Some(key));
+    // Envelopes rule 12: each invalid container is refused, for the reason given.
+    for v in f["invalid"].as_array().unwrap() {
+        let got = match envelopes::open(&Sealed::decode(&b(&v["sealed"])).unwrap(), Some(&recipient), &dk) {
+            Ok(_) => "ok",
+            Err(envelopes::EnvError::Addressing(_)) => "addressing",
+            Err(envelopes::EnvError::Shape(_)) => "shape",
+            Err(_) => "other",
+        };
+        assert_eq!(got, v["result"].as_str().unwrap(), "{}", v["why"]);
+    }
 }
 
 /// Part 2: signatures (`signatures.json`): keys from their secrets and
@@ -390,6 +408,14 @@ fn verdict_vectors() {
                     Ok(None) => "a clone put in force by a record",
                     Err(_) => "unknown",
                 }),
+                // Whether a liveness act shows presence (rule 50; "Liveness (type 12)").
+                "liveness" => json!(with_facts(&v, &mirs, facts).liveness(&h(&ask["act"])).map_or("unknown", |x| if x { "shows presence" } else { "shows nothing" })),
+                // Whether terms are invalid against their parent and lineage (a false mark...).
+                "agreement invalid" => json!(match with_facts(&v, &mirs, facts).agreement(&h(&ask["act"])).map(|a| a.invalid.is_some()) {
+                    Ok(true) => "invalid",
+                    Ok(false) => "not invalid",
+                    Err(_) => "unknown",
+                }),
                 "deal fork" => match with_facts(&v, &mirs, facts).deal_fork(&h(&ask["act"])).unwrap() {
                     None => json!("one version in force"),
                     Some(d) => json!({ "reference": hex::encode(d.reference), "branches": d.branches.len(), "tangled": d.tangled.is_some() }),
@@ -432,6 +458,12 @@ fn verdict_vectors() {
                     })
                 }
                 "disagreements" => with_facts(&v, &mirs, facts).disagreements(&h(&ask["receiver"])).map_or(json!("unknown"), |x| json!(x.len())),
+                "specification claim" => json!(match v.specification_claim(&h(&ask["act"]), &h(&ask["creator"])) {
+                    mor_core::chain::SpecClaim::Claimed => "claimed",
+                    mor_core::chain::SpecClaim::Unclaimed { disputed: false } => "unclaimed",
+                    mor_core::chain::SpecClaim::Unclaimed { disputed: true } => "unclaimed, shown as disputed",
+                    mor_core::chain::SpecClaim::Unknown => "unknown",
+                }),
                 q => panic!("{what}: a question this check does not know: {q}"),
             };
             assert_eq!(got, c["verdict"], "{layer}: {what}");
@@ -457,7 +489,7 @@ fn verdict_vectors() {
         assert_eq!(got.as_deref(), c["spec_hash"].as_str(), "{}", c["name"]);
         n += 1;
     }
-    assert_eq!(n, 153);
+    assert_eq!(n, 327);
 }
 
 /// An Agreements view over `v`, with the facts a verdict vector states.
@@ -479,6 +511,14 @@ fn with_facts<'a>(v: &'a mor_core::chain::Verifier, mirs: &mor_core::agreements:
     }
     for x in facts["settled_out_of_turn"].as_array().into_iter().flatten() {
         av.settled_out_of_turn.insert(h(x));
+    }
+    // A rail Module's kind and binding, read from its specification (fields
+    // 11 and 13), under the specification's hash.
+    for x in facts["rail_specifications"].as_array().into_iter().flatten() {
+        use mor_core::development::{Known, Spec};
+        if let Ok(Spec { rail: Some(r), .. }) = Spec::decode(&b(x), &Known::default()) {
+            av.rails.insert(Spec::hash_of(&b(x)), r);
+        }
     }
     av
 }

@@ -5,11 +5,12 @@
 //!
 //! In plain words: a specification says what kind of thing it is (a cMIP,
 //! a Module, a unit…). A cMIP that checks proofs of delivery says so, by
-//! one field, so that verifiers can find checkers and the core asks only
-//! those (F268, decided 12 October 2026: a proof checker is not a task; "a
-//! cMIP that checks proofs of delivery declares so in its specification by
-//! one field (as rail Modules declare their kind), so checkers stay
-//! discoverable").
+//! one field, so that verifiers can find checkers (F268, decided 12 October
+//! 2026: a proof checker is not a task; "a cMIP that checks proofs of
+//! delivery declares so in its specification by one field (as rail Modules
+//! declare their kind), so checkers stay discoverable"). From Development
+//! 11 the field serves discovery only: the checker of whatever cMIP an
+//! offer names is asked, declared or not.
 //!
 //! ```cddl
 //! spec = {
@@ -401,10 +402,12 @@ impl Spec {
     /// payment cMIP told from bytes: a Module whose field 5 names a payment
     /// cMIP (one whose own field 2 lists Money's task 6) must carry fields 11
     /// and 13. `cmip` gives the content, encoded, of a specification the
-    /// verifier holds, by hash. A Module lacking fields 11 and 13 whose field
+    /// verifier holds, by hash, the MIRs it ships among them (rule 26; the
+    /// Money MIR is known by `money`). A Module lacking fields 11 and 13 whose field
     /// 5 names a specification the verifier does not hold is unknown (that
-    /// hash); one naming a held payment cMIP is no specification. Every
-    /// other answer is [`Self::decode`]'s with no payment cMIP named.
+    /// hash); one naming a held payment cMIP is no specification. Held
+    /// content not in the format is no specification, so no payment cMIP.
+    /// Every other answer is [`Self::decode`]'s with no payment cMIP named.
     pub fn decode_judged(encoded: &[u8], money: &Hash, cmip: &dyn Fn(&Hash) -> Option<Vec<u8>>) -> Judged {
         let s = match Self::decode(encoded, &Known::default()) {
             Ok(s) => s,
@@ -414,6 +417,13 @@ impl Spec {
             return Judged::Spec(s);
         }
         let Some(target) = s.implements else { return Judged::Spec(s) };
+        // A Module working under the Money MIR names it (Development, "What
+        // each kind must carry"): a MIR, kind 4, is no payment cMIP, and
+        // every verifier holds the MIRs whose hashes it accepts (rule 26).
+        // The other MIRs reach this function only through `cmip`.
+        if target == *money {
+            return Judged::Spec(s);
+        }
         let Some(bytes) = cmip(&target) else { return Judged::Unknown(target) };
         match Self::decode(&bytes, &Known::default()) {
             Ok(c) if c.is_payment_cmip(money) => Judged::NoSpecification(NoSpecification(

@@ -243,7 +243,8 @@ pub enum SpecClaim {
 /// A succession as one verifier sees it (Identity draft 13, F300).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SuccessionSeen {
-    /// No succession declared, or the latest declaration ended it.
+    /// No succession declared, or the latest declaration ended it, or
+    /// names no MOR identity: a "mor" identifier not 32 bytes long.
     None,
     /// Declared by `rotation` to the MOR identity `successor`, which has
     /// not confirmed it: shown as declared, never followed.
@@ -412,7 +413,11 @@ struct Cand {
 struct Tally {
     winner: Option<Hash>,
     dishonest: Vec<Operator>,
+    /// A contested position: rules 40, 44 and 4.
     contested: bool,
+    /// A voided receipt another identity acknowledged: shown as
+    /// contesting the position, it blocks nothing (receipt check 6).
+    disputed: bool,
 }
 
 struct StepOut {
@@ -915,11 +920,13 @@ impl Verifier {
         let Some((rotation, Some(successor))) = decided else {
             return SuccessionSeen::None;
         };
-        let mor = (successor.protocol == "mor")
-            .then(|| Hash::try_from(successor.identifier.as_slice()).ok())
-            .flatten();
-        let Some(by) = mor else {
+        if successor.protocol != "mor" {
             return SuccessionSeen::Elsewhere { rotation, successor };
+        }
+        // A "mor" identifier of another length names no MOR identity, and
+        // no client follows it (Part three, the `successor` format).
+        let Ok(by) = Hash::try_from(successor.identifier.as_slice()) else {
+            return SuccessionSeen::None;
         };
         let mut unknown = false;
         for h in self.signed_by(&by) {
@@ -1308,7 +1315,7 @@ impl Verifier {
             let c = cands.iter().find(|c| c.id == w).unwrap();
             let mut out = counted(c, How::Homes);
             out.dishonest = t.dishonest;
-            out.contested = t.contested;
+            out.contested = t.contested || t.disputed;
             return out;
         }
 
@@ -1329,7 +1336,10 @@ impl Verifier {
                     },
                 });
                 s2.push(h.state.clone());
-                if self.step(cx, id, &l2, &s2, dishonest, false).result.is_ok() {
+                // Under the rule it declared: a next rotation its new homes
+                // receipt, never one counting by a homeless procedure of
+                // its own (Identity, "Finality").
+                if matches!(self.step(cx, id, &l2, &s2, dishonest, false).result, Ok((Link { how: How::Homes, .. }, _))) {
                     finals.push((*h, b));
                 }
             }
@@ -1346,7 +1356,7 @@ impl Verifier {
                     },
                 );
                 out.dishonest = t.dishonest;
-                out.contested = t.contested;
+                out.contested = t.contested || t.disputed;
                 return out;
             }
             _ => {
@@ -1371,7 +1381,7 @@ impl Verifier {
         if cannot_tell {
             let mut out = StepOut::stop(Stop::CannotTell(ids));
             out.dishonest = t.dishonest;
-            out.contested = t.contested;
+            out.contested = t.contested || t.disputed;
             return out;
         }
         let mut out = match prov.len() {
@@ -1387,7 +1397,7 @@ impl Verifier {
             _ => StepOut::stop(Stop::Contested(ids)),
         };
         out.dishonest = t.dishonest;
-        out.contested = t.contested;
+        out.contested = t.contested || t.disputed;
         out
     }
 
@@ -1415,6 +1425,7 @@ impl Verifier {
             winner: None,
             dishonest: vec![],
             contested: false,
+            disputed: false,
         };
         for op in voters {
             match op {
@@ -1435,7 +1446,7 @@ impl Verifier {
                                 Judged::Support { protected } => {
                                     best = Some(best.unwrap_or(false) || protected)
                                 }
-                                Judged::Disputed => t.contested = true,
+                                Judged::Disputed => t.disputed = true,
                                 Judged::No => {}
                             }
                         }
@@ -1462,6 +1473,11 @@ impl Verifier {
             Effective::Threshold(k) => k,
         };
         t.winner = votes.iter().find(|(_, v)| **v >= need).map(|(c, _)| *c);
+        // Rule 40: where homes disagree and none meets the rule, the
+        // identity is contested until one does.
+        if t.winner.is_none() && votes.len() >= 2 {
+            t.contested = true;
+        }
         t
     }
 
@@ -1625,9 +1641,16 @@ impl Verifier {
             // F298: void needs every kept line rebuilt and the act on none
             // of them; disputed is void but relied on, so it waits too.
             Kept::CannotTell => Judgement::Unknown,
-            Kept::No if self.recorded.contains(&x.id) || self.acknowledged(cx, x) => Judgement::Disputed,
-            Kept::No if self.keepers_unknown.contains(&x.id) => Judgement::Unknown,
-            Kept::No => Judgement::Void,
+            Kept::No if self.recorded.contains(&x.id) => Judgement::Disputed,
+            Kept::No => match self.acknowledged(cx, x) {
+                Some(true) => Judgement::Disputed,
+                // An acknowledgement whose status this verifier cannot
+                // tell: whether the act is relied on cannot be told
+                // either; unknown, never void (section 6, F298).
+                None => Judgement::Unknown,
+                Some(false) if self.keepers_unknown.contains(&x.id) => Judgement::Unknown,
+                Some(false) => Judgement::Void,
+            },
         }
     }
 
@@ -1639,19 +1662,24 @@ impl Verifier {
     /// shape holds (a witness act): [`Self::status_cx`] judges all of it.
     /// An acknowledgement counts only while its signer's chain keeps it
     /// valid: one its signer's rotation voided keeps nothing disputed,
-    /// acknowledged or not (Identity draft 13, F297).
-    fn acknowledged(&self, cx: &mut Cx, x: &Held) -> bool {
+    /// acknowledged or not (Identity draft 13, F297). `None` where none
+    /// is valid and one's status this verifier cannot tell ("A verifier
+    /// that cannot tell answers unknown").
+    fn acknowledged(&self, cx: &mut Cx, x: &Held) -> Option<bool> {
+        let mut unknown = false;
         for a in self.acked_by.get(&x.id).into_iter().flatten() {
             let y = &self.acts[a];
             let Some(s) = y.signer() else { continue };
             if Some(s) == x.signer() {
                 continue;
             }
-            if self.status_cx(cx, y) == Status::Valid {
-                return true;
+            match self.status_cx(cx, y) {
+                Status::Valid => return Some(true),
+                Status::Unknown => unknown = true,
+                _ => {}
             }
         }
-        false
+        (!unknown).then_some(false)
     }
 
     /// Whether an act lies in a rotation's kept ancestry: a kept tip or an
@@ -1761,7 +1789,7 @@ impl Verifier {
                 match x.payload() {
                     Some(Payload::Endorsement(en))
                         if x.signer() == Some(id)
-                            && x.act.outside.binding.as_ref().is_some_and(|b| b == prev || self.sets_key(id, b))
+                            && x.act.outside.binding.as_ref() == Some(&self.key_set_by(prev))
                             && ps.signing_key.made(&x.act.signature)
                             && names(&x.inside, id, h) =>
                     {
@@ -1772,16 +1800,16 @@ impl Verifier {
             })
     }
 
-    /// Whether `b` is a genesis or rotation of `id`, an act that sets a
-    /// signing key: where a chain signature is the act just before a
-    /// homeless rotation, the endorsement is bound to the act that set the
-    /// key in effect (F132).
-    fn sets_key(&self, id: &Hash, b: &Hash) -> bool {
-        self.acts.get(b).is_some_and(|h| match h.payload() {
-            Some(Payload::Genesis(_)) => h.id == *id,
-            Some(Payload::Rotation(_)) => h.signer() == Some(id),
-            _ => false,
-        })
+    /// The identity-chain act an escape endorsement is bound to: the act
+    /// just before the homeless rotation, or, where that act is a chain
+    /// signature (which sets no key), the act that set the key in effect
+    /// (F132; "The escape endorsement").
+    fn key_set_by(&self, prev: &Hash) -> Hash {
+        let mut cur = *prev;
+        while let Some(Payload::ChainSignature(c)) = self.acts.get(&cur).and_then(|h| h.payload()) {
+            cur = c.prev;
+        }
+        cur
     }
 
     /// Whether an operator closed its homes by a counting rotation.
@@ -1926,6 +1954,84 @@ impl Verifier {
         }
     }
 
+    /// Everyday check 2 and rule 28: whether `b`, a rotation or chain
+    /// signature of `res`'s identity past its counting links, is built on
+    /// one this verifier waits on (pending or contested, rule 42), each act
+    /// between passing the rotation checks on the state the one before it
+    /// would leave. Such a rotation does not count yet, so it, and every act
+    /// bound to it, is pending, never invalid: it may count once the
+    /// receipts it waits on arrive. A homeless rotation a valid objection
+    /// voids is waited on by nothing: rotations built on it are left as
+    /// they were (rule 55: void with it).
+    fn on_waiting(&self, cx: &mut Cx, res: &Resolution, b: &Held) -> bool {
+        let n = res.links.len();
+        if n == 0 || res.waiting().is_empty() {
+            return false;
+        }
+        // Back from `b` to an act the resolution waits on.
+        let mut path = vec![b.id];
+        let mut cur = b;
+        loop {
+            let prev = match cur.payload() {
+                Some(Payload::Rotation(r)) => r.prev,
+                Some(Payload::ChainSignature(c)) => c.prev,
+                _ => return false,
+            };
+            if cur.signer() != Some(&res.identity) || res.position_of(&prev).is_some() || path.len() > self.acts.len() {
+                return false;
+            }
+            let Some(p) = self.acts.get(&prev) else { return false };
+            path.push(prev);
+            if res.waiting().contains(&prev) {
+                if self.objected(cx, res, p) {
+                    return false;
+                }
+                break;
+            }
+            cur = p;
+        }
+        // Forward again: each act a candidate on the state the one before
+        // it would leave, at the next position.
+        let mut prev = res.links[n - 1].act;
+        let mut state = res.states[n - 1].clone();
+        for (i, id) in path.iter().rev().enumerate() {
+            let Some(c) = self.candidates(&res.identity, (n + i) as u64, &prev, &state).into_iter().find(|c| &c.id == id) else {
+                return false;
+            };
+            prev = c.id;
+            state = c.state;
+        }
+        true
+    }
+
+    /// Whether a homeless rotation `h` waited on at `res`'s next position
+    /// is voided by a valid objection from a home of the old set (rule 49,
+    /// step 3), as [`Self::homeless_basis`] reads one.
+    fn objected(&self, cx: &mut Cx, res: &Resolution, h: &Held) -> bool {
+        let n = res.links.len();
+        if !matches!(h.payload(), Some(Payload::Rotation(r)) if r.homeless) || n == 0 {
+            return false;
+        }
+        let id = res.identity;
+        let old = res.states[n - 1].operators();
+        for oid in self.by_type.get(&types::OBJECTION).into_iter().flatten() {
+            let o = &self.acts[oid];
+            let (Some(Payload::Objection(ob)), Some(s)) = (o.payload(), o.signer()) else {
+                continue;
+            };
+            if ob.identity != id || !names(&o.inside, &id, &h.id) || !old.contains(&Operator::Id(*s)) {
+                continue;
+            }
+            if res.dishonest.iter().any(|(d, p)| *d == Operator::Id(*s) && (*p as usize) < n) || self.closed(cx, s) {
+                continue;
+            }
+            if self.status_cx(cx, o) == Status::Valid {
+                return true;
+            }
+        }
+        false
+    }
+
     /// For an Envelopes withdrawal (type 3), whether its signer is the
     /// publication's signer or the identity the publication's `for` (field
     /// 8) names; `None` while the publication is not held. `Some(true)` for
@@ -1977,6 +2083,10 @@ impl Verifier {
         // on its grantor's chain. A binding that is no link of the signer's
         // identity chain is a scoped key's (Identity rule 8): Agreements
         // judge whether the grant backs it (rules 73 to 80, `backing`).
+        let collective = res
+            .states
+            .iter()
+            .any(|s| s.declarations.iter().any(|d| d.spec == agreements && d.kind == crate::agreements::kinds::FOUNDING_AGREEMENT && d.value.is_some()));
         if let Some(b) = x.act.outside.binding {
             // A holder's member key (Text rule 14; Agreements rule 73): the
             // binding is the holder's signature act on a founding or clone,
@@ -1995,11 +2105,28 @@ impl Verifier {
             if o.predecessor == b && res.position_of(&b).is_none() {
                 return Some(true);
             }
+            if res.position_of(&b).is_none() {
+                match self.acts.get(&b) {
+                    // Text rule 14: signed with a grant key, the second case
+                    // decides, whoever the signer is; a collective's grant
+                    // key naming one of its decisions, not its grant, is
+                    // invalid (the first case is the collective's own key's).
+                    Some(g) if g.inside.spec != self.identity_spec => return Some(false),
+                    // A binding not held may be a holder's signature act: a
+                    // collective's text naming a founding or clone is unknown
+                    // until it holds that signature (Text rule 14).
+                    None if collective
+                        && self
+                            .acts
+                            .get(&o.predecessor)
+                            .is_some_and(|p| p.inside.spec == agreements && p.inside.type_ == crate::agreements::types::TERMS) =>
+                    {
+                        return None
+                    }
+                    _ => {}
+                }
+            }
         }
-        let collective = res
-            .states
-            .iter()
-            .any(|s| s.declarations.iter().any(|d| d.spec == agreements && d.kind == crate::agreements::kinds::FOUNDING_AGREEMENT && d.value.is_some()));
         if !collective {
             return Some(false);
         }
@@ -2007,7 +2134,10 @@ impl Verifier {
             return Some(true);
         }
         let p = self.acts.get(&o.predecessor)?;
-        Some(p.signer() == Some(signer) && p.inside.spec == agreements && p.inside.type_ == crate::agreements::types::RECORD)
+        // One of its records: an act claiming the collective as signer that
+        // is invalid (another key's) is no decision of its own (Text rule 14;
+        // Agreements rule 58).
+        Some(p.signer() == Some(signer) && p.inside.spec == agreements && p.inside.type_ == crate::agreements::types::RECORD && self.status_cx(cx, p) != Status::Invalid)
     }
 
     fn status_cx(&self, cx: &mut Cx, x: &Held) -> Status {
@@ -2063,7 +2193,7 @@ impl Verifier {
             let res = self.resolve_cx(cx, &who);
             return if res.position_of(&x.id).is_some() {
                 Status::Valid
-            } else if res.waiting().contains(&x.id) {
+            } else if res.waiting().contains(&x.id) || self.on_waiting(cx, &res, x) {
                 Status::Pending
             } else if self.lost_at(&res, &who, x) {
                 Status::NotCounting
@@ -2090,7 +2220,7 @@ impl Verifier {
             if matches!(res.stop, Stop::CannotTell(ref c) if c.contains(binding)) {
                 return Status::Unknown;
             }
-            if res.waiting().contains(binding) {
+            if res.waiting().contains(binding) || self.acts.get(binding).is_some_and(|b| self.on_waiting(cx, &res, b)) {
                 return Status::Pending;
             }
             // F128: a scoped key, installed by an act of a higher MIR. A

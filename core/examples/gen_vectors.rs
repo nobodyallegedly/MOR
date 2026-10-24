@@ -200,6 +200,17 @@ fn text_vectors() -> J {
         ("a \nb\u{FDD0}\r", "rules 10, 11 and 8 broken, in that order along the string: the rule named is 8"),
         ("a\u{202E}b\u{202C}", "bidirectional controls are canonical (shown visibly before signing terms)"),
         ("\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}", "an emoji sequence with ZERO WIDTH JOINER: canonical"),
+        ("a\u{1F}b", "rule 9: the last C0 control, U+001F"),
+        ("a\u{1680}", "rule 10: ending with OGHAM SPACE MARK, on the fixed list"),
+        ("a\u{2000}\nb", "rule 10: a line ending with EN QUAD, the first of U+2000 to U+200A"),
+        ("a\u{200A}", "rule 10: ending with HAIR SPACE, the last of U+2000 to U+200A"),
+        ("a\u{202F}", "rule 10: ending with NARROW NO-BREAK SPACE"),
+        ("a\u{205F}", "rule 10: ending with MEDIUM MATHEMATICAL SPACE"),
+        ("a\u{FDEF}", "rule 11: noncharacter U+FDEF, the last of U+FDD0 to U+FDEF"),
+        ("a\u{FDCF}", "U+FDCF, just below the noncharacter block, assigned: canonical"),
+        ("a\u{1FFFE}", "rule 11: noncharacter U+1FFFE, plane 1"),
+        ("a\u{378}", "U+0378, not assigned in Unicode 17.0: left as it is, canonical (rule 12)"),
+        ("a\u{2066}b\u{2069}", "bidirectional isolates are canonical (rule 6 protects in display)"),
     ];
     let v: Vec<J> = cases
         .iter()
@@ -465,8 +476,19 @@ fn invalid_acts() -> J {
             json!({ "why": why, "outside": hx(&o.encode()), "locked": hx(&l), "result": want })
         })
         .collect();
+    // Envelopes rule 1: an unknown key on the outside makes the act invalid,
+    // before anything is opened (S7g, Envelopes).
+    let mut v = v;
+    let (o, l) = act::seal(&good, &key, &nonce, &addr);
+    let mut extra = o.to_value();
+    if let Value::Map(m) = &mut extra {
+        m.push((Value::Uint(7), Value::Uint(0)));
+    }
+    let extra = cbor::encode(&extra);
+    assert!(matches!(act::Outside::from_value(&cbor::decode(&extra).unwrap()), Err(act::ActError::Shape(_))));
+    v.push(json!({ "why": "an unknown outside key (7)", "outside": hx(&extra), "locked": hx(&l), "result": "shape" }));
     json!({
-        "description": "Opening an act (Envelope rules 1, 2, 3, 5): check the locked hash, unlock with the outside's content key (XChaCha20-Poly1305, no associated data), check the inside commitment over the unlocked bytes, then decode the inside as deterministic CBOR in the Envelope's shape with canonical text. Each case gives the first check that fails, in that order, or ok.",
+        "description": "Opening an act (Envelope rules 1, 2, 3, 5): decode the outside in its shape (an unknown key is refused), check the locked hash, unlock with the outside's content key (XChaCha20-Poly1305, no associated data), check the inside commitment over the unlocked bytes, then decode the inside as deterministic CBOR in the Envelope's shape with canonical text. Each case gives the first check that fails, in that order, or ok.",
         "vectors": v,
     })
 }
@@ -516,6 +538,50 @@ fn sealed_container() -> J {
     let sealed = envelopes::seal(&inner, Some(&content_key), &[Recipient::Identity { id: recipient, key: dk.public.clone() }], &rnd).unwrap();
     let opened = envelopes::open(&sealed, Some(&recipient), &dk).unwrap();
     assert_eq!(opened.act, inner);
+    // Envelopes rule 12: a container that fails "Opening" (step 4) or whose
+    // inner act fails "Addressing" (step 5) is invalid and delivers nothing
+    // (S7g, Envelopes). Each sealed to the same recipient, fresh randomness each.
+    let rnd_for = |case: &str| SealRandom {
+        container_key: fixed(&format!("mor-core vector: container key, {case}")),
+        nonce: fixed_n(&format!("mor-core vector: container nonce, {case}")),
+        eseeds: vec![[fixed(&format!("mor-core vector: eseed, first half, {case}")), fixed(&format!("mor-core vector: eseed, second half, {case}"))].concat().try_into().unwrap()],
+    };
+    let inner_as = |case: &str, public: bool, to: Hash| {
+        act::make(
+            &Inside { salt: fixed_n(&format!("mor-core vector: sealed salt, {case}")), ..inside.clone() },
+            &fixed(&format!("mor-core vector: sealed content key, {case}")),
+            &fixed_n(&format!("mor-core vector: sealed inner nonce, {case}")),
+            &Addressing {
+                signer: Some(fixed("mor-core vector: stand-in signer identity")),
+                binding: Some(fixed("mor-core vector: stand-in binding")),
+                public,
+                to: Some(vec![to]),
+            },
+            |id| signer_key.sign(id, &[0; 32]),
+        )
+    };
+    let me = [Recipient::Identity { id: recipient, key: dk.public.clone() }];
+    let mut invalid = vec![];
+    let c = "addressed to another";
+    let other = inner_as(c, false, fixed("mor-core vector: stand-in other identity"));
+    let s1 = envelopes::seal(&other, Some(&fixed(&format!("mor-core vector: sealed content key, {c}"))), &me, &rnd_for(c)).unwrap();
+    assert!(matches!(envelopes::open(&s1, Some(&recipient), &dk), Err(envelopes::EnvError::Addressing(_))));
+    invalid.push(json!({ "why": "the inner act's own to names another identity than the recipient (step 5)", "sealed": hx(&s1.encode()), "result": "addressing" }));
+    let c = "a key for a public act";
+    let public = inner_as(c, true, recipient);
+    let s2 = envelopes::seal(&public, Some(&fixed(&format!("mor-core vector: sealed content key, {c}"))), &me, &rnd_for(c)).unwrap();
+    assert!(matches!(envelopes::open(&s2, Some(&recipient), &dk), Err(envelopes::EnvError::Shape(_))));
+    invalid.push(json!({ "why": "contents carry a key for a public inner act (step 4)", "sealed": hx(&s2.encode()), "result": "shape" }));
+    let mut parts = cbor::decode(&sealed.locked_act).unwrap();
+    if let Value::Array(a) = &mut parts {
+        if let Value::Array(caps) = &mut a[0] {
+            let first = caps[0].clone();
+            caps.push(first);
+        }
+    }
+    let s3 = envelopes::Sealed { to: sealed.to.clone(), locked_act: cbor::encode(&parts) };
+    assert!(matches!(envelopes::open(&s3, Some(&recipient), &dk), Err(envelopes::EnvError::Shape(_))));
+    invalid.push(json!({ "why": "two capsules for one recipient in to (step 1)", "sealed": hx(&s3.encode()), "result": "shape" }));
     json!({
         "description": "A sealed container in the Envelopes MIR's format: sealed = [to, locked-act], no one-time key and no signature, its outside unauthenticated by design. locked-act = [capsules, nonce, locked], one capsule [ct, wrapped] per recipient: ct the X-Wing ciphertext of encapsulating to the recipient's key with eseed, wrapped the container key locked under tagged_hash(\"MOR/sealed/wrap\", shared secret) with a zero nonce; locked opens with the container key and nonce to contents = [act, key], the inner act and its content key. The recipient's public key is X-Wing's from the secret given. Every input is fixed; the spec, signer and binding are stand-ins.",
         "recipient": hx(&recipient),
@@ -528,6 +594,7 @@ fn sealed_container() -> J {
         "nonce": hx(&rnd.nonce),
         "eseed": hx(&rnd.eseeds[0]),
         "sealed": hx(&sealed.encode()),
+        "invalid": invalid,
     })
 }
 
@@ -569,7 +636,7 @@ fn verdict_vectors() -> J {
     layers.insert("mir_hashes".into(), J::Array(verdicts::mir_hashes()));
     let m = verdicts::mirs();
     json!({
-        "about": "Verdict vectors: for each case, the acts a verifier holds (by id, from the pool: each act's complete bytes, outside, locked inside and signature, as Envelopes encodes an act; every act public, its content key on its outside), the facts it holds beside them that are not acts (inclusion proofs a home served, each naming the receipt it proves; homes it failed to reach; anchors it checked; rail answers it was given: that a receipt or claim is valid, paid to a flow, and which payment a proof is; a private act's content key, as its recipient holds it; private acts found at a home, with the home's operator; a judge's period passed on a question, and settlements signed before their link's stage opened, as the time reference says), the question asked and the verdict the texts give, with the rule that decides it. Questions: status (Identity's standing of an act: valid, pending, void, disputed, invalid, unknown, scoped, not counting); chain (the acts counting at each position of an identity chain, what stops it, and homes proven dishonest from a position on); succession (Identity, \"Succession\": none, declared, confirmed and followed, unknown, or another protocol's, with the successor and its confirmation); status after keepers (Identity's standing once Agreements has read the keeper records held and named the acts their keepers recorded before the rotation voiding them); backing (Agreements rule 80 for an act of a grant key); consent counts (whether an act of a collective has the consent its areas need); agreement exists; deal fork; deadline (rule 33, under the keepers and rule given, on the clock given, at the point given); closing and fork (whether a collective's closing or fork is complete); version in force (a deal's, as its chain of judgment settles it); vow (each sale's state, the payments signed by nobody, and those whose place is unknown); purchase contests (the contests shown beside a purchase, by the act that is it: the buyer's payer's claim of the payment, or the buyer's signature act on an offer at no price; or unknown); refund repaid (what Money shows paid back toward a refund, or unknown); paid toward (what counts toward an obligation, or unknown where it rests on a payment the rail's answer does not name); payment counts (whether a receipt or claim the rail answered paid counts for its payee, Money rules 4 and 12 to 15: counts, does not count, or unknown); purchase (Agreements rule 12's verdict on a receipt or claim: purchase, no purchase, unrecorded, wrong receipt, unknown, or not a payment for a work); disagreements (how many open questions a receiver shows, Money rule 11, or unknown likewise). The MIR hashes are stand-ins, SHA-256 of a label, until the freeze: identity, envelopes, text, money, agreements, development below. Every key is test data derived from a name.",
+        "about": "Verdict vectors: for each case, the acts a verifier holds (by id, from the pool: each act's complete bytes, outside, locked inside and signature, as Envelopes encodes an act; every act public, its content key on its outside), the facts it holds beside them that are not acts (inclusion proofs a home served, each naming the receipt it proves; homes it failed to reach; anchors it checked; rail answers it was given: that a receipt or claim is valid, paid to a flow, and which payment a proof is; the specifications of rail Modules it adopted, whose fields 11 and 13 give each rail's kind and what its proof binds; a private act's content key, as its recipient holds it; private acts found at a home, with the home's operator; a judge's period passed on a question, and settlements signed before their link's stage opened, as the time reference says), the question asked and the verdict the texts give, with the rule that decides it. Questions: status (Identity's standing of an act: valid, pending, void, disputed, invalid, unknown, scoped, not counting); chain (the acts counting at each position of an identity chain, what stops it, and homes proven dishonest from a position on); succession (Identity, \"Succession\": none, declared, confirmed and followed, unknown, or another protocol's, with the successor and its confirmation); status after keepers (Identity's standing once Agreements has read the keeper records held and named the acts their keepers recorded before the rotation voiding them); backing (Agreements rule 80 for an act of a grant key); consent counts (whether an act of a collective has the consent its areas need); agreement exists; deal fork; deadline (rule 33, under the keepers and rule given, on the clock given, at the point given); closing and fork (whether a collective's closing or fork is complete); version in force (a deal's, as its chain of judgment settles it); vow (each sale's state, the payments signed by nobody, and those whose place is unknown); purchase contests (the contests shown beside a purchase, by the act that is it: the buyer's payer's claim of the payment, or the buyer's signature act on an offer at no price; or unknown); refund repaid (what Money shows paid back toward a refund, or unknown); paid toward (what counts toward an obligation, or unknown where it rests on a payment the rail's answer does not name); payment counts (whether a receipt or claim the rail answered paid counts for its payee, Money rules 4 and 12 to 15: counts, does not count, or unknown); purchase (Agreements rule 12's verdict on a receipt or claim: purchase, no purchase, unrecorded, wrong receipt, unknown, or not a payment for a work); disagreements (how many open questions a receiver shows, Money rule 11, or unknown likewise); specification claim (Development rule 3: whether a publication claims a specification for the creator given: claimed, unclaimed, unclaimed shown as disputed, or unknown); agreement invalid (whether an agreement's terms are invalid, a false mark included: invalid, not invalid, or unknown); liveness (whether a party's liveness act shows presence: shows presence, shows nothing, or unknown). The MIR hashes are stand-ins, SHA-256 of a label, until the freeze: identity, envelopes, text, money, agreements, development below. Every key is test data derived from a name.",
         "mirs": { "identity": hx(&m.identity), "envelopes": hx(&m.envelopes), "text": hx(&m.text), "money": hx(&m.money), "agreements": hx(&m.agreements), "development": hx(&m.development) },
         "pool": out.pool,
         "cases": layers,

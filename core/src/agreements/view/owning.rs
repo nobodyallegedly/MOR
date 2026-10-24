@@ -337,6 +337,43 @@ impl<'a> AgreementsView<'a> {
         out
     }
 
+    /// A stake's holders as currently held (rule 14: "the transfers name
+    /// the current holder of each stake, and a split service MUST follow
+    /// them"; rule 26): `holders`, field 7 of `version`, with each
+    /// effective transfer of stake `idx` moving its share from its seller
+    /// to its buyer. A transfer counts here only where the version it names
+    /// writes that stake as `version` does (mechanic, the build's: a later
+    /// version restating the stake's holders has counted the transfers
+    /// before it).
+    pub(super) fn holders_as_held(&self, version: &Hash, idx: u64, stake: &Stake, holders: Vec<(Option<Hash>, u64)>) -> Vec<(Option<Hash>, u64)> {
+        let root = |a: &Hash| self.lineage(a).ok().and_then(|l| l.last().map(|x| x.0));
+        let mut out = holders;
+        for h in self.v.held_acts() {
+            if !self.is_agreements(h, crate::agreements::open_formats::new_types::STAKE_TRANSFER) {
+                continue;
+            }
+            let Ok(t) = StakeTransfer::decode(&h.inside) else { continue };
+            if t.stake != idx || root(&t.agreement).is_none() || root(&t.agreement) != root(version) {
+                continue;
+            }
+            if self.terms(&t.agreement).ok().and_then(|x| x.stakes?.get(idx as usize).cloned()).as_ref() != Some(stake) {
+                continue;
+            }
+            let Ok(e) = self.transfer(&h.id) else { continue };
+            if !e.effective {
+                continue;
+            }
+            if let Some(x) = out.iter_mut().find(|(w, _)| *w == Some(e.seller)) {
+                x.1 = x.1.saturating_sub(t.share);
+            }
+            match out.iter_mut().find(|(w, _)| *w == Some(t.to)) {
+                Some(x) => x.1 += t.share,
+                None => out.push((Some(t.to), t.share)),
+            }
+        }
+        out
+    }
+
     /// The position on the seller's identity chain of the chain signature
     /// naming the transfer (the earliest that counts), F132.
     fn transfer_place(&self, id: &Hash, seller: &Hash) -> Option<u64> {
@@ -404,6 +441,11 @@ impl<'a> AgreementsView<'a> {
             if pos < place || self.signers(&h.id, &[t.to]).is_empty() || !self.valid(&h.id) {
                 continue;
             }
+            // An over-sale confers nothing (rule 14, F224): the seller's
+            // receipts after it are no buyer's.
+            if self.held_before(&h.id, &t, &seller, Some(place)).is_none_or(|left| left < t.share) {
+                continue;
+            }
             for (split, i) in self.splits_paying_on(&t, &seller) {
                 let names = x.fulfils == split || r.inside.objects.iter().flatten().any(|o| o.chain == split || o.predecessor == split);
                 if !names {
@@ -461,7 +503,9 @@ impl<'a> AgreementsView<'a> {
     /// Whether a liveness act (type 12, rule 50) shows presence: valid, and
     /// public or addressed to every other party of the agreement it names
     /// (Fable's reading of OF23 a). In a collective it counts only where
-    /// the collective placed it (FR10), which its chain shows.
+    /// the collective placed it (FR10; "Liveness (type 12)"): an act of the
+    /// collective on its chain acknowledging it ("Made before, made
+    /// after", 2).
     pub fn liveness(&self, id: &Hash) -> R<bool> {
         let h = self.held(id)?;
         let l = crate::agreements::open_formats::Liveness::decode(&h.inside)?;
@@ -469,7 +513,13 @@ impl<'a> AgreementsView<'a> {
         let signer = h.act.outside.signer.unwrap_or_default();
         let reaches = h.act.outside.content_key.is_some()
             || t.parties.iter().filter(|p| **p != signer).all(|p| h.act.outside.to.iter().flatten().any(|q| q == p));
-        Ok(self.valid(id) && t.parties.contains(&signer) && reaches)
+        if !(self.valid(id) && t.parties.contains(&signer) && reaches) {
+            return Ok(false);
+        }
+        Ok(match self.collective_of(&l.agreement)? {
+            Some(c) => !self.placements(&self.col(&c), h).is_empty(),
+            None => true,
+        })
     }
 }
 
