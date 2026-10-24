@@ -28,6 +28,14 @@ Where the core offers the owner several options, one of them is the default when
 
 Before any question is put: "Is this core business? Or has core defined how the choice is made by participants?" Where the core already gives participants the means to choose (their terms, their split plan, their vows, their cMIPs), the answer is theirs, and the question is not put. The core keeps only what no choice may break.
 
+## F400. A witnessed act does not vanish with its author: whoever relies keeps it (24 October 2026)
+
+**Found by Nobody, allegedly, joining two questions:** a right to vanish (he used Nostr's: "Almost all relays respected it and wiped my notes"; on MOR a relay transport cMIP's, after the freeze, honoured by policy) and "what's the exact mechanic of a RELY at the moment". A witness act (Identity type 15, rules 10 and 11) keeps the act it names visible as disputed if its author disowns it (rule 34); but an acknowledgement counts only alongside the act it names (Envelopes), so an author who has every home and relay delete the original leaves the reliance pointing at nothing: the promise gone without any rotation.
+
+**Decided by Nobody, allegedly, 24 October 2026:** "Yes, it really is a core business to ensure witnessed acts don't vanish." **Client conformance in Identity (rule 10 or 11): a client that signs a witness act keeps a copy of every act it names, and makes it available where its own signer's acts are found**, so that a signed act relied on survives in the hands of whoever relied on it (a signed act verifies from any copy). The same holds for any acknowledgement an Identity, Money or Agreements act carries. *Stated cost, in the vanish request's own words when it is written:* a vanish removes what its author uploaded; what someone relied on survives with them.
+
+**Where:** Identity rules 10 and 11 (and the acknowledgement passages of Envelopes where they read it), in S7i; the apps that offer Rely (Damgar first) follow, the suite's; the vanish request in the relay transport cMIP after the freeze says it.
+
 ## F398. Baked, claimed, offered, published: one word per step, and the price leaves the upload (24 October 2026)
 
 **Found by Nobody, allegedly, walking Q-A12** (a co-owned work sold by one owner): "We have a terminology problem, a publication means two things? The upload and the deal with a publisher." Envelopes' type 0 "publication" is the act that carries media (fingerprint, lock, size, where to fetch, optionally a price and `for`); Agreements uses "publication" for a publisher's release (rule 15, "a publication carries two agreements"), and "publish" is also used for putting any act on relays.
