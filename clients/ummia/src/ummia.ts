@@ -61,6 +61,10 @@ import type { OwnRelease, Releases } from './releases.ts';
 import { KINDS, TASKS, prepareSpec, publishSpec, readHash, type SpecForm } from './spec.ts';
 import { LIMIT_SAY, actsOf, track, type Tracked } from './track.ts';
 import type { AcceptedEntry, Done, Line, Review, State } from './shapes.ts';
+import { approveRules, readRules, rulesOf, type RulesShown } from '../../kit/src/engine/rules.ts';
+
+/** The rules Ummia runs (H93): long-form drafts and discussions, releases, and names. */
+export const UMMIA_RULES = rulesOf('long-form', 'release-manifest', 'naming');
 
 export type { State } from './shapes.ts';
 
@@ -101,6 +105,8 @@ export interface Settings {
   via: Via;
   /** Who acts (the chooser): the identity's own ID, or a collective it acts for (round 2). */
   acting?: string | null;
+  /** Rules followed in Ummia only (H93): their spec hashes, the sealed list unchanged. */
+  rulesHere?: string[];
   /** The collectives this identity acts for here, with its own key (round 2, F353). */
   collectives?: { id: string; available: boolean; why: string | null }[];
   /** Look's saved points (decided: a release line, a developer's releases; "the same follow list, but here it filters"). */
@@ -529,6 +535,7 @@ export class Ummia {
     out.acting = chosen(out.actors, s.acting ?? me.id)?.id ?? null;
     out.settings = { relays: s.relays, track: s.track, reports: s.reports };
     out.saved = s.saved ?? [];
+    out.rules = await this.rulesNow(me, s);
     out.counts = { specs: book.specs.length, releases: book.releases.length + (book.collectiveReleases?.length ?? 0), mips: book.mips.length, reports: book.reports.length, cards: (book.cards?.length ?? 0) + (book.discussions?.length ?? 0), anchors: book.anchors.length };
     return out;
   }
@@ -701,6 +708,34 @@ export class Ummia {
     } catch {
       return new Map();
     }
+  }
+
+  /** Ummia's own rules (H93), held against the list and what was approved in Ummia only: read again at most once a minute. */
+  private rulesRead = new Map<string, { shown: RulesShown; at: number }>();
+  private async rulesNow(me: TestIdentity, s: Settings, fresh = false): Promise<RulesShown> {
+    const c = this.rulesRead.get(me.id);
+    if (c && !fresh && c.at + 60 > now()) return c.shown;
+    const { shown } = await readRules('Ummia', UMMIA_RULES, me, s.rulesHere ?? [], { open: this.secrets(me), via: me.via });
+    this.rulesRead.set(me.id, { shown, at: now() });
+    return shown;
+  }
+
+  async rules(): Promise<RulesShown> {
+    const { me, s } = await this.ctx();
+    return this.rulesNow(me, s, true);
+  }
+
+  /** Approve rules Ummia runs, in Ummia only or added to the list; or stop following one in Ummia only. */
+  approveRules(a: { keys: string[]; where: 'here' | 'list'; remove?: boolean }): Promise<{ lines: Line[]; rules: RulesShown }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const keys = a.keys.includes('*') ? (await this.rulesNow(me, s, true)).rules.filter((r) => !r.on).map((r) => r.key) : a.keys;
+      if (!keys.length) return { lines: [{ text: 'Every rule Ummia runs is followed already.' }], rules: await this.rulesNow(me, s) };
+      const r = await approveRules('Ummia', UMMIA_RULES, me, { keys, where: a.where, remove: a.remove, here: s.rulesHere ?? [] }, { via: me.via, save: () => this.store.saveIdentity(me), check: () => this.current(me) });
+      const next = { ...s, rulesHere: r.here };
+      await this.store.write(me.id, 'settings', next);
+      return { lines: r.lines, rules: await this.rulesNow(me, next, true) };
+    });
   }
 
   /** The whole list, as every app reads it: each entry, its label, and whose part it is where known. */

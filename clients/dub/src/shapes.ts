@@ -151,6 +151,8 @@ export interface Held {
 }
 
 export interface State {
+  /** Rules I follow (H93): the rules Dub runs, and where each is followed. */
+  rules?: import('../../kit/src/engine/rules.ts').RulesShown;
   /** The identity window (no identity in use), three words to type back, or the app. */
   stage: 'identity' | 'confirm' | 'ready';
   /** The units a money draft may name (Damgar's units Modules), regtest first, each with how Dub writes it. */

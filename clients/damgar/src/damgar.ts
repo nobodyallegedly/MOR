@@ -824,13 +824,20 @@ export class Damgar {
    * accepted cMIP, 1.3). Written on the latest version read, checked again
    * before sending (F340).
    */
-  setAccepted(keys: string[]): Promise<{ lines: Line[] }> {
+  setAccepted(keys: string[], where: 'list' | 'here' = 'list'): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s } = await this.ctx();
       await this.current(me);
       const want = new Set(keys);
       const unknownKey = keys.find((k) => !ACCEPTABLE.some((a) => a.key === k));
       if (unknownKey) throw new Error(`Damgar lists no “${unknownKey}”.`);
+      // H93: in Damgar only, on the person's choice: kept here, the sealed list unchanged, so the other apps still ask.
+      if (where === 'here') {
+        const hashes = ACCEPTABLE.filter((a) => want.has(a.key)).flatMap((a) => a.hashes);
+        await this.store.write(me.id, 'settings', { ...s, acceptedHere: hashes, acceptLater: false } satisfies Settings);
+        this.lists.delete(me.id);
+        return { lines: [{ text: 'Followed in Damgar only: your list is unchanged, so the other apps still ask.', tone: 'ok' }] };
+      }
       // H112: where the list cannot be sealed to the identity (Kišib does not let Damgar open what is sealed to it, or no key is held), the cause and
       // the way are said, and the choice is kept in Damgar only, so nothing is stuck: other apps do not see it until it is sealed.
       const { open, problem } = await this.opener(me);
@@ -857,7 +864,7 @@ export class Damgar {
       await this.accepted(me, true);
       const lines: Line[] = [];
       if (r.list.merged.length) lines.push({ text: `Two apps had changed the accepted list at once. Both changes were merged: ${r.list.merged.join(' ')}`, tone: 'warn' });
-      lines.push(r.written ? { text: `What you accept is sealed to this identity and kept at its homes (version ${r.list.version}): every app holding the identity reads it; nobody else can.`, tone: 'ok' } : { text: 'Nothing changed.' });
+      lines.push(r.written ? { text: `Your rules are sealed to this identity and kept at its homes (version ${r.list.version}): every app holding the identity reads it; nobody else can.`, tone: 'ok' } : { text: 'Nothing changed.' });
       for (const a of ACCEPTABLE) {
         if (!want.has(a.key)) continue;
         const missing = a.needs.filter((n) => !want.has(n));
@@ -880,7 +887,7 @@ export class Damgar {
       return {
         lines: [
           on
-            ? { text: `What you accept is published at ${s.relays.join(', ')}: anyone can read which specifications you accept, and so which rails you can pay on.`, tone: 'warn' }
+            ? { text: `Your rules are published at ${s.relays.join(', ')}: anyone can read which specifications you accept, and so which rails you can pay on.`, tone: 'warn' }
             : { text: 'The published list is withdrawn: it is private again. Earlier versions stay readable as acts.', tone: 'ok' },
         ],
       };

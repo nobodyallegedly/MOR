@@ -848,3 +848,46 @@ export function askNick(page: HTMLElement, o: { title: string; current?: string 
     });
   });
 }
+
+/**
+ * The ask for rules not followed yet (H93): a one-line reminder under the
+ * top, naming them, whose button opens the app's Rules I follow. It belongs
+ * to the identity in use: called with null, or with nothing missing, it goes.
+ */
+export function rulesAsk(page: HTMLElement, w: { id: string; app: string; missing: string[]; open: () => void } | null): void {
+  for (const r of page.querySelectorAll<HTMLElement>('[data-k-rules-ask]')) if (!w || !w.missing.length || r.dataset.kRulesAsk !== w.id) r.remove();
+  if (!w || !w.missing.length) return;
+  const words = `${w.app} runs ${w.missing.length === 1 ? 'a rule' : `${w.missing.length} rules`} you have not approved: ${w.missing.join(', ')}. Until then, what was done under ${w.missing.length === 1 ? 'it' : 'them'} is unknown here.`;
+  let line = page.querySelector<HTMLElement>(`[data-k-rules-ask="${CSS.escape(w.id)}"]`);
+  if (line) {
+    line.querySelector('span')!.textContent = words;
+    return;
+  }
+  line = document.createElement('div');
+  line.className = 'k-reminder k-rules-ask';
+  line.dataset.kRulesAsk = w.id;
+  line.setAttribute('role', 'status');
+  const text = document.createElement('span');
+  text.textContent = words;
+  const look = document.createElement('button');
+  look.type = 'button';
+  look.className = 'k-btn k-small';
+  look.textContent = 'Rules I follow';
+  look.addEventListener('click', () => w.open());
+  line.append(text, look);
+  (page.querySelector('.k-top') ?? page.firstElementChild)?.after(line);
+}
+
+/**
+ * Rules I follow's clicks (H93): `approve` is given the rule's key ("*" for
+ * every one not followed) and where (`here`: in this app only; `list`: added
+ * to the identity's list); `stop`, a rule followed in this app only.
+ */
+export function attachRules(root: HTMLElement, o: { approve: (key: string, where: 'here' | 'list') => void; stop: (key: string) => void }): void {
+  root.addEventListener('click', (ev) => {
+    const t = (ev.target as HTMLElement).closest<HTMLElement>('[data-k-rule], [data-k-rule-stop]');
+    if (!t || !root.contains(t)) return;
+    if (t.dataset.kRuleStop) o.stop(t.dataset.kRuleStop);
+    else o.approve(t.dataset.kRule!, t.dataset.kRuleWhere === 'list' ? 'list' : 'here');
+  });
+}

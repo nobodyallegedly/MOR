@@ -115,7 +115,7 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
     case 'check':
       return d.check();
     case 'accept':
-      return d.setAccepted(list(a.keys));
+      return d.setAccepted(list(a.keys), a.in === 'here' ? 'here' : 'list');
     case 'publish list':
       return d.publishList(a.on === true);
     case 'look':

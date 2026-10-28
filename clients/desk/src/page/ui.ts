@@ -15,7 +15,7 @@
 import { Client, Refused, type ActRead, type AgentDetails, type AgentView, type Constitution, type Done, type Line, type Permissions, type RealCollective, type ShareHere, type State } from './api.ts';
 import { forgetKey, loadKey } from './keystore.ts';
 import * as v from './view.ts';
-import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, stampCards, closePanel, copy, keyChanged, note, openConfirm, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, shortForm, type CardHost, type KitAct, type KitWho, type MenuItem } from '../../../kit/src/index.ts';
+import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, stampCards, closePanel, copy, keyChanged, rulesAsk, attachRules, rulesPart, note, openConfirm, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, shortForm, type CardHost, type KitAct, type KitWho, type MenuItem } from '../../../kit/src/index.ts';
 import { mount, type Mounted } from '../../../collective/src/page/mount.ts';
 import { reading } from '../../../collective/src/page/view.ts';
 import type { Review } from '../../../collective/src/page/api.ts';
@@ -238,11 +238,31 @@ function alarmsHtml(): string {
   const seller = alarms.length ? v.sellerAlarms(alarms).replace('</div>', `<div class="k-row"><button type="button" class="k-btn k-small" data-action="alarms-seen" data-keys="${v.e(JSON.stringify(alarms.map((a) => a.key)))}">Seen: hide until Edubba opens again</button></div></div>`) : '';
   return `<div id="e-alarms">${v.spent(mine, forms)}${seller}</div>`;
 }
-/** The kit's warning for the identity in use (H82), or none (H83). */
+/** The kit's warning for the identity in use (H82), or none (H83); and the rules it has not approved (H93). */
 function syncKey() {
   const own = spentNow.find((x) => x.kind === 'identity' && x.id === state.acting);
   keyChanged(app, own ? { id: own.id, name: own.name, say: own.say, form: v.renewIdentityForm(own.id, own.name) } : null);
+  rulesAsk(app, state.acting && state.rules ? { id: state.acting, app: 'Edubba', missing: state.rules.missing, open: openRules } : null);
 }
+
+// ---------------------------------------------------------------- Rules I follow (H93)
+
+const rulesHtml = () => rulesPart({ app: 'Edubba', rules: state.rules?.rules ?? [], problem: state.rules?.problem ?? null, manage: 'Your whole list, every app’s part of it, is shown and changed in Ummia.' });
+
+function openRules() {
+  closePanel();
+  popup.show('Rules I follow', rulesHtml());
+}
+
+async function rulesChosen(key: string, where: 'here' | 'list', remove = false) {
+  const r = await busy(where === 'list' ? 'Sealing your list to this identity at its homes…' : 'Keeping it in Edubba…', () => c.ask<{ lines: Line[]; rules: State['rules'] }>('rules approve', { keys: [key], where, remove }));
+  if (!r) return;
+  state.rules = r.rules;
+  if (popup.open) popup.replace(`${note('done', v.lines(r.lines))}${rulesHtml()}`);
+  syncKey();
+}
+
+attachRules(app, { approve: (key, where) => void rulesChosen(key, where), stop: (key) => void rulesChosen(key, 'here', true) });
 function drawAlarms() {
   syncKey();
   const at = $('e-alarms');
@@ -1252,6 +1272,8 @@ app.addEventListener('click', async (ev) => {
       }
       return drawAlarms();
     }
+    case 'rules':
+      return openRules();
     case 'this-app': {
       closePanel();
       popup.show('This app', v.thisApp(state, v.settings(state), web ? '' : v.browsers(state)));

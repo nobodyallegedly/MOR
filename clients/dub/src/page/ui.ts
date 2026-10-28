@@ -34,6 +34,9 @@ import {
   type Named,
   openConfirm,
   keyChanged,
+  rulesAsk,
+  attachRules,
+  rulesPart,
   shortForm,
   type Contact,
   type KitAct,
@@ -510,7 +513,33 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
     if (part === 'purchases') drawBought();
     counts();
+    askRules();
   }
+
+  // ---------------------------------------------------------------- Rules I follow (H93)
+
+  /** A rule Dub runs not approved yet: asked under the top, for the identity in use. */
+  function askRules() {
+    const s = state;
+    rulesAsk(app, s?.identity && s.rules ? { id: s.identity.id, app: 'Dub', missing: s.rules.missing, open: openRules } : null);
+  }
+
+  const rulesHtml = () => rulesPart({ app: 'Dub', rules: state?.rules?.rules ?? [], problem: state?.rules?.problem ?? null, manage: 'Your whole list, every app’s part of it, is shown and changed in Ummia.' });
+
+  function openRules() {
+    closePanel();
+    popup.show('Rules I follow', rulesHtml());
+  }
+
+  async function rulesChosen(key: string, where: 'here' | 'list', remove = false) {
+    const r = await busy(where === 'list' ? 'Sealing your list to this identity at its homes…' : 'Keeping it in Dub…', () => b.ask<{ lines: v.Line[]; rules: NonNullable<State['rules']> }>('rules approve', { keys: [key], where, remove }));
+    if (!r || !state) return;
+    state.rules = r.rules;
+    if (popup.open) popup.replace(`${note('done', v.lines(r.lines))}${rulesHtml()}`);
+    askRules();
+  }
+
+  attachRules(app, { approve: (key, where) => void rulesChosen(key, where), stop: (key) => void rulesChosen(key, 'here', true) });
 
   function drawTyping() {
     fill('replying', replying ? `<span class="k-chip k-on">Replying to ${v.e(replying.name)}<button type="button" class="k-x" data-action="unreply" aria-label="Not a reply">×</button></span>` : '');
@@ -948,6 +977,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
           ['line', 'Line and homes', ''],
           ['lane', 'A lane from Damgar', ''],
           ['collective', 'A collective under it', String(s.identity!.collectives.length || '')],
+          ['rules', 'Rules I follow', s.rules?.missing.length ? `${s.rules.missing.length} to approve` : ''],
         ]
       : [['use', 'Use this one', '']];
     popAt(
@@ -1007,6 +1037,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         closePanel();
         popup.show('A collective under it', v.collectiveForm(s));
         return;
+      case 'rules':
+        return openRules();
     }
   }
 

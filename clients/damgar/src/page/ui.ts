@@ -785,7 +785,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       case 'accept': {
         const keys = [...f.querySelectorAll<HTMLInputElement>('input[name=accept]:checked')].map((x) => x.value);
         const first = state?.stage === 'accept';
-        const r = await act(() => b.ask<Lines>('accept', { keys, where: first ? 'first' : 'settings' }));
+        // H93: two ways, the button pressed says which: in Damgar only, or added to the list.
+        const kept = (ev as SubmitEvent).submitter?.getAttribute('data-in') === 'here' ? 'here' : 'list';
+        const r = await act(() => b.ask<Lines>('accept', { keys, where: first ? 'first' : 'settings', in: kept }));
         if (r) {
           state = await b.ask<State>('state');
           if (first) await show(state);

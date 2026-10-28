@@ -121,7 +121,7 @@ async function damgarBrings(page: Page, id: string, words: string) {
   await sees(page, 'form#accept, .k-tile', 'accept');
   if (await page.locator('form#accept').count()) {
     for (const box of await page.locator('input[name=accept]').all()) await box.check();
-    await page.getByRole('button', { name: 'Accept these' }).click();
+    await page.getByRole('button', { name: 'Add these to my list' }).click();
   }
   await sees(page, '.k-tile', 'tiles');
 }

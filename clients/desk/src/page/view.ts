@@ -268,7 +268,7 @@ export const removeBox = (name: string) => removeSaid(NAME, name);
 
 /** The panel's foot: the app itself (settled on the mockups): homes and relays, the collective client's settings, the paired browsers. */
 export function thisApp(s: State, settingsHtml: string, browsersHtml: string): string {
-  return `<h4>This app</h4>${inside(`<h3>Homes and relays</h3>${settingsHtml}${
+  return `<h4>This app</h4>${inside(`${s.acting ? `<h3>Rules I follow</h3><div class="k-row"><span class="k-grow k-small k-soft">${s.rules?.missing.length ? `${s.rules.missing.length} not approved yet for this identity.` : 'Every rule Edubba runs is followed by this identity.'}</span><button type="button" class="k-btn k-small" data-action="rules">Rules I follow</button></div>` : ''}<h3>Homes and relays</h3>${settingsHtml}${
     WEB
       ? ''
       : `<section class="card colroot" data-collective-root id="e-col-settings"><h3>For test collectives</h3><p class="small">The collective client’s own settings, kept in its folder.</p><div id="status-col"></div><div id="settings"></div></section><h3>Browsers paired with this program</h3>${browsersHtml}`

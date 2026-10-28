@@ -571,3 +571,40 @@ export function slotWords(by: string, host: string): string {
 }
 
 export type { App };
+
+/** A rule an app runs, as Rules I follow shows it (H93; `engine/rules.ts`). */
+export interface KitRule {
+  key: string;
+  name: string;
+  kind: string;
+  does: string;
+  text?: string;
+  on: 'list' | 'here' | null;
+}
+
+/**
+ * Rules I follow (H93): the cMIPs and Modules this app runs, each with where
+ * it is followed: on your list (read by every app), in this app only, or not
+ * yet (its acts unknown here, nothing signed under it), with the two ways to
+ * approve it. In Settings, every app but Kišib and Nakišib.
+ */
+export function rulesPart(o: { app: string; rules: KitRule[]; problem: string | null; manage?: string }): string {
+  const missing = o.rules.filter((r) => !r.on);
+  const both = (key: string) =>
+    `<button type="button" class="k-btn k-p k-small" data-k-rule="${e(key)}" data-k-rule-where="list">Add to my list</button><button type="button" class="k-btn k-small" data-k-rule="${e(key)}" data-k-rule-where="here">In ${e(o.app)} only</button>`;
+  const row = (r: KitRule) => {
+    const state = r.on === 'list' ? 'On your list: every app follows it' : r.on === 'here' ? `In ${o.app} only: the other apps still ask` : `Not followed yet: its acts are unknown here, and ${o.app} signs nothing under it`;
+    const acts =
+      r.on === 'list'
+        ? ''
+        : r.on === 'here'
+          ? `<button type="button" class="k-btn k-p k-small" data-k-rule="${e(r.key)}" data-k-rule-where="list">Add to my list</button><button type="button" class="k-btn k-q k-small" data-k-rule-stop="${e(r.key)}">Stop following in ${e(o.app)}</button>`
+          : both(r.key);
+    return `<li class="k-rule${r.on ? '' : ' k-rule-not'}" data-k-rule-row="${e(r.key)}"><div class="k-rule-head"><b>${e(r.name)}</b> <span class="k-tagc">${e(r.kind)}</span></div><p class="k-small k-soft">${e(r.does)}</p>${r.text ? `<p class="k-small k-faint k-mono">${e(r.text)}</p>` : ''}<p class="k-small k-rule-on">${e(state)}</p>${acts ? `<div class="k-row">${acts}</div>` : ''}</li>`;
+  };
+  return `<section class="k-rules" data-k-rules-part>${say(`The rules ${o.app} runs, and whether you follow them.`, [
+    `A rule here is a cMIP or a Module: a specification anyone may write, which ${o.app} carries in its build. You choose which you follow.`,
+    `Add to my list: kept on your list of rules, sealed to this identity at its homes, and every app holding it reads it. In ${o.app} only: kept by ${o.app}; your list is unchanged, so the other apps still ask.`,
+    `Until you follow a rule, what others did under it is shown unknown here, and ${o.app} signs nothing under it (Development rule 10).`,
+  ])}${o.problem ? `<p class="k-small k-soft">${e(o.problem)}.</p>` : ''}${missing.length > 1 ? `<div class="k-row k-rules-all"><span class="k-small">${missing.length} not followed yet:</span>${both('*')}</div>` : ''}<ul class="k-rule-list">${o.rules.map(row).join('')}</ul>${o.manage ? `<p class="k-small k-soft">${e(o.manage)}</p>` : ''}</section>`;
+}

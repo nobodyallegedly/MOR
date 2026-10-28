@@ -5,7 +5,7 @@
 // and part were open (`ummia:at`); Look's point and filters in memory;
 // nothing of a key or an act.
 
-import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, copy, feedBox, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, openConfirm, keyChanged, shortForm, stampCards, type KitAct } from '../../../kit/src/index.ts';
+import { NOT_STAMPED, attachCards, attachClosing, attachColumn, card, cardsUntimed, closePanel, copy, feedBox, identityPanel, openPanel, openSlot, panelOpen, popAt, Popup, redrawPanel, removeSaid, openConfirm, keyChanged, rulesAsk, attachRules, rulesPart, shortForm, stampCards, type KitAct } from '../../../kit/src/index.ts';
 import * as v from './view.ts';
 import type { Done, Review, State } from '../shapes.ts';
 import type { LookItem, Looked, SpecPage } from '../look.ts';
@@ -164,11 +164,37 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     keepAt();
     if (!tab) {
       app.innerHTML = v.home(state!, b.web);
+      askRules();
       return;
     }
     app.innerHTML = v.tabPage(state!, tab, part, counts);
+    askRules();
     await fill();
   }
+
+  // ---------------------------------------------------------------- Rules I follow (H93)
+
+  /** A rule Ummia runs not approved yet: asked under the top, for the identity in use. */
+  function askRules() {
+    const s = state;
+    rulesAsk(app, s?.identity && s.rules ? { id: s.identity.id, app: 'Ummia', missing: s.rules.missing, open: () => void go('choose', 'ummia-rules') } : null);
+  }
+
+  const rulesHtml = () => `<h2>Ummia’s own rules</h2>${rulesPart({ app: 'Ummia', rules: state?.rules?.rules ?? [], problem: state?.rules?.problem ?? null, manage: 'Every layer, above: your whole list, every app’s part of it.' })}`;
+
+  async function rulesChosen(key: string, where: 'here' | 'list', remove = false) {
+    try {
+      const r = await b.ask<{ lines: v.Line[]; rules: NonNullable<State['rules']> }>('rules approve', { keys: [key], where, remove });
+      if (!state) return;
+      state.rules = r.rules;
+      if (tab === 'choose') await draw();
+      say('done', v.lines(r.lines));
+    } catch (err) {
+      fail(err);
+    }
+  }
+
+  attachRules(app, { approve: (key, where) => void rulesChosen(key, where), stop: (key) => void rulesChosen(key, 'here', true) });
 
   /** The column's quiet counts, read after drawing. */
   async function readCounts() {
@@ -361,6 +387,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     }
     if (tab === 'choose') {
       if (part === 'accept-hash') return `<h2>Accept by hash</h2>${v.acceptForm()}`;
+      if (part === 'ummia-rules') return rulesHtml();
       const a = await b.ask<Parameters<typeof v.choosePane>[0]>('accepted');
       return v.choosePane(a, part.startsWith('layer:') ? part.slice(6) : null);
     }

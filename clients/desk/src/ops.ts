@@ -56,6 +56,8 @@ export interface Parts {
 export const WEB_OPS: readonly string[] = [
   'clock words',
   'state',
+  'rules',
+  'rules approve',
   'publishing',
   'publishing act as',
   'publishing collective add',
@@ -204,6 +206,7 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
           proposals: real.proposals().map((x) => ({ ...x, standing: real.standing(x) })),
           contacts: real.contacts(),
           acting,
+          rules: await member.rules(acting).catch(() => null),
           // The identity panel (decided): each identity held here, with the collectives under it: the real ones it is a member of (founded here), and those brought naming it.
           under: Object.fromEntries(
             store.book().identities.map((i) => [
@@ -408,6 +411,10 @@ export function operations(p: Parts, opts: { web: boolean }): (op: string, a: Re
         return after.renewCollective(text(a.collective), text(a.words));
       case 'real lists':
         return real.readLists();
+      case 'rules':
+        return member.rules(await member.acting(), true);
+      case 'rules approve':
+        return member.approveRules(await member.acting(), { keys: Array.isArray(a.keys) ? a.keys.map(String) : [], where: a.where === 'list' ? 'list' : 'here', remove: a.remove === true });
       case 'real contacts':
         return real.contacts();
       case 'real contact add':

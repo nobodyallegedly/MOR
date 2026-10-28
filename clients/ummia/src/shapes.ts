@@ -25,6 +25,8 @@ export interface AcceptedEntry {
 
 export interface State {
   web: boolean;
+  /** Rules I follow (H93): the rules Ummia runs, and where each is followed. */
+  rules?: import('../../kit/src/engine/rules.ts').RulesShown;
   /** The identity window first; then the app. */
   stage: 'identity' | 'ready';
   held: { id: string; grouped: string; short: string; active: boolean; /** Used through Kišib's runner: no key of it here. */ runner?: boolean }[];

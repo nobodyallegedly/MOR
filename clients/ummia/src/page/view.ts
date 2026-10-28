@@ -195,7 +195,7 @@ export function column(tab: Tab, s: State, k: { mips: number; threads: number; r
     case 'publish':
       return [{ key: 'release', label: 'A release' }, { key: 'spec', label: 'A cMIP or Module' }, { key: 'anchoring', label: 'Anchoring', k: k.anchors }, '-', { key: 'published', label: 'Published here', k: k.published }];
     case 'choose':
-      return [{ key: 'every', label: 'Every layer' }, ...LAYERS.map((l) => ({ key: `layer:${l}`, label: l })), '-', { key: 'accept-hash', label: '+ Accept by hash' }];
+      return [{ key: 'every', label: 'Every layer' }, ...LAYERS.map((l) => ({ key: `layer:${l}`, label: l })), '-', { key: 'accept-hash', label: '+ Accept by hash' }, '-', { key: 'ummia-rules', label: 'Ummia’s own rules', k: s.rules?.missing.length || undefined }];
   }
 }
 
@@ -539,7 +539,7 @@ export function anchoringPane(anchors: AnchorShown[], sayIt: string[], web: bool
 
 export function choosePane(a: { entries: AcceptedEntry[]; version: number; forked: boolean; merged: string[]; published: boolean; problems: string[]; say: string[] }, layer: string | null): string {
   const shown = layer ? a.entries.filter((x) => (x.layer ?? '').split(', ').includes(layer)) : a.entries;
-  return `<h2>What you accept${layer ? ` · ${e(layer)}` : ''}</h2>${say('Sealed to you, read by every app', a.say)}
+  return `<h2>Rules I follow${layer ? ` · ${e(layer)}` : ''}</h2>${say('Sealed to you, read by every app', a.say)}
 ${a.problems.length ? note('', lines(a.problems.map((t) => ({ text: t, tone: 'warn' })))) : ''}
 ${a.forked ? note('', `Two apps changed it at once. Shown merged, nothing dropped: ${lines(a.merged.map((t) => ({ text: t })))} Your next change writes the merge.`) : ''}
 <p class="k-small k-soft">${a.version ? `Version ${a.version}.` : 'Nothing accepted yet: the default, under which no app signs anything under any specification.'}</p>

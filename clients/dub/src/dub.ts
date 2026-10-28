@@ -67,6 +67,7 @@ import type { PaymentShown } from '../../damgar/src/shapes.ts';
 import { isLongForm } from '../../barebone/src/corrections.ts';
 import type { RunnerLink } from './runner.ts';
 import type { DamgarLink, Woken } from './damgar-link.ts';
+import { approveRules, readRules, rulesOf, type RulesShown } from '../../kit/src/engine/rules.ts';
 
 export type { Line, State } from './shapes.ts';
 
@@ -136,7 +137,13 @@ export interface Settings {
   collectives?: { id: string; available: boolean; why: string | null }[];
   /** The collective acted as now, or none: the identity itself. */
   acting?: string | null;
+  /** Rules followed in Dub only (H93): their spec hashes, the sealed list unchanged. */
+  rulesHere?: string[];
 }
+
+/** The rules Dub runs (H93): its money (Damgar's code, in Dub), its people, names, corrections and collectives. */
+export const DUB_RULES = rulesOf('payment', 'messages', 'grant-limits', 'people', 'naming', 'corrections', 'appended', 'member-keys');
+const MONEY_RULES = ['payment', 'messages', 'grant-limits'];
 
 /**
  * What the Signing tab keeps for one identity (H18). The one-time keys'
@@ -264,6 +271,8 @@ export class Dub {
   /** Display names found, by ID, and when (this app's memory only). */
   /** Display names read (the naming cMIP), by identity: what was found, or that its homes were not reached (H96: never "no name" for that). */
   private names = new Map<string, { names: string[]; at: number; unreached?: boolean }>();
+  /** Rules I follow as last read, by identity (memory only; H93). */
+  private rulesRead = new Map<string, { shown: RulesShown; at: number }>();
 
   /** `web`: Dub's web client (F281). `reader`: where long-form documents open. */
   /** Money, round 2: a lane asked here, payments signed under it, sealed posts (`money.ts`). */
@@ -431,10 +440,54 @@ export class Dub {
         clock: s.clock ? { id: s.clock.id, form: idForm(s.clock.id), name: s.clock.name } : null,
         laneClock: dubsarClock() ? { id: dubsarClock()!.identity, name: DUBSAR_CLOCK_NAME } : null,
       };
+      out.rules = await this.rulesNow(me, s);
       // Proposals to sign wait in the inbox as this app read it: signed in Edubba (Dub's Signing tab removed, decided).
       out.proposalsWaiting = p.inbox.items.filter((k) => k.talk && k.talk.thread === k.key && k.from && k.from !== me.id && k.refs.length).length;
     }
     return out;
+  }
+
+  // ------------------------------------------------------------ Rules I follow (H93)
+
+  /** The rules Dub runs, held against the identity's sealed list and what was approved in Dub only: read again at most once a minute. */
+  private async rulesNow(me: TestIdentity, s: Settings, fresh = false): Promise<RulesShown> {
+    const c = this.rulesRead.get(me.id);
+    if (c && !fresh && c.at + 60 > now()) return c.shown;
+    const { open } = await this.opener(me);
+    const { shown } = await readRules('Dub', DUB_RULES, me, s.rulesHere ?? [], { open, via: s.via });
+    this.rulesRead.set(me.id, { shown, at: now() });
+    return shown;
+  }
+
+  /** How this app opens what is sealed to an identity it holds (Edubba's Rules I follow reads it so), or null. */
+  async openerFor(id: string): Promise<Opener | null> {
+    const me = await this.load(id).catch(() => null);
+    return me ? (await this.opener(me)).open : null;
+  }
+
+  async rules(): Promise<RulesShown> {
+    const { me, s } = await this.ctx();
+    return this.rulesNow(me, s, true);
+  }
+
+  /**
+   * Approve rules Dub runs, in Dub only or added to the list; or stop
+   * following one in Dub only. The money rules approved in Dub only are
+   * followed by Damgar's code in Dub too (its own "Damgar only" choice).
+   */
+  approveRules(a: { keys: string[]; where: 'here' | 'list'; remove?: boolean }): Promise<{ lines: Line[]; rules: RulesShown }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      const keys = a.keys.includes('*') ? (await this.rulesNow(me, s, true)).rules.filter((r) => !r.on).map((r) => r.key) : a.keys;
+      if (!keys.length) return { lines: [{ text: 'Every rule Dub runs is followed already.' }], rules: await this.rulesNow(me, s) };
+      const { open } = await this.opener(me);
+      const r = await approveRules('Dub', DUB_RULES, me, { keys, where: a.where, remove: a.remove, here: s.rulesHere ?? [] }, { open, via: s.via, save: () => this.store.saveIdentity(me) });
+      const next = { ...s, rulesHere: r.here };
+      await this.store.saveSettings(me.id, next);
+      const hereMoney = DUB_RULES.filter((x) => MONEY_RULES.includes(x.key) && x.hashes.every((h) => r.here.includes(h))).map((x) => x.key);
+      await this.money.engine.setAccepted(hereMoney, 'here').catch(() => undefined);
+      return { lines: r.lines, rules: await this.rulesNow(me, next, true) };
+    });
   }
 
   private async ctx(): Promise<{ me: TestIdentity; s: Settings; p: People; hints: string[] }> {

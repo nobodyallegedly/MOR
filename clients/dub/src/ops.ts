@@ -29,6 +29,8 @@ const untilOf = (v: unknown): number | null => {
 export const OPS = [
   'state',
   'names',
+  'rules',
+  'rules approve',
   'runner',
   'runner pair',
   'runner take',
@@ -111,6 +113,10 @@ const payKind = (v: unknown): 'tip' | 'buy' | 'vow' | 'pay' => (v === 'tip' || v
 
 export async function run(dub: Dub, op: string, a: Record<string, unknown>, p: Platform): Promise<unknown> {
   switch (op) {
+    case 'rules':
+      return dub.rules();
+    case 'rules approve':
+      return dub.approveRules({ keys: list(a.keys), where: a.where === 'list' ? 'list' : 'here', remove: a.remove === true });
     case 'names':
       return dub.names_({ ids: Array.isArray(a.ids) ? a.ids.map(String) : [], fresh: a.fresh === true });
     case 'state':

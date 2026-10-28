@@ -56,7 +56,7 @@ test('H115: a part opened again shows at once from what it last showed, said Loo
   const parts = [
     ['account', 'payments', 'Payments'],
     ['lanes', 'in-force', 'In force'],
-    ['settings', 'accept', 'What you accept'],
+    ['settings', 'accept', 'Rules I follow'],
     ['waiting', 'to-pay', 'To pay'],
   ] as const;
   // Each drawn once, at the program's own pace.

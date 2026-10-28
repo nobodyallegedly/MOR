@@ -164,7 +164,7 @@ const COLUMNS: Record<string, string[]> = {
   waiting: ['To pay', 'To receive', '+ Paste an act to sign', 'To the vault'],
   account: ['Summary', 'Payments', 'Shared deals', 'Under the lanes', 'Anchors'],
   lanes: ['Asked', 'In force', 'Damgar’s own', 'Ended'],
-  settings: ['Where you are paid', 'What you accept', 'Homes and relays', 'Every step by hand'],
+  settings: ['Where you are paid', 'Rules I follow', 'Homes and relays', 'Every step by hand'],
 };
 
 /** Each tile opened, its column read, each part opened (a picture of each). */
@@ -196,7 +196,7 @@ async function columns(page: Page, tag: string, phone = false) {
 async function acceptAll(page: Page) {
   await sees(page, 'form#accept', 'accept');
   for (const box of await page.locator('input[name=accept]').all()) await box.check();
-  await page.getByRole('button', { name: 'Accept these' }).click();
+  await page.getByRole('button', { name: 'Add these to my list' }).click();
   await sees(page, '.k-tile', 'tiles after accept');
 }
 
@@ -574,7 +574,7 @@ test('Use one from Kišib: Damgar paired with Kišib’s runner; a payment signe
   // What Max accepts is sealed to Max: signed through Kišib too, its panel in Damgar's window.
   await sees(gp, 'form#accept', 'accept through Kišib');
   for (const box of await gp.locator('input[name=accept]').all()) await box.check();
-  await gp.getByRole('button', { name: 'Accept these' }).click();
+  await gp.getByRole('button', { name: 'Add these to my list' }).click();
   await gp.waitForSelector('.k-frame.k-kishib iframe', { timeout: 60_000 });
   await gp.frameLocator('.k-frame iframe').locator('button:has-text("Sign it")').click();
   await sees(gp, '.k-tile', 'tiles through Kišib');
@@ -631,7 +631,7 @@ test('H112: through Kišib’s runner with the opening unticked, the first use n
   await shot(gp, 'h112-01-accept');
   // Accepting: refused to be sealed, the cause and the way said (Kišib, Runner › Apps), kept in Damgar only; the app opens.
   for (const box of await gp.locator('input[name=accept]').all()) await box.check();
-  await gp.getByRole('button', { name: 'Accept these' }).click();
+  await gp.getByRole('button', { name: 'Add these to my list' }).click();
   await sees(gp, '.k-tile', 'tiles, not stuck');
   const said = await gp.locator('#status').innerText();
   assert.match(said, /Kišib does not let Damgar open what is sealed to this identity, so the rules you follow cannot be sealed to it\. To allow it, tick it in Kišib: Runner › Apps, beside Damgar/);
@@ -665,7 +665,7 @@ test('H112: through Kišib’s runner with the opening unticked, the first use n
   await k.c.ask('runner opening', { pairing: app.id, identity: max.id, on: true });
   await go(gp, 'settings', 'accept');
   assert.match(await gp.locator('#pane').innerText(), /Kept in Damgar only/);
-  await gp.locator('#pane').getByRole('button', { name: 'Save what I accept' }).click();
+  await gp.locator('#pane').getByRole('button', { name: 'Save to my list' }).click();
   await gp.waitForSelector('.k-frame.k-kishib iframe', { timeout: 60_000 });
   await gp.frameLocator('.k-frame iframe').locator('button:has-text("Sign it")').click();
   await sees(gp, '#status .k-note.k-done', 'sealed');

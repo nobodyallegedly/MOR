@@ -58,6 +58,8 @@ export const OPS = [
   'track',
   'acts of',
   'accepted',
+  'rules',
+  'rules approve',
   'accepted change',
   'accepted publish',
   'mips',
@@ -100,6 +102,10 @@ export async function run(u: Ummia, op: string, a: Record<string, unknown>): Pro
   switch (op) {
     case 'state':
       return u.state();
+    case 'rules':
+      return u.rules();
+    case 'rules approve':
+      return u.approveRules({ keys: list(a.keys), where: a.where === 'list' ? 'list' : 'here', remove: a.remove === true });
     case 'bring':
       return u.bring({ id: text(a.id), words: text(a.words), address: text(a.address), relays: list(a.relays) });
     case 'renew':

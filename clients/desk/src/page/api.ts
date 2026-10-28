@@ -178,6 +178,8 @@ export interface State {
   contacts: { id: string; name: string; from: 'added' | { agent: string } | { list: string } }[];
   /** The identity in use (H33): the one To sign signs as, and the identity panel marks. */
   acting: string | null;
+  /** Rules I follow (H93): the rules Edubba runs, and where each is followed, for the identity in use. */
+  rules: import('../../../kit/src/engine/rules.ts').RulesShown | null;
   /** The collectives under each identity held here, for the identity panel (decided): those it is a member of, founded here, and those brought naming it. */
   under: Record<string, { id: string; name: string; real: boolean }[]>;
   /** The web client (for testing only). */

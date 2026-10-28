@@ -34,7 +34,7 @@ let homes: Relay[];
 let relay: Relay;
 let browser: Browser;
 /** Each app's page, with an identity in use: its address (paired once per page opened), and how it brings another identity. */
-const apps: { name: string; url: () => string; bring: (id: string, words: string) => Promise<unknown> }[] = [];
+const apps: { name: string; url: () => string; bring: (id: string, words: string) => Promise<unknown>; ask: (op: string, a?: Record<string, unknown>) => Promise<unknown> }[] = [];
 let MAX = '';
 const problems: string[] = [];
 /** The pages that open on tiles: Kišib's (no identity needed) beside the others. */
@@ -48,18 +48,18 @@ before(async () => {
   const max = await dub(H, R);
   await max.c.ask('name', { name: 'Max' });
   MAX = max.id;
-  apps.push({ name: 'Dub', url: () => `${max.app.base}/#pair=${max.app.access.newCode()}`, bring: (id, words) => max.c.ask('bring', { id, words, address: H[0] }) });
+  apps.push({ name: 'Dub', url: () => `${max.app.base}/#pair=${max.app.access.newCode()}`, bring: (id, words) => max.c.ask('bring', { id, words, address: H[0] }), ask: (op, a) => max.c.ask(op, a ?? {}) });
   const g = await damgar();
   await g.c.ask('bring', { id: max.id, words: max.words, address: H[0] });
   await g.c.ask('accept', { keys: ACCEPTABLE.map((a) => a.key) });
-  apps.push({ name: 'Damgar', url: () => `${g.app.base}/#pair=${g.app.access.newCode()}`, bring: async (id, words) => (await g.c.ask('bring', { id, words, address: H[0] }), await g.c.ask('accept', { keys: ACCEPTABLE.map((a) => a.key) })) });
+  apps.push({ name: 'Damgar', url: () => `${g.app.base}/#pair=${g.app.access.newCode()}`, bring: async (id, words) => (await g.c.ask('bring', { id, words, address: H[0] }), await g.c.ask('accept', { keys: ACCEPTABLE.map((a) => a.key) })), ask: (op, a) => g.c.ask(op, a ?? {}) });
   const e = await edubba(H, R);
   await e.c.ask('bring', { name: 'Max', id: max.id, words: max.words, address: H[0], linked: false });
-  apps.push({ name: 'Edubba', url: () => `${e.app.base}/#pair=${e.app.access.newCode()}`, bring: async (id, words) => (await e.c.ask('bring', { name: 'Changed elsewhere', id, words, address: H[0], linked: false }), await e.c.ask('acting as', { id })) });
+  apps.push({ name: 'Edubba', url: () => `${e.app.base}/#pair=${e.app.access.newCode()}`, bring: async (id, words) => (await e.c.ask('bring', { name: 'Changed elsewhere', id, words, address: H[0], linked: false }), await e.c.ask('acting as', { id })), ask: (op, a) => e.c.ask(op, a ?? {}) });
   const u = await ummia();
   await u.c.ask('bring', { id: max.id, words: max.words, address: H[0] });
   await u.c.ask('settings', { relays: R, track: R });
-  apps.push({ name: 'Ummia', url: () => `${u.app.base}/#pair=${u.app.access.newCode()}`, bring: (id, words) => u.c.ask('bring', { id, words, address: H[0] }) });
+  apps.push({ name: 'Ummia', url: () => `${u.app.base}/#pair=${u.app.access.newCode()}`, bring: (id, words) => u.c.ask('bring', { id, words, address: H[0] }), ask: (op, a) => u.c.ask(op, a ?? {}) });
   const k = await kishib();
   tiled.push({ name: 'Kišib', url: () => `${k.app.base}/#pair=${k.app.access.newCode()}` }, ...apps.filter((a) => a.name !== 'Dub'));
   browser = await chromium.launch({ executablePath: CHROMIUM });
@@ -139,6 +139,50 @@ for (const size of ['mac', 'phone'] as const) {
     assert.deepEqual(problems, []);
   });
 }
+
+test('H93: Rules I follow in Dub, Edubba and Ummia: asked under the top; followed in this app only, or added to the list every app reads', async () => {
+  // Max accepted every money rule in Damgar (its list sealed at the homes): Payment, Money messages and Grant limits are on it.
+  const steps = [
+    { app: 'Dub', here: 'corrections', list: 'naming', listed: ['payment', 'grant-limits'], notCarried: [] as string[] },
+    { app: 'Edubba', here: 'agent-memory', list: 'member-keys', listed: ['naming', 'messages'], notCarried: ['corrections'] },
+    { app: 'Ummia', here: 'release-manifest', list: 'long-form', listed: ['naming'], notCarried: [] },
+  ];
+  for (const st of steps) {
+    const a = apps.find((x) => x.name === st.app)!;
+    // Read afresh by the program, as on opening after another app changed the list.
+    await a.ask('rules');
+    const page = await open(a.url(), SIZES.mac);
+    try {
+      const line = page.locator('[data-k-rules-ask]');
+      await line.waitFor({ timeout: 60_000 });
+      assert.match(await line.innerText(), new RegExp(`${st.app} runs (a rule|\\d+ rules) you have not approved`), st.app);
+      await line.getByRole('button', { name: 'Rules I follow' }).click();
+      const part = page.locator('[data-k-rules-part]').first();
+      await part.waitFor();
+      const row = (k: string) => part.locator(`[data-k-rule-row="${k}"]`);
+      for (const k of st.listed) assert.match(await row(k).locator('.k-rule-on').innerText(), /On your list/, `${st.app}: ${k} read from the list`);
+      for (const k of st.notCarried) assert.match(await row(k).locator('.k-rule-on').innerText(), /Not followed yet/, `${st.app}: ${k}, followed in another app only, is asked here`);
+      await shot(page, `${st.app}-rules`);
+      await row(st.here).locator(`[data-k-rule-where="here"]`).click();
+      await page.locator(`[data-k-rules-part] [data-k-rule-row="${st.here}"] .k-rule-on`, { hasText: `In ${st.app} only` }).waitFor({ timeout: 60_000 });
+      await page.locator(`[data-k-rules-part] [data-k-rule-row="${st.list}"] [data-k-rule-where="list"]`).click();
+      await page.locator(`[data-k-rules-part] [data-k-rule-row="${st.list}"] .k-rule-on`, { hasText: 'On your list' }).waitFor({ timeout: 60_000 });
+      await shot(page, `${st.app}-rules-approved`);
+    } catch (err) {
+      await shot(page, `${st.app}-rules-failed`);
+      throw new Error(`${st.app}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    await page.context().close();
+  }
+  // Everything approved in Dub: the line under the top goes.
+  const dub = apps.find((x) => x.name === 'Dub')!;
+  await dub.ask('rules approve', { keys: ['*'], where: 'here' });
+  const page = await open(dub.url(), SIZES.mac);
+  await page.waitForTimeout(1500);
+  assert.equal(await page.locator('[data-k-rules-ask]').count(), 0, 'nothing left to ask in Dub');
+  await page.context().close();
+  assert.deepEqual(problems, []);
+});
 
 test('H82, H83: in every app, a key changed elsewhere: a pop-up over the page, closed to a line under the top; it follows the identity in use', async () => {
   // An identity held in every app beside Max, its signing key then changed elsewhere (a rotation, as Kišib makes one).
