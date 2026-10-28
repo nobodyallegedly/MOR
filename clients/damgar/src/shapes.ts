@@ -2,6 +2,7 @@
 // code, the program on the Mac and Linux and the web client alike.
 
 import type { LineShown } from '../../genesis/src/card-words.ts';
+import type { Named } from '../../kit/src/html.ts';
 /** One line said to the person, with its tone: red only for an alarm (a void act, a key changed elsewhere, a proof that does not hold). */
 export interface Line {
   text: string;
@@ -136,7 +137,7 @@ export interface State {
   /** Something was saved from Settings (H45): its sections start folded; before that, on first use, all open. */
   settingsSaved: boolean;
   stage: 'identity' | 'accept' | 'ready';
-  held: { id: string; grouped: string; short: string; active: boolean; /** Used through Kišib's runner: Damgar holds none of its keys. */ runner?: boolean; /** Its display name (the naming cMIP), where it has one. */ name?: string | null }[];
+  held: { id: string; grouped: string; short: string; active: boolean; /** Used through Kišib's runner: Damgar holds none of its keys. */ runner?: boolean; /** Its display name (the naming cMIP), where it has one. */ name?: string | null; /** Its published name as read (H96): the name, none published, or not reached. */ named?: Named | null }[];
   identity: null | {
     id: string;
     grouped: string;
@@ -149,9 +150,13 @@ export interface State {
     /** This app's line; its card for Kišib names only an act the homes hold (H80's question 2). */
     line: LineShown;
     /** The collectives Damgar acts for in money, under this identity (the identity panel). */
-    collectives: { id: string; form: string; short: string; name: string | null }[];
+    collectives: { id: string; form: string; short: string; name: string | null; /** Its published name as read (H96). */ named?: Named | null }[];
     /** Its display name (the naming cMIP), where it has one. */
     name: string | null;
+    /** Its published name as read (H96): what the top right and the identity panel show, or why not. */
+    named?: Named | null;
+    /** Its ID link (`mid1…?r=…`, one home and one relay): Share your ID link (H88). */
+    link?: string;
     /** Used through Kišib's runner. */
     runner: boolean;
   };

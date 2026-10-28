@@ -73,7 +73,7 @@ export async function serve(opts: { dir: string; port: number; chain?: ChainSour
         return run(damgar, op, a);
     }
   };
-  // Inter, Dub's files, and Damgar's icon, served beside the page from the program's own origin.
+  // The suite's type (H123), from the kit, and Damgar's icon, served beside the page from the program's own origin.
   const files = {
     ...Object.fromEntries(Object.entries(FONT_FILES).map(([name, type]) => [`/${name}`, { type, body: readFileSync(here(`../dub/${FONTS_DIR}/${name}`)) }])),
     '/icon.png': { type: 'image/png', body: readFileSync(here('static/icon/damgar.png')) },

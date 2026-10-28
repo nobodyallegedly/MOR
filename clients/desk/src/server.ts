@@ -91,7 +91,7 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
 
   const api = operations({ store, desk, setup, real, after, member, publishing, corrections, collectives, agents, access, money, folders: listFolders, refuse: (status, message) => new Refusal(status, message) }, { web: false });
 
-  // Inter, bundled with Dub (F332), served from this page's own origin too.
+  // The suite's type (H123), from the kit, served from this page's own origin too.
   const fonts = Object.fromEntries(
     Object.entries(FONT_FILES).map(([name, type]) => [`/${name}`, { type, body: readFileSync(fileURLToPath(new URL(`../../dub/${FONTS_DIR}/${name}`, import.meta.url))) }]),
   );

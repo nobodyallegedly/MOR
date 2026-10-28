@@ -91,7 +91,7 @@ export function wakeRoutes(damgar: Damgar, base: () => string, fonts: Record<str
   return async (req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean> => {
     if (!url.pathname.startsWith('/damgar/')) return false;
     if (req.method === 'GET' && url.pathname === '/damgar/panel.css') return send(res, 200, 'text/css; charset=utf-8', `${KIT_STYLE}\n${PANEL_STYLE}`, publicHeaders), true;
-    const font = /^\/damgar\/(inter_(?:light|regular)\.woff2)$/.exec(url.pathname);
+    const font = /^\/damgar\/([a-z_]+\.woff2)$/.exec(url.pathname);
     if (req.method === 'GET' && font && fonts[`/${font[1]}`]) return send(res, 200, 'font/woff2', fonts[`/${font[1]}`].body, publicHeaders), true;
     const pm = /^\/damgar\/panel\/([0-9a-f]{64})$/.exec(url.pathname);
     if (pm) {

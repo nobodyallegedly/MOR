@@ -93,8 +93,9 @@ import { Refused, encryptionSecret, fromWords, groupId, threePositions, toWords,
 import { newChainKey } from '../../dub/src/chainwords.ts';
 import { openerOf, type Opener } from '../../dub/src/people.ts';
 import type { RunnerLink } from '../../dub/src/runner.ts';
-import { namesOf } from '../../dub/src/names.ts';
-import { idForm, readActId, readId } from '../../genesis/src/forms.ts';
+import { idForm, idWhere, readActId, readId } from '../../genesis/src/forms.ts';
+import { Known } from '../../kit/src/engine/known.ts';
+import type { Named, NameShown } from '../../kit/src/html.ts';
 import { WITNESS_EXPLANATION } from '../../genesis/src/witness.ts';
 import { offers as anchorOffers } from '../../ummia/src/anchor.ts';
 import { carriedKey, lookCurrent, servedChain } from '../../dub/src/carryin.ts';
@@ -371,15 +372,23 @@ export class Damgar {
     return this.line(me, via).catch(() => null);
   }
   private queue: Promise<unknown> = Promise.resolve();
-  /** Display names read (the naming cMIP), by identity, for a few minutes (memory only): the panel shows names, not hashes. */
-  private names = new Map<string, { name: string | null; at: number }>();
+  /**
+   * Who is known, as in every app (H96, H100, H106, H109): the one contacts
+   * list (the people cMIP's, sealed to the identity at its homes, nicknames
+   * included) and the names identities published (the naming cMIP), read by
+   * the kit's one name reader, kept a few minutes in memory only.
+   */
+  private readonly known = new Known('Damgar');
 
-  private async nameOf(id: string, places: string[], via: Via): Promise<string | null> {
-    const c = this.names.get(id);
-    if (c && c.at + 300 > now()) return c.name;
-    const name = (await namesOf(id, places, via).catch(() => [])).map((x) => x.name).pop() ?? null;
-    this.names.set(id, { name, at: now() });
-    return name;
+  /** An identity's published name as read (H96): the name, none published, or not reached (never "no name" for silence). */
+  private published(id: string, places: string[]): Promise<NameShown> {
+    return this.known.names.read(id, places);
+  }
+
+  /** Its display name (the naming cMIP), where one was read; null otherwise. */
+  private async nameOf(id: string, places: string[], _via?: Via): Promise<string | null> {
+    const n = await this.published(id, places);
+    return n.state === 'name' ? n.name : null;
   }
   /** The accepted list as last read, by identity (memory only). */
   private lists = new Map<string, { list: Accepted; at: number }>();
@@ -901,7 +910,10 @@ export class Damgar {
     const held = [];
     for (const id of await this.store.held()) {
       const f = await this.store.identity(id);
-      held.push({ id, grouped: groupId(id), short: short(id), active: id === active, runner: !f?.f.signingSecret, name: f ? await this.nameOf(id, f.f.homes.map((h) => h.hint), f.via) : null });
+      // H96: each one's published name read at its own homes and relays (kept a while), so the top right and the panel say it, or why not.
+      const s = f ? ((await this.store.read<Settings>(id, 'settings')) ?? { relays: [], via: {} }) : null;
+      const published: NameShown = f && s ? await this.published(id, [...f.f.homes.map((h) => h.hint), ...s.relays]) : { state: 'unreached' };
+      held.push({ id, grouped: groupId(id), short: short(id), active: id === active, runner: !f?.f.signingSecret, name: published.state === 'name' ? published.name : null, named: { nick: null, published } });
     }
     const me = active ? await this.load(active) : null;
     const out: State = { web: !!this.opts.web, settingsSaved: false, stage: 'identity', held, identity: null, accept: [], list: { version: 0, merged: [], published: false, problems: [] }, counts: { toSign: 0, toPay: 0 } };
@@ -920,8 +932,16 @@ export class Damgar {
       encryption: me.f.encryption.length > 0,
       line: line ?? noLine(me.f),
       // The collectives under it (decided: acting as a collective is the identity panel's gesture): those Damgar acts for, added here.
-      collectives: await Promise.all((s.collectives ?? []).map(async (c) => ({ id: c, form: idForm(c), short: short(c), name: await this.nameOf(c, [...me.f.homes.map((h) => h.hint), ...s.relays], s.via) }))),
+      collectives: await Promise.all(
+        (s.collectives ?? []).map(async (c) => {
+          const published = await this.published(c, [...me.f.homes.map((h) => h.hint), ...s.relays]);
+          return { id: c, form: idForm(c), short: short(c), name: published.state === 'name' ? published.name : null, named: { nick: null, published } };
+        }),
+      ),
       name: held.find((h) => h.id === me.id)?.name ?? null,
+      named: held.find((h) => h.id === me.id)?.named ?? null,
+      // H88: its ID link (the ID with where it lives: one home, one relay), for Share your ID link.
+      link: idWhere(me.id, [...me.f.homes.map((h) => h.hint).slice(0, 1), ...s.relays.filter((r) => !me.f.homes.some((h) => h.hint === r)).slice(0, 1)]),
       runner: !me.f.signingSecret,
     };
     let l: Accepted;
@@ -947,6 +967,60 @@ export class Damgar {
       toPay: Object.values(book.payments).filter((p) => p.side === 'out' && p.stage === 'to pay').length,
     };
     return out;
+  }
+
+  // ------------------------------------------------------------ who is known (H96, H100, H106, H109, H119)
+
+  /**
+   * The names of these identities, for the page (the kit's `attachIds`;
+   * H96, H106): the nickname given in the one contacts list (sealed, the
+   * person's own) and the name each published, read at the identity's homes
+   * and relays. `fresh`: asked again (a retry). With no identity in use (the
+   * first screen), the names published only, each held identity's read at
+   * its own homes.
+   */
+  async names(a: { ids: string[]; fresh?: boolean }): Promise<Record<string, Named>> {
+    const ids = [...new Set(a.ids.filter((x) => /^[0-9a-f]{64}$/.test(x)))].slice(0, 200);
+    const active = await this.store.active();
+    const me = active ? await this.load(active) : null;
+    if (!me) {
+      const out: Record<string, Named> = {};
+      for (const id of ids) {
+        const f = await this.store.identity(id).catch(() => null);
+        out[id] = { nick: null, published: f ? await this.known.names.read(id, f.f.homes.map((h) => h.hint), !!a.fresh) : { state: 'unreached' } };
+      }
+      return out;
+    }
+    const { s, hints } = await this.ctx();
+    const { open } = await this.opener(me);
+    return this.known.named(me, open, ids, hints, { via: s.via, fresh: a.fresh });
+  }
+
+  /** The one contacts list (H100), each contact with its names; why it cannot be read here, where it cannot. */
+  async contacts(a: { fresh?: boolean } = {}): Promise<{ contacts: { id: string; form: string; name: string | null; named: Named }[]; problem: string | null }> {
+    const { me, s, hints } = await this.ctx();
+    const { open, problem } = await this.opener(me);
+    const r = await this.known.contacts(me, open, hints, { via: s.via, fresh: a.fresh });
+    // Where Damgar cannot open what is sealed to the identity, its own words for why (H112).
+    return { contacts: r.contacts, problem: open ? r.problem : problem === RUNNER_NO_OPEN_SAY ? 'Kišib does not let Damgar open what is sealed to this identity, so its contacts are not read here' : (problem ?? r.problem) };
+  }
+
+  /** Add a contact (with a nickname, H109), give or change its nickname, or take it out: sealed as the people cMIP keeps the list, seen in every app. */
+  contactChange(a: { op: 'add' | 'nick' | 'remove'; id: string; nick?: string | null }): Promise<{ lines: Line[] }> {
+    return this.serial(async () => {
+      const { me, s } = await this.ctx();
+      await this.current(me);
+      if (!a.id.trim()) throw new Error('Give its ID (mid1…, or an ID link). Nothing was signed.');
+      const { open } = await this.opener(me);
+      let said;
+      try {
+        said = await this.known.change(me, a, { open, via: s.via, save: () => this.store.saveIdentity(me) });
+      } catch (e) {
+        if (e instanceof Refused) throw new Error(`${e.message}. Nothing was signed.`);
+        throw e;
+      }
+      return { lines: said };
+    });
   }
 
   /**

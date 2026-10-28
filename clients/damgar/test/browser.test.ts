@@ -526,14 +526,16 @@ test('the web client by clicks, at a phone’s size and a Mac’s: Make an ident
   await sees(mp, '#pane form.collective-promise', 'for the collective');
   const me = await mp.locator('.k-me').innerText();
   assert.ok(me.includes(colShort), `${me} / ${colShort}`);
-  assert.ok((await mp.locator('.k-col').innerText()).includes(`For ${colShort}`));
+  // H106, H121: the column names it by its name, never a bare short ID (it has none: “the collective”); its pane by its names, the short ID a button.
+  assert.ok((await mp.locator('.k-col').innerText()).includes('For the collective'));
+  assert.equal(await mp.locator(`#pane h2 [data-k-who="${col}"] .k-idbtn`).count(), 1);
   // Its promise to pay is read back and signed there (`collective.test.ts` signs them through the program).
   assert.match(await mp.locator('#pane').innerText(), /Its Money area, “Money”: 2 holders, 1 key; above 10,000 an act, one more/);
   await shot(mp, 'mac-web-03-for-the-collective');
   // The same gesture again: back to A alone.
   await mp.locator('[data-k-open="identity"]').click();
   await mp.locator('.k-panel [data-k-under]').click();
-  await mp.waitForFunction(() => !/For mid1/.test(document.querySelector('.k-col')?.textContent ?? ''));
+  await mp.waitForFunction(() => !/For the collective/.test(document.querySelector('.k-col')?.textContent ?? ''));
   await mc.close();
   assert.deepEqual(problems, []);
   assert.deepEqual(csp, []);

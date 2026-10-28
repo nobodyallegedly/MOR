@@ -9,12 +9,22 @@
 // from relays or typed by the person is escaped.
 
 import { APPS, KIT_STYLE } from '../../../kit/src/style.ts';
-import { appMark, e, meButton, note, opened, say, shortForm, tiles, top, type ColumnEntry, type Tile, whatIsMor } from '../../../kit/src/html.ts';
+import { appMark, contactsButton, e, meButton, note, opened, say, tiles, top, type ColumnEntry, type Named, type Tile, whatIsMor } from '../../../kit/src/html.ts';
+import { actId, contactsButtonFor, hashButton, who } from '../../../kit/src/ids.ts';
 import { cardWords } from '../../../genesis/src/card-words.ts';
 import { actFormOf } from '../../../dub/src/page/view.ts';
 import type { Account, Accept, LaneShown, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from '../shapes.ts';
 
 export { e, note, say };
+
+/**
+ * An identity wherever Damgar shows one (H96, H106, H121): its names (the
+ * nickname, then the name it published, faint), asked of Damgar once drawn,
+ * and its short ID under them, a button: one tap shows it whole, a second
+ * copies it. Never a bare short ID.
+ */
+export const whoOf = (w: { id: string; me?: boolean }, inline = true): string => who({ id: w.id, me: !!w.me, inline });
+export { actId, hashButton };
 export type { Account, Accept, LaneShown, Line, PaymentShown, Rails, State, ToSign };
 
 export const NAME = 'Damgar';
@@ -104,14 +114,18 @@ export interface Acting {
   id: string;
   form: string;
   name: string | null;
+  /** Its published name as read (H96). */
+  named?: Named | null;
 }
 
 /** The top of the window: Damgar (back to the tiles), its tabs once a tile is open, the identity (or the collective acted as) top right. */
 export function topBar(s: State, tab: Tab | null, acting: Acting | null): string {
   const i = s.identity;
   const tabs = tab ? `<nav class="k-tabs" aria-label="Damgar">${TILES.map((t) => `<button type="button" class="k-tab${t.key === tab ? ' k-on' : ''}" data-tab="${t.key}"${t.key === tab ? ' aria-current="page"' : ''}>${e(t.name)}${t.key === 'waiting' && s.counts.toSign + s.counts.toPay ? `<span class="k-count">${s.counts.toSign + s.counts.toPay}</span>` : ''}</button>`).join('')}</nav>` : '';
-  const me = i ? meButton({ name: i.name ?? (i.runner ? 'via Kišib' : shortForm(i.form)), form: i.form, as: acting ? { name: acting.name, form: acting.form } : null }) : '';
-  return top({ left: `<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME, 'icon.png')}</button>${tabs}`, right: me });
+  // H96: its name as read: Loading…, its name, No name published, or Name not reached; never a bare mid1… in its place.
+  const me = i ? meButton({ name: i.name, form: i.form, named: i.named ?? null, as: acting ? { name: acting.name, form: acting.form, named: acting.named ?? null } : null }) : '';
+  // H100: Contacts top left, the one list, as in every app.
+  return top({ left: `<div class="k-row">${contactsButton()}<button type="button" class="k-btn k-q" data-action="home-tiles" title="The four tiles">${appMark(NAME, 'icon.png')}</button></div>${tabs}`, right: me });
 }
 
 /** The four tiles, their danger marks; the counts on Waiting. */
@@ -129,7 +143,7 @@ export function column(tab: Tab, s: State, c: { toPay: number; toReceive: number
       return [
         { key: 'to-pay', label: 'To pay', k: c.toPay },
         { key: 'to-receive', label: 'To receive', k: c.toReceive },
-        ...(acting ? ['-' as ColumnEntry, { key: 'collective', label: `For ${acting.name ?? shortForm(acting.form)}` } as ColumnEntry] : []),
+        ...(acting ? ['-' as ColumnEntry, { key: 'collective', label: `For ${acting.name ?? 'the collective'}` } as ColumnEntry] : []),
         '-',
         { key: 'paste', label: '+ Paste an act to sign' },
         { key: 'vault', label: 'To the vault' },
@@ -182,7 +196,7 @@ export function firstScreen(web: boolean, part: 'make' | 'bring' | 'kishib' = 'b
 
 export function bringForm(): string {
   return `<form id="bring"><p class="k-small k-soft">By its ID and its signing key’s words, as Dub, Edubba or Kišib show them (never the chain key’s).</p>
-<label>Its ID (mid1…, or its hexadecimal)</label><input name="id" autocomplete="off" spellcheck="false" required>
+<label>Its ID (mid1…, or its hexadecimal)</label><div class="k-row"><input name="id" class="k-grow" autocomplete="off" spellcheck="false" required>${contactsButtonFor('id')}</div>
 <label>Its signing key’s 24 words</label><textarea name="words" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" required></textarea>
 <label>An address where it is found (one of its homes)</label><input name="address" placeholder="https://" required>
 <label>Relays, one per line, if it names none</label><textarea name="relays"></textarea>
@@ -209,7 +223,7 @@ export function makeWords(r: { words: string[]; positions: number[] }): string {
 export function runnerForm(r: { available: boolean; state: string | null; code: string | null; identities: { id: string; form: string; name: string | null; held: boolean }[]; problem: string | null }): string {
   if (!r.available) return `<p class="k-small k-soft">Kišib’s runner is in the computer’s program only, on the Mac: never in the web client. Bring the identity here by its words instead.</p>`;
   const ids = r.identities.length
-    ? `<div class="k-list">${r.identities.map((x) => `<div><span>${e(x.name ?? shortForm(x.form))} <span class="k-mono k-faint">${e(shortForm(x.form))}</span></span><button type="button" class="k-btn k-small k-r" data-runner-take="${e(x.id)}">${x.held ? 'Use it' : 'Use it here'}</button></div>`).join('')}</div>`
+    ? `<div class="k-list">${r.identities.map((x) => `<div><span>${who({ id: x.id, named: x.name ? { published: { state: 'name', name: x.name } } : null, inline: true })}</span><button type="button" class="k-btn k-small k-r" data-runner-take="${e(x.id)}">${x.held ? 'Use it' : 'Use it here'}</button></div>`).join('')}</div>`
     : '';
   return `${r.problem ? note('error', e(r.problem)) : ''}
 ${say('Kišib keeps the identity’s signing key on this Mac; Damgar holds none.', ['Pairing starts here and is approved in Kišib (Runner, Apps), comparing the code. Then every money act Damgar would sign is a request to Kišib, and Kišib’s panel appears inside Damgar’s window: money always asks. Allow “may open what is sealed to this identity” in Kišib, or Damgar cannot read what waits for it.'])}
@@ -260,9 +274,10 @@ export function renewForm(): string {
 }
 
 export function collectiveForm(cs: { id: string; form: string }[]): string {
+  // H121: each collective by its names, its short ID a button; H119: Contacts beside the field taking an ID.
   return `<p class="k-small k-soft">A collective whose Money area you hold: Damgar acts for it with your own key for it, sealed to you when you signed its founding. Then choose it under this identity in the panel: Waiting shows its part.</p>
-${cs.length ? `<div class="k-list">${cs.map((c) => `<div><span class="k-mono">${e(shortForm(c.form))}</span><button type="button" class="k-btn k-q k-small k-r" data-collective-remove="${e(c.id)}">Stop acting for it</button></div>`).join('')}</div>` : ''}
-<form id="collective-add" class="k-row"><input name="id" class="k-grow" placeholder="A collective’s ID (mid1… or hex)" autocomplete="off" spellcheck="false" required><button type="submit" class="k-btn k-p">Act for it</button></form>`;
+${cs.length ? `<div class="k-list">${cs.map((c) => `<div><span>${who({ id: c.id, collective: true, inline: true })}</span><button type="button" class="k-btn k-q k-small k-r" data-collective-remove="${e(c.id)}">Stop acting for it</button></div>`).join('')}</div>` : ''}
+<form id="collective-add" class="k-row"><input name="id" class="k-grow" placeholder="A collective’s ID (mid1… or hex)" autocomplete="off" spellcheck="false" required>${contactsButtonFor('id')}<button type="submit" class="k-btn k-p">Act for it</button></form>`;
 }
 
 
@@ -307,7 +322,7 @@ export function itemActs(t: ToSign): string {
 /** What a payment shows to be paid: the invoice or address, the proof pasted back; a vault's invoice; an anchor's ticket. */
 export function payment(p: PaymentShown, forPay = false): string {
   const proofs = p.proofs.length
-    ? `<div class="damgar-proofs">${p.proofs.map((x) => `<div class="p"><span>${x.kind === 'claim' ? 'Claim' : 'Receipt'} by ${e(x.by.me ? 'you' : x.by.short)}</span><span class="k-small k-soft">${e(x.how)}</span>${verdict(x.rail)}<span class="k-small k-soft">rail: ${e(x.rail.why || 'the rail’s own evidence holds')}</span>${x.confirmations ? `<span class="k-small">${x.confirmations[0]} of ${x.confirmations[1]} confirmations</span>` : ''}</div><div class="p k-small">Beside it: ${verdict(x.beside)} ${e(x.beside.why)}${x.standing !== 'valid' ? ` · the act itself: ${e(x.standing)}` : ''}</div>`).join('')}</div>`
+    ? `<div class="damgar-proofs">${p.proofs.map((x) => `<div class="p"><span>${x.kind === 'claim' ? 'Claim' : 'Receipt'} by ${whoOf(x.by)}</span><span class="k-small k-soft">${e(x.how)}</span>${verdict(x.rail)}<span class="k-small k-soft">rail: ${e(x.rail.why || 'the rail’s own evidence holds')}</span>${x.confirmations ? `<span class="k-small">${x.confirmations[0]} of ${x.confirmations[1]} confirmations</span>` : ''}</div><div class="p k-small">Beside it: ${verdict(x.beside)} ${e(x.beside.why)}${x.standing !== 'valid' ? ` · the act itself: ${e(x.standing)}` : ''}</div>`).join('')}</div>`
     : '';
   const pay =
     forPay && p.pay
@@ -319,7 +334,7 @@ ${p.stage === 'paid' ? `<div class="k-row"><button type="button" data-action="re
       : '';
   const vaultInvoice =
     forPay && p.vaultInvoice
-      ? `<p class="k-small k-soft">Make an invoice on your vault’s node (${e(p.vaultInvoice.node.slice(0, 16))}…) for exactly ${e(p.amount.said)}, with this description hash and no description (on regtest, in the test wallet, on the vault’s node):</p><div class="damgar-copy">${e(p.vaultInvoice.descriptionHash)}</div>
+      ? `<p class="k-small k-soft">Make an invoice on your vault’s node (${hashButton(p.vaultInvoice.node)}) for exactly ${e(p.amount.said)}, with this description hash and no description (on regtest, in the test wallet, on the vault’s node):</p><div class="damgar-copy">${e(p.vaultInvoice.descriptionHash)}</div>
 <form class="vault-invoice" data-key="${e(p.key)}"><label>The invoice your vault’s node made</label><input name="invoice" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Check it</button></div></form>`
       : '';
   const ticket = p.ticket ? `<p class="k-small k-soft">An anchor’s ticket: batch ${p.ticket.batch}, tier ${p.ticket.tier}, on the chain by block ${p.ticket.deadline}.${p.ticket.checked ? '' : ' Not checked here: this Damgar follows no chain, so whether that block is within the tier’s reach of today’s is unknown. Pay only if you trust the service on it, or check it in Damgar on a computer.'}</p>` : '';
@@ -348,7 +363,7 @@ export function vaultPane(r: Rails | null, problem: string | null, waiting: stri
   if (!v) return `<h2>To the vault</h2><p class="k-soft">Your identity’s chain declares no vault: every payment goes to your flow. A vault, and its limit per unit, is declared with the chain key, in Kišib (Paper, Change the vault).</p>`;
   return `<h2>To the vault</h2>
 ${say('From your wallet to your vault, one way only.', ['Damgar binds the payment, you pay it in your wallet (on regtest, the test wallet) and paste the proof back. It names the act that declared your vault, a transfer to yourself (the payment cMIP, draft 4). Withdrawing needs the chain key and stays in Kišib.'])}
-<p class="k-small k-soft">Your vault: ${e(v.entries.map((x) => `${x.railName}, ${x.unit.said}: ${x.said}`).join('; '))}. Declared in your chain (act ${e(v.declaredBy.slice(0, 12))}…), with the chain key: changed only in Kišib.</p>
+<p class="k-small k-soft">Your vault: ${e(v.entries.map((x) => `${x.railName}, ${x.unit.said}: ${x.said}`).join('; '))}. Declared in your chain (act ${actId(v.declaredBy)}), with the chain key: changed only in Kišib.</p>
 <form id="vault-transfer"><label>To</label><select name="entry">${v.entries.map((x, i) => `<option value="${i}">${e(x.railName)}, ${e(x.unit.said)}</option>`).join('')}</select>
 <label>Amount (whole units)</label><input name="value" inputmode="numeric" autocomplete="off" required>
 <div class="k-row"><button type="submit" class="k-btn">Read it back</button></div></form><div id="vault-review"></div>${waiting}`;
@@ -361,24 +376,25 @@ ${r.costs.length ? `<div class="damgar-costs"><h3>Before you send</h3>${lines(r.
 ${r.blocking.length ? note('error', lines(r.blocking.map((t) => ({ text: t, tone: 'warn' as const })))) : `<div class="k-row"><button type="button" class="k-btn k-p" data-action="vault transfer" data-digest="${e(r.digest)}">Bind it, then pay it here</button></div>`}`;
 }
 
-/** For a collective (round 3, F353): its Money area, a promise to pay, and the promises signed here with how they stand. */
+/** For a collective (round 3, F353): its Money area, a promise to pay, and the promises signed here with how they stand. `name`: the collective as shown, markup (its names, `whoOf`). */
 export function collectivePane(c: { id: string; area: { name: string; holders: string[]; number: number; cap: { value: number } | null } | null; why: string | null; acts: { act: string; to: string; amount: { value: number }; whatFor: string; standing: { met: boolean; areas: { signers: string[]; needed: number; byKey: string[]; limits?: string | null }[] } | null }[] } | null, name: string): string {
-  if (!c) return `<h2>For ${e(name)}</h2><p class="k-soft">Damgar does not act for this collective: add it in the identity’s menu (A collective under it).</p>`;
+  if (!c) return `<h2>For ${name}</h2><p class="k-soft">Damgar does not act for this collective: add it in the identity’s menu (A collective under it).</p>`;
   const area = c.area;
+  // H96, H121: whom each promise pays by its names, its act by its short ID, each a button.
   const acts = c.acts.length
-    ? lines(
-        c.acts.map((a) => {
+    ? `<ul class="damgar-lines">${c.acts
+        .map((a) => {
           const st = a.standing;
           const keys = st?.areas[0];
-          return { text: `${a.amount.value.toLocaleString('en')} to ${a.to.slice(0, 8)}…${a.whatFor ? ` (${a.whatFor})` : ''}: ${st ? (st.met ? 'counts for the collective' : 'does not count yet') : 'not read'}${keys ? `, ${keys.signers.length} of ${keys.needed} keys${keys.limits === 'above' ? ', above the cap' : ''}` : ''} · ${a.act.slice(0, 12)}…`, tone: st?.met ? 'ok' : 'warn' };
-        }),
-      )
+          return `<li class="${st?.met ? 'ok' : 'warn'}">${e(a.amount.value.toLocaleString('en'))} to ${who({ id: a.to, inline: true })}${a.whatFor ? ` (${e(a.whatFor)})` : ''}: ${e(st ? (st.met ? 'counts for the collective' : 'does not count yet') : 'not read')}${keys ? e(`, ${keys.signers.length} of ${keys.needed} keys${keys.limits === 'above' ? ', above the cap' : ''}`) : ''} · ${actId(a.act)}</li>`;
+        })
+        .join('')}</ul>`
     : '<p class="k-small k-soft">No promise signed here yet.</p>';
-  return `<h2>For ${e(name)}</h2>
+  return `<h2>For ${name}</h2>
 ${say('Damgar acts for it with your own key for it.', ['Made as you signed its founding and sealed to you at your homes. Within the area’s cap, your key alone; above it, another holder’s key too, as its constitution writes it.'])}
 ${area ? `<p class="k-small k-soft">Its Money area, “${e(area.name)}”: ${area.holders.length} holder${area.holders.length === 1 ? '' : 's'}, ${area.number} key${area.number === 1 ? '' : 's'}${area.cap ? `; above ${area.cap.value.toLocaleString('en')} an act, one more` : ''}.</p>` : ''}
 ${c.why ? note('error', e(c.why)) : `<form class="collective-promise" data-collective="${e(c.id)}"><h3>A promise to pay, from the collective</h3>
-<label>To whom (an ID)</label><input name="to" type="text" required autocomplete="off" spellcheck="false">
+<label>To whom (an ID)</label><div class="k-row"><input name="to" type="text" class="k-grow" required autocomplete="off" spellcheck="false">${contactsButtonFor('to')}</div>
 <label>How much (regtest satoshis)</label><input name="value" type="text" inputmode="numeric" required>
 <label>What for</label><input name="whatFor" type="text">
 <div class="k-row"><button type="submit" class="k-btn">Read it back</button></div><div class="promise-read"></div></form>`}
@@ -397,7 +413,7 @@ const amounts = (xs: Shown[]) => (xs.length ? xs.map((x) => e(x.said)).join('<br
 /** Summary: per unit, never added across units; requests and debts; what it does not judge. */
 export function summaryPane(a: Account): string {
   const asks = a.asks.length
-    ? `<h3>Requests and debts</h3><div class="k-list">${a.asks.map((x) => `<div><span>${x.side === 'out' ? 'You asked' : 'Asked of you by'} <span class="k-mono">${e(shortForm(formOf(x.other.id, 'mid')))}</span>: ${e(x.amount.said)}${x.whatFor ? `, for “${e(x.whatFor)}”` : ''}</span><span class="k-r">${e(x.state)}</span></div>`).join('')}</div>`
+    ? `<h3>Requests and debts</h3><div class="k-list">${a.asks.map((x) => `<div><span>${x.side === 'out' ? 'You asked' : 'Asked of you by'} ${whoOf(x.other)}: ${e(x.amount.said)}${x.whatFor ? `, for “${e(x.whatFor)}”` : ''}</span><span class="k-r">${e(x.state)}</span></div>`).join('')}</div>`
     : '';
   return `<h2>Summary</h2>
 ${say('Per unit, never summed across units. Each verified from the rail’s evidence.', a.notes)}
@@ -441,7 +457,7 @@ ${say('What an app may sign and pay without asking you each time.', ['A lane let
 ${manual ? note('', 'Every step is followed by hand (Settings): the lanes Damgar holds sign nothing until you turn it off. Lanes other apps hold still sign there.') : ''}
 ${ls.map((l) => lane(l)).join('') || '<p class="k-empty">No lane in force. An app asks for one (in Dub: the identity’s menu, “A lane from Damgar”), and it waits in Asked.</p>'}
 <h3>The clock for lanes</h3><p class="k-small k-soft">A lane’s expiry is judged on a timestamp clock you name (the grant limits cMIP, 3.1): until it stamps an act, whether it came before the expiry is unknown.${dubsar ? ' Prefilled with the Dubsar clock, the one every app of the suite relies on; a lane’s grant names the clock, so its words say which.' : ''}</p>
-<form id="clock" class="k-row"><input name="clock" class="k-grow" placeholder="its ID" value="${e(clock ?? '')}" spellcheck="false"><button type="submit" class="k-btn">Save the clock</button></form>`;
+<form id="clock" class="k-row"><input name="clock" class="k-grow" placeholder="its ID" value="${e(clock ?? '')}" spellcheck="false">${contactsButtonFor('clock')}<button type="submit" class="k-btn">Save the clock</button></form>`;
 }
 
 /** Damgar's own lanes: receipts and invoices, referral shares; and the node link (moved here from Settings, accepted). */
@@ -468,10 +484,10 @@ ${web ? note('', 'The web client never makes a link to a node: use Damgar on you
 
 export function paidPane(r: Rails | null, problem: string | null): string {
   const pointer = r?.pointer
-    ? `<div class="k-box k-fill"><dl class="k-facts"><dt>In force</dt><dd>version ${r.pointer.version}${r.pointer.forked ? ' (its chain is forked: the last pointer before the fork counts)' : ''} · <span class="k-mono">${e(shortForm(formOf(r.pointer.act)))}</span></dd>${r.pointer.rails.map((x, n) => `<dt>${n + 1}. ${e(x.name)}</dt><dd class="k-mono">${e(x.said)}${x.accepted ? '' : ' (a rail Module you do not accept)'}</dd>`).join('')}</dl></div>`
+    ? `<div class="k-box k-fill"><dl class="k-facts"><dt>In force</dt><dd>version ${r.pointer.version}${r.pointer.forked ? ' (its chain is forked: the last pointer before the fork counts)' : ''} · ${actId(r.pointer.act)}</dd>${r.pointer.rails.map((x, n) => `<dt>${n + 1}. ${e(x.name)}</dt><dd class="k-mono">${e(x.said)}${x.accepted ? '' : ' (a rail Module you do not accept)'}</dd>`).join('')}</dl></div>`
     : '<p class="k-soft">You have no payee pointer yet: nobody can pay you until you say where.</p>';
   const vault = r?.vault
-    ? `${lines(r.vault.entries.map((x) => ({ text: `${x.unit.said}, on ${x.railName}: ${x.said}.` })))}<p class="k-small k-soft">Declared in your identity’s chain (act ${e(r.vault.declaredBy.slice(0, 12))}…), with the chain key: changed only in Kišib, in a change of keys, never here. Move money into it from Waiting, To the vault.</p>`
+    ? `${lines(r.vault.entries.map((x) => ({ text: `${x.unit.said}, on ${x.railName}: ${x.said}.` })))}<p class="k-small k-soft">Declared in your identity’s chain (act ${actId(r.vault.declaredBy)}), with the chain key: changed only in Kišib, in a change of keys, never here. Move money into it from Waiting, To the vault.</p>`
     : '<p class="k-small k-soft">None declared: every payment goes to your flow. A vault, and its limit per unit, is declared with the chain key, in Kišib.</p>';
   return `<h2>Where you are paid</h2>
 ${say('Your payee pointer: where payments to you go, with each rail’s costs.', ['Read back with each rail’s stated costs before it is signed. A new pointer replaces the one in force for new payments.'])}
@@ -482,7 +498,7 @@ ${problem ? note('error', e(problem)) : pointer}
 <label>Network</label><select name="network"><option value="3" selected>regtest</option><option value="2">signet</option></select>
 <label class="damgar-check"><input type="checkbox" name="newRequestKey"> Make a new on-chain request key (the old one then no longer counts for new payments)</label>
 <div class="k-row"><button type="submit" class="k-btn">Read it back</button></div></form><div id="rails-review"></div></details>
-${r?.requestKey ? `<p class="k-small k-soft">The on-chain request key Damgar holds: <span class="k-mono">${e(r.requestKey.slice(0, 16))}…</span></p>` : ''}
+${r?.requestKey ? `<p class="k-small k-soft">The on-chain request key Damgar holds: ${hashButton(r.requestKey)}</p>` : ''}
 <div class="k-box"><h3>The vault</h3>${vault}</div>`;
 }
 
@@ -522,8 +538,8 @@ export interface CardAct {
 
 const actChoice = (acts: CardAct[]) =>
   acts.length > 1
-    ? `<div class="damgar-ways">${acts.map((x, i) => `<label class="k-row"><input type="radio" name="act" value="${e(x.id)}"${i === 0 ? ' checked' : ''}> <span>${e(x.said)} <span class="k-mono k-faint">${e(shortForm(formOf(x.id)))}</span></span></label>`).join('')}</div>`
-    : `<input type="hidden" name="act" value="${e(acts[0].id)}"><p class="k-small"><b>${e(acts[0].said)}</b> <span class="k-mono k-faint">${e(shortForm(formOf(acts[0].id)))}</span></p>`;
+    ? `<div class="damgar-ways">${acts.map((x, i) => `<label class="k-row"><input type="radio" name="act" value="${e(x.id)}"${i === 0 ? ' checked' : ''}> <span>${e(x.said)} ${actId(x.id)}</span></label>`).join('')}</div>`
+    : `<input type="hidden" name="act" value="${e(acts[0].id)}"><p class="k-small"><b>${e(acts[0].said)}</b> ${actId(acts[0].id)}</p>`;
 
 const noAct = '<p class="k-soft">This card is not yet an act on MOR (a draft waiting to be signed here): there is nothing to rely on or anchor.</p>';
 
@@ -538,7 +554,7 @@ export function anchorForm(acts: CardAct[], offers: { act: string; unit: string;
   if (!acts.length) return noAct;
   const which = chosen ? acts.filter((x) => x.id === chosen) : acts;
   return `<form id="anchor-offers">${say('An anchor puts this act’s fingerprint on the Bitcoin chain, through a pooled anchoring service, paid here.', ['Anyone may anchor any act (the anchoring cMIP). The service is sent a leaf (the act’s fingerprint mixed with a random secret Damgar keeps), never the act. Damgar signs the payment’s request at once; you pay the invoice in To pay; it shows in Account › Anchors. Round 1 runs on regtest: its coins are worth nothing.'])}${actChoice(which.length ? which : acts)}
-<label>The anchoring service’s ID</label><div class="k-row"><input name="service" value="${e(service)}" required spellcheck="false" autocomplete="off" class="k-grow"><button type="submit" class="k-btn">Read its offer</button></div></form>${
+<label>The anchoring service’s ID</label><div class="k-row"><input name="service" value="${e(service)}" required spellcheck="false" autocomplete="off" class="k-grow">${contactsButtonFor('service')}<button type="submit" class="k-btn">Read its offer</button></div></form>${
     offers === null
       ? ''
       : offers.length

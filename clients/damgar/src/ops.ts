@@ -70,6 +70,12 @@ export const OPS = [
   'runner asking',
   'runner drop',
   'runner unpair',
+  // H96, H100, H109, H119: names and the one contacts list, as every app.
+  'names',
+  'contacts',
+  'contact add',
+  'contact nick',
+  'contact remove',
 ] as const;
 
 /** An expiry, as seconds since 1970, from a number or a date the page sends; none where empty. */
@@ -212,6 +218,16 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
       return d.runnerDrop({ request: text(a.request) });
     case 'runner unpair':
       return d.runnerUnpair();
+    case 'names':
+      return d.names({ ids: list(a.ids), fresh: a.fresh === true });
+    case 'contacts':
+      return d.contacts({ fresh: a.fresh === true });
+    case 'contact add':
+      return d.contactChange({ op: 'add', id: text(a.id), nick: text(a.nick) });
+    case 'contact nick':
+      return d.contactChange({ op: 'nick', id: text(a.id), nick: text(a.nick) });
+    case 'contact remove':
+      return d.contactChange({ op: 'remove', id: text(a.id) });
     case 'answer address':
       return d.answerAddress(text(a.id));
     default:
