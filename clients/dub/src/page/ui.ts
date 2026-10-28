@@ -666,7 +666,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
     closePanel();
     draw();
     try {
-      const r = await b.ask<{ who: v.Who; lives: string; trouble: string | null; items: Item[]; clock: { name: string; placed: number; shown: number } | null; problems: string[] }>('profile', { id });
+      const r = await b.ask<{ who: v.Who; lives: string; takes: string; trouble: string | null; items: Item[]; clock: { name: string; placed: number; shown: number } | null; problems: string[] }>('profile', { id });
       if (profileOf !== id) return;
       const me = r.who.me;
       fill(
@@ -674,6 +674,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         profilePage({
           who: v.kitWho(r.who, collectives().includes(r.who.id)),
           lives: r.lives,
+          takes: r.takes,
           trouble: r.trouble,
           actions: me ? [] : [r.who.followed ? { key: 'unfollow', label: 'Following' } : { key: 'follow', label: 'Follow', primary: true }, { key: 'message', label: 'Message' }, { key: 'pay', label: 'Pay' }],
           cards: itemCards(r.items),

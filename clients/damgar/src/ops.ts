@@ -153,9 +153,9 @@ async function runOp(d: Damgar, op: string, a: Record<string, unknown>): Promise
     case 'rails':
       return d.rails();
     case 'rails review':
-      return d.railsReview({ lightning: text(a.lightning), onchain: text(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true });
+      return d.railsReview({ lightning: text(a.lightning), onchain: text(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true, order: Array.isArray(a.order) ? list(a.order) : undefined });
     case 'rails publish':
-      return d.publishRails({ lightning: text(a.lightning), onchain: text(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true, digest: text(a.digest) });
+      return d.publishRails({ lightning: text(a.lightning), onchain: text(a.onchain), network: Number(a.network ?? 3), newRequestKey: a.newRequestKey === true, order: Array.isArray(a.order) ? list(a.order) : undefined, digest: text(a.digest) });
     case 'relays':
       return d.setRelays(list(a.relays));
     case 'lanes':

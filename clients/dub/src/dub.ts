@@ -2199,7 +2199,7 @@ export class Dub {
    * display name, where it lives (and since when, by the clock named, where
    * it stamped its genesis), trouble only where there is, and its posts.
    */
-  profile(a: { id: string }): Promise<{ who: Who; lives: string; trouble: string | null; items: Item[]; clock: { name: string; placed: number; shown: number } | null; problems: string[] }> {
+  profile(a: { id: string }): Promise<{ who: Who; lives: string; takes: string; trouble: string | null; items: Item[]; clock: { name: string; placed: number; shown: number } | null; problems: string[] }> {
     return this.serial(async () => {
       const { me, p, s, hints } = await this.ctx();
       const { id, hints: where } = readIdWhere(a.id);
@@ -2221,6 +2221,14 @@ export class Dub {
       } catch (e) {
         trouble = `It could not be looked up: ${message(e)}.`;
       }
+      // H100: the rails and currencies it takes, from its payee pointer, so whoever pays sees them first.
+      let takes: string;
+      try {
+        const ptr = await this.money.engine.pointerOf(id);
+        takes = ptr?.rails.length ? `Paid on ${ptr.rails.map((r) => `${r.name}, in ${r.said}`).join('; ')} (its payee pointer, version ${ptr.version}).` : 'It publishes no payee pointer: nobody can pay it yet.';
+      } catch (e) {
+        takes = `Where it is paid could not be read: ${message(e)}.`;
+      }
       const feed = await readFeed([{ identity: id, name: null }], [...new Set([...theirs, ...places])], s.via, undefined, dubsarClock());
       const items: Item[] = [];
       for (const fp of feed.posts) {
@@ -2233,6 +2241,7 @@ export class Dub {
       return {
         who: this.whoFrom(id, me.id, p),
         lives,
+        takes,
         trouble,
         items,
         clock: feed.clock ? { name: DUBSAR_CLOCK_NAME, placed: feed.posts.filter((x) => x.time).length, shown: feed.posts.length } : null,

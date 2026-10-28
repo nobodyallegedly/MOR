@@ -3568,13 +3568,33 @@ export class Damgar {
   }
 
   /**
+   * Where an identity is paid, as anyone reads it (H100: "Currencies and
+   * rails accepted can live on the profile page"): its payee pointer in
+   * force, each rail by name, with what it names (a node, a key, its
+   * network, so its unit). Null where it publishes none.
+   */
+  async pointerOf(id: string): Promise<{ version: number; rails: { name: string; said: string }[] } | null> {
+    const { me, s } = await this.ctx();
+    const { look, acts } = await this.payee(id, me, s);
+    const ptr = look.verifier.moneyPointer(MONEY, id) as { act: string | null; version: number };
+    if (!ptr.act || !acts.get(ptr.act)?.payload) return null;
+    const pp = (moneyRead(0, acts.get(ptr.act)!.payload!) as { act: { rails: { module: string; address: Uint8Array }[] } }).act;
+    // Its unit, from the network the rail names: what a payer pays in.
+    const unitOn = (module: string, address: Uint8Array) => {
+      const a = (module === SPEC.lightning.hash ? readLightningAddress(address) : module === SPEC.onchain.hash ? readOnchainAddress(address) : null) as { network: number } | null;
+      return a ? `${a.network === 0 ? 'bitcoin' : NETWORKS[a.network]} satoshis` : 'a unit this app does not read';
+    };
+    return { version: ptr.version, rails: pp.rails.map((r) => ({ name: railName(r.module), said: unitOn(r.module, new Uint8Array(r.address)) })) };
+  }
+
+  /**
    * Review a new payee pointer (Money type 0): the rails in order of
    * preference, with each rail Module's stated costs (a client MUST show
    * them before a rail is declared). Nothing is signed until `publishRails`
    * with the same digest. On-chain, the request key is made here, or a new
    * one where `newRequestKey`.
    */
-  async railsReview(a: { lightning?: string; onchain?: string; network: number; newRequestKey?: boolean }): Promise<{ digest: string; lines: Line[]; costs: Line[] }> {
+  async railsReview(a: { lightning?: string; onchain?: string; network: number; newRequestKey?: boolean; order?: string[] }): Promise<{ digest: string; lines: Line[]; costs: Line[] }> {
     const { me } = await this.ctx();
     const keys = (await this.store.read<Keys>(me.id, 'keys')) ?? { request: null, earlier: [] };
     const rails = this.railsFrom(a, keys.request && !a.newRequestKey ? keys.request : null);
@@ -3587,7 +3607,7 @@ export class Damgar {
     return { digest, lines: [...lines, { text: 'Signed with your signing key, public: anyone paying you reads it. It replaces the pointer in force; payments already bound stay as they are.' }], costs };
   }
 
-  private railsFrom(a: { lightning?: string; onchain?: string; network: number }, requestSecret: string | null): { module: string; address: Uint8Array; requestSecret: string | null }[] {
+  private railsFrom(a: { lightning?: string; onchain?: string; network: number; order?: string[] }, requestSecret: string | null): { module: string; address: Uint8Array; requestSecret: string | null }[] {
     const out: { module: string; address: Uint8Array; requestSecret: string | null }[] = [];
     if (a.lightning?.trim()) out.push({ module: SPEC.lightning.hash, address: lightningAddress({ network: a.network, node: a.lightning.trim().toLowerCase() }) as Uint8Array, requestSecret: null });
     if (a.onchain?.trim()) {
@@ -3597,11 +3617,19 @@ export class Damgar {
       const secret = requestSecret ?? hex(newSecret());
       out.push({ module: SPEC.onchain.hash, address: onchainAddress({ network: a.network, key, request: onchainKey(unhex(secret)) }) as Uint8Array, requestSecret: secret });
     }
+    // H92: in the order the person put the rails' cards, the first preferred (Money's pointer lists rails in order of preference).
+    if (a.order?.length) {
+      const rank = (m: string) => {
+        const i = a.order!.indexOf(m === SPEC.lightning.hash ? 'lightning' : 'onchain');
+        return i < 0 ? a.order!.length : i;
+      };
+      out.sort((x, y) => rank(x.module) - rank(y.module));
+    }
     return out;
   }
 
   /** Publish the reviewed payee pointer: version one more than the pointer in force, naming it. */
-  publishRails(a: { lightning?: string; onchain?: string; network: number; newRequestKey?: boolean; digest: string }): Promise<{ lines: Line[] }> {
+  publishRails(a: { lightning?: string; onchain?: string; network: number; newRequestKey?: boolean; order?: string[]; digest: string }): Promise<{ lines: Line[] }> {
     return this.serial(async () => {
       const { me, s, book } = await this.ctx();
       const { digest: _, ...rest } = a;

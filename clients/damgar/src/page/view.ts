@@ -9,8 +9,9 @@
 // from relays or typed by the person is escaped.
 
 import { APPS, KIT_STYLE } from '../../../kit/src/style.ts';
-import { appMark, contactsButton, e, meButton, note, opened, say, tiles, top, type ColumnEntry, type Named, type Tile, whatIsMor } from '../../../kit/src/html.ts';
+import { appMark, contactsButton, e, fold, meButton, note, opened, say, tiles, top, type ColumnEntry, type Named, type Tile, whatIsMor } from '../../../kit/src/html.ts';
 import { actId, contactsButtonFor, hashButton, who } from '../../../kit/src/ids.ts';
+import { qrSvg } from '../../../kit/src/qr.ts';
 import { cardWords } from '../../../genesis/src/card-words.ts';
 import { actFormOf } from '../../../dub/src/page/view.ts';
 import type { Account, Accept, LaneShown, Line, PaymentShown, Rails, Shown, State, ToSign, Verdict, Who } from '../shapes.ts';
@@ -63,6 +64,10 @@ body:has(.k-page){display:flex;flex-direction:column;height:100vh;height:100dvh}
 .damgar-lines li{margin:3px 0}
 li.bad{color:var(--k-bad)}
 li.warn{color:var(--k-soft)}
+.damgar-qr{display:inline-block;line-height:0;border-radius:8px;overflow:hidden;max-width:100%}
+.damgar-qr svg{max-width:100%;height:auto}
+.damgar-wallet{margin:6px 0 8px}
+.damgar-wallet a.k-btn{text-decoration:none;display:inline-flex;align-items:center}
 .damgar-copy{font:12px/1.5 "Atkinson Hyperlegible Mono",ui-monospace,"SF Mono",Menlo,monospace;color:var(--k-soft);overflow-wrap:anywhere;border:1px solid var(--k-edge);border-radius:10px;padding:8px 10px;background:var(--k-bg);margin:6px 0}
 .damgar-v{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:1px 8px;border-radius:999px;border:1px solid var(--k-edge);color:var(--k-soft)}
 .damgar-v.valid{color:var(--k-text);border-color:var(--k-p)}
@@ -319,6 +324,23 @@ export function itemActs(t: ToSign): string {
   return `${t.amount ? `<p>${e(t.amount.said)}</p>` : ''}${lines(t.lines)}${invoice}<div class="damgar-acts">${offers}</div>`;
 }
 
+/**
+ * H117 (decided: "let's have at least the wallet receive the invoices for
+ * aproval"): the invoice handed to the person's wallet, every payment still
+ * approved there. Where a WebLN wallet is in the browser, it is offered
+ * first, and the proof it returns is taken back by itself; **Open in
+ * wallet**, a `lightning:` link opening the wallet app with the invoice
+ * filled in, and its QR for a wallet on a phone, whose proof is pasted back.
+ * No spending link.
+ */
+export function openInWallet(key: string, invoice: string): string {
+  const webln = typeof globalThis !== 'undefined' && !!(globalThis as { webln?: unknown }).webln;
+  const link = `lightning:${invoice}`;
+  return `<div class="damgar-wallet" data-wallet="${e(key)}"><div class="k-row">${webln ? `<button type="button" class="k-btn k-p" data-action="webln" data-key="${e(key)}" data-invoice="${e(invoice)}">Pay with your browser’s wallet</button>` : ''}<a class="k-btn${webln ? '' : ' k-p'}" href="${e(link)}" data-open-wallet>Open in wallet</a></div>
+${fold('Its QR code, for a wallet on your phone', `<div class="damgar-qr">${qrSvg(link, { level: 'M', label: 'The invoice, as a QR code' })}</div>`)}
+<p class="k-small k-soft">${webln ? 'Your browser’s wallet asks you to approve it, then hands the proof back here by itself.' : 'Your wallet asks you to approve it; then paste its proof below.'} Nothing is paid without your approval in the wallet.</p></div>`;
+}
+
 /** What a payment shows to be paid: the invoice or address, the proof pasted back; a vault's invoice; an anchor's ticket. */
 export function payment(p: PaymentShown, forPay = false): string {
   const proofs = p.proofs.length
@@ -327,7 +349,7 @@ export function payment(p: PaymentShown, forPay = false): string {
   const pay =
     forPay && p.pay
       ? p.pay.invoice
-        ? `<label>Pay this invoice in your wallet</label><div class="damgar-copy">${e(p.pay.invoice)}</div><button type="button" class="k-btn k-q k-small" data-action="copy" data-text="${e(p.pay.invoice)}">Copy the invoice</button>
+        ? `<label>Pay this invoice in your wallet</label>${openInWallet(p.key, p.pay.invoice)}<div class="damgar-copy">${e(p.pay.invoice)}</div><button type="button" class="k-btn k-q k-small" data-action="copy" data-text="${e(p.pay.invoice)}">Copy the invoice</button>
 <form class="paid" data-key="${e(p.key)}"><label>The proof, from your wallet once paid: the preimage (64 hexadecimal characters)</label><input name="proof" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Check it and sign my claim</button></div></form>`
         : `<label>Pay exactly ${e(p.pay.amount.said)} to this address, from your wallet</label><div class="damgar-copy">${e(p.pay.address ?? '')}</div><button type="button" class="k-btn k-q k-small" data-action="copy" data-text="${e(p.pay.address ?? '')}">Copy the address</button>
 ${p.stage === 'paid' ? `<div class="k-row"><button type="button" data-action="recheck" data-key="${e(p.key)}" class="k-btn k-p">Check the chain again</button></div>` : `<form class="paid" data-key="${e(p.key)}"><label>The proof, from your wallet once sent: the transaction’s id (64 hexadecimal characters)</label><input name="proof" required spellcheck="false" autocomplete="off"><div class="k-row"><button type="submit" class="k-btn k-p">Check it and sign my claim</button></div></form>`}`
@@ -482,7 +504,46 @@ ${web ? note('', 'The web client never makes a link to a node: use Damgar on you
 
 // ---------------------------------------------------------------- settings
 
-export function paidPane(r: Rails | null, problem: string | null): string {
+/**
+ * H92 (his words: "First the user selects the rail, that changes the content
+ * of the setup page depending on rail"): each rail Module's own fields for
+ * the payee pointer, by its key. A rail Module to come adds its fields here,
+ * not a new page; its name and what it does come from its own entry
+ * (`../specs.ts`), its costs from its read-back.
+ */
+export const RAIL_FIELDS: Record<string, { fields: (v: Record<string, string>) => string; network: boolean }> = {
+  lightning: {
+    fields: (v) => `<label>Your wallet’s node key (66 hexadecimal characters; the test wallet shows it)</label><input name="lightning" autocomplete="off" spellcheck="false" value="${e(v.lightning ?? '')}">`,
+    network: true,
+  },
+  onchain: {
+    fields: (v) =>
+      `<label>A Bitcoin key of your wallet, x-only (64 hexadecimal characters)</label><input name="onchain" autocomplete="off" spellcheck="false" value="${e(v.onchain ?? '')}"><label class="damgar-check"><input type="checkbox" name="newRequestKey"${v.newRequestKey === 'on' ? ' checked' : ''}> Make a new on-chain request key (the old one then no longer counts for new payments)</label>`,
+    network: true,
+  },
+};
+
+/** The rail Modules this identity accepts that Damgar can put in a pointer: what + Add a rail offers. */
+export const railsAccepted = (accept: Accept[]) => accept.filter((a) => a.kind === 'Module' && a.accepted && RAIL_FIELDS[a.key]);
+
+/** The new pointer's form (H92): one card per rail chosen, each removable, its own fields; + Add a rail from those accepted. */
+export function railsForm(accept: Accept[], chosen: string[], values: Record<string, string>): string {
+  const can = railsAccepted(accept);
+  if (!can.length) return `<p class="k-soft">You accept no rail Module yet: accept one in Settings, Rules I follow (the Lightning rail, the on-chain rail), then choose it here.</p>`;
+  const cards = chosen
+    .map((k) => can.find((a) => a.key === k))
+    .filter((a): a is Accept => !!a)
+    .map((a, n) => `<div class="k-box damgar-rail" data-rail-card="${e(a.key)}"><div class="k-row"><h4 class="k-grow">${n + 1}. ${e(a.name)}</h4><button type="button" class="k-btn k-q k-small" data-action="rail-remove" data-rail="${e(a.key)}">Remove</button></div><p class="k-small k-soft">${e(a.does)}</p>${RAIL_FIELDS[a.key].fields(values)}</div>`)
+    .join('');
+  const left = can.filter((a) => !chosen.includes(a.key));
+  const add = left.length
+    ? `<div class="k-row damgar-rail-add"><select name="rail-add" aria-label="A rail to add">${left.map((a) => `<option value="${e(a.key)}">${e(a.name)}</option>`).join('')}</select><button type="button" class="k-btn" data-action="rail-add">${chosen.length ? '+ Add a rail' : 'Choose this rail'}</button></div>`
+    : '';
+  const network = chosen.some((k) => RAIL_FIELDS[k]?.network) ? `<label>Network</label><select name="network"><option value="3"${values.network !== '2' ? ' selected' : ''}>regtest</option><option value="2"${values.network === '2' ? ' selected' : ''}>signet</option></select>` : '';
+  return `<form id="rails">${chosen.length ? '' : '<p class="k-small k-soft">First choose a rail: the page then asks only what that rail needs.</p>'}${cards}${add}${network}${chosen.length ? '<div class="k-row"><button type="submit" class="k-btn">Read it back</button></div>' : ''}</form>`;
+}
+
+export function paidPane(r: Rails | null, problem: string | null, accept: Accept[] = [], chosen: string[] = [], values: Record<string, string> = {}): string {
   const pointer = r?.pointer
     ? `<div class="k-box k-fill"><dl class="k-facts"><dt>In force</dt><dd>version ${r.pointer.version}${r.pointer.forked ? ' (its chain is forked: the last pointer before the fork counts)' : ''} · ${actId(r.pointer.act)}</dd>${r.pointer.rails.map((x, n) => `<dt>${n + 1}. ${e(x.name)}</dt><dd class="k-mono">${e(x.said)}${x.accepted ? '' : ' (a rail Module you do not accept)'}</dd>`).join('')}</dl></div>`
     : '<p class="k-soft">You have no payee pointer yet: nobody can pay you until you say where.</p>';
@@ -492,12 +553,7 @@ export function paidPane(r: Rails | null, problem: string | null): string {
   return `<h2>Where you are paid</h2>
 ${say('Your payee pointer: where payments to you go, with each rail’s costs.', ['Read back with each rail’s stated costs before it is signed. A new pointer replaces the one in force for new payments.'])}
 ${problem ? note('error', e(problem)) : pointer}
-<details class="k-box"><summary>Change it</summary>
-<form id="rails"><label>Lightning: your wallet’s node key (66 hexadecimal characters; the test wallet shows it)</label><input name="lightning" autocomplete="off" spellcheck="false">
-<label>On-chain: a Bitcoin key of your wallet, x-only (64 hexadecimal characters)</label><input name="onchain" autocomplete="off" spellcheck="false">
-<label>Network</label><select name="network"><option value="3" selected>regtest</option><option value="2">signet</option></select>
-<label class="damgar-check"><input type="checkbox" name="newRequestKey"> Make a new on-chain request key (the old one then no longer counts for new payments)</label>
-<div class="k-row"><button type="submit" class="k-btn">Read it back</button></div></form><div id="rails-review"></div></details>
+${fold('Change it', `<div id="rails-at">${railsForm(accept, chosen, values)}</div><div id="rails-review"></div>`, { attrs: 'id="rails-fold"', open: !!values.open })}
 ${r?.requestKey ? `<p class="k-small k-soft">The on-chain request key Damgar holds: ${hashButton(r.requestKey)}</p>` : ''}
 <div class="k-box"><h3>The vault</h3>${vault}</div>`;
 }

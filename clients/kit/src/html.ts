@@ -406,6 +406,8 @@ export interface Profile {
   who: KitWho;
   /** One line on where they live (and since when, where known). */
   lives: string;
+  /** H100: the rails and currencies they are paid on, from their payee pointer, or that they publish none. */
+  takes?: string | null;
   /** A red line, only when there is trouble (a contested identity, a key changed, homes that disagree). */
   trouble?: string | null;
   /** The buttons: Follow, Message, Pay; each may be left out by the app. */
@@ -426,7 +428,7 @@ export function profile(p: Profile): string {
   // H96: with a nickname, the name it published beside it, faint; its state said where it has none.
   const own = n.nick ? (n.published?.state === 'name' ? (n.published.name !== n.nick ? `calls itself “${n.published.name}”` : null) : n.published && n.published.state !== 'loading' ? NAME_WORDS[n.published.state] : null) : !nameOf(n) && n.published && n.published.state !== 'name' ? NAME_WORDS[n.published.state] : null;
   return `<div class="k-prof" data-k-profile="${e(w.id)}"><div class="k-row"><button type="button" class="k-btn k-q" data-k-back="profile">← Back</button></div>
-<div class="k-hero"><span class="k-dot${w.collective ? ' k-c' : ''}">${e(initial(name, w.form))}</span><div class="k-grow"><h2 dir="auto">${e(name)}</h2>${own ? `<div class="k-own-name" dir="auto">${e(own)}</div>` : ''}<p class="k-soft">${e(p.lives)}</p><span class="k-mono k-soft">${e(shortForm(w.form))}</span> <button type="button" class="k-btn k-q k-small" data-k-copy="${e(w.link)}">Copy ID link</button></div>
+<div class="k-hero"><span class="k-dot${w.collective ? ' k-c' : ''}">${e(initial(name, w.form))}</span><div class="k-grow"><h2 dir="auto">${e(name)}</h2>${own ? `<div class="k-own-name" dir="auto">${e(own)}</div>` : ''}<p class="k-soft">${e(p.lives)}</p>${p.takes ? `<p class="k-small k-soft" data-k-takes>${e(p.takes)}</p>` : ''}<span class="k-mono k-soft">${e(shortForm(w.form))}</span> <button type="button" class="k-btn k-q k-small" data-k-copy="${e(w.link)}">Copy ID link</button></div>
 <div class="k-row">${p.actions.map((a) => `<button type="button" class="k-btn${a.primary ? ' k-p' : ''}" data-k-do="${e(a.key)}">${e(a.label)}</button>`).join('')}</div></div>
 ${p.trouble ? `<div class="k-alarmbox">${e(p.trouble)}</div>` : ''}
 ${feedBox({ id: 'k-profile-feed', cards: p.cards, empty: p.empty ?? 'Nothing found from them yet.' })}${p.clock ?? ''}

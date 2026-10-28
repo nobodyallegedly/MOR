@@ -189,6 +189,8 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
 
   async function show(s: State) {
     state = s;
+    if (s.identity?.id !== shownFor) railsChosen = null;
+    shownFor = s.identity?.id ?? null;
     if (timer) clearInterval(timer);
     timer = null;
     closePanel();
@@ -523,9 +525,32 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
       } catch (e) {
         problem = errorOf(e);
       }
-      return v.paidPane(r, problem);
+      // H92: the rails of the pointer in force, first; with none, the first rail chosen by the person.
+      if (!railsChosen) railsChosen = (r?.pointer?.rails ?? []).map((x) => s.accept.find((a) => a.hashes.includes(x.module))?.key).filter((k): k is string => !!k && !!v.RAIL_FIELDS[k]);
+      return v.paidPane(r, problem, s.accept, railsChosen, {});
     }
     return '';
+  }
+
+  // ---------------------------------------------------------------- the new pointer's rails (H92)
+
+  let railsChosen: string[] | null = null;
+  let shownFor: string | null = null;
+  /** What was typed in the rails' fields, kept when a rail is added or removed. */
+  const railValues = (): Record<string, string> => {
+    const f = app.querySelector<HTMLFormElement>('form#rails');
+    if (!f) return {};
+    const out: Record<string, string> = {};
+    for (const [k, x] of new FormData(f)) out[k] = String(x);
+    return out;
+  };
+  function redrawRails(chosen: string[]) {
+    railsChosen = chosen;
+    const at = $('rails-at');
+    if (!at || !state) return;
+    at.innerHTML = v.railsForm(state.accept, chosen, railValues());
+    const review = $('rails-review');
+    if (review) review.innerHTML = '';
   }
 
   // ---------------------------------------------------------------- the identity panel
@@ -678,6 +703,31 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         tab = null;
         return void (await draw());
       // H112: the first-use step never locks the app: Later, or back to the first page.
+      // H117: the browser's own wallet (WebLN), where there is one: it asks the person to approve, and its proof is taken back here.
+      case 'webln': {
+        const w = (window as unknown as { webln?: { enable(): Promise<void>; sendPayment(invoice: string): Promise<{ preimage: string }> } }).webln;
+        if (!w) return;
+        try {
+          await w.enable();
+          const r = await w.sendPayment(el.dataset.invoice!);
+          const f = app.querySelector<HTMLFormElement>(`form.paid[data-key="${CSS.escape(el.dataset.key!)}"]`);
+          const proof = f?.querySelector<HTMLInputElement>('input[name=proof]');
+          if (f && proof && /^[0-9a-f]{64}$/i.test(r.preimage)) {
+            proof.value = r.preimage;
+            f.requestSubmit();
+          } else fail(new Error('Your browser’s wallet gave no proof Damgar can read: paste the preimage from it below.'));
+        } catch (err) {
+          fail(new Error(`Your browser’s wallet did not pay it (${errorOf(err)}). Nothing was signed.`));
+        }
+        return;
+      }
+      case 'rail-add': {
+        const k = app.querySelector<HTMLSelectElement>('form#rails select[name="rail-add"]')?.value;
+        if (k) redrawRails([...(railsChosen ?? []), k]);
+        return;
+      }
+      case 'rail-remove':
+        return redrawRails((railsChosen ?? []).filter((k) => k !== el.dataset.rail));
       case 'accept-later': {
         const r = await act(() => b.ask<Lines>('accept later'));
         if (r) {
@@ -921,7 +971,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: State): Promi
         return;
       }
       case 'rails': {
-        const a = { lightning: str(fd, 'lightning'), onchain: str(fd, 'onchain'), network: Number(str(fd, 'network') || 3), newRequestKey: fd.get('newRequestKey') === 'on' };
+        // H92: only the rails whose cards are there, in their order.
+        const on = railsChosen ?? [];
+        const a = { lightning: on.includes('lightning') ? str(fd, 'lightning') : '', onchain: on.includes('onchain') ? str(fd, 'onchain') : '', network: Number(str(fd, 'network') || 3), newRequestKey: fd.get('newRequestKey') === 'on', order: on };
         const r = await act(() => b.ask<{ digest: string; lines: v.Line[]; costs: v.Line[] }>('rails review', a));
         if (r) {
           reviewed = a;
