@@ -15,10 +15,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { chromium, type Browser, type Page } from 'playwright-core';
+import { chromium, webkit, type Browser, type Page } from 'playwright-core';
 import { KIT_STYLE } from '../src/style.ts';
 
 const CHROMIUM = process.env.MOR_CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+/** WebKit, Safari's engine, which every browser on an iPad and an iPhone uses (`MOR_BROWSER=webkit`, Playwright's own build, installed on GitHub's machines): the rows from the iPad and the iPhone (H84, H99's tap, H102, H105, the type at 390 px). */
+const WEBKIT = process.env.MOR_BROWSER === 'webkit';
 const here = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));
 const shots = process.env.MOR_SCREENSHOTS;
 
@@ -52,7 +54,7 @@ before(async () => {
     res.writeHead(404).end();
   });
   base = await listen(page1);
-  browser = await chromium.launch({ executablePath: CHROMIUM });
+  browser = WEBKIT ? await webkit.launch() : await chromium.launch({ executablePath: CHROMIUM });
 });
 
 after(async () => {
@@ -415,6 +417,29 @@ test('H84: @ suggestions at the iPad’s size with its keyboard up: just above t
   assert.ok(p.y >= 420 && p.y + p.height <= 420 + 760, `within the part seen: ${p.y}..${p.y + p.height}`);
   assert.ok(p.y + p.height <= f.y + 1 && f.y - (p.y + p.height) < 16, `just above the typing box: ${p.y + p.height} above ${f.y}`);
   if (shots) await page.screenshot({ path: join(shots, 'kit-mention-ipad-keyboard.png') });
+  await context.close();
+});
+
+test('H99: two signs, tapped on a phone: the "?" unfolds an explanation and nothing to do; the chevron opens a panel to work in, turning down', async () => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  const page = await context.newPage();
+  await page.goto(base);
+  await page.locator('.k-say').first().waitFor();
+  const sayBox = page.locator('.k-say', { hasText: 'Test identities only' });
+  assert.equal(await sayBox.locator('summary .k-help').innerText(), '?');
+  assert.equal(await sayBox.locator('form, input, button:not([data-k-mor])').count(), 0, 'the "?" holds nothing to do');
+  await sayBox.locator('summary').tap();
+  await sayBox.locator('.k-more-text', { hasText: 'Every key is held in software.' }).waitFor();
+  const fold = page.locator('.k-fold', { hasText: 'A lane from Damgar' });
+  assert.equal(await fold.locator('.k-help').count(), 0, 'no "?" on a panel to work in');
+  const turned = () => fold.locator('.k-chev').evaluate((el) => getComputedStyle(el).transform);
+  assert.ok(/^(none|matrix\(1, 0, 0, 1, 0, 0\))$/.test(await turned()), 'the chevron points right, closed');
+  await fold.locator('summary').tap();
+  await fold.locator('form#lane-demo input[name=cap]').waitFor();
+  await page.waitForTimeout(250);
+  const m = (await turned()).match(/matrix\(([^)]+)\)/)![1].split(',').map(Number);
+  assert.ok(Math.abs(m[0]) < 0.01 && Math.abs(m[1] - 1) < 0.01, `the chevron turned down: ${m.join(',')}`);
+  if (shots) await page.screenshot({ path: join(shots, `kit-h99-signs${WEBKIT ? '-webkit' : ''}.png`) });
   await context.close();
 });
 

@@ -27,6 +27,7 @@ import {
   redrawPanel,
   removeSaid,
   say,
+  fold,
   switcher,
   tiles,
   top,
@@ -96,7 +97,7 @@ function draw() {
       above: `${lenses([{ key: 'following', label: 'Following' }, { key: 'toyou', label: 'To you' }, { key: 'relay', label: 'Relay' }], 'following')}`,
       cards: acts.map((a) => card(a)).join(''),
       below: clockLine({ name: 'the test clock', placed: 3, shown: 5 }),
-    })}${typingBox({ id: 'post', placeholder: 'Write something public…', button: 'Post', tools: '<button type="button">Picture</button><button type="button" data-at>@</button>', opts: '<input id="to" placeholder="To…" aria-label="To">' })}${say('Test identities only, until MOR is frozen', ['Every key is held in software.', 'Nothing here is for a real identity.'])}</section></div>`;
+    })}${typingBox({ id: 'post', placeholder: 'Write something public…', button: 'Post', tools: '<button type="button">Picture</button><button type="button" data-at>@</button>', opts: '<input id="to" placeholder="To…" aria-label="To">' })}${say('Test identities only, until MOR is frozen', ['Every key is held in software.', 'Nothing here is for a real identity.'])}${fold('A lane from Damgar', '<form id="lane-demo"><label>Cap per payment</label><input name="cap" inputmode="numeric"><button type="submit" class="k-btn">Ask Damgar</button></form>')}</section></div>`;
   } else if (part === 'tiles') {
     body = `<div class="k-body" id="tiles">${tiles([
       { key: 'identities', name: 'Identities', say: 'Records and successions.', icon: 'identities', danger: 1 },
