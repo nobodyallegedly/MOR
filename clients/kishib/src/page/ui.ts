@@ -84,6 +84,15 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
     }
     app.innerHTML = v.tabPage(b.web, tab, part, pane ?? v.part(tab, part ?? '', b.web, r), r);
     if (tab === 'runner' && part === 'signed') drawSigned();
+    void notices();
+  }
+
+  /** H97: Waiting for you, its rotations read from the inbox at once where the runner holds the member (the rotation notice cMIP, 2.1). */
+  async function notices() {
+    const box = app.querySelector<HTMLElement>('#notices[data-auto]');
+    if (!box) return;
+    const r = await b.ask<{ notices: Parameters<typeof v.noticesList>[0]; problem: string | null }>('collective notices', {}).catch((err) => ({ notices: [], problem: errorOf(err) }));
+    if (box.isConnected) box.innerHTML = `<h3>Rotations waiting for you</h3>${v.noticesList(r.notices, r.problem)}`;
   }
 
   /** Where the state says Kišib stands: a sitting in its tab, or what was open. */
@@ -205,6 +214,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
     const st = $('status');
     if (st) st.innerHTML = '';
     if (tab === 'runner' && key === 'signed') drawSigned();
+    void notices();
   });
 
   // ---------------------------------------------------------------- forms
@@ -281,6 +291,14 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
       return done('The new signing key’s words are taken: the runner signs for this identity again, with its new key.');
     }
     await withFiles(form, a);
+    if (id === 'form-notices') {
+      // H97: elsewhere than the runner, the member's words first; read, then forgotten here (cleared from the form).
+      const r = await act(() => b.ask<{ notices: Parameters<typeof v.noticesList>[0]; problem: string | null }>('collective notices', { member: a.member, address: a.address, words: a.words }));
+      clear(form);
+      const list = $('notices-list');
+      if (r && list) list.innerHTML = v.noticesList(r.notices, r.problem);
+      return;
+    }
     if (id === 'nakisib-answer' || id === 'nakisib-late') {
       const s = await act(() => b.ask<v.State>('nakisib answer', a));
       if (s) await show({ ...s, runner: runner ?? undefined });
@@ -368,8 +386,13 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         part = null;
         door = null;
         return draw();
+      // H89: top right shows what Kišib holds and the runner's state, as in every app; it opens the runner, where identities are added.
       case 'holds':
-        return openTab(b.web ? 'identities' : runner?.on ? 'identities' : 'runner');
+        return openTab(b.web ? 'identities' : 'runner');
+      case 'runner-add':
+        tab = 'runner';
+        part = 'add';
+        return draw();
       case 'open-door':
         door = tab;
         return draw();
@@ -380,6 +403,23 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
           current = null;
           draw();
         }
+        return;
+      }
+      // H97: a rotation listed, tapped: the form filled in from its notice, then the rotation read from its request, checked against the collective's chain (2.3).
+      case 'notice-pick': {
+        const f = app.querySelector<HTMLFormElement>('#form-give');
+        if (!f) return;
+        const set = (name: string, value: string) => {
+          const el = f.elements.namedItem(name) as HTMLInputElement | null;
+          if (el) el.value = value;
+        };
+        set('collective', d.collective ?? '');
+        set('fingerprint', d.fingerprint ?? '');
+        set('address', d.relays ?? '');
+        set('number', d.share ?? '');
+        set('member', d.member ?? '');
+        f.querySelector<HTMLElement>('[data-action="read request"]')?.click();
+        f.querySelector<HTMLElement>('[name="shareWords"]')?.scrollIntoView({ block: 'center' });
         return;
       }
       case 'read request': {
@@ -450,7 +490,7 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         if (!r) return;
         runner = r;
         draw();
-        return done('The runner is on, its file encrypted under your passphrase. Give it an identity (Identities, Held here), then pair an app: in Dub, the identity panel, + Add, Use one from Kišib.');
+        return done('The runner is on, its file encrypted under your passphrase. Give it an identity (Runner, Add an identity to the runner), then pair an app: in Dub, the identity panel, + Add, Use one from Kišib.');
       }
       case 'quit': {
         if (!(await ask(app, { title: 'Quit Kišib?', text: 'Its program ends, and the runner, if on, is locked: the apps sign through it no more until Kišib is opened again and its passphrase given. Nothing is erased.', yes: 'Quit Kišib' }))) return;
@@ -484,7 +524,9 @@ export function mount(app: HTMLElement, b: Backend): { show(state: ProgramState)
         if (r) {
           runner = r;
           draw();
-          done('Approved: the app may now use the identities chosen, each act shown in Kišib’s panel inside its window.');
+          // H124: the pairing approved stays where it is, open: its line kept in view, to finish setting it up.
+          app.querySelector(`[data-app="${CSS.escape(d.pairing!)}"]`)?.scrollIntoView({ block: 'nearest' });
+          done('Approved: the app may now use the identities chosen, each act shown in Kišib’s panel inside its window. Its setting up is here, below.');
         }
         return;
       }

@@ -81,7 +81,10 @@ export async function serve(opts: { dir: string; port: number; drafts?: string; 
   // H33: Edubba signs as a member, with Dub's own code, for any identity it holds; the names it shows are Edubba's own.
   let base = '';
   // Kišib's runner (the Dubsar runner cMIP): an identity used through it, Edubba holding no key; it signs in To sign through Kišib's panel, as Dub does.
-  const runner = new RunnerLink(opts.dir, { kishib: opts.kishib ?? KISHIB_DIR, origin: () => base, name: 'Edubba' });
+  const runner = new RunnerLink(opts.dir, { kishib: opts.kishib ?? KISHIB_DIR, origin: () => base, name: 'Edubba',
+    // H126: Edubba's stated need, shown beside “may open what is sealed to this identity” in Kišib, never ticking it.
+    needs: { opening: { why: 'to read the proposals you are asked to sign', without: 'To sign stays empty' } },
+  });
   const member = new Member(store, desk, () => [...store.book().identities.map((i) => ({ id: i.id, name: i.name })), ...real.contacts().map((c) => ({ id: c.id, name: c.name }))], runner);
   // The Publishing tab (round 3, part B): protected files and vows, as oneself or a collective.
   const publishing = new Publishing(desk, store, real);

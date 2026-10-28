@@ -126,8 +126,8 @@ test('names, contacts and IDs in Kišib, by clicks', async () => {
   const mark = await page.locator('.k-top .kishib-home-btn').boundingBox();
   assert.ok(left!.x < mark!.x, 'Contacts before the app’s mark, top left');
 
-  // H88, bringing one: an identity given to the runner by clicks; its ID whole, Copy ID, Share your ID link.
-  await go(page, 'identities', 'held');
+  // H88, bringing one: an identity given to the runner by clicks (H89: Runner, Add an identity to the runner); its ID whole, Copy ID, Share your ID link.
+  await go(page, 'runner', 'add');
   await page.fill('#form-give-runner [name="id"]', a.id);
   await page.fill('#form-give-runner [name="address"]', H[0]);
   await page.fill('#form-give-runner [name="words"]', words);
@@ -140,6 +140,7 @@ test('names, contacts and IDs in Kišib, by clicks', async () => {
   assert.equal(await given.getByRole('button', { name: 'Share your ID link' }).count(), 1);
   assert.match((await given.getByRole('button', { name: 'Share your ID link' }).getAttribute('data-k-share')) ?? '', new RegExp(`^${idForm(a.id)}\\?r=`));
   // In Held here too, beside its record: its own ID block.
+  await go(page, 'identities', 'held');
   assert.equal((await page.locator(`[data-held="${a.id}"] [data-k-ownid] .k-idwhole`).innerText()).trim(), idForm(a.id));
   // H96: its name as read, not "No name".
   await page.locator(`[data-held="${a.id}"] h3 [data-k-who] .k-nick`, { hasText: 'Max' }).waitFor({ timeout: 30_000 });

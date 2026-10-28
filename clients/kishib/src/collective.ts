@@ -104,6 +104,113 @@ export interface CollectiveDeps {
   web: boolean;
 }
 
+// ---------------------------------------------------------------- the rotation notice (`cmips/cmip-rotation-notice-draft-1.md`; hand test v3, H97)
+
+/** The rotation notice cMIP's hash, its draft test value: named as the text format (key 1) of the starter's message. */
+export const ROTATION_NOTICE_FORMAT = sha256('Rotation notice cMIP, draft 1, test value until publication');
+
+/** The line opening the structured part (1.1), word for word. */
+export const NOTICE_HEAD = '-- Dubsar rotation notice, draft 1 --';
+
+/** What a notice carries (1.1): the values a member otherwise copies by hand. */
+export interface Notice {
+  collective: string;
+  fingerprint: string;
+  relays: string[];
+  expires: number;
+  share: number;
+}
+
+/** A notice's text (1.1): the free text first, for any reader; the structured part last, nothing after it. */
+export function noticeText(free: string, n: Notice): string {
+  return [free, NOTICE_HEAD, `collective: ${n.collective}`, `fingerprint: ${n.fingerprint}`, `relays: ${n.relays.join(' ')}`, `expires: ${n.expires}`, `share: ${n.share}`].join('\n');
+}
+
+/**
+ * The structured part of a notice's text (1.1, 1.2), read strictly: its
+ * last block exactly the form, each field once, in order, nothing after.
+ * Anything else: null, the text read as free text only, never half-read.
+ */
+export function readNotice(text: string): Notice | null {
+  const ls = text.split('\n');
+  const at = ls.lastIndexOf(NOTICE_HEAD);
+  if (at < 0 || ls.length - at !== 6) return null;
+  const want = ['collective', 'fingerprint', 'relays', 'expires', 'share'];
+  const v: Record<string, string> = {};
+  for (let i = 0; i < 5; i++) {
+    const m = /^([a-z]+): (.+)$/.exec(ls[at + 1 + i]);
+    if (!m || m[1] !== want[i]) return null;
+    v[m[1]] = m[2];
+  }
+  const relays = v.relays.split(' ');
+  if (!/^[0-9a-f]{64}$/.test(v.collective) || !/^[0-9a-f]{64}$/.test(v.fingerprint)) return null;
+  if (!relays.length || relays.length > 8 || relays.some((r) => !/^https?:\/\/\S+$/.test(r))) return null;
+  if (!/^\d{1,12}$/.test(v.expires) || !/^\d{1,3}$/.test(v.share)) return null;
+  const share = Number(v.share);
+  if (share < 1 || share > 255) return null;
+  return { collective: v.collective, fingerprint: v.fingerprint, relays, expires: Number(v.expires), share };
+}
+
+/** A rotation waiting for a member, as Waiting for you lists it (2.2): the notice's values, who sent it, and to whom. */
+export interface Listed extends Notice {
+  member: string;
+  from: string;
+  /** The message it came in. */
+  message: string;
+}
+
+/**
+ * The rotations waiting for a member (2.1, 2.2): every negotiation message
+ * in the notice's format sealed to the member at its Agreements inbox,
+ * opened with `open` (the runner's key, or the key the member's words
+ * carry), its structured part read; listed if not expired and sent by a
+ * member of the collective it names, as the collective's chain says. The
+ * rotation itself is read and checked later, as by hand (2.3).
+ */
+export async function noticesFor(member: string, hints: string[], open: (sealed: Uint8Array[]) => Promise<({ described: unknown } | null)[]>, now: number, via: Via = {}): Promise<{ listed: Listed[]; problem: string | null }> {
+  let inbox: string[] = [];
+  try {
+    inbox = (await lookUp(member, hints, via)).inbox(REPO_SPECS.agreements) ?? [];
+  } catch (e) {
+    return { listed: [], problem: `The identity could not be read at ${hints.join(', ')}: ${message(e)}` };
+  }
+  if (!inbox.length) return { listed: [], problem: 'This identity declares no inbox: no notice can reach it.' };
+  const found: Listed[] = [];
+  for (const hint of inbox) {
+    let after: number | undefined;
+    try {
+      for (;;) {
+        const page = await relayAt(hint, via).feed({ to: member, after });
+        const sealed = page.items.filter((it) => it.kind === 'sealed').map((it) => it.item as Uint8Array);
+        const opened = sealed.length ? await open(sealed) : [];
+        for (const o of opened) {
+          if (!o) continue;
+          const m = readMessage(o.described as Parameters<typeof readMessage>[0]);
+          if (!m || m.format !== ROTATION_NOTICE_FORMAT || !m.to.includes(member)) continue;
+          const n = readNotice(m.text);
+          if (!n || n.expires <= now || found.some((x) => x.fingerprint === n.fingerprint)) continue;
+          found.push({ ...n, member, from: m.from, message: m.id });
+        }
+        if (!page.items.length || page.next === after) break;
+        after = page.next;
+      }
+    } catch {
+      // that inbox is away
+    }
+  }
+  // Sent by a member of the collective named, as its chain says (2.2); the rest is checked when it is read (2.3).
+  const listed: Listed[] = [];
+  for (const x of found) {
+    try {
+      const c = await readCollective(x.collective, x.relays, via);
+      if (c.holders.includes(x.from)) listed.push(x);
+    } catch {
+      // the collective not read at the relays named: not listed
+    }
+  }
+  return { listed, problem: null };
+}
+
 // H121: an identity written whole (`mid1…`); Kišib's page shows it short, its names beside, a tap showing it whole.
 const short = (id: string) => (/^[0-9a-f]{64}$/.test(id) ? idForm(id) : id);
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -574,12 +681,17 @@ export class CollectiveSitting {
           thread: a.thread,
           previous: a.previous,
           acks: [a.previous],
-          text: [
-            `A rotation of the collective ${c.rd.id} waits for your paper share, in Kišib.`,
-            `Fingerprint: ${this.fingerprint}`,
-            `Open Kišib, choose “Give my share to a collective’s rotation”, and give the collective and this fingerprint. Kišib shows the rotation in plain words before you type anything.`,
-            `It expires at ${when(q.expires)}.`,
-          ].join('\n'),
+          // H97: the free text, as before, then the rotation notice cMIP's structured part, which the member's Kišib reads to fill in Waiting for you.
+          text: noticeText(
+            [
+              `A rotation of the collective ${c.rd.id} waits for your paper share, in Kišib.`,
+              `Fingerprint: ${this.fingerprint}`,
+              `Open Kišib, Collectives, “Waiting for you”: it is listed there, filled in, or give the collective and this fingerprint. Kišib shows the rotation in plain words before you type anything.`,
+              `It expires at ${when(q.expires)}.`,
+            ].join('\n'),
+            { collective: c.rd.id, fingerprint: this.fingerprint, relays: q.relays.filter((r) => /^https?:\/\//.test(r)).slice(0, 8), expires: q.expires, share: c.holders.indexOf(m) + 1 },
+          ),
+          format: ROTATION_NOTICE_FORMAT,
           // Kišib makes no line an app continues: its acts stay off the starter's homes (README, cost of point 7).
           home: false,
         });
@@ -825,6 +937,8 @@ export class CollectiveSitting {
       if (blob) break;
     }
     if (!blob) throw new Error(`No rotation request with this fingerprint was found at ${c.rd.places.join(', ')}. Check the fingerprint, or ask the starter.`);
+    // Never believed from a message (the rotation notice cMIP, 2.3): the request is the one the fingerprint names.
+    if (sha256(blob) !== fp) throw new Error('The request found does not match this fingerprint: nothing is read from it, and nothing is signed.');
     const q = decodeRequest(blob);
     if (q.collective !== id) throw new Error('This request is for another collective.');
     if (now > q.expires) throw new Error(`This request expired at ${when(q.expires)}: its one-time key is destroyed. Ask the starter to begin again.`);

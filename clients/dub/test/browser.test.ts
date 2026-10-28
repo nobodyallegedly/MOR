@@ -144,7 +144,7 @@ test('a person, without a terminal, through every screen of the new Dub', async 
 
   // Always opens on Public: three lenses, Relay third; the typing box at the bottom.
   await page.locator('[data-k-part="public"].k-on').waitFor({ timeout: 60_000 });
-  assert.deepEqual((await page.locator('[data-k-part]').allInnerTexts()).map((t) => t.trim()), ['Public', 'Private', 'Purchases']);
+  assert.deepEqual((await page.locator('[data-k-part]').allInnerTexts()).map((t) => t.trim()), ['Public', 'Private', 'Notes', 'Purchases']);
   assert.deepEqual((await page.locator('[data-k-lens]').allInnerTexts()).map((t) => t.trim()), ['Following', 'To you', 'Relay']);
   await page.locator('.k-me', { hasText: 'Ada' }).waitFor();
   assert.ok((await page.locator('#post').boundingBox())!.y > (await page.locator('#feed').boundingBox())!.y, 'the typing box below the feed');
@@ -484,7 +484,7 @@ test('a person, without a terminal, through every screen of the new Dub', async 
   await idp.locator('[data-k-use][aria-current]', { hasText: 'Ada' }).waitFor();
   await shot(page, '17-identity-panel');
   await idp.locator(`[data-k-idmenu="${me}"]`).click();
-  assert.deepEqual((await page.locator('.k-pop [data-k-item]').allInnerTexts()).map((x) => x.split('\n')[0]), ['Name', 'Relays', 'Words', 'Line and homes', 'A lane from Damgar', 'A collective under it', 'Remove from Dub…']);
+  assert.deepEqual((await page.locator('.k-pop [data-k-item]').allInnerTexts()).map((x) => x.split('\n')[0]), ['Name', 'Relays', 'Words', 'Line and homes', 'A lane from Damgar', 'A collective under it', 'Rules I follow', 'Remove from Dub…']);
   await shot(page, '18-identity-menu');
   await page.getByRole('menuitem', { name: /^Name/ }).click();
   await modal.locator('form#name input').fill('Ada Lovelace');

@@ -45,7 +45,8 @@ export const DECLINED = 'Declined.';
 export const RESIGNED = 'Resigned.';
 
 /** A negotiation message's payload (Agreements, type 18): the message as canonical text. */
-export const negotiationPayload = (text: string): Uint8Array => cborEncode(new Map<number, unknown>([[0, text.normalize('NFC')]]));
+/** A negotiation message's payload: its text (key 0), and, where given, the text format it is written in (key 1, a format's hash, as a text act names one). */
+export const negotiationPayload = (text: string, format?: string): Uint8Array => cborEncode(new Map<number, unknown>([[0, text.normalize('NFC')], ...(format ? [[1, unhex(format)] as [number, unknown]] : [])]));
 
 /** The other side of a thread, as the sender reaches it: its identity, its current encryption key, its inbox relays. */
 export interface Reach {
@@ -79,10 +80,10 @@ export interface Sent {
 export async function negotiate(
   by: TestIdentity,
   to: Reach,
-  o: { text: string; thread?: string; previous?: string; acks?: string[]; refs?: [string, string][]; home?: boolean },
+  o: { text: string; thread?: string; previous?: string; acks?: string[]; refs?: [string, string][]; home?: boolean; /** The text format the message is written in (key 1), where it names one: a rotation notice (the rotation notice cMIP). */ format?: string },
 ): Promise<Sent> {
   // Signed here, or by Kišib's runner where this app holds no key of the identity (the Dubsar runner cMIP).
-  const made = await by.signNow(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text), {
+  const made = await by.signNow(REPO_SPECS.agreements, NEGOTIATION, negotiationPayload(o.text, o.format), {
     public: false,
     to: [to.id],
     objects: o.thread ? [[o.thread, o.previous ?? o.thread]] : undefined,
@@ -117,6 +118,8 @@ export interface Message {
   previous: string | null;
   acks: string[];
   refs: [string, string][];
+  /** The text format it names (key 1), hex, where it names one. */
+  format?: string | null;
 }
 
 interface Described {
@@ -140,7 +143,9 @@ export function readMessage(d: Described): Message | null {
   const text = m.get(0);
   if (typeof text !== 'string') return null;
   const link = d.objects?.[0];
+  const format = m.get(1) instanceof Uint8Array ? hex(m.get(1) as Uint8Array) : null;
   return {
+    format,
     id: d.id,
     from: d.signer,
     to: d.to ?? [],

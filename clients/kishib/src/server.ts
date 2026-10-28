@@ -200,7 +200,7 @@ export async function serve(opts: { dir: string; port: number; now?: () => numbe
       const a = (body ? JSON.parse(body) : {}) as Record<string, unknown>;
       switch (url.pathname) {
         case '/runner/pair':
-          return json(res, 200, runner.pair({ name: text(a.name), origin: text(a.origin) })), true;
+          return json(res, 200, runner.pair({ name: text(a.name), origin: text(a.origin), needs: a.needs })), true;
         case '/runner/paired':
           return json(res, 200, runner.paired(token)), true;
         case '/runner/unpair':

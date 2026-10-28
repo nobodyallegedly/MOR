@@ -42,6 +42,7 @@ export const OPS = [
   'confirm plan',
   'collective start',
   'collective read',
+  'collective notices',
   'collective give',
   'confirm',
   'resend',
@@ -105,6 +106,9 @@ export async function run(k: Kishib, op: string, a: Record<string, unknown>): Pr
       return k.confirmPlan({ owner: text(a.owner), successor: text(a.successor), address: text(a.address), words: text(a.words) });
     case 'collective start':
       return k.collectiveStart({ collective: text(a.collective), address: text(a.address), founder: text(a.founder), founderWords: text(a.founderWords), number: text(a.number), shareWords: text(a.shareWords), room: a.room === true, leaveOut: list(a.leaveOut) });
+    // H97: the rotations waiting for the member, from their inbox (the rotation notice cMIP).
+    case 'collective notices':
+      return k.collectiveNotices({ member: text(a.member), address: text(a.address), words: text(a.words) });
     case 'collective read':
       return k.collectiveRead({ collective: text(a.collective), fingerprint: text(a.fingerprint), address: text(a.address) });
     case 'collective give':

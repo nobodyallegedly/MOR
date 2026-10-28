@@ -90,8 +90,8 @@ test('the runner by clicks: Kišib and Dub, the panel inside Dub’s window', as
   await kp.waitForSelector('#runner-state >> text=since');
   assert.ok(existsSync(join(k.dir, 'runner.json')));
 
-  // An identity given to it: Identities, Held here.
-  await kp.click('[data-tab="identities"]');
+  // An identity given to it: Runner, Add an identity to the runner (H89).
+  await kp.click('[data-k-col="add"]');
   await kp.waitForSelector('#form-give-runner');
   await kp.fill('#form-give-runner [name="id"]', a.id);
   await kp.fill('#form-give-runner [name="address"]', H[0]);
@@ -332,7 +332,7 @@ test('draft 2 by clicks: the passphrase typed twice, a message read through Kiš
   await kp.click('[data-action="runner-on"]');
   await kp.waitForSelector('#runner-state >> text=since');
   assert.equal(await kp.inputValue('#runner-pass').catch(() => ''), '');
-  await kp.click('[data-tab="identities"]');
+  await kp.click('[data-k-col="add"]');
   await kp.fill('#form-give-runner [name="id"]', a.id);
   await kp.fill('#form-give-runner [name="address"]', H[0]);
   await kp.fill('#form-give-runner [name="words"]', words);

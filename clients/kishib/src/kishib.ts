@@ -25,20 +25,20 @@
 //
 // TEST IDENTITIES ONLY, until MOR is frozen.
 
-import { MIRS, SPECS, IDENTITY_TYPES, ENVELOPES_TYPES, encryptionKeyPayload, makeGenesis, routesPayload, xwingPublic, actId, cborDecode, cborEncode, describeAct, hex, lightningAddress, makeRotation, newSigningSecret, onchainAddress, randomBytes, readLightningAddress, readOnchainAddress, sha256, signingPublic, unhex, vaultDeclaration } from '../../genesis/src/core.ts';
+import { MIRS, SPECS, IDENTITY_TYPES, ENVELOPES_TYPES, encryptionKeyPayload, makeGenesis, routesPayload, xwingPublic, actId, cborDecode, cborEncode, describeAct, hex, lightningAddress, makeRotation, newSigningSecret, openSealed, onchainAddress, randomBytes, readLightningAddress, readOnchainAddress, sha256, signingPublic, unhex, vaultDeclaration } from '../../genesis/src/core.ts';
 import { SPEC as MONEY_SPECS } from '../../damgar/src/specs.ts';
 import { UNITS_MODULES, say as sayAmount, unitOf } from '../../damgar/src/units.ts';
 import type { Home } from '../../genesis/src/identity.ts';
 import { lookUp } from '../../genesis/src/lookup.ts';
 import { CODE, RelayError, relayAt, type Via } from '../../genesis/src/transport.ts';
 import { checkWarned, planLines, readCards, type LinePlan } from '../../genesis/src/lines.ts';
-import { encryptionSecret, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
+import { encryptionSecret, fromWords, Refused as WordsRefused, threePositions, toWords, typedBack } from '../../../modules/carry/src/carry.ts';
 import { actForm, idForm, idWhere, readId } from '../../genesis/src/forms.ts';
 import { lookCurrent, servedChain } from '../../dub/src/carryin.ts';
 import { bindingOf, homesWords, linesUnder, placing, readIdentity, recordWords, served, type Read, type Served } from './read.ts';
 import { chainKeyAt, freshSeed, indexOf, seedOf, spentPaper, wipe, Refused } from './words.ts';
 import { fingerprint, grouped, type Line, type Review, type Section, type Sitting, type State } from './shapes.ts';
-import { CollectiveSitting, EXPIRY, checkShare, type CollectiveDeps } from './collective.ts';
+import { CollectiveSitting, EXPIRY, checkShare, noticesFor, type CollectiveDeps, type Listed } from './collective.ts';
 import { addresses, holding, put, FORGOTTEN_SAY, NEW_CHAIN_WORDS_SAY, NEW_WORDS_SAY } from './common.ts';
 import { airgap } from './airgap.ts';
 import { Known, type KnownContacts } from '../../kit/src/engine/known.ts';
@@ -70,6 +70,14 @@ export const LAST_OF_OLD_PAPER_SAY =
   'This paper already made an earlier change of these keys: until 21 October 2026 Kišib reused one paper for every change. This change is its last. It commits a key of a new paper, whose words are shown once the homes’ receipts are in; this paper is spent after it.';
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+/** One sealed container opened with an encryption key, or null where it does not open. */
+const openOr = (bytes: Uint8Array, id: string, secret: Uint8Array) => {
+  try {
+    return openSealed(bytes, id, secret) as { described: unknown };
+  } catch {
+    return null;
+  }
+};
 // H121: an identity written whole (`mid1…`); Kišib's page shows it short, its names beside, a tap showing it whole.
 const short = (id: string) => (/^[0-9a-f]{64}$/.test(id) ? idForm(id) : id);
 const unb64 = (t: string): Uint8Array => {
@@ -168,9 +176,9 @@ export interface Holder {
 /** Said where Kišib has no contacts list to read (H100), by why: the kit's Contacts panel says it. */
 export const NO_CONTACTS_SAY = {
   web: 'Kišib on the web holds no identity, so it has no contacts list: your contacts are in the apps holding your identity (Dub, Damgar…), and in Kišib’s program once its runner holds it',
-  off: 'Kišib’s runner is off, so Kišib holds no identity and has no contacts list to read: turn it on (Runner), and give it an identity (Identities, Held here)',
+  off: 'Kišib’s runner is off, so Kišib holds no identity and has no contacts list to read: turn it on (Runner), and give it an identity (Runner, Add an identity to the runner)',
   locked: 'Kišib is locked: its contacts list is read once the runner’s passphrase is given (Runner)',
-  none: 'Kišib’s runner holds no identity yet: give it one (Identities, Held here), and its contacts list is read here',
+  none: 'Kišib’s runner holds no identity yet: give it one (Runner, Add an identity to the runner), and its contacts list is read here',
 } as const;
 
 export class Kishib {
@@ -1295,6 +1303,48 @@ export class Kishib {
   }
 
   /** A member: read a rotation waiting for its share, by the collective and its fingerprint, before typing anything. */
+  /**
+   * The rotations waiting for a member (the rotation notice cMIP, 2.1; H97),
+   * for Collectives › Waiting for you, prefilled. On the Mac with the runner
+   * on, at once, for every identity it holds (opened with the key it holds);
+   * elsewhere (the web, or no runner), only with the member's ID, a home and
+   * signing words, overwritten once read: Kišib holds nothing before.
+   */
+  async collectiveNotices(a: { member?: string; address?: string; words?: string; via?: Via }): Promise<{ notices: Listed[]; problem: string | null; by: 'runner' | 'words' | null }> {
+    const via = a.via ?? {};
+    const now = this.now();
+    if (a.words?.trim()) {
+      const member = readId(a.member ?? '');
+      const hints = addresses(a.address ?? '');
+      let seed: Uint8Array;
+      try {
+        seed = fromWords(a.words);
+      } catch (e) {
+        if (e instanceof WordsRefused) throw new Error(`${e.message}. Nothing was read.`);
+        throw e;
+      }
+      const secret = encryptionSecret(seed);
+      seed.fill(0);
+      try {
+        const r = await noticesFor(member, hints, async (sealed) => sealed.map((b) => openOr(b, member, secret)), now, via);
+        return { notices: r.listed, problem: r.problem, by: 'words' };
+      } finally {
+        secret.fill(0);
+      }
+    }
+    const h = this.holder;
+    if (this.web || !h || h.state !== 'on' || !h.holding().length) {
+      const why = this.web || !h ? 'Kišib holds nothing here' : h.state === 'locked' ? 'Kišib’s runner is locked: give its passphrase (Runner), or' : h.state === 'off' ? 'Kišib’s runner is off, so Kišib holds nothing' : 'Kišib’s runner holds no identity';
+      return { notices: [], problem: `${why}: give your ID, one of your homes and your signing words, and Kišib reads the rotations waiting for you in your inbox, then forgets the words.`, by: null };
+    }
+    const notices: Listed[] = [];
+    for (const x of h.holding()) {
+      const r = await noticesFor(x.id, x.homes, h.self(x.id).open, now, via);
+      notices.push(...r.listed);
+    }
+    return { notices, problem: null, by: 'runner' };
+  }
+
   async collectiveRead(a: { collective: string; fingerprint: string; address: string; via?: Via }): Promise<{ title: string; sections: Section[] }> {
     const { c, sections } = await CollectiveSitting.readRequest(a, this.now());
     return { title: `A rotation of ${short(c.rd.id)} asks for your share`, sections };
